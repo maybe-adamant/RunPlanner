@@ -81,11 +81,11 @@ describe('draft spec', () => {
   });
 
   it("stores god boons only when they differ from their biome's default, and the per-god cap likewise, clamped", () => {
-    expect(withDraftGodBoons(draft, 'G', 2)).toEqual(draft);
-    const raised = withDraftGodBoons(draft, 'G', 12);
+    expect(withDraftGodBoons(draft, 'Underworld', 'G', 2)).toEqual(draft);
+    const raised = withDraftGodBoons(draft, 'Underworld', 'G', 12);
     expect(raised.godBoonsByBiome).toEqual({ G: 10 });
-    expect(withDraftGodBoons(raised, 'G', 2)).toEqual(draft);
-    expect(withDraftGodBoons(draft, 'F', -2).godBoonsByBiome).toEqual({ F: 0 });
+    expect(withDraftGodBoons(raised, 'Underworld', 'G', 2)).toEqual(draft);
+    expect(withDraftGodBoons(draft, 'Underworld', 'F', -2).godBoonsByBiome).toEqual({ F: 0 });
     expect(withDraftPerGodCap(draft, 5)).toEqual(draft);
     // Under Denial the default is 4; a stored 5 is absolute.
     expect(withDraftPerGodCap(draft, 4, 4)).toEqual(draft);

@@ -1,10 +1,6 @@
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { biomeIcon } from '@planner/ui/artwork/roomArtwork';
-import {
-  routeInitialProfile,
-  type EncounterPhaseAddress,
-  type ProjectDocument,
-} from '@run-planner/engine/authored-project';
+import type { EncounterPhaseAddress, ProjectDocument } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectEvaluation } from '@run-planner/engine/simulation';
 import { useEffect, useRef } from 'react';
@@ -70,8 +66,6 @@ export function RouteWorkspace({
   const pendingNpcPhaseFocus = useRef<EncounterPhaseAddress | null>(null);
   const activePanel = useAppSelector((state) => state.editorSession.activePanel);
   const drafting = useAppSelector((state) => state.draftSession.run.kind === 'running');
-  // The FreshFile route is never drafted.
-  const hasDraft = routeInitialProfile(catalog, workspaceRoute.routeKey).kind !== 'freshFile';
   const replacementRevision = useAppSelector(
     (state) => state.editorSession.workspaceReplacementRevision,
   );
@@ -126,7 +120,6 @@ export function RouteWorkspace({
       case 'wells':
         return hasWells;
       case 'draft':
-        return hasDraft;
       case 'route':
       case 'loadout':
       case 'biome':
@@ -190,42 +183,40 @@ export function RouteWorkspace({
           {/* Panels stay put while a draft runs. */}
           <fieldset className="panel-navigation-fieldset" disabled={drafting}>
             <p className="navigation-label">{navigation.label}</p>
-            {fixedRoutePanels.map((panel) =>
-              panel.kind === 'draft' && !hasDraft ? null : (
-                <button
-                  aria-current={displayedPanel.kind === panel.kind ? 'page' : undefined}
-                  aria-label={panel.label}
-                  className="panel-navigation-item"
-                  data-active={displayedPanel.kind === panel.kind}
-                  key={panel.kind}
-                  onClick={() =>
-                    dispatch(
-                      routePanelSelected({
-                        routeKey: workspaceRoute.routeKey,
-                        panel: { kind: panel.kind },
-                      }),
-                    )
-                  }
-                  type="button"
-                  {...(panel.kind === 'loadout'
-                    ? {
-                        'aria-describedby': `${workspaceRoute.routeKey}-loadout-navigation-feedback`,
-                      }
-                    : {})}
-                >
-                  <span>{panel.label}</span>
-                  {panel.kind === 'loadout' ? (
-                    <span
-                      aria-label={`${feedback.loadout.status.label}${feedback.loadout.findingCount === 0 ? '' : `, ${feedback.loadout.findingCount} findings`}`}
-                      className="navigation-feedback"
-                      id={`${workspaceRoute.routeKey}-loadout-navigation-feedback`}
-                    >
-                      <NavigationStatusMarker status={feedback.loadout.status} />
-                    </span>
-                  ) : null}
-                </button>
-              ),
-            )}
+            {fixedRoutePanels.map((panel) => (
+              <button
+                aria-current={displayedPanel.kind === panel.kind ? 'page' : undefined}
+                aria-label={panel.label}
+                className="panel-navigation-item"
+                data-active={displayedPanel.kind === panel.kind}
+                key={panel.kind}
+                onClick={() =>
+                  dispatch(
+                    routePanelSelected({
+                      routeKey: workspaceRoute.routeKey,
+                      panel: { kind: panel.kind },
+                    }),
+                  )
+                }
+                type="button"
+                {...(panel.kind === 'loadout'
+                  ? {
+                      'aria-describedby': `${workspaceRoute.routeKey}-loadout-navigation-feedback`,
+                    }
+                  : {})}
+              >
+                <span>{panel.label}</span>
+                {panel.kind === 'loadout' ? (
+                  <span
+                    aria-label={`${feedback.loadout.status.label}${feedback.loadout.findingCount === 0 ? '' : `, ${feedback.loadout.findingCount} findings`}`}
+                    className="navigation-feedback"
+                    id={`${workspaceRoute.routeKey}-loadout-navigation-feedback`}
+                  >
+                    <NavigationStatusMarker status={feedback.loadout.status} />
+                  </span>
+                ) : null}
+              </button>
+            ))}
             <div className="panel-navigation-separator" role="separator" />
             {workspaceRoute.rail.map((biomeProjection) => {
               const biomeFeedback = feedback.biomes.get(biomeProjection.biomeKey);

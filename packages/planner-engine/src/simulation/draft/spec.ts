@@ -6,6 +6,8 @@ import type {
 } from '../../authored-project/model';
 import { createProjectDocument } from '../../authored-project/defaults';
 import { decodeProjectDocument } from '../../authored-project/codec';
+import { resolveRoutePosition } from '../../authored-project/route-context';
+import { routeHasKeepsakeRack } from '../../authored-project/route-profile';
 
 /** The project's route and itinerary, which a draft never changes, and its configured prefix. */
 export type DraftRoute = Pick<AuthoredRoutePlan, 'routeKey' | 'itineraryBiomeKeys'> &
@@ -17,14 +19,17 @@ export function draftPlannedBiomeKeys(route: DraftRoute): readonly string[] {
   return count === 0 ? route.itineraryBiomeKeys : route.itineraryBiomeKeys.slice(0, count);
 }
 
-/** The loadout a draft sets; the starting reward and keepsake equip results are generated. */
+/**
+ * The loadout a draft sets; the starting reward and keepsake equip results are generated.
+ * A null choice is one the route's save profile has not unlocked; the project codec judges it.
+ */
 export interface DraftLoadout {
-  readonly weaponKey: string;
-  readonly aspectKey: string;
-  readonly familiarKey: string;
+  readonly weaponKey: string | null;
+  readonly aspectKey: string | null;
+  readonly familiarKey: string | null;
   readonly manualArcanaKeys: readonly string[];
   readonly fearRanks: Readonly<Record<string, number>>;
-  readonly startingKeepsakeKey: string;
+  readonly startingKeepsakeKey: string | null;
   readonly aspectHexTree?: RouteLoadout['aspectHexTree'];
 }
 
@@ -77,8 +82,11 @@ export function draftDenialActive(catalog: Catalog, loadout: DraftLoadout): bool
 }
 
 /** Keepsakes that force a god's boon (`ForceBoonName`) bring an outside god in. */
-export function forcesGod(catalog: Catalog, keepsakeKey: string): boolean {
-  return catalog.keepsakes.byKey[keepsakeKey]?.effect?.kind === 'olympianRewardPressure';
+export function forcesGod(catalog: Catalog, keepsakeKey: string | null): boolean {
+  return (
+    keepsakeKey !== null &&
+    catalog.keepsakes.byKey[keepsakeKey]?.effect?.kind === 'olympianRewardPressure'
+  );
 }
 
 /** The route loadout a draft sets, before any generated choice. */
@@ -128,7 +136,7 @@ export function draftLoadoutProject(
   );
 }
 
-/** A rack follows every biome's Postboss except the last. */
+/** A rack follows each biome's Postboss whose room holds one on this route; the last biome has none. */
 export function draftKeepsakeOptions(catalog: Catalog, route: DraftRoute): DraftKeepsakeOptions {
   const keepsakeKeys = Object.freeze(
     catalog.keepsakes.values.map((k) => k.key).filter((key) => !forcesGod(catalog, key)),
@@ -136,7 +144,13 @@ export function draftKeepsakeOptions(catalog: Catalog, route: DraftRoute): Draft
   return Object.freeze({
     rackSlots: Object.freeze(
       route.itineraryBiomeKeys
-        .slice(0, -1)
+        .filter((biomeKey) => {
+          const postboss = resolveRoutePosition(catalog, route, biomeKey).completion
+            .postbossRoomGameName;
+          return (
+            postboss !== null && routeHasKeepsakeRack(catalog.rooms.byKey[postboss], route.routeKey)
+          );
+        })
         .map((afterBiomeKey) => Object.freeze({ afterBiomeKey, keepsakeKeys })),
     ),
   });

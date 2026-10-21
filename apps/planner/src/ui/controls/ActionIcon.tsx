@@ -8,6 +8,7 @@ export type ActionIconName =
   | 'new'
   | 'publish'
   | 'redo'
+  | 'reset'
   | 'save'
   | 'saveAs'
   | 'undo'
@@ -76,6 +77,13 @@ export function ActionIcon({ name }: { readonly name: ActionIconName }) {
           <>
             <path d="m10 4 3 3-3 3" />
             <path d="M13 7H7a4 4 0 0 0-4 4" />
+          </>
+        );
+      case 'reset':
+        return (
+          <>
+            <path d="M12.5 8a4.5 4.5 0 1 1-1.3-3.2" />
+            <path d="M12 2.5v2.8H9.2" />
           </>
         );
       case 'chevronLeft':

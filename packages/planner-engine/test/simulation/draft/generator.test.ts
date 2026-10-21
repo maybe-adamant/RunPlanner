@@ -496,11 +496,29 @@ describe('draftProject', () => {
     });
   });
 
-  it('refuses the FreshFile route', () => {
-    const base = createProjectDocument(catalog, { projectId: 'f', routeKey: 'FreshFile' });
-    expect(draftProject(catalog, base, cases[0]!.spec, 1)).toEqual({
-      kind: 'refused',
-      refusals: [{ kind: 'freshFileRoute' }],
+  it('drafts Fresh File from its null loadout, with Apollo met', () => {
+    const base = createProjectDocument(catalog, {
+      projectId: 'f',
+      routeKey: 'FreshFile',
+      configuredBiomeCount: 2,
     });
+    const { startingReward: _reward, ...freshLoadout } = base.route.loadout;
+    void _reward;
+    const spec: DraftSpec = {
+      loadout: freshLoadout,
+      world: {
+        godKeys: ['Apollo', 'Poseidon', 'Hestia', 'Demeter'],
+        storyNpcByBiome: {},
+        fieldNpcsByBiome: {},
+      },
+      basketTraitKeys: ['ApolloWeaponBoon', 'PoseidonCastBoon', 'HestiaSprintBoon'],
+      rackKeepsakeKeys: [],
+    };
+    const result = draftProject(catalog, base, spec, 1);
+    if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+    const assembly = simulateProjectAssembly(catalog, result.project);
+    expect(assembly.evaluation.status).toBe('valid');
+    expect(assembly.evaluation.findings).toEqual([]);
+    expect(latestRunState(assembly)?.godPool.acquiredSourceKeys).toContain('ApolloUpgrade');
   });
 });

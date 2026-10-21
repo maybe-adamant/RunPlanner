@@ -5,6 +5,7 @@ import { createProjectDocument } from '../../../src/authored-project/defaults';
 import { defaultDraftGodBoons } from '../../../src/authored-project/draft-spec';
 import {
   assessDraftBasket,
+  assessDraftGods,
   draftGodBoonBudget,
   draftKeepsakeOptions,
   draftOrderRefusals,
@@ -221,7 +222,7 @@ describe('draft basket legality', () => {
   });
 
   it('leaves element thresholds to the search', () => {
-    const infusion = assessment(underworld, spec([]), 'ElementalDamageFloorBoon');
+    const infusion = assessment(underworld, spec([], zeusSecond), 'ElementalDamageFloorBoon');
     expect(infusion.selectable).toBe(true);
     expect(infusion.checkedDuringSearch).toContain('elementCount');
   });
@@ -553,7 +554,7 @@ describe('draft first god pick', () => {
 
   it('is unrestricted when the start already holds a core', () => {
     const empty = createTraitHistoryState();
-    expect(draftFirstOfferTraitKeys(catalog, 'Zeus', empty)).toEqual(zeusCores);
+    expect(draftFirstOfferTraitKeys(catalog, 'Underworld', 'Zeus', empty)).toEqual(zeusCores);
     const held = {
       traitKey: 'ApolloWeaponBoon',
       giverKey: 'Apollo',
@@ -561,7 +562,7 @@ describe('draft first god pick', () => {
       sourceRole: 'draftBasket',
     } as const;
     expect(
-      draftFirstOfferTraitKeys(catalog, 'Zeus', {
+      draftFirstOfferTraitKeys(catalog, 'Underworld', 'Zeus', {
         ...empty,
         equippedTraits: { ApolloWeaponBoon: held },
         equippedSlots: { Melee: held },
@@ -589,13 +590,13 @@ describe('draft god boon budget', () => {
       godBoonsByBiome: { G: 6 },
     });
     expect(budget.biomes.map(({ biomeKey, value }) => [biomeKey, value])).toEqual([
-      ['F', defaultDraftGodBoons('F')],
+      ['F', defaultDraftGodBoons('Underworld', 'F')],
       ['G', 6],
-      ['H', defaultDraftGodBoons('H')],
-      ['I', defaultDraftGodBoons('I')],
+      ['H', defaultDraftGodBoons('Underworld', 'H')],
+      ['I', defaultDraftGodBoons('Underworld', 'I')],
     ]);
     expect(budget.total).toBe(
-      6 + ['F', 'H', 'I'].reduce((sum, key) => sum + defaultDraftGodBoons(key), 0),
+      6 + ['F', 'H', 'I'].reduce((sum, key) => sum + defaultDraftGodBoons('Underworld', key), 0),
     );
     // A Dream route reads each biome's default by key, whatever its order.
     expect(
@@ -603,8 +604,8 @@ describe('draft god boon budget', () => {
         loadout: underworld,
       }).biomes.map(({ biomeKey, value }) => [biomeKey, value]),
     ).toEqual([
-      ['H', defaultDraftGodBoons('H')],
-      ['F', defaultDraftGodBoons('F')],
+      ['H', defaultDraftGodBoons('Underworld', 'H')],
+      ['F', defaultDraftGodBoons('Underworld', 'F')],
     ]);
   });
 
@@ -616,15 +617,15 @@ describe('draft god boon budget', () => {
       godBoonsByBiome: { G: 0 },
     });
     expect(budget).toMatchObject({
-      total: defaultDraftGodBoons('F'),
-      effectiveTotal: defaultDraftGodBoons('F') - 1,
+      total: defaultDraftGodBoons('Underworld', 'F'),
+      effectiveTotal: defaultDraftGodBoons('Underworld', 'F') - 1,
       forfeit: true,
       perGod: 4,
       perGodDefault: 4,
       reachable: 16,
     });
     expect(budget.biomes.map((biome) => biome.effective)).toEqual([
-      defaultDraftGodBoons('F') - 1,
+      defaultDraftGodBoons('Underworld', 'F') - 1,
       0,
     ]);
     // A chosen value holds under Denial; nothing is subtracted from it.
@@ -789,15 +790,129 @@ describe('draft keepsakes and route', () => {
     ).toEqual(['ZeusWeaponBoon', 'ApolloWeaponBoon', 'HeraWeaponBoon']);
   });
 
-  it('refuses a god starting keepsake and the FreshFile route', () => {
+  it('refuses a god starting keepsake', () => {
     expect(refusals(underworld)).toEqual([]);
     expect(
       refusals(
         route('Underworld', ['F', 'G', 'H', 'I'], { startingKeepsakeKey: 'ForceHeraBoonKeepsake' }),
       ),
     ).toEqual([{ kind: 'godStartingKeepsake', keepsakeKey: 'ForceHeraBoonKeepsake' }]);
-    expect(refusals(route('FreshFile', ['F', 'G', 'H', 'I']))).toEqual([
-      { kind: 'freshFileRoute' },
+  });
+});
+
+describe('draft on Fresh File', () => {
+  const freshFile = route('FreshFile', ['F', 'G', 'H', 'I'], {
+    weaponKey: null,
+    aspectKey: null,
+    familiarKey: null,
+    startingKeepsakeKey: null,
+  });
+  const world = (godKeys: readonly string[]) => ({ ...emptyWorld, godKeys });
+  const freshRefusals = (godKeys: readonly string[], basketTraitKeys: readonly string[] = []) =>
+    refusals(freshFile, { world: world(godKeys), basketTraitKeys, rackKeepsakeKeys: [] });
+
+  it('offers only the gods the route can, Apollo first, with no bonus givers, NPCs or racks', () => {
+    const options = draftWorldOptions(catalog, freshFile);
+    expect(options.godKeys).toEqual(['Aphrodite', 'Apollo', 'Demeter', 'Hestia', 'Poseidon']);
+    expect(options.requiredGodKeys).toEqual(['Apollo']);
+    expect(options.bonusGiverKeys).toEqual([]);
+    expect(biomeHosts(freshFile)).toEqual(
+      ['F', 'G', 'H', 'I'].map((biomeKey) => ({ biomeKey, story: undefined, field: [] })),
+    );
+    expect(draftKeepsakeOptions(catalog, freshFile).rackSlots).toEqual([]);
+  });
+
+  it('drafts the null loadout and leads with Apollo', () => {
+    expect(freshRefusals(['Apollo', 'Poseidon', 'Demeter'])).toEqual([]);
+    expect(freshRefusals(['Poseidon', 'Apollo', 'Demeter'])).toEqual([
+      { kind: 'requiredGod', godKey: 'Apollo' },
     ]);
+    expect(freshRefusals(['Zeus', 'Apollo', 'Poseidon'])).toContainEqual({
+      kind: 'notAGod',
+      godKey: 'Zeus',
+    });
+  });
+
+  it('refuses Aphrodite and Hestia without Poseidon or Demeter in the pool', () => {
+    const needs = ['Poseidon', 'Demeter'];
+    expect(freshRefusals(['Apollo', 'Aphrodite', 'Hestia'])).toEqual([
+      { kind: 'godUnreachable', godKey: 'Aphrodite', needsGodKeys: needs },
+      { kind: 'godUnreachable', godKey: 'Hestia', needsGodKeys: needs },
+    ]);
+    expect(freshRefusals(['Apollo', 'Demeter', 'Aphrodite', 'Hestia'])).toEqual([]);
+    // A mature save has used them before, so the Underworld admits the same pool.
+    expect(refusals(underworld, { world: world(['Apollo', 'Aphrodite', 'Hestia']) })).toEqual([]);
+  });
+
+  it("narrows Apollo's first trait to the forced first offer: Attack, Sprint or Magick", () => {
+    const first = {
+      kind: 'firstGodPick',
+      godKey: 'Apollo',
+      traitKeys: ['ApolloWeaponBoon', 'ApolloSprintBoon', 'ApolloManaBoon'],
+    };
+    const pool = ['Apollo', 'Poseidon', 'Demeter'];
+    expect(freshRefusals(pool, ['ApolloCastBoon', 'ApolloWeaponBoon'])).toEqual([
+      { kind: 'basketTrait', traitKey: 'ApolloCastBoon', refusals: [first] },
+    ]);
+    expect(freshRefusals(pool, ['ApolloSprintBoon', 'ApolloCastBoon'])).toEqual([]);
+  });
+
+  it('gates each god on the route: Apollo first, then Poseidon or Demeter before Aphrodite and Hestia', () => {
+    const selectable = (godKeys: readonly string[]) =>
+      assessDraftGods(catalog, freshFile, godKeys)
+        .filter((god) => god.selectable)
+        .map((god) => god.godKey);
+    expect(selectable([])).toEqual(['Apollo']);
+    expect(selectable(['Apollo'])).toEqual(['Apollo', 'Demeter', 'Poseidon']);
+    expect(selectable(['Apollo', 'Demeter'])).toEqual([
+      'Aphrodite',
+      'Apollo',
+      'Demeter',
+      'Hestia',
+      'Poseidon',
+    ]);
+    expect(
+      assessDraftGods(catalog, freshFile, ['Apollo']).find((god) => god.godKey === 'Hestia')
+        ?.refusals,
+    ).toEqual([{ kind: 'needsGod', needsGodKeys: ['Poseidon', 'Demeter'] }]);
+    // A selected god stays removable; the Underworld gates nothing but the cap.
+    expect(selectable(['Poseidon'])).toEqual(['Apollo', 'Poseidon']);
+    expect(assessDraftGods(catalog, underworld, []).every((god) => god.selectable)).toBe(true);
+  });
+
+  it("allows only Apollo's first-offer traits while Apollo has no basket trait", () => {
+    const draft = (basketTraitKeys: readonly string[]) => ({
+      ...spec(basketTraitKeys, world(['Apollo', 'Poseidon', 'Demeter'])),
+      rackKeepsakeKeys: [],
+    });
+    const first = {
+      kind: 'firstGodPick',
+      godKey: 'Apollo',
+      traitKeys: ['ApolloWeaponBoon', 'ApolloSprintBoon', 'ApolloManaBoon'],
+    };
+    expect(assessment(freshFile, draft([]), 'ApolloCastBoon').refusals).toEqual([first]);
+    expect(assessment(freshFile, draft([]), 'ApolloSprintBoon').selectable).toBe(true);
+    expect(assessment(freshFile, draft(['ApolloSprintBoon']), 'ApolloCastBoon').selectable).toBe(
+      true,
+    );
+    // Another god may not take the last slot Apollo's first offer can fill.
+    const slots = draft(['PoseidonWeaponBoon', 'PoseidonSprintBoon']);
+    expect(assessment(freshFile, slots, 'DemeterManaBoon').refusals).toEqual([
+      { ...first, kind: 'firstOfferSlot' },
+    ]);
+    expect(assessment(freshFile, slots, 'DemeterCastBoon').selectable).toBe(true);
+  });
+
+  it("refuses a basket whose other gods take every slot of Apollo's first offer", () => {
+    const pool = ['Apollo', 'Poseidon', 'Demeter'];
+    const blocking = ['PoseidonWeaponBoon', 'PoseidonSprintBoon', 'DemeterManaBoon'];
+    expect(freshRefusals(pool, blocking)).toEqual([
+      {
+        kind: 'firstOfferBlocked',
+        godKey: 'Apollo',
+        traitKeys: ['ApolloWeaponBoon', 'ApolloSprintBoon', 'ApolloManaBoon'],
+      },
+    ]);
+    expect(freshRefusals(pool, blocking.slice(0, 2))).toEqual([]);
   });
 });
