@@ -690,6 +690,63 @@ only itself; attempt counts alone bound the search, so a seed drafts the same
 project on every machine. The encounter post pass then makes every reached
 encounter deterministic from the same seed.
 
+### Draft spec meaning
+
+The draft covers the route's planned biome prefix: targets, racks, caps and the
+report stop at the last planned biome. The god pool's order is the order new
+gods arrive: whenever the walk would author an offer from a god not yet
+acquired this run, it uses the next unacquired pool god instead, so the run's
+first Olympian pick is pool #1's. The basket's order is each god's own
+acquisition order; only a god's next unheld trait may be taken from it, and a
+trait waiting only on run state (an element threshold or a rarity count) is
+passed over until that state holds. Duos stand outside both gods' orders: once
+ready, a god room of either god takes one with chance 1/3, then 2/3, then
+always, the count carrying into the next biome.
+
+Caps are engine-owned and scale with the plan. The god boon cap sums each
+planned biome's planned god boons (a route- and biome-keyed default, less one
+per biome under Forfeit); the per-god cap defaults to 5, or 4 under Denial;
+Hermes and Hammer share one cap equal to the planned biome count. An
+over-budget basket is refused, never trimmed. Static refusals also cover a
+basket order that places a trait above its own prerequisite and a pool #1 god
+whose first queued trait cannot be the run's first pick (a core boon on a
+mature route, the route's first-run offer on Fresh File). World options read
+route legality: Fresh File offers only gods its acquisition requirements
+admit, with its first-run god required as pool #1, no Hermes, Hammer, Selene,
+NPCs or racks, and a nullable loadout; a pool that leaves a god unreachable is
+refused.
+
+### Draft steering
+
+Steering weights are draft policy over legal candidates, reading every room as
+the route declares it, route overlays included:
+
+- A selected NPC's window, read generically from its encounter requirements
+  (room-reward exclusions, depth window, room tags, the gap since the previous
+  NPC, once per route), outranks a due trait: hosting rooms are favoured while
+  the window is open and their door reward avoids the excluded types. A missed
+  window is reported as a miss.
+- Each exit shows at most one god boon door when it can: once another door of
+  the exit holds a god boon (a boon reward, Mystery boon or Devotion trial),
+  such rewards on this door are strongly damped, since every shown door draws
+  from the bag whether taken or not.
+- Shop purchases buy a boon or Mystery boon of a god that can take its next
+  queued trait or a ready Duo, and Hermes or a Hammer when due, at a soft pace
+  of about two purchases per planned biome. The pace steepens when behind or
+  when the boon entries left in the bags this biome's doors draw from (its
+  base-store policy, else the stores its rooms declare) are nearly spent; it never forces or blocks a purchase, and gold is not modelled.
+- On a route whose save-file god history starts closed (Fresh File), a Shop
+  stocks only gods already picked up, so a door offering a not-yet-met god
+  with queued traits outranks a Shop door, midshop preference included.
+- Fountain rooms only break ties between equal doors and make a wanted god's
+  reward likelier. Resource points roll about one room in ten, preferring an
+  element a waiting trait needs; Dream buys elemental boosts instead.
+- Offer exclusions that hold in every branch stop the walk chasing that god or
+  source for the biome rather than retrying it.
+
+A fixed corpus (`npm run test:draft-corpus`) measures these rules; its
+committed baseline records rates and medians, not plans.
+
 ## Extension and Verification
 
 Before changing a sensitive boundary, identify its complete input/output

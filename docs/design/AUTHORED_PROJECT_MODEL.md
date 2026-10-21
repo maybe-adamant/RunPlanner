@@ -293,9 +293,11 @@ settings: `godKeys`, `storyNpcByBiome`, `fieldNpcsByBiome`, `basketTraitKeys`,
 `rackKeepsakeByBiome` (a missing biome keeps the held keepsake) and `seed`, plus
 optional keys saved only when they differ from their defaults: `godBoonsByBiome`
 (each biome's planned god boons, 0–10, a missing biome keeping its biome's
-default), `perGodCap` (1–10, default 5) and the `preferMidshops` and
-`pursueTartarusGoal` preferences (`true` when on). A new route starts empty with
-seed 1. The codec is exact: gods are Olympian givers,
+default, and a stored count equal to it is dropped on decode), `perGodCap` (1–10, default 5, or 4 under Denial) and the `preferMidshops` and
+`pursueTartarusGoal` preferences (`true` when on). Both arrays are ordered:
+`godKeys` is the pool order and `basketTraitKeys` each god's acquisition order
+([Draft spec meaning](SIMULATION_AND_VALIDATION.md#draft-spec-meaning)). A new
+route starts empty with seed 1. The codec is exact: gods are Olympian givers,
 story and field NPCs are the catalog's story givers and field-NPC encounter
 presentations, traits and keepsakes are catalog keys, and records save in
 catalog biome order; entries for biomes off the itinerary are kept. The loadout

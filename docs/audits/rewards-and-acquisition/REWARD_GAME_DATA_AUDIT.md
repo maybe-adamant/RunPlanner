@@ -480,7 +480,9 @@ the common baseline rather than represented as inert requirement kinds.
 entry is eligible, it appends the complete base store while retaining every
 leftover, increments a call-local refill counter, and recursively evaluates the
 same offer. After two unsuccessful appends it returns
-`RoomRewardHealDrop`.
+`RoomRewardHealDrop`. Eligibility includes the producer's room filter,
+so a Boon-only miniboss offer refills a `RunProgress` bag whose Boons are spent
+while its other entries remain; the miniboss door need only be shown.
 
 Within one supported picker call, the current-run facts, room filters, and
 `previouslyChosenRewards` peer list do not change during recursion. None of the
