@@ -4,6 +4,8 @@ import {
   routeInitialProfile,
   withDraftGodBoons,
   withDraftPerGodCap,
+  withDraftPreferMidshops,
+  withDraftPursueTartarusGoal,
   type AuthoredDraftSpec,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -28,8 +30,6 @@ import {
   withDraftBasketTraitToggled,
   withDraftFieldNpcToggled,
   withDraftGodToggled,
-  withDraftPreferMidshops,
-  withDraftPursueTartarusGoal,
   projectDraftBudget,
   withDraftRackKeepsake,
   withDraftStoryNpcToggled,
@@ -791,7 +791,8 @@ export function RouteDraftPanel({
                 />
                 <span className="draft-budget-value">{budget.perGod.value}</span>
                 <span className="draft-recommended">
-                  Recommended: 5 without Denial · 4 with Denial
+                  Recommended: {budget.perGod.defaults.withoutDenial} without Denial ·{' '}
+                  {budget.perGod.defaults.withDenial} with Denial
                 </span>
               </span>
             </section>
@@ -812,7 +813,7 @@ export function RouteDraftPanel({
               {draft.preferMidshops === true ? (
                 <p className="draft-option-note">Drafts take longer.</p>
               ) : null}
-              {projection.plannedBiomeKeys.includes('I') ? (
+              {budget.clockworkGoal ? (
                 <>
                   <label className="draft-option">
                     <input

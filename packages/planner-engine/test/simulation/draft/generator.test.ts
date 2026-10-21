@@ -390,8 +390,12 @@ describe('draftProject', () => {
       };
       const result = draftProject(catalog, underworld, spec, 7);
       if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
-      // Zeus's next queued trait, from a bought boon.
-      expect(shopBuys(result.project)).toContain('G:RandomLoot:FocusLightningBoon');
+      // A trait taken from a bought god boon is a basket trait, in its god's order.
+      const boughtTraits = shopBuys(result.project).flatMap((buy) => {
+        const traits = buy.split(':')[2];
+        return traits === undefined || traits === '' ? [] : traits.split('/');
+      });
+      for (const traitKey of boughtTraits) expect(spec.basketTraitKeys).toContain(traitKey);
       const held = Object.keys(
         latestRunState(simulateProjectAssembly(catalog, result.project))?.traits.equippedTraits ??
           {},

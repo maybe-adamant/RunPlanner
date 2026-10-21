@@ -34,7 +34,11 @@ import {
 } from '../../authored-project';
 import { hermesShrineInitialSlotKey } from '../../authored-project/model';
 import { exitDecisionForSource } from '../../authored-project/topology/query';
-import { biomeStartRoomGameNames, resolveBiomeStart } from '../../authored-project/route-profile';
+import {
+  biomeStartRoomGameNames,
+  resolveBiomeStart,
+  routeRoomDeclaration,
+} from '../../authored-project/route-profile';
 import { locallyValidRewardOffers, type ResolvedRewardOffer } from '../../reward-kernel';
 import {
   createPreparedProjectCandidateSession,
@@ -72,6 +76,8 @@ import { draftKeepsakeOptions, type DraftSpec } from './spec';
 import {
   DRAFT_ELEMENT_BOOSTS as ELEMENT_BOOSTS,
   DraftSteering,
+  draftSideDoorWeight,
+  draftSiblingHoldsGodBoon,
   NPC_EXCLUDED_REWARD_FACTOR,
   NPC_WINDOW_WEIGHT,
   type DraftProgress,
@@ -83,8 +89,8 @@ import type { DraftWorldProduct } from './world';
 const TARTARUS_GOAL_WEIGHT = 150;
 
 /** A Clockwork combat room left without an authored reward resolves to a Goal. */
-function clockworkGoal(catalog: Catalog, occurrence: RoomOccurrence): boolean {
-  const mode = catalog.rooms.byKey[occurrence.gameName]?.mode;
+function clockworkGoal(catalog: Catalog, routeKey: string, occurrence: RoomOccurrence): boolean {
+  const mode = routeRoomDeclaration(catalog.rooms.byKey[occurrence.gameName], routeKey)?.mode;
   return (
     mode?.kind === 'authored' &&
     mode.templateKey === 'ClockworkCombat' &&
@@ -95,9 +101,6 @@ function clockworkGoal(catalog: Catalog, occurrence: RoomOccurrence): boolean {
 
 /** A Shop door beside a door to a new god with queued traits. */
 const SHOP_OUTRANKED_FACTOR = 0.001;
-
-/** A boon on a door beside one that already holds a boon, so one exit shows one boon. */
-const SIDE_BOON_FACTOR = 0.01;
 
 /** The offer weight of a wanted god's boon; a due god's is higher. */
 const WANTED_GOD_WEIGHT = 30;
@@ -279,7 +282,7 @@ export class DraftWalk {
     const occurrenceId = latest.origin.occurrenceId;
     const route = this.project.route;
     // Only a room that can host an unplaced point rolls.
-    const support = this.catalog.rooms.byKey[latest.gameName]?.resourcePointSupport;
+    const support = this.roomOf(latest.gameName)?.resourcePointSupport;
     if (
       support === undefined ||
       support.excludedRouteKeys?.includes(route.routeKey) === true ||
@@ -357,6 +360,11 @@ export class DraftWalk {
   private occurrenceId(biomeKey: string): OccurrenceId {
     this.nextOccurrence += 1;
     return createOccurrenceId(`${biomeKey}-draft-${this.nextOccurrence}`);
+  }
+
+  /** A room as this route declares it, with its route overlay applied. */
+  private roomOf(gameName: string) {
+    return routeRoomDeclaration(this.catalog.rooms.byKey[gameName], this.project.route.routeKey);
   }
 
   private occurrence(biomeKey: string, occurrenceId: string): RoomOccurrence | undefined {
@@ -712,7 +720,7 @@ export class DraftWalk {
       );
       const occurrenceId = this.occurrenceId(openSet.biomeKey);
       const localSlotKeys =
-        this.catalog.rooms.byKey[slot.roomGameName]?.localChildren.flatMap((child) =>
+        this.roomOf(slot.roomGameName)?.localChildren.flatMap((child) =>
           child.kind === 'fixedRoomSlots' ? child.slots.map((local) => local.slotKey) : [],
         ) ?? [];
       const localOccurrenceIdsBySlot = Object.fromEntries(
@@ -827,10 +835,9 @@ export class DraftWalk {
   ): boolean {
     if (feature.target.kind !== 'hermesShrineOffer') return false;
     const slotKey = hermesShrineInitialSlotKey(feature.target.generationKey);
-    const room =
-      this.catalog.rooms.byKey[
-        this.occurrence(feature.biomeKey, feature.occurrenceId)?.gameName ?? ''
-      ];
+    const room = this.roomOf(
+      this.occurrence(feature.biomeKey, feature.occurrenceId)?.gameName ?? '',
+    );
     const profile = this.catalog.rewards.shops.byKey[room?.surfaceShop?.profileKey ?? ''];
     if (slotKey === undefined || profile === undefined) return false;
     const group = profile?.groups.byKey[profile.slots.byKey[slotKey]?.groupKey ?? ''];
@@ -956,12 +963,13 @@ export class DraftWalk {
         reward !== undefined && reward !== null
           ? Math.max(this.steering.offerWeight(reward.offer), 0.01)
           : 1;
-      if (this.spec.pursueTartarusGoal === true && clockworkGoal(this.catalog, occurrence))
+      if (
+        this.spec.pursueTartarusGoal === true &&
+        clockworkGoal(this.catalog, this.project.route.routeKey, occurrence)
+      )
         return TARTARUS_GOAL_WEIGHT;
       const outranked =
-        newGodDoor && this.catalog.rooms.byKey[occurrence.gameName]?.kind === 'Shop'
-          ? SHOP_OUTRANKED_FACTOR
-          : 1;
+        newGodDoor && this.roomOf(occurrence.gameName)?.kind === 'Shop' ? SHOP_OUTRANKED_FACTOR : 1;
       return (
         this.steering.roomWeight(occurrence.gameName, selection.biomeKey) * offerWeight * outranked
       );
@@ -1026,8 +1034,7 @@ export class DraftWalk {
     }
     if (origin.kind === 'rewardWheelOffer') {
       const occurrence = this.occurrence(origin.biomeKey, origin.occurrenceId);
-      const room =
-        occurrence === undefined ? undefined : this.catalog.rooms.byKey[occurrence.gameName];
+      const room = occurrence === undefined ? undefined : this.roomOf(occurrence.gameName);
       const attachment = this.catalog.encounterEnvelopes.byKey[
         room?.encounterEnvelopeKey ?? ''
       ]?.slots
@@ -1076,8 +1083,7 @@ export class DraftWalk {
     }
     if (origin.kind !== 'incomingReward' && origin.kind !== 'localReward') return false;
     const occurrence = this.occurrence(origin.biomeKey, origin.occurrenceId);
-    const room =
-      occurrence === undefined ? undefined : this.catalog.rooms.byKey[occurrence.gameName];
+    const room = occurrence === undefined ? undefined : this.roomOf(occurrence.gameName);
     if (occurrence === undefined || room === undefined) return false;
     const binding = countedRewardBinding(room, occurrence.state.kind, origin);
     const types =
@@ -1131,7 +1137,7 @@ export class DraftWalk {
         this.steering.offerGod(offer) !== undefined && base >= WANTED_GOD_WEIGHT
           ? base * wantedGodBoost
           : base;
-      const kept = avoidBoon && offer.rewardType === 'Boon' ? boosted * SIDE_BOON_FACTOR : boosted;
+      const kept = draftSideDoorWeight(this.catalog, offer, boosted, avoidBoon);
       return npcExcluded.has(offer.rewardType) ? kept * NPC_EXCLUDED_REWARD_FACTOR : kept;
     };
     const ordered = this.inPoolOrder(this.weighted(legal, weight), legal, (offer) => offer);
@@ -1203,7 +1209,7 @@ export class DraftWalk {
     return god !== undefined && this.stoppedGods.has(god);
   }
 
-  /** Whether another door of this room's exit already holds a boon. */
+  /** Whether another door of this room's exit already holds a god boon. */
   private siblingHoldsBoon(biomeKey: string, occurrence: RoomOccurrence): boolean {
     const topology = this.project.route.biomes.find((b) => b.biomeKey === biomeKey)?.topology;
     const decision = topology?.decisions.find(
@@ -1213,13 +1219,12 @@ export class DraftWalk {
         d.normal.targets.some((t) => t.occurrenceId === occurrence.occurrenceId),
     );
     if (decision?.kind !== 'exit' || decision.normal.kind !== 'batch') return false;
-    return decision.normal.targets.some((t) => {
-      if (t.occurrenceId === occurrence.occurrenceId) return false;
-      const sibling = this.occurrence(biomeKey, t.occurrenceId);
-      const reward =
-        sibling !== undefined && 'reward' in sibling.state ? sibling.state.reward : null;
-      return reward?.offer.rewardType === 'Boon';
+    const doors = decision.normal.targets.map((t) => {
+      const door = this.occurrence(biomeKey, t.occurrenceId);
+      const reward = door !== undefined && 'reward' in door.state ? door.state.reward : null;
+      return { occurrenceId: t.occurrenceId, ...(reward ? { offer: reward.offer } : {}) };
     });
+    return draftSiblingHoldsGodBoon(this.catalog, doors, occurrence.occurrenceId);
   }
 
   /** Reward types this room should avoid so a selected NPC can be met in it or a sibling. */
@@ -1260,8 +1265,7 @@ export class DraftWalk {
     excluded: ReadonlySet<string>,
   ): boolean {
     const occurrence = this.occurrence(biomeKey, occurrenceId);
-    const room =
-      occurrence === undefined ? undefined : this.catalog.rooms.byKey[occurrence.gameName];
+    const room = occurrence === undefined ? undefined : this.roomOf(occurrence.gameName);
     if (occurrence === undefined || room === undefined) return false;
     const origin = createIncomingRewardAddress(
       createBiomeAddress(this.project.route.routeKey, biomeKey),

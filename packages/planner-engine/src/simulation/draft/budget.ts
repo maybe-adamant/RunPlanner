@@ -9,12 +9,14 @@ import {
   type DraftSpec,
 } from './spec';
 
-const TARTARUS = 'I';
-/**
- * Tartarus's god boons when the walk always takes the Clockwork Goal: its median over
- * the corpus's heavy Underworld and Dream specs, nearly all from the Preboss Shop.
- */
-const TARTARUS_GOAL_EXPECTED = 3;
+/** God boons a Clockwork biome yields when its Goal is always taken, nearly all from the Preboss Shop. */
+const CLOCKWORK_GOAL_EXPECTED = 3;
+
+/** Whether the biome's doors follow the Clockwork Goal batch policy. */
+function clockworkBiome(catalog: Catalog, biomeKey: string): boolean {
+  const progression = catalog.biomeLayouts.byKey[biomeKey]?.progression;
+  return progression?.kind === 'generated' && progression.batchPolicy.kind === 'clockwork';
+}
 
 export interface DraftGodBoonBiome {
   readonly biomeKey: string;
@@ -42,6 +44,10 @@ export interface DraftGodBoonBudget {
   readonly perGod: number;
   /** The per-god cap's default: one fewer under Denial, which bans the offered rows not taken. */
   readonly perGodDefault: number;
+  /** The per-god cap's default without and with Denial. */
+  readonly perGodDefaults: { readonly withoutDenial: number; readonly withDenial: number };
+  /** A planned biome has a Clockwork Goal the walk can pursue. */
+  readonly clockworkGoal: boolean;
   /** The most god boons the per-god cap allows across the god pool. */
   readonly reachable: number;
 }
@@ -77,8 +83,8 @@ export function draftGodBoonBudget(
       effective: Math.max(value - forfeit, 0),
       defaultValue,
       expected:
-        spec.pursueTartarusGoal === true && biomeKey === TARTARUS
-          ? Math.min(defaultValue, TARTARUS_GOAL_EXPECTED)
+        spec.pursueTartarusGoal === true && clockworkBiome(catalog, biomeKey)
+          ? Math.min(defaultValue, CLOCKWORK_GOAL_EXPECTED)
           : defaultValue,
     });
   });
@@ -91,6 +97,11 @@ export function draftGodBoonBudget(
     denial: draftDenialActive(catalog, spec.loadout),
     perGod,
     perGodDefault: draftDefaultPerGodCap(catalog, spec.loadout),
+    perGodDefaults: Object.freeze({
+      withoutDenial: DEFAULT_DRAFT_PER_GOD_CAP,
+      withDenial: DEFAULT_DRAFT_PER_GOD_CAP - 1,
+    }),
+    clockworkGoal: biomes.some((biome) => clockworkBiome(catalog, biome.biomeKey)),
     reachable: perGod * ORDINARY_SOURCE_CAP,
   });
 }

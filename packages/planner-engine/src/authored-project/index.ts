@@ -500,6 +500,8 @@ export {
   sameDraftSpec,
   withDraftGodBoons,
   withDraftPerGodCap,
+  withDraftPreferMidshops,
+  withDraftPursueTartarusGoal,
 } from './draft-spec';
 
 export { structurallyInvalidGeneratedPickupPlacements } from './generated-pickup-placement';

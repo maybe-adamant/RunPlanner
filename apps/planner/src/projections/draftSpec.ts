@@ -172,7 +172,10 @@ export interface DraftBudgetProjection {
     readonly range: { readonly min: number; readonly max: number };
     /** 5, or 4 under Denial. */
     readonly defaultValue: number;
+    readonly defaults: { readonly withoutDenial: number; readonly withDenial: number };
   };
+  /** A planned biome has a Clockwork Goal to pursue. */
+  readonly clockworkGoal: boolean;
 }
 
 export function projectDraftBudget(
@@ -206,25 +209,10 @@ export function projectDraftBudget(
       value: budget.perGod,
       range: DRAFT_PER_GOD_CAP_RANGE,
       defaultValue: budget.perGodDefault,
+      defaults: budget.perGodDefaults,
     }),
+    clockworkGoal: budget.clockworkGoal,
   });
-}
-
-/** The Tartarus goal preference is stored only when on. */
-export function withDraftPursueTartarusGoal(
-  draft: AuthoredDraftSpec,
-  on: boolean,
-): AuthoredDraftSpec {
-  const { pursueTartarusGoal: _pursueTartarusGoal, ...rest } = draft;
-  void _pursueTartarusGoal;
-  return on ? { ...rest, pursueTartarusGoal: true } : rest;
-}
-
-/** The midshop preference is stored only when on. */
-export function withDraftPreferMidshops(draft: AuthoredDraftSpec, on: boolean): AuthoredDraftSpec {
-  const { preferMidshops: _preferMidshops, ...rest } = draft;
-  void _preferMidshops;
-  return on ? { ...rest, preferMidshops: true } : rest;
 }
 
 function toggled(values: readonly string[], value: string): readonly string[] {

@@ -1,6 +1,7 @@
 import type { Catalog, EncounterDefinition } from '../../catalog-schema';
 import type { RequirementExpression, RoomStructuralTag } from '../../requirements/model';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
+import { routeRoomDeclaration } from '../../authored-project/route-profile';
 import { roomEncounterDefinitions } from './world';
 
 /** The host conditions a field NPC encounter's requirements declare, read generically. */
@@ -101,7 +102,8 @@ export function draftNpcHosts(
       string,
       { npcKey: string; conditions: DraftNpcHostConditions; rooms: Set<string> }
     >();
-    for (const room of catalog.rooms.values) {
+    for (const declared of catalog.rooms.values) {
+      const room = routeRoomDeclaration(declared, routeKey);
       if (room.roomSetKey !== biomeKey) continue;
       for (const definition of roomEncounterDefinitions(catalog, room.encounterSlotBindings)) {
         const npcKey = definition.npcPresentationKey;
