@@ -93,6 +93,23 @@ deterministic corpus. A heavy basket must stay within about 15 s.
      `initial-composition.ts`. Fresh File keeps Apollo locked as #1 with its
      narrower Weapon/Sprint/Mana first offer (Fresh File stage).
 
+8. **Fresh File drafting.**
+   - Draft becomes available on Fresh File. The walk already drafts it; the
+     work is route-aware static products and legality.
+   - World options read route legality: gods by acquisition `lootRequirement`
+     (Zeus, Hera, Hephaestus and Ares are out), no Hermes, Hammer or Selene,
+     and no story or field NPCs. Racks come from `routeHasKeepsakeRack`, which
+     gives none.
+   - The loadout may be null for weapon, aspect, familiar and keepsake.
+   - Apollo is auto-included and locked as pool #1. The first-pick set narrows
+     to the `firstRunOffer` set (Apollo Weapon, Sprint or Mana). A pool with
+     neither Poseidon nor Demeter is refused, since Aphrodite and Hestia are
+     unreachable without one of them.
+   - The Bonus and NPC tabs and the NPC rows are hidden. Prefer midshops and
+     Pursue the Tartarus goal apply.
+   - Defaults are keyed by route and biome, since Fresh File shares
+     Underworld's biome keys; they are measured once the stage settles.
+
 ## Source facts
 
 - Field NPCs and their extra requirements (catalog), beyond the shared rules
@@ -176,7 +193,13 @@ deterministic corpus. A heavy basket must stay within about 15 s.
    - Engine: pool-order god substitution and the first-pick basket refusal.
    - App: order badges on the pool, the reset button, refusal copy.
    - Tests: `test:engine`, `test:planner`; the corpus delta.
-5. **Closure.**
+5. **Fresh File.**
+   - Engine: route-aware world, racks, nullable loadout, the Apollo and pool
+     refusals, route-keyed defaults; remove the `freshFileRoute` refusal.
+   - App: the Draft tab on Fresh File, locked Apollo, hidden tabs, refusal
+     copy.
+   - Corpus: Fresh File specs; measure capacity, then set its defaults.
+6. **Closure.**
    - An independent review.
    - Promote durable rules to the draft design documentation.
    - Update `docs/testing/DRAFT_MODE_LIVE_ACCEPTANCE.md`.
@@ -184,7 +207,6 @@ deterministic corpus. A heavy basket must stay within about 15 s.
 
 ## Non-goals
 
-- Fresh File drafting, which comes later;
 - draft share codes, which follow this plan;
 - per-biome purchase budgets or a gold model;
 - per-biome milestone targets other than prefix scaling;
