@@ -1,5 +1,4 @@
-import type { Catalog, RoomDeclaration } from '../../catalog-schema';
-import type { RequirementExpression } from '../../requirements/model';
+import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { TraitElement } from '../../catalog-schema/traits';
 import { authoredShopOffer } from '../../authored-project/shop';
@@ -62,67 +61,6 @@ const NPC_EARLY_VISIT_WEIGHT = 0.2;
 const NPC_HOST_PLACEMENT_WEIGHT = 3;
 /** A reward the NPC's room excludes, while no other open door can host it. */
 export const NPC_EXCLUDED_REWARD_FACTOR = 0.01;
-
-/** A Miniboss that refills an empty boon bag: above any boon door (at most 90), below a story room. */
-const MINIBOSS_REFILL_WEIGHT = 150;
-/** Rooms in a biome without a fixed Preboss depth. */
-const USUAL_BIOME_ROOMS: Readonly<Record<string, number>> = { N: 8 };
-const DEFAULT_BIOME_ROOMS = 6;
-/** Doors shown per room; each draws one bag entry, taken or not. */
-const DOORS_PER_ROOM = 2;
-
-export type BoonBagMode = 'conserve' | 'burn';
-
-/**
- * Burn the bag's boons when fewer are left than the biome's unmet god targets and a refill can
- * come within the biome: a Miniboss asking for a boon, or the bag emptying; otherwise conserve.
- */
-export function boonBagMode(input: {
-  readonly boons: number;
-  readonly entries: number;
-  readonly targets: number;
-  readonly roomsLeft: number;
-  readonly minibossRefill: boolean;
-}): BoonBagMode {
-  const refill = input.minibossRefill || input.entries <= input.roomsLeft * DOORS_PER_ROOM;
-  return input.boons < input.targets && refill ? 'burn' : 'conserve';
-}
-
-/** A Miniboss's biome depth window, from its forced window or its depth eligibility; unbounded otherwise. */
-function minibossDepthWindow(room: RoomDeclaration): {
-  readonly min: number;
-  readonly max: number;
-} {
-  if (room.force?.kind === 'depthWindow' && room.force.axis === 'biomeDepthCache')
-    return { min: room.force.start, max: room.force.deadline };
-  const ranges = (requirement: RequirementExpression | undefined): RequirementExpression[] =>
-    requirement === undefined
-      ? []
-      : requirement.kind === 'all'
-        ? requirement.requirements.flatMap(ranges)
-        : [requirement];
-  let min = 0;
-  let max = Infinity;
-  for (const requirement of ranges(room.eligibility))
-    if (requirement.kind === 'counterRange' && requirement.axis === 'biomeDepthCache') {
-      min = Math.max(min, requirement.range.min ?? 0);
-      max = Math.min(max, requirement.range.max ?? Infinity);
-    }
-  return { min, max };
-}
-
-/** A biome's room count: its fixed Preboss depth, or its usual length. */
-function biomeRoomCount(catalog: Catalog, biomeKey: string): number {
-  let fixed = 0;
-  for (const room of catalog.rooms.values)
-    if (
-      room.roomSetKey === biomeKey &&
-      room.kind === 'Preboss' &&
-      room.force?.kind === 'depthWindow'
-    )
-      fixed = Math.max(fixed, room.force.deadline);
-  return fixed > 0 ? fixed : (USUAL_BIOME_ROOMS[biomeKey] ?? DEFAULT_BIOME_ROOMS);
-}
 
 /** Shop weight of a boon whose god can take a basket trait now, above any due god. */
 const PURCHASABLE_GOD_WEIGHT = 120;
@@ -627,121 +565,25 @@ export class DraftSteering {
     return PURCHASES_PER_BIOME * this.state.biomeIndex() + 1 - made;
   }
 
-  /** Eligible boon entries left in the boon bags, and every entry left in those bags. */
-  private boonBag():
-    | { readonly boons: number; readonly entries: number; readonly storeKeys: readonly string[] }
-    | undefined {
-    const snapshot = latestRunState(this.state.assembly());
-    if (snapshot === undefined) return undefined;
-    const count = (remaining: { kind: 'exact'; count: number } | { kind: 'range'; min: number }) =>
-      remaining.kind === 'exact' ? remaining.count : remaining.min;
-    let boons = 0;
-    let entries = 0;
-    const storeKeys: string[] = [];
-    for (const bag of snapshot.bags) {
-      if (!bag.entries.some((entry) => entry.rewardType === 'Boon')) continue;
-      storeKeys.push(bag.storeKey);
-      entries += count(bag.remaining);
-      for (const entry of bag.entries)
-        if (entry.rewardType === 'Boon' && entry.eligibility === 'eligible')
-          boons += count(entry.remaining);
-    }
-    return { boons, entries, storeKeys };
-  }
-
-  /** Whether the run's eligible boon bag entries are nearly spent, which a Shop never is. */
-  boonBagLow(): boolean {
-    const bag = this.boonBag();
-    return bag !== undefined && bag.boons <= LOW_BOON_BAG;
-  }
-
-  /** The current biome's key and its depth cache after the latest authored room. */
-  private currentBiome(): { readonly biomeKey: string; readonly depth: number } | undefined {
-    const assembly = this.state.assembly();
-    const biomeKey = assembly.project.route.itineraryBiomeKeys[this.state.biomeIndex()];
-    const biome = assembly.evaluation.route.biomes.find((entry) => entry.biomeKey === biomeKey);
-    if (biomeKey === undefined || biome === undefined || !('history' in biome)) return undefined;
-    return { biomeKey, depth: biome.history.ledgers.counters.biomeDepthCache };
-  }
-
   /**
-   * Minibosses of this biome whose reward draws from a boon bag; a Hub biome shows all its rooms
-   * at once, so none refills there.
+   * Whether the eligible boon entries of the bags this biome's doors draw from are nearly spent,
+   * which a Shop never is.
    */
-  private refillMinibosses(biomeKey: string, storeKeys: readonly string[]): RoomDeclaration[] {
-    if (this.catalog.biomeLayouts.byKey[biomeKey]?.progression.kind === 'hub') return [];
-    return this.catalog.rooms.values.filter(
-      (room) =>
-        room.kind === 'Miniboss' &&
-        room.roomSetKey === biomeKey &&
-        room.incomingReward.kind === 'countedChoice' &&
-        room.incomingReward.storeKeys.some((key) => storeKeys.includes(key)),
-    );
-  }
-
-  /** Whether a Miniboss can still refill the bag here: none taken, one unshown whose window has not passed. */
-  private minibossRefill(biomeKey: string, depth: number, storeKeys: readonly string[]): boolean {
-    const biome = this.state
-      .assembly()
-      .evaluation.route.biomes.find((entry) => entry.biomeKey === biomeKey);
-    if (biome === undefined || !('history' in biome)) return false;
-    const ledgers = biome.history.ledgers;
-    const minibosses = this.refillMinibosses(biomeKey, storeKeys);
-    if (
-      minibosses.some((room) => ledgers.roomAppearances.some((a) => a.gameName === room.gameName))
-    )
-      return false;
-    return minibosses.some(
-      (room) =>
-        !ledgers.roomCreations.some((created) => created.gameName === room.gameName) &&
-        depth + 1 <= minibossDepthWindow(room).max,
-    );
-  }
-
-  /** Unheld basket god traits due by this biome; each needs one god boon. */
-  private unmetGodTargets(): number {
-    const progress = this.progress();
-    return this.dueTraits().filter(
-      (key) =>
-        !progress.equippedTraitKeys.includes(key) &&
-        this.catalog.traitGivers.values.some(
-          (giver) =>
-            giver.providerKind === 'olympian' &&
-            this.worldGivers.has(giver.key) &&
-            giver.traitKeys.includes(key),
-        ),
-    ).length;
-  }
-
-  /** The bag mode at the current room, with the eligible boon entries left. */
-  boonBagState(): { readonly mode: BoonBagMode; readonly boons: number } {
-    const bag = this.boonBag();
-    const biome = this.currentBiome();
-    if (bag === undefined || biome === undefined) return { mode: 'conserve', boons: 0 };
-    const mode = boonBagMode({
-      boons: bag.boons,
-      entries: bag.entries,
-      targets: this.unmetGodTargets(),
-      roomsLeft: Math.max(0, biomeRoomCount(this.catalog, biome.biomeKey) - biome.depth),
-      minibossRefill: this.minibossRefill(biome.biomeKey, biome.depth, bag.storeKeys),
-    });
-    return { mode, boons: bag.boons };
-  }
-
-  /** A Miniboss room whose depth window holds for the next entered room, while burning an empty bag. */
-  private minibossWanted(gameName: string, biomeKey: string): boolean {
-    if (this.catalog.rooms.byKey[gameName]?.kind !== 'Miniboss') return false;
-    const biome = this.currentBiome();
-    const bag = this.boonBag();
-    if (biome === undefined || bag === undefined || biome.biomeKey !== biomeKey) return false;
-    const room = this.refillMinibosses(biomeKey, bag.storeKeys).find(
-      (entry) => entry.gameName === gameName,
-    );
-    if (room === undefined) return false;
-    const window = minibossDepthWindow(room);
-    if (biome.depth + 1 < window.min || biome.depth + 1 > window.max) return false;
-    const state = this.boonBagState();
-    return state.mode === 'burn' && state.boons === 0;
+  boonBagLow(): boolean {
+    const assembly = this.state.assembly();
+    const snapshot = latestRunState(assembly);
+    if (snapshot === undefined) return false;
+    const biomeKey = assembly.project.route.itineraryBiomeKeys[this.state.biomeIndex()];
+    const policy = this.catalog.biomeLayouts.byKey[biomeKey ?? '']?.progression.rewardStorePolicy;
+    const doorStores = policy?.kind === 'authoredBaseStore' ? policy.storeKeys : undefined;
+    let remaining = 0;
+    for (const bag of snapshot.bags)
+      if (doorStores === undefined || doorStores.includes(bag.storeKey))
+        for (const entry of bag.entries)
+          if (entry.rewardType === 'Boon' && entry.eligibility === 'eligible')
+            remaining +=
+              entry.remaining.kind === 'exact' ? entry.remaining.count : entry.remaining.min;
+    return remaining <= LOW_BOON_BAG;
   }
 
   /** A door placement waits on a story NPC whose wanted trait is not ready while a later room is likely. */
@@ -758,7 +600,6 @@ export class DraftSteering {
         this.laterRoomLikely(biomeKey);
       return waits ? 0.1 : 200;
     }
-    if (this.minibossWanted(gameName, biomeKey)) return MINIBOSS_REFILL_WEIGHT;
     if (room?.kind === 'Shop') {
       // A mid-biome Shop the player prefers is taken over any boon door, below a story room
       // (200); more so the further purchases trail the pace or the boon bag runs low.

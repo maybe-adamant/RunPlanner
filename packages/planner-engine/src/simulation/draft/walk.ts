@@ -96,7 +96,7 @@ function clockworkGoal(catalog: Catalog, occurrence: RoomOccurrence): boolean {
 /** A Shop door beside a door to a new god with queued traits. */
 const SHOP_OUTRANKED_FACTOR = 0.001;
 
-/** A boon on a door beside one that already holds a boon, while the bag is conserved. */
+/** A boon on a door beside one that already holds a boon, so one exit shows one boon. */
 const SIDE_BOON_FACTOR = 0.01;
 
 /** The offer weight of a wanted god's boon; a due god's is higher. */
@@ -1095,8 +1095,7 @@ export class DraftWalk {
           // A fountain room makes a wanted or due god boon somewhat likelier.
           room.kind === 'Reprieve' ? 2 : 1,
           this.npcExcludedRewards(origin.biomeKey, occurrence),
-          this.steering.boonBagState().mode === 'conserve' &&
-            this.siblingHoldsBoon(origin.biomeKey, occurrence),
+          this.siblingHoldsBoon(origin.biomeKey, occurrence),
         )
       : this.tryOffers(
           types,
