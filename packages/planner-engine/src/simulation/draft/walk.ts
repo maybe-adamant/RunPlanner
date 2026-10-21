@@ -93,6 +93,9 @@ function clockworkGoal(catalog: Catalog, occurrence: RoomOccurrence): boolean {
   );
 }
 
+/** A boon on a door beside one that already holds a boon, while the bag is conserved. */
+const SIDE_BOON_FACTOR = 0.01;
+
 /** The offer weight of a wanted god's boon; a due god's is higher. */
 const WANTED_GOD_WEIGHT = 30;
 
@@ -1074,6 +1077,8 @@ export class DraftWalk {
           // A fountain room makes a wanted or due god boon somewhat likelier.
           room.kind === 'Reprieve' ? 2 : 1,
           this.npcExcludedRewards(origin.biomeKey, occurrence),
+          this.steering.boonBagState().mode === 'conserve' &&
+            this.siblingHoldsBoon(origin.biomeKey, occurrence),
         )
       : this.tryOffers(
           types,
@@ -1090,6 +1095,7 @@ export class DraftWalk {
     apply: (command: ProjectCommand) => boolean,
     wantedGodBoost = 1,
     npcExcluded: ReadonlySet<string> = new Set(),
+    avoidBoon = false,
   ): boolean {
     const legal = rewardTypes
       .flatMap((type) => locallyValidRewardOffers(this.catalog.rewards, type))
@@ -1108,7 +1114,8 @@ export class DraftWalk {
         this.steering.offerGod(offer) !== undefined && base >= WANTED_GOD_WEIGHT
           ? base * wantedGodBoost
           : base;
-      return npcExcluded.has(offer.rewardType) ? boosted * NPC_EXCLUDED_REWARD_FACTOR : boosted;
+      const kept = avoidBoon && offer.rewardType === 'Boon' ? boosted * SIDE_BOON_FACTOR : boosted;
+      return npcExcluded.has(offer.rewardType) ? kept * NPC_EXCLUDED_REWARD_FACTOR : kept;
     };
     const ordered = this.inPoolOrder(this.weighted(legal, weight), legal, (offer) => offer);
     for (const offer of ordered) if (apply(command(offer))) return true;
@@ -1177,6 +1184,25 @@ export class DraftWalk {
     }
     const god = this.steering.offerGod(offer);
     return god !== undefined && this.stoppedGods.has(god);
+  }
+
+  /** Whether another door of this room's exit already holds a boon. */
+  private siblingHoldsBoon(biomeKey: string, occurrence: RoomOccurrence): boolean {
+    const topology = this.project.route.biomes.find((b) => b.biomeKey === biomeKey)?.topology;
+    const decision = topology?.decisions.find(
+      (d) =>
+        d.kind === 'exit' &&
+        d.normal.kind === 'batch' &&
+        d.normal.targets.some((t) => t.occurrenceId === occurrence.occurrenceId),
+    );
+    if (decision?.kind !== 'exit' || decision.normal.kind !== 'batch') return false;
+    return decision.normal.targets.some((t) => {
+      if (t.occurrenceId === occurrence.occurrenceId) return false;
+      const sibling = this.occurrence(biomeKey, t.occurrenceId);
+      const reward =
+        sibling !== undefined && 'reward' in sibling.state ? sibling.state.reward : null;
+      return reward?.offer.rewardType === 'Boon';
+    });
   }
 
   /** Reward types this room should avoid so a selected NPC can be met in it or a sibling. */
