@@ -1,5 +1,6 @@
 import type { Catalog, HexDeclaration, HexLayoutDeclaration } from '../catalog-schema';
 import { createRouteAddress, createRouteStartKeepsakeSelectionAddress } from './addresses';
+import { ProjectCommandContractError } from './commands/contract';
 import type { ProjectCommand } from './commands/dispatch';
 import {
   DRAFT_GOD_BOONS_RANGE,
@@ -11,6 +12,7 @@ import { assessPublicDreamItinerary } from './dream-itinerary';
 import { assessStartingArcanaGrasp } from './loadout';
 import type { AuthoredDraftSpec, AuthoredRoutePlan, ProjectDocument, RouteLoadout } from './model';
 import { routeInitialProfile } from './route-profile';
+import { ProjectDocumentContractError } from './validation';
 import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from './traits/hex-tree';
 import { hexNodeTalentDomain } from './traits/hex-talent-tree';
 import type { AuthoredHexTreeConfiguration } from './traits/state';
@@ -49,7 +51,7 @@ export type DraftShareCodeDecoding =
   | { readonly ok: false; readonly refusal: DraftShareCodeRefusal };
 
 const LAYOUT_VERSION = 1;
-const FINGERPRINT_CHARS = 2;
+const FINGERPRINT_CHARS = 3;
 /** Crockford base32: no I, L, O or U, read case-insensitively. */
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const SELENE_SPELL = 'SpellMoonBeamTrait';
@@ -101,6 +103,13 @@ const authoredHexNodes = (layout: HexLayoutDeclaration) =>
     (node) => node.kind !== 'olympianSpell' && node.kind !== 'olympianCount',
   );
 
+/** Fresh File fixes its loadout, so a code carries none for it. */
+const fixedLoadout = (catalog: Catalog, routeKey: string) =>
+  routeInitialProfile(catalog, routeKey).kind === 'freshFile';
+
+const isSelene = (catalog: Catalog, aspectKey: string | null) =>
+  aspectKey !== null && catalog.aspects.byKey[aspectKey]?.startingTrait?.traitKey === SELENE_SPELL;
+
 function fingerprint(catalog: Catalog, lists: ShareLists): string {
   const dream = catalog.routes.byKey.Dream?.dreamItinerary;
   const parts = [
@@ -118,6 +127,11 @@ function fingerprint(catalog: Catalog, lists: ShareLists): string {
     dream === undefined
       ? []
       : [dream.biomeCount, ...dream.initialBiomeKeys, '/', ...dream.laterAdditionalBiomeKeys],
+    lists.routeKeys.filter((routeKey) => fixedLoadout(catalog, routeKey)),
+    catalog.aspects.values.filter((aspect) => isSelene(catalog, aspect.key)).map((a) => a.key),
+    [DRAFT_GOD_BOONS_RANGE.min, DRAFT_GOD_BOONS_RANGE.max],
+    [DRAFT_PER_GOD_CAP_RANGE.min, DRAFT_PER_GOD_CAP_RANGE.max],
+    lists.hex?.layouts.values.map((layout) => layout.key) ?? [],
     lists.hex === undefined
       ? []
       : lists.hex.layouts.values.flatMap((layout) =>
@@ -193,13 +207,6 @@ class BitReader {
     if (rest.length >= 5 || rest.some((bit) => bit !== 0)) throw new Malformed();
   }
 }
-
-/** Fresh File fixes its loadout, so a code carries none for it. */
-const fixedLoadout = (catalog: Catalog, routeKey: string) =>
-  routeInitialProfile(catalog, routeKey).kind === 'freshFile';
-
-const isSelene = (catalog: Catalog, aspectKey: string | null) =>
-  aspectKey !== null && catalog.aspects.byKey[aspectKey]?.startingTrait?.traitKey === SELENE_SPELL;
 
 function writeBiomeRecord<T>(
   writer: BitWriter,
@@ -344,7 +351,11 @@ function readHexTree(
       reader.index(hexNodeTalentDomain(hex, layout.key, node.key)),
     ]),
   );
-  return normalizeAuthoredHexTree(catalog, SELENE_SPELL, { layoutKey: layout.key, nodes });
+  try {
+    return normalizeAuthoredHexTree(catalog, SELENE_SPELL, { layoutKey: layout.key, nodes });
+  } catch {
+    throw new Malformed();
+  }
 }
 
 /**
@@ -373,7 +384,8 @@ export function decodeDraftShareCode(
   try {
     inputs = readInputs(new BitReader(bits), catalog, lists);
   } catch (error) {
-    if (error instanceof Error) return refuse('malformed');
+    if (error instanceof Malformed || error instanceof ProjectDocumentContractError)
+      return refuse('malformed');
     throw error;
   }
   if (
@@ -511,6 +523,15 @@ export function draftShareCommands(
   inputs: DraftShareInputs,
 ): readonly ProjectCommand[] {
   const route = createRouteAddress(project.route.routeKey);
+  if (
+    inputs.routeKey !== project.route.routeKey ||
+    inputs.itineraryBiomeKeys.join() !== project.route.itineraryBiomeKeys.join()
+  )
+    throw new ProjectCommandContractError(
+      'ReplaceDraftSpec',
+      route,
+      `share inputs are for route ${inputs.routeKey} ${inputs.itineraryBiomeKeys.join('')}`,
+    );
   const loadout = inputs.loadout;
   const commands: ProjectCommand[] = [
     { kind: 'ConfigureRoutePrefix', route, configuredBiomeCount: inputs.configuredBiomeCount },

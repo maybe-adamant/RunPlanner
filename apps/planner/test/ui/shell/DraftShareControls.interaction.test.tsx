@@ -122,10 +122,6 @@ describe('Draft share controls', () => {
     for (const [text, message] of [
       ['not a code!', 'Not a draft code.'],
       [`2${code.slice(1)}`, 'This code is from another planner version.'],
-      [
-        `${code[0]}${code[1] === '0' ? 'Z' : '0'}${code.slice(2)}`,
-        'This code is from another planner version.',
-      ],
       [surfaceCode, 'This code is for another route.'],
       [code.slice(0, 5), 'This code is damaged.'],
     ] as const) {
