@@ -1,6 +1,6 @@
 # Smarter Draft
 
-Status: locked 2026-10-20, stages 0–3 committed (to `2fae9c222`). Base commit: `b5b49e93e`.
+Status: locked 2026-10-20, stages 0–5 committed. Base commit: `b5b49e93e`.
 
 ## Objective
 
@@ -110,6 +110,26 @@ deterministic corpus. A heavy basket must stay within about 15 s.
    - Defaults are keyed by route and biome, since Fresh File shares
      Underworld's biome keys; they are measured once the stage settles.
 
+9. **Boon bag steering.**
+   - Every door shown draws from the RunProgress bag, taken or not. Once its
+     boons are gone, rooms draw its other entries and no boon appears until a
+     refill: a Miniboss asking for a boon refills at once, otherwise the bag
+     refills when it empties.
+   - A biome's 2–3 Minibosses share one depth window; each appears at most once,
+     shown or taken, and none appears after one is taken.
+   - At each room the walk reads boon entries left (B), the biome's unmet god
+     targets (T), rooms left (average biome length minus depth; Ephyra about 8,
+     Thessaly about 6) and the Miniboss window. No look-ahead.
+   - **Conserve** (B ≥ T, or no refill can come within the biome): a side door
+     gets a non-boon reward.
+   - **Burn** (B < T and a refill can come within the biome): side-door boons
+     and side-door Minibosses spend the bag, keeping one Miniboss unshown; at
+     B = 0 the walk takes a Miniboss as soon as the window allows.
+   - Near the end of its window a Miniboss breaks ties like a fountain when its
+     boon serves any goal.
+   - Fresh File: a door with an unmet god whose traits are still queued beats a
+     Shop, which can only stock met gods.
+
 ## Source facts
 
 - Field NPCs and their extra requirements (catalog), beyond the shared rules
@@ -199,7 +219,12 @@ deterministic corpus. A heavy basket must stay within about 15 s.
    - App: the Draft tab on Fresh File, locked Apollo, hidden tabs, refusal
      copy.
    - Corpus: Fresh File specs; measure capacity, then set its defaults.
-6. **Closure.**
+6. **Boon bag steering.**
+   - Engine: the Conserve and Burn modes, Miniboss placement and the
+     end-of-window lean, the Fresh File Shop rule.
+   - Tuned by trial against the corpus; each step reports its delta.
+   - Tests: `test:engine`; the corpus delta.
+7. **Closure.**
    - An independent review.
    - Promote durable rules to the draft design documentation.
    - Update `docs/testing/DRAFT_MODE_LIVE_ACCEPTANCE.md`.
