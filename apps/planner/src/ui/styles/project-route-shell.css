@@ -1993,3 +1993,100 @@
   color: #ded9d0;
   background: #24252d;
 }
+
+/* The seed and share actions read as one quiet line beside Reroll and Draft. */
+.draft-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-right: 0.25rem;
+  color: var(--muted);
+}
+
+.draft-meta .draft-seed {
+  margin-right: 0;
+}
+
+.draft-ghost-action {
+  padding: 0 0.15rem;
+  border: 0;
+  border-radius: 4px;
+  color: var(--muted);
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.draft-ghost-action:hover,
+.draft-ghost-action:focus-visible,
+.draft-ghost-action[aria-expanded='true'] {
+  color: #f2ede5;
+}
+
+.draft-ghost-action:active {
+  color: var(--selection-accent);
+}
+
+/* Labels stack in one cell, so swapping them never shifts the row. */
+.draft-share-copy {
+  display: inline-grid;
+}
+
+.draft-share-copy > span {
+  grid-area: 1 / 1;
+  text-align: left;
+}
+
+.draft-share-copy > span[aria-hidden='true'] {
+  visibility: hidden;
+}
+
+.contextual-picker-popover.draft-share-popover {
+  width: 22rem;
+  padding: 8px;
+}
+
+.draft-share-paste {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.4rem 0.5rem;
+}
+
+.draft-share-input {
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px 9px;
+  border: 1px solid #42434d;
+  border-radius: 8px;
+  color: #f2ede5;
+  background: #202128;
+  font: inherit;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.draft-share-input::placeholder {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.draft-share-input:hover,
+.draft-share-input:focus-visible {
+  border-color: #65636f;
+}
+
+.draft-share-input[aria-invalid='true'],
+.draft-share-input[aria-invalid='true']:focus-visible {
+  border-color: #c9785b;
+  outline-color: #c9785b;
+}
+
+/* A reserved line, so a refusal never resizes the popover. */
+.draft-share-refusal {
+  grid-column: 1 / -1;
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--attention);
+  font-size: 0.9em;
+}
