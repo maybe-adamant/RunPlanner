@@ -12,7 +12,7 @@ import {
   encodeExecutionPlan,
 } from '../../src/execution-plan';
 import selectedFixture from './fixtures/surface-generated-precombat.execution.json';
-import noneFixture from './fixtures/surface-nop.execution.json';
+import noneFixture from './fixtures/surface-nopq.execution.json';
 import underworldFixture from './fixtures/f-opening.execution.json';
 
 describe('Aetos biome execution directive', () => {

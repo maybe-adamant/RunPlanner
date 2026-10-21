@@ -78,7 +78,7 @@ import fgIxionChaosFixture from './fixtures/fg-ixion-chaos.execution.json';
 import underworldFGHFixture from './fixtures/underworld-fgh.execution.json';
 import underworldFGHIFixture from './fixtures/underworld-fghi.execution.json';
 import surfaceNFixture from './fixtures/surface-n.execution.json';
-import surfaceNOFixture from './fixtures/surface-no.execution.json';
+import surfaceNOPQFixture from './fixtures/surface-nopq.execution.json';
 import freshFileFGHIFixture from './fixtures/fresh-file-fghi.execution.json';
 import surfaceQShopCorrelationFixture from './fixtures/surface-q-shop-correlation.execution.json';
 import { surfaceScheduledLifecycleWithQSupplyChainSlicesProject } from '@run-planner/test-fixtures/scheduled-lifecycle';
@@ -2427,7 +2427,7 @@ describe('execution-plan compiler and codec', () => {
       };
     };
     const mutate = (change: (occurrence: MutableShipOccurrence) => void) => {
-      const wire = JSON.parse(JSON.stringify(surfaceNOFixture)) as Record<string, unknown> & {
+      const wire = JSON.parse(JSON.stringify(surfaceNOPQFixture)) as Record<string, unknown> & {
         occurrences: MutableShipOccurrence[];
       };
       const occurrence = wire.occurrences.find(

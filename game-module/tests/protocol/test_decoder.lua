@@ -1540,14 +1540,14 @@ function TestProtocol.testSurfaceNFixtureClosesHubAndNativeRestoreReferences()
     lu.assertNil(protocol.decode(plan))
 end
 
-function TestProtocol.testSurfaceNOFixtureCarriesCompleteShipWheelProducts()
-    local decoded, errorMessage = protocol.decode(decode("surface-no"))
+function TestProtocol.testSurfaceFixtureCarriesCompleteShipWheelProducts()
+    local decoded, errorMessage = protocol.decode(decode("surface-nopq"))
     lu.assertNotNil(decoded, errorMessage)
-    lu.assertEquals(decoded.extent.biomeKeys, { "N", "O" })
     local wheelCount, choiceCount = 0, 0
     for _, occurrence in ipairs(decoded.occurrences) do
         for _, wheel in ipairs(occurrence.overview.rewardWheels or {}) do
             wheelCount = wheelCount + 1
+            lu.assertEquals(occurrence.biomeKey, "O")
             lu.assertEquals(wheel.offerCount, #wheel.offers)
         end
         for _, transaction in ipairs(occurrence.timeline.transactions) do
@@ -1558,14 +1558,14 @@ function TestProtocol.testSurfaceNOFixtureCarriesCompleteShipWheelProducts()
     lu.assertEquals(choiceCount, wheelCount)
 end
 
-function TestProtocol.testSurfaceNOPQFixturesCarryOnlyTheirPublishedPAndQNavigationFacts()
-    local pPlan = decode("surface-nop")
-    local pDecoded, pError = protocol.decode(pPlan)
-    lu.assertNotNil(pDecoded, pError)
-    lu.assertEquals(pDecoded.extent.biomeKeys, { "N", "O", "P" })
+function TestProtocol.testSurfaceNOPQFixtureCarriesItsPublishedPAndQNavigationFacts()
+    local qPlan = decode("surface-nopq")
+    local qDecoded, qError = protocol.decode(qPlan)
+    lu.assertNotNil(qDecoded, qError)
+    lu.assertEquals(qDecoded.extent.biomeKeys, { "N", "O", "P", "Q" })
 
     local pEncounter, pBoss
-    for _, occurrence in ipairs(pDecoded.occurrences) do
+    for _, occurrence in ipairs(qDecoded.occurrences) do
         if occurrence.biomeKey == "P" and occurrence.kind == "PEncounter" then
             pEncounter = occurrence
         elseif occurrence.gameName == "P_PreBoss01" and occurrence.doors.kind == "fixed" then
@@ -1579,10 +1579,6 @@ function TestProtocol.testSurfaceNOPQFixturesCarryOnlyTheirPublishedPAndQNavigat
     })
     lu.assertEquals(pBoss.doors.target.gameName, "P_Boss01")
 
-    local qPlan = decode("surface-nopq")
-    local qDecoded, qError = protocol.decode(qPlan)
-    lu.assertNotNil(qDecoded, qError)
-    lu.assertEquals(qDecoded.extent.biomeKeys, { "N", "O", "P", "Q" })
     local widths = {}
     local qShop, qBoss
     for _, occurrence in ipairs(qDecoded.occurrences) do

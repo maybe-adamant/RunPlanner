@@ -46,8 +46,6 @@ import {
 } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   loadSurfaceNProject,
-  loadSurfaceNOProject,
-  loadSurfaceNOPProject,
   surfaceGeneratedPreCombatProject,
   surfaceNOpeningCompositionProject,
   surfaceShrineDeliveriesProject,
@@ -81,8 +79,6 @@ import surfaceGeneratedPrecombatFixture from '../fixtures/surface-generated-prec
 import surfaceNPhialIntermediateFountainFixture from '../fixtures/surface-n-phial-intermediate-fountain.execution.json';
 import surfaceNFixture from '../fixtures/surface-n.execution.json';
 import surfaceNOpeningCompositionFixture from '../fixtures/surface-n-opening-composition.execution.json';
-import surfaceNOFixture from '../fixtures/surface-no.execution.json';
-import surfaceNOPFixture from '../fixtures/surface-nop.execution.json';
 import surfaceNOPQFixture from '../fixtures/surface-nopq.execution.json';
 import surfaceQShopCorrelationFixture from '../fixtures/surface-q-shop-correlation.execution.json';
 import surfaceSeleneHexPathFixture from '../fixtures/surface-selene-hex-path.execution.json';
@@ -224,8 +220,6 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     project: surfaceNOpeningCompositionProject,
     wire: surfaceNOpeningCompositionFixture,
   },
-  { name: 'surface-no', project: loadSurfaceNOProject, wire: surfaceNOFixture },
-  { name: 'surface-nop', project: loadSurfaceNOPProject, wire: surfaceNOPFixture },
   { name: 'surface-nopq', project: typhonCustomizationProject, wire: surfaceNOPQFixture },
   {
     name: 'surface-q-shop-correlation',

@@ -425,7 +425,7 @@ describe('published trait screen dependencies', () => {
         .filter((dependency) => automatic.has(dependency.afterOwner)),
     ).toEqual([]);
     expect(
-      occurrenceNamed(fixture('surface-no').product, 'O_Devotion01').timeline.dependencies,
+      occurrenceNamed(fixture('surface-nopq').product, 'O_Devotion01').timeline.dependencies,
     ).toEqual([]);
   });
 
