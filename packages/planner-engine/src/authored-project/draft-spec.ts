@@ -22,6 +22,76 @@ export const EMPTY_DRAFT_SPEC: AuthoredDraftSpec = Object.freeze({
 /** The largest seed; the generator reads it as an unsigned 32-bit value. */
 export const MAX_DRAFT_SEED = 0xffff_ffff;
 
+/** The range of one biome's planned god boons. */
+export const DRAFT_GOD_BOONS_RANGE = Object.freeze({ min: 0, max: 10 });
+/** The range of the per-god boon cap; ten is past any god's useful core and other boons. */
+export const DRAFT_PER_GOD_CAP_RANGE = Object.freeze({ min: 1, max: 10 });
+export const DEFAULT_DRAFT_PER_GOD_CAP = 5;
+
+/**
+ * Each biome's default planned god boons by biome key, near the drafter's measured trait
+ * capacity there (25th percentile, start boon, Devotion, cages and Shops included).
+ */
+const DEFAULT_DRAFT_GOD_BOONS: Readonly<Record<string, number>> = Object.freeze({
+  F: 6,
+  G: 2,
+  H: 2,
+  I: 4,
+  N: 6,
+  O: 2,
+  P: 3,
+  Q: 3,
+});
+
+export function defaultDraftGodBoons(biomeKey: string): number {
+  return DEFAULT_DRAFT_GOD_BOONS[biomeKey] ?? 3;
+}
+
+const clamp = (value: number, range: { readonly min: number; readonly max: number }) =>
+  Math.min(Math.max(Math.round(value), range.min), range.max);
+
+/** Sets one biome's planned god boons, clamped; its biome's default is not stored. */
+export function withDraftGodBoons(
+  draft: AuthoredDraftSpec,
+  biomeKey: string,
+  value: number,
+): AuthoredDraftSpec {
+  const { [biomeKey]: _previous, ...others } = draft.godBoonsByBiome ?? {};
+  void _previous;
+  const clamped = clamp(value, DRAFT_GOD_BOONS_RANGE);
+  const godBoonsByBiome =
+    clamped === defaultDraftGodBoons(biomeKey) ? others : { ...others, [biomeKey]: clamped };
+  const { godBoonsByBiome: _old, ...rest } = draft;
+  void _old;
+  return Object.keys(godBoonsByBiome).length === 0 ? rest : { ...rest, godBoonsByBiome };
+}
+
+/**
+ * Sets the per-god cap, clamped; the current default (5, or 4 under Denial) is not stored.
+ * A stored value is absolute, so it holds when Denial is toggled later.
+ */
+export function withDraftPerGodCap(
+  draft: AuthoredDraftSpec,
+  value: number,
+  defaultValue: number = DEFAULT_DRAFT_PER_GOD_CAP,
+): AuthoredDraftSpec {
+  const { perGodCap: _old, ...rest } = draft;
+  void _old;
+  const clamped = clamp(value, DRAFT_PER_GOD_CAP_RANGE);
+  return clamped === defaultValue ? rest : { ...rest, perGodCap: clamped };
+}
+
+function expectInRange(
+  value: unknown,
+  path: string,
+  range: { readonly min: number; readonly max: number },
+): number {
+  const number = expectNonNegativeInteger(value, path);
+  if (number < range.min || number > range.max)
+    fail(path, `must be from ${range.min} to ${range.max}`);
+  return number;
+}
+
 function distinctKeys(
   value: unknown,
   path: string,
@@ -69,9 +139,16 @@ export function decodeDraftSpec(value: unknown, path: string, catalog: Catalog):
       'basketTraitKeys',
       'rackKeepsakeByBiome',
       'seed',
+      'preferMidshops',
+      'godBoonsByBiome',
+      'perGodCap',
+      'pursueTartarusGoal',
     ],
     path,
   );
+  for (const flag of ['preferMidshops', 'pursueTartarusGoal'])
+    if (Object.hasOwn(raw, flag) && raw[flag] !== true)
+      fail(`${path}.${flag}`, 'must be true when present');
   // The same catalog facts the draft world reads its gods and NPCs from.
   const godKeys = new Set(
     catalog.traitGivers.values.filter((g) => g.providerKind === 'olympian').map((g) => g.key),
@@ -129,6 +206,21 @@ export function decodeDraftSpec(value: unknown, path: string, catalog: Catalog):
       },
     ),
     seed,
+    ...(raw.preferMidshops === true ? { preferMidshops: true as const } : {}),
+    ...(raw.pursueTartarusGoal === true ? { pursueTartarusGoal: true as const } : {}),
+    ...(raw.godBoonsByBiome === undefined
+      ? {}
+      : {
+          godBoonsByBiome: biomeRecord(
+            raw.godBoonsByBiome,
+            `${path}.godBoonsByBiome`,
+            catalog,
+            (e, p) => expectInRange(e, p, DRAFT_GOD_BOONS_RANGE),
+          ),
+        }),
+    ...(raw.perGodCap === undefined
+      ? {}
+      : { perGodCap: expectInRange(raw.perGodCap, `${path}.perGodCap`, DRAFT_PER_GOD_CAP_RANGE) }),
   });
 }
 
@@ -153,6 +245,10 @@ export function sameDraftSpec(left: AuthoredDraftSpec, right: AuthoredDraftSpec)
   const same = (a: string, b: string) => a === b;
   return (
     left.seed === right.seed &&
+    left.preferMidshops === right.preferMidshops &&
+    left.pursueTartarusGoal === right.pursueTartarusGoal &&
+    left.perGodCap === right.perGodCap &&
+    sameRecord(left.godBoonsByBiome ?? {}, right.godBoonsByBiome ?? {}, (a, b) => a === b) &&
     sameKeys(left.godKeys, right.godKeys) &&
     sameKeys(left.basketTraitKeys, right.basketTraitKeys) &&
     sameRecord(left.storyNpcByBiome, right.storyNpcByBiome, same) &&

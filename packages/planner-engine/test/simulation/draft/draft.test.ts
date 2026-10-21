@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { createDefaultRouteLoadout } from '../../../src/authored-project/loadout';
 import { createProjectDocument } from '../../../src/authored-project/defaults';
+import { defaultDraftGodBoons } from '../../../src/authored-project/draft-spec';
 import {
   assessDraftBasket,
+  draftGodBoonBudget,
   draftKeepsakeOptions,
   draftSourceQueues,
   draftRefusals,
@@ -262,7 +264,7 @@ describe('draft basket legality', () => {
     );
     const { caps } = assessDraftBasket(catalog, denial, { ...spec(zeus), loadout: denial });
     expect(caps.poolGods[0]).toEqual({ giverKey: 'Zeus', count: 4, cap: 4 });
-    expect(caps.poolGodTotal).toEqual({ count: 4, cap: 12 });
+    expect(caps.poolGodTotal).toEqual({ count: 4, cap: 14 });
   });
 
   it('counts a Legendary toward its god, and a held Duo toward neither', () => {
@@ -293,36 +295,39 @@ describe('draft basket legality', () => {
     expect(duo.refusals.some((refusal) => refusal.kind === 'cap')).toBe(false);
   });
 
-  it('caps the basket at twelve god traits, eight under Forfeit, leaving Hermes outside', () => {
+  it('caps the basket at fourteen god traits, ten under Forfeit, leaving Hermes outside', () => {
     const godKeys = ['Zeus', 'Apollo', 'Hestia', 'Aphrodite'];
     const own = (giverKey: string) =>
       catalog.traitGivers.byKey[giverKey]!.traitKeys.filter(
         (key) => catalog.traitGivers.values.filter((g) => g.traitKeys.includes(key)).length === 1,
       );
     const next = own('Aphrodite')[0]!;
-    const twelve = godKeys.slice(0, 3).flatMap((key) => own(key).slice(0, 4));
+    const fourteen = [
+      ...godKeys.slice(0, 3).flatMap((key) => own(key).slice(0, 4)),
+      ...own('Aphrodite').slice(1, 3),
+    ];
     const capped = (cap: number) => ({ kind: 'totalCap', cap });
-    expect(assessment(underworld, spec(twelve, { godKeys }), next).refusals).toContainEqual(
-      capped(12),
+    expect(assessment(underworld, spec(fourteen, { godKeys }), next).refusals).toContainEqual(
+      capped(14),
     );
     expect(
-      assessment(underworld, spec(twelve.slice(1), { godKeys }), next).refusals,
-    ).not.toContainEqual(capped(12));
+      assessment(underworld, spec(fourteen.slice(1), { godKeys }), next).refusals,
+    ).not.toContainEqual(capped(14));
     expect(
-      assessment(underworld, spec(twelve, { godKeys }), 'HermesWeaponBoon').refusals,
-    ).not.toContainEqual(capped(12));
+      assessment(underworld, spec(fourteen, { godKeys }), 'HermesWeaponBoon').refusals,
+    ).not.toContainEqual(capped(14));
     const forfeit = {
       ...underworld,
       fearRanks: { ...underworld.fearRanks, BoonSkipShrineUpgrade: 1 },
     };
-    const eight = twelve.slice(0, 8);
-    expect(assessment(forfeit, spec(eight, { godKeys }), next).refusals).toContainEqual(capped(8));
-    expect(
-      assessment(forfeit, spec(eight.slice(1), { godKeys }), next).refusals,
-    ).not.toContainEqual(capped(8));
+    const ten = fourteen.slice(0, 10);
+    expect(assessment(forfeit, spec(ten, { godKeys }), next).refusals).toContainEqual(capped(10));
+    expect(assessment(forfeit, spec(ten.slice(1), { godKeys }), next).refusals).not.toContainEqual(
+      capped(10),
+    );
   });
 
-  it('scales the god cap by the planned share and allows one Hermes or Hammer per planned biome', () => {
+  it("sums the planned biomes' god boons, less one each under Forfeit, with one Hermes or Hammer per planned biome", () => {
     const planned = (count: number, frame = underworld) => ({
       ...frame,
       biomes: createProjectDocument(catalog, {
@@ -348,14 +353,15 @@ describe('draft basket legality', () => {
       };
     };
     expect([1, 2, 3, 4].map(caps)).toEqual([
-      { gods: 3, forfeitGods: 2, supply: 1, selene: 1, perGod: 5 },
-      { gods: 6, forfeitGods: 4, supply: 2, selene: 1, perGod: 5 },
-      { gods: 9, forfeitGods: 6, supply: 3, selene: 1, perGod: 5 },
-      { gods: 12, forfeitGods: 8, supply: 4, selene: 1, perGod: 5 },
+      // Underworld's defaults: F 6, G 2, H 2, I 4.
+      { gods: 6, forfeitGods: 5, supply: 1, selene: 1, perGod: 5 },
+      { gods: 8, forfeitGods: 6, supply: 2, selene: 1, perGod: 5 },
+      { gods: 10, forfeitGods: 7, supply: 3, selene: 1, perGod: 5 },
+      { gods: 14, forfeitGods: 10, supply: 4, selene: 1, perGod: 5 },
     ]);
     // An unconfigured route plans the whole itinerary.
     expect(capsOf(underworld)).toMatchObject({
-      poolGodTotal: { cap: 12 },
+      poolGodTotal: { cap: 14 },
       supplyTotal: { cap: 4 },
     });
     // One planned biome takes one Hermes or Hammer trait in all.
@@ -487,6 +493,81 @@ describe('draft basket order', () => {
   });
 });
 
+describe('draft god boon budget', () => {
+  const planned = (count: number, routeKey = 'Underworld', itinerary?: readonly string[]) => ({
+    ...underworld,
+    routeKey,
+    ...(itinerary === undefined ? {} : { itineraryBiomeKeys: itinerary }),
+    biomes: createProjectDocument(catalog, {
+      projectId: 'b',
+      routeKey,
+      ...(itinerary === undefined ? {} : { itineraryBiomeKeys: itinerary }),
+      configuredBiomeCount: count,
+    }).route.biomes,
+  });
+
+  it("plans each biome's default by biome key, with overrides by biome", () => {
+    const budget = draftGodBoonBudget(catalog, planned(4), {
+      loadout: underworld,
+      godBoonsByBiome: { G: 6 },
+    });
+    expect(budget.biomes.map(({ biomeKey, value }) => [biomeKey, value])).toEqual([
+      ['F', defaultDraftGodBoons('F')],
+      ['G', 6],
+      ['H', defaultDraftGodBoons('H')],
+      ['I', defaultDraftGodBoons('I')],
+    ]);
+    expect(budget.total).toBe(
+      6 + ['F', 'H', 'I'].reduce((sum, key) => sum + defaultDraftGodBoons(key), 0),
+    );
+    // A Dream route reads each biome's default by key, whatever its order.
+    expect(
+      draftGodBoonBudget(catalog, planned(2, 'Dream', ['H', 'F', 'N', 'I']), {
+        loadout: underworld,
+      }).biomes.map(({ biomeKey, value }) => [biomeKey, value]),
+    ).toEqual([
+      ['H', defaultDraftGodBoons('H')],
+      ['F', defaultDraftGodBoons('F')],
+    ]);
+  });
+
+  it('takes one boon per biome under Forfeit, floored at zero, and defaults to four per god under Denial', () => {
+    const vows = { BoonSkipShrineUpgrade: 1, BanUnpickedBoonsShrineUpgrade: 1 };
+    const loadout = { ...underworld, fearRanks: { ...underworld.fearRanks, ...vows } };
+    const budget = draftGodBoonBudget(catalog, planned(2), {
+      loadout,
+      godBoonsByBiome: { G: 0 },
+    });
+    expect(budget).toMatchObject({
+      total: defaultDraftGodBoons('F'),
+      effectiveTotal: defaultDraftGodBoons('F') - 1,
+      forfeit: true,
+      perGod: 4,
+      perGodDefault: 4,
+      reachable: 16,
+    });
+    expect(budget.biomes.map((biome) => biome.effective)).toEqual([
+      defaultDraftGodBoons('F') - 1,
+      0,
+    ]);
+    // A chosen value holds under Denial; nothing is subtracted from it.
+    expect(draftGodBoonBudget(catalog, planned(2), { loadout, perGodCap: 7 })).toMatchObject({
+      perGod: 7,
+      perGodDefault: 4,
+      reachable: 28,
+    });
+  });
+
+  it('caps each god at the per-god value in the refusals', () => {
+    const draft = { ...spec(['ZeusWeaponBoon', 'ZeusCastBoon']), perGodCap: 2 };
+    expect(assessment(underworld, draft, 'ZeusSprintBoon').refusals).toContainEqual({
+      kind: 'cap',
+      giverKey: 'Zeus',
+      cap: 2,
+    });
+  });
+});
+
 describe('draft basket caps', () => {
   const world = {
     godKeys: ['Zeus', 'Apollo', 'Hestia', 'Aphrodite'],
@@ -505,7 +586,7 @@ describe('draft basket caps', () => {
 
   it('counts the basket against every cap of the world', () => {
     const { caps } = assessDraftBasket(catalog, underworld, spec(basket, world));
-    expect(caps.poolGodTotal).toEqual({ count: 4, cap: 12 });
+    expect(caps.poolGodTotal).toEqual({ count: 4, cap: 14 });
     expect(caps.poolGods).toEqual([
       { giverKey: 'Zeus', count: 2, cap: 5 },
       { giverKey: 'Apollo', count: 0, cap: 5 },
@@ -528,7 +609,7 @@ describe('draft basket caps', () => {
     expect(caps.npcTotal).toEqual({ count: 1, cap: 3 });
   });
 
-  it('lowers the pool-god total to eight under Forfeit', () => {
+  it('lowers the pool-god total to ten under Forfeit', () => {
     const forfeit = {
       ...underworld,
       fearRanks: { ...underworld.fearRanks, BoonSkipShrineUpgrade: 1 },
@@ -537,7 +618,7 @@ describe('draft basket caps', () => {
       ...spec(basket, world),
       loadout: forfeit,
     });
-    expect(caps.poolGodTotal).toEqual({ count: 4, cap: 8 });
+    expect(caps.poolGodTotal).toEqual({ count: 4, cap: 10 });
   });
 });
 

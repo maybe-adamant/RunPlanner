@@ -17,11 +17,6 @@ export function draftPlannedBiomeKeys(route: DraftRoute): readonly string[] {
   return count === 0 ? route.itineraryBiomeKeys : route.itineraryBiomeKeys.slice(0, count);
 }
 
-/** The planned share of the route, which scales the planner's boon and Hermes-plus-Hammer caps. */
-export function draftPlannedShare(route: DraftRoute): number {
-  return draftPlannedBiomeKeys(route).length / route.itineraryBiomeKeys.length;
-}
-
 /** The loadout a draft sets; the starting reward and keepsake equip results are generated. */
 export interface DraftLoadout {
   readonly weaponKey: string;
@@ -49,6 +44,14 @@ export interface DraftSpec {
   readonly basketTraitKeys: readonly string[];
   /** One entry per Postboss rack between biomes, in order; null keeps the held keepsake. */
   readonly rackKeepsakeKeys: readonly (string | null)[];
+  /** The player's preference for mid-biome Shops, which have no combat. */
+  readonly preferMidshops?: boolean;
+  /** Planned god boons by biome; a biome left out keeps its biome's default. */
+  readonly godBoonsByBiome?: Readonly<Record<string, number>>;
+  /** The most god boons from one god before Denial's reduction; absent is the default. */
+  readonly perGodCap?: number;
+  /** In Tartarus, always take the Clockwork Goal door, below a selected story room. */
+  readonly pursueTartarusGoal?: boolean;
 }
 
 export interface DraftKeepsakeOptions {

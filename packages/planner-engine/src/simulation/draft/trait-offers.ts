@@ -53,7 +53,7 @@ export function draftDuoFires(declined: number, roll: number): boolean {
 }
 
 /** Outside traits tried in a row when no offered row may be taken. */
-const SUBSTITUTE_DRAWS = 6;
+const SUBSTITUTE_DRAWS = 20;
 
 /** Authors trait offers toward the basket, with every selected-outcome child complete. */
 export class DraftTraitOffers {

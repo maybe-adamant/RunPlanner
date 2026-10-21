@@ -283,14 +283,19 @@ assembly publishes the complete authored record, omitting optional modifiers
 that are off, only when some value is non-native, separately from starting
 equipment.
 
-`ReplaceRoute` replaces the loadout (keeping run modifiers) and every itinerary
-biome's plan and clears resource placements, which name hosts in the replaced
-biomes; the route, itinerary, Practice start and draft spec stay.
+`ReplaceRoute` replaces the loadout (keeping run modifiers) and the planned
+biome prefix (one to every itinerary biome, in itinerary order) and clears
+resource placements, which name hosts in the replaced biomes; the route,
+itinerary, Practice start and draft spec stay.
 
 The route also owns one always-present `draft` spec, the persisted Draft
 settings: `godKeys`, `storyNpcByBiome`, `fieldNpcsByBiome`, `basketTraitKeys`,
-`rackKeepsakeByBiome` (a missing biome keeps the held keepsake) and `seed`. A new
-route starts empty with seed 1. The codec is exact: gods are Olympian givers,
+`rackKeepsakeByBiome` (a missing biome keeps the held keepsake) and `seed`, plus
+optional keys saved only when they differ from their defaults: `godBoonsByBiome`
+(each biome's planned god boons, 0–10, a missing biome keeping its biome's
+default), `perGodCap` (1–10, default 5) and the `preferMidshops` and
+`pursueTartarusGoal` preferences (`true` when on). A new route starts empty with
+seed 1. The codec is exact: gods are Olympian givers,
 story and field NPCs are the catalog's story givers and field-NPC encounter
 presentations, traits and keepsakes are catalog keys, and records save in
 catalog biome order; entries for biomes off the itinerary are kept. The loadout

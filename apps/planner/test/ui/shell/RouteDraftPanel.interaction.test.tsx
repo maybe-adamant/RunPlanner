@@ -273,6 +273,90 @@ describe('Draft panel', () => {
     expect(screen.queryByText(`${strike} needs ${rush} first.`)).toBeNull();
   });
 
+  it('plans up to a biome from the Draft tab, keeping only its NPC rows and racks', () => {
+    const { application, catalog } = open();
+    const draft = () => application.store.getState().projectWorkspace.history!.present.route;
+    const label = (key: string) => catalog.biomes.byKey[key]!.label;
+    fireEvent.click(
+      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
+        name: label('G'),
+      }),
+    );
+    expect(draft().biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G']);
+    const npcRows = within(screen.getByRole('table', { name: 'NPCs' }))
+      .getAllByRole('rowheader')
+      .map((row) => row.textContent);
+    expect(npcRows).toEqual([label('F'), label('G')]);
+    expect(screen.queryByRole('button', { name: `After ${label('G')}` })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: `After ${label('H')}` })).toBeNull();
+    const summary = screen.getByRole('list', { name: 'Basket caps' });
+    expect(
+      within(summary)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toContain('Hermes + Hammer0/2');
+  });
+
+  it('sets per-biome god boons, the per-god cap and room preferences on the Advanced tab', () => {
+    const { application } = open();
+    const draft = () => application.store.getState().projectWorkspace.history!.present.route.draft;
+    fireEvent.click(screen.getByRole('tab', { name: 'Advanced' }));
+    expect(screen.getByRole('tab', { name: 'Advanced' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const oceanus = screen.getByRole('slider', { name: /God boons in Oceanus/ });
+    expect((oceanus as HTMLInputElement).value).toBe('2');
+    // Fixed tags keep their positions; only their activity changes.
+    const tags = within(screen.getByRole('list', { name: 'God boon rules' })).getAllByRole(
+      'listitem',
+    );
+    expect(tags.map((tag) => tag.textContent)).toEqual([
+      'Above default → more misses',
+      'Forfeit −1/biome',
+      'Reachable 20',
+    ]);
+    expect(tags.map((tag) => tag.hasAttribute('data-active'))).toEqual([true, false, false]);
+    fireEvent.change(oceanus, { target: { value: '4' } });
+    expect(draft().godBoonsByBiome).toEqual({ G: 4 });
+    fireEvent.change(oceanus, { target: { value: '2' } });
+    expect(draft().godBoonsByBiome).toBeUndefined();
+
+    expect(screen.getByText('Recommended: 5 without Denial · 4 with Denial')).toBeTruthy();
+    const perGod = screen.getByRole('slider', { name: 'Most boons from one god' });
+    fireEvent.change(perGod, { target: { value: '2' } });
+    expect(draft().perGodCap).toBe(2);
+    expect(screen.getByText('Reachable 8').hasAttribute('data-active')).toBe(true);
+    // Under Denial the default drops to four, so a stored five is kept.
+    act(() => {
+      application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceFearVowRank',
+          route: { kind: 'route', routeKey: 'Underworld' },
+          vowKey: 'BanUnpickedBoonsShrineUpgrade',
+          rank: 1,
+        }),
+      );
+    });
+    fireEvent.change(perGod, { target: { value: '5' } });
+    expect(draft().perGodCap).toBe(5);
+    fireEvent.change(perGod, { target: { value: '4' } });
+    expect(draft()).not.toHaveProperty('perGodCap');
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Prefer midshops' }));
+    expect(draft().preferMidshops).toBe(true);
+    expect(screen.getByText('Drafts take longer.')).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'Pursue the Tartarus goal aggressively' }),
+    );
+    expect(draft().pursueTartarusGoal).toBe(true);
+    // Tartarus's default 4 is above what it yields with the goal pursued.
+    expect(screen.getByText('Default: 4 · expected: 3')).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'Pursue the Tartarus goal aggressively' }),
+    );
+    expect(draft()).not.toHaveProperty('pursueTartarusGoal');
+  });
+
   it('blocks drafting from a keepsake that brings in a god', () => {
     const { application, catalog, runs } = open();
     const keepsake = catalog.keepsakes.values.find((candidate) =>

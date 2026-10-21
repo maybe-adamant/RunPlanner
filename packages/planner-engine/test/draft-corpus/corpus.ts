@@ -45,9 +45,11 @@ interface EntryRecipe {
   readonly forfeit?: boolean;
   /** Keepsake taken at the first rack. */
   readonly rackKeepsakeKey?: string;
+  readonly preferMidshops?: boolean;
+  readonly pursueTartarusGoal?: boolean;
 }
 
-const SEEDS = [1, 2, 3, 4] as const;
+const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 const LIGHT = 3;
 const MEDIUM = 8;
 /** More than any god cap, so a heavy basket fills to the planned cap. */
@@ -59,7 +61,7 @@ const SURFACE_GODS = ['Zeus', 'Hera', 'Demeter', 'Ares'];
 const DREAM_GODS = ['Zeus', 'Apollo', 'Poseidon', 'Hestia'];
 const DREAM_ITINERARY = ['H', 'F', 'N', 'I'];
 
-const recipes: readonly EntryRecipe[] = [
+const baseRecipes: readonly EntryRecipe[] = [
   {
     name: 'U1 light Artemis',
     routeKey: 'Underworld',
@@ -294,6 +296,25 @@ const recipes: readonly EntryRecipe[] = [
   },
 ];
 
+/** The same specs with the player's midshop preference on. */
+const MIDSHOP_VARIANTS = ['U3', 'S2', 'D3', 'U6'];
+/** Full-route specs through Tartarus, with the Clockwork Goal pursued. */
+const TARTARUS_VARIANTS = ['U1', 'U3', 'U4', 'U8', 'D1', 'D3', 'D4'];
+
+const recipes: readonly EntryRecipe[] = [
+  ...baseRecipes,
+  ...baseRecipes
+    .filter((recipe) => MIDSHOP_VARIANTS.includes(recipe.name.split(' ')[0]!))
+    .map((recipe) => ({ ...recipe, name: `${recipe.name} midshops`, preferMidshops: true })),
+  ...baseRecipes
+    .filter((recipe) => TARTARUS_VARIANTS.includes(recipe.name.split(' ')[0]!))
+    .map((recipe) => ({ ...recipe, name: `${recipe.name} tartarus`, pursueTartarusGoal: true })),
+];
+
+function baseName(recipe: EntryRecipe): string {
+  return recipe.name.replace(/ (midshops|tartarus)$/, '');
+}
+
 function nameSeed(name: string): number {
   let hash = 2_166_136_261;
   for (const char of name) hash = Math.imul(hash ^ char.charCodeAt(0), 16_777_619) >>> 0;
@@ -313,7 +334,8 @@ function buildBasket(
   loadout: DraftLoadout,
   world: DraftWorld,
 ): string[] {
-  const rng = createDraftRng(nameSeed(recipe.name));
+  // A midshop variant builds its base spec's basket.
+  const rng = createDraftRng(nameSeed(baseName(recipe)));
   const basket: string[] = [];
   const spec = (): DraftSpec => ({
     loadout,
@@ -364,7 +386,7 @@ function buildBasket(
 
 function buildEntry(recipe: EntryRecipe): DraftCorpusEntry {
   const base = createProjectDocument(catalog, {
-    projectId: `corpus-${nameSeed(recipe.name)}`,
+    projectId: `corpus-${nameSeed(baseName(recipe))}`,
     routeKey: recipe.routeKey,
     ...(recipe.itineraryBiomeKeys === undefined
       ? {}
@@ -398,6 +420,8 @@ function buildEntry(recipe: EntryRecipe): DraftCorpusEntry {
     world,
     basketTraitKeys: buildBasket(recipe, base, loadout, world),
     rackKeepsakeKeys,
+    ...(recipe.preferMidshops === true ? { preferMidshops: true } : {}),
+    ...(recipe.pursueTartarusGoal === true ? { pursueTartarusGoal: true } : {}),
   };
   const refusals = draftRefusals(catalog, base, spec);
   if (refusals.length > 0)

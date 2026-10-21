@@ -11,7 +11,7 @@ import type { RunStartPoint } from './practice-start';
 
 export const PROJECT_DOCUMENT_SCHEMA_VERSION = 97 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
-export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 2;
+export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 3;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -619,6 +619,14 @@ export interface AuthoredDraftSpec {
   /** Rack keepsake by the biome its rack follows; a missing entry keeps the held keepsake. */
   readonly rackKeepsakeByBiome: Readonly<Record<string, string>>;
   readonly seed: number;
+  /** Favour mid-biome Shops, which have no combat; absent is off, so it is saved only when on. */
+  readonly preferMidshops?: true;
+  /** God boons planned per biome, by biome; a biome left out keeps its biome's default. */
+  readonly godBoonsByBiome?: Readonly<Record<string, number>>;
+  /** The most god boons from one god; absent is the default. */
+  readonly perGodCap?: number;
+  /** In Tartarus, always take the Clockwork Goal door; absent is off, so it is saved only when on. */
+  readonly pursueTartarusGoal?: true;
 }
 
 export interface ProjectDocument {

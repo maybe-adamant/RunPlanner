@@ -10,6 +10,7 @@ import {
 const nothing: DraftHeldTraits = {
   traitKeys: new Set(),
   elementCounts: { Aether: 0, Earth: 0, Air: 0, Fire: 0, Water: 0 },
+  godBoonRarityCounts: {},
 };
 const anyOf = (...keys: string[]): DraftPrerequisiteNeed => [
   { weights: new Map(keys.map((key) => [key, 1])), needed: 1 },
@@ -59,5 +60,16 @@ describe('draft prerequisite order', () => {
     });
     expect(prerequisites.ready('ElementalDamageFloorBoon', air(2))).toBe(false);
     expect(prerequisites.ready('ElementalDamageFloorBoon', air(3))).toBe(true);
+    expect(prerequisites.runStateWaiting('ElementalDamageFloorBoon', air(2))).toBe(true);
+  });
+
+  it('waits on run state for Uncommon Grace while any Common god boon is held', () => {
+    const prerequisites = createDraftPrerequisites(catalog, ['CommonGlobalDamageBoon'], nothing);
+    const commons = (count: number) => ({ ...nothing, godBoonRarityCounts: { Common: count } });
+    expect(prerequisites.ready('CommonGlobalDamageBoon', commons(0))).toBe(true);
+    expect(prerequisites.runStateWaiting('CommonGlobalDamageBoon', commons(1))).toBe(true);
+    // A held-trait need is not run state: Double Strike waits on a Zeus core boon.
+    const zeus = createDraftPrerequisites(catalog, ['ZeusCastBoon', 'DoubleBoltBoon'], nothing);
+    expect(zeus.runStateWaiting('DoubleBoltBoon', nothing)).toBe(false);
   });
 });

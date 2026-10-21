@@ -2,7 +2,7 @@
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "schemaVersion": 97,
-  "schemaRevision": 2,
+  "schemaRevision": 3,
   "projectId": "surface-2",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -5608,5 +5608,5 @@
       }
     }
   ],
-  "planFingerprint": "0124ec06"
+  "planFingerprint": "a74f377e"
 }

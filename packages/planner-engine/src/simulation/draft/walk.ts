@@ -61,9 +61,30 @@ import { draftProvider, type DraftGodSchedule, type DraftSupply } from './schedu
 import { settleDraftCommand, settleDraftCommandWithoutNewFinding } from './settle';
 import { routeResourceAuthoring } from '../resources';
 import type { DraftSpec } from './spec';
-import { DraftSteering, type DraftProgress } from './steering';
+import {
+  DRAFT_ELEMENT_BOOSTS as ELEMENT_BOOSTS,
+  DraftSteering,
+  type DraftProgress,
+} from './steering';
 import { DraftTraitOffers } from './trait-offers';
 import type { DraftWorldProduct } from './world';
+
+/** A pursued Clockwork Goal door: above any boon door (at most 90), below a story room (200). */
+const TARTARUS_GOAL_WEIGHT = 150;
+
+/** A Clockwork combat room left without an authored reward resolves to a Goal. */
+function clockworkGoal(catalog: Catalog, occurrence: RoomOccurrence): boolean {
+  const mode = catalog.rooms.byKey[occurrence.gameName]?.mode;
+  return (
+    mode?.kind === 'authored' &&
+    mode.templateKey === 'ClockworkCombat' &&
+    occurrence.state.kind === 'counted' &&
+    occurrence.state.reward === null
+  );
+}
+
+/** The offer weight of a wanted god's boon; a due god's is higher. */
+const WANTED_GOD_WEIGHT = 30;
 
 /** Chance that a newly entered room places a resource point, as the game spawns them naturally. */
 const ESSENCE_CHANCE = 0.1;
@@ -339,17 +360,38 @@ export class DraftWalk {
     return this.steering.scheduledTargets();
   }
 
-  /** Buys a Shop Hermes or Hammer a ready basket trait needs now; a refused purchase is undone. */
-  private buyWantedSupply(
+  /**
+   * Buys what the basket wants now: a boon of a god that can take its next basket
+   * trait, at the purchase pace; a due Hermes or Hammer; on Dream, an element a
+   * waiting trait needs. A purchase that invalidates the route is undone.
+   */
+  private buyWanted(
     offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
     value: ResolvedRewardOffer,
   ): void {
+    const progress = this.steering.progress();
     const supply = draftProvider(this.catalog, value);
-    if (supply === undefined || supply === 'spell') return;
-    if (this.steering.supplyNeed(supply, this.steering.progress()) !== 'now') return;
+    const god = this.steering.offerGod(value);
+    const element = ELEMENT_BOOSTS[value.rewardType];
+    const wanted =
+      supply === 'hermes' || supply === 'hammer'
+        ? this.steering.supplyNeed(supply, progress) === 'now'
+        : god !== undefined
+          ? this.steering.godTakes(god, progress) && this.rng() < this.purchaseChance()
+          : element !== undefined && this.steering.wantedElements(progress).includes(element);
+    if (!wanted) return;
     if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true })) return;
     if (this.assembly.evaluation.issue?.kind === 'invalid')
       this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: false });
+  }
+
+  /** Ahead of the purchase pace a boon is bought less often, behind it more often; never always or never. */
+  private purchaseChance(): number {
+    const behind = this.steering.purchasesBehind();
+    // Catch up steeply when behind, and buy readily once the boon bag runs low.
+    const chance =
+      behind > 0 ? Math.min(0.7 + 0.15 * behind, 0.95) : Math.max(0.5 + 0.2 * behind, 0.15);
+    return this.steering.boonBagLow() ? Math.max(chance, 0.85) : chance;
   }
 
   /** A basket Hermes or Hammer reward some decision could take; none while the basket reserves every Hermes room. */
@@ -855,6 +897,8 @@ export class DraftWalk {
         reward !== undefined && reward !== null
           ? Math.max(this.steering.offerWeight(reward.offer), 0.01)
           : 1;
+      if (this.spec.pursueTartarusGoal === true && clockworkGoal(this.catalog, occurrence))
+        return TARTARUS_GOAL_WEIGHT;
       return this.steering.roomWeight(occurrence.gameName, selection.biomeKey) * offerWeight;
     });
     for (const target of ordered)
@@ -907,9 +951,9 @@ export class DraftWalk {
         );
       });
       this.noteSupply(values.map((value) => value.offer));
-      for (const value of this.weighted(values, (v) => this.steering.offerWeight(v.offer)))
+      for (const value of this.weighted(values, (v) => this.steering.shopWeight(v.offer)))
         if (apply({ kind: 'ReplaceShopOfferOption', offer: origin, value })) {
-          this.buyWantedSupply(origin, value.offer);
+          this.buyWanted(origin, value.offer);
           return true;
         }
       return false;
@@ -933,6 +977,29 @@ export class DraftWalk {
         apply,
       );
     }
+    if (origin.kind === 'acquisitionEntry') {
+      // A pickup a purchase leaves at its site, such as a bought Mystery boon, has one fixed
+      // reward type; a probe's `rewardTypeFixed` exclusion names it when the entry key does not.
+      const evaluateEntry = (value: ResolvedRewardOffer) =>
+        this.evaluate({ kind: 'acquisitionEntryOffer', entry: origin, value });
+      const probe =
+        this.catalog.rewards.rewardTypes.byKey[origin.entryKey] === undefined
+          ? undefined
+          : locallyValidRewardOffers(this.catalog.rewards, origin.entryKey)[0];
+      const probed = probe === undefined ? undefined : evaluateEntry(probe);
+      const fixed =
+        probed?.kind === 'acquisitionEntryOffer'
+          ? probed.result.exclusions?.find((exclusion) => exclusion.kind === 'rewardTypeFixed')
+          : undefined;
+      const rewardType = fixed?.kind === 'rewardTypeFixed' ? fixed.rewardType : origin.entryKey;
+      if (this.catalog.rewards.rewardTypes.byKey[rewardType] === undefined) return false;
+      return this.tryOffers(
+        [rewardType],
+        evaluateEntry,
+        (value) => ({ kind: 'ReplaceAcquisitionEntryOffer', entry: origin, value }),
+        apply,
+      );
+    }
     if (origin.kind !== 'incomingReward' && origin.kind !== 'localReward') return false;
     const occurrence = this.occurrence(origin.biomeKey, origin.occurrenceId);
     const room =
@@ -951,6 +1018,8 @@ export class DraftWalk {
           (value) => this.evaluate({ kind: 'incomingReward', reward: origin, value }),
           (value) => ({ kind: 'ReplaceIncomingReward', reward: origin, value }),
           apply,
+          // A fountain room makes a wanted or due god boon somewhat likelier.
+          room.kind === 'Reprieve' ? 2 : 1,
         )
       : this.tryOffers(
           types,
@@ -965,6 +1034,7 @@ export class DraftWalk {
     evaluate: (value: ResolvedRewardOffer) => { readonly kind: string },
     command: (value: ResolvedRewardOffer) => ProjectCommand,
     apply: (command: ProjectCommand) => boolean,
+    wantedGodBoost = 1,
   ): boolean {
     const legal = rewardTypes
       .flatMap((type) => locallyValidRewardOffers(this.catalog.rewards, type))
@@ -983,8 +1053,13 @@ export class DraftWalk {
         );
       });
     this.noteSupply(legal);
-    for (const offer of this.weighted(legal, (o) => this.steering.offerWeight(o)))
-      if (apply(command(offer))) return true;
+    const weight = (offer: ResolvedRewardOffer) => {
+      const base = this.steering.offerWeight(offer);
+      return this.steering.offerGod(offer) !== undefined && base >= WANTED_GOD_WEIGHT
+        ? base * wantedGodBoost
+        : base;
+    };
+    for (const offer of this.weighted(legal, weight)) if (apply(command(offer))) return true;
     return false;
   }
 

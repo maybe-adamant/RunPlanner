@@ -1,7 +1,12 @@
 import type { AuthoredDraftSpec, ProjectDocument } from '@run-planner/engine/authored-project';
 import type { Catalog, TraitOrdinaryBoonSlot } from '@run-planner/engine/catalog-schema';
 import {
+  DRAFT_GOD_BOONS_RANGE,
+  DRAFT_PER_GOD_CAP_RANGE,
+} from '@run-planner/engine/authored-project';
+import {
   assessDraftBasket,
+  draftGodBoonBudget,
   draftSourceQueues,
   draftKeepsakeOptions,
   draftOrderRefusals,
@@ -108,8 +113,100 @@ export function projectDraftSpec(catalog: Catalog, project: ProjectDocument): Dr
       },
       basketTraitKeys: draft.basketTraitKeys,
       rackKeepsakeKeys: rackSlots.map((slot) => slot.keepsakeKey),
+      ...(draft.preferMidshops === true ? { preferMidshops: true } : {}),
+      ...(draft.pursueTartarusGoal === true ? { pursueTartarusGoal: true } : {}),
+      ...(draft.godBoonsByBiome === undefined ? {} : { godBoonsByBiome: draft.godBoonsByBiome }),
+      ...(draft.perGodCap === undefined ? {} : { perGodCap: draft.perGodCap }),
     }),
   });
+}
+
+export interface DraftBudgetBiome {
+  readonly biomeKey: string;
+  readonly value: number;
+  /** Shown beside the value only when Forfeit lowers it. */
+  readonly effective?: number;
+  /** The biome's default, the drafter's measured capacity there. */
+  readonly defaultValue: number;
+  /** Present when the biome is expected to yield less than its default. */
+  readonly expected?: number;
+  /** The value exceeds what the biome is expected to yield. */
+  readonly aboveDefault: boolean;
+}
+
+/** The Advanced tab's god boon budget, read from the engine's budget. */
+export interface DraftBudgetProjection {
+  readonly range: { readonly min: number; readonly max: number };
+  readonly biomes: readonly DraftBudgetBiome[];
+  readonly total: number;
+  /** Present when Forfeit lowers the total. */
+  readonly effectiveTotal?: number;
+  /** The fixed rule lines: each always shown, active when it applies. */
+  readonly rules: {
+    readonly forfeit: boolean;
+    /** God boons traits per god allow across the four gods. */
+    readonly reachable: number;
+    /** The reachable count is below the planned total. */
+    readonly reachableBinding: boolean;
+  };
+  readonly perGod: {
+    readonly value: number;
+    readonly range: { readonly min: number; readonly max: number };
+    /** 5, or 4 under Denial. */
+    readonly defaultValue: number;
+  };
+}
+
+export function projectDraftBudget(
+  catalog: Catalog,
+  project: ProjectDocument,
+  spec: DraftSpec,
+): DraftBudgetProjection {
+  const budget = draftGodBoonBudget(catalog, project.route, spec);
+  return Object.freeze({
+    range: DRAFT_GOD_BOONS_RANGE,
+    biomes: Object.freeze(
+      budget.biomes.map((biome) =>
+        Object.freeze({
+          biomeKey: biome.biomeKey,
+          value: biome.value,
+          ...(biome.effective === biome.value ? {} : { effective: biome.effective }),
+          defaultValue: biome.defaultValue,
+          ...(biome.expected === biome.defaultValue ? {} : { expected: biome.expected }),
+          aboveDefault: biome.value > biome.expected,
+        }),
+      ),
+    ),
+    total: budget.total,
+    ...(budget.effectiveTotal === budget.total ? {} : { effectiveTotal: budget.effectiveTotal }),
+    rules: Object.freeze({
+      forfeit: budget.forfeit,
+      reachable: budget.reachable,
+      reachableBinding: budget.reachable < budget.effectiveTotal,
+    }),
+    perGod: Object.freeze({
+      value: budget.perGod,
+      range: DRAFT_PER_GOD_CAP_RANGE,
+      defaultValue: budget.perGodDefault,
+    }),
+  });
+}
+
+/** The Tartarus goal preference is stored only when on. */
+export function withDraftPursueTartarusGoal(
+  draft: AuthoredDraftSpec,
+  on: boolean,
+): AuthoredDraftSpec {
+  const { pursueTartarusGoal: _pursueTartarusGoal, ...rest } = draft;
+  void _pursueTartarusGoal;
+  return on ? { ...rest, pursueTartarusGoal: true } : rest;
+}
+
+/** The midshop preference is stored only when on. */
+export function withDraftPreferMidshops(draft: AuthoredDraftSpec, on: boolean): AuthoredDraftSpec {
+  const { preferMidshops: _preferMidshops, ...rest } = draft;
+  void _preferMidshops;
+  return on ? { ...rest, preferMidshops: true } : rest;
 }
 
 function toggled(values: readonly string[], value: string): readonly string[] {

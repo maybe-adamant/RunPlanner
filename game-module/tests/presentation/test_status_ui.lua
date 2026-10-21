@@ -25,8 +25,8 @@ local function entry(fields)
     local value = {
         label = "Melinoe - Underworld", planName = "Staff practice", sentAt = "2026-10-12T10:00:00.000Z",
         aspect = "Melinoe (Staff)", route = "Underworld", endBiome = "Oceanus", startingFear = 8,
-        catalogVersion = "0.55.0-anvil-of-fates", schemaVersion = 97, schemaRevision = 2,
-        fingerprint = "73f59fb5", matchesVersion = true,
+        catalogVersion = "0.55.0-anvil-of-fates", schemaVersion = 97, schemaRevision = 3,
+        fingerprint = "20936bad", matchesVersion = true,
     }
     for key, field in pairs(fields or {}) do value[key] = field end
     return value
@@ -318,7 +318,7 @@ function TestStatusUi.testFramesOpenNoFilesUntilTheWindowReopens()
         ["slots.runplanner.json"] = '{"format":"run-planner-slot-overview","formatVersion":2,"slots":{"2":'
             .. '{"label":"Melinoe - Underworld","sentAt":"2026-10-12T10:00:00.000Z","aspect":"Melinoe (Staff)",'
             .. '"route":"Underworld","endBiome":"Oceanus","startingFear":8,"catalogVersion":"0.55.0-anvil-of-fates",'
-            .. '"schemaVersion":97,"schemaRevision":2,"fingerprint":"73f59fb5"}}}',
+            .. '"schemaVersion":97,"schemaRevision":3,"fingerprint":"20936bad"}}}',
         ["slot-2.runplanner.json"] = "{}",
     }
     local opens = 0

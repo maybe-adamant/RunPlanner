@@ -11,6 +11,8 @@ import {
   encodeProjectDocument,
   MAX_DRAFT_SEED,
   sameDraftSpec,
+  withDraftGodBoons,
+  withDraftPerGodCap,
   ProjectCommandContractError,
   ProjectDocumentContractError,
   undoProjectHistory,
@@ -55,6 +57,55 @@ describe('draft spec', () => {
       rackKeepsakeByBiome: {},
       seed: 1,
     });
+  });
+
+  it('saves the midshop and Tartarus preferences only when on, and refuses any value but true', () => {
+    const on = { ...draft, preferMidshops: true as const };
+    const decoded = (value: unknown) =>
+      decodeProjectDocument(withRawDraft(value), catalog).route.draft;
+    expect(decoded(on)).toEqual(on);
+    expect(decoded(draft)).not.toHaveProperty('preferMidshops');
+    expect(() => decoded({ ...draft, preferMidshops: false })).toThrow(
+      ProjectDocumentContractError,
+    );
+    expect(decoded({ ...draft, pursueTartarusGoal: true })).toEqual({
+      ...draft,
+      pursueTartarusGoal: true,
+    });
+    expect(() => decoded({ ...draft, pursueTartarusGoal: false })).toThrow(
+      ProjectDocumentContractError,
+    );
+    expect(sameDraftSpec({ ...draft, pursueTartarusGoal: true }, draft)).toBe(false);
+    expect(sameDraftSpec(on, draft)).toBe(false);
+    expect(sameDraftSpec(on, { ...on })).toBe(true);
+  });
+
+  it("stores god boons only when they differ from their biome's default, and the per-god cap likewise, clamped", () => {
+    expect(withDraftGodBoons(draft, 'G', 2)).toEqual(draft);
+    const raised = withDraftGodBoons(draft, 'G', 12);
+    expect(raised.godBoonsByBiome).toEqual({ G: 10 });
+    expect(withDraftGodBoons(raised, 'G', 2)).toEqual(draft);
+    expect(withDraftGodBoons(draft, 'F', -2).godBoonsByBiome).toEqual({ F: 0 });
+    expect(withDraftPerGodCap(draft, 5)).toEqual(draft);
+    // Under Denial the default is 4; a stored 5 is absolute.
+    expect(withDraftPerGodCap(draft, 4, 4)).toEqual(draft);
+    expect(withDraftPerGodCap(draft, 5, 4).perGodCap).toBe(5);
+    expect(withDraftPerGodCap(draft, 0).perGodCap).toBe(1);
+    expect(withDraftPerGodCap(draft, 99).perGodCap).toBe(10);
+    const decoded = (value: unknown) =>
+      decodeProjectDocument(withRawDraft(value), catalog).route.draft;
+    expect(decoded({ ...draft, godBoonsByBiome: { G: 6 }, perGodCap: 7 })).toEqual({
+      ...draft,
+      godBoonsByBiome: { G: 6 },
+      perGodCap: 7,
+    });
+    for (const bad of [
+      { godBoonsByBiome: { G: 11 } },
+      { godBoonsByBiome: { Z: 4 } },
+      { perGodCap: 0 },
+      { perGodCap: 11 },
+    ])
+      expect(() => decoded({ ...draft, ...bad })).toThrow(ProjectDocumentContractError);
   });
 
   it('round-trips through ReplaceDraftSpec as one undoable edit, keeping off-itinerary biomes', () => {
