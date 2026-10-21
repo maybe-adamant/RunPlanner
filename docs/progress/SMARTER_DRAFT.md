@@ -154,13 +154,11 @@ deterministic corpus. A heavy basket must stay within about 15 s.
    - A corpus A/B of the god cap partition by planned biome count, decided by
      the owner.
    - Tests: `test:engine`, `test:planner`, `test:product`; the corpus delta.
-3. **NPC windows.**
+3. **NPC windows and exclusions.**
    - The generic requirement reader, the steering and the miss report.
-   - Tests: `test:engine`; the corpus delta.
-4. **Exclusions.**
    - Exclusion-driven repairs.
-   - Tests: `test:engine`; the corpus delta.
-5. **Closure.**
+   - Tests: `test:engine`; the corpus delta for each part.
+4. **Closure.**
    - An independent review.
    - Promote durable rules to the draft design documentation.
    - Update `docs/testing/DRAFT_MODE_LIVE_ACCEPTANCE.md`.

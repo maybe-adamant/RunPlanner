@@ -340,6 +340,7 @@ function chooseEncounters(
     if (support === undefined) continue;
     reached = true;
     if (!support.activationSatisfied) continue;
+    if (biomeKey === 'N') { const ex = support.exclusions.filter((e) => e.encounterKey.startsWith('Artemis')).map((e) => e.kind === 'requirements' ? e.definitions.map((d) => d.evaluation.kind === 'all' ? d.evaluation.children.filter((c) => !c.satisfied).map((c) => JSON.stringify(c)) : []) : e.kind); console.log('PROBE', occurrenceId, occurrence.gameName, support.candidateEncounterKeys.join(','), JSON.stringify(ex)); }
     const candidates = support.candidateEncounterKeys.filter(
       (key) => catalog.encounterDefinitions.byKey[key]?.kind !== 'nonCombat',
     );
