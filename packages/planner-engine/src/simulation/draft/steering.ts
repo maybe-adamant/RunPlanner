@@ -3,6 +3,7 @@ import type { RequirementExpression } from '../../requirements/model';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { TraitElement } from '../../catalog-schema/traits';
 import { authoredShopOffer } from '../../authored-project/shop';
+import { routeSaveFileGodHistory } from '../../authored-project/route-profile';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { DRAFT_PROVIDER_CAPS, draftSourceQueues, draftTraitKind } from './basket';
 import type { DraftHeldTraits, DraftPrerequisites } from './prerequisites';
@@ -489,6 +490,21 @@ export class DraftSteering {
       acquired.flatMap((source) => this.catalog.traitGiverByAcquisitionGameName[source] ?? []),
     );
     return this.spec.world.godKeys.filter((godKey) => !gods.has(godKey));
+  }
+
+  /**
+   * A boon of a pool god not yet met whose basket traits are still queued, where Shops stock only
+   * gods already picked up on this save file.
+   */
+  queuedNewGod(offer: ResolvedRewardOffer): boolean {
+    const routeKey = this.state.assembly().project.route.routeKey;
+    if (routeSaveFileGodHistory(this.catalog, routeKey) !== 'closed') return false;
+    const god = this.offerGod(offer);
+    return (
+      god !== undefined &&
+      this.newGods().includes(god) &&
+      this.nextQueued(god, this.progress()) !== undefined
+    );
   }
 
   /** Steering weight of a reward; Olympian sources outside the world and the Anvil weigh nothing. */

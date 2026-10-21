@@ -93,6 +93,9 @@ function clockworkGoal(catalog: Catalog, occurrence: RoomOccurrence): boolean {
   );
 }
 
+/** A Shop door beside a door to a new god with queued traits. */
+const SHOP_OUTRANKED_FACTOR = 0.001;
+
 /** A boon on a door beside one that already holds a boon, while the bag is conserved. */
 const SIDE_BOON_FACTOR = 0.01;
 
@@ -928,10 +931,19 @@ export class DraftWalk {
         : exitDecisionForSource(topology, selection.source);
     if (decision?.kind !== 'exit' || decision.normal.kind !== 'batch') return false;
     const targets = decision.normal.targets;
+    const rewardOf = (occurrence: RoomOccurrence | undefined) =>
+      occurrence !== undefined && 'reward' in occurrence.state
+        ? occurrence.state.reward
+        : undefined;
+    // A door to a new god with queued traits outranks a Shop, which cannot stock that god yet.
+    const newGodDoor = targets.some((target) => {
+      const reward = rewardOf(this.occurrence(selection.biomeKey, target.occurrenceId));
+      return reward !== undefined && reward !== null && this.steering.queuedNewGod(reward.offer);
+    });
     const ordered = this.weighted(targets, (target) => {
       const occurrence = this.occurrence(selection.biomeKey, target.occurrenceId);
       if (occurrence === undefined) return 1;
-      const reward = 'reward' in occurrence.state ? occurrence.state.reward : undefined;
+      const reward = rewardOf(occurrence);
       if (
         this.steering.npcHosting(
           occurrence.gameName,
@@ -946,7 +958,13 @@ export class DraftWalk {
           : 1;
       if (this.spec.pursueTartarusGoal === true && clockworkGoal(this.catalog, occurrence))
         return TARTARUS_GOAL_WEIGHT;
-      return this.steering.roomWeight(occurrence.gameName, selection.biomeKey) * offerWeight;
+      const outranked =
+        newGodDoor && this.catalog.rooms.byKey[occurrence.gameName]?.kind === 'Shop'
+          ? SHOP_OUTRANKED_FACTOR
+          : 1;
+      return (
+        this.steering.roomWeight(occurrence.gameName, selection.biomeKey) * offerWeight * outranked
+      );
     });
     for (const target of ordered)
       if (
