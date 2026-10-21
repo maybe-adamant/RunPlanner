@@ -1,6 +1,6 @@
 # Smarter Draft
 
-Status: locked 2026-10-20. Base commit: `b5b49e93e`.
+Status: locked 2026-10-20, stages 0–2 committed (to `2af32d14a`). Base commit: `b5b49e93e`.
 
 ## Objective
 
@@ -28,16 +28,22 @@ deterministic corpus. A heavy basket must stay within about 15 s.
    - In a short biome it carries over to the next one.
    - Legendaries are ordinary members of their god's order, gated on their
      prerequisites like any other trait.
-3. **Scaling by planned biomes.**
-   - The draft follows the route's configured prefix ("Plan up to"). This
-     reverses the full-route-only draft of `1ebe3ab11`.
-   - The god boon cap and the combined Hermes-plus-Hammer cap scale by the
-     planned share of the route, rounded up. For example, one biome of four
-     gives 3 boons (2 under Forfeit) and 1 Hermes-or-Hammer.
-   - The Selene and NPC caps do not scale.
-   - A basket over the scaled cap is an over-budget state shown as usual; it
-     is not trimmed automatically.
-   - Targets and the report cover only the planned biomes.
+3. **Scaling by planned biomes.** (Built in stage 2.)
+   - The draft follows the route's configured prefix ("Plan up to"),
+     reversing the full-route-only draft of `1ebe3ab11`. Targets, racks and the
+     report cover the planned biomes, including the last planned biome's rack.
+   - The god boon cap is the sum of per-biome targets over the planned biomes.
+     Defaults are keyed by biome for a stable baseline: F6 G2 H2 I4, N6 O2 P3
+     Q3. Forfeit is −1 per biome (vow rule). The targets also drive the
+     schedule's per-biome spread as a soft hint.
+   - Hermes plus Hammer share one cap equal to the planned biome count; each
+     giver keeps its cap of 2.
+   - Traits per god defaults to 5, or 4 with Denial; a user-set value is used
+     as is.
+   - The Draft panel's Advanced tab exposes the per-biome sliders (0–10), traits
+     per god, Prefer midshops and Pursue the Tartarus goal aggressively; values
+     are saved only when they differ from the defaults (schemaRevision 3).
+   - An over-budget basket is refused, never trimmed.
 4. **NPC windows outrank traits.**
    - A selected NPC's qualifying room is reserved ahead of a due god trait.
    - The qualifying conditions are read generically from the encounter
@@ -51,18 +57,19 @@ deterministic corpus. A heavy basket must stay within about 15 s.
      non-excluded door reward at that door, and keeps the gap clear of other
      NPCs.
    - A missed window is reported as a miss.
-5. **Purchases.**
-   - The walk buys due items from a Shop it reaches: a god boon (including
-     Mystery), Hermes or a Hammer.
-   - A soft pace nudge aims at about 2 purchases per planned biome in total.
-     Purchases become less likely ahead of that pace and more likely behind
-     it. The pace never blocks a purchase and never forces one.
-   - Gold is not modelled; this is draft policy.
+5. **Purchases.** (Built in stage 2.)
+   - The walk buys from a Shop a god boon or Mystery boon whose god can take its
+     next queued trait or a ready Duo, and Hermes or a Hammer when due. Shop
+     stock is shaped toward such gods first.
+   - The buy chance follows a soft pace of about 2 purchases per planned biome,
+     steeper when behind or when the boon bag is low. It never blocks or forces
+     a purchase. Gold is not modelled.
+   - Fountain rooms break ties between equal doors and double a wanted god's
+     reward weight.
    - Elemental essences: resource points roll about 10% per room that can host
-     an unplaced family, preferring an element a waiting element-gated trait
-     needs. Dream has no native resource points, so the walk buys elemental
-     boosts from Dream Shops instead. Those buys follow the same element
-     preference and don't count against the purchase pace.
+     an unplaced family, preferring an element a waiting element- or
+     rarity-gated trait needs. Dream buys elemental boosts from its Shops
+     instead, outside the pace.
 6. **Offer exclusions in the walk.** The walk acts on
    `RewardProducerCandidateResult.exclusions`:
    - `peerConflict` re-authors the peer;
