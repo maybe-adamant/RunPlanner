@@ -19,9 +19,11 @@ const surface = createProjectDocument(catalog, {
   routeKey: 'Surface',
   configuredBiomeCount: 4,
 });
-const underworld = createProjectDocument(catalog, {
-  projectId: 'u',
-  routeKey: 'Underworld',
+// Echo's story room is in the first biome.
+const dream = createProjectDocument(catalog, {
+  projectId: 'd',
+  routeKey: 'Dream',
+  itineraryBiomeKeys: ['H', 'F', 'N', 'I'],
   configuredBiomeCount: 4,
 });
 const surfaceWorld = (godKeys: readonly string[]): DraftSpec['world'] => ({
@@ -29,9 +31,9 @@ const surfaceWorld = (godKeys: readonly string[]): DraftSpec['world'] => ({
   storyNpcByBiome: { N: 'Medea', O: 'Circe', P: 'Dionysus' },
   fieldNpcsByBiome: { O: ['Icarus'] },
 });
-const underworldWorld: DraftSpec['world'] = {
-  godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
-  storyNpcByBiome: { F: 'Arachne', G: 'Narcissus', H: 'Echo', I: 'Hades' },
+const dreamWorld: DraftSpec['world'] = {
+  godKeys: ['Zeus', 'Apollo', 'Poseidon', 'Hestia'],
+  storyNpcByBiome: { H: 'Echo', F: 'Arachne', N: 'Medea', I: 'Hades' },
   fieldNpcsByBiome: {},
 };
 const spec = (
@@ -152,11 +154,7 @@ describe('draft selected-outcome children', () => {
 
   it('drafts Pom Pom Pom and Boon Boon Boon with their Echo outcomes', () => {
     for (const traitKey of ['EchoDoubleLevelBoon', 'EchoLastRunBoon']) {
-      const { walk, biomeIndex } = walkUntilHeld(
-        underworld,
-        spec(underworldWorld, [traitKey]),
-        traitKey,
-      );
+      const { walk, biomeIndex } = walkUntilHeld(dream, spec(dreamWorld, [traitKey]), traitKey, 2);
       expectChildrenAuthored(walk, biomeIndex, traitKey);
     }
   });

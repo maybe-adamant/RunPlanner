@@ -305,12 +305,17 @@ broad phase-closure verification:
   fixed corpus of specs and seeds, prints target, order, purchase, attempt and
   time aggregates with deltas against the committed
   `packages/planner-engine/test/draft-corpus/baseline.json`, and fails only on
-  a refusal, a throw or a redrafted seed's changed plan; `DRAFT_CORPUS_WRITE=1`
-  rewrites the baseline.
+  a refusal, a throw, a failed draft or a redrafted seed's changed plan;
+  `DRAFT_CORPUS_WRITE=1` rewrites the baseline.
+- `npm run test:performance:snapshot` and `npm run test:performance:compare`
+  (below) for changes to rebuild, candidate, edit or Undo latency.
 
-`npm run test` and `npm run check` remain the complete phase, push, and release
-gates. Run the complete gate for test/configuration changes, shared package
-changes with broad downstream impact, and before declaring a phase closed.
+`npm run check` is the core-correctness gate for phase closure, push, and
+release; `npm run test` is its correctness test lane. Run the complete gate for
+test/configuration changes, shared package changes with broad downstream
+impact, and before declaring a phase closed. The equivalence, draft corpus and
+performance lanes are opt-in measurement and end-to-end witnesses outside the
+gate; run them when their trigger above applies.
 
 ### Shared test execution policy
 
@@ -326,7 +331,7 @@ Library asynchronous queries use the shared ten-second functional wait. The
 progress reporter's heartbeat and slowest-file output are diagnostic and never
 determine pass/fail.
 
-Performance is measured separately with
+Performance is measured separately, outside `npm run check`, with
 `npm run test:performance:snapshot` and judged by
 `npm run test:performance:compare`; `npm run test:performance:absolute` is
 reserved for an explicitly canonical environment. The snapshot covers the
