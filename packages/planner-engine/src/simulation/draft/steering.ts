@@ -2,11 +2,15 @@ import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { TraitElement } from '../../catalog-schema/traits';
 import { authoredShopOffer } from '../../authored-project/shop';
-import { routeSaveFileGodHistory } from '../../authored-project/route-profile';
+import {
+  routeRoomDeclaration,
+  routeSaveFileGodHistory,
+} from '../../authored-project/route-profile';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { DRAFT_PROVIDER_CAPS, draftSourceQueues, draftTraitKind } from './basket';
 import type { DraftHeldTraits, DraftPrerequisites } from './prerequisites';
 import { latestRunState } from './report';
+import type { RunStateSnapshot } from '../rewards';
 import {
   draftProvider,
   draftSupplyTraitKeys,
@@ -64,6 +68,83 @@ export const NPC_EXCLUDED_REWARD_FACTOR = 0.01;
 
 /** Shop weight of a boon whose god can take a basket trait now, above any due god. */
 const PURCHASABLE_GOD_WEIGHT = 120;
+
+/**
+ * The stores a biome's doors draw from: its base-store policy's keys, or else the stores its
+ * rooms' counted rewards declare.
+ */
+export function draftDoorStoreKeys(
+  catalog: Catalog,
+  routeKey: string,
+  biomeKey: string,
+): readonly string[] {
+  const policy = catalog.biomeLayouts.byKey[biomeKey]?.progression.rewardStorePolicy;
+  if (policy?.kind === 'authoredBaseStore') return policy.storeKeys;
+  const keys = new Set<string>();
+  for (const declared of catalog.rooms.values) {
+    const room = routeRoomDeclaration(declared, routeKey);
+    if (room.roomSetKey === biomeKey && room.incomingReward.kind === 'countedChoice')
+      room.incomingReward.storeKeys.forEach((key) => keys.add(key));
+  }
+  return [...keys];
+}
+
+/** A god boon on a door beside one already holding a god boon, so one exit shows one boon. */
+const SIDE_BOON_FACTOR = 0.01;
+
+/** Whether an offer grants an Olympian's boon: a boon reward, a Mystery boon or a Devotion trial. */
+export function draftGrantsGodBoon(catalog: Catalog, offer: ResolvedRewardOffer): boolean {
+  const source =
+    offer.payload?.kind === 'BoonSource'
+      ? offer.payload.source
+      : offer.payload?.kind === 'DevotionPair'
+        ? offer.payload.chosenSource
+        : undefined;
+  const giverKey =
+    source === undefined ? undefined : catalog.traitGiverByAcquisitionGameName[source];
+  return catalog.traitGivers.byKey[giverKey ?? '']?.providerKind === 'olympian';
+}
+
+/** Whether a door other than `occurrenceId` among an exit's doors holds a god boon. */
+export function draftSiblingHoldsGodBoon(
+  catalog: Catalog,
+  doors: readonly { readonly occurrenceId: string; readonly offer?: ResolvedRewardOffer }[],
+  occurrenceId: string,
+): boolean {
+  return doors.some(
+    (door) =>
+      door.occurrenceId !== occurrenceId &&
+      door.offer !== undefined &&
+      draftGrantsGodBoon(catalog, door.offer),
+  );
+}
+
+/** A door offer's weight, damped when it grants a god boon beside a door that already does. */
+export function draftSideDoorWeight(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  weight: number,
+  siblingHoldsGodBoon: boolean,
+): number {
+  return siblingHoldsGodBoon && draftGrantsGodBoon(catalog, offer)
+    ? weight * SIDE_BOON_FACTOR
+    : weight;
+}
+
+/** Eligible boon entries left in the named stores' bags. */
+export function draftBoonEntriesLeft(
+  bags: RunStateSnapshot['bags'],
+  storeKeys: readonly string[],
+): number {
+  let remaining = 0;
+  for (const bag of bags)
+    if (storeKeys.includes(bag.storeKey))
+      for (const entry of bag.entries)
+        if (entry.rewardType === 'Boon' && entry.eligibility === 'eligible')
+          remaining +=
+            entry.remaining.kind === 'exact' ? entry.remaining.count : entry.remaining.min;
+  return remaining;
+}
 
 /** The draft's weights and targets: what the basket still wants, and when. */
 export class DraftSteering {
@@ -310,13 +391,19 @@ export class DraftSteering {
     );
   }
 
+  /** The catalog's rooms as this route declares them. */
+  private routeRooms() {
+    const routeKey = this.state.assembly().project.route.routeKey;
+    return this.catalog.rooms.values.map((room) => routeRoomDeclaration(room, routeKey));
+  }
+
   /**
    * Whether the biome likely has another room before its last forced depth;
    * a cheap stand-in for a later chance to meet an NPC.
    */
   laterRoomLikely(biomeKey: string): boolean {
     let lastForced = 0;
-    for (const room of this.catalog.rooms.values)
+    for (const room of this.routeRooms())
       if (
         room.roomSetKey === biomeKey &&
         room.force?.kind === 'depthWindow' &&
@@ -565,30 +652,23 @@ export class DraftSteering {
     return PURCHASES_PER_BIOME * this.state.biomeIndex() + 1 - made;
   }
 
-  /**
-   * Whether the eligible boon entries of the bags this biome's doors draw from are nearly spent,
-   * which a Shop never is.
-   */
+  /** Whether the eligible boon entries of the bags this biome's doors draw from are nearly spent, which a Shop never is. */
   boonBagLow(): boolean {
     const assembly = this.state.assembly();
     const snapshot = latestRunState(assembly);
     if (snapshot === undefined) return false;
-    const biomeKey = assembly.project.route.itineraryBiomeKeys[this.state.biomeIndex()];
-    const policy = this.catalog.biomeLayouts.byKey[biomeKey ?? '']?.progression.rewardStorePolicy;
-    const doorStores = policy?.kind === 'authoredBaseStore' ? policy.storeKeys : undefined;
-    let remaining = 0;
-    for (const bag of snapshot.bags)
-      if (doorStores === undefined || doorStores.includes(bag.storeKey))
-        for (const entry of bag.entries)
-          if (entry.rewardType === 'Boon' && entry.eligibility === 'eligible')
-            remaining +=
-              entry.remaining.kind === 'exact' ? entry.remaining.count : entry.remaining.min;
-    return remaining <= LOW_BOON_BAG;
+    const route = assembly.project.route;
+    const biomeKey = route.itineraryBiomeKeys[this.state.biomeIndex()] ?? '';
+    const storeKeys = draftDoorStoreKeys(this.catalog, route.routeKey, biomeKey);
+    return draftBoonEntriesLeft(snapshot.bags, storeKeys) <= LOW_BOON_BAG;
   }
 
   /** A door placement waits on a story NPC whose wanted trait is not ready while a later room is likely. */
   roomWeight(gameName: string, biomeKey: string, placing = false): number {
-    const room = this.catalog.rooms.byKey[gameName];
+    const room = routeRoomDeclaration(
+      this.catalog.rooms.byKey[gameName],
+      this.state.assembly().project.route.routeKey,
+    );
     if (room?.kind === 'Story') {
       if (this.spec.world.storyNpcByBiome[biomeKey] === undefined) return 0.5;
       const biomeIndex = this.state.assembly().project.route.itineraryBiomeKeys.indexOf(biomeKey);

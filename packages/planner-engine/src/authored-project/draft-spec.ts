@@ -29,8 +29,8 @@ export const DRAFT_PER_GOD_CAP_RANGE = Object.freeze({ min: 1, max: 10 });
 export const DEFAULT_DRAFT_PER_GOD_CAP = 5;
 
 /**
- * Each biome's default planned god boons by biome key, near the drafter's measured trait
- * capacity there (25th percentile, start boon, Devotion, cages and Shops included).
+ * Each biome's default planned god boons by biome key: the god boons a draft usually gains there,
+ * counting the start boon, Devotion, cages and Shops.
  */
 const DEFAULT_DRAFT_GOD_BOONS: Readonly<Record<string, number>> = Object.freeze({
   F: 6,
@@ -92,6 +92,23 @@ export function withDraftPerGodCap(
   return clamped === defaultValue ? rest : { ...rest, perGodCap: clamped };
 }
 
+/** The Tartarus goal preference is stored only when on. */
+export function withDraftPursueTartarusGoal(
+  draft: AuthoredDraftSpec,
+  on: boolean,
+): AuthoredDraftSpec {
+  const { pursueTartarusGoal: _pursueTartarusGoal, ...rest } = draft;
+  void _pursueTartarusGoal;
+  return on ? { ...rest, pursueTartarusGoal: true } : rest;
+}
+
+/** The midshop preference is stored only when on. */
+export function withDraftPreferMidshops(draft: AuthoredDraftSpec, on: boolean): AuthoredDraftSpec {
+  const { preferMidshops: _preferMidshops, ...rest } = draft;
+  void _preferMidshops;
+  return on ? { ...rest, preferMidshops: true } : rest;
+}
+
 function expectInRange(
   value: unknown,
   path: string,
@@ -138,8 +155,16 @@ function biomeRecord<T>(
   );
 }
 
-/** Strict on keys and catalog references; biomes off the itinerary are kept. */
-export function decodeDraftSpec(value: unknown, path: string, catalog: Catalog): AuthoredDraftSpec {
+/**
+ * Strict on keys and catalog references; biomes off the itinerary are kept, and a planned god
+ * boon count equal to its route's default is dropped, as the setter never stores one.
+ */
+export function decodeDraftSpec(
+  value: unknown,
+  path: string,
+  catalog: Catalog,
+  routeKey: string,
+): AuthoredDraftSpec {
   const raw = expectRecord(value, path);
   expectExactKeys(
     raw,
@@ -219,20 +244,29 @@ export function decodeDraftSpec(value: unknown, path: string, catalog: Catalog):
     seed,
     ...(raw.preferMidshops === true ? { preferMidshops: true as const } : {}),
     ...(raw.pursueTartarusGoal === true ? { pursueTartarusGoal: true as const } : {}),
-    ...(raw.godBoonsByBiome === undefined
-      ? {}
-      : {
-          godBoonsByBiome: biomeRecord(
-            raw.godBoonsByBiome,
-            `${path}.godBoonsByBiome`,
-            catalog,
-            (e, p) => expectInRange(e, p, DRAFT_GOD_BOONS_RANGE),
-          ),
-        }),
+    ...godBoonOverrides(raw.godBoonsByBiome, `${path}.godBoonsByBiome`, catalog, routeKey),
     ...(raw.perGodCap === undefined
       ? {}
       : { perGodCap: expectInRange(raw.perGodCap, `${path}.perGodCap`, DRAFT_PER_GOD_CAP_RANGE) }),
   });
+}
+
+function godBoonOverrides(
+  value: unknown,
+  path: string,
+  catalog: Catalog,
+  routeKey: string,
+): { readonly godBoonsByBiome?: Readonly<Record<string, number>> } {
+  if (value === undefined) return {};
+  const decoded = biomeRecord(value, path, catalog, (e, p) =>
+    expectInRange(e, p, DRAFT_GOD_BOONS_RANGE),
+  );
+  const overrides = Object.entries(decoded).filter(
+    ([biomeKey, count]) => count !== defaultDraftGodBoons(routeKey, biomeKey),
+  );
+  return overrides.length === 0
+    ? {}
+    : { godBoonsByBiome: Object.freeze(Object.fromEntries(overrides)) };
 }
 
 function sameKeys(left: readonly string[], right: readonly string[]): boolean {

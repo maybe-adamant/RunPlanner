@@ -99,6 +99,11 @@ describe('draft spec', () => {
       godBoonsByBiome: { G: 6 },
       perGodCap: 7,
     });
+    // A stored count equal to its biome's default decodes away.
+    expect(decoded({ ...draft, godBoonsByBiome: { F: 6, G: 6 } }).godBoonsByBiome).toEqual({
+      G: 6,
+    });
+    expect(decoded({ ...draft, godBoonsByBiome: { G: 2 } })).toEqual(draft);
     for (const bad of [
       { godBoonsByBiome: { G: 11 } },
       { godBoonsByBiome: { Z: 4 } },

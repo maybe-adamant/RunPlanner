@@ -116,9 +116,11 @@ function pullNpcPrerequisites(
 }
 
 /**
- * Over the planned biomes: basket god traits spread by capacity, Hermes and Hammer traits one per half;
- * no trait falls due before its prerequisites, and an NPC basket trait's
- * prerequisites fall due by its NPC's biome.
+ * A soft due biome per basket trait over the planned biomes: god traits spread by capacity and in
+ * each god's queue order, Hermes and Hammer traits one per half, each placed after its
+ * prerequisites' due biomes. An NPC basket trait's god-trait prerequisites are pulled toward its
+ * NPC's biome where one option allows; a pulled trait brings its god's earlier traits along, which
+ * can place them before their own prerequisites. Readiness is still checked room by room.
  */
 export function draftGodSchedule(
   catalog: Catalog,

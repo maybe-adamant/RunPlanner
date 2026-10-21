@@ -1,4 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
+import { routeRoomDeclaration } from '../../authored-project/route-profile';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import type { RunStateSnapshot } from '../rewards';
 import type { DraftSpec } from './spec';
@@ -82,7 +83,9 @@ export function draftReport(
         key: npc,
         biomeKey,
         met: [...(rooms.get(biomeKey) ?? [])].some(
-          (gameName) => catalog.rooms.byKey[gameName]?.kind === 'Story',
+          (gameName) =>
+            routeRoomDeclaration(catalog.rooms.byKey[gameName], assembly.project.route.routeKey)
+              ?.kind === 'Story',
         ),
       });
   for (const [biomeKey, wanted] of Object.entries(spec.world.fieldNpcsByBiome))
