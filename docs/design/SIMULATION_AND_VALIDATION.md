@@ -747,6 +747,27 @@ the route declares it, route overlays included:
 A fixed corpus (`npm run test:draft-corpus`) measures these rules; its
 committed baseline records rates and medians, not plans.
 
+### Draft share codes
+
+A share code carries what a player authors for a draft, so drafting a pasted
+code gives the same plan: the route (and a Dream itinerary), the configured
+prefix, the loadout choices the draft reads (weapon, aspect with its Hex tree,
+keepsake, familiar, Vows and manual Arcana; none on Fresh File), the ordered
+god pool and basket, NPC and rack picks, the Advanced overrides that differ
+from their defaults and the seed. It leaves out what the draft generates (the
+starting reward and keepsake equip results) and what sits outside the draft
+(the Practice start and run modifiers), so a code reproduces the plan only
+when those match.
+
+The engine codec (`encodeDraftShareCode`, `decodeDraftShareCode`) packs
+positions in catalog-ordered lists into base32 behind a layout version and a
+fingerprint of those lists and the catalog facts that shape the layout. A code
+from another layout, catalog or route is refused rather than decoded into other
+keys, and the decoded inputs pass the draft spec and loadout validation. Codes are made on demand and never
+persisted, so they touch neither the project schema nor the plan wire. Pasting
+installs the spec and loadout through semantic commands (`draftShareCommands`)
+as one history edit.
+
 ## Extension and Verification
 
 Before changing a sensitive boundary, identify its complete input/output
