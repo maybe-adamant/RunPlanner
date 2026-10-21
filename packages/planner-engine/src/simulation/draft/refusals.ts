@@ -1,15 +1,14 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument } from '../../authored-project/model';
 import { ProjectDocumentContractError } from '../../authored-project/validation';
-import { assessDraftBasket, type DraftTraitRefusal } from './basket';
+import { assessDraftBasket, draftFirstOfferBlocked, type DraftTraitRefusal } from './basket';
 import { draftKeepsakeOptions, draftLoadoutProject, forcesGod, type DraftSpec } from './spec';
-import { draftRepeatedFieldNpcs, draftWorldOptions } from './world';
+import { draftRepeatedFieldNpcs, draftUnreachableGods, draftWorldOptions } from './world';
 
 /** Devotion trials need two gods other than Ares, so fewer pool gods can dead-end a forced screen. */
 const MIN_DRAFT_GODS = 3;
 
 export type DraftRefusal =
-  | { readonly kind: 'freshFileRoute' }
   /** The project codec rejects the loadout. */
   | { readonly kind: 'invalidLoadout'; readonly path: string; readonly detail: string }
   | { readonly kind: 'godStartingKeepsake'; readonly keepsakeKey: string }
@@ -23,6 +22,14 @@ export type DraftRefusal =
   | { readonly kind: 'tooFewGods'; readonly minGods: number }
   | { readonly kind: 'tooManyGods'; readonly maxGods: number }
   | { readonly kind: 'notAGod'; readonly godKey: string }
+  /** The route forces this god's boon first, so the pool leads with it. */
+  | { readonly kind: 'requiredGod'; readonly godKey: string }
+  /** The route offers this god only once the run has used one of `needsGodKeys`, none in the pool. */
+  | {
+      readonly kind: 'godUnreachable';
+      readonly godKey: string;
+      readonly needsGodKeys: readonly string[];
+    }
   | { readonly kind: 'storyNpc'; readonly biomeKey: string; readonly npcKey: string }
   | { readonly kind: 'fieldNpc'; readonly biomeKey: string; readonly npcKey: string }
   /** A once-per-run field NPC selected in several biomes. */
@@ -32,6 +39,12 @@ export type DraftRefusal =
       readonly biomeKeys: readonly string[];
     }
   | { readonly kind: 'unknownTrait'; readonly traitKey: string }
+  /** Pool #1's first offer holds only these traits, and basket traits of other gods take every slot. */
+  | {
+      readonly kind: 'firstOfferBlocked';
+      readonly godKey: string;
+      readonly traitKeys: readonly string[];
+    }
   | {
       readonly kind: 'basketTrait';
       readonly traitKey: string;
@@ -47,18 +60,14 @@ export function draftRefusals(
   const refusals: DraftRefusal[] = [];
   const { loadout, world } = spec;
   let loadoutValid = true;
-  if (catalog.routes.byKey[base.route.routeKey]?.initialProfile.kind === 'freshFile') {
-    refusals.push({ kind: 'freshFileRoute' });
+  try {
+    draftLoadoutProject(catalog, base, loadout);
+  } catch (error) {
+    if (!(error instanceof ProjectDocumentContractError)) throw error;
+    refusals.push({ kind: 'invalidLoadout', path: error.path, detail: error.detail });
     loadoutValid = false;
-  } else
-    try {
-      draftLoadoutProject(catalog, base, loadout);
-    } catch (error) {
-      if (!(error instanceof ProjectDocumentContractError)) throw error;
-      refusals.push({ kind: 'invalidLoadout', path: error.path, detail: error.detail });
-      loadoutValid = false;
-    }
-  if (forcesGod(catalog, loadout.startingKeepsakeKey))
+  }
+  if (loadout.startingKeepsakeKey !== null && forcesGod(catalog, loadout.startingKeepsakeKey))
     refusals.push({ kind: 'godStartingKeepsake', keepsakeKey: loadout.startingKeepsakeKey });
 
   const slotCount = draftKeepsakeOptions(catalog, base.route).rackSlots.length;
@@ -84,6 +93,11 @@ export function draftRefusals(
     refuse({ kind: 'tooManyGods', maxGods: options.maxGods });
   for (const godKey of world.godKeys)
     if (!options.godKeys.includes(godKey)) refuse({ kind: 'notAGod', godKey });
+  options.requiredGodKeys.forEach((godKey, index) => {
+    if (world.godKeys[index] !== godKey) refuse({ kind: 'requiredGod', godKey });
+  });
+  for (const unreachable of draftUnreachableGods(catalog, base.route.routeKey, world.godKeys))
+    refuse({ kind: 'godUnreachable', ...unreachable });
   for (const [biomeKey, npcKey] of Object.entries(world.storyNpcByBiome))
     if (options.biomes.find((biome) => biome.biomeKey === biomeKey)?.storyNpc?.npcKey !== npcKey)
       refuse({ kind: 'storyNpc', biomeKey, npcKey });
@@ -102,5 +116,9 @@ export function draftRefusals(
     for (const trait of assessDraftBasket(catalog, base.route, spec).traits)
       if (trait.inBasket && !trait.selectable)
         refusals.push({ kind: 'basketTrait', traitKey: trait.traitKey, refusals: trait.refusals });
+  if (loadoutValid && worldValid && unknown.length === 0) {
+    const blocked = draftFirstOfferBlocked(catalog, base.route, spec);
+    if (blocked !== undefined) refusals.push({ kind: 'firstOfferBlocked', ...blocked });
+  }
   return Object.freeze(refusals);
 }

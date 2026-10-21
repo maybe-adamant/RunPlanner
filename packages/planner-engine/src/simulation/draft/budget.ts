@@ -69,7 +69,7 @@ export function draftGodBoonBudget(
 ): DraftGodBoonBudget {
   const forfeit = draftForfeitActive(catalog, spec.loadout) ? 1 : 0;
   const biomes = draftPlannedBiomeKeys(route).map((biomeKey) => {
-    const defaultValue = defaultDraftGodBoons(biomeKey);
+    const defaultValue = defaultDraftGodBoons(route.routeKey, biomeKey);
     const value = spec.godBoonsByBiome?.[biomeKey] ?? defaultValue;
     return Object.freeze({
       biomeKey,

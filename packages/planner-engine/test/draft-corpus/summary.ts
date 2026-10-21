@@ -118,7 +118,7 @@ function table(
 
 /** Essence placement by route, for judging the per-room essence chance. */
 function essenceTable(runs: readonly DraftCorpusRun[]): string {
-  const rows = ['U', 'S', 'D'].map((prefix) => {
+  const rows = ['U', 'S', 'D', 'F'].map((prefix) => {
     const drafted = runs.filter((run) => run.outcome === 'drafted' && run.spec.startsWith(prefix));
     const counts = [0, 1, 2, 3, 4].map(
       (count) => drafted.filter((run) => run.essences === count).length,

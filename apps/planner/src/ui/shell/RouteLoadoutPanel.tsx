@@ -51,7 +51,7 @@ export function RouteLoadoutPanel({
 }
 
 /** A fresh profile's fixed weapon; Arcana, Fear, keepsake and starting reward do not exist there. */
-function FreshFileLoadout({
+export function FreshFileLoadout({
   catalog,
   fixedWeaponKey,
 }: {

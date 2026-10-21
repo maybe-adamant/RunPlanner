@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createProjectDocument } from '../../src/authored-project/defaults';
+import { routeInitialProfile } from '../../src/authored-project/route-profile';
 import type { ProjectDocument } from '../../src/authored-project';
 import {
   assessDraftBasket,
@@ -60,6 +61,9 @@ const UNDERWORLD_ALT_GODS = ['Poseidon', 'Demeter', 'Hera', 'Ares'];
 const SURFACE_GODS = ['Zeus', 'Hera', 'Demeter', 'Ares'];
 const DREAM_GODS = ['Zeus', 'Apollo', 'Poseidon', 'Hestia'];
 const DREAM_ITINERARY = ['H', 'F', 'N', 'I'];
+/** Fresh File offers Apollo first, Aphrodite and Hestia only after Poseidon or Demeter. */
+const FRESH_GODS = ['Apollo', 'Poseidon', 'Demeter', 'Hestia'];
+const FRESH_ALT_GODS = ['Apollo', 'Demeter', 'Aphrodite', 'Poseidon'];
 
 const baseRecipes: readonly EntryRecipe[] = [
   {
@@ -294,12 +298,54 @@ const baseRecipes: readonly EntryRecipe[] = [
     godKeys: DREAM_GODS,
     basket: { godTraits: HEAVY, hammer: 1 },
   },
+  {
+    name: 'F1 light',
+    routeKey: 'FreshFile',
+    prefix: 4,
+    godKeys: FRESH_GODS,
+    basket: { godTraits: LIGHT },
+  },
+  {
+    name: 'F2 medium',
+    routeKey: 'FreshFile',
+    prefix: 4,
+    godKeys: FRESH_ALT_GODS,
+    basket: { godTraits: MEDIUM },
+  },
+  {
+    name: 'F3 heavy',
+    routeKey: 'FreshFile',
+    prefix: 4,
+    godKeys: FRESH_GODS,
+    basket: { godTraits: HEAVY },
+  },
+  {
+    name: 'F4 heavy prefix 2',
+    routeKey: 'FreshFile',
+    prefix: 2,
+    godKeys: FRESH_ALT_GODS,
+    basket: { godTraits: HEAVY },
+  },
+  {
+    name: 'F5 medium prefix 1',
+    routeKey: 'FreshFile',
+    prefix: 1,
+    godKeys: FRESH_GODS,
+    basket: { godTraits: MEDIUM },
+  },
+  {
+    name: 'F6 heavy alt',
+    routeKey: 'FreshFile',
+    prefix: 4,
+    godKeys: FRESH_ALT_GODS,
+    basket: { godTraits: HEAVY },
+  },
 ];
 
 /** The same specs with the player's midshop preference on. */
-const MIDSHOP_VARIANTS = ['U3', 'S2', 'D3', 'U6'];
+const MIDSHOP_VARIANTS = ['U3', 'S2', 'D3', 'U6', 'F3'];
 /** Full-route specs through Tartarus, with the Clockwork Goal pursued. */
-const TARTARUS_VARIANTS = ['U1', 'U3', 'U4', 'U8', 'D1', 'D3', 'D4'];
+const TARTARUS_VARIANTS = ['U1', 'U3', 'U4', 'U8', 'D1', 'D3', 'D4', 'F3'];
 
 const recipes: readonly EntryRecipe[] = [
   ...baseRecipes,
@@ -361,7 +407,7 @@ function buildBasket(
       ).find(
         (key) =>
           !draftRefusals(catalog, base, { ...spec(), basketTraitKeys: [...basket, key] }).some(
-            (refusal) => refusal.kind === 'basketTrait',
+            (refusal) => refusal.kind === 'basketTrait' || refusal.kind === 'firstOfferBlocked',
           ),
       );
       if (next === undefined && capped) return;
@@ -393,7 +439,11 @@ function buildEntry(recipe: EntryRecipe): DraftCorpusEntry {
       : { itineraryBiomeKeys: recipe.itineraryBiomeKeys }),
     configuredBiomeCount: recipe.prefix,
   });
-  const { startingReward: _startingReward, ...defaults } = createDefaultRouteLoadout(catalog);
+  // A fixed-loadout route drafts its own null loadout; the others the default one.
+  const { startingReward: _startingReward, ...defaults } =
+    routeInitialProfile(catalog, recipe.routeKey).kind === 'freshFile'
+      ? base.route.loadout
+      : createDefaultRouteLoadout(catalog);
   void _startingReward;
   const loadout: DraftLoadout = recipe.forfeit
     ? { ...defaults, fearRanks: { ...defaults.fearRanks, BoonSkipShrineUpgrade: 1 } }

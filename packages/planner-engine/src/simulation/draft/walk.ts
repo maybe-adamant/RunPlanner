@@ -68,7 +68,7 @@ import {
 import { draftProvider, type DraftGodSchedule, type DraftSupply } from './schedule';
 import { settleDraftCommand, settleDraftCommandWithoutNewFinding } from './settle';
 import { routeResourceAuthoring } from '../resources';
-import type { DraftSpec } from './spec';
+import { draftKeepsakeOptions, type DraftSpec } from './spec';
 import {
   DRAFT_ELEMENT_BOOSTS as ELEMENT_BOOSTS,
   DraftSteering,
@@ -424,9 +424,14 @@ export class DraftWalk {
 
   /** Equips the drafted keepsake at the rack after this biome's Postboss, once. */
   private equipRack(biomeIndex: number): 'none' | 'equipped' | 'refused' {
-    const keepsakeKey = this.spec.rackKeepsakeKeys[biomeIndex];
     const plan = this.project.route.biomes[biomeIndex];
-    if (keepsakeKey === undefined || keepsakeKey === null || plan === undefined) return 'none';
+    if (plan === undefined) return 'none';
+    // The spec holds one keepsake per rack slot, in slot order.
+    const slot = draftKeepsakeOptions(this.catalog, this.project.route).rackSlots.findIndex(
+      (candidate) => candidate.afterBiomeKey === plan.biomeKey,
+    );
+    const keepsakeKey = this.spec.rackKeepsakeKeys[slot];
+    if (keepsakeKey === undefined || keepsakeKey === null) return 'none';
     const rack = plan.topology?.occurrences.find(
       (occurrence) => occurrence.keepsakeRack !== undefined,
     );

@@ -43,8 +43,16 @@ const DEFAULT_DRAFT_GOD_BOONS: Readonly<Record<string, number>> = Object.freeze(
   Q: 3,
 });
 
-export function defaultDraftGodBoons(biomeKey: string): number {
-  return DEFAULT_DRAFT_GOD_BOONS[biomeKey] ?? 3;
+/** Routes whose biomes yield differently from the shared biome defaults, by route then biome key. */
+const ROUTE_DEFAULT_DRAFT_GOD_BOONS: Readonly<Record<string, Readonly<Record<string, number>>>> =
+  Object.freeze({
+    FreshFile: Object.freeze({ F: 5, G: 3, H: 3, I: 3 }),
+  });
+
+export function defaultDraftGodBoons(routeKey: string, biomeKey: string): number {
+  return (
+    ROUTE_DEFAULT_DRAFT_GOD_BOONS[routeKey]?.[biomeKey] ?? DEFAULT_DRAFT_GOD_BOONS[biomeKey] ?? 3
+  );
 }
 
 const clamp = (value: number, range: { readonly min: number; readonly max: number }) =>
@@ -53,6 +61,7 @@ const clamp = (value: number, range: { readonly min: number; readonly max: numbe
 /** Sets one biome's planned god boons, clamped; its biome's default is not stored. */
 export function withDraftGodBoons(
   draft: AuthoredDraftSpec,
+  routeKey: string,
   biomeKey: string,
   value: number,
 ): AuthoredDraftSpec {
@@ -60,7 +69,9 @@ export function withDraftGodBoons(
   void _previous;
   const clamped = clamp(value, DRAFT_GOD_BOONS_RANGE);
   const godBoonsByBiome =
-    clamped === defaultDraftGodBoons(biomeKey) ? others : { ...others, [biomeKey]: clamped };
+    clamped === defaultDraftGodBoons(routeKey, biomeKey)
+      ? others
+      : { ...others, [biomeKey]: clamped };
   const { godBoonsByBiome: _old, ...rest } = draft;
   void _old;
   return Object.keys(godBoonsByBiome).length === 0 ? rest : { ...rest, godBoonsByBiome };

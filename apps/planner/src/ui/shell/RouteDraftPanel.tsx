@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   createRouteAddress,
+  routeInitialProfile,
   withDraftGodBoons,
   withDraftPerGodCap,
   type AuthoredDraftSpec,
@@ -17,6 +18,11 @@ import {
 } from '@run-planner/engine/simulation';
 
 import {
+  draftSlotList,
+  draftWorldHasNpcs,
+  projectDraftFirstBoonTag,
+  projectDraftGodTags,
+  type DraftRuleTag,
   projectDraftBasket,
   projectDraftSpec,
   withDraftBasketTraitToggled,
@@ -49,6 +55,7 @@ import type { DraftRunController } from '@planner/workspace/draftRun';
 import { DraftBasketDialog } from './DraftBasketDialog';
 import { DraftCapCount } from './DraftCapCount';
 import { RouteLoadoutControls } from './RouteLoadoutControls';
+import { FreshFileLoadout } from './RouteLoadoutPanel';
 import { RoutePrefixControl } from './RoutePrefixControl';
 import { useCommonItemWidth } from './useCommonItemWidth';
 
@@ -66,12 +73,51 @@ function refusalHint(catalog: Catalog, refusal: DraftRefusal | undefined): strin
       return 'The loadout is not complete.';
     case 'tooFewGods':
       return `Choose at least ${refusal.minGods} gods.`;
+    case 'requiredGod':
+    case 'godUnreachable':
+    case 'firstOfferBlocked':
+      return godRefusalNote(catalog, refusal);
     case 'basketTrait':
     case 'unknownTrait':
       return 'Remove the marked basket traits first.';
     default:
       return undefined;
   }
+}
+
+/** A god pool or first-boon refusal, as the Draft button's reason. */
+function godRefusalNote(catalog: Catalog, refusal: DraftRefusal): string | undefined {
+  const god = (key: string) => catalog.traitGivers.byKey[key]?.label ?? key;
+  switch (refusal.kind) {
+    case 'requiredGod':
+      return `The run opens with ${god(refusal.godKey)}'s boon, so ${god(refusal.godKey)} leads the pool.`;
+    case 'godUnreachable':
+      return `${god(refusal.godKey)} needs ${refusal.needsGodKeys.map(god).join(' or ')} in the pool.`;
+    case 'firstOfferBlocked':
+      return `${god(refusal.godKey)}'s first boon needs a free ${draftSlotList(catalog, refusal.traitKeys)} slot.`;
+    default:
+      return undefined;
+  }
+}
+
+/** A section's fixed rule tags on its title line: faint, outlined while the saved draft breaks one. */
+function RuleTags({
+  label,
+  tags,
+}: {
+  readonly label: string;
+  readonly tags: readonly DraftRuleTag[];
+}) {
+  if (tags.length === 0) return null;
+  return (
+    <ul aria-label={label} className="draft-tags">
+      {tags.map((tag) => (
+        <li data-active={tag.active || undefined} key={tag.key}>
+          {tag.label}
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 /** An NPC's trait-giver label; NPCs that give no traits have no catalog label beyond their key. */
@@ -285,16 +331,23 @@ export function RouteDraftPanel({
   );
   const running = run.kind === 'running';
   const elapsed = useElapsedSeconds(run);
-  const godKeys = spec?.world.godKeys ?? [];
+  const godKeys = projection.gods.filter((god) => god.selected).map((god) => god.godKey);
+  const orderedGodKeys = spec?.world.godKeys ?? godKeys;
   const blocked = spec === undefined || refusals.length > 0;
   const draftHint =
     spec === undefined ? 'The loadout is not complete.' : refusalHint(catalog, refusals[0]);
+  const initialProfile = routeInitialProfile(catalog, project.route.routeKey);
+  const godTags = projectDraftGodTags(catalog, project, godKeys, refusals);
+  const firstBoonTag =
+    spec === undefined ? undefined : projectDraftFirstBoonTag(catalog, project, spec, refusals);
   const overwrites = project.route.biomes.some((biome) => biome.topology !== null);
   const biomeLabel = (biomeKey: string) => catalog.biomes.byKey[biomeKey]?.label ?? biomeKey;
   const godKeepsakeHint = (keepsakeKey: string) =>
     forcesGod(catalog, keepsakeKey) ? godKeepsakeReason : undefined;
   // Each planned biome's Postboss holds its rack; racks of later biomes are left out.
-  const plannedRacks = rackSlots.slice(0, projection.plannedBiomeKeys.length);
+  const plannedRacks = rackSlots.filter((slot) =>
+    projection.plannedBiomeKeys.includes(slot.afterBiomeKey),
+  );
   const chipGroup = (group: DraftBasketChipGroup) => (
     <div className="draft-chip-group" data-queued={group.queued || undefined} key={group.key}>
       <span className="draft-chip-group-label">
@@ -429,37 +482,43 @@ export function RouteDraftPanel({
               configuredBiomeCount={project.route.biomes.length}
               routeKey={project.route.routeKey}
             />
-            <RouteLoadoutControls
-              authoredRoute={project.route}
-              catalog={catalog}
-              interactions={interactions}
-              keepsakeUnavailableHint={godKeepsakeHint}
-              workspaceRoute={workspaceRoute}
-            />
-            <section
-              className="draft-section draft-section-inline"
-              aria-labelledby="draft-gods-heading"
-            >
-              <h3 className="draft-section-heading" id="draft-gods-heading">
-                Gods{' '}
-                <span>
-                  {godKeys.length}/{worldOptions.maxGods}
-                </span>
-              </h3>
+            {initialProfile.kind === 'freshFile' ? (
+              <FreshFileLoadout catalog={catalog} fixedWeaponKey={initialProfile.fixedWeaponKey} />
+            ) : (
+              <RouteLoadoutControls
+                authoredRoute={project.route}
+                catalog={catalog}
+                interactions={interactions}
+                keepsakeUnavailableHint={godKeepsakeHint}
+                workspaceRoute={workspaceRoute}
+              />
+            )}
+            <section className="draft-section" aria-labelledby="draft-gods-heading">
+              <div className="draft-title-row">
+                <h3 className="draft-section-heading" id="draft-gods-heading">
+                  Gods{' '}
+                  <span>
+                    {godKeys.length}/{worldOptions.maxGods}
+                  </span>
+                </h3>
+                <RuleTags label="God pool rules" tags={godTags} />
+              </div>
               <div className="draft-toggle-row" role="group" aria-label="Gods">
-                {worldOptions.godKeys.map((godKey) => {
-                  const selected = godKeys.includes(godKey);
-                  const full = !selected && godKeys.length >= worldOptions.maxGods;
+                {projection.gods.map(({ godKey, selected, selectable }) => {
                   // Click order is pool order: new gods arrive in it, #1 first.
-                  const poolNumber = selected ? godKeys.indexOf(godKey) + 1 : undefined;
+                  const poolNumber = selected ? orderedGodKeys.indexOf(godKey) + 1 : undefined;
                   return (
                     <button
                       aria-pressed={selected}
                       className="draft-toggle"
                       data-has-icon
-                      disabled={full}
+                      disabled={!selectable}
                       key={godKey}
-                      onClick={() => replaceDraft(withDraftGodToggled(draft, godKey))}
+                      onClick={() =>
+                        replaceDraft(
+                          withDraftGodToggled(draft, godKey, worldOptions.requiredGodKeys),
+                        )
+                      }
                       type="button"
                     >
                       <ArtworkIcon
@@ -482,103 +541,105 @@ export function RouteDraftPanel({
                   onClick={() => replaceDraft({ ...draft, godKeys: [] })}
                   type="button"
                 >
-                  <ActionIcon name="undo" />
+                  <ActionIcon name="reset" />
                 </button>
               </div>
             </section>
-            <section className="draft-section" aria-labelledby="draft-npcs-heading">
-              {/* The title shares the header row with the Story and Field column labels. */}
-              <table className="draft-npc-table" aria-labelledby="draft-npcs-heading">
-                <thead>
-                  <tr>
-                    <th scope="col">
-                      <h3 className="draft-section-heading" id="draft-npcs-heading">
-                        NPCs
-                      </h3>
-                    </th>
-                    <th className="draft-section-heading" scope="col">
-                      Story
-                    </th>
-                    <th className="draft-section-heading draft-npc-field" scope="col">
-                      Field
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* A biome past the planned prefix is not drafted, so its NPC row is left out. */}
-                  {worldOptions.biomes
-                    .filter((biome) => projection.plannedBiomeKeys.includes(biome.biomeKey))
-                    .map((biome) => {
-                      const storyNpc = biome.storyNpc;
-                      const label = biomeLabel(biome.biomeKey);
-                      return (
-                        <tr key={biome.biomeKey}>
-                          <th className="draft-npc-biome" scope="row">
-                            {label}
-                          </th>
-                          <td>
-                            {storyNpc === undefined ? null : (
-                              <button
-                                aria-label={`${npcLabel(catalog, storyNpc)}, story room in ${label}`}
-                                aria-pressed={
-                                  spec?.world.storyNpcByBiome[biome.biomeKey] === storyNpc.npcKey
-                                }
-                                className="draft-toggle"
-                                data-has-icon
-                                onClick={() =>
-                                  replaceDraft(
-                                    withDraftStoryNpcToggled(
-                                      draft,
-                                      biome.biomeKey,
-                                      storyNpc.npcKey,
-                                    ),
-                                  )
-                                }
-                                type="button"
-                              >
-                                <ArtworkIcon
-                                  className="draft-toggle-icon"
-                                  source={npcIcon(storyNpc.npcKey)}
-                                />
-                                {npcLabel(catalog, storyNpc)}
-                              </button>
-                            )}
-                          </td>
-                          <td className="draft-npc-field">
-                            <span className="draft-toggle-row">
-                              {biome.fieldNpcs.map((npc) => (
+            {!draftWorldHasNpcs(worldOptions) ? null : (
+              <section className="draft-section" aria-labelledby="draft-npcs-heading">
+                {/* The title shares the header row with the Story and Field column labels. */}
+                <table className="draft-npc-table" aria-labelledby="draft-npcs-heading">
+                  <thead>
+                    <tr>
+                      <th scope="col">
+                        <h3 className="draft-section-heading" id="draft-npcs-heading">
+                          NPCs
+                        </h3>
+                      </th>
+                      <th className="draft-section-heading" scope="col">
+                        Story
+                      </th>
+                      <th className="draft-section-heading draft-npc-field" scope="col">
+                        Field
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* A biome past the planned prefix is not drafted, so its NPC row is left out. */}
+                    {worldOptions.biomes
+                      .filter((biome) => projection.plannedBiomeKeys.includes(biome.biomeKey))
+                      .map((biome) => {
+                        const storyNpc = biome.storyNpc;
+                        const label = biomeLabel(biome.biomeKey);
+                        return (
+                          <tr key={biome.biomeKey}>
+                            <th className="draft-npc-biome" scope="row">
+                              {label}
+                            </th>
+                            <td>
+                              {storyNpc === undefined ? null : (
                                 <button
-                                  aria-label={`${npcLabel(catalog, npc)} in ${label}`}
+                                  aria-label={`${npcLabel(catalog, storyNpc)}, story room in ${label}`}
                                   aria-pressed={
-                                    spec?.world.fieldNpcsByBiome[biome.biomeKey]?.includes(
-                                      npc.npcKey,
-                                    ) === true
+                                    spec?.world.storyNpcByBiome[biome.biomeKey] === storyNpc.npcKey
                                   }
                                   className="draft-toggle"
                                   data-has-icon
-                                  key={npc.npcKey}
                                   onClick={() =>
                                     replaceDraft(
-                                      withDraftFieldNpcToggled(draft, biome.biomeKey, npc.npcKey),
+                                      withDraftStoryNpcToggled(
+                                        draft,
+                                        biome.biomeKey,
+                                        storyNpc.npcKey,
+                                      ),
                                     )
                                   }
                                   type="button"
                                 >
                                   <ArtworkIcon
                                     className="draft-toggle-icon"
-                                    source={npcIcon(npc.npcKey)}
+                                    source={npcIcon(storyNpc.npcKey)}
                                   />
-                                  {npcLabel(catalog, npc)}
+                                  {npcLabel(catalog, storyNpc)}
                                 </button>
-                              ))}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            </section>
+                              )}
+                            </td>
+                            <td className="draft-npc-field">
+                              <span className="draft-toggle-row">
+                                {biome.fieldNpcs.map((npc) => (
+                                  <button
+                                    aria-label={`${npcLabel(catalog, npc)} in ${label}`}
+                                    aria-pressed={
+                                      spec?.world.fieldNpcsByBiome[biome.biomeKey]?.includes(
+                                        npc.npcKey,
+                                      ) === true
+                                    }
+                                    className="draft-toggle"
+                                    data-has-icon
+                                    key={npc.npcKey}
+                                    onClick={() =>
+                                      replaceDraft(
+                                        withDraftFieldNpcToggled(draft, biome.biomeKey, npc.npcKey),
+                                      )
+                                    }
+                                    type="button"
+                                  >
+                                    <ArtworkIcon
+                                      className="draft-toggle-icon"
+                                      source={npcIcon(npc.npcKey)}
+                                    />
+                                    {npcLabel(catalog, npc)}
+                                  </button>
+                                ))}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </section>
+            )}
             {plannedRacks.length === 0 ? null : (
               <section className="draft-section" aria-labelledby="draft-racks-heading">
                 <h3 className="draft-section-heading" id="draft-racks-heading">
@@ -602,9 +663,15 @@ export function RouteDraftPanel({
             )}
             <section className="draft-section" aria-labelledby="draft-basket-heading">
               <div className="draft-section-header">
-                <h3 className="draft-section-heading" id="draft-basket-heading">
-                  Basket
-                </h3>
+                <div className="draft-title-row">
+                  <h3 className="draft-section-heading" id="draft-basket-heading">
+                    Basket
+                  </h3>
+                  <RuleTags
+                    label="Basket rules"
+                    tags={firstBoonTag === undefined ? [] : [firstBoonTag]}
+                  />
+                </div>
                 <button
                   aria-haspopup="dialog"
                   className="secondary-action"
@@ -643,17 +710,19 @@ export function RouteDraftPanel({
         ) : budget === undefined ? null : (
           <>
             <section className="draft-section" aria-labelledby="draft-god-boons-heading">
-              <h3 className="draft-section-heading" id="draft-god-boons-heading">
-                God boons · {budget.effectiveTotal ?? budget.total}
-              </h3>
-              {/* Fixed tags: each always present, outlined when it applies. */}
-              <ul aria-label="God boon rules" className="draft-tags">
-                <li data-active>Above default → more misses</li>
-                <li data-active={budget.rules.forfeit || undefined}>Forfeit −1/biome</li>
-                <li data-active={budget.rules.reachableBinding || undefined}>
-                  Reachable {budget.rules.reachable}
-                </li>
-              </ul>
+              <div className="draft-title-row">
+                <h3 className="draft-section-heading" id="draft-god-boons-heading">
+                  God boons · {budget.effectiveTotal ?? budget.total}
+                </h3>
+                {/* Fixed tags: each always present, outlined when it applies. */}
+                <ul aria-label="God boon rules" className="draft-tags">
+                  <li data-active>Above default → more misses</li>
+                  <li data-active={budget.rules.forfeit || undefined}>Forfeit −1/biome</li>
+                  <li data-active={budget.rules.reachableBinding || undefined}>
+                    Reachable {budget.rules.reachable}
+                  </li>
+                </ul>
+              </div>
               <div className="route-loadout-row draft-budget-row">
                 {budget.biomes.map((biome) => {
                   const label = biomeLabel(biome.biomeKey);
@@ -673,7 +742,12 @@ export function RouteDraftPanel({
                           min={budget.range.min}
                           onChange={(event) =>
                             replaceDraft(
-                              withDraftGodBoons(draft, biome.biomeKey, Number(event.target.value)),
+                              withDraftGodBoons(
+                                draft,
+                                project.route.routeKey,
+                                biome.biomeKey,
+                                Number(event.target.value),
+                              ),
                             )
                           }
                           type="range"

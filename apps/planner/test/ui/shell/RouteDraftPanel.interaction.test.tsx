@@ -69,15 +69,80 @@ function openBasket() {
 }
 
 describe('Draft panel', () => {
-  it('is a route panel before Loadout, absent on the FreshFile route', () => {
-    open();
-    const items = within(navigation())
-      .getAllByRole('button')
-      .map((button) => button.getAttribute('aria-label') ?? button.textContent);
-    expect(items.slice(0, 3)).toEqual(['Route', 'Draft', 'Loadout']);
-    cleanup();
-    open('FreshFile');
-    expect(within(navigation()).queryByRole('button', { name: 'Draft' })).toBeNull();
+  it('is a route panel before Loadout, on every route', () => {
+    for (const routeKey of ['Underworld', 'FreshFile']) {
+      open(routeKey);
+      const items = within(navigation())
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('aria-label') ?? button.textContent);
+      expect(items.slice(0, 3)).toEqual(['Route', 'Draft', 'Loadout']);
+      cleanup();
+    }
+  });
+
+  it('gates Fresh File gods by route prerequisite, with rule tags and no bonus givers, NPCs or racks', () => {
+    const { catalog } = open('FreshFile');
+    const gods = () => screen.getByRole('group', { name: 'Gods' });
+    const god = (name: string) => within(gods()).getByRole('button', { name });
+    const enabled = () =>
+      ['Aphrodite', 'Apollo', 'Demeter', 'Hestia', 'Poseidon'].filter(
+        (name) => !(god(name) as HTMLButtonElement).disabled,
+      );
+    const tags = () =>
+      within(screen.getByRole('list', { name: 'God pool rules' }))
+        .getAllByRole('listitem')
+        .map((tag) => [tag.textContent, tag.hasAttribute('data-active')]);
+    expect(within(gods()).queryByRole('button', { name: 'Zeus' })).toBeNull();
+    expect(screen.queryByRole('table', { name: 'NPCs' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Rack keepsakes' })).toBeNull();
+    expect(tags()).toEqual([
+      ['Run starts with Apollo', false],
+      ['Aphrodite/Hestia after Poseidon or Demeter', false],
+    ]);
+
+    // Apollo first, then Poseidon or Demeter, then Aphrodite and Hestia.
+    expect(enabled()).toEqual(['Apollo']);
+    expect(hintOf(god('Poseidon'))).toBeNull();
+    chooseGods(['Apollo']);
+    expect(enabled()).toEqual(['Apollo', 'Demeter', 'Poseidon']);
+    chooseGods(['Poseidon']);
+    expect(enabled()).toEqual(['Aphrodite', 'Apollo', 'Demeter', 'Hestia', 'Poseidon']);
+    chooseGods(['Hestia']);
+    expect(
+      ['Apollo', 'Poseidon', 'Hestia'].map(
+        (name) => god(name).querySelector('.draft-order-number')?.textContent,
+      ),
+    ).toEqual(['1', '2', '3']);
+
+    // Removing a prerequisite god is allowed; the broken rule's tag turns active.
+    chooseGods(['Poseidon']);
+    expect(tags()[1]).toEqual(['Aphrodite/Hestia after Poseidon or Demeter', true]);
+    chooseGods(['Apollo']);
+    expect(tags()[0]).toEqual(['Run starts with Apollo', true]);
+    // Apollo rejoins the pool at its place.
+    chooseGods(['Apollo', 'Demeter']);
+    expect(god('Apollo').querySelector('.draft-order-number')?.textContent).toBe('1');
+    expect(tags().every(([, active]) => active === false)).toBe(true);
+
+    const basketTag = () =>
+      within(screen.getByRole('list', { name: 'Basket rules' })).getByRole('listitem');
+    expect(basketTag().textContent).toBe("Apollo's first boon must be Attack, Sprint or Magick");
+    expect(basketTag().hasAttribute('data-active')).toBe(false);
+    const dialog = openBasket();
+    expect(
+      within(dialog)
+        .getAllByRole('tab')
+        .map((tab) => tab.textContent),
+    ).toEqual([expect.stringMatching(/^Gods/)]);
+    const [cast, sprint] = ['ApolloCastBoon', 'ApolloSprintBoon'].map(
+      (key) => catalog.traits.byKey[key]!.label,
+    );
+    const castRow = within(dialog).getByRole('button', { name: cast! });
+    expect(castRow.getAttribute('aria-disabled')).toBe('true');
+    expect(hintOf(castRow)).toBeNull();
+    fireEvent.click(within(dialog).getByRole('button', { name: sprint! }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    expect(basketTag().hasAttribute('data-active')).toBe(false);
   });
 
   it('caps the god pool and toggles story and field NPCs by biome', () => {
@@ -122,26 +187,29 @@ describe('Draft panel', () => {
     expect(['Apollo', 'Zeus'].map(number)).toEqual(['1', '2']);
   });
 
-  it("notes pool #1's non-core first trait and blocks the draft until a core leads", () => {
+  it('allows only a core first boon for pool #1, and marks the tag when a non-core is left first', () => {
     const { catalog } = open();
     chooseGods(['Zeus', 'Apollo', 'Hestia']);
+    expect(screen.queryByRole('list', { name: 'God pool rules' })).toBeNull();
+    const tag = () =>
+      within(screen.getByRole('list', { name: 'Basket rules' })).getByRole('listitem');
+    expect(tag().textContent).toBe("First god's first boon must be a core boon");
+    expect(tag().hasAttribute('data-active')).toBe(false);
     const label = (key: string) => catalog.traits.byKey[key]!.label;
     const [ring, cast] = ['FocusLightningBoon', 'ZeusCastBoon'].map(label);
     const dialog = openBasket();
-    for (const name of [ring!, cast!])
-      fireEvent.click(within(dialog).getByRole('button', { name }));
+    const ringRow = () => within(dialog).getByRole('button', { name: ring! });
+    expect(ringRow().getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(within(dialog).getByRole('button', { name: cast! }));
+    expect(ringRow().getAttribute('aria-disabled')).toBeNull();
+    fireEvent.click(ringRow());
     fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
-    const note =
-      "Zeus's first trait must be a core boon (Attack, Special, Cast, Sprint or Magick).";
-    expect(screen.getByText(note)).toBeTruthy();
+    // Removing the core leaves a non-core first: the tag turns active and the draft is blocked.
+    const zeus = () => screen.getByRole('list', { name: 'Zeus basket traits' });
+    fireEvent.click(within(zeus()).getByRole('button', { name: `Remove ${cast}` }));
+    expect(tag().hasAttribute('data-active')).toBe(true);
+    expect(within(zeus()).getByRole('listitem').hasAttribute('data-refused')).toBe(false);
     expect(draftButton().getAttribute('aria-disabled')).toBe('true');
-    fireEvent.click(
-      within(screen.getByRole('list', { name: 'Zeus basket traits' })).getByRole('button', {
-        name: `Move ${cast} earlier`,
-      }),
-    );
-    expect(screen.queryByText(note)).toBeNull();
-    expect(draftButton().getAttribute('aria-disabled')).not.toBe('true');
   });
 
   it('orders a god by core slot, then other boons, then its Legendary, with Duos last', () => {

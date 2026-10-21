@@ -1365,18 +1365,6 @@
   border-top: 1px solid #30313a;
 }
 
-.draft-section-inline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 1rem;
-}
-
-.draft-section-inline > .draft-toggle-row {
-  flex: 1 1 20rem;
-  min-width: 0;
-}
-
 .draft-section-header {
   display: flex;
   align-items: center;
@@ -1603,6 +1591,14 @@
 .draft-fieldset > .draft-section:first-child {
   padding-top: 0;
   border-top: 0;
+}
+
+/* A section title with its fixed rule tags on the same line. */
+.draft-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
 }
 
 .draft-tags {

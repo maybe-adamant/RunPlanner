@@ -1,4 +1,8 @@
-import type { AuthoredDraftSpec, ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  routeInitialProfile,
+  type AuthoredDraftSpec,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import type { Catalog, TraitOrdinaryBoonSlot } from '@run-planner/engine/catalog-schema';
 import {
   DRAFT_GOD_BOONS_RANGE,
@@ -6,18 +10,22 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   assessDraftBasket,
+  assessDraftGods,
   draftGodBoonBudget,
+  draftFirstBoonRule,
+  draftGodRules,
   draftSourceQueues,
   draftKeepsakeOptions,
   draftOrderRefusals,
   draftPlannedBiomeKeys,
   draftWorldOptions,
   type DraftCapUsage,
+  type DraftGodAssessment,
+  type DraftRefusal,
   type DraftGiverCapUsage,
   type DraftKeepsakeOptions,
   type DraftSpec,
   type DraftTraitAssessment,
-  type DraftTraitRefusal,
   type DraftWorldOptions,
 } from '@run-planner/engine/simulation';
 
@@ -38,7 +46,12 @@ export interface DraftSpecProjection {
   readonly plannedBiomeKeys: readonly string[];
   readonly keepsakeOptions: DraftKeepsakeOptions;
   readonly rackSlots: readonly DraftRackSlot[];
-  /** Absent while the project's loadout has no weapon, aspect, familiar or keepsake. */
+  /** Each route god's selectability against the saved pool. */
+  readonly gods: readonly DraftGodAssessment[];
+  /**
+   * Absent while the project's loadout has no weapon, aspect, familiar or keepsake, except on
+   * a route whose save profile fixes the loadout.
+   */
   readonly spec?: DraftSpec;
 }
 
@@ -80,17 +93,21 @@ export function projectDraftSpec(catalog: Catalog, project: ProjectDocument): Dr
       keepsakeKey,
     });
   });
+  const godKeys = draft.godKeys.filter((key) => worldOptions.godKeys.includes(key));
   const projection = {
     worldOptions,
+    gods: assessDraftGods(catalog, route, godKeys),
     plannedBiomeKeys: draftPlannedBiomeKeys(route),
     keepsakeOptions,
     rackSlots,
   };
+  const fixedLoadout = routeInitialProfile(catalog, route.routeKey).kind === 'freshFile';
   if (
-    weaponKey === null ||
-    aspectKey === null ||
-    familiarKey === null ||
-    startingKeepsakeKey === null
+    !fixedLoadout &&
+    (weaponKey === null ||
+      aspectKey === null ||
+      familiarKey === null ||
+      startingKeepsakeKey === null)
   )
     return Object.freeze(projection);
   return Object.freeze({
@@ -108,7 +125,7 @@ export function projectDraftSpec(catalog: Catalog, project: ProjectDocument): Dr
           : { aspectHexTree: route.loadout.aspectHexTree }),
       },
       world: {
-        godKeys: draft.godKeys.filter((key) => worldOptions.godKeys.includes(key)),
+        godKeys,
         storyNpcByBiome,
         fieldNpcsByBiome,
       },
@@ -214,8 +231,18 @@ function toggled(values: readonly string[], value: string): readonly string[] {
   return values.includes(value) ? values.filter((v) => v !== value) : [...values, value];
 }
 
-export function withDraftGodToggled(draft: AuthoredDraftSpec, godKey: string): AuthoredDraftSpec {
-  return { ...draft, godKeys: toggled(draft.godKeys, godKey) };
+/** A route-required god rejoins the pool at its required place; any other god joins last. */
+export function withDraftGodToggled(
+  draft: AuthoredDraftSpec,
+  godKey: string,
+  requiredGodKeys: readonly string[] = [],
+): AuthoredDraftSpec {
+  const index = requiredGodKeys.indexOf(godKey);
+  if (index === -1 || draft.godKeys.includes(godKey))
+    return { ...draft, godKeys: toggled(draft.godKeys, godKey) };
+  const godKeys = [...draft.godKeys];
+  godKeys.splice(Math.min(index, godKeys.length), 0, godKey);
+  return { ...draft, godKeys };
 }
 
 export function withDraftBasketTraitToggled(
@@ -266,6 +293,13 @@ export function withDraftRackKeepsake(
   if (keepsakeKey === slot.inheritedKeepsakeKey) delete rackKeepsakeByBiome[slot.afterBiomeKey];
   else rackKeepsakeByBiome[slot.afterBiomeKey] = keepsakeKey;
   return { ...draft, rackKeepsakeByBiome };
+}
+
+/** Whether any itinerary biome hosts a story or field NPC the draft can target. */
+export function draftWorldHasNpcs(worldOptions: DraftWorldOptions): boolean {
+  return worldOptions.biomes.some(
+    (biome) => biome.storyNpc !== undefined || biome.fieldNpcs.length > 0,
+  );
 }
 
 export interface DraftBasketRow {
@@ -353,7 +387,9 @@ function refusalHint(
         return 'Its giver is not in the world.';
       case 'prerequisiteAfter':
         return `Needs ${refusal.traitKeys.map(label).join(' or ')} earlier.`;
+      // The Basket title's first-boon tag states these.
       case 'firstGodPick':
+      case 'firstOfferSlot':
       case 'draftIllegal':
       case 'wrongHammerLoadout':
       case 'cap':
@@ -382,17 +418,15 @@ const SLOT_LABELS: Readonly<Record<TraitOrdinaryBoonSlot, string>> = {
 };
 
 /** "Zeus's first trait must be a core boon (Attack, …, Sprint or Magick)." from the refusal's traits. */
-function firstGodPickNote(
-  catalog: Catalog,
-  refusal: Extract<DraftTraitRefusal, { readonly kind: 'firstGodPick' }>,
-): string {
+const giverLabel = (catalog: Catalog, giverKey: string) =>
+  catalog.traitGivers.byKey[giverKey]?.label ?? giverKey;
+
+/** The core slots these traits occupy, in game order: "Attack, Sprint or Magick". */
+export function draftSlotList(catalog: Catalog, traitKeys: readonly string[]): string {
   const slots = SLOT_ORDER.filter((slot) =>
-    refusal.traitKeys.some((key) => catalog.traits.byKey[key]?.equipmentSlot === slot),
+    traitKeys.some((key) => catalog.traits.byKey[key]?.equipmentSlot === slot),
   ).map((slot) => SLOT_LABELS[slot]);
-  const list =
-    slots.length < 2 ? slots.join('') : `${slots.slice(0, -1).join(', ')} or ${slots.at(-1)}`;
-  const god = catalog.traitGivers.byKey[refusal.godKey]?.label ?? refusal.godKey;
-  return `${god}'s first trait must be a core boon (${list}).`;
+  return slots.length < 2 ? slots.join('') : `${slots.slice(0, -1).join(', ')} or ${slots.at(-1)}`;
 }
 
 /** Core slots first, then the other boons, then the Legendary. */
@@ -544,6 +578,9 @@ export function projectDraftBasket(
         ]),
   ];
 
+  // A route without bonus givers or NPCs, such as Fresh File, has no tab for them.
+  const hasBonus = worldOptions.bonusGiverKeys.length > 0;
+  const hasNpcs = draftWorldHasNpcs(worldOptions);
   const tabs: DraftBasketTab[] = [
     {
       key: 'gods',
@@ -552,8 +589,12 @@ export function projectDraftBasket(
       sections: [...godSections, ...(duos.length === 0 ? [] : [section('duos', 'Duos', duos)])],
     },
     // Hermes and Hammers share one count, one per planned biome; Selene keeps its own.
-    { key: 'bonus', label: 'Bonus', cap: caps.supplyTotal, sections: bonus },
-    { key: 'npcs', label: 'NPCs', cap: caps.npcTotal, sections: npcSections },
+    ...(hasBonus
+      ? [{ key: 'bonus' as const, label: 'Bonus', cap: caps.supplyTotal, sections: bonus }]
+      : []),
+    ...(hasNpcs
+      ? [{ key: 'npcs' as const, label: 'NPCs', cap: caps.npcTotal, sections: npcSections }]
+      : []),
   ];
 
   const chip = (traitKey: string, order?: DraftBasketChip['order']): DraftBasketChip => {
@@ -571,7 +612,9 @@ export function projectDraftBasket(
     return Object.freeze({
       traitKey,
       label: catalog.traits.byKey[traitKey]?.label ?? traitKey,
-      refused: trait === undefined || !trait.selectable,
+      // The first-boon rule is the Basket title's tag, not a chip mark.
+      refused:
+        trait === undefined || trait.refusals.some((refusal) => refusal.kind !== 'firstGodPick'),
       ...(hint === undefined ? {} : { hint }),
       ...(order === undefined ? {} : { order: Object.freeze(order) }),
     });
@@ -615,9 +658,7 @@ export function projectDraftBasket(
             (byKey.get(traitKey)?.refusals ?? []).flatMap((refusal) =>
               refusal.kind === 'prerequisiteAfter'
                 ? [`${label(traitKey)} needs ${refusal.traitKeys.map(label).join(' or ')} first.`]
-                : refusal.kind === 'firstGodPick'
-                  ? [firstGodPickNote(catalog, refusal)]
-                  : [],
+                : [],
             ),
           ),
         ),
@@ -635,21 +676,90 @@ export function projectDraftBasket(
           }),
         ]),
   ];
+  const offered = (giverKey: string) => worldOptions.bonusGiverKeys.includes(giverKey);
+  const supplyOffered = caps.providers.some(
+    (usage) => usage.providerKind !== 'spell' && offered(usage.giverKey),
+  );
   const summary: DraftBasketSummaryCap[] = [
     { key: 'gods', label: 'God boons', cap: caps.poolGodTotal },
-    { key: 'supply', label: 'Hermes + Hammer', cap: caps.supplyTotal },
+    ...(supplyOffered ? [{ key: 'supply', label: 'Hermes + Hammer', cap: caps.supplyTotal }] : []),
     ...caps.providers
-      .filter((usage) => usage.providerKind === 'spell')
+      .filter((usage) => usage.providerKind === 'spell' && offered(usage.giverKey))
       .map((usage) => ({
         key: usage.giverKey,
         label: catalog.traitGivers.byKey[usage.giverKey]?.label ?? usage.giverKey,
         cap: usage,
       })),
-    { key: 'npcs', label: 'NPCs', cap: caps.npcTotal },
+    ...(hasNpcs ? [{ key: 'npcs', label: 'NPCs', cap: caps.npcTotal }] : []),
   ];
   return Object.freeze({
     tabs: Object.freeze(tabs.map((tab) => Object.freeze(tab))),
     summary: Object.freeze(summary),
     chipGroups: Object.freeze(chipGroups),
+  });
+}
+
+/** A rule shown as a fixed tag on a section's title line; active while the saved draft breaks it. */
+export interface DraftRuleTag {
+  readonly key: string;
+  readonly label: string;
+  readonly active: boolean;
+}
+
+/** The route's god pool rules: "Run starts with Apollo", "Aphrodite/Hestia after Poseidon or Demeter". */
+export function projectDraftGodTags(
+  catalog: Catalog,
+  project: ProjectDocument,
+  godKeys: readonly string[],
+  refusals: readonly DraftRefusal[],
+): readonly DraftRuleTag[] {
+  const rules = draftGodRules(catalog, project.route);
+  const names = (keys: readonly string[], joiner: string) =>
+    keys.map((key) => giverLabel(catalog, key)).join(joiner);
+  return Object.freeze([
+    ...(rules.requiredGodKeys.length === 0
+      ? []
+      : [
+          Object.freeze({
+            key: 'required',
+            label: `Run starts with ${names(rules.requiredGodKeys, ', ')}`,
+            // An empty pool is unfinished, not in breach.
+            active:
+              godKeys.length > 0 && refusals.some((refusal) => refusal.kind === 'requiredGod'),
+          }),
+        ]),
+    ...rules.needs.map((need) =>
+      Object.freeze({
+        key: `needs:${need.godKeys.join()}`,
+        label: `${names(need.godKeys, '/')} after ${names(need.needsGodKeys, ' or ')}`,
+        active: refusals.some(
+          (refusal) => refusal.kind === 'godUnreachable' && need.godKeys.includes(refusal.godKey),
+        ),
+      }),
+    ),
+  ]);
+}
+
+/** Pool #1's first-boon rule as the Basket title's tag, active while the saved basket breaks it. */
+export function projectDraftFirstBoonTag(
+  catalog: Catalog,
+  project: ProjectDocument,
+  spec: DraftSpec,
+  refusals: readonly DraftRefusal[],
+): DraftRuleTag | undefined {
+  const rule = draftFirstBoonRule(catalog, project.route, spec.loadout);
+  if (rule === undefined) return undefined;
+  return Object.freeze({
+    key: 'firstBoon',
+    label:
+      rule.kind === 'routeGod'
+        ? `${giverLabel(catalog, rule.godKey)}'s first boon must be ${draftSlotList(catalog, rule.traitKeys)}`
+        : "First god's first boon must be a core boon",
+    active: refusals.some(
+      (refusal) =>
+        refusal.kind === 'firstOfferBlocked' ||
+        (refusal.kind === 'basketTrait' &&
+          refusal.refusals.some((reason) => reason.kind === 'firstGodPick')),
+    ),
   });
 }

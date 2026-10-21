@@ -18,7 +18,7 @@ import {
   type DraftHeldTraits,
   type DraftPrerequisites,
 } from './prerequisites';
-import { draftWorldGiverKeys } from './world';
+import { draftWorldGiverKeys, draftWorldOptions } from './world';
 import { draftGodBoonBudget, draftPerGodCap } from './budget';
 
 export type DraftTraitRefusal =
@@ -38,6 +38,12 @@ export type DraftTraitRefusal =
   /** Pool #1 is the run's first Olympian, so its first queued trait must fit that god's first offer. */
   | {
       readonly kind: 'firstGodPick';
+      readonly godKey: string;
+      readonly traitKeys: readonly string[];
+    }
+  /** It would take the last slot pool #1's first offer can fill while #1 has no basket trait. */
+  | {
+      readonly kind: 'firstOfferSlot';
       readonly godKey: string;
       readonly traitKeys: readonly string[];
     }
@@ -125,7 +131,7 @@ export function assessDraftBasket(
   const order: DraftOrderContext = {
     queues: draftSourceQueues(catalog, spec),
     prerequisites: createDraftPrerequisites(catalog, spec.basketTraitKeys, heldTraits(routeStart)),
-    firstPick: draftFirstPick(catalog, spec, routeStart.traitHistory),
+    firstPick: draftFirstPick(catalog, route.routeKey, spec, routeStart.traitHistory),
   };
   return Object.freeze({
     traits: Object.freeze(
@@ -258,6 +264,7 @@ function assessTrait(
   if (
     hammer !== undefined &&
     (spec.loadout.weaponKey !== hammer.weaponKey ||
+      spec.loadout.aspectKey === null ||
       !hammer.aspectKeys.includes(spec.loadout.aspectKey))
   )
     refusals.push({ kind: 'wrongHammerLoadout' });
@@ -283,6 +290,18 @@ function assessTrait(
     if (later.length > 0) refusals.push({ kind: 'prerequisiteAfter', traitKeys: later });
     const firstPick = firstPickRefusal(order, traitKey);
     if (firstPick !== undefined) refusals.push(firstPick);
+  } else {
+    const pending = pendingFirstPick(order);
+    if (pending !== undefined) {
+      if (capped?.giverKey === pending.godKey && !pending.traitKeys.includes(traitKey))
+        refusals.push({ kind: 'firstGodPick', ...pending });
+      else if (
+        capped?.giverKey !== pending.godKey &&
+        slot !== undefined &&
+        firstOfferSlotsHeld(catalog, pending, [...spec.basketTraitKeys, traitKey])
+      )
+        refusals.push({ kind: 'firstOfferSlot', ...pending });
+    }
   }
   if (trait.offerDependsOnDeathDefiance === true) deferred.add('deathDefiance');
   return Object.freeze({
@@ -300,6 +319,7 @@ function compatibleHammerKeys(catalog: Catalog, loadout: DraftLoadout): readonly
   return catalog.traits.values
     .filter(
       (trait) =>
+        loadout.aspectKey !== null &&
         trait.hammerCompatibility?.weaponKey === loadout.weaponKey &&
         trait.hammerCompatibility.aspectKeys.includes(loadout.aspectKey),
     )
@@ -516,7 +536,7 @@ export function draftOrderRefusals(
     spec.basketTraitKeys,
     heldTraits(routeStart),
   );
-  const firstPick = draftFirstPick(catalog, spec, routeStart.traitHistory);
+  const firstPick = draftFirstPick(catalog, route.routeKey, spec, routeStart.traitHistory);
   return (basketTraitKeys) => {
     const order: DraftOrderContext = {
       queues: draftSourceQueues(catalog, { ...spec, basketTraitKeys }),
@@ -550,7 +570,7 @@ interface DraftOrderContext {
 }
 
 /** Pool #1 and the traits the run's first Olympian offer can hold for it. */
-interface DraftFirstPick {
+export interface DraftFirstPick {
   readonly godKey: string;
   readonly traitKeys: readonly string[];
 }
@@ -561,23 +581,113 @@ interface DraftFirstPick {
  */
 function draftFirstPick(
   catalog: Catalog,
+  routeKey: string,
   spec: DraftSpec,
   start: TraitHistoryState,
 ): DraftFirstPick | undefined {
   const godKey = spec.world.godKeys[0];
   if (godKey === undefined || catalog.traitGivers.byKey[godKey]?.providerKind !== 'olympian')
     return undefined;
-  const traitKeys = draftFirstOfferTraitKeys(catalog, godKey, start);
+  const traitKeys = draftFirstOfferTraitKeys(catalog, routeKey, godKey, start);
   return traitKeys === undefined ? undefined : Object.freeze({ godKey, traitKeys });
 }
 
-/** The traits a god's first offer of the run can hold from this start; undefined when unrestricted. */
+/**
+ * The traits a god's first offer of the run can hold from this start; undefined when unrestricted.
+ * A route's first-run forced offer of this god narrows it to that offer's traits.
+ */
 export function draftFirstOfferTraitKeys(
   catalog: Catalog,
+  routeKey: string,
   godKey: string,
   start: TraitHistoryState,
 ): readonly string[] | undefined {
-  return initialOfferCoreOnlyKeys(catalog, godKey, start);
+  const giverTraits = catalog.traitGivers.byKey[godKey]?.traitKeys ?? [];
+  const forced = catalog.rooms.values.find(
+    (room) =>
+      room.firstRunOffer?.routeKey === routeKey &&
+      room.firstRunOffer.traitKeys.some((key) => giverTraits.includes(key)),
+  )?.firstRunOffer;
+  return forced !== undefined ? forced.traitKeys : initialOfferCoreOnlyKeys(catalog, godKey, start);
+}
+
+/**
+ * The route's rule for pool #1's first boon: a required god's narrowed first offer, or any
+ * first god's core boons. Undefined when the start already holds a core.
+ */
+export type DraftFirstBoonRule =
+  | { readonly kind: 'routeGod'; readonly godKey: string; readonly traitKeys: readonly string[] }
+  | { readonly kind: 'core' };
+
+export function draftFirstBoonRule(
+  catalog: Catalog,
+  route: DraftRoute,
+  loadout: DraftLoadout,
+): DraftFirstBoonRule | undefined {
+  const start = routeStartState(catalog, route, loadout).traitHistory;
+  const godKey = draftWorldOptions(catalog, route).requiredGodKeys[0];
+  if (godKey !== undefined) {
+    const traitKeys = draftFirstOfferTraitKeys(catalog, route.routeKey, godKey, start);
+    return traitKeys === undefined
+      ? undefined
+      : Object.freeze({ kind: 'routeGod', godKey, traitKeys });
+  }
+  const restricted = draftWorldOptions(catalog, route).godKeys.some(
+    (key) => draftFirstOfferTraitKeys(catalog, route.routeKey, key, start) !== undefined,
+  );
+  return restricted ? Object.freeze({ kind: 'core' }) : undefined;
+}
+
+/** Pool #1 and its first offer's traits while #1 has no basket trait to lead with. */
+export function draftPendingFirstPick(
+  catalog: Catalog,
+  route: DraftRoute,
+  spec: DraftSpec,
+): DraftFirstPick | undefined {
+  const routeStart = routeStartState(catalog, route, spec.loadout);
+  return pendingFirstPick({
+    queues: draftSourceQueues(catalog, spec),
+    firstPick: draftFirstPick(catalog, route.routeKey, spec, routeStart.traitHistory),
+  });
+}
+
+function pendingFirstPick(
+  order: Pick<DraftOrderContext, 'queues' | 'firstPick'>,
+): DraftFirstPick | undefined {
+  const first = order.firstPick;
+  if (first === undefined) return undefined;
+  const queue = order.queues.find((candidate) => candidate.giverKey === first.godKey);
+  return queue === undefined || queue.traitKeys.length === 0 ? first : undefined;
+}
+
+/** Whether these basket traits hold the slot of every trait pool #1's first offer may hold. */
+function firstOfferSlotsHeld(
+  catalog: Catalog,
+  first: DraftFirstPick,
+  basketTraitKeys: readonly string[],
+): boolean {
+  const heldSlots = new Set(
+    basketTraitKeys.flatMap((key) => catalog.traits.byKey[key]?.equipmentSlot ?? []),
+  );
+  return first.traitKeys.every((key) => {
+    const slot = catalog.traits.byKey[key]?.equipmentSlot;
+    return slot !== undefined && heldSlots.has(slot);
+  });
+}
+
+/**
+ * Pool #1's first offer when every trait it may hold is kept out by a basket trait of another
+ * source in the same slot, while #1 has no basket trait of its own to lead with.
+ */
+export function draftFirstOfferBlocked(
+  catalog: Catalog,
+  route: DraftRoute,
+  spec: DraftSpec,
+): DraftFirstPick | undefined {
+  const pending = draftPendingFirstPick(catalog, route, spec);
+  return pending !== undefined && firstOfferSlotsHeld(catalog, pending, spec.basketTraitKeys)
+    ? pending
+    : undefined;
 }
 
 function firstPickRefusal(
