@@ -10,21 +10,14 @@ import { replaceSimulationTraitHistory } from '../state/transitions';
 import { createTraitHistoryState } from '../traits/history/fold';
 import { checkRequirement } from '../traits/level-effects';
 import type { TraitFindingCode } from '../model';
-import {
-  draftDenialActive,
-  draftForfeitActive,
-  draftPlannedBiomeKeys,
-  draftPlannedShare,
-  type DraftLoadout,
-  type DraftRoute,
-  type DraftSpec,
-} from './spec';
+import { draftPlannedBiomeKeys, type DraftLoadout, type DraftRoute, type DraftSpec } from './spec';
 import {
   createDraftPrerequisites,
   type DraftHeldTraits,
   type DraftPrerequisites,
 } from './prerequisites';
 import { draftWorldGiverKeys } from './world';
+import { draftGodBoonBudget, draftPerGodCap } from './budget';
 
 export type DraftTraitRefusal =
   | { readonly kind: 'giverNotInWorld' }
@@ -115,9 +108,10 @@ export function assessDraftBasket(
   );
   for (const key of spec.basketTraitKeys) traitKeys.add(key);
   const routeStart = routeStartState(catalog, route, spec.loadout);
+  const budget = draftGodBoonBudget(catalog, route, spec);
   const plan: DraftPlanScale = {
-    share: draftPlannedShare(route),
-    planned: draftPlannedBiomeKeys(route).length,
+    godTotalCap: budget.effectiveTotal,
+    perGodCap: budget.perGod,
     supplyCap: supplyCap(route),
   };
   const order: DraftOrderContext = {
@@ -155,14 +149,14 @@ function basketCaps(
   return Object.freeze({
     poolGodTotal: Object.freeze({
       count: spec.basketTraitKeys.filter((key) => isGodTrait(catalog, key)).length,
-      cap: totalCap(catalog, spec, plan),
+      cap: plan.godTotalCap,
     }),
     supplyTotal: Object.freeze({
       count: spec.basketTraitKeys.filter((key) => isSupplyTrait(catalog, key)).length,
       cap: plan.supplyCap,
     }),
     poolGods: Object.freeze(
-      spec.world.godKeys.map((godKey) => usage(godKey, olympianCap(catalog, spec))),
+      spec.world.godKeys.map((godKey) => usage(godKey, draftPerGodCap(catalog, spec))),
     ),
     providers: Object.freeze(
       catalog.traitGivers.values.flatMap((giver) => {
@@ -183,31 +177,9 @@ function basketCaps(
 
 /** How the planned prefix sizes the route-wide caps. */
 interface DraftPlanScale {
-  /** Planned biomes over itinerary biomes. */
-  readonly share: number;
-  readonly planned: number;
+  readonly godTotalCap: number;
+  readonly perGodCap: number;
   readonly supplyCap: number;
-}
-
-/** A planner cap over the whole route, scaled by the planned share and rounded up. */
-function scaled(cap: number, share: number): number {
-  return Math.ceil(cap * share);
-}
-
-// EXPERIMENT: cumulative god caps by planned biome count.
-const CAP_VARIANT: 'current' | 'A' | 'B' = 'current';
-const CAP_TABLES = {
-  A: { normal: [4, 7, 11, 14], forfeit: [3, 5, 8, 10] },
-  B: { normal: [5, 8, 11, 12], forfeit: [4, 6, 8, 8] },
-} as const;
-
-function totalCap(catalog: Catalog, spec: DraftSpec, plan: DraftPlanScale): number {
-  const forfeit = draftForfeitActive(catalog, spec.loadout);
-  if (CAP_VARIANT !== 'current') {
-    const table = CAP_TABLES[CAP_VARIANT][forfeit ? 'forfeit' : 'normal'];
-    return table[plan.planned - 1] ?? table[table.length - 1]!;
-  }
-  return scaled(forfeit ? FORFEIT_OLYMPIAN_TOTAL_CAP : OLYMPIAN_TOTAL_CAP, plan.share);
 }
 
 /** One Hermes or Hammer trait per planned biome; each giver keeps its own cap of two. */
@@ -261,7 +233,7 @@ function assessTrait(
     );
     if (held.length >= capped.cap) refusals.push({ kind: 'cap', ...capped });
   }
-  const godTotalCap = totalCap(catalog, spec, plan);
+  const godTotalCap = plan.godTotalCap;
   if (
     isGodTrait(catalog, traitKey) &&
     others.filter((key) => isGodTrait(catalog, key)).length >= godTotalCap
@@ -352,19 +324,6 @@ export const DRAFT_PROVIDER_CAPS: Readonly<Record<DraftProviderKind, number>> = 
   hermes: 2,
   spell: 1,
 };
-/**
- * Planner limit on one god's own traits, Legendary included; a Duo counts for neither god.
- * Denial bans offered rows that are not taken, so it leaves room for one fewer.
- */
-const OLYMPIAN_CAP = 5;
-const DENIAL_OLYMPIAN_CAP = 4;
-
-function olympianCap(catalog: Catalog, spec: DraftSpec): number {
-  return draftDenialActive(catalog, spec.loadout) ? DENIAL_OLYMPIAN_CAP : OLYMPIAN_CAP;
-}
-/** Planner limit on god traits across the whole pool; Forfeit's lost boon rooms lower it. */
-const OLYMPIAN_TOTAL_CAP = 12;
-const FORFEIT_OLYMPIAN_TOTAL_CAP = 8;
 /** Planner limit on each trait-giving NPC: one of its traits per draft. */
 const NPC_CAP = 1;
 
@@ -391,7 +350,7 @@ export function draftCappedGiver(
   const giver = givers[0]!;
   const cap =
     giver.providerKind === 'olympian'
-      ? olympianCap(catalog, spec)
+      ? draftPerGodCap(catalog, spec)
       : isNpcGiver(giver)
         ? NPC_CAP
         : isProviderKind(giver.providerKind)
@@ -453,6 +412,7 @@ function heldTraits(state: SimulationState): DraftHeldTraits {
   return Object.freeze({
     traitKeys: new Set(Object.keys(history.equippedTraits)),
     elementCounts: history.elementCounts,
+    godBoonRarityCounts: history.godBoonRarityCounts,
   });
 }
 
@@ -575,7 +535,7 @@ function prerequisitesQueuedAfter(order: DraftOrderContext, traitKey: string): r
   if (queue === undefined) return [];
   const after = new Set(queue.slice(queue.indexOf(traitKey) + 1));
   const later = new Set<string>();
-  // A trait waiting only on an element threshold is passed over, so only held-trait needs order it.
+  // A trait waiting only on run state is passed over, so only held-trait needs order it.
   for (const need of order.prerequisites.heldTraitNeeds.get(traitKey) ?? []) {
     if (need.length === 0) continue;
     const met = need.some((option) => {

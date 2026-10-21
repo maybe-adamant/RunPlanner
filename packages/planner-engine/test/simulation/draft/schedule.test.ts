@@ -21,17 +21,22 @@ const spec: DraftSpec = {
 };
 
 describe('draft god schedule', () => {
-  it('spreads basket traits by capacity', () => {
-    const { byBiome } = draftScheduleFor(surface, spec, 1);
+  it('spreads basket traits by the planned god boons of each biome', () => {
+    const { byBiome } = draftScheduleFor(
+      surface,
+      { ...spec, godBoonsByBiome: { N: 6, O: 1, P: 1, Q: 1 } },
+      1,
+    );
     expect(byBiome.flatMap((biome) => biome.traitKeys).sort()).toEqual(
       [...spec.basketTraitKeys].sort(),
     );
     expect(byBiome[0]!.traitKeys.length).toBeGreaterThan(byBiome[1]!.traitKeys.length);
   });
 
-  it('gives O no anchors under Forfeit', () => {
+  it('gives a biome no anchors when Forfeit takes its one planned boon', () => {
     const forfeit = {
       ...spec,
+      godBoonsByBiome: { O: 1 },
       loadout: { ...loadout, fearRanks: { ...loadout.fearRanks, BoonSkipShrineUpgrade: 1 } },
     };
     const o = draftScheduleFor(surface, forfeit, 1).byBiome[1]!;
@@ -173,8 +178,9 @@ describe('draft god schedule', () => {
       ] as const)
         for (const seed of seeds) {
           const early = dueOf(route, draft(['BoltRetaliateBoon', 'LuckyBoon'], draftLoadout), seed);
-          expect(early('BoltRetaliateBoon')).toBe(0);
-          expect(early('LuckyBoon')).toBe(1);
+          // A lone god trait falls due by mid-route; Success Rate waits for it and the first half's end.
+          expect(early('BoltRetaliateBoon')).toBeLessThanOrEqual(1);
+          expect(early('LuckyBoon')).toBe(Math.max(1, early('BoltRetaliateBoon')!));
           const chained = dueOf(route, draft(successRate, draftLoadout), seed);
           expect(chained('LuckyBoon')).toBe(Math.max(1, chained('DoubleStrikeChanceBoon')!));
         }

@@ -9,6 +9,7 @@ import { createDefaultRouteLoadout } from '../../../src/authored-project/loadout
 import { createProjectDocument } from '../../../src/authored-project/defaults';
 import { draftProject, simulateProjectAssembly, type DraftSpec } from '../../../src/simulation';
 import { DEFAULT_DRAFT_BUDGET } from '../../../src/simulation/draft/generator';
+import { authoredShopOffer } from '../../../src/authored-project/shop';
 import { latestRunState } from '../../../src/simulation/draft/report';
 import { DRAFT_ILLEGAL_ECHO_TRAIT_KEYS } from '../../../src/simulation/draft/basket';
 import { draftLoadoutProject } from '../../../src/simulation/draft/spec';
@@ -339,6 +340,159 @@ describe('draftProject', () => {
           duo,
         );
       }
+    });
+  });
+
+  describe('Shop purchases', () => {
+    /** Each Shop purchase as biome, reward type and the trait its boon offer selected. */
+    const shopBuys = (project: ProjectDocument): string[] =>
+      project.route.biomes.flatMap((biome) =>
+        (biome.topology?.occurrences ?? []).flatMap((occurrence) =>
+          (occurrence.roomActions?.order ?? []).flatMap((action) => {
+            if (action.kind !== 'interactShopOffer') return [];
+            const reward = authoredShopOffer(occurrence, action.offerKey)?.reward;
+            const traits = Object.values(reward?.traitOffersByAcquisitionRole ?? {}).flatMap(
+              (offer) =>
+                offer?.kind === 'traits'
+                  ? [
+                      offer.options[
+                        ['option1', 'option2', 'option3'].indexOf(offer.selectedOptionKey)
+                      ]!.traitKey,
+                    ]
+                  : [],
+            );
+            return [`${biome.biomeKey}:${reward?.offer.rewardType}:${traits.join('/')}`];
+          }),
+        ),
+      );
+    const underworld = cases[0]!.base;
+
+    it("buys the boon of a god whose next basket trait it can take, keeping each god's order", () => {
+      const zeus = ['ZeusWeaponBoon', 'ZeusCastBoon', 'DoubleBoltBoon', 'FocusLightningBoon'];
+      const spec: DraftSpec = {
+        loadout,
+        world: {
+          godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+          storyNpcByBiome: {},
+          fieldNpcsByBiome: {},
+        },
+        basketTraitKeys: [
+          'ZeusWeaponBoon',
+          'ApolloSpecialBoon',
+          'ZeusCastBoon',
+          'HestiaSprintBoon',
+          'AphroditeManaBoon',
+          'DoubleBoltBoon',
+          'FocusLightningBoon',
+          'ApolloRetaliateBoon',
+        ],
+        rackKeepsakeKeys: [null, null, null],
+      };
+      const result = draftProject(catalog, underworld, spec, 5);
+      if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+      // Zeus's next queued trait, from a bought boon.
+      expect(shopBuys(result.project)).toContain('F:RandomLoot:DoubleBoltBoon');
+      const held = Object.keys(
+        latestRunState(simulateProjectAssembly(catalog, result.project))?.traits.equippedTraits ??
+          {},
+      );
+      const zeusHeld = zeus.filter((key) => held.includes(key));
+      expect(zeusHeld).toEqual(zeus.slice(0, zeusHeld.length));
+      // The soft pace never runs far past two purchases per planned biome.
+      expect(shopBuys(result.project).length).toBeLessThanOrEqual(9);
+    });
+
+    it("enters each planned biome's midshop when the player prefers midshops", () => {
+      const spec: DraftSpec = {
+        loadout,
+        world: {
+          godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+          storyNpcByBiome: {},
+          fieldNpcsByBiome: {},
+        },
+        basketTraitKeys: ['ZeusWeaponBoon', 'ApolloCastBoon'],
+        rackKeepsakeKeys: [null, null, null],
+      };
+      const fg = createProjectDocument(catalog, {
+        projectId: 'm',
+        routeKey: 'Underworld',
+        configuredBiomeCount: 2,
+      });
+      const midshops = (prefer: boolean) => {
+        const result = draftProject(
+          catalog,
+          fg,
+          { ...spec, ...(prefer ? { preferMidshops: true } : {}) },
+          1,
+        );
+        if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+        return simulateProjectAssembly(catalog, result.project).evaluation.route.biomes.flatMap(
+          (biome) =>
+            'history' in biome
+              ? biome.history.ledgers.roomAppearances
+                  .filter(
+                    (entry) =>
+                      entry.origin.biomeKey === biome.biomeKey &&
+                      catalog.rooms.byKey[entry.gameName]?.kind === 'Shop',
+                  )
+                  .map((entry) => entry.gameName)
+              : [],
+        );
+      };
+      expect(midshops(false)).toEqual([]);
+      expect(midshops(true)).toEqual(['F_Shop01', 'G_Shop01']);
+    });
+
+    it('takes the Clockwork Goal doors in Tartarus when told to pursue the goal', () => {
+      const spec: DraftSpec = {
+        ...cases[0]!.spec,
+        world: { ...cases[0]!.spec.world, storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+        rackKeepsakeKeys: [null, null, null],
+      };
+      const nonGoals = (pursue: boolean) => {
+        const result = draftProject(
+          catalog,
+          underworld,
+          { ...spec, ...(pursue ? { pursueTartarusGoal: true } : {}) },
+          1,
+        );
+        if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+        const tartarus = simulateProjectAssembly(
+          catalog,
+          result.project,
+        ).evaluation.route.biomes.find((biome) => biome.biomeKey === 'I');
+        if (tartarus === undefined || !('history' in tartarus)) throw new Error('no Tartarus');
+        return tartarus.history.ledgers.counters.clockworkNonGoalRewardsAcquired ?? 0;
+      };
+      // Every door it can is a Goal, so fewer non-goal rewards are taken on the way down.
+      expect(nonGoals(true)).toBeLessThan(nonGoals(false));
+    });
+
+    it('buys a Dream elemental boost of the element a waiting Infusion needs', () => {
+      const { loadout: base } = cases[2]!.spec;
+      const spec: DraftSpec = {
+        loadout: { ...base, fearRanks: { ...base.fearRanks, BoonSkipShrineUpgrade: 1 } },
+        world: {
+          godKeys: ['Zeus', 'Apollo', 'Poseidon', 'Hestia'],
+          storyNpcByBiome: {},
+          fieldNpcsByBiome: {},
+        },
+        basketTraitKeys: [
+          'PoseidonManaBoon',
+          'FocusLightningBoon',
+          'DoubleRewardBoon',
+          'ZeusSpecialBoon',
+          'ElementalDamageFloorBoon',
+          'ElementalRallyBoon',
+          'ApolloCastBoon',
+          'ElementalHealthBoon',
+        ],
+        rackKeepsakeKeys: [null, null, null],
+      };
+      const result = draftProject(catalog, cases[2]!.base, spec, 5);
+      if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+      // Air for Zeus's waiting Infusion, from the first Dream Shop.
+      expect(shopBuys(result.project)).toContain('H:AirBoost:');
     });
   });
 

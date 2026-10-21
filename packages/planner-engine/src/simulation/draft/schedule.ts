@@ -9,25 +9,9 @@ import {
   type DraftPrerequisiteNeed,
 } from './prerequisites';
 import { shuffleDraft, type DraftRng } from './rng';
-import { draftForfeitActive, draftPlannedBiomeKeys, type DraftRoute, type DraftSpec } from './spec';
+import { draftGodBoonBudget } from './budget';
+import { draftPlannedBiomeKeys, type DraftRoute, type DraftSpec } from './spec';
 import type { DraftWorldProduct } from './world';
-
-/**
- * Median world-god boon rooms one biome yields: ten seeds each of full
- * Underworld FGHI and Surface NOPQ drafts, counting door rewards, Fields cages
- * and Ship wheel picks. Measured when wanted god boons weighed 25 against 1;
- * steering now weighs them 30 or 60 against 4.
- */
-const DRAFT_GOD_ROOM_CAPACITY: Readonly<Record<string, number>> = Object.freeze({
-  F: 5,
-  G: 2,
-  H: 1,
-  I: 2,
-  N: 5,
-  O: 1,
-  P: 2,
-  Q: 2,
-});
 
 /** The Hermes and Daedalus Hammer rewards whose basket traits are scheduled by route half. */
 export type DraftSupply = 'hermes' | 'hammer';
@@ -146,9 +130,14 @@ export function draftGodSchedule(
   const shuffle = <T>(values: readonly T[]) => shuffleDraft(rng, values);
   const godKeys = shuffle(spec.world.godKeys);
   const biomeKeys = draftPlannedBiomeKeys(route);
-  const forfeit = draftForfeitActive(catalog, spec.loadout) ? 1 : 0;
-  const capacity = (biomeKey: string) =>
-    Math.max((DRAFT_GOD_ROOM_CAPACITY[biomeKey] ?? 1) - forfeit, 0);
+  // Each planned biome's god boon budget is its soft scheduling target, never a hard cap.
+  const planned = new Map(
+    draftGodBoonBudget(catalog, route, spec).biomes.map((biome) => [
+      biome.biomeKey,
+      biome.effective,
+    ]),
+  );
+  const capacity = (biomeKey: string) => planned.get(biomeKey) ?? 0;
   const firstHalf = biomeKeys.slice(0, Math.ceil(biomeKeys.length / 2));
   const godsOf = (traitKey: string) =>
     catalog.traitGivers.values

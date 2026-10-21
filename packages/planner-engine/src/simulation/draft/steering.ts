@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { TraitElement } from '../../catalog-schema/traits';
+import { authoredShopOffer } from '../../authored-project/shop';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { DRAFT_PROVIDER_CAPS, draftSourceQueues, draftTraitKind } from './basket';
 import type { DraftHeldTraits, DraftPrerequisites } from './prerequisites';
@@ -28,10 +29,29 @@ export interface DraftSteeringState {
   readonly biomeIndex: () => number;
 }
 
+/** The purchase pace's target: Shop purchases per planned biome, elemental boosts aside. */
+const PURCHASES_PER_BIOME = 2;
+/** Dream Shop boosts by the element each grants. */
+export const DRAFT_ELEMENT_BOOSTS: Readonly<Record<string, TraitElement>> = {
+  FireBoost: 'Fire',
+  AirBoost: 'Air',
+  EarthBoost: 'Earth',
+  WaterBoost: 'Water',
+};
+
 /** Offer weight of a giver whose basket trait is still wanted. */
 const WANTED_GIVER_WEIGHT = 30;
 /** Offer weight of a giver whose basket trait is due now. */
 const DUE_GIVER_WEIGHT = 60;
+/** A fountain door only breaks a tie with an otherwise equal door. */
+const FOUNTAIN_TIE_BREAK = 1.01;
+/** A preferred midshop's least weight: above any boon door (at most 90), below a story room. */
+const PREFERRED_MIDSHOP_FLOOR = 100;
+/** Remaining eligible boon bag entries at or below which the bag counts as low. */
+const LOW_BOON_BAG = 1;
+
+/** Shop weight of a boon whose god can take a basket trait now, above any due god. */
+const PURCHASABLE_GOD_WEIGHT = 120;
 
 /** The draft's weights and targets: what the basket still wants, and when. */
 export class DraftSteering {
@@ -65,20 +85,21 @@ export class DraftSteering {
 
   /**
    * The god's next basket trait not yet held; only it may be taken from the god.
-   * A trait waiting only on an element threshold is passed over until the threshold is met.
+   * A trait waiting only on run state, an element threshold or a god boon rarity count, is passed
+   * over until that state holds.
    */
   nextQueued(godKey: string, progress: DraftProgress): string | undefined {
     const unmet = (this.queues.get(godKey) ?? []).filter(
       (key) => !progress.equippedTraitKeys.includes(key),
     );
-    return unmet.find((key) => !this.prerequisites.elementWaiting(key, progress.held)) ?? unmet[0];
+    return unmet.find((key) => !this.prerequisites.runStateWaiting(key, progress.held)) ?? unmet[0];
   }
 
   /** Element thresholds a waiting basket trait still needs, first waiting trait first. */
   wantedElements(progress: DraftProgress): readonly TraitElement[] {
     const elements: TraitElement[] = [];
     for (const key of this.wantedBasket(progress))
-      if (this.prerequisites.elementWaiting(key, progress.held))
+      if (this.prerequisites.runStateWaiting(key, progress.held))
         for (const element of this.prerequisites.missingElements(key, progress.held))
           if (!elements.includes(element)) elements.push(element);
     return elements;
@@ -120,7 +141,7 @@ export class DraftSteering {
   }
 
   /** A god whose room can take a basket trait now: its next queued trait or a Duo is ready. */
-  private godTakes(giverKey: string, progress: DraftProgress): boolean {
+  godTakes(giverKey: string, progress: DraftProgress): boolean {
     const next = this.nextQueued(giverKey, progress);
     return (
       (next !== undefined && this.ready(next, progress)) ||
@@ -142,7 +163,11 @@ export class DraftSteering {
       held:
         snapshot === undefined
           ? this.start
-          : { traitKeys: new Set(equippedTraitKeys), elementCounts: snapshot.traits.elementCounts },
+          : {
+              traitKeys: new Set(equippedTraitKeys),
+              elementCounts: snapshot.traits.elementCounts,
+              godBoonRarityCounts: snapshot.traits.godBoonRarityCounts,
+            },
     };
   }
 
@@ -259,6 +284,34 @@ export class DraftSteering {
     return wanted.some((key) => due.includes(key)) ? 'now' : 'later';
   }
 
+  /** The world god an offer's boon comes from, for boon rewards, Mystery boons and Devotion trials. */
+  offerGod(offer: ResolvedRewardOffer): string | undefined {
+    const source =
+      offer.payload?.kind === 'BoonSource'
+        ? offer.payload.source
+        : offer.payload?.kind === 'DevotionPair'
+          ? offer.payload.chosenSource
+          : undefined;
+    const giverKey =
+      source === undefined ? undefined : this.catalog.traitGiverByAcquisitionGameName[source];
+    return giverKey !== undefined &&
+      this.catalog.traitGivers.byKey[giverKey]?.providerKind === 'olympian' &&
+      this.worldGivers.has(giverKey)
+      ? giverKey
+      : undefined;
+  }
+
+  /**
+   * Steering weight of a Shop item: a boon (or Mystery boon) of a god that can take a
+   * basket trait now comes first, so the purchase it would take is on offer.
+   */
+  shopWeight(offer: ResolvedRewardOffer): number {
+    const god = this.offerGod(offer);
+    return god !== undefined && this.godTakes(god, this.progress())
+      ? PURCHASABLE_GOD_WEIGHT
+      : this.offerWeight(offer);
+  }
+
   /** Steering weight of a reward; Olympian sources outside the world and the Anvil weigh nothing. */
   offerWeight(offer: ResolvedRewardOffer): number {
     // The Anvil of Fates replaces held Hammers, so a monotonic draft never takes it.
@@ -362,6 +415,36 @@ export class DraftSteering {
     return due;
   }
 
+  /**
+   * How far the run's Shop purchases trail the soft pace of PURCHASES_PER_BIOME per
+   * planned biome, measured at mid-biome; negative when ahead. Elemental boosts aside.
+   */
+  purchasesBehind(): number {
+    let made = 0;
+    for (const biome of this.state.assembly().project.route.biomes)
+      for (const occurrence of biome.topology?.occurrences ?? [])
+        for (const action of occurrence.roomActions?.order ?? []) {
+          if (action.kind !== 'interactShopOffer') continue;
+          const reward = authoredShopOffer(occurrence, action.offerKey)?.reward?.offer;
+          if (reward === undefined || DRAFT_ELEMENT_BOOSTS[reward.rewardType] === undefined)
+            made += 1;
+        }
+    return PURCHASES_PER_BIOME * this.state.biomeIndex() + 1 - made;
+  }
+
+  /** Whether the run's eligible boon bag entries are nearly spent, which a Shop never is. */
+  boonBagLow(): boolean {
+    const snapshot = latestRunState(this.state.assembly());
+    if (snapshot === undefined) return false;
+    let remaining = 0;
+    for (const bag of snapshot.bags)
+      for (const entry of bag.entries)
+        if (entry.rewardType === 'Boon' && entry.eligibility === 'eligible')
+          remaining +=
+            entry.remaining.kind === 'exact' ? entry.remaining.count : entry.remaining.min;
+    return remaining <= LOW_BOON_BAG;
+  }
+
   /** A door placement waits on a story NPC whose wanted trait is not ready while a later room is likely. */
   roomWeight(gameName: string, biomeKey: string, placing = false): number {
     const room = this.catalog.rooms.byKey[gameName];
@@ -376,7 +459,22 @@ export class DraftSteering {
         this.laterRoomLikely(biomeKey);
       return waits ? 0.1 : 200;
     }
-    if (room?.kind === 'Shop') return 0.4;
+    if (room?.kind === 'Shop') {
+      // A mid-biome Shop the player prefers is taken over any boon door, below a story room
+      // (200); more so the further purchases trail the pace or the boon bag runs low.
+      if (this.spec.preferMidshops === true)
+        return Math.min(
+          Math.max(
+            10 + 40 * Math.max(this.purchasesBehind(), 0) + (this.boonBagLow() ? 60 : 0),
+            PREFERRED_MIDSHOP_FLOOR,
+          ),
+          180,
+        );
+      // Behind the purchase pace a Shop door is more welcome, ahead of it less.
+      return this.purchasesBehind() > 0 ? 1.5 : 0.4;
+    }
+    // A fountain door only breaks a tie with an otherwise equal door.
+    if (room?.kind === 'Reprieve') return FOUNTAIN_TIE_BREAK;
     return 1;
   }
 }

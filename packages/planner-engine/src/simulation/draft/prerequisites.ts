@@ -4,13 +4,17 @@ import { BASE_TRAIT_ELEMENTS, highestBaseElementCount } from '../traits/history/
 
 type PrerequisiteLeaf = Extract<
   TraitRequirementExpression,
-  { readonly kind: 'anyEquippedTrait' | 'elementCount' | 'highestBaseElementCount' }
+  {
+    readonly kind:
+      'anyEquippedTrait' | 'elementCount' | 'highestBaseElementCount' | 'godBoonRarityCount';
+  }
 >;
 
-/** Traits held, and the element counts the run has from them and everything else. */
+/** Traits held, and the element and god boon rarity counts the run has. */
 export interface DraftHeldTraits {
   readonly traitKeys: ReadonlySet<string>;
   readonly elementCounts: Readonly<Record<TraitElement, number>>;
+  readonly godBoonRarityCounts: Readonly<Record<string, number>>;
 }
 
 /** One way to meet a need: basket traits whose contributions reach the shortfall. */
@@ -29,8 +33,8 @@ export interface DraftPrerequisites {
   readonly heldTraitNeeds: ReadonlyMap<string, readonly DraftPrerequisiteNeed[]>;
   /** Whether the trait's held-trait and element requirements all hold. */
   ready(traitKey: string, held: DraftHeldTraits): boolean;
-  /** Whether the trait waits only on element thresholds. */
-  elementWaiting(traitKey: string, held: DraftHeldTraits): boolean;
+  /** Whether the trait waits only on run state, element or god boon rarity counts, not on held traits. */
+  runStateWaiting(traitKey: string, held: DraftHeldTraits): boolean;
   /** Elements whose unmet threshold the trait waits on; any base element for a highest-count need. */
   missingElements(traitKey: string, held: DraftHeldTraits): readonly TraitElement[];
   /** Wanted basket traits that some unmet need of a waiting trait, by default any wanted one, could use. */
@@ -51,7 +55,8 @@ function prerequisiteLeaves(catalog: Catalog, traitKey: string): readonly Prereq
     else if (
       requirement.kind === 'anyEquippedTrait' ||
       requirement.kind === 'elementCount' ||
-      requirement.kind === 'highestBaseElementCount'
+      requirement.kind === 'highestBaseElementCount' ||
+      requirement.kind === 'godBoonRarityCount'
     )
       leaves.push(requirement);
   };
@@ -75,6 +80,10 @@ function leafHeld(leaf: PrerequisiteLeaf, held: DraftHeldTraits): boolean {
       return held.elementCounts[leaf.element] >= leaf.minimum;
     case 'highestBaseElementCount':
       return highestBaseElementCount(held.elementCounts) >= leaf.minimum;
+    case 'godBoonRarityCount': {
+      const count = held.godBoonRarityCounts[leaf.rarity] ?? 0;
+      return count >= leaf.minimum && (leaf.maximum === undefined || count <= leaf.maximum);
+    }
   }
 }
 
@@ -93,6 +102,8 @@ function leafOptions(
     ),
     needed: minimum - start.elementCounts[element],
   });
+  // A rarity count is run state no basket trait supplies.
+  if (leaf.kind === 'godBoonRarityCount') return [];
   const options =
     leaf.kind === 'anyEquippedTrait'
       ? [
@@ -159,7 +170,7 @@ export function createDraftPrerequisites(
               ? BASE_TRAIT_ELEMENTS
               : [],
         ),
-    elementWaiting: (traitKey: string, held: DraftHeldTraits) => {
+    runStateWaiting: (traitKey: string, held: DraftHeldTraits) => {
       const waiting = leavesOf(traitKey).filter((leaf) => !leafHeld(leaf, held));
       return waiting.length > 0 && waiting.every((leaf) => leaf.kind !== 'anyEquippedTrait');
     },

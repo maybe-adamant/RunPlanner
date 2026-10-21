@@ -24,8 +24,12 @@ export interface DraftCorpusRun {
   readonly targets: Readonly<Record<string, { readonly met: number; readonly total: number }>>;
   /** Pairs of one source's met basket traits acquired against basket order. */
   readonly orderInversions: number;
-  /** Inverted pairs whose earlier trait waits on an element threshold, which the draft may pass over. */
+  /** Inverted pairs whose earlier trait waits on run state (element or rarity count), which the draft passes over. */
   readonly elementDeferred: number;
+  /** God traits first held in each biome, by biome key. */
+  readonly godTraitsByBiome: Readonly<Record<string, number>>;
+  /** Basket traits taken from a bought boon. */
+  readonly boughtBasketTraits: readonly string[];
   /** Resource points placed, each granting one element. */
   readonly essences: number;
   /** Placed points whose element a waiting element-gated basket trait needed then. */
@@ -98,12 +102,36 @@ function firstEquipped(project: ProjectDocument): ReadonlyMap<string, number> {
   return first;
 }
 
+/** Each god trait the run ends with, counted in the biome of the snapshot that first holds it. */
+function godTraitsByBiome(project: ProjectDocument): Record<string, number> {
+  const assembly = simulateProjectAssembly(catalog, project);
+  const seen = new Set<string>();
+  const counts: Record<string, number> = {};
+  const snapshots = assembly.evaluation.route.biomes
+    .flatMap((biome) => ('rewards' in biome ? biome.rewards.runStateSnapshots : []))
+    .sort((a, b) => a.historySequence - b.historySequence);
+  for (const snapshot of snapshots)
+    for (const traitKey of Object.keys(snapshot.traits.equippedTraits)) {
+      if (seen.has(traitKey)) continue;
+      seen.add(traitKey);
+      if (
+        catalog.traitGivers.values.some(
+          (giver) => giver.providerKind === 'olympian' && giver.traitKeys.includes(traitKey),
+        )
+      )
+        counts[snapshot.biomeKey] = (counts[snapshot.biomeKey] ?? 0) + 1;
+    }
+  return counts;
+}
+
 function elementGated(traitKey: string): boolean {
   const trait = catalog.traits.byKey[traitKey];
   const visit = (requirement: TraitRequirementExpression): boolean =>
     requirement.kind === 'all'
       ? requirement.requirements.some(visit)
-      : requirement.kind === 'elementCount' || requirement.kind === 'highestBaseElementCount';
+      : requirement.kind === 'elementCount' ||
+        requirement.kind === 'highestBaseElementCount' ||
+        requirement.kind === 'godBoonRarityCount';
   return (
     trait !== undefined &&
     [...trait.eligibilityRequirements, ...trait.linkedBoonRequirements].some(visit)
@@ -140,6 +168,25 @@ function purchaseKind(offer: ResolvedRewardOffer): string {
 }
 
 /** Authored Shop purchases by kind: god boons (Mystery included), Hermes, Hammer and others. */
+/** Basket traits selected from a bought boon's offer. */
+function boughtBasketTraits(spec: DraftSpec, project: ProjectDocument): string[] {
+  const bought: string[] = [];
+  for (const biome of project.route.biomes)
+    for (const occurrence of biome.topology?.occurrences ?? [])
+      for (const action of occurrence.roomActions?.order ?? []) {
+        if (action.kind !== 'interactShopOffer') continue;
+        const reward = authoredShopOffer(occurrence, action.offerKey)?.reward;
+        for (const offer of Object.values(reward?.traitOffersByAcquisitionRole ?? {})) {
+          if (offer?.kind !== 'traits') continue;
+          const index = ['option1', 'option2', 'option3'].indexOf(offer.selectedOptionKey);
+          const traitKey = offer.options[index]?.traitKey;
+          if (traitKey !== undefined && spec.basketTraitKeys.includes(traitKey))
+            bought.push(traitKey);
+        }
+      }
+  return bought;
+}
+
 function purchases(project: ProjectDocument): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const biome of project.route.biomes)
@@ -247,6 +294,8 @@ export function measureDraft(
       elementDeferred: 0,
       essences: 0,
       essencesIntended: 0,
+      boughtBasketTraits: [],
+      godTraitsByBiome: {},
       elementGated: { total: 0, met: 0, withEssence: 0 },
       purchases: {},
       attempts: 0,
@@ -261,6 +310,8 @@ export function measureDraft(
     ),
     ...essenceUse(entry.spec, result.project),
     purchases: purchases(result.project),
+    boughtBasketTraits: boughtBasketTraits(entry.spec, result.project),
+    godTraitsByBiome: godTraitsByBiome(result.project),
     attempts: result.attempts,
   };
 }

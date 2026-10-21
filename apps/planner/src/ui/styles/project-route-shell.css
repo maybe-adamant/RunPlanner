@@ -1543,6 +1543,154 @@
   color: var(--muted);
 }
 
+.draft-heading {
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid #30313a;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+/* The tabs read as the panel title, in the panel-title lavender; the active tab is underlined in gold. */
+.draft-tabs {
+  display: inline-flex;
+  gap: 1.25rem;
+}
+
+.draft-tabs > .draft-tab {
+  padding: 0 0 0.2rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #ae98ca;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  cursor: pointer;
+}
+
+.draft-tabs > .draft-tab[aria-selected='true'] {
+  border-bottom-color: var(--selection-accent);
+  opacity: 1;
+}
+
+.draft-tabs > .draft-tab:focus-visible {
+  outline: 2px solid var(--selection-accent);
+  outline-offset: 3px;
+}
+
+.draft-heading-meta {
+  color: var(--selection-accent);
+  font-size: 0.85rem;
+}
+
+/* Advanced-tab text shares the section labels' face and weight, in sentence case. */
+.draft-option,
+.draft-option-note,
+.draft-tags {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* The first section under the title carries no second separator. */
+.draft-fieldset > .draft-section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.draft-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.draft-tags > li {
+  padding: 0.05rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  opacity: 0.55;
+}
+
+.draft-tags > li[data-active] {
+  border-color: #4b4c58;
+  color: var(--text);
+  opacity: 1;
+}
+
+.draft-recommended {
+  padding: 0.05rem 0.5rem;
+  border: 1px solid #4b4c58;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.draft-budget-row {
+  align-items: start;
+}
+
+.draft-budget-biome {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 11rem;
+}
+
+.draft-budget-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+}
+
+.draft-budget-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.draft-budget-control input[type='range'] {
+  width: 8rem;
+  accent-color: var(--selection-accent);
+}
+
+.draft-budget-value {
+  min-width: 3.5rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.draft-budget-warning {
+  margin: 0;
+  max-width: 14rem;
+  color: var(--finding);
+  font-size: 0.85rem;
+}
+
+.draft-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: fit-content;
+  cursor: pointer;
+}
+
+.draft-option-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .draft-chip-groups {
   display: grid;
   gap: 0.45rem;
@@ -1721,7 +1869,7 @@
 }
 
 .draft-seed {
-  margin-right: auto;
+  margin-right: 0.25rem;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }

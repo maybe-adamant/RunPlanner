@@ -186,8 +186,8 @@ describe('draft walk order', () => {
       const held = Object.keys(latestRunState(walk.assembly)?.traits.equippedTraits ?? {});
       return { taken: held.includes(duo), declines: walk.duoDeclines().get(duo) ?? 0 };
     };
-    // Declined in two god rooms, the third takes it.
-    expect(run(1, new Map())).toEqual({ taken: true, declines: 2 });
+    // Declined in a god room, a later one takes it.
+    expect(run(1, new Map())).toEqual({ taken: true, declines: 1 });
     // A count carried in from an earlier biome continues: twice declined, every later room fires it.
     for (const seed of [1, 2, 3, 4]) expect(run(seed, new Map([[duo, 2]])).declines).toBe(2);
     // Planned only to F, the walk is in its last biome: the first god room takes the Duo.
