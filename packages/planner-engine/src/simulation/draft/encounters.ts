@@ -10,6 +10,7 @@ import {
 } from '../../authored-project';
 import { customizationDecisionOnRoute } from '../../authored-project/room-state/encounter-customization';
 import type { GeneratedEncounterCandidateCapability } from '../encounters/generation-preparation';
+import type { EncounterPhaseCandidateSupport } from '../encounters/preparation';
 import type { InfiniteRosterCandidateCapability } from '../encounters/infinite-roster';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import {
@@ -287,6 +288,38 @@ export interface DraftEncounterChoiceContext {
   readonly assembly: () => ProjectEvaluationAssembly;
   readonly apply: (command: ProjectCommand) => boolean;
   readonly shuffle: <T>(values: readonly T[]) => T[];
+  /** Re-authors an entered room's reward to a type outside `excluded`; false when none settles. */
+  readonly reauthorReward: (
+    biomeKey: string,
+    occurrenceId: OccurrenceId,
+    excluded: ReadonlySet<string>,
+  ) => boolean;
+}
+
+/** Reward types that alone keep a phase from hosting this encounter, per the engine's evidence. */
+function rewardOnlyExclusion(
+  exclusions: EncounterPhaseCandidateSupport['exclusions'],
+  encounterKey: string,
+): ReadonlySet<string> | undefined {
+  for (const exclusion of exclusions) {
+    if (exclusion.encounterKey !== encounterKey || exclusion.kind !== 'requirements') continue;
+    for (const { evaluation } of exclusion.definitions) {
+      const failing =
+        evaluation.kind === 'all'
+          ? evaluation.children.filter((child) => !child.satisfied)
+          : [evaluation];
+      if (
+        failing.length > 0 &&
+        failing.every((child) => child.kind === 'currentRoomRewardExcludes')
+      )
+        return new Set(
+          failing.flatMap((child) =>
+            child.kind === 'currentRoomRewardExcludes' ? child.rewardTypes : [],
+          ),
+        );
+    }
+  }
+  return undefined;
 }
 
 /** Encounter choice for the finding's room, once its phases are reached. */
@@ -305,9 +338,18 @@ export function draftEncounterChoice(
           ? origin.owner.occurrenceId
           : undefined;
   if (typeof occurrenceId !== 'string') return false;
-  const key = `encounters:${origin.biomeKey}:${occurrenceId}`;
+  return draftOccurrenceEncounterChoice(context, origin.biomeKey, occurrenceId as OccurrenceId);
+}
+
+/** Encounter choice for one room once its phases are reached, made once per walk. */
+export function draftOccurrenceEncounterChoice(
+  context: DraftEncounterChoiceContext,
+  biomeKey: string,
+  occurrenceId: OccurrenceId,
+): boolean {
+  const key = `encounters:${biomeKey}:${occurrenceId}`;
   if (context.hooked.has(key)) return false;
-  const outcome = chooseEncounters(context, origin.biomeKey, occurrenceId as OccurrenceId);
+  const outcome = chooseEncounters(context, biomeKey, occurrenceId);
   if (outcome.reached) context.hooked.add(key);
   return outcome.changed;
 }
@@ -333,33 +375,41 @@ function chooseEncounters(
       { kind: 'occurrence', occurrenceId },
       phaseKey,
     );
-    const support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
+    let support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
       context.assembly(),
       phase,
     );
     if (support === undefined) continue;
     reached = true;
     if (!support.activationSatisfied) continue;
-    if (biomeKey === 'N') { const ex = support.exclusions.filter((e) => e.encounterKey.startsWith('Artemis')).map((e) => e.kind === 'requirements' ? e.definitions.map((d) => d.evaluation.kind === 'all' ? d.evaluation.children.filter((c) => !c.satisfied).map((c) => JSON.stringify(c)) : []) : e.kind); console.log('PROBE', occurrenceId, occurrence.gameName, support.candidateEncounterKeys.join(','), JSON.stringify(ex)); }
-    const candidates = support.candidateEncounterKeys.filter(
-      (key) => catalog.encounterDefinitions.byKey[key]?.kind !== 'nonCombat',
-    );
-    const npcFor = (key: string) => catalog.encounterDefinitions.byKey[key]?.npcPresentationKey;
     // A field NPC whose wanted trait is not ready yet waits for a likely later room.
     const waits = (key: string) =>
       steering.npcWaiting(
         catalog.encounterDefinitions.byKey[key]?.traitOfferProducer?.giverKey,
         steering.progress(),
       ) && steering.laterRoomLikely(biomeKey);
-    const field = candidates.find((key) => {
+    const npcFor = (key: string) => catalog.encounterDefinitions.byKey[key]?.npcPresentationKey;
+    const wantedNpc = (key: string) => {
       const npc = npcFor(key);
-      return (
-        npc !== undefined &&
-        wanted.includes(npc) &&
-        !metFieldNpc(context, biomeKey, npc) &&
-        !waits(key)
-      );
-    });
+      return npc !== undefined && wanted.includes(npc) && !metFieldNpc(context, biomeKey, npc);
+    };
+    // A wanted NPC barred only by this room's reward is met here, with an accepted reward instead.
+    if (!support.candidateEncounterKeys.some(wantedNpc))
+      for (const exclusion of support.exclusions) {
+        if (!wantedNpc(exclusion.encounterKey) || waits(exclusion.encounterKey)) continue;
+        const excluded = rewardOnlyExclusion(support.exclusions, exclusion.encounterKey);
+        if (excluded === undefined || !context.reauthorReward(biomeKey, occurrenceId, excluded))
+          continue;
+        changed = true;
+        support =
+          encounterPhaseCandidateSupportForProjectEvaluationAssembly(context.assembly(), phase) ??
+          support;
+        break;
+      }
+    const candidates = support.candidateEncounterKeys.filter(
+      (key) => catalog.encounterDefinitions.byKey[key]?.kind !== 'nonCombat',
+    );
+    const field = candidates.find((key) => wantedNpc(key) && !waits(key));
     const ordinary = candidates.filter((key) => npcFor(key) === undefined);
     const choice = field ?? (ordinary.length > 0 ? context.shuffle(ordinary)[0] : undefined);
     if (choice === undefined || choice === support.selectedEncounterKey) continue;
