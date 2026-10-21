@@ -1,9 +1,16 @@
 import { createHash } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
+import { expect } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { traitGiverForAcquisitionRole } from '../../src/authored-project/traits/state';
 import { authoredShopOffer } from '../../src/authored-project/shop';
 import type { ProjectDocument } from '../../src/authored-project';
+import {
+  assembleExecutionProduct,
+  compileExecutionPlan,
+  decodeExecutionPlan,
+  encodeExecutionPlan,
+} from '../../src/execution-plan';
 import { draftProject, simulateProjectAssembly, type DraftSpec } from '../../src/simulation';
 import type { DraftReport } from '../../src/simulation/draft/report';
 import { draftProvider } from '../../src/simulation/draft/schedule';
@@ -271,6 +278,20 @@ function digestOf(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 16);
 }
 
+/** The drafted project's published plan survives the wire: decoding its encoding restores it. */
+function expectExecutionRoundTrip(project: ProjectDocument): void {
+  const plan = compileExecutionPlan({
+    product: assembleExecutionProduct({
+      assembly: simulateProjectAssembly(catalog, project),
+      catalog,
+    }),
+  });
+  expect(
+    decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan))),
+    'execution plan round trip',
+  ).toEqual(plan);
+}
+
 /** Drafts one seed and measures it; a refusal or a throw is a corpus defect. */
 export function measureDraft(
   entry: DraftCorpusEntry,
@@ -300,6 +321,7 @@ export function measureDraft(
       purchases: {},
       attempts: 0,
     };
+  expectExecutionRoundTrip(result.project);
   return {
     ...common,
     outcome: 'drafted',
