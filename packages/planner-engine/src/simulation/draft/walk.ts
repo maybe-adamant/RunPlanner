@@ -5,6 +5,7 @@ import {
   createExitDecisionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRouteAddress,
@@ -45,7 +46,14 @@ import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-product
 import { assessmentRepairOwner } from '../finding-regions';
 import type { SemanticFinding } from '../model';
 import { draftStartTraits } from './basket';
-import { draftEncounterChoice, type DraftEncounterChoiceContext } from './encounters';
+import { latestRunState } from './report';
+import type { RewardOfferExclusionEvidence } from '../rewards/offer-exclusions';
+import type { RewardProducerCandidateResult } from '../rewards/producer-frontiers';
+import {
+  draftEncounterChoice,
+  draftOccurrenceEncounterChoice,
+  type DraftEncounterChoiceContext,
+} from './encounters';
 import { createDraftPrerequisites } from './prerequisites';
 import { shuffleDraft, type DraftRng } from './rng';
 import {
@@ -64,6 +72,8 @@ import type { DraftSpec } from './spec';
 import {
   DRAFT_ELEMENT_BOOSTS as ELEMENT_BOOSTS,
   DraftSteering,
+  NPC_EXCLUDED_REWARD_FACTOR,
+  NPC_WINDOW_WEIGHT,
   type DraftProgress,
 } from './steering';
 import { DraftTraitOffers } from './trait-offers';
@@ -114,6 +124,10 @@ export class DraftWalk {
   /** Hermes and Hammer rewards some decision in this walk could legally take. */
   readonly legalSupply = new Set<DraftSupply>();
   private readonly duoDeclineCounts: Map<string, number>;
+  /** Gods the native cap or interaction rule bars for the rest of this walk. */
+  private readonly stoppedGods = new Set<string>();
+  /** Devotion sources found unacquired, with the acquired god count then. */
+  private readonly unacquiredDevotionSources = new Map<string, number>();
 
   constructor(
     readonly catalog: Catalog,
@@ -174,6 +188,8 @@ export class DraftWalk {
       assembly: () => this.assembly,
       apply,
       shuffle,
+      reauthorReward: (biomeKey, occurrenceId, excluded) =>
+        this.reauthorIncomingReward(biomeKey, occurrenceId, excluded),
     };
   }
 
@@ -743,9 +759,15 @@ export class DraftWalk {
       const target = decision.openTargets.find((t) => t.hubSlotKey === action.hubSlotKey);
       const occurrence =
         target === undefined ? undefined : this.occurrence(visit.biomeKey, target.occurrenceId);
-      return occurrence === undefined
-        ? 1
-        : this.steering.roomWeight(occurrence.gameName, visit.biomeKey);
+      if (occurrence === undefined) return 1;
+      const reward = 'reward' in occurrence.state ? occurrence.state.reward : undefined;
+      return (
+        this.steering.npcVisitWeight(
+          occurrence.gameName,
+          reward?.offer.rewardType,
+          visit.biomeKey,
+        ) ?? this.steering.roomWeight(occurrence.gameName, visit.biomeKey)
+      );
     };
     const orders: HubAction[][] =
       visit.kind === 'hubFountain'
@@ -759,7 +781,16 @@ export class DraftWalk {
       const evaluation = this.evaluate({ kind: 'hubActionOrder', hub, actions });
       // Later repairable findings may follow; only an impossible order is refused here.
       if (evaluation.kind === 'hubActionOrder' && !evaluation.result.selectedPossible) continue;
-      if (this.apply({ kind: 'ReplaceHubActionOrder', hub, actions })) return true;
+      if (!this.apply({ kind: 'ReplaceHubActionOrder', hub, actions })) continue;
+      // A Hub room without a finding of its own still has its encounters chosen when reached.
+      const last = actions.at(-1);
+      const target =
+        last?.kind === 'roomVisit'
+          ? decision.openTargets.find((t) => t.hubSlotKey === last.hubSlotKey)
+          : undefined;
+      if (target !== undefined)
+        draftOccurrenceEncounterChoice(this.encounterChoices, visit.biomeKey, target.occurrenceId);
+      return true;
     }
     return false;
   }
@@ -893,6 +924,14 @@ export class DraftWalk {
       const occurrence = this.occurrence(selection.biomeKey, target.occurrenceId);
       if (occurrence === undefined) return 1;
       const reward = 'reward' in occurrence.state ? occurrence.state.reward : undefined;
+      if (
+        this.steering.npcHosting(
+          occurrence.gameName,
+          reward?.offer.rewardType,
+          selection.biomeKey,
+        ) === 'open'
+      )
+        return NPC_WINDOW_WEIGHT;
       const offerWeight =
         reward !== undefined && reward !== null
           ? Math.max(this.steering.offerWeight(reward.offer), 0.01)
@@ -980,18 +1019,26 @@ export class DraftWalk {
     if (origin.kind === 'acquisitionEntry') {
       // A pickup a purchase leaves at its site, such as a bought Mystery boon, has one fixed
       // reward type; a probe's `rewardTypeFixed` exclusion names it when the entry key does not.
+      // A Shop slot's entry key is no reward type, so any locally valid offer probes it.
       const evaluateEntry = (value: ResolvedRewardOffer) =>
         this.evaluate({ kind: 'acquisitionEntryOffer', entry: origin, value });
       const probe =
         this.catalog.rewards.rewardTypes.byKey[origin.entryKey] === undefined
-          ? undefined
+          ? this.catalog.rewards.rewardTypes.values
+              .map((type) => locallyValidRewardOffers(this.catalog.rewards, type.gameName)[0])
+              .find((offer) => offer !== undefined)
           : locallyValidRewardOffers(this.catalog.rewards, origin.entryKey)[0];
       const probed = probe === undefined ? undefined : evaluateEntry(probe);
       const fixed =
         probed?.kind === 'acquisitionEntryOffer'
           ? probed.result.exclusions?.find((exclusion) => exclusion.kind === 'rewardTypeFixed')
           : undefined;
-      const rewardType = fixed?.kind === 'rewardTypeFixed' ? fixed.rewardType : origin.entryKey;
+      const rewardType =
+        fixed?.kind === 'rewardTypeFixed'
+          ? fixed.rewardType
+          : probed?.kind === 'acquisitionEntryOffer' && probed.result.supported
+            ? probe!.rewardType
+            : origin.entryKey;
       if (this.catalog.rewards.rewardTypes.byKey[rewardType] === undefined) return false;
       return this.tryOffers(
         [rewardType],
@@ -1020,6 +1067,7 @@ export class DraftWalk {
           apply,
           // A fountain room makes a wanted or due god boon somewhat likelier.
           room.kind === 'Reprieve' ? 2 : 1,
+          this.npcExcludedRewards(origin.biomeKey, occurrence),
         )
       : this.tryOffers(
           types,
@@ -1035,32 +1083,116 @@ export class DraftWalk {
     command: (value: ResolvedRewardOffer) => ProjectCommand,
     apply: (command: ProjectCommand) => boolean,
     wantedGodBoost = 1,
+    npcExcluded: ReadonlySet<string> = new Set(),
   ): boolean {
     const legal = rewardTypes
       .flatMap((type) => locallyValidRewardOffers(this.catalog.rewards, type))
-      .filter((offer) => this.steering.offerWeight(offer) > 0)
+      .filter((offer) => this.steering.offerWeight(offer) > 0 && !this.offerStopped(offer))
       .filter((offer) => {
         const evaluation = evaluate(offer);
-        return (
-          'result' in evaluation &&
-          typeof evaluation.result === 'object' &&
-          evaluation.result !== null &&
-          'supported' in evaluation.result &&
-          evaluation.result.supported === true &&
-          'findings' in evaluation.result &&
-          Array.isArray(evaluation.result.findings) &&
-          evaluation.result.findings.length === 0
-        );
+        if (!('result' in evaluation) || typeof evaluation.result !== 'object') return false;
+        const result = evaluation.result as Partial<RewardProducerCandidateResult> | null;
+        if (result?.supported === false) this.noteExclusions(result.exclusions ?? []);
+        return result?.supported === true && result.findings?.length === 0;
       });
     this.noteSupply(legal);
     const weight = (offer: ResolvedRewardOffer) => {
       const base = this.steering.offerWeight(offer);
-      return this.steering.offerGod(offer) !== undefined && base >= WANTED_GOD_WEIGHT
-        ? base * wantedGodBoost
-        : base;
+      const boosted =
+        this.steering.offerGod(offer) !== undefined && base >= WANTED_GOD_WEIGHT
+          ? base * wantedGodBoost
+          : base;
+      return npcExcluded.has(offer.rewardType) ? boosted * NPC_EXCLUDED_REWARD_FACTOR : boosted;
     };
     for (const offer of this.weighted(legal, weight)) if (apply(command(offer))) return true;
     return false;
+  }
+
+  private acquiredGodCount(): number {
+    return latestRunState(this.assembly)?.godPool.acquiredSourceKeys.length ?? 0;
+  }
+
+  /** Stops chasing what an offer exclusion holding in every branch rules out. */
+  private noteExclusions(exclusions: readonly RewardOfferExclusionEvidence[]): void {
+    for (const exclusion of exclusions) {
+      if (!exclusion.allBranches) continue;
+      if (exclusion.kind === 'godCap' || exclusion.kind === 'godNotInteracted') {
+        const giverKey = this.catalog.traitGiverByAcquisitionGameName[exclusion.source];
+        if (giverKey !== undefined) this.stoppedGods.add(giverKey);
+      } else if (exclusion.kind === 'devotionSourceNotAcquired')
+        for (const source of exclusion.sources)
+          this.unacquiredDevotionSources.set(source, this.acquiredGodCount());
+    }
+  }
+
+  /** A stopped god's boon, or a Devotion trial naming a source unacquired since no god was gained. */
+  private offerStopped(offer: ResolvedRewardOffer): boolean {
+    if (offer.payload?.kind === 'DevotionPair') {
+      const count = this.acquiredGodCount();
+      return [offer.payload.chosenSource, offer.payload.spurnedSource].some(
+        (source) => this.unacquiredDevotionSources.get(source) === count,
+      );
+    }
+    const god = this.steering.offerGod(offer);
+    return god !== undefined && this.stoppedGods.has(god);
+  }
+
+  /** Reward types this room should avoid so a selected NPC can be met in it or a sibling. */
+  private npcExcludedRewards(biomeKey: string, occurrence: RoomOccurrence): ReadonlySet<string> {
+    const topology = this.project.route.biomes.find((b) => b.biomeKey === biomeKey)?.topology;
+    if (topology === undefined || topology === null) return new Set();
+    const byId = (id: string) => this.occurrence(biomeKey, id);
+    for (const decision of topology.decisions) {
+      if (decision.kind === 'hub') {
+        if (!decision.openTargets.some((t) => t.occurrenceId === occurrence.occurrenceId)) continue;
+        const visited = new Set(
+          decision.actions.flatMap((a) => (a.kind === 'roomVisit' ? [a.hubSlotKey] : [])),
+        );
+        const siblings = decision.openTargets
+          .filter((t) => !visited.has(t.hubSlotKey))
+          .flatMap((t) => byId(t.occurrenceId) ?? []);
+        return this.steering.npcExcludedRewards(biomeKey, occurrence, siblings, true);
+      }
+      if (
+        decision.kind === 'exit' &&
+        decision.normal.kind === 'batch' &&
+        decision.normal.targets.some((t) => t.occurrenceId === occurrence.occurrenceId)
+      ) {
+        const siblings = decision.normal.targets.flatMap((t) => byId(t.occurrenceId) ?? []);
+        return this.steering.npcExcludedRewards(biomeKey, occurrence, siblings, false);
+      }
+    }
+    return new Set();
+  }
+
+  /**
+   * Re-authors an entered room's reward to one a selected NPC's encounter accepts, when the
+   * engine's encounter evidence names only the reward as excluding it.
+   */
+  private reauthorIncomingReward(
+    biomeKey: string,
+    occurrenceId: OccurrenceId,
+    excluded: ReadonlySet<string>,
+  ): boolean {
+    const occurrence = this.occurrence(biomeKey, occurrenceId);
+    const room =
+      occurrence === undefined ? undefined : this.catalog.rooms.byKey[occurrence.gameName];
+    if (occurrence === undefined || room === undefined) return false;
+    const origin = createIncomingRewardAddress(
+      createBiomeAddress(this.project.route.routeKey, biomeKey),
+      occurrenceId,
+    );
+    const binding = countedRewardBinding(room, occurrence.state.kind, origin);
+    if (binding === undefined) return false;
+    const types = countedRewardTypeDomain(this.catalog, this.assembly, origin, binding).filter(
+      (type) => !excluded.has(type),
+    );
+    return this.tryOffers(
+      types,
+      (value) => this.evaluate({ kind: 'incomingReward', reward: origin, value }),
+      (value) => ({ kind: 'ReplaceIncomingReward', reward: origin, value }),
+      (command) => this.apply(command),
+    );
   }
 
   // --- Other owners --------------------------------------------------------

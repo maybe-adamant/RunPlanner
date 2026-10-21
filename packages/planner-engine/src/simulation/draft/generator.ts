@@ -57,6 +57,19 @@ function targetWeight(target: DraftReport['targets'][number]): number {
   return target.kind === 'storyNpc' || target.kind === 'fieldNpc' ? NPC_TARGET_WEIGHT : 1;
 }
 
+/** An attempt's score: its met targets, NPCs weighted above traits, its met scheduled targets, less wasted Hermes. */
+export function draftAttemptScore(
+  report: DraftReport,
+  scheduled: readonly { readonly met: boolean }[],
+  wastedHermes: number,
+): number {
+  return (
+    report.targets.reduce((sum, target) => sum + (target.met ? targetWeight(target) : 0), 0) +
+    scheduled.filter((target) => target.met).length -
+    wastedHermes
+  );
+}
+
 function attemptSeed(seed: number, biomeIndex: number, attempt: number): number {
   return (seed * 1_000_003 + biomeIndex * 7_919 + attempt * 104_729) >>> 0;
 }
@@ -102,6 +115,7 @@ export function draftProject(
       | undefined;
     const reasons: string[] = [];
     let afterSuccess = 0;
+    let supplyRetried = false;
     for (
       let attempt = 0;
       best === undefined
@@ -126,10 +140,7 @@ export function draftProject(
       }
       const report = draftReport(catalog, spec, walk.assembly);
       const scheduled = walk.scheduledTargets();
-      const score =
-        report.targets.reduce((sum, target) => sum + (target.met ? targetWeight(target) : 0), 0) +
-        scheduled.filter((target) => target.met).length -
-        walk.wastedHermes();
+      const score = draftAttemptScore(report, scheduled, walk.wastedHermes());
       // An NPC basket trait is this biome's own target, like its NPC.
       const localMet = report.targets.every(
         (target) =>
@@ -145,15 +156,17 @@ export function draftProject(
         (score === best.score && localMet && !best.localMet)
       )
         best = { assembly: walk.assembly, duoDeclines: walk.duoDeclines(), score, localMet };
-      // An unmet scheduled Hermes or Hammer ends the biome only when no decision could take it here.
+      // An unmet scheduled Hermes or Hammer some decision could take here earns one retry.
       if (
         localMet &&
-        scheduled.every(
-          (target) =>
-            target.met || target.supply === undefined || !walk.legalSupply.has(target.supply),
-        )
+        (supplyRetried ||
+          scheduled.every(
+            (target) =>
+              target.met || target.supply === undefined || !walk.legalSupply.has(target.supply),
+          ))
       )
         break;
+      if (localMet) supplyRetried = true;
     }
     if (best === undefined) return Object.freeze({ kind: 'failed', biomeKey, reasons });
     duoDeclines = best.duoDeclines;

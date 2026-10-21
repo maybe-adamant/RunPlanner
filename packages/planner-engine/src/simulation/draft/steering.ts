@@ -14,6 +14,8 @@ import {
 } from './schedule';
 import type { DraftSpec } from './spec';
 import type { DraftNpcGiver, DraftWorldProduct } from './world';
+import type { RoomOccurrence } from '../../authored-project';
+import { draftNpcHosts, draftNpcWindowOpen, type DraftNpcHost } from './npc-windows';
 
 /** What the walk has acquired so far, read from the latest Run State snapshot. */
 export interface DraftProgress {
@@ -50,6 +52,15 @@ const PREFERRED_MIDSHOP_FLOOR = 100;
 /** Remaining eligible boon bag entries at or below which the bag counts as low. */
 const LOW_BOON_BAG = 1;
 
+/** A door or Hub visit that hosts a selected NPC in its open window: below a story room (200), above a midshop (at most 180). */
+export const NPC_WINDOW_WEIGHT = 190;
+/** A hosting Hub visit before its NPC's window opens, kept for a later visit. */
+const NPC_EARLY_VISIT_WEIGHT = 0.2;
+/** A target room that could host a selected NPC is likelier to be placed while its window is open. */
+const NPC_HOST_PLACEMENT_WEIGHT = 3;
+/** A reward the NPC's room excludes, while no other open door can host it. */
+export const NPC_EXCLUDED_REWARD_FACTOR = 0.01;
+
 /** Shop weight of a boon whose god can take a basket trait now, above any due god. */
 const PURCHASABLE_GOD_WEIGHT = 120;
 
@@ -63,6 +74,8 @@ export class DraftSteering {
   private readonly npcTraitBiomes: ReadonlyMap<string, number>;
   /** Each world god's basket traits in acquisition order. */
   private readonly queues: ReadonlyMap<string, readonly string[]>;
+  /** Each biome's selected field NPC encounters the draft can steer toward. */
+  private readonly npcHosts: ReadonlyMap<string, readonly DraftNpcHost[]>;
 
   constructor(
     private readonly catalog: Catalog,
@@ -81,6 +94,101 @@ export class DraftSteering {
     this.queues = new Map(
       draftSourceQueues(catalog, spec).map((queue) => [queue.giverKey, queue.traitKeys]),
     );
+    this.npcHosts = draftNpcHosts(
+      catalog,
+      state.assembly().project.route.routeKey,
+      spec.world.fieldNpcsByBiome,
+    );
+  }
+
+  /** Selected field NPC encounters not yet met in this biome; one waiting on a trait waits while a later room is likely. */
+  private unmetNpcHosts(biomeKey: string): readonly DraftNpcHost[] {
+    const hosts = this.npcHosts.get(biomeKey) ?? [];
+    if (hosts.length === 0) return hosts;
+    const biome = this.state
+      .assembly()
+      .evaluation.route.biomes.find((entry) => entry.biomeKey === biomeKey);
+    const met = new Set(
+      biome !== undefined && 'history' in biome
+        ? biome.history.ledgers.encounterRecords
+            .filter((record) => record.origin.biomeKey === biomeKey)
+            .map(
+              (record) =>
+                this.catalog.encounterDefinitions.byKey[record.encounterKey]?.npcPresentationKey,
+            )
+        : [],
+    );
+    return hosts.filter((host) => {
+      if (met.has(host.npcKey)) return false;
+      const giverKey =
+        this.catalog.encounterDefinitions.byKey[host.conditions.encounterKey]?.traitOfferProducer
+          ?.giverKey;
+      return !(this.npcWaiting(giverKey, this.progress()) && this.laterRoomLikely(biomeKey));
+    });
+  }
+
+  /**
+   * Whether a room with this reward hosts a selected unmet NPC: 'open' when its window holds for
+   * the next entered room, 'later' when only the counters or gap still hold it back.
+   */
+  npcHosting(
+    gameName: string,
+    rewardType: string | undefined,
+    biomeKey: string,
+  ): 'open' | 'later' | undefined {
+    let hosting: 'later' | undefined;
+    for (const host of this.unmetNpcHosts(biomeKey)) {
+      if (!host.hostRooms.has(gameName)) continue;
+      if (rewardType !== undefined && host.conditions.excludedRewardTypes.includes(rewardType))
+        continue;
+      if (draftNpcWindowOpen(this.state.assembly(), biomeKey, host.conditions)) return 'open';
+      hosting = 'later';
+    }
+    return hosting;
+  }
+
+  /** Steering weight of a door or Hub visit for the NPC window, when it hosts one. */
+  npcVisitWeight(
+    gameName: string,
+    rewardType: string | undefined,
+    biomeKey: string,
+  ): number | undefined {
+    const hosting = this.npcHosting(gameName, rewardType, biomeKey);
+    return hosting === 'open'
+      ? NPC_WINDOW_WEIGHT
+      : hosting === 'later'
+        ? NPC_EARLY_VISIT_WEIGHT
+        : undefined;
+  }
+
+  /**
+   * Reward types to avoid on this room so a selected NPC can be met there: those its encounter
+   * excludes, unless another unvisited door or Hub room already hosts it with an accepted reward.
+   * A door counts while the NPC's window is open; a Hub room for any later visit.
+   */
+  npcExcludedRewards(
+    biomeKey: string,
+    occurrence: RoomOccurrence,
+    siblings: readonly RoomOccurrence[],
+    hub: boolean,
+  ): ReadonlySet<string> {
+    const excluded = new Set<string>();
+    for (const host of this.unmetNpcHosts(biomeKey)) {
+      if (!host.hostRooms.has(occurrence.gameName)) continue;
+      if (!hub && !draftNpcWindowOpen(this.state.assembly(), biomeKey, host.conditions)) continue;
+      const reserved = siblings.some((sibling) => {
+        const reward = 'reward' in sibling.state ? sibling.state.reward : undefined;
+        return (
+          sibling.occurrenceId !== occurrence.occurrenceId &&
+          host.hostRooms.has(sibling.gameName) &&
+          reward !== undefined &&
+          reward !== null &&
+          !host.conditions.excludedRewardTypes.includes(reward.offer.rewardType)
+        );
+      });
+      if (!reserved) host.conditions.excludedRewardTypes.forEach((type) => excluded.add(type));
+    }
+    return excluded;
   }
 
   /**
@@ -475,6 +583,8 @@ export class DraftSteering {
     }
     // A fountain door only breaks a tie with an otherwise equal door.
     if (room?.kind === 'Reprieve') return FOUNTAIN_TIE_BREAK;
+    if (placing && this.npcHosting(gameName, undefined, biomeKey) === 'open')
+      return NPC_HOST_PLACEMENT_WEIGHT;
     return 1;
   }
 }

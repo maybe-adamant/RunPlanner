@@ -141,7 +141,7 @@ export function draftRepeatedFieldNpcs(
   return Object.freeze(repeated);
 }
 
-function roomEncounterDefinitions(
+export function roomEncounterDefinitions(
   catalog: Catalog,
   bindings: Catalog['rooms']['values'][number]['encounterSlotBindings'],
 ): readonly EncounterDefinition[] {
