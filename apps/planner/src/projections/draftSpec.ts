@@ -1,6 +1,12 @@
 import {
+  decodeDraftShareCode,
+  draftShareCommands,
+  encodeDraftShareCode,
+  projectDraftShareInputs,
   routeInitialProfile,
   type AuthoredDraftSpec,
+  type DraftShareCodeRefusal,
+  type ProjectCommand,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, TraitOrdinaryBoonSlot } from '@run-planner/engine/catalog-schema';
@@ -750,4 +756,33 @@ export function projectDraftFirstBoonTag(
           refusal.refusals.some((reason) => reason.kind === 'firstGodPick')),
     ),
   });
+}
+
+export type DraftSharePaste =
+  | { readonly kind: 'apply'; readonly commands: readonly ProjectCommand[] }
+  | { readonly kind: 'refused'; readonly message: string };
+
+const SHARE_REFUSAL_MESSAGES: Readonly<Record<DraftShareCodeRefusal, string>> = {
+  badLayout: 'Not a draft code.',
+  otherVersion: 'This code is from another planner version.',
+  otherFingerprint: 'This code is from another planner version.',
+  otherRoute: 'This code is for another route.',
+  malformed: 'This code is damaged.',
+};
+
+/** The project's draft inputs as a share code. */
+export function projectDraftShareCode(catalog: Catalog, project: ProjectDocument): string {
+  return encodeDraftShareCode(catalog, projectDraftShareInputs(project));
+}
+
+/** A pasted code as the edit that installs its spec and loadout, or why it is refused. */
+export function projectDraftSharePaste(
+  catalog: Catalog,
+  project: ProjectDocument,
+  code: string,
+): DraftSharePaste {
+  const decoded = decodeDraftShareCode(catalog, code, project.route);
+  return decoded.ok
+    ? { kind: 'apply', commands: draftShareCommands(catalog, project, decoded.inputs) }
+    : { kind: 'refused', message: SHARE_REFUSAL_MESSAGES[decoded.refusal] };
 }

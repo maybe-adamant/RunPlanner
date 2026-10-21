@@ -505,3 +505,13 @@ export {
 } from './draft-spec';
 
 export { structurallyInvalidGeneratedPickupPlacements } from './generated-pickup-placement';
+export {
+  decodeDraftShareCode,
+  draftShareCommands,
+  encodeDraftShareCode,
+  projectDraftShareInputs,
+  type DraftShareCodeDecoding,
+  type DraftShareCodeRefusal,
+  type DraftShareInputs,
+  type DraftShareLoadout,
+} from './draft-share-code';

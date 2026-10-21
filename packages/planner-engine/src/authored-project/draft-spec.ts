@@ -155,6 +155,36 @@ function biomeRecord<T>(
   );
 }
 
+/** The gods and NPCs a draft spec may name, in catalog order; the draft world reads the same facts. */
+export function draftSpecCatalogKeys(catalog: Catalog): {
+  readonly godKeys: readonly string[];
+  readonly storyNpcKeys: readonly string[];
+  readonly fieldNpcKeys: readonly string[];
+} {
+  const distinct = (keys: readonly string[]) => Object.freeze([...new Set(keys)]);
+  return Object.freeze({
+    godKeys: distinct(
+      catalog.traitGivers.values.filter((g) => g.providerKind === 'olympian').map((g) => g.key),
+    ),
+    storyNpcKeys: distinct(
+      catalog.encounterDefinitions.values.flatMap((definition) =>
+        definition.kind === 'story' && definition.traitOfferProducer !== undefined
+          ? [definition.traitOfferProducer.giverKey]
+          : [],
+      ),
+    ),
+    fieldNpcKeys: distinct(
+      catalog.encounterDefinitions.values.flatMap((definition) =>
+        definition.kind === 'combat' &&
+        definition.npcPresentationKey !== undefined &&
+        catalog.fieldNpcEncounterKeys.includes(definition.key)
+          ? [definition.npcPresentationKey]
+          : [],
+      ),
+    ),
+  });
+}
+
 /**
  * Strict on keys and catalog references; biomes off the itinerary are kept, and a planned god
  * boon count equal to its route's default is dropped, as the setter never stores one.
@@ -185,26 +215,10 @@ export function decodeDraftSpec(
   for (const flag of ['preferMidshops', 'pursueTartarusGoal'])
     if (Object.hasOwn(raw, flag) && raw[flag] !== true)
       fail(`${path}.${flag}`, 'must be true when present');
-  // The same catalog facts the draft world reads its gods and NPCs from.
-  const godKeys = new Set(
-    catalog.traitGivers.values.filter((g) => g.providerKind === 'olympian').map((g) => g.key),
-  );
-  const storyNpcKeys = new Set(
-    catalog.encounterDefinitions.values.flatMap((definition) =>
-      definition.kind === 'story' && definition.traitOfferProducer !== undefined
-        ? [definition.traitOfferProducer.giverKey]
-        : [],
-    ),
-  );
-  const fieldNpcKeys = new Set(
-    catalog.encounterDefinitions.values.flatMap((definition) =>
-      definition.kind === 'combat' &&
-      definition.npcPresentationKey !== undefined &&
-      catalog.fieldNpcEncounterKeys.includes(definition.key)
-        ? [definition.npcPresentationKey]
-        : [],
-    ),
-  );
+  const keys = draftSpecCatalogKeys(catalog);
+  const godKeys = new Set(keys.godKeys);
+  const storyNpcKeys = new Set(keys.storyNpcKeys);
+  const fieldNpcKeys = new Set(keys.fieldNpcKeys);
   const seed = expectNonNegativeInteger(raw.seed, `${path}.seed`);
   if (seed > MAX_DRAFT_SEED) fail(`${path}.seed`, `exceeds ${MAX_DRAFT_SEED}`);
   return Object.freeze({

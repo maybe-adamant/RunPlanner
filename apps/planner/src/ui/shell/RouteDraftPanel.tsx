@@ -54,6 +54,7 @@ import { hintProps } from '@planner/ui/controls/hint';
 import type { DraftRunController } from '@planner/workspace/draftRun';
 import { DraftBasketDialog } from './DraftBasketDialog';
 import { DraftCapCount } from './DraftCapCount';
+import { DraftShareControls } from './DraftShareControls';
 import { RouteLoadoutControls } from './RouteLoadoutControls';
 import { FreshFileLoadout } from './RouteLoadoutPanel';
 import { RoutePrefixControl } from './RoutePrefixControl';
@@ -836,7 +837,10 @@ export function RouteDraftPanel({
       </fieldset>
       <div className="draft-actions">
         <div className="draft-action-row">
-          <span className="draft-seed">Seed {running ? run.seed : draft.seed}</span>
+          <span className="draft-meta">
+            <span className="draft-seed">Seed {running ? run.seed : draft.seed}</span>
+            {running ? null : <DraftShareControls catalog={catalog} project={project} />}
+          </span>
           {running ? (
             <>
               <span className="draft-progress">Drafting… {elapsed} s</span>
