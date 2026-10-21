@@ -7,7 +7,10 @@ import { draftCorpusRunsDirectory } from './paths';
 
 export const DRAFT_CORPUS_SHARDS = 8;
 
-/** Drafts every seed of this shard's specs; the first seed is drafted twice to witness determinism. */
+/**
+ * Drafts every seed of this shard's specs; a failed draft fails its seed after its run is
+ * recorded. The first seed is drafted twice to witness determinism.
+ */
 export function draftCorpusShard(shard: number): void {
   const indexes = Array.from({ length: DRAFT_CORPUS_SPEC_COUNT }, (_, index) => index).filter(
     (index) => index % DRAFT_CORPUS_SHARDS === shard,
@@ -28,6 +31,7 @@ export function draftCorpusShard(shard: number): void {
             join(draftCorpusRunsDirectory, `${specIndex}-${seed}.json`),
             JSON.stringify(run),
           );
+          expect(run.outcome, run.failure).toBe('drafted');
         },
       );
     });

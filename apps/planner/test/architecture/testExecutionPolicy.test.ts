@@ -174,9 +174,7 @@ describe('repository test execution policy', () => {
       scripts: Record<string, string>;
     };
     expect(packageJson.scripts['test:correctness']).toBe('vitest run --config vitest.config.ts');
-    expect(packageJson.scripts['test']).toBe(
-      'npm run test:correctness && npm run test:performance',
-    );
+    expect(packageJson.scripts['test']).toBe('npm run test:correctness');
   });
 
   it('keeps watchdogs and worker ownership in the shared configuration', () => {

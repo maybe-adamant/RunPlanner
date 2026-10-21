@@ -120,3 +120,34 @@ describe('god purchases', () => {
     expect(mature.queuedNewGod(offer('Boon', 'PoseidonUpgrade'))).toBe(false);
   });
 });
+
+describe('midshop preference', () => {
+  it('weighs a mid-biome Shop door above a boon door only when the player prefers midshops', () => {
+    const base = createProjectDocument(catalog, {
+      projectId: 'm',
+      routeKey: 'Underworld',
+      configuredBiomeCount: 1,
+    });
+    const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
+    void _startingReward;
+    const spec: DraftSpec = {
+      loadout,
+      world: {
+        godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+        storyNpcByBiome: {},
+        fieldNpcsByBiome: {},
+      },
+      basketTraitKeys: ['ZeusWeaponBoon'],
+      rackKeepsakeKeys: [null, null, null],
+    };
+    const shop = (preferMidshops: boolean) =>
+      draftSteeringFor(base, { ...spec, ...(preferMidshops ? { preferMidshops } : {}) }).roomWeight(
+        'F_Shop01',
+        'F',
+      );
+    const boonDoor = draftSteeringFor(base, spec);
+    const boon = boonDoor.roomWeight('F_Combat01', 'F') * boonDoor.offerWeight(zeusBoon);
+    expect(shop(true)).toBeGreaterThan(boon);
+    expect(shop(false)).toBeLessThan(boon);
+  });
+});
