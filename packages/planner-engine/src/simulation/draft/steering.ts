@@ -38,13 +38,12 @@ export interface DraftSteeringState {
 
 /** The purchase pace's target: Shop purchases per planned biome, elemental boosts aside. */
 const PURCHASES_PER_BIOME = 2;
-/** Dream Shop boosts by the element each grants. */
-export const DRAFT_ELEMENT_BOOSTS: Readonly<Record<string, TraitElement>> = {
-  FireBoost: 'Fire',
-  AirBoost: 'Air',
-  EarthBoost: 'Earth',
-  WaterBoost: 'Water',
-};
+/** The elements a pickup of this reward type contributes, as its acquisition declares them. */
+export function draftBoostElements(catalog: Catalog, rewardType: string): readonly TraitElement[] {
+  return Object.keys(
+    catalog.rewards.acquisitions.byKey[rewardType]?.elementContributions ?? {},
+  ) as TraitElement[];
+}
 
 /** Offer weight of a giver whose basket trait is still wanted. */
 const WANTED_GIVER_WEIGHT = 30;
@@ -646,7 +645,10 @@ export class DraftSteering {
         for (const action of occurrence.roomActions?.order ?? []) {
           if (action.kind !== 'interactShopOffer') continue;
           const reward = authoredShopOffer(occurrence, action.offerKey)?.reward?.offer;
-          if (reward === undefined || DRAFT_ELEMENT_BOOSTS[reward.rewardType] === undefined)
+          if (
+            reward === undefined ||
+            draftBoostElements(this.catalog, reward.rewardType).length === 0
+          )
             made += 1;
         }
     return PURCHASES_PER_BIOME * this.state.biomeIndex() + 1 - made;
