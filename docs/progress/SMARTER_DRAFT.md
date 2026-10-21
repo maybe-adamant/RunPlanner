@@ -1,6 +1,6 @@
 # Smarter Draft
 
-Status: locked 2026-10-20, stages 0–2 committed (to `2af32d14a`). Base commit: `b5b49e93e`.
+Status: locked 2026-10-20, stages 0–3 committed (to `2fae9c222`). Base commit: `b5b49e93e`.
 
 ## Objective
 
@@ -78,6 +78,20 @@ deterministic corpus. A heavy basket must stay within about 15 s.
    - static kinds that hold in every branch prune the type for the biome;
    - `entriesSpent` and `storeExhausted` drop that supply hope early;
    - `priorityRequired` authors the queued priority first.
+
+7. **God pool order.**
+   - Clicking gods in the pool numbers them 1–4 (click order, plus a reset
+     button), shown like the basket's order badges. `godKeys` is already an
+     ordered array, so no schema change is needed.
+   - The walk keeps its current god-choice heuristics. Whenever it would
+     author an offer from a god not yet acquired this run, it swaps in the next
+     unacquired god in pool order instead.
+   - The first god is pool #1, so the run's first Olympian pick is #1's. The
+     engine refuses a basket whose #1 god's first queued trait can't be that
+     first pick: a core boon (Attack, Special, Cast, Sprint, Magick) under the
+     game's per-run seeding rule, already modelled in
+     `initial-composition.ts`. Fresh File keeps Apollo locked as #1 with its
+     narrower Weapon/Sprint/Mana first offer (Fresh File stage).
 
 ## Source facts
 
@@ -158,7 +172,11 @@ deterministic corpus. A heavy basket must stay within about 15 s.
    - The generic requirement reader, the steering and the miss report.
    - Exclusion-driven repairs.
    - Tests: `test:engine`; the corpus delta for each part.
-4. **Closure.**
+4. **God pool order.**
+   - Engine: pool-order god substitution and the first-pick basket refusal.
+   - App: order badges on the pool, the reset button, refusal copy.
+   - Tests: `test:engine`, `test:planner`; the corpus delta.
+5. **Closure.**
    - An independent review.
    - Promote durable rules to the draft design documentation.
    - Update `docs/testing/DRAFT_MODE_LIVE_ACCEPTANCE.md`.
