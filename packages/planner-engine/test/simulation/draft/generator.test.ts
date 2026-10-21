@@ -224,7 +224,7 @@ describe('draftProject', () => {
     });
 
     it('drafts Success Rate after its late Artemis prerequisite and Paid Dues after it', () => {
-      const result = draftProject(catalog, base, waiting, 1);
+      const result = draftProject(catalog, base, waiting, 2);
       if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
       const assembly = simulateProjectAssembly(catalog, result.project);
       expect(assembly.evaluation.status).toBe('valid');
@@ -388,10 +388,10 @@ describe('draftProject', () => {
         ],
         rackKeepsakeKeys: [null, null, null],
       };
-      const result = draftProject(catalog, underworld, spec, 5);
+      const result = draftProject(catalog, underworld, spec, 2);
       if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
       // Zeus's next queued trait, from a bought boon.
-      expect(shopBuys(result.project)).toContain('F:RandomLoot:DoubleBoltBoon');
+      expect(shopBuys(result.project)).toContain('G:RandomLoot:FocusLightningBoon');
       const held = Object.keys(
         latestRunState(simulateProjectAssembly(catalog, result.project))?.traits.equippedTraits ??
           {},
@@ -473,7 +473,7 @@ describe('draftProject', () => {
       const spec: DraftSpec = {
         loadout: { ...base, fearRanks: { ...base.fearRanks, BoonSkipShrineUpgrade: 1 } },
         world: {
-          godKeys: ['Zeus', 'Apollo', 'Poseidon', 'Hestia'],
+          godKeys: ['Poseidon', 'Zeus', 'Apollo', 'Hestia'],
           storyNpcByBiome: {},
           fieldNpcsByBiome: {},
         },

@@ -990,7 +990,8 @@ export class DraftWalk {
         );
       });
       this.noteSupply(values.map((value) => value.offer));
-      for (const value of this.weighted(values, (v) => this.steering.shopWeight(v.offer)))
+      const ordered = this.weighted(values, (v) => this.steering.shopWeight(v.offer));
+      for (const value of this.inPoolOrder(ordered, values, (v) => v.offer))
         if (apply({ kind: 'ReplaceShopOfferOption', offer: origin, value })) {
           this.buyWanted(origin, value.offer);
           return true;
@@ -1104,8 +1105,44 @@ export class DraftWalk {
           : base;
       return npcExcluded.has(offer.rewardType) ? boosted * NPC_EXCLUDED_REWARD_FACTOR : boosted;
     };
-    for (const offer of this.weighted(legal, weight)) if (apply(command(offer))) return true;
+    const ordered = this.inPoolOrder(this.weighted(legal, weight), legal, (offer) => offer);
+    for (const offer of ordered) if (apply(command(offer))) return true;
     return false;
+  }
+
+  /**
+   * New gods arrive in pool order: an offer from a god not yet acquired becomes the same offer
+   * from the next unacquired pool god; where that one is not legal, it is tried last.
+   */
+  private inPoolOrder<T>(
+    ordered: readonly T[],
+    legal: readonly T[],
+    offerOf: (value: T) => ResolvedRewardOffer,
+  ): T[] {
+    const newGods = this.steering.newGods();
+    const next = newGods[0];
+    if (next === undefined) return [...ordered];
+    const result: T[] = [];
+    const outOfOrder: T[] = [];
+    for (const value of ordered) {
+      const offer = offerOf(value);
+      const god = this.steering.offerGod(offer);
+      if (god === undefined || god === next || !newGods.includes(god)) {
+        if (!result.includes(value)) result.push(value);
+        continue;
+      }
+      const twin = legal.find((candidate) => {
+        const other = offerOf(candidate);
+        return (
+          other.rewardType === offer.rewardType &&
+          other.payload?.kind === offer.payload?.kind &&
+          this.steering.offerGod(other) === next
+        );
+      });
+      if (twin !== undefined && !result.includes(twin)) result.push(twin);
+      outOfOrder.push(value);
+    }
+    return [...result, ...outOfOrder];
   }
 
   private acquiredGodCount(): number {

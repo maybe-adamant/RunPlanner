@@ -1843,6 +1843,22 @@
   stroke-width: 1.8;
 }
 
+.draft-pool-reset {
+  align-self: center;
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.draft-pool-reset .action-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.draft-pool-reset:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .draft-chip-remove:hover {
   color: var(--text);
 }

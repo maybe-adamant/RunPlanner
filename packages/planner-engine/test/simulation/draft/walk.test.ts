@@ -135,6 +135,20 @@ function acquired(walk: DraftWalk, basket: readonly string[]): string[] {
   return order;
 }
 
+/** Pool gods in the order the run first picked up their boons. */
+function godsInAcquisitionOrder(assembly: ProjectEvaluationAssembly): string[] {
+  const snapshots = assembly.evaluation.route.biomes
+    .flatMap((biome) => ('rewards' in biome ? biome.rewards.runStateSnapshots : []))
+    .sort((a, b) => a.historySequence - b.historySequence);
+  const gods: string[] = [];
+  for (const snapshot of snapshots)
+    for (const source of snapshot.godPool.acquiredSourceKeys) {
+      const giverKey = catalog.traitGiverByAcquisitionGameName[source];
+      if (giverKey !== undefined && !gods.includes(giverKey)) gods.push(giverKey);
+    }
+  return gods;
+}
+
 describe('draft walk order', () => {
   const world = {
     godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
@@ -156,6 +170,23 @@ describe('draft walk order', () => {
       const held = acquired(walk, zeus);
       expect(held.length).toBeGreaterThan(0);
       expect(held).toEqual(zeus.slice(0, held.length));
+    }
+  });
+
+  it('meets new gods in pool order, the starting reward bringing pool #1', () => {
+    const pool = ['Hestia', 'Aphrodite', 'Zeus', 'Apollo'];
+    const spec: DraftSpec = {
+      loadout,
+      world: { ...world, godKeys: pool },
+      basketTraitKeys: ['HestiaSpecialBoon', 'ApolloCastBoon'],
+      rackKeepsakeKeys: [null, null, null],
+    };
+    for (const seed of [1, 2, 3]) {
+      const walk = startDraftWalk(base, spec, seed);
+      expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
+      const met = godsInAcquisitionOrder(walk.assembly);
+      expect(met.length).toBeGreaterThan(1);
+      expect(met).toEqual(pool.slice(0, met.length));
     }
   });
 
@@ -187,7 +218,7 @@ describe('draft walk order', () => {
       return { taken: held.includes(duo), declines: walk.duoDeclines().get(duo) ?? 0 };
     };
     // Declined in a god room, a later one takes it.
-    expect(run(1, new Map())).toEqual({ taken: true, declines: 1 });
+    expect(run(2, new Map())).toEqual({ taken: true, declines: 1 });
     // A count carried in from an earlier biome continues: twice declined, every later room fires it.
     for (const seed of [1, 2, 3, 4]) expect(run(seed, new Map([[duo, 2]])).declines).toBe(2);
     // Planned only to F, the walk is in its last biome: the first god room takes the Duo.

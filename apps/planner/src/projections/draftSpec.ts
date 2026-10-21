@@ -17,6 +17,7 @@ import {
   type DraftKeepsakeOptions,
   type DraftSpec,
   type DraftTraitAssessment,
+  type DraftTraitRefusal,
   type DraftWorldOptions,
 } from '@run-planner/engine/simulation';
 
@@ -316,7 +317,7 @@ export interface DraftBasketChipGroup {
   /** A god, Hermes or Hammer row, whose chips are in acquisition order. */
   readonly queued: boolean;
   readonly chips: readonly DraftBasketChip[];
-  /** Each of this source's traits queued above its prerequisite, as a visible line. */
+  /** Each order refusal of this source's queue, as a visible line. */
   readonly orderNotes: readonly string[];
 }
 
@@ -352,6 +353,7 @@ function refusalHint(
         return 'Its giver is not in the world.';
       case 'prerequisiteAfter':
         return `Needs ${refusal.traitKeys.map(label).join(' or ')} earlier.`;
+      case 'firstGodPick':
       case 'draftIllegal':
       case 'wrongHammerLoadout':
       case 'cap':
@@ -370,6 +372,28 @@ const SLOT_ORDER: readonly TraitOrdinaryBoonSlot[] = [
   'Rush',
   'Mana',
 ];
+
+const SLOT_LABELS: Readonly<Record<TraitOrdinaryBoonSlot, string>> = {
+  Melee: 'Attack',
+  Secondary: 'Special',
+  Ranged: 'Cast',
+  Rush: 'Sprint',
+  Mana: 'Magick',
+};
+
+/** "Zeus's first trait must be a core boon (Attack, …, Sprint or Magick)." from the refusal's traits. */
+function firstGodPickNote(
+  catalog: Catalog,
+  refusal: Extract<DraftTraitRefusal, { readonly kind: 'firstGodPick' }>,
+): string {
+  const slots = SLOT_ORDER.filter((slot) =>
+    refusal.traitKeys.some((key) => catalog.traits.byKey[key]?.equipmentSlot === slot),
+  ).map((slot) => SLOT_LABELS[slot]);
+  const list =
+    slots.length < 2 ? slots.join('') : `${slots.slice(0, -1).join(', ')} or ${slots.at(-1)}`;
+  const god = catalog.traitGivers.byKey[refusal.godKey]?.label ?? refusal.godKey;
+  return `${god}'s first trait must be a core boon (${list}).`;
+}
 
 /** Core slots first, then the other boons, then the Legendary. */
 function godOrder(
@@ -540,7 +564,9 @@ export function projectDraftBasket(
         ? undefined
         : refusalHint(
             catalog,
-            trait.refusals.filter((refusal) => refusal.kind !== 'prerequisiteAfter'),
+            trait.refusals.filter(
+              (refusal) => refusal.kind !== 'prerequisiteAfter' && refusal.kind !== 'firstGodPick',
+            ),
           );
     return Object.freeze({
       traitKey,
@@ -585,14 +611,15 @@ export function projectDraftBasket(
           }),
         ),
         orderNotes: Object.freeze(
-          queue.traitKeys.flatMap((traitKey) => {
-            const refusal = byKey
-              .get(traitKey)
-              ?.refusals.find((candidate) => candidate.kind === 'prerequisiteAfter');
-            return refusal?.kind === 'prerequisiteAfter'
-              ? [`${label(traitKey)} needs ${refusal.traitKeys.map(label).join(' or ')} first.`]
-              : [];
-          }),
+          queue.traitKeys.flatMap((traitKey) =>
+            (byKey.get(traitKey)?.refusals ?? []).flatMap((refusal) =>
+              refusal.kind === 'prerequisiteAfter'
+                ? [`${label(traitKey)} needs ${refusal.traitKeys.map(label).join(' or ')} first.`]
+                : refusal.kind === 'firstGodPick'
+                  ? [firstGodPickNote(catalog, refusal)]
+                  : [],
+            ),
+          ),
         ),
       }),
     ),

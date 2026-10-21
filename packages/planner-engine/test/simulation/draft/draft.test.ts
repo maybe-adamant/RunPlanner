@@ -7,6 +7,7 @@ import {
   assessDraftBasket,
   draftGodBoonBudget,
   draftKeepsakeOptions,
+  draftOrderRefusals,
   draftSourceQueues,
   draftRefusals,
   draftWorldGiverKeys,
@@ -16,6 +17,8 @@ import {
   type DraftSpec,
   type DraftWorld,
 } from '../../../src/simulation';
+import { draftFirstOfferTraitKeys } from '../../../src/simulation/draft/basket';
+import { createTraitHistoryState } from '../../../src/simulation/traits/history/fold';
 
 function route(
   routeKey: string,
@@ -47,6 +50,8 @@ function refusals(frame: DraftRoute & DraftLoadout, draft: Partial<DraftSpec> = 
 }
 
 const emptyWorld: DraftWorld = { godKeys: [], storyNpcByBiome: {}, fieldNpcsByBiome: {} };
+/** Zeus behind pool #1, so order tests of Zeus's queue meet no first-pick rule. */
+const zeusSecond: Partial<DraftWorld> = { godKeys: ['Apollo', 'Zeus'] };
 
 function spec(basketTraitKeys: readonly string[], world: Partial<DraftWorld> = {}): DraftSpec {
   return {
@@ -462,34 +467,106 @@ describe('draft basket order', () => {
   it('refuses a trait queued before the only god traits that meet its need', () => {
     const refusal = { kind: 'prerequisiteAfter', traitKeys: ['ZeusCastBoon'] };
     expect(
-      assessment(underworld, spec(['DoubleBoltBoon', 'ZeusCastBoon']), 'DoubleBoltBoon').refusals,
+      assessment(underworld, spec(['DoubleBoltBoon', 'ZeusCastBoon'], zeusSecond), 'DoubleBoltBoon')
+        .refusals,
     ).toEqual([refusal]);
     expect(
-      assessment(underworld, spec(['ZeusCastBoon', 'DoubleBoltBoon']), 'DoubleBoltBoon').selectable,
+      assessment(underworld, spec(['ZeusCastBoon', 'DoubleBoltBoon'], zeusSecond), 'DoubleBoltBoon')
+        .selectable,
     ).toBe(true);
     // An earlier member of the same need is enough.
     expect(
       assessment(
         underworld,
-        spec(['ZeusSprintBoon', 'DoubleBoltBoon', 'ZeusCastBoon']),
+        spec(['ZeusSprintBoon', 'DoubleBoltBoon', 'ZeusCastBoon'], zeusSecond),
         'DoubleBoltBoon',
       ).selectable,
     ).toBe(true);
     expect(
-      refusals(underworld, { basketTraitKeys: ['DoubleBoltBoon', 'ZeusCastBoon'] }),
+      refusals(underworld, {
+        world: { ...emptyWorld, godKeys: ['Apollo', 'Zeus', 'Hestia'] },
+        basketTraitKeys: ['DoubleBoltBoon', 'ZeusCastBoon'],
+      }),
     ).toContainEqual({ kind: 'basketTrait', traitKey: 'DoubleBoltBoon', refusals: [refusal] });
   });
 
   it('refuses a Legendary queued above its own god prerequisites, and admits it after them', () => {
-    const before = spec(['SpawnKillBoon', 'ZeusCastBoon', 'FocusLightningBoon', 'DoubleBoltBoon']);
+    const before = spec(
+      ['SpawnKillBoon', 'ZeusCastBoon', 'FocusLightningBoon', 'DoubleBoltBoon'],
+      zeusSecond,
+    );
     expect(assessment(underworld, before, 'SpawnKillBoon').refusals).toEqual([
       {
         kind: 'prerequisiteAfter',
         traitKeys: ['ZeusCastBoon', 'FocusLightningBoon', 'DoubleBoltBoon'],
       },
     ]);
-    const after = spec(['ZeusCastBoon', 'FocusLightningBoon', 'DoubleBoltBoon', 'SpawnKillBoon']);
+    const after = spec(
+      ['ZeusCastBoon', 'FocusLightningBoon', 'DoubleBoltBoon', 'SpawnKillBoon'],
+      zeusSecond,
+    );
     expect(assessment(underworld, after, 'SpawnKillBoon').selectable).toBe(true);
+  });
+});
+
+describe('draft first god pick', () => {
+  const zeusCores = [
+    'ZeusWeaponBoon',
+    'ZeusSpecialBoon',
+    'ZeusCastBoon',
+    'ZeusSprintBoon',
+    'ZeusManaBoon',
+  ];
+  const firstPick = { kind: 'firstGodPick', godKey: 'Zeus', traitKeys: zeusCores };
+
+  it("admits a core boon as pool #1's first queued trait", () => {
+    const basket = spec(['ZeusCastBoon', 'DoubleBoltBoon']);
+    expect(assessment(underworld, basket, 'ZeusCastBoon').selectable).toBe(true);
+    expect(assessment(underworld, basket, 'DoubleBoltBoon').selectable).toBe(true);
+  });
+
+  it("refuses a non-core first trait of pool #1, and no other god's", () => {
+    expect(
+      assessment(underworld, spec(['FocusLightningBoon', 'ZeusCastBoon']), 'FocusLightningBoon')
+        .refusals,
+    ).toEqual([firstPick]);
+    expect(
+      refusals(underworld, { basketTraitKeys: ['FocusLightningBoon', 'ApolloRetaliateBoon'] }),
+    ).toEqual([{ kind: 'basketTrait', traitKey: 'FocusLightningBoon', refusals: [firstPick] }]);
+  });
+
+  it('has no refusal while pool #1 has no basket trait', () => {
+    expect(refusals(underworld, { basketTraitKeys: ['ApolloRetaliateBoon'] })).toEqual([]);
+  });
+
+  it('blocks a reorder that moves a non-core to the front of pool #1', () => {
+    const order = draftOrderRefusals(
+      catalog,
+      underworld,
+      spec(['ZeusCastBoon', 'FocusLightningBoon']),
+    );
+    expect(order(['ZeusCastBoon', 'FocusLightningBoon']).size).toBe(0);
+    expect(order(['FocusLightningBoon', 'ZeusCastBoon']).get('FocusLightningBoon')).toEqual([
+      firstPick,
+    ]);
+  });
+
+  it('is unrestricted when the start already holds a core', () => {
+    const empty = createTraitHistoryState();
+    expect(draftFirstOfferTraitKeys(catalog, 'Zeus', empty)).toEqual(zeusCores);
+    const held = {
+      traitKey: 'ApolloWeaponBoon',
+      giverKey: 'Apollo',
+      providerKind: 'olympian',
+      sourceRole: 'draftBasket',
+    } as const;
+    expect(
+      draftFirstOfferTraitKeys(catalog, 'Zeus', {
+        ...empty,
+        equippedTraits: { ApolloWeaponBoon: held },
+        equippedSlots: { Melee: held },
+      }),
+    ).toBeUndefined();
   });
 });
 
