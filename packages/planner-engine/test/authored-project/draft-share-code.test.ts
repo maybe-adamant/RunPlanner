@@ -7,12 +7,15 @@ import {
   decodeDraftShareCode,
   draftShareCommands,
   encodeDraftShareCode,
+  MAX_DRAFT_SEED,
+  ProjectCommandContractError,
   projectDraftShareInputs,
   undoProjectHistory,
   type DraftShareInputs,
 } from '@run-planner/engine/authored-project';
 import { draftProject, type DraftSpec } from '@run-planner/engine/simulation';
 import { createDefaultAuthoredHexTree } from '../../src/authored-project/traits/hex-tree';
+import { hexNodeTalentDomain } from '../../src/authored-project/traits/hex-talent-tree';
 
 const project = (routeKey: string, itineraryBiomeKeys?: readonly string[]) =>
   createProjectDocument(catalog, {
@@ -107,9 +110,64 @@ describe('draft share codes', () => {
       expect(decoded(code.toLowerCase().replace(/1/g, 'l'))).toEqual(inputs);
     });
 
+  it('round-trips an edited Hex tree, the seed range and a Vow at its top rank', () => {
+    const hex = catalog.hexes.byKey.SpellMoonBeamTrait!;
+    const tree = createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait', 'Pyramid');
+    const edited = Object.fromEntries(
+      Object.entries(tree.nodes).map(([nodeKey, talentKey]) => {
+        const domain = hexNodeTalentDomain(hex, 'Pyramid', nodeKey);
+        return [nodeKey, domain.find((key) => key !== talentKey) ?? talentKey];
+      }),
+    );
+    expect(edited).not.toEqual(tree.nodes);
+    const topVow = catalog.fearVows.values.find((vow) => vow.key !== 'LimitGraspShrineUpgrade')!;
+    for (const seed of [0, MAX_DRAFT_SEED]) {
+      const inputs: DraftShareInputs = {
+        ...surface,
+        loadout: {
+          ...surface.loadout,
+          manualArcanaKeys: [],
+          fearRanks: fearRanks({ [topVow.key]: topVow.incrementalFear.length }),
+          aspectHexTree: { layoutKey: 'Pyramid', nodes: edited },
+        },
+        draft: { ...surface.draft, seed },
+      };
+      expect(decoded(encodeDraftShareCode(catalog, inputs))).toEqual(inputs);
+    }
+  });
+
+  it('refuses set padding bits and an index past its list', () => {
+    // A Fresh File code packed by hand: route, prefix, one god, empty basket and records, seed 1.
+    const header = encodeDraftShareCode(catalog, freshFile).slice(0, 4);
+    const code = (godIndex: number, padding: string) => {
+      const bits = `11${'010'}${'0001'}${godIndex.toString(2).padStart(4, '0')}${'0'.repeat(9)}0000${'000'}0000011${padding}`;
+      let text = header;
+      for (let index = 0; index < bits.length; index += 5)
+        text += '0123456789ABCDEFGHJKMNPQRSTVWXYZ'[parseInt(bits.slice(index, index + 5), 2)];
+      return text;
+    };
+    const godKeys = catalog.traitGivers.values.filter((g) => g.providerKind === 'olympian');
+    expect(decoded(code(0, '0000')).draft).toMatchObject({ godKeys: [godKeys[0]!.key], seed: 1 });
+    const refusal = (text: string) => {
+      const result = decodeDraftShareCode(catalog, text);
+      return result.ok ? 'decoded' : result.refusal;
+    };
+    expect(refusal(code(0, '0001'))).toBe('malformed');
+    expect(refusal(code(godKeys.length, '0000'))).toBe('malformed');
+  });
+
+  it('installs inputs only on a project of their own route', () => {
+    expect(() => draftShareCommands(catalog, project('Surface'), underworld)).toThrow(
+      ProjectCommandContractError,
+    );
+    expect(() =>
+      draftShareCommands(catalog, project('Dream', ['G', 'F', 'N', 'I']), dream),
+    ).toThrow(ProjectCommandContractError);
+  });
+
   it('keeps a light spec short', () => {
-    expect(encodeDraftShareCode(catalog, freshFile).length).toBeLessThanOrEqual(16);
-    expect(encodeDraftShareCode(catalog, underworld).length).toBeLessThanOrEqual(48);
+    expect(encodeDraftShareCode(catalog, freshFile).length).toBeLessThanOrEqual(17);
+    expect(encodeDraftShareCode(catalog, underworld).length).toBeLessThanOrEqual(49);
   });
 
   it('refuses other layouts, catalogs, routes and garbage', () => {
@@ -123,6 +181,7 @@ describe('draft share codes', () => {
     expect(refusal(`2${code.slice(1)}`)).toBe('otherVersion');
     const otherFingerprint = code[1] === '0' ? 'Z' : '0';
     expect(refusal(`${code[0]}${otherFingerprint}${code.slice(2)}`)).toBe('otherFingerprint');
+    expect(refusal(code.slice(0, 4))).toBe('badLayout');
     expect(refusal(code.slice(0, 6))).toBe('malformed');
     expect(refusal(`${code}ZZ`)).toBe('malformed');
     expect(refusal(code, { routeKey: 'Surface', itineraryBiomeKeys: ['N', 'O', 'P', 'Q'] })).toBe(
