@@ -74,7 +74,7 @@ import { settleDraftCommand, settleDraftCommandWithoutNewFinding } from './settl
 import { routeResourceAuthoring } from '../resources';
 import { draftKeepsakeOptions, type DraftSpec } from './spec';
 import {
-  DRAFT_ELEMENT_BOOSTS as ELEMENT_BOOSTS,
+  draftBoostElements,
   DraftSteering,
   draftSideDoorWeight,
   draftSiblingHoldsGodBoon,
@@ -402,13 +402,13 @@ export class DraftWalk {
     const progress = this.steering.progress();
     const supply = draftProvider(this.catalog, value);
     const god = this.steering.offerGod(value);
-    const element = ELEMENT_BOOSTS[value.rewardType];
+    const elements = draftBoostElements(this.catalog, value.rewardType);
     const wanted =
       supply === 'hermes' || supply === 'hammer'
         ? this.steering.supplyNeed(supply, progress) === 'now'
         : god !== undefined
           ? this.steering.godTakes(god, progress) && this.rng() < this.purchaseChance()
-          : element !== undefined && this.steering.wantedElements(progress).includes(element);
+          : elements.some((element) => this.steering.wantedElements(progress).includes(element));
     if (!wanted) return;
     if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true })) return;
     if (this.assembly.evaluation.issue?.kind === 'invalid')
