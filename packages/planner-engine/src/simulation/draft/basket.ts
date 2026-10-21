@@ -9,6 +9,8 @@ import type { SimulationState } from '../state/model';
 import { replaceSimulationTraitHistory } from '../state/transitions';
 import { createTraitHistoryState } from '../traits/history/fold';
 import { checkRequirement } from '../traits/level-effects';
+import { initialOfferCoreOnlyKeys } from '../traits/authoring/initial-composition';
+import type { TraitHistoryState } from '../traits/history/model';
 import type { TraitFindingCode } from '../model';
 import { draftPlannedBiomeKeys, type DraftLoadout, type DraftRoute, type DraftSpec } from './spec';
 import {
@@ -33,6 +35,12 @@ export type DraftTraitRefusal =
   | { readonly kind: 'supplyCap'; readonly cap: number }
   /** Its need can only be met by its god's traits queued after it. */
   | { readonly kind: 'prerequisiteAfter'; readonly traitKeys: readonly string[] }
+  /** Pool #1 is the run's first Olympian, so its first queued trait must fit that god's first offer. */
+  | {
+      readonly kind: 'firstGodPick';
+      readonly godKey: string;
+      readonly traitKeys: readonly string[];
+    }
   | {
       readonly kind: 'requirement';
       readonly code: TraitFindingCode;
@@ -117,6 +125,7 @@ export function assessDraftBasket(
   const order: DraftOrderContext = {
     queues: draftSourceQueues(catalog, spec),
     prerequisites: createDraftPrerequisites(catalog, spec.basketTraitKeys, heldTraits(routeStart)),
+    firstPick: draftFirstPick(catalog, spec, routeStart.traitHistory),
   };
   return Object.freeze({
     traits: Object.freeze(
@@ -272,6 +281,8 @@ function assessTrait(
   if (spec.basketTraitKeys.includes(traitKey)) {
     const later = prerequisitesQueuedAfter(order, traitKey);
     if (later.length > 0) refusals.push({ kind: 'prerequisiteAfter', traitKeys: later });
+    const firstPick = firstPickRefusal(order, traitKey);
+    if (firstPick !== undefined) refusals.push(firstPick);
   }
   if (trait.offerDependsOnDeathDefiance === true) deferred.add('deathDefiance');
   return Object.freeze({
@@ -491,37 +502,93 @@ export function draftSourceQueues(catalog: Catalog, spec: DraftSpec): readonly D
 }
 
 /**
- * Order legality for reorderings of the spec's basket: each basket trait queued
- * above a same-source trait its held-trait need must use, with those later traits.
+ * Order legality for reorderings of the spec's basket: each basket trait queued above a
+ * same-source trait its held-trait need must use, and a pool #1 first trait its first offer lacks.
  */
 export function draftOrderRefusals(
   catalog: Catalog,
   route: DraftRoute,
   spec: DraftSpec,
-): (basketTraitKeys: readonly string[]) => ReadonlyMap<string, readonly string[]> {
+): (basketTraitKeys: readonly string[]) => ReadonlyMap<string, readonly DraftOrderRefusal[]> {
+  const routeStart = routeStartState(catalog, route, spec.loadout);
   const prerequisites = createDraftPrerequisites(
     catalog,
     spec.basketTraitKeys,
-    draftStartTraits(catalog, route, spec.loadout),
+    heldTraits(routeStart),
   );
+  const firstPick = draftFirstPick(catalog, spec, routeStart.traitHistory);
   return (basketTraitKeys) => {
-    const order = {
+    const order: DraftOrderContext = {
       queues: draftSourceQueues(catalog, { ...spec, basketTraitKeys }),
       prerequisites,
+      firstPick,
     };
-    const refusals = new Map<string, readonly string[]>();
+    const refusals = new Map<string, readonly DraftOrderRefusal[]>();
     for (const queue of order.queues)
       for (const traitKey of queue.traitKeys) {
+        const found: DraftOrderRefusal[] = [];
         const later = prerequisitesQueuedAfter(order, traitKey);
-        if (later.length > 0) refusals.set(traitKey, later);
+        if (later.length > 0) found.push({ kind: 'prerequisiteAfter', traitKeys: later });
+        const first = firstPickRefusal(order, traitKey);
+        if (first !== undefined) found.push(first);
+        if (found.length > 0) refusals.set(traitKey, Object.freeze(found));
       }
     return refusals;
   };
 }
 
+/** A refusal that depends only on where the trait sits in its source's queue. */
+export type DraftOrderRefusal = Extract<
+  DraftTraitRefusal,
+  { readonly kind: 'prerequisiteAfter' | 'firstGodPick' }
+>;
+
 interface DraftOrderContext {
   readonly queues: readonly DraftSourceQueue[];
   readonly prerequisites: DraftPrerequisites;
+  readonly firstPick: DraftFirstPick | undefined;
+}
+
+/** Pool #1 and the traits the run's first Olympian offer can hold for it. */
+interface DraftFirstPick {
+  readonly godKey: string;
+  readonly traitKeys: readonly string[];
+}
+
+/**
+ * Pool #1's restricted first offer: with no core held at route start, a god's first offer is
+ * all vacant cores. Undefined when the start already holds a core, so any trait can come first.
+ */
+function draftFirstPick(
+  catalog: Catalog,
+  spec: DraftSpec,
+  start: TraitHistoryState,
+): DraftFirstPick | undefined {
+  const godKey = spec.world.godKeys[0];
+  if (godKey === undefined || catalog.traitGivers.byKey[godKey]?.providerKind !== 'olympian')
+    return undefined;
+  const traitKeys = draftFirstOfferTraitKeys(catalog, godKey, start);
+  return traitKeys === undefined ? undefined : Object.freeze({ godKey, traitKeys });
+}
+
+/** The traits a god's first offer of the run can hold from this start; undefined when unrestricted. */
+export function draftFirstOfferTraitKeys(
+  catalog: Catalog,
+  godKey: string,
+  start: TraitHistoryState,
+): readonly string[] | undefined {
+  return initialOfferCoreOnlyKeys(catalog, godKey, start);
+}
+
+function firstPickRefusal(
+  order: DraftOrderContext,
+  traitKey: string,
+): DraftOrderRefusal | undefined {
+  const first = order.firstPick;
+  if (first === undefined) return undefined;
+  const queue = order.queues.find((candidate) => candidate.giverKey === first.godKey);
+  if (queue?.traitKeys[0] !== traitKey || first.traitKeys.includes(traitKey)) return undefined;
+  return { kind: 'firstGodPick', godKey: first.godKey, traitKeys: first.traitKeys };
 }
 
 /**

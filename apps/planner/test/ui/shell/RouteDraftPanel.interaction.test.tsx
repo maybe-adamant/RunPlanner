@@ -103,6 +103,47 @@ describe('Draft panel', () => {
     expect(pressed(`Artemis in ${erebus}`)).toBe('false');
   });
 
+  it('numbers the god pool in click order and resets it', () => {
+    open();
+    const gods = () => screen.getByRole('group', { name: 'Gods' });
+    const number = (name: string) =>
+      within(gods()).getByRole('button', { name }).querySelector('.draft-order-number')
+        ?.textContent;
+    const reset = () => within(gods()).getByRole('button', { name: 'Reset god order' });
+    expect((reset() as HTMLButtonElement).disabled).toBe(true);
+    chooseGods(['Hestia', 'Zeus', 'Apollo']);
+    expect(['Hestia', 'Zeus', 'Apollo', 'Hera'].map(number)).toEqual(['1', '2', '3', undefined]);
+    // Unchoosing a god closes the gap behind it.
+    chooseGods(['Hestia']);
+    expect(['Zeus', 'Apollo'].map(number)).toEqual(['1', '2']);
+    fireEvent.click(reset());
+    expect(['Zeus', 'Apollo'].map((name) => pressed(name))).toEqual(['false', 'false']);
+    chooseGods(['Apollo', 'Zeus']);
+    expect(['Apollo', 'Zeus'].map(number)).toEqual(['1', '2']);
+  });
+
+  it("notes pool #1's non-core first trait and blocks the draft until a core leads", () => {
+    const { catalog } = open();
+    chooseGods(['Zeus', 'Apollo', 'Hestia']);
+    const label = (key: string) => catalog.traits.byKey[key]!.label;
+    const [ring, cast] = ['FocusLightningBoon', 'ZeusCastBoon'].map(label);
+    const dialog = openBasket();
+    for (const name of [ring!, cast!])
+      fireEvent.click(within(dialog).getByRole('button', { name }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    const note =
+      "Zeus's first trait must be a core boon (Attack, Special, Cast, Sprint or Magick).";
+    expect(screen.getByText(note)).toBeTruthy();
+    expect(draftButton().getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(
+      within(screen.getByRole('list', { name: 'Zeus basket traits' })).getByRole('button', {
+        name: `Move ${cast} earlier`,
+      }),
+    );
+    expect(screen.queryByText(note)).toBeNull();
+    expect(draftButton().getAttribute('aria-disabled')).not.toBe('true');
+  });
+
   it('orders a god by core slot, then other boons, then its Legendary, with Duos last', () => {
     const { catalog } = open();
     chooseGods(['Zeus', 'Apollo']);

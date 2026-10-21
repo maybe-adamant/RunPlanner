@@ -70,6 +70,21 @@ function coreSeeds(
   return sets;
 }
 
+/**
+ * The vacant core traits when a fresh offer from this god holds only them, every
+ * core seed filling all three positions; undefined when other traits can appear.
+ */
+export function initialOfferCoreOnlyKeys(
+  catalog: Catalog,
+  giverKey: string,
+  history: TraitHistoryState,
+): readonly string[] | undefined {
+  const priority = catalog.traitGivers.byKey[giverKey]?.priorityTraitKeys ?? [];
+  const seeds = coreSeeds(catalog, priority, history);
+  if (priority.length === 0 || !seeds.every((seed) => seed.length === 3)) return undefined;
+  return Object.freeze([...new Set(seeds.flat())]);
+}
+
 function preparePools(input: InitialOfferInput): InitialOfferPools | undefined {
   const {
     catalog,

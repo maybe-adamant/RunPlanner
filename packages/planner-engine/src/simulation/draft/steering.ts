@@ -420,6 +420,15 @@ export class DraftSteering {
       : this.offerWeight(offer);
   }
 
+  /** Pool gods the run has not yet picked up a boon from, in pool order. */
+  newGods(): readonly string[] {
+    const acquired = latestRunState(this.state.assembly())?.godPool.acquiredSourceKeys ?? [];
+    const gods = new Set(
+      acquired.flatMap((source) => this.catalog.traitGiverByAcquisitionGameName[source] ?? []),
+    );
+    return this.spec.world.godKeys.filter((godKey) => !gods.has(godKey));
+  }
+
   /** Steering weight of a reward; Olympian sources outside the world and the Anvil weigh nothing. */
   offerWeight(offer: ResolvedRewardOffer): number {
     // The Anvil of Fates replaces held Hammers, so a monotonic draft never takes it.

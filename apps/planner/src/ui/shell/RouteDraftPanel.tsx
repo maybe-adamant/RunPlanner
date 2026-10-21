@@ -450,6 +450,8 @@ export function RouteDraftPanel({
                 {worldOptions.godKeys.map((godKey) => {
                   const selected = godKeys.includes(godKey);
                   const full = !selected && godKeys.length >= worldOptions.maxGods;
+                  // Click order is pool order: new gods arrive in it, #1 first.
+                  const poolNumber = selected ? godKeys.indexOf(godKey) + 1 : undefined;
                   return (
                     <button
                       aria-pressed={selected}
@@ -465,9 +467,23 @@ export function RouteDraftPanel({
                         source={traitGiverArtwork[godKey] ?? undefined}
                       />
                       {catalog.traitGivers.byKey[godKey]?.label ?? godKey}
+                      {poolNumber === undefined ? null : (
+                        <span className="draft-order-number" aria-hidden="true">
+                          {poolNumber}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
+                <button
+                  aria-label="Reset god order"
+                  className="draft-chip-remove draft-pool-reset"
+                  disabled={draft.godKeys.length === 0}
+                  onClick={() => replaceDraft({ ...draft, godKeys: [] })}
+                  type="button"
+                >
+                  <ActionIcon name="undo" />
+                </button>
               </div>
             </section>
             <section className="draft-section" aria-labelledby="draft-npcs-heading">

@@ -628,6 +628,7 @@ export {
   assessDraftBasket,
   draftSourceQueues,
   draftOrderRefusals,
+  type DraftOrderRefusal,
   type DraftSourceQueue,
   type DraftBasketAssessment,
   type DraftBasketCaps,
