@@ -738,6 +738,11 @@ the route declares it, route overlays included:
 - On a route whose save-file god history starts closed (Fresh File), a Shop
   stocks only gods already picked up, so a door offering a not-yet-met god
   with queued traits outranks a Shop door, midshop preference included.
+- A new door rolls each legal room inside its declared depth window and
+  places a hit first, softening the game's 1 / (deadline - depth) ramp one
+  step to 1 / (deadline - depth + 1) (a window one depth wide keeps the
+  native rule); a door that can show a wanted story room keeps it instead,
+  and an offered story room's door is always taken. Legality still only forces a room at its deadline.
 - Fountain rooms only break ties between equal doors and make a wanted god's
   reward likelier. Resource points roll about one room in ten, preferring an
   element a waiting trait needs; Dream buys elemental boosts instead.
