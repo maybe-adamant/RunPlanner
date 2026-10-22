@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   describePublicationBlocker,
   describeRemoveOutcome,
-  gameSaveState,
   projectGamePanel,
   projectGameProfileChoices,
   projectGameIndicator,
@@ -424,7 +423,7 @@ describe('Game panel projection', () => {
       },
     });
     const current = { kind: 'publishable', projectId: 'mine', planFingerprint: 'current' } as const;
-    const plans = projectGamePlans(status, current, 'clean', catalog, now);
+    const plans = projectGamePlans(status, current, catalog, now);
     const exact = (ms: number) =>
       new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
     expect(plans?.unavailableReason).toBeNull();
@@ -463,18 +462,9 @@ describe('Game panel projection', () => {
       action: { label: 'Send here', confirm: false },
     });
 
-    const dirty = projectGamePlans(status, current, 'dirty', catalog, now);
-    expect(dirty?.rows.map((row) => row.action?.label)).toEqual(Array(12).fill('Save and send'));
-    expect(dirty?.rows[0]?.action?.confirm).toBe(true);
-    expect(projectGamePlans(status, current, 'unsaved', catalog, now)?.rows[5]?.action).toEqual({
-      label: 'Save and send…',
-      confirm: false,
-    });
-
     const blocked = projectGamePlans(
       status,
       { kind: 'notPublishable', code: 'notEligible' },
-      'clean',
       catalog,
       now,
     );
@@ -483,8 +473,7 @@ describe('Game panel projection', () => {
     const reasonFor = (
       code: 'unsupportedRoute' | 'openingMissing' | 'executionCoverageMissing' | null,
     ) =>
-      projectGamePlans(status, { kind: 'notPublishable', code }, 'clean', catalog, now)
-        ?.unavailableReason;
+      projectGamePlans(status, { kind: 'notPublishable', code }, catalog, now)?.unavailableReason;
     expect(reasonFor('unsupportedRoute')).toBe('The game module can’t run this route yet.');
     expect(reasonFor('openingMissing')).toBe('Plan the opening room before sending this plan.');
     expect(reasonFor('executionCoverageMissing')).toBe('The game module can’t run this plan yet.');
@@ -497,16 +486,15 @@ describe('Game panel projection', () => {
           code: 'startPointIneligible',
           startPointReason: { kind: 'branchesDisagree', families: ['traits', 'maxStats'] },
         },
-        'clean',
         catalog,
         now,
       )?.unavailableReason,
     ).toBe(
       'The start point can’t start this run. The planned outcomes before this point differ in boons and traits, max Health or Magick.',
     );
-    expect(
-      projectGamePlans(status, { kind: 'noProject' }, 'clean', catalog, now)?.unavailableReason,
-    ).toBe('Open a project to send it to the game.');
+    expect(projectGamePlans(status, { kind: 'noProject' }, catalog, now)?.unavailableReason).toBe(
+      'Open a project to send it to the game.',
+    );
     expect(
       projectGamePlans(
         gameModuleStatus({
@@ -514,19 +502,10 @@ describe('Game panel projection', () => {
           publicationBlockers: [{ code: 'moduleMissing', found: null, required: '0.1.0' }],
         }),
         { kind: 'noProject' },
-        'clean',
         catalog,
         now,
       ),
     ).toBeNull();
-  });
-
-  it('derives the send save state from the profile status', () => {
-    expect(gameSaveState('Clean', 'a.runplanner.json')).toBe('clean');
-    expect(gameSaveState('Dirty', 'a.runplanner.json')).toBe('dirty');
-    expect(gameSaveState('Unsaved', null)).toBe('unsaved');
-    expect(gameSaveState('Recovered', 'a.runplanner.json')).toBe('dirty');
-    expect(gameSaveState('Recovered', null)).toBe('unsaved');
   });
 
   it('falls back to raw keys for labels the catalog does not own', () => {
@@ -550,7 +529,7 @@ describe('Game panel projection', () => {
         ),
       },
     });
-    const rows = projectGamePlans(status, { kind: 'noProject' }, 'clean', catalog, 0)?.rows;
+    const rows = projectGamePlans(status, { kind: 'noProject' }, catalog, 0)?.rows;
     expect(rows?.[0]?.columns).toMatchObject({
       route: 'constructor',
       endsAt: 'toString',
@@ -578,14 +557,14 @@ describe('Game panel projection', () => {
       },
     });
     const current = { kind: 'noProject' } as const;
-    const before = projectGamePlans(status, current, 'clean', catalog, 0);
+    const before = projectGamePlans(status, current, catalog, 0);
     expect(before?.rebuild).toEqual({ available: true, summary: null });
     expect(before?.rows.slice(1, 4).map((row) => row.note)).toEqual([
       'Outdated — rebuild slots',
       'Outdated — rebuild slots',
       'Outdated — send again',
     ]);
-    const after = projectGamePlans(status, current, 'clean', catalog, 0, {
+    const after = projectGamePlans(status, current, catalog, 0, {
       problem: null,
       outcomes: [
         { slot: 2, kind: 'failed', reason: 'Couldn’t rebuild after the update.' },
@@ -603,9 +582,7 @@ describe('Game panel projection', () => {
     const unsourced = gameModuleStatus({
       inspection: { planSlots: planSlots(planSlot(4, { ...stale, hasSource: false })) },
     });
-    expect(projectGamePlans(unsourced, current, 'clean', catalog, 0)?.rebuild.available).toBe(
-      false,
-    );
+    expect(projectGamePlans(unsourced, current, catalog, 0)?.rebuild.available).toBe(false);
   });
 
   it('asks for an outdated slot to be sent again', () => {
@@ -624,7 +601,7 @@ describe('Game panel projection', () => {
       },
     });
     const current = { kind: 'publishable', projectId: 'mine', planFingerprint: 'current' } as const;
-    expect(projectGamePlans(status, current, 'clean', catalog, 0)?.rows[1]).toMatchObject({
+    expect(projectGamePlans(status, current, catalog, 0)?.rows[1]).toMatchObject({
       slot: 2,
       state: 'stale',
       columns: { route: 'Underworld', endsAt: 'Erebus', plan: null },
@@ -634,7 +611,7 @@ describe('Game panel projection', () => {
       action: { label: 'Replace', confirm: true },
     });
     expect(
-      projectGameSendButton(status, { projectId: 'mine', eligible: true }, 2, 'clean', {
+      projectGameSendButton(status, { projectId: 'mine', eligible: true }, 2, {
         kind: 'idle',
       }),
     ).toMatchObject({ state: 'ready', action: { kind: 'send', slot: 2 } });
@@ -662,14 +639,14 @@ describe('Game panel projection', () => {
     const sentAt = Date.UTC(2026, 0, 2, 14, 5, 30);
     const cases = [
       [
-        projectGameSendButton(ready, null, 2, 'clean', idle),
+        projectGameSendButton(ready, null, 2, idle),
         'noProject',
         'Send to game',
         null,
         'Open a plan first.',
       ],
       [
-        projectGameSendButton(null, mine, 2, 'clean', idle),
+        projectGameSendButton(null, mine, 2, idle),
         'notReady',
         'Send to game',
         null,
@@ -682,7 +659,6 @@ describe('Game panel projection', () => {
           }),
           mine,
           2,
-          'clean',
           idle,
         ),
         'notReady',
@@ -691,7 +667,7 @@ describe('Game panel projection', () => {
         'Set up the game in the Game panel.',
       ],
       [
-        projectGameSendButton(ready, { projectId: 'my-plan', eligible: false }, 2, 'clean', idle),
+        projectGameSendButton(ready, { projectId: 'my-plan', eligible: false }, 2, idle),
         'notSendable',
         'Send to game',
         null,
@@ -705,7 +681,6 @@ describe('Game panel projection', () => {
             startPointBlock: { code: 'startPointIneligible', reason: { kind: 'notOnItinerary' } },
           },
           2,
-          'clean',
           idle,
         ),
         'notSendable',
@@ -714,70 +689,49 @@ describe('Game panel projection', () => {
         'The start point can’t start this run. This biome is not on the route.',
       ],
       [
-        projectGameSendButton(ready, mine, null, 'clean', idle),
+        projectGameSendButton(ready, mine, null, idle),
         'chooseSlot',
         'Send to game…',
         { kind: 'openPlans' },
         'Choose a slot in the Game panel.',
       ],
       [
-        projectGameSendButton(ready, mine, 2, 'unsaved', idle),
+        projectGameSendButton(inSlot2('another-project'), mine, 2, idle),
         'chooseSlot',
         'Send to game…',
         { kind: 'openPlans' },
         'Choose a slot in the Game panel.',
       ],
       [
-        projectGameSendButton(inSlot2('another-project'), mine, 2, 'clean', idle),
+        projectGameSendButton(inSlot2(null, 'unreadable'), mine, 2, idle),
         'chooseSlot',
         'Send to game…',
         { kind: 'openPlans' },
         'Choose a slot in the Game panel.',
       ],
       [
-        projectGameSendButton(inSlot2(null, 'unreadable'), mine, 2, 'clean', idle),
-        'chooseSlot',
-        'Send to game…',
-        { kind: 'openPlans' },
-        'Choose a slot in the Game panel.',
-      ],
-      [
-        projectGameSendButton(inSlot2('my-plan'), mine, 2, 'clean', idle),
+        projectGameSendButton(inSlot2('my-plan'), mine, 2, idle),
         'ready',
         'Send · Slot 2',
         { kind: 'send', slot: 2 },
         null,
       ],
       [
-        projectGameSendButton(ready, mine, 2, 'dirty', idle),
-        'ready',
-        'Send · Slot 2',
-        { kind: 'send', slot: 2 },
-        'Saves your changes, then sends to slot 2.',
-      ],
-      [
-        projectGameSendButton(ready, mine, 2, 'dirty', { kind: 'sending' }),
-        'saving',
-        'Saving…',
-        null,
-        null,
-      ],
-      [
-        projectGameSendButton(ready, mine, 2, 'clean', { kind: 'sending' }),
+        projectGameSendButton(ready, mine, 2, { kind: 'sending' }),
         'sending',
         'Sending…',
         null,
         null,
       ],
       [
-        projectGameSendButton(ready, mine, 2, 'clean', { kind: 'sent', slot: 2, atMs: sentAt }),
+        projectGameSendButton(ready, mine, 2, { kind: 'sent', slot: 2, atMs: sentAt }),
         'sent',
         '✓ Sent · Slot 2',
         null,
         `Sent to slot 2 at ${new Date(sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}; now active.`,
       ],
       [
-        projectGameSendButton(ready, mine, 2, 'clean', { kind: 'failed' }),
+        projectGameSendButton(ready, mine, 2, { kind: 'failed' }),
         'failed',
         '! Not sent',
         null,
@@ -794,20 +748,18 @@ describe('Game panel projection', () => {
         'Send to game',
         'Send to game…',
         'Send · Slot N',
-        'Saving…',
         'Sending…',
         '✓ Sent · Slot N',
         '! Not sent',
       ]),
     );
-    expect(
-      projectGameSendButton(ready, mine, 12, 'clean', { kind: 'sent', slot: 12, atMs: 0 }).label,
-    ).toBe('✓ Sent · Slot 12');
+    expect(projectGameSendButton(ready, mine, 12, { kind: 'sent', slot: 12, atMs: 0 }).label).toBe(
+      '✓ Sent · Slot 12',
+    );
     const notActive = projectGameSendButton(
       ready,
       mine,
       2,
-      'clean',
       { kind: 'sent', slot: 2, atMs: sentAt },
       { slot: 2, message: 'locked.', atMs: sentAt },
     );
@@ -818,7 +770,6 @@ describe('Game panel projection', () => {
       gameModuleStatus({ inspection: { activeSlot: { state: 'present', slot: 2 } } }),
       mine,
       2,
-      'clean',
       { kind: 'sent', slot: 2, atMs: sentAt },
       { slot: 2, message: 'locked.', atMs: sentAt },
     );
@@ -965,7 +916,6 @@ describe('Game panel projection', () => {
       projectGamePlans(
         gameModuleStatus({ inspection: { eventSlot: slot, activeSlot } }),
         { kind: 'noProject' },
-        'clean',
         catalog,
         now,
       );

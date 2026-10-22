@@ -6,12 +6,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createApplication } from '@planner/composition/createApplication';
 import { createFakeGameModuleHost } from '@planner-test/fixtures/gameModuleHost';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
+import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 
 async function openFromGamePanel(
   host: ReturnType<typeof createFakeGameModuleHost>['host'],
   withProject: boolean,
 ) {
-  const application = createApplication({ gameModuleHost: host });
+  const application = createApplication({
+    gameModuleHost: host,
+    projectLibrary: createMemoryProjectLibrary().adapter,
+  });
   if (withProject) await application.projectOperations.createNew('Underworld');
   const rendered = renderPlannerForInteraction({ application, startWithProject: false });
   await rendered.user.click(await screen.findByRole('button', { name: /^Game — / }));

@@ -13,7 +13,6 @@ import type {
   ActiveCommunityEvent,
   EventFeedSnapshot,
 } from '@planner/persistence/communityEventHost';
-import { selectProfileStatus } from '@planner/state/store';
 import { compileEventProject } from '@planner/workspace/eventDocument';
 import {
   UNAVAILABLE_EVENT_PROJECT,
@@ -27,6 +26,7 @@ import {
   createFakeCommunityEventDevelopmentHost,
   createFakeCommunityEventHost,
 } from '@planner-test/fixtures/communityEventHost';
+import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 
 vi.mock('@planner/workspace/eventDocument', async (importOriginal) => {
   const original = await importOriginal<typeof import('@planner/workspace/eventDocument')>();
@@ -38,6 +38,7 @@ function setup(options: { readonly devBuild?: boolean } = {}) {
   const events = createFakeCommunityEventHost();
   const development = createFakeCommunityEventDevelopmentHost();
   const dismissed: string[] = [];
+  const library = createMemoryProjectLibrary();
   const application = createApplication({
     communityEventDevelopmentHost: development,
     communityEventHost: events,
@@ -48,9 +49,10 @@ function setup(options: { readonly devBuild?: boolean } = {}) {
     },
     gameModuleHost: game.host,
     mintProjectId: () => 'event-copy',
+    projectLibrary: library.adapter,
   });
   const controller = application.communityEvents!;
-  return { application, controller, development, dismissed, events, game };
+  return { application, controller, development, dismissed, events, game, library };
 }
 
 const projectJson = encodeProjectDocument(createGoldenFGHProject());
@@ -318,8 +320,8 @@ describe('community event controller', () => {
     ]);
   });
 
-  it('opens the active event’s project as an unsaved copy with its own identity', async () => {
-    const { application, controller, events } = setup();
+  it('adds the active event’s project to the library as a copy with its own identity', async () => {
+    const { application, controller, events, library } = setup();
     events.refreshFeed.mockResolvedValue(feedWith(activeEvent(projectJson)));
     const project = createGoldenFGHProject();
     events.downloadProject.mockResolvedValue(encodeProjectDocument(project));
@@ -336,8 +338,9 @@ describe('community event controller', () => {
     if (workspace.kind !== 'openProject') throw new Error('Expected an open project');
     expect(workspace.history.present.projectId).toBe('event-copy');
     expect(project.projectId).not.toBe('event-copy');
-    expect(selectProfileStatus(application.store.getState())).toBe('Unsaved');
-    expect(application.store.getState().profileSession.fileName).toBeNull();
+    expect((await library.plans(application.catalog)).map((plan) => plan.projectId)).toEqual([
+      'event-copy',
+    ]);
 
     events.downloadProject.mockResolvedValueOnce('not a project');
     await expect(controller.openProject()).resolves.toMatchObject({ status: 'failure' });

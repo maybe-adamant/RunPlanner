@@ -15,6 +15,7 @@ import {
   createTraitOfferAddress,
   encodeProjectDocument,
   semanticAddressKey,
+  type ProjectDocument,
   type TraitOfferOwnerAddress,
   hubVisitSlotKeys,
 } from '@run-planner/engine/authored-project';
@@ -27,16 +28,10 @@ import {
   type PlannerApplication,
 } from '@planner/composition/createApplication';
 import { prepareTraitOptionDomain } from '@planner/projections/rewards/traitDomainProjection';
-import type {
-  AutosaveRecoveryAdapter,
-  AutosaveScheduler,
-} from '@planner/persistence/autosaveRecovery';
-import type { ProfileFileAdapter } from '@planner/persistence/profileFile';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
-import { selectProfileStatus } from '@planner/state/store';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
   authorLegalTraitOffers,
@@ -60,6 +55,10 @@ import {
   pOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
+import {
+  createManualSaveScheduler,
+  createMemoryProjectLibrary,
+} from '@planner-test/support/memoryProjectLibrary';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { loadSurfaceNNaturalSelectionFrontierCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 
@@ -68,80 +67,29 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function createPersistence(): {
-  readonly profileFile: ProfileFileAdapter;
-  readStoredJson(): string | null;
-} {
-  let storedJson: string | null = null;
-  let storedFileName: string | null = null;
-  const storedFile = (fileName: string) => ({
-    activate: () => Promise.resolve(),
-    fileName,
-    write: (json: string) => {
-      storedJson = json;
-      return Promise.resolve();
-    },
+/** An application saving to an in-memory library whose debounced writes the test runs. */
+function createSavingApplication(options: Parameters<typeof createApplication>[0] = {}) {
+  const library = createMemoryProjectLibrary();
+  const saves = createManualSaveScheduler();
+  const application = createApplication({
+    ...options,
+    projectLibrary: library.adapter,
+    saveScheduler: saves.scheduler,
   });
   return {
-    profileFile: {
-      clearActive: () => Promise.resolve(),
-      supportsSaveAs: false,
-      saveAs: (fileName, json) => {
-        storedFileName = fileName;
-        storedJson = json;
-        return Promise.resolve(storedFile(fileName));
-      },
-      load: () =>
-        Promise.resolve(
-          storedJson === null || storedFileName === null
-            ? null
-            : { file: storedFile(storedFileName), json: storedJson },
-        ),
-      restoreActive: () => Promise.resolve({ status: 'none' as const }),
+    application,
+    library,
+    saves,
+    async open(project: ProjectDocument) {
+      const result = await application.projectOperations.openPlan(await library.file(project));
+      if (result.status !== 'success') throw new Error(result.message);
     },
-    readStoredJson: () => storedJson,
-  };
-}
-
-function createRecoveryPersistence(): {
-  readonly adapter: AutosaveRecoveryAdapter;
-  readonly scheduler: AutosaveScheduler;
-  flush(): void;
-  hasPendingAutosave(): boolean;
-  readStoredJson(): string | null;
-} {
-  let storedJson: string | null = null;
-  let pending: { cancelled: boolean; task: () => void } | null = null;
-  return {
-    adapter: {
-      read: () => storedJson,
-      write: (json) => {
-        storedJson = json;
-      },
-      clear: () => {
-        storedJson = null;
-      },
+    /** Writes the pending edit and returns the stored document. */
+    async write(): Promise<string> {
+      saves.run();
+      await application.projectOperations.flush();
+      return library.writes.at(-1)!.json;
     },
-    scheduler: {
-      schedule: (_delayMs, task) => {
-        if (pending !== null) pending.cancelled = true;
-        const next = { cancelled: false, task };
-        pending = next;
-        return () => {
-          next.cancelled = true;
-        };
-      },
-    },
-    flush() {
-      if (pending === null || pending.cancelled) {
-        throw new Error('No recovery autosave is pending');
-      }
-      const next = pending;
-      pending = null;
-      next.task();
-    },
-    hasPendingAutosave: () => pending !== null && !pending.cancelled,
-    readStoredJson: () => storedJson,
   };
 }
 
@@ -177,15 +125,10 @@ function hubRailButton(): HTMLElement {
 
 describe('surface product loop', () => {
   it('renders every Surface biome through the shared workspace and persists the complete route', async () => {
-    const persistence = createPersistence();
-    const recovery = createRecoveryPersistence();
-    const application = createApplication({
-      autosaveRecovery: recovery.adapter,
-      autosaveScheduler: recovery.scheduler,
-      profileFile: persistence.profileFile,
-    });
+    const saving = createSavingApplication();
+    const { application, library } = saving;
     const authored = loadSurfaceNOPQProject();
-    application.store.dispatch(authoredProjectReplaced(authored));
+    await saving.open(authored);
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
@@ -226,17 +169,12 @@ describe('surface product loop', () => {
     }
 
     expect(simulateProject(application.catalog, authored)).toEqual(currentEvaluation(application));
-    recovery.flush();
-    expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
+    // Viewing every biome is no edit, so nothing is written.
+    expect(saving.saves.hasPending()).toBe(false);
+    expect(await library.plans(application.catalog)).toEqual([authored]);
 
-    await view.user.click(screen.getByRole('button', { name: 'File' }));
-    await view.user.click(screen.getByRole('menuitem', { name: 'Save' }));
-    await screen.findByText('File saved');
-    expect(persistence.readStoredJson()).toBe(encodeProjectDocument(authored));
-    expect(selectProfileStatus(application.store.getState())).toBe('Clean');
-
-    await view.user.click(screen.getByRole('button', { name: 'File' }));
-    await view.user.click(screen.getByRole('menuitem', { name: 'New' }));
+    await view.user.click(screen.getByRole('button', { name: 'Plan' }));
+    await view.user.click(screen.getByRole('menuitem', { name: 'New…' }));
     expect(currentEvaluation(application).status).toBe('valid');
     await view.user.click(
       within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
@@ -244,20 +182,25 @@ describe('surface product loop', () => {
       }),
     );
     expect(currentEvaluation(application).status).toBe('incomplete');
-    await view.user.click(screen.getByRole('button', { name: 'File' }));
-    await view.user.click(screen.getByRole('menuitem', { name: 'Load…' }));
-    await screen.findByText('File loaded');
-    expect(currentProject(application)).toEqual(authored);
+    expect((await library.plans(application.catalog)).map((plan) => plan.route.routeKey)).toEqual([
+      'Surface',
+      'Surface',
+    ]);
+    library.choose({ fileName: 'surface.runplanner.json', json: encodeProjectDocument(authored) });
+    await view.user.click(screen.getByRole('button', { name: 'Plan' }));
+    await view.user.click(screen.getByRole('menuitem', { name: 'Open file…' }));
+    await screen.findByText('File added to library');
+    // The library already holds the file's identity, so the copy takes a new one.
+    const imported = currentProject(application);
+    expect(imported).toEqual({ ...authored, projectId: imported.projectId });
+    expect(imported.projectId).not.toBe(authored.projectId);
 
     application.dispose();
     view.unmount();
-    const recovered = createApplication({
-      autosaveRecovery: recovery.adapter,
-      autosaveScheduler: recovery.scheduler,
-    });
-    renderPlannerForInteraction({ application: recovered });
-    expect(selectProfileStatus(recovered.store.getState())).toBe('Recovered');
-    expect(currentProject(recovered)).toEqual(authored);
+    const reopened = createApplication({ projectLibrary: library.adapter });
+    await reopened.startupReady;
+    renderPlannerForInteraction({ application: reopened });
+    expect(currentProject(reopened)).toEqual(imported);
   });
 
   it('carries a purchased P Shop Hammer through route history and the application projection', async () => {
@@ -326,15 +269,11 @@ describe('surface product loop', () => {
     application.dispose();
   });
 
-  it('records an N Hub Reset visits edit as one undoable semantic command and autosaves both states', async () => {
-    const recovery = createRecoveryPersistence();
-    const application = createApplication({
-      autosaveRecovery: recovery.adapter,
-      autosaveScheduler: recovery.scheduler,
-    });
+  it('records an N Hub Reset visits edit as one undoable semantic command and saves both states', async () => {
+    const saving = createSavingApplication();
+    const { application } = saving;
     const authored = loadSurfaceNProject();
-    application.store.dispatch(authoredProjectReplaced(authored));
-    recovery.flush();
+    await saving.open(authored);
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
@@ -357,36 +296,29 @@ describe('surface product loop', () => {
     ).toBe(true);
     expect(edited).not.toEqual(authored);
     expect(currentHistory(application).past).toHaveLength(historyBefore + 1);
-    expect(recovery.hasPendingAutosave()).toBe(true);
-    recovery.flush();
-    expect(recovery.readStoredJson()).toBe(encodeProjectDocument(edited));
+    expect(saving.saves.hasPending()).toBe(true);
+    expect(await saving.write()).toBe(encodeProjectDocument(edited));
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
 
     expect(currentProject(application)).toEqual(authored);
     expect(currentHistory(application).past).toHaveLength(historyBefore);
-    expect(recovery.hasPendingAutosave()).toBe(true);
-    recovery.flush();
-    expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
+    expect(saving.saves.hasPending()).toBe(true);
+    expect(await saving.write()).toBe(encodeProjectDocument(authored));
 
     await view.user.click(screen.getByRole('button', { name: 'Redo' }));
 
     expect(currentProject(application)).toEqual(edited);
     expect(currentHistory(application).past).toHaveLength(historyBefore + 1);
-    expect(recovery.hasPendingAutosave()).toBe(true);
-    recovery.flush();
-    expect(recovery.readStoredJson()).toBe(encodeProjectDocument(edited));
+    expect(saving.saves.hasPending()).toBe(true);
+    expect(await saving.write()).toBe(encodeProjectDocument(edited));
   });
 
-  it('closes a ninth unvisited Hub member, keeping its Preboss chain, as one undoable autosaved command', async () => {
-    const recovery = createRecoveryPersistence();
-    const application = createApplication({
-      autosaveRecovery: recovery.adapter,
-      autosaveScheduler: recovery.scheduler,
-    });
+  it('closes a ninth unvisited Hub member, keeping its Preboss chain, as one undoable saved command', async () => {
+    const saving = createSavingApplication();
+    const { application } = saving;
     const authored = loadSurfaceNProject();
-    application.store.dispatch(authoredProjectReplaced(authored));
-    recovery.flush();
+    await saving.open(authored);
     const dispatch = vi.spyOn(application.store, 'dispatch');
     const view = renderPlannerForInteraction({ application });
 
@@ -454,16 +386,14 @@ describe('surface product loop', () => {
         slot: createHubSlotAddress(nBiome, 'hub', 'combat03'),
       },
     ]);
-    expect(recovery.hasPendingAutosave()).toBe(true);
-    recovery.flush();
-    expect(recovery.readStoredJson()).toBe(encodeProjectDocument(currentProject(application)));
+    expect(saving.saves.hasPending()).toBe(true);
+    expect(await saving.write()).toBe(encodeProjectDocument(currentProject(application)));
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
 
     await waitFor(() => expect(currentProject(application)).toEqual(authored));
-    expect(recovery.hasPendingAutosave()).toBe(true);
-    recovery.flush();
-    expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
+    expect(saving.saves.hasPending()).toBe(true);
+    expect(await saving.write()).toBe(encodeProjectDocument(authored));
   });
 
   it('routes the selected issue to the owning decision inspector', async () => {
@@ -779,15 +709,12 @@ describe('surface product loop', () => {
   });
 
   it('treats a shared-workspace rail focus as session-only work', async () => {
-    const recovery = createRecoveryPersistence();
     const work: ApplicationEvaluationEvent[] = [];
-    const application = createApplication({
-      autosaveRecovery: recovery.adapter,
-      autosaveScheduler: recovery.scheduler,
+    const saving = createSavingApplication({
       observeEvaluationWork: (event) => work.push(event),
     });
-    application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
-    recovery.flush();
+    const { application } = saving;
+    await saving.open(loadSurfaceNOPQProject());
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Thessaly' }));
@@ -811,7 +738,7 @@ describe('surface product loop', () => {
     );
     expect(currentHistory(application)).toBe(historyBefore);
     expect(currentEvaluation(application)).toBe(evaluationBefore);
-    expect(recovery.hasPendingAutosave()).toBe(false);
+    expect(saving.saves.hasPending()).toBe(false);
     expect(work.filter((event) => event.kind === 'projectEvaluation')).toEqual([]);
     expect(work.filter((event) => event.kind === 'queryBatch')).toEqual([]);
     expect(

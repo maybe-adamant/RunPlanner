@@ -7,12 +7,7 @@ import {
 
 import type { BuildIdentity } from '../composition/buildIdentity';
 import type { GameModuleHost } from '../persistence/gameModuleHost';
-import {
-  selectPresentProject,
-  selectProfileStatus,
-  type PlannerStore,
-  type RootState,
-} from '../state/store';
+import { selectPresentProject, type PlannerStore, type RootState } from '../state/store';
 import type { CurrentGamePlan } from './projectOperations';
 import type { SlotRebuildReport } from './slotRebuild';
 
@@ -78,8 +73,8 @@ export function projectBugReportFacts(
       selectPresentProject(state) === undefined
         ? null
         : {
-            fileName: state.profileSession.fileName,
-            saveStatus: selectProfileStatus(state),
+            name: selectPresentProject(state)?.name ?? null,
+            lastWriteFailure: state.librarySession.writeError,
             gamePlan: options.currentGamePlan,
           },
     lastSendSlot: state.gameSendSession.lastSentSlot,

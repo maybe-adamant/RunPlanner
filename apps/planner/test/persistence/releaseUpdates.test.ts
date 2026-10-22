@@ -146,24 +146,13 @@ describe('release update policy', () => {
     );
   });
 
-  it('cancels the install when the save is cancelled, fails or throws', async () => {
+  it('cancels the install when the save fails or throws', async () => {
     for (const [save, message] of [
-      [
-        () =>
-          Promise.resolve({
-            status: 'cancelled' as const,
-            message: 'Update cancelled; the project was not saved.',
-          }),
-        'Update cancelled; the project was not saved.',
-      ],
       [
         () => Promise.resolve({ status: 'failure' as const, message: 'Not saved: disk full' }),
         'Not saved: disk full',
       ],
-      [
-        () => Promise.reject(new Error('dialog closed')),
-        'Not saved, so not updated: dialog closed',
-      ],
+      [() => Promise.reject(new Error('disk gone')), 'Not saved, so not updated: disk gone'],
     ] as const) {
       const fixture = controller(undefined, { save });
       await confirming(fixture);

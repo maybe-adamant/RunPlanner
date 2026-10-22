@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { withDraftGodToggled, withDraftRackKeepsake } from '@planner/projections/draftSpec';
-import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import {
   authoredProjectCommandDispatched,
   authoredProjectUndoRequested,
+  authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
 import type { DraftRunner, DraftRunRequest } from '@planner/workspace/draftRun';
 import type { DraftRunEvent, DraftRunOutcome } from '@planner/workspace/draftWorkerProtocol';
@@ -68,7 +68,7 @@ function openUnderworld(runner: DraftRunner, seeds: readonly number[] = [11]) {
   });
   const { catalog } = application;
   application.store.dispatch(
-    newProjectCreated({
+    authoredProjectReplaced({
       ...generated,
       route: { ...generated.route, biomes: [] },
     }),
@@ -229,7 +229,7 @@ describe('draft run controller', () => {
     const { application, draftedResult, generated, history, run } = openUnderworld(runner);
     application.draftRun.draft();
     application.store.dispatch(
-      newProjectCreated({
+      authoredProjectReplaced({
         ...generated,
         projectId: 'other',
         route: { ...generated.route, biomes: [] },

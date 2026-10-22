@@ -37,6 +37,7 @@ describe('candidate application boundary', () => {
       'buildIdentity',
       'catalog',
       'catalogSummary',
+      'closeRequest',
       'communityEvents',
       'dispose',
       'draftRun',

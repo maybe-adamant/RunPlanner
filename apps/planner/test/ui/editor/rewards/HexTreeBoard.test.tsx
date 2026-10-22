@@ -8,17 +8,19 @@ import {
 } from '@run-planner/engine/authored-project';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectReplaced,
+} from '@planner/state/projectWorkspaceSlice';
 import { routePanelSelected } from '@planner/state/editorSessionSlice';
 import { createApplication } from '@planner/composition/createApplication';
-import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 
 /** A configured biome lets the route-start tree findings reach the assessment. */
 function seleneApplication() {
   const application = createApplication();
   application.store.dispatch(
-    newProjectCreated(
+    authoredProjectReplaced(
       createProjectDocument(application.catalog, {
         projectId: 'run-plan',
         routeKey: 'Underworld',

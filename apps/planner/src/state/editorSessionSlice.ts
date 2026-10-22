@@ -12,7 +12,6 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RunStateOwner } from '@run-planner/engine/simulation';
 
 import { authoredProjectReplaced } from './projectWorkspaceSlice';
-import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';
 
 export interface FindingSelection {
   /** Redirected semantic owner used only to focus and scroll its visible marker. */
@@ -344,11 +343,7 @@ export function createEditorSessionReducer(catalog: Catalog): Reducer<EditorSess
   };
 
   return (state = initialState, action) => {
-    if (
-      authoredProjectReplaced.match(action) ||
-      newProjectCreated.match(action) ||
-      profileLoadSucceeded.match(action)
-    ) {
+    if (authoredProjectReplaced.match(action)) {
       // A new document owns a new route-local workspace. Preserve the
       // monotonic navigation revision for React focus effects, but do not
       // carry a panel or semantic owner into the replacement route.

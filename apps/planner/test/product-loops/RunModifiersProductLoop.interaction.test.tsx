@@ -10,16 +10,20 @@ import {
   authoredProjectRedoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 import { createFakeGameModuleHost } from '@planner-test/fixtures/gameModuleHost';
-import { createFakeProfileFiles } from '@planner-test/fixtures/profileFiles';
+import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 
 afterEach(cleanup);
 
-it('restores authored modifiers through history, saved reload and published execution', async () => {
-  const files = createFakeProfileFiles();
+it('restores authored modifiers through history, saved reopen and published execution', async () => {
+  const library = createMemoryProjectLibrary();
   const game = createFakeGameModuleHost();
-  const application = createApplication({ profileFile: files.adapter, gameModuleHost: game.host });
-  await files.openSaved(application, loadSurfaceNProject(), 'modifiers.runplanner.json');
+  const application = createApplication({
+    projectLibrary: library.adapter,
+    gameModuleHost: game.host,
+  });
+  const key = await library.file(loadSurfaceNProject());
+  await application.projectOperations.openPlan(key);
   const { user } = renderPlannerForInteraction({ application });
   // The Route panel hosts the run modifiers.
   const modifiers = () => user.click(screen.getByRole('button', { name: 'Route' }));
@@ -35,12 +39,12 @@ it('restores authored modifiers through history, saved reload and published exec
   expect(gold().value).toBe('35');
   const expected = { encounterGoldRange: 35 };
   await act(async () => {
-    expect((await application.projectOperations.saveProfile()).status).toBe('success');
+    expect((await application.projectOperations.flush()).status).toBe('success');
   });
-  const saved = decodeProjectDocument(JSON.parse(files.writes.at(-1)!.json), application.catalog);
+  const saved = decodeProjectDocument(JSON.parse(library.writes.at(-1)!.json), application.catalog);
   expect(routeRunModifiers(saved.route.loadout)).toEqual(expected);
   await act(async () => {
-    await files.openSaved(application, saved, 'modifiers.runplanner.json');
+    expect((await application.projectOperations.openPlan(key)).status).toBe('success');
   });
   // Opening a document returns the workspace to Route.
   await modifiers();

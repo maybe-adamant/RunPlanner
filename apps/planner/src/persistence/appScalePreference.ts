@@ -5,7 +5,7 @@ export interface AppScalePreference {
 
 const storageKey = 'run-planner.app-scale';
 
-/** A device-local preference, independent of profile files and recovery. */
+/** A device-local preference, independent of plans and their library. */
 export function createBrowserAppScalePreference(
   storage: () => Pick<Storage, 'getItem' | 'setItem'>,
 ): AppScalePreference {

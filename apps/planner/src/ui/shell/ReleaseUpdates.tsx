@@ -4,17 +4,12 @@ import type {
   ReleaseUpdateController,
   ReleaseUpdateState,
 } from '@planner/persistence/releaseUpdates';
-import type { UpdateInstallLabel } from '@planner/projections/releaseUpdate';
 
 function useReleaseUpdateState(controller: ReleaseUpdateController) {
   return useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot);
 }
 
-function noticeContent(
-  controller: ReleaseUpdateController,
-  state: ReleaseUpdateState,
-  installLabel: UpdateInstallLabel,
-) {
+function noticeContent(controller: ReleaseUpdateController, state: ReleaseUpdateState) {
   switch (state.kind) {
     case 'available':
       return (
@@ -57,7 +52,7 @@ function noticeContent(
               onClick={() => void controller.confirmInstall()}
               type="button"
             >
-              {installLabel}
+              Install and restart
             </button>
             <button
               className="quiet-action action-compact"
@@ -102,13 +97,11 @@ function noticeContent(
 
 export function ReleaseUpdateNotice({
   controller,
-  installLabel,
 }: {
   readonly controller: ReleaseUpdateController;
-  readonly installLabel: UpdateInstallLabel;
 }) {
   const state = useReleaseUpdateState(controller);
-  const content = noticeContent(controller, state, installLabel);
+  const content = noticeContent(controller, state);
   if (content === null) return null;
 
   return (

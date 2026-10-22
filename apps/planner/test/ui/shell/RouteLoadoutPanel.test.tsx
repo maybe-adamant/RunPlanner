@@ -11,7 +11,6 @@ import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
-import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
@@ -87,7 +86,7 @@ describe('RouteLoadoutPanel', () => {
       value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
     });
     project = authorLegalTraitOffers(project);
-    application.store.dispatch(newProjectCreated(project));
+    application.store.dispatch(authoredProjectReplaced(project));
     const markup = loadoutMarkup(application);
     expect(markup).toContain('>Starting reward</label>');
     expect(markup).toMatch(

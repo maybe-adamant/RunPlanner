@@ -7,7 +7,6 @@ import {
   gameSendStarted,
   gameSentSlotNotActivated,
 } from '@planner/state/gameSendSessionSlice';
-import { newProjectCreated, profileLoadSucceeded } from '@planner/state/profileSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { createProjectDocument } from '@run-planner/engine/authored-project';
 
@@ -41,24 +40,11 @@ describe('game send session', () => {
     const history = application.store.getState().projectWorkspace.history;
     expect(history?.present).toBe(project);
 
-    application.store.dispatch(newProjectCreated(project));
-    expect(application.store.getState().gameSendSession).toEqual({
-      lastSentSlot: null,
-      lastFailure: null,
-      lastActivationFailure: null,
-    });
-    record();
-    const assembly = application.store.getState().projectWorkspace.assembly!;
-    application.store.dispatch(
-      profileLoadSucceeded({ assembly, project, baselineJson: '{}', fileName: 'other.json' }),
-    );
-    expect(application.store.getState().gameSendSession).toEqual({
-      lastSentSlot: null,
-      lastFailure: null,
-      lastActivationFailure: null,
-    });
-    record();
     application.store.dispatch(authoredProjectReplaced(project));
-    expect(application.store.getState().gameSendSession.lastFailure).toBeNull();
+    expect(application.store.getState().gameSendSession).toEqual({
+      lastSentSlot: null,
+      lastFailure: null,
+      lastActivationFailure: null,
+    });
   });
 });

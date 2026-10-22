@@ -9,7 +9,7 @@ import type {
   ProjectOperationResult,
   ProjectOperations,
 } from '@planner/workspace/projectOperations';
-import { selectProfileSession, selectProfileStatus, useAppSelector } from '@planner/state/store';
+import { selectLibrarySession, selectRevertAvailable, useAppSelector } from '@planner/state/store';
 import { ActionIcon } from '../controls/ActionIcon';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { routeArtwork } from '@planner/ui/artwork/route-icons/routeArtwork';
@@ -33,8 +33,8 @@ export function ProjectFileControls({
   readonly beforeFileMenu?: ReactNode;
   readonly onEntryOpenChange: (open: boolean) => void;
 }) {
-  const profileSession = useAppSelector(selectProfileSession);
-  const profileStatus = useAppSelector(selectProfileStatus);
+  const librarySession = useAppSelector(selectLibrarySession);
+  const revertAvailable = useAppSelector(selectRevertAvailable);
   const [result, setResult] = useState<ProjectOperationResult | null>(null);
   const [pendingOperation, setPendingOperation] = useState<ProjectOperation | null>(null);
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
@@ -44,7 +44,7 @@ export function ProjectFileControls({
     const timer = window.setTimeout(() => setResult(null), 5000);
     return () => window.clearTimeout(timer);
   }, [result]);
-  const runProfileOperation = async (
+  const runOperation = async (
     operation: ProjectOperation,
     run: () => Promise<ProjectOperationResult>,
   ): Promise<ProjectOperationResult> => {
@@ -53,10 +53,7 @@ export function ProjectFileControls({
     try {
       const operationResult = await run();
       setResult(operationResult);
-      if (
-        (operation === 'loadProfile' || operation === 'new') &&
-        operationResult.status === 'success'
-      ) {
+      if (operation !== 'revert' && operationResult.status === 'success') {
         onEntryOpenChange(false);
       }
       return operationResult;
@@ -71,11 +68,7 @@ export function ProjectFileControls({
   };
 
   const feedback = (
-    <ProjectFileFeedback
-      status={hasProject ? profileStatus : undefined}
-      session={profileSession}
-      result={result}
-    />
+    <ProjectFileFeedback savesAsYouEdit={hasProject} session={librarySession} result={result} />
   );
 
   if (entryOpen || !hasProject) {
@@ -106,7 +99,7 @@ export function ProjectFileControls({
                     setDreamItineraryOpen(true);
                     return;
                   }
-                  void runProfileOperation('new', () => operations.createNew(route.routeKey));
+                  void runOperation('new', () => operations.createNew(route.routeKey));
                 }}
                 type="button"
               >
@@ -124,38 +117,12 @@ export function ProjectFileControls({
           <button
             className="secondary-action"
             disabled={pendingOperation !== null}
-            onClick={() => void runProfileOperation('loadProfile', () => operations.loadProfile())}
+            onClick={() => void runOperation('importPlan', () => operations.importPlan())}
             type="button"
           >
             <ActionIcon name="load" />
-            {pendingOperation === 'loadProfile' ? 'Loading…' : 'Load'}
+            {pendingOperation === 'importPlan' ? 'Opening…' : 'Open file…'}
           </button>
-          {profileSession.recoveryStatus === 'blocked' && (
-            <>
-              <button
-                className="secondary-action"
-                disabled={pendingOperation !== null}
-                onClick={() =>
-                  void runProfileOperation('exportRecovery', () =>
-                    operations.exportAutosaveRecovery(),
-                  )
-                }
-                type="button"
-              >
-                <ActionIcon name="save" />
-                {pendingOperation === 'exportRecovery' ? 'Exporting…' : 'Export Autosave'}
-              </button>
-              <button
-                className="danger-action"
-                disabled={pendingOperation !== null}
-                onClick={() => setResult(operations.discardAutosaveRecovery())}
-                type="button"
-              >
-                <ActionIcon name="discard" />
-                Discard
-              </button>
-            </>
-          )}
           {hasProject && (
             <button className="quiet-action" onClick={() => onEntryOpenChange(false)} type="button">
               Cancel
@@ -167,7 +134,7 @@ export function ProjectFileControls({
             catalog={catalog}
             onCancel={() => setDreamItineraryOpen(false)}
             onCreate={(itineraryBiomeKeys) => {
-              void runProfileOperation('new', () =>
+              void runOperation('new', () =>
                 operations.createNew('Dream', itineraryBiomeKeys),
               ).then((operationResult) => {
                 if (operationResult.status === 'success') setDreamItineraryOpen(false);
@@ -184,7 +151,7 @@ export function ProjectFileControls({
     <section
       className="project-file-controls"
       aria-busy={pendingOperation !== null}
-      aria-label="Project profile"
+      aria-label="Plan actions"
     >
       {feedback}
       <div className="project-file-actions">
@@ -192,12 +159,12 @@ export function ProjectFileControls({
         <DropdownMenu.Root onOpenChange={setFileMenuOpen} open={fileMenuOpen}>
           <DropdownMenu.Trigger asChild>
             <button
-              aria-label="File"
+              aria-label="Plan"
               className="secondary-action action-compact project-file-menu-trigger"
               disabled={pendingOperation !== null}
               type="button"
             >
-              File
+              Plan
             </button>
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
@@ -209,80 +176,52 @@ export function ProjectFileControls({
             >
               <DropdownMenu.Item
                 className="project-file-menu-item"
-                disabled={pendingOperation !== null || !hasProject}
+                disabled={pendingOperation !== null}
                 onSelect={() => queueFileMenuAction(() => onEntryOpenChange(true))}
               >
                 <ActionIcon name="new" />
-                New
+                New…
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 className="project-file-menu-item"
                 disabled={pendingOperation !== null}
                 onSelect={() =>
                   queueFileMenuAction(() => {
-                    void runProfileOperation('loadProfile', () => operations.loadProfile());
+                    void runOperation('importPlan', () => operations.importPlan());
                   })
                 }
               >
                 <ActionIcon name="load" />
-                {pendingOperation === 'loadProfile' ? 'Loading…' : 'Load…'}
+                {pendingOperation === 'importPlan' ? 'Opening…' : 'Open file…'}
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className="project-file-menu-item"
+                disabled={pendingOperation !== null}
+                onSelect={() =>
+                  queueFileMenuAction(() => {
+                    void runOperation('duplicate', () => operations.duplicate());
+                  })
+                }
+              >
+                <ActionIcon name="duplicate" />
+                {pendingOperation === 'duplicate' ? 'Duplicating…' : 'Duplicate'}
               </DropdownMenu.Item>
               <DropdownMenu.Separator className="project-file-menu-separator" />
               <DropdownMenu.Item
                 className="project-file-menu-item"
-                disabled={pendingOperation !== null || !hasProject}
+                disabled={pendingOperation !== null || !revertAvailable}
                 onSelect={() =>
                   queueFileMenuAction(() => {
-                    void runProfileOperation('saveProfile', () => operations.saveProfile());
+                    setResult(operations.revertToOpened());
                   })
                 }
               >
-                <ActionIcon name="save" />
-                {pendingOperation === 'saveProfile' ? 'Saving…' : 'Save'}
+                <ActionIcon name="undo" />
+                Revert to opened
               </DropdownMenu.Item>
-              {operations.saveAsAvailable && (
-                <DropdownMenu.Item
-                  className="project-file-menu-item"
-                  disabled={pendingOperation !== null || !hasProject}
-                  onSelect={() =>
-                    queueFileMenuAction(() => {
-                      void runProfileOperation('saveProfileAs', () => operations.saveProfileAs());
-                    })
-                  }
-                >
-                  <ActionIcon name="saveAs" />
-                  {pendingOperation === 'saveProfileAs' ? 'Saving…' : 'Save As…'}
-                </DropdownMenu.Item>
-              )}
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
-        {profileSession.recoveryStatus === 'blocked' && (
-          <>
-            <button
-              className="secondary-action action-compact"
-              disabled={pendingOperation !== null}
-              onClick={() =>
-                void runProfileOperation('exportRecovery', () =>
-                  operations.exportAutosaveRecovery(),
-                )
-              }
-              type="button"
-            >
-              <ActionIcon name="save" />
-              {pendingOperation === 'exportRecovery' ? 'Exporting…' : 'Export Autosave'}
-            </button>
-            <button
-              className="danger-action action-compact"
-              disabled={pendingOperation !== null}
-              onClick={() => setResult(operations.discardAutosaveRecovery())}
-              type="button"
-            >
-              <ActionIcon name="discard" />
-              Discard
-            </button>
-          </>
-        )}
       </div>
     </section>
   );

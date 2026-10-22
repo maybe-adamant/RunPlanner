@@ -43,8 +43,8 @@ remain semantic commands. One effective user intent creates one history step;
 no-ops do not. Navigation, focus, search, disclosure and derived results do
 not enter Undo/Redo.
 
-Before route choice or accepted loading there is no project, history,
-evaluation or autosave publication. The route chooser does not create a
+Before route choice or an accepted open there is no project, history,
+evaluation or library write. The route chooser does not create a
 placeholder document. One accepted project owns one route; the shell does not
 retain sibling route runs.
 
@@ -331,7 +331,7 @@ An open Run State sheet similarly clears if its exact snapshot/launcher
 disappears. Opening, closing or navigating the sheet uses published snapshots
 and creates no authored command, candidate preparation or simulation.
 
-## Project, File and Recovery State
+## Project, Library and Session State
 
 These are separate authorities:
 
@@ -339,28 +339,44 @@ These are separate authorities:
 | -------------------------------------------- | ------------------------------------------- |
 | Semantic choices and schema/catalog identity | Authored project                            |
 | Undo/Redo snapshots                          | Authored history coordinated by application |
-| Current file reference and saved fingerprint | Application file session                    |
-| Raw recovery copy                            | Autosave adapter                            |
+| Stored plans                                 | Project library adapter                     |
+| Open item key and pending writes             | Library saver                               |
+| Opened snapshot and the latest write failure | Library session slice                       |
 | Route panel, focus, open dialogs and drafts  | UI session                                  |
 | Evaluation, findings and workspace           | Replaceable derived products                |
 
-The normalized `ProjectDocument` is the profile file. Paths, filenames, save
-baselines, Redux state and recovery metadata never enter it.
+The normalized `ProjectDocument` is the stored plan. Keys, file names, Redux
+state and session metadata never enter it.
 
-Application scale is a local presentation preference, independent of project
-files, recovery and Undo/Redo. The shell owns keyboard/wheel shortcuts and CSS
+Application scale is a local presentation preference, independent of plans and
+Undo/Redo. The shell owns keyboard/wheel shortcuts and CSS
 scaling; a browser-storage adapter persists the preference for web and desktop.
 Map zoom remains independent. Responsive layout uses the scaled available space;
 pointer gestures and floating overlays account for screen versus layout coordinates.
 
-### File operations
+### Plan operations
 
-The file menu provides New, Load, Save and desktop Save As. Sending a plan to
-the game belongs to the Game panel and the header send button. Both send only a
-saved file with no unsaved changes, saving first (Save As for a never-saved
-project) and naming the plan by the file's stem. Sending adds no authored edit
-or history step, but it may first save, writing the file and, for a never-saved
-project, choosing it through Save As.
+Every open plan is a library item, and every authored edit is saved: there is
+no Save, no unsaved state and no recovery copy. The header's Plan menu offers
+New, Open file, Duplicate and Revert to opened; the entry panel offers the
+route chooser and Open file. `ProjectOperations` owns them:
+
+- **New** creates the route's project, files it in the library and opens it.
+- **Open file** imports a picked file into the library and opens the copy.
+- **Duplicate** writes the open plan first, then files a copy named "X (copy)"
+  with a new `projectId` from `reidentifyProjectHistory`, and opens it.
+- **Revert to opened** replaces the project with the document it was opened as,
+  through one undoable history step.
+- An event's project opens the same way as an imported copy that always takes
+  its own identity.
+
+Opening any plan first writes the open one's pending edits; if that write
+fails, the open plan stays and the failure is reported. The opened plan starts
+a new history.
+
+Sending a plan to the game belongs to the Game panel and the header send
+button. A send compiles the open plan as it stands and writes nothing; it adds
+no authored edit or history step.
 
 The Game panel, opened from the Game button beside About, holds a Game location
 section, a Game module section once a target is set, and a Plans in game
@@ -382,100 +398,82 @@ the header compiles only when sending. The `gameSendSession` slice holds the
 loaded project's last sent slot and the latest send failure, with its time, as
 UI-session state; `publishGame` clears the failure when a send starts and records
 it when one fails. Both are cleared by any document replacement and never
-persisted or placed in history. The button's transient Saving, Sending and
+persisted or placed in history. The button's transient Sending and
 three-second result labels are component state. Publish failures reuse the step
 wording. The game target is neither authored state nor Redux state
 and never enters history.
 
-Browser Load uses file input; Save downloads a file. Browser Save As would be
-the same operation and is omitted. Tauri uses native dialogs and a remembered
-accepted file reference. Save writes that file, Save As writes and activates
-another as a copy with a new `projectId` (minted by the application and applied
-to every history snapshot through `reidentifyProjectHistory`, so Undo keeps it;
-the first save of a never-saved project keeps its identity), and New clears the association when creating the replacement project.
-
-`ProfileFileAdapter` owns explicit file operations and restoring the remembered
-reference. A `ProfileFileReference` supplies its display name, activation and
-write capability. It lives outside Redux, authored JSON and history.
-`AutosaveRecoveryAdapter` independently reads, writes and clears recovery.
-Platform globals are confined to adapters and composition.
-
-Activate a selected file only after accepting its document or successfully
-writing the intended snapshot. Cancellation, bad input, preparation failure or
-write failure leaves the previous association and baseline unchanged.
-
 ### Project library
 
 `ProjectLibraryAdapter` stores plans as complete documents addressed by an
-opaque key. The desktop host keeps them as plain `.runplanner.json` files in
-`RunPlanner/Projects/` under the platform documents folder, created on demand;
-the key is the file name, `<plan name> (<8 hex digits of the projectId's
-SHA-256>)`, made portable. The host reads only each file's head to list it,
-writes atomically, refuses a document without a project identity and name,
-renames a file only when the plan's name or identity changes (never over
-another file), deletes to the system recycle bin and restores the most recent
-bin item for undo (Windows and Linux). The browser host keeps the same model in
-IndexedDB, with deleted plans restorable for a week and no folder. Listing scans
-the folder each time; there is no index.
+opaque key, and the library session (the last opened plan, by key and
+`projectId`, and whether the pre-library file was offered). The desktop host
+keeps plans as plain `.runplanner.json` files in `RunPlanner/Projects/` under
+the platform documents folder, created on demand; the key is the file name,
+`<plan name> (<8 hex digits of the projectId's SHA-256>)`, made portable. The
+host reads only each file's head to list it, writes atomically, refuses a
+document without a project identity and name, renames a file only when the
+plan's name or identity changes (never over another file), and deletes to the
+system recycle bin. It keeps the session in the configuration folder. The
+browser host keeps the same model in IndexedDB, without a folder or bin.
+Listing scans the folder each time; there is no index.
 
 Library meaning stays in the application. `createProjectLibraryOperations`
 classifies entries as openable, too new or unreadable against the loader's
 supported schemas, never dropping one, and names a plan from before plans had
 names by its file stem. Identity follows the engine: a stored copy sharing an
-older plan's `projectId` (oldest by modified time keeps it), or an imported
-file whose identity the library already holds, is loaded, given a new identity
-through `reidentifyProjectHistory` and written back whole. Import loads and
-admits the file like Load before filing a copy. The previously active file is
-offered for import until the library holds its identity.
+older plan's `projectId` (oldest by modified time keeps it; the open plan
+always keeps its own), or an imported file whose identity the library already
+holds, is loaded, given a new identity through `reidentifyProjectHistory` and
+written whole. A deleted plan's content is kept in memory, so undoing the
+delete files it again on every platform; the recycle bin is the longer-term net.
+
+### Continuous save
+
+`LibrarySaver` watches the present project. An effective authored change
+(edit, Undo/Redo, revert) schedules a debounced write of the open item;
+changes coalesce, one write runs at a time and each writes the newest
+snapshot, so the last edit wins in order. A write that refiles the plan under a
+new key moves the saver and the remembered last plan to it. A failed write is
+recorded in the library session and shown as a stable notice in place of
+"Saved as you edit"; the next edit or flush retries it, and a success clears
+it. Navigation, findings and derived publication do not write.
+
+A plan opened from an older schema keeps its original before the first write
+replaces it: the desktop library recycles a copy of the file, and the write
+waits until that succeeds.
+
+Pending writes are flushed before another plan opens, before an update
+installs, when the page is hidden, and before the desktop window closes: the
+host holds a close request while the planner writes, closing silently once the
+write succeeds, or after a timeout if the planner never answers. Only a write
+that still fails asks "Not saved — close anyway?" (Close anyway / Keep open),
+and the host keeps the window open while the user answers. The browser asks
+before unloading only while a write failure stands.
 
 ### Atomic replacement
 
-Loading prepares the whole document before publication: the shared application
+Opening prepares the whole document before publication: the shared application
 loader's compatibility check and strict engine parsing, evaluation, and
 immediate workspace projection must all succeed. The
 [authored-document boundary](AUTHORED_PROJECT_MODEL.md#authored-document-boundary)
-owns migration support and original-preservation requirements. Only then
-replace the project/history, establish the clean baseline, activate the file
-and queue autosave. Failure leaves the current project, history, evaluation,
-file target and recovery value untouched.
+owns migration support. Only then is the project replaced, with a new history
+and the opened snapshot. Failure leaves the current project, history,
+evaluation and library unchanged, except that an import or New files its item
+before it opens.
 
-The host stores path metadata and raw bytes, not planner semantics.
-Desktop startup reconciles remembered disk content and recovery before
-constructing the synchronous application; the application owns decoding and
-canonical comparison.
+### Startup
 
-### Dirty state and restart
-
-Dirty state compares the current normalized project fingerprint with the last
-explicitly loaded or successfully saved snapshot. Autosave never establishes a
-clean baseline. If editing continues during a save, success marks the serialized
-snapshot as saved while newer content remains dirty. Undo back to the saved
-snapshot is clean without another write.
-
-| Startup inputs                                             | Result                                                   |
-| ---------------------------------------------------------- | -------------------------------------------------------- |
-| Valid remembered file, no recovery                         | Open the file clean                                      |
-| Equivalent valid file and recovery                         | Open clean with that file association                    |
-| Different valid recovery and file                          | Open recovered work, keep disk baseline and Save target  |
-| Missing/unreadable/invalid remembered file, valid recovery | Recover anonymously and clear stale association          |
-| Browser recovery                                           | Recover anonymously, unsaved                             |
-| Corrupt recovery                                           | Preserve/export raw content and block recovery overwrite |
-
-Corrupt recovery does not erase a valid remembered source file. When no valid
-project can open, show the route chooser and failure without creating a
-placeholder. Successful explicit Load or Discard Autosave clears the recovery
-blockade; simply choosing a route must not overwrite the corrupt value.
-
-Autosave is debounced and observes effective authored replacements, including
-edits, Undo/Redo, route creation and accepted Load. Navigation, findings and
-derived publication do not trigger it. Autosave failures are reported without
-blocking continued editing.
+Startup reopens the last opened plan, found by key or, after a rename outside
+the planner, by `projectId`. When there is none the entry panel shows; when it
+cannot be read the entry panel shows its failure. The file the planner kept
+open before plans lived in the library is offered once for import; importing
+or declining it is remembered.
 
 A shell fault boundary remains available after rendering or unhandled browser
-failure. It does not continue an unknown partial interaction. It preserves the
-source and allows another profile through the same preparation boundary.
-Raw recovery export does not decode, migrate, activate a file or clear recovery.
-Explicit discard removes only recovery, never the user's source profile.
+failure. It does not continue an unknown partial interaction. It offers
+another file through the same open path, a reload, or a reload that does not
+reopen the failing plan, which stays in the library.
 
 ## Presentation and Accessibility
 
@@ -518,7 +516,7 @@ consumption and reachability:
 - mandatory controls present despite missing or invalid values;
 - precise finding navigation and the same inline repair target;
 - readiness at every activation path, including label triggers;
-- cancellation, async save races and recovery precedence;
+- cancellation, ordered library writes and their failures;
 - representative nested-target, hub, generated-pickup and Undo workflows.
 
 Production enforces local construction invariants: declaration contacts,

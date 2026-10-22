@@ -32,11 +32,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
-import type {
-  AutosaveRecoveryAdapter,
-  AutosaveScheduler,
-} from '@planner/persistence/autosaveRecovery';
-import type { ProfileFileAdapter, ProfileFileReference } from '@planner/persistence/profileFile';
 import {
   createFakeGameModuleHost,
   gameModuleStatus,
@@ -44,8 +39,7 @@ import {
   planSlots,
 } from '@planner-test/fixtures/gameModuleHost';
 import { gamePlanSent } from '@planner/state/gameSendSessionSlice';
-import { profileSaveSucceeded } from '@planner/state/profileSessionSlice';
-import { createFakeProfileFiles } from '@planner-test/fixtures/profileFiles';
+import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
@@ -104,22 +98,6 @@ async function expectAboutBuildIdentity(startWithProject: boolean): Promise<void
   const summary = about.querySelector('.about-product-summary');
   expect(summary).not.toBeNull();
   expect(summary!.textContent).toMatch(/^VersionDevelopmentBuildLocal buildSchema98Catalog/);
-}
-
-function profileReference(fileName: string): ProfileFileReference {
-  return { activate: () => Promise.resolve(), fileName, write: () => Promise.resolve() };
-}
-
-function profileAdapter(
-  overrides: Pick<ProfileFileAdapter, 'load' | 'saveAs'> &
-    Partial<Pick<ProfileFileAdapter, 'supportsSaveAs'>>,
-): ProfileFileAdapter {
-  return {
-    clearActive: () => Promise.resolve(),
-    restoreActive: () => Promise.resolve({ status: 'none' }),
-    supportsSaveAs: false,
-    ...overrides,
-  };
 }
 
 function configuredBiomeCount(
@@ -682,7 +660,7 @@ describe('planner history interaction', () => {
     expect(screen.getByRole('button', { name: 'Loadout' })).toBeTruthy();
   });
 
-  it('offers no Publish to Game in the File menu', async () => {
+  it('offers no Publish to Game in the Plan menu', async () => {
     const game = createFakeGameModuleHost();
     const application = createApplication({ gameModuleHost: game.host });
     const project = createCompleteFGProject();
@@ -693,7 +671,7 @@ describe('planner history interaction', () => {
       }),
     );
     const { user } = renderPlannerForInteraction({ application });
-    await user.click(screen.getByRole('button', { name: 'File' }));
+    await user.click(screen.getByRole('button', { name: 'Plan' }));
     expect(screen.queryByRole('menuitem', { name: /Publish/ })).toBeNull();
   });
 
@@ -706,20 +684,18 @@ describe('planner history interaction', () => {
     application.store.dispatch(authoredProjectReplaced(firstBiomeProject()));
   }
 
-  /** An application whose open project is a clean saved file, as sending requires. */
+  /** An application with a sendable library plan open. */
   async function savedApplication(game: ReturnType<typeof createFakeGameModuleHost>) {
-    const files = createFakeProfileFiles();
+    const library = createMemoryProjectLibrary();
     const application = createApplication({
       gameModuleHost: game.host,
-      profileFile: files.adapter,
+      projectLibrary: library.adapter,
       mintProjectId: () => 'copy-id',
     });
-    await files.openSaved(
-      application,
-      { ...firstBiomeProject(), name: 'Erebus opener' },
-      'erebus.runplanner.json',
-    );
-    return { application, files };
+    const key = await library.file({ ...firstBiomeProject(), name: 'Erebus opener' });
+    const opened = await application.projectOperations.openPlan(key);
+    if (opened.status !== 'success') throw new Error(opened.message);
+    return { application, library };
   }
 
   const sendButton = () =>
@@ -882,7 +858,10 @@ describe('planner history interaction', () => {
     await reasonOf('Send to game', 'Set up the game in the Game panel.');
     cleanup();
 
-    const unsendable = createApplication({ gameModuleHost: game.host });
+    const unsendable = createApplication({
+      gameModuleHost: game.host,
+      projectLibrary: createMemoryProjectLibrary().adapter,
+    });
     await unsendable.projectOperations.createNew('Underworld');
     unsendable.store.dispatch(gamePlanSent({ slot: 1 }));
     renderPlannerForInteraction({ application: unsendable });
@@ -941,16 +920,13 @@ describe('planner history interaction', () => {
     expect(await screen.findByRole('button', { name: 'Send to game…' })).toBeTruthy();
   });
 
-  it('explains saving first, then shows saving and sending while it saves in place', async () => {
+  it('sends the open plan as it stands, without saving first', async () => {
     const game = createFakeGameModuleHost();
-    const { application, files } = await savedApplication(game);
+    const { application, library } = await savedApplication(game);
     application.store.dispatch(gamePlanSent({ slot: 5 }));
-    application.store.dispatch(
-      profileSaveSucceeded({ baselineJson: '{}', fileName: 'erebus.runplanner.json' }),
-    );
     renderPlannerForInteraction({ application });
     const button = await screen.findByRole('button', { name: 'Send · Slot 5' });
-    expect(hintOf(button)).toBe('Saves your changes, then sends to slot 5.');
+    expect(hintOf(button)).toBeNull();
     let publish: (() => void) | undefined;
     game.host.publish.mockImplementationOnce(
       (slotNumber, json, sourceJson, summary) =>
@@ -967,17 +943,16 @@ describe('planner history interaction', () => {
         }),
     );
     fireEvent.click(button);
-    expect(button.textContent).toBe('Saving…');
-    await waitFor(() => expect(button.textContent).toBe('Sending…'));
-    expect(files.writes.map((write) => write.fileName)).toEqual(['erebus.runplanner.json']);
+    expect(button.textContent).toBe('Sending…');
+    expect(library.writes).toHaveLength(0);
     act(() => publish?.());
     await waitFor(() => expect(button.textContent).toBe('✓ Sent · Slot 5'));
     expect(JSON.parse(game.published[0]!.json)).toMatchObject({ displayName: 'Erebus opener' });
   });
 
-  it('gives a Save As copy a new identity, so earlier sends no longer match it', async () => {
+  it('gives a duplicate a new identity, so earlier sends no longer match it', async () => {
     const game = createFakeGameModuleHost();
-    const { application, files } = await savedApplication(game);
+    const { application, library } = await savedApplication(game);
     const current = application.projectOperations.inspectCurrentGamePlan();
     if (current.kind !== 'publishable') throw new Error('fixture must be sendable');
     const inSlot1 = gameModuleStatus({
@@ -1004,13 +979,17 @@ describe('planner history interaction', () => {
     expect(await within(panel).findByText('current')).toBeTruthy();
     await user.click(within(panel).getByRole('button', { name: 'Close' }));
 
-    files.chooseSaveAs('Erebus copy.runplanner.json');
-    await act(async () => {
-      await application.projectOperations.saveProfileAs();
+    await user.click(screen.getByRole('button', { name: 'Plan' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Duplicate' }));
+    expect(await screen.findByText('Plan duplicated')).toBeTruthy();
+    expect(application.store.getState().projectWorkspace.history?.present).toMatchObject({
+      projectId: 'copy-id',
+      name: 'Erebus opener (copy)',
     });
-    expect(application.store.getState().projectWorkspace.history?.present.projectId).toBe(
-      'copy-id',
-    );
+    expect((await library.plans(catalog)).map((plan) => plan.name)).toEqual([
+      'Erebus opener',
+      'Erebus opener (copy)',
+    ]);
     expect(await screen.findByRole('button', { name: 'Send to game…' })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Game — ready' }));
     const reopened = await screen.findByRole('dialog', { name: 'Game' });
@@ -1021,7 +1000,10 @@ describe('planner history interaction', () => {
 
   it('shows the can’t-send callout with Show findings, which closes the panel at the finding', async () => {
     const game = createFakeGameModuleHost();
-    const application = createApplication({ gameModuleHost: game.host });
+    const application = createApplication({
+      gameModuleHost: game.host,
+      projectLibrary: createMemoryProjectLibrary().adapter,
+    });
     await application.projectOperations.createNew('Underworld');
     const { user } = renderPlannerForInteraction({ application });
     await user.click(await screen.findByRole('button', { name: 'Game — ready' }));
@@ -1276,8 +1258,10 @@ describe('planner history interaction', () => {
     const underworld = screen.getByRole('button', { name: 'Create Underworld project' });
     underworld.focus();
     await user.keyboard('{Enter}');
-    expect(application.store.getState().projectWorkspace.history?.present.route.routeKey).toBe(
-      'Underworld',
+    await waitFor(() =>
+      expect(application.store.getState().projectWorkspace.history?.present.route.routeKey).toBe(
+        'Underworld',
+      ),
     );
     expect(screen.getByRole('button', { name: 'Route' }).getAttribute('aria-current')).toBe('page');
     await user.click(
@@ -3007,164 +2991,60 @@ describe('route loadout interaction', () => {
   });
 });
 
-describe('project profile interaction', () => {
+describe('plan library interaction', () => {
   it('uses the menu primitive for keyboard navigation, Escape focus return, and outside dismissal', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createCompleteFGProject()));
     const { user } = renderPlannerForInteraction({ application });
-    const trigger = screen.getByRole('button', { name: 'File' });
+    const trigger = screen.getByRole('button', { name: 'Plan' });
 
     trigger.focus();
     await user.keyboard('{Enter}');
 
-    const menu = screen.getByRole('menu', { name: 'File' });
+    const menu = screen.getByRole('menu', { name: 'Plan' });
     expect(
       within(menu)
         .getAllByRole('menuitem')
         .map((item) => item.textContent?.trim()),
-    ).toEqual(['New', 'Load…', 'Save']);
+    ).toEqual(['New…', 'Open file…', 'Duplicate', 'Revert to opened']);
     expect(within(menu).getAllByRole('separator')).toHaveLength(1);
-    expect(document.activeElement).toBe(within(menu).getByRole('menuitem', { name: 'New' }));
+    // Nothing has changed since the plan opened, so there is nothing to revert.
+    expect(within(menu).getByRole('menuitem', { name: 'Revert to opened' })).toHaveProperty(
+      'ariaDisabled',
+      'true',
+    );
+    expect(document.activeElement).toBe(within(menu).getByRole('menuitem', { name: 'New…' }));
 
     await user.keyboard('{ArrowDown}');
-    expect(document.activeElement).toBe(within(menu).getByRole('menuitem', { name: 'Load…' }));
+    expect(document.activeElement).toBe(within(menu).getByRole('menuitem', { name: 'Open file…' }));
     await user.keyboard('{Escape}');
 
     expect(screen.queryByRole('menu')).toBeNull();
     expect(document.activeElement).toBe(trigger);
 
     await user.click(trigger);
-    expect(screen.getByRole('menu', { name: 'File' })).toBeTruthy();
+    expect(screen.getByRole('menu', { name: 'Plan' })).toBeTruthy();
     fireEvent.pointerDown(document.body);
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
-  it('exposes native Save As, reports its result, and closes before pending work', async () => {
-    let finishLoad: (() => void) | undefined;
-    let menuVisibleWhenLoadStarted: boolean | undefined;
-    const savedAs: string[] = [];
-    const application = createApplication({
-      profileFile: profileAdapter({
-        supportsSaveAs: true,
-        saveAs: (_fileName, json) => {
-          savedAs.push(json);
-          return Promise.resolve(profileReference('alternate.runplanner.json'));
-        },
-        load: () => {
-          menuVisibleWhenLoadStarted = screen.queryByRole('menu') !== null;
-          return new Promise<null>((resolve) => {
-            finishLoad = () => resolve(null);
-          });
-        },
-      }),
-    });
-    application.store.dispatch(authoredProjectReplaced(createCompleteFGProject()));
-    const { user } = renderPlannerForInteraction({ application });
-    const trigger = screen.getByRole('button', { name: 'File' });
-
-    await user.click(trigger);
-    const menu = screen.getByRole('menu', { name: 'File' });
-    expect(
-      within(menu)
-        .getAllByRole('menuitem')
-        .map((item) => item.textContent?.trim()),
-    ).toEqual(['New', 'Load…', 'Save', 'Save As…']);
-    expect(within(menu).getByRole('menuitem', { name: 'Save As…' })).toHaveProperty(
-      'ariaDisabled',
-      null,
-    );
-
-    await user.click(within(menu).getByRole('menuitem', { name: 'Save As…' }));
-    expect(await screen.findByText('Saved as new file')).toBeTruthy();
-    expect(savedAs).toHaveLength(1);
-
-    await user.click(trigger);
-    await user.click(
-      within(screen.getByRole('menu', { name: 'File' })).getByRole('menuitem', { name: 'Load…' }),
-    );
-    expect(screen.queryByRole('menu')).toBeNull();
-    expect(menuVisibleWhenLoadStarted).toBe(false);
-    expect(trigger).toHaveProperty('disabled', true);
-    expect(screen.getByRole('region', { name: 'Project profile' }).getAttribute('aria-busy')).toBe(
-      'true',
-    );
-
-    finishLoad?.();
-    await waitFor(() => expect(trigger).toHaveProperty('disabled', false));
-    expect(screen.queryByText('Load Profile cancelled.')).toBeNull();
-  });
-
-  it('saves, replaces, and reloads the project through the visible profile controls', async () => {
-    let profileJson: string | null = null;
-    let profileFileName: string | null = null;
-    const storedFile = (fileName: string): ProfileFileReference => ({
-      activate: () => Promise.resolve(),
-      fileName,
-      write: (json) => {
-        profileJson = json;
-        return Promise.resolve();
-      },
-    });
-    const profileFile = profileAdapter({
-      saveAs: (fileName, json) => {
-        profileFileName = fileName;
-        profileJson = json;
-        return Promise.resolve(storedFile(fileName));
-      },
-      load: () =>
-        Promise.resolve(
-          profileJson === null || profileFileName === null
-            ? null
-            : { file: storedFile(profileFileName), json: profileJson },
-        ),
-    });
-    const application = createApplication({ profileFile });
+  it('creates a library plan, saves each edit, and reverts to it as one undoable step', async () => {
+    const library = createMemoryProjectLibrary();
+    const application = createApplication({ projectLibrary: library.adapter });
     const { user } = renderPlannerForInteraction({ application });
 
-    expect(screen.queryByRole('button', { name: 'New' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+    expect(screen.queryByText('Saved as you edit')).toBeNull();
     expect(
-      screen.getByRole('button', { name: 'Load' }).classList.contains('secondary-action'),
+      screen.getByRole('button', { name: 'Open file…' }).classList.contains('secondary-action'),
     ).toBe(true);
-    expect(screen.queryByText('Not saved')).toBeNull();
     await user.click(
       within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
         name: 'Create Underworld project',
       }),
     );
-    await user.click(screen.getByRole('button', { name: 'File' }));
-    const fileMenu = screen.getByRole('menu', { name: 'File' });
-    expect(within(fileMenu).getByRole('menuitem', { name: 'New' })).toBeTruthy();
-    expect(within(fileMenu).getByRole('menuitem', { name: 'Save' })).toBeTruthy();
-    expect(within(fileMenu).getByRole('menuitem', { name: 'Load…' })).toBeTruthy();
-    await user.keyboard('{Escape}');
-    expect(screen.getByText('Not saved')).toBeTruthy();
-    await user.click(
-      within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
-        name: 'Erebus',
-      }),
-    );
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'ReplaceManualArcanaSelection',
-        route: createRouteAddress('Underworld'),
-        arcanaKeys: ['ChanneledCast'],
-      }),
-    );
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'ReplaceFearVowRank',
-        route: createRouteAddress('Underworld'),
-        vowKey: 'EnemyDamageShrineUpgrade',
-        rank: 3,
-      }),
-    );
-    const savedEvaluation = application.store.getState().projectWorkspace.assembly!.evaluation;
-    await user.click(screen.getByRole('button', { name: 'File' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Save' }));
-    expect(await screen.findByText('File saved')).toBeTruthy();
-    expect(screen.getByText('Saved')).toBeTruthy();
-    expect(profileFileName).toBe('run-plan.runplanner.json');
+    expect(screen.getByText('Saved as you edit')).toBeTruthy();
+    const opened = application.store.getState().projectWorkspace.history!.present;
+    expect(await library.plans(catalog)).toEqual([opened]);
 
     act(() => {
       application.store.dispatch(
@@ -3172,181 +3052,146 @@ describe('project profile interaction', () => {
           kind: 'ReplaceFearVowRank',
           route: createRouteAddress('Underworld'),
           vowKey: 'EnemyDamageShrineUpgrade',
-          rank: 2,
+          rank: 3,
         }),
       );
     });
-    expect(screen.getByText('Unsaved changes')).toBeTruthy();
-    expect(profileJson).not.toBeNull();
+    await act(async () => {
+      expect((await application.projectOperations.flush()).status).toBe('success');
+    });
+    const edited = application.store.getState().projectWorkspace.history!.present;
+    expect(await library.plans(catalog)).toEqual([edited]);
+
+    await user.click(screen.getByRole('button', { name: 'Plan' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Revert to opened' }));
+    expect(screen.getByText('Plan reverted')).toBeTruthy();
+    expect(application.store.getState().projectWorkspace.history!.present).toEqual(opened);
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(application.store.getState().projectWorkspace.history!.present).toBe(edited);
 
     const workspaceBeforeNew = application.store.getState().projectWorkspace;
-    await user.click(screen.getByRole('button', { name: 'File' }));
-    await user.click(screen.getByRole('menuitem', { name: 'New' }));
+    await user.click(screen.getByRole('button', { name: 'Plan' }));
+    await user.click(screen.getByRole('menuitem', { name: 'New…' }));
     expect(screen.getByRole('heading', { name: 'Choose a new route' })).toBeTruthy();
-    expect(screen.queryByRole('navigation', { name: 'Planner sections' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(application.store.getState().projectWorkspace).toBe(workspaceBeforeNew);
-    expect(screen.getByText('Unsaved changes')).toBeTruthy();
-
-    await user.click(screen.getByRole('button', { name: 'File' }));
-    await user.click(screen.getByRole('menuitem', { name: 'New' }));
-    await user.click(
-      within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
-        name: 'Create Underworld project',
-      }),
-    );
-    expect(configuredBiomeCount(application)).toBe(1);
-    expect(screen.getByText('Project created')).toBeTruthy();
-    expect(screen.getByText('Not saved')).toBeTruthy();
-
-    await user.click(screen.getByRole('button', { name: 'File' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Load…' }));
-    expect(await screen.findByText('File loaded')).toBeTruthy();
-    expect(configuredBiomeCount(application)).toBe(1);
-    expect(
-      application.store.getState().projectWorkspace.history!.present.route?.loadout,
-    ).toMatchObject({
-      manualArcanaKeys: ['ChanneledCast'],
-      fearRanks: { EnemyDamageShrineUpgrade: 3 },
-    });
-    expect(application.store.getState().projectWorkspace.history!.past).toEqual([]);
-    expect(application.store.getState().projectWorkspace.history!.future).toEqual([]);
-    expect(application.store.getState().projectWorkspace.assembly!.evaluation).toEqual(
-      savedEvaluation,
-    );
-    expect(screen.getByText('Saved')).toBeTruthy();
   });
 
-  it('presents a restored startup project as recovered', () => {
-    const source = createOpenTestApplication();
-    const json = encodeProjectDocument(source.store.getState().projectWorkspace.history!.present);
-    const application = createApplication({
-      autosaveRecovery: {
-        read: () => json,
-        write: () => {},
-        clear: () => {},
-      },
-      autosaveScheduler: { schedule: () => () => {} },
-    });
-
+  it('shows a failed write until a later write succeeds', async () => {
+    const library = createMemoryProjectLibrary();
+    const application = createApplication({ projectLibrary: library.adapter });
+    await application.projectOperations.createNew('Underworld');
     renderPlannerForInteraction({ application });
+    const edit = (rank: number) =>
+      act(() => {
+        application.store.dispatch(
+          authoredProjectCommandDispatched({
+            kind: 'ReplaceFearVowRank',
+            route: createRouteAddress('Underworld'),
+            vowKey: 'EnemyDamageShrineUpgrade',
+            rank,
+          }),
+        );
+      });
 
-    expect(screen.getByText('Recovered')).toBeTruthy();
-  });
-
-  it('presents corrupt recovery and exposes its explicit discard action', async () => {
-    let recoveryJson: string | null = '{not json';
-    const exported: { fileName: string; json: string }[] = [];
-    const recovery: AutosaveRecoveryAdapter = {
-      read: () => recoveryJson,
-      write: (json) => {
-        recoveryJson = json;
-      },
-      clear: () => {
-        recoveryJson = null;
-      },
-    };
-    const scheduler: AutosaveScheduler = {
-      schedule: () => () => {},
-    };
-    const application = createApplication({
-      autosaveRecovery: recovery,
-      autosaveScheduler: scheduler,
-      profileFile: profileAdapter({
-        saveAs: (fileName, json) => {
-          exported.push({ fileName, json });
-          return Promise.resolve(profileReference(fileName));
-        },
-        load: () => Promise.resolve(null),
-      }),
+    library.failWrites(new Error('disk full'));
+    edit(2);
+    await act(async () => {
+      expect((await application.projectOperations.flush()).status).toBe('failure');
     });
-    const { user } = renderPlannerForInteraction({ application, startWithProject: false });
+    expect(screen.getByRole('alert').textContent).toContain('Not saved');
+    expect(screen.queryByText('Saved as you edit')).toBeNull();
 
-    expect(screen.getByRole('alert').textContent).toContain('Couldn’t recover autosave');
-    await user.click(screen.getByRole('button', { name: 'Couldn’t recover autosave Details' }));
-    expect(
-      screen.getByRole('textbox', { name: 'Couldn’t recover autosave details' }),
-    ).toHaveProperty('value', 'Autosave recovery failed: $: must be valid JSON');
-    await user.click(screen.getByRole('button', { name: 'Close' }));
-    expect(screen.queryByText('Not saved')).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Export Autosave' }));
-    expect(exported).toEqual([
-      { fileName: 'run-planner-autosave.runplanner.json', json: '{not json' },
-    ]);
-    expect(recoveryJson).toBe('{not json');
-    expect(screen.getByText('Autosave exported')).toBeTruthy();
-    const discard = screen.getByRole('button', { name: 'Discard' });
-    expect(discard.classList.contains('danger-action')).toBe(true);
-    await user.click(discard);
-
-    expect(recoveryJson).toBeNull();
+    library.failWrites(null);
+    edit(3);
+    await act(async () => {
+      expect((await application.projectOperations.flush()).status).toBe('success');
+    });
     expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Discard' })).toBeNull();
-    expect(screen.getByText('Autosave discarded')).toBeTruthy();
+    expect(screen.getByText('Saved as you edit')).toBeTruthy();
+    expect(
+      (await library.plans(catalog))[0]?.route.loadout.fearRanks.EnemyDamageShrineUpgrade,
+    ).toBe(3);
   });
 
-  it('presents a load failure and retains the current workspace', async () => {
-    const application = createApplication({
-      profileFile: profileAdapter({
-        saveAs: (fileName) => Promise.resolve(profileReference(fileName)),
-        load: () =>
-          Promise.resolve({ file: profileReference('broken.runplanner.json'), json: '{not json' }),
-      }),
-    });
+  it('presents a file it cannot open and retains the current workspace', async () => {
+    const library = createMemoryProjectLibrary();
+    const application = createApplication({ projectLibrary: library.adapter });
     const workspace = application.store.getState().projectWorkspace;
     const { user } = renderPlannerForInteraction({ application });
 
-    await user.click(screen.getByRole('button', { name: 'Load' }));
+    library.choose({ fileName: 'broken.runplanner.json', json: '{not json' });
+    await user.click(screen.getByRole('button', { name: 'Open file…' }));
 
-    expect((await screen.findByRole('alert')).textContent).toContain('Couldn’t load file');
-    await user.click(screen.getByRole('button', { name: 'Couldn’t load file Details' }));
-    expect(screen.getByRole('textbox', { name: 'Couldn’t load file details' })).toHaveProperty(
+    expect((await screen.findByRole('alert')).textContent).toContain('Couldn’t open file');
+    await user.click(screen.getByRole('button', { name: 'Couldn’t open file Details' }));
+    expect(screen.getByRole('textbox', { name: 'Couldn’t open file details' })).toHaveProperty(
       'value',
-      'Load Profile failed: $: must be valid JSON',
+      'Open file failed: $: must be valid JSON',
     );
     expect(application.store.getState().projectWorkspace).toBe(workspace);
     expect(screen.getByRole('group', { name: 'Choose route' })).toBeTruthy();
+    expect(await library.plans(catalog)).toEqual([]);
   });
 
-  it('closes the initial route chooser after loading a valid current-schema route', async () => {
+  it('closes the initial route chooser after opening a file into the library', async () => {
     const source = createOpenTestApplication('Surface');
-    const profileJson = encodeProjectDocument(
-      source.store.getState().projectWorkspace.history!.present,
-    );
-    const application = createApplication({
-      profileFile: profileAdapter({
-        saveAs: (fileName) => Promise.resolve(profileReference(fileName)),
-        load: () =>
-          Promise.resolve({ file: profileReference('surface.runplanner.json'), json: profileJson }),
-      }),
-    });
+    const json = encodeProjectDocument(source.store.getState().projectWorkspace.history!.present);
+    const library = createMemoryProjectLibrary();
+    const application = createApplication({ projectLibrary: library.adapter });
     const { user } = renderPlannerForInteraction({ application, startWithProject: false });
 
     expect(screen.getByRole('group', { name: 'Choose route' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Load' }));
+    library.choose({ fileName: 'surface.runplanner.json', json });
+    await user.click(screen.getByRole('button', { name: 'Open file…' }));
 
-    expect(await screen.findByText('File loaded')).toBeTruthy();
+    expect(await screen.findByText('File added to library')).toBeTruthy();
     expect(screen.queryByRole('group', { name: 'Choose route' })).toBeNull();
     expect(application.store.getState().projectWorkspace.history?.present.route.routeKey).toBe(
       'Surface',
     );
+    expect((await library.plans(catalog)).map((plan) => plan.route.routeKey)).toEqual(['Surface']);
   });
 
-  it('preserves the initial route chooser when loading is cancelled', async () => {
-    const application = createApplication({
-      profileFile: profileAdapter({
-        saveAs: (fileName) => Promise.resolve(profileReference(fileName)),
-        load: () => Promise.resolve(null),
-      }),
-    });
+  it('preserves the initial route chooser when opening a file is cancelled', async () => {
+    const library = createMemoryProjectLibrary();
+    const application = createApplication({ projectLibrary: library.adapter });
     const { user } = renderPlannerForInteraction({ application, startWithProject: false });
 
-    await user.click(screen.getByRole('button', { name: 'Load' }));
+    await user.click(screen.getByRole('button', { name: 'Open file…' }));
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Load' })).toHaveProperty('disabled', false),
+      expect(screen.getByRole('button', { name: 'Open file…' })).toHaveProperty('disabled', false),
     );
-    expect(screen.queryByText('Load Profile cancelled.')).toBeNull();
+    expect(screen.queryByText('Open file cancelled.')).toBeNull();
     expect(screen.getByRole('group', { name: 'Choose route' })).toBeTruthy();
+  });
+
+  it('reopens the last plan at startup and offers the earlier file once', async () => {
+    const previous = {
+      fileName: 'Earlier.runplanner.json',
+      json: encodeProjectDocument({ ...createCompleteFGProject(), projectId: 'earlier' }),
+    };
+    const library = createMemoryProjectLibrary({ previousFile: previous });
+    const first = createApplication({ projectLibrary: library.adapter });
+    await first.startupReady;
+    const { user, unmount } = renderPlannerForInteraction({
+      application: first,
+      startWithProject: false,
+    });
+    const offer = screen.getByRole('status', { name: 'Earlier plan' });
+    await user.click(within(offer).getByRole('button', { name: 'Import' }));
+    await waitFor(() =>
+      expect(first.store.getState().projectWorkspace.history?.present.projectId).toBe('earlier'),
+    );
+    expect(screen.queryByRole('status', { name: 'Earlier plan' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Choose route' })).toBeNull();
+    first.dispose();
+    unmount();
+
+    const second = createApplication({ projectLibrary: library.adapter });
+    await second.startupReady;
+    expect(second.store.getState().projectWorkspace.history?.present.projectId).toBe('earlier');
+    expect(second.store.getState().librarySession.previousFileOffer).toBeNull();
   });
 });

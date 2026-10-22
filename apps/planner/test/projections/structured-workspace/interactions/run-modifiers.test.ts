@@ -12,8 +12,10 @@ import {
   type RunStartPoint,
 } from '@run-planner/engine/authored-project';
 import { createApplication } from '@planner/composition/createApplication';
-import { newProjectCreated } from '@planner/state/profileSessionSlice';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectReplaced,
+} from '@planner/state/projectWorkspaceSlice';
 import { visibleRunModifierDeclarations } from '@planner/projections/structured-workspace/interactions/run-modifiers';
 import { createOpenTestApplication } from '@planner-test/fixtures/renderPlanner';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
@@ -79,7 +81,7 @@ it('authors only released declarations outside a development build', () => {
   for (const devBuild of [false, true]) {
     const application = createApplication({ devBuild });
     application.store.dispatch(
-      newProjectCreated(
+      authoredProjectReplaced(
         createProjectDocument(application.catalog, {
           projectId: 'run-plan',
           routeKey: 'Underworld',
@@ -104,7 +106,7 @@ function startOf(intent: { readonly command: ProjectCommand }) {
 
 function openGolden(devBuild: boolean, document: ProjectDocument = createGoldenFGHIProject()) {
   const application = createApplication({ devBuild });
-  application.store.dispatch(newProjectCreated(document));
+  application.store.dispatch(authoredProjectReplaced(document));
   const control = () =>
     application.selectStructuredWorkspace(application.store.getState())!.route.runModifiers;
   return { application, control };

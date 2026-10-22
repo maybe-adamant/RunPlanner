@@ -5,7 +5,6 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
-  encodeProjectDocument,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
@@ -28,9 +27,9 @@ import { createGoldenFGHIProject, targetOccurrenceId } from '@run-planner/test-f
 import {
   authoredProjectCommandDispatched,
   authoredProjectRedoRequested,
+  authoredProjectReplaced,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
-import { profileLoadSucceeded } from '@planner/state/profileSessionSlice';
 import { createPlannerStore, useAppSelector, type PlannerStore } from '@planner/state/store';
 import { CountedRewardEditor, RewardValueEditor } from '@planner/ui/editor/rewards/RewardEditors';
 
@@ -379,8 +378,8 @@ describe('reward editor projections', () => {
     const store = createPlannerStore({
       assembleProjectEvaluation: (current) => simulateProjectAssembly(catalog, current),
       catalog,
-      initialWorkspace: { project, assembly: simulateProjectAssembly(catalog, project) },
     });
+    store.dispatch(authoredProjectReplaced(project));
     const user = userEvent.setup();
     renderStoreReward(store, structuredWorkspace);
     await user.click(screen.getByLabelText('Reward'));
@@ -405,14 +404,7 @@ describe('reward editor projections', () => {
     expect(screen.getByLabelText('Reward').getAttribute('aria-expanded')).toBe('false');
     const loadedProject = project;
     act(() => {
-      store.dispatch(
-        profileLoadSucceeded({
-          assembly: simulateProjectAssembly(catalog, loadedProject),
-          baselineJson: encodeProjectDocument(loadedProject),
-          fileName: 'loaded-profile.runplanner.json',
-          project: loadedProject,
-        }),
-      );
+      store.dispatch(authoredProjectReplaced(loadedProject));
     });
     await act(async () => {
       pending.reject(new Error('stale lifecycle projection'));

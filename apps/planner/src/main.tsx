@@ -2,27 +2,21 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { invoke as tauriInvoke, isTauri } from '@tauri-apps/api/core';
-import { open, save } from '@tauri-apps/plugin-dialog';
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { open } from '@tauri-apps/plugin-dialog';
+import { readTextFile } from '@tauri-apps/plugin-fs';
 
 import { installDevBrowserErrorReporter } from './diagnostics/devBrowserErrorReporter';
-import { createBrowserProfileFileAdapter } from './persistence/browserProfileFileAdapter';
-import { createTauriProfileFileAdapter } from './persistence/tauriProfileFileAdapter';
 import { createBrowserProjectLibraryAdapter } from './persistence/browserProjectLibraryAdapter';
 import { createTauriProjectLibraryAdapter } from './persistence/tauriProjectLibraryAdapter';
-import type { OutsideProjectFile } from './persistence/projectLibrary';
 import { createTauriGameModuleHost } from './persistence/gameModuleHost';
 import {
   createBrowserEventDismissalPreference,
   createTauriCommunityEventDevelopmentHost,
   createTauriCommunityEventHost,
 } from './persistence/communityEventHost';
-import {
-  createBrowserAutosaveRecoveryAdapter,
-  createBrowserAutosaveScheduler,
-} from './persistence/browserAutosaveRecoveryAdapter';
 import { createApplication } from './composition/createApplication';
 import { createWorkerDraftRunner } from './workspace/draftRun';
+import { unloadNeedsConfirmation } from './workspace/closeRequest';
 import './ui/styles.css';
 import { App } from './ui/shell/App';
 import { ApplicationFaultBoundary } from './ui/shell/ApplicationFaultBoundary';
@@ -40,53 +34,15 @@ const devBrowserErrorReporter = installDevBrowserErrorReporter();
 const rootElement = document.getElementById('root');
 const tauriHost = isTauri();
 const appScalePreference = createBrowserAppScalePreference(() => globalThis.localStorage);
-const autosaveRecovery = createBrowserAutosaveRecoveryAdapter({
-  storage: () => globalThis.localStorage,
-});
-const profileFile = tauriHost
-  ? createTauriProfileFileAdapter({
-      activate: (path) => tauriInvoke('profile_file_activate', { path }),
-      clearActive: () => tauriInvoke('profile_file_clear_active'),
-      open: (options) =>
-        open({
-          directory: false,
-          filters: options.filters.map((filter) => ({
-            extensions: [...filter.extensions],
-            name: filter.name,
-          })),
-          multiple: false,
-          title: options.title,
-        }),
-      readTextFile,
-      restoreActive: () =>
-        tauriInvoke<{ readonly fileName: string; readonly json: string } | null>(
-          'profile_file_restore_active',
-        ),
-      save: (options) =>
-        save({
-          ...(options.defaultPath === undefined ? {} : { defaultPath: options.defaultPath }),
-          filters: options.filters.map((filter) => ({
-            extensions: [...filter.extensions],
-            name: filter.name,
-          })),
-          title: options.title,
-        }),
-      writeTextFile,
-      writeActive: (json) => tauriInvoke('profile_file_write_active', { json }),
-    })
-  : createBrowserProfileFileAdapter({
-      Blob: globalThis.Blob,
-      URL: globalThis.URL,
-      document: globalThis.document,
-    });
-const chooseProjectFile = async (): Promise<OutsideProjectFile | null> => {
-  const loaded = await profileFile.load();
-  return loaded === null ? null : { fileName: loaded.file.fileName, json: loaded.json };
-};
 const projectLibrary = tauriHost
-  ? createTauriProjectLibraryAdapter({ chooseFile: chooseProjectFile, invoke: tauriInvoke })
+  ? createTauriProjectLibraryAdapter({
+      invoke: tauriInvoke,
+      openDialog: (options) =>
+        open({ directory: false, filters: options.filters, multiple: false, title: options.title }),
+      readTextFile,
+    })
   : createBrowserProjectLibraryAdapter({
-      chooseFile: chooseProjectFile,
+      document: globalThis.document,
       indexedDB: () => globalThis.indexedDB,
     });
 
@@ -95,17 +51,10 @@ if (rootElement === null) {
 }
 
 const application = createApplication({
-  autosaveRecovery,
-  autosaveScheduler: createBrowserAutosaveScheduler<number>({
-    clearTimeout: (handle) => globalThis.window.clearTimeout(handle),
-    setTimeout: (task, delayMs) => globalThis.window.setTimeout(task, delayMs),
-  }),
   buildIdentity: __RUN_PLANNER_BUILD_IDENTITY__,
   draftRunner: createWorkerDraftRunner(
     () => new Worker(new URL('./workspace/draftWorker.ts', import.meta.url), { type: 'module' }),
   ),
-  profileFile,
-  profileFileRestore: await profileFile.restoreActive(),
   projectLibrary,
   ...(tauriHost
     ? {
@@ -119,12 +68,37 @@ const application = createApplication({
 
 await application.startupReady;
 
+// Pending edits are written before the window closes or the page is hidden; a close asks first
+// only while those edits still cannot be saved.
+if (tauriHost) {
+  const closeWhenWritten = async (): Promise<void> => {
+    for (;;) {
+      await tauriInvoke('app_close_requested');
+      const close = await application.closeRequest.request(() => tauriInvoke('app_close_kept'));
+      if (close) {
+        await tauriInvoke('app_close_ready');
+        return;
+      }
+    }
+  };
+  void closeWhenWritten();
+} else {
+  globalThis.window.addEventListener('beforeunload', (event) => {
+    if (unloadNeedsConfirmation(application.store)) event.preventDefault();
+  });
+}
+globalThis.document.addEventListener('visibilitychange', () => {
+  if (globalThis.document.visibilityState === 'hidden') {
+    void application.projectOperations.flush();
+  }
+});
+
 const releaseUpdates =
   tauriHost && __RUN_PLANNER_BUILD_IDENTITY__.version !== 'Development'
     ? createReleaseUpdateController({
         buildIdentity: __RUN_PLANNER_BUILD_IDENTITY__,
         host: createTauriReleaseUpdateHost(),
-        saveBeforeInstall: () => application.projectOperations.saveBeforeUpdate(),
+        saveBeforeInstall: () => application.projectOperations.flush(),
         skipPreference: createBrowserReleaseSkipPreference(() => globalThis.localStorage),
       })
     : undefined;
@@ -132,16 +106,21 @@ const releaseUpdates =
 createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
   <StrictMode>
     <ApplicationFaultBoundary
-      discardRecoveryAndReload={() => {
-        application.dispose();
-        autosaveRecovery.clear();
-        globalThis.window.location.reload();
-      }}
-      exportAutosaveRecovery={() => application.projectOperations.exportAutosaveRecovery()}
-      loadProfile={() => application.projectOperations.loadProfile()}
+      openFile={() => application.projectOperations.importPlan()}
       reload={() => {
-        application.dispose();
-        globalThis.window.location.reload();
+        void application.projectOperations.flush().finally(() => {
+          application.dispose();
+          globalThis.window.location.reload();
+        });
+      }}
+      reloadWithoutPlan={() => {
+        void application.projectOperations
+          .forgetLastOpened()
+          .catch(() => undefined)
+          .finally(() => {
+            application.dispose();
+            globalThis.window.location.reload();
+          });
       }}
     >
       <Provider store={application.store}>
@@ -151,6 +130,7 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
           buildIdentity={application.buildIdentity}
           catalog={application.catalog}
           catalogSummary={application.catalogSummary}
+          closeRequest={application.closeRequest}
           draftRun={application.draftRun}
           editorNavigation={application.editorNavigation}
           {...(application.communityEvents === undefined

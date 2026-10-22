@@ -2,7 +2,6 @@ import { createSlice, type PayloadAction, type Reducer } from '@reduxjs/toolkit'
 import type { DraftRefusal, DraftReport } from '@run-planner/engine/simulation';
 
 import { authoredProjectReplaced } from './projectWorkspaceSlice';
-import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';
 
 /** The last draft run; a drafted result has already been applied to the project. */
 export type DraftRunState =
@@ -50,12 +49,7 @@ export const { draftRunStarted, draftRunSettled, draftRunCleared } = draftSessio
 /** A different project starts idle. */
 export function createDraftSessionReducer(): Reducer<DraftSessionState> {
   return (state = initialState, action) => {
-    if (
-      authoredProjectReplaced.match(action) ||
-      newProjectCreated.match(action) ||
-      profileLoadSucceeded.match(action)
-    )
-      return initialState;
+    if (authoredProjectReplaced.match(action)) return initialState;
     return draftSessionSlice.reducer(state, action);
   };
 }

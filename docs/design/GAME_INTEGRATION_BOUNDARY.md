@@ -463,10 +463,10 @@ covers, must name `file:events.json`, and its `timestamp` orders feeds.
   the ended notice. The notice says why the event cannot be played, except while
   slot 0 still holds this event's plan and only the download failed; a later
   sync retries the download.
-- **Open project** opens the event's verified project file, downloaded as above
-  when the session does not hold it (the session holds only the active event's), as a new, never-saved copy with its own
-  `projectId`, so a copy sent to a slot is not the event's plan. When the open
-  project has unsaved changes, the planner asks before replacing it.
+- **Open project** adds the event's verified project file, downloaded as above
+  when the session does not hold it (the session holds only the active event's),
+  to the library as a copy with its own `projectId`, so a copy sent to a slot is
+  not the event's plan, and opens it. The open plan's edits are already saved.
 
 Publishing is the events repository's workflow. It builds the feed with the
 planner's builder (`npm run events:build`), which compiles every event's project
@@ -567,17 +567,14 @@ every outdated slot that has a source, provided nothing blocks sending:
 source, and the last rebuild's summary ("Rebuilt 2 slots · couldn’t rebuild 1
 slot") shows beneath it. Results last for the session.
 
-A sent plan's identity chain is the saved file, then the document's
-`projectId`, then the compiled `planFingerprint`. Its name is the project's
-authored [`name`](AUTHORED_PROJECT_MODEL.md#persistence-and-validation), not
-the file's. Sending needs a saved file with no unsaved changes: a clean file
-sends, a file with unsaved changes offers **Save and send**, which saves in
-place first, and a never-saved project offers **Save and send…**, which opens
-Save As first, or sends nothing if cancelled. The plan carries the name as the
+A sent plan's identity chain is the document's `projectId`, then the compiled
+`planFingerprint`. Its name is the project's authored
+[`name`](AUTHORED_PROJECT_MODEL.md#persistence-and-validation), not the file's.
+Sending compiles the open plan as it stands; it does not save first, since
+every edit is already being saved. The plan carries the name as the
 optional, presentation-only `displayName`, which is outside `planFingerprint`;
-the game module accepts it and only logs it. Save As from an already-saved file gives the copy a new `projectId`
-(the first save of a never-saved project keeps its own), so earlier sends no
-longer match it.
+the game module accepts it and only logs it. A duplicate gives the copy a new
+`projectId`, so earlier sends no longer match it.
 
 Once the module is ready, the Game panel shows the twelve slots as a table: Slot,
 Plan, Route, Ends, Aspect and Sent. The host reads each slot under the same
@@ -629,15 +626,15 @@ The header always shows one send button beside the Game button, with a fixed
 minimum width so no state shifts the header, and explains every state in its
 hint:
 
-| State                                  | Label                         | Clicking                                     |
-| -------------------------------------- | ----------------------------- | -------------------------------------------- |
-| No project open                        | Send to game                  | nothing (Open a plan first)                  |
-| Module not ready                       | Send to game                  | nothing (Set up the game in the Game panel)  |
-| Engine reports the plan ineligible     | Send to game                  | nothing (the Game panel's reason)            |
-| No usable session slot, or never saved | Send to game…                 | opens the Game panel at Plans                |
-| Ready                                  | Send · Slot N                 | sends, saving unsaved changes in place first |
-| Saving, then sending                   | Saving…, Sending…             | nothing                                      |
-| Result, for 3 seconds                  | ✓ Sent · Slot N or ! Not sent | nothing                                      |
+| State                              | Label                         | Clicking                                    |
+| ---------------------------------- | ----------------------------- | ------------------------------------------- |
+| No project open                    | Send to game                  | nothing (Open a plan first)                 |
+| Module not ready                   | Send to game                  | nothing (Set up the game in the Game panel) |
+| Engine reports the plan ineligible | Send to game                  | nothing (the Game panel's reason)           |
+| No usable session slot             | Send to game…                 | opens the Game panel at Plans               |
+| Ready                              | Send · Slot N                 | sends                                       |
+| Sending                            | Sending…                      | nothing                                     |
+| Result, for 3 seconds              | ✓ Sent · Slot N or ! Not sent | nothing                                     |
 
 It re-sends only to the session slot, and only while it is empty or holds the
 same `projectId`, so it never overwrites another project's plan. It reads the

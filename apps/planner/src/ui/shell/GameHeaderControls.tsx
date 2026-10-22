@@ -7,13 +7,12 @@ import type {
 } from '@planner/persistence/gameModuleHost';
 import {
   describeSent,
-  gameSaveState,
   projectGameIndicator,
   projectGameSendButton,
   type GameSendActivity,
   type GameSendProject,
 } from '@planner/projections/gamePanel';
-import { selectProfileStatus, useAppSelector, type RootState } from '@planner/state/store';
+import { useAppSelector, type RootState } from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import { hintProps } from '@planner/ui/controls/hint';
 
@@ -64,9 +63,6 @@ export function GameHeaderControls({
   const lastSentSlot = useAppSelector((state) => state.gameSendSession.lastSentSlot);
   const lastSendFailed = useAppSelector((state) => state.gameSendSession.lastFailure !== null);
   const activationFailure = useAppSelector((state) => state.gameSendSession.lastActivationFailure);
-  const saveState = useAppSelector((state) =>
-    gameSaveState(selectProfileStatus(state), state.profileSession.fileName),
-  );
   const [activity, setActivity] = useState<GameSendActivity>(IDLE);
   // A successful send is announced from state, so it reflects the slot as last read.
   const [announcement, setAnnouncement] = useState<string | { readonly sent: GamePlanSlotNumber }>(
@@ -99,7 +95,6 @@ export function GameHeaderControls({
     snapshot.status,
     project,
     lastSentSlot,
-    saveState,
     activity,
     activationFailure,
   );

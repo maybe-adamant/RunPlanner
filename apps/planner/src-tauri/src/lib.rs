@@ -1,9 +1,9 @@
 use tauri::Manager;
 
 mod bug_report_commands;
+mod close_gate;
 mod community_events;
 mod game_module_commands;
-mod profile_file_session;
 mod project_library_commands;
 mod release_updates;
 
@@ -45,18 +45,19 @@ pub fn run() {
             community_events::game_event_local_clear,
             bug_report_commands::bug_report_create,
             bug_report_commands::bug_report_reveal,
-            profile_file_session::profile_file_restore_active,
-            profile_file_session::profile_file_activate,
-            profile_file_session::profile_file_clear_active,
-            profile_file_session::profile_file_write_active,
             project_library_commands::project_library_list,
             project_library_commands::project_library_read,
             project_library_commands::project_library_create,
             project_library_commands::project_library_write,
             project_library_commands::project_library_delete,
-            project_library_commands::project_library_restore,
+            project_library_commands::project_library_preserve_original,
             project_library_commands::project_library_reveal,
             project_library_commands::project_library_previous_active,
+            project_library_commands::project_library_session_read,
+            project_library_commands::project_library_session_write,
+            close_gate::app_close_requested,
+            close_gate::app_close_ready,
+            close_gate::app_close_kept,
             release_updates::release_update_check,
             release_updates::release_update_install,
             release_updates::external_open_url
@@ -68,6 +69,12 @@ pub fn run() {
         .manage(bug_report_commands::LastBugReport::default())
         .manage(community_events::CommunityEvents::default())
         .manage(project_library_commands::ProjectLibraryLock::default())
+        .manage(run_planner_game_host::close_gate::CloseGate::default())
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                close_gate::intercept(window, api);
+            }
+        })
         .run(tauri::generate_context!())
         .expect("failed to run Run Planner");
 }

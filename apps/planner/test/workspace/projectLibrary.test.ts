@@ -8,7 +8,9 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
 import {
+  EMPTY_LIBRARY_SESSION,
   summarizeProjectJson,
+  type LibrarySession,
   type OutsideProjectFile,
   type ProjectLibraryAdapter,
   type ProjectLibraryEntry,
@@ -25,6 +27,7 @@ function createFolder(
   } = {},
 ) {
   const stored = new Map(Object.entries(files));
+  let session: LibrarySession = EMPTY_LIBRARY_SESSION;
   let created = 0;
   const entry = (key: string): ProjectLibraryEntry => {
     const file = stored.get(key);
@@ -45,13 +48,22 @@ function createFolder(
       stored.set(key, { json, modifiedMs: stored.get(key)?.modifiedMs ?? 0 });
       return Promise.resolve(entry(key));
     },
-    delete: () => Promise.reject(new Error('unused')),
-    restore: () => Promise.reject(new Error('unused')),
+    delete(key) {
+      entry(key);
+      stored.delete(key);
+      return Promise.resolve();
+    },
+    preserveOriginal: () => Promise.reject(new Error('unused')),
     reveal: () => Promise.reject(new Error('unused')),
     chooseImportFile: () => Promise.resolve(options.chosen ?? null),
     previousActiveFile: () => Promise.resolve(options.previous ?? null),
+    readSession: () => Promise.resolve(session),
+    writeSession(next) {
+      session = next;
+      return Promise.resolve();
+    },
   };
-  return { adapter, stored };
+  return { adapter, stored, session: () => session };
 }
 
 function planJson(projectId: string, name = 'Surface plan'): string {
@@ -108,6 +120,10 @@ describe('project library operations', () => {
     });
     expect(items[1]).toMatchObject({ name: 'Future', schemaVersion: 120 });
     expect(items[5]).toMatchObject({ name: 'My old plan', projectId: 'golden-fg' });
+    // Only a plan read from an older schema rewrites its original on the first write.
+    const library = operations(adapter);
+    expect((await library.read('My old plan.runplanner.json')).olderOnDisk).toBe(true);
+    expect((await library.read('a.runplanner.json')).olderOnDisk).toBe(false);
   });
 
   it('gives a newer copy sharing an identity a new one through the engine', async () => {
@@ -136,54 +152,95 @@ describe('project library operations', () => {
     );
   });
 
+  it('keeps the open plan identity even when it is the newer copy', async () => {
+    const { adapter } = createFolder({
+      'open.runplanner.json': { json: planJson('plan-a', 'Open'), modifiedMs: 20 },
+      'older.runplanner.json': { json: planJson('plan-a', 'Older'), modifiedMs: 10 },
+    });
+    const items = await operations(adapter).list({ openKey: 'open.runplanner.json' });
+    expect(items.map((item) => item.kind === 'ready' && [item.key, item.projectId])).toEqual([
+      ['older.runplanner.json', 'run-plan-minted-1'],
+      ['open.runplanner.json', 'plan-a'],
+    ]);
+  });
+
   it('imports a copy and re-identifies it only when its identity is taken', async () => {
     const outside = { fileName: 'Outside.runplanner.json', json: planJson('plan-a', 'Outside') };
     const { adapter, stored } = createFolder({}, { chosen: outside });
     const library = operations(adapter);
 
-    expect(await library.importChosenFile()).toMatchObject({
-      status: 'imported',
-      reidentified: false,
-      item: { kind: 'ready', projectId: 'plan-a', name: 'Outside' },
+    expect((await library.importChosenFile())?.project).toMatchObject({
+      projectId: 'plan-a',
+      name: 'Outside',
     });
-    expect(await library.importFile(outside)).toMatchObject({
-      status: 'imported',
-      reidentified: true,
-      item: { kind: 'ready', projectId: 'run-plan-minted-1', name: 'Outside' },
-    });
-    expect(stored.size).toBe(2);
+    expect((await library.importFile(outside)).project.projectId).toBe('run-plan-minted-1');
+    expect((await library.importFile(outside, { newIdentity: true })).project.projectId).toBe(
+      'run-plan-minted-2',
+    );
+    expect(stored.size).toBe(3);
   });
 
   it('names an imported plan from before plans had names after its file', async () => {
     const { adapter } = createFolder({});
-    const result = await operations(adapter).importFile({
+    const plan = await operations(adapter).importFile({
       fileName: 'C:\\Plans\\Gorgon run.runplanner.json',
       json: JSON.stringify(schema91Json),
     });
-    expect(result).toMatchObject({
-      status: 'imported',
-      item: { kind: 'ready', name: 'Gorgon run', projectId: 'golden-fg' },
-    });
+    expect(plan.project).toMatchObject({ name: 'Gorgon run', projectId: 'golden-fg' });
+    expect(plan.migrationProvenance.length).toBeGreaterThan(0);
   });
 
-  it('reports an import it cannot open and a cancelled pick', async () => {
+  it('files nothing for an import it cannot open or a cancelled pick', async () => {
     const { adapter, stored } = createFolder({});
     const library = operations(adapter);
-    expect(await library.importChosenFile()).toEqual({ status: 'cancelled' });
-    const failed = await library.importFile({ fileName: 'bad.runplanner.json', json: '{}' });
-    expect(failed.status).toBe('failure');
-    expect(failed.status === 'failure' && failed.message).toMatch(/^Could not import bad/);
+    expect(await library.importChosenFile()).toBeNull();
+    await expect(
+      library.importFile({ fileName: 'bad.runplanner.json', json: '{}' }),
+    ).rejects.toThrow();
     expect(stored.size).toBe(0);
   });
 
-  it('offers the previously open file until the library holds it', async () => {
-    const previous = { fileName: 'Last.runplanner.json', json: planJson('plan-last', 'Last') };
-    expect(await operations(createFolder({}).adapter).previousActiveImportOffer()).toBeNull();
-
-    const { adapter } = createFolder({}, { previous });
+  it('keeps a deleted plan in memory so undo files it again', async () => {
+    const { adapter, stored } = createFolder({
+      'kept.runplanner.json': { json: planJson('plan-a', 'Kept'), modifiedMs: 1 },
+    });
     const library = operations(adapter);
-    expect(await library.previousActiveImportOffer()).toBe(previous);
-    expect(await library.importFile(previous)).toMatchObject({ status: 'imported' });
-    expect(await library.previousActiveImportOffer()).toBeNull();
+    const deleted = await library.deletePlan('kept.runplanner.json');
+    expect(stored.size).toBe(0);
+    const restored = await library.undoDelete(deleted);
+    expect(restored.project.projectId).toBe('plan-a');
+    expect(stored.get(restored.key)?.json).toBe(planJson('plan-a', 'Kept'));
+  });
+
+  it('reopens the last plan by key, or by identity once a rename moved it', async () => {
+    const { adapter } = createFolder({
+      'moved.runplanner.json': { json: planJson('plan-a', 'Moved'), modifiedMs: 1 },
+    });
+    const library = operations(adapter);
+    expect(await library.readLastOpened()).toBeNull();
+    await library.rememberOpened({ key: 'moved.runplanner.json', projectId: 'plan-a' });
+    expect((await library.readLastOpened())?.key).toBe('moved.runplanner.json');
+    await library.rememberOpened({ key: 'gone.runplanner.json', projectId: 'plan-a' });
+    expect((await library.readLastOpened())?.key).toBe('moved.runplanner.json');
+    await library.rememberOpened({ key: 'gone.runplanner.json', projectId: 'plan-b' });
+    expect(await library.readLastOpened()).toBeNull();
+  });
+
+  it('offers the previously open file once, unless the library holds it', async () => {
+    const previous = { fileName: 'Last.runplanner.json', json: planJson('plan-last', 'Last') };
+    expect(await operations(createFolder({}).adapter).previousFileOffer()).toBeNull();
+
+    const held = createFolder(
+      { 'last.runplanner.json': { json: planJson('plan-last', 'Last'), modifiedMs: 1 } },
+      { previous },
+    );
+    expect(await operations(held.adapter).previousFileOffer()).toBeNull();
+
+    const folder = createFolder({}, { previous });
+    const library = operations(folder.adapter);
+    expect(await library.previousFileOffer()).toBe(previous);
+    await library.settlePreviousFileOffer();
+    expect(folder.session().previousFileOffered).toBe(true);
+    expect(await operations(folder.adapter).previousFileOffer()).toBeNull();
   });
 });

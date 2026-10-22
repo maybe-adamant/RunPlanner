@@ -3,7 +3,7 @@
 Run Planner is a standalone Hades II route-authoring and simulation
 application for Run Director. It owns the supported catalog, authored route,
 deterministic game-language history, possibility and eligibility evaluation,
-validation, findings, editor projections, profiles, recovery, and undo/redo.
+validation, findings, editor projections, the plan library, and undo/redo.
 The [Run Planner game module](game-module/) consumes a validated execution plan
 and audits live runtime behavior; it is not a second planner or simulator.
 
@@ -121,13 +121,10 @@ from [`schema/README.md`](schema/README.md).
 ## Desktop development
 
 The desktop host wraps the same production Vite build without adding
-Rust-side domain behavior. Its native File menu remembers the last accepted
-project file across restarts: Save overwrites that file, while Save As chooses
-and activates another one. Autosave remains a separate recovery channel, so
-recovered unsaved edits stay associated with their desktop file without
-writing it implicitly. The browser build retains portable upload/download
-behavior and exposes no duplicate Save As command. On a machine with the
-platform's Tauri prerequisites:
+Rust-side domain behavior. Plans live in the library folder
+(`Documents/RunPlanner/Projects/`) and every edit is written there; the
+planner reopens the last plan at startup. The browser build keeps the same
+library in IndexedDB. On a machine with the platform's Tauri prerequisites:
 
 ```bash
 npm run desktop:dev

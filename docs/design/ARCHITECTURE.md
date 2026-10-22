@@ -221,8 +221,9 @@ by the command.
 ## Hosts, Performance and Maintenance
 
 Vite builds the same React application for browser and desktop. Tauri owns
-native windows, packaging, scoped file transport, the remembered active-file
-reference, the [project library](EDITOR_MODEL.md#project-library) folder and the
+native windows, packaging, scoped file transport, the
+[project library](EDITOR_MODEL.md#project-library) folder and its session, a
+close gate that lets the planner write pending edits, and the
 [game module lane](GAME_INTEGRATION_BOUNDARY.md#distribution-and-the-game-target):
 the compile-time embedded module, the game target setting, install checks,
 plan-slot writes and bug-report assembly. A single-instance guard hands a second
@@ -253,9 +254,8 @@ release, orders versions, and verifies the update signature against the
 public key committed in `tauri.conf.json`. Application policy owns the notice
 state: a found update is announced, may be dismissed for the session or
 skipped by version, and installs only after the user confirms that the
-planner will close and reopen. An unsaved project is saved first through the
-ordinary save path (Save As when never saved), under the same save facts that
-gate sending to the game; a cancelled or failed save cancels the install. If
+planner will close and reopen. The open plan's pending edits are written
+first; a failed write cancels the install. If
 the confirmed version was superseded, the pending one is offered instead.
 Native transport opens no other release URLs. React presents the notice and
 the manual check.

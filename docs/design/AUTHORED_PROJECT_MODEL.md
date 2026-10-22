@@ -12,8 +12,8 @@ React rendering are separate concerns.
 The current schema is the sole engine-authored-project contract. Its codec
 rejects other schemas and mismatched catalog versions rather than manufacturing
 current topology or leaf state from stale data. The application's shared loader
-handles explicit Open, remembered-file startup and autosave recovery before
-invoking the same strict engine parser, including its existing reconciliation.
+handles every open of a library plan or imported file before invoking the same
+strict engine parser, including its existing reconciliation.
 
 Automatic migration support starts at schema 86. The loader inspects the source
 schema/catalog identity, applies only registered ordered transitions, and
@@ -22,12 +22,13 @@ target identities; an old catalog identity is not blindly replaced with the
 current one. Unsupported older or future documents remain untouched. The
 transition list is empty while the current schema equals the support floor.
 
-Registering the first real migration also requires the application to preserve
-original disk and recovery bytes before overwrite, expose an upgraded-in-memory
-notice, and retain pending-save provenance across restart and retry. A pure
-transform alone is not a complete user-facing migration. These responsibilities
-do not belong in the current-schema decoder or simulation. Existing offline
-tools remain documented in [`schema/README.md`](../../schema/README.md).
+A migrated plan opens in memory in the current schema and its file stays
+untouched until the first edit is saved. Before that first write, the desktop
+library sends a copy of the original file to the system recycle bin, named
+`<file> (schema N original)`; the browser library has no bin and rewrites the
+plan in place. Opening a migrated plan names the repairs its migrations may
+need. Existing offline tools remain documented in
+[`schema/README.md`](../../schema/README.md).
 
 ### Schema change approval
 
@@ -1330,15 +1331,14 @@ checks in their diagnostic order. It returns resolved occurrence roles and
 entry-active facts for leaf decoding. This validation path never invokes
 command repair or silently prunes representable authored state.
 
-Persistence excludes filenames, Redux state, editor tabs, graph positions,
-candidate sets, findings, simulation output, save baselines, autosave status,
-and an alternate profile wrapper. The application profile session remembers
-the selected file's basename for later saves; it is transport metadata, not
-authored project identity or name. A new project starts with a unique minted
-`projectId`; a save keeps it, and Save As from an already-saved file writes the
-copy under a new one. That change replaces the identity in every history
-snapshot rather than adding a command step, so Undo and Redo never restore the
-old identity. Schema 89 identities are unique: the 88 → 89 migration replaces
+Persistence excludes filenames, library keys, Redux state, editor tabs, graph
+positions, candidate sets, findings, simulation output, write status, and an
+alternate profile wrapper. A library key is transport metadata, not authored
+project identity or name. A new project starts with a unique minted
+`projectId`; every write keeps it, and a duplicate, an event copy or an import
+whose identity the library already holds takes a new one through
+`reidentifyProjectHistory`, which replaces the identity in every snapshot
+rather than adding a command step. Schema 89 identities are unique: the 88 → 89 migration replaces
 schema 88's shared default `'run-plan'` with a unique identity, and there is no
 runtime rule for it. Schema 90 admits the Fresh File route's null equipment
 and keepsake selections; the 89 → 90 migration changes only the version, since

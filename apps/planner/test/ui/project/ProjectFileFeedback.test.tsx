@@ -11,32 +11,32 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const session = { recoveryError: null, autosaveError: null, profileFileError: null };
+const session = { writeError: null, openError: null };
 
-it('keeps document state separate from failures and retains every error in selectable details', () => {
+it('shows a failed write in place of the saved status and keeps every error in details', () => {
   render(
     <ProjectFileFeedback
-      status="Clean"
-      session={{ ...session, autosaveError: 'Recovery storage is full.' }}
+      savesAsYouEdit
+      session={{ ...session, writeError: 'Could not save the plan: disk full.' }}
       result={{
-        operation: 'loadProfile',
+        operation: 'importPlan',
         status: 'failure',
         message: 'Schema 1 is not supported.',
       }}
     />,
   );
-  expect(screen.getByRole('status', { name: 'Document status: Saved' })).toBeTruthy();
+  expect(screen.queryByText('Saved as you edit')).toBeNull();
   expect(screen.getAllByRole('alert')).toHaveLength(1);
-  expect(screen.getByRole('alert').textContent).toBe('Couldn’t load file 2 issues · Details');
+  expect(screen.getByRole('alert').textContent).toBe('Couldn’t open file 2 issues · Details');
   expect(screen.queryByRole('textbox')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Couldn’t load file 2 issues · Details' }));
-  const details = screen.getByRole('dialog', { name: 'File operation details' });
+  fireEvent.click(screen.getByRole('button', { name: 'Couldn’t open file 2 issues · Details' }));
+  const details = screen.getByRole('dialog', { name: 'Plan details' });
   expect(
-    within(details).getByRole('textbox', { name: 'Couldn’t load file details' }),
+    within(details).getByRole('textbox', { name: 'Couldn’t open file details' }),
   ).toHaveProperty('value', 'Schema 1 is not supported.');
-  expect(within(details).getByRole('textbox', { name: 'Autosave failed details' })).toHaveProperty(
+  expect(within(details).getByRole('textbox', { name: 'Not saved details' })).toHaveProperty(
     'value',
-    'Recovery storage is full.',
+    'Could not save the plan: disk full.',
   );
   for (const textbox of within(details).getAllByRole('textbox'))
     expect(textbox).toHaveProperty('readOnly', true);
@@ -47,13 +47,13 @@ it('keeps document state separate from failures and retains every error in selec
 it('does not turn cancellation into a notification', () => {
   render(
     <ProjectFileFeedback
-      status="Dirty"
+      savesAsYouEdit
       session={session}
-      result={{ operation: 'loadProfile', status: 'cancelled', message: 'Load cancelled.' }}
+      result={{ operation: 'importPlan', status: 'cancelled', message: 'Open file cancelled.' }}
     />,
   );
-  expect(screen.getByRole('status').textContent).toBe('Unsaved changes');
-  expect(screen.queryByText('Load cancelled.')).toBeNull();
+  expect(screen.getByRole('status').textContent).toBe('Saved as you edit');
+  expect(screen.queryByText('Open file cancelled.')).toBeNull();
 });
 
 it('expires confirmations, renews repeated operations, and never times out failures', async () => {
@@ -79,13 +79,13 @@ it('expires confirmations, renews repeated operations, and never times out failu
     });
   };
   await create();
-  expect(screen.getByText('Project created')).toBeTruthy();
+  expect(screen.getByText('Plan created')).toBeTruthy();
   await act(() => vi.advanceTimersByTimeAsync(4000));
   await create();
   await act(() => vi.advanceTimersByTimeAsync(4000));
-  expect(screen.getByText('Project created')).toBeTruthy();
+  expect(screen.getByText('Plan created')).toBeTruthy();
   await act(() => vi.advanceTimersByTimeAsync(1000));
-  expect(screen.queryByText('Project created')).toBeNull();
+  expect(screen.queryByText('Plan created')).toBeNull();
   createNew.mockResolvedValue({
     operation: 'new',
     status: 'failure',
@@ -93,5 +93,5 @@ it('expires confirmations, renews repeated operations, and never times out failu
   });
   await create();
   await act(() => vi.advanceTimersByTimeAsync(10000));
-  expect(screen.getByRole('alert').textContent).toContain('Couldn’t create project');
+  expect(screen.getByRole('alert').textContent).toContain('Couldn’t create plan');
 });

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type {
-  ProjectLibraryAdapter,
-  ProjectLibraryEntry,
+import {
+  EMPTY_LIBRARY_SESSION,
+  type ProjectLibraryAdapter,
+  type ProjectLibraryEntry,
 } from '@planner/persistence/projectLibrary';
 
 /** A stored plan's head: the fields the library reads, around opaque content. */
@@ -67,7 +68,7 @@ export function describeProjectLibraryContract(
       expect(await library.list()).toEqual([]);
     });
 
-    it('deletes to a bin that restores the plan for undo', async () => {
+    it('deletes a plan from the library', async () => {
       const library = createAdapter();
       const kept = await library.create(libraryPlanJson('plan-a', 'Kept'));
       const deleted = await library.create(libraryPlanJson('plan-b', 'Deleted'));
@@ -76,11 +77,17 @@ export function describeProjectLibraryContract(
       expect((await library.list()).map((entry) => entry.key)).toEqual([kept.key]);
       await expect(library.read(deleted.key)).rejects.toThrow();
       await expect(library.delete(deleted.key)).rejects.toThrow(/not in the library/);
+    });
 
-      const restored = await library.restore(deleted.key);
-      expect(restored.key).toBe(deleted.key);
-      expect(await library.read(deleted.key)).toBe(libraryPlanJson('plan-b', 'Deleted'));
-      await expect(library.restore(deleted.key)).rejects.toThrow(/already in the library/);
+    it('remembers the library session', async () => {
+      const library = createAdapter();
+      expect(await library.readSession()).toEqual(EMPTY_LIBRARY_SESSION);
+      const session = {
+        lastOpened: { key: 'plan-key', projectId: 'plan-a' },
+        previousFileOffered: true,
+      };
+      await library.writeSession(session);
+      expect(await createAdapter().readSession()).toEqual(session);
     });
 
     it('keeps plans across reopening', async () => {

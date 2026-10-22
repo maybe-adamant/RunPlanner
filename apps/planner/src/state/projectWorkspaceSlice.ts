@@ -2,7 +2,6 @@ import { createAction, type Middleware, type Reducer } from '@reduxjs/toolkit';
 import {
   publishProjectHistoryEdit,
   createProjectHistory,
-  reidentifyProjectHistory,
   projectCommandAuthoringAddresses,
   redoProjectHistory,
   semanticAddressKey,
@@ -19,8 +18,6 @@ import {
   type ProjectEvaluationAssembly,
   type SettlementFault,
 } from '@run-planner/engine/simulation';
-
-import { newProjectCreated, profileLoadSucceeded } from './profileSessionSlice';
 
 export type ProjectEvaluationAssembler = (project: ProjectDocument) => ProjectEvaluationAssembly;
 
@@ -54,11 +51,13 @@ export const authoredProjectCommandsDispatched = createAction<readonly ProjectCo
 );
 export const authoredProjectUndoRequested = createAction('projectWorkspace/undoRequested');
 export const authoredProjectRedoRequested = createAction('projectWorkspace/redoRequested');
-/** A saved copy's new project identity; replaces every snapshot, adding no history step. */
-export const projectIdentityMinted = createAction<string>('projectWorkspace/projectIdentityMinted');
-
+/** Opens another document, starting a new history. */
 export const authoredProjectReplaced = createAction<ProjectDocument>(
   'projectWorkspace/projectReplaced',
+);
+/** Returns the open plan to a document as one undoable history step. */
+export const authoredProjectReverted = createAction<ProjectDocument>(
+  'projectWorkspace/projectReverted',
 );
 
 function publishWorkspace(
@@ -112,13 +111,9 @@ export const settlementFaultWarning: Middleware<
 
 export function createProjectWorkspaceReducer(
   catalog: Catalog,
-  initialWorkspace: PreparedProjectWorkspace | undefined,
   assembleProjectEvaluation: ProjectEvaluationAssembler,
 ): Reducer<ProjectWorkspaceState> {
-  const initialState: ProjectWorkspaceState =
-    initialWorkspace === undefined
-      ? Object.freeze({ kind: 'noProject' })
-      : publishPreparedWorkspace(createProjectHistory(initialWorkspace.project), initialWorkspace);
+  const initialState: ProjectWorkspaceState = Object.freeze({ kind: 'noProject' });
 
   const publishCommands = (
     state: OpenProjectWorkspaceState,
@@ -172,21 +167,15 @@ export function createProjectWorkspaceReducer(
         ? state
         : publishWorkspace(history, assembleProjectEvaluation);
     }
-    if (projectIdentityMinted.match(action)) {
-      if (state.kind === 'noProject') return state;
-      return publishWorkspace(
-        reidentifyProjectHistory(state.history, action.payload),
-        assembleProjectEvaluation,
-      );
-    }
     if (authoredProjectReplaced.match(action)) {
       return publishWorkspace(createProjectHistory(action.payload), assembleProjectEvaluation);
     }
-    if (newProjectCreated.match(action)) {
-      return publishWorkspace(createProjectHistory(action.payload), assembleProjectEvaluation);
-    }
-    if (profileLoadSucceeded.match(action)) {
-      return publishPreparedWorkspace(createProjectHistory(action.payload.project), action.payload);
+    if (authoredProjectReverted.match(action)) {
+      if (state.kind === 'noProject') return state;
+      const history = publishProjectHistoryEdit(state.history, action.payload);
+      return history === state.history
+        ? state
+        : publishWorkspace(history, assembleProjectEvaluation);
     }
     return state;
   };

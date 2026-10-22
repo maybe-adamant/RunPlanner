@@ -68,11 +68,8 @@ function createStore() {
     routeKey: 'Underworld',
     configuredBiomeCount: 0,
   });
-  const store = createPlannerStore({
-    assembleProjectEvaluation,
-    catalog,
-    initialWorkspace: { project, assembly: assembleProjectEvaluation(project) },
-  });
+  const store = createPlannerStore({ assembleProjectEvaluation, catalog });
+  store.dispatch(authoredProjectReplaced(project));
   return { assembleProjectEvaluation, store };
 }
 
@@ -200,29 +197,6 @@ describe('project workspace application state', () => {
     expect(selectProjectEvaluation(state)?.status).toBe('empty');
     expect(selectCanUndoProject(state)).toBe(false);
     expect(selectCanRedoProject(state)).toBe(false);
-  });
-
-  it('rejects an otherwise valid assembly for a different authored identity', () => {
-    const initialProject = createProjectDocument(catalog, {
-      projectId: 'run-plan',
-      routeKey: 'Underworld',
-      configuredBiomeCount: 0,
-    });
-    const foreignProject = createEmptyProjectDocument(catalog, {
-      projectId: 'foreign-assembly',
-      routeKey: 'Surface',
-    });
-
-    expect(() =>
-      createPlannerStore({
-        assembleProjectEvaluation: () => simulateProjectAssembly(catalog, foreignProject),
-        catalog,
-        initialWorkspace: {
-          project: initialProject,
-          assembly: simulateProjectAssembly(catalog, foreignProject),
-        },
-      }),
-    ).toThrow(/does not match authored workspace identity/);
   });
 
   it('publishes one replacement evaluation after edit, undo, and redo', () => {

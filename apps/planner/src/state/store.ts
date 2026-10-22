@@ -10,22 +10,15 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createDraftSessionReducer } from './draftSessionSlice';
 import { createEditorSessionReducer } from './editorSessionSlice';
 import { createGameSendSessionReducer } from './gameSendSessionSlice';
-import {
-  createInitialProfileSessionState,
-  createProfileSessionReducer,
-  type ProfileSessionState,
-} from './profileSessionSlice';
+import { createLibrarySessionReducer } from './librarySessionSlice';
 import {
   createProjectWorkspaceReducer,
   type ProjectEvaluationAssembler,
-  type PreparedProjectWorkspace,
   settlementFaultWarning,
 } from './projectWorkspaceSlice';
 
 export interface CreatePlannerStoreOptions {
   readonly catalog: Catalog;
-  readonly initialWorkspace?: PreparedProjectWorkspace;
-  readonly initialProfileSession?: ProfileSessionState;
   readonly assembleProjectEvaluation: ProjectEvaluationAssembler;
 }
 
@@ -38,13 +31,10 @@ export function createPlannerStore(options: CreatePlannerStoreOptions) {
     reducer: {
       projectWorkspace: createProjectWorkspaceReducer(
         options.catalog,
-        options.initialWorkspace,
         options.assembleProjectEvaluation,
       ),
       editorSession: createEditorSessionReducer(options.catalog),
-      profileSession: createProfileSessionReducer(
-        options.initialProfileSession ?? createInitialProfileSessionState(),
-      ),
+      librarySession: createLibrarySessionReducer(),
       gameSendSession: createGameSendSessionReducer(),
       draftSession: createDraftSessionReducer(),
     },
@@ -65,23 +55,27 @@ export const selectProjectEvaluation = (state: RootState) =>
   state.projectWorkspace.kind === 'openProject'
     ? state.projectWorkspace.assembly.evaluation
     : undefined;
-export const selectExplicitProfileBaselineJson = (state: RootState) =>
-  state.profileSession.explicitBaselineJson;
-export const selectProfileSession = (state: RootState) => state.profileSession;
-export type ProfileStatus = 'Clean' | 'Dirty' | 'Recovered' | 'Unsaved';
-export const selectProfileStatus = createSelector(
+export const selectLibrarySession = (state: RootState) => state.librarySession;
+
+const encodings = new WeakMap<object, string>();
+function encoded(project: Parameters<typeof encodeProjectDocument>[0]): string {
+  let json = encodings.get(project);
+  if (json === undefined) {
+    json = encodeProjectDocument(project);
+    encodings.set(project, json);
+  }
+  return json;
+}
+
+/** Whether the open plan differs from the document it was opened as. */
+export const selectRevertAvailable = createSelector(
   selectPresentProject,
-  selectProfileSession,
-  (project, session): ProfileStatus => {
-    if (project === undefined) return 'Unsaved';
-    if (session.recoveryStatus === 'recovered') {
-      return 'Recovered';
-    }
-    if (session.explicitBaselineJson === null) {
-      return 'Unsaved';
-    }
-    return encodeProjectDocument(project) === session.explicitBaselineJson ? 'Clean' : 'Dirty';
-  },
+  (state: RootState) => state.librarySession.opened,
+  (project, opened) =>
+    project !== undefined &&
+    opened !== null &&
+    project !== opened &&
+    encoded(project) !== encoded(opened),
 );
 export const selectCanUndoProject = (state: RootState) =>
   state.projectWorkspace.kind === 'openProject' &&

@@ -13,7 +13,6 @@ import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { createInitialProject } from '@planner/composition/projectBootstrap';
-import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import {
   findingSelected,
   routePanelSelected,
@@ -57,7 +56,7 @@ function findingsMarkup(markup: string): string {
 
 function configureF(application: ReturnType<typeof createApplication>): void {
   application.store.dispatch(
-    newProjectCreated(
+    authoredProjectReplaced(
       createInitialProject(application.catalog, {
         projectId: 'app-shell-project',
         routeKey: 'Underworld',
@@ -105,7 +104,7 @@ describe('App', () => {
   it('limits Findings to the selected route', () => {
     const application = createApplication();
     application.store.dispatch(
-      newProjectCreated(
+      authoredProjectReplaced(
         createInitialProject(application.catalog, {
           projectId: 'app-shell-project',
           routeKey: 'Underworld',

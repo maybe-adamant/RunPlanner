@@ -2,15 +2,13 @@ export type ActionIconName =
   | 'chevronLeft'
   | 'chevronRight'
   | 'close'
-  | 'discard'
   | 'info'
   | 'load'
   | 'new'
   | 'publish'
   | 'redo'
   | 'reset'
-  | 'save'
-  | 'saveAs'
+  | 'duplicate'
   | 'undo'
   | 'zoom';
 
@@ -31,18 +29,11 @@ export function ActionIcon({ name }: { readonly name: ActionIconName }) {
             <path d="M9 2.5v3h3M8 8v3M6.5 9.5h3" />
           </>
         );
-      case 'save':
+      case 'duplicate':
         return (
           <>
-            <path d="M3 2.5h9.5l1 1v10h-11v-11Z" />
-            <path d="M5 2.5v4h6v-4M5 13.5v-5h6v5" />
-          </>
-        );
-      case 'saveAs':
-        return (
-          <>
-            <path d="M3 2.5h6l3 3v3M9 2.5v3h3" />
-            <path d="m6.5 13.5 1.8-.4 4.2-4.2-1.4-1.4-4.2 4.2z" />
+            <path d="M5.5 5.5h7.5v8h-7.5z" />
+            <path d="M3 11V2.5h7.5" />
           </>
         );
       case 'publish':
@@ -57,12 +48,6 @@ export function ActionIcon({ name }: { readonly name: ActionIconName }) {
           <>
             <path d="M2.5 5.5h4l1-2h6v9h-11z" />
             <path d="m5.5 9 2 2 3-3" />
-          </>
-        );
-      case 'discard':
-        return (
-          <>
-            <path d="M3.5 4.5h9M6 2.5h4l.5 2h-5l.5-2Zm-1 2 .5 9h5l.5-9M7 7v4M9 7v4" />
           </>
         );
       case 'undo':

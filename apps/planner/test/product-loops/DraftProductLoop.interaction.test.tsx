@@ -4,8 +4,8 @@ import { createProjectDocument } from '@run-planner/engine/authored-project';
 import { afterEach, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
-import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
+import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 
 afterEach(cleanup);
 
@@ -13,7 +13,7 @@ it('drafts a zero-finding route as one undoable edit, and rerolls as one more', 
   const application = createApplication({ rerollSeed: () => 3 });
   const { catalog, store } = application;
   store.dispatch(
-    newProjectCreated(
+    authoredProjectReplaced(
       createProjectDocument(catalog, {
         projectId: 'run-plan',
         routeKey: 'Underworld',
