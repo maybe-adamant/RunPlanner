@@ -1,0 +1,121 @@
+use std::path::PathBuf;
+use std::sync::Mutex;
+
+use tauri::{Manager, State};
+
+use run_planner_game_host::project_library::{self, LibraryEntry, NativeRecycler};
+
+use crate::game_module_commands::config_dir;
+use crate::profile_file_session::{self, RestoredProfileFile};
+
+/// Serializes library file changes, so a rename never races a write of the same plan.
+#[derive(Default)]
+pub struct ProjectLibraryLock(Mutex<()>);
+
+fn library_folder(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .document_dir()
+        .map(|documents| documents.join("RunPlanner").join("Projects"))
+        .map_err(|error| format!("Could not resolve the documents folder: {error}"))
+}
+
+fn locked<T>(
+    lock: &State<'_, ProjectLibraryLock>,
+    operation: impl FnOnce() -> Result<T, String>,
+) -> Result<T, String> {
+    let _guard = lock
+        .0
+        .lock()
+        .map_err(|_| "The library is unavailable.".to_owned())?;
+    operation()
+}
+
+#[tauri::command(async)]
+pub(crate) fn project_library_list(
+    app: tauri::AppHandle,
+    lock: State<'_, ProjectLibraryLock>,
+) -> Result<Vec<LibraryEntry>, String> {
+    let folder = library_folder(&app)?;
+    locked(&lock, || project_library::list(&folder))
+}
+
+#[tauri::command(async)]
+pub(crate) fn project_library_read(app: tauri::AppHandle, key: String) -> Result<String, String> {
+    project_library::read(&library_folder(&app)?, &key)
+}
+
+#[tauri::command(async)]
+pub(crate) fn project_library_create(
+    app: tauri::AppHandle,
+    lock: State<'_, ProjectLibraryLock>,
+    json: String,
+) -> Result<LibraryEntry, String> {
+    let folder = library_folder(&app)?;
+    locked(&lock, || project_library::create(&folder, &json))
+}
+
+#[tauri::command(async)]
+pub(crate) fn project_library_write(
+    app: tauri::AppHandle,
+    lock: State<'_, ProjectLibraryLock>,
+    key: String,
+    json: String,
+) -> Result<LibraryEntry, String> {
+    let folder = library_folder(&app)?;
+    locked(&lock, || project_library::write(&folder, &key, &json))
+}
+
+#[tauri::command(async)]
+pub(crate) fn project_library_delete(
+    app: tauri::AppHandle,
+    lock: State<'_, ProjectLibraryLock>,
+    key: String,
+) -> Result<(), String> {
+    let folder = library_folder(&app)?;
+    locked(&lock, || {
+        project_library::delete(&folder, &key, &mut NativeRecycler)
+    })
+}
+
+#[tauri::command(async)]
+pub(crate) fn project_library_restore(
+    app: tauri::AppHandle,
+    lock: State<'_, ProjectLibraryLock>,
+    key: String,
+) -> Result<LibraryEntry, String> {
+    let folder = library_folder(&app)?;
+    locked(&lock, || {
+        project_library::restore(&folder, &key, &mut NativeRecycler)
+    })
+}
+
+/// Shows the library folder in the system file manager.
+#[tauri::command]
+pub(crate) fn project_library_reveal(app: tauri::AppHandle) -> Result<(), String> {
+    let folder = library_folder(&app)?;
+    project_library::ensure_folder(&folder)?;
+    reveal_folder(&folder)
+}
+
+/// The file the planner last had open before the library, without forgetting it.
+#[tauri::command(async)]
+pub(crate) fn project_library_previous_active(
+    app: tauri::AppHandle,
+) -> Result<Option<RestoredProfileFile>, String> {
+    profile_file_session::previous_active(&config_dir(&app)?)
+}
+
+#[cfg(target_os = "windows")]
+fn reveal_folder(folder: &std::path::Path) -> Result<(), String> {
+    std::process::Command::new("explorer")
+        .arg(folder)
+        .spawn()
+        .map(|_| ())
+        .map_err(|error| format!("Could not open the folder: {error}"))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn reveal_folder(folder: &std::path::Path) -> Result<(), String> {
+    run_planner_game_host::system_opener::open(folder.as_os_str())
+        .map_err(|error| format!("Could not open the folder: {error}"))
+}

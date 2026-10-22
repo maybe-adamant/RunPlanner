@@ -404,6 +404,30 @@ Activate a selected file only after accepting its document or successfully
 writing the intended snapshot. Cancellation, bad input, preparation failure or
 write failure leaves the previous association and baseline unchanged.
 
+### Project library
+
+`ProjectLibraryAdapter` stores plans as complete documents addressed by an
+opaque key. The desktop host keeps them as plain `.runplanner.json` files in
+`RunPlanner/Projects/` under the platform documents folder, created on demand;
+the key is the file name, `<plan name> (<8 hex digits of the projectId's
+SHA-256>)`, made portable. The host reads only each file's head to list it,
+writes atomically, refuses a document without a project identity and name,
+renames a file only when the plan's name or identity changes (never over
+another file), deletes to the system recycle bin and restores the most recent
+bin item for undo (Windows and Linux). The browser host keeps the same model in
+IndexedDB, with deleted plans restorable for a week and no folder. Listing scans
+the folder each time; there is no index.
+
+Library meaning stays in the application. `createProjectLibraryOperations`
+classifies entries as openable, too new or unreadable against the loader's
+supported schemas, never dropping one, and names a plan from before plans had
+names by its file stem. Identity follows the engine: a stored copy sharing an
+older plan's `projectId` (oldest by modified time keeps it), or an imported
+file whose identity the library already holds, is loaded, given a new identity
+through `reidentifyProjectHistory` and written back whole. Import loads and
+admits the file like Load before filing a copy. The previously active file is
+offered for import until the library holds its identity.
+
 ### Atomic replacement
 
 Loading prepares the whole document before publication: the shared application

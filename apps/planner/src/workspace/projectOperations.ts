@@ -115,7 +115,7 @@ interface CreateProjectOperationsOptions {
   readonly store: PlannerStore;
 }
 
-function mintRandomProjectId(): string {
+export function mintRandomProjectId(): string {
   return `run-plan-${globalThis.crypto.randomUUID()}`;
 }
 

@@ -8,6 +8,9 @@ import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { installDevBrowserErrorReporter } from './diagnostics/devBrowserErrorReporter';
 import { createBrowserProfileFileAdapter } from './persistence/browserProfileFileAdapter';
 import { createTauriProfileFileAdapter } from './persistence/tauriProfileFileAdapter';
+import { createBrowserProjectLibraryAdapter } from './persistence/browserProjectLibraryAdapter';
+import { createTauriProjectLibraryAdapter } from './persistence/tauriProjectLibraryAdapter';
+import type { OutsideProjectFile } from './persistence/projectLibrary';
 import { createTauriGameModuleHost } from './persistence/gameModuleHost';
 import {
   createBrowserEventDismissalPreference,
@@ -76,6 +79,16 @@ const profileFile = tauriHost
       URL: globalThis.URL,
       document: globalThis.document,
     });
+const chooseProjectFile = async (): Promise<OutsideProjectFile | null> => {
+  const loaded = await profileFile.load();
+  return loaded === null ? null : { fileName: loaded.file.fileName, json: loaded.json };
+};
+const projectLibrary = tauriHost
+  ? createTauriProjectLibraryAdapter({ chooseFile: chooseProjectFile, invoke: tauriInvoke })
+  : createBrowserProjectLibraryAdapter({
+      chooseFile: chooseProjectFile,
+      indexedDB: () => globalThis.indexedDB,
+    });
 
 if (rootElement === null) {
   throw new Error('Run Planner root element is missing');
@@ -93,6 +106,7 @@ const application = createApplication({
   ),
   profileFile,
   profileFileRestore: await profileFile.restoreActive(),
+  projectLibrary,
   ...(tauriHost
     ? {
         communityEventDevelopmentHost: createTauriCommunityEventDevelopmentHost(),

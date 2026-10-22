@@ -1,12 +1,26 @@
+use tauri::Manager;
+
 mod bug_report_commands;
 mod community_events;
 mod game_module_commands;
 mod profile_file_session;
+mod project_library_commands;
 mod release_updates;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Registered first: a second launch hands over to the running window and exits,
+        // so one process writes the project library.
+        .plugin(tauri_plugin_single_instance::init(
+            |app, _arguments, _directory| {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.unminimize();
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            },
+        ))
         .invoke_handler(tauri::generate_handler![
             game_module_commands::game_target_discover,
             game_module_commands::game_target_use_discovered,
@@ -35,6 +49,14 @@ pub fn run() {
             profile_file_session::profile_file_activate,
             profile_file_session::profile_file_clear_active,
             profile_file_session::profile_file_write_active,
+            project_library_commands::project_library_list,
+            project_library_commands::project_library_read,
+            project_library_commands::project_library_create,
+            project_library_commands::project_library_write,
+            project_library_commands::project_library_delete,
+            project_library_commands::project_library_restore,
+            project_library_commands::project_library_reveal,
+            project_library_commands::project_library_previous_active,
             release_updates::release_update_check,
             release_updates::release_update_install,
             release_updates::external_open_url
@@ -45,6 +67,7 @@ pub fn run() {
         .manage(release_updates::PendingUpdate::default())
         .manage(bug_report_commands::LastBugReport::default())
         .manage(community_events::CommunityEvents::default())
+        .manage(project_library_commands::ProjectLibraryLock::default())
         .run(tauri::generate_context!())
         .expect("failed to run Run Planner");
 }
