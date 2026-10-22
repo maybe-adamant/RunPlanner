@@ -1,13 +1,13 @@
 # Project Library and App Home
 
-Status: locked 2026-10-21. Base commit: `59d52b0b1`.
+Status: locked 2026-10-21, gate 0 settled. Base commit: `59d52b0b1`.
 
 ## Objective
 
 The app opens on a home with Library, Game and Settings. Projects live in an
 app-owned, visible library folder and save continuously. A plan's name is part
 of the project. Slots in the game are shown against the library items they came
-from. Starter plans ship with the app.
+from. A catalog of template plans ships with the app.
 
 ## Current shape (facts)
 
@@ -47,17 +47,33 @@ from. Starter plans ship with the app.
 3. **Continuous save.** Every edit writes the open item. There is no Save, no
    unsaved state and no global autosave. Each item keeps a "revert to last
    opened" snapshot. Sending to the game no longer saves first.
-4. **App home.**
-   - **Library:** items, New (blank or from a starter), Import, Duplicate,
-     Delete, Open folder.
-   - **Game:** module status and install, game folder target, all slots with
-     the library item each links to (by `projectId` and fingerprint), active
-     slot, community events as they behave today.
+4. **App home.** Settled mock-ups (gate 0): a header with Library / Catalog /
+   Game / Settings tabs; the Game tab shows "· update" in visible text when the
+   module has one.
+   - **Library:** a full-width list (name, route and aspect, biomes planned,
+     slots with current/older, last edited); per row Duplicate, Delete, Open;
+     page actions "Browse catalog", Open folder, Import…, New plan (blank).
+     Delete moves the file to the OS recycle bin and shows a floating
+     "Deleted · Undo" toast (about 8 s) that restores it.
+   - **Catalog:** see item 5.
+   - **Game:** module status and update, game location, the community event card
+     as today, and a table of all slots (library plan or "Not in library",
+     current/older with a visible reason, route, aspect, sent date, Play next,
+     Open for linked slots) with "Rebuild outdated slots". Home never sends or
+     clears slots.
    - **Settings:** app scale.
-   - The project editor is entered from the Library. It keeps only the
-     project's own game section: send this plan, its slot, current or older.
-5. **Starter plans.** Bundled read-only projects within the migration window;
-   "New from starter" copies one into the library with a new id.
+   - **Editor header:** ← Home, the plan name with Rename, "Saved as you edit",
+     "Revert to opened", the readiness badge, Undo/Redo, "Send · Slot N" and a
+     "Slots · N" button that also shows "· K older" in visible text; its popover
+     lists this plan's slots and the picker for other slots.
+   - No validity badge on library rows.
+5. **Catalog.** A scalable collection of template plans, bundled for now with
+   room for a remote source later. Each entry is a project plus metadata: title,
+   one-line description, one fixed category (the sub-tabs, e.g. Full runs,
+   Practice, Fresh File, Speedrun), free tags (filters, never repeating the
+   category), and source. Search, route and tag filters, sort. "Add to library"
+   copies the entry with a new id; an added entry shows "In library · Open".
+   Entries stay within the migration window.
 
 ## Ownership
 
@@ -66,7 +82,7 @@ from. Starter plans ship with the app.
 - **Planner application:** migration, library and settings adapters, continuous
   save, home and editor UI, slot↔item projection.
 - **Tauri host:** library folder commands (list, read, write, rename, delete,
-  reveal), index, single-instance guard, starter plan bundling.
+  reveal), index, single-instance guard, catalog bundling.
 - **Game module:** no change.
 
 ## Gates
@@ -82,7 +98,7 @@ from. Starter plans ship with the app.
    autosave; revert snapshot; Duplicate; send without saving.
 4. **App home.** Library, Game and Settings screens from the approved mock-ups;
    editor game section slimmed; slot↔item links.
-5. **Starter plans.** Bundling and "New from starter".
+5. **Catalog.** Entry format and bundling, the Catalog screen, Add to library.
 6. **Closure.** Independent review, docs, live checks, delete this plan.
 
 ## Non-goals
