@@ -369,8 +369,12 @@ App notices (an update, an ended event) show under the shown screen's header.
 
 Navigation is mirrored into the History API by `installNavigationHistory`: each
 change of Home tab, Library folder, open plan or editor section (Route, Draft,
-Loadout, a biome, settings) pushes one entry, a change that leaves the location
-as it is pushes none, and the first location replaces the initial entry. Back
+Loadout, a biome, settings) that follows the user's input (a pointer press, key
+or click) pushes one entry, a change that leaves the location as it is pushes
+none, and the first location replaces the initial entry. A change the app makes
+by itself, with no input since the last entry was written or restored (a
+restored editor correcting its section, say), rewrites the shown entry, so it
+never discards the entries ahead of it. Back
 and forward (the browser's, the mouse's back and forward buttons, Alt+←/→)
 restore the entry's location: a Home entry shows that tab and folder, writing
 the open plan's pending edits when leaving the editor; an editor entry reopens
