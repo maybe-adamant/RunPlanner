@@ -1,8 +1,8 @@
 import {
   EMPTY_LIBRARY_SESSION,
   summarizeProjectJson,
+  type ChosenImportFile,
   type LibrarySession,
-  type OutsideProjectFile,
   type ProjectLibraryAdapter,
   type ProjectLibraryEntry,
   type ProjectLibraryListing,
@@ -51,14 +51,15 @@ export interface BrowserProjectLibraryEnvironment {
 }
 
 /** Asks for one plan file through a transient file input; null when cancelled. */
-function chooseFile(document: Document): Promise<OutsideProjectFile | null> {
+function chooseFiles(document: Document): Promise<readonly ChosenImportFile[]> {
   return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.accept = '.runplanner.json,.json,application/json';
     input.hidden = true;
+    input.multiple = true;
     input.type = 'file';
     let settled = false;
-    const finish = (result: OutsideProjectFile | null, error?: unknown) => {
+    const finish = (result: readonly ChosenImportFile[], error?: unknown) => {
       if (settled) return;
       settled = true;
       input.remove();
@@ -68,24 +69,28 @@ function chooseFile(document: Document): Promise<OutsideProjectFile | null> {
     input.addEventListener(
       'change',
       () => {
-        const file = input.files?.[0];
-        if (file === undefined) {
-          finish(null);
-          return;
-        }
-        void file.text().then(
-          (json) => finish(Object.freeze({ fileName: file.name, json })),
-          (error: unknown) => finish(null, error),
-        );
+        const files = [...(input.files ?? [])];
+        void Promise.all(
+          files.map((file) =>
+            file.text().then(
+              (json): ChosenImportFile => Object.freeze({ fileName: file.name, json }),
+              (error: unknown): ChosenImportFile =>
+                Object.freeze({
+                  fileName: file.name,
+                  problem: error instanceof Error ? error.message : String(error),
+                }),
+            ),
+          ),
+        ).then((chosen) => finish(chosen));
       },
       { once: true },
     );
-    input.addEventListener('cancel', () => finish(null), { once: true });
+    input.addEventListener('cancel', () => finish([]), { once: true });
     document.body.append(input);
     try {
       input.click();
     } catch (error) {
-      finish(null, error);
+      finish([], error);
     }
   });
 }
@@ -294,7 +299,7 @@ export function createBrowserProjectLibraryAdapter(
     // Browser storage has no recycle bin, so an older plan is rewritten in place.
     preserveOriginal: () => Promise.resolve(),
     reveal: () => Promise.reject(new Error('The library is not a folder in this browser.')),
-    chooseImportFile: () => chooseFile(environment.document),
+    chooseImportFiles: () => chooseFiles(environment.document),
     previousActiveFile: () => Promise.resolve(null),
     async readSession(): Promise<LibrarySession> {
       const session = await transact(await database(), [SESSION], 'readonly', (transaction) =>

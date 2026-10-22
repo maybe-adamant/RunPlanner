@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ALL_PLANS,
+  describeImportSummary,
   NO_SLOT_LINKS,
   projectLibraryChips,
   projectLibrarySlotLinks,
@@ -217,5 +218,32 @@ describe('library view', () => {
       ['route:FreshFile', 'Fresh File'],
       ['inGame', 'In game'],
     ]);
+  });
+});
+
+describe('import summary', () => {
+  const failed = (fileName: string) => ({ fileName, message: 'Not a plan file.' });
+
+  it('names one import, counts several and lists each file that could not be read', () => {
+    expect(describeImportSummary([], [])).toBeNull();
+    expect(describeImportSummary(['Erebus opener'], [])).toEqual({
+      text: 'Imported “Erebus opener”',
+      lasting: false,
+    });
+    expect(describeImportSummary(['A', 'B', 'C', 'D'], [])).toEqual({
+      text: 'Imported 4 plans',
+      lasting: false,
+    });
+    expect(describeImportSummary(['A', 'B', 'C'], [failed('x.json')])).toEqual({
+      text: 'Imported 3 · 1 couldn’t be read: x.json: Not a plan file.',
+      lasting: true,
+    });
+    expect(describeImportSummary([], [failed('x.json')])).toEqual({
+      text: 'Couldn’t read x.json: Not a plan file.',
+      lasting: true,
+    });
+    expect(describeImportSummary([], [failed('x.json'), failed('y.json')])?.text).toBe(
+      '2 couldn’t be read: x.json: Not a plan file.; y.json: Not a plan file.',
+    );
   });
 });

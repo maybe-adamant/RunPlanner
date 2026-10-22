@@ -38,7 +38,7 @@ const projectLibrary = tauriHost
   ? createTauriProjectLibraryAdapter({
       invoke: tauriInvoke,
       openDialog: (options) =>
-        open({ directory: false, filters: options.filters, multiple: false, title: options.title }),
+        open({ directory: false, filters: options.filters, multiple: true, title: options.title }),
       readTextFile,
     })
   : createBrowserProjectLibraryAdapter({

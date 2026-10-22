@@ -177,6 +177,38 @@ export interface GameActiveSlotSetting {
   readonly blockers: readonly GamePublicationBlocker[];
 }
 
+/** What clearing a plan slot removed, as stored, which restoring writes back unchanged. */
+export interface GameClearedSlot {
+  readonly slot: GamePlanSlotNumber;
+  readonly plan: string;
+  readonly source: string | null;
+  readonly summary: GamePlanSlotSummary | null;
+  /** The cleared slot was the one the game module plays next. */
+  readonly wasActive: boolean;
+}
+
+export interface GameSlotClearing {
+  /** `alreadyEmpty`: the slot had no file and no summary. */
+  readonly status: 'cleared' | 'alreadyEmpty' | 'invalidSlot' | 'blocked' | 'nativeWrite';
+  readonly message: string;
+  readonly blockers: readonly GamePublicationBlocker[];
+  /** Null when nothing was cleared, or the slot file was not text that can be restored. */
+  readonly cleared: GameClearedSlot | null;
+  /** The cleared slot was active, so slot 1 is active now. */
+  readonly activeSlotMoved: boolean;
+  /** Why the cleared slot stayed active although it is now empty. */
+  readonly activationProblem: string | null;
+}
+
+export interface GameSlotRestoration {
+  /** `occupied`: the slot holds a plan written since it was cleared and is left as it is. */
+  readonly status: 'restored' | 'invalidSlot' | 'occupied' | 'blocked' | 'nativeWrite';
+  readonly message: string;
+  readonly blockers: readonly GamePublicationBlocker[];
+  /** Why a restored slot that was active was not made active again; the plan stays written. */
+  readonly activationProblem: string | null;
+}
+
 /** What a bug report includes; the host adds its own facts and files. */
 export interface BugReportRequest {
   readonly appFacts: Readonly<Record<string, unknown>>;
@@ -245,6 +277,10 @@ export interface GameModuleHost extends GamePlanPublisher, GameSlotRebuildHost {
   readonly remove: () => Promise<GameModuleRemoveResult>;
   /** Makes a slot that holds a plan the one the game module plays next. */
   readonly setActiveSlot: (slotNumber: GameActiveSlotNumber) => Promise<GameActiveSlotSetting>;
+  /** Removes a plan slot with its source and summary; an active slot hands over to slot 1. */
+  readonly clearSlot: (slotNumber: GamePlanSlotNumber) => Promise<GameSlotClearing>;
+  /** Writes a cleared slot back while it is still empty, active again when it was. */
+  readonly restoreSlot: (cleared: GameClearedSlot) => Promise<GameSlotRestoration>;
   /** Asks where to save through the host's own dialog, then writes the report there. */
   readonly createBugReport: (
     defaultFileName: string,
@@ -317,6 +353,10 @@ export function createTauriGameModuleHost(
       }),
     setActiveSlot: (slotNumber: GameActiveSlotNumber) =>
       environment.invoke<GameActiveSlotSetting>('game_active_slot_set', { slotNumber }),
+    clearSlot: (slotNumber: GamePlanSlotNumber) =>
+      environment.invoke<GameSlotClearing>('game_slot_clear', { slotNumber }),
+    restoreSlot: (cleared: GameClearedSlot) =>
+      environment.invoke<GameSlotRestoration>('game_slot_restore', { cleared }),
     createBugReport: (defaultFileName: string, request: BugReportRequest) =>
       environment.invoke<BugReportCreation>('bug_report_create', { defaultFileName, request }),
     revealBugReport: () => environment.invoke<void>('bug_report_reveal'),

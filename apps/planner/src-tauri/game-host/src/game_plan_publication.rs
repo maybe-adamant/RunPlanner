@@ -11,9 +11,9 @@ use crate::game_module_package::{ExecutionCompatibility, ModulePackage};
 use crate::game_target::{existing_directory, ResolvedTarget, CONFIG_DIRECTORY};
 use crate::plan_slots::{
     any_slot_file_name, empty_slot, encode_active_slot, inspect_active_slot, inspect_all_slots,
-    read_slot, read_slot_source, slot_file_name, slot_source_file_name, valid_slot_source,
-    ActiveSlotFacts, PlanSlotState, ACTIVE_SLOT_FILE, EVENT_SLOT, MAX_PLAN_BYTES,
-    MAX_SLOT_SOURCE_BYTES, MODULE_CONFIG_DIRECTORY,
+    read_slot, read_slot_plan, read_slot_source, slot_file_name, slot_source_file_name,
+    valid_slot_source, ActiveSlotFacts, PlanSlotState, ACTIVE_SLOT_FILE, EVENT_SLOT,
+    MAX_PLAN_BYTES, MAX_SLOT_SOURCE_BYTES, MODULE_CONFIG_DIRECTORY,
 };
 use crate::slot_overview::{self, SentEntry, SlotEvent, SlotSummary, SLOT_OVERVIEW_FILE};
 
@@ -200,19 +200,20 @@ fn write_plan(
         SlotChange::Write {
             plan: plan_json.as_bytes(),
             source: source.map(str::as_bytes),
-            entry: Box::new(entry),
+            entry: Some(Box::new(entry)),
         },
     )?;
     commit_slot_and_overview(staged)
 }
 
 /// What a staged send does to its slot. A write without a source removes any source left
-/// beside the slot, so a source always describes the plan it sits beside.
+/// beside the slot, so a source always describes the plan it sits beside; one without an entry
+/// leaves the slot without a summary.
 enum SlotChange<'a> {
     Write {
         plan: &'a [u8],
         source: Option<&'a [u8]>,
-        entry: Box<SentEntry>,
+        entry: Option<Box<SentEntry>>,
     },
     Remove,
 }
@@ -311,7 +312,7 @@ fn stage_slot_and_overview(
                 (None, Some(_)) => return Err("The event slot keeps no source.".to_owned()),
                 (_, None) => None,
             };
-            (Some(slot), source, Some(*entry))
+            (Some(slot), source, entry.map(|entry| *entry))
         }
         SlotChange::Remove => {
             slots[usize::from(slot_number)] = empty_slot(slot_number);
@@ -640,6 +641,210 @@ pub fn publish_event(
     }
 }
 
+/// What clearing a plan slot removed, as stored, so it can be written back.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClearedSlot {
+    pub slot: u8,
+    pub plan: String,
+    pub source: Option<String>,
+    pub summary: Option<SlotSummary>,
+    /// The cleared slot was the one the module plays next.
+    pub was_active: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SlotClearStatus {
+    Cleared,
+    /// The slot had no file and the overview no entry for it.
+    AlreadyEmpty,
+    /// The slot number is outside 1 through 12; the event slot is never cleared here.
+    InvalidSlot,
+    Blocked,
+    NativeWrite,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SlotClearing {
+    pub status: SlotClearStatus,
+    pub message: String,
+    pub blockers: Vec<PublicationBlocker>,
+    /// Absent when nothing was cleared, or the plan file was not text the planner can restore.
+    pub cleared: Option<ClearedSlot>,
+    /// The cleared slot was active, so slot 1 is active now.
+    pub active_slot_moved: bool,
+    /// Why the cleared slot stayed active although it is now empty.
+    pub activation_problem: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SlotRestoreStatus {
+    Restored,
+    InvalidSlot,
+    /// The slot holds a plan again, written since it was cleared; it is left as it is.
+    Occupied,
+    Blocked,
+    NativeWrite,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SlotRestoration {
+    pub status: SlotRestoreStatus,
+    pub message: String,
+    pub blockers: Vec<PublicationBlocker>,
+    /// Why a restored slot that was active was not made active again; the plan stays written.
+    pub activation_problem: Option<String>,
+}
+
+/// Removes a plan slot's file, its source and its overview entry together on any established
+/// target whose slots can be read, returning what it held. When the slot was active, slot 1 is
+/// made active, as the module does when no active slot is named.
+pub fn clear_slot(config_dir: &Path, package: &ModulePackage, slot_number: u8) -> SlotClearing {
+    let clearing = |status, message: String| SlotClearing {
+        status,
+        message,
+        blockers: Vec::new(),
+        cleared: None,
+        active_slot_moved: false,
+        activation_problem: None,
+    };
+    if let Err(message) = slot_file_name(slot_number) {
+        return clearing(SlotClearStatus::InvalidSlot, message);
+    }
+    let (status, target) = status(config_dir, package);
+    let (Some(target), Some(inspection)) = (target, status.inspection) else {
+        return SlotClearing {
+            blockers: status.publication_blockers,
+            ..clearing(
+                SlotClearStatus::Blocked,
+                "The game target is not available.".to_owned(),
+            )
+        };
+    };
+    let facts = &inspection.plan_slots[usize::from(slot_number - 1)];
+    if facts.state == PlanSlotState::Empty && !slot_overview::has_entry(&target, slot_number) {
+        return clearing(
+            SlotClearStatus::AlreadyEmpty,
+            format!("Slot {slot_number} is empty."),
+        );
+    }
+    let was_active =
+        inspect_active_slot(&target) == (ActiveSlotFacts::Present { slot: slot_number });
+    let cleared = read_slot_plan(&target, slot_number).map(|plan| ClearedSlot {
+        slot: slot_number,
+        plan,
+        source: read_slot_source(&target, slot_number).ok().flatten(),
+        summary: slot_overview::slot_summary(&target, facts),
+        was_active,
+    });
+    let removed = stage_slot_and_overview(
+        &target,
+        inspection.module.compatibility.as_ref(),
+        slot_number,
+        SlotChange::Remove,
+    )
+    .and_then(commit_slot_and_overview);
+    if let Err(message) = removed {
+        return clearing(SlotClearStatus::NativeWrite, message);
+    }
+    let mut result = SlotClearing {
+        cleared,
+        ..clearing(
+            SlotClearStatus::Cleared,
+            format!("Cleared slot {slot_number}."),
+        )
+    };
+    match hand_over_active_slot(&target, slot_number) {
+        Ok(moved) => result.active_slot_moved = moved,
+        Err(problem) => result.activation_problem = Some(problem),
+    }
+    result
+}
+
+/// Writes a cleared slot back as it was, its source and summary included, while the slot is
+/// still empty. A slot that was active is made active again while slot 1, which took over,
+/// still is.
+pub fn restore_slot(
+    config_dir: &Path,
+    package: &ModulePackage,
+    cleared: &ClearedSlot,
+) -> SlotRestoration {
+    let restoration = |status, message: String| SlotRestoration {
+        status,
+        message,
+        blockers: Vec::new(),
+        activation_problem: None,
+    };
+    let slot_number = cleared.slot;
+    if let Err(message) = slot_file_name(slot_number) {
+        return restoration(SlotRestoreStatus::InvalidSlot, message);
+    }
+    let checked = (cleared.plan.len() <= MAX_PLAN_BYTES)
+        .then_some(())
+        .ok_or_else(|| format!("Game plan exceeds the {MAX_PLAN_BYTES}-byte limit."))
+        .and_then(|()| match &cleared.summary {
+            Some(summary) => summary.validate(),
+            None => Ok(()),
+        });
+    if let Err(message) = checked {
+        return restoration(SlotRestoreStatus::NativeWrite, message);
+    }
+    let (status, target) = status(config_dir, package);
+    let (Some(target), Some(inspection)) = (target, status.inspection) else {
+        return SlotRestoration {
+            blockers: status.publication_blockers,
+            ..restoration(
+                SlotRestoreStatus::Blocked,
+                "The game target is not available.".to_owned(),
+            )
+        };
+    };
+    if inspection.plan_slots[usize::from(slot_number - 1)].state != PlanSlotState::Empty {
+        return restoration(
+            SlotRestoreStatus::Occupied,
+            format!("Slot {slot_number} holds a plan again, so it was not restored."),
+        );
+    }
+    let written = stage_slot_and_overview(
+        &target,
+        inspection.module.compatibility.as_ref(),
+        slot_number,
+        SlotChange::Write {
+            plan: cleared.plan.as_bytes(),
+            source: cleared.source.as_deref().map(str::as_bytes),
+            entry: cleared.summary.clone().map(|summary| {
+                Box::new(SentEntry {
+                    slot: slot_number,
+                    summary,
+                    event: None,
+                })
+            }),
+        },
+    )
+    .and_then(commit_slot_and_overview);
+    if let Err(message) = written {
+        return restoration(SlotRestoreStatus::NativeWrite, message);
+    }
+    let reactivate = cleared.was_active
+        && matches!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot } if slot == 1 || slot == slot_number
+        );
+    SlotRestoration {
+        activation_problem: reactivate
+            .then(|| write_active_slot(&target, slot_number).err())
+            .flatten(),
+        ..restoration(
+            SlotRestoreStatus::Restored,
+            format!("Restored slot {slot_number}."),
+        )
+    }
+}
+
 /// Which event slot a clear keeps.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EventSlotKeep<'a> {
@@ -742,7 +947,7 @@ pub fn clear_event(
         }
     };
     result.fallback_slot_has_plan = fallback_slot_has_plan;
-    match hand_over_event_slot(&target) {
+    match hand_over_active_slot(&target, EVENT_SLOT) {
         Ok(moved) => result.active_slot_moved = moved,
         Err(problem) => result.activation_problem = Some(problem),
     }
@@ -750,9 +955,9 @@ pub fn clear_event(
 }
 
 /// Makes slot 1 active only while the active slot file, read just before the write, still
-/// names the event slot, so a slot the player picked meanwhile stands.
-fn hand_over_event_slot(target: &ResolvedTarget) -> Result<bool, String> {
-    if inspect_active_slot(target) != (ActiveSlotFacts::Present { slot: EVENT_SLOT }) {
+/// names the cleared slot, so a slot the player picked meanwhile stands. Slot 1 itself stays.
+fn hand_over_active_slot(target: &ResolvedTarget, cleared: u8) -> Result<bool, String> {
+    if cleared == 1 || inspect_active_slot(target) != (ActiveSlotFacts::Present { slot: cleared }) {
         return Ok(false);
     }
     write_active_slot(target, 1).map(|()| true)
@@ -927,11 +1132,11 @@ mod tests {
     fn the_event_slot_hands_over_only_while_the_file_still_names_it() {
         let temporary = TemporaryDirectory::new("hand-over");
         let (target, _) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
-        assert_eq!(hand_over_event_slot(&target), Ok(false));
+        assert_eq!(hand_over_active_slot(&target, EVENT_SLOT), Ok(false));
         assert!(!active_slot_path(&target).exists());
         // A slot picked after the event slot was read active stands.
         fs::write(active_slot_path(&target), encode_active_slot(4).unwrap()).unwrap();
-        assert_eq!(hand_over_event_slot(&target), Ok(false));
+        assert_eq!(hand_over_active_slot(&target, EVENT_SLOT), Ok(false));
         assert_eq!(
             inspect_active_slot(&target),
             ActiveSlotFacts::Present { slot: 4 }
@@ -941,7 +1146,7 @@ mod tests {
             encode_active_slot(EVENT_SLOT).unwrap(),
         )
         .unwrap();
-        assert_eq!(hand_over_event_slot(&target), Ok(true));
+        assert_eq!(hand_over_active_slot(&target, EVENT_SLOT), Ok(true));
         assert_eq!(
             inspect_active_slot(&target),
             ActiveSlotFacts::Present { slot: 1 }
@@ -1000,6 +1205,143 @@ mod tests {
             names.iter().all(|name| !name.ends_with(".tmp")),
             "{names:?}"
         );
+    }
+
+    #[test]
+    fn clearing_a_plan_slot_removes_it_with_its_source_and_entry_and_undo_writes_it_back() {
+        let temporary = TemporaryDirectory::new("clear-slot");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        let unset = clear_slot(&config, &package, 3);
+        assert_eq!(unset.status, SlotClearStatus::Blocked);
+        assert_eq!(unset.blockers[0].code, BlockerCode::NoTarget);
+        remember_target(&config, &target).unwrap();
+        let second = PRESENT_PLAN.replace(r#""f""#, r#""g""#);
+        publish(&config, &package, 1, PRESENT_PLAN, SOURCE, summary("A"));
+        publish(&config, &package, 3, &second, SOURCE, summary("B"));
+        let before = overview(&target);
+        for slot in [EVENT_SLOT, 13] {
+            assert_eq!(
+                clear_slot(&config, &package, slot).status,
+                SlotClearStatus::InvalidSlot
+            );
+        }
+        assert_eq!(
+            clear_slot(&config, &package, 7).status,
+            SlotClearStatus::AlreadyEmpty
+        );
+
+        let cleared = clear_slot(&config, &package, 3);
+        assert_eq!(
+            cleared.status,
+            SlotClearStatus::Cleared,
+            "{}",
+            cleared.message
+        );
+        assert!(cleared.active_slot_moved);
+        assert_eq!(cleared.activation_problem, None);
+        assert_eq!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 1 }
+        );
+        let held = cleared.cleared.unwrap();
+        assert_eq!(
+            held,
+            ClearedSlot {
+                slot: 3,
+                plan: second.clone(),
+                source: Some(SOURCE.to_owned()),
+                summary: Some(summary("B")),
+                was_active: true,
+            }
+        );
+        assert!(!safe_destination(&target, 3).unwrap().exists());
+        assert_eq!(slot_source(&config, &package, 3).unwrap(), None);
+        let slots = overview(&target)["slots"].as_object().unwrap().clone();
+        assert_eq!(slots.keys().collect::<Vec<_>>(), ["1"]);
+
+        let restored = restore_slot(&config, &package, &held);
+        assert_eq!(
+            restored.status,
+            SlotRestoreStatus::Restored,
+            "{}",
+            restored.message
+        );
+        assert_eq!(
+            fs::read_to_string(safe_destination(&target, 3).unwrap()).unwrap(),
+            second
+        );
+        assert_eq!(
+            slot_source(&config, &package, 3).unwrap().as_deref(),
+            Some(SOURCE)
+        );
+        assert_eq!(overview(&target), before);
+        assert_eq!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 3 }
+        );
+        // A slot filled again since it was cleared is left as it is.
+        let occupied = restore_slot(&config, &package, &held);
+        assert_eq!(occupied.status, SlotRestoreStatus::Occupied);
+
+        // Clearing an inactive slot, or slot 1 while active, leaves the active slot as it is.
+        let inactive = clear_slot(&config, &package, 1);
+        assert!(!inactive.active_slot_moved);
+        assert!(!inactive.cleared.unwrap().was_active);
+        set_active_slot(&config, &package, 3);
+        fs::rename(
+            safe_destination(&target, 3).unwrap(),
+            safe_destination(&target, 1).unwrap(),
+        )
+        .unwrap();
+        set_active_slot(&config, &package, 1);
+        let first = clear_slot(&config, &package, 1);
+        assert!(first.cleared.unwrap().was_active);
+        assert!(!first.active_slot_moved);
+        assert_eq!(
+            inspect_active_slot(&target),
+            ActiveSlotFacts::Present { slot: 1 }
+        );
+    }
+
+    #[test]
+    fn clearing_a_slot_that_is_not_text_offers_nothing_to_restore() {
+        let temporary = TemporaryDirectory::new("clear-unreadable");
+        let config = temporary.0.join("app-config");
+        let (target, package) = ready_target(&temporary.0.join("target"), TargetKind::Manual);
+        remember_target(&config, &target).unwrap();
+        fs::write(safe_destination(&target, 2).unwrap(), [0xff, 0xfe]).unwrap();
+        let cleared = clear_slot(&config, &package, 2);
+        assert_eq!(cleared.status, SlotClearStatus::Cleared);
+        assert_eq!(cleared.cleared, None);
+        assert!(!safe_destination(&target, 2).unwrap().exists());
+        // An unreadable plan the planner does keep as text is restored without a summary.
+        fs::write(safe_destination(&target, 2).unwrap(), "not a plan").unwrap();
+        let held = clear_slot(&config, &package, 2).cleared.unwrap();
+        assert_eq!(
+            (held.source.as_deref(), held.summary.as_ref()),
+            (None, None)
+        );
+        let restored = restore_slot(&config, &package, &held);
+        assert_eq!(
+            restored.status,
+            SlotRestoreStatus::Restored,
+            "{}",
+            restored.message
+        );
+        assert_eq!(
+            fs::read_to_string(safe_destination(&target, 2).unwrap()).unwrap(),
+            "not a plan"
+        );
+        let invalid = restore_slot(
+            &config,
+            &package,
+            &ClearedSlot {
+                slot: EVENT_SLOT,
+                ..held
+            },
+        );
+        assert_eq!(invalid.status, SlotRestoreStatus::InvalidSlot);
     }
 
     fn config_files(target: &ResolvedTarget) -> Vec<String> {
@@ -1136,11 +1478,11 @@ mod tests {
                 SlotChange::Write {
                     plan: second.as_bytes(),
                     source: Some(second_source.as_bytes()),
-                    entry: Box::new(SentEntry {
+                    entry: Some(Box::new(SentEntry {
                         slot,
                         summary: summary("Momus - Underworld"),
                         event: None,
-                    }),
+                    })),
                 },
             )
             .unwrap();
@@ -1753,7 +2095,7 @@ mod tests {
             SlotChange::Write {
                 plan: EVENT_PLAN.as_bytes(),
                 source: None,
-                entry: Box::new(event_entry()),
+                entry: Some(Box::new(event_entry())),
             },
         )
         .unwrap();

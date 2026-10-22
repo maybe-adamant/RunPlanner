@@ -409,6 +409,26 @@ pub fn inspect_all_slots(
     }
 }
 
+/// A slot file's text exactly as stored: `None` when it is missing, linked, oversized or not text.
+pub fn read_slot_plan(target: &ResolvedTarget, slot_number: u8) -> Option<String> {
+    let directory = module_config_dir(target).ok()??;
+    let path = directory.join(any_slot_file_name(slot_number).ok()?);
+    let metadata = fs::symlink_metadata(&path).ok()?;
+    if metadata.file_type().is_symlink()
+        || !metadata.is_file()
+        || metadata.len() > MAX_PLAN_BYTES as u64
+    {
+        return None;
+    }
+    let mut bytes = Vec::new();
+    fs::File::open(&path)
+        .and_then(|file| file.take(MAX_PLAN_BYTES as u64 + 1).read_to_end(&mut bytes))
+        .ok()?;
+    (bytes.len() <= MAX_PLAN_BYTES)
+        .then(|| String::from_utf8(bytes).ok())
+        .flatten()
+}
+
 /// The stored source of a sendable slot: `None` when it has none, and an error when the file
 /// is linked, oversized or not a valid source.
 pub fn read_slot_source(

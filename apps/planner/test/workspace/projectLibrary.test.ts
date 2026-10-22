@@ -11,6 +11,7 @@ import {
   EMPTY_LIBRARY_SESSION,
   summarizeProjectJson,
   type LibrarySession,
+  type ChosenImportFile,
   type OutsideProjectFile,
   type ProjectLibraryAdapter,
   type ProjectLibraryEntry,
@@ -25,7 +26,7 @@ import schema91Json from '../persistence/fixtures/anvil-results.schema-91.runpla
 function createFolder(
   files: Record<string, { readonly json: string; readonly modifiedMs: number }>,
   options: {
-    readonly chosen?: OutsideProjectFile | null;
+    readonly chosen?: readonly ChosenImportFile[];
     readonly previous?: OutsideProjectFile | null;
     readonly folders?: readonly string[];
   } = {},
@@ -90,7 +91,7 @@ function createFolder(
     },
     preserveOriginal: () => Promise.reject(new Error('unused')),
     reveal: () => Promise.reject(new Error('unused')),
-    chooseImportFile: () => Promise.resolve(options.chosen ?? null),
+    chooseImportFiles: () => Promise.resolve(options.chosen ?? []),
     previousActiveFile: () => Promise.resolve(options.previous ?? null),
     readSession: () => Promise.resolve(session),
     writeSession(next) {
@@ -201,10 +202,10 @@ describe('project library operations', () => {
 
   it('imports a copy and re-identifies it only when its identity is taken', async () => {
     const outside = { fileName: 'Outside.runplanner.json', json: planJson('plan-a', 'Outside') };
-    const { adapter, stored } = createFolder({}, { chosen: outside });
+    const { adapter, stored } = createFolder({}, { chosen: [outside] });
     const library = operations(adapter);
 
-    expect((await library.importChosenFile(''))?.project).toMatchObject({
+    expect((await library.importChosenFiles('')).filed[0]?.project).toMatchObject({
       projectId: 'plan-a',
       name: 'Outside',
     });
@@ -213,6 +214,33 @@ describe('project library operations', () => {
       'run-plan-minted-2',
     );
     expect(stored.size).toBe(3);
+  });
+
+  it('imports several files one at a time and reports each file it could not', async () => {
+    const outside = { fileName: 'Outside.runplanner.json', json: planJson('plan-a', 'Outside') };
+    const { adapter, stored } = createFolder(
+      {},
+      {
+        chosen: [
+          outside,
+          { fileName: 'locked.runplanner.json', problem: 'Permission denied' },
+          { fileName: 'broken.runplanner.json', json: '{not json' },
+          { ...outside, fileName: 'Outside copy.runplanner.json' },
+        ],
+      },
+    );
+    const report = await operations(adapter).importChosenFiles('Practice');
+    // The second copy of one file sees the identity the first took.
+    expect(report.filed.map((plan) => plan.project.projectId)).toEqual([
+      'plan-a',
+      'run-plan-minted-1',
+    ]);
+    expect(report.filed.every((plan) => plan.key.startsWith('Practice/'))).toBe(true);
+    expect(report.failed).toEqual([
+      { fileName: 'locked.runplanner.json', message: 'Permission denied' },
+      { fileName: 'broken.runplanner.json', message: '$: must be valid JSON' },
+    ]);
+    expect(stored.size).toBe(2);
   });
 
   it('names an imported plan from before plans had names after its file', async () => {
@@ -228,7 +256,7 @@ describe('project library operations', () => {
   it('files nothing for an import it cannot open or a cancelled pick', async () => {
     const { adapter, stored } = createFolder({});
     const library = operations(adapter);
-    expect(await library.importChosenFile('')).toBeNull();
+    expect(await library.importChosenFiles('')).toEqual({ filed: [], failed: [] });
     await expect(
       library.importFile({ fileName: 'bad.runplanner.json', json: '{}' }),
     ).rejects.toThrow();
@@ -270,9 +298,9 @@ describe('project library operations', () => {
 
   it('files new and imported plans in a folder and moves plans between folders', async () => {
     const outside = { fileName: 'Outside.runplanner.json', json: planJson('plan-a', 'Outside') };
-    const { adapter, stored } = createFolder({}, { chosen: outside });
+    const { adapter, stored } = createFolder({}, { chosen: [outside] });
     const library = operations(adapter);
-    const imported = await library.importChosenFile('Practice');
+    const [imported] = (await library.importChosenFiles('Practice')).filed;
     expect(imported?.key).toMatch(/^Practice\//);
     const created = await library.create(
       createProjectDocument(catalog, { projectId: 'plan-b', name: 'B', routeKey: 'Surface' }),

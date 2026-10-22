@@ -145,6 +145,21 @@ pub fn has_entry(target: &ResolvedTarget, slot: u8) -> bool {
         if read_overview(&directory.join(SLOT_OVERVIEW_FILE)).contains_key(&slot))
 }
 
+/// The summary the overview holds for a slot while it still describes the slot's plan.
+pub fn slot_summary(target: &ResolvedTarget, facts: &PlanSlotFacts) -> Option<SlotSummary> {
+    let (Some(compatibility), Some(fingerprint), Ok(Some(directory))) = (
+        &facts.compatibility,
+        &facts.plan_fingerprint,
+        module_config_dir(target),
+    ) else {
+        return None;
+    };
+    read_overview(&directory.join(SLOT_OVERVIEW_FILE))
+        .remove(&facts.slot)
+        .filter(|entry| entry.describes(compatibility, fingerprint))
+        .map(|entry| entry.summary)
+}
+
 pub fn describe_event_slot(target: &ResolvedTarget, facts: PlanSlotFacts) -> EventSlotFacts {
     let event = match (
         &facts.compatibility,

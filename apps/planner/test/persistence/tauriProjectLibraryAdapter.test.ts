@@ -2,10 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createTauriProjectLibraryAdapter } from '@planner/persistence/tauriProjectLibraryAdapter';
 
-function createAdapter(path: string | null = null) {
+function createAdapter(paths: readonly string[] | null = null) {
   const invoke = vi.fn(() => Promise.resolve(null));
-  const readTextFile = vi.fn(() => Promise.resolve('{"plan":true}'));
-  const openDialog = vi.fn(() => Promise.resolve(path));
+  const readTextFile = vi.fn((path: string) =>
+    path.includes('locked')
+      ? Promise.reject(new Error('Permission denied'))
+      : Promise.resolve('{"plan":true}'),
+  );
+  const openDialog = vi.fn(() => Promise.resolve(paths));
   const library = createTauriProjectLibraryAdapter({
     invoke: invoke as never,
     openDialog,
@@ -53,16 +57,19 @@ describe('Tauri project library adapter', () => {
     ]);
   });
 
-  it('reads a file chosen in the native dialog by its file name', async () => {
-    const chosen = createAdapter('C:\\Plans\\Surface run.runplanner.json');
-    await expect(chosen.library.chooseImportFile()).resolves.toEqual({
-      fileName: 'Surface run.runplanner.json',
-      json: '{"plan":true}',
-    });
+  it('reads each file chosen in the native dialog by its file name', async () => {
+    const chosen = createAdapter([
+      'C:\\Plans\\Surface run.runplanner.json',
+      '/plans/locked.runplanner.json',
+    ]);
+    await expect(chosen.library.chooseImportFiles()).resolves.toEqual([
+      { fileName: 'Surface run.runplanner.json', json: '{"plan":true}' },
+      { fileName: 'locked.runplanner.json', problem: 'Permission denied' },
+    ]);
     expect(chosen.readTextFile).toHaveBeenCalledWith('C:\\Plans\\Surface run.runplanner.json');
 
     const cancelled = createAdapter(null);
-    await expect(cancelled.library.chooseImportFile()).resolves.toBeNull();
+    await expect(cancelled.library.chooseImportFiles()).resolves.toEqual([]);
     expect(cancelled.readTextFile).not.toHaveBeenCalled();
   });
 });

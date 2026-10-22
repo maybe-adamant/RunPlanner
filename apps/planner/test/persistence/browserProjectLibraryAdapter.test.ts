@@ -49,38 +49,33 @@ describe('Browser project library', () => {
     );
   });
 
-  it('imports a file picked through a transient file input', async () => {
+  it('imports the files picked through a transient file input', async () => {
     const library = createAdapter();
     expect(library.supportsReveal).toBe(false);
-    const chosen = library.chooseImportFile();
+    const chosen = library.chooseImportFiles();
     const input = fileInput();
     expect(input.accept).toContain('.runplanner.json');
+    expect(input.multiple).toBe(true);
     Object.defineProperty(input, 'files', {
       configurable: true,
-      value: [{ name: 'plan.runplanner.json', text: () => Promise.resolve('{"plan":true}') }],
+      value: [
+        { name: 'plan.runplanner.json', text: () => Promise.resolve('{"plan":true}') },
+        { name: 'bad.runplanner.json', text: () => Promise.reject(new Error('denied')) },
+      ],
     });
     fireEvent.change(input);
-    await expect(chosen).resolves.toEqual({
-      fileName: 'plan.runplanner.json',
-      json: '{"plan":true}',
-    });
+    await expect(chosen).resolves.toEqual([
+      { fileName: 'plan.runplanner.json', json: '{"plan":true}' },
+      { fileName: 'bad.runplanner.json', problem: 'denied' },
+    ]);
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
-  it('reports a cancelled or unreadable pick without leaving the input', async () => {
+  it('reports a cancelled pick without leaving the input', async () => {
     const library = createAdapter();
-    const cancelled = library.chooseImportFile();
+    const cancelled = library.chooseImportFiles();
     fireEvent(fileInput(), new Event('cancel'));
-    await expect(cancelled).resolves.toBeNull();
-
-    const unreadable = library.chooseImportFile();
-    const input = fileInput();
-    Object.defineProperty(input, 'files', {
-      configurable: true,
-      value: [{ name: 'bad.runplanner.json', text: () => Promise.reject(new Error('denied')) }],
-    });
-    fireEvent.change(input);
-    await expect(unreadable).rejects.toThrow('denied');
+    await expect(cancelled).resolves.toEqual([]);
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 

@@ -25,6 +25,7 @@ import { SettingsScreen } from './SettingsScreen';
 import {
   useGameStatusRefresh,
   useGameStatusSnapshot,
+  useLibraryRescan,
   useLibrarySlotLinks,
 } from './useLibrarySlotLinks';
 
@@ -180,6 +181,7 @@ export function HomeScreen({
   useGameStatusRefresh(gameStatus);
   const snapshot = useGameStatusSnapshot(gameStatus);
   const index = useLibrarySlotLinks(operations, gameStatus);
+  useLibraryRescan(index.refresh, tab === 'library');
   const eventActive = useSyncExternalStore(
     communityEvents?.subscribe ?? noSubscription,
     () => communityEvents?.getSnapshot().kind === 'active',

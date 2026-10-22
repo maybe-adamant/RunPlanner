@@ -12,6 +12,8 @@ import {
   projectSendSlots,
   describeActiveSlotSetting,
   describeLastSendFailure,
+  describeSlotRestoration,
+  projectSlotClearing,
   describeSent,
   describeSentNotActivated,
 } from '@planner/projections/gamePanel';
@@ -396,7 +398,12 @@ describe('Game panel projection', () => {
       plan: { kind: 'event', title: 'Week 42' },
       aspect: 'Staff · Melinoë',
       nextRun: { kind: 'available', intent: { kind: 'setActiveSlot', slot: 0 } },
+      clear: null,
     });
+    // Every filled plan slot can be cleared from Home, the event slot never.
+    expect(home?.rows.filter((row) => row.clear !== null).map((row) => row.slot)).toEqual(
+      home?.rows.filter((row) => row.slot !== 0 && row.state !== 'empty').map((row) => row.slot),
+    );
     expect(home?.rows[1]).toMatchObject({
       plan: { kind: 'library', key: 'k', name: 'My plan', marker: 'current' },
       route: catalog.routes.byKey.Surface!.label,
@@ -754,6 +761,75 @@ describe('Game panel projection', () => {
     const atMs = Date.UTC(2026, 0, 2, 14, 5);
     expect(describeLastSendFailure({ message: 'could not write plan slot.', atMs })).toBe(
       `Last send failed at ${new Date(atMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}: could not write plan slot.`,
+    );
+  });
+
+  it('describes a cleared slot with its undo, and why a clear or its undo did not take', () => {
+    const cleared = { slot: 3, plan: '{}', source: null, summary: null, wasActive: true } as const;
+    const clearing = {
+      status: 'cleared',
+      message: 'Cleared slot 3.',
+      blockers: [],
+      cleared,
+      activeSlotMoved: false,
+      activationProblem: null,
+    } as const;
+    expect(projectSlotClearing(3, clearing, true)).toEqual({
+      notice: { text: 'Cleared slot 3', undo: cleared },
+      problem: null,
+    });
+    expect(projectSlotClearing(3, { ...clearing, activeSlotMoved: true }, true).notice?.text).toBe(
+      'Cleared slot 3 · Slot 1 plays next',
+    );
+    expect(projectSlotClearing(3, { ...clearing, activeSlotMoved: true }, false).notice?.text).toBe(
+      'Cleared slot 3 · No plan plays next',
+    );
+    expect(
+      projectSlotClearing(3, { ...clearing, cleared: null, activationProblem: 'denied' }, true),
+    ).toEqual({
+      notice: { text: 'Cleared slot 3', undo: null },
+      problem: 'Slot 3 is still the active slot although it is empty: denied',
+    });
+    expect(
+      projectSlotClearing(3, { ...clearing, status: 'alreadyEmpty', cleared: null }, true),
+    ).toEqual({
+      notice: null,
+      problem: null,
+    });
+    expect(
+      projectSlotClearing(
+        3,
+        {
+          ...clearing,
+          status: 'blocked',
+          cleared: null,
+          blockers: [{ code: 'noTarget', found: null, required: null }],
+        },
+        true,
+      ).problem,
+    ).toBe(
+      `Not cleared: ${describePublicationBlocker({ code: 'noTarget', found: null, required: null })}`,
+    );
+
+    const restored = {
+      status: 'restored',
+      message: 'Restored slot 3.',
+      blockers: [],
+      activationProblem: null,
+    } as const;
+    expect(describeSlotRestoration(restored)).toBeNull();
+    expect(describeSlotRestoration({ ...restored, activationProblem: 'denied' })).toBe(
+      'Restored, but not made active again: denied',
+    );
+    expect(
+      describeSlotRestoration({
+        ...restored,
+        status: 'occupied',
+        message: 'Slot 3 holds a plan again, so it was not restored.',
+      }),
+    ).toBe('Slot 3 holds a plan again, so it was not restored.');
+    expect(describeSlotRestoration({ ...restored, status: 'nativeWrite', message: 'x' })).toBe(
+      'Not restored: x',
     );
   });
 });

@@ -332,3 +332,33 @@ export function projectLibraryView(
         .sort((left, right) => left.name.localeCompare(right.name));
   return Object.freeze({ searching, breadcrumb, folders, rows });
 }
+
+/** An import's summary notice; `lasting` while a file could not be imported. */
+export interface ImportSummary {
+  readonly text: string;
+  readonly lasting: boolean;
+}
+
+/** "Imported 4 plans", or "Imported 3 · 1 couldn’t be read: <file>: <reason>"; null when cancelled. */
+export function describeImportSummary(
+  imported: readonly string[],
+  failed: readonly { readonly fileName: string; readonly message: string }[],
+): ImportSummary | null {
+  const reasons = failed.map((file) => `${file.fileName}: ${file.message}`).join('; ');
+  const unread =
+    failed.length === 0
+      ? null
+      : imported.length === 0 && failed.length === 1
+        ? `Couldn’t read ${reasons}`
+        : `${failed.length} couldn’t be read: ${reasons}`;
+  if (imported.length === 0) return unread === null ? null : { text: unread, lasting: true };
+  const done =
+    imported.length === 1 && unread === null
+      ? `Imported “${imported[0]}”`
+      : unread === null
+        ? `Imported ${imported.length} plans`
+        : `Imported ${imported.length}`;
+  return unread === null
+    ? { text: done, lasting: false }
+    : { text: `${done} · ${unread}`, lasting: true };
+}

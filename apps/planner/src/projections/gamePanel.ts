@@ -9,6 +9,7 @@ import { ownEntry, slotLoadoutLabel } from '@planner/projections/gameSlotSummary
 import type { GameActivationFailure, GameSendFailure } from '@planner/state/gameSendSessionSlice';
 import type {
   GameActiveSlotNumber,
+  GameClearedSlot,
   GameActiveSlotSetting,
   GameEventSlot,
   GameModuleInstallResult,
@@ -18,6 +19,8 @@ import type {
   GameTargetDiscovery,
   GamePlanSlot,
   GamePlanSlotNumber,
+  GameSlotClearing,
+  GameSlotRestoration,
   GameTargetInspection,
   ModpackLibState,
 } from '@planner/persistence/gameModuleHost';
@@ -591,6 +594,74 @@ export function describeActiveSlotSetting(setting: GameActiveSlotSetting): strin
   }
 }
 
+/** A cleared slot's notice, with what Undo writes back, and any problem to report. */
+export interface SlotClearingProduct {
+  readonly notice: { readonly text: string; readonly undo: GameClearedSlot | null } | null;
+  readonly problem: string | null;
+}
+
+/** `slotOnePlayable`: slot 1, which takes over from a cleared active slot, holds a playable plan. */
+export function projectSlotClearing(
+  slot: GamePlanSlotNumber,
+  clearing: GameSlotClearing,
+  slotOnePlayable: boolean,
+): SlotClearingProduct {
+  switch (clearing.status) {
+    case 'cleared':
+      return {
+        notice: {
+          text: `Cleared slot ${slot}${
+            !clearing.activeSlotMoved
+              ? ''
+              : slotOnePlayable
+                ? ' · Slot 1 plays next'
+                : ' · No plan plays next'
+          }`,
+          undo: clearing.cleared,
+        },
+        problem:
+          clearing.activationProblem === null
+            ? null
+            : `Slot ${slot} is still the active slot although it is empty: ${clearing.activationProblem}`,
+      };
+    case 'alreadyEmpty':
+      return { notice: null, problem: null };
+    case 'blocked':
+      return {
+        notice: null,
+        problem: `Not cleared: ${
+          clearing.blockers.length > 0
+            ? clearing.blockers.map(describePublicationBlocker).join(' ')
+            : clearing.message
+        }`,
+      };
+    case 'invalidSlot':
+    case 'nativeWrite':
+      return { notice: null, problem: `Not cleared: ${clearing.message}` };
+  }
+}
+
+/** Why undoing a clear did not fully restore the slot, or null. */
+export function describeSlotRestoration(restoration: GameSlotRestoration): string | null {
+  switch (restoration.status) {
+    case 'restored':
+      return restoration.activationProblem === null
+        ? null
+        : `Restored, but not made active again: ${restoration.activationProblem}`;
+    case 'occupied':
+      return restoration.message;
+    case 'blocked':
+      return `Not restored: ${
+        restoration.blockers.length > 0
+          ? restoration.blockers.map(describePublicationBlocker).join(' ')
+          : restoration.message
+      }`;
+    case 'invalidSlot':
+    case 'nativeWrite':
+      return `Not restored: ${restoration.message}`;
+  }
+}
+
 // A send's activation failure stands until the file, as last read, names that slot.
 function stillInactive(
   failure: GameActivationFailure | null,
@@ -793,6 +864,13 @@ export interface HomeSlotRow {
   readonly sent: GamePlanSentTime | null;
   /** Null for a slot holding no plan. */
   readonly nextRun: HomeSlotNextRun | null;
+  /** Present for a filled plan slot; the event slot is never cleared from Home. */
+  readonly clear: GameClearSlotIntent | null;
+}
+
+export interface GameClearSlotIntent {
+  readonly kind: 'clearSlot';
+  readonly slot: GamePlanSlotNumber;
 }
 
 export interface HomeSlotsProduct {
@@ -810,7 +888,8 @@ function slotsText(count: number): string {
 
 /**
  * Home's slot table: every slot, the event slot first, with the library plan it holds, whether
- * it plays next, and the outdated slots a rebuild would write. Home never sends or clears slots.
+ * it plays next, and the outdated slots a rebuild would write. Home never sends; it clears plan
+ * slots but not the event slot.
  */
 export function projectHomeSlots(
   status: GameModuleStatus,
@@ -864,6 +943,7 @@ export function projectHomeSlots(
       summary: null,
       ...columns(event),
       nextRun: nextRun(event),
+      clear: null,
     });
   }
   for (const slot of inspection.planSlots) {
@@ -901,6 +981,7 @@ export function projectHomeSlots(
       summary: slot.state === 'empty' ? 'Empty' : slot.state === 'unreadable' ? 'Unreadable' : null,
       ...columns(slot),
       nextRun: nextRun(slot),
+      clear: slot.state === 'empty' ? null : { kind: 'clearSlot', slot: slot.slot },
     });
   }
   const rebuildable = inspection.planSlots.filter(

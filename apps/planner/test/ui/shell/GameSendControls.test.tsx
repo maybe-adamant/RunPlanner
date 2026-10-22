@@ -271,6 +271,6 @@ describe('editor send control', () => {
     const last = await openPicker(user);
     await user.click(within(last).getByRole('button', { name: 'Open Game' }));
     expect(app.store.getState().librarySession.view).toEqual({ kind: 'home', tab: 'game' });
-    expect(screen.getByRole('region', { name: 'Hades II' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Game module' })).toBeTruthy();
   });
 });

@@ -34,6 +34,9 @@ describe('Tauri game module host adapter', () => {
     await host.rebuildSlot(3, '{"format":"run-planner-execution"}', '{"source":1}', summary);
     await host.setActiveSlot(2);
     await host.setActiveSlot(0);
+    await host.clearSlot(4);
+    const cleared = { slot: 4, plan: '{}', source: null, summary: null, wasActive: true } as const;
+    await host.restoreSlot(cleared);
     await host.openExternalPage('https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/');
     const request = {
       appFacts: { plannerVersion: '1.0.0' },
@@ -73,6 +76,8 @@ describe('Tauri game module host adapter', () => {
       ],
       ['game_active_slot_set', { slotNumber: 2 }],
       ['game_active_slot_set', { slotNumber: 0 }],
+      ['game_slot_clear', { slotNumber: 4 }],
+      ['game_slot_restore', { cleared }],
       ['external_open_url', { url: 'https://thunderstore.io/c/hades-ii/p/adamant/ModpackLib/' }],
       ['bug_report_create', { defaultFileName: 'report.zip', request }],
       ['bug_report_reveal'],

@@ -35,6 +35,8 @@ pub fn run() {
             game_module_commands::game_plan_rebuild,
             game_module_commands::game_slot_source_read,
             game_module_commands::game_active_slot_set,
+            game_module_commands::game_slot_clear,
+            game_module_commands::game_slot_restore,
             community_events::event_feed_refresh,
             community_events::event_project_download,
             community_events::game_event_publish,

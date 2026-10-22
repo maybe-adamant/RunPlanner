@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import type {
+  GameClearedSlot,
   GameStatusController,
   GameTargetDiscovery,
 } from '@planner/persistence/gameModuleHost';
@@ -9,6 +10,7 @@ import { useAppSelector } from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import {
   describeActiveSlotSetting,
+  describeSlotRestoration,
   describeInstallOutcome,
   describeLastSendFailure,
   describeRemoveOutcome,
@@ -16,7 +18,9 @@ import {
   projectGamePanel,
   projectGameProfileChoices,
   projectHomeSlots,
+  projectSlotClearing,
   type GameActiveSlotIntent,
+  type GameClearSlotIntent,
   type GameLocationProduct,
   type GameModuleSectionProduct,
   type HomeSlotRow,
@@ -33,6 +37,7 @@ import type {
 } from '@planner/workspace/communityEvents';
 import type { SlotRebuildController } from '@planner/workspace/slotRebuild';
 import { CommunityEventCard } from '../shell/NoticeArea';
+import { HomeToast } from './HomeToast';
 import type { LibrarySlotIndex } from './useLibrarySlotLinks';
 
 type Confirmation = 'install' | 'checkoutInstall' | 'remove';
@@ -40,6 +45,12 @@ type Confirmation = 'install' | 'checkoutInstall' | 'remove';
 interface Feedback {
   readonly tone: 'status' | 'alert';
   readonly text: string;
+}
+
+interface ClearedNotice {
+  readonly id: number;
+  readonly text: string;
+  readonly undo: GameClearedSlot | null;
 }
 
 interface TargetRequest {
@@ -277,7 +288,7 @@ function ModuleCard({
   return (
     <section aria-labelledby="game-module-title" className="home-panel home-card">
       <h3 className="home-section-title" id="game-module-title">
-        Game module
+        Status
       </h3>
       <div className="home-status-line">
         <span className="home-status-text" data-tone={module.tone}>
@@ -409,12 +420,14 @@ function SlotPlanCell({ row }: { readonly row: HomeSlotRow }) {
 }
 
 function SlotsTable({
+  onClear,
   onOpen,
   onPlayNext,
   onRebuild,
   pending,
   slots,
 }: {
+  readonly onClear: (intent: GameClearSlotIntent) => void;
   readonly onOpen: (key: string) => void;
   readonly onPlayNext: (intent: GameActiveSlotIntent) => void;
   readonly onRebuild: (() => void) | undefined;
@@ -435,7 +448,7 @@ function SlotsTable({
               Next run
             </th>
             <th className="home-slots-open" scope="col">
-              <span className="visually-hidden">Open</span>
+              <span className="visually-hidden">Actions</span>
             </th>
           </tr>
         </thead>
@@ -476,19 +489,35 @@ function SlotsTable({
                 )}
               </td>
               <td className="home-slots-open">
-                {row.plan?.kind === 'library' ? (
-                  <button
-                    aria-label={`Open ${row.plan.name}`}
-                    className="text-action"
-                    disabled={pending}
-                    onClick={() => {
-                      if (row.plan?.kind === 'library') onOpen(row.plan.key);
-                    }}
-                    type="button"
-                  >
-                    Open
-                  </button>
-                ) : null}
+                <div className="library-row-actions">
+                  {row.clear === null ? null : (
+                    <button
+                      aria-label={`Clear ${row.label}`}
+                      className="text-action"
+                      data-tone="danger"
+                      disabled={pending}
+                      onClick={() => {
+                        if (row.clear !== null) onClear(row.clear);
+                      }}
+                      type="button"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  {row.plan?.kind === 'library' ? (
+                    <button
+                      aria-label={`Open ${row.plan.name}`}
+                      className="text-action"
+                      disabled={pending}
+                      onClick={() => {
+                        if (row.plan?.kind === 'library') onOpen(row.plan.key);
+                      }}
+                      type="button"
+                    >
+                      Open
+                    </button>
+                  ) : null}
+                </div>
               </td>
             </tr>
           ))}
@@ -553,6 +582,7 @@ function GameSections({
   );
   const [pending, setPending] = useState(true);
   const [slotsFeedback, setSlotsFeedback] = useState<Feedback | null>(null);
+  const [cleared, setCleared] = useState<ClearedNotice | null>(null);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [changing, setChanging] = useState(false);
   const [discovery, setDiscovery] = useState<GameTargetDiscovery | null>(null);
@@ -622,6 +652,42 @@ function GameSections({
     } finally {
       setPending(false);
     }
+  };
+
+  const changeSlot = async (change: () => Promise<string | null>) => {
+    setPending(true);
+    setSlotsFeedback(null);
+    try {
+      const problem = await change();
+      if (problem !== null) setSlotsFeedback({ tone: 'alert', text: problem });
+    } catch (error) {
+      setSlotsFeedback({ tone: 'alert', text: errorText(error) });
+    }
+    try {
+      await gameStatus.refresh();
+    } catch {
+      // The Game tab reports a failed status read.
+    } finally {
+      setPending(false);
+    }
+  };
+  const clearSlot = (intent: GameClearSlotIntent) =>
+    changeSlot(async () => {
+      const slotOnePlayable = status?.inspection?.planSlots[0]?.state === 'present';
+      const outcome = projectSlotClearing(
+        intent.slot,
+        await host.clearSlot(intent.slot),
+        slotOnePlayable,
+      );
+      if (outcome.notice !== null) {
+        const notice = outcome.notice;
+        setCleared((previous) => ({ id: (previous?.id ?? 0) + 1, ...notice }));
+      }
+      return outcome.problem;
+    });
+  const undoClear = (undo: GameClearedSlot) => {
+    setCleared(null);
+    void changeSlot(async () => describeSlotRestoration(await host.restoreSlot(undo)));
   };
 
   const development = communityEvents?.development;
@@ -825,6 +891,7 @@ function GameSections({
             </p>
           )}
           <SlotsTable
+            onClear={(intent) => void clearSlot(intent)}
             onOpen={(key) => void operations.openPlan(key)}
             onPlayNext={(intent) => void playNext(intent)}
             onRebuild={
@@ -862,6 +929,23 @@ function GameSections({
           )}
           <FeedbackLine feedback={slotsFeedback} />
         </section>
+      )}
+      {cleared === null ? null : (
+        <HomeToast
+          {...(cleared.undo === null
+            ? {}
+            : {
+                action: {
+                  label: 'Undo',
+                  run: () => {
+                    if (cleared.undo !== null) undoClear(cleared.undo);
+                  },
+                },
+              })}
+          key={cleared.id}
+          onDismiss={() => setCleared(null)}
+          text={cleared.text}
+        />
       )}
       {switchRequest !== null && (
         <SwitchAwayDialog
@@ -931,10 +1015,7 @@ export function GameScreen({
   return (
     <section aria-labelledby="game-title" className="home-page">
       <div className="home-page-heading">
-        <div>
-          <p className="eyebrow">Game</p>
-          <h2 id="game-title">Hades II</h2>
-        </div>
+        <h2 id="game-title">Game module</h2>
       </div>
       {gameStatus === undefined ? (
         <p className="game-publication-hint">

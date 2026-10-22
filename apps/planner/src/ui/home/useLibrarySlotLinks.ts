@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import type {
   GamePlanSlot,
@@ -40,6 +40,22 @@ export function useGameStatusRefresh(gameStatus: GameStatusController | undefine
     window.addEventListener('focus', refresh);
     return () => window.removeEventListener('focus', refresh);
   }, [gameStatus]);
+}
+
+/**
+ * Reads the library again when the window regains focus and each time the Library is shown
+ * again, so plans added to the folder by hand appear; there is no file watcher.
+ */
+export function useLibraryRescan(refresh: () => void, libraryShown: boolean) {
+  useEffect(() => {
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+  }, [refresh]);
+  const wasShown = useRef(libraryShown);
+  useEffect(() => {
+    if (libraryShown && !wasShown.current) refresh();
+    wasShown.current = libraryShown;
+  }, [libraryShown, refresh]);
 }
 
 export interface LibrarySlotIndex {

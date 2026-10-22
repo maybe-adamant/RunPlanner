@@ -239,8 +239,8 @@ ModpackLib `.cfg`.
 - Sending a plan also makes its slot active. The planner makes a slot active
   only when that slot holds a plan; the in-game picker offers all twelve, and
   the event slot first while it holds a file or is the active slot. Writing the
-  event slot never changes the active slot; clearing it while it is active
-  makes slot 1 active (see [Event slot](#event-slot)).
+  event slot never changes the active slot; clearing it, or a plan slot, while
+  it is active makes slot 1 active (see [Event slot](#event-slot)).
 
 ### Slot overview
 
@@ -504,8 +504,8 @@ change together: the host stages the complete files beside their destinations,
 with copies of the slot's and the source's previous files, then replaces the
 slot, then the source, then the overview. If a later file cannot be replaced,
 the earlier ones are restored from their copies (or removed when they had no
-file) and the send fails; no staged file remains either way. Clearing the event
-slot follows the same order with a removal in place of the slot write.
+file) and the send fails; no staged file remains either way. Clearing a slot
+follows the same order with a removal in place of the slot write.
 Only then does the host write `active-slot.json`; if only the activation fails,
 the send still succeeds, the plan
 stays, and the result carries the activation problem, which the planner shows
@@ -598,12 +598,23 @@ planner wrote, is stale: outdated for the module, it cannot be played next.
 Host status also carries the bundled and installed compatibility files into
 bug reports.
 
-Home never sends or clears a slot. **Play next** writes `active-slot.json`
+Home never sends a slot. **Play next** writes `active-slot.json`
 without resending for any slot holding a plan the installed module admits, and
 the slot the file names as last read shows **Plays next** (a missing or invalid
 file plays slot 1); the slots are then re-read, and a failed write leaves a
 short notice under the table. A successful send makes its slot the one that
 plays next.
+
+**Clear** removes a filled plan slot (1 to 12) with its source and overview
+entry on any established target whose slots can be read; the event slot is
+never cleared from Home. The host returns what it removed, as stored: the plan
+text, its source, its summary while the overview still described it, and
+whether the slot was active. A cleared active slot hands over to slot 1, as a
+missing file would, unless the player picked another slot meanwhile or the
+cleared slot was slot 1. A floating "Cleared slot N · Undo" notice stays about
+eight seconds; Undo has the host write the removed files back while the slot is
+still empty, and makes the slot active again while slot 1, which took over,
+still is. A slot file that is not bounded text clears without an Undo.
 
 Sending belongs to the plan's editor, whose header has one split send button
 of stable width. Its main part sends to the plan's own slot (the one that plays
