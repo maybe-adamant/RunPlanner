@@ -101,13 +101,28 @@ from. A catalog of template plans ships with the app.
      the separate Game and About buttons leave the editor; the Route panel
      drops its readiness badge.
    - No validity badge on library rows.
-5. **Catalog.** A scalable collection of template plans, bundled for now with
-   room for a remote source later. Each entry is a project plus metadata: title,
-   one-line description, one fixed category (the sub-tabs, e.g. Full runs,
-   Practice, Fresh File, Speedrun), free tags (filters, never repeating the
-   category), and source. Search, route and tag filters, sort. "Add to library"
-   copies the entry with a new id; an added entry shows "In library · Open".
-   Entries stay within the migration window.
+5. **Catalog.** A scalable collection of template plans in its own repository,
+   `RunPlanner-Catalog`, following the community events pattern.
+   - The repository holds one folder per entry (the plan plus `entry.json`:
+     title, one-line description, one fixed category, free tags never repeating
+     the category, author). A secret-free validation workflow checks contributor
+     pull requests; an owner-gated publish workflow builds against the latest
+     planner release, checks every entry loads, and signs the feed with its own
+     catalog key.
+   - The feed is a signed `catalog.json` index of metadata plus each entry's URL
+     and SHA-256. The app fetches and caches the index on launch, verifies the
+     signature before decoding, and downloads an entry only on "Add to library",
+     checking its hash. Offline it shows the cached index; with no cache, the
+     Catalog shows that it could not load.
+   - An entry newer than the app's schema shows "Needs a newer planner" and
+     cannot be added. "Add to library" copies the entry with a new id; an added
+     entry shows "In library · Open".
+   - The Catalog screen: category sub-tabs with counts, search, route chips, a
+     tag filter and sort, rows in the Library's style.
+   - The repository is a submodule at `external/RunPlanner-Catalog` for local
+     work, and an opt-in planner lane loads every pinned entry through the
+     current loader. Fetch, verification and caching are shared with community
+     events rather than duplicated.
 
 ## Ownership
 
@@ -116,7 +131,7 @@ from. A catalog of template plans ships with the app.
 - **Planner application:** migration, library and settings adapters, continuous
   save, home and editor UI, slot↔item projection.
 - **Tauri host:** library folder commands (list, read, write, rename, delete,
-  reveal), index, single-instance guard, catalog bundling.
+  reveal), index, single-instance guard, catalog feed fetch and cache.
 - **Game module:** no change.
 
 ## Gates
@@ -133,7 +148,9 @@ from. A catalog of template plans ships with the app.
 4. **App home.** Library (with folders), Game and Settings screens from the
    approved mock-ups; host folder commands; editor header and split send
    button; slot↔item links.
-5. **Catalog.** Entry format and bundling, the Catalog screen, Add to library.
+5. **Catalog.** The catalog repository and its workflows, the shared signed-feed
+   fetch, the Catalog screen, Add to library, the opt-in entry lane, the first
+   entries.
 6. **Closure.** Independent review, docs, live checks, delete this plan.
 
 ## Non-goals
