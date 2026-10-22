@@ -12,14 +12,14 @@ afterEach(() => {
 });
 
 describe('application fault recovery', () => {
-  it('keeps native profile loading available after a project render fails', async () => {
+  it('keeps opening another file available after a project render fails', async () => {
     let faulted = true;
-    const loadProfile = vi.fn(async () => {
+    const openFile = vi.fn(async () => {
       faulted = false;
       return {
-        operation: 'loadProfile' as const,
+        operation: 'importPlan' as const,
         status: 'success' as const,
-        message: 'Loaded the profile.',
+        message: 'Opened.',
       };
     });
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -30,16 +30,9 @@ describe('application fault recovery', () => {
 
     render(
       <ApplicationFaultBoundary
-        discardRecoveryAndReload={() => undefined}
-        exportAutosaveRecovery={() =>
-          Promise.resolve({
-            operation: 'exportRecovery',
-            status: 'success',
-            message: 'Exported the autosave copy.',
-          })
-        }
-        loadProfile={loadProfile}
+        openFile={openFile}
         reload={() => undefined}
+        reloadWithoutPlan={() => undefined}
       >
         <ProjectSurface />
       </ApplicationFaultBoundary>,
@@ -50,19 +43,19 @@ describe('application fault recovery', () => {
     ).toBeTruthy();
     expect(screen.getByText('broken project projection')).toBeTruthy();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Load another project' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Open another file' }));
 
     await waitFor(() => expect(screen.getByText('Replacement project is ready.')).toBeTruthy());
-    expect(loadProfile).toHaveBeenCalledOnce();
+    expect(openFile).toHaveBeenCalledOnce();
     consoleError.mockRestore();
   });
 
   it('retains the recovery surface when the replacement file also fails preparation', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const loadProfile = vi.fn(async () => ({
-      operation: 'loadProfile' as const,
+    const openFile = vi.fn(async () => ({
+      operation: 'importPlan' as const,
       status: 'failure' as const,
-      message: 'Load Profile failed: invalid route',
+      message: 'Open file failed: invalid route',
     }));
     function BrokenProject(): null {
       throw new Error('broken project projection');
@@ -70,24 +63,17 @@ describe('application fault recovery', () => {
 
     render(
       <ApplicationFaultBoundary
-        discardRecoveryAndReload={() => undefined}
-        exportAutosaveRecovery={() =>
-          Promise.resolve({
-            operation: 'exportRecovery',
-            status: 'success',
-            message: 'Exported the autosave copy.',
-          })
-        }
-        loadProfile={loadProfile}
+        openFile={openFile}
         reload={() => undefined}
+        reloadWithoutPlan={() => undefined}
       >
         <BrokenProject />
       </ApplicationFaultBoundary>,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Load another project' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Open another file' }));
 
     expect((await screen.findByRole('alert')).textContent).toContain(
-      'Load Profile failed: invalid route',
+      'Open file failed: invalid route',
     );
     expect(
       screen.getByRole('heading', { name: 'Run Planner could not display this project' }),
@@ -96,24 +82,18 @@ describe('application fault recovery', () => {
   });
 
   it('turns an unhandled asynchronous failure into the same recovery surface', async () => {
-    const discardRecoveryAndReload = vi.fn();
-    const exportAutosaveRecovery = vi.fn(async () => ({
-      operation: 'exportRecovery' as const,
-      status: 'success' as const,
-      message: 'Exported the autosave copy.',
-    }));
+    const reloadWithoutPlan = vi.fn();
     render(
       <ApplicationFaultBoundary
-        discardRecoveryAndReload={discardRecoveryAndReload}
-        exportAutosaveRecovery={exportAutosaveRecovery}
-        loadProfile={() =>
+        openFile={() =>
           Promise.resolve({
-            operation: 'loadProfile',
+            operation: 'importPlan',
             status: 'cancelled',
-            message: 'Load Profile cancelled.',
+            message: 'Open file cancelled.',
           })
         }
         reload={() => undefined}
+        reloadWithoutPlan={reloadWithoutPlan}
       >
         <p>Project is open.</p>
       </ApplicationFaultBoundary>,
@@ -129,10 +109,7 @@ describe('application fault recovery', () => {
       screen.getByRole('heading', { name: 'Run Planner could not display this project' }),
     ).toBeTruthy();
     expect(screen.getByText('async project failure')).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Export Autosave' }));
-    expect(exportAutosaveRecovery).toHaveBeenCalledOnce();
-    expect(await screen.findByText('Exported the autosave copy.')).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Start without recovered project' }));
-    expect(discardRecoveryAndReload).toHaveBeenCalledOnce();
+    await userEvent.click(screen.getByRole('button', { name: 'Start without this plan' }));
+    expect(reloadWithoutPlan).toHaveBeenCalledOnce();
   });
 });

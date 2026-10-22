@@ -1,7 +1,12 @@
 import {
+  applyProjectCommand,
   assessPublicDreamItinerary,
+  createProjectAddress,
+  createProjectHistory,
   encodeProjectDocument,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
+  PROJECT_NAME_MAX,
+  reidentifyProjectHistory,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
@@ -12,26 +17,16 @@ import {
   ExecutionCompilerError,
 } from '@run-planner/engine/execution-plan';
 
-import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
-import { loadProjectDocument } from '../persistence/projectDocumentLoader';
 import { createInitialProject } from '../composition/projectBootstrap';
-import {
-  profileFileStem,
-  type ProfileFileAdapter,
-  type ProfileFileReference,
-} from '../persistence/profileFile';
 import type { GamePlanPublisher, GamePlanSlotNumber } from '../persistence/gameModuleHost';
+import type { OutsideProjectFile } from '../persistence/projectLibrary';
 import { describePublicationBlocker } from '../projections/gamePanel';
 import { projectGameSlotSummary } from '../projections/gameSlotSummary';
 import { encodeSlotSource } from '../persistence/slotSource';
+import { libraryOpenFailed, previousFileOffered } from '../state/librarySessionSlice';
 import {
-  newProjectCreated,
-  profileLoadSucceeded,
-  profileSaveSucceeded,
-  recoveryDiscarded,
-} from '../state/profileSessionSlice';
-import {
-  projectIdentityMinted,
+  authoredProjectReplaced,
+  authoredProjectReverted,
   type PreparedProjectWorkspace,
 } from '../state/projectWorkspaceSlice';
 import {
@@ -40,24 +35,23 @@ import {
   gameSendStarted,
   gameSentSlotNotActivated,
 } from '../state/gameSendSessionSlice';
-import { assertPublicProjectAdmission } from './project-admission';
+import { selectPresentProject, type PlannerStore } from '../state/store';
+import type { LibrarySaver } from './librarySave';
 import {
-  selectPresentProject,
-  selectProfileSession,
-  selectProfileStatus,
-  type PlannerStore,
-} from '../state/store';
+  mintRandomProjectId,
+  type FiledPlan,
+  type ProjectLibraryOperations,
+} from './projectLibrary';
 
 export type ProjectOperation =
-  | 'discardRecovery'
-  | 'exportRecovery'
-  | 'loadProfile'
+  | 'duplicate'
+  | 'importPlan'
+  | 'importPrevious'
   | 'new'
   | 'openCopy'
+  | 'openPlan'
   | 'publishGame'
-  | 'saveBeforeUpdate'
-  | 'saveProfile'
-  | 'saveProfileAs';
+  | 'revert';
 
 export type CurrentGamePlan =
   | { readonly kind: 'noProject' }
@@ -82,56 +76,61 @@ export type ProjectOperationResult = {
 };
 
 export interface ProjectOperations {
+  /** Creates a library plan for the route and opens it. */
   createNew(
     routeKey: string,
     itineraryBiomeKeys?: readonly string[],
   ): Promise<ProjectOperationResult>;
-  discardAutosaveRecovery(): ProjectOperationResult;
-  exportAutosaveRecovery(): Promise<ProjectOperationResult>;
-  readonly saveAsAvailable: boolean;
+  /** Imports a file the user picks into the library and opens the copy. */
+  importPlan(): Promise<ProjectOperationResult>;
+  openPlan(key: string): Promise<ProjectOperationResult>;
+  /** Files the open plan as a new plan named as its copy, with its own identity, and opens it. */
+  duplicate(): Promise<ProjectOperationResult>;
+  /** Returns the open plan to the document it was opened as, as one undoable step. */
+  revertToOpened(): ProjectOperationResult;
+  /** Files a project document as a new plan with its own identity and opens it. */
+  openProjectCopy(json: string): Promise<ProjectOperationResult>;
+  /** Imports the file open before the library, once offered, and opens it. */
+  acceptPreviousFile(): Promise<ProjectOperationResult>;
+  declinePreviousFile(): Promise<void>;
+  /** Reopens the plan open at the last close and offers the pre-library file. */
+  restoreStartup(): Promise<void>;
+  /** The next start opens no plan; every plan stays in the library. */
+  forgetLastOpened(): Promise<void>;
   /** Whether the current project compiles to an execution plan, and its fingerprint. */
   inspectCurrentGamePlan(): CurrentGamePlan;
   publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult>;
-  /** Saves an unsaved or never-saved project before the planner closes to update. */
-  saveBeforeUpdate(): Promise<ProjectOperationResult>;
-  saveProfile(): Promise<ProjectOperationResult>;
-  saveProfileAs(): Promise<ProjectOperationResult>;
-  loadProfile(): Promise<ProjectOperationResult>;
-  /** Opens a project document as a new, never-saved copy with its own identity. */
-  openProjectCopy(json: string): Promise<ProjectOperationResult>;
+  /** Writes the open plan's pending edits, before the planner closes or updates. */
+  flush(): Promise<{ readonly status: 'failure' | 'success'; readonly message: string }>;
 }
 
 interface CreateProjectOperationsOptions {
-  readonly activeProfileFile?: ProfileFileReference;
-  readonly autosaveRecovery?: AutosaveRecoveryAdapter;
   readonly catalog: Catalog;
   /** Internal-stage run modifiers take part in publication only in a development build. */
   readonly devBuild?: boolean;
-  readonly profileFile: ProfileFileAdapter;
+  /** The library and the writer of its open plan; absent where nothing is stored. */
+  readonly library?: {
+    readonly operations: ProjectLibraryOperations;
+    readonly saver: LibrarySaver;
+  };
   readonly prepareProjectWorkspace: (project: ProjectDocument) => PreparedProjectWorkspace;
   readonly gamePlanPublisher?: GamePlanPublisher;
-  /** Mints the identity a saved copy takes; injectable for deterministic tests. */
+  /** Mints the identity a copy takes; injectable for deterministic tests. */
   readonly mintProjectId?: () => string;
   readonly store: PlannerStore;
 }
 
-export function mintRandomProjectId(): string {
-  return `run-plan-${globalThis.crypto.randomUUID()}`;
-}
-
 const operationLabels: Readonly<Record<ProjectOperation, string>> = Object.freeze({
-  discardRecovery: 'Discard Autosave',
-  exportRecovery: 'Export Autosave',
-  loadProfile: 'Load Profile',
-  new: 'New project',
+  duplicate: 'Duplicate',
+  importPlan: 'Open file',
+  importPrevious: 'Import',
+  new: 'New plan',
   openCopy: 'Open project',
+  openPlan: 'Open plan',
   publishGame: 'Send to game',
-  saveBeforeUpdate: 'Save before update',
-  saveProfile: 'Save Profile',
-  saveProfileAs: 'Save As',
+  revert: 'Revert to opened',
 });
-export const DEFAULT_PROFILE_FILE_NAME = 'run-plan.runplanner.json';
-export const DEFAULT_AUTOSAVE_EXPORT_FILE_NAME = 'run-planner-autosave.runplanner.json';
+const COPY_SUFFIX = ' (copy)';
 
 function errorDetail(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown project operation failure';
@@ -153,79 +152,52 @@ function failure(operation: ProjectOperation, error: unknown): ProjectOperationR
   );
 }
 
-function loadedProfileFileName(fileName: string): string {
-  if (fileName.trim().length === 0) {
-    throw new Error('Loaded profile filename must be non-blank');
-  }
-  return fileName;
+/** "X (copy)", shortened so it stays a valid plan name. */
+function copyName(name: string): string {
+  const room = PROJECT_NAME_MAX - Array.from(COPY_SUFFIX).length;
+  return `${Array.from(name).slice(0, room).join('').trimEnd()}${COPY_SUFFIX}`;
 }
 
 export function createProjectOperations(
   options: CreateProjectOperationsOptions,
 ): ProjectOperations {
-  let activeProfileFile = options.activeProfileFile ?? null;
   const currentPlans = new WeakMap<object, CurrentGamePlan>();
   const internalRunModifiers = options.devBuild ?? false;
-  const currentProject = () => selectPresentProject(options.store.getState());
   const mintProjectId = options.mintProjectId ?? mintRandomProjectId;
-  // Explicit saves run one at a time, so each reads the identity its predecessor wrote.
-  // An idle save starts at once, reading the snapshot of its invocation; a later one waits.
-  let inFlightSave: Promise<unknown> | null = null;
-  const serializedSave = (
-    task: () => Promise<ProjectOperationResult>,
+  let previousFile: OutsideProjectFile | null = null;
+  const library = () => {
+    if (options.library === undefined) {
+      throw new Error('The plan library is unavailable in this environment');
+    }
+    return options.library.operations;
+  };
+  const saver = () => {
+    if (options.library === undefined) {
+      throw new Error('The plan library is unavailable in this environment');
+    }
+    return options.library.saver;
+  };
+  /** Opens a filed plan, after writing the open one's pending edits. */
+  const openFiled = async (
+    operation: ProjectOperation,
+    plan: FiledPlan,
+    message: string,
   ): Promise<ProjectOperationResult> => {
-    const run = inFlightSave === null ? task() : inFlightSave.then(task, task);
-    const tracked: Promise<unknown> = run.finally(() => {
-      if (inFlightSave === tracked) inFlightSave = null;
-    });
-    inFlightSave = tracked;
-    return run;
+    const prepared = options.prepareProjectWorkspace(plan.project);
+    await saver().open(
+      plan.key,
+      () => options.store.dispatch(authoredProjectReplaced(prepared.project)),
+      { preserveOriginal: plan.olderOnDisk },
+    );
+    await library().rememberOpened({ key: plan.key, projectId: plan.project.projectId });
+    return result(
+      operation,
+      'success',
+      plan.migrationProvenance.length === 0
+        ? message
+        : migratedPlanMessage(plan.project, plan.migrationProvenance),
+    );
   };
-  const activateSaved = async (file: ProfileFileReference, operation: ProjectOperation) => {
-    try {
-      await file.activate();
-      return null;
-    } catch (error) {
-      return result(
-        operation,
-        'failure',
-        `${operationLabels[operation]} wrote ${file.fileName} but could not make it the active file: ${errorDetail(error)}`,
-      );
-    }
-  };
-  const saveProfileNow = async (): Promise<ProjectOperationResult> => {
-    try {
-      const snapshot = currentProject();
-      if (snapshot === undefined) {
-        throw new Error('No project is open');
-      }
-      const suggestedFileName =
-        selectProfileSession(options.store.getState()).fileName ?? DEFAULT_PROFILE_FILE_NAME;
-      const baselineJson = encodeProjectDocument(snapshot);
-      let savedFile = activeProfileFile;
-      if (savedFile === null) {
-        savedFile = await options.profileFile.saveAs(suggestedFileName, baselineJson);
-        if (savedFile === null) {
-          return result('saveProfile', 'cancelled', 'Save Profile cancelled.');
-        }
-        const activationFailure = await activateSaved(savedFile, 'saveProfile');
-        if (activationFailure !== null) return activationFailure;
-      } else {
-        await savedFile.write(baselineJson);
-      }
-      activeProfileFile = savedFile;
-      options.store.dispatch(profileSaveSucceeded({ baselineJson, fileName: savedFile.fileName }));
-      return result('saveProfile', 'success', 'Saved the profile.');
-    } catch (error) {
-      return failure('saveProfile', error);
-    }
-  };
-  const saveProfile = () => serializedSave(saveProfileNow);
-  // A project that is not both saved to a file and clean is saved first (Save As if never saved).
-  const saveUnlessClean = (): Promise<ProjectOperationResult> | null =>
-    activeProfileFile === null || selectProfileStatus(options.store.getState()) !== 'Clean'
-      ? saveProfile()
-      : null;
   const sendToGame = async (slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult> => {
     try {
       if (options.gamePlanPublisher === undefined) {
@@ -233,79 +205,52 @@ export function createProjectOperations(
       }
       const workspace = options.store.getState().projectWorkspace;
       if (workspace.kind !== 'openProject') throw new Error('No project is open');
-      // Checked before saving, so an unsendable plan is never saved on the way.
-      assembleExecutionProduct({
-        assembly: workspace.assembly,
-        catalog: options.catalog,
-        internalRunModifiers,
-      });
-      // Sending needs a saved file with no unsaved changes.
-      let saved = false;
-      const pendingSave = saveUnlessClean();
-      if (pendingSave !== null) {
-        const saving = await pendingSave;
-        if (saving.status === 'cancelled') {
-          return result('publishGame', 'cancelled', 'Send to game cancelled; nothing was sent.');
-        }
-        if (saving.status === 'failure') {
-          return result('publishGame', 'failure', `Not saved, so not sent: ${saving.message}`);
-        }
-        saved = true;
-      }
-      const notSent = (message: string) =>
-        result('publishGame', 'failure', saved ? `Saved, but not sent: ${message}` : message);
-      try {
-        // Compile the document as saved, since the save may have re-identified its history.
-        const savedWorkspace = options.store.getState().projectWorkspace;
-        if (savedWorkspace.kind !== 'openProject') throw new Error('No project is open');
-        const savedProject = selectPresentProject(options.store.getState());
-        if (savedProject === undefined) throw new Error('No project is open');
-        const plan = compileExecutionPlan({
-          product: assembleExecutionProduct({
-            assembly: savedWorkspace.assembly,
-            catalog: options.catalog,
-            internalRunModifiers,
-          }),
-          displayName: savedProject.name,
-        });
-        // The saved document and the options it compiled with, so the slot can be rebuilt.
-        const source = encodeSlotSource({
+      const project = workspace.history.present;
+      const plan = compileExecutionPlan({
+        product: assembleExecutionProduct({
+          assembly: workspace.assembly,
+          catalog: options.catalog,
           internalRunModifiers,
-          projectJson: encodeProjectDocument(savedProject),
-        });
-        const publication = await options.gamePlanPublisher.publish(
-          slotNumber,
-          encodeExecutionPlan(plan),
-          source,
-          projectGameSlotSummary(plan, options.catalog, new Date()),
-        );
-        if (publication.status === 'published') {
-          options.store.dispatch(gamePlanSent({ slot: slotNumber }));
-          if (publication.activationProblem !== null) {
-            options.store.dispatch(
-              gameSentSlotNotActivated({
-                slot: slotNumber,
-                message: publication.activationProblem,
-                atMs: Date.now(),
-              }),
-            );
-          }
-          return result('publishGame', 'success', `Published to game, Slot ${slotNumber}.`);
-        }
-        return notSent(
+        }),
+        displayName: project.name,
+      });
+      // The document and the options it compiled with, so the slot can be rebuilt.
+      const source = encodeSlotSource({
+        internalRunModifiers,
+        projectJson: encodeProjectDocument(project),
+      });
+      const publication = await options.gamePlanPublisher.publish(
+        slotNumber,
+        encodeExecutionPlan(plan),
+        source,
+        projectGameSlotSummary(plan, options.catalog, new Date()),
+      );
+      if (publication.status !== 'published') {
+        return result(
+          'publishGame',
+          'failure',
           publication.blockers.length > 0
             ? publication.blockers.map(describePublicationBlocker).join(' ')
             : publication.message,
         );
-      } catch (error) {
-        return notSent(errorDetail(error));
       }
+      options.store.dispatch(gamePlanSent({ slot: slotNumber }));
+      if (publication.activationProblem !== null) {
+        options.store.dispatch(
+          gameSentSlotNotActivated({
+            slot: slotNumber,
+            message: publication.activationProblem,
+            atMs: Date.now(),
+          }),
+        );
+      }
+      return result('publishGame', 'success', `Published to game, Slot ${slotNumber}.`);
     } catch (error) {
       return failure('publishGame', error);
     }
   };
+
   return Object.freeze({
-    saveAsAvailable: options.profileFile.supportsSaveAs === true,
     async createNew(
       routeKey: string,
       itineraryBiomeKeys?: readonly string[],
@@ -333,46 +278,110 @@ export function createProjectOperations(
           routeKey,
           ...(itineraryBiomeKeys === undefined ? {} : { itineraryBiomeKeys }),
         });
-        assertPublicProjectAdmission(options.catalog, project);
-        await options.profileFile.clearActive();
-        activeProfileFile = null;
-        options.store.dispatch(newProjectCreated(project));
-        return result('new', 'success', 'Created a new project.');
+        options.prepareProjectWorkspace(project);
+        return await openFiled('new', await library().create(project), 'Created a new plan.');
       } catch (error) {
         return failure('new', error);
       }
     },
-    discardAutosaveRecovery(): ProjectOperationResult {
+    async importPlan(): Promise<ProjectOperationResult> {
       try {
-        if (selectProfileSession(options.store.getState()).recoveryStatus !== 'blocked') {
-          throw new Error('No unreadable autosave is awaiting discard');
-        }
-        if (options.autosaveRecovery === undefined) {
-          throw new Error('Autosave recovery is unavailable in this environment');
-        }
-        options.autosaveRecovery.clear();
-        options.store.dispatch(recoveryDiscarded());
-        return result('discardRecovery', 'success', 'Discarded the unreadable autosave.');
+        const plan = await library().importChosenFile();
+        if (plan === null) return result('importPlan', 'cancelled', 'Open file cancelled.');
+        return await openFiled('importPlan', plan, 'Added the file to the library and opened it.');
       } catch (error) {
-        return failure('discardRecovery', error);
+        return failure('importPlan', error);
       }
     },
-    async exportAutosaveRecovery(): Promise<ProjectOperationResult> {
+    async openPlan(key: string): Promise<ProjectOperationResult> {
       try {
-        if (options.autosaveRecovery === undefined) {
-          throw new Error('Autosave recovery is unavailable in this environment');
-        }
-        const json = options.autosaveRecovery.read();
-        if (json === null) {
-          throw new Error('No autosave recovery copy is available');
-        }
-        const exported = await options.profileFile.saveAs(DEFAULT_AUTOSAVE_EXPORT_FILE_NAME, json);
-        if (exported === null) {
-          return result('exportRecovery', 'cancelled', 'Export Autosave cancelled.');
-        }
-        return result('exportRecovery', 'success', 'Exported the autosave copy.');
+        return await openFiled('openPlan', await library().read(key), 'Opened the plan.');
       } catch (error) {
-        return failure('exportRecovery', error);
+        return failure('openPlan', error);
+      }
+    },
+    async duplicate(): Promise<ProjectOperationResult> {
+      try {
+        const project = selectPresentProject(options.store.getState());
+        if (project === undefined) throw new Error('No plan is open');
+        await saver().flush();
+        const renamed = applyProjectCommand(project, options.catalog, {
+          kind: 'RenameProject',
+          project: createProjectAddress(),
+          name: copyName(project.name),
+        });
+        const copy = reidentifyProjectHistory(
+          createProjectHistory(renamed),
+          mintProjectId(),
+        ).present;
+        return await openFiled('duplicate', await library().create(copy), `Opened ${copy.name}.`);
+      } catch (error) {
+        return failure('duplicate', error);
+      }
+    },
+    revertToOpened(): ProjectOperationResult {
+      try {
+        const opened = options.store.getState().librarySession.opened;
+        if (opened === null) throw new Error('No plan is open');
+        options.store.dispatch(authoredProjectReverted(opened));
+        return result('revert', 'success', 'Reverted to the plan as it was opened.');
+      } catch (error) {
+        return failure('revert', error);
+      }
+    },
+    async openProjectCopy(json: string): Promise<ProjectOperationResult> {
+      try {
+        // A copy never shares the original's identity, so its sends are its own.
+        const plan = await library().importFile(
+          { fileName: 'project.runplanner.json', json },
+          { newIdentity: true },
+        );
+        return await openFiled('openCopy', plan, 'Added the project to the library and opened it.');
+      } catch (error) {
+        return failure('openCopy', error);
+      }
+    },
+    async acceptPreviousFile(): Promise<ProjectOperationResult> {
+      try {
+        if (previousFile === null) throw new Error('No earlier file is waiting to be imported');
+        const plan = await library().importFile(previousFile);
+        previousFile = null;
+        options.store.dispatch(previousFileOffered(null));
+        await library().settlePreviousFileOffer();
+        return await openFiled('importPrevious', plan, `Imported ${plan.project.name}.`);
+      } catch (error) {
+        return failure('importPrevious', error);
+      }
+    },
+    async declinePreviousFile(): Promise<void> {
+      previousFile = null;
+      options.store.dispatch(previousFileOffered(null));
+      await library().settlePreviousFileOffer();
+    },
+    async forgetLastOpened(): Promise<void> {
+      if (options.library === undefined) return;
+      await library().rememberOpened(null);
+    },
+    async restoreStartup(): Promise<void> {
+      if (options.library === undefined) return;
+      try {
+        const last = await library().readLastOpened();
+        if (last !== null) await openFiled('openPlan', last, 'Opened the plan.');
+      } catch (error) {
+        options.store.dispatch(
+          libraryOpenFailed({
+            message: `Could not reopen the last plan: ${errorDetail(error)}`,
+          }),
+        );
+      }
+      try {
+        previousFile = await library().previousFileOffer();
+        if (previousFile !== null) {
+          options.store.dispatch(previousFileOffered({ fileName: previousFile.fileName }));
+        }
+      } catch {
+        // Without a readable earlier file there is nothing to offer.
+        previousFile = null;
       }
     },
     inspectCurrentGamePlan(): CurrentGamePlan {
@@ -414,144 +423,25 @@ export function createProjectOperations(
       }
       return outcome;
     },
-    async saveBeforeUpdate(): Promise<ProjectOperationResult> {
-      if (options.store.getState().projectWorkspace.kind !== 'openProject') {
-        return result('saveBeforeUpdate', 'success', 'No project is open.');
+    async flush() {
+      if (options.library === undefined) {
+        return Object.freeze({ status: 'success' as const, message: 'Nothing to save.' });
       }
-      const pendingSave = saveUnlessClean();
-      if (pendingSave === null) {
-        return result('saveBeforeUpdate', 'success', 'The project is already saved.');
-      }
-      const saving = await pendingSave;
-      if (saving.status === 'cancelled') {
-        return result(
-          'saveBeforeUpdate',
-          'cancelled',
-          'Update cancelled; the project was not saved.',
-        );
-      }
-      if (saving.status === 'failure') {
-        return result(
-          'saveBeforeUpdate',
-          'failure',
-          `Not saved, so not updated: ${saving.message}`,
-        );
-      }
-      return result('saveBeforeUpdate', 'success', 'Saved the profile.');
-    },
-    saveProfile,
-    saveProfileAs: () =>
-      serializedSave(async (): Promise<ProjectOperationResult> => {
-        try {
-          const snapshot = currentProject();
-          if (snapshot === undefined) {
-            throw new Error('No project is open');
-          }
-          const suggestedFileName =
-            selectProfileSession(options.store.getState()).fileName ?? DEFAULT_PROFILE_FILE_NAME;
-          // A copy of an already-saved file is a different plan, so it takes a new identity;
-          // the first save of a never-saved project keeps its own.
-          const projectId = activeProfileFile === null ? snapshot.projectId : mintProjectId();
-          const baselineJson = encodeProjectDocument({ ...snapshot, projectId });
-          const savedFile = await options.profileFile.saveAs(suggestedFileName, baselineJson);
-          if (savedFile === null) {
-            return result('saveProfileAs', 'cancelled', 'Save As cancelled.');
-          }
-          const activationFailure = await activateSaved(savedFile, 'saveProfileAs');
-          if (activationFailure !== null) return activationFailure;
-          activeProfileFile = savedFile;
-          if (projectId !== snapshot.projectId) {
-            options.store.dispatch(projectIdentityMinted(projectId));
-          }
-          options.store.dispatch(
-            profileSaveSucceeded({ baselineJson, fileName: savedFile.fileName }),
-          );
-          return result('saveProfileAs', 'success', 'Saved as a new file.');
-        } catch (error) {
-          return failure('saveProfileAs', error);
-        }
-      }),
-    async openProjectCopy(json: string): Promise<ProjectOperationResult> {
       try {
-        const { project: loaded } = loadProjectDocument(json, options.catalog);
-        // A copy never shares the original's identity, so its sends are its own.
-        const project: ProjectDocument = { ...loaded, projectId: mintProjectId() };
-        assertPublicProjectAdmission(options.catalog, project);
-        await options.profileFile.clearActive();
-        activeProfileFile = null;
-        options.store.dispatch(newProjectCreated(project));
-        return result('openCopy', 'success', 'Opened the project as an unsaved copy.');
+        await options.library.saver.flush();
+        return Object.freeze({ status: 'success' as const, message: 'Saved the plan.' });
       } catch (error) {
-        return failure('openCopy', error);
-      }
-    },
-    async loadProfile(): Promise<ProjectOperationResult> {
-      try {
-        const loaded = await options.profileFile.load();
-        if (loaded === null) {
-          return result('loadProfile', 'cancelled', 'Load Profile cancelled.');
-        }
-        const fileName = loadedProfileFileName(loaded.file.fileName);
-        const loadedDocument = loadProjectDocument(loaded.json, options.catalog, {
-          legacyName: profileFileStem(fileName),
+        return Object.freeze({
+          status: 'failure' as const,
+          message: `Could not save the plan: ${errorDetail(error)}`,
         });
-        const { project } = loadedDocument;
-        assertPublicProjectAdmission(options.catalog, project);
-        const baselineJson = encodeProjectDocument(project);
-        const prepared = options.prepareProjectWorkspace(project);
-        const autosaveRecovery = options.autosaveRecovery;
-        let clearedRecoveryJson: string | null = null;
-        if (selectProfileSession(options.store.getState()).recoveryStatus === 'blocked') {
-          if (autosaveRecovery === undefined) {
-            throw new Error('Autosave recovery is unavailable in this environment');
-          }
-          const recoveryJson = autosaveRecovery.read();
-          if (recoveryJson === null) {
-            throw new Error('Blocked autosave recovery is missing');
-          }
-          autosaveRecovery.clear();
-          clearedRecoveryJson = recoveryJson;
-        }
-        try {
-          await loaded.file.activate();
-        } catch (error) {
-          if (clearedRecoveryJson !== null && autosaveRecovery !== undefined) {
-            try {
-              autosaveRecovery.write(clearedRecoveryJson);
-            } catch (restoreError) {
-              throw new Error(
-                `${errorDetail(error)}; restoring blocked autosave also failed: ${errorDetail(restoreError)}`,
-                { cause: restoreError },
-              );
-            }
-          }
-          throw error;
-        }
-        options.store.dispatch(
-          profileLoadSucceeded({
-            assembly: prepared.assembly,
-            project,
-            baselineJson,
-            fileName,
-          }),
-        );
-        activeProfileFile = loaded.file;
-        return result(
-          'loadProfile',
-          'success',
-          loadedDocument.migrationProvenance.length === 0
-            ? 'Loaded the profile.'
-            : migratedProfileMessage(project, loadedDocument.migrationProvenance),
-        );
-      } catch (error) {
-        return failure('loadProfile', error);
       }
     },
   });
 }
 
-/** Names the repairs a migrated profile may need, by the migrations it went through. */
-function migratedProfileMessage(
+/** Names the repairs a migrated plan may need, by the migrations it went through. */
+function migratedPlanMessage(
   project: ProjectDocument,
   provenance: readonly { readonly sourceSchemaVersion: number }[],
 ): string {
@@ -570,6 +460,6 @@ function migratedProfileMessage(
       ? ['retained encounter choices may need missing fields repaired']
       : []),
   ];
-  const migrated = `Migrated the profile to schema ${PROJECT_DOCUMENT_SCHEMA_VERSION}`;
+  const migrated = `Migrated the plan to schema ${PROJECT_DOCUMENT_SCHEMA_VERSION}`;
   return repairs.length === 0 ? `${migrated}.` : `${migrated}; ${repairs.join(', and ')}.`;
 }

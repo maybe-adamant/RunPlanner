@@ -5,8 +5,9 @@ import { Provider } from 'react-redux';
 
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import { createProjectDocument } from '@run-planner/engine/authored-project';
-import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import { App } from '@planner/ui/shell/App';
+import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
+import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 
 interface RenderPlannerOptions {
   readonly application?: PlannerApplication;
@@ -19,7 +20,7 @@ interface RenderPlannerOptions {
 export function createOpenTestApplication(routeKey = 'Underworld'): PlannerApplication {
   const application = createApplication();
   application.store.dispatch(
-    newProjectCreated(
+    authoredProjectReplaced(
       createProjectDocument(application.catalog, {
         projectId: 'run-plan',
         routeKey,
@@ -33,7 +34,9 @@ export function createOpenTestApplication(routeKey = 'Underworld'): PlannerAppli
 export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) {
   const application =
     options.application ??
-    (options.startWithProject === false ? createApplication() : createOpenTestApplication());
+    (options.startWithProject === false
+      ? createApplication({ projectLibrary: createMemoryProjectLibrary().adapter })
+      : createOpenTestApplication());
   const user = userEvent.setup();
   const view = render(
     <Provider store={application.store}>

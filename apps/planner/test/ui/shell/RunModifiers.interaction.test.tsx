@@ -22,7 +22,6 @@ import {
 } from '@planner-test/fixtures/renderPlanner';
 import { hintOf } from '@planner-test/support/hints';
 import { createApplication } from '@planner/composition/createApplication';
-import { newProjectCreated } from '@planner/state/profileSessionSlice';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
 afterEach(cleanup);
@@ -165,7 +164,7 @@ describe('Practice mode', () => {
     const application = createApplication({ devBuild: false });
     const golden = createGoldenFGHIProject();
     application.store.dispatch(
-      newProjectCreated(
+      authoredProjectReplaced(
         startPoint === undefined
           ? golden
           : {

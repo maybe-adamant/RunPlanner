@@ -5,15 +5,16 @@ import { ActionIcon } from '../controls/ActionIcon';
 
 interface ApplicationFaultBoundaryProps {
   readonly children: ReactNode;
-  readonly discardRecoveryAndReload: () => void;
-  readonly exportAutosaveRecovery: () => Promise<ProjectOperationResult>;
-  readonly loadProfile: () => Promise<ProjectOperationResult>;
+  /** Imports a file into the library and opens it in place of the failing plan. */
+  readonly openFile: () => Promise<ProjectOperationResult>;
   readonly reload: () => void;
+  /** Reloads without reopening the failing plan; it stays in the library. */
+  readonly reloadWithoutPlan: () => void;
 }
 
 interface ApplicationFaultBoundaryState {
   readonly error: Error | null;
-  readonly pendingOperation: 'exportRecovery' | 'loadProfile' | null;
+  readonly pendingOperation: 'importPlan' | null;
   readonly result: ProjectOperationResult | null;
 }
 
@@ -66,36 +67,21 @@ export class ApplicationFaultBoundary extends Component<
     this.setState({ error: normalizedError(event.reason), pendingOperation: null });
   };
 
-  private readonly loadAnotherProfile = async (): Promise<void> => {
-    this.setState({ pendingOperation: 'loadProfile', result: null });
+  private readonly openAnotherFile = async (): Promise<void> => {
+    this.setState({ pendingOperation: 'importPlan', result: null });
     let result: ProjectOperationResult;
     try {
-      result = await this.props.loadProfile();
+      result = await this.props.openFile();
     } catch (error) {
       result = {
-        operation: 'loadProfile',
+        operation: 'importPlan',
         status: 'failure',
-        message: `Load Profile failed: ${normalizedError(error).message}`,
+        message: `Open file failed: ${normalizedError(error).message}`,
       };
     }
     if (result.status === 'success') {
       this.setState({ error: null, pendingOperation: null, result: null });
       return;
-    }
-    this.setState({ pendingOperation: null, result });
-  };
-
-  private readonly exportAutosave = async (): Promise<void> => {
-    this.setState({ pendingOperation: 'exportRecovery', result: null });
-    let result: ProjectOperationResult;
-    try {
-      result = await this.props.exportAutosaveRecovery();
-    } catch (error) {
-      result = {
-        operation: 'exportRecovery',
-        status: 'failure',
-        message: `Export Autosave failed: ${normalizedError(error).message}`,
-      };
     }
     this.setState({ pendingOperation: null, result });
   };
@@ -109,8 +95,8 @@ export class ApplicationFaultBoundary extends Component<
           <p className="eyebrow">Recovery</p>
           <h1 id="application-fault-title">Run Planner could not display this project</h1>
           <p>
-            The project file was not changed. You can export the autosave for debugging, load
-            another project, or reload the application and return to startup recovery.
+            The plan is still in your library as it was last saved. You can open another file,
+            reload the application, or start without reopening this plan.
           </p>
           {this.state.result === null ? null : (
             <p
@@ -125,30 +111,17 @@ export class ApplicationFaultBoundary extends Component<
             <button
               className="secondary-action"
               disabled={this.state.pendingOperation !== null}
-              onClick={() => void this.loadAnotherProfile()}
+              onClick={() => void this.openAnotherFile()}
               type="button"
             >
               <ActionIcon name="load" />
-              {this.state.pendingOperation === 'loadProfile' ? 'Loading…' : 'Load another project'}
-            </button>
-            <button
-              className="secondary-action"
-              disabled={this.state.pendingOperation !== null}
-              onClick={() => void this.exportAutosave()}
-              type="button"
-            >
-              <ActionIcon name="save" />
-              {this.state.pendingOperation === 'exportRecovery' ? 'Exporting…' : 'Export Autosave'}
+              {this.state.pendingOperation === 'importPlan' ? 'Opening…' : 'Open another file'}
             </button>
             <button className="quiet-action" onClick={this.props.reload} type="button">
               Reload application
             </button>
-            <button
-              className="danger-action"
-              onClick={this.props.discardRecoveryAndReload}
-              type="button"
-            >
-              Start without recovered project
+            <button className="danger-action" onClick={this.props.reloadWithoutPlan} type="button">
+              Start without this plan
             </button>
           </div>
           <details className="application-fault-details">

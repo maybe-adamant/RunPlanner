@@ -12,17 +12,13 @@ import { createContextualPickerProjection } from '../projections/contextual/cont
 import { createRewardPickerProjection } from '../projections/rewards/rewardPicker';
 import { createTraitDomainProjection } from '../projections/rewards/traitDomainProjection';
 import { createStructuredWorkspaceProjection } from '../projections/structured-workspace';
-import {
-  createAutosaveCoordinator,
-  restoreStartupProject,
-  type AutosaveRecoveryAdapter,
-  type AutosaveScheduler,
-} from '../persistence/autosaveRecovery';
 import { assertPublicProjectAdmission } from '../workspace/project-admission';
 import { createEditorNavigation } from '../projections/editorNavigation';
 import { createEditorSessionReconciliationCoordinator } from '../workspace/editorSessionReconciliation';
 import { createProjectOperations } from '../workspace/projectOperations';
 import { createProjectLibraryOperations } from '../workspace/projectLibrary';
+import { createLibrarySaver, type SaveScheduler } from '../workspace/librarySave';
+import { createCloseRequestController } from '../workspace/closeRequest';
 import type { ProjectLibraryAdapter } from '../persistence/projectLibrary';
 import { createBugReportOperations } from '../workspace/bugReport';
 import {
@@ -30,11 +26,6 @@ import {
   type EventDismissalPreference,
 } from '../workspace/communityEvents';
 import { allocateOccurrenceId, type OccurrenceIdFactory } from '../workspace/occurrenceIds';
-import {
-  createUnavailableProfileFileAdapter,
-  type ProfileFileAdapter,
-  type ProfileFileRestoreResult,
-} from '../persistence/profileFile';
 import { createGameStatusController, type GameModuleHost } from '../persistence/gameModuleHost';
 import type {
   CommunityEventDevelopmentHost,
@@ -42,7 +33,6 @@ import type {
 } from '../persistence/communityEventHost';
 import { createPlannerStore } from '../state/store';
 import type { PreparedProjectWorkspace } from '../state/projectWorkspaceSlice';
-import { profileFileErrorReported } from '../state/profileSessionSlice';
 import { createSlotRebuildController } from '../workspace/slotRebuild';
 import {
   createDraftRunController,
@@ -53,15 +43,14 @@ import { createDevelopmentBuildIdentity, type BuildIdentity } from './buildIdent
 
 export interface CreateApplicationOptions {
   readonly allocateOccurrenceId?: OccurrenceIdFactory;
-  readonly autosaveDelayMs?: number;
-  readonly autosaveRecovery?: AutosaveRecoveryAdapter;
-  readonly autosaveScheduler?: AutosaveScheduler;
   readonly buildIdentity?: BuildIdentity;
   /** Authors `internal` run modifiers; defaults to the Vite development build flag. */
   readonly devBuild?: boolean;
-  readonly profileFile?: ProfileFileAdapter;
-  readonly profileFileRestore?: ProfileFileRestoreResult;
+  /** Where plans are stored; every edit of the open plan is written there. */
   readonly projectLibrary?: ProjectLibraryAdapter;
+  /** Debounces those writes; defaults to timers. */
+  readonly saveScheduler?: SaveScheduler;
+  readonly saveDelayMs?: number;
   readonly gameModuleHost?: GameModuleHost;
   /** The signed community event feed; given with the game module host. */
   readonly communityEventHost?: CommunityEventHost;
@@ -83,9 +72,6 @@ export type ApplicationEvaluationEvent =
     };
 
 export function createApplication(options: CreateApplicationOptions = {}) {
-  if ((options.autosaveRecovery === undefined) !== (options.autosaveScheduler === undefined)) {
-    throw new Error('Autosave recovery adapter and scheduler must be provided together');
-  }
   const editorNavigation = createEditorNavigation(catalog);
   const rerollSeed = options.rerollSeed ?? (() => Math.floor(Math.random() * 1_000_000));
   const evaluationCache = new WeakMap<
@@ -136,19 +122,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     }
     return Object.freeze({ assembly, project });
   };
-  const profileFile = options.profileFile ?? createUnavailableProfileFileAdapter();
-  const startup = restoreStartupProject(
-    catalog,
-    options.autosaveRecovery,
-    prepareProjectWorkspace,
-    options.profileFileRestore,
-  );
-  const store = createPlannerStore({
-    catalog,
-    assembleProjectEvaluation,
-    initialProfileSession: startup.profileSession,
-    ...(startup.preparedProject === undefined ? {} : { initialWorkspace: startup.preparedProject }),
-  });
+  const store = createPlannerStore({ catalog, assembleProjectEvaluation });
   const draftRun = createDraftRunController({
     catalog,
     store,
@@ -159,40 +133,47 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     store,
     structuredWorkspace,
   });
+  const libraryOperations =
+    options.projectLibrary === undefined
+      ? undefined
+      : createProjectLibraryOperations({
+          adapter: options.projectLibrary,
+          catalog,
+          ...(options.mintProjectId === undefined ? {} : { mintProjectId: options.mintProjectId }),
+        });
+  const librarySaver =
+    options.projectLibrary === undefined || libraryOperations === undefined
+      ? undefined
+      : createLibrarySaver({
+          adapter: options.projectLibrary,
+          delayMs: options.saveDelayMs ?? 400,
+          onRefiled: (key, project) =>
+            void libraryOperations
+              .rememberOpened({ key, projectId: project.projectId })
+              .catch(() => {
+                // The next open or rename records the plan again.
+              }),
+          scheduler: options.saveScheduler ?? {
+            schedule: (delayMs, task) => {
+              const handle = globalThis.setTimeout(task, delayMs);
+              return () => globalThis.clearTimeout(handle);
+            },
+          },
+          store,
+        });
   const projectOperations = createProjectOperations({
-    ...(startup.activeProfileFile === undefined
-      ? {}
-      : { activeProfileFile: startup.activeProfileFile }),
-    ...(options.autosaveRecovery === undefined
-      ? {}
-      : { autosaveRecovery: options.autosaveRecovery }),
     catalog,
     devBuild,
-    profileFile,
+    ...(libraryOperations === undefined || librarySaver === undefined
+      ? {}
+      : { library: { operations: libraryOperations, saver: librarySaver } }),
     prepareProjectWorkspace,
     ...(options.gameModuleHost === undefined ? {} : { gamePlanPublisher: options.gameModuleHost }),
     ...(options.mintProjectId === undefined ? {} : { mintProjectId: options.mintProjectId }),
     store,
   });
-  const autosaveCoordinator =
-    options.autosaveRecovery === undefined || options.autosaveScheduler === undefined
-      ? undefined
-      : createAutosaveCoordinator({
-          adapter: options.autosaveRecovery,
-          delayMs: options.autosaveDelayMs ?? 500,
-          scheduler: options.autosaveScheduler,
-          store,
-        });
-  const startupReady = startup.clearActiveProfileFile
-    ? profileFile.clearActive().catch((error: unknown) => {
-        const existing = store.getState().profileSession.profileFileError;
-        store.dispatch(
-          profileFileErrorReported({
-            message: `${existing === null ? '' : `${existing} `}Could not clear the unsafe active profile: ${error instanceof Error ? error.message : String(error)}`,
-          }),
-        );
-      })
-    : Promise.resolve();
+  const startupReady = projectOperations.restoreStartup();
+  const closeRequest = createCloseRequestController(() => projectOperations.flush());
   const selectStructuredWorkspace = (state: ReturnType<typeof store.getState>) =>
     state.projectWorkspace.kind === 'openProject'
       ? structuredWorkspace.project(state.projectWorkspace.assembly)
@@ -257,20 +238,12 @@ export function createApplication(options: CreateApplicationOptions = {}) {
           }),
     catalog,
     catalogSummary,
+    closeRequest,
     editorNavigation,
     communityEvents,
     draftRun,
     gameStatus,
-    projectLibrary:
-      options.projectLibrary === undefined
-        ? undefined
-        : createProjectLibraryOperations({
-            adapter: options.projectLibrary,
-            catalog,
-            ...(options.mintProjectId === undefined
-              ? {}
-              : { mintProjectId: options.mintProjectId }),
-          }),
+    projectLibrary: libraryOperations,
     projectOperations,
     slotRebuild,
     store,
@@ -280,7 +253,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     dispose(): void {
       editorSessionReconciliation.dispose();
       draftRun.dispose();
-      autosaveCoordinator?.dispose();
+      librarySaver?.dispose();
       communityEvents?.dispose();
     },
   };

@@ -15,6 +15,7 @@ import {
   gameModuleStatus,
 } from '@planner-test/fixtures/gameModuleHost';
 import type { GameActiveSlot } from '@planner/persistence/gameModuleHost';
+import type { ProjectOperations } from '@planner/workspace/projectOperations';
 
 afterEach(() => {
   cleanup();
@@ -63,7 +64,6 @@ describe('Notice area', () => {
     render(
       <NoticeArea
         communityEvents={eventController({ kind: 'active', event, problem: null })}
-        installLabel="Install and restart"
         releaseUpdates={releaseUpdates}
       />,
     );
@@ -78,13 +78,7 @@ describe('Notice area', () => {
   it('shows details, opens the project, copies its link and dismisses', async () => {
     const controller = eventController({ kind: 'active', event, problem: null });
     const user = userEvent.setup();
-    render(
-      <NoticeArea
-        communityEvents={controller}
-        installLabel="Install and restart"
-        releaseUpdates={undefined}
-      />,
-    );
+    render(<NoticeArea communityEvents={controller} releaseUpdates={undefined} />);
     const notice = screen.getByRole('complementary', { name: 'Community event' });
     expect(within(notice).getByText('ends', { exact: false }).querySelector('time')?.dateTime).toBe(
       '2026-10-19T00:00:00Z',
@@ -120,13 +114,7 @@ describe('Notice area', () => {
       fallbackSlotHasPlan: true,
     });
     const user = userEvent.setup();
-    render(
-      <NoticeArea
-        communityEvents={controller}
-        installLabel="Install and restart"
-        releaseUpdates={undefined}
-      />,
-    );
+    render(<NoticeArea communityEvents={controller} releaseUpdates={undefined} />);
     const notice = screen.getByRole('status', { name: 'Community event' });
     const title = within(notice).getByText('Event ended: Week 42: Staff sprint.');
     // The ended notice shares the active notice's truncated headline and actions row.
@@ -155,7 +143,6 @@ describe('Notice area', () => {
           title: null,
           fallbackSlotHasPlan: false,
         })}
-        installLabel="Install and restart"
         releaseUpdates={undefined}
       />,
     );
@@ -171,7 +158,6 @@ describe('Notice area', () => {
           event,
           problem: 'Update the planner to play this event.',
         })}
-        installLabel="Install and restart"
         releaseUpdates={undefined}
       />,
     );
@@ -181,29 +167,31 @@ describe('Notice area', () => {
     expect(within(notice).getByRole('button', { name: 'Open project' })).toBeTruthy();
   });
 
-  it('asks before an event project replaces unsaved work', async () => {
-    const controller = eventController({ kind: 'active', event, problem: null });
+  it('offers the file open before the library once, ahead of the event', async () => {
+    const operations = {
+      acceptPreviousFile: vi.fn(() =>
+        Promise.resolve({ operation: 'importPrevious', status: 'failure', message: 'Unreadable.' }),
+      ),
+      declinePreviousFile: vi.fn(() => Promise.resolve()),
+    } as unknown as ProjectOperations;
     const user = userEvent.setup();
     render(
       <NoticeArea
-        communityEvents={controller}
-        confirmOpenProject
-        installLabel="Install and restart"
+        communityEvents={eventController({ kind: 'active', event, problem: null })}
+        previousFile={{ fileName: 'Surface.runplanner.json', operations }}
         releaseUpdates={undefined}
       />,
     );
-    await user.click(screen.getByRole('button', { name: 'Open project' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Replace the open project?' });
-    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
-    expect(controller.openProject).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Open project' }));
-    await user.click(
-      within(await screen.findByRole('dialog', { name: 'Replace the open project?' })).getByRole(
-        'button',
-        { name: 'Open project' },
-      ),
-    );
-    expect(controller.openProject).toHaveBeenCalledTimes(1);
+    const notice = screen.getByRole('status', { name: 'Earlier plan' });
+    expect(
+      within(notice).getByText('Import Surface.runplanner.json into your library?'),
+    ).toBeTruthy();
+    expect(screen.queryByText('Event: Week 42: Staff sprint')).toBeNull();
+    await user.click(within(notice).getByRole('button', { name: 'Import' }));
+    expect(operations.acceptPreviousFile).toHaveBeenCalledOnce();
+    expect((await within(notice).findByRole('alert')).textContent).toBe('Unreadable.');
+    await user.click(within(notice).getByRole('button', { name: 'Not now' }));
+    expect(operations.declinePreviousFile).toHaveBeenCalledOnce();
   });
 
   it('copies the link in place, without inserting a row, then restores the label', async () => {
@@ -216,7 +204,6 @@ describe('Notice area', () => {
           event: { ...event, title: 'x'.repeat(80) },
           problem: null,
         })}
-        installLabel="Install and restart"
         releaseUpdates={undefined}
       />,
     );
@@ -268,7 +255,6 @@ describe('Notice area', () => {
       <NoticeArea
         communityEvents={controller}
         gameStatus={gameStatus}
-        installLabel="Install and restart"
         releaseUpdates={undefined}
       />,
     );

@@ -318,12 +318,6 @@
   color: #9bd7af;
 }
 
-.profile-status[data-profile-status='dirty'],
-.profile-status[data-profile-status='recovered'] {
-  border-color: #755d32;
-  color: #e6c27a;
-}
-
 .project-operation-result {
   margin: 0;
   color: #aaa7af;

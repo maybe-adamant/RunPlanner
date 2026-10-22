@@ -12,8 +12,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { routePanelSelected } from '@planner/state/editorSessionSlice';
-import { newProjectCreated } from '@planner/state/profileSessionSlice';
-import { authoredProjectUndoRequested } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectUndoRequested,
+  authoredProjectReplaced,
+} from '@planner/state/projectWorkspaceSlice';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 
 afterEach(() => {
@@ -25,7 +27,7 @@ afterEach(() => {
 function open(routeKey = 'Underworld') {
   const application = createApplication({});
   application.store.dispatch(
-    newProjectCreated(
+    authoredProjectReplaced(
       createProjectDocument(application.catalog, {
         projectId: 'share',
         routeKey,

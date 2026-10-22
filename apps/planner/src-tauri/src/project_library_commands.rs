@@ -3,10 +3,10 @@ use std::sync::Mutex;
 
 use tauri::{Manager, State};
 
+use run_planner_game_host::library_session::{self, LibrarySession, PreviousFile};
 use run_planner_game_host::project_library::{self, LibraryEntry, NativeRecycler};
 
 use crate::game_module_commands::config_dir;
-use crate::profile_file_session::{self, RestoredProfileFile};
 
 /// Serializes library file changes, so a rename never races a write of the same plan.
 #[derive(Default)]
@@ -77,15 +77,16 @@ pub(crate) fn project_library_delete(
     })
 }
 
+/// Recycles a copy of a plan as it is now, before the planner first rewrites an older schema.
 #[tauri::command(async)]
-pub(crate) fn project_library_restore(
+pub(crate) fn project_library_preserve_original(
     app: tauri::AppHandle,
     lock: State<'_, ProjectLibraryLock>,
     key: String,
-) -> Result<LibraryEntry, String> {
+) -> Result<(), String> {
     let folder = library_folder(&app)?;
     locked(&lock, || {
-        project_library::restore(&folder, &key, &mut NativeRecycler)
+        project_library::preserve_original(&folder, &key, &mut NativeRecycler)
     })
 }
 
@@ -97,12 +98,27 @@ pub(crate) fn project_library_reveal(app: tauri::AppHandle) -> Result<(), String
     reveal_folder(&folder)
 }
 
-/// The file the planner last had open before the library, without forgetting it.
+#[tauri::command]
+pub(crate) fn project_library_session_read(
+    app: tauri::AppHandle,
+) -> Result<LibrarySession, String> {
+    Ok(library_session::read(&config_dir(&app)?))
+}
+
+#[tauri::command]
+pub(crate) fn project_library_session_write(
+    app: tauri::AppHandle,
+    session: LibrarySession,
+) -> Result<(), String> {
+    library_session::write(&config_dir(&app)?, &session)
+}
+
+/// The file the planner last had open before the library.
 #[tauri::command(async)]
 pub(crate) fn project_library_previous_active(
     app: tauri::AppHandle,
-) -> Result<Option<RestoredProfileFile>, String> {
-    profile_file_session::previous_active(&config_dir(&app)?)
+) -> Result<Option<PreviousFile>, String> {
+    library_session::previous_active_file(&config_dir(&app)?)
 }
 
 #[cfg(target_os = "windows")]

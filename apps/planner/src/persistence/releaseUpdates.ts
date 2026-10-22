@@ -17,9 +17,9 @@ export interface ReleaseUpdateHost {
   installUpdate(version: string): Promise<AvailableUpdate | null>;
 }
 
-/** Saves the open project if needed before the application closes to update. */
+/** Writes the open plan's pending edits before the application closes to update. */
 export type SaveBeforeInstall = () => Promise<{
-  readonly status: 'cancelled' | 'failure' | 'success';
+  readonly status: 'failure' | 'success';
   readonly message: string;
 }>;
 
@@ -45,7 +45,7 @@ export interface ReleaseUpdateController {
   /** Asks the user to confirm installing the available update. */
   requestInstall(): void;
   cancelInstall(): void;
-  /** Saves if needed, then installs; only after `requestInstall`, or to retry a failed install. */
+  /** Saves pending edits, then installs; only after `requestInstall`, or to retry a failed install. */
   confirmInstall(): Promise<void>;
   later(): void;
   skip(): void;

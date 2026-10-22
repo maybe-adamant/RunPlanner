@@ -2,7 +2,6 @@ import type { ContextualPickerModel } from '@planner/projections/contextual/cont
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ExecutionCompilerError } from '@run-planner/engine/execution-plan';
 import type { StartPointPublicationBlock } from '@run-planner/engine/execution-plan';
-import type { ProfileStatus } from '@planner/state/store';
 import type { CurrentGamePlan } from '@planner/workspace/projectOperations';
 import type { SlotRebuildReport } from '@planner/workspace/slotRebuild';
 import { describeStartPointBlocked } from '@planner/projections/startPointCopy';
@@ -504,25 +503,6 @@ export function projectGameIndicator(
     : { state: 'needsSetup', symbol: '!', accessibleName: 'Game — needs setup' };
 }
 
-/** Whether sending first needs a save: never saved, unsaved changes, or clean. */
-export type GameSaveState = 'unsaved' | 'dirty' | 'clean';
-
-export function gameSaveState(
-  profileStatus: ProfileStatus,
-  fileName: string | null,
-): GameSaveState {
-  switch (profileStatus) {
-    case 'Clean':
-      return 'clean';
-    case 'Dirty':
-      return 'dirty';
-    case 'Recovered':
-      return fileName === null ? 'unsaved' : 'dirty';
-    case 'Unsaved':
-      return 'unsaved';
-  }
-}
-
 export type GamePlanSlotSummary = 'Empty' | 'Unreadable';
 
 const SLOT_SUMMARIES: Readonly<Record<GamePlanSlot['state'], GamePlanSlotSummary | null>> = {
@@ -674,19 +654,9 @@ function slotMarker(slot: GamePlanSlot, current: CurrentGamePlan): GamePlanSlotR
   return slot.planFingerprint === current.planFingerprint ? 'current' : 'olderVersion';
 }
 
-function slotAction(
-  slot: GamePlanSlot,
-  saveState: GameSaveState,
-): NonNullable<GamePlanSlotRow['action']> {
+function slotAction(slot: GamePlanSlot): NonNullable<GamePlanSlotRow['action']> {
   const confirm = slot.state !== 'empty';
-  switch (saveState) {
-    case 'clean':
-      return { label: confirm ? 'Replace' : 'Send here', confirm };
-    case 'dirty':
-      return { label: 'Save and send', confirm };
-    case 'unsaved':
-      return { label: 'Save and send…', confirm };
-  }
+  return { label: confirm ? 'Replace' : 'Send here', confirm };
 }
 
 function unavailableReason(current: CurrentGamePlan): string | null {
@@ -769,7 +739,6 @@ function eventSlotRow(slot: GameEventSlot, catalog: Catalog, now: number): GameE
 export function projectGamePlans(
   status: GameModuleStatus,
   current: CurrentGamePlan,
-  saveState: GameSaveState,
   catalog: Catalog,
   now: number,
   rebuild: SlotRebuildReport | null = null,
@@ -791,7 +760,7 @@ export function projectGamePlans(
       summary: SLOT_SUMMARIES[slot.state],
       note: slotNote(slot, rebuild),
       marker: slotMarker(slot, current),
-      action: reason === null ? slotAction(slot, saveState) : null,
+      action: reason === null ? slotAction(slot) : null,
     })),
   });
 }
@@ -949,7 +918,6 @@ export type GameSendButtonLabel =
   | 'Send to game'
   | 'Send to game…'
   | `Send · Slot ${GamePlanSlotNumber}`
-  | 'Saving…'
   | 'Sending…'
   | `✓ Sent · Slot ${GamePlanSlotNumber}`
   | '! Not sent';
@@ -961,7 +929,6 @@ export interface GameSendButton {
     | 'notSendable'
     | 'chooseSlot'
     | 'ready'
-    | 'saving'
     | 'sending'
     | 'sent'
     | 'failed';
@@ -1003,15 +970,12 @@ export function projectGameSendButton(
   status: GameModuleStatus | null,
   project: GameSendProject | null,
   lastSentSlot: GamePlanSlotNumber | null,
-  saveState: GameSaveState,
   activity: GameSendActivity,
   activationFailure: GameActivationFailure | null = null,
 ): GameSendButton {
   switch (activity.kind) {
     case 'sending':
-      return saveState === 'clean'
-        ? inactive('sending', 'Sending…', null)
-        : inactive('saving', 'Saving…', null);
+      return inactive('sending', 'Sending…', null);
     case 'sent':
       return inactive(
         'sent',
@@ -1042,7 +1006,7 @@ export function projectGameSendButton(
     slot?.state === 'empty' ||
     ((slot?.state === 'present' || slot?.state === 'stale') &&
       slot.projectId === project.projectId);
-  if (lastSentSlot === null || !ownSlot || saveState === 'unsaved') {
+  if (lastSentSlot === null || !ownSlot) {
     return {
       state: 'chooseSlot',
       label: 'Send to game…',
@@ -1054,8 +1018,7 @@ export function projectGameSendButton(
     state: 'ready',
     label: `Send · Slot ${lastSentSlot}`,
     action: { kind: 'send', slot: lastSentSlot },
-    description:
-      saveState === 'clean' ? null : `Saves your changes, then sends to slot ${lastSentSlot}.`,
+    description: null,
   };
 }
 

@@ -1,61 +1,48 @@
 import * as Popover from '@radix-ui/react-popover';
-import type { ProfileSessionState } from '@planner/state/profileSessionSlice';
-import type { ProfileStatus } from '@planner/state/store';
+import type { LibrarySessionState } from '@planner/state/librarySessionSlice';
 import type {
   ProjectOperation,
   ProjectOperationResult,
 } from '@planner/workspace/projectOperations';
 
-const statusLabels: Record<ProfileStatus, string> = {
-  Clean: 'Saved',
-  Dirty: 'Unsaved changes',
-  Unsaved: 'Not saved',
-  Recovered: 'Recovered',
-};
-
 const failureLabels: Record<ProjectOperation, string> = {
-  new: 'Couldn’t create project',
+  new: 'Couldn’t create plan',
+  importPlan: 'Couldn’t open file',
+  openPlan: 'Couldn’t open plan',
+  duplicate: 'Couldn’t duplicate plan',
+  revert: 'Couldn’t revert plan',
   openCopy: 'Couldn’t open project',
-  loadProfile: 'Couldn’t load file',
-  saveProfile: 'Couldn’t save file',
-  saveProfileAs: 'Couldn’t save file',
+  importPrevious: 'Couldn’t import file',
   publishGame: 'Couldn’t publish to game',
-  saveBeforeUpdate: 'Couldn’t save before updating',
-  exportRecovery: 'Couldn’t export autosave',
-  discardRecovery: 'Couldn’t discard autosave',
 };
 
 const successLabels: Record<ProjectOperation, string> = {
-  new: 'Project created',
+  new: 'Plan created',
+  importPlan: 'File added to library',
+  openPlan: 'Plan opened',
+  duplicate: 'Plan duplicated',
+  revert: 'Plan reverted',
   openCopy: 'Project opened',
-  loadProfile: 'File loaded',
-  saveProfile: 'File saved',
-  saveProfileAs: 'Saved as new file',
+  importPrevious: 'File imported',
   publishGame: 'Published to game',
-  saveBeforeUpdate: 'File saved',
-  exportRecovery: 'Autosave exported',
-  discardRecovery: 'Autosave discarded',
 };
 
 export function ProjectFileFeedback({
-  status,
+  savesAsYouEdit,
   session,
   result,
 }: {
-  readonly status: ProfileStatus | undefined;
-  readonly session: Pick<
-    ProfileSessionState,
-    'recoveryError' | 'autosaveError' | 'profileFileError'
-  >;
+  /** Whether a plan is open, so its edits are being saved. */
+  readonly savesAsYouEdit: boolean;
+  readonly session: Pick<LibrarySessionState, 'writeError' | 'openError'>;
   readonly result: ProjectOperationResult | null;
 }) {
   const errors = [
     ...(result?.status === 'failure'
       ? [{ key: 'operation', label: failureLabels[result.operation], detail: result.message }]
       : []),
-    { key: 'recovery', label: 'Couldn’t recover autosave', detail: session.recoveryError },
-    { key: 'autosave', label: 'Autosave failed', detail: session.autosaveError },
-    { key: 'file', label: 'File recovery needs attention', detail: session.profileFileError },
+    { key: 'write', label: 'Not saved', detail: session.writeError },
+    { key: 'open', label: 'Couldn’t reopen plan', detail: session.openError },
   ].filter((error) => error.detail !== null);
 
   return (
@@ -76,14 +63,14 @@ export function ProjectFileFeedback({
             </Popover.Trigger>
             <Popover.Portal>
               <Popover.Content
-                aria-label="File operation details"
+                aria-label="Plan details"
                 className="project-file-error-details"
                 align="end"
                 collisionPadding={12}
                 sideOffset={6}
               >
                 <header>
-                  <h2>File operation details</h2>
+                  <h2>Plan details</h2>
                   <Popover.Close className="quiet-action action-compact">Close</Popover.Close>
                 </header>
                 {errors.map((error) => (
@@ -102,14 +89,9 @@ export function ProjectFileFeedback({
           </Popover.Root>
         </div>
       )}
-      {status === undefined ? null : (
-        <span
-          aria-label={`Document status: ${statusLabels[status]}`}
-          className="profile-status"
-          data-profile-status={status.toLowerCase()}
-          role="status"
-        >
-          {statusLabels[status]}
+      {!savesAsYouEdit || session.writeError !== null ? null : (
+        <span className="profile-status" data-profile-status="clean" role="status">
+          Saved as you edit
         </span>
       )}
     </div>

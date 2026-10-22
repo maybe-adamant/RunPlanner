@@ -15,10 +15,8 @@ import {
   projectRouteNavigation,
   type EditorNavigation,
 } from '@planner/projections/editorNavigation';
-import { updateInstallLabel } from '@planner/projections/releaseUpdate';
 import {
   selectPresentProject,
-  selectProfileStatus,
   selectProjectEvaluation,
   type RootState,
   useAppDispatch,
@@ -35,6 +33,7 @@ import type { BugReportOperations } from '@planner/workspace/bugReport';
 import type { CommunityEventController } from '@planner/workspace/communityEvents';
 import type { SlotRebuildController } from '@planner/workspace/slotRebuild';
 import type { DraftRunController } from '@planner/workspace/draftRun';
+import type { CloseRequestController } from '@planner/workspace/closeRequest';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
@@ -50,6 +49,7 @@ import { NoticeArea } from './NoticeArea';
 import { GameHeaderControls } from './GameHeaderControls';
 import { GamePanel } from './GamePanel';
 import { BugReportDialog } from './BugReportDialog';
+import { CloseConfirmDialog } from './CloseConfirmDialog';
 import { hintProps } from '@planner/ui/controls/hint';
 import { routeBannerArtwork } from '@planner/ui/artwork/route-banners/routeBannerArtwork';
 
@@ -60,6 +60,8 @@ interface AppProps {
   readonly buildIdentity: BuildIdentity;
   readonly catalog: Catalog;
   readonly catalogSummary: CatalogSummary;
+  /** Asks before closing while the open plan's latest edits could not be saved. */
+  readonly closeRequest?: CloseRequestController;
   readonly draftRun: DraftRunController;
   readonly editorNavigation: EditorNavigation;
   /** Present only in the desktop application. */
@@ -80,6 +82,7 @@ export function App({
   buildIdentity,
   catalog,
   catalogSummary,
+  closeRequest,
   draftRun,
   editorNavigation,
   communityEvents,
@@ -91,19 +94,12 @@ export function App({
 }: AppProps) {
   const scalePercent = useAppScale(appScalePreference);
   const project = useAppSelector(selectPresentProject);
-  // Opening an event's project replaces the open one, so unsaved work is confirmed first.
-  const unsavedWork = useAppSelector(
-    (state) =>
-      state.projectWorkspace.kind === 'openProject' && selectProfileStatus(state) !== 'Clean',
-  );
-  const installLabel = useAppSelector((state) =>
-    updateInstallLabel(
-      state.projectWorkspace.kind === 'openProject',
-      selectProfileStatus(state),
-      state.profileSession.fileName,
-    ),
-  );
-  const [entryOpen, setEntryOpen] = useState(project === undefined);
+  const previousFile = useAppSelector((state) => state.librarySession.previousFileOffer);
+  // The entry panel stays open only for the plan it was opened over; opening any plan closes it.
+  const opened = useAppSelector((state) => state.librarySession.opened);
+  const [entryOver, setEntryOver] = useState<{ readonly plan: object | null } | null>(null);
+  const entryOpen = entryOver !== null && entryOver.plan === opened;
+  const setEntryOpen = (open: boolean) => setEntryOver(open ? { plan: opened } : null);
   const [aboutReporting, setAboutReporting] = useState(false);
   // Which part of the Game panel opens focused, or null while it is closed.
   const [gameOpen, setGameOpen] = useState<'panel' | 'plans' | null>(null);
@@ -299,9 +295,10 @@ export function App({
 
         <NoticeArea
           communityEvents={communityEvents}
-          confirmOpenProject={unsavedWork}
           {...(gameStatus === undefined ? {} : { gameStatus })}
-          installLabel={installLabel}
+          {...(previousFile === null
+            ? {}
+            : { previousFile: { fileName: previousFile.fileName, operations: projectOperations } })}
           releaseUpdates={releaseUpdates}
         />
 
@@ -361,6 +358,7 @@ export function App({
             target={levelResolutionDialogTarget}
           />
         )}
+        {closeRequest === undefined ? null : <CloseConfirmDialog controller={closeRequest} />}
         <HintLayer />
       </main>
     </FindingTargetScope>

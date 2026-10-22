@@ -27,6 +27,19 @@ export interface OutsideProjectFile {
   readonly json: string;
 }
 
+/** What the planner remembers about the library between launches. */
+export interface LibrarySession {
+  /** The plan open when the planner last closed, by key and by identity should its key move. */
+  readonly lastOpened: { readonly key: string; readonly projectId: string } | null;
+  /** The file open before the library was offered once, and imported or declined. */
+  readonly previousFileOffered: boolean;
+}
+
+export const EMPTY_LIBRARY_SESSION: LibrarySession = Object.freeze({
+  lastOpened: null,
+  previousFileOffered: false,
+});
+
 /**
  * The host's store of library plans. It files complete documents and never edits their
  * content; a document must carry a project identity and a name to be filed.
@@ -39,14 +52,31 @@ export interface ProjectLibraryAdapter {
   create(json: string): Promise<ProjectLibraryEntry>;
   /** Replaces the plan; the returned entry carries its key after any rename. */
   write(key: string, json: string): Promise<ProjectLibraryEntry>;
-  /** Moves the plan to the recycle bin, from which `restore` brings it back. */
+  /** Moves the plan to the system recycle bin where there is one, else removes it. */
   delete(key: string): Promise<void>;
-  restore(key: string): Promise<ProjectLibraryEntry>;
+  /**
+   * Keeps the plan as it is now, before its first rewrite from an older schema: a copy goes to
+   * the system recycle bin where there is one.
+   */
+  preserveOriginal(key: string): Promise<void>;
   reveal(): Promise<void>;
   /** Asks the user for a plan file to import; null when they cancel. */
   chooseImportFile(): Promise<OutsideProjectFile | null>;
   /** The file the planner had open before it kept a library, when one is remembered. */
   previousActiveFile(): Promise<OutsideProjectFile | null>;
+  readSession(): Promise<LibrarySession>;
+  writeSession(session: LibrarySession): Promise<void>;
+}
+
+const PROJECT_FILE_SUFFIX = '.runplanner.json';
+
+/** A file's name without its extension; it names a plan saved before plans carried names. */
+export function projectFileStem(fileName: string): string {
+  const base = fileName.split(/[\\/]/).at(-1) ?? fileName;
+  const stem = base.toLowerCase().endsWith(PROJECT_FILE_SUFFIX)
+    ? base.slice(0, -PROJECT_FILE_SUFFIX.length)
+    : base.replace(/\.[^.]+$/, '');
+  return stem.trim().length === 0 ? base : stem.trim();
 }
 
 function nullableNumber(value: unknown): number | null {

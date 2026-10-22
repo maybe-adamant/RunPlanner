@@ -49,9 +49,9 @@ Hades II runs on Linux through Steam's Proton. Hell2Modding loads as a
 `WINEDLLOVERRIDES="d3d12=n,b" %command%` for mods to load. This setting is
 community-documented, not verified by this project.
 
-Settings, the remembered project file and autosave recovery live in your user
-profile, not the install folder. Project files (`.runplanner.json`) stay
-wherever you save them.
+Your plans live in `Documents/RunPlanner/Projects/` as `.runplanner.json`
+files and save as you edit; settings live in your user profile, not the install
+folder.
 
 ## Getting started
 
@@ -65,7 +65,7 @@ wherever you save them.
    Flatpak's when only that one exists.
 3. Follow the Game module steps, ending with **Install**. The Game panel lists
    anything else to fix first, such as an older ModpackLib.
-4. Create or load a plan, configure your loadout and route, and fix any issues
+4. Create or open a plan, configure your loadout and route, and fix any issues
    the planner points out.
 5. Under **Plans in game**, choose **Send here** on one of the twelve slots, or
    **Replace** on an occupied one. Sending also makes that slot the one used
@@ -85,7 +85,7 @@ next run uses; it never replaces the plan already in progress.
 ## Planning
 
 Create an **Underworld**, **Surface**, **Dream Dive** or **Fresh File**
-project, or load an existing plan. A Dream Dive sets your own biome order; a
+project, or open an existing plan file. A Dream Dive sets your own biome order; a
 Fresh File plans the very first run of a brand-new save, with its fixed
 starting weapon.
 
@@ -155,8 +155,8 @@ records to include in a bug report.
 
 From time to time a community event offers everyone the same planned run. The
 app shows it above your project, `Event: <title> · ends <date>`, with
-**Details**, **Open project** (opens the event's plan as an unsaved copy you can
-study or change), **Copy link** and **Dismiss**. You don't need to send
+**Details**, **Open project** (adds a copy of the event's plan to your library
+to study or change), **Copy link** and **Dismiss**. You don't need to send
 anything: once the mod is set up, the app puts the event in the game's read-only
 **Event** slot, listed first in the **Plan** tab's picker. Pick it to play the
 event; the victory screen then reads `Planned event - <title>`. When the event
@@ -169,8 +169,7 @@ repository.
 
 Official releases check for updates when the app starts, and About offers a
 manual check. When an update is found, choose **Update**, then **Install and
-restart**; with unsaved changes the button is **Save and install** and saves
-first.
+restart**.
 
 After updating the app, open the **Game** panel and choose **Update** to update
 the mod. Sending waits until the installed mod matches the app, and a slot sent

@@ -23,8 +23,6 @@ import {
 } from '@planner-test/fixtures/communityEventHost';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import { catalog } from '@run-planner/hades2-catalog';
-import { createFakeProfileFiles } from '@planner-test/fixtures/profileFiles';
-import { profileSaveSucceeded } from '@planner/state/profileSessionSlice';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { hintOf } from '@planner-test/support/hints';
 import { encodeSlotSource } from '@planner/persistence/slotSource';
@@ -33,6 +31,7 @@ import {
   encodeProjectDocument,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 
 const unset = (): GameModuleStatus =>
   gameModuleStatus({
@@ -411,8 +410,10 @@ describe('Game panel', () => {
     cleanup();
 
     const game = createFakeGameModuleHost();
-    const { dialog } = await openGame(game.host, (application) =>
-      application.projectOperations.createNew('Underworld').then(() => undefined),
+    const { dialog } = await openGame(
+      game.host,
+      (application) => application.projectOperations.createNew('Underworld').then(() => undefined),
+      { projectLibrary: createMemoryProjectLibrary().adapter },
     );
     expect(within(dialog).getByRole('heading', { name: 'Plans in game' })).toBeTruthy();
     const callout = within(dialog).getByRole('group', { name: 'Can’t send' });
@@ -465,13 +466,9 @@ describe('Game panel', () => {
         },
       }),
     );
-    const files = createFakeProfileFiles();
-    const { dialog, user } = await openGame(
-      game.host,
-      (application) =>
-        files.openSaved(application, named('Erebus opener'), 'erebus.runplanner.json'),
-      { profileFile: files.adapter },
-    );
+    const { dialog, user } = await openGame(game.host, (application) => {
+      application.store.dispatch(authoredProjectReplaced(named('Erebus opener')));
+    });
     const table = within(dialog).getByRole('table', { name: 'Plans in game' });
     const row = within(table).getByRole('row', { name: /Slot 1\b/ });
     expect(within(row).getByText('Their run')).toBeTruthy();
@@ -491,7 +488,6 @@ describe('Game panel', () => {
     await user.click(within(table).getByRole('button', { name: 'Send here (slot 2)' }));
     expect(game.published.map((publication) => publication.slotNumber)).toEqual([2]);
     expect(JSON.parse(game.published[0]!.json)).toMatchObject({ displayName: 'Erebus opener' });
-    expect(files.writes).toHaveLength(0);
     expect(await within(dialog).findByText('Published to game, Slot 2.')).toBeTruthy();
 
     await user.click(within(table).getByRole('button', { name: 'Replace (slot 1)' }));
@@ -749,13 +745,9 @@ describe('Game panel', () => {
 
   it('moves the next run with a send and reports a send it could not activate', async () => {
     const game = createFakeGameModuleHost();
-    const files = createFakeProfileFiles();
-    const { dialog, user } = await openGame(
-      game.host,
-      (application) =>
-        files.openSaved(application, named('Erebus opener'), 'erebus.runplanner.json'),
-      { profileFile: files.adapter },
-    );
+    const { dialog, user } = await openGame(game.host, (application) => {
+      application.store.dispatch(authoredProjectReplaced(named('Erebus opener')));
+    });
     const choice = within(dialog).getByRole<HTMLSelectElement>('combobox', {
       name: 'Active plan',
     });
@@ -784,57 +776,6 @@ describe('Game panel', () => {
       /^!Sent to slot 4 at .+, but it isn’t active: could not replace active slot file\.$/,
     );
     expect(choice.value).toBe('2');
-  });
-
-  it('saves unsaved changes in place before sending', async () => {
-    const game = createFakeGameModuleHost();
-    const files = createFakeProfileFiles();
-    const { dialog, user } = await openGame(
-      game.host,
-      async (application) => {
-        await files.openSaved(application, named('Erebus opener'), 'erebus.runplanner.json');
-        // A different saved baseline makes the open document dirty without an authored edit.
-        application.store.dispatch(
-          profileSaveSucceeded({ baselineJson: '{}', fileName: 'erebus.runplanner.json' }),
-        );
-      },
-      { profileFile: files.adapter },
-    );
-    await user.click(await within(dialog).findByRole('button', { name: 'Save and send (slot 3)' }));
-    expect(files.writes.map((write) => write.fileName)).toEqual(['erebus.runplanner.json']);
-    expect(game.published.map((publication) => publication.slotNumber)).toEqual([3]);
-    expect(JSON.parse(game.published[0]!.json)).toMatchObject({ displayName: 'Erebus opener' });
-    expect(await within(dialog).findByRole('button', { name: 'Send here (slot 4)' })).toBeTruthy();
-  });
-
-  it('asks where to save a never-saved plan and sends nothing when cancelled', async () => {
-    const game = createFakeGameModuleHost();
-    const files = createFakeProfileFiles();
-    const { dialog, user } = await openGame(
-      game.host,
-      (application) => {
-        application.store.dispatch(authoredProjectReplaced(named('Surface Phial run')));
-      },
-      { profileFile: files.adapter },
-    );
-    files.chooseSaveAs(null);
-    await user.click(
-      await within(dialog).findByRole('button', { name: 'Save and send… (slot 1)' }),
-    );
-    expect(
-      await within(dialog).findByText('Send to game cancelled; nothing was sent.'),
-    ).toBeTruthy();
-    expect(game.published).toHaveLength(0);
-    expect(files.writes).toHaveLength(0);
-
-    files.chooseSaveAs('phial.runplanner.json');
-    await user.click(within(dialog).getByRole('button', { name: 'Save and send… (slot 1)' }));
-    expect(files.writes.map((write) => write.fileName)).toEqual(['phial.runplanner.json']);
-    expect(JSON.parse(game.published[0]!.json)).toMatchObject({
-      displayName: 'Surface Phial run',
-      // The first save of a never-saved project keeps its identity.
-      projectId: firstBiome().projectId,
-    });
   });
 
   it('rebuilds outdated slots from their sources and reports each outcome', async () => {

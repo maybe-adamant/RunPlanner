@@ -85,11 +85,9 @@ pub struct LibraryEntry {
     pub content: EntryContent,
 }
 
-/// Moves files to the platform's recycle bin and brings them back.
+/// Moves files to the platform's recycle bin.
 pub trait Recycler {
     fn recycle(&mut self, path: &Path) -> Result<(), String>;
-    /// Restores the most recently recycled file that lived at `path`.
-    fn restore(&mut self, path: &Path) -> Result<(), String>;
 }
 
 pub struct NativeRecycler;
@@ -98,59 +96,6 @@ impl Recycler for NativeRecycler {
     fn recycle(&mut self, path: &Path) -> Result<(), String> {
         trash::delete(path)
             .map_err(|error| format!("Could not move the plan to the trash: {error}"))
-    }
-
-    #[cfg(any(
-        target_os = "windows",
-        all(
-            unix,
-            not(target_os = "macos"),
-            not(target_os = "ios"),
-            not(target_os = "android")
-        )
-    ))]
-    fn restore(&mut self, path: &Path) -> Result<(), String> {
-        use trash::os_limited;
-        let name = path.file_name().ok_or("The plan has no file name.")?;
-        let parent = path.parent().ok_or("The plan has no folder.")?;
-        let item = os_limited::list()
-            .map_err(|error| format!("Could not read the trash: {error}"))?
-            .into_iter()
-            .filter(|item| item.name == name && same_folder(&item.original_parent, parent))
-            .max_by_key(|item| item.time_deleted)
-            .ok_or("The plan is no longer in the trash.")?;
-        os_limited::restore_all([item])
-            .map_err(|error| format!("Could not restore the plan from the trash: {error}"))
-    }
-
-    #[cfg(not(any(
-        target_os = "windows",
-        all(
-            unix,
-            not(target_os = "macos"),
-            not(target_os = "ios"),
-            not(target_os = "android")
-        )
-    )))]
-    fn restore(&mut self, _path: &Path) -> Result<(), String> {
-        Err("Restoring from the trash is not available on this system.".to_owned())
-    }
-}
-
-#[cfg(any(
-    target_os = "windows",
-    all(
-        unix,
-        not(target_os = "macos"),
-        not(target_os = "ios"),
-        not(target_os = "android")
-    )
-))]
-fn same_folder(left: &Path, right: &Path) -> bool {
-    if cfg!(target_os = "windows") {
-        left.to_string_lossy().to_lowercase() == right.to_string_lossy().to_lowercase()
-    } else {
-        left == right
     }
 }
 
@@ -354,18 +299,43 @@ pub fn delete(folder: &Path, key: &str, recycler: &mut impl Recycler) -> Result<
     recycler.recycle(&path)
 }
 
-/// Brings a deleted plan back from the recycle bin under its old file name.
-pub fn restore(
+/// Sends a copy of a plan file, as it is now, to the recycle bin beside its original name,
+/// so a plan from an older schema can be recovered after the planner rewrites it.
+pub fn preserve_original(
     folder: &Path,
     key: &str,
     recycler: &mut impl Recycler,
-) -> Result<LibraryEntry, String> {
+) -> Result<(), String> {
     let path = entry_path(folder, key)?;
-    if path.exists() {
-        return Err(format!("{key} is already in the library."));
+    let json =
+        fs::read_to_string(&path).map_err(|error| format!("Could not read {key}: {error}"))?;
+    let schema = read_head(&json)
+        .ok()
+        .and_then(|summary| summary.schema_version)
+        .map_or_else(
+            || "older schema".to_owned(),
+            |version| format!("schema {version}"),
+        );
+    let stem = &key[..key.len() - PROJECT_FILE_SUFFIX.len()];
+    let copy = (1..)
+        .map(|attempt| {
+            let suffix = if attempt == 1 {
+                String::new()
+            } else {
+                format!(" {attempt}")
+            };
+            folder.join(format!(
+                "{stem} ({schema} original{suffix}){PROJECT_FILE_SUFFIX}"
+            ))
+        })
+        .find(|candidate| !candidate.exists())
+        .ok_or("Could not name the original copy.")?;
+    fs::copy(&path, &copy).map_err(|error| format!("Could not copy {key}: {error}"))?;
+    let recycled = recycler.recycle(&copy);
+    if recycled.is_err() {
+        let _ = fs::remove_file(&copy);
     }
-    recycler.restore(&path)?;
-    Ok(entry(folder, key.to_owned()))
+    recycled
 }
 
 #[cfg(test)]
@@ -404,11 +374,6 @@ mod tests {
             fs::remove_file(path).map_err(|error| error.to_string())?;
             self.0.insert(path.to_owned(), bytes);
             Ok(())
-        }
-
-        fn restore(&mut self, path: &Path) -> Result<(), String> {
-            let bytes = self.0.remove(path).ok_or("not in the bin")?;
-            fs::write(path, bytes).map_err(|error| error.to_string())
         }
     }
 
@@ -600,24 +565,57 @@ mod tests {
     }
 
     #[test]
-    fn deletes_to_the_recycle_bin_and_restores_for_undo() {
+    fn deletes_to_the_recycle_bin() {
         let folder = TestFolder::new();
         let mut bin = MemoryRecycler::default();
         let created = create(&folder.0, &plan("run-plan-a", "Kept")).unwrap();
         delete(&folder.0, &created.key, &mut bin).unwrap();
         assert!(list(&folder.0).unwrap().is_empty());
+        assert_eq!(
+            bin.0.get(&folder.0.join(&created.key)).map(Vec::as_slice),
+            Some(plan("run-plan-a", "Kept").as_bytes())
+        );
         assert!(delete(&folder.0, &created.key, &mut bin)
             .unwrap_err()
             .contains("not in the library"));
+    }
 
-        let restored = restore(&folder.0, &created.key, &mut bin).unwrap();
-        assert_eq!(restored.key, created.key);
+    #[test]
+    fn recycles_a_copy_of_the_original_before_it_is_rewritten() {
+        let folder = TestFolder::new();
+        let mut bin = MemoryRecycler::default();
+        ensure_folder(&folder.0).unwrap();
+        let old = r#"{"schemaVersion":97,"projectId":"a"}"#;
+        fs::write(folder.0.join("Old.runplanner.json"), old).unwrap();
+        // A copy already in the folder under that name is not replaced.
+        fs::write(
+            folder.0.join("Old (schema 97 original).runplanner.json"),
+            "{}",
+        )
+        .unwrap();
+        preserve_original(&folder.0, "Old.runplanner.json", &mut bin).unwrap();
+
         assert_eq!(
-            read(&folder.0, &created.key).unwrap(),
-            plan("run-plan-a", "Kept")
+            fs::read_to_string(folder.0.join("Old.runplanner.json")).unwrap(),
+            old
         );
-        assert!(restore(&folder.0, &created.key, &mut bin)
-            .unwrap_err()
-            .contains("already in the library"));
+        let recycled: Vec<_> = bin
+            .0
+            .iter()
+            .map(|(path, bytes)| {
+                (
+                    path.file_name().unwrap().to_string_lossy().into_owned(),
+                    bytes.clone(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            recycled,
+            vec![(
+                "Old (schema 97 original 2).runplanner.json".to_owned(),
+                old.as_bytes().to_vec()
+            )]
+        );
+        assert_eq!(list(&folder.0).unwrap().len(), 2);
     }
 }

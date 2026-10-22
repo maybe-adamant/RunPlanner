@@ -10,7 +10,6 @@ import {
   type ReleaseUpdateHost,
   type SaveBeforeInstall,
 } from '@planner/persistence/releaseUpdates';
-import type { UpdateInstallLabel } from '@planner/projections/releaseUpdate';
 import { ReleaseUpdateCheck, ReleaseUpdateNotice } from '@planner/ui/shell/ReleaseUpdates';
 
 afterEach(cleanup);
@@ -32,14 +31,11 @@ function updates(
   return { controller, installUpdate, saveBeforeInstall };
 }
 
-function renderUpdates(
-  controller: ReturnType<typeof updates>['controller'],
-  installLabel: UpdateInstallLabel = 'Install and restart',
-) {
+function renderUpdates(controller: ReturnType<typeof updates>['controller']) {
   render(
     <>
       <ReleaseUpdateCheck controller={controller} />
-      <ReleaseUpdateNotice controller={controller} installLabel={installLabel} />
+      <ReleaseUpdateNotice controller={controller} />
     </>,
   );
 }
@@ -73,26 +69,26 @@ describe('Release updates', () => {
     expect(installUpdate).toHaveBeenCalledExactlyOnceWith('1.2.3');
   });
 
-  it('saves unsaved changes first and reports a cancelled save without installing', async () => {
+  it('writes pending edits first and reports a failed write without installing', async () => {
     const { controller, installUpdate, saveBeforeInstall } = updates(
       { version: '1.2.3' },
       undefined,
       vi.fn<SaveBeforeInstall>(() =>
         Promise.resolve({
-          status: 'cancelled',
-          message: 'Update cancelled; the project was not saved.',
+          status: 'failure',
+          message: 'Not saved, so not updated: disk full.',
         }),
       ),
     );
     const user = userEvent.setup();
-    renderUpdates(controller, 'Save and install…');
+    renderUpdates(controller);
 
     await user.click(screen.getByRole('button', { name: 'Check for updates' }));
     await user.click(await screen.findByRole('button', { name: 'Update' }));
-    await user.click(screen.getByRole('button', { name: 'Save and install…' }));
+    await user.click(screen.getByRole('button', { name: 'Install and restart' }));
     expect(saveBeforeInstall).toHaveBeenCalledOnce();
     expect(installUpdate).not.toHaveBeenCalled();
-    expect(await screen.findByText(/Update cancelled; the project was not saved\./)).toBeTruthy();
+    expect(await screen.findByText(/Not saved, so not updated: disk full\./)).toBeTruthy();
   });
 
   it('reports a failed install with a retry', async () => {

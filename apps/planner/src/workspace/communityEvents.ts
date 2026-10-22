@@ -65,7 +65,7 @@ export interface CommunityEventController {
    */
   sync(trigger?: EventSyncTrigger): Promise<void>;
   dismiss(): void;
-  /** Downloads the active event's project and opens it as an unsaved copy. */
+  /** Downloads the active event's project, adds it to the library as a copy and opens it. */
   openProject(): Promise<ProjectOperationResult>;
   /**
    * Makes the event slot the one the game module plays next, then re-reads the game status.

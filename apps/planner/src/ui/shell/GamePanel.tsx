@@ -13,7 +13,7 @@ import type {
   GameTargetDiscovery,
 } from '@planner/persistence/gameModuleHost';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import { selectProfileStatus, useAppSelector } from '@planner/state/store';
+import { useAppSelector } from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import {
   describeActiveSlotSetting,
@@ -21,7 +21,6 @@ import {
   describeLastSendFailure,
   describeRemoveOutcome,
   describeSentNotActivated,
-  gameSaveState,
   projectGamePanel,
   projectGameIndicator,
   projectGamePlans,
@@ -713,9 +712,6 @@ function GameSection({
   const lastActivationFailure = useAppSelector(
     (state) => state.gameSendSession.lastActivationFailure,
   );
-  const saveState = useAppSelector((state) =>
-    gameSaveState(selectProfileStatus(state), state.profileSession.fileName),
-  );
   const host = gameStatus.host;
   const snapshot = useSyncExternalStore(
     gameStatus.subscribe,
@@ -786,7 +782,6 @@ function GameSection({
       ? projectGamePlans(
           status,
           operations.inspectCurrentGamePlan(),
-          saveState,
           catalog,
           snapshot.readAt,
           rebuildReport,

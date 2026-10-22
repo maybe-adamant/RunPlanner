@@ -1,15 +1,11 @@
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 
-import { ModalDialog } from '@planner/ui/controls/ModalDialog';
-
 import type { GameStatusController } from '@planner/persistence/gameModuleHost';
 import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdates';
 import { projectEventPlaysNext } from '@planner/projections/gamePanel';
-import {
-  releaseUpdateNoticeShown,
-  type UpdateInstallLabel,
-} from '@planner/projections/releaseUpdate';
+import { releaseUpdateNoticeShown } from '@planner/projections/releaseUpdate';
 import type { CommunityEventController, EventNotice } from '@planner/workspace/communityEvents';
+import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import { ReleaseUpdateNotice } from './ReleaseUpdates';
 
 const IDLE_UPDATE = { kind: 'idle' } as const;
@@ -58,9 +54,11 @@ function EventNoticeBar({
   actions,
   children,
   headline,
+  label = 'Community event',
   status = false,
 }: {
   readonly actions: ReactNode;
+  readonly label?: string;
   readonly children?: ReactNode;
   /** One line, truncated with an ellipsis. */
   readonly headline: { readonly text: string; readonly ends?: string };
@@ -68,7 +66,7 @@ function EventNoticeBar({
 }) {
   return (
     <aside
-      aria-label="Community event"
+      aria-label={label}
       className="release-update-notice event-notice"
       {...(status ? { role: 'status' } : {})}
     >
@@ -90,12 +88,10 @@ function EventNoticeBar({
 }
 
 function ActiveEventNotice({
-  confirmOpenProject,
   controller,
   notice,
   playsNext,
 }: {
-  readonly confirmOpenProject: boolean;
   readonly controller: CommunityEventController;
   readonly notice: Extract<EventNotice, { kind: 'active' }>;
   /** Whether the game module plays the event slot's plan next, as last read. */
@@ -103,7 +99,6 @@ function ActiveEventNotice({
 }) {
   const { event } = notice;
   const [details, setDetails] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [copy, setCopy] = useState<(typeof COPY_LABELS)[number]>('Copy link');
@@ -114,7 +109,6 @@ function ActiveEventNotice({
     return () => clearTimeout(timer);
   }, [copy]);
   const openProject = async () => {
-    setConfirming(false);
     setPending(true);
     setMessage(null);
     try {
@@ -176,10 +170,7 @@ function ActiveEventNotice({
           <button
             className="quiet-action action-compact"
             disabled={pending}
-            onClick={() => {
-              if (confirmOpenProject) setConfirming(true);
-              else void openProject();
-            }}
+            onClick={() => void openProject()}
             type="button"
           >
             <StableLabel current={pending ? 'Opening…' : 'Open project'} labels={OPEN_LABELS} />
@@ -212,30 +203,6 @@ function ActiveEventNotice({
       )}
       {notice.problem === null ? null : <p>{notice.problem}</p>}
       {message === null ? null : <p role="alert">{message}</p>}
-      {confirming && (
-        <ModalDialog
-          describedBy="event-open-project-message"
-          labelledBy="event-open-project-title"
-          onCancel={() => setConfirming(false)}
-          pending={false}
-        >
-          <header className="panel-heading">
-            <h2 id="event-open-project-title">Replace the open project?</h2>
-          </header>
-          <p className="game-publication-message" id="event-open-project-message">
-            The open project has unsaved changes. Opening the event’s project replaces it with an
-            unsaved copy of the event.
-          </p>
-          <footer className="game-publication-actions">
-            <button className="quiet-action" onClick={() => setConfirming(false)} type="button">
-              Cancel
-            </button>
-            <button className="danger-action" onClick={() => void openProject()} type="button">
-              Open project
-            </button>
-          </footer>
-        </ModalDialog>
-      )}
     </EventNoticeBar>
   );
 }
@@ -268,20 +235,79 @@ function EndedEventNotice({
   );
 }
 
-/** One notice at a time: an app update first, otherwise the community event. */
+/** Offers once to import the file the planner kept open before plans lived in the library. */
+function PreviousFileNotice({
+  fileName,
+  operations,
+}: {
+  readonly fileName: string;
+  readonly operations: ProjectOperations;
+}) {
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const settle = async (task: () => Promise<string | null>) => {
+    setPending(true);
+    setMessage(null);
+    try {
+      setMessage(await task());
+    } finally {
+      setPending(false);
+    }
+  };
+  return (
+    <EventNoticeBar
+      actions={
+        <>
+          <button
+            className="secondary-action action-compact"
+            disabled={pending}
+            onClick={() =>
+              void settle(async () => {
+                const result = await operations.acceptPreviousFile();
+                return result.status === 'failure' ? result.message : null;
+              })
+            }
+            type="button"
+          >
+            Import
+          </button>
+          <button
+            className="quiet-action action-compact"
+            disabled={pending}
+            onClick={() =>
+              void settle(async () => {
+                await operations.declinePreviousFile();
+                return null;
+              })
+            }
+            type="button"
+          >
+            Not now
+          </button>
+        </>
+      }
+      headline={{ text: `Import ${fileName} into your library?` }}
+      label="Earlier plan"
+      status
+    >
+      <p>Plans now live in your library and save as you edit. This was the file you had open.</p>
+      {message === null ? null : <p role="alert">{message}</p>}
+    </EventNoticeBar>
+  );
+}
+
+/** One notice at a time: an app update first, then the import offer, then the community event. */
 export function NoticeArea({
   communityEvents,
-  confirmOpenProject = false,
   gameStatus,
-  installLabel,
+  previousFile,
   releaseUpdates,
 }: {
   readonly communityEvents: CommunityEventController | undefined;
-  /** Opening an event's project first asks to replace an open project with unsaved work. */
-  readonly confirmOpenProject?: boolean;
   /** The game status the Game panel reads, which names the slot played next. */
   readonly gameStatus?: GameStatusController;
-  readonly installLabel: UpdateInstallLabel;
+  /** The file open before the library, while it is offered for import. */
+  readonly previousFile?: { readonly fileName: string; readonly operations: ProjectOperations };
   readonly releaseUpdates: ReleaseUpdateController | undefined;
 }) {
   const updateSnapshot = releaseUpdates?.getSnapshot ?? idleUpdate;
@@ -305,7 +331,12 @@ export function NoticeArea({
     eventPlaysNext,
   );
   if (releaseUpdates !== undefined && releaseUpdateNoticeShown(update)) {
-    return <ReleaseUpdateNotice controller={releaseUpdates} installLabel={installLabel} />;
+    return <ReleaseUpdateNotice controller={releaseUpdates} />;
+  }
+  if (previousFile !== undefined) {
+    return (
+      <PreviousFileNotice fileName={previousFile.fileName} operations={previousFile.operations} />
+    );
   }
   if (communityEvents === undefined) return null;
   switch (event.kind) {
@@ -314,7 +345,6 @@ export function NoticeArea({
     case 'active':
       return (
         <ActiveEventNotice
-          confirmOpenProject={confirmOpenProject}
           controller={communityEvents}
           key={event.event.id}
           notice={event}

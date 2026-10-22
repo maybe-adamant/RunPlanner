@@ -46,6 +46,7 @@ import {
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 
 afterEach(() => {
   cleanup();
@@ -636,7 +637,9 @@ describe('underworld product loop', () => {
   });
 
   it('keeps a blocked downstream biome visible but prevents authoring it', async () => {
-    const application = createApplication();
+    const application = createApplication({
+      projectLibrary: createMemoryProjectLibrary().adapter,
+    });
     await application.projectOperations.createNew('Underworld');
     const view = renderPlannerForInteraction({ application });
 
@@ -670,7 +673,9 @@ describe('underworld product loop', () => {
   });
 
   it('shrinks a route prefix immediately and preserves existing undo behavior', async () => {
-    const application = createApplication();
+    const application = createApplication({
+      projectLibrary: createMemoryProjectLibrary().adapter,
+    });
     await application.projectOperations.createNew('Underworld');
     application.store.dispatch(
       authoredProjectCommandDispatched({

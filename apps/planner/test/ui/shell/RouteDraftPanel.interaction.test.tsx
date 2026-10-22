@@ -9,8 +9,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { routePanelSelected } from '@planner/state/editorSessionSlice';
-import { newProjectCreated } from '@planner/state/profileSessionSlice';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectReplaced,
+} from '@planner/state/projectWorkspaceSlice';
 import type { DraftRunner, DraftRunRequest } from '@planner/workspace/draftRun';
 import type { DraftRunEvent } from '@planner/workspace/draftWorkerProtocol';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
@@ -37,7 +39,7 @@ function open(routeKey = 'Underworld') {
   };
   const application = createApplication({ draftRunner: runner, rerollSeed: () => 42 });
   application.store.dispatch(
-    newProjectCreated(
+    authoredProjectReplaced(
       createProjectDocument(application.catalog, {
         projectId: 'run-plan',
         routeKey,

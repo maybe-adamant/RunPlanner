@@ -1,16 +1,17 @@
 import {
+  EMPTY_LIBRARY_SESSION,
   summarizeProjectJson,
+  type LibrarySession,
   type OutsideProjectFile,
   type ProjectLibraryAdapter,
   type ProjectLibraryEntry,
 } from './projectLibrary';
 
 const DATABASE_NAME = 'run-planner-library';
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const PLANS = 'plans';
-const BIN = 'bin';
-/** How long a deleted plan stays restorable in browser storage. */
-const BIN_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const SESSION = 'session';
+const SESSION_RECORD = 'session';
 
 interface StoredPlan {
   readonly key: string;
@@ -18,16 +19,56 @@ interface StoredPlan {
   readonly modifiedMs: number;
 }
 
-interface BinnedPlan extends StoredPlan {
-  readonly deletedMs: number;
+interface StoredSession extends LibrarySession {
+  readonly id: typeof SESSION_RECORD;
 }
 
 export interface BrowserProjectLibraryEnvironment {
   readonly indexedDB: () => IDBFactory;
-  /** Picks a file through the browser's file input and reads it; null when cancelled. */
-  readonly chooseFile: () => Promise<OutsideProjectFile | null>;
+  /** Hosts the transient file input that picks a plan to import. */
+  readonly document: Document;
   readonly now?: () => number;
   readonly mintKey?: () => string;
+}
+
+/** Asks for one plan file through a transient file input; null when cancelled. */
+function chooseFile(document: Document): Promise<OutsideProjectFile | null> {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement('input');
+    input.accept = '.runplanner.json,.json,application/json';
+    input.hidden = true;
+    input.type = 'file';
+    let settled = false;
+    const finish = (result: OutsideProjectFile | null, error?: unknown) => {
+      if (settled) return;
+      settled = true;
+      input.remove();
+      if (error === undefined) resolve(result);
+      else reject(error instanceof Error ? error : new Error(String(error)));
+    };
+    input.addEventListener(
+      'change',
+      () => {
+        const file = input.files?.[0];
+        if (file === undefined) {
+          finish(null);
+          return;
+        }
+        void file.text().then(
+          (json) => finish(Object.freeze({ fileName: file.name, json })),
+          (error: unknown) => finish(null, error),
+        );
+      },
+      { once: true },
+    );
+    input.addEventListener('cancel', () => finish(null), { once: true });
+    document.body.append(input);
+    try {
+      input.click();
+    } catch (error) {
+      finish(null, error);
+    }
+  });
 }
 
 function settle<T>(request: IDBRequest<T>): Promise<T> {
@@ -87,8 +128,8 @@ export function createBrowserProjectLibraryAdapter(
         if (!upgrading.objectStoreNames.contains(PLANS)) {
           upgrading.createObjectStore(PLANS, { keyPath: 'key' });
         }
-        if (!upgrading.objectStoreNames.contains(BIN)) {
-          upgrading.createObjectStore(BIN, { keyPath: 'key' });
+        if (!upgrading.objectStoreNames.contains(SESSION)) {
+          upgrading.createObjectStore(SESSION, { keyPath: 'id' });
         }
       };
       request.onsuccess = () => resolve(request.result);
@@ -136,34 +177,32 @@ export function createBrowserProjectLibraryAdapter(
       return entryFor(plan);
     },
     async delete(key: string): Promise<void> {
-      const deletedMs = now();
-      await transact(await database(), [PLANS, BIN], 'readwrite', async (transaction) => {
-        const plan = await stored(transaction, key);
-        const bin = transaction.objectStore(BIN);
-        const binned = await settle<BinnedPlan[]>(bin.getAll());
-        const expired = binned.filter((item) => deletedMs - item.deletedMs > BIN_RETENTION_MS);
-        await Promise.all([
-          settle(transaction.objectStore(PLANS).delete(key)),
-          settle(bin.put({ ...plan, deletedMs } satisfies BinnedPlan)),
-          ...expired.map((item) => settle(bin.delete(item.key))),
-        ]);
+      await transact(await database(), [PLANS], 'readwrite', async (transaction) => {
+        await stored(transaction, key);
+        await settle(transaction.objectStore(PLANS).delete(key));
       });
     },
-    async restore(key: string): Promise<ProjectLibraryEntry> {
-      return transact(await database(), [PLANS, BIN], 'readwrite', async (transaction) => {
-        const plans = transaction.objectStore(PLANS);
-        if ((await settle(plans.count(key))) > 0)
-          throw new Error(`${key} is already in the library.`);
-        const bin = transaction.objectStore(BIN);
-        const binned = await settle<BinnedPlan | undefined>(bin.get(key));
-        if (binned === undefined) throw new Error('The plan is no longer in the trash.');
-        const plan: StoredPlan = { key, json: binned.json, modifiedMs: binned.modifiedMs };
-        await Promise.all([settle(plans.add(plan)), settle(bin.delete(key))]);
-        return entryFor(plan);
-      });
-    },
+    // Browser storage has no recycle bin, so an older plan is rewritten in place.
+    preserveOriginal: () => Promise.resolve(),
     reveal: () => Promise.reject(new Error('The library is not a folder in this browser.')),
-    chooseImportFile: () => environment.chooseFile(),
+    chooseImportFile: () => chooseFile(environment.document),
     previousActiveFile: () => Promise.resolve(null),
+    async readSession(): Promise<LibrarySession> {
+      const session = await transact(await database(), [SESSION], 'readonly', (transaction) =>
+        settle<StoredSession | undefined>(transaction.objectStore(SESSION).get(SESSION_RECORD)),
+      );
+      return session === undefined
+        ? EMPTY_LIBRARY_SESSION
+        : Object.freeze({
+            lastOpened: session.lastOpened,
+            previousFileOffered: session.previousFileOffered,
+          });
+    },
+    async writeSession(session: LibrarySession): Promise<void> {
+      const record: StoredSession = { id: SESSION_RECORD, ...session };
+      await transact(await database(), [SESSION], 'readwrite', (transaction) =>
+        settle(transaction.objectStore(SESSION).put(record)),
+      );
+    },
   });
 }

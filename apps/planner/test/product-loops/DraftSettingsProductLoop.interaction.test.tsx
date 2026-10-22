@@ -4,24 +4,23 @@ import { createProjectDocument, decodeProjectDocument } from '@run-planner/engin
 import { afterEach, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
-import { createFakeProfileFiles } from '@planner-test/fixtures/profileFiles';
+import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 
 afterEach(cleanup);
 
 it('keeps draft settings in the project through Undo, save and reload', async () => {
-  const files = createFakeProfileFiles();
-  const application = createApplication({ profileFile: files.adapter });
+  const library = createMemoryProjectLibrary();
+  const application = createApplication({ projectLibrary: library.adapter });
   const { catalog, store } = application;
-  await files.openSaved(
-    application,
+  const key = await library.file(
     createProjectDocument(catalog, {
       projectId: 'run-plan',
       routeKey: 'Underworld',
       configuredBiomeCount: 2,
     }),
-    'draft.runplanner.json',
   );
+  await application.projectOperations.openPlan(key);
   const { user } = renderPlannerForInteraction({ application });
   const draftPanel = () => user.click(screen.getByRole('button', { name: 'Draft' }));
   const present = () => store.getState().projectWorkspace.history!.present;
@@ -59,12 +58,12 @@ it('keeps draft settings in the project through Undo, save and reload', async ()
   expect(Object.values(authored.fieldNpcsByBiome).flat()).toHaveLength(1);
 
   await act(async () => {
-    expect((await application.projectOperations.saveProfile()).status).toBe('success');
+    expect((await application.projectOperations.flush()).status).toBe('success');
   });
-  const saved = decodeProjectDocument(JSON.parse(files.writes.at(-1)!.json), catalog);
+  const saved = decodeProjectDocument(JSON.parse(library.writes.at(-1)!.json), catalog);
   expect(saved.route.draft).toEqual(authored);
   await act(async () => {
-    await files.openSaved(application, saved, 'draft.runplanner.json');
+    expect((await application.projectOperations.openPlan(key)).status).toBe('success');
   });
   // Opening a document returns the workspace to Route.
   await draftPanel();

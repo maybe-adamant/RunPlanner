@@ -19,7 +19,7 @@ between them:
 - how candidate sessions are cached and invalidated.
 
 Candidate results are replaceable derived data. They never enter the authored
-project, profile document, autosave, undo history, or canonical game history.
+project, stored plan, undo history, or canonical game history.
 
 ## Candidate Assembly
 
@@ -563,8 +563,8 @@ The candidate projection should not hide evaluation acquisition behind a
 general `evaluateProject(project)` callback or recover candidate artifacts from
 a public evaluation for an explicit-artifact family. Passing the exact
 published assembly makes identity, ownership, and invalidation explicit. The
-assembly is replaceable derived state: it never enters profiles, autosave,
-persistence, or authored undo history, and React does not inspect its callable
+assembly is replaceable derived state: it never enters stored plans or
+authored undo history, and React does not inspect its callable
 artifacts.
 
 The structured workspace is the React contact. It owns the exact bound
