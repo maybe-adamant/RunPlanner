@@ -183,16 +183,16 @@ describe('surface product loop', () => {
       'Surface',
       'Surface',
     ]);
+    const held = new Set((await library.plans(application.catalog)).map((plan) => plan.projectId));
     library.choose({ fileName: 'surface.runplanner.json', json: encodeProjectDocument(authored) });
     await view.user.click(screen.getByRole('button', { name: 'Home' }));
     await view.user.click(screen.getByRole('button', { name: 'Import…' }));
-    await waitFor(() =>
-      expect(application.store.getState().librarySession.view).toEqual({ kind: 'editor' }),
-    );
-    // The library already holds the file's identity, so the copy takes a new one.
-    const imported = currentProject(application);
+    expect((await screen.findByRole('status')).textContent).toBe(`Imported “${authored.name}”`);
+    // Importing opens nothing; the library already held the file's identity, so the copy took a
+    // new one.
+    const stored = await library.plans(application.catalog);
+    const imported = stored.find((plan) => !held.has(plan.projectId))!;
     expect(imported).toEqual({ ...authored, projectId: imported.projectId });
-    expect(imported.projectId).not.toBe(authored.projectId);
 
     application.dispose();
     view.unmount();

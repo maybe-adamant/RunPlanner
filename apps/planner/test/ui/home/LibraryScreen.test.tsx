@@ -118,26 +118,57 @@ describe('Library screen', () => {
     ]);
   });
 
-  it('imports into the folder shown and says why a file cannot open', async () => {
+  it('imports several files into the folder shown with one summary notice', async () => {
     const { application, library, user } = await renderLibrary();
     await user.click(screen.getByRole('button', { name: 'Import…' }));
     expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
 
     library.choose({ fileName: 'broken.runplanner.json', json: '{not json' });
     await user.click(screen.getByRole('button', { name: 'Import…' }));
-    expect((await screen.findByRole('alert')).textContent).toBe(
-      'Open file failed: $: must be valid JSON',
+    const failed = await screen.findByRole('status');
+    expect(failed.textContent).toBe(
+      'Couldn’t read broken.runplanner.json: $: must be valid JSON' + 'Dismiss',
     );
+    await user.click(within(failed).getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByRole('status')).toBeNull();
+
+    library.choose([
+      { fileName: 'surface.runplanner.json', json: encodeProjectDocument(plan('s', 'Outside')) },
+      { fileName: 'broken.runplanner.json', json: '{not json' },
+      { fileName: 'other.runplanner.json', json: encodeProjectDocument(plan('o', 'Other')) },
+    ]);
+    await user.click(screen.getByRole('button', { name: 'Import…' }));
+    expect((await screen.findByRole('status')).textContent).toBe(
+      'Imported 2 · 1 couldn’t be read: broken.runplanner.json: $: must be valid JSON' + 'Dismiss',
+    );
+    expect(await within(table()).findByText('Outside')).toBeTruthy();
+    expect(within(table()).getByText('Other')).toBeTruthy();
+    // Importing files nothing open.
     expect(application.store.getState().projectWorkspace.kind).toBe('noProject');
 
     library.choose({
       fileName: 'surface.runplanner.json',
-      json: encodeProjectDocument(plan('outside', 'Outside', 'Surface')),
+      json: encodeProjectDocument(plan('s', 'Outside')),
     });
     await user.click(screen.getByRole('button', { name: 'Import…' }));
-    await waitFor(() =>
-      expect(application.store.getState().projectWorkspace.history?.present.name).toBe('Outside'),
-    );
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('Imported “Outside”'));
+    // The library already held the identity, so the second copy took a new one.
+    expect(new Set((await library.plans(catalog)).map((stored) => stored.projectId)).size).toBe(3);
+  });
+
+  it('reads the library again when the window regains focus or the Library is shown', async () => {
+    const { library, user } = await renderLibrary();
+    await library.file(plan('a', 'Added by hand'));
+    expect(within(table()).queryByText('Added by hand')).toBeNull();
+    window.dispatchEvent(new Event('focus'));
+    expect(await within(table()).findByText('Added by hand')).toBeTruthy();
+
+    await library.file(plan('b', 'Added later'));
+    const home = screen.getByRole('navigation', { name: 'Home' });
+    await user.click(within(home).getByRole('button', { name: 'Settings' }));
+    await user.click(within(home).getByRole('button', { name: 'Library' }));
+    expect(await within(table()).findByText('Added later')).toBeTruthy();
   });
 
   it('offers the earlier file once and opens it when imported', async () => {

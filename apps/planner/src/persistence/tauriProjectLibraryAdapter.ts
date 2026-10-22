@@ -1,4 +1,5 @@
 import type {
+  ChosenImportFile,
   LibrarySession,
   OutsideProjectFile,
   ProjectLibraryAdapter,
@@ -8,11 +9,11 @@ import type {
 
 export interface TauriProjectLibraryEnvironment {
   readonly invoke: <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
-  /** The native open dialog; resolves the chosen path, or null when cancelled. */
+  /** The native open dialog for several files; resolves the chosen paths, or null when cancelled. */
   readonly openDialog: (options: {
     readonly title: string;
     readonly filters: { readonly name: string; readonly extensions: string[] }[];
-  }) => Promise<string | null>;
+  }) => Promise<readonly string[] | null>;
   readonly readTextFile: (path: string) => Promise<string>;
 }
 
@@ -57,13 +58,24 @@ export function createTauriProjectLibraryAdapter(
     async reveal(): Promise<void> {
       await invoke('project_library_reveal');
     },
-    async chooseImportFile(): Promise<OutsideProjectFile | null> {
-      const path = await environment.openDialog({
+    async chooseImportFiles(): Promise<readonly ChosenImportFile[]> {
+      const paths = await environment.openDialog({
         filters: [{ name: 'Run Planner project', extensions: ['json'] }],
-        title: 'Import a Run Planner plan',
+        title: 'Import Run Planner plans',
       });
-      if (path === null) return null;
-      return { fileName: fileNameFromPath(path), json: await environment.readTextFile(path) };
+      const chosen: ChosenImportFile[] = [];
+      for (const path of paths ?? []) {
+        const fileName = fileNameFromPath(path);
+        try {
+          chosen.push({ fileName, json: await environment.readTextFile(path) });
+        } catch (error) {
+          chosen.push({
+            fileName,
+            problem: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+      return chosen;
     },
     previousActiveFile: () => invoke<OutsideProjectFile | null>('project_library_previous_active'),
     readSession: () => invoke<LibrarySession>('project_library_session_read'),

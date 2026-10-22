@@ -6,7 +6,9 @@ use run_planner_game_host::game_module_install::{
     self, GameModuleStatus, InstallOutcome, NativeSwap, RemoveOutcome,
 };
 use run_planner_game_host::game_module_package::ModulePackage;
-use run_planner_game_host::game_plan_publication::{self, ActiveSlotSetting, GamePlanPublication};
+use run_planner_game_host::game_plan_publication::{
+    self, ActiveSlotSetting, ClearedSlot, GamePlanPublication, SlotClearing, SlotRestoration,
+};
 use run_planner_game_host::game_target::{
     self, GameTargetDiscovery, GameTargetFacts, ResolvedTarget, TargetKind,
 };
@@ -231,5 +233,29 @@ pub(crate) fn game_active_slot_set(
         &config_dir(&app)?,
         ModulePackage::bundled(),
         slot_number,
+    ))
+}
+
+#[tauri::command]
+pub(crate) fn game_slot_clear(
+    app: tauri::AppHandle,
+    slot_number: u8,
+) -> Result<SlotClearing, String> {
+    Ok(game_plan_publication::clear_slot(
+        &config_dir(&app)?,
+        ModulePackage::bundled(),
+        slot_number,
+    ))
+}
+
+#[tauri::command]
+pub(crate) fn game_slot_restore(
+    app: tauri::AppHandle,
+    cleared: ClearedSlot,
+) -> Result<SlotRestoration, String> {
+    Ok(game_plan_publication::restore_slot(
+        &config_dir(&app)?,
+        ModulePackage::bundled(),
+        &cleared,
     ))
 }

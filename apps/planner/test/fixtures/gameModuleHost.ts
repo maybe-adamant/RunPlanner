@@ -135,6 +135,30 @@ export function createFakeGameModuleHost(
     ),
     remove: vi.fn<GameModuleHost['remove']>(() => Promise.resolve({ outcome: 'removed', status })),
     setActiveSlot: vi.fn<GameModuleHost['setActiveSlot']>(() => Promise.resolve(activation)),
+    clearSlot: vi.fn<GameModuleHost['clearSlot']>((slotNumber) =>
+      Promise.resolve({
+        status: 'cleared',
+        message: `Cleared slot ${slotNumber}.`,
+        blockers: [],
+        cleared: {
+          slot: slotNumber,
+          plan: '{"format":"run-planner-execution"}',
+          source: null,
+          summary: null,
+          wasActive: false,
+        },
+        activeSlotMoved: false,
+        activationProblem: null,
+      }),
+    ),
+    restoreSlot: vi.fn<GameModuleHost['restoreSlot']>((cleared) =>
+      Promise.resolve({
+        status: 'restored',
+        message: `Restored slot ${cleared.slot}.`,
+        blockers: [],
+        activationProblem: null,
+      }),
+    ),
     publish: vi.fn<GameModuleHost['publish']>((slotNumber, json, sourceJson, summary) => {
       published.push({ slotNumber, json, sourceJson, summary });
       sources.set(slotNumber, sourceJson);

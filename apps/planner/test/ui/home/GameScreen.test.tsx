@@ -62,7 +62,7 @@ async function openGame(
   const rendered = renderPlannerForInteraction({ application, startWithProject: false });
   const home = screen.getByRole('navigation', { name: 'Home' });
   await rendered.user.click(within(home).getByRole('button', { name: /^Game/ }));
-  const dialog = await screen.findByRole('region', { name: 'Hades II' });
+  const dialog = await screen.findByRole('region', { name: 'Game module' });
   await within(dialog).findByRole('heading', { name: 'Game location' });
   return { ...rendered, dialog };
 }
@@ -100,7 +100,7 @@ describe('Game screen', () => {
     game.host.useDiscoveredTarget.mockResolvedValue(gameModuleStatus());
     const { dialog, user } = await openGame(game.host);
     expect(within(dialog).getByText('Choose where Hades II mods are installed.')).toBeTruthy();
-    expect(within(dialog).queryByRole('heading', { name: 'Game module' })).toBeNull();
+    expect(within(dialog).queryByRole('heading', { name: 'Status' })).toBeNull();
 
     await user.click(within(dialog).getByRole('button', { name: 'Find r2modman profiles' }));
     const search = await screen.findByRole('combobox', { name: 'r2modman profile choices' });
@@ -157,7 +157,7 @@ describe('Game screen', () => {
     expect(
       await within(dialog).findByText('Choose where Hades II mods are installed.'),
     ).toBeTruthy();
-    expect(within(dialog).queryByRole('heading', { name: 'Game module' })).toBeNull();
+    expect(within(dialog).queryByRole('heading', { name: 'Status' })).toBeNull();
     expect(game.host.remove).not.toHaveBeenCalled();
   });
 
@@ -449,7 +449,7 @@ describe('Game screen', () => {
       within(table)
         .getAllByRole('columnheader')
         .map((header) => header.textContent),
-    ).toEqual(['Slot', 'Library plan', 'Route', 'Aspect', 'Sent', 'Next run', 'Open']);
+    ).toEqual(['Slot', 'Library plan', 'Route', 'Aspect', 'Sent', 'Next run', 'Actions']);
     const row = (label: string) =>
       within(table).getByRole('rowheader', { name: label }).closest('tr')!;
     // A linked slot shows the plan's library name, and why it is older, in visible text.
@@ -493,6 +493,64 @@ describe('Game screen', () => {
     expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Plan name' }).value).toBe(
       'Erebus opener',
     );
+  });
+
+  it('clears a filled plan slot, never the event slot, and undoes it from the notice', async () => {
+    const filled = (active: GamePlanSlotNumber) =>
+      gameModuleStatus({
+        inspection: {
+          planSlots: planSlots(
+            planSlot(1, { state: 'present', routeKey: 'Underworld', projectId: 'a' }),
+            planSlot(3, { state: 'present', routeKey: 'Surface', projectId: 'b' }),
+          ),
+          eventSlot: eventSlot({ state: 'present', routeKey: 'Underworld' }),
+          activeSlot: { state: 'present', slot: active },
+        },
+      });
+    const game = createFakeGameModuleHost(filled(3));
+    const { dialog, user } = await openGame(game.host, undefined, { devBuild: false });
+    const table = within(dialog).getByRole('table', { name: 'Slots in game' });
+    const row = (label: string) =>
+      within(table).getByRole('rowheader', { name: label }).closest('tr')!;
+    expect(within(row('Event')).queryByRole('button', { name: /^Clear/ })).toBeNull();
+    expect(within(row('Slot 2')).queryByRole('button', { name: /^Clear/ })).toBeNull();
+
+    const cleared = {
+      slot: 3,
+      plan: '{"format":"run-planner-execution"}',
+      source: null,
+      summary: null,
+      wasActive: true,
+    } as const;
+    game.host.clearSlot.mockResolvedValueOnce({
+      status: 'cleared',
+      message: 'Cleared slot 3.',
+      blockers: [],
+      cleared,
+      activeSlotMoved: true,
+      activationProblem: null,
+    });
+    await user.click(within(row('Slot 3')).getByRole('button', { name: 'Clear Slot 3' }));
+    expect(game.host.clearSlot).toHaveBeenCalledWith(3);
+    const notice = await screen.findByRole('status');
+    expect(notice.textContent).toBe('Cleared slot 3 · Slot 1 plays next' + 'Undo');
+    await user.click(within(notice).getByRole('button', { name: 'Undo' }));
+    expect(game.host.restoreSlot).toHaveBeenCalledWith(cleared);
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
+
+    game.host.clearSlot.mockResolvedValueOnce({
+      status: 'nativeWrite',
+      message: 'could not remove slot-1.runplanner.json',
+      blockers: [],
+      cleared: null,
+      activeSlotMoved: false,
+      activationProblem: null,
+    });
+    await user.click(within(row('Slot 1')).getByRole('button', { name: 'Clear Slot 1' }));
+    expect(
+      await within(dialog).findByText('Not cleared: could not remove slot-1.runplanner.json'),
+    ).toBeTruthy();
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('shows the event slot with its title and offers it for the next run', async () => {
@@ -618,7 +676,7 @@ describe('Game screen', () => {
     const { user } = renderPlannerForInteraction({ startWithProject: false });
     const home = screen.getByRole('navigation', { name: 'Home' });
     await user.click(within(home).getByRole('button', { name: 'Game' }));
-    const page = screen.getByRole('region', { name: 'Hades II' });
+    const page = screen.getByRole('region', { name: 'Game module' });
     expect(within(page).getByText(/available in the desktop application/)).toBeTruthy();
   });
 });

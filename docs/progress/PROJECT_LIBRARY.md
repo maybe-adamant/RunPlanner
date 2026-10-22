@@ -41,13 +41,16 @@ from. A catalog of template plans ships with the app.
      moved and deleted (to the recycle bin) by host commands; a plan moves
      between folders under the same file name. `projectId` stays unique across
      the whole library.
-   - No index file: the app scans the folder recursively, reading only each
-     file's head (about 10 ms for 200 plans in a release build). A cache keyed
+   - No index file and no file watcher: the app scans the folder recursively
+     when the window regains focus and each time the Library is shown, so
+     plans added by hand appear, reading only each file's head (about 10 ms for 200 plans in a release build). A cache keyed
      by file, size and modified time can come later if cold scans prove slow.
    - Among files sharing a `projectId`, the oldest keeps it and newer copies
      are re-minted.
-   - Opening an outside file imports a copy into the folder shown; an id
-     already in the library is re-minted. Duplicate creates a new item in the
+   - Import takes one or more outside files and files a copy of each in the
+     folder shown, without opening any; an id already in the library is
+     re-minted. One notice sums it up ("Imported 4 plans", or "Imported 3 ·
+     1 couldn't be read: <file>: <reason>"). Duplicate creates a new item in the
      same folder with a new id named "X (copy)".
    - "Open folder" reveals the library in the file manager.
    - First run offers once to import the previously active file; a declined
@@ -80,8 +83,10 @@ from. A catalog of template plans ships with the app.
    - **Game:** module status and update, game location, the community event
      card, and a table of all slots (library plan or "Not in library",
      current/older with a visible reason, route, loadout, sent date, Play next,
-     Open for linked slots) with "Rebuild outdated slots". Home never sends or
-     clears slots; development builds keep Import event folder / Clear event.
+     Open and Clear) with "Rebuild outdated slots". Home never sends slots;
+     Clear removes a filled plan slot (never the event slot) with a floating
+     "Cleared slot N · Undo" notice. Development builds keep Import event
+     folder / Clear event.
    - **Settings:** app scale.
    - **Editor header:** ← Home · plan name · Rename · Discard changes ···
      readiness badge · Undo/Redo icon buttons · split send button. "Discard

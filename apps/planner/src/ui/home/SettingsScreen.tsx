@@ -11,10 +11,7 @@ export function SettingsScreen({
   return (
     <section aria-labelledby="settings-title" className="home-page">
       <div className="home-page-heading">
-        <div>
-          <p className="eyebrow">Settings</p>
-          <h2 id="settings-title">Preferences</h2>
-        </div>
+        <h2 id="settings-title">Settings</h2>
       </div>
       <div className="home-settings">
         <section aria-labelledby="settings-display-title" className="home-panel home-card">

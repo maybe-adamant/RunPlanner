@@ -97,6 +97,12 @@ export type DeleteFolderResult = ProjectOperationResult & {
   readonly deleted: DeletedFolder | null;
 };
 
+/** The names of the plans an import filed, and the files it could not, with their reasons. */
+export type ImportPlansResult = ProjectOperationResult & {
+  readonly imported: readonly string[];
+  readonly failed: readonly { readonly fileName: string; readonly message: string }[];
+};
+
 export interface ProjectOperations {
   /** Whether the library is a folder that Open folder can show. */
   readonly libraryRevealable: boolean;
@@ -119,8 +125,13 @@ export interface ProjectOperations {
     itineraryBiomeKeys?: readonly string[],
     folder?: string,
   ): Promise<ProjectOperationResult>;
-  /** Imports a file the user picks into a library folder and opens the copy. */
+  /**
+   * Imports the files the user picks into a library folder and opens the first copy; used where
+   * no library is shown.
+   */
   importPlan(folder?: string): Promise<ProjectOperationResult>;
+  /** Imports the files the user picks into a library folder without opening any. */
+  importPlans(folder: string): Promise<ImportPlansResult>;
   /** Opens a library plan; the plan already open is shown as it is. */
   openPlan(key: string): Promise<ProjectOperationResult>;
   /** Files a library plan as a new plan named as its copy, with its own identity. */
@@ -433,11 +444,38 @@ export function createProjectOperations(
     },
     async importPlan(folder = ''): Promise<ProjectOperationResult> {
       try {
-        const plan = await library().importChosenFile(folder);
-        if (plan === null) return result('importPlan', 'cancelled', 'Open file cancelled.');
-        return await openFiled('importPlan', plan, 'Added the file to the library and opened it.');
+        const { filed, failed } = await library().importChosenFiles(folder);
+        const [plan] = filed;
+        if (plan !== undefined) {
+          return await openFiled(
+            'importPlan',
+            plan,
+            'Added the file to the library and opened it.',
+          );
+        }
+        const [problem] = failed;
+        if (problem !== undefined) return failure('importPlan', new Error(problem.message));
+        return result('importPlan', 'cancelled', 'Open file cancelled.');
       } catch (error) {
         return failure('importPlan', error);
+      }
+    },
+    async importPlans(folder: string): Promise<ImportPlansResult> {
+      try {
+        const { filed, failed } = await library().importChosenFiles(folder);
+        const imported = filed.map((plan) => plan.project.name);
+        const status = imported.length === 0 && failed.length === 0 ? 'cancelled' : 'success';
+        return Object.freeze({
+          ...result(
+            'importPlan',
+            status,
+            status === 'cancelled' ? 'Import cancelled.' : 'Imported the files into the library.',
+          ),
+          imported: Object.freeze(imported),
+          failed,
+        });
+      } catch (error) {
+        return Object.freeze({ ...failure('importPlan', error), imported: [], failed: [] });
       }
     },
     async openPlan(key: string): Promise<ProjectOperationResult> {

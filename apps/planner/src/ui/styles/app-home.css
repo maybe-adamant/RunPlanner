@@ -112,6 +112,8 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
+  /* The page actions' row height on every page, so the title never moves between tabs. */
+  min-height: 36px;
 }
 
 .home-page-heading h2 {

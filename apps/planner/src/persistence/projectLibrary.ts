@@ -38,6 +38,10 @@ export interface OutsideProjectFile {
   readonly json: string;
 }
 
+/** A file picked for import: its text, or why it could not be read. */
+export type ChosenImportFile =
+  OutsideProjectFile | { readonly fileName: string; readonly problem: string };
+
 /** What the planner remembers about the library between launches. */
 export interface LibrarySession {
   /** The file open before the library was offered once, and imported or declined. */
@@ -77,8 +81,8 @@ export interface ProjectLibraryAdapter {
    */
   preserveOriginal(key: string): Promise<void>;
   reveal(): Promise<void>;
-  /** Asks the user for a plan file to import; null when they cancel. */
-  chooseImportFile(): Promise<OutsideProjectFile | null>;
+  /** Asks the user for plan files to import; empty when they cancel. */
+  chooseImportFiles(): Promise<readonly ChosenImportFile[]>;
   /** The file the planner had open before it kept a library, when one is remembered. */
   previousActiveFile(): Promise<OutsideProjectFile | null>;
   readSession(): Promise<LibrarySession>;

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import {
   ALL_PLANS,
+  describeImportSummary,
   projectLibraryChips,
   projectLibraryView,
   sameChip,
@@ -21,11 +22,9 @@ import {
 } from '@planner/workspace/projectLibrary';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import { NewPlanDialog } from '../project/NewPlanDialog';
+import { HomeToast } from './HomeToast';
 import { FolderNameDialog, MoveToDialog } from './LibraryDialogs';
 import type { LibrarySlotIndex } from './useLibrarySlotLinks';
-
-/** How long a deletion can be undone from its notice. */
-const UNDO_DELETE_MS = 8_000;
 
 function SlotLinks({ slots }: { readonly slots: readonly PlanSlotLink[] }) {
   if (slots.length === 0) return <span className="home-muted">—</span>;
@@ -114,6 +113,14 @@ type Deleted =
   | { readonly kind: 'plan'; readonly name: string; readonly plan: DeletedPlan }
   | { readonly kind: 'folder'; readonly name: string; readonly folder: DeletedFolder };
 
+/** The floating notice of a deletion, which can be undone, or of an import. */
+interface Notice {
+  readonly id: number;
+  readonly text: string;
+  readonly lasting: boolean;
+  readonly undo: Deleted | null;
+}
+
 type FolderDialog =
   | { readonly kind: 'new' }
   | { readonly kind: 'rename'; readonly path: string; readonly name: string };
@@ -149,13 +156,15 @@ export function LibraryScreen({
   const [moving, setMoving] = useState<LibraryRow | null>(null);
   const [pending, setPending] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [deleted, setDeleted] = useState<Deleted | null>(null);
-
-  useEffect(() => {
-    if (deleted === null) return;
-    const timer = window.setTimeout(() => setDeleted(null), UNDO_DELETE_MS);
-    return () => window.clearTimeout(timer);
-  }, [deleted]);
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const notify = (next: Omit<Notice, 'id'>) =>
+    setNotice((previous) => ({ id: (previous?.id ?? 0) + 1, ...next }));
+  const deleted = (target: Deleted) =>
+    notify({
+      text: `Deleted ${target.kind === 'folder' ? 'folder ' : ''}“${target.name}”`,
+      lasting: false,
+      undo: target,
+    });
 
   // A folder renamed or deleted elsewhere shows its nearest remaining parent.
   let folder = shownFolder;
@@ -187,18 +196,24 @@ export function LibraryScreen({
   const removePlan = (row: LibraryRow) =>
     report(async () => {
       const result = await operations.deletePlan(row.key);
-      if (result.deleted !== null)
-        setDeleted({ kind: 'plan', name: row.name, plan: result.deleted });
+      if (result.deleted !== null) deleted({ kind: 'plan', name: row.name, plan: result.deleted });
       return result;
     });
   const removeFolder = (path: string, name: string) =>
     report(async () => {
       const result = await operations.deleteFolder(path);
-      if (result.deleted !== null) setDeleted({ kind: 'folder', name, folder: result.deleted });
+      if (result.deleted !== null) deleted({ kind: 'folder', name, folder: result.deleted });
+      return result;
+    });
+  const importPlans = () =>
+    report(async () => {
+      const result = await operations.importPlans(folder);
+      const summary = describeImportSummary(result.imported, result.failed);
+      if (summary !== null) notify({ ...summary, undo: null });
       return result;
     });
   const undoDelete = (target: Deleted) => {
-    setDeleted(null);
+    setNotice(null);
     report(() =>
       target.kind === 'plan'
         ? operations.undoDelete(target.plan)
@@ -222,10 +237,7 @@ export function LibraryScreen({
   return (
     <section aria-labelledby="library-title" className="home-page">
       <div className="home-page-heading">
-        <div>
-          <p className="eyebrow">Library</p>
-          <h2 id="library-title">Your plans</h2>
-        </div>
+        <h2 id="library-title">Your plans</h2>
         <div className="home-page-actions">
           {operations.libraryRevealable && (
             <button
@@ -248,7 +260,7 @@ export function LibraryScreen({
           <button
             className="secondary-action"
             disabled={pending}
-            onClick={() => report(() => operations.importPlan(folder))}
+            onClick={importPlans}
             type="button"
           >
             Import…
@@ -518,19 +530,23 @@ export function LibraryScreen({
         )}
       </div>
 
-      {deleted === null ? null : (
-        <div className="home-toast" role="status">
-          <span>
-            Deleted {deleted.kind === 'folder' ? 'folder ' : ''}“{deleted.name}”
-          </span>
-          <button
-            className="secondary-action action-compact"
-            onClick={() => undoDelete(deleted)}
-            type="button"
-          >
-            Undo
-          </button>
-        </div>
+      {notice === null ? null : (
+        <HomeToast
+          {...(notice.undo === null
+            ? {}
+            : {
+                action: {
+                  label: 'Undo',
+                  run: () => {
+                    if (notice.undo !== null) undoDelete(notice.undo);
+                  },
+                },
+              })}
+          key={notice.id}
+          lasting={notice.lasting}
+          onDismiss={() => setNotice(null)}
+          text={notice.text}
+        />
       )}
       {newPlanOpen && (
         <NewPlanDialog

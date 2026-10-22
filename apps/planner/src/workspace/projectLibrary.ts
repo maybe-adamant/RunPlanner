@@ -120,6 +120,12 @@ export interface DeletedFolder {
   readonly plans: readonly DeletedPlan[];
 }
 
+/** The files an import filed, and those it could not, each with its reason. */
+export interface ImportReport {
+  readonly filed: readonly FiledPlan[];
+  readonly failed: readonly { readonly fileName: string; readonly message: string }[];
+}
+
 export interface ProjectLibraryOperations {
   /** Whether the library is a folder the system file manager can show. */
   readonly revealable: boolean;
@@ -133,8 +139,8 @@ export interface ProjectLibraryOperations {
   read(key: string): Promise<FiledPlan>;
   /** Files a new plan in a folder; it must not share an identity with a stored one. */
   create(project: ProjectDocument, folder: string): Promise<FiledPlan>;
-  /** Asks for a file and files a copy of it in a folder; null when the user cancels. */
-  importChosenFile(folder: string): Promise<FiledPlan | null>;
+  /** Asks for files and files a copy of each in a folder; empty when the user cancels. */
+  importChosenFiles(folder: string): Promise<ImportReport>;
   /** Files a copy; a new identity when asked or when the library holds the file's. */
   importFile(
     file: OutsideProjectFile,
@@ -330,9 +336,27 @@ export function createProjectLibraryOperations(
     read,
     create,
     importFile,
-    async importChosenFile(folder: string): Promise<FiledPlan | null> {
-      const file = await adapter.chooseImportFile();
-      return file === null ? null : importFile(file, { folder });
+    async importChosenFiles(folder: string): Promise<ImportReport> {
+      const filed: FiledPlan[] = [];
+      const failed: { readonly fileName: string; readonly message: string }[] = [];
+      // One at a time, so a later file sees the identities an earlier one took.
+      for (const file of await adapter.chooseImportFiles()) {
+        if ('problem' in file) {
+          failed.push(Object.freeze({ fileName: file.fileName, message: file.problem }));
+          continue;
+        }
+        try {
+          filed.push(await importFile(file, { folder }));
+        } catch (error) {
+          failed.push(
+            Object.freeze({
+              fileName: file.fileName,
+              message: error instanceof Error ? error.message : String(error),
+            }),
+          );
+        }
+      }
+      return Object.freeze({ filed: Object.freeze(filed), failed: Object.freeze(failed) });
     },
     async deletePlan(key: string): Promise<DeletedPlan> {
       const json = await adapter.read(key);
