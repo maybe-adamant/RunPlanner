@@ -6,3 +6,7 @@
 	path = external/RunPlanner-Events
 	url = https://github.com/maybe-adamant/RunPlanner-Events.git
 	branch = main
+[submodule "external/RunPlanner-Catalog"]
+	path = external/RunPlanner-Catalog
+	url = https://github.com/maybe-adamant/RunPlanner-Catalog.git
+	branch = main
