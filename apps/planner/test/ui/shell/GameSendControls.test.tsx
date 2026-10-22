@@ -104,6 +104,13 @@ describe('editor send control', () => {
     await waitFor(() => expect(mainButton().textContent).toBe('Slot 1 · up to date'));
     expect(mainButton()).toBe(button);
     expect(sendSplit().getAttribute('data-state')).toBe('upToDate');
+    // Nothing to send: the main part opens the picker instead.
+    fireEvent.click(button);
+    const picker = await screen.findByRole('dialog', { name: 'Slots' });
+    expect(within(picker).getByRole('list', { name: 'This plan in game' }).textContent).toContain(
+      'Slot 1 · current',
+    );
+    expect(game.published).toHaveLength(1);
   });
 
   it('sends to the plan’s own slot that plays next once it was edited since sending', async () => {

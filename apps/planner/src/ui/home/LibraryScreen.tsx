@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { GameStatusController } from '@planner/persistence/gameModuleHost';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import {
   ALL_PLANS,
+  describeDeletedPlan,
   describeImportSummary,
   projectLibraryChips,
   projectLibraryView,
@@ -31,28 +33,8 @@ import { IconActionButton } from '../controls/IconActionButton';
 import { HomeContext } from './HomeContext';
 import { HomeToast } from './HomeToast';
 import { FolderNameDialog, MoveToDialog } from './LibraryDialogs';
+import { LibrarySendCell } from './LibrarySendCell';
 import type { LibrarySlotIndex } from './useLibrarySlotLinks';
-
-function SlotLinks({ slots }: { readonly slots: readonly PlanSlotLink[] }) {
-  if (slots.length === 0) return <span className="home-muted">—</span>;
-  return (
-    <ul className="library-in-game">
-      {slots.map((link) => (
-        <li key={link.slot}>
-          Slot {link.slot}
-          {link.marker === null ? null : (
-            <>
-              {' · '}
-              <span className="slot-marker" data-marker={link.marker}>
-                {link.marker}
-              </span>
-            </>
-          )}
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 /**
  * Offers once to import what the planner kept before plans lived in the library: the file it
@@ -153,6 +135,7 @@ export function LibraryScreen({
   actionsSlot,
   catalog,
   catalogShown,
+  gameStatus,
   index,
   operations,
   routes,
@@ -162,6 +145,8 @@ export function LibraryScreen({
   readonly catalog: Catalog;
   /** Whether the Catalog tab exists, so the page links to it. */
   readonly catalogShown: boolean;
+  /** Absent outside the desktop application, where plans cannot be sent. */
+  readonly gameStatus: GameStatusController | undefined;
   readonly index: LibrarySlotIndex;
   readonly operations: ProjectOperations;
   readonly routes: readonly RouteEditorNavigation[];
@@ -183,9 +168,12 @@ export function LibraryScreen({
   const [notice, setNotice] = useState<Notice | null>(null);
   const notify = (next: Omit<Notice, 'id'>) =>
     setNotice((previous) => ({ id: (previous?.id ?? 0) + 1, ...next }));
-  const deleted = (target: Deleted) =>
+  const deleted = (target: Deleted, slots: readonly PlanSlotLink[] = []) =>
     notify({
-      text: `Deleted ${target.kind === 'folder' ? 'folder ' : ''}“${target.name}”`,
+      text:
+        target.kind === 'folder'
+          ? `Deleted folder “${target.name}”`
+          : describeDeletedPlan(target.name, slots),
       lasting: false,
       undo: target,
     });
@@ -220,7 +208,12 @@ export function LibraryScreen({
   const removePlan = (row: LibraryRow) =>
     report(async () => {
       const result = await operations.deletePlan(row.key);
-      if (result.deleted !== null) deleted({ kind: 'plan', name: row.name, plan: result.deleted });
+      if (result.deleted !== null) {
+        deleted(
+          { kind: 'plan', name: row.name, plan: result.deleted },
+          row.kind === 'ready' ? row.slots : [],
+        );
+      }
       return result;
     });
   const removeFolder = (path: string, name: string) =>
@@ -414,7 +407,9 @@ export function LibraryScreen({
             <tr>
               <th scope="col">Plan</th>
               <th scope="col">Biomes planned</th>
-              <th scope="col">In game</th>
+              <th className="library-in-game-column" scope="col">
+                In game
+              </th>
               <th scope="col">Edited</th>
               <th className="library-actions-column" scope="col">
                 <span className="visually-hidden">Actions</span>
@@ -529,9 +524,15 @@ export function LibraryScreen({
                     </>
                   )}
                 </td>
-                <td>
-                  {row.kind === 'ready' ? (
-                    <SlotLinks slots={row.slots} />
+                <td className="library-in-game-cell">
+                  {gameStatus !== undefined && row.kind === 'ready' ? (
+                    <LibrarySendCell
+                      gameStatus={gameStatus}
+                      index={index}
+                      onOpen={() => report(() => operations.openPlan(row.key))}
+                      operations={operations}
+                      row={row}
+                    />
                   ) : (
                     <span className="home-muted">—</span>
                   )}

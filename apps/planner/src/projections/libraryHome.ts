@@ -89,6 +89,11 @@ export function projectLibrarySlotLinks(
   return Object.freeze({ byKey, bySlot });
 }
 
+/** The library plan each slot holds, by name, as the slot picker names occupants. */
+export function slotNamesBySlot(links: LibrarySlotLinks): ReadonlyMap<GamePlanSlotNumber, string> {
+  return new Map(Array.from(links.bySlot, ([slot, linked]) => [slot, linked.name] as const));
+}
+
 export interface LibraryRowEdited {
   readonly text: string;
   readonly iso: string;
@@ -106,6 +111,7 @@ interface LibraryRowPlace {
 export type LibraryRow =
   | (LibraryRowPlace & {
       readonly kind: 'ready';
+      readonly projectId: string;
       readonly routeKey: string | null;
       /** Such as "Underworld · Staff, Aspect of Melinoë". */
       readonly summary: string;
@@ -302,6 +308,7 @@ export function projectLibraryView(
           {
             ...place,
             kind: 'ready',
+            projectId: item.projectId,
             routeKey: item.routeKey,
             summary: [route, loadout].filter((part) => part !== null).join(' · '),
             biomes: biomeColumn(catalog, item.routeKey, item.biomeCount),
@@ -348,6 +355,24 @@ export function projectLibraryView(
   if (inGame > 0) context.push({ text: `${inGame} in game`, tone: 'ok' });
   if (searching) context.push({ text: `${rows.length} shown`, tone: null });
   return Object.freeze({ searching, breadcrumb, folders, rows, context });
+}
+
+/**
+ * A deleted plan's notice, naming the slots that still hold it, such as
+ * `Deleted “Wells” · still in slots 2 and 9`; deleting never touches a slot.
+ */
+export function describeDeletedPlan(
+  name: string,
+  slots: readonly { readonly slot: GamePlanSlotNumber }[],
+): string {
+  const deleted = `Deleted “${name}”`;
+  const numbers = slots.map((link) => String(link.slot));
+  if (numbers.length === 0) return deleted;
+  const listed =
+    numbers.length === 1
+      ? `slot ${numbers[0]}`
+      : `slots ${numbers.slice(0, -1).join(', ')} and ${numbers[numbers.length - 1]}`;
+  return `${deleted} · still in ${listed}`;
 }
 
 /** An import's summary notice; `lasting` while a file could not be imported. */

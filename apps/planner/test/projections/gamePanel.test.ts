@@ -7,6 +7,7 @@ import {
   projectGameContext,
   projectGameProfileChoices,
   projectGameSendButton,
+  projectLibrarySendButton,
   projectEventPlaysNext,
   projectHomeSlots,
   projectNextRunSlot,
@@ -654,9 +655,10 @@ describe('Game panel projection', () => {
           null,
           idle,
         ),
+        // Nothing to send: the main part opens the picker.
         'upToDate',
         'Slot 3 · up to date',
-        null,
+        { kind: 'openPlans' },
         null,
       ],
       // An outdated slot always needs a send.
@@ -724,6 +726,72 @@ describe('Game panel projection', () => {
       { slot: 2, message: 'locked.', atMs: sentAt },
     );
     expect(nowActive.description).toMatch(/; now active\.$/);
+  });
+
+  it('names a Library plan’s default slot, its state and how many more slots hold it', () => {
+    const link = (slot: GamePlanSlotNumber, marker: PlanSlotLink['marker']): PlanSlotLink => ({
+      slot,
+      marker,
+      reason: marker === 'older' ? 'edited since sent' : null,
+    });
+    const playing = (slot: GamePlanSlotNumber) =>
+      gameModuleStatus({ inspection: { activeSlot: { state: 'present', slot } } });
+    const idle = { kind: 'idle' } as const;
+    const shown = (button: ReturnType<typeof projectLibrarySendButton>) => [
+      button.state,
+      button.label,
+      button.action,
+      button.more,
+    ];
+    // Not in a slot, or no game location: the main part opens the picker.
+    expect(shown(projectLibrarySendButton(playing(1), [], idle))).toEqual([
+      'chooseSlot',
+      'Send to game…',
+      { kind: 'openPlans' },
+      0,
+    ]);
+    expect(shown(projectLibrarySendButton(null, [link(2, 'current')], idle))).toEqual([
+      'chooseSlot',
+      'Send to game…',
+      { kind: 'openPlans' },
+      0,
+    ]);
+    // Several slots: the one that plays next, else the first, with the rest counted.
+    expect(
+      shown(projectLibrarySendButton(playing(9), [link(2, 'current'), link(9, 'older')], idle)),
+    ).toEqual(['ready', 'Update slot 9', { kind: 'send', slot: 9 }, 1]);
+    expect(
+      shown(projectLibrarySendButton(playing(1), [link(2, 'current'), link(9, 'older')], idle)),
+    ).toEqual(['upToDate', 'Slot 2 · up to date', { kind: 'openPlans' }, 1]);
+    // Still comparing: the bare slot, which does nothing until the comparison is read.
+    expect(shown(projectLibrarySendButton(playing(1), [link(4, null)], idle))).toEqual([
+      'checking',
+      'Slot 4',
+      null,
+      0,
+    ]);
+    // The module not ready: the bare slot, opening the picker that says why.
+    const outdated = gameModuleStatus({
+      inspection: {
+        module: {
+          state: 'plannerInstalled',
+          version: '0.0.1',
+          source: 'bundled',
+          matchesBundled: false,
+          modified: false,
+        },
+        install: { action: 'update', consentRequired: false, updateAvailable: true },
+      },
+    });
+    expect(shown(projectLibrarySendButton(outdated, [link(3, 'older')], idle))).toEqual([
+      'notReady',
+      'Slot 3',
+      { kind: 'openPlans' },
+      0,
+    ]);
+    expect(
+      shown(projectLibrarySendButton(playing(1), [link(3, 'older')], { kind: 'sending' })),
+    ).toEqual(['sending', 'Sending…', null, 0]);
   });
 
   it('plays the event next only while the file names it and it holds a playable plan', () => {

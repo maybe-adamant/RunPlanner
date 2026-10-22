@@ -252,6 +252,7 @@ export function HomeScreen({
             actionsSlot={tabActions}
             catalog={catalog}
             catalogShown={planCatalog !== undefined}
+            gameStatus={gameStatus}
             index={index}
             operations={operations}
             routes={routes}

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ALL_PLANS,
+  describeDeletedPlan,
   describeImportSummary,
   NO_SLOT_LINKS,
   projectLibraryChips,
@@ -233,6 +234,17 @@ describe('library view', () => {
 
 describe('import summary', () => {
   const failed = (fileName: string) => ({ fileName, message: 'Not a plan file.' });
+
+  it('names the slots a deleted plan is still in', () => {
+    expect(describeDeletedPlan('Wells', [])).toBe('Deleted “Wells”');
+    expect(describeDeletedPlan('Wells', [{ slot: 2 }])).toBe('Deleted “Wells” · still in slot 2');
+    expect(describeDeletedPlan('Wells', [{ slot: 2 }, { slot: 9 }])).toBe(
+      'Deleted “Wells” · still in slots 2 and 9',
+    );
+    expect(describeDeletedPlan('Wells', [{ slot: 2 }, { slot: 5 }, { slot: 9 }])).toBe(
+      'Deleted “Wells” · still in slots 2, 5 and 9',
+    );
+  });
 
   it('names one import, counts several and lists each file that could not be read', () => {
     expect(describeImportSummary([], [])).toBeNull();
