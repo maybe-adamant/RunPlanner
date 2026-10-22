@@ -8,7 +8,7 @@ import { createFakeGameModuleHost } from '@planner-test/fixtures/gameModuleHost'
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 
-async function openFromGamePanel(
+async function openFromAbout(
   host: ReturnType<typeof createFakeGameModuleHost>['host'],
   withProject: boolean,
 ) {
@@ -18,9 +18,11 @@ async function openFromGamePanel(
   });
   if (withProject) await application.projectOperations.createNew('Underworld');
   const rendered = renderPlannerForInteraction({ application, startWithProject: false });
-  await rendered.user.click(await screen.findByRole('button', { name: /^Game — / }));
-  const panel = await screen.findByRole('dialog', { name: 'Game' });
-  await rendered.user.click(within(panel).getByRole('button', { name: 'Create bug report…' }));
+  // The open plan stays open while Home shows; About lives on Home.
+  if (withProject) await rendered.user.click(screen.getByRole('button', { name: 'Home' }));
+  await rendered.user.click(screen.getByRole('button', { name: 'About' }));
+  const about = await screen.findByRole('dialog', { name: 'About Run Planner' });
+  await rendered.user.click(within(about).getByRole('button', { name: 'Create bug report…' }));
   const dialog = await screen.findByRole('dialog', { name: 'Create bug report' });
   return { ...rendered, dialog };
 }
@@ -30,7 +32,7 @@ describe('Bug report dialog', () => {
 
   it('saves the chosen contents, then offers the folder and the issue page', async () => {
     const game = createFakeGameModuleHost();
-    const { dialog, user } = await openFromGamePanel(game.host, true);
+    const { dialog, user } = await openFromAbout(game.host, true);
     const openPlan = within(dialog).getByRole('checkbox', { name: 'Open plan' });
     expect((openPlan as HTMLInputElement).checked).toBe(true);
     await user.click(within(dialog).getByRole('checkbox', { name: 'Game logs' }));
@@ -63,7 +65,7 @@ describe('Bug report dialog', () => {
 
   it('keeps the choices after a cancelled save and shows a host failure', async () => {
     const game = createFakeGameModuleHost();
-    const { dialog, user } = await openFromGamePanel(game.host, false);
+    const { dialog, user } = await openFromAbout(game.host, false);
     const openPlan = within(dialog).getByRole('checkbox', {
       name: 'Open plan',
     }) as HTMLInputElement;
@@ -89,7 +91,7 @@ describe('Bug report dialog', () => {
     expect(game.host.createBugReport.mock.calls[0]![1].openPlan).toBeNull();
   });
 
-  it('closes only itself on Escape, and not while saving', async () => {
+  it('closes only itself on Escape, and not while saving, leaving Home as it was', async () => {
     const game = createFakeGameModuleHost();
     let finish: () => void = () => undefined;
     game.host.createBugReport.mockImplementationOnce(
@@ -99,14 +101,13 @@ describe('Bug report dialog', () => {
             resolve({ kind: 'saved', fileName: defaultFileName, entries: [], issuePageUrl: '' });
         }),
     );
-    const { dialog, user } = await openFromGamePanel(game.host, false);
+    const { dialog, user } = await openFromAbout(game.host, false);
     const escape = () =>
       fireEvent(dialog, new Event('cancel', { bubbles: true, cancelable: true }));
 
     await user.click(within(dialog).getByRole('button', { name: 'Create…' }));
     escape();
     expect(screen.getByRole('dialog', { name: 'Create bug report' })).toBeTruthy();
-    expect(screen.getByRole('dialog', { name: 'Game' })).toBeTruthy();
     finish();
     await within(dialog).findByRole('status');
 
@@ -114,7 +115,7 @@ describe('Bug report dialog', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: 'Create bug report' })).toBeNull(),
     );
-    expect(screen.getByRole('dialog', { name: 'Game' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Your plans' })).toBeTruthy();
   });
 
   it('opens from About in the desktop application only', async () => {

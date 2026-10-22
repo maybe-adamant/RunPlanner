@@ -58,19 +58,19 @@ folder.
 1. Install **adamant-ModpackLib** in your Hades II r2modman profile. r2modman
    also installs its dependencies. The app checks ModpackLib but never
    installs it.
-2. In the app, open the **Game** panel. Under Game location, choose **Find
+2. In the app, open Home's **Game** tab. Under Game location, choose **Find
    r2modman profiles** and pick your profile, or **Choose folder…** for the
    folder that contains `ReturnOfModding` in a manual Hell2Modding install. On
    Linux, discovery reads a native r2modman install's profiles, or the
    Flatpak's when only that one exists.
-3. Follow the Game module steps, ending with **Install**. The Game panel lists
-   anything else to fix first, such as an older ModpackLib.
-4. Create or open a plan, configure your loadout and route, and fix any issues
-   the planner points out.
-5. Under **Plans in game**, choose **Send here** on one of the twelve slots, or
-   **Replace** on an occupied one. Sending also makes that slot the one used
-   for the next run. Later sends can use the header's **Send to game (slot
-   N)**.
+3. Choose **Install** under Game module. The Game tab lists anything else to
+   fix first, such as an older ModpackLib.
+4. In the **Library**, choose **New plan** or **Import…**, configure your
+   loadout and route, and fix any issues the planner points out. Plans save as
+   you edit, in `Documents/RunPlanner/Projects`.
+5. In the plan's header, choose **Send to slot N**, or open ▾ to pick another
+   of the twelve slots. Sending also makes that slot the one used for the next
+   run; the Game tab shows every slot and lets you choose which plays next.
 6. Launch the game with that profile and open the **Run Planner** window from
    the ReturnOfModding menu bar. **Plan for next run** shows the slot the next
    run will use; pick another slot there or in the app.
@@ -183,7 +183,7 @@ and the game.
 If something goes wrong,
 [report an issue](https://github.com/maybe-adamant/RunPlanner/issues) with your
 plan, the room where it happened, what you expected, and what you actually saw.
-In the app, **Create bug report…** in the Game panel saves a zip with your
+In the app, **Create bug report…** under About saves a zip with your
 plan, plans in game and game logs to attach.
 
 Otherwise include `logOutput.log` from your profile's `ReturnOfModding` folder.

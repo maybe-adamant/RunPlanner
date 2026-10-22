@@ -191,7 +191,7 @@ base amount added to the game's own starting gold; empty adds none and shows a
 0 placeholder. Clicking the checkbox while the picker is open without a value
 cancels it and returns focus to the checkbox. An
 ineligible saved start point stays checked and its label carries a quiet
-"(unavailable)" without a hover; the Game panel states the reason. The row
+"(unavailable)" without a hover; the slot picker states the reason. The row
 itself has no descriptive hover.
 An `internal` declaration appears only when the application composition marks
 a development build; no declared modifier is currently internal.

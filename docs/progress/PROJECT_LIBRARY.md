@@ -1,6 +1,7 @@
 # Project Library and App Home
 
-Status: locked 2026-10-21, gate 0 settled. Base commit: `59d52b0b1`.
+Status: locked 2026-10-21. Gates 0–4 delivered (gate 4 approved by the owner and
+implemented with its tests and docs); gate 5 is next. Base commit: `59d52b0b1`.
 
 ## Objective
 
@@ -35,45 +36,65 @@ from. A catalog of template plans ships with the app.
    - A visible folder in the platform's documents directory
      (`RunPlanner/Projects/`), plain `.runplanner.json` files named from the
      plan name plus a short id; renaming the plan renames the file.
-   - No index file: the app scans the folder, reading only each file's head
-     (about 10 ms for 200 plans in a release build). A cache keyed by file,
-     size and modified time can come later if cold scans prove slow.
+   - Real subfolders of any depth, mirrored in the app. A plan's key is its
+     `/`-separated path inside the library. Folders are created, renamed,
+     moved and deleted (to the recycle bin) by host commands; a plan moves
+     between folders under the same file name. `projectId` stays unique across
+     the whole library.
+   - No index file: the app scans the folder recursively, reading only each
+     file's head (about 10 ms for 200 plans in a release build). A cache keyed
+     by file, size and modified time can come later if cold scans prove slow.
    - Among files sharing a `projectId`, the oldest keeps it and newer copies
      are re-minted.
-   - Opening an outside file imports a copy; an id already in the library is
-     re-minted. Duplicate creates a new item with a new id named "X (copy)".
+   - Opening an outside file imports a copy into the folder shown; an id
+     already in the library is re-minted. Duplicate creates a new item in the
+     same folder with a new id named "X (copy)".
    - "Open folder" reveals the library in the file manager.
    - First run offers once to import the previously active file; a declined
      offer is remembered and Import stays available.
+   - The app starts on Home with no plan open; the last plan is not reopened.
    - A single-instance guard keeps one app process writing the library.
    - The web build keeps the same model over browser storage, without a
-     folder.
+     folder to reveal; a plan's folder is a path field and folders are their
+     own records.
 3. **Continuous save.** Every edit writes the open item. There is no Save, no
    unsaved state and no global autosave. Each item keeps a "revert to last
    opened" snapshot. Sending to the game no longer saves first.
-4. **App home.** Settled mock-ups (gate 0): a header with Library / Catalog /
-   Game / Settings tabs; the Game tab shows "· update" in visible text when the
-   module has one.
-   - **Library:** a full-width list (name, route and aspect, biomes planned,
-     slots with current/older, last edited); per row Duplicate, Delete, Open;
-     page actions "Browse catalog", Open folder, Import…, New plan (blank).
-     Delete moves the file to the OS recycle bin and shows a floating
-     "Deleted · Undo" toast (about 8 s); Undo restores from an in-memory copy
-     on every platform.
+4. **App home.** Settled mock-ups (gate 0), revised at the gate 4 review: a
+   header with Library / Catalog / Game / Settings tabs and About (version and
+   update check); the Game tab shows "· update" or "· event" in visible text
+   when the module has an update or a community event is active.
+   - **Library:** a breadcrumb ("Library › Practice › Bosses"), folder rows
+     (Rename, Delete, Open) above plan rows; per plan name, route and aspect,
+     biomes planned, slots with current/older, last edited, and Duplicate,
+     Move to… (folder picker), Delete, Open; page actions "Browse catalog",
+     Open folder, New folder, Import…, New plan (blank, filed in the folder
+     shown). The search box and the chips (All, one per route type as the
+     route chooser names it, In game) search the whole library and show each
+     result's folder. Sort is kept per folder. Deleting a plan or a folder
+     moves it to the OS recycle bin and shows a floating "Deleted · Undo"
+     toast (about 8 s); Undo restores from an in-memory copy on every
+     platform. Deleting the open plan, or a folder holding it, closes it. No
+     drag and drop yet.
    - **Catalog:** see item 5.
-   - **Game:** module status and update, game location, the community event card
-     as today, and a table of all slots (library plan or "Not in library",
-     current/older with a visible reason, route, aspect, sent date, Play next,
+   - **Game:** module status and update, game location, the community event
+     card, and a table of all slots (library plan or "Not in library",
+     current/older with a visible reason, route, loadout, sent date, Play next,
      Open for linked slots) with "Rebuild outdated slots". Home never sends or
-     clears slots.
+     clears slots; development builds keep Import event folder / Clear event.
    - **Settings:** app scale.
-   - **Editor header:** ← Home, the plan name with Rename, "Saved as you edit",
-     "Revert to opened", the readiness badge, Undo/Redo as icon buttons,
-     "Send · Slot N" and a "Slots · N" button that also shows "· K older" in
-     visible text; its popover lists this plan's slots and the picker for other
-     slots. The route label, File, the zoom control, save status, the separate
-     Game and About buttons leave the editor header (Game and About on Home,
-     zoom in Settings).
+   - **Editor header:** ← Home · plan name · Rename · Discard changes ···
+     readiness badge · Undo/Redo icon buttons · split send button. "Discard
+     changes" (one undoable step back to the plan as opened) shows only after
+     an edit since opening, in reserved space; "Not saved · Details" shows
+     only on a write failure, in a reserved slot. The split button's main part
+     sends and ▾ opens the slot picker: "Send to slot N" (never sent, or the
+     slot is older), quiet "Slot N · up to date", or "Send to game…" with no
+     slot to choose. Its slot is the plan's own (the one that plays next when
+     it has several), else the slot last used this session while still empty,
+     else the first empty one. The route label, File, zoom, save status and
+     the separate Game and About buttons leave the editor; the Route panel
+     drops its readiness badge.
    - No validity badge on library rows.
 5. **Catalog.** A scalable collection of template plans, bundled for now with
    room for a remote source later. Each entry is a project plus metadata: title,
@@ -104,8 +125,9 @@ from. A catalog of template plans ships with the app.
    adapter; import with re-identification; first-run import.
 3. **Continuous save.** Retire Save, Save As, the profile session and global
    autosave; revert snapshot; Duplicate; send without saving.
-4. **App home.** Library, Game and Settings screens from the approved mock-ups;
-   editor game section slimmed; slot↔item links.
+4. **App home.** Library (with folders), Game and Settings screens from the
+   approved mock-ups; host folder commands; editor header and split send
+   button; slot↔item links.
 5. **Catalog.** Entry format and bundling, the Catalog screen, Add to library.
 6. **Closure.** Independent review, docs, live checks, delete this plan.
 

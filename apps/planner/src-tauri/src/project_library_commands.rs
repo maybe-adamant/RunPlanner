@@ -4,7 +4,7 @@ use std::sync::Mutex;
 use tauri::{Manager, State};
 
 use run_planner_game_host::library_session::{self, LibrarySession, PreviousFile};
-use run_planner_game_host::project_library::{self, LibraryEntry, NativeRecycler};
+use run_planner_game_host::project_library::{self, LibraryEntry, LibraryListing, NativeRecycler};
 
 use crate::game_module_commands::config_dir;
 
@@ -34,9 +34,9 @@ fn locked<T>(
 pub(crate) fn project_library_list(
     app: tauri::AppHandle,
     lock: State<'_, ProjectLibraryLock>,
-) -> Result<Vec<LibraryEntry>, String> {
+) -> Result<LibraryListing, String> {
     let folder = library_folder(&app)?;
-    locked(&lock, || project_library::list(&folder))
+    locked(&lock, || project_library::scan(&folder))
 }
 
 #[tauri::command(async)]
@@ -49,9 +49,54 @@ pub(crate) fn project_library_create(
     app: tauri::AppHandle,
     lock: State<'_, ProjectLibraryLock>,
     json: String,
+    folder: String,
 ) -> Result<LibraryEntry, String> {
-    let folder = library_folder(&app)?;
-    locked(&lock, || project_library::create(&folder, &json))
+    let root = library_folder(&app)?;
+    locked(&lock, || project_library::create(&root, &json, &folder))
+}
+
+#[tauri::command(async)]
+pub(crate) fn project_library_move(
+    app: tauri::AppHandle,
+    lock: State<'_, ProjectLibraryLock>,
+    key: String,
+    folder: String,
+) -> Result<LibraryEntry, String> {
+    let root = library_folder(&app)?;
+    locked(&lock, || project_library::move_plan(&root, &key, &folder))
+}
+
+#[tauri::command(async)]
+pub(crate) fn project_library_folder_create(
+    app: tauri::AppHandle,
+    lock: State<'_, ProjectLibraryLock>,
+    folder: String,
+) -> Result<(), String> {
+    let root = library_folder(&app)?;
+    locked(&lock, || project_library::create_folder(&root, &folder))
+}
+
+#[tauri::command(async)]
+pub(crate) fn project_library_folder_move(
+    app: tauri::AppHandle,
+    lock: State<'_, ProjectLibraryLock>,
+    from: String,
+    to: String,
+) -> Result<(), String> {
+    let root = library_folder(&app)?;
+    locked(&lock, || project_library::move_folder(&root, &from, &to))
+}
+
+#[tauri::command(async)]
+pub(crate) fn project_library_folder_delete(
+    app: tauri::AppHandle,
+    lock: State<'_, ProjectLibraryLock>,
+    folder: String,
+) -> Result<(), String> {
+    let root = library_folder(&app)?;
+    locked(&lock, || {
+        project_library::delete_folder(&root, &folder, &mut NativeRecycler)
+    })
 }
 
 #[tauri::command(async)]

@@ -6,6 +6,13 @@ import type {
 } from '@planner/workspace/projectOperations';
 
 const failureLabels: Record<ProjectOperation, string> = {
+  deleteFolder: 'Couldn’t delete folder',
+  folder: 'Couldn’t change folder',
+  move: 'Couldn’t move plan',
+  undoDeleteFolder: 'Couldn’t restore folder',
+  delete: 'Couldn’t delete plan',
+  reveal: 'Couldn’t open folder',
+  undoDelete: 'Couldn’t restore plan',
   new: 'Couldn’t create plan',
   importPlan: 'Couldn’t open file',
   openPlan: 'Couldn’t open plan',
@@ -16,25 +23,12 @@ const failureLabels: Record<ProjectOperation, string> = {
   publishGame: 'Couldn’t publish to game',
 };
 
-const successLabels: Record<ProjectOperation, string> = {
-  new: 'Plan created',
-  importPlan: 'File added to library',
-  openPlan: 'Plan opened',
-  duplicate: 'Plan duplicated',
-  revert: 'Plan reverted',
-  openCopy: 'Project opened',
-  importPrevious: 'File imported',
-  publishGame: 'Published to game',
-};
-
+/** Shows only failures: an operation's, or the open plan's latest write. */
 export function ProjectFileFeedback({
-  savesAsYouEdit,
   session,
   result,
 }: {
-  /** Whether a plan is open, so its edits are being saved. */
-  readonly savesAsYouEdit: boolean;
-  readonly session: Pick<LibrarySessionState, 'writeError' | 'openError'>;
+  readonly session: Pick<LibrarySessionState, 'writeError'>;
   readonly result: ProjectOperationResult | null;
 }) {
   const errors = [
@@ -42,16 +36,10 @@ export function ProjectFileFeedback({
       ? [{ key: 'operation', label: failureLabels[result.operation], detail: result.message }]
       : []),
     { key: 'write', label: 'Not saved', detail: session.writeError },
-    { key: 'open', label: 'Couldn’t reopen plan', detail: session.openError },
   ].filter((error) => error.detail !== null);
 
   return (
     <div className="project-profile-feedback">
-      {result?.status === 'success' ? (
-        <p className="project-operation-result" data-status="success" role="status">
-          {successLabels[result.operation]}
-        </p>
-      ) : null}
       {errors.length === 0 ? null : (
         <div className="project-file-failure" role="alert">
           <Popover.Root>
@@ -88,11 +76,6 @@ export function ProjectFileFeedback({
             </Popover.Portal>
           </Popover.Root>
         </div>
-      )}
-      {!savesAsYouEdit || session.writeError !== null ? null : (
-        <span className="profile-status" data-profile-status="clean" role="status">
-          Saved as you edit
-        </span>
       )}
     </div>
   );

@@ -63,18 +63,6 @@
     flex-direction: column;
   }
 
-  .app-header-actions {
-    display: flex;
-    width: 100%;
-    align-items: flex-start;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .app-header-actions > .project-file-controls {
-    flex-basis: 100%;
-  }
-
   .project-profile-feedback {
     flex: 1 1 100%;
     justify-content: flex-start;
@@ -84,18 +72,8 @@
     text-align: left;
   }
 
-  .project-entry-panel {
-    margin-top: 28px;
-    padding: 22px;
-  }
-
   .route-choice-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .project-entry-footer {
-    align-items: flex-start;
-    flex-direction: column;
   }
 
   .editor-workspace {

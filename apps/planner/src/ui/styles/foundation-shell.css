@@ -212,27 +212,6 @@ input[type='checkbox']:checked:disabled {
   border-bottom: 1px solid #303139;
 }
 
-/* The entry panel spans below a top row of the brand and the Game and About controls. */
-.app-header[data-entry] {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.app-header[data-entry] > .app-header-actions {
-  display: contents;
-}
-
-.app-header[data-entry] .header-about-controls {
-  grid-area: 1 / 2;
-}
-
-.app-header[data-entry] .project-entry-panel {
-  grid-column: 1 / -1;
-}
-
 /* The route's victory scene is the window backdrop; a top shade keeps the
    header legible and the editor panel sits above it. */
 .app-header[data-route-banner] {
@@ -258,20 +237,6 @@ input[type='checkbox']:checked:disabled {
   z-index: 1;
 }
 
-.app-brand {
-  display: flex;
-  min-width: 0;
-  flex: 0 1 auto;
-  align-items: baseline;
-  white-space: nowrap;
-}
-
-.app-brand-separator {
-  margin: 0 8px;
-  color: #5f5a66;
-  font-size: 1.35rem;
-}
-
 .app-plan-name {
   min-width: 6ch;
   flex: 0 1 auto;
@@ -294,15 +259,6 @@ input[type='checkbox']:checked:disabled {
   border-radius: 4px;
   background: rgb(17 18 22 / 70%);
   outline: none;
-}
-
-.app-header-actions {
-  display: flex;
-  min-width: 0;
-  flex: 1 1 auto;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
 }
 
 .app-header h1,
@@ -366,24 +322,6 @@ input[type='checkbox']:checked:disabled {
   padding-left: 8px;
   border-left: 1px solid #383943;
   gap: 6px;
-}
-
-.header-about-controls {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 6px;
-  padding-left: 8px;
-  border-left: 1px solid #383943;
-}
-
-.app-scale-value {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 /*

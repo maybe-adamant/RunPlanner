@@ -34,9 +34,10 @@ export function describeProjectLibraryContract(
   describe(`${host} project library contract`, () => {
     it('files, lists, reads and replaces plans', async () => {
       const library = createAdapter();
-      expect(await library.list()).toEqual([]);
+      expect(await library.list()).toEqual({ folders: [], entries: [] });
 
-      const created = await library.create(libraryPlanJson('plan-a', 'First'));
+      const created = await library.create(libraryPlanJson('plan-a', 'First'), '');
+      expect(created.folder).toBe('');
       expect(summaryOf(created)).toEqual({
         schemaVersion: 98,
         schemaRevision: null,
@@ -57,24 +58,53 @@ export function describeProjectLibraryContract(
       expect(await library.read(written.key)).toBe(
         libraryPlanJson('plan-a', 'Renamed', 'Underworld'),
       );
-      expect((await library.list()).map((entry) => entry.key)).toEqual([written.key]);
+      expect((await library.list()).entries.map((entry) => entry.key)).toEqual([written.key]);
+    });
+
+    it('files plans in folders, moves them, and renames and deletes folders', async () => {
+      const library = createAdapter();
+      await library.createFolder('Practice/Bosses');
+      const boss = await library.create(libraryPlanJson('plan-a', 'Boss'), 'Practice/Bosses');
+      const top = await library.create(libraryPlanJson('plan-b', 'Top'), '');
+      expect(boss.folder).toBe('Practice/Bosses');
+      expect((await library.list()).folders).toEqual(['Practice', 'Practice/Bosses']);
+
+      const moved = await library.movePlan(top.key, 'Practice');
+      expect(moved.folder).toBe('Practice');
+      expect(await library.read(moved.key)).toBe(libraryPlanJson('plan-b', 'Top'));
+
+      await library.moveFolder('Practice', 'Drills');
+      const renamed = await library.list();
+      expect(renamed.folders).toEqual(['Drills', 'Drills/Bosses']);
+      expect(renamed.entries.map((entry) => entry.folder).sort()).toEqual([
+        'Drills',
+        'Drills/Bosses',
+      ]);
+      await expect(library.moveFolder('Drills', 'Drills/Bosses/Inner')).rejects.toThrow(
+        /into itself/,
+      );
+
+      await library.deleteFolder('Drills/Bosses');
+      const remaining = await library.list();
+      expect(remaining.folders).toEqual(['Drills']);
+      expect(remaining.entries.map((entry) => entry.folder)).toEqual(['Drills']);
     });
 
     it('refuses a plan without an identity or a name', async () => {
       const library = createAdapter();
-      await expect(library.create('{"name":"x"}')).rejects.toThrow(/project identity/);
-      await expect(library.create('{"projectId":"a","name":"  "}')).rejects.toThrow(/no name/);
-      await expect(library.create('[1]')).rejects.toThrow(/Not a plan file/);
-      expect(await library.list()).toEqual([]);
+      await expect(library.create('{"name":"x"}', '')).rejects.toThrow(/project identity/);
+      await expect(library.create('{"projectId":"a","name":"  "}', '')).rejects.toThrow(/no name/);
+      await expect(library.create('[1]', '')).rejects.toThrow(/Not a plan file/);
+      expect(await library.list()).toEqual({ folders: [], entries: [] });
     });
 
     it('deletes a plan from the library', async () => {
       const library = createAdapter();
-      const kept = await library.create(libraryPlanJson('plan-a', 'Kept'));
-      const deleted = await library.create(libraryPlanJson('plan-b', 'Deleted'));
+      const kept = await library.create(libraryPlanJson('plan-a', 'Kept'), '');
+      const deleted = await library.create(libraryPlanJson('plan-b', 'Deleted'), '');
 
       await library.delete(deleted.key);
-      expect((await library.list()).map((entry) => entry.key)).toEqual([kept.key]);
+      expect((await library.list()).entries.map((entry) => entry.key)).toEqual([kept.key]);
       await expect(library.read(deleted.key)).rejects.toThrow();
       await expect(library.delete(deleted.key)).rejects.toThrow(/not in the library/);
     });
@@ -82,19 +112,16 @@ export function describeProjectLibraryContract(
     it('remembers the library session', async () => {
       const library = createAdapter();
       expect(await library.readSession()).toEqual(EMPTY_LIBRARY_SESSION);
-      const session = {
-        lastOpened: { key: 'plan-key', projectId: 'plan-a' },
-        previousFileOffered: true,
-      };
+      const session = { previousFileOffered: true };
       await library.writeSession(session);
       expect(await createAdapter().readSession()).toEqual(session);
     });
 
     it('keeps plans across reopening', async () => {
       const first = createAdapter();
-      const created = await first.create(libraryPlanJson('plan-a', 'Kept'));
+      const created = await first.create(libraryPlanJson('plan-a', 'Kept'), '');
       const reopened = createAdapter();
-      expect((await reopened.list()).map((entry) => entry.key)).toContain(created.key);
+      expect((await reopened.list()).entries.map((entry) => entry.key)).toContain(created.key);
     });
   });
 }

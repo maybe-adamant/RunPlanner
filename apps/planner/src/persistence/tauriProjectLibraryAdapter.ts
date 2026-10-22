@@ -3,6 +3,7 @@ import type {
   OutsideProjectFile,
   ProjectLibraryAdapter,
   ProjectLibraryEntry,
+  ProjectLibraryListing,
 } from './projectLibrary';
 
 export interface TauriProjectLibraryEnvironment {
@@ -30,9 +31,21 @@ export function createTauriProjectLibraryAdapter(
   const { invoke } = environment;
   return Object.freeze({
     supportsReveal: true,
-    list: () => invoke<readonly ProjectLibraryEntry[]>('project_library_list'),
+    list: () => invoke<ProjectLibraryListing>('project_library_list'),
     read: (key: string) => invoke<string>('project_library_read', { key }),
-    create: (json: string) => invoke<ProjectLibraryEntry>('project_library_create', { json }),
+    create: (json: string, folder: string) =>
+      invoke<ProjectLibraryEntry>('project_library_create', { json, folder }),
+    movePlan: (key: string, folder: string) =>
+      invoke<ProjectLibraryEntry>('project_library_move', { key, folder }),
+    async createFolder(folder: string): Promise<void> {
+      await invoke('project_library_folder_create', { folder });
+    },
+    async moveFolder(from: string, to: string): Promise<void> {
+      await invoke('project_library_folder_move', { from, to });
+    },
+    async deleteFolder(folder: string): Promise<void> {
+      await invoke('project_library_folder_delete', { folder });
+    },
     write: (key: string, json: string) =>
       invoke<ProjectLibraryEntry>('project_library_write', { key, json }),
     async delete(key: string): Promise<void> {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
@@ -24,7 +24,11 @@ describe('Fresh File product loop', () => {
     const { application, user } = renderPlannerForInteraction({ startWithProject: false });
     const project = () => application.store.getState().projectWorkspace.history!.present;
 
-    await user.click(screen.getByRole('button', { name: 'Create Fresh File project' }));
+    await user.click(screen.getByRole('button', { name: 'New plan' }));
+    await user.click(await screen.findByRole('button', { name: 'Create Fresh File plan' }));
+    await waitFor(() =>
+      expect(application.store.getState().projectWorkspace.kind).toBe('openProject'),
+    );
     expect(project().route).toMatchObject({
       routeKey: 'FreshFile',
       loadout: { weaponKey: null, aspectKey: null, startingKeepsakeKey: null },

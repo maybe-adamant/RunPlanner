@@ -90,7 +90,7 @@ A plan is admitted by its header, independent of the release number:
   any presentation failure.
 
 The game target is an application setting in the desktop configuration
-directory, never authored state or history. The Game panel's Game location
+directory, never authored state or history. The Game tab's Game location
 offers **Find r2modman profiles**, which lists the Hades II profiles under the
 platform's r2modman data root (below), and **Choose folder…**, which accepts any
 folder that is, or directly contains, a real `ReturnOfModding` folder: an
@@ -176,7 +176,7 @@ change causes; otherwise the older module still plays plans sent from this
 planner.
 The planner does not check whether the game is running.
 
-**Create bug report…** (Game panel and About, desktop only) saves one zip
+**Create bug report…** (About, desktop only) saves one zip
 where the user chooses. The host assembles it from explicit inputs:
 `report.json` (planner facts supplied by the application, including the last
 send failure or a last send that was not made active and the current
@@ -334,14 +334,14 @@ need not decode every plan to describe them:
 Slot 0 holds the community event plan. It is the same envelope, read and
 loaded by the module like any other slot, but it is read-only to the user:
 sending can never target it (the host refuses any send outside 1 through 12),
-and the Game panel shows it as a read-only **Event** row above the twelve slots,
-with the event title in the Plan column and its end time beneath, the same
-Route, Ends, Aspect and Sent columns, and no send action. The row shows while
-the slot holds a file. **Active plan** offers it like any other slot, and the
-event notice's **Set as active** makes it active through the same host write.
+and the Game tab shows it as an **Event** row above the twelve slots, with the
+event title marked "community event", the same Route, Aspect and Sent columns,
+and no send action. The row shows while the slot holds a plan. **Play next**
+offers it like any other slot, and the event card's **Set as active** makes it
+active through the same host write.
 
 The application keeps slot 0 in step with the [event feed](#event-feed) without
-any user action: at start-up and whenever the Game panel opens it writes the
+any user action: at start-up and whenever the Game tab opens it writes the
 active event, or clears slot 0 when there is none. Only two host operations
 change it, each through the same staged slot-and-overview transaction as a
 send (see [Publication preconditions](#publication-preconditions)):
@@ -437,7 +437,7 @@ covers, must name `file:events.json`, and its `timestamp` orders feeds.
 - The active event is the one whose window (`startsAt` inclusive, `endsAt`
   exclusive) contains now; of several, the latest start wins, then the greater
   id. There is at most one.
-- Start-up reads the feed at most once every ten minutes; opening the Game panel
+- Start-up reads the feed at most once every ten minutes; opening the Game tab
   also retries at once after a failed fetch. The last verified feed and its
   signature are kept together in one file in the application data folder
   (`event-feed/events.cache`) and verified again when read. A failed fetch
@@ -539,7 +539,7 @@ slot.
 
 A slot is outdated when its plan names another catalog or schema pair than the
 installed module admits. After the planner installs or updates the module, and
-when the Game panel's **Rebuild slots** is pressed, the application rebuilds
+when the Game tab's **Rebuild outdated slots** is pressed, the application rebuilds
 every outdated slot that has a source, provided nothing blocks sending:
 
 - It loads the source's project through the project loader, which migrates an
@@ -561,11 +561,13 @@ every outdated slot that has a source, provided nothing blocks sending:
   it stays outdated, its row asks for a bug report, and the next bug report
   carries the compiler's error.
 - A slot without a source, sent before slots kept one, stays outdated and reads
-  "Outdated — send again".
+  "Outdated for this module · send again to play".
 
-**Rebuild slots** shows under the slot table while an outdated slot has a
-source, and the last rebuild's summary ("Rebuilt 2 slots · couldn’t rebuild 1
-slot") shows beneath it. Results last for the session.
+**Rebuild outdated slots** shows under the slot table while an outdated slot
+has a source, beside how many need it ("1 slot needs a rebuild for module
+1.15.0") and then the last rebuild's summary ("Rebuilt 2 slots · couldn’t
+rebuild 1 slot"); a slot that could not be rebuilt says why in its row. Results
+last for the session.
 
 A sent plan's identity chain is the document's `projectId`, then the compiled
 `planFingerprint`. Its name is the project's authored
@@ -576,75 +578,62 @@ optional, presentation-only `displayName`, which is outside `planFingerprint`;
 the game module accepts it and only logs it. A duplicate gives the copy a new
 `projectId`, so earlier sends no longer match it.
 
-Once the module is ready, the Game panel shows the twelve slots as a table: Slot,
-Plan, Route, Ends, Aspect and Sent. The host reads each slot under the same
-link and containment rules and the 1 MiB bound, and reports it as empty,
-present, stale or unreadable with its modified time and only existing wire
-fields: `projectId`, `displayName`, `routeKey`, `extent.biomeKeys`,
+The Game tab shows the event slot and the twelve plan slots as a table: Slot,
+Library plan, Route, Aspect, Sent, Next run and Open. The host reads each slot
+under the same link and containment rules and the 1 MiB bound, and reports it
+as empty, present, stale or unreadable with its modified time and only existing
+wire fields: `projectId`, `displayName`, `routeKey`, `extent.biomeKeys`,
 `startingLoadout.weaponKey` and `startingLoadout.aspectKey`, and
-`planFingerprint`. The application labels the route and final biome from the
-catalog, and the aspect as its name without "Aspect of" followed by the
-weapon's `shortLabel` ("Circe (Staff)"); a loadout without an aspect
-shows "None", and a plan without `displayName` shows _Unnamed_, Sent is a compact relative time with the exact local time as
-its title and description, and an unreadable slot shows only "Unreadable". A
-slot whose plan names another catalog or schema pair than the installed module
-admits, or one an earlier planner wrote, is stale and shows only "Outdated —
-send again"; it cannot be made active, and the header's quick send treats the
-open project's own stale slot like its present one. Host status also carries
-the bundled and installed compatibility files into bug reports.
+`planFingerprint`. A slot whose `projectId` a library plan holds is shown by
+that plan's library name with **Open**; it is **current** when its fingerprint
+matches the plan as it is now and **older** otherwise, with the reason in
+visible text ("Plan edited since it was sent", or outdated for the module).
+Any other slot shows its `displayName` and "Not in library". The application
+labels the route from the catalog and the loadout as the weapon's `shortLabel`
+and the aspect's name without "Aspect of" ("Staff · Melinoë"), leaving out
+keys the catalog does not own; Sent is a compact relative time, and an
+unreadable slot shows only "Unreadable". A slot whose plan names another
+catalog or schema pair than the installed module admits, or one an earlier
+planner wrote, is stale: outdated for the module, it cannot be played next.
+Host status also carries the bundled and installed compatibility files into
+bug reports.
 
-The table is an overview with send actions only. The slot the module plays next
-is chosen in **Active plan** at the top of the Game panel, shown whenever
-a game location is set and disabled while its slots cannot be read. It names
-slots as the in-game picker does (`Slot 2 (Circe - Surface)`,
-`Event: <title> (<label>)`), offers the event slot first and each plan slot
-holding a plan the installed module admits, lists a slot holding an outdated
-plan disabled as `(outdated)`, and shows `active-slot.json` as
-last read: a missing or invalid file shows slot 1, and a file naming a slot
-without such a plan keeps that slot, labelled with what it holds
-(`Slot 4 (empty)`, `(unreadable)`, `(outdated)`, `Event (none)`). Choosing
-writes the file without resending; the slots are then re-read, and a failed
-write leaves a short notice beside the choice and its value unchanged. A
-successful send makes its slot the value.
+Home never sends or clears a slot. **Play next** writes `active-slot.json`
+without resending for any slot holding a plan the installed module admits, and
+the slot the file names as last read shows **Plays next** (a missing or invalid
+file plays slot 1); the slots are then re-read, and a failed write leaves a
+short notice under the table. A successful send makes its slot the one that
+plays next.
 
-A slot with the open project's `projectId` is marked **current** when its
-fingerprint matches the compiled plan and **older version** otherwise, by plain
-identity equality. **Send here** fills an empty slot and
-**Replace** overwrites an occupied one after confirmation, both taking the Save
-and send forms when a save is needed; all are absent while the current project
-cannot compile, which the panel explains from the compiler's error code: a
-known route, extent or opening code gets its own sentence, and any other failure
-asks to resolve the plan's findings, never showing raw compiler text. That
-reason shows in a warning callout with a **Show findings** action, present only
-when the evaluation has a next repair, which closes the panel and navigates to
-it exactly as the Next repair banner does. The planner remembers the last slot
-sent for the loaded project as UI-session state only: a send from the Game panel
-or the header sets it, and loading, creating or replacing the document, or
-restarting, clears it.
+Sending belongs to the plan's editor, whose header has one split send button
+of stable width. Its main part sends to the plan's own slot (the one that plays
+next when it has several), else to the slot last sent this session while it is
+still empty, else to the first empty slot; ▾ opens the slot picker. The planner
+remembers the last slot sent for the loaded project as UI-session state only;
+loading, creating or replacing the document, or restarting, clears it.
 
-The header always shows one send button beside the Game button, with a fixed
-minimum width so no state shifts the header, and explains every state in its
-hint:
+| State                              | Label                         | Clicking                                  |
+| ---------------------------------- | ----------------------------- | ----------------------------------------- |
+| Module not ready                   | Send to game                  | nothing (Set up the game on the Game tab) |
+| Engine reports the plan ineligible | Send to game                  | nothing (the picker's reason)             |
+| The slot holds the plan as it is   | Slot N · up to date (quiet)   | nothing                                   |
+| A slot to send to                  | Send to slot N                | sends                                     |
+| No slot to choose                  | Send to game…                 | opens the slot picker                     |
+| Sending                            | Sending…                      | nothing                                   |
+| Result, for 3 seconds              | ✓ Sent · Slot N or ! Not sent | nothing                                   |
 
-| State                              | Label                         | Clicking                                    |
-| ---------------------------------- | ----------------------------- | ------------------------------------------- |
-| No project open                    | Send to game                  | nothing (Open a plan first)                 |
-| Module not ready                   | Send to game                  | nothing (Set up the game in the Game panel) |
-| Engine reports the plan ineligible | Send to game                  | nothing (the Game panel's reason)           |
-| No usable session slot             | Send to game…                 | opens the Game panel at Plans               |
-| Ready                              | Send · Slot N                 | sends                                       |
-| Sending                            | Sending…                      | nothing                                     |
-| Result, for 3 seconds              | ✓ Sent · Slot N or ! Not sent | nothing                                     |
-
-It re-sends only to the session slot, and only while it is empty or holds the
-same `projectId`, so it never overwrites another project's plan. It reads the
-engine's execution-plan eligibility without compiling and compiles only when
-clicked. A hidden status region announces each result. A failed send, from
-either place, is kept as UI-session state until the next send or a document
-replacement: the Game panel shows it as a Last send notice and the Game button
-shows **!** ("Game — last send failed"). Otherwise the Game button shows the same
-overall state as the panel with a distinct symbol and a text alternative,
-including when status could not be read.
+The slot picker lists the plan's own slots (current and plays next, or older
+with **Update slot N**) and every slot to send to: **Send here** fills an empty
+slot and **Replace** overwrites another plan after confirmation. All are absent
+while the plan cannot compile, which the picker explains from the compiler's
+error code: a known route, extent or opening code gets its own sentence, and
+any other failure asks to resolve the plan's findings, never showing raw
+compiler text, with a **Show findings** action when the evaluation has a next
+repair. The button reads the engine's execution-plan eligibility without
+compiling, compiles to compare only while the plan is in a slot, and compiles
+to send only when clicked. A hidden status region announces each result. A
+failed send, or a send whose slot was not made active, is kept as UI-session
+state until the next send or a document replacement and shown in the picker.
 
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The

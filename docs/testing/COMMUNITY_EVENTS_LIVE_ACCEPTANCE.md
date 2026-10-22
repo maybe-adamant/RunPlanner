@@ -24,20 +24,19 @@ live verification; the owner confirms or waives each check.
 
 ## App and game
 
-- [ ] Start the app: the notice reads `Event: <title> · ends <date>`, below any
-      app update notice. **Details** shows the description and rules below the
-      notice's first row; **Copy link** copies the project URL and reads Copied
-      briefly without moving the buttons.
+- [ ] Start the app: Home's Game tab reads **Game · event**, and the Game tab's
+      event card reads `Event: <title> · ends <date>`. **Details** shows the
+      description and rules below the card's first row; **Copy link** copies the
+      project URL and reads Copied briefly without moving the buttons.
 - [ ] **Set as active** makes the Event slot active: the button reads
-      **Active** and the Game panel's **Active plan** shows the event.
+      **Active** and the slot table's Event row reads **Plays next**.
 - [ ] The Event slot holds the event's plan, compiled by the app from the
       event's project, without a feed republish for this planner release.
-- [ ] **Open project** opens the event's plan as an unsaved copy; with unsaved
-      changes in the open project it asks first. The copy sent to a slot does
-      not count as the event.
-- [ ] The Game panel shows the read-only **Event** row above the twelve slots
-      with the title, end time, route and aspect, and no send action.
-      **Active plan** lists `Event: <title> (<label>)` first.
+- [ ] **Open project** adds the event's plan to the library as a copy and opens
+      it. The copy sent to a slot does not count as the event.
+- [ ] The Game tab shows the **Event** row above the twelve slots with the title
+      marked community event, route and loadout, **Play next**, and no send
+      action.
 - [ ] In game, the **Plan** picker lists `Event: <title> (<label>)` first;
       details show the event and its end. Pick it and finish the run: Current
       Run reads `Event: <title>`, and the victory screen's first row reads

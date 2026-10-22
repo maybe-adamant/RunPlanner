@@ -173,23 +173,22 @@ describe('surface product loop', () => {
     expect(saving.saves.hasPending()).toBe(false);
     expect(await library.plans(application.catalog)).toEqual([authored]);
 
-    await view.user.click(screen.getByRole('button', { name: 'Plan' }));
-    await view.user.click(screen.getByRole('menuitem', { name: 'New…' }));
+    // Home creates and imports plans; the open plan stays open until another opens.
+    await view.user.click(screen.getByRole('button', { name: 'Home' }));
+    await view.user.click(screen.getByRole('button', { name: 'New plan' }));
     expect(currentEvaluation(application).status).toBe('valid');
-    await view.user.click(
-      within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
-        name: 'Create Surface project',
-      }),
-    );
-    expect(currentEvaluation(application).status).toBe('incomplete');
+    await view.user.click(await screen.findByRole('button', { name: 'Create Surface plan' }));
+    await waitFor(() => expect(currentEvaluation(application).status).toBe('incomplete'));
     expect((await library.plans(application.catalog)).map((plan) => plan.route.routeKey)).toEqual([
       'Surface',
       'Surface',
     ]);
     library.choose({ fileName: 'surface.runplanner.json', json: encodeProjectDocument(authored) });
-    await view.user.click(screen.getByRole('button', { name: 'Plan' }));
-    await view.user.click(screen.getByRole('menuitem', { name: 'Open file…' }));
-    await screen.findByText('File added to library');
+    await view.user.click(screen.getByRole('button', { name: 'Home' }));
+    await view.user.click(screen.getByRole('button', { name: 'Import…' }));
+    await waitFor(() =>
+      expect(application.store.getState().librarySession.view).toEqual({ kind: 'editor' }),
+    );
     // The library already holds the file's identity, so the copy takes a new one.
     const imported = currentProject(application);
     expect(imported).toEqual({ ...authored, projectId: imported.projectId });
@@ -197,10 +196,15 @@ describe('surface product loop', () => {
 
     application.dispose();
     view.unmount();
+    // A later start shows the library, which holds all three plans.
     const reopened = createApplication({ projectLibrary: library.adapter });
     await reopened.startupReady;
     renderPlannerForInteraction({ application: reopened });
-    expect(currentProject(reopened)).toEqual(imported);
+    expect(reopened.store.getState().projectWorkspace.kind).toBe('noProject');
+    const { items } = await reopened.projectOperations.listLibrary();
+    expect(items.map((item) => item.kind === 'ready' && item.projectId)).toContain(
+      imported.projectId,
+    );
   });
 
   it('carries a purchased P Shop Hammer through route history and the application projection', async () => {

@@ -5,18 +5,37 @@ import {
   type OutsideProjectFile,
   type ProjectLibraryAdapter,
   type ProjectLibraryEntry,
+  type ProjectLibraryListing,
 } from './projectLibrary';
 
 const DATABASE_NAME = 'run-planner-library';
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 const PLANS = 'plans';
 const SESSION = 'session';
+const FOLDERS = 'folders';
 const SESSION_RECORD = 'session';
 
 interface StoredPlan {
   readonly key: string;
   readonly json: string;
   readonly modifiedMs: number;
+  /** The folder path; absent in plans stored before folders, which are at the top level. */
+  readonly folder?: string;
+}
+
+interface StoredFolder {
+  readonly path: string;
+}
+
+/** Whether `path` is `folder` or inside it. */
+function within(path: string, folder: string): boolean {
+  return path === folder || path.startsWith(`${folder}/`);
+}
+
+/** Every folder a path needs, itself and its parents. */
+function withParents(folder: string): string[] {
+  const parts = folder.split('/');
+  return parts.map((_, index) => parts.slice(0, index + 1).join('/'));
 }
 
 interface StoredSession extends LibrarySession {
@@ -108,6 +127,7 @@ function filedIdentity(json: string): void {
 function entryFor(plan: StoredPlan): ProjectLibraryEntry {
   return Object.freeze({
     key: plan.key,
+    folder: plan.folder ?? '',
     modifiedMs: plan.modifiedMs,
     content: summarizeProjectJson(plan.json),
   });
@@ -131,6 +151,9 @@ export function createBrowserProjectLibraryAdapter(
         if (!upgrading.objectStoreNames.contains(SESSION)) {
           upgrading.createObjectStore(SESSION, { keyPath: 'id' });
         }
+        if (!upgrading.objectStoreNames.contains(FOLDERS)) {
+          upgrading.createObjectStore(FOLDERS, { keyPath: 'path' });
+        }
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error ?? new Error('Could not open browser storage'));
@@ -148,11 +171,21 @@ export function createBrowserProjectLibraryAdapter(
 
   return Object.freeze({
     supportsReveal: false,
-    async list(): Promise<readonly ProjectLibraryEntry[]> {
-      const plans = await transact(await database(), [PLANS], 'readonly', (transaction) =>
-        settle<StoredPlan[]>(transaction.objectStore(PLANS).getAll()),
+    async list(): Promise<ProjectLibraryListing> {
+      const [plans, folders] = await transact(
+        await database(),
+        [PLANS, FOLDERS],
+        'readonly',
+        (transaction) =>
+          Promise.all([
+            settle<StoredPlan[]>(transaction.objectStore(PLANS).getAll()),
+            settle<StoredFolder[]>(transaction.objectStore(FOLDERS).getAll()),
+          ]),
       );
-      return Object.freeze(plans.map(entryFor));
+      return Object.freeze({
+        folders: Object.freeze(folders.map((folder) => folder.path).sort()),
+        entries: Object.freeze(plans.map(entryFor)),
+      });
     },
     async read(key: string): Promise<string> {
       const plan = await transact(await database(), [PLANS], 'readonly', (transaction) =>
@@ -160,21 +193,97 @@ export function createBrowserProjectLibraryAdapter(
       );
       return plan.json;
     },
-    async create(json: string): Promise<ProjectLibraryEntry> {
+    async create(json: string, folder: string): Promise<ProjectLibraryEntry> {
       filedIdentity(json);
-      const plan: StoredPlan = { key: mintKey(), json, modifiedMs: now() };
-      await transact(await database(), [PLANS], 'readwrite', (transaction) =>
-        settle(transaction.objectStore(PLANS).add(plan)),
-      );
+      const plan: StoredPlan = { key: mintKey(), json, modifiedMs: now(), folder };
+      await transact(await database(), [PLANS, FOLDERS], 'readwrite', async (transaction) => {
+        if (folder !== '') {
+          await Promise.all(
+            withParents(folder).map((path) =>
+              settle(transaction.objectStore(FOLDERS).put({ path })),
+            ),
+          );
+        }
+        await settle(transaction.objectStore(PLANS).add(plan));
+      });
       return entryFor(plan);
     },
     async write(key: string, json: string): Promise<ProjectLibraryEntry> {
       filedIdentity(json);
-      const plan: StoredPlan = { key, json, modifiedMs: now() };
-      await transact(await database(), [PLANS], 'readwrite', (transaction) =>
-        settle(transaction.objectStore(PLANS).put(plan)),
+      const plan = await transact(await database(), [PLANS], 'readwrite', async (transaction) => {
+        const previous = await stored(transaction, key);
+        const next: StoredPlan = { ...previous, json, modifiedMs: now() };
+        await settle(transaction.objectStore(PLANS).put(next));
+        return next;
+      });
+      return entryFor(plan);
+    },
+    async movePlan(key: string, folder: string): Promise<ProjectLibraryEntry> {
+      const plan = await transact(
+        await database(),
+        [PLANS, FOLDERS],
+        'readwrite',
+        async (transaction) => {
+          const previous = await stored(transaction, key);
+          const next: StoredPlan = { ...previous, folder };
+          if (folder !== '') {
+            await Promise.all(
+              withParents(folder).map((path) =>
+                settle(transaction.objectStore(FOLDERS).put({ path })),
+              ),
+            );
+          }
+          await settle(transaction.objectStore(PLANS).put(next));
+          return next;
+        },
       );
       return entryFor(plan);
+    },
+    async createFolder(folder: string): Promise<void> {
+      await transact(await database(), [FOLDERS], 'readwrite', (transaction) =>
+        Promise.all(
+          withParents(folder).map((path) => settle(transaction.objectStore(FOLDERS).put({ path }))),
+        ),
+      );
+    },
+    async moveFolder(from: string, to: string): Promise<void> {
+      if (within(to, from)) throw new Error(`${from} cannot be moved into itself.`);
+      await transact(await database(), [PLANS, FOLDERS], 'readwrite', async (transaction) => {
+        const folders = transaction.objectStore(FOLDERS);
+        const all = await settle<StoredFolder[]>(folders.getAll());
+        if (!all.some((folder) => folder.path === from)) {
+          throw new Error(`${from} is not in the library.`);
+        }
+        if (all.some((folder) => folder.path === to)) {
+          throw new Error(`${to} is already in the library.`);
+        }
+        const moved = (path: string) => `${to}${path.slice(from.length)}`;
+        for (const folder of all.filter((candidate) => within(candidate.path, from))) {
+          await settle(folders.delete(folder.path));
+          await settle(folders.put({ path: moved(folder.path) }));
+        }
+        for (const path of withParents(to)) await settle(folders.put({ path }));
+        const plans = transaction.objectStore(PLANS);
+        for (const plan of await settle<StoredPlan[]>(plans.getAll())) {
+          if (plan.folder !== undefined && within(plan.folder, from)) {
+            await settle(plans.put({ ...plan, folder: moved(plan.folder) }));
+          }
+        }
+      });
+    },
+    async deleteFolder(folder: string): Promise<void> {
+      await transact(await database(), [PLANS, FOLDERS], 'readwrite', async (transaction) => {
+        const folders = transaction.objectStore(FOLDERS);
+        for (const stored of await settle<StoredFolder[]>(folders.getAll())) {
+          if (within(stored.path, folder)) await settle(folders.delete(stored.path));
+        }
+        const plans = transaction.objectStore(PLANS);
+        for (const plan of await settle<StoredPlan[]>(plans.getAll())) {
+          if (plan.folder !== undefined && within(plan.folder, folder)) {
+            await settle(plans.delete(plan.key));
+          }
+        }
+      });
     },
     async delete(key: string): Promise<void> {
       await transact(await database(), [PLANS], 'readwrite', async (transaction) => {
@@ -194,7 +303,6 @@ export function createBrowserProjectLibraryAdapter(
       return session === undefined
         ? EMPTY_LIBRARY_SESSION
         : Object.freeze({
-            lastOpened: session.lastOpened,
             previousFileOffered: session.previousFileOffered,
           });
     },

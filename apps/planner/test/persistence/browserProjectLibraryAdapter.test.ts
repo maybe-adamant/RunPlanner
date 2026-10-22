@@ -41,7 +41,7 @@ describeProjectLibraryContract('Browser', () => createAdapter());
 describe('Browser project library', () => {
   it('stamps each write with the time it was made', async () => {
     const library = createAdapter();
-    const created = await library.create(libraryPlanJson('plan-a', 'First'));
+    const created = await library.create(libraryPlanJson('plan-a', 'First'), '');
     expect(created.modifiedMs).toBe(1_000);
     clock = 5_000;
     expect((await library.write(created.key, libraryPlanJson('plan-a', 'Edited'))).modifiedMs).toBe(

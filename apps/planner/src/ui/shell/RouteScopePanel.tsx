@@ -1,7 +1,7 @@
 import { type RouteFeedbackPresentation } from '@planner/projections/evaluationProjection';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import type { WorkspaceRoute } from '@planner/projections/structured-workspace';
-import { FindingCount, StatusBadge } from '../feedback/EvaluationFeedback';
+import { FindingCount } from '../feedback/EvaluationFeedback';
 import { RoutePrefixControl } from './RoutePrefixControl';
 import { RouteRunModifiers } from './RouteRunModifiers';
 
@@ -29,7 +29,6 @@ export function RouteScopePanel({
       <header className="panel-heading">
         <h2 className="eyebrow route-loadout-heading">Route</h2>
         <div className="panel-heading-actions">
-          <StatusBadge status={feedback.status} />
           <FindingCount count={feedback.findingCount} label={`${label} findings`} />
           <span className="neutral-status">{routeExtent}</span>
         </div>

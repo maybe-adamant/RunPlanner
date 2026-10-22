@@ -1,5 +1,5 @@
 //! What the planner remembers about the library between launches, in the configuration folder:
-//! the plan it last had open and whether the pre-library file was offered for import. It also
+//! whether the pre-library file was offered for import. It also
 //! reads the file the planner kept open before it had a library.
 
 use serde::{Deserialize, Serialize};
@@ -12,18 +12,9 @@ const SESSION_FILE: &str = "library-session.json";
 /// The file the planner kept open before plans lived in the library.
 const PREVIOUS_ACTIVE_FILE: &str = "active-profile.json";
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct OpenedPlan {
-    pub key: String,
-    pub project_id: String,
-}
-
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LibrarySession {
-    #[serde(default)]
-    pub last_opened: Option<OpenedPlan>,
     /// The pre-library file was offered once, and imported or declined.
     #[serde(default)]
     pub previous_file_offered: bool,
@@ -120,10 +111,6 @@ mod tests {
         let folder = TestFolder::new();
         assert_eq!(read(&folder.0), LibrarySession::default());
         let session = LibrarySession {
-            last_opened: Some(OpenedPlan {
-                key: "Plan (12345678).runplanner.json".to_owned(),
-                project_id: "run-plan-a".to_owned(),
-            }),
             previous_file_offered: true,
         };
         write(&folder.0, &session).unwrap();

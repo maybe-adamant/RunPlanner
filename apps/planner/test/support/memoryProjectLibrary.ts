@@ -49,13 +49,13 @@ export function createMemoryProjectLibrary(
     failWrites: (error: Error | null) => {
       failWrites = error;
     },
-    /** Stores `project` as a library plan and returns its key. */
-    async file(project: ProjectDocument): Promise<string> {
-      return (await stored.create(encodeProjectDocument(project))).key;
+    /** Stores `project` as a library plan in a folder and returns its key. */
+    async file(project: ProjectDocument, folder = ''): Promise<string> {
+      return (await stored.create(encodeProjectDocument(project), folder)).key;
     },
     /** The stored plans, decoded. */
     async plans(catalog: Catalog): Promise<readonly ProjectDocument[]> {
-      const entries = await stored.list();
+      const { entries } = await stored.list();
       return Promise.all(
         entries.map(async (entry) => parseProjectDocument(await stored.read(entry.key), catalog)),
       );

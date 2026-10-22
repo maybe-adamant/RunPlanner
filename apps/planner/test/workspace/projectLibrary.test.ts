@@ -18,29 +18,47 @@ import {
 import { createProjectLibraryOperations } from '@planner/workspace/projectLibrary';
 import schema91Json from '../persistence/fixtures/anvil-results.schema-91.runplanner.json';
 
-/** A folder of named files, as the desktop host keeps them, with the host's head reader. */
+/**
+ * A folder of files keyed by their path, as the desktop host keeps them, with the host's head
+ * reader and subfolders.
+ */
 function createFolder(
   files: Record<string, { readonly json: string; readonly modifiedMs: number }>,
   options: {
     readonly chosen?: OutsideProjectFile | null;
     readonly previous?: OutsideProjectFile | null;
+    readonly folders?: readonly string[];
   } = {},
 ) {
   const stored = new Map(Object.entries(files));
+  const folders = new Set(options.folders ?? []);
   let session: LibrarySession = EMPTY_LIBRARY_SESSION;
   let created = 0;
+  const folderOf = (key: string) => key.slice(0, Math.max(0, key.lastIndexOf('/')));
+  const nameOf = (key: string) => key.slice(key.lastIndexOf('/') + 1);
+  const inside = (path: string, folder: string) => path === folder || path.startsWith(`${folder}/`);
   const entry = (key: string): ProjectLibraryEntry => {
     const file = stored.get(key);
     if (file === undefined) throw new Error(`${key} is not in the library.`);
-    return { key, modifiedMs: file.modifiedMs, content: summarizeProjectJson(file.json) };
+    return {
+      key,
+      folder: folderOf(key),
+      modifiedMs: file.modifiedMs,
+      content: summarizeProjectJson(file.json),
+    };
   };
   const adapter: ProjectLibraryAdapter = {
     supportsReveal: false,
-    list: () => Promise.resolve([...stored.keys()].sort().map(entry)),
+    list: () =>
+      Promise.resolve({
+        folders: [...folders].sort(),
+        entries: [...stored.keys()].sort().map(entry),
+      }),
     read: (key) => Promise.resolve(entry(key) && stored.get(key)!.json),
-    create(json) {
+    create(json, folder) {
       created += 1;
-      const key = `created-${created}.runplanner.json`;
+      const key = `${folder === '' ? '' : `${folder}/`}created-${created}.runplanner.json`;
+      if (folder !== '') folders.add(folder);
       stored.set(key, { json, modifiedMs: 10_000 + created });
       return Promise.resolve(entry(key));
     },
@@ -53,6 +71,23 @@ function createFolder(
       stored.delete(key);
       return Promise.resolve();
     },
+    movePlan(key, folder) {
+      const file = stored.get(key)!;
+      const target = `${folder === '' ? '' : `${folder}/`}${nameOf(key)}`;
+      stored.delete(key);
+      stored.set(target, file);
+      return Promise.resolve(entry(target));
+    },
+    createFolder(folder) {
+      folders.add(folder);
+      return Promise.resolve();
+    },
+    moveFolder: () => Promise.reject(new Error('unused')),
+    deleteFolder(folder) {
+      for (const path of [...folders]) if (inside(path, folder)) folders.delete(path);
+      for (const key of [...stored.keys()]) if (inside(folderOf(key), folder)) stored.delete(key);
+      return Promise.resolve();
+    },
     preserveOriginal: () => Promise.reject(new Error('unused')),
     reveal: () => Promise.reject(new Error('unused')),
     chooseImportFile: () => Promise.resolve(options.chosen ?? null),
@@ -63,7 +98,7 @@ function createFolder(
       return Promise.resolve();
     },
   };
-  return { adapter, stored, session: () => session };
+  return { adapter, stored, folders, session: () => session };
 }
 
 function planJson(projectId: string, name = 'Surface plan'): string {
@@ -102,7 +137,7 @@ describe('project library operations', () => {
       'My old plan.runplanner.json': { json: legacy, modifiedMs: 6 },
     });
 
-    const items = await operations(adapter).list();
+    const { items } = await operations(adapter).list();
     expect(items.map((item) => [item.key, item.kind])).toEqual([
       ['a.runplanner.json', 'ready'],
       ['b.runplanner.json', 'tooNew'],
@@ -133,7 +168,7 @@ describe('project library operations', () => {
       'other.runplanner.json': { json: planJson('plan-b'), modifiedMs: 30 },
     });
 
-    const items = await operations(adapter).list();
+    const { items } = await operations(adapter).list();
     expect(items.map((item) => item.kind === 'ready' && [item.key, item.projectId])).toEqual([
       ['original.runplanner.json', 'plan-a'],
       ['copy.runplanner.json', 'run-plan-minted-1'],
@@ -157,7 +192,7 @@ describe('project library operations', () => {
       'open.runplanner.json': { json: planJson('plan-a', 'Open'), modifiedMs: 20 },
       'older.runplanner.json': { json: planJson('plan-a', 'Older'), modifiedMs: 10 },
     });
-    const items = await operations(adapter).list({ openKey: 'open.runplanner.json' });
+    const { items } = await operations(adapter).list({ openKey: 'open.runplanner.json' });
     expect(items.map((item) => item.kind === 'ready' && [item.key, item.projectId])).toEqual([
       ['older.runplanner.json', 'run-plan-minted-1'],
       ['open.runplanner.json', 'plan-a'],
@@ -169,7 +204,7 @@ describe('project library operations', () => {
     const { adapter, stored } = createFolder({}, { chosen: outside });
     const library = operations(adapter);
 
-    expect((await library.importChosenFile())?.project).toMatchObject({
+    expect((await library.importChosenFile(''))?.project).toMatchObject({
       projectId: 'plan-a',
       name: 'Outside',
     });
@@ -193,7 +228,7 @@ describe('project library operations', () => {
   it('files nothing for an import it cannot open or a cancelled pick', async () => {
     const { adapter, stored } = createFolder({});
     const library = operations(adapter);
-    expect(await library.importChosenFile()).toBeNull();
+    expect(await library.importChosenFile('')).toBeNull();
     await expect(
       library.importFile({ fileName: 'bad.runplanner.json', json: '{}' }),
     ).rejects.toThrow();
@@ -212,18 +247,67 @@ describe('project library operations', () => {
     expect(stored.get(restored.key)?.json).toBe(planJson('plan-a', 'Kept'));
   });
 
-  it('reopens the last plan by key, or by identity once a rename moved it', async () => {
-    const { adapter } = createFolder({
-      'moved.runplanner.json': { json: planJson('plan-a', 'Moved'), modifiedMs: 1 },
-    });
+  it('keeps identities unique across folders, the copy in a subfolder taking a new one', async () => {
+    const { adapter } = createFolder(
+      {
+        'Practice/Bosses/copy.runplanner.json': {
+          json: planJson('plan-a', 'Copy'),
+          modifiedMs: 20,
+        },
+        'original.runplanner.json': { json: planJson('plan-a', 'Original'), modifiedMs: 10 },
+      },
+      { folders: ['Practice', 'Practice/Bosses'] },
+    );
+    const listing = await operations(adapter).list();
+    expect(listing.folders).toEqual(['Practice', 'Practice/Bosses']);
+    expect(
+      listing.items.map((item) => item.kind === 'ready' && [item.folder, item.projectId]),
+    ).toEqual([
+      ['', 'plan-a'],
+      ['Practice/Bosses', 'run-plan-minted-1'],
+    ]);
+  });
+
+  it('files new and imported plans in a folder and moves plans between folders', async () => {
+    const outside = { fileName: 'Outside.runplanner.json', json: planJson('plan-a', 'Outside') };
+    const { adapter, stored } = createFolder({}, { chosen: outside });
     const library = operations(adapter);
-    expect(await library.readLastOpened()).toBeNull();
-    await library.rememberOpened({ key: 'moved.runplanner.json', projectId: 'plan-a' });
-    expect((await library.readLastOpened())?.key).toBe('moved.runplanner.json');
-    await library.rememberOpened({ key: 'gone.runplanner.json', projectId: 'plan-a' });
-    expect((await library.readLastOpened())?.key).toBe('moved.runplanner.json');
-    await library.rememberOpened({ key: 'gone.runplanner.json', projectId: 'plan-b' });
-    expect(await library.readLastOpened()).toBeNull();
+    const imported = await library.importChosenFile('Practice');
+    expect(imported?.key).toMatch(/^Practice\//);
+    const created = await library.create(
+      createProjectDocument(catalog, { projectId: 'plan-b', name: 'B', routeKey: 'Surface' }),
+      'Speedrun',
+    );
+    const moved = await library.movePlan(created.key, '');
+    expect(moved).not.toContain('/');
+    expect([...stored.keys()].sort()).toEqual([imported!.key, moved].sort());
+  });
+
+  it('keeps a deleted folder with its subfolders and plans in memory so undo restores it', async () => {
+    const { adapter, stored, folders } = createFolder(
+      {
+        'Practice/a.runplanner.json': { json: planJson('plan-a', 'A'), modifiedMs: 1 },
+        'Practice/Bosses/b.runplanner.json': { json: planJson('plan-b', 'B'), modifiedMs: 2 },
+        'top.runplanner.json': { json: planJson('plan-c', 'Top'), modifiedMs: 3 },
+      },
+      { folders: ['Practice', 'Practice/Bosses', 'Practice/Empty'] },
+    );
+    const library = operations(adapter);
+    const deleted = await library.deleteFolder('Practice');
+    expect(deleted.folders).toEqual(['Practice', 'Practice/Bosses', 'Practice/Empty']);
+    expect(deleted.plans.map((plan) => plan.folder)).toEqual(['Practice/Bosses', 'Practice']);
+    expect([...stored.keys()]).toEqual(['top.runplanner.json']);
+    expect(folders.size).toBe(0);
+
+    await library.undoDeleteFolder(deleted);
+    expect([...folders].sort()).toEqual(['Practice', 'Practice/Bosses', 'Practice/Empty']);
+    const restored = (await library.list()).items.filter((item) => item.folder !== '');
+    expect(restored.map((item) => item.kind === 'ready' && [item.folder, item.projectId])).toEqual(
+      expect.arrayContaining([
+        ['Practice', 'plan-a'],
+        ['Practice/Bosses', 'plan-b'],
+      ]),
+    );
   });
 
   it('offers the previously open file once, unless the library holds it', async () => {
