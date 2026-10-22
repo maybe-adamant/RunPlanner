@@ -17,10 +17,10 @@ are not live verification; the owner confirms or waives each check.
       active, and in game both slots load with Status Ready.
 - [ ] Send a plan whose project the newer schema makes invalid (or whose source
       file was edited to an incomplete project under an older major), then update
-      the module: that slot stays outdated and its row says it couldn’t be
-      rebuilt after the update and asks to open the project and resend.
-- [ ] A slot sent by a planner before slots kept their source reads **Outdated
-      for this module · send again to play** and is not rebuilt.
+      the module: that slot stays outdated, its row reads “couldn’t rebuild”, and
+      the line under the table asks to open the project and resend.
+- [ ] A slot sent by a planner before slots kept their source reads **older,
+      send again** and is not rebuilt.
 - [ ] With an outdated slot that has a source and the module already current
       (for example after an update whose automatic rebuild failed to write),
       press **Rebuild outdated slots**: it rebuilds and the summary counts it.

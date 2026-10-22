@@ -365,19 +365,36 @@ event is active. Which Home tab shows, or whether the editor shows, and the
 Library folder shown are UI-session state in the library session slice; opening
 any plan shows its editor, and closing it (its item deleted) returns to the
 Library. Going Home keeps the open plan open. Settings holds the app scale.
+App notices (an update, an ended event) show under the shown screen's header.
+
+Navigation is mirrored into the History API by `installNavigationHistory`: each
+change of Home tab, Library folder, open plan or editor section (Route, Draft,
+Loadout, a biome, settings) pushes one entry, a change that leaves the location
+as it is pushes none, and the first location replaces the initial entry. Back
+and forward (the browser's, the mouse's back and forward buttons, Alt+←/→)
+restore the entry's location: a Home entry shows that tab and folder, writing
+the open plan's pending edits when leaving the editor; an editor entry reopens
+its plan, found by key or by `projectId` after a rename or move, and shows its
+section. A plan no longer in the library lands on the Library with a short
+notice, and the entry is rewritten to where it landed. Navigation stays
+UI-session state; authored history and Undo are untouched. In the desktop app
+the mouse buttons and Alt+←/→ also step history when the WebView has not done
+so itself within a moment.
 
 ### Plan operations
 
 Every open plan is a library item, and every authored edit is saved: there is
 no Save, no unsaved state and no recovery copy. The Library offers New plan (a
 route chooser), Import…, New folder, Open folder and Browse catalog (to the
-Catalog tab), and per plan Duplicate, Move to…, Delete and Open; the Catalog
+Catalog tab), and per plan Duplicate, Move to…, Delete and Open as icon buttons
+whose hint names the action; the Catalog
 offers Add to library; the editor offers Discard changes. `ProjectOperations`
 owns them:
 
 - **New plan** creates the route's project, files it in the folder shown and
   opens it.
-- **Import…** files a picked file in the folder shown and opens the copy.
+- **Import…** files each picked file in the folder shown without opening any,
+  with one summary notice.
 - **Duplicate** writes the plan's pending edits when it is open, then files a
   copy named "X (copy)" with a new `projectId` from `reidentifyProjectHistory`
   in the same folder, without opening it.
@@ -409,8 +426,8 @@ per route in the route chooser's names, In game) searches the whole library,
 and each result names its folder. Sort is kept per folder. The slots come from
 `projectLibrarySlotLinks`, which links a slot to the plan holding its
 `projectId`: current when the slot's fingerprint is the plan's as it is now,
-older with the reason otherwise ("Plan edited since it was sent", or outdated
-for the module). `ProjectOperations.inspectLibraryGamePlans` compiles only the
+older with the reason otherwise ("edited since sent", or "needs rebuild" or
+"send again" for the module). `ProjectOperations.inspectLibraryGamePlans` compiles only the
 plans a slot holds, cached by key and modified time, and the open plan as it
 is now.
 

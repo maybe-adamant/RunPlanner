@@ -19,12 +19,16 @@ export interface LibrarySessionState {
   readonly writeError: string | null;
   /** The file open before the library, offered once for import. */
   readonly previousFileOffer: { readonly fileName: string } | null;
+  /** Why back or forward could not show where it pointed; null once dismissed. */
+  readonly navigationNotice: string | null;
 }
 
 export const viewChanged = createAction<AppView>('library/viewChanged');
 export const libraryFolderChanged = createAction<string>('library/folderChanged');
 export const libraryWriteSucceeded = createAction('library/writeSucceeded');
 export const libraryWriteFailed = createAction<{ readonly message: string }>('library/writeFailed');
+/** Shows, or with null dismisses, why a history step landed elsewhere. */
+export const navigationNoticeShown = createAction<string | null>('library/navigationNoticeShown');
 export const previousFileOffered = createAction<{ readonly fileName: string } | null>(
   'library/previousFileOffered',
 );
@@ -38,6 +42,7 @@ const INITIAL_STATE: LibrarySessionState = Object.freeze({
   opened: null,
   writeError: null,
   previousFileOffer: null,
+  navigationNotice: null,
 });
 
 export function createLibrarySessionReducer(): Reducer<LibrarySessionState> {
@@ -67,6 +72,10 @@ export function createLibrarySessionReducer(): Reducer<LibrarySessionState> {
       .addCase(libraryWriteFailed, (state, action) => ({
         ...state,
         writeError: action.payload.message,
+      }))
+      .addCase(navigationNoticeShown, (state, action) => ({
+        ...state,
+        navigationNotice: action.payload,
       }))
       .addCase(previousFileOffered, (state, action) => ({
         ...state,

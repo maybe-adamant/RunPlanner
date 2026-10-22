@@ -29,13 +29,13 @@ live verification; the owner confirms or waives each check.
       description and rules below the card's first row; **Copy link** copies the
       project URL and reads Copied briefly without moving the buttons.
 - [ ] **Set as active** makes the Event slot active: the button reads
-      **Active** and the slot table's Event row reads **Plays next**.
+      **Active** and the slot table's Event row has its Next run dot filled.
 - [ ] The Event slot holds the event's plan, compiled by the app from the
       event's project, without a feed republish for this planner release.
 - [ ] **Open project** adds the event's plan to the library as a copy and opens
       it. The copy sent to a slot does not count as the event.
 - [ ] The Game tab shows the **Event** row above the twelve slots with the title
-      marked community event, route and loadout, **Play next**, and no send
+      marked community event, route and loadout, a Next run choice, and no send
       action.
 - [ ] In game, the **Plan** picker lists `Event: <title> (<label>)` first;
       details show the event and its end. Pick it and finish the run: Current

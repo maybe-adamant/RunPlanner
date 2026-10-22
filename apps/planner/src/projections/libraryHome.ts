@@ -23,9 +23,10 @@ export interface LibrarySlotLinks {
   >;
 }
 
-export const EDITED_SINCE_SENT = 'Plan edited since it was sent';
-const OUTDATED_REBUILD = 'Outdated for this module · rebuild to play';
-const OUTDATED_RESEND = 'Outdated for this module · send again to play';
+/** Why a slot is older than its plan, in the few words a slot row has room for. */
+export const EDITED_SINCE_SENT = 'edited since sent';
+export const OUTDATED_REBUILD = 'needs rebuild';
+export const OUTDATED_RESEND = 'send again';
 
 export const NO_SLOT_LINKS: LibrarySlotLinks = Object.freeze({
   byKey: new Map(),

@@ -1,10 +1,11 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 
 import { PROJECT_DOCUMENT_SCHEMA_VERSION } from '@run-planner/engine/authored-project';
 import type { Catalog, CatalogSummary } from '@run-planner/engine/catalog-schema';
 
 import type { BuildIdentity } from '@planner/composition/buildIdentity';
+import { homeBackdropArtwork } from '@planner/ui/artwork/home-backdrop/homeBackdropArtwork';
 import type { GameStatusController } from '@planner/persistence/gameModuleHost';
 import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdates';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
@@ -141,6 +142,9 @@ function AboutPopover({
                 </div>
               </dl>
             </section>
+            <p className="about-credit">
+              Artwork © Supergiant Games, used under their fan content policy.
+            </p>
             <Popover.Arrow className="about-popover-arrow" />
           </Popover.Content>
         </Popover.Portal>
@@ -167,6 +171,7 @@ export function HomeScreen({
   scale,
   slotRebuild,
   tab,
+  notices,
 }: {
   readonly bugReport: BugReportOperations | undefined;
   readonly buildIdentity: BuildIdentity;
@@ -182,6 +187,8 @@ export function HomeScreen({
   readonly scale: AppScale;
   readonly slotRebuild: SlotRebuildController | undefined;
   readonly tab: HomeTab;
+  /** The app's notices, shown under Home's header. */
+  readonly notices: ReactNode;
 }) {
   const dispatch = useAppDispatch();
   useGameStatusRefresh(gameStatus);
@@ -197,7 +204,11 @@ export function HomeScreen({
     snapshot.status === null ? null : (projectGamePanel(snapshot.status).module?.state ?? null);
   return (
     <>
-      <header className="app-header home-header">
+      <header
+        className="app-header home-header"
+        data-backdrop="home"
+        style={{ '--window-backdrop': `url("${homeBackdropArtwork}")` } as CSSProperties}
+      >
         <h1>Run Planner</h1>
         <nav aria-label="Home" className="home-nav">
           {TABS.filter((entry) => entry.tab !== 'catalog' || planCatalog !== undefined).map(
@@ -234,6 +245,7 @@ export function HomeScreen({
         </div>
       </header>
       <div className="home-body">
+        {notices}
         {tab === 'library' || (tab === 'catalog' && planCatalog === undefined) ? (
           <LibraryScreen
             catalog={catalog}

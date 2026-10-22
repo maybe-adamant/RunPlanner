@@ -99,6 +99,24 @@ describe('Library screen', () => {
     expect(within(page).queryByRole('button', { name: 'Open folder' })).toBeNull();
   });
 
+  it('opens a plan from its name, and a folder from its name', async () => {
+    const { application, user } = await renderLibrary(async (library) => {
+      await library.adapter.createFolder('Practice');
+      await library.file(plan('a', 'Erebus opener'));
+    });
+    await user.click(within(table()).getByRole('button', { name: /^Practice/ }));
+    await waitFor(() =>
+      expect(application.store.getState().librarySession.libraryFolder).toBe('Practice'),
+    );
+    const crumbs = screen.getByRole('navigation', { name: 'Folder' });
+    await user.click(within(crumbs).getByRole('button', { name: 'Library' }));
+    within(table()).getByRole('button', { name: 'Erebus opener' }).focus();
+    await user.keyboard('{Enter}');
+    await waitFor(() =>
+      expect(application.store.getState().librarySession.view).toEqual({ kind: 'editor' }),
+    );
+  });
+
   it('duplicates a plan in place and undoes a deletion from its notice', async () => {
     const { user, library } = await renderLibrary(async (library) => {
       await library.file(plan('a', 'Erebus opener'));

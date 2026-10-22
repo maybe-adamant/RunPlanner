@@ -336,8 +336,8 @@ loaded by the module like any other slot, but it is read-only to the user:
 sending can never target it (the host refuses any send outside 1 through 12),
 and the Game tab shows it as an **Event** row above the twelve slots, with the
 event title marked "community event", the same Route, Aspect and Sent columns,
-and no send action. The row shows while the slot holds a plan. **Play next**
-offers it like any other slot, and the event card's **Set as active** makes it
+and no send action. The row shows while the slot holds a plan. Its Next run
+choice works like any other slot's, and the event card's **Set as active** makes it
 active through the same host write.
 
 The application keeps slot 0 in step with the [event feed](#event-feed) without
@@ -616,20 +616,22 @@ every outdated slot that has a source, provided nothing blocks sending:
 - A source that cannot be read, or a rebuilt plan that cannot be written,
   stays outdated with that reason.
 - A project saved under another schema pair that no longer builds stays
-  outdated; its row reads "Couldn’t rebuild after the update — open the project
-  and resend."
+  outdated; its row reads "couldn’t rebuild", and under the table "Slot N
+  couldn’t rebuild: Couldn’t rebuild after the update — open the project and
+  resend."
 - A project saved under this planner's schema pair that no longer builds breaks
   the [same-version invariant](AUTHORED_PROJECT_MODEL.md#schema-change-approval):
   it stays outdated, its row asks for a bug report, and the next bug report
   carries the compiler's error.
 - A slot without a source, sent before slots kept one, stays outdated and reads
-  "Outdated for this module · send again to play".
+  "older, send again".
 
 **Rebuild outdated slots** shows under the slot table while an outdated slot
 has a source, beside how many need it ("1 slot needs a rebuild for module
 1.15.0") and then the last rebuild's summary ("Rebuilt 2 slots · couldn’t
-rebuild 1 slot"); a slot that could not be rebuilt says why in its row. Results
-last for the session.
+rebuild 1 slot"); a slot that could not be rebuilt says so in its row, and one
+line per such slot under the table gives the reason ("Slot 7 couldn’t rebuild:
+…"). Results last for the session.
 
 A sent plan's identity chain is the document's `projectId`, then the compiled
 `planFingerprint`. Its name is the project's authored
@@ -641,16 +643,20 @@ the game module accepts it and only logs it. A duplicate gives the copy a new
 `projectId`, so earlier sends no longer match it.
 
 The Game tab shows the event slot and the twelve plan slots as a table: Slot,
-Library plan, Route, Aspect, Sent, Next run and Open. The host reads each slot
+Library plan, Route, Aspect, Sent, Next run and actions (Clear, Open), in fixed
+columns and one-line rows of one height, so no change of state moves the table. The host reads each slot
 under the same link and containment rules and the 1 MiB bound, and reports it
 as empty, present, stale or unreadable with its modified time and only existing
 wire fields: `projectId`, `displayName`, `routeKey`, `extent.biomeKeys`,
 `startingLoadout.weaponKey` and `startingLoadout.aspectKey`, and
 `planFingerprint`. A slot whose `projectId` a library plan holds is shown by
 that plan's library name with **Open**; it is **current** when its fingerprint
-matches the plan as it is now and **older** otherwise, with the reason in
-visible text ("Plan edited since it was sent", or outdated for the module).
-Any other slot shows its `displayName` and "Not in library". The application
+matches the plan as it is now and **older** otherwise, with the reason in a few
+visible words on the same line ("older, edited since sent", "older, needs
+rebuild"); the name is shortened first, the state never. Any other slot shows
+its `displayName` and "not in library". Next run is a radio group: the slot
+that plays next is filled, a playable slot is hollow, and an outdated or
+unreadable slot's is disabled. The application
 labels the route from the catalog and the loadout as the weapon's `shortLabel`
 and the aspect's name without "Aspect of" ("Staff · Melinoë"), leaving out
 keys the catalog does not own; Sent is a compact relative time, and an
@@ -660,10 +666,10 @@ planner wrote, is stale: outdated for the module, it cannot be played next.
 Host status also carries the bundled and installed compatibility files into
 bug reports.
 
-Home never sends a slot. **Play next** writes `active-slot.json`
-without resending for any slot holding a plan the installed module admits, and
-the slot the file names as last read shows **Plays next** (a missing or invalid
-file plays slot 1); the slots are then re-read, and a failed write leaves a
+Home never sends a slot. Choosing a slot under Next run writes
+`active-slot.json` without resending for any slot holding a plan the installed
+module admits, and the slot the file names as last read shows filled (a
+missing or invalid file plays slot 1); the slots are then re-read, and a failed write leaves a
 short notice under the table. A successful send makes its slot the one that
 plays next.
 

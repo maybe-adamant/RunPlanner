@@ -212,27 +212,35 @@ input[type='checkbox']:checked:disabled {
   border-bottom: 1px solid #303139;
 }
 
-/* The route's victory scene is the window backdrop; a top shade keeps the
-   header legible and the editor panel sits above it. */
+/* The route's victory scene, or Home's scene, is the window backdrop; a top shade
+   keeps the header legible and the page content sits above it. */
 .app-header[data-route-banner] {
-  position: relative;
-  isolation: isolate;
   padding: 12px 14px 14px;
   border-bottom-color: transparent;
 }
 
-.app-header[data-route-banner]::before {
+.app-header[data-route-banner],
+.app-header[data-backdrop] {
+  position: relative;
+  isolation: isolate;
+}
+
+.app-header[data-route-banner]::before,
+.app-header[data-backdrop]::before {
   position: fixed;
   z-index: -1;
   inset: 0;
   background:
     linear-gradient(to bottom, rgb(17 18 22 / 72%), rgb(17 18 22 / 35%) 18%, rgb(17 18 22 / 35%)),
-    var(--route-banner) center / cover no-repeat;
+    var(--window-backdrop) var(--window-backdrop-position, center) / cover no-repeat;
   content: '';
   pointer-events: none;
 }
 
-.app-shell .editor-workspace {
+/* Every in-flow content layer beside the header sits above its fixed backdrop. */
+.app-shell .notice-area,
+.app-shell .editor-workspace,
+.app-shell .home-body {
   position: relative;
   z-index: 1;
 }
@@ -361,6 +369,35 @@ input[type='checkbox']:checked:disabled {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.35;
+}
+
+/* A row action shown as an icon; its hint names the action. */
+.icon-action {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.icon-action:hover:not(:disabled),
+.icon-action:focus-visible {
+  border-color: #44434d;
+  color: var(--text);
+}
+
+.icon-action[data-tone='danger']:hover:not(:disabled) {
+  color: #e0a0a0;
+}
+
+.icon-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .primary-action {
