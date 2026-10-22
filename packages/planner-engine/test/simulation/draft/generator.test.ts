@@ -199,7 +199,7 @@ describe('draftProject', () => {
 
     it('drafts Success Rate after its late Artemis prerequisite and Paid Dues after it', () => {
       // Paid Dues needs a Hermes room after Success Rate in G, so the plan runs into H.
-      const result = draftProject(catalog, planned('Underworld', 3), waiting, 1);
+      const result = draftProject(catalog, planned('Underworld', 3), waiting, 15);
       if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
       const assembly = simulateProjectAssembly(catalog, result.project);
       for (const traitKey of waiting.basketTraitKeys)
@@ -335,7 +335,7 @@ describe('draftProject', () => {
         ],
         rackKeepsakeKeys: [null, null, null],
       };
-      const result = draftProject(catalog, planned('Underworld', 2), spec, 8);
+      const result = draftProject(catalog, planned('Underworld', 2), spec, 1);
       if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
       // A trait taken from a bought god boon is a basket trait, in its god's order.
       const boughtTraits = shopBuys(result.project).flatMap((buy) => {
@@ -388,7 +388,7 @@ describe('draftProject', () => {
           catalog,
           practice,
           { ...spec, ...(pursue ? { pursueTartarusGoal: true } : {}) },
-          1,
+          2,
         );
         if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
         const drafted = applyProjectCommand(practice, catalog, result.command);
@@ -425,7 +425,7 @@ describe('draftProject', () => {
         ],
         rackKeepsakeKeys: [null, null, null],
       };
-      const walk = startDraftWalk(dream.base, spec, 16);
+      const walk = startDraftWalk(dream.base, spec, 33);
       expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
       // Air for Zeus's waiting Infusion, from the first Dream Shop.
       expect(shopBuys(walk.project)).toContain('H:AirBoost:');

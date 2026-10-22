@@ -45,6 +45,7 @@ import {
   type ProjectCandidateSession,
 } from '../candidates/session';
 import type { StartRoomCandidateQuery } from '../candidates/start-room';
+import type { ForcePressureLedgerEntry } from '../generation';
 import { countedRewardTypeDomain } from '../evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { assessmentRepairOwner } from '../finding-regions';
@@ -647,8 +648,10 @@ export class DraftWalk {
       target,
       uncommitted ? 'uncommitted' : 'authored',
     );
+    let pressure: ForcePressureLedgerEntry | undefined;
     const legal = names.filter((gameName) => {
       const evaluation = this.evaluate({ kind: 'roomTarget', target, gameName });
+      if (evaluation.kind === 'roomTarget') pressure ??= evaluation.result.pressure;
       // An uncommitted first target has no reached context yet; its static domain stands.
       return (
         evaluation.kind === 'unavailable' ||
@@ -659,11 +662,18 @@ export class DraftWalk {
       ...legal.map((gameName) => ({ kind: 'room' as const, gameName })),
       ...(takeover === undefined ? [] : [{ kind: 'takeover' as const }]),
     ];
-    for (const choice of this.weighted(choices, (entry) =>
+    const forced = this.steering.windowForcedRoom(legal, pressure, target.biomeKey, this.rng);
+    const ordered = this.weighted(choices, (entry) =>
       entry.kind === 'takeover'
         ? 0.5
         : this.steering.roomWeight(entry.gameName, target.biomeKey, true),
-    )) {
+    );
+    for (const choice of forced === undefined
+      ? ordered
+      : [
+          { kind: 'room' as const, gameName: forced },
+          ...ordered.filter((entry) => entry.kind !== 'room' || entry.gameName !== forced),
+        ]) {
       if (choice.kind === 'takeover') {
         if (applyTakeover()) return true;
         continue;
@@ -974,7 +984,15 @@ export class DraftWalk {
         this.steering.roomWeight(occurrence.gameName, selection.biomeKey) * offerWeight * outranked
       );
     });
-    for (const target of ordered)
+    // An offered story room is created once per run: its door goes before any other.
+    const story = (target: (typeof targets)[number]) => {
+      const occurrence = this.occurrence(selection.biomeKey, target.occurrenceId);
+      return (
+        occurrence !== undefined &&
+        this.steering.storyTarget(occurrence.gameName, selection.biomeKey)
+      );
+    };
+    for (const target of [...ordered.filter(story), ...ordered.filter((t) => !story(t))])
       if (
         this.apply({
           kind: 'SetExitSelection',

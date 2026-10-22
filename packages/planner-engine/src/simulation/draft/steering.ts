@@ -21,6 +21,19 @@ import type { DraftSpec } from './spec';
 import type { DraftNpcGiver, DraftWorldProduct } from './world';
 import type { RoomOccurrence } from '../../authored-project';
 import { draftNpcHosts, draftNpcWindowOpen, type DraftNpcHost } from './npc-windows';
+import type { ForcePressureLedgerEntry } from '../generation';
+import type { DraftRng } from './rng';
+
+/**
+ * The draft's chance a door forces a room at this depth of its window: the game's
+ * `IsRoomForced` ramp 1 / (deadline - depth) shifted one step softer, 1 / (deadline - depth + 1),
+ * forced at the deadline. A window one depth wide or less keeps the native rule.
+ */
+export function draftWindowForceChance(depth: number, start: number, deadline: number): number {
+  if (depth < start) return 0;
+  if (depth >= deadline) return 1;
+  return deadline - start <= 1 ? 1 / (deadline - depth) : 1 / (deadline - depth + 1);
+}
 
 /** What the walk has acquired so far, read from the latest Run State snapshot. */
 export interface DraftProgress {
@@ -53,6 +66,8 @@ const DUE_GIVER_WEIGHT = 60;
 const FOUNTAIN_TIE_BREAK = 1.01;
 /** A preferred midshop's least weight: above any boon door (at most 90), below a story room. */
 const PREFERRED_MIDSHOP_FLOOR = 100;
+/** A story room the draft wants met: above every other door. */
+const STORY_WEIGHT = 200;
 /** Remaining eligible boon bag entries at or below which the bag counts as low. */
 const LOW_BOON_BAG = 1;
 
@@ -665,6 +680,47 @@ export class DraftSteering {
     return draftBoonEntriesLeft(snapshot.bags, storeKeys) <= LOW_BOON_BAG;
   }
 
+  /**
+   * The room a door rolls forced inside its declared depth window, picked among the hits;
+   * a door that can show a wanted story room keeps it instead.
+   */
+  windowForcedRoom(
+    legal: readonly string[],
+    pressure: ForcePressureLedgerEntry | undefined,
+    biomeKey: string,
+    random: DraftRng,
+  ): string | undefined {
+    if (pressure === undefined) return undefined;
+    const optional = legal.filter((name) => pressure.optionalForcedRoomGameNames.includes(name));
+    if (
+      optional.length === 0 ||
+      legal.some((name) => this.roomWeight(name, biomeKey, true) === STORY_WEIGHT)
+    )
+      return undefined;
+    const routeKey = this.state.assembly().project.route.routeKey;
+    const hits = optional.filter((name) => {
+      const force = routeRoomDeclaration(this.catalog.rooms.byKey[name], routeKey)?.force;
+      if (force?.kind !== 'depthWindow') return false;
+      const depth =
+        force.axis === 'biomeEncounterDepth'
+          ? pressure.biomeEncounterDepth
+          : pressure.biomeDepthCache;
+      return random() < draftWindowForceChance(depth, force.start, force.deadline);
+    });
+    return hits.length === 0 ? undefined : hits[Math.floor(random() * hits.length)];
+  }
+
+  /** A story room of the biome's selected story NPC; offered once per run, so its door is taken. */
+  storyTarget(gameName: string, biomeKey: string): boolean {
+    return (
+      this.spec.world.storyNpcByBiome[biomeKey] !== undefined &&
+      routeRoomDeclaration(
+        this.catalog.rooms.byKey[gameName],
+        this.state.assembly().project.route.routeKey,
+      )?.kind === 'Story'
+    );
+  }
+
   /** A door placement waits on a story NPC whose wanted trait is not ready while a later room is likely. */
   roomWeight(gameName: string, biomeKey: string, placing = false): number {
     const room = routeRoomDeclaration(
@@ -680,7 +736,7 @@ export class DraftSteering {
         giver !== undefined &&
         this.npcWaiting(giver.giverKey, this.progress()) &&
         this.laterRoomLikely(biomeKey);
-      return waits ? 0.1 : 200;
+      return waits ? 0.1 : STORY_WEIGHT;
     }
     if (room?.kind === 'Shop') {
       // A mid-biome Shop the player prefers is taken over any boon door, below a story room

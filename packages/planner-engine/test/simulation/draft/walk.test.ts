@@ -13,6 +13,7 @@ import { decodeProjectDocument } from '../../../src/authored-project/codec';
 import { simulateProjectAssembly } from '../../../src/simulation';
 import type { ProjectEvaluationAssembly } from '../../../src/simulation/evaluation/evaluation-products';
 import { draftLoadoutProject } from '../../../src/simulation/draft/spec';
+import { selectedExitTarget } from '../../../src/authored-project/topology/query';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -218,7 +219,7 @@ describe('draft walk order', () => {
       return { taken: held.includes(duo), declines: walk.duoDeclines().get(duo) ?? 0 };
     };
     // Declined in a god room, a later one takes it.
-    expect(run(2, new Map())).toEqual({ taken: true, declines: 1 });
+    expect(run(3, new Map())).toEqual({ taken: true, declines: 1 });
     // A count carried in from an earlier biome continues: twice declined, every later room fires it.
     for (const seed of [1, 3]) expect(run(seed, new Map([[duo, 2]])).declines).toBe(2);
     // Planned only to F, the walk is in its last biome: the first god room takes the Duo.
@@ -234,5 +235,39 @@ describe('draft walk order', () => {
       ),
     );
     expect(run(1, new Map(), onlyF)).toEqual({ taken: true, declines: 0 });
+  });
+});
+
+describe('draft exit choice', () => {
+  it('takes an offered story door over a miniboss door', () => {
+    const spec: DraftSpec = {
+      loadout,
+      world: {
+        godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+        storyNpcByBiome: { F: 'Arachne' },
+        fieldNpcsByBiome: {},
+      },
+      basketTraitKeys: zeusBasket,
+      rackKeepsakeKeys: [null, null, null],
+    };
+    // A seed whose Arachne door shares its exit with a miniboss carrying a wanted boon.
+    const walk = startDraftWalk(base, spec, 13);
+    expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
+    const topology = walk.project.route.biomes[0]!.topology!;
+    const roomOf = (occurrenceId: string) =>
+      topology.occurrences.find((o) => o.occurrenceId === occurrenceId)?.gameName;
+    const exit = topology.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.normal.targets.some((t) => roomOf(t.occurrenceId) === 'F_Story01'),
+    );
+    if (exit?.kind !== 'exit') throw new Error('no Arachne door');
+    expect(
+      exit.normal.targets.some(
+        (t) => catalog.rooms.byKey[roomOf(t.occurrenceId) ?? '']?.kind === 'Miniboss',
+      ),
+    ).toBe(true);
+    const selected = selectedExitTarget(exit);
+    expect(selected && roomOf(selected.occurrenceId)).toBe('F_Story01');
   });
 });
