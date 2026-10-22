@@ -28,6 +28,8 @@ export interface NavigationHistoryEnvironment {
 const ENTRY_FORMAT = 'run-planner-navigation';
 /** How long a back or forward key or mouse button waits for the host's own navigation. */
 const NATIVE_NAVIGATION_GRACE_MS = 120;
+/** Input that can start a navigation; an assistive technology's activation is a bare click. */
+const USER_INPUT_EVENTS = ['pointerdown', 'keydown', 'click'] as const;
 
 interface HistoryEntry {
   readonly format: typeof ENTRY_FORMAT;
@@ -68,7 +70,9 @@ const sameLocation = (left: NavigationLocation | null, right: NavigationLocation
 
 /**
  * Mirrors app navigation into the History API: each change of Home tab, Library folder, open
- * plan or editor section pushes one entry, and back or forward restores the entry's location.
+ * plan or editor section the user makes pushes one entry, and back or forward restores the
+ * entry's location. A change the app makes by itself, as when a restored editor corrects its
+ * section, rewrites the shown entry instead, so it never drops the entries ahead of it.
  * Navigation is UI-session state; authored history and Undo are untouched.
  */
 export function installNavigationHistory(options: {
@@ -89,12 +93,19 @@ export function installNavigationHistory(options: {
   let restoring = 0;
   let restored: Promise<void> = Promise.resolve();
   let popped = 0;
+  // Whether the user has pointed, clicked or typed since the last entry was written or
+  // restored: only a change that follows their input is a navigation of their own.
+  let userActed = false;
+  const userInput = () => {
+    userActed = true;
+  };
 
   const write = (location: NavigationLocation, push: boolean) => {
     const entry: HistoryEntry = { format: ENTRY_FORMAT, location };
     if (push) history.pushState(entry, '');
     else history.replaceState(entry, '');
     shown = location;
+    userActed = false;
   };
   if (shown !== null) write(shown, false);
 
@@ -106,7 +117,7 @@ export function installNavigationHistory(options: {
     if (restoring > 0) return;
     const location = locate();
     if (location === null || sameLocation(location, shown)) return;
-    write(location, shown !== null);
+    write(location, shown !== null && userActed);
   };
   const unsubscribe = store.subscribe(() => {
     if (restoring > 0 || pending) return;
@@ -177,9 +188,12 @@ export function installNavigationHistory(options: {
         const location = locate();
         if (location !== null && !sameLocation(location, entry.location)) write(location, false);
         shown = location;
+        // The input that stepped history was spent on this restore.
+        userActed = false;
       });
   };
   environment.addEventListener('popstate', popState);
+  for (const type of USER_INPUT_EVENTS) environment.addEventListener(type, userInput, true);
 
   // Back or forward, unless the host navigated by itself within the grace period.
   const step = (direction: 'back' | 'forward') => {
@@ -205,6 +219,7 @@ export function installNavigationHistory(options: {
   return () => {
     unsubscribe();
     environment.removeEventListener('popstate', popState);
+    for (const type of USER_INPUT_EVENTS) environment.removeEventListener(type, userInput, true);
     environment.removeEventListener('mouseup', mouseUp);
     environment.removeEventListener('keydown', keyDown);
   };

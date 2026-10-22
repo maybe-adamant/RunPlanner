@@ -88,27 +88,32 @@ async function setUp() {
     explicitBackForward: true,
   });
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
-  return { application, fake, key, library, settle, uninstall };
+  // The user's own navigation: their input, then what it does.
+  const userNavigates = async (navigation: () => unknown) => {
+    fake.dispatch('pointerdown', {});
+    await navigation();
+    await settle();
+  };
+  return { application, fake, key, library, settle, uninstall, userNavigates };
 }
 
 describe('navigation history', () => {
   it('pushes one entry per navigation and restores each on back and forward', async () => {
-    const { application, fake, key, settle } = await setUp();
+    const { application, fake, key, userNavigates } = await setUp();
     const { store } = application;
     expect(fake.locations()).toEqual([{ view: 'home', tab: 'library', folder: '' }]);
 
-    store.dispatch(viewChanged({ kind: 'home', tab: 'game' }));
-    await settle();
+    await userNavigates(() => store.dispatch(viewChanged({ kind: 'home', tab: 'game' })));
     // A change that leaves the location as it is pushes nothing.
-    store.dispatch(viewChanged({ kind: 'home', tab: 'game' }));
-    await settle();
-    store.dispatch(viewChanged({ kind: 'home', tab: 'library' }));
-    store.dispatch(libraryFolderChanged('Practice'));
-    await settle();
-    await application.projectOperations.openPlan(key);
-    await settle();
-    store.dispatch(routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'loadout' } }));
-    await settle();
+    await userNavigates(() => store.dispatch(viewChanged({ kind: 'home', tab: 'game' })));
+    await userNavigates(() => {
+      store.dispatch(viewChanged({ kind: 'home', tab: 'library' }));
+      store.dispatch(libraryFolderChanged('Practice'));
+    });
+    await userNavigates(() => application.projectOperations.openPlan(key));
+    await userNavigates(() =>
+      store.dispatch(routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'loadout' } })),
+    );
     const editor = { view: 'editor', plan: { key, projectId: 'p-erebus' } };
     expect(fake.locations()).toEqual([
       { view: 'home', tab: 'library', folder: '' },
@@ -141,15 +146,12 @@ describe('navigation history', () => {
   });
 
   it('opens a plan again from history, and shows the Library when it is gone', async () => {
-    const { application, fake, key, settle } = await setUp();
+    const { application, fake, key, userNavigates } = await setUp();
     const { store } = application;
-    await application.projectOperations.openPlan(key);
-    await settle();
-    store.dispatch(viewChanged({ kind: 'home', tab: 'library' }));
-    await settle();
+    await userNavigates(() => application.projectOperations.openPlan(key));
+    await userNavigates(() => store.dispatch(viewChanged({ kind: 'home', tab: 'library' })));
     // Deleting the plan closes it; its editor entry stays behind.
-    await application.projectOperations.deletePlan(key);
-    await settle();
+    await userNavigates(() => application.projectOperations.deletePlan(key));
 
     fake.environment.history.back();
     await vi.waitFor(() =>
@@ -163,7 +165,7 @@ describe('navigation history', () => {
   });
 
   it('stays on the open plan and says why when it cannot be saved before going back', async () => {
-    const { application, fake, key, library, settle } = await setUp();
+    const { application, fake, key, library, userNavigates } = await setUp();
     const { store } = application;
     const other = await library.file(
       createProjectDocument(catalog, {
@@ -172,10 +174,8 @@ describe('navigation history', () => {
         routeKey: 'Surface',
       }),
     );
-    await application.projectOperations.openPlan(key);
-    await settle();
-    await application.projectOperations.openPlan(other);
-    await settle();
+    await userNavigates(() => application.projectOperations.openPlan(key));
+    await userNavigates(() => application.projectOperations.openPlan(other));
     library.failWrites(new Error('disk full'));
     store.dispatch(
       authoredProjectCommandDispatched({
@@ -197,9 +197,10 @@ describe('navigation history', () => {
   });
 
   it('steps back on the back mouse button only when the host did not', async () => {
-    const { application, fake, settle } = await setUp();
-    application.store.dispatch(viewChanged({ kind: 'home', tab: 'settings' }));
-    await settle();
+    const { application, fake, userNavigates } = await setUp();
+    await userNavigates(() =>
+      application.store.dispatch(viewChanged({ kind: 'home', tab: 'settings' })),
+    );
     expect(fake.index()).toBe(1);
 
     fake.dispatch('mouseup', { button: 3 });
@@ -217,5 +218,67 @@ describe('navigation history', () => {
     fake.environment.history.forward();
     fake.runTimers();
     expect(fake.index()).toBe(1);
+  });
+  it('keeps the entries ahead when a restored editor corrects its section by itself', async () => {
+    const { application, fake, key, userNavigates } = await setUp();
+    const { store } = application;
+    await userNavigates(() => application.projectOperations.openPlan(key));
+    await userNavigates(() =>
+      store.dispatch(routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'loadout' } })),
+    );
+    await userNavigates(() => store.dispatch(viewChanged({ kind: 'home', tab: 'library' })));
+    await userNavigates(() => store.dispatch(viewChanged({ kind: 'home', tab: 'game' })));
+    expect(fake.locations()).toHaveLength(5);
+
+    fake.environment.history.back();
+    fake.environment.history.back();
+    await vi.waitFor(() =>
+      expect(store.getState().librarySession.view).toEqual({ kind: 'editor' }),
+    );
+    await vi.waitFor(() => expect(fake.index()).toBe(2));
+    // Once the restore settles, the editor shows another section without the user's input,
+    // as when the restored section is no longer available.
+    store.dispatch(routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'route' } }));
+    await vi.waitFor(() =>
+      expect(fake.locations()[2]).toMatchObject({ section: { kind: 'route' } }),
+    );
+    expect(fake.locations()).toHaveLength(5);
+
+    fake.environment.history.forward();
+    await vi.waitFor(() =>
+      expect(store.getState().librarySession.view).toEqual({ kind: 'home', tab: 'library' }),
+    );
+    fake.environment.history.forward();
+    await vi.waitFor(() =>
+      expect(store.getState().librarySession.view).toEqual({ kind: 'home', tab: 'game' }),
+    );
+    expect(fake.index()).toBe(4);
+  });
+
+  it('keeps the entries ahead when the Library changes its folder by itself after back', async () => {
+    const { application, fake, key, userNavigates } = await setUp();
+    const { store } = application;
+    await userNavigates(() => store.dispatch(libraryFolderChanged('Practice')));
+    await userNavigates(() => application.projectOperations.openPlan(key));
+    expect(fake.locations()).toHaveLength(3);
+
+    fake.environment.history.back();
+    await vi.waitFor(() =>
+      expect(store.getState().librarySession.view).toEqual({ kind: 'home', tab: 'library' }),
+    );
+    await vi.waitFor(() => expect(fake.index()).toBe(1));
+    store.dispatch(libraryFolderChanged(''));
+    await vi.waitFor(() => expect(fake.locations()[1]).toMatchObject({ folder: '' }));
+
+    fake.environment.history.forward();
+    await vi.waitFor(() =>
+      expect(store.getState().librarySession.view).toEqual({ kind: 'editor' }),
+    );
+    expect(fake.index()).toBe(2);
+    expect(fake.locations()).toHaveLength(3);
+
+    // The user's next navigation still pushes.
+    await userNavigates(() => store.dispatch(viewChanged({ kind: 'home', tab: 'settings' })));
+    expect(fake.locations()).toHaveLength(4);
   });
 });
