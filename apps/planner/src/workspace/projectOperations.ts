@@ -19,11 +19,14 @@ import {
 
 import { createInitialProject } from '../composition/projectBootstrap';
 import type { GamePlanPublisher, GamePlanSlotNumber } from '../persistence/gameModuleHost';
-import type { OutsideProjectFile } from '../persistence/projectLibrary';
 import { describePublicationBlocker } from '../projections/gamePanel';
 import { projectGameSlotSummary } from '../projections/gameSlotSummary';
 import { encodeSlotSource } from '../persistence/slotSource';
-import { previousFileOffered, viewChanged } from '../state/librarySessionSlice';
+import {
+  previousFileOffered,
+  recoveredPlanOfferChanged,
+  viewChanged,
+} from '../state/librarySessionSlice';
 import {
   authoredProjectClosed,
   authoredProjectReplaced,
@@ -50,6 +53,7 @@ import {
   type LibraryItem,
   type LibraryListing,
   type ProjectLibraryOperations,
+  type StartupImportOffer,
 } from './projectLibrary';
 
 export type ProjectOperation =
@@ -62,6 +66,7 @@ export type ProjectOperation =
   | 'duplicate'
   | 'importPlan'
   | 'importPrevious'
+  | 'importRecovered'
   | 'new'
   | 'openCopy'
   | 'openPlan'
@@ -149,8 +154,11 @@ export interface ProjectOperations {
   undoDeleteFolder(deleted: DeletedFolder): Promise<ProjectOperationResult>;
   /** Returns the open plan to the document it was opened as, as one undoable step. */
   revertToOpened(): ProjectOperationResult;
-  /** Files a project document as a new plan with its own identity and opens it. */
-  openProjectCopy(json: string): Promise<ProjectOperationResult>;
+  /**
+   * Files a project document as a new plan with its own identity and opens it; a document from
+   * before plans had names takes `title`.
+   */
+  openProjectCopy(json: string, title?: string): Promise<ProjectOperationResult>;
   /**
    * Files a catalog entry's plan at the top of the library as a copy with its own identity,
    * named after the entry's title, and remembers which entry it came from.
@@ -164,8 +172,15 @@ export interface ProjectOperations {
   /** Imports the file open before the library, once offered, and opens it. */
   acceptPreviousFile(): Promise<ProjectOperationResult>;
   declinePreviousFile(): Promise<void>;
-  /** Offers the pre-library file once; the app starts on Home with no plan open. */
+  /** Imports the project autosaved before the library, once offered, and opens it. */
+  acceptRecoveredPlan(): Promise<ProjectOperationResult>;
+  declineRecoveredPlan(): Promise<void>;
+  /**
+   * Offers the pre-library file and autosave once; the app starts on Home with no plan open.
+   */
   restoreStartup(): Promise<void>;
+  /** Whether the open plan has edits not yet written. */
+  hasUnwrittenEdits(): boolean;
   /** Whether the current project compiles to an execution plan, and its fingerprint. */
   inspectCurrentGamePlan(): CurrentGamePlan;
   publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult>;
@@ -199,6 +214,7 @@ const operationLabels: Readonly<Record<ProjectOperation, string>> = Object.freez
   duplicate: 'Duplicate',
   importPlan: 'Open file',
   importPrevious: 'Import',
+  importRecovered: 'Import',
   new: 'New plan',
   openCopy: 'Open project',
   openPlan: 'Open plan',
@@ -241,7 +257,16 @@ export function createProjectOperations(
   const currentPlans = new WeakMap<object, CurrentGamePlan>();
   const internalRunModifiers = options.devBuild ?? false;
   const mintProjectId = options.mintProjectId ?? mintRandomProjectId;
-  let previousFile: OutsideProjectFile | null = null;
+  let previousFile: StartupImportOffer | null = null;
+  let recoveredPlan: StartupImportOffer | null = null;
+  // Library changes run one at a time, so a scan never re-identifies or refiles a plan that
+  // another operation is moving, copying or restoring.
+  let libraryTail: Promise<unknown> = Promise.resolve();
+  const exclusive = <T>(task: () => Promise<T>): Promise<T> => {
+    const run = libraryTail.then(task, task);
+    libraryTail = run.catch(() => undefined);
+    return run;
+  };
   /** Fingerprints of stored plans, by key and the modified time they were read at. */
   const storedFingerprints = new Map<
     string,
@@ -367,8 +392,10 @@ export function createProjectOperations(
     libraryRevealable: options.library?.operations.revealable ?? false,
     async listLibrary(): Promise<LibraryListing> {
       if (options.library === undefined) return { folders: [], items: [] };
-      const openKey = saver().openKey();
-      return library().list(openKey === null ? {} : { openKey });
+      return exclusive(() => {
+        const openKey = saver().openKey();
+        return library().list(openKey === null ? {} : { openKey });
+      });
     },
     async inspectLibraryGamePlans(
       items: readonly LibraryItem[],
@@ -445,18 +472,15 @@ export function createProjectOperations(
           ...(itineraryBiomeKeys === undefined ? {} : { itineraryBiomeKeys }),
         });
         options.prepareProjectWorkspace(project);
-        return await openFiled(
-          'new',
-          await library().create(project, folder),
-          'Created a new plan.',
-        );
+        const plan = await exclusive(() => library().create(project, folder));
+        return await openFiled('new', plan, 'Created a new plan.');
       } catch (error) {
         return failure('new', error);
       }
     },
     async importPlan(folder = ''): Promise<ProjectOperationResult> {
       try {
-        const { filed, failed } = await library().importChosenFiles(folder);
+        const { filed, failed } = await exclusive(() => library().importChosenFiles(folder));
         const [plan] = filed;
         if (plan !== undefined) {
           return await openFiled(
@@ -474,7 +498,7 @@ export function createProjectOperations(
     },
     async importPlans(folder: string): Promise<ImportPlansResult> {
       try {
-        const { filed, failed } = await library().importChosenFiles(folder);
+        const { filed, failed } = await exclusive(() => library().importChosenFiles(folder));
         const imported = filed.map((plan) => plan.project.name);
         const status = imported.length === 0 && failed.length === 0 ? 'cancelled' : 'success';
         return Object.freeze({
@@ -504,19 +528,22 @@ export function createProjectOperations(
     async duplicate(key: string): Promise<ProjectOperationResult> {
       try {
         if (saver().openKey() === key) await saver().flush();
-        const { project } = await library().read(key);
-        const folder =
-          (await library().list()).items.find((item) => item.key === key)?.folder ?? '';
-        const renamed = applyProjectCommand(project, options.catalog, {
-          kind: 'RenameProject',
-          project: createProjectAddress(),
-          name: copyName(project.name),
+        const copy = await exclusive(async () => {
+          const { project } = await library().read(key);
+          const folder =
+            (await library().scan()).items.find((item) => item.key === key)?.folder ?? '';
+          const renamed = applyProjectCommand(project, options.catalog, {
+            kind: 'RenameProject',
+            project: createProjectAddress(),
+            name: copyName(project.name),
+          });
+          const minted = reidentifyProjectHistory(
+            createProjectHistory(renamed),
+            mintProjectId(),
+          ).present;
+          await library().create(minted, folder);
+          return minted;
         });
-        const copy = reidentifyProjectHistory(
-          createProjectHistory(renamed),
-          mintProjectId(),
-        ).present;
-        await library().create(copy, folder);
         return result('duplicate', 'success', `Added ${copy.name}.`);
       } catch (error) {
         return failure('duplicate', error);
@@ -529,7 +556,7 @@ export function createProjectOperations(
           saver().close();
           options.store.dispatch(authoredProjectClosed());
         }
-        const deleted = await library().deletePlan(key);
+        const deleted = await exclusive(() => library().deletePlan(key));
         return Object.freeze({ ...result('delete', 'success', 'Deleted the plan.'), deleted });
       } catch (error) {
         return Object.freeze({ ...failure('delete', error), deleted: null });
@@ -537,10 +564,18 @@ export function createProjectOperations(
     },
     async movePlan(key: string, folder: string): Promise<ProjectOperationResult> {
       try {
-        const open = saver().openKey() === key;
-        if (open) await saver().flush();
-        const moved = await library().movePlan(key, folder);
-        if (open) saver().moved(key, moved);
+        // Writes wait while the file moves, so a pending edit cannot recreate the old key.
+        await exclusive(async () => {
+          if (saver().openKey() !== key) {
+            await library().movePlan(key, folder);
+            return;
+          }
+          await saver().hold(async () => {
+            // The pending write may have refiled the plan under its new name.
+            const from = saver().openKey() ?? key;
+            saver().moved(from, await library().movePlan(from, folder));
+          });
+        });
         return result('move', 'success', 'Moved the plan.');
       } catch (error) {
         return failure('move', error);
@@ -551,10 +586,12 @@ export function createProjectOperations(
         const normalized = normalizeFolderName(name);
         if (normalized === null) throw new Error(`“${name}” can’t name a folder.`);
         const path = childFolder(parent, normalized);
-        if ((await library().list()).folders.includes(path)) {
-          throw new Error(`A folder named “${normalized}” is already here.`);
-        }
-        await library().createFolder(path);
+        await exclusive(async () => {
+          if ((await library().scan()).folders.includes(path)) {
+            throw new Error(`A folder named “${normalized}” is already here.`);
+          }
+          await library().createFolder(path);
+        });
         return result('folder', 'success', `Added the folder ${normalized}.`);
       } catch (error) {
         return failure('folder', error);
@@ -566,17 +603,16 @@ export function createProjectOperations(
         if (normalized === null) throw new Error(`“${name}” can’t name a folder.`);
         const target = childFolder(parentFolder(folder), normalized);
         if (target === folder) return result('folder', 'cancelled', 'The name is unchanged.');
-        const openKey = saver().openKey();
-        const project = options.store.getState().projectWorkspace.history?.present;
-        if (openKey !== null) await saver().flush();
-        await library().moveFolder(folder, target);
-        // The open plan may now be filed under another key.
-        if (openKey !== null && project !== undefined) {
-          const moved = (await library().list()).items.find(
-            (item) => item.kind === 'ready' && item.projectId === project.projectId,
-          );
-          if (moved !== undefined) saver().moved(openKey, moved.key);
-        }
+        await exclusive(() =>
+          saver().hold(async () => {
+            await library().moveFolder(folder, target);
+            // A key inside the folder moves with it; a key that does not name its folder stays.
+            const openKey = saver().openKey();
+            if (openKey?.startsWith(`${folder}/`) === true) {
+              saver().moved(openKey, `${target}${openKey.slice(folder.length)}`);
+            }
+          }),
+        );
         return result('folder', 'success', `Renamed the folder to ${normalized}.`);
       } catch (error) {
         return failure('folder', error);
@@ -584,20 +620,30 @@ export function createProjectOperations(
     },
     async deleteFolder(folder: string): Promise<DeleteFolderResult> {
       try {
-        const openKey = saver().openKey();
         const inside = (path: string) => path === folder || path.startsWith(`${folder}/`);
-        const openFolder =
-          openKey === null
-            ? null
-            : ((await library().list()).items.find((item) => item.key === openKey)?.folder ?? null);
-        if (openFolder !== null && inside(openFolder)) {
-          await saver().flush();
-          saver().close();
-          options.store.dispatch(authoredProjectClosed());
-        }
-        const deleted = await library().deleteFolder(folder);
+        const deleted = await exclusive(async () => {
+          const openKey = saver().openKey();
+          const openFolder =
+            openKey === null
+              ? null
+              : ((await library().scan()).items.find((item) => item.key === openKey)?.folder ??
+                null);
+          if (openFolder !== null && inside(openFolder)) {
+            await saver().flush();
+            saver().close();
+            options.store.dispatch(authoredProjectClosed());
+          }
+          return library().deleteFolder(folder);
+        });
+        const unkept = deleted.unkept.length;
         return Object.freeze({
-          ...result('deleteFolder', 'success', 'Deleted the folder.'),
+          ...result(
+            'deleteFolder',
+            'success',
+            unkept === 0
+              ? 'Deleted the folder.'
+              : `Deleted the folder; ${unkept === 1 ? '1 file' : `${unkept} files`} could not be read, so only the recycle bin keeps ${unkept === 1 ? 'it' : 'them'}.`,
+          ),
           deleted,
         });
       } catch (error) {
@@ -606,7 +652,7 @@ export function createProjectOperations(
     },
     async undoDeleteFolder(deleted: DeletedFolder): Promise<ProjectOperationResult> {
       try {
-        await library().undoDeleteFolder(deleted);
+        await exclusive(() => library().undoDeleteFolder(deleted));
         return result('undoDeleteFolder', 'success', 'Restored the folder.');
       } catch (error) {
         return failure('undoDeleteFolder', error);
@@ -614,8 +660,12 @@ export function createProjectOperations(
     },
     async undoDelete(deleted: DeletedPlan): Promise<ProjectOperationResult> {
       try {
-        const plan = await library().undoDelete(deleted);
-        return result('undoDelete', 'success', `Restored ${plan.project.name}.`);
+        const item = await exclusive(() => library().undoDelete(deleted));
+        return result(
+          'undoDelete',
+          'success',
+          item.kind === 'unreadable' ? 'Restored the file.' : `Restored ${item.name}.`,
+        );
       } catch (error) {
         return failure('undoDelete', error);
       }
@@ -630,12 +680,14 @@ export function createProjectOperations(
         return failure('revert', error);
       }
     },
-    async openProjectCopy(json: string): Promise<ProjectOperationResult> {
+    async openProjectCopy(json: string, title?: string): Promise<ProjectOperationResult> {
       try {
         // A copy never shares the original's identity, so its sends are its own.
-        const plan = await library().importFile(
-          { fileName: 'project.runplanner.json', json },
-          { newIdentity: true },
+        const plan = await exclusive(() =>
+          library().importFile(
+            { fileName: 'project.runplanner.json', json },
+            { newIdentity: true, ...(title === undefined ? {} : { legacyName: title }) },
+          ),
         );
         return await openFiled('openCopy', plan, 'Added the project to the library and opened it.');
       } catch (error) {
@@ -647,9 +699,11 @@ export function createProjectOperations(
       json: string,
     ): Promise<ProjectOperationResult> {
       try {
-        const plan = await library().importFile(
-          { fileName: `${entry.id}.runplanner.json`, json },
-          { newIdentity: true, name: entry.title },
+        const plan = await exclusive(() =>
+          library().importFile(
+            { fileName: `${entry.id}.runplanner.json`, json },
+            { newIdentity: true, name: entry.title },
+          ),
         );
         await library().recordCatalogCopy(entry.id, plan.project.projectId);
         return result('addCatalog', 'success', `Added “${plan.project.name}” to the library.`);
@@ -660,8 +714,11 @@ export function createProjectOperations(
     catalogCopies: async () => (options.library === undefined ? {} : library().catalogCopies()),
     async acceptPreviousFile(): Promise<ProjectOperationResult> {
       try {
-        if (previousFile === null) throw new Error('No earlier file is waiting to be imported');
-        const plan = await library().importFile(previousFile);
+        const offer = previousFile;
+        if (offer === null) throw new Error('No earlier file is waiting to be imported');
+        const plan = await exclusive(() =>
+          library().importFile(offer, { legacyName: offer.legacyName }),
+        );
         previousFile = null;
         options.store.dispatch(previousFileOffered(null));
         await library().settlePreviousFileOffer();
@@ -675,6 +732,26 @@ export function createProjectOperations(
       options.store.dispatch(previousFileOffered(null));
       await library().settlePreviousFileOffer();
     },
+    async acceptRecoveredPlan(): Promise<ProjectOperationResult> {
+      try {
+        const offer = recoveredPlan;
+        if (offer === null) throw new Error('No recovered plan is waiting to be imported');
+        const plan = await exclusive(() =>
+          library().importFile(offer, { legacyName: offer.legacyName }),
+        );
+        recoveredPlan = null;
+        options.store.dispatch(recoveredPlanOfferChanged(false));
+        await library().settleRecoveredPlanOffer();
+        return await openFiled('importRecovered', plan, `Imported ${plan.project.name}.`);
+      } catch (error) {
+        return failure('importRecovered', error);
+      }
+    },
+    async declineRecoveredPlan(): Promise<void> {
+      recoveredPlan = null;
+      options.store.dispatch(recoveredPlanOfferChanged(false));
+      await library().settleRecoveredPlanOffer();
+    },
     async restoreStartup(): Promise<void> {
       if (options.library === undefined) return;
       try {
@@ -686,7 +763,15 @@ export function createProjectOperations(
         // Without a readable earlier file there is nothing to offer.
         previousFile = null;
       }
+      try {
+        recoveredPlan = await library().recoveredPlanOffer();
+        if (recoveredPlan !== null) options.store.dispatch(recoveredPlanOfferChanged(true));
+      } catch {
+        recoveredPlan = null;
+      }
     },
+    hasUnwrittenEdits: () =>
+      options.library === undefined ? false : options.library.saver.hasUnwrittenEdits(),
     inspectCurrentGamePlan,
     async publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult> {
       options.store.dispatch(gameSendStarted());

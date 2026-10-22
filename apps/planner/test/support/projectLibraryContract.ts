@@ -109,6 +109,32 @@ export function describeProjectLibraryContract(
       await expect(library.delete(deleted.key)).rejects.toThrow(/not in the library/);
     });
 
+    it('restores a deleted file byte for byte, older, unreadable or unnamed', async () => {
+      const library = createAdapter();
+      const older = await library.create(libraryPlanJson('plan-a', 'Older'), 'Practice');
+      const bytes = await library.readBytes(older.key);
+      await library.deleteFolder('Practice');
+      const unnamed = new TextEncoder().encode('{"schemaVersion":97,"projectId":"plan-b"}');
+      const broken = new TextEncoder().encode('{ broken');
+
+      const restored = await library.restore(older.key, 'Practice', bytes);
+      expect(restored).toMatchObject({ key: older.key, folder: 'Practice' });
+      expect(await library.readBytes(older.key)).toEqual(bytes);
+      expect((await library.list()).folders).toEqual(['Practice']);
+      const schema97 = await library.restore(
+        `Practice/${'unnamed.runplanner.json'}`,
+        'Practice',
+        unnamed,
+      );
+      expect(schema97.content).toMatchObject({ summary: { schemaVersion: 97, name: null } });
+      const unreadable = await library.restore('broken.runplanner.json', '', broken);
+      expect(unreadable.content.status).toBe('unreadable');
+      expect(await library.readBytes('broken.runplanner.json')).toEqual(broken);
+      await expect(library.restore(older.key, 'Practice', bytes)).rejects.toThrow(
+        /already in the library/,
+      );
+    });
+
     it('remembers the library session', async () => {
       const library = createAdapter();
       expect(await library.readSession()).toEqual(EMPTY_LIBRARY_SESSION);

@@ -174,6 +174,13 @@ export function createBrowserProjectLibraryAdapter(
     return plan;
   };
 
+  const readJson = async (key: string): Promise<string> => {
+    const plan = await transact(await database(), [PLANS], 'readonly', (transaction) =>
+      stored(transaction, key),
+    );
+    return plan.json;
+  };
+
   return Object.freeze({
     supportsReveal: false,
     async list(): Promise<ProjectLibraryListing> {
@@ -192,11 +199,32 @@ export function createBrowserProjectLibraryAdapter(
         entries: Object.freeze(plans.map(entryFor)),
       });
     },
-    async read(key: string): Promise<string> {
-      const plan = await transact(await database(), [PLANS], 'readonly', (transaction) =>
-        stored(transaction, key),
-      );
-      return plan.json;
+    read: readJson,
+    async readBytes(key: string): Promise<Uint8Array> {
+      return new TextEncoder().encode(await readJson(key));
+    },
+    async restore(key: string, folder: string, bytes: Uint8Array): Promise<ProjectLibraryEntry> {
+      const plan: StoredPlan = {
+        key,
+        json: new TextDecoder().decode(bytes),
+        modifiedMs: now(),
+        folder,
+      };
+      await transact(await database(), [PLANS, FOLDERS], 'readwrite', async (transaction) => {
+        if (folder !== '') {
+          await Promise.all(
+            withParents(folder).map((path) =>
+              settle(transaction.objectStore(FOLDERS).put({ path })),
+            ),
+          );
+        }
+        const existing = await settle<StoredPlan | undefined>(
+          transaction.objectStore(PLANS).get(key),
+        );
+        if (existing !== undefined) throw new Error(`${key} is already in the library.`);
+        await settle(transaction.objectStore(PLANS).add(plan));
+      });
+      return entryFor(plan);
     },
     async create(json: string, folder: string): Promise<ProjectLibraryEntry> {
       filedIdentity(json);

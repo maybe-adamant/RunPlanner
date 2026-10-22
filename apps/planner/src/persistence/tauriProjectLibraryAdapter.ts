@@ -34,6 +34,11 @@ export function createTauriProjectLibraryAdapter(
     supportsReveal: true,
     list: () => invoke<ProjectLibraryListing>('project_library_list'),
     read: (key: string) => invoke<string>('project_library_read', { key }),
+    async readBytes(key: string): Promise<Uint8Array> {
+      return Uint8Array.from(await invoke<number[]>('project_library_read_bytes', { key }));
+    },
+    restore: (key: string, _folder: string, bytes: Uint8Array) =>
+      invoke<ProjectLibraryEntry>('project_library_restore', { key, bytes: Array.from(bytes) }),
     create: (json: string, folder: string) =>
       invoke<ProjectLibraryEntry>('project_library_create', { json, folder }),
     movePlan: (key: string, folder: string) =>

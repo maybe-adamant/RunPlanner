@@ -52,13 +52,22 @@ function SlotLinks({ slots }: { readonly slots: readonly PlanSlotLink[] }) {
   );
 }
 
-/** Offers once to import the file the planner kept open before plans lived in the library. */
-function PreviousFileOffer({
-  fileName,
-  operations,
+/**
+ * Offers once to import what the planner kept before plans lived in the library: the file it
+ * had open, or the unsaved project it autosaved.
+ */
+function StartupImportOffer({
+  id,
+  title,
+  description,
+  accept,
+  decline,
 }: {
-  readonly fileName: string;
-  readonly operations: ProjectOperations;
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly accept: () => Promise<{ readonly status: string; readonly message: string }>;
+  readonly decline: () => Promise<void>;
 }) {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -72,10 +81,10 @@ function PreviousFileOffer({
     }
   };
   return (
-    <section aria-labelledby="previous-file-title" className="home-panel library-offer">
+    <section aria-labelledby={id} className="home-panel library-offer">
       <div>
-        <h3 id="previous-file-title">Import {fileName}?</h3>
-        <p>This was the file you had open. Plans now live in your library and save as you edit.</p>
+        <h3 id={id}>{title}</h3>
+        <p>{description}</p>
         {message === null ? null : <p role="alert">{message}</p>}
       </div>
       <div className="library-offer-actions">
@@ -84,7 +93,7 @@ function PreviousFileOffer({
           disabled={pending}
           onClick={() =>
             void settle(async () => {
-              const result = await operations.acceptPreviousFile();
+              const result = await accept();
               return result.status === 'failure' ? result.message : null;
             })
           }
@@ -97,7 +106,7 @@ function PreviousFileOffer({
           disabled={pending}
           onClick={() =>
             void settle(async () => {
-              await operations.declinePreviousFile();
+              await decline();
               return null;
             })
           }
@@ -154,6 +163,7 @@ export function LibraryScreen({
 }) {
   const dispatch = useAppDispatch();
   const previousFile = useAppSelector((state) => state.librarySession.previousFileOffer);
+  const recoveredPlan = useAppSelector((state) => state.librarySession.recoveredPlanOffer);
   const shownFolder = useAppSelector((state) => state.librarySession.libraryFolder);
   const navigationNotice = useAppSelector((state) => state.librarySession.navigationNotice);
   const [filter, setFilter] = useState('');
@@ -211,8 +221,10 @@ export function LibraryScreen({
   const removeFolder = (path: string, name: string) =>
     report(async () => {
       const result = await operations.deleteFolder(path);
-      if (result.deleted !== null) deleted({ kind: 'folder', name, folder: result.deleted });
-      return result;
+      if (result.deleted === null) return result;
+      deleted({ kind: 'folder', name, folder: result.deleted });
+      // Files that could not be kept for undo are named where problems show.
+      return result.deleted.unkept.length === 0 ? result : { ...result, status: 'failure' };
     });
   const importPlans = () =>
     report(async () => {
@@ -295,8 +307,23 @@ export function LibraryScreen({
       </div>
 
       {previousFile === null ? null : (
-        <PreviousFileOffer fileName={previousFile.fileName} operations={operations} />
+        <StartupImportOffer
+          accept={() => operations.acceptPreviousFile()}
+          decline={() => operations.declinePreviousFile()}
+          description="This was the file you had open. Plans now live in your library and save as you edit."
+          id="previous-file-title"
+          title={`Import ${previousFile.fileName}?`}
+        />
       )}
+      {recoveredPlan ? (
+        <StartupImportOffer
+          accept={() => operations.acceptRecoveredPlan()}
+          decline={() => operations.declineRecoveredPlan()}
+          description="The planner kept these edits before plans lived in your library."
+          id="recovered-plan-title"
+          title="Recovered unsaved plan"
+        />
+      ) : null}
       {problem === null && index.error === null ? null : (
         <p className="home-problem" role="alert">
           {problem ?? index.error}
@@ -352,6 +379,7 @@ export function LibraryScreen({
         </div>
         <div className="library-filters">
           <input
+            autoComplete="off"
             aria-label="Search plans by name"
             onChange={(event) => setFilter(event.target.value)}
             placeholder="Search all plans"

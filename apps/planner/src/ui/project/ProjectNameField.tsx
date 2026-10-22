@@ -26,6 +26,7 @@ export function ProjectNameField({ name }: { readonly name: string }) {
   };
   return (
     <input
+      autoComplete="off"
       aria-label="Plan name"
       className="app-plan-name"
       id={PLAN_NAME_FIELD_ID}

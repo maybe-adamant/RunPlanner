@@ -45,6 +45,26 @@ pub(crate) fn project_library_read(app: tauri::AppHandle, key: String) -> Result
 }
 
 #[tauri::command(async)]
+pub(crate) fn project_library_read_bytes(
+    app: tauri::AppHandle,
+    key: String,
+) -> Result<Vec<u8>, String> {
+    project_library::read_bytes(&library_folder(&app)?, &key)
+}
+
+/// Puts a deleted file back at its key, byte for byte.
+#[tauri::command(async)]
+pub(crate) fn project_library_restore(
+    app: tauri::AppHandle,
+    lock: State<'_, ProjectLibraryLock>,
+    key: String,
+    bytes: Vec<u8>,
+) -> Result<LibraryEntry, String> {
+    let root = library_folder(&app)?;
+    locked(&lock, || project_library::restore(&root, &key, &bytes))
+}
+
+#[tauri::command(async)]
 pub(crate) fn project_library_create(
     app: tauri::AppHandle,
     lock: State<'_, ProjectLibraryLock>,

@@ -47,6 +47,7 @@ export function FolderNameDialog({
         <label className="library-dialog-field">
           Folder name
           <input
+            autoComplete="off"
             autoFocus
             onChange={(event) => setName(event.target.value)}
             spellCheck={false}

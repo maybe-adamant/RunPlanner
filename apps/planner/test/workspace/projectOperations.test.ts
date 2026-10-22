@@ -361,6 +361,106 @@ describe('project operations', () => {
     ).toHaveLength(2);
   });
 
+  it('leaves the open plan its key and identity when an older copy of it appears', async () => {
+    let clock = 1_000;
+    const library = createMemoryProjectLibrary({ now: () => clock });
+    const saves = createManualSaveScheduler();
+    let minted = 0;
+    const application = createApplication({
+      mintProjectId: () => `minted-${(minted += 1)}`,
+      projectLibrary: library.adapter,
+      saveScheduler: saves.scheduler,
+    });
+    const operations = application.projectOperations;
+    await operations.createNew('Underworld', undefined, 'Practice');
+    const key = operations.openKey()!;
+    // A copy of the open plan, stored earlier, appears in the library.
+    clock = 500;
+    const older = await library.file({ ...presentProject(application), name: 'Older copy' });
+    clock = 2_000;
+
+    await operations.duplicate(key);
+    await operations.createFolder('', 'Drills');
+    await operations.renameFolder('Drills', 'Routes');
+    await operations.deleteFolder('Routes');
+    await operations.renameFolder('Practice', 'Bosses');
+
+    expect(operations.openKey()).toBe(key);
+    expect(presentProject(application).projectId).toBe('minted-1');
+    expect((await library.plan(catalog, key)).projectId).toBe('minted-1');
+    application.store.dispatch(configure(2));
+    await operations.flush();
+    expect(library.writes.map((write) => write.key)).toEqual([key]);
+    expect((await library.plan(catalog, key)).route.biomes).toHaveLength(2);
+    expect((await library.plan(catalog, older)).name).toBe('Older copy');
+  });
+
+  it('runs library scans one at a time, so a copy is re-identified once', async () => {
+    const { application, library } = createLibraryApplication();
+    const project = createProjectDocument(catalog, { projectId: 'shared', routeKey: 'Surface' });
+    await library.file(project);
+    const copy = await library.file({ ...project, name: 'Copy' });
+    const [first, second] = await Promise.all([
+      application.projectOperations.listLibrary(),
+      application.projectOperations.listLibrary(),
+    ]);
+    expect(second).toEqual(first);
+    expect((await library.plan(catalog, copy)).projectId).toBe('minted-1');
+    await application.projectOperations.createNew('Underworld');
+    expect(presentProject(application).projectId).toBe('minted-2');
+  });
+
+  it('holds writes of the open plan while it moves, then writes the edits made meanwhile', async () => {
+    const library = createMemoryProjectLibrary();
+    const saves = createManualSaveScheduler();
+    let moving = false;
+    const writesWhileMoving: string[] = [];
+    let application: ReturnType<typeof createApplication> | null = null;
+    const adapter = {
+      ...library.adapter,
+      async write(key: string, json: string) {
+        if (moving) writesWhileMoving.push(key);
+        return library.adapter.write(key, json);
+      },
+      async movePlan(key: string, folder: string) {
+        moving = true;
+        // An edit lands and its debounced write fires while the file moves.
+        application!.store.dispatch(rename('Edited while moving'));
+        saves.run();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        const moved = await library.adapter.movePlan(key, folder);
+        moving = false;
+        return moved;
+      },
+    };
+    application = createApplication({ projectLibrary: adapter, saveScheduler: saves.scheduler });
+    await application.projectOperations.createNew('Underworld');
+    const key = application.projectOperations.openKey()!;
+    await expect(application.projectOperations.movePlan(key, 'Practice')).resolves.toMatchObject({
+      status: 'success',
+    });
+    expect(writesWhileMoving).toEqual([]);
+    await application.projectOperations.flush();
+    expect((await library.plan(catalog, key)).name).toBe('Edited while moving');
+  });
+
+  it('names a copy of an unnamed older project after the title it was opened from', async () => {
+    const { application } = createLibraryApplication();
+    const { name: _name, ...rest } = JSON.parse(
+      encodeProjectDocument(
+        createProjectDocument(catalog, { projectId: 'event-plan', routeKey: 'Underworld' }),
+      ),
+    ) as Record<string, unknown>;
+    void _name;
+    await expect(
+      application.projectOperations.openProjectCopy(
+        JSON.stringify({ ...rest, schemaVersion: 97 }),
+        'Weekly Trial',
+      ),
+    ).resolves.toMatchObject({ status: 'success' });
+    expect(presentProject(application).name).toBe('Weekly Trial');
+  });
+
   it('opens an outside file as a library copy, re-identified when the library holds it', async () => {
     const { application, library } = createLibraryApplication();
     const project = createProjectDocument(catalog, {
@@ -715,6 +815,55 @@ describe('project operations', () => {
     expect(presentProject(application).projectId).toBe('earlier');
     expect(application.store.getState().librarySession.previousFileOffer).toBeNull();
     expect((await accepting.adapter.readSession()).previousFileOffered).toBe(true);
+  });
+
+  it('offers the unsaved autosave from before the library once, importing or declining it', async () => {
+    const recovered = encodeProjectDocument({ ...loadSurfaceNProject(), projectId: 'recovered' });
+    const createAutosave = () => {
+      let value: string | null = recovered;
+      return {
+        read: () => value,
+        clear: () => {
+          value = null;
+        },
+        value: () => value,
+      };
+    };
+    const declined = createAutosave();
+    const declining = createApplication({
+      projectLibrary: createMemoryProjectLibrary().adapter,
+      legacyAutosave: declined,
+    });
+    await declining.startupReady;
+    expect(declining.store.getState().librarySession.recoveredPlanOffer).toBe(true);
+    await declining.projectOperations.declineRecoveredPlan();
+    expect(declining.store.getState().librarySession.recoveredPlanOffer).toBe(false);
+    expect(declined.value()).toBeNull();
+
+    const accepted = createAutosave();
+    const library = createMemoryProjectLibrary();
+    let full = true;
+    const application = createApplication({
+      projectLibrary: {
+        ...library.adapter,
+        create: (json, folder) =>
+          full ? Promise.reject(new Error('disk full')) : library.adapter.create(json, folder),
+      },
+      legacyAutosave: accepted,
+    });
+    await application.startupReady;
+    const failed = await application.projectOperations.acceptRecoveredPlan();
+    expect(failed.status).toBe('failure');
+    // A failed import keeps the autosave for another try.
+    expect(accepted.value()).toBe(recovered);
+    full = false;
+    await expect(application.projectOperations.acceptRecoveredPlan()).resolves.toMatchObject({
+      operation: 'importRecovered',
+      status: 'success',
+    });
+    expect(presentProject(application).projectId).toBe('recovered');
+    expect(accepted.value()).toBeNull();
+    expect(application.store.getState().librarySession.recoveredPlanOffer).toBe(false);
   });
 });
 

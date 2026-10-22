@@ -29,6 +29,13 @@ export interface LibrarySaver {
   ): Promise<void>;
   /** Writes pending edits now; rejects with the write failure. */
   flush(): Promise<void>;
+  /**
+   * Writes pending edits, then runs `task` with writes held, so a file move or rename cannot race
+   * a write to the old key; edits made meanwhile are written once it ends.
+   */
+  hold<T>(task: () => Promise<T>): Promise<T>;
+  /** Whether the open item has edits not yet written: pending, being written, or failed. */
+  hasUnwrittenEdits(): boolean;
   /** The open item was moved to `to`, as when it or its folder moves. */
   moved(from: string, to: string): void;
   /** Stops writing the open item, dropping its pending edits, as when it is deleted. */
@@ -57,6 +64,7 @@ export function createLibrarySaver(options: {
   let cancelPending: (() => void) | null = null;
   let running: Promise<void> | null = null;
   let failure: unknown = null;
+  let holds = 0;
 
   const cancel = () => {
     cancelPending?.();
@@ -90,6 +98,7 @@ export function createLibrarySaver(options: {
   };
   // One write loop at a time; a later caller runs another once the running one ends.
   const drain = (): Promise<void> => {
+    if (holds > 0) return Promise.resolve();
     if (running !== null) return running.then(drain);
     const started = writePending().finally(() => {
       if (running === started) running = null;
@@ -122,7 +131,11 @@ export function createLibrarySaver(options: {
       publish: () => void,
       openOptions: { readonly preserveOriginal?: boolean } = {},
     ): Promise<void> {
-      await flush();
+      try {
+        await flush();
+      } catch (error) {
+        throw new Error(`Could not save the current plan: ${errorDetail(error)}`, { cause: error });
+      }
       publishing = true;
       try {
         publish();
@@ -135,6 +148,23 @@ export function createLibrarySaver(options: {
       observed = written;
     },
     flush,
+    async hold<T>(task: () => Promise<T>): Promise<T> {
+      await flush();
+      holds += 1;
+      try {
+        return await task();
+      } finally {
+        holds -= 1;
+        if (holds === 0 && cancelPending === null) {
+          const snapshot = present();
+          if (key !== null && snapshot !== undefined && snapshot !== written) void drain();
+        }
+      }
+    },
+    hasUnwrittenEdits(): boolean {
+      const snapshot = present();
+      return key !== null && snapshot !== undefined && snapshot !== written;
+    },
     moved(from: string, to: string): void {
       if (key === from) key = to;
       if (preserveBeforeWrite === from) preserveBeforeWrite = to;

@@ -8,6 +8,7 @@ import { readTextFile } from '@tauri-apps/plugin-fs';
 import { installDevBrowserErrorReporter } from './diagnostics/devBrowserErrorReporter';
 import { createBrowserProjectLibraryAdapter } from './persistence/browserProjectLibraryAdapter';
 import { createTauriProjectLibraryAdapter } from './persistence/tauriProjectLibraryAdapter';
+import { createBrowserLegacyAutosave } from './persistence/legacyAutosave';
 import { installNavigationHistory } from './workspace/navigationHistory';
 import { createTauriGameModuleHost } from './persistence/gameModuleHost';
 import {
@@ -58,6 +59,7 @@ const application = createApplication({
     () => new Worker(new URL('./workspace/draftWorker.ts', import.meta.url), { type: 'module' }),
   ),
   projectLibrary,
+  legacyAutosave: createBrowserLegacyAutosave(() => globalThis.localStorage),
   ...(tauriHost
     ? {
         catalogFeedHost: createTauriCatalogFeedHost(),
@@ -77,6 +79,7 @@ if (tauriHost) {
   const closeWhenWritten = async (): Promise<void> => {
     for (;;) {
       await tauriInvoke('app_close_requested');
+      await tauriInvoke('app_close_acknowledged');
       const close = await application.closeRequest.request(() => tauriInvoke('app_close_kept'));
       if (close) {
         await tauriInvoke('app_close_ready');
@@ -87,7 +90,11 @@ if (tauriHost) {
   void closeWhenWritten();
 } else {
   globalThis.window.addEventListener('beforeunload', (event) => {
-    if (unloadNeedsConfirmation(application.store)) event.preventDefault();
+    if (unloadNeedsConfirmation(application.store, application.projectOperations)) {
+      // The prompt gives the pending write time to finish.
+      void application.projectOperations.flush();
+      event.preventDefault();
+    }
   });
 }
 globalThis.document.addEventListener('visibilitychange', () => {

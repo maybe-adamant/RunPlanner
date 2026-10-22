@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { createProjectAddress } from '@run-planner/engine/authored-project';
+
 import { createApplication } from '@planner/composition/createApplication';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import {
+  createManualSaveScheduler,
+  createMemoryProjectLibrary,
+} from '@planner-test/support/memoryProjectLibrary';
 import { libraryWriteFailed } from '@planner/state/librarySessionSlice';
 import {
   createCloseRequestController,
@@ -39,10 +46,37 @@ describe('close request', () => {
     await expect(close).resolves.toBe(true);
   });
 
-  it('asks before a page unloads only while a write failure stands', () => {
+  it('asks before a page unloads while a write failure stands', () => {
     const application = createApplication();
-    expect(unloadNeedsConfirmation(application.store)).toBe(false);
+    const ops = application.projectOperations;
+    expect(unloadNeedsConfirmation(application.store, ops)).toBe(false);
     application.store.dispatch(libraryWriteFailed({ message: 'Could not save the plan: full' }));
-    expect(unloadNeedsConfirmation(application.store)).toBe(true);
+    expect(unloadNeedsConfirmation(application.store, ops)).toBe(true);
+  });
+
+  it('asks before a page unloads while a write is pending or under way', async () => {
+    const library = createMemoryProjectLibrary();
+    const saves = createManualSaveScheduler();
+    const application = createApplication({
+      projectLibrary: library.adapter,
+      saveScheduler: saves.scheduler,
+    });
+    const ops = application.projectOperations;
+    await ops.createNew('Underworld');
+    expect(unloadNeedsConfirmation(application.store, ops)).toBe(false);
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'RenameProject',
+        project: createProjectAddress(),
+        name: 'Edited',
+      }),
+    );
+    // Debounced and not yet started.
+    expect(unloadNeedsConfirmation(application.store, ops)).toBe(true);
+    saves.run();
+    // Started and not yet finished.
+    expect(unloadNeedsConfirmation(application.store, ops)).toBe(true);
+    await ops.flush();
+    expect(unloadNeedsConfirmation(application.store, ops)).toBe(false);
   });
 });

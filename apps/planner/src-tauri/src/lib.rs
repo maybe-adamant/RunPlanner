@@ -8,6 +8,7 @@ mod feed_fetch;
 mod game_module_commands;
 mod project_library_commands;
 mod release_updates;
+mod webview_settings;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -57,6 +58,8 @@ pub fn run() {
             project_library_commands::project_library_write,
             project_library_commands::project_library_delete,
             project_library_commands::project_library_move,
+            project_library_commands::project_library_read_bytes,
+            project_library_commands::project_library_restore,
             project_library_commands::project_library_folder_create,
             project_library_commands::project_library_folder_move,
             project_library_commands::project_library_folder_delete,
@@ -66,6 +69,7 @@ pub fn run() {
             project_library_commands::project_library_session_read,
             project_library_commands::project_library_session_write,
             close_gate::app_close_requested,
+            close_gate::app_close_acknowledged,
             close_gate::app_close_ready,
             close_gate::app_close_kept,
             release_updates::release_update_check,
@@ -81,6 +85,12 @@ pub fn run() {
         .manage(catalog_feed::PlanCatalog::default())
         .manage(project_library_commands::ProjectLibraryLock::default())
         .manage(run_planner_game_host::close_gate::CloseGate::default())
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                webview_settings::disable_autofill(&window);
+            }
+            Ok(())
+        })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 close_gate::intercept(window, api);

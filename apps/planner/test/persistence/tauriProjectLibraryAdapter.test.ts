@@ -25,6 +25,7 @@ describe('Tauri project library adapter', () => {
 
     await library.list();
     await library.read('a.runplanner.json');
+    await library.restore('a.runplanner.json', '', Uint8Array.of(123, 255));
     await library.create('{"c":1}', 'Practice');
     await library.write('a.runplanner.json', '{"w":1}');
     await library.delete('a.runplanner.json');
@@ -42,6 +43,7 @@ describe('Tauri project library adapter', () => {
     expect(invoke.mock.calls).toEqual([
       ['project_library_list'],
       ['project_library_read', { key: 'a.runplanner.json' }],
+      ['project_library_restore', { key: 'a.runplanner.json', bytes: [123, 255] }],
       ['project_library_create', { json: '{"c":1}', folder: 'Practice' }],
       ['project_library_write', { key: 'a.runplanner.json', json: '{"w":1}' }],
       ['project_library_delete', { key: 'a.runplanner.json' }],
@@ -55,6 +57,17 @@ describe('Tauri project library adapter', () => {
       ['project_library_session_read'],
       ['project_library_session_write', { session }],
     ]);
+  });
+
+  it('reads a file as bytes', async () => {
+    const invoke = vi.fn(() => Promise.resolve([123, 255]));
+    const library = createTauriProjectLibraryAdapter({
+      invoke: invoke as never,
+      openDialog: vi.fn(),
+      readTextFile: vi.fn(),
+    });
+    expect(await library.readBytes('a.runplanner.json')).toEqual(Uint8Array.of(123, 255));
+    expect(invoke).toHaveBeenCalledWith('project_library_read_bytes', { key: 'a.runplanner.json' });
   });
 
   it('reads each file chosen in the native dialog by its file name', async () => {

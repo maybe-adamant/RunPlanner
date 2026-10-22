@@ -88,12 +88,22 @@ pub struct LibraryEntry {
     pub content: EntryContent,
 }
 
+/// A folder the scan could not read, and why; its plans are not listed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnreadableFolder {
+    pub folder: String,
+    pub message: String,
+}
+
 /// Every plan and every folder in the library.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LibraryListing {
     pub folders: Vec<String>,
     pub entries: Vec<LibraryEntry>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub unreadable_folders: Vec<UnreadableFolder>,
 }
 
 /// Moves files to the platform's recycle bin.
@@ -109,12 +119,19 @@ impl Recycler for NativeRecycler {
     }
 }
 
+/// The most of a file the library reads to list it; a larger file is listed as unreadable.
+const HEAD_READ_LIMIT: u64 = 16 * 1024 * 1024;
+
 fn read_head(json: &str) -> Result<ProjectSummary, String> {
-    if !json.trim_start().starts_with('{') {
+    read_head_bytes(json.as_bytes())
+}
+
+fn read_head_bytes(bytes: &[u8]) -> Result<ProjectSummary, String> {
+    if bytes.iter().find(|byte| !byte.is_ascii_whitespace()) != Some(&b'{') {
         return Err("Not a plan file: the content is not a JSON object.".to_owned());
     }
     let head: DocumentHead =
-        serde_json::from_str(json).map_err(|error| format!("Not a plan file: {error}"))?;
+        serde_json::from_slice(bytes).map_err(|error| format!("Not a plan file: {error}"))?;
     let route = head.route.unwrap_or_default();
     let loadout = route.loadout.unwrap_or_default();
     Ok(ProjectSummary {
@@ -238,15 +255,47 @@ fn key_in(folder: &str, file_name: &str) -> String {
     }
 }
 
+/// Whether a plan file name is one plain, portable path segment.
+fn is_plain_file_name(name: &str) -> bool {
+    is_library_file_name(name)
+        && !name.chars().any(|c| {
+            matches!(c, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*') || c.is_control()
+        })
+        && !is_reserved_windows_name(name)
+}
+
+/// Whether `path` lies below `root` through plain components, none of them a symbolic link.
+fn stays_below(root: &Path, path: &Path) -> bool {
+    let Ok(relative) = path.strip_prefix(root) else {
+        return false;
+    };
+    let mut current = root.to_owned();
+    for component in relative.components() {
+        let std::path::Component::Normal(part) = component else {
+            return false;
+        };
+        current.push(part);
+        if fs::symlink_metadata(&current).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
+            return false;
+        }
+    }
+    true
+}
+
 /// The path of a library file, refusing anything but a plan file in a library folder.
 fn entry_path(root: &Path, key: &str) -> Result<PathBuf, String> {
+    let refused = || format!("{key} is not a plan in the library.");
     let (folder, file_name) = key.rsplit_once('/').unwrap_or(("", key));
-    if file_name.contains('\\') || !is_library_file_name(file_name) {
-        return Err(format!("{key} is not a plan in the library."));
+    if !is_plain_file_name(file_name) {
+        return Err(refused());
     }
-    let directory =
-        folder_path(root, folder).map_err(|_| format!("{key} is not a plan in the library."))?;
-    Ok(directory.join(file_name))
+    let path = folder_path(root, folder)
+        .map_err(|_| refused())?
+        .join(file_name);
+    if !stays_below(root, &path) {
+        return Err(refused());
+    }
+    Ok(path)
 }
 
 fn modified_ms(path: &Path) -> u64 {
@@ -257,16 +306,25 @@ fn modified_ms(path: &Path) -> u64 {
         .map_or(0, |duration| duration.as_millis() as u64)
 }
 
+/// At most `HEAD_READ_LIMIT` bytes of a file, or why it is not listed.
+fn read_bounded(path: &Path) -> Result<Vec<u8>, String> {
+    use std::io::Read;
+    let file = fs::File::open(path).map_err(|error| format!("Could not read the file: {error}"))?;
+    let mut bytes = Vec::new();
+    file.take(HEAD_READ_LIMIT + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("Could not read the file: {error}"))?;
+    if bytes.len() as u64 > HEAD_READ_LIMIT {
+        return Err("Not a plan file: it is too large to list.".to_owned());
+    }
+    Ok(bytes)
+}
+
 fn entry(root: &Path, key: String) -> LibraryEntry {
     let path = entry_path(root, &key).unwrap_or_else(|_| root.join(&key));
-    let content = match fs::read_to_string(&path) {
-        Ok(json) => match read_head(&json) {
-            Ok(summary) => EntryContent::Summarized { summary },
-            Err(message) => EntryContent::Unreadable { message },
-        },
-        Err(error) => EntryContent::Unreadable {
-            message: format!("Could not read the file: {error}"),
-        },
+    let content = match read_bounded(&path).and_then(|bytes| read_head_bytes(&bytes)) {
+        Ok(summary) => EntryContent::Summarized { summary },
+        Err(message) => EntryContent::Unreadable { message },
     };
     LibraryEntry {
         modified_ms: modified_ms(&path),
@@ -285,16 +343,18 @@ pub fn ensure_folder(folder: &Path) -> Result<(), String> {
     })
 }
 
-fn walk(
-    root: &Path,
-    folder: &str,
-    folders: &mut Vec<String>,
-    keys: &mut Vec<String>,
-) -> Result<(), String> {
+#[derive(Default)]
+struct Walk {
+    folders: Vec<String>,
+    keys: Vec<String>,
+    unreadable: Vec<UnreadableFolder>,
+}
+
+fn walk(root: &Path, folder: &str, found: &mut Walk) -> Result<(), String> {
     let directory = folder_path(root, folder)?;
-    for item in fs::read_dir(&directory)
-        .map_err(|error| format!("Could not read the library folder: {error}"))?
-    {
+    let items = fs::read_dir(&directory)
+        .map_err(|error| format!("Could not read the library folder: {error}"))?;
+    for item in items {
         let item = item.map_err(|error| format!("Could not read the library folder: {error}"))?;
         let Ok(name) = item.file_name().into_string() else {
             continue;
@@ -304,10 +364,16 @@ fn walk(
         };
         if kind.is_dir() && is_folder_name(&name) && !is_library_file_name(&name) {
             let child = key_in(folder, &name);
-            folders.push(child.clone());
-            walk(root, &child, folders, keys)?;
-        } else if kind.is_file() && is_library_file_name(&name) {
-            keys.push(key_in(folder, &name));
+            found.folders.push(child.clone());
+            // A subfolder that cannot be read is reported; the rest of the library still lists.
+            if let Err(message) = walk(root, &child, found) {
+                found.unreadable.push(UnreadableFolder {
+                    folder: child,
+                    message,
+                });
+            }
+        } else if kind.is_file() && is_plain_file_name(&name) {
+            found.keys.push(key_in(folder, &name));
         }
     }
     Ok(())
@@ -316,14 +382,17 @@ fn walk(
 /// Every plan file and folder below the library, unreadable plans included, ordered by path.
 pub fn scan(root: &Path) -> Result<LibraryListing, String> {
     ensure_folder(root)?;
-    let mut folders = Vec::new();
-    let mut keys = Vec::new();
-    walk(root, "", &mut folders, &mut keys)?;
-    folders.sort();
-    keys.sort();
+    let mut found = Walk::default();
+    walk(root, "", &mut found)?;
+    found.folders.sort();
+    found.keys.sort();
+    found
+        .unreadable
+        .sort_by(|left, right| left.folder.cmp(&right.folder));
     Ok(LibraryListing {
-        folders,
-        entries: keys.into_iter().map(|key| entry(root, key)).collect(),
+        folders: found.folders,
+        entries: found.keys.into_iter().map(|key| entry(root, key)).collect(),
+        unreadable_folders: found.unreadable,
     })
 }
 
@@ -335,6 +404,23 @@ pub fn list(root: &Path) -> Result<Vec<LibraryEntry>, String> {
 pub fn read(folder: &Path, key: &str) -> Result<String, String> {
     let path = entry_path(folder, key)?;
     fs::read_to_string(&path).map_err(|error| format!("Could not read {key}: {error}"))
+}
+
+/// A library file's bytes as they are, whether or not they read as a plan.
+pub fn read_bytes(folder: &Path, key: &str) -> Result<Vec<u8>, String> {
+    let path = entry_path(folder, key)?;
+    fs::read(&path).map_err(|error| format!("Could not read {key}: {error}"))
+}
+
+/// Puts a deleted file back at its key with exactly these bytes; never replaces a file.
+pub fn restore(root: &Path, key: &str, bytes: &[u8]) -> Result<LibraryEntry, String> {
+    let path = entry_path(root, key)?;
+    if path.exists() {
+        return Err(format!("{key} is already in the library."));
+    }
+    ensure_folder(&folder_path(root, folder_of(key))?)?;
+    atomic_file::write(&path, bytes, "plan")?;
+    Ok(entry(root, key.to_owned()))
 }
 
 /// Files a new plan in `folder` under the name its document carries; never replaces a file.
@@ -634,6 +720,105 @@ mod tests {
         )
         .unwrap();
         assert_eq!(reidentified.key, file_name_for("Second", "run-plan-b"));
+    }
+
+    #[test]
+    fn refuses_windows_drive_and_device_keys_on_every_platform() {
+        let folder = TestFolder::new();
+        create_top(&folder.0, &plan("run-plan-a", "Kept")).unwrap();
+        for key in [
+            "C:x.runplanner.json",
+            "C:/x.runplanner.json",
+            "C:\\x.runplanner.json",
+            "\\\\server\\share\\x.runplanner.json",
+            "/absolute/x.runplanner.json",
+            "Practice/C:x.runplanner.json",
+            "C:/Practice/x.runplanner.json",
+            "x:y.runplanner.json",
+            "CON.runplanner.json",
+            "Practice/nul/x.runplanner.json",
+            "a|b.runplanner.json",
+        ] {
+            assert!(read(&folder.0, key).is_err(), "{key} must be refused");
+            assert!(read_bytes(&folder.0, key).is_err(), "{key} must be refused");
+            assert!(
+                restore(&folder.0, key, b"{}").is_err(),
+                "{key} must be refused"
+            );
+            assert!(
+                write(&folder.0, key, &plan("a", "x")).is_err(),
+                "{key} must be refused"
+            );
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn refuses_keys_through_a_symbolic_link() {
+        let folder = TestFolder::new();
+        let outside = TestFolder::new();
+        fs::create_dir_all(&folder.0).unwrap();
+        fs::create_dir_all(&outside.0).unwrap();
+        fs::write(outside.0.join("x.runplanner.json"), plan("a", "x")).unwrap();
+        std::os::unix::fs::symlink(&outside.0, folder.0.join("Linked")).unwrap();
+        assert!(read(&folder.0, "Linked/x.runplanner.json").is_err());
+        assert!(restore(&folder.0, "Linked/y.runplanner.json", b"{}").is_err());
+        assert!(!outside.0.join("y.runplanner.json").exists());
+    }
+
+    #[test]
+    fn restores_any_bytes_at_their_key_without_replacing_a_file() {
+        let folder = TestFolder::new();
+        let bytes: &[u8] = b"{\"schemaVersion\":91,\"projectId\":\"p\"}\xff";
+        let restored = restore(&folder.0, "Practice/Old (1).runplanner.json", bytes).unwrap();
+        assert_eq!(restored.folder, "Practice");
+        assert!(matches!(restored.content, EntryContent::Unreadable { .. }));
+        assert_eq!(
+            read_bytes(&folder.0, "Practice/Old (1).runplanner.json").unwrap(),
+            bytes
+        );
+        assert!(
+            restore(&folder.0, "Practice/Old (1).runplanner.json", b"{}")
+                .unwrap_err()
+                .contains("already in the library")
+        );
+    }
+
+    #[test]
+    fn lists_an_oversized_file_as_unreadable_without_reading_it_all() {
+        let folder = TestFolder::new();
+        fs::create_dir_all(&folder.0).unwrap();
+        let mut large = b"{\"schemaVersion\":98,\"pad\":\"".to_vec();
+        large.resize(HEAD_READ_LIMIT as usize + 16, b'a');
+        fs::write(folder.0.join("large.runplanner.json"), large).unwrap();
+        let listed = list(&folder.0).unwrap();
+        assert!(matches!(
+            &listed[0].content,
+            EntryContent::Unreadable { message } if message.contains("too large")
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn reports_an_unreadable_subfolder_and_lists_the_rest() {
+        use std::os::unix::fs::PermissionsExt;
+        let folder = TestFolder::new();
+        create_top(&folder.0, &plan("run-plan-a", "Top")).unwrap();
+        create(&folder.0, &plan("run-plan-b", "Hidden"), "Locked").unwrap();
+        let locked = folder.0.join("Locked");
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o000)).unwrap();
+        // A process that can read anything (root) cannot witness the failure.
+        if fs::read_dir(&locked).is_ok() {
+            fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+            return;
+        }
+        let listing = scan(&folder.0);
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o755)).unwrap();
+        let listing = listing.unwrap();
+        assert_eq!(listing.folders, vec!["Locked".to_owned()]);
+        assert_eq!(listing.entries.len(), 1);
+        assert_eq!(listing.unreadable_folders.len(), 1);
+        assert_eq!(listing.unreadable_folders[0].folder, "Locked");
     }
 
     #[test]

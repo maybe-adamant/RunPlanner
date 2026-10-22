@@ -110,7 +110,6 @@ function createStaticPresentationStore(
       getDefaultMiddleware({ immutableCheck: false, serializableCheck: false }),
     reducer: {
       editorSession: createEditorSessionReducer(catalog),
-      profileSession: (state: Record<string, never> = {}) => state,
       projectWorkspace: (state = { assembly }) => state,
     },
   });

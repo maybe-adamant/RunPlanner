@@ -84,7 +84,8 @@ interface CreateCommunityEventControllerOptions {
   readonly host: CommunityEventHost;
   readonly development?: CommunityEventDevelopmentHost;
   readonly dismissals: EventDismissalPreference;
-  readonly openProjectCopy: (json: string) => Promise<ProjectOperationResult>;
+  /** Opens a copy of an event's project; an unnamed older one takes the event's title. */
+  readonly openProjectCopy: (json: string, title: string) => Promise<ProjectOperationResult>;
   /** Makes a slot active through the game host's one active-slot write. */
   readonly setActiveSlot: (slot: GameActiveSlotNumber) => Promise<GameActiveSlotSetting>;
   /** Re-reads the game status after the event slot or active slot changed. */
@@ -324,7 +325,10 @@ export function createCommunityEventController(
         return { operation: 'openCopy', status: 'failure', message: 'No event is active.' };
       }
       try {
-        return await options.openProjectCopy(await options.host.downloadProject(event.id));
+        return await options.openProjectCopy(
+          await options.host.downloadProject(event.id),
+          event.title,
+        );
       } catch (error) {
         return { operation: 'openCopy', status: 'failure', message: errorText(error) };
       }

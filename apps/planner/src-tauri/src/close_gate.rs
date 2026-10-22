@@ -5,25 +5,33 @@ use std::time::Duration;
 use tauri::async_runtime::channel;
 use tauri::{CloseRequestApi, Manager, State, Window};
 
-use run_planner_game_host::close_gate::CloseGate;
+use run_planner_game_host::close_gate::{CloseDecision, CloseGate};
 
-/// A planner that never answers cannot keep the window open longer than this.
-const CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
+/// A planner that never takes up a close request cannot keep the window open longer than this.
+const ANSWER_TIMEOUT: Duration = Duration::from_secs(5);
+/// Once the planner writes, it has this long; keeping an older original and recycling it can
+/// take seconds on a slow disk or recycle bin.
+const WRITE_TIMEOUT: Duration = Duration::from_secs(60);
 
-/// Holds a close request while the planner waits for one; otherwise lets it through.
-pub(crate) fn intercept(window: &Window, api: &CloseRequestApi) {
-    let gate = window.state::<CloseGate>();
-    let Some(held) = gate.intercept() else {
-        return;
-    };
-    api.prevent_close();
-    let window = window.clone();
+fn close_after(window: Window, held: u64, timeout: Duration) {
     std::thread::spawn(move || {
-        std::thread::sleep(CLOSE_TIMEOUT);
+        std::thread::sleep(timeout);
         if window.state::<CloseGate>().timed_out(held) {
             let _ = window.destroy();
         }
     });
+}
+
+/// Holds a close request while the planner waits for one; otherwise lets it through.
+pub(crate) fn intercept(window: &Window, api: &CloseRequestApi) {
+    match window.state::<CloseGate>().intercept() {
+        CloseDecision::Close => {}
+        CloseDecision::AlreadyHeld => api.prevent_close(),
+        CloseDecision::Hold { held } => {
+            api.prevent_close();
+            close_after(window.clone(), held, ANSWER_TIMEOUT);
+        }
+    }
 }
 
 /// Resolves when the user asks to close the window.
@@ -33,6 +41,14 @@ pub(crate) async fn app_close_requested(gate: State<'_, CloseGate>) -> Result<()
     gate.wait(Box::new(move || sender.try_send(()).is_ok()));
     receiver.recv().await;
     Ok(())
+}
+
+/// The planner took up the held close and is writing its pending edits.
+#[tauri::command]
+pub(crate) fn app_close_acknowledged(window: Window, gate: State<'_, CloseGate>) {
+    if let Some(held) = gate.acknowledge() {
+        close_after(window, held, WRITE_TIMEOUT);
+    }
 }
 
 /// Closes the window once the planner has written what it had pending.
