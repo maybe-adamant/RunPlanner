@@ -35,12 +35,16 @@ from. A catalog of template plans ships with the app.
    - A visible folder in the platform's documents directory
      (`RunPlanner/Projects/`), plain `.runplanner.json` files named from the
      plan name plus a short id; renaming the plan renames the file.
-   - An index in app data keyed by `projectId` (name, route, timestamps). It is
-     rebuilt by scanning the folder and is never the only copy of anything.
+   - No index file: the app scans the folder, reading only each file's head
+     (about 10 ms for 200 plans in a release build). A cache keyed by file,
+     size and modified time can come later if cold scans prove slow.
+   - Among files sharing a `projectId`, the oldest keeps it and newer copies
+     are re-minted.
    - Opening an outside file imports a copy; an id already in the library is
-     re-minted. Duplicate creates a new item with a new id.
+     re-minted. Duplicate creates a new item with a new id named "X (copy)".
    - "Open folder" reveals the library in the file manager.
-   - First run offers to import the previously active file and other files.
+   - First run offers once to import the previously active file; a declined
+     offer is remembered and Import stays available.
    - A single-instance guard keeps one app process writing the library.
    - The web build keeps the same model over browser storage, without a
      folder.
@@ -54,7 +58,8 @@ from. A catalog of template plans ships with the app.
      slots with current/older, last edited); per row Duplicate, Delete, Open;
      page actions "Browse catalog", Open folder, Import…, New plan (blank).
      Delete moves the file to the OS recycle bin and shows a floating
-     "Deleted · Undo" toast (about 8 s) that restores it.
+     "Deleted · Undo" toast (about 8 s); Undo restores from an in-memory copy
+     on every platform.
    - **Catalog:** see item 5.
    - **Game:** module status and update, game location, the community event card
      as today, and a table of all slots (library plan or "Not in library",
