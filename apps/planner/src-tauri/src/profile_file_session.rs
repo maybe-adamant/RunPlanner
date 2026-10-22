@@ -111,6 +111,22 @@ fn restore_active(config_dir: &Path) -> Result<Option<RestoredProfileFile>, Stri
     }
 }
 
+/// The remembered file and its content; a missing or forgotten file is no file.
+pub(crate) fn previous_active(config_dir: &Path) -> Result<Option<RestoredProfileFile>, String> {
+    let Some(path) = read_active_path(config_dir)? else {
+        return Ok(None);
+    };
+    let file_name = profile_file_name(&path)?;
+    match fs::read_to_string(&path) {
+        Ok(json) => Ok(Some(RestoredProfileFile { file_name, json })),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(format!(
+            "could not read the previously open plan {}: {error}",
+            path.display()
+        )),
+    }
+}
+
 fn write_active_profile(config_dir: &Path, json: &str) -> Result<(), String> {
     let path = read_active_path(config_dir)?
         .ok_or_else(|| "no active profile file is remembered".to_owned())?;
@@ -185,7 +201,16 @@ mod tests {
             "{\"route\":\"updated\"}"
         );
 
+        let previous = previous_active(&config)
+            .expect("read previous profile")
+            .expect("previous profile");
+        assert_eq!(previous.json, "{\"route\":\"updated\"}");
+        assert!(read_active_path(&config)
+            .expect("still remembered")
+            .is_some());
+
         clear_active_path(&config).expect("clear profile");
+        assert!(previous_active(&config).expect("read cleared").is_none());
         assert!(restore_active(&config)
             .expect("restore cleared profile")
             .is_none());
@@ -199,6 +224,9 @@ mod tests {
         let missing = root.join("missing.runplanner.json");
         write_active_path(&config, missing).expect("activate missing profile");
 
+        assert!(previous_active(&config)
+            .expect("a missing previous file is none")
+            .is_none());
         assert!(restore_active(&config)
             .expect_err("missing profile must fail")
             .contains("could not reopen active profile"));

@@ -42,6 +42,7 @@ describe('candidate application boundary', () => {
       'draftRun',
       'editorNavigation',
       'gameStatus',
+      'projectLibrary',
       'projectOperations',
       'selectStructuredWorkspace',
       'slotRebuild',

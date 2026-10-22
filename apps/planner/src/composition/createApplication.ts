@@ -22,6 +22,8 @@ import { assertPublicProjectAdmission } from '../workspace/project-admission';
 import { createEditorNavigation } from '../projections/editorNavigation';
 import { createEditorSessionReconciliationCoordinator } from '../workspace/editorSessionReconciliation';
 import { createProjectOperations } from '../workspace/projectOperations';
+import { createProjectLibraryOperations } from '../workspace/projectLibrary';
+import type { ProjectLibraryAdapter } from '../persistence/projectLibrary';
 import { createBugReportOperations } from '../workspace/bugReport';
 import {
   createCommunityEventController,
@@ -59,6 +61,7 @@ export interface CreateApplicationOptions {
   readonly devBuild?: boolean;
   readonly profileFile?: ProfileFileAdapter;
   readonly profileFileRestore?: ProfileFileRestoreResult;
+  readonly projectLibrary?: ProjectLibraryAdapter;
   readonly gameModuleHost?: GameModuleHost;
   /** The signed community event feed; given with the game module host. */
   readonly communityEventHost?: CommunityEventHost;
@@ -258,6 +261,16 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     communityEvents,
     draftRun,
     gameStatus,
+    projectLibrary:
+      options.projectLibrary === undefined
+        ? undefined
+        : createProjectLibraryOperations({
+            adapter: options.projectLibrary,
+            catalog,
+            ...(options.mintProjectId === undefined
+              ? {}
+              : { mintProjectId: options.mintProjectId }),
+          }),
     projectOperations,
     slotRebuild,
     store,

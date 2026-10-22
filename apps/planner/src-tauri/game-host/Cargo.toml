@@ -1,7 +1,7 @@
 [package]
 name = "run-planner-game-host"
 version = "0.1.0"
-description = "Game module package, game target, install and plan-slot publication for the Run Planner desktop host"
+description = "Game module package, game target, install, plan-slot publication and the project library for the Run Planner desktop host"
 authors = ["maybe-adamant"]
 edition = "2021"
 rust-version = "1.77.2"
@@ -21,6 +21,7 @@ minisign-verify = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
 sha2 = "0.10"
+trash = "5.2"
 zip = { version = "4", default-features = false, features = ["deflate-flate2", "time"] }
 # zip's flate2 needs an explicit pure-Rust deflate backend.
 flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
