@@ -29,6 +29,10 @@ export interface LibrarySaver {
   ): Promise<void>;
   /** Writes pending edits now; rejects with the write failure. */
   flush(): Promise<void>;
+  /** The open item was moved to `to`, as when it or its folder moves. */
+  moved(from: string, to: string): void;
+  /** Stops writing the open item, dropping its pending edits, as when it is deleted. */
+  close(): void;
   dispose(): void;
 }
 
@@ -41,8 +45,6 @@ export function createLibrarySaver(options: {
   readonly store: PlannerStore;
   readonly scheduler: SaveScheduler;
   readonly delayMs: number;
-  /** A write moved the open item to another key. */
-  readonly onRefiled: (key: string, project: ProjectDocument) => void;
 }): LibrarySaver {
   const { adapter, store } = options;
   const present = () => selectPresentProject(store.getState());
@@ -76,10 +78,7 @@ export function createLibrarySaver(options: {
         if (store.getState().librarySession.writeError !== null) {
           store.dispatch(libraryWriteSucceeded());
         }
-        if (key === target && entry.key !== target) {
-          key = entry.key;
-          options.onRefiled(entry.key, snapshot);
-        }
+        if (key === target && entry.key !== target) key = entry.key;
       } catch (error) {
         failure = error;
         store.dispatch(
@@ -136,6 +135,16 @@ export function createLibrarySaver(options: {
       observed = written;
     },
     flush,
+    moved(from: string, to: string): void {
+      if (key === from) key = to;
+      if (preserveBeforeWrite === from) preserveBeforeWrite = to;
+    },
+    close(): void {
+      cancel();
+      key = null;
+      preserveBeforeWrite = null;
+      written = undefined;
+    },
     dispose(): void {
       unsubscribe();
       cancel();

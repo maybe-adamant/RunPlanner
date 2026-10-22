@@ -29,17 +29,9 @@ import {
 } from '@run-planner/engine/authored-project';
 import { derivedAcquisitionEntriesForProjectEvaluationAssembly } from '@run-planner/engine/simulation';
 import { catalog } from '@run-planner/hades2-catalog';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
-import {
-  createFakeGameModuleHost,
-  gameModuleStatus,
-  planSlot,
-  planSlots,
-} from '@planner-test/fixtures/gameModuleHost';
-import { gamePlanSent } from '@planner/state/gameSendSessionSlice';
-import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
@@ -51,10 +43,7 @@ import {
   semanticOwnerNavigated,
   traitOfferDialogOpened,
 } from '@planner/state/editorSessionSlice';
-import {
-  createOpenTestApplication,
-  renderPlannerForInteraction,
-} from '@planner-test/fixtures/renderPlanner';
+import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 import {
   createGoldenEchoGiftHammerPendingProject,
   echoGiftHammerReplayAddress,
@@ -85,13 +74,13 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceSeleneHexPathCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
-import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
 async function expectAboutBuildIdentity(startWithProject: boolean): Promise<void> {
   const view = renderPlannerForInteraction({ startWithProject });
-
+  // About lives on Home, which an open plan's editor returns to.
+  if (startWithProject) await view.user.click(screen.getByRole('button', { name: 'Home' }));
   await view.user.click(screen.getByRole('button', { name: 'About' }));
 
   const about = await screen.findByLabelText('About Run Planner');
@@ -639,13 +628,16 @@ describe('planner history interaction', () => {
     }
     expect(application.store.getState().projectWorkspace.history!.present).toBe(project);
   });
-  it('keeps the plan name, document history, and project information in the header', async () => {
+  it('keeps the plan name and document history in the header, and project information on Home', async () => {
     const { user } = renderPlannerForInteraction();
 
     expect(screen.getByRole('textbox', { name: 'Plan name' })).toBeTruthy();
     expect(screen.queryByRole('navigation', { name: 'Planner sections' })).toBeNull();
     expect(screen.getByRole('group', { name: 'Project history' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'About' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Loadout' })).toBeTruthy();
 
+    await user.click(screen.getByRole('button', { name: 'Home' }));
     await user.click(screen.getByRole('button', { name: 'About' }));
 
     const about = await screen.findByRole('dialog', { name: 'About Run Planner' });
@@ -657,381 +649,6 @@ describe('planner history interaction', () => {
     expect(within(about).getByText('Reset scale', { selector: 'dt' })).toBeTruthy();
     expect(within(about).getAllByText('Ctrl/Cmd', { selector: 'kbd' })).toHaveLength(4);
     expect(within(about).queryByText('Rooms')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Loadout' })).toBeTruthy();
-  });
-
-  it('offers no Publish to Game in the Plan menu', async () => {
-    const game = createFakeGameModuleHost();
-    const application = createApplication({ gameModuleHost: game.host });
-    const project = createCompleteFGProject();
-    application.store.dispatch(
-      authoredProjectReplaced({
-        ...project,
-        route: { ...project.route, biomes: project.route.biomes.slice(0, 1) },
-      }),
-    );
-    const { user } = renderPlannerForInteraction({ application });
-    await user.click(screen.getByRole('button', { name: 'Plan' }));
-    expect(screen.queryByRole('menuitem', { name: /Publish/ })).toBeNull();
-  });
-
-  function firstBiomeProject() {
-    const project = createCompleteFGProject();
-    return { ...project, route: { ...project.route, biomes: project.route.biomes.slice(0, 1) } };
-  }
-
-  function loadFirstBiome(application: ReturnType<typeof createApplication>) {
-    application.store.dispatch(authoredProjectReplaced(firstBiomeProject()));
-  }
-
-  /** An application with a sendable library plan open. */
-  async function savedApplication(game: ReturnType<typeof createFakeGameModuleHost>) {
-    const library = createMemoryProjectLibrary();
-    const application = createApplication({
-      gameModuleHost: game.host,
-      projectLibrary: library.adapter,
-      mintProjectId: () => 'copy-id',
-    });
-    const key = await library.file({ ...firstBiomeProject(), name: 'Erebus opener' });
-    const opened = await application.projectOperations.openPlan(key);
-    if (opened.status !== 'success') throw new Error(opened.message);
-    return { application, library };
-  }
-
-  const sendButton = () =>
-    document.querySelector<HTMLButtonElement>('.game-send-button') ??
-    (() => {
-      throw new Error('the header send button is missing');
-    })();
-  const sendStatus = () =>
-    document.querySelector<HTMLElement>('.game-send-status') ??
-    (() => {
-      throw new Error('the send status region is missing');
-    })();
-  const descriptionOf = (element: HTMLElement) => element.getAttribute('aria-description');
-
-  it('keeps one header send button through a panel send, a re-send and its timed result', async () => {
-    const game = createFakeGameModuleHost();
-    const { application } = await savedApplication(game);
-    const { user } = renderPlannerForInteraction({ application });
-    expect(await screen.findByRole('button', { name: 'Game — ready' })).toBeTruthy();
-    const button = await screen.findByRole('button', { name: 'Send to game…' });
-    const className = button.className;
-    expect(button).toBe(sendButton());
-    expect(hintOf(button)).toBe('Choose a slot in the Game panel.');
-
-    await user.click(button);
-    const panel = await screen.findByRole('dialog', { name: 'Game' });
-    expect(document.activeElement).toBe(
-      within(panel).getByRole('heading', { name: 'Plans in game' }),
-    );
-    await user.click(within(panel).getByRole('button', { name: 'Send here (slot 3)' }));
-    await within(panel).findByText('Published to game, Slot 3.');
-    await user.click(within(panel).getByRole('button', { name: 'Close' }));
-
-    expect(await screen.findByRole('button', { name: 'Send · Slot 3' })).toBe(button);
-    expect(hintOf(button)).toBeNull();
-    expect(descriptionOf(button)).toBeNull();
-    const status = sendStatus();
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
-    try {
-      vi.setSystemTime(new Date(2026, 8, 27, 14, 32, 5));
-      await act(async () => {
-        fireEvent.click(button);
-      });
-      await act(() => vi.advanceTimersByTimeAsync(0));
-      expect(game.published.map((publication) => publication.slotNumber)).toEqual([3, 3]);
-      expect(sendButton()).toBe(button);
-      expect(button.className).toBe(className);
-      expect(button.textContent).toBe('✓ Sent · Slot 3');
-      expect(button.getAttribute('aria-disabled')).toBe('true');
-      const sentTime = new Date(2026, 8, 27, 14, 32, 5).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      expect(hintOf(button)).toBe(`Sent to slot 3 at ${sentTime}; now active.`);
-      expect(status.textContent).toBe('Sent to slot 3.');
-      await act(async () => {
-        fireEvent.click(button);
-      });
-      expect(game.published).toHaveLength(2);
-      await act(() => vi.advanceTimersByTimeAsync(2900));
-      expect(button.textContent).toBe('✓ Sent · Slot 3');
-      await act(() => vi.advanceTimersByTimeAsync(100));
-      expect(button.textContent).toBe('Send · Slot 3');
-      expect(button.className).toBe(className);
-    } finally {
-      vi.useRealTimers();
-    }
-
-    act(() => loadFirstBiome(application));
-    expect(await screen.findByRole('button', { name: 'Send to game…' })).toBe(button);
-    expect(application.store.getState().gameSendSession.lastSentSlot).toBeNull();
-  });
-
-  it('announces a send whose slot was not made active as sent, not failed', async () => {
-    const game = createFakeGameModuleHost();
-    const { application } = await savedApplication(game);
-    application.store.dispatch(gamePlanSent({ slot: 4 }));
-    const { user } = renderPlannerForInteraction({ application });
-    game.host.publish.mockResolvedValueOnce({
-      status: 'published',
-      message: 'Published to Slot 4, but it was not made active.',
-      blockers: [],
-      activationProblem: 'could not replace active slot file.',
-    });
-    const button = await screen.findByRole('button', { name: 'Send · Slot 4' });
-    await user.click(button);
-    await waitFor(() => expect(button.textContent).toBe('✓ Sent · Slot 4'));
-    expect(hintOf(button)).toMatch(/; not made active\.$/);
-    expect(sendStatus().textContent).toBe('Sent to slot 4; not made active.');
-    expect(screen.queryByRole('button', { name: 'Game — last send failed' })).toBeNull();
-  });
-
-  it('reports a failed send on the button, in the Game panel and on the indicator', async () => {
-    const game = createFakeGameModuleHost();
-    const { application } = await savedApplication(game);
-    application.store.dispatch(gamePlanSent({ slot: 4 }));
-    const { user } = renderPlannerForInteraction({ application });
-    game.host.publish.mockResolvedValueOnce({
-      status: 'nativeWrite',
-      message: 'could not write plan slot.',
-      blockers: [],
-      activationProblem: null,
-    });
-    const button = await screen.findByRole('button', { name: 'Send · Slot 4' });
-    await user.click(button);
-    await waitFor(() => expect(button.textContent).toBe('! Not sent'));
-    expect(hintOf(button)).toBe('Details are in the Game panel.');
-    expect(button.getAttribute('aria-disabled')).toBe('true');
-    expect(sendStatus().getAttribute('role')).toBe('status');
-    expect(sendStatus().textContent).toBe('Not sent: could not write plan slot.');
-    const indicator = screen.getByRole('button', { name: 'Game — last send failed' });
-    expect(indicator.querySelector('.game-indicator')?.textContent).toBe('!');
-    await user.click(indicator);
-    const panel = await screen.findByRole('dialog', { name: 'Game' });
-    expect(within(panel).getByRole('group', { name: 'Last send' }).textContent).toMatch(
-      /^!Last send failed at .*: could not write plan slot\.$/,
-    );
-    await user.click(within(panel).getByRole('button', { name: 'Close' }));
-
-    act(() => loadFirstBiome(application));
-    expect(await screen.findByRole('button', { name: 'Game — ready' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Game — ready' }));
-    const reopened = await screen.findByRole('dialog', { name: 'Game' });
-    await within(reopened).findByRole('table', { name: 'Plans in game' });
-    expect(within(reopened).queryByRole('group', { name: 'Last send' })).toBeNull();
-  });
-
-  it('keeps disabled send states focusable with their reason', async () => {
-    const reasonOf = async (name: string, reason: string) => {
-      const button = await screen.findByRole('button', { name });
-      await waitFor(() => expect(hintOf(button)).toBe(reason));
-      expect(button.getAttribute('aria-disabled')).toBe('true');
-      expect((button as HTMLButtonElement).disabled).toBe(false);
-      expect(descriptionOf(button)).toBe(reason);
-      button.focus();
-      expect(document.activeElement).toBe(button);
-      fireEvent.click(button);
-      expect(screen.queryByRole('dialog', { name: 'Game' })).toBeNull();
-      return button;
-    };
-    const game = createFakeGameModuleHost();
-    renderPlannerForInteraction({
-      application: createApplication({ gameModuleHost: game.host }),
-      startWithProject: false,
-    });
-    await reasonOf('Send to game', 'Open a plan first.');
-    cleanup();
-
-    const notReady = createFakeGameModuleHost(
-      gameModuleStatus({
-        inspection: { modpackLib: { state: 'missing', found: null } },
-        publicationBlockers: [{ code: 'modpackLibMissing', found: null, required: '4.1.0' }],
-      }),
-    );
-    const first = createApplication({ gameModuleHost: notReady.host });
-    loadFirstBiome(first);
-    first.store.dispatch(gamePlanSent({ slot: 2 }));
-    renderPlannerForInteraction({ application: first });
-    expect(await screen.findByRole('button', { name: 'Game — needs setup' })).toBeTruthy();
-    await reasonOf('Send to game', 'Set up the game in the Game panel.');
-    cleanup();
-
-    const unsendable = createApplication({
-      gameModuleHost: game.host,
-      projectLibrary: createMemoryProjectLibrary().adapter,
-    });
-    await unsendable.projectOperations.createNew('Underworld');
-    unsendable.store.dispatch(gamePlanSent({ slot: 1 }));
-    renderPlannerForInteraction({ application: unsendable });
-    expect(await screen.findByRole('button', { name: 'Game — ready' })).toBeTruthy();
-    await reasonOf('Send to game', 'Resolve this plan’s findings before sending it.');
-    expect(game.published).toEqual([]);
-  });
-
-  it('opens the Game panel instead when the session slot holds another project', async () => {
-    const occupied = gameModuleStatus();
-    const other = createFakeGameModuleHost({
-      ...occupied,
-      inspection: {
-        ...occupied.inspection!,
-        planSlots: occupied.inspection!.planSlots.map((slot) =>
-          slot.slot === 2
-            ? {
-                ...slot,
-                state: 'present' as const,
-                modifiedAtMs: 1,
-                routeKey: 'Surface',
-                biomeKeys: ['N'],
-                planFingerprint: 'theirs',
-                projectId: 'someone-else',
-              }
-            : slot,
-        ),
-      },
-    });
-    const application = createApplication({ gameModuleHost: other.host });
-    loadFirstBiome(application);
-    application.store.dispatch(gamePlanSent({ slot: 2 }));
-    const { user } = renderPlannerForInteraction({ application });
-    expect(await screen.findByRole('button', { name: 'Game — ready' })).toBeTruthy();
-    await user.click(await screen.findByRole('button', { name: 'Send to game…' }));
-    expect(await screen.findByRole('dialog', { name: 'Game' })).toBeTruthy();
-    expect(other.published).toEqual([]);
-  });
-
-  it('forgets the session slot when another project loads and on restart', async () => {
-    const game = createFakeGameModuleHost();
-    const { application } = await savedApplication(game);
-    application.store.dispatch(gamePlanSent({ slot: 2 }));
-    renderPlannerForInteraction({ application });
-    expect(await screen.findByRole('button', { name: 'Send · Slot 2' })).toBeTruthy();
-    await act(async () => {
-      await application.projectOperations.createNew('Underworld');
-    });
-    expect(await screen.findByRole('button', { name: 'Send to game' })).toBeTruthy();
-    cleanup();
-
-    const restarted = createApplication({ gameModuleHost: game.host });
-    loadFirstBiome(restarted);
-    renderPlannerForInteraction({ application: restarted });
-    expect(await screen.findByRole('button', { name: 'Game — ready' })).toBeTruthy();
-    expect(await screen.findByRole('button', { name: 'Send to game…' })).toBeTruthy();
-  });
-
-  it('sends the open plan as it stands, without saving first', async () => {
-    const game = createFakeGameModuleHost();
-    const { application, library } = await savedApplication(game);
-    application.store.dispatch(gamePlanSent({ slot: 5 }));
-    renderPlannerForInteraction({ application });
-    const button = await screen.findByRole('button', { name: 'Send · Slot 5' });
-    expect(hintOf(button)).toBeNull();
-    let publish: (() => void) | undefined;
-    game.host.publish.mockImplementationOnce(
-      (slotNumber, json, sourceJson, summary) =>
-        new Promise((resolve) => {
-          publish = () => {
-            game.published.push({ slotNumber, json, sourceJson, summary });
-            resolve({
-              status: 'published',
-              message: 'Published.',
-              blockers: [],
-              activationProblem: null,
-            });
-          };
-        }),
-    );
-    fireEvent.click(button);
-    expect(button.textContent).toBe('Sending…');
-    expect(library.writes).toHaveLength(0);
-    act(() => publish?.());
-    await waitFor(() => expect(button.textContent).toBe('✓ Sent · Slot 5'));
-    expect(JSON.parse(game.published[0]!.json)).toMatchObject({ displayName: 'Erebus opener' });
-  });
-
-  it('gives a duplicate a new identity, so earlier sends no longer match it', async () => {
-    const game = createFakeGameModuleHost();
-    const { application, library } = await savedApplication(game);
-    const current = application.projectOperations.inspectCurrentGamePlan();
-    if (current.kind !== 'publishable') throw new Error('fixture must be sendable');
-    const inSlot1 = gameModuleStatus({
-      inspection: {
-        planSlots: planSlots(
-          planSlot(1, {
-            state: 'present',
-            modifiedAtMs: Date.now(),
-            routeKey: 'Underworld',
-            biomeKeys: ['F'],
-            planFingerprint: current.planFingerprint,
-            projectId: current.projectId,
-            displayName: 'Erebus opener',
-          }),
-        ),
-      },
-    });
-    game.host.status.mockResolvedValue(inSlot1);
-    application.store.dispatch(gamePlanSent({ slot: 1 }));
-    const { user } = renderPlannerForInteraction({ application });
-    expect(await screen.findByRole('button', { name: 'Send · Slot 1' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Game — ready' }));
-    const panel = await screen.findByRole('dialog', { name: 'Game' });
-    expect(await within(panel).findByText('current')).toBeTruthy();
-    await user.click(within(panel).getByRole('button', { name: 'Close' }));
-
-    await user.click(screen.getByRole('button', { name: 'Plan' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Duplicate' }));
-    expect(await screen.findByText('Plan duplicated')).toBeTruthy();
-    expect(application.store.getState().projectWorkspace.history?.present).toMatchObject({
-      projectId: 'copy-id',
-      name: 'Erebus opener (copy)',
-    });
-    expect((await library.plans(catalog)).map((plan) => plan.name)).toEqual([
-      'Erebus opener',
-      'Erebus opener (copy)',
-    ]);
-    expect(await screen.findByRole('button', { name: 'Send to game…' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Game — ready' }));
-    const reopened = await screen.findByRole('dialog', { name: 'Game' });
-    await within(reopened).findByRole('table', { name: 'Plans in game' });
-    expect(within(reopened).queryByText('current')).toBeNull();
-    expect(within(reopened).queryByText('older version')).toBeNull();
-  });
-
-  it('shows the can’t-send callout with Show findings, which closes the panel at the finding', async () => {
-    const game = createFakeGameModuleHost();
-    const application = createApplication({
-      gameModuleHost: game.host,
-      projectLibrary: createMemoryProjectLibrary().adapter,
-    });
-    await application.projectOperations.createNew('Underworld');
-    const { user } = renderPlannerForInteraction({ application });
-    await user.click(await screen.findByRole('button', { name: 'Game — ready' }));
-    const panel = await screen.findByRole('dialog', { name: 'Game' });
-    const callout = await within(panel).findByRole('group', { name: 'Can’t send' });
-    expect(callout.textContent).toContain('Resolve this plan’s findings before sending it.');
-    await user.click(within(callout).getByRole('button', { name: 'Show findings' }));
-    expect(screen.queryByRole('dialog', { name: 'Game' })).toBeNull();
-    const selected = application.store.getState().editorSession.selectedFinding;
-    expect(selected?.key).toBe(
-      application.store.getState().projectWorkspace.assembly?.evaluation.route.issue?.regionKey,
-    );
-    await waitFor(() =>
-      expect(document.activeElement?.getAttribute('data-selected-finding')).toBe('true'),
-    );
-  });
-
-  it('shows the callout without Show findings when nothing is navigable', async () => {
-    const game = createFakeGameModuleHost();
-    const { user } = renderPlannerForInteraction({
-      application: createApplication({ gameModuleHost: game.host }),
-      startWithProject: false,
-    });
-    await user.click(await screen.findByRole('button', { name: 'Game — ready' }));
-    const panel = await screen.findByRole('dialog', { name: 'Game' });
-    const callout = await within(panel).findByRole('group', { name: 'Can’t send' });
-    expect(callout.textContent).toContain('Open a project to send it to the game.');
-    expect(within(callout).queryByRole('button')).toBeNull();
   });
 
   it('binds visible history controls to semantic project history', async () => {
@@ -1242,7 +859,11 @@ describe('planner history interaction', () => {
   it('keeps navigation outside authored history', async () => {
     const { application, user } = renderPlannerForInteraction({ startWithProject: false });
 
-    await user.click(screen.getByRole('button', { name: 'Create Surface project' }));
+    await user.click(screen.getByRole('button', { name: 'New plan' }));
+    await user.click(await screen.findByRole('button', { name: 'Create Surface plan' }));
+    await waitFor(() =>
+      expect(application.store.getState().projectWorkspace.kind).toBe('openProject'),
+    );
 
     expect(application.store.getState().editorSession.activeSection).toBe('route');
     expect(application.store.getState().projectWorkspace.kind).toBe('openProject');
@@ -1255,7 +876,8 @@ describe('planner history interaction', () => {
   it('activates the selected route and configured-biome navigation from the keyboard', async () => {
     const { application, user } = renderPlannerForInteraction({ startWithProject: false });
 
-    const underworld = screen.getByRole('button', { name: 'Create Underworld project' });
+    await user.click(screen.getByRole('button', { name: 'New plan' }));
+    const underworld = await screen.findByRole('button', { name: 'Create Underworld plan' });
     underworld.focus();
     await user.keyboard('{Enter}');
     await waitFor(() =>
@@ -2988,210 +2610,5 @@ describe('route loadout interaction', () => {
     expect(screen.getByRole('button', { name: 'Edit Arcana' }).textContent).toBe(
       'Arcana · 3 active · 1/30 Grasp',
     );
-  });
-});
-
-describe('plan library interaction', () => {
-  it('uses the menu primitive for keyboard navigation, Escape focus return, and outside dismissal', async () => {
-    const application = createApplication();
-    application.store.dispatch(authoredProjectReplaced(createCompleteFGProject()));
-    const { user } = renderPlannerForInteraction({ application });
-    const trigger = screen.getByRole('button', { name: 'Plan' });
-
-    trigger.focus();
-    await user.keyboard('{Enter}');
-
-    const menu = screen.getByRole('menu', { name: 'Plan' });
-    expect(
-      within(menu)
-        .getAllByRole('menuitem')
-        .map((item) => item.textContent?.trim()),
-    ).toEqual(['New…', 'Open file…', 'Duplicate', 'Revert to opened']);
-    expect(within(menu).getAllByRole('separator')).toHaveLength(1);
-    // Nothing has changed since the plan opened, so there is nothing to revert.
-    expect(within(menu).getByRole('menuitem', { name: 'Revert to opened' })).toHaveProperty(
-      'ariaDisabled',
-      'true',
-    );
-    expect(document.activeElement).toBe(within(menu).getByRole('menuitem', { name: 'New…' }));
-
-    await user.keyboard('{ArrowDown}');
-    expect(document.activeElement).toBe(within(menu).getByRole('menuitem', { name: 'Open file…' }));
-    await user.keyboard('{Escape}');
-
-    expect(screen.queryByRole('menu')).toBeNull();
-    expect(document.activeElement).toBe(trigger);
-
-    await user.click(trigger);
-    expect(screen.getByRole('menu', { name: 'Plan' })).toBeTruthy();
-    fireEvent.pointerDown(document.body);
-    expect(screen.queryByRole('menu')).toBeNull();
-  });
-
-  it('creates a library plan, saves each edit, and reverts to it as one undoable step', async () => {
-    const library = createMemoryProjectLibrary();
-    const application = createApplication({ projectLibrary: library.adapter });
-    const { user } = renderPlannerForInteraction({ application });
-
-    expect(screen.queryByText('Saved as you edit')).toBeNull();
-    expect(
-      screen.getByRole('button', { name: 'Open file…' }).classList.contains('secondary-action'),
-    ).toBe(true);
-    await user.click(
-      within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
-        name: 'Create Underworld project',
-      }),
-    );
-    expect(screen.getByText('Saved as you edit')).toBeTruthy();
-    const opened = application.store.getState().projectWorkspace.history!.present;
-    expect(await library.plans(catalog)).toEqual([opened]);
-
-    act(() => {
-      application.store.dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ReplaceFearVowRank',
-          route: createRouteAddress('Underworld'),
-          vowKey: 'EnemyDamageShrineUpgrade',
-          rank: 3,
-        }),
-      );
-    });
-    await act(async () => {
-      expect((await application.projectOperations.flush()).status).toBe('success');
-    });
-    const edited = application.store.getState().projectWorkspace.history!.present;
-    expect(await library.plans(catalog)).toEqual([edited]);
-
-    await user.click(screen.getByRole('button', { name: 'Plan' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Revert to opened' }));
-    expect(screen.getByText('Plan reverted')).toBeTruthy();
-    expect(application.store.getState().projectWorkspace.history!.present).toEqual(opened);
-    await user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(application.store.getState().projectWorkspace.history!.present).toBe(edited);
-
-    const workspaceBeforeNew = application.store.getState().projectWorkspace;
-    await user.click(screen.getByRole('button', { name: 'Plan' }));
-    await user.click(screen.getByRole('menuitem', { name: 'New…' }));
-    expect(screen.getByRole('heading', { name: 'Choose a new route' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(application.store.getState().projectWorkspace).toBe(workspaceBeforeNew);
-  });
-
-  it('shows a failed write until a later write succeeds', async () => {
-    const library = createMemoryProjectLibrary();
-    const application = createApplication({ projectLibrary: library.adapter });
-    await application.projectOperations.createNew('Underworld');
-    renderPlannerForInteraction({ application });
-    const edit = (rank: number) =>
-      act(() => {
-        application.store.dispatch(
-          authoredProjectCommandDispatched({
-            kind: 'ReplaceFearVowRank',
-            route: createRouteAddress('Underworld'),
-            vowKey: 'EnemyDamageShrineUpgrade',
-            rank,
-          }),
-        );
-      });
-
-    library.failWrites(new Error('disk full'));
-    edit(2);
-    await act(async () => {
-      expect((await application.projectOperations.flush()).status).toBe('failure');
-    });
-    expect(screen.getByRole('alert').textContent).toContain('Not saved');
-    expect(screen.queryByText('Saved as you edit')).toBeNull();
-
-    library.failWrites(null);
-    edit(3);
-    await act(async () => {
-      expect((await application.projectOperations.flush()).status).toBe('success');
-    });
-    expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.getByText('Saved as you edit')).toBeTruthy();
-    expect(
-      (await library.plans(catalog))[0]?.route.loadout.fearRanks.EnemyDamageShrineUpgrade,
-    ).toBe(3);
-  });
-
-  it('presents a file it cannot open and retains the current workspace', async () => {
-    const library = createMemoryProjectLibrary();
-    const application = createApplication({ projectLibrary: library.adapter });
-    const workspace = application.store.getState().projectWorkspace;
-    const { user } = renderPlannerForInteraction({ application });
-
-    library.choose({ fileName: 'broken.runplanner.json', json: '{not json' });
-    await user.click(screen.getByRole('button', { name: 'Open file…' }));
-
-    expect((await screen.findByRole('alert')).textContent).toContain('Couldn’t open file');
-    await user.click(screen.getByRole('button', { name: 'Couldn’t open file Details' }));
-    expect(screen.getByRole('textbox', { name: 'Couldn’t open file details' })).toHaveProperty(
-      'value',
-      'Open file failed: $: must be valid JSON',
-    );
-    expect(application.store.getState().projectWorkspace).toBe(workspace);
-    expect(screen.getByRole('group', { name: 'Choose route' })).toBeTruthy();
-    expect(await library.plans(catalog)).toEqual([]);
-  });
-
-  it('closes the initial route chooser after opening a file into the library', async () => {
-    const source = createOpenTestApplication('Surface');
-    const json = encodeProjectDocument(source.store.getState().projectWorkspace.history!.present);
-    const library = createMemoryProjectLibrary();
-    const application = createApplication({ projectLibrary: library.adapter });
-    const { user } = renderPlannerForInteraction({ application, startWithProject: false });
-
-    expect(screen.getByRole('group', { name: 'Choose route' })).toBeTruthy();
-    library.choose({ fileName: 'surface.runplanner.json', json });
-    await user.click(screen.getByRole('button', { name: 'Open file…' }));
-
-    expect(await screen.findByText('File added to library')).toBeTruthy();
-    expect(screen.queryByRole('group', { name: 'Choose route' })).toBeNull();
-    expect(application.store.getState().projectWorkspace.history?.present.route.routeKey).toBe(
-      'Surface',
-    );
-    expect((await library.plans(catalog)).map((plan) => plan.route.routeKey)).toEqual(['Surface']);
-  });
-
-  it('preserves the initial route chooser when opening a file is cancelled', async () => {
-    const library = createMemoryProjectLibrary();
-    const application = createApplication({ projectLibrary: library.adapter });
-    const { user } = renderPlannerForInteraction({ application, startWithProject: false });
-
-    await user.click(screen.getByRole('button', { name: 'Open file…' }));
-
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Open file…' })).toHaveProperty('disabled', false),
-    );
-    expect(screen.queryByText('Open file cancelled.')).toBeNull();
-    expect(screen.getByRole('group', { name: 'Choose route' })).toBeTruthy();
-  });
-
-  it('reopens the last plan at startup and offers the earlier file once', async () => {
-    const previous = {
-      fileName: 'Earlier.runplanner.json',
-      json: encodeProjectDocument({ ...createCompleteFGProject(), projectId: 'earlier' }),
-    };
-    const library = createMemoryProjectLibrary({ previousFile: previous });
-    const first = createApplication({ projectLibrary: library.adapter });
-    await first.startupReady;
-    const { user, unmount } = renderPlannerForInteraction({
-      application: first,
-      startWithProject: false,
-    });
-    const offer = screen.getByRole('status', { name: 'Earlier plan' });
-    await user.click(within(offer).getByRole('button', { name: 'Import' }));
-    await waitFor(() =>
-      expect(first.store.getState().projectWorkspace.history?.present.projectId).toBe('earlier'),
-    );
-    expect(screen.queryByRole('status', { name: 'Earlier plan' })).toBeNull();
-    expect(screen.queryByRole('group', { name: 'Choose route' })).toBeNull();
-    first.dispose();
-    unmount();
-
-    const second = createApplication({ projectLibrary: library.adapter });
-    await second.startupReady;
-    expect(second.store.getState().projectWorkspace.history?.present.projectId).toBe('earlier');
-    expect(second.store.getState().librarySession.previousFileOffer).toBeNull();
   });
 });

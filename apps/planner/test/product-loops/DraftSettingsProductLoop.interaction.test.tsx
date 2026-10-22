@@ -12,7 +12,7 @@ afterEach(cleanup);
 it('keeps draft settings in the project through Undo, save and reload', async () => {
   const library = createMemoryProjectLibrary();
   const application = createApplication({ projectLibrary: library.adapter });
-  const { catalog, store } = application;
+  const { catalog } = application;
   const key = await library.file(
     createProjectDocument(catalog, {
       projectId: 'run-plan',
@@ -21,9 +21,10 @@ it('keeps draft settings in the project through Undo, save and reload', async ()
     }),
   );
   await application.projectOperations.openPlan(key);
-  const { user } = renderPlannerForInteraction({ application });
+  let { user } = renderPlannerForInteraction({ application });
+  let current = application;
   const draftPanel = () => user.click(screen.getByRole('button', { name: 'Draft' }));
-  const present = () => store.getState().projectWorkspace.history!.present;
+  const present = () => current.store.getState().projectWorkspace.history!.present;
   await draftPanel();
 
   const gods = () => screen.getByRole('group', { name: 'Gods' });
@@ -62,10 +63,13 @@ it('keeps draft settings in the project through Undo, save and reload', async ()
   });
   const saved = decodeProjectDocument(JSON.parse(library.writes.at(-1)!.json), catalog);
   expect(saved.route.draft).toEqual(authored);
-  await act(async () => {
-    expect((await application.projectOperations.openPlan(key)).status).toBe('success');
-  });
-  // Opening a document returns the workspace to Route.
+  // A later start opens the plan from the library on Route.
+  application.dispose();
+  cleanup();
+  current = createApplication({ projectLibrary: library.adapter });
+  await current.startupReady;
+  expect((await current.projectOperations.openPlan(key)).status).toBe('success');
+  ({ user } = renderPlannerForInteraction({ application: current }));
   await draftPanel();
   for (const god of ['Zeus', 'Hera', 'Apollo'])
     expect(within(gods()).getByRole('button', { name: god }).getAttribute('aria-pressed')).toBe(

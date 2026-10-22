@@ -24,6 +24,7 @@ import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-fi
 import { legacyRareEpicHexTrees } from '@run-planner/test-fixtures/shared';
 
 import { createApplication } from '@planner/composition/createApplication';
+import { viewChanged } from '@planner/state/librarySessionSlice';
 import { EXECUTION_PLAN_FORMAT } from '@run-planner/engine/execution-plan';
 import { createFakeGameModuleHost, gameModuleStatus } from '@planner-test/fixtures/gameModuleHost';
 import {
@@ -192,10 +193,7 @@ describe('project operations', () => {
       'plan-1',
       'plan-1-renamed',
     ]);
-    expect((await library.adapter.readSession()).lastOpened).toEqual({
-      key: 'plan-1-renamed',
-      projectId: 'minted-1',
-    });
+    expect(application.projectOperations.openKey()).toBe('plan-1-renamed');
   });
 
   it('reports a failed write and retries it with the next edit or flush', async () => {
@@ -244,10 +242,15 @@ describe('project operations', () => {
     expect(
       (await library.plans(catalog)).find((plan) => plan.projectId === 'minted-1')?.route.biomes,
     ).toHaveLength(2);
-    expect((await library.adapter.readSession()).lastOpened).toEqual({
-      key,
-      projectId: loadSurfaceNProject().projectId,
-    });
+    expect(application.store.getState().librarySession.view).toEqual({ kind: 'editor' });
+
+    // Opening the plan already open only shows it, keeping its history.
+    application.store.dispatch(viewChanged({ kind: 'home', tab: 'library' }));
+    application.store.dispatch(rename('Edited'));
+    const edited = presentHistory(application);
+    await application.projectOperations.openPlan(key);
+    expect(presentHistory(application)).toBe(edited);
+    expect(application.store.getState().librarySession.view).toEqual({ kind: 'editor' });
   });
 
   it('reverts to the plan as opened as one undoable step', async () => {
@@ -268,32 +271,94 @@ describe('project operations', () => {
     expect(presentProject(application)).toBe(edited);
   });
 
-  it('duplicates the open plan as a new library plan named as its copy', async () => {
+  it('duplicates a library plan in its folder under a new identity, without opening it', async () => {
     const { application, library } = createLibraryApplication();
-    await application.projectOperations.createNew('Underworld');
+    await application.projectOperations.createNew('Underworld', undefined, 'Practice');
     application.store.dispatch(rename('Erebus opener'));
     application.store.dispatch(configure(2));
     const original = presentProject(application);
-    await expect(application.projectOperations.duplicate()).resolves.toEqual({
+    const key = application.projectOperations.openKey()!;
+    await expect(application.projectOperations.duplicate(key)).resolves.toEqual({
       operation: 'duplicate',
       status: 'success',
-      message: 'Opened Erebus opener (copy).',
+      message: 'Added Erebus opener (copy).',
     });
-    expect(presentProject(application)).toEqual({
-      ...original,
-      projectId: 'minted-2',
-      name: 'Erebus opener (copy)',
-    });
-    expect(presentHistory(application)).toMatchObject({ past: [], future: [] });
-    expect((await library.plans(catalog)).map((plan) => [plan.projectId, plan.name])).toEqual([
-      ['minted-1', 'Erebus opener'],
-      ['minted-2', 'Erebus opener (copy)'],
+    // The open plan stays open; its pending edits were written before copying.
+    expect(presentProject(application)).toBe(original);
+    const { items } = await application.projectOperations.listLibrary();
+    expect(
+      items.map((item) => item.kind === 'ready' && [item.projectId, item.name, item.folder]),
+    ).toEqual([
+      ['minted-1', 'Erebus opener', 'Practice'],
+      ['minted-2', 'Erebus opener (copy)', 'Practice'],
     ]);
+    expect(
+      (await library.plans(catalog)).find((plan) => plan.projectId === 'minted-2')?.route.biomes,
+    ).toHaveLength(2);
 
     application.store.dispatch(rename('é'.repeat(200)));
-    await application.projectOperations.duplicate();
-    expect(Array.from(presentProject(application).name)).toHaveLength(200);
-    expect(presentProject(application).name.endsWith(' (copy)')).toBe(true);
+    await application.projectOperations.duplicate(key);
+    const copy = (await library.plans(catalog)).find((plan) => plan.projectId === 'minted-3')!;
+    expect(Array.from(copy.name)).toHaveLength(200);
+    expect(copy.name.endsWith(' (copy)')).toBe(true);
+  });
+
+  it('closes the open plan when it or its folder is deleted, and undo files it again', async () => {
+    const { application } = createLibraryApplication();
+    await application.projectOperations.createNew('Underworld', undefined, 'Practice/Bosses');
+    application.store.dispatch(configure(2));
+    const key = application.projectOperations.openKey()!;
+
+    const deleted = await application.projectOperations.deletePlan(key);
+    expect(deleted).toMatchObject({ status: 'success', deleted: { folder: 'Practice/Bosses' } });
+    expect(application.store.getState().projectWorkspace.kind).toBe('noProject');
+    expect(application.store.getState().librarySession.view).toEqual({
+      kind: 'home',
+      tab: 'library',
+    });
+    expect(application.projectOperations.openKey()).toBeNull();
+    await application.projectOperations.undoDelete(deleted.deleted!);
+    const restored = (await application.projectOperations.listLibrary()).items;
+    expect(restored).toMatchObject([{ folder: 'Practice/Bosses', projectId: 'minted-1' }]);
+
+    await application.projectOperations.openPlan(restored[0]!.key);
+    expect(presentProject(application).route.biomes).toHaveLength(2);
+    const folder = await application.projectOperations.deleteFolder('Practice');
+    expect(folder.status).toBe('success');
+    expect(application.store.getState().projectWorkspace.kind).toBe('noProject');
+    expect(await application.projectOperations.listLibrary()).toEqual({ folders: [], items: [] });
+    await application.projectOperations.undoDeleteFolder(folder.deleted!);
+    expect((await application.projectOperations.listLibrary()).folders).toEqual([
+      'Practice',
+      'Practice/Bosses',
+    ]);
+  });
+
+  it('keeps writing the open plan after it or its folder moves', async () => {
+    const { application, library } = createLibraryApplication();
+    await application.projectOperations.createFolder('', 'Practice');
+    await expect(application.projectOperations.createFolder('', 'Practice')).resolves.toMatchObject(
+      {
+        status: 'failure',
+      },
+    );
+    await expect(application.projectOperations.createFolder('', 'a/b')).resolves.toMatchObject({
+      status: 'failure',
+    });
+    await application.projectOperations.createNew('Underworld');
+    const key = application.projectOperations.openKey()!;
+    await expect(application.projectOperations.movePlan(key, 'Practice')).resolves.toMatchObject({
+      status: 'success',
+    });
+    await application.projectOperations.renameFolder('Practice', 'Drills');
+    application.store.dispatch(configure(2));
+    await application.projectOperations.flush();
+    const { folders, items } = await application.projectOperations.listLibrary();
+    expect(folders).toEqual(['Drills']);
+    expect(items).toMatchObject([{ folder: 'Drills', projectId: 'minted-1' }]);
+    expect(
+      (await library.plans(catalog)).find((plan) => plan.projectId === 'minted-1')?.route.biomes,
+    ).toHaveLength(2);
   });
 
   it('opens an outside file as a library copy, re-identified when the library holds it', async () => {
@@ -604,32 +669,20 @@ describe('project operations', () => {
     });
   });
 
-  it('reopens the last plan at startup, and reports one it cannot read', async () => {
+  it('starts on Home with no plan open, whatever was open at the last close', async () => {
     const { application, library } = createLibraryApplication();
     await application.projectOperations.createNew('Surface');
-    const opened = presentProject(application);
     application.dispose();
 
     const reopened = createApplication({ projectLibrary: library.adapter });
     await reopened.startupReady;
-    expect(presentProject(reopened)).toEqual(opened);
+    expect(reopened.store.getState().projectWorkspace.kind).toBe('noProject');
+    expect(reopened.store.getState().librarySession.view).toEqual({
+      kind: 'home',
+      tab: 'library',
+    });
+    expect((await reopened.projectOperations.listLibrary()).items).toHaveLength(1);
     reopened.dispose();
-
-    const plans = await library.adapter.list();
-    await library.adapter.write(plans[0]!.key, '{"schemaVersion":98,"projectId":"x","name":"x"}');
-    const broken = createApplication({ projectLibrary: library.adapter });
-    await broken.startupReady;
-    expect(broken.store.getState().projectWorkspace.kind).toBe('noProject');
-    expect(broken.store.getState().librarySession.openError).toMatch(
-      /^Could not reopen the last plan: /,
-    );
-
-    // A plan the library no longer holds is no plan.
-    await broken.projectOperations.forgetLastOpened();
-    const fresh = createApplication({ projectLibrary: library.adapter });
-    await fresh.startupReady;
-    expect(fresh.store.getState().projectWorkspace.kind).toBe('noProject');
-    expect(fresh.store.getState().librarySession.openError).toBeNull();
   });
 
   it('offers the file open before the library once, importing or declining it', async () => {

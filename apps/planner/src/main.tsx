@@ -113,15 +113,6 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
           globalThis.window.location.reload();
         });
       }}
-      reloadWithoutPlan={() => {
-        void application.projectOperations
-          .forgetLastOpened()
-          .catch(() => undefined)
-          .finally(() => {
-            application.dispose();
-            globalThis.window.location.reload();
-          });
-      }}
     >
       <Provider store={application.store}>
         <App

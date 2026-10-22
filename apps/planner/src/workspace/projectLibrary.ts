@@ -22,6 +22,41 @@ import {
 } from '../persistence/projectLibrary';
 import { assertPublicProjectAdmission } from './project-admission';
 
+const FOLDER_NAME_MAX = 60;
+const RESERVED_NAME = /^(con|prn|aux|nul|com\d|lpt\d)(\.|$)/i;
+
+/**
+ * A folder name as typed, trimmed, or null when it cannot name a folder on every desktop
+ * platform: empty, too long, a leading or trailing dot, a separator or reserved character.
+ */
+export function normalizeFolderName(name: string): string | null {
+  const trimmed = name.trim();
+  if (
+    trimmed.length === 0 ||
+    Array.from(trimmed).length > FOLDER_NAME_MAX ||
+    trimmed.startsWith('.') ||
+    trimmed.endsWith('.') ||
+    /[<>:"/\\|?*]/.test(trimmed) ||
+    Array.from(trimmed).some((character) => character.charCodeAt(0) < 0x20) ||
+    RESERVED_NAME.test(trimmed) ||
+    trimmed.toLowerCase().endsWith('.runplanner.json')
+  ) {
+    return null;
+  }
+  return trimmed;
+}
+
+/** The folder a path sits in, `""` at the top level. */
+export function parentFolder(folder: string): string {
+  const index = folder.lastIndexOf('/');
+  return index < 0 ? '' : folder.slice(0, index);
+}
+
+/** A folder path joined with a child name. */
+export function childFolder(parent: string, name: string): string {
+  return parent === '' ? name : `${parent}/${name}`;
+}
+
 export function mintRandomProjectId(): string {
   return `run-plan-${globalThis.crypto.randomUUID()}`;
 }
@@ -30,6 +65,7 @@ export type LibraryItem =
   | {
       readonly kind: 'ready';
       readonly key: string;
+      readonly folder: string;
       readonly modifiedMs: number;
       readonly projectId: string;
       /** The plan's name; an older plan without one is named by its file. */
@@ -42,6 +78,7 @@ export type LibraryItem =
   | {
       readonly kind: 'tooNew';
       readonly key: string;
+      readonly folder: string;
       readonly modifiedMs: number;
       readonly name: string;
       readonly schemaVersion: number;
@@ -49,6 +86,7 @@ export type LibraryItem =
   | {
       readonly kind: 'unreadable';
       readonly key: string;
+      readonly folder: string;
       readonly modifiedMs: number;
       readonly message: string;
     };
@@ -62,31 +100,54 @@ export interface FiledPlan {
   readonly olderOnDisk: boolean;
 }
 
+/** Every plan and every folder, nested folders as `/`-separated paths. */
+export interface LibraryListing {
+  readonly folders: readonly string[];
+  readonly items: readonly LibraryItem[];
+}
+
 /** A deleted plan's content, kept in memory so the deletion can be undone. */
 export interface DeletedPlan {
   readonly key: string;
+  readonly folder: string;
   readonly json: string;
 }
 
+/** A deleted folder: itself, its subfolders and its plans, kept in memory for undo. */
+export interface DeletedFolder {
+  readonly folder: string;
+  readonly folders: readonly string[];
+  readonly plans: readonly DeletedPlan[];
+}
+
 export interface ProjectLibraryOperations {
-  /** Every stored plan; a copy sharing an older plan's identity first takes a new one. */
-  list(options?: { readonly openKey?: string }): Promise<readonly LibraryItem[]>;
+  /** Whether the library is a folder the system file manager can show. */
+  readonly revealable: boolean;
+  /** Shows the library folder in the system file manager. */
+  reveal(): Promise<void>;
+  /** A stored plan's document as it is filed, unloaded. */
+  readJson(key: string): Promise<string>;
+  /** Every stored plan and folder; a copy sharing an older plan's identity first takes a new one. */
+  list(options?: { readonly openKey?: string }): Promise<LibraryListing>;
   /** Reads and loads one plan. */
   read(key: string): Promise<FiledPlan>;
-  /** Files a new plan; it must not share an identity with a stored one. */
-  create(project: ProjectDocument): Promise<FiledPlan>;
-  /** Asks for a file and files a copy of it; null when the user cancels. */
-  importChosenFile(): Promise<FiledPlan | null>;
+  /** Files a new plan in a folder; it must not share an identity with a stored one. */
+  create(project: ProjectDocument, folder: string): Promise<FiledPlan>;
+  /** Asks for a file and files a copy of it in a folder; null when the user cancels. */
+  importChosenFile(folder: string): Promise<FiledPlan | null>;
   /** Files a copy; a new identity when asked or when the library holds the file's. */
   importFile(
     file: OutsideProjectFile,
-    options?: { readonly newIdentity?: boolean },
+    options?: { readonly newIdentity?: boolean; readonly folder?: string },
   ): Promise<FiledPlan>;
   deletePlan(key: string): Promise<DeletedPlan>;
   undoDelete(deleted: DeletedPlan): Promise<FiledPlan>;
-  /** The plan open when the planner last closed, when it is still in the library. */
-  readLastOpened(): Promise<FiledPlan | null>;
-  rememberOpened(plan: { readonly key: string; readonly projectId: string } | null): Promise<void>;
+  /** Moves a plan to another folder; resolves its new key. */
+  movePlan(key: string, folder: string): Promise<string>;
+  createFolder(folder: string): Promise<void>;
+  moveFolder(from: string, to: string): Promise<void>;
+  deleteFolder(folder: string): Promise<DeletedFolder>;
+  undoDeleteFolder(deleted: DeletedFolder): Promise<void>;
   /** The file open before the library, until it is offered once or the library holds it. */
   previousFileOffer(): Promise<OutsideProjectFile | null>;
   settlePreviousFileOffer(): Promise<void>;
@@ -109,9 +170,9 @@ function tooNew(summary: ProjectLibrarySummary): boolean {
 }
 
 function classify(entry: ProjectLibraryEntry): LibraryItem {
-  const { key, modifiedMs, content } = entry;
+  const { key, folder, modifiedMs, content } = entry;
   if (content.status === 'unreadable') {
-    return Object.freeze({ kind: 'unreadable', key, modifiedMs, message: content.message });
+    return Object.freeze({ kind: 'unreadable', key, folder, modifiedMs, message: content.message });
   }
   const { summary } = content;
   const name = summary.name ?? projectFileStem(key);
@@ -119,6 +180,7 @@ function classify(entry: ProjectLibraryEntry): LibraryItem {
     return Object.freeze({
       kind: 'tooNew',
       key,
+      folder,
       modifiedMs,
       name,
       schemaVersion: summary.schemaVersion,
@@ -129,6 +191,7 @@ function classify(entry: ProjectLibraryEntry): LibraryItem {
     return Object.freeze({
       kind: 'unreadable',
       key,
+      folder,
       modifiedMs,
       message: 'Not a plan file: it has no schema version or project identity.',
     });
@@ -137,6 +200,7 @@ function classify(entry: ProjectLibraryEntry): LibraryItem {
     return Object.freeze({
       kind: 'unreadable',
       key,
+      folder,
       modifiedMs,
       message: `Project schema ${summary.schemaVersion} is older than the planner can open.`,
     });
@@ -144,6 +208,7 @@ function classify(entry: ProjectLibraryEntry): LibraryItem {
   return Object.freeze({
     kind: 'ready',
     key,
+    folder,
     modifiedMs,
     projectId,
     name,
@@ -182,7 +247,7 @@ export function createProjectLibraryOperations(
     Object.freeze({ key: entry.key, project, migrationProvenance, olderOnDisk: false });
   const heldIdentities = async (): Promise<ReadonlySet<string>> =>
     new Set(
-      (await adapter.list())
+      (await adapter.list()).entries
         .map(classify)
         .flatMap((item) => (item.kind === 'ready' ? [item.projectId] : [])),
     );
@@ -217,22 +282,30 @@ export function createProjectLibraryOperations(
       olderOnDisk: migrationProvenance.length > 0,
     });
   };
-  const create = async (project: ProjectDocument): Promise<FiledPlan> =>
-    filed(await adapter.create(encodeProjectDocument(project)), project);
+  const create = async (project: ProjectDocument, folder: string): Promise<FiledPlan> =>
+    filed(await adapter.create(encodeProjectDocument(project), folder), project);
   const importFile = async (
     file: OutsideProjectFile,
-    importOptions: { readonly newIdentity?: boolean } = {},
+    importOptions: { readonly newIdentity?: boolean; readonly folder?: string } = {},
   ): Promise<FiledPlan> => {
     const { project, migrationProvenance } = load(file.json, file.fileName);
     const fresh =
       importOptions.newIdentity === true || (await heldIdentities()).has(project.projectId);
     const copy = fresh ? reidentified(project) : project;
-    return filed(await adapter.create(encodeProjectDocument(copy)), copy, migrationProvenance);
+    return filed(
+      await adapter.create(encodeProjectDocument(copy), importOptions.folder ?? ''),
+      copy,
+      migrationProvenance,
+    );
   };
 
   return Object.freeze({
-    async list(listOptions: { readonly openKey?: string } = {}): Promise<readonly LibraryItem[]> {
-      const items = (await adapter.list()).map(classify);
+    revealable: adapter.supportsReveal,
+    reveal: () => adapter.reveal(),
+    readJson: (key: string) => adapter.read(key),
+    async list(listOptions: { readonly openKey?: string } = {}): Promise<LibraryListing> {
+      const listing = await adapter.list();
+      const items = listing.entries.map(classify);
       const holders = new Set<string>();
       const result: LibraryItem[] = [];
       // The open plan keeps its identity, whatever its age.
@@ -249,42 +322,57 @@ export function createProjectLibraryOperations(
         }
         result.push(await reidentifyCopy(item));
       }
-      return Object.freeze(result.sort(byAge));
+      return Object.freeze({
+        folders: Object.freeze([...listing.folders]),
+        items: Object.freeze(result.sort(byAge)),
+      });
     },
     read,
     create,
     importFile,
-    async importChosenFile(): Promise<FiledPlan | null> {
+    async importChosenFile(folder: string): Promise<FiledPlan | null> {
       const file = await adapter.chooseImportFile();
-      return file === null ? null : importFile(file);
+      return file === null ? null : importFile(file, { folder });
     },
     async deletePlan(key: string): Promise<DeletedPlan> {
       const json = await adapter.read(key);
+      const entry = (await adapter.list()).entries.find((candidate) => candidate.key === key);
       await adapter.delete(key);
-      return Object.freeze({ key, json });
+      return Object.freeze({ key, folder: entry?.folder ?? '', json });
     },
     async undoDelete(deleted: DeletedPlan): Promise<FiledPlan> {
       const { project } = load(deleted.json, deleted.key);
-      return filed(await adapter.create(deleted.json), project);
+      return filed(await adapter.create(deleted.json, deleted.folder), project);
     },
-    async readLastOpened(): Promise<FiledPlan | null> {
-      const last = (await currentSession()).lastOpened;
-      if (last === null) return null;
-      const entries = await adapter.list();
-      const entry =
-        entries.find((candidate) => candidate.key === last.key) ??
-        entries.find(
-          (candidate) =>
-            candidate.content.status === 'summarized' &&
-            candidate.content.summary.projectId === last.projectId,
+    async movePlan(key: string, folder: string): Promise<string> {
+      return (await adapter.movePlan(key, folder)).key;
+    },
+    createFolder: (folder: string) => adapter.createFolder(folder),
+    moveFolder: (from: string, to: string) => adapter.moveFolder(from, to),
+    async deleteFolder(folder: string): Promise<DeletedFolder> {
+      const listing = await adapter.list();
+      const inside = (path: string) => path === folder || path.startsWith(`${folder}/`);
+      const plans: DeletedPlan[] = [];
+      for (const entry of listing.entries.filter((candidate) => inside(candidate.folder))) {
+        plans.push(
+          Object.freeze({
+            key: entry.key,
+            folder: entry.folder,
+            json: await adapter.read(entry.key),
+          }),
         );
-      return entry === undefined ? null : read(entry.key);
+      }
+      await adapter.deleteFolder(folder);
+      return Object.freeze({
+        folder,
+        folders: Object.freeze(listing.folders.filter(inside)),
+        plans: Object.freeze(plans),
+      });
     },
-    rememberOpened: (plan: { readonly key: string; readonly projectId: string } | null) =>
-      updateSession({
-        lastOpened:
-          plan === null ? null : Object.freeze({ key: plan.key, projectId: plan.projectId }),
-      }),
+    async undoDeleteFolder(deleted: DeletedFolder): Promise<void> {
+      for (const folder of [deleted.folder, ...deleted.folders]) await adapter.createFolder(folder);
+      for (const plan of deleted.plans) await adapter.create(plan.json, plan.folder);
+    },
     async previousFileOffer(): Promise<OutsideProjectFile | null> {
       if ((await currentSession()).previousFileOffered) return null;
       const file = await adapter.previousActiveFile();

@@ -4,6 +4,8 @@ import { createProjectAddress, normalizeProjectName } from '@run-planner/engine/
 import { useAppDispatch } from '@planner/state/store';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 
+export const PLAN_NAME_FIELD_ID = 'plan-name';
+
 /** The plan's name, renamed in place; mount it keyed by the name so outside changes reset it. */
 export function ProjectNameField({ name }: { readonly name: string }) {
   const dispatch = useAppDispatch();
@@ -26,6 +28,7 @@ export function ProjectNameField({ name }: { readonly name: string }) {
     <input
       aria-label="Plan name"
       className="app-plan-name"
+      id={PLAN_NAME_FIELD_ID}
       onBlur={commit}
       onChange={(event) => setDraft(event.target.value)}
       onKeyDown={(event) => {

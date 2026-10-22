@@ -42,6 +42,21 @@ export function slotAspectLabel(
   return weapon === undefined ? aspect : `${aspect} (${weapon})`;
 }
 
+/**
+ * A slot's loadout on Home, such as "Staff · Melinoë"; a plan without an aspect shows its
+ * weapon alone, and keys the catalog does not know are left out.
+ */
+export function slotLoadoutLabel(
+  catalog: Catalog,
+  weaponKey: string | null,
+  aspectKey: string | null,
+): string {
+  const weapon = ownEntry(catalog.weapons.byKey, weaponKey)?.shortLabel;
+  const aspectLabel = ownEntry(catalog.aspects.byKey, aspectKey)?.label;
+  const aspect = aspectLabel === undefined ? undefined : aspectShortLabel(aspectLabel);
+  return [weapon, aspect].filter((part) => part !== undefined).join(' · ') || '—';
+}
+
 function sharedAspectName(catalog: Catalog, shortName: string): boolean {
   return (
     catalog.aspects.values.filter((entry) => aspectShortLabel(entry.label) === shortName).length > 1

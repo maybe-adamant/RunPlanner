@@ -5,7 +5,7 @@ import type { StartPointPublicationBlock } from '@run-planner/engine/execution-p
 import type { CurrentGamePlan } from '@planner/workspace/projectOperations';
 import type { SlotRebuildReport } from '@planner/workspace/slotRebuild';
 import { describeStartPointBlocked } from '@planner/projections/startPointCopy';
-import { ownEntry, slotAspectLabel, slotPickerLabel } from '@planner/projections/gameSlotSummary';
+import { ownEntry, slotLoadoutLabel } from '@planner/projections/gameSlotSummary';
 import type { GameActivationFailure, GameSendFailure } from '@planner/state/gameSendSessionSlice';
 import type {
   GameActiveSlotNumber,
@@ -18,7 +18,6 @@ import type {
   GameTargetDiscovery,
   GamePlanSlot,
   GamePlanSlotNumber,
-  GameStatusSnapshot,
   GameTargetInspection,
   ModpackLibState,
 } from '@planner/persistence/gameModuleHost';
@@ -457,132 +456,15 @@ export function describeRemoveOutcome(outcome: GameModuleRemoveResult['outcome']
   }
 }
 
-export interface GameIndicator {
-  readonly state:
-    'ready' | 'needsSetup' | 'noLocation' | 'checking' | 'unavailable' | 'lastSendFailed';
-  readonly symbol: '✓' | '!' | '○' | '…';
-  readonly accessibleName: string;
-}
-
 function isReady(status: GameModuleStatus): boolean {
   return (
     status.publicationBlockers.length === 0 && projectGamePanel(status).module?.state === 'ready'
   );
 }
 
-/**
- * The header indicator: one overall state from the same host facts as the Game panel. A failed
- * last send outranks every state once status is known.
- */
-export function projectGameIndicator(
-  snapshot: GameStatusSnapshot,
-  lastSendFailed = false,
-): GameIndicator {
-  const { status, error } = snapshot;
-  if (lastSendFailed && (status !== null || error !== null)) {
-    return {
-      state: 'lastSendFailed',
-      symbol: '!',
-      accessibleName: 'Game — last send failed',
-    };
-  }
-  if (status === null) {
-    return error === null
-      ? { state: 'checking', symbol: '…', accessibleName: 'Game — checking' }
-      : {
-          state: 'unavailable',
-          symbol: '!',
-          accessibleName: `Game — status unavailable: ${error}`,
-        };
-  }
-  if (status.target === null) {
-    return { state: 'noLocation', symbol: '○', accessibleName: 'Game — no location' };
-  }
-  return isReady(status)
-    ? { state: 'ready', symbol: '✓', accessibleName: 'Game — ready' }
-    : { state: 'needsSetup', symbol: '!', accessibleName: 'Game — needs setup' };
-}
-
-export type GamePlanSlotSummary = 'Empty' | 'Unreadable';
-
-const SLOT_SUMMARIES: Readonly<Record<GamePlanSlot['state'], GamePlanSlotSummary | null>> = {
-  empty: 'Empty',
-  present: null,
-  // An outdated slot shows its plan's columns and says what it needs in its note.
-  stale: null,
-  unreadable: 'Unreadable',
-};
-
-export type GamePlanSlotActionLabel = 'Send here' | 'Replace' | 'Save and send' | 'Save and send…';
-
-export interface GamePlanSlotRow {
-  readonly slot: GamePlanSlotNumber;
-  readonly state: GamePlanSlot['state'];
-  /** Present only for a readable plan. */
-  readonly columns: {
-    /** The plan's saved name, or null for an unnamed plan. */
-    readonly plan: string | null;
-    readonly route: string;
-    readonly endsAt: string;
-    readonly aspect: string;
-    readonly sent: GamePlanSentTime | null;
-  } | null;
-  readonly summary: GamePlanSlotSummary | null;
-  /** Why an outdated slot was not rebuilt, or what it needs. */
-  readonly note: string | null;
-  readonly marker: 'current' | 'olderVersion' | null;
-  readonly action: { readonly label: GamePlanSlotActionLabel; readonly confirm: boolean } | null;
-}
-
 export interface GameActiveSlotIntent {
   readonly kind: 'setActiveSlot';
   readonly slot: GameActiveSlotNumber;
-}
-
-export type GameEventSlotSummary = 'No event' | 'Outdated' | 'Unreadable';
-
-/** The read-only event slot: it is never sent to. */
-export interface GameEventSlotRow {
-  readonly state: GameEventSlot['state'];
-  /** Present only for a readable plan. */
-  readonly columns: {
-    /** The event's title, or null when the overview does not describe the slot. */
-    readonly title: string | null;
-    /** When the event ends, in local time. */
-    readonly eventEnds: { readonly text: string; readonly iso: string } | null;
-    readonly route: string;
-    readonly endsAt: string;
-    readonly aspect: string;
-    readonly sent: GamePlanSentTime | null;
-  } | null;
-  readonly summary: GameEventSlotSummary | null;
-}
-
-/** A pending or failed Active slot write in the panel. */
-export type GameActivationActivity =
-  | { readonly kind: 'idle' }
-  | { readonly kind: 'pending' }
-  | { readonly kind: 'failed'; readonly message: string };
-
-export interface GameNextRunOption {
-  readonly slot: GameActiveSlotNumber;
-  /** Named as the in-game picker names it, such as "Slot 2 (Circe - Surface)". */
-  readonly label: string;
-  /** Null for a slot whose plan the installed module cannot play. */
-  readonly intent: GameActiveSlotIntent | null;
-}
-
-/** The Game panel's "Active plan" choice, which writes `active-slot.json`. */
-export interface GameNextRunProduct {
-  readonly label: 'Active plan';
-  /** False while the target's slots cannot be read, so nothing can be chosen. */
-  readonly available: boolean;
-  /** The slot the module plays next, or null while unavailable. */
-  readonly value: GameActiveSlotNumber | null;
-  /** The event slot first, then plan slots holding a plan; only playable ones have an intent. */
-  readonly options: readonly GameNextRunOption[];
-  readonly pending: boolean;
-  readonly notice: string | null;
 }
 
 export interface GamePlanSentTime {
@@ -591,16 +473,6 @@ export interface GamePlanSentTime {
   /** The exact local date and time. */
   readonly exact: string;
   readonly iso: string;
-}
-
-export interface GamePlansProduct {
-  /** Shown while the event slot holds a file. */
-  readonly event: GameEventSlotRow | null;
-  /** **Rebuild slots**, offered while an outdated slot has a stored source. */
-  readonly rebuild: { readonly available: boolean; readonly summary: string | null };
-  readonly rows: readonly GamePlanSlotRow[];
-  /** Why the current project cannot be sent; send actions are absent while set. */
-  readonly unavailableReason: string | null;
 }
 
 function sentAgo(modifiedAtMs: number, now: number): string {
@@ -629,34 +501,13 @@ function ownLabel(
   return ownEntry(records, key)?.label;
 }
 
-function slotColumns(
-  slot: Omit<GamePlanSlot, 'slot'>,
-  catalog: Catalog,
-  now: number,
-): GamePlanSlotRow['columns'] {
-  if (slot.state !== 'present' && slot.state !== 'stale') return null;
-  const endKey = slot.biomeKeys.at(-1);
-  return {
-    plan: slot.displayName,
-    route:
-      slot.routeKey === null
-        ? '—'
-        : (ownLabel(catalog.routes.byKey, slot.routeKey) ?? slot.routeKey),
-    endsAt: endKey === undefined ? '—' : (ownLabel(catalog.biomes.byKey, endKey) ?? endKey),
-    aspect: slotAspectLabel(catalog, slot.weaponKey, slot.aspectKey),
-    sent: slot.modifiedAtMs === null ? null : sentTime(slot.modifiedAtMs, now),
-  };
-}
-
-function slotMarker(slot: GamePlanSlot, current: CurrentGamePlan): GamePlanSlotRow['marker'] {
+function slotMarker(
+  slot: GamePlanSlot,
+  current: CurrentGamePlan,
+): 'current' | 'olderVersion' | null {
   if (current.kind !== 'publishable' || slot.state !== 'present') return null;
   if (slot.projectId !== current.projectId) return null;
   return slot.planFingerprint === current.planFingerprint ? 'current' : 'olderVersion';
-}
-
-function slotAction(slot: GamePlanSlot): NonNullable<GamePlanSlotRow['action']> {
-  const confirm = slot.state !== 'empty';
-  return { label: confirm ? 'Replace' : 'Send here', confirm };
 }
 
 function unavailableReason(current: CurrentGamePlan): string | null {
@@ -694,77 +545,6 @@ export function describeNotPublishable(code: ExecutionCompilerError['code'] | nu
   }
 }
 
-const IDLE_ACTIVATION: GameActivationActivity = Object.freeze({ kind: 'idle' });
-
-const EVENT_SLOT_SUMMARIES: Readonly<Record<GameEventSlot['state'], GameEventSlotSummary | null>> =
-  {
-    empty: 'No event',
-    present: null,
-    stale: 'Outdated',
-    unreadable: 'Unreadable',
-  };
-
-function eventEnds(iso: string): { readonly text: string; readonly iso: string } | null {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  return {
-    text: `Ends ${date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`,
-    iso: date.toISOString(),
-  };
-}
-
-function eventSlotRow(slot: GameEventSlot, catalog: Catalog, now: number): GameEventSlotRow | null {
-  if (slot.state === 'empty') return null;
-  const columns = slotColumns(slot, catalog, now);
-  return {
-    state: slot.state,
-    columns:
-      columns === null
-        ? null
-        : {
-            title: slot.event?.title ?? null,
-            eventEnds: slot.event === null ? null : eventEnds(slot.event.endsAt),
-            route: columns.route,
-            endsAt: columns.endsAt,
-            aspect: columns.aspect,
-            sent: columns.sent,
-          },
-    summary: EVENT_SLOT_SUMMARIES[slot.state],
-  };
-}
-
-/**
- * The twelve plan slots and the read-only event slot, shown only while the game module is ready.
- */
-export function projectGamePlans(
-  status: GameModuleStatus,
-  current: CurrentGamePlan,
-  catalog: Catalog,
-  now: number,
-  rebuild: SlotRebuildReport | null = null,
-): GamePlansProduct | null {
-  if (!isReady(status) || status.inspection === null) return null;
-  const reason = unavailableReason(current);
-  const slots = status.inspection.planSlots;
-  return Object.freeze({
-    unavailableReason: reason,
-    event: eventSlotRow(status.inspection.eventSlot, catalog, now),
-    rebuild: {
-      available: slots.some((slot) => slot.state === 'stale' && slot.hasSource),
-      summary: rebuildSummary(rebuild),
-    },
-    rows: slots.map((slot): GamePlanSlotRow => ({
-      slot: slot.slot,
-      state: slot.state,
-      columns: slotColumns(slot, catalog, now),
-      summary: SLOT_SUMMARIES[slot.state],
-      note: slotNote(slot, rebuild),
-      marker: slotMarker(slot, current),
-      action: reason === null ? slotAction(slot) : null,
-    })),
-  });
-}
-
 function rebuildSummary(report: SlotRebuildReport | null): string | null {
   if (report === null) return null;
   if (report.problem !== null) return `Slots not rebuilt: ${report.problem}`;
@@ -780,16 +560,6 @@ function rebuildSummary(report: SlotRebuildReport | null): string | null {
     : `Rebuilt ${slots(rebuilt)} · couldn’t rebuild ${slots(failed)}`;
 }
 
-// An outdated slot's note: its last rebuild failure, or what it needs.
-function slotNote(slot: GamePlanSlot, report: SlotRebuildReport | null): string | null {
-  if (slot.state !== 'stale') return null;
-  const outcome = report?.outcomes.find((entry) => entry.slot === slot.slot);
-  if (outcome !== undefined && (outcome.kind === 'failed' || outcome.kind === 'defect')) {
-    return outcome.reason;
-  }
-  return slot.hasSource ? 'Outdated — rebuild slots' : 'Outdated — send again';
-}
-
 /**
  * The slot the game module plays next: the one `active-slot.json` names, or slot 1 when the
  * file is missing or invalid. Null while the target's slots cannot be read.
@@ -803,63 +573,6 @@ export function projectNextRunSlot(status: GameModuleStatus | null): GameActiveS
 /** Whether the next run plays the event slot, which holds a plan the module can play. */
 export function projectEventPlaysNext(status: GameModuleStatus | null): boolean {
   return projectNextRunSlot(status) === 0 && status?.inspection?.eventSlot.state === 'present';
-}
-
-const UNPLAYABLE_SLOT_STATES: Readonly<Record<Exclude<GamePlanSlot['state'], 'present'>, string>> =
-  {
-    empty: 'empty',
-    stale: 'outdated',
-    unreadable: 'unreadable',
-  };
-
-function nextRunOption(slot: GamePlanSlot | GameEventSlot, catalog: Catalog): GameNextRunOption {
-  const event = 'event' in slot ? slot.event : undefined;
-  const name = event === undefined ? `Slot ${slot.slot}` : 'Event';
-  if (slot.state !== 'present') {
-    const state = UNPLAYABLE_SLOT_STATES[slot.state];
-    return {
-      slot: slot.slot,
-      label: `${name} (${event !== undefined && slot.state === 'empty' ? 'none' : state})`,
-      intent: null,
-    };
-  }
-  const plan =
-    slot.routeKey === null
-      ? null
-      : slotPickerLabel(catalog, slot.weaponKey, slot.aspectKey, slot.routeKey);
-  const named = event == null ? name : `Event: ${event.title}`;
-  return {
-    slot: slot.slot,
-    label: plan === null ? named : `${named} (${plan})`,
-    intent: { kind: 'setActiveSlot', slot: slot.slot },
-  };
-}
-
-/**
- * The "Active plan" choice. It offers every slot whose plan the installed module can play,
- * and lists an outdated slot disabled with that reason; the active slot is
- * always shown, labelled with what it holds when it is not playable.
- * It is available whenever the target's slots can be read, whatever the module's readiness.
- */
-export function projectNextRun(
-  status: GameModuleStatus,
-  catalog: Catalog,
-  activation: GameActivationActivity = IDLE_ACTIVATION,
-): GameNextRunProduct {
-  const inspection = status.inspection;
-  const value = projectNextRunSlot(status);
-  const pending = activation.kind === 'pending';
-  const slots = inspection === null ? [] : [inspection.eventSlot, ...inspection.planSlots];
-  return Object.freeze({
-    label: 'Active plan' as const,
-    available: inspection !== null,
-    value,
-    options: slots
-      .filter((slot) => slot.state === 'present' || slot.state === 'stale' || slot.slot === value)
-      .map((slot) => nextRunOption(slot, catalog)),
-    pending,
-    notice: activation.kind === 'failed' ? `Not made active: ${activation.message}` : null,
-  });
 }
 
 /** Why an Active slot write did not take effect, or null when it did. */
@@ -917,7 +630,8 @@ export type GameSendActivity =
 export type GameSendButtonLabel =
   | 'Send to game'
   | 'Send to game…'
-  | `Send · Slot ${GamePlanSlotNumber}`
+  | `Send to slot ${GamePlanSlotNumber}`
+  | `Slot ${GamePlanSlotNumber} · up to date`
   | 'Sending…'
   | `✓ Sent · Slot ${GamePlanSlotNumber}`
   | '! Not sent';
@@ -929,6 +643,7 @@ export interface GameSendButton {
     | 'notSendable'
     | 'chooseSlot'
     | 'ready'
+    | 'upToDate'
     | 'sending'
     | 'sent'
     | 'failed';
@@ -947,6 +662,8 @@ export interface GameSendProject {
   readonly eligible: boolean;
   /** The engine's reason the authored start point blocks publication. */
   readonly startPointBlock?: StartPointPublicationBlock;
+  /** The plan's fingerprint as it is now; compiled only while the plan is in a slot. */
+  readonly planFingerprint?: string | null;
 }
 
 function localTime(ms: number): string {
@@ -962,9 +679,10 @@ function inactive(
 }
 
 /**
- * The always-present header send; a send also makes its slot active. It re-sends only to the slot last sent in this session for the
- * loaded project, while that slot is empty or still holds this project; otherwise it opens the
- * Game panel's plans. It uses the engine's eligibility without compiling.
+ * The header's split send button; a send also makes its slot active. It sends to the plan's own
+ * slot (the one that plays next when it has several), else the slot last sent this session while
+ * it is still empty, else the first empty slot; with none of those it opens the slot picker. A
+ * slot already holding the plan as it is now has nothing to send.
  */
 export function projectGameSendButton(
   status: GameModuleStatus | null,
@@ -983,13 +701,13 @@ export function projectGameSendButton(
         `Sent to slot ${activity.slot} at ${localTime(activity.atMs)}; ${stillInactive(activationFailure, status) ? 'not made active' : 'now active'}.`,
       );
     case 'failed':
-      return inactive('failed', '! Not sent', 'Details are in the Game panel.');
+      return inactive('failed', '! Not sent', 'Details are in the slot picker.');
     case 'idle':
       break;
   }
   if (project === null) return inactive('noProject', 'Send to game', 'Open a plan first.');
   if (status === null || !isReady(status)) {
-    return inactive('notReady', 'Send to game', 'Set up the game in the Game panel.');
+    return inactive('notReady', 'Send to game', 'Set up the game on the Game tab.');
   }
   if (!project.eligible) {
     return inactive('notSendable', 'Send to game', describeNotPublishable('notEligible'));
@@ -1001,23 +719,41 @@ export function projectGameSendButton(
       describeStartPointBlocked(project.startPointBlock),
     );
   }
-  const slot = status.inspection?.planSlots.find((entry) => entry.slot === lastSentSlot);
-  const ownSlot =
-    slot?.state === 'empty' ||
-    ((slot?.state === 'present' || slot?.state === 'stale') &&
-      slot.projectId === project.projectId);
-  if (lastSentSlot === null || !ownSlot) {
+  const slots = status.inspection?.planSlots ?? [];
+  const own = slots.filter(
+    (slot) =>
+      (slot.state === 'present' || slot.state === 'stale') && slot.projectId === project.projectId,
+  );
+  const next = projectNextRunSlot(status);
+  const ownSlot = own.find((slot) => slot.slot === next) ?? own[0];
+  if (ownSlot !== undefined) {
+    const upToDate =
+      ownSlot.state === 'present' &&
+      project.planFingerprint != null &&
+      ownSlot.planFingerprint === project.planFingerprint;
+    return upToDate
+      ? inactive('upToDate', `Slot ${ownSlot.slot} · up to date`, null)
+      : {
+          state: 'ready',
+          label: `Send to slot ${ownSlot.slot}`,
+          action: { kind: 'send', slot: ownSlot.slot },
+          description: null,
+        };
+  }
+  const lastSent = slots.find((slot) => slot.slot === lastSentSlot && slot.state === 'empty');
+  const target = lastSent ?? slots.find((slot) => slot.state === 'empty');
+  if (target === undefined) {
     return {
       state: 'chooseSlot',
       label: 'Send to game…',
       action: { kind: 'openPlans' },
-      description: 'Choose a slot in the Game panel.',
+      description: 'Choose a slot.',
     };
   }
   return {
     state: 'ready',
-    label: `Send · Slot ${lastSentSlot}`,
-    action: { kind: 'send', slot: lastSentSlot },
+    label: `Send to slot ${target.slot}`,
+    action: { kind: 'send', slot: target.slot },
     description: null,
   };
 }
@@ -1025,4 +761,257 @@ export function projectGameSendButton(
 /** The Game panel's notice of the latest failed send. */
 export function describeLastSendFailure(failure: GameSendFailure): string {
   return `Last send failed at ${localTime(failure.atMs)}: ${failure.message}`;
+}
+
+/** What a Home slot row says it holds. */
+export type HomeSlotPlan =
+  | {
+      readonly kind: 'library';
+      readonly key: string;
+      readonly name: string;
+      readonly marker: 'current' | 'older' | null;
+      readonly reason: string | null;
+    }
+  | { readonly kind: 'notInLibrary'; readonly name: string | null; readonly note: string | null }
+  | { readonly kind: 'event'; readonly title: string | null };
+
+/** The slot's place in the next run: it plays next, can be made to, or cannot be played. */
+export type HomeSlotNextRun =
+  | { readonly kind: 'playsNext' }
+  | { readonly kind: 'available'; readonly intent: GameActiveSlotIntent }
+  | { readonly kind: 'unplayable' };
+
+export interface HomeSlotRow {
+  readonly slot: GameActiveSlotNumber;
+  readonly label: string;
+  readonly state: GamePlanSlot['state'];
+  /** Null for a slot without a readable plan, which shows its summary. */
+  readonly plan: HomeSlotPlan | null;
+  readonly summary: 'Empty' | 'Unreadable' | null;
+  readonly route: string | null;
+  readonly aspect: string | null;
+  readonly sent: GamePlanSentTime | null;
+  /** Null for a slot holding no plan. */
+  readonly nextRun: HomeSlotNextRun | null;
+}
+
+export interface HomeSlotsProduct {
+  readonly rows: readonly HomeSlotRow[];
+  readonly rebuild: {
+    readonly available: boolean;
+    /** How many outdated slots a rebuild would write, or the last rebuild's result. */
+    readonly summary: string | null;
+  };
+}
+
+function slotsText(count: number): string {
+  return `${count} ${count === 1 ? 'slot' : 'slots'}`;
+}
+
+/**
+ * Home's slot table: every slot, the event slot first, with the library plan it holds, whether
+ * it plays next, and the outdated slots a rebuild would write. Home never sends or clears slots.
+ */
+export function projectHomeSlots(
+  status: GameModuleStatus,
+  catalog: Catalog,
+  now: number,
+  links: {
+    readonly bySlot: ReadonlyMap<
+      GamePlanSlotNumber,
+      {
+        readonly key: string;
+        readonly name: string;
+        readonly link: {
+          readonly marker: 'current' | 'older' | null;
+          readonly reason: string | null;
+        };
+      }
+    >;
+  },
+  rebuild: SlotRebuildReport | null = null,
+): HomeSlotsProduct | null {
+  const inspection = status.inspection;
+  if (inspection === null) return null;
+  const next = projectNextRunSlot(status);
+  const nextRun = (slot: GamePlanSlot | GameEventSlot): HomeSlotNextRun | null => {
+    if (slot.state === 'empty' || slot.state === 'unreadable') return null;
+    if (slot.slot === next && slot.state === 'present') return { kind: 'playsNext' };
+    return slot.state === 'present'
+      ? { kind: 'available', intent: { kind: 'setActiveSlot', slot: slot.slot } }
+      : { kind: 'unplayable' };
+  };
+  const columns = (slot: GamePlanSlot | GameEventSlot) => {
+    const readable = slot.state === 'present' || slot.state === 'stale';
+    return {
+      route: !readable
+        ? null
+        : slot.routeKey === null
+          ? '—'
+          : (ownLabel(catalog.routes.byKey, slot.routeKey) ?? slot.routeKey),
+      aspect: readable ? slotLoadoutLabel(catalog, slot.weaponKey, slot.aspectKey) : null,
+      sent: readable && slot.modifiedAtMs !== null ? sentTime(slot.modifiedAtMs, now) : null,
+    };
+  };
+  const event = inspection.eventSlot;
+  const rows: HomeSlotRow[] = [];
+  if (event.state === 'present' || event.state === 'stale') {
+    rows.push({
+      slot: event.slot,
+      label: 'Event',
+      state: event.state,
+      plan: { kind: 'event', title: event.event?.title ?? event.displayName },
+      summary: null,
+      ...columns(event),
+      nextRun: nextRun(event),
+    });
+  }
+  for (const slot of inspection.planSlots) {
+    const readable = slot.state === 'present' || slot.state === 'stale';
+    const linked = links.bySlot.get(slot.slot);
+    // A failed rebuild says why in place of what the slot needs.
+    const rebuildFailure = rebuild?.outcomes.find(
+      (outcome) =>
+        outcome.slot === slot.slot && (outcome.kind === 'failed' || outcome.kind === 'defect'),
+    );
+    const failure =
+      rebuildFailure === undefined || !('reason' in rebuildFailure) ? null : rebuildFailure.reason;
+    const outdated =
+      slot.state !== 'stale'
+        ? null
+        : (failure ??
+          (slot.hasSource
+            ? 'Outdated for this module · rebuild to play'
+            : 'Outdated for this module · send again to play'));
+    rows.push({
+      slot: slot.slot,
+      label: `Slot ${slot.slot}`,
+      state: slot.state,
+      plan: !readable
+        ? null
+        : linked === undefined
+          ? { kind: 'notInLibrary', name: slot.displayName, note: outdated }
+          : {
+              kind: 'library',
+              key: linked.key,
+              name: linked.name,
+              marker: linked.link.marker,
+              reason: slot.state === 'stale' ? outdated : linked.link.reason,
+            },
+      summary: slot.state === 'empty' ? 'Empty' : slot.state === 'unreadable' ? 'Unreadable' : null,
+      ...columns(slot),
+      nextRun: nextRun(slot),
+    });
+  }
+  const rebuildable = inspection.planSlots.filter(
+    (slot) => slot.state === 'stale' && slot.hasSource,
+  ).length;
+  return Object.freeze({
+    rows,
+    rebuild: {
+      available: rebuildable > 0,
+      summary:
+        rebuildSummary(rebuild) ??
+        (rebuildable === 0
+          ? null
+          : `${slotsText(rebuildable)} ${rebuildable === 1 ? 'needs' : 'need'} a rebuild for module ${status.bundledVersion}.`),
+    },
+  });
+}
+
+const GAME_NOT_READY = 'Set up or update the game module on the Game tab to send plans.';
+
+/** Who holds a slot, as the editor's slot picker names it. */
+export type SendSlotOccupant =
+  | { readonly kind: 'thisPlan'; readonly marker: 'current' | 'older' }
+  | { readonly kind: 'plan'; readonly name: string }
+  | { readonly kind: 'notInLibrary' }
+  | { readonly kind: 'empty' }
+  | { readonly kind: 'unreadable' };
+
+export interface SendSlotPick {
+  readonly slot: GamePlanSlotNumber;
+  readonly occupant: SendSlotOccupant;
+  /** Null while the plan cannot be sent. */
+  readonly action: {
+    readonly label: 'Send here' | 'Replace' | 'Update' | 'Current';
+    /** Replacing another plan asks first. */
+    readonly confirm: boolean;
+    readonly enabled: boolean;
+  } | null;
+}
+
+export interface SendOwnSlot {
+  readonly slot: GamePlanSlotNumber;
+  readonly marker: 'current' | 'older';
+  readonly playsNext: boolean;
+  readonly sent: GamePlanSentTime | null;
+}
+
+/** The editor's Slots popover: the open plan's slots, and every slot to send it to. */
+export interface SendSlotsProduct {
+  readonly own: readonly SendOwnSlot[];
+  readonly olderCount: number;
+  readonly picks: readonly SendSlotPick[];
+  /** Why the plan cannot be sent; slot actions are absent while set. */
+  readonly unavailableReason: string | null;
+}
+
+export function projectSendSlots(
+  status: GameModuleStatus,
+  current: CurrentGamePlan,
+  projectId: string | null,
+  libraryNames: ReadonlyMap<GamePlanSlotNumber, string>,
+  now: number,
+): SendSlotsProduct | null {
+  if (status.inspection === null) return null;
+  const reason = isReady(status) ? unavailableReason(current) : GAME_NOT_READY;
+  const next = projectNextRunSlot(status);
+  const own: SendOwnSlot[] = [];
+  const picks = status.inspection.planSlots.map((slot): SendSlotPick => {
+    const readable = slot.state === 'present' || slot.state === 'stale';
+    const mine = readable && projectId !== null && slot.projectId === projectId;
+    const marker: 'current' | 'older' =
+      mine && slot.state === 'present' && slotMarker(slot, current) === 'current'
+        ? 'current'
+        : 'older';
+    if (mine) {
+      own.push({
+        slot: slot.slot,
+        marker,
+        playsNext: slot.slot === next,
+        sent: slot.modifiedAtMs === null ? null : sentTime(slot.modifiedAtMs, now),
+      });
+    }
+    const occupant: SendSlotOccupant = mine
+      ? { kind: 'thisPlan', marker }
+      : slot.state === 'empty'
+        ? { kind: 'empty' }
+        : slot.state === 'unreadable'
+          ? { kind: 'unreadable' }
+          : libraryNames.has(slot.slot)
+            ? { kind: 'plan', name: libraryNames.get(slot.slot)! }
+            : { kind: 'notInLibrary' };
+    const label = mine
+      ? marker === 'current'
+        ? 'Current'
+        : 'Update'
+      : slot.state === 'empty'
+        ? 'Send here'
+        : 'Replace';
+    return {
+      slot: slot.slot,
+      occupant,
+      action:
+        reason === null
+          ? { label, confirm: !mine && slot.state !== 'empty', enabled: label !== 'Current' }
+          : null,
+    };
+  });
+  return Object.freeze({
+    own,
+    olderCount: own.filter((slot) => slot.marker === 'older').length,
+    picks,
+    unavailableReason: reason,
+  });
 }

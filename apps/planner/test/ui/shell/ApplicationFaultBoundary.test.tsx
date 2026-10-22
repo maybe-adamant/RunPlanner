@@ -29,11 +29,7 @@ describe('application fault recovery', () => {
     }
 
     render(
-      <ApplicationFaultBoundary
-        openFile={openFile}
-        reload={() => undefined}
-        reloadWithoutPlan={() => undefined}
-      >
+      <ApplicationFaultBoundary openFile={openFile} reload={() => undefined}>
         <ProjectSurface />
       </ApplicationFaultBoundary>,
     );
@@ -62,11 +58,7 @@ describe('application fault recovery', () => {
     }
 
     render(
-      <ApplicationFaultBoundary
-        openFile={openFile}
-        reload={() => undefined}
-        reloadWithoutPlan={() => undefined}
-      >
+      <ApplicationFaultBoundary openFile={openFile} reload={() => undefined}>
         <BrokenProject />
       </ApplicationFaultBoundary>,
     );
@@ -82,7 +74,7 @@ describe('application fault recovery', () => {
   });
 
   it('turns an unhandled asynchronous failure into the same recovery surface', async () => {
-    const reloadWithoutPlan = vi.fn();
+    const reload = vi.fn();
     render(
       <ApplicationFaultBoundary
         openFile={() =>
@@ -92,8 +84,7 @@ describe('application fault recovery', () => {
             message: 'Open file cancelled.',
           })
         }
-        reload={() => undefined}
-        reloadWithoutPlan={reloadWithoutPlan}
+        reload={reload}
       >
         <p>Project is open.</p>
       </ApplicationFaultBoundary>,
@@ -109,7 +100,9 @@ describe('application fault recovery', () => {
       screen.getByRole('heading', { name: 'Run Planner could not display this project' }),
     ).toBeTruthy();
     expect(screen.getByText('async project failure')).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Start without this plan' }));
-    expect(reloadWithoutPlan).toHaveBeenCalledOnce();
+    // The app starts on Home with no plan open, so reloading is the way out.
+    expect(screen.queryByRole('button', { name: 'Start without this plan' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Reload application' }));
+    expect(reload).toHaveBeenCalledOnce();
   });
 });

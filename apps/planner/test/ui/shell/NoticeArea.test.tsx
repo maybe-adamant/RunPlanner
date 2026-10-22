@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createGameStatusController } from '@planner/persistence/gameModuleHost';
 import { createReleaseUpdateController } from '@planner/persistence/releaseUpdates';
 import type { CommunityEventController, EventNotice } from '@planner/workspace/communityEvents';
-import { NoticeArea } from '@planner/ui/shell/NoticeArea';
+import { CommunityEventCard, NoticeArea } from '@planner/ui/shell/NoticeArea';
 import { communityEvent } from '@planner-test/fixtures/communityEventHost';
 import {
   createFakeGameModuleHost,
@@ -15,7 +15,6 @@ import {
   gameModuleStatus,
 } from '@planner-test/fixtures/gameModuleHost';
 import type { GameActiveSlot } from '@planner/persistence/gameModuleHost';
-import type { ProjectOperations } from '@planner/workspace/projectOperations';
 
 afterEach(() => {
   cleanup();
@@ -50,7 +49,7 @@ function eventController(initial: EventNotice) {
 const event = communityEvent();
 
 describe('Notice area', () => {
-  it('shows an available app update before the event notice', async () => {
+  it('shows an available app update before an ended event, and no active event', async () => {
     const releaseUpdates = createReleaseUpdateController({
       buildIdentity: { build: 'abc123def456', commit: 'a'.repeat(40), version: '1.0.0' },
       host: {
@@ -61,24 +60,36 @@ describe('Notice area', () => {
       skipPreference: { read: () => undefined, write: vi.fn() },
     })!;
     const user = userEvent.setup();
-    render(
+    const { rerender } = render(
       <NoticeArea
         communityEvents={eventController({ kind: 'active', event, problem: null })}
         releaseUpdates={releaseUpdates}
       />,
     );
-    expect(screen.getByText('Event: Week 42: Staff sprint')).toBeTruthy();
+    // The active event is a card on the Game tab, not an app-wide notice.
+    expect(screen.queryByText(/^Event:/)).toBeNull();
+    rerender(
+      <NoticeArea
+        communityEvents={eventController({
+          kind: 'ended',
+          title: 'Week 42',
+          fallbackSlotHasPlan: true,
+        })}
+        releaseUpdates={releaseUpdates}
+      />,
+    );
+    expect(screen.getByText('Event ended: Week 42.')).toBeTruthy();
     releaseUpdates.checkAutomatically();
     expect(await screen.findByText('Run Planner 1.2.3 is available.')).toBeTruthy();
-    expect(screen.queryByText(/^Event:/)).toBeNull();
+    expect(screen.queryByText(/Event ended/)).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Later' }));
-    expect(screen.getByText(/^Event: Week 42: Staff sprint/)).toBeTruthy();
+    expect(screen.getByText('Event ended: Week 42.')).toBeTruthy();
   });
 
   it('shows details, opens the project, copies its link and dismisses', async () => {
     const controller = eventController({ kind: 'active', event, problem: null });
     const user = userEvent.setup();
-    render(<NoticeArea communityEvents={controller} releaseUpdates={undefined} />);
+    render(<CommunityEventCard communityEvents={controller} />);
     const notice = screen.getByRole('complementary', { name: 'Community event' });
     expect(within(notice).getByText('ends', { exact: false }).querySelector('time')?.dateTime).toBe(
       '2026-10-19T00:00:00Z',
@@ -123,7 +134,7 @@ describe('Notice area', () => {
     expect(notice.querySelector('.event-notice-body')?.contains(title)).toBe(true);
     expect(
       within(notice).getByText(
-        'The next run uses Slot 1 — choose another slot in the Game panel or in game.',
+        'The next run uses Slot 1 — choose another slot on the Game tab or in game.',
       ),
     ).toBeTruthy();
     expect(
@@ -152,13 +163,12 @@ describe('Notice area', () => {
 
   it('says why the event cannot be played and offers no Set as active', () => {
     render(
-      <NoticeArea
+      <CommunityEventCard
         communityEvents={eventController({
           kind: 'active',
           event,
           problem: 'Update the planner to play this event.',
         })}
-        releaseUpdates={undefined}
       />,
     );
     const notice = screen.getByRole('complementary', { name: 'Community event' });
@@ -167,44 +177,16 @@ describe('Notice area', () => {
     expect(within(notice).getByRole('button', { name: 'Open project' })).toBeTruthy();
   });
 
-  it('offers the file open before the library once, ahead of the event', async () => {
-    const operations = {
-      acceptPreviousFile: vi.fn(() =>
-        Promise.resolve({ operation: 'importPrevious', status: 'failure', message: 'Unreadable.' }),
-      ),
-      declinePreviousFile: vi.fn(() => Promise.resolve()),
-    } as unknown as ProjectOperations;
-    const user = userEvent.setup();
-    render(
-      <NoticeArea
-        communityEvents={eventController({ kind: 'active', event, problem: null })}
-        previousFile={{ fileName: 'Surface.runplanner.json', operations }}
-        releaseUpdates={undefined}
-      />,
-    );
-    const notice = screen.getByRole('status', { name: 'Earlier plan' });
-    expect(
-      within(notice).getByText('Import Surface.runplanner.json into your library?'),
-    ).toBeTruthy();
-    expect(screen.queryByText('Event: Week 42: Staff sprint')).toBeNull();
-    await user.click(within(notice).getByRole('button', { name: 'Import' }));
-    expect(operations.acceptPreviousFile).toHaveBeenCalledOnce();
-    expect((await within(notice).findByRole('alert')).textContent).toBe('Unreadable.');
-    await user.click(within(notice).getByRole('button', { name: 'Not now' }));
-    expect(operations.declinePreviousFile).toHaveBeenCalledOnce();
-  });
-
   it('copies the link in place, without inserting a row, then restores the label', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
     render(
-      <NoticeArea
+      <CommunityEventCard
         communityEvents={eventController({
           kind: 'active',
           event: { ...event, title: 'x'.repeat(80) },
           problem: null,
         })}
-        releaseUpdates={undefined}
       />,
     );
     const notice = screen.getByRole('complementary', { name: 'Community event' });
@@ -251,13 +233,7 @@ describe('Notice area', () => {
       gameStatus.publish(eventHeld({ state: 'present', slot: 0 }));
       return Promise.resolve(null);
     });
-    render(
-      <NoticeArea
-        communityEvents={controller}
-        gameStatus={gameStatus}
-        releaseUpdates={undefined}
-      />,
-    );
+    render(<CommunityEventCard communityEvents={controller} gameStatus={gameStatus} />);
     const notice = screen.getByRole('complementary', { name: 'Community event' });
     const play = within(notice).getByRole('button', { name: 'Set as active' });
     await user.click(play);

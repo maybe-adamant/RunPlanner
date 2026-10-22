@@ -5,7 +5,19 @@ const minimumScale = 50;
 const maximumScale = 200;
 const scaleStep = 10;
 
-export function useAppScale(preference?: AppScalePreference): number {
+export interface AppScale {
+  readonly percent: number;
+  readonly canShrink: boolean;
+  readonly canGrow: boolean;
+  step(direction: 1 | -1): void;
+  reset(): void;
+}
+
+function clampedStep(current: number, direction: number): number {
+  return Math.max(minimumScale, Math.min(maximumScale, current + direction * scaleStep));
+}
+
+export function useAppScale(preference?: AppScalePreference): AppScale {
   const [percent, setPercent] = useState(() => {
     const saved = preference?.read();
     return saved !== undefined &&
@@ -31,10 +43,7 @@ export function useAppScale(preference?: AppScalePreference): number {
   }, [percent, preference]);
 
   useEffect(() => {
-    const step = (direction: number) =>
-      setPercent((current) =>
-        Math.max(minimumScale, Math.min(maximumScale, current + direction * scaleStep)),
-      );
+    const step = (direction: number) => setPercent((current) => clampedStep(current, direction));
     const keyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing || event.altKey) return;
       if (!event.ctrlKey && !event.metaKey) return;
@@ -70,5 +79,11 @@ export function useAppScale(preference?: AppScalePreference): number {
     };
   }, []);
 
-  return percent;
+  return {
+    percent,
+    canShrink: percent > minimumScale,
+    canGrow: percent < maximumScale,
+    step: (direction) => setPercent((current) => clampedStep(current, direction)),
+    reset: () => setPercent(100),
+  };
 }

@@ -8,8 +8,6 @@ interface ApplicationFaultBoundaryProps {
   /** Imports a file into the library and opens it in place of the failing plan. */
   readonly openFile: () => Promise<ProjectOperationResult>;
   readonly reload: () => void;
-  /** Reloads without reopening the failing plan; it stays in the library. */
-  readonly reloadWithoutPlan: () => void;
 }
 
 interface ApplicationFaultBoundaryState {
@@ -119,9 +117,6 @@ export class ApplicationFaultBoundary extends Component<
             </button>
             <button className="quiet-action" onClick={this.props.reload} type="button">
               Reload application
-            </button>
-            <button className="danger-action" onClick={this.props.reloadWithoutPlan} type="button">
-              Start without this plan
             </button>
           </div>
           <details className="application-fault-details">

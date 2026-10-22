@@ -342,6 +342,7 @@ These are separate authorities:
 | Stored plans                                 | Project library adapter                     |
 | Open item key and pending writes             | Library saver                               |
 | Opened snapshot and the latest write failure | Library session slice                       |
+| Home tab or editor, Library folder shown     | Library session slice (UI session)          |
 | Route panel, focus, open dialogs and drafts  | UI session                                  |
 | Evaluation, findings and workspace           | Replaceable derived products                |
 
@@ -354,90 +355,134 @@ scaling; a browser-storage adapter persists the preference for web and desktop.
 Map zoom remains independent. Responsive layout uses the scaled available space;
 pointer gestures and floating overlays account for screen versus layout coordinates.
 
+### App home
+
+The app opens on Home with no plan open. Home's header has the Library, Game
+and Settings tabs and About (version, build, schema, catalog, the update check,
+a bug report and the keyboard shortcuts); the Game tab says "· update" or
+"· event" in visible text while the game module has an update or a community
+event is active. Which Home tab shows, or whether the editor shows, and the
+Library folder shown are UI-session state in the library session slice; opening
+any plan shows its editor, and closing it (its item deleted) returns to the
+Library. Going Home keeps the open plan open. Settings holds the app scale.
+
 ### Plan operations
 
 Every open plan is a library item, and every authored edit is saved: there is
-no Save, no unsaved state and no recovery copy. The header's Plan menu offers
-New, Open file, Duplicate and Revert to opened; the entry panel offers the
-route chooser and Open file. `ProjectOperations` owns them:
+no Save, no unsaved state and no recovery copy. The Library offers New plan (a
+route chooser), Import…, New folder and Open folder, and per plan Duplicate,
+Move to…, Delete and Open; the editor offers Discard changes. `ProjectOperations`
+owns them:
 
-- **New** creates the route's project, files it in the library and opens it.
-- **Open file** imports a picked file into the library and opens the copy.
-- **Duplicate** writes the open plan first, then files a copy named "X (copy)"
-  with a new `projectId` from `reidentifyProjectHistory`, and opens it.
-- **Revert to opened** replaces the project with the document it was opened as,
+- **New plan** creates the route's project, files it in the folder shown and
+  opens it.
+- **Import…** files a picked file in the folder shown and opens the copy.
+- **Duplicate** writes the plan's pending edits when it is open, then files a
+  copy named "X (copy)" with a new `projectId` from `reidentifyProjectHistory`
+  in the same folder, without opening it.
+- **Delete** moves the item to the recycle bin and keeps its content in memory
+  for the notice's Undo; deleting the open plan, or a folder holding it, closes
+  it. Folders are created, renamed and deleted the same way, a deleted folder
+  keeping its subfolders and plans for Undo; **Move to…** refiles a plan in
+  another folder, and the saver follows the open plan wherever it moves.
+- **Discard changes** replaces the project with the document it was opened as,
   through one undoable history step.
 - An event's project opens the same way as an imported copy that always takes
   its own identity.
 
 Opening any plan first writes the open one's pending edits; if that write
 fails, the open plan stays and the failure is reported. The opened plan starts
-a new history.
+a new history. Opening the plan already open only shows its editor.
 
-Sending a plan to the game belongs to the Game panel and the header send
-button. A send compiles the open plan as it stands and writes nothing; it adds
-no authored edit or history step.
+### Library screen
 
-The Game panel, opened from the Game button beside About, holds a Game location
-section, a Game module section once a target is set, and a Plans in game
-section once the module is ready. `GameStatusController` shares the latest host
-status between the header indicator and the panel and is refreshed at startup
-and after every Game action. `GameModuleHost` is the desktop adapter over the
-host's target, status, install, remove and publish commands; the host persists
-the game target and owns every compatibility and install decision.
-`projectGamePanel` groups the reported facts into the collapsed
-location line, one overall state, ordered steps (each issue once, with the
-planner's Install or Update as the only step action), the Remove availability
-and a collapsed details list; `projectGameProfileChoices` feeds the profile
-picker, and `projectGamePlans` summarizes the slots and compares their
-fingerprints with `ProjectOperations.inspectCurrentGamePlan`, which compiles only
-while the Plans section shows. `projectGameIndicator` and `projectGameSendButton`
-drive the header from the evaluation's execution-plan eligibility, the
-authored project id and the button's local send activity, without compiling;
-the header compiles only when sending. The `gameSendSession` slice holds the
-loaded project's last sent slot and the latest send failure, with its time, as
-UI-session state; `publishGame` clears the failure when a send starts and records
-it when one fails. Both are cleared by any document replacement and never
-persisted or placed in history. The button's transient Sending and
-three-second result labels are component state. Publish failures reuse the step
-wording. The game target is neither authored state nor Redux state
-and never enters history.
+`projectLibraryView` turns the listing into one screen: the breadcrumb, the
+shown folder's subfolders (with their plan counts) above its plans, and per
+plan its route and loadout, biomes planned, the slots it is in and when it was
+edited; a file the planner cannot open shows why. A search or a chip (All, one
+per route in the route chooser's names, In game) searches the whole library,
+and each result names its folder. Sort is kept per folder. The slots come from
+`projectLibrarySlotLinks`, which links a slot to the plan holding its
+`projectId`: current when the slot's fingerprint is the plan's as it is now,
+older with the reason otherwise ("Plan edited since it was sent", or outdated
+for the module). `ProjectOperations.inspectLibraryGamePlans` compiles only the
+plans a slot holds, cached by key and modified time, and the open plan as it
+is now.
+
+### Game screen and the editor's send control
+
+The Game tab holds the game module (status, its install or update as the one
+primary action, and its facts), the game location, the community event card
+and the table of every slot. `GameStatusController` shares the latest host
+status between Home and the editor and is refreshed when either shows, on
+window focus and after every game action. `GameModuleHost` is the desktop
+adapter over the host's target, status, install, remove and publish commands;
+the host persists the game target and owns every compatibility and install
+decision. `projectGamePanel` groups the reported facts into the location, one
+overall state, ordered steps (each issue once) and the facts list;
+`projectGameProfileChoices` feeds the profile picker. `projectHomeSlots` lists
+the event slot and the twelve plan slots with the library plan each holds (or
+"Not in library"), why an older one differs, which plays next and the outdated
+slots a rebuild would write. Home plays a slot next and opens a linked plan;
+it never sends or clears slots, except that development builds keep Import
+event folder and Clear event.
+
+Sending belongs to the editor's split send button. `projectGameSendButton`
+picks its slot (the plan's own slot, the one that plays next when it has
+several; else the slot last sent this session while still empty; else the
+first empty one) and its label ("Send to slot N", a quiet "Slot N · up to
+date" when that slot holds the plan as it is now, or "Send to game…" with no
+slot), from the evaluation's eligibility without compiling unless the plan is
+in a slot. Its ▾ opens the slot picker, `projectSendSlots`: the plan's own
+slots with Update for an older one, every slot to send to (Replace asks
+first), why the plan cannot be sent with Show findings, and the last send's
+failure. A send compiles the open plan as it stands and writes nothing; it adds
+no authored edit or history step. The `gameSendSession` slice holds the
+loaded project's last sent slot and the latest send failure as UI-session
+state, cleared by any document replacement. The button's transient Sending and
+three-second result labels are component state. The game target is neither
+authored state nor Redux state and never enters history.
 
 ### Project library
 
 `ProjectLibraryAdapter` stores plans as complete documents addressed by an
-opaque key, and the library session (the last opened plan, by key and
-`projectId`, and whether the pre-library file was offered). The desktop host
-keeps plans as plain `.runplanner.json` files in `RunPlanner/Projects/` under
-the platform documents folder, created on demand; the key is the file name,
-`<plan name> (<8 hex digits of the projectId's SHA-256>)`, made portable. The
-host reads only each file's head to list it, writes atomically, refuses a
-document without a project identity and name, renames a file only when the
-plan's name or identity changes (never over another file), and deletes to the
-system recycle bin. It keeps the session in the configuration folder. The
-browser host keeps the same model in IndexedDB, without a folder or bin.
-Listing scans the folder each time; there is no index.
+opaque key in a folder (a `/`-separated path, `""` at the top), lists every
+plan and folder, creates, renames, moves and deletes folders, moves a plan
+between folders, and keeps the library session (whether the pre-library file
+was offered). The desktop host keeps plans as plain `.runplanner.json` files in
+`RunPlanner/Projects/` under the platform documents folder and its subfolders
+of any depth, created on demand; the key is the file's path inside the library,
+its name `<plan name> (<8 hex digits of the projectId's SHA-256>)`, made
+portable, and folder names are plain portable names. The host scans
+recursively, reading only each file's head, writes atomically, refuses a
+document without a project identity and name, renames a file within its folder
+only when the plan's name or identity changes (never over another file), and
+deletes plans and folders to the system recycle bin. It keeps the session in
+the configuration folder. The browser host keeps the same model in IndexedDB,
+a plan's folder a path field and folders their own records, without a folder to
+reveal or a bin. Listing scans each time; there is no index.
 
 Library meaning stays in the application. `createProjectLibraryOperations`
 classifies entries as openable, too new or unreadable against the loader's
 supported schemas, never dropping one, and names a plan from before plans had
-names by its file stem. Identity follows the engine: a stored copy sharing an
-older plan's `projectId` (oldest by modified time keeps it; the open plan
-always keeps its own), or an imported file whose identity the library already
-holds, is loaded, given a new identity through `reidentifyProjectHistory` and
-written whole. A deleted plan's content is kept in memory, so undoing the
-delete files it again on every platform; the recycle bin is the longer-term net.
+names by its file stem. Identity follows the engine across the whole library:
+a stored copy sharing an older plan's `projectId` (oldest by modified time
+keeps it; the open plan always keeps its own), or an imported file whose
+identity the library already holds, is loaded, given a new identity through
+`reidentifyProjectHistory` and written whole. A deleted plan's or folder's
+content is kept in memory, so undoing the delete files it again on every
+platform; the recycle bin is the longer-term net.
 
 ### Continuous save
 
 `LibrarySaver` watches the present project. An effective authored change
-(edit, Undo/Redo, revert) schedules a debounced write of the open item;
+(edit, Undo/Redo, discard) schedules a debounced write of the open item;
 changes coalesce, one write runs at a time and each writes the newest
 snapshot, so the last edit wins in order. A write that refiles the plan under a
-new key moves the saver and the remembered last plan to it. A failed write is
-recorded in the library session and shown as a stable notice in place of
-"Saved as you edit"; the next edit or flush retries it, and a success clears
-it. Navigation, findings and derived publication do not write.
+new key moves the saver to it. Nothing says the plan is saved; a failed write
+is recorded in the library session and shown as "Not saved · Details" in a slot
+the editor header keeps for it; the next edit or flush retries it, and a
+success clears it. Navigation, findings and derived publication do not write.
 
 A plan opened from an older schema keeps its original before the first write
 replaces it: the desktop library recycles a copy of the file, and the write
@@ -464,16 +509,13 @@ before it opens.
 
 ### Startup
 
-Startup reopens the last opened plan, found by key or, after a rename outside
-the planner, by `projectId`. When there is none the entry panel shows; when it
-cannot be read the entry panel shows its failure. The file the planner kept
-open before plans lived in the library is offered once for import; importing
-or declining it is remembered.
+Startup shows the Library with no plan open. The file the planner kept open
+before plans lived in the library is offered once on the Library for import;
+importing or declining it is remembered.
 
 A shell fault boundary remains available after rendering or unhandled browser
 failure. It does not continue an unknown partial interaction. It offers
-another file through the same open path, a reload, or a reload that does not
-reopen the failing plan, which stays in the library.
+another file through the same open path, or a reload, which starts on Home.
 
 ## Presentation and Accessibility
 

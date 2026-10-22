@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { useAppScale } from '@planner/ui/shell/useAppScale';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
@@ -76,12 +76,19 @@ it('enforces the scale limits without falling through to native zoom', () => {
   expect(fireEvent.wheel(window, { ctrlKey: true, deltaY: 120 })).toBe(true);
 });
 
-it('changes scale without publishing project history or reevaluating the plan', () => {
+it('changes scale from Settings without publishing project history or reevaluating the plan', async () => {
   const view = renderPlannerForInteraction();
   const before = view.application.store.getState().projectWorkspace;
-  expect(screen.getByLabelText('App scale').textContent).toBe('100%');
+  await view.user.click(screen.getByRole('button', { name: 'Home' }));
+  await view.user.click(screen.getByRole('button', { name: 'Settings' }));
+  const stepper = screen.getByRole('group', { name: 'App scale' });
+  expect(within(stepper).getByText('100%')).toBeTruthy();
+  expect(within(stepper).getByRole('button', { name: 'Reset' })).toHaveProperty('disabled', true);
   fireEvent.keyDown(window, { key: '-', ctrlKey: true });
   expect(scale()).toBe('0.9');
-  expect(screen.getByLabelText('App scale').textContent).toBe('90%');
+  await view.user.click(within(stepper).getByRole('button', { name: 'Smaller' }));
+  expect(within(stepper).getByText('80%')).toBeTruthy();
+  await view.user.click(within(stepper).getByRole('button', { name: 'Reset' }));
+  expect(scale()).toBe('1');
   expect(view.application.store.getState().projectWorkspace).toBe(before);
 });

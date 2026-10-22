@@ -12,7 +12,7 @@ each check.
 - [ ] **Plan for next run** lists `Slot N (<label>)` for sent slots and
       `Slot N (empty)` for the unsent one. A slot file copied in by hand,
       without resending, shows plain `Slot N`.
-- [ ] Choosing a slot saves it (the planner's Game panel shows it active within
+- [ ] Choosing a slot saves it (the planner's Game tab shows it as Plays next within
       a second) and its details appear without pressing anything: Plan, Sent in
       local time, Aspect, Route `<route> -> <final biome>`, Keepsake, Fear,
       Practice when set, and `Status: Ready`. The unsent slot shows "Nothing

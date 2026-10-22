@@ -5,7 +5,6 @@ import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdate
 import { projectEventPlaysNext } from '@planner/projections/gamePanel';
 import { releaseUpdateNoticeShown } from '@planner/projections/releaseUpdate';
 import type { CommunityEventController, EventNotice } from '@planner/workspace/communityEvents';
-import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import { ReleaseUpdateNotice } from './ReleaseUpdates';
 
 const IDLE_UPDATE = { kind: 'idle' } as const;
@@ -53,11 +52,13 @@ const COPY_FEEDBACK_MS = 2_000;
 function EventNoticeBar({
   actions,
   children,
+  className = 'release-update-notice event-notice',
   headline,
   label = 'Community event',
   status = false,
 }: {
   readonly actions: ReactNode;
+  readonly className?: string;
   readonly label?: string;
   readonly children?: ReactNode;
   /** One line, truncated with an ellipsis. */
@@ -65,11 +66,7 @@ function EventNoticeBar({
   readonly status?: boolean;
 }) {
   return (
-    <aside
-      aria-label={label}
-      className="release-update-notice event-notice"
-      {...(status ? { role: 'status' } : {})}
-    >
+    <aside aria-label={label} className={className} {...(status ? { role: 'status' } : {})}>
       <div className="event-notice-body">
         <div className="event-notice-headline">
           <span className="event-notice-title">{headline.text}</span>
@@ -139,6 +136,7 @@ function ActiveEventNotice({
   const detailsId = `event-details-${event.id}`;
   return (
     <EventNoticeBar
+      className="event-card"
       actions={
         <>
           {/* One element in both states, so focus stays when the event becomes the next run. */}
@@ -228,100 +226,32 @@ function EndedEventNotice({
     >
       <p>
         {notice.fallbackSlotHasPlan
-          ? 'The next run uses Slot 1 — choose another slot in the Game panel or in game.'
+          ? 'The next run uses Slot 1 — choose another slot on the Game tab or in game.'
           : 'The next run has no plan until you choose a slot.'}
       </p>
     </EventNoticeBar>
   );
 }
 
-/** Offers once to import the file the planner kept open before plans lived in the library. */
-function PreviousFileNotice({
-  fileName,
-  operations,
-}: {
-  readonly fileName: string;
-  readonly operations: ProjectOperations;
-}) {
-  const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const settle = async (task: () => Promise<string | null>) => {
-    setPending(true);
-    setMessage(null);
-    try {
-      setMessage(await task());
-    } finally {
-      setPending(false);
-    }
-  };
-  return (
-    <EventNoticeBar
-      actions={
-        <>
-          <button
-            className="secondary-action action-compact"
-            disabled={pending}
-            onClick={() =>
-              void settle(async () => {
-                const result = await operations.acceptPreviousFile();
-                return result.status === 'failure' ? result.message : null;
-              })
-            }
-            type="button"
-          >
-            Import
-          </button>
-          <button
-            className="quiet-action action-compact"
-            disabled={pending}
-            onClick={() =>
-              void settle(async () => {
-                await operations.declinePreviousFile();
-                return null;
-              })
-            }
-            type="button"
-          >
-            Not now
-          </button>
-        </>
-      }
-      headline={{ text: `Import ${fileName} into your library?` }}
-      label="Earlier plan"
-      status
-    >
-      <p>Plans now live in your library and save as you edit. This was the file you had open.</p>
-      {message === null ? null : <p role="alert">{message}</p>}
-    </EventNoticeBar>
-  );
-}
-
-/** One notice at a time: an app update first, then the import offer, then the community event. */
-export function NoticeArea({
-  communityEvents,
-  gameStatus,
-  previousFile,
-  releaseUpdates,
-}: {
-  readonly communityEvents: CommunityEventController | undefined;
-  /** The game status the Game panel reads, which names the slot played next. */
-  readonly gameStatus?: GameStatusController;
-  /** The file open before the library, while it is offered for import. */
-  readonly previousFile?: { readonly fileName: string; readonly operations: ProjectOperations };
-  readonly releaseUpdates: ReleaseUpdateController | undefined;
-}) {
-  const updateSnapshot = releaseUpdates?.getSnapshot ?? idleUpdate;
-  const update = useSyncExternalStore(
-    releaseUpdates?.subscribe ?? noSubscription,
-    updateSnapshot,
-    updateSnapshot,
-  );
+function useEventNotice(communityEvents: CommunityEventController | undefined) {
   const eventSnapshot = communityEvents?.getSnapshot ?? noEvent;
-  const event = useSyncExternalStore(
+  return useSyncExternalStore(
     communityEvents?.subscribe ?? noSubscription,
     eventSnapshot,
     eventSnapshot,
   );
+}
+
+/** The active community event on the Game tab, or nothing. */
+export function CommunityEventCard({
+  communityEvents,
+  gameStatus,
+}: {
+  readonly communityEvents: CommunityEventController;
+  /** The game status, which names the slot played next. */
+  readonly gameStatus?: GameStatusController;
+}) {
+  const event = useEventNotice(communityEvents);
   const statusSnapshot = gameStatus?.getSnapshot;
   const eventPlaysNext =
     statusSnapshot === undefined ? noStatus : () => projectEventPlaysNext(statusSnapshot().status);
@@ -330,28 +260,35 @@ export function NoticeArea({
     eventPlaysNext,
     eventPlaysNext,
   );
+  if (event.kind !== 'active') return null;
+  return (
+    <ActiveEventNotice
+      controller={communityEvents}
+      key={event.event.id}
+      notice={event}
+      playsNext={playsNext}
+    />
+  );
+}
+
+/** One notice at a time across the app: an app update first, then an ended event. */
+export function NoticeArea({
+  communityEvents,
+  releaseUpdates,
+}: {
+  readonly communityEvents: CommunityEventController | undefined;
+  readonly releaseUpdates: ReleaseUpdateController | undefined;
+}) {
+  const updateSnapshot = releaseUpdates?.getSnapshot ?? idleUpdate;
+  const update = useSyncExternalStore(
+    releaseUpdates?.subscribe ?? noSubscription,
+    updateSnapshot,
+    updateSnapshot,
+  );
+  const event = useEventNotice(communityEvents);
   if (releaseUpdates !== undefined && releaseUpdateNoticeShown(update)) {
     return <ReleaseUpdateNotice controller={releaseUpdates} />;
   }
-  if (previousFile !== undefined) {
-    return (
-      <PreviousFileNotice fileName={previousFile.fileName} operations={previousFile.operations} />
-    );
-  }
-  if (communityEvents === undefined) return null;
-  switch (event.kind) {
-    case 'none':
-      return null;
-    case 'active':
-      return (
-        <ActiveEventNotice
-          controller={communityEvents}
-          key={event.event.id}
-          notice={event}
-          playsNext={playsNext}
-        />
-      );
-    case 'ended':
-      return <EndedEventNotice controller={communityEvents} notice={event} />;
-  }
+  if (communityEvents === undefined || event.kind !== 'ended') return null;
+  return <EndedEventNotice controller={communityEvents} notice={event} />;
 }

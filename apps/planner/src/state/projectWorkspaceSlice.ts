@@ -55,6 +55,8 @@ export const authoredProjectRedoRequested = createAction('projectWorkspace/redoR
 export const authoredProjectReplaced = createAction<ProjectDocument>(
   'projectWorkspace/projectReplaced',
 );
+/** Closes the open plan, as when its library item is deleted. */
+export const authoredProjectClosed = createAction('projectWorkspace/projectClosed');
 /** Returns the open plan to a document as one undoable history step. */
 export const authoredProjectReverted = createAction<ProjectDocument>(
   'projectWorkspace/projectReverted',
@@ -170,6 +172,7 @@ export function createProjectWorkspaceReducer(
     if (authoredProjectReplaced.match(action)) {
       return publishWorkspace(createProjectHistory(action.payload), assembleProjectEvaluation);
     }
+    if (authoredProjectClosed.match(action)) return initialState;
     if (authoredProjectReverted.match(action)) {
       if (state.kind === 'noProject') return state;
       const history = publishProjectHistoryEdit(state.history, action.payload);

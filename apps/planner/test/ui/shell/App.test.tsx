@@ -76,29 +76,30 @@ function configureF(application: ReturnType<typeof createApplication>): void {
 }
 
 describe('App', () => {
-  it('renders the planner shell from the composed catalog and store', () => {
+  it('starts on the Library with Home’s tabs and About', () => {
     const application = createApplication();
     const markup = appMarkup(application);
 
     expect(markup).toContain('Run Planner');
-    expect(markup).toContain('Choose your route');
-    expect(markup).toContain('Dream Dive');
-    expect(markup).toContain('Underworld');
-    expect(markup).toContain('Surface');
-    expect(markup).toContain('About</button>');
+    expect(markup).toContain('Your plans');
+    expect(markup).toContain('aria-current="page"');
+    expect(markup).toContain('>Library</button>');
     expect(markup).toContain('>Game</button>');
-    expect(markup).not.toContain('Settings');
-    expect(markup).not.toContain('<h2 id="game-dialog-title">');
+    expect(markup).toContain('>Settings</button>');
+    expect(markup).toContain('About</button>');
+    expect(markup).not.toContain('What’s new');
+    expect(markup).not.toContain('aria-label="Plan name"');
   });
 
-  it('keeps project information out of the route workspace', () => {
+  it('shows an open plan’s editor header without the Home tabs or project information', () => {
     const application = createOpenTestApplication();
     const markup = appMarkup(application);
 
     expect(markup).not.toContain('class="project-findings"');
     expect(markup).toContain('aria-label="Plan name"');
-    expect(markup).toContain('About</button>');
-    expect(markup).not.toContain('<h2 id="game-dialog-title">');
+    expect(markup).toContain('Home</button>');
+    expect(markup).not.toContain('About</button>');
+    expect(markup).not.toContain('Saved as you edit');
   });
 
   it('limits Findings to the selected route', () => {

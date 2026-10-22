@@ -49,7 +49,6 @@ function setup() {
   const saver = createLibrarySaver({
     adapter: recording.adapter,
     delayMs: 0,
-    onRefiled: () => undefined,
     scheduler: createManualSaveScheduler().scheduler,
     store: application.store,
   });
@@ -103,5 +102,20 @@ describe('library saver', () => {
     await saver.flush();
     expect(recording.calls).toEqual(['preserve old', 'write old']);
     expect(application.store.getState().librarySession.writeError).toBeNull();
+  });
+
+  it('follows a move of the open plan and stops writing once it is closed', async () => {
+    const { open, recording, rename, saver } = setup();
+    await open('Practice/plan', plan('moved'), false);
+    saver.moved('Practice/plan', 'Speedrun/plan');
+    rename('Moved');
+    await saver.flush();
+    expect(recording.calls).toEqual(['write Speedrun/plan']);
+
+    saver.close();
+    rename('Closed');
+    await saver.flush();
+    expect(recording.calls).toEqual(['write Speedrun/plan']);
+    expect(saver.openKey()).toBeNull();
   });
 });

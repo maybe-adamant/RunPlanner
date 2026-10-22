@@ -222,14 +222,18 @@ by the command.
 
 Vite builds the same React application for browser and desktop. Tauri owns
 native windows, packaging, scoped file transport, the
-[project library](EDITOR_MODEL.md#project-library) folder and its session, a
+[project library](EDITOR_MODEL.md#project-library) folder (its subfolders,
+recursive head-only scan, plan and folder moves, and deletes to the recycle
+bin) and its session, a
 close gate that lets the planner write pending edits, and the
 [game module lane](GAME_INTEGRATION_BOUNDARY.md#distribution-and-the-game-target):
 the compile-time embedded module, the game target setting, install checks,
 plan-slot writes and bug-report assembly. A single-instance guard hands a second
 launch to the running window, so one process writes the library. Rust does not
 parse planner semantics; the library reads only a document's head (identity,
-name, route summary) to list and file it. Browser/filesystem effects
+name, route summary) to list and file it, and accepts only plain portable
+folder and file names inside the library. The browser host keeps the same
+library in IndexedDB. Browser/filesystem effects
 stay behind application adapters; desktop integration does not move simulator
 rules into the host. Native file-drop interception remains disabled to retain
 ordinary HTML interaction behavior.
@@ -237,7 +241,7 @@ ordinary HTML interaction behavior.
 Build identity is application metadata, separate from schema and catalog
 identity. Official CI builds supply one validated release version to Tauri and
 the frontend, together with the source commit. Local builds identify themselves
-as Development. About is available without an open project.
+as Development. About is on Home, which the app starts on with no plan open.
 
 The desktop application ships as a per-user NSIS installer (no administrator
 rights, no code signing). Installed and development builds share one data

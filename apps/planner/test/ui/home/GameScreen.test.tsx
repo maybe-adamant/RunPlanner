@@ -4,11 +4,7 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
-import type {
-  GameActiveSlot,
-  GameModuleStatus,
-  GamePlanSlotNumber,
-} from '@planner/persistence/gameModuleHost';
+import type { GameModuleStatus, GamePlanSlotNumber } from '@planner/persistence/gameModuleHost';
 import {
   createFakeGameModuleHost,
   eventSlot,
@@ -18,13 +14,12 @@ import {
 } from '@planner-test/fixtures/gameModuleHost';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 import {
+  activeEvent,
   createFakeCommunityEventDevelopmentHost,
   createFakeCommunityEventHost,
 } from '@planner-test/fixtures/communityEventHost';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import { catalog } from '@run-planner/hades2-catalog';
-import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
-import { hintOf } from '@planner-test/support/hints';
 import { encodeSlotSource } from '@planner/persistence/slotSource';
 import {
   createProjectDocument,
@@ -65,8 +60,9 @@ async function openGame(
   const application = createApplication({ ...options, gameModuleHost: host });
   await prepare?.(application);
   const rendered = renderPlannerForInteraction({ application, startWithProject: false });
-  await rendered.user.click(await screen.findByRole('button', { name: /^Game — / }));
-  const dialog = await screen.findByRole('dialog', { name: 'Game' });
+  const home = screen.getByRole('navigation', { name: 'Home' });
+  await rendered.user.click(within(home).getByRole('button', { name: /^Game/ }));
+  const dialog = await screen.findByRole('region', { name: 'Hades II' });
   await within(dialog).findByRole('heading', { name: 'Game location' });
   return { ...rendered, dialog };
 }
@@ -81,7 +77,7 @@ function named(name: string) {
   return { ...firstBiome(), name };
 }
 
-describe('Game panel', () => {
+describe('Game screen', () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
@@ -112,7 +108,7 @@ describe('Game panel', () => {
     expect(screen.queryByRole('option', { name: /h2-dev/ })).toBeNull();
     await user.click(screen.getByRole('option', { name: 'h2-clean, Run Planner (Thunderstore)' }));
     expect(game.host.useDiscoveredTarget).toHaveBeenCalledWith('/profiles/h2-clean');
-    expect(await within(dialog).findByText('h2-dev (r2modman profile)')).toBeTruthy();
+    expect(await within(dialog).findByText('h2-dev · r2modman profile')).toBeTruthy();
     expect(
       within(dialog).getByText('Ready · module 0.1.0 · ModpackLib 4.1.0 · dependencies found'),
     ).toBeTruthy();
@@ -125,30 +121,28 @@ describe('Game panel', () => {
     const { dialog, user } = await openGame(game.host);
     await user.click(within(dialog).getByRole('button', { name: 'Choose folder…' }));
     expect(game.host.useChosenTarget).toHaveBeenCalledWith('/games/Hades II/Ship');
-    expect(await within(dialog).findByText('Ship (folder)')).toBeTruthy();
-    const steps = within(dialog).getByRole('list', { name: 'Game module steps' });
-    expect(
-      within(steps)
-        .getAllByRole('button')
-        .map((button) => button.textContent),
-    ).toEqual(['Install']);
+    expect(await within(dialog).findByText('Ship · folder')).toBeTruthy();
+    // The module's own install is the card's one primary action.
+    const install = within(dialog).getByRole('button', { name: 'Install' });
+    expect(install.className).toContain('primary-action');
     expect(within(dialog).queryByRole('button', { name: 'Remove game module' })).toBeNull();
     expect(within(dialog).queryByText('Game target set.')).toBeNull();
-    await user.click(within(steps).getByRole('button', { name: 'Install' }));
+    await user.click(install);
     expect(game.host.install).toHaveBeenCalledWith(false);
     expect(await within(dialog).findByText('Installed the game module.')).toBeTruthy();
   });
 
-  it('collapses a set location, keeps details closed, and forgets without touching files', async () => {
+  it('shows a set location with its path and the module facts, and forgets without touching files', async () => {
     const game = createFakeGameModuleHost();
     const { dialog, user } = await openGame(game.host);
-    const line = within(dialog).getByText('h2-dev (r2modman profile)');
-    expect(hintOf(line)).toBe('/profiles/h2-dev');
-    const details = dialog.querySelector('details');
-    expect(details?.open).toBe(false);
+    expect(within(dialog).getByText('h2-dev · r2modman profile')).toBeTruthy();
+    expect(within(dialog).getByText('/profiles/h2-dev')).toBeTruthy();
+    expect(dialog.querySelector('details')).toBeNull();
+    expect(
+      within(dialog).getByText('Ready · module 0.1.0 · ModpackLib 4.1.0 · dependencies found'),
+    ).toBeTruthy();
     const remove = within(dialog).getByRole('button', { name: 'Remove game module' });
-    expect(remove.textContent).toBe('Remove');
-    expect(remove.parentElement?.textContent).toMatch(/^Ready · module 0\.1\.0 .*Remove$/);
+    expect(remove.textContent).toBe('Remove module');
     await user.click(remove);
     const confirmRemove = await screen.findByRole('dialog', { name: 'Remove game module?' });
     await user.click(within(confirmRemove).getByRole('button', { name: 'Cancel' }));
@@ -197,12 +191,12 @@ describe('Game panel', () => {
     ).toBeTruthy();
     expect(game.host.useChosenTarget).not.toHaveBeenCalled();
     expect(screen.queryByRole('dialog', { name: 'Switch game location?' })).toBeNull();
-    expect(within(dialog).getByText('h2-dev (r2modman profile)')).toBeTruthy();
+    expect(within(dialog).getByText('h2-dev · r2modman profile')).toBeTruthy();
 
     game.host.remove.mockResolvedValueOnce({ outcome: 'removed', status: gameModuleStatus() });
     ask = await chooseNewFolder();
     await user.click(within(ask).getByRole('button', { name: 'Remove it, then switch' }));
-    expect(await within(dialog).findByText('Ship (folder)')).toBeTruthy();
+    expect(await within(dialog).findByText('Ship · folder')).toBeTruthy();
     expect(game.host.remove).toHaveBeenCalledTimes(2);
     expect(game.host.useChosenTarget).toHaveBeenCalledTimes(1);
   });
@@ -236,7 +230,7 @@ describe('Game panel', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Choose folder…' }));
     const ask = await screen.findByRole('dialog', { name: 'Switch game location?' });
     await user.click(within(ask).getByRole('button', { name: 'Keep it and switch' }));
-    expect(await within(dialog).findByText('Ship (folder)')).toBeTruthy();
+    expect(await within(dialog).findByText('Ship · folder')).toBeTruthy();
     expect(game.host.remove).not.toHaveBeenCalled();
 
     game.host.pickTargetFolder.mockResolvedValue('/games/Other');
@@ -266,10 +260,9 @@ describe('Game panel', () => {
     expect(game.host.install).toHaveBeenCalledWith(true);
   });
 
-  it('offers the checkout install only in development builds, inside details', async () => {
+  it('offers the checkout install only in development builds', async () => {
     const game = createFakeGameModuleHost(gameModuleStatus({ developmentInstallAvailable: true }));
     const { dialog, user } = await openGame(game.host);
-    await user.click(within(dialog).getByText('Details'));
     await user.click(within(dialog).getByRole('button', { name: 'Install from this checkout' }));
     expect(game.host.installFromCheckout).toHaveBeenCalledWith(false);
   });
@@ -318,7 +311,7 @@ describe('Game panel', () => {
     ).toBeTruthy();
     expect(within(ask).getByRole('button', { name: 'Cancel' })).toBeTruthy();
     await user.click(within(ask).getByRole('button', { name: 'Keep it and switch' }));
-    expect(await within(dialog).findByText('Ship (folder)')).toBeTruthy();
+    expect(await within(dialog).findByText('Ship · folder')).toBeTruthy();
     expect(game.host.remove).not.toHaveBeenCalled();
   });
 
@@ -346,7 +339,7 @@ describe('Game panel', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByRole('dialog', { name: 'Switch game location?' })).toBeNull();
-    expect(within(dialog).getByText('h2-dev (r2modman profile)')).toBeTruthy();
+    expect(within(dialog).getByText('h2-dev · r2modman profile')).toBeTruthy();
   });
 
   it('treats reselecting the current location as no change', async () => {
@@ -361,7 +354,7 @@ describe('Game panel', () => {
     const { dialog, user } = await openGame(game.host);
     await user.click(within(dialog).getByRole('button', { name: 'Change game location' }));
     await user.click(within(dialog).getByRole('button', { name: 'Choose folder…' }));
-    expect(await within(dialog).findByText('h2-dev (r2modman profile)')).toBeTruthy();
+    expect(await within(dialog).findByText('h2-dev · r2modman profile')).toBeTruthy();
     expect(screen.queryByRole('dialog', { name: 'Switch game location?' })).toBeNull();
     expect(game.host.remove).not.toHaveBeenCalled();
     expect(game.host.useChosenTarget).not.toHaveBeenCalled();
@@ -386,279 +379,124 @@ describe('Game panel', () => {
     );
   });
 
-  it('labels the Game button with the indicator state in its accessible name', async () => {
-    const needsSetup = createFakeGameModuleHost(manualTarget());
-    renderPlannerForInteraction({
-      application: createApplication({ gameModuleHost: needsSetup.host }),
-      startWithProject: false,
-    });
-    const button = await screen.findByRole('button', { name: 'Game — needs setup' });
-    expect(button.textContent).toBe('Game!');
-    cleanup();
-    const noLocation = createFakeGameModuleHost(unset());
-    renderPlannerForInteraction({
-      application: createApplication({ gameModuleHost: noLocation.host }),
-      startWithProject: false,
-    });
-    expect(await screen.findByRole('button', { name: 'Game — no location' })).toBeTruthy();
-  });
-
-  it('shows plans only when the module is ready, with the reason when nothing can be sent', async () => {
-    const notReady = createFakeGameModuleHost(manualTarget());
-    const first = await openGame(notReady.host);
-    expect(within(first.dialog).queryByRole('heading', { name: 'Plans in game' })).toBeNull();
-    cleanup();
-
-    const game = createFakeGameModuleHost();
-    const { dialog } = await openGame(
-      game.host,
-      (application) => application.projectOperations.createNew('Underworld').then(() => undefined),
-      { projectLibrary: createMemoryProjectLibrary().adapter },
-    );
-    expect(within(dialog).getByRole('heading', { name: 'Plans in game' })).toBeTruthy();
-    const callout = within(dialog).getByRole('group', { name: 'Can’t send' });
-    expect(
-      within(callout).getByText('Resolve this plan’s findings before sending it.'),
-    ).toBeTruthy();
-    expect(within(callout).getByRole('button', { name: 'Show findings' })).toBeTruthy();
-    const table = within(dialog).getByRole('table', { name: 'Plans in game' });
-    expect(
-      within(table)
-        .getAllByRole('columnheader')
-        .map((header) => header.textContent),
-    ).toEqual(['Slot', 'Plan', 'Route', 'Ends', 'Aspect', 'Sent', 'Action']);
-    expect(
-      within(table)
-        .getAllByRole('rowheader')
-        .map((header) => header.textContent),
-    ).toEqual(Array.from({ length: 12 }, (_, index) => `Slot ${index + 1}`));
-    expect(within(table).queryAllByRole('button')).toEqual([]);
-  });
-
-  it('sends a clean saved plan under its project name and confirms before replacing', async () => {
-    const fourHoursAgo = Date.now() - 4 * 3_600_000;
+  it('says in the Game tab when the module has an update or an event is on', async () => {
     const game = createFakeGameModuleHost(
+      gameModuleStatus({
+        publicationBlockers: [{ code: 'moduleMismatch', found: '0.0.9', required: '0.1.0' }],
+        inspection: {
+          module: { matchesBundled: false, version: '0.0.9' },
+          install: { action: 'update', updateAvailable: true },
+        },
+      }),
+    );
+    const events = createFakeCommunityEventHost();
+    events.refreshFeed.mockResolvedValue({
+      active: activeEvent(encodeProjectDocument(firstBiome())),
+      source: 'network',
+      problem: null,
+    });
+    const { dialog } = await openGame(game.host, undefined, { communityEventHost: events });
+    const tab = within(screen.getByRole('navigation', { name: 'Home' })).getByRole('button', {
+      name: /^Game/,
+    });
+    await waitFor(() => expect(tab.textContent).toBe('Game · update · event'));
+    expect(tab.getAttribute('aria-current')).toBe('page');
+    const card = within(dialog).getByRole('complementary', { name: 'Community event' });
+    expect(within(card).getByText('Event: Week 42: Staff sprint')).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Update' }).className).toContain(
+      'primary-action',
+    );
+  });
+
+  it('lists every slot with its library plan, plays a slot next and opens a linked plan', async () => {
+    const library = createMemoryProjectLibrary();
+    const plan = named('Erebus opener');
+    const slots = (active: GamePlanSlotNumber) =>
       gameModuleStatus({
         inspection: {
           planSlots: planSlots(
             planSlot(1, {
               state: 'present',
-              modifiedAtMs: Date.now(),
               routeKey: 'Underworld',
               biomeKeys: ['F'],
-              planFingerprint: 'another',
-              projectId: 'another',
-              displayName: 'Their run',
+              planFingerprint: 'sent-before',
+              projectId: plan.projectId,
+              displayName: 'Old name',
               weaponKey: 'WeaponStaffSwing',
               aspectKey: 'BaseStaffAspect',
             }),
-            planSlot(3, {
+            planSlot(2, {
               state: 'present',
-              modifiedAtMs: fourHoursAgo,
-              routeKey: 'Underworld',
-              biomeKeys: ['F'],
-              planFingerprint: 'another',
-              projectId: 'another',
-              weaponKey: 'WeaponDagger',
-              aspectKey: 'DaggerBackstabAspect',
+              routeKey: 'Surface',
+              projectId: 'theirs',
+              displayName: 'Their run',
             }),
+            planSlot(3, { state: 'stale', routeKey: 'Underworld', projectId: plan.projectId }),
           ),
-        },
-      }),
-    );
-    const { dialog, user } = await openGame(game.host, (application) => {
-      application.store.dispatch(authoredProjectReplaced(named('Erebus opener')));
-    });
-    const table = within(dialog).getByRole('table', { name: 'Plans in game' });
-    const row = within(table).getByRole('row', { name: /Slot 1\b/ });
-    expect(within(row).getByText('Their run')).toBeTruthy();
-    expect(within(row).getByText(catalog.biomes.byKey.F!.label)).toBeTruthy();
-    expect(within(row).getByText('Melinoë (Staff)')).toBeTruthy();
-    expect(within(row).getByText('just now')).toBeTruthy();
-    const unnamed = within(table).getByRole('row', { name: /Slot 3\b/ });
-    expect(within(unnamed).getByText('Unnamed')).toBeTruthy();
-    expect(within(unnamed).getByText('Melinoë (Blades)')).toBeTruthy();
-    const sent = within(unnamed).getByText('4h ago');
-    const exact = new Date(fourHoursAgo).toLocaleString(undefined, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    });
-    expect(hintOf(sent)).toBe(exact);
-    expect(sent.getAttribute('aria-description')).toBe(exact);
-    await user.click(within(table).getByRole('button', { name: 'Send here (slot 2)' }));
-    expect(game.published.map((publication) => publication.slotNumber)).toEqual([2]);
-    expect(JSON.parse(game.published[0]!.json)).toMatchObject({ displayName: 'Erebus opener' });
-    expect(await within(dialog).findByText('Published to game, Slot 2.')).toBeTruthy();
-
-    await user.click(within(table).getByRole('button', { name: 'Replace (slot 1)' }));
-    const confirm = await screen.findByRole('dialog', { name: 'Replace the plan in slot 1?' });
-    expect(confirm.getAttribute('aria-describedby')).toBe('game-plan-replace-message');
-    await user.click(within(confirm).getByRole('button', { name: 'Cancel' }));
-    expect(game.published).toHaveLength(1);
-    expect(document.activeElement?.getAttribute('aria-label')).toBe('Replace (slot 1)');
-    await user.click(within(table).getByRole('button', { name: 'Replace (slot 1)' }));
-    await user.click(
-      within(await screen.findByRole('dialog', { name: 'Replace the plan in slot 1?' })).getByRole(
-        'button',
-        { name: 'Replace' },
-      ),
-    );
-    expect(game.published.map((publication) => publication.slotNumber)).toEqual([2, 1]);
-    await waitFor(() =>
-      expect(document.activeElement?.getAttribute('aria-label')).toBe('Replace (slot 1)'),
-    );
-  });
-
-  it('chooses the plan for the next run and shows the file as re-read', async () => {
-    const present = { state: 'present', routeKey: 'Underworld', biomeKeys: ['F'] } as const;
-    const withActive = (activeSlot: GameActiveSlot) =>
-      gameModuleStatus({
-        inspection: {
-          planSlots: planSlots(
-            planSlot(2, present),
-            planSlot(3, { state: 'unreadable' }),
-            planSlot(5, present),
-          ),
-          activeSlot,
+          activeSlot: { state: 'present', slot: active },
         },
       });
-    const game = createFakeGameModuleHost(withActive({ state: 'invalid' }));
-    const { dialog, user } = await openGame(game.host);
-    const choice = within(dialog).getByRole<HTMLSelectElement>('combobox', {
-      name: 'Active plan',
-    });
-    // An invalid file plays slot 1, shown with what it holds; slots without a plan are absent.
-    await waitFor(() => expect(choice.disabled).toBe(false));
-    expect(choice.value).toBe('1');
-    expect(
-      within(choice)
-        .getAllByRole('option')
-        .map((option) => option.textContent),
-    ).toEqual([
-      'Slot 1 (empty)',
-      expect.stringMatching(/^Slot 2 \(/),
-      expect.stringMatching(/^Slot 5 \(/),
-    ]);
-    // The table is an overview with send actions only.
-    expect(within(dialog).queryAllByRole('radio')).toEqual([]);
-    expect(within(dialog).queryByRole('radiogroup')).toBeNull();
-
-    let finish: (() => void) | undefined;
-    game.host.setActiveSlot.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          finish = () =>
-            resolve({ status: 'activated', message: 'Slot 2 is active.', blockers: [] });
-        }),
+    const game = createFakeGameModuleHost(slots(1));
+    const { dialog, user, application } = await openGame(
+      game.host,
+      async () => {
+        await library.file(plan, 'Practice');
+      },
+      { projectLibrary: library.adapter },
     );
-    await user.selectOptions(choice, '2');
+    const table = within(dialog).getByRole('table', { name: 'Slots in game' });
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent),
+    ).toEqual(['Slot', 'Library plan', 'Route', 'Aspect', 'Sent', 'Next run', 'Open']);
+    const row = (label: string) =>
+      within(table).getByRole('rowheader', { name: label }).closest('tr')!;
+    // A linked slot shows the plan's library name, and why it is older, in visible text.
+    expect(within(row('Slot 1')).getByText('Erebus opener')).toBeTruthy();
+    expect(await within(row('Slot 1')).findByText('Plan edited since it was sent')).toBeTruthy();
+    expect(within(row('Slot 1')).getByText('Plays next')).toBeTruthy();
+    expect(within(row('Slot 1')).getByText('Staff · Melinoë')).toBeTruthy();
+    expect(within(row('Slot 2')).getByText('Their run ·')).toBeTruthy();
+    expect(within(row('Slot 2')).getByText('Not in library')).toBeTruthy();
+    expect(within(row('Slot 2')).queryByRole('button', { name: /^Open/ })).toBeNull();
+    expect(
+      within(row('Slot 3')).getByText('Outdated for this module · send again to play'),
+    ).toBeTruthy();
+    expect(within(row('Slot 3')).getByRole('button', { name: 'Play Slot 3 next' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(within(row('Slot 4')).getByText('Empty')).toBeTruthy();
+    // Home never sends.
+    expect(within(table).queryByRole('button', { name: /Send|Replace/ })).toBeNull();
+
+    game.host.status.mockResolvedValue(slots(2));
+    await user.click(within(row('Slot 2')).getByRole('button', { name: 'Play Slot 2 next' }));
     expect(game.host.setActiveSlot).toHaveBeenCalledWith(2);
-    await waitFor(() => expect(choice.getAttribute('aria-busy')).toBe('true'));
-    expect(choice.value).toBe('1');
-    await user.selectOptions(choice, '5');
-    expect(game.host.setActiveSlot).toHaveBeenCalledTimes(1);
-    game.host.status.mockResolvedValue(withActive({ state: 'present', slot: 2 }));
-    finish?.();
-    await waitFor(() => expect(choice.value).toBe('2'));
-    expect(within(choice).getAllByRole('option')).toHaveLength(2);
+    expect(await within(row('Slot 2')).findByText('Plays next')).toBeTruthy();
 
     game.host.setActiveSlot.mockResolvedValueOnce({
       status: 'nativeWrite',
       message: 'could not replace active slot file.',
       blockers: [],
     });
-    await waitFor(() => expect(choice.getAttribute('aria-busy')).toBeNull());
-    await user.selectOptions(choice, '5');
+    await user.click(within(row('Slot 1')).getByRole('button', { name: 'Play Slot 1 next' }));
     expect(
       await within(dialog).findByText('Not made active: could not replace active slot file.'),
     ).toBeTruthy();
-    expect(choice.value).toBe('2');
-  });
 
-  it('keeps the choice while an update is pending and disables it without readable slots', async () => {
-    const game = createFakeGameModuleHost(
-      gameModuleStatus({
-        publicationBlockers: [{ code: 'moduleMismatch', found: '0.0.9', required: '0.1.0' }],
-        inspection: {
-          module: { matchesBundled: false, version: '0.0.9' },
-          install: { action: 'update' },
-          planSlots: planSlots(planSlot(2, { state: 'present', routeKey: 'Underworld' })),
-          activeSlot: { state: 'present', slot: 2 },
-        },
-      }),
+    await user.click(within(row('Slot 1')).getByRole('button', { name: 'Open Erebus opener' }));
+    await waitFor(() =>
+      expect(application.store.getState().librarySession.view).toEqual({ kind: 'editor' }),
     );
-    const { dialog } = await openGame(game.host);
-    const choice = within(dialog).getByRole<HTMLSelectElement>('combobox', {
-      name: 'Active plan',
-    });
-    await waitFor(() => expect(choice.value).toBe('2'));
-    expect(choice.disabled).toBe(false);
-    expect(within(dialog).queryByRole('heading', { name: 'Plans in game' })).toBeNull();
-    cleanup();
-
-    const gone = createFakeGameModuleHost(
-      gameModuleStatus({
-        inspection: null,
-        targetProblem: 'The folder is gone.',
-        publicationBlockers: [{ code: 'targetUnavailable', found: null, required: null }],
-      }),
+    expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Plan name' }).value).toBe(
+      'Erebus opener',
     );
-    const second = await openGame(gone.host);
-    const disabled = within(second.dialog).getByRole<HTMLSelectElement>('combobox', {
-      name: 'Active plan',
-    });
-    await waitFor(() => expect(disabled.disabled).toBe(true));
-    expect(disabled.getAttribute('title')).toBeNull();
   });
 
-  it('moves the active plan off an active event and shows why outdated plans are not offered', async () => {
-    const plan = (slot: GamePlanSlotNumber) =>
-      planSlot(slot, {
-        state: 'present',
-        routeKey: 'Underworld',
-        biomeKeys: ['F'],
-        weaponKey: 'WeaponStaffSwing',
-        aspectKey: 'BaseStaffAspect',
-      });
-    const withActive = (slot: 0 | GamePlanSlotNumber) =>
-      gameModuleStatus({
-        inspection: {
-          planSlots: planSlots(plan(1), plan(2), plan(3), { ...plan(4), state: 'stale' }),
-          eventSlot: eventSlot({
-            state: 'present',
-            routeKey: 'Surface',
-            event: { id: 'e', title: 'Week 42', endsAt: '2026-10-19T00:00:00Z' },
-          }),
-          activeSlot: { state: 'present', slot },
-        },
-      });
-    const game = createFakeGameModuleHost(withActive(0));
-    const { dialog, user } = await openGame(game.host, undefined, {
-      communityEventHost: createFakeCommunityEventHost(),
-      devBuild: false,
-    });
-    const choice = within(dialog).getByRole<HTMLSelectElement>('combobox', {
-      name: 'Active plan',
-    });
-    await waitFor(() => expect(choice.value).toBe('0'));
-    const stale = within(choice).getByRole<HTMLOptionElement>('option', {
-      name: 'Slot 4 (outdated)',
-    });
-    expect(stale.disabled).toBe(true);
-    expect(
-      within(choice)
-        .getAllByRole<HTMLOptionElement>('option')
-        .filter((option) => !option.disabled)
-        .map((option) => option.value),
-    ).toEqual(['0', '1', '2', '3']);
-    game.host.status.mockResolvedValue(withActive(2));
-    await user.selectOptions(choice, '2');
-    expect(game.host.setActiveSlot).toHaveBeenCalledWith(2);
-    await waitFor(() => expect(choice.value).toBe('2'));
-  });
-
-  it('shows the event slot read-only in the table and offers it for the next run', async () => {
-    const withEvent = (activeSlot: GameActiveSlot) =>
+  it('shows the event slot with its title and offers it for the next run', async () => {
+    const withEvent = (active: 0 | 3) =>
       gameModuleStatus({
         inspection: {
           eventSlot: eventSlot({
@@ -671,35 +509,20 @@ describe('Game panel', () => {
               endsAt: '2026-10-19T00:00:00Z',
             },
           }),
-          activeSlot,
+          activeSlot: { state: 'present', slot: active },
         },
       });
-    const game = createFakeGameModuleHost(withEvent({ state: 'present', slot: 3 }));
-    const { dialog, user } = await openGame(
-      game.host,
-      (application) => {
-        application.store.dispatch(authoredProjectReplaced(createCompleteFGProject()));
-      },
-      { devBuild: false },
-    );
-    const table = within(dialog).getByRole('table', { name: 'Plans in game' });
+    const game = createFakeGameModuleHost(withEvent(3));
+    const { dialog, user } = await openGame(game.host, undefined, { devBuild: false });
+    const table = within(dialog).getByRole('table', { name: 'Slots in game' });
     const row = (await within(table).findByRole('rowheader', { name: 'Event' })).closest('tr')!;
     expect(within(row).getByText('Week 42: Staff sprint')).toBeTruthy();
-    expect(within(row).getByText(/^Ends /)).toBeTruthy();
-    expect(within(row).queryByRole('button')).toBeNull();
-    expect(within(table).getAllByRole('button', { name: /\(slot \d+\)$/ })).toHaveLength(12);
+    expect(within(row).getByText('· community event')).toBeTruthy();
     expect(within(dialog).queryByRole('button', { name: 'Import event folder…' })).toBeNull();
-
-    const choice = within(dialog).getByRole<HTMLSelectElement>('combobox', {
-      name: 'Active plan',
-    });
-    expect(
-      within(choice).getByRole('option', { name: /^Event: Week 42: Staff sprint \(/ }),
-    ).toBeTruthy();
-    game.host.status.mockResolvedValue(withEvent({ state: 'present', slot: 0 }));
-    await user.selectOptions(choice, '0');
+    game.host.status.mockResolvedValue(withEvent(0));
+    await user.click(within(row).getByRole('button', { name: 'Play Event next' }));
     expect(game.host.setActiveSlot).toHaveBeenCalledWith(0);
-    await waitFor(() => expect(choice.value).toBe('0'));
+    expect(await within(row).findByText('Plays next')).toBeTruthy();
   });
 
   it('syncs the event slot on opening and runs the development event actions', async () => {
@@ -743,41 +566,6 @@ describe('Game panel', () => {
     expect(within(dialog).queryByRole('button', { name: 'Import event folder…' })).toBeNull();
   });
 
-  it('moves the next run with a send and reports a send it could not activate', async () => {
-    const game = createFakeGameModuleHost();
-    const { dialog, user } = await openGame(game.host, (application) => {
-      application.store.dispatch(authoredProjectReplaced(named('Erebus opener')));
-    });
-    const choice = within(dialog).getByRole<HTMLSelectElement>('combobox', {
-      name: 'Active plan',
-    });
-    const sentTo = (slot: GamePlanSlotNumber) =>
-      gameModuleStatus({
-        inspection: {
-          planSlots: planSlots(planSlot(slot, { state: 'present', biomeKeys: ['F'] })),
-          activeSlot: { state: 'present', slot },
-        },
-      });
-    game.host.status.mockResolvedValue(sentTo(2));
-    await user.click(await within(dialog).findByRole('button', { name: 'Send here (slot 2)' }));
-    await waitFor(() => expect(choice.value).toBe('2'));
-    expect(within(dialog).queryByRole('group', { name: 'Last send' })).toBeNull();
-
-    game.host.publish.mockResolvedValueOnce({
-      status: 'published',
-      message: 'Published to Slot 4, but it was not made active.',
-      blockers: [],
-      activationProblem: 'could not replace active slot file.',
-    });
-    await user.click(within(dialog).getByRole('button', { name: 'Send here (slot 4)' }));
-    expect(await within(dialog).findByText('Published to game, Slot 4.')).toBeTruthy();
-    const notice = within(dialog).getByRole('group', { name: 'Last send' });
-    expect(notice.textContent).toMatch(
-      /^!Sent to slot 4 at .+, but it isn’t active: could not replace active slot file\.$/,
-    );
-    expect(choice.value).toBe('2');
-  });
-
   it('rebuilds outdated slots from their sources and reports each outcome', async () => {
     const stale = {
       state: 'stale',
@@ -814,8 +602,9 @@ describe('Game panel', () => {
     );
     const { dialog, user } = await openGame(game.host);
 
-    expect(within(dialog).getByText('Outdated — send again')).toBeTruthy();
-    await user.click(await within(dialog).findByRole('button', { name: 'Rebuild slots' }));
+    expect(within(dialog).getByText('Outdated for this module · send again to play')).toBeTruthy();
+    expect(within(dialog).getByText('2 slots need a rebuild for module 0.1.0.')).toBeTruthy();
+    await user.click(await within(dialog).findByRole('button', { name: 'Rebuild outdated slots' }));
 
     expect(
       await within(dialog).findByText('Rebuilt 1 slot · couldn’t rebuild 1 slot'),
@@ -827,10 +616,9 @@ describe('Game panel', () => {
 
   it('explains that game management needs the desktop application', async () => {
     const { user } = renderPlannerForInteraction({ startWithProject: false });
-    await user.click(screen.getByRole('button', { name: 'Game' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Game' });
-    expect(within(dialog).getByText(/available in the desktop application/)).toBeTruthy();
-    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
-    expect(screen.queryByRole('dialog', { name: 'Settings' })).toBeNull();
+    const home = screen.getByRole('navigation', { name: 'Home' });
+    await user.click(within(home).getByRole('button', { name: 'Game' }));
+    const page = screen.getByRole('region', { name: 'Hades II' });
+    expect(within(page).getByText(/available in the desktop application/)).toBeTruthy();
   });
 });

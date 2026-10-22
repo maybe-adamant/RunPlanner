@@ -9,6 +9,7 @@
 @import './styles/editor-structure.css';
 @import './styles/room-workbenches.css';
 @import './styles/shell-meta.css';
+@import './styles/app-home.css';
 @import './styles/responsive.css';
 @import './styles/finding-overrides.css';
 @import './room-maps/room-maps.css';

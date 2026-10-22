@@ -14,11 +14,22 @@ export type ProjectLibraryEntryContent =
   | { readonly status: 'summarized'; readonly summary: ProjectLibrarySummary }
   | { readonly status: 'unreadable'; readonly message: string };
 
-/** One stored plan. Its key addresses it in the library and changes when a rename refiles it. */
+/**
+ * One stored plan. Its key addresses it in the library and changes when a rename or move
+ * refiles it.
+ */
 export interface ProjectLibraryEntry {
   readonly key: string;
+  /** The folder holding it, a `/`-separated path; `""` is the top level. */
+  readonly folder: string;
   readonly modifiedMs: number;
   readonly content: ProjectLibraryEntryContent;
+}
+
+/** Every stored plan and every folder, nested folders as `/`-separated paths. */
+export interface ProjectLibraryListing {
+  readonly folders: readonly string[];
+  readonly entries: readonly ProjectLibraryEntry[];
 }
 
 /** A plan file from outside the library, by its own file name. */
@@ -29,14 +40,11 @@ export interface OutsideProjectFile {
 
 /** What the planner remembers about the library between launches. */
 export interface LibrarySession {
-  /** The plan open when the planner last closed, by key and by identity should its key move. */
-  readonly lastOpened: { readonly key: string; readonly projectId: string } | null;
   /** The file open before the library was offered once, and imported or declined. */
   readonly previousFileOffered: boolean;
 }
 
 export const EMPTY_LIBRARY_SESSION: LibrarySession = Object.freeze({
-  lastOpened: null,
   previousFileOffered: false,
 });
 
@@ -47,9 +55,18 @@ export const EMPTY_LIBRARY_SESSION: LibrarySession = Object.freeze({
 export interface ProjectLibraryAdapter {
   /** Whether the library is a folder the system file manager can show. */
   readonly supportsReveal: boolean;
-  list(): Promise<readonly ProjectLibraryEntry[]>;
+  list(): Promise<ProjectLibraryListing>;
   read(key: string): Promise<string>;
-  create(json: string): Promise<ProjectLibraryEntry>;
+  /** Files a new plan in `folder`, which is created when missing. */
+  create(json: string, folder: string): Promise<ProjectLibraryEntry>;
+  /** Moves a plan to another folder under the same file name. */
+  movePlan(key: string, folder: string): Promise<ProjectLibraryEntry>;
+  /** Creates a folder with any missing parents; an existing one is kept. */
+  createFolder(folder: string): Promise<void>;
+  /** Renames or moves a folder with everything in it. */
+  moveFolder(from: string, to: string): Promise<void>;
+  /** Moves a folder with everything in it to the system recycle bin where there is one. */
+  deleteFolder(folder: string): Promise<void>;
   /** Replaces the plan; the returned entry carries its key after any rename. */
   write(key: string, json: string): Promise<ProjectLibraryEntry>;
   /** Moves the plan to the system recycle bin where there is one, else removes it. */

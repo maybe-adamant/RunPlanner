@@ -147,12 +147,6 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       : createLibrarySaver({
           adapter: options.projectLibrary,
           delayMs: options.saveDelayMs ?? 400,
-          onRefiled: (key, project) =>
-            void libraryOperations
-              .rememberOpened({ key, projectId: project.projectId })
-              .catch(() => {
-                // The next open or rename records the plan again.
-              }),
           scheduler: options.saveScheduler ?? {
             schedule: (delayMs, task) => {
               const handle = globalThis.setTimeout(task, delayMs);
