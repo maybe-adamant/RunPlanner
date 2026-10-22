@@ -399,18 +399,19 @@ export function LibraryScreen({
             {view?.folders.map((row) => (
               <tr data-kind="folder" key={`folder:${row.path}`}>
                 <td colSpan={4}>
-                  <button
-                    className="library-folder-name"
-                    onClick={() => openFolder(row.path)}
-                    type="button"
-                  >
-                    <FolderIcon />
-                    {row.name}
-                  </button>
-                  <span className="home-muted library-folder-count">
-                    {' '}
-                    · {row.planCount} {row.planCount === 1 ? 'plan' : 'plans'}
-                  </span>
+                  <div className="library-folder-line">
+                    <button
+                      className="library-folder-name"
+                      onClick={() => openFolder(row.path)}
+                      type="button"
+                    >
+                      <FolderIcon />
+                      {row.name}
+                    </button>
+                    <span className="home-muted library-folder-count">
+                      · {row.planCount} {row.planCount === 1 ? 'plan' : 'plans'}
+                    </span>
+                  </div>
                 </td>
                 <td>
                   <div className="library-row-actions">
