@@ -1016,3 +1016,152 @@
   color: var(--muted);
   cursor: default;
 }
+
+/* Catalog */
+.catalog-note {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.catalog-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 0 12px;
+  border-bottom: 1px solid #2c2d35;
+}
+
+.catalog-tab {
+  margin-bottom: -1px;
+  padding: 10px 12px 9px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.catalog-tab:hover {
+  color: var(--text);
+}
+
+.catalog-tab[aria-current='page'] {
+  border-bottom-color: var(--selection-accent);
+  color: var(--text);
+}
+
+.catalog-tab-count {
+  margin-left: 6px;
+  color: #77747e;
+  font-variant-numeric: tabular-nums;
+}
+
+.catalog-select {
+  width: auto;
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 1px solid #3a3b45;
+  border-radius: 8px;
+  background: #191a20;
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.catalog-filters {
+  padding-bottom: 14px;
+}
+
+.catalog-filters-spacer {
+  flex: 1;
+}
+
+.catalog-table th:first-child {
+  width: 42%;
+}
+
+.catalog-description {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.catalog-biomes {
+  margin-top: 3px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.catalog-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.catalog-tags li {
+  padding: 1px 7px;
+  border: 1px solid #33343d;
+  border-radius: 999px;
+  background: #26272f;
+  color: #c9c3d6;
+  font-size: 0.74rem;
+}
+
+.catalog-author {
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.catalog-in-library {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #9fd6a8;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.catalog-unsupported {
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.catalog-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+  padding: 18px 16px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.catalog-status p {
+  margin: 0;
+}
+
+.catalog-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@container app-viewport (max-width: 760px) {
+  .catalog-table th:nth-child(2),
+  .catalog-table td:nth-child(2) {
+    display: table-cell;
+  }
+
+  .catalog-table th:nth-child(3),
+  .catalog-table td:nth-child(3),
+  .catalog-table th:nth-child(4),
+  .catalog-table td:nth-child(4) {
+    display: none;
+  }
+}

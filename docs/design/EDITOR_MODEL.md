@@ -357,8 +357,8 @@ pointer gestures and floating overlays account for screen versus layout coordina
 
 ### App home
 
-The app opens on Home with no plan open. Home's header has the Library, Game
-and Settings tabs and About (version, build, schema, catalog, the update check,
+The app opens on Home with no plan open. Home's header has the Library,
+Catalog (desktop only), Game and Settings tabs and About (version, build, schema, catalog, the update check,
 a bug report and the keyboard shortcuts); the Game tab says "· update" or
 "· event" in visible text while the game module has an update or a community
 event is active. Which Home tab shows, or whether the editor shows, and the
@@ -370,8 +370,9 @@ Library. Going Home keeps the open plan open. Settings holds the app scale.
 
 Every open plan is a library item, and every authored edit is saved: there is
 no Save, no unsaved state and no recovery copy. The Library offers New plan (a
-route chooser), Import…, New folder and Open folder, and per plan Duplicate,
-Move to…, Delete and Open; the editor offers Discard changes. `ProjectOperations`
+route chooser), Import…, New folder, Open folder and Browse catalog (to the
+Catalog tab), and per plan Duplicate, Move to…, Delete and Open; the Catalog
+offers Add to library; the editor offers Discard changes. `ProjectOperations`
 owns them:
 
 - **New plan** creates the route's project, files it in the folder shown and
@@ -389,6 +390,10 @@ owns them:
   through one undoable history step.
 - An event's project opens the same way as an imported copy that always takes
   its own identity.
+- **Add to library** files a catalog entry's verified plan at the library's
+  top level as a copy with its own identity, renamed to the entry's title
+  (template plans predate plan names), without opening it, and records the
+  entry's id with the copy's `projectId` in the library session.
 
 Opening any plan first writes the open one's pending edits; if that write
 fails, the open plan stays and the failure is reported. The opened plan starts
@@ -408,6 +413,26 @@ older with the reason otherwise ("Plan edited since it was sent", or outdated
 for the module). `ProjectOperations.inspectLibraryGamePlans` compiles only the
 plans a slot holds, cached by key and modified time, and the open plan as it
 is now.
+
+### Catalog screen
+
+`CatalogFeedController` holds the host's verified catalog index (loading,
+ready, offline from the cached index, could not load, or off without a catalog
+key); the start-up read and showing the Catalog refresh it, the latter
+retrying a failed fetch. `projectCatalogView` turns it into the screen:
+category tabs with their entry counts (All first), the categories and their
+labels coming from the index in its order and a category without entries
+having no tab, then
+the shown category's entries searched by title, description, author and tags,
+filtered by a route chip (Any route, then each route in the route chooser's
+names) and a tag, and sorted by name or route. Each row shows the title and
+description, route and biomes ("4 biomes · to Tartarus"), tags and author,
+and offers Add to library, "In library" with Open, or "Needs a newer planner"
+for an entry saved in a schema the loader does not open. An entry is in the
+library while a library plan holds the `projectId` recorded when it was added,
+so renaming or moving the copy keeps the link and deleting it offers the entry
+again; a copy made by Duplicate is a plan of its own. A category change clears
+the tag filter.
 
 ### Game screen and the editor's send control
 
@@ -449,7 +474,7 @@ authored state nor Redux state and never enters history.
 opaque key in a folder (a `/`-separated path, `""` at the top), lists every
 plan and folder, creates, renames, moves and deletes folders, moves a plan
 between folders, and keeps the library session (whether the pre-library file
-was offered). The desktop host keeps plans as plain `.runplanner.json` files in
+was offered, and the copy each catalog entry was added as). The desktop host keeps plans as plain `.runplanner.json` files in
 `RunPlanner/Projects/` under the platform documents folder and its subfolders
 of any depth, created on demand; the key is the file's path inside the library,
 its name `<plan name> (<8 hex digits of the projectId's SHA-256>)`, made

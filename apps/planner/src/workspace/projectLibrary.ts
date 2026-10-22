@@ -1,4 +1,6 @@
 import {
+  applyProjectCommand,
+  createProjectAddress,
   createProjectHistory,
   encodeProjectDocument,
   reidentifyProjectHistory,
@@ -126,6 +128,12 @@ export interface ImportReport {
   readonly failed: readonly { readonly fileName: string; readonly message: string }[];
 }
 
+export interface ImportFileOptions {
+  readonly newIdentity?: boolean;
+  readonly folder?: string;
+  readonly name?: string;
+}
+
 export interface ProjectLibraryOperations {
   /** Whether the library is a folder the system file manager can show. */
   readonly revealable: boolean;
@@ -141,11 +149,11 @@ export interface ProjectLibraryOperations {
   create(project: ProjectDocument, folder: string): Promise<FiledPlan>;
   /** Asks for files and files a copy of each in a folder; empty when the user cancels. */
   importChosenFiles(folder: string): Promise<ImportReport>;
-  /** Files a copy; a new identity when asked or when the library holds the file's. */
-  importFile(
-    file: OutsideProjectFile,
-    options?: { readonly newIdentity?: boolean; readonly folder?: string },
-  ): Promise<FiledPlan>;
+  /**
+   * Files a copy; a new identity when asked or when the library holds the file's, and renamed
+   * when `name` is given.
+   */
+  importFile(file: OutsideProjectFile, options?: ImportFileOptions): Promise<FiledPlan>;
   deletePlan(key: string): Promise<DeletedPlan>;
   undoDelete(deleted: DeletedPlan): Promise<FiledPlan>;
   /** Moves a plan to another folder; resolves its new key. */
@@ -157,6 +165,9 @@ export interface ProjectLibraryOperations {
   /** The file open before the library, until it is offered once or the library holds it. */
   previousFileOffer(): Promise<OutsideProjectFile | null>;
   settlePreviousFileOffer(): Promise<void>;
+  /** The `projectId` of the copy each catalog entry was added as, by entry id. */
+  catalogCopies(): Promise<Readonly<Record<string, string>>>;
+  recordCatalogCopy(entryId: string, projectId: string): Promise<void>;
 }
 
 interface CreateProjectLibraryOperationsOptions {
@@ -292,9 +303,18 @@ export function createProjectLibraryOperations(
     filed(await adapter.create(encodeProjectDocument(project), folder), project);
   const importFile = async (
     file: OutsideProjectFile,
-    importOptions: { readonly newIdentity?: boolean; readonly folder?: string } = {},
+    importOptions: ImportFileOptions = {},
   ): Promise<FiledPlan> => {
-    const { project, migrationProvenance } = load(file.json, file.fileName);
+    const loaded = load(file.json, file.fileName);
+    const { migrationProvenance } = loaded;
+    const project =
+      importOptions.name === undefined
+        ? loaded.project
+        : applyProjectCommand(loaded.project, catalog, {
+            kind: 'RenameProject',
+            project: createProjectAddress(),
+            name: importOptions.name,
+          });
     const fresh =
       importOptions.newIdentity === true || (await heldIdentities()).has(project.projectId);
     const copy = fresh ? reidentified(project) : project;
@@ -410,5 +430,12 @@ export function createProjectLibraryOperations(
       return typeof projectId === 'string' && (await heldIdentities()).has(projectId) ? null : file;
     },
     settlePreviousFileOffer: () => updateSession({ previousFileOffered: true }),
+    catalogCopies: async () => (await currentSession()).catalogCopies,
+    async recordCatalogCopy(entryId: string, projectId: string): Promise<void> {
+      const { catalogCopies } = await currentSession();
+      await updateSession({
+        catalogCopies: Object.freeze({ ...catalogCopies, [entryId]: projectId }),
+      });
+    },
   });
 }

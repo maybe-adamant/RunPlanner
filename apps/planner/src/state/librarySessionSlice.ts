@@ -3,7 +3,7 @@ import type { ProjectDocument } from '@run-planner/engine/authored-project';
 
 import { authoredProjectClosed, authoredProjectReplaced } from './projectWorkspaceSlice';
 
-export type HomeTab = 'library' | 'game' | 'settings';
+export type HomeTab = 'library' | 'catalog' | 'game' | 'settings';
 
 /** Which screen the app shows: a Home tab, or the open plan's editor. */
 export type AppView =

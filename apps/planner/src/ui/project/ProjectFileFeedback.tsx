@@ -6,6 +6,7 @@ import type {
 } from '@planner/workspace/projectOperations';
 
 const failureLabels: Record<ProjectOperation, string> = {
+  addCatalog: 'Couldn’t add plan',
   deleteFolder: 'Couldn’t delete folder',
   folder: 'Couldn’t change folder',
   move: 'Couldn’t move plan',

@@ -12,11 +12,13 @@ import { projectGamePanel } from '@planner/projections/gamePanel';
 import { viewChanged, type HomeTab } from '@planner/state/librarySessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import type { BugReportOperations } from '@planner/workspace/bugReport';
+import type { CatalogFeedController } from '@planner/workspace/catalogFeed';
 import type { CommunityEventController } from '@planner/workspace/communityEvents';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import type { SlotRebuildController } from '@planner/workspace/slotRebuild';
 import { hintProps } from '@planner/ui/controls/hint';
 import { BugReportDialog } from '../shell/BugReportDialog';
+import { CatalogScreen } from './CatalogScreen';
 import { ReleaseUpdateCheck } from '../shell/ReleaseUpdates';
 import type { AppScale } from '../shell/useAppScale';
 import { GameScreen } from './GameScreen';
@@ -33,6 +35,7 @@ const noSubscription = () => () => undefined;
 
 const TABS: readonly { readonly tab: HomeTab; readonly label: string }[] = [
   { tab: 'library', label: 'Library' },
+  { tab: 'catalog', label: 'Catalog' },
   { tab: 'game', label: 'Game' },
   { tab: 'settings', label: 'Settings' },
 ];
@@ -158,6 +161,7 @@ export function HomeScreen({
   communityEvents,
   gameStatus,
   operations,
+  planCatalog,
   releaseUpdates,
   routes,
   scale,
@@ -171,6 +175,8 @@ export function HomeScreen({
   readonly communityEvents: CommunityEventController | undefined;
   readonly gameStatus: GameStatusController | undefined;
   readonly operations: ProjectOperations;
+  /** The plan catalog; absent where there is no host to read it, as in the browser. */
+  readonly planCatalog: CatalogFeedController | undefined;
   readonly releaseUpdates: ReleaseUpdateController | undefined;
   readonly routes: readonly RouteEditorNavigation[];
   readonly scale: AppScale;
@@ -181,7 +187,7 @@ export function HomeScreen({
   useGameStatusRefresh(gameStatus);
   const snapshot = useGameStatusSnapshot(gameStatus);
   const index = useLibrarySlotLinks(operations, gameStatus);
-  useLibraryRescan(index.refresh, tab === 'library');
+  useLibraryRescan(index.refresh, tab === 'library' || tab === 'catalog');
   const eventActive = useSyncExternalStore(
     communityEvents?.subscribe ?? noSubscription,
     () => communityEvents?.getSnapshot().kind === 'active',
@@ -194,26 +200,28 @@ export function HomeScreen({
       <header className="app-header home-header">
         <h1>Run Planner</h1>
         <nav aria-label="Home" className="home-nav">
-          {TABS.map((entry) => (
-            <button
-              aria-current={entry.tab === tab ? 'page' : undefined}
-              className="home-nav-tab"
-              key={entry.tab}
-              onClick={() => dispatch(viewChanged({ kind: 'home', tab: entry.tab }))}
-              type="button"
-            >
-              {entry.label}
-              {entry.tab === 'game' && moduleState === 'updateAvailable' ? (
-                <span className="home-nav-note"> · update</span>
-              ) : null}
-              {entry.tab === 'game' && eventActive ? (
-                <span className="home-nav-note" data-tone="event">
-                  {' '}
-                  · event
-                </span>
-              ) : null}
-            </button>
-          ))}
+          {TABS.filter((entry) => entry.tab !== 'catalog' || planCatalog !== undefined).map(
+            (entry) => (
+              <button
+                aria-current={entry.tab === tab ? 'page' : undefined}
+                className="home-nav-tab"
+                key={entry.tab}
+                onClick={() => dispatch(viewChanged({ kind: 'home', tab: entry.tab }))}
+                type="button"
+              >
+                {entry.label}
+                {entry.tab === 'game' && moduleState === 'updateAvailable' ? (
+                  <span className="home-nav-note"> · update</span>
+                ) : null}
+                {entry.tab === 'game' && eventActive ? (
+                  <span className="home-nav-note" data-tone="event">
+                    {' '}
+                    · event
+                  </span>
+                ) : null}
+              </button>
+            ),
+          )}
         </nav>
         <span className="home-header-spacer" />
         <div className="home-header-about">
@@ -226,8 +234,22 @@ export function HomeScreen({
         </div>
       </header>
       <div className="home-body">
-        {tab === 'library' ? (
-          <LibraryScreen catalog={catalog} index={index} operations={operations} routes={routes} />
+        {tab === 'library' || (tab === 'catalog' && planCatalog === undefined) ? (
+          <LibraryScreen
+            catalog={catalog}
+            catalogShown={planCatalog !== undefined}
+            index={index}
+            operations={operations}
+            routes={routes}
+          />
+        ) : tab === 'catalog' ? (
+          <CatalogScreen
+            catalog={catalog}
+            controller={planCatalog!}
+            index={index}
+            operations={operations}
+            routes={routes}
+          />
         ) : tab === 'game' ? (
           <GameScreen
             catalog={catalog}

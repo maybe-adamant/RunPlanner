@@ -112,7 +112,7 @@ export function describeProjectLibraryContract(
     it('remembers the library session', async () => {
       const library = createAdapter();
       expect(await library.readSession()).toEqual(EMPTY_LIBRARY_SESSION);
-      const session = { previousFileOffered: true };
+      const session = { previousFileOffered: true, catalogCopies: { 'sub-2m': 'run-plan-1' } };
       await library.writeSession(session);
       expect(await createAdapter().readSession()).toEqual(session);
     });

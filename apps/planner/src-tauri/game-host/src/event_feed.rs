@@ -1,16 +1,13 @@
-use base64::Engine;
-use minisign_verify::{PublicKey, Signature};
 use serde::Deserialize;
 use serde_json::value::RawValue;
-use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
-use std::fs;
-use std::io::Read;
 use std::path::Path;
 
-use crate::atomic_file;
 use crate::community_event::{
     decode_event, valid_event_id, CommunityEvent, Instant, MAX_EVENT_BYTES,
+};
+use crate::signed_feed::{
+    read_bounded, sha256_hex, FeedSession, FeedSource, FeedState, SignedFeed, Verified,
 };
 
 // The repository whose `events` release publishes the feed; renaming it is this one edit.
@@ -46,12 +43,21 @@ pub const EVENT_FEED_FILE_NAME: &str = "events.json";
 pub const EVENT_FEED_FORMAT: &str = "run-planner-event-feed";
 pub const EVENT_FEED_FORMAT_VERSION: u8 = 2;
 pub const MAX_FEED_BYTES: usize = 16 * 1_048_576;
-pub const MAX_FEED_SIGNATURE_BYTES: usize = 4096;
 pub const MAX_FEED_EVENTS: usize = 32;
 pub const MAX_EVENT_PROJECT_BYTES: usize = 8 * 1_048_576;
-/// The last verified feed with its signature, kept in application data for offline starts:
-/// the signature file's line, a line break, then the feed bytes, written as one file.
+/// The last verified feed, kept in application data for offline starts.
 pub const CACHED_FEED_FILE: &str = "events.cache";
+
+/// The community event feed, signed with the event key.
+pub const EVENT_FEED: SignedFeed = SignedFeed {
+    label: "event feed",
+    file_name: EVENT_FEED_FILE_NAME,
+    url: EVENT_FEED_URL,
+    signature_url: EVENT_FEED_SIGNATURE_URL,
+    max_bytes: MAX_FEED_BYTES,
+    cache_directory: "event-feed",
+    cache_file: CACHED_FEED_FILE,
+};
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
@@ -70,65 +76,7 @@ pub struct DecodedFeed {
 }
 
 /// A decoded feed with the time its signature's trusted comment records.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct VerifiedFeed {
-    pub feed: DecodedFeed,
-    /// Seconds since the Unix epoch.
-    pub signed_at: u64,
-}
-
-fn base64_text(encoded: &[u8], artifact: &str) -> Result<String, String> {
-    let trimmed = std::str::from_utf8(encoded)
-        .map_err(|_| format!("The {artifact} is not text."))?
-        .trim();
-    let decoded = base64::engine::general_purpose::STANDARD
-        .decode(trimmed)
-        .map_err(|_| format!("The {artifact} is not base64."))?;
-    String::from_utf8(decoded).map_err(|_| format!("The {artifact} is not text."))
-}
-
-/// The event feed public key as checked in, refused while it is still the placeholder.
-pub fn event_public_key(checked_in: &str) -> Result<&str, String> {
-    let key = checked_in.trim();
-    if key.is_empty() || key.starts_with("PLACEHOLDER") {
-        return Err(
-            "No event feed public key is installed, so community events are off.".to_owned(),
-        );
-    }
-    Ok(key)
-}
-
-/// Verifies `data` against a signature file as `tauri signer sign` writes it (base64 of a
-/// prehashed minisign signature), with the event public key in the same base64 form.
-/// The trusted comment, covered by the signature, must name `events.json`; its timestamp is
-/// returned.
-pub fn verify_signature(
-    data: &[u8],
-    signature_file: &[u8],
-    public_key: &str,
-) -> Result<u64, String> {
-    if signature_file.len() > MAX_FEED_SIGNATURE_BYTES {
-        return Err("The event feed signature is too large.".to_owned());
-    }
-    let key = PublicKey::decode(&base64_text(public_key.as_bytes(), "public key")?)
-        .map_err(|_| "The event feed public key is invalid.".to_owned())?;
-    let signature = Signature::decode(&base64_text(signature_file, "event feed signature")?)
-        .map_err(|_| "The event feed signature is invalid.".to_owned())?;
-    key.verify(data, &signature, false)
-        .map_err(|_| "The event feed signature does not match.".to_owned())?;
-    let comment = signature.trusted_comment();
-    let field = |name: &str| {
-        comment
-            .split('\t')
-            .find_map(|part| part.strip_prefix(name).map(str::to_owned))
-    };
-    if field("file:").as_deref() != Some(EVENT_FEED_FILE_NAME) {
-        return Err("The event feed signature is for another file.".to_owned());
-    }
-    field("timestamp:")
-        .and_then(|seconds| seconds.parse().ok())
-        .ok_or_else(|| "The event feed signature has no timestamp.".to_owned())
-}
+pub type VerifiedFeed = Verified<DecodedFeed>;
 
 /// The only project URL an event may name: its own file beside the feed.
 pub fn project_url_for(id: &str) -> String {
@@ -188,14 +136,12 @@ pub fn verify_feed(
     public_key: &str,
     not_before: Option<u64>,
 ) -> Result<VerifiedFeed, String> {
-    let signed_at = verify_signature(feed, signature, public_key)?;
-    if not_before.is_some_and(|earliest| signed_at < earliest) {
-        return Err("The event feed is older than the one already verified.".to_owned());
-    }
-    Ok(VerifiedFeed {
-        feed: decode_feed(feed)?,
-        signed_at,
-    })
+    EVENT_FEED.verify(feed, signature, public_key, not_before, decode_feed)
+}
+
+/// The cached feed, verified again, since application data is not trusted more than the network.
+pub fn read_cached_feed(directory: &Path, public_key: &str) -> Result<VerifiedFeed, String> {
+    EVENT_FEED.read_cached(directory, public_key, decode_feed)
 }
 
 fn window(event: &CommunityEvent) -> Option<(Instant, Instant)> {
@@ -239,72 +185,6 @@ impl ProjectSchemaRange {
     }
 }
 
-/// Keeps a verified feed and its signature together, in one atomically replaced file.
-pub fn cache_feed(directory: &Path, feed: &[u8], signature: &[u8]) -> Result<(), String> {
-    let line = std::str::from_utf8(signature)
-        .ok()
-        .map(str::trim)
-        .filter(|line| !line.contains('\n'))
-        .ok_or_else(|| "The event feed signature is not one line.".to_owned())?;
-    fs::create_dir_all(directory)
-        .map_err(|error| format!("could not create the event feed cache: {error}"))?;
-    let mut bytes = Vec::with_capacity(line.len() + 1 + feed.len());
-    bytes.extend_from_slice(line.as_bytes());
-    bytes.push(b'\n');
-    bytes.extend_from_slice(feed);
-    atomic_file::write(
-        &directory.join(CACHED_FEED_FILE),
-        &bytes,
-        "event feed cache",
-    )
-}
-
-fn read_bounded(path: &Path, limit: usize) -> Option<Vec<u8>> {
-    let metadata = fs::symlink_metadata(path).ok()?;
-    if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() > limit as u64 {
-        return None;
-    }
-    let mut bytes = Vec::new();
-    fs::File::open(path)
-        .and_then(|file| file.take(limit as u64 + 1).read_to_end(&mut bytes))
-        .ok()?;
-    (bytes.len() <= limit).then_some(bytes)
-}
-
-// The cached signature line and feed bytes, unverified.
-fn read_cached_parts(directory: &Path) -> Result<(Vec<u8>, usize), String> {
-    let bytes = read_bounded(
-        &directory.join(CACHED_FEED_FILE),
-        MAX_FEED_SIGNATURE_BYTES + 1 + MAX_FEED_BYTES,
-    )
-    .ok_or_else(|| "No cached event feed.".to_owned())?;
-    let split = bytes
-        .iter()
-        .position(|&byte| byte == b'\n')
-        .ok_or_else(|| "The cached event feed is malformed.".to_owned())?;
-    Ok((bytes, split))
-}
-
-/// The cached feed, verified again, since application data is not trusted more than the network.
-pub fn read_cached_feed(directory: &Path, public_key: &str) -> Result<VerifiedFeed, String> {
-    let (bytes, split) = read_cached_parts(directory)?;
-    verify_feed(&bytes[split + 1..], &bytes[..split], public_key, None)
-}
-
-/// When the cached feed was signed, once its signature verifies, even when it no longer
-/// decodes (an older format): a fetched feed must not predate it.
-pub fn cached_signed_at(directory: &Path, public_key: &str) -> Option<u64> {
-    let (bytes, split) = read_cached_parts(directory).ok()?;
-    verify_signature(&bytes[split + 1..], &bytes[..split], public_key).ok()
-}
-
-fn sha256_hex(bytes: &[u8]) -> String {
-    Sha256::digest(bytes)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
-}
-
 /// Checks a downloaded project file against its event's signed hash, as text.
 pub fn verify_project(event: &CommunityEvent, bytes: Vec<u8>) -> Result<String, String> {
     if sha256_hex(&bytes) != event.project_sha256 {
@@ -325,21 +205,6 @@ pub fn project_id_of(json: &str) -> Option<String> {
         .map(|identity| identity.project_id)
 }
 
-/// How long a successful feed read stands before the next background fetch.
-pub const FEED_REFRESH_INTERVAL: std::time::Duration = std::time::Duration::from_secs(10 * 60);
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum FeedSource {
-    /// No verified feed has been read.
-    None,
-    Network,
-    /// The last verified feed kept in application data.
-    Cache,
-    /// No event public key is installed, so there are no events.
-    Disabled,
-}
-
 /// A project file verified against its event's hash, held for the session.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct HeldProject {
@@ -350,93 +215,45 @@ struct HeldProject {
 
 /// The host's verified events for this session. The event slot is written only for the active
 /// event whose project this session verified, with the host's own event metadata.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EventSession {
-    feed: Option<DecodedFeed>,
-    signed_at: Option<u64>,
-    source: FeedSource,
-    checked_at: Option<std::time::Instant>,
-    last_failed: bool,
+    state: FeedState<DecodedFeed>,
     /// A development event, which takes the place of the feed's event.
     local: Option<CommunityEvent>,
     project: Option<HeldProject>,
 }
 
-impl Default for EventSession {
-    fn default() -> Self {
-        Self {
-            feed: None,
-            signed_at: None,
-            source: FeedSource::None,
-            checked_at: None,
-            last_failed: false,
-            local: None,
-            project: None,
-        }
-    }
-}
-
-impl EventSession {
-    /// Background reads wait out the interval; `retry_failed` retries at once after a failure.
-    pub fn needs_fetch(&self, now: std::time::Instant, retry_failed: bool) -> bool {
-        (retry_failed && self.last_failed)
-            || self
-                .checked_at
-                .map_or(true, |at| now.duration_since(at) >= FEED_REFRESH_INTERVAL)
+impl FeedSession<DecodedFeed> for EventSession {
+    fn feed_state(&self) -> &FeedState<DecodedFeed> {
+        &self.state
     }
 
-    /// The signing time a newly fetched feed must not predate.
-    pub fn signed_at(&self) -> Option<u64> {
-        self.signed_at
-    }
-
-    pub fn accept_fetched(&mut self, verified: VerifiedFeed, at: std::time::Instant) {
-        self.feed = Some(verified.feed);
-        self.signed_at = Some(verified.signed_at);
-        self.source = FeedSource::Network;
-        self.checked_at = Some(at);
-        self.last_failed = false;
-    }
-
-    /// A failed fetch keeps the feed already held, else falls back to the cached one.
-    pub fn fetch_failed(
-        &mut self,
-        cached: impl FnOnce() -> Option<VerifiedFeed>,
-        at: std::time::Instant,
-    ) {
-        if self.feed.is_none() {
-            if let Some(verified) = cached() {
-                self.feed = Some(verified.feed);
-                self.signed_at = Some(verified.signed_at);
-                self.source = FeedSource::Cache;
-            }
-        }
-        self.checked_at = Some(at);
-        self.last_failed = true;
+    fn feed_state_mut(&mut self) -> &mut FeedState<DecodedFeed> {
+        &mut self.state
     }
 
     /// Without an installed event key there are no events: the session holds an empty feed,
     /// so the event slot is cleared rather than kept.
-    pub fn disable(&mut self) {
-        self.feed = Some(DecodedFeed::default());
-        self.signed_at = None;
-        self.source = FeedSource::Disabled;
+    fn disable(&mut self) {
+        self.state.disable(DecodedFeed::default());
         self.local = None;
         self.project = None;
     }
+}
 
+impl EventSession {
     pub fn source(&self) -> FeedSource {
-        self.source
+        self.state.source()
     }
 
     /// Whether the session holds verified event data, so a missing event is known to be absent.
     pub fn has_verified_feed(&self) -> bool {
-        self.feed.is_some() || self.local.is_some()
+        self.state.feed().is_some() || self.local.is_some()
     }
 
     pub fn refused(&self) -> &[String] {
-        self.feed
-            .as_ref()
+        self.state
+            .feed()
             .map_or(&[], |feed| feed.refused.as_slice())
     }
 
@@ -453,8 +270,8 @@ impl EventSession {
     /// The development event when one is loaded, else the feed's active event at `now`.
     pub fn active(&self, now: Instant) -> Option<&CommunityEvent> {
         self.local.as_ref().or_else(|| {
-            self.feed
-                .as_ref()
+            self.state
+                .feed()
                 .and_then(|feed| select_active(&feed.events, now))
         })
     }
@@ -463,7 +280,12 @@ impl EventSession {
     pub fn named(&self, id: &str) -> Option<&CommunityEvent> {
         self.local
             .iter()
-            .chain(self.feed.iter().flat_map(|feed| feed.events.iter()))
+            .chain(
+                self.state
+                    .feed()
+                    .into_iter()
+                    .flat_map(|feed| feed.events.iter()),
+            )
             .find(|event| event.id == id)
     }
 
@@ -619,6 +441,8 @@ mod tests {
     use super::*;
     use crate::community_event::parse_instant;
     use crate::game_target::test_support::TemporaryDirectory;
+    use crate::signed_feed::{FEED_REFRESH_INTERVAL, MAX_FEED_SIGNATURE_BYTES};
+    use std::fs;
 
     // A real minisign key (the app updater's) that did not sign the test fixture.
     const OTHER_PUBLIC_KEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVEOTZDOEExM0I5OUYyN0UKUldSKzhwazdvY2lXN2MzMVNGR1pQQWFGOTV2V1l5dEg5Yis1dzRYTDk2VWFldFdweER3Z3huRjcK";
@@ -626,15 +450,16 @@ mod tests {
 
     #[test]
     fn the_placeholder_public_key_is_never_used() {
-        assert!(event_public_key(EVENT_PUBLIC_KEY_PLACEHOLDER).is_err());
-        assert!(event_public_key("  ").is_err());
+        assert!(EVENT_FEED.public_key(EVENT_PUBLIC_KEY_PLACEHOLDER).is_err());
+        assert!(EVENT_FEED.public_key("  ").is_err());
         assert_eq!(
-            event_public_key(TEST_PUBLIC_KEY),
+            EVENT_FEED.public_key(TEST_PUBLIC_KEY),
             Ok(TEST_PUBLIC_KEY.trim())
         );
         let shipped = include_str!("../../event-feed.pub");
         assert!(
-            shipped.trim() == EVENT_PUBLIC_KEY_PLACEHOLDER || event_public_key(shipped).is_ok(),
+            shipped.trim() == EVENT_PUBLIC_KEY_PLACEHOLDER
+                || EVENT_FEED.public_key(shipped).is_ok(),
             "event-feed.pub holds the placeholder or a key"
         );
         assert_eq!(
@@ -646,18 +471,20 @@ mod tests {
     #[test]
     fn a_feed_signed_by_the_key_for_events_json_verifies_and_anything_else_is_refused() {
         assert_eq!(
-            verify_signature(SIGNED_FEED, FEED_SIGNATURE, TEST_PUBLIC_KEY),
+            EVENT_FEED.verify_signature(SIGNED_FEED, FEED_SIGNATURE, TEST_PUBLIC_KEY),
             Ok(FEED_SIGNED_AT)
         );
         let mut tampered = SIGNED_FEED.to_vec();
         tampered[10] ^= 1;
-        assert!(verify_signature(&tampered, FEED_SIGNATURE, TEST_PUBLIC_KEY).is_err());
+        assert!(EVENT_FEED
+            .verify_signature(&tampered, FEED_SIGNATURE, TEST_PUBLIC_KEY)
+            .is_err());
         assert_eq!(
-            verify_signature(SIGNED_FEED, FEED_SIGNATURE, OTHER_PUBLIC_KEY),
+            EVENT_FEED.verify_signature(SIGNED_FEED, FEED_SIGNATURE, OTHER_PUBLIC_KEY),
             Err("The event feed signature does not match.".to_owned())
         );
         assert_eq!(
-            verify_signature(SIGNED_FEED, OTHER_FILE_SIGNATURE, TEST_PUBLIC_KEY),
+            EVENT_FEED.verify_signature(SIGNED_FEED, OTHER_FILE_SIGNATURE, TEST_PUBLIC_KEY),
             Err("The event feed signature is for another file.".to_owned())
         );
         for signature in [
@@ -665,7 +492,9 @@ mod tests {
             b"",
             &[b'A'; MAX_FEED_SIGNATURE_BYTES + 1],
         ] {
-            assert!(verify_signature(SIGNED_FEED, signature, TEST_PUBLIC_KEY).is_err());
+            assert!(EVENT_FEED
+                .verify_signature(SIGNED_FEED, signature, TEST_PUBLIC_KEY)
+                .is_err());
         }
         let verified = verify_feed(SIGNED_FEED, FEED_SIGNATURE, TEST_PUBLIC_KEY, None).unwrap();
         assert_eq!(verified.signed_at, FEED_SIGNED_AT);
@@ -823,7 +652,9 @@ mod tests {
         let temporary = TemporaryDirectory::new("event-feed-cache");
         let directory = temporary.0.join("event-feed");
         assert!(read_cached_feed(&directory, TEST_PUBLIC_KEY).is_err());
-        cache_feed(&directory, SIGNED_FEED, FEED_SIGNATURE).unwrap();
+        EVENT_FEED
+            .cache(&directory, SIGNED_FEED, FEED_SIGNATURE)
+            .unwrap();
         let cached = read_cached_feed(&directory, TEST_PUBLIC_KEY).unwrap();
         assert_eq!(cached.signed_at, FEED_SIGNED_AT);
         assert_eq!(cached.feed.events.len(), 1);
@@ -841,27 +672,38 @@ mod tests {
         assert!(read_cached_feed(&directory, TEST_PUBLIC_KEY).is_err());
         fs::write(&path, SIGNED_FEED).unwrap();
         assert!(read_cached_feed(&directory, TEST_PUBLIC_KEY).is_err());
-        assert_eq!(cached_signed_at(&directory, TEST_PUBLIC_KEY), None);
+        assert_eq!(
+            EVENT_FEED.cached_signed_at(&directory, TEST_PUBLIC_KEY),
+            None
+        );
     }
 
     #[test]
     fn a_cached_feed_of_an_older_format_still_sets_the_replay_floor() {
         let temporary = TemporaryDirectory::new("event-feed-cache-v1");
         let directory = temporary.0.join("event-feed");
-        assert_eq!(cached_signed_at(&directory, TEST_PUBLIC_KEY), None);
-        cache_feed(&directory, V1_FEED, V1_FEED_SIGNATURE).unwrap();
+        assert_eq!(
+            EVENT_FEED.cached_signed_at(&directory, TEST_PUBLIC_KEY),
+            None
+        );
+        EVENT_FEED
+            .cache(&directory, V1_FEED, V1_FEED_SIGNATURE)
+            .unwrap();
         assert!(read_cached_feed(&directory, TEST_PUBLIC_KEY).is_err());
         assert_eq!(
-            cached_signed_at(&directory, TEST_PUBLIC_KEY),
+            EVENT_FEED.cached_signed_at(&directory, TEST_PUBLIC_KEY),
             Some(V1_FEED_SIGNED_AT)
         );
-        assert_eq!(cached_signed_at(&directory, OTHER_PUBLIC_KEY), None);
+        assert_eq!(
+            EVENT_FEED.cached_signed_at(&directory, OTHER_PUBLIC_KEY),
+            None
+        );
         // The current fixture was signed before that cached feed, so it reads as a replay.
         assert!(verify_feed(
             SIGNED_FEED,
             FEED_SIGNATURE,
             TEST_PUBLIC_KEY,
-            cached_signed_at(&directory, TEST_PUBLIC_KEY)
+            EVENT_FEED.cached_signed_at(&directory, TEST_PUBLIC_KEY)
         )
         .is_err());
     }
@@ -886,7 +728,7 @@ mod tests {
 
     fn session_with_feed(now: std::time::Instant) -> EventSession {
         let mut session = EventSession::default();
-        session.accept_fetched(
+        session.feed_state_mut().accept_fetched(
             verify_feed(SIGNED_FEED, FEED_SIGNATURE, TEST_PUBLIC_KEY, None).unwrap(),
             now,
         );
@@ -900,15 +742,17 @@ mod tests {
         let after = parse_instant("2026-10-20T00:00:00Z").unwrap();
         let id = "2026-w42-staff";
         let empty = EventSession::default();
-        assert!(empty.needs_fetch(now, false));
+        assert!(empty.feed_state().needs_fetch(now, false));
         assert!(!empty.has_verified_feed());
         assert!(empty.publishable(id, PLAN, during).is_err());
         let mut session = session_with_feed(now);
         assert_eq!(session.source(), FeedSource::Network);
-        assert_eq!(session.signed_at(), Some(FEED_SIGNED_AT));
+        assert_eq!(session.feed_state().signed_at(), Some(FEED_SIGNED_AT));
         assert!(session.has_verified_feed());
-        assert!(!session.needs_fetch(now, true));
-        assert!(session.needs_fetch(now + FEED_REFRESH_INTERVAL, false));
+        assert!(!session.feed_state().needs_fetch(now, true));
+        assert!(session
+            .feed_state()
+            .needs_fetch(now + FEED_REFRESH_INTERVAL, false));
         assert_eq!(
             session.publishable(id, PLAN, during).err(),
             Some(format!("{id} has no verified project."))
@@ -1002,20 +846,21 @@ mod tests {
     fn a_failed_fetch_keeps_the_held_feed_or_reads_the_cache_and_retries_on_request() {
         let now = std::time::Instant::now();
         let mut session = EventSession::default();
-        session.fetch_failed(
+        session.feed_state_mut().fetch_failed(
             || verify_feed(SIGNED_FEED, FEED_SIGNATURE, TEST_PUBLIC_KEY, None).ok(),
             now,
         );
         assert_eq!(session.source(), FeedSource::Cache);
-        assert_eq!(session.signed_at(), Some(FEED_SIGNED_AT));
+        assert_eq!(session.feed_state().signed_at(), Some(FEED_SIGNED_AT));
         // Background reads wait; a panel opening retries a failed fetch at once.
-        assert!(!session.needs_fetch(now, false));
-        assert!(session.needs_fetch(now, true));
+        assert!(!session.feed_state().needs_fetch(now, false));
+        assert!(session.feed_state().needs_fetch(now, true));
         let mut held = session_with_feed(now);
-        held.fetch_failed(|| panic!("the held feed is kept"), now);
+        held.feed_state_mut()
+            .fetch_failed(|| panic!("the held feed is kept"), now);
         assert_eq!(held.source(), FeedSource::Network);
         let mut none = EventSession::default();
-        none.fetch_failed(|| None, now);
+        none.feed_state_mut().fetch_failed(|| None, now);
         assert_eq!(none.source(), FeedSource::None);
         assert!(!none.has_verified_feed());
     }

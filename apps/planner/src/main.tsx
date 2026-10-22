@@ -15,6 +15,7 @@ import {
   createTauriCommunityEventHost,
 } from './persistence/communityEventHost';
 import { createApplication } from './composition/createApplication';
+import { createTauriCatalogFeedHost } from './persistence/catalogFeedHost';
 import { createWorkerDraftRunner } from './workspace/draftRun';
 import { unloadNeedsConfirmation } from './workspace/closeRequest';
 import './ui/styles.css';
@@ -58,6 +59,7 @@ const application = createApplication({
   projectLibrary,
   ...(tauriHost
     ? {
+        catalogFeedHost: createTauriCatalogFeedHost(),
         communityEventDevelopmentHost: createTauriCommunityEventDevelopmentHost(),
         communityEventHost: createTauriCommunityEventHost(),
         eventDismissals: createBrowserEventDismissalPreference(() => globalThis.localStorage),
@@ -128,6 +130,9 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
             ? {}
             : { communityEvents: application.communityEvents })}
           {...(application.gameStatus === undefined ? {} : { gameStatus: application.gameStatus })}
+          {...(application.planCatalog === undefined
+            ? {}
+            : { planCatalog: application.planCatalog })}
           {...(application.slotRebuild === undefined
             ? {}
             : { slotRebuild: application.slotRebuild })}
@@ -142,3 +147,4 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
 
 releaseUpdates?.checkAutomatically();
 void application.communityEvents?.sync();
+void application.planCatalog?.sync();

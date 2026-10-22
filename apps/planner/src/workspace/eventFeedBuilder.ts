@@ -4,9 +4,9 @@ import {
   compileEventProject,
   eventMetadataProblem,
   eventProjectUrl,
-  projectFileSha256,
   type AuthoredEventMetadata,
 } from './eventDocument';
+import { buildFeedFolders, projectFileSchema, projectFileSha256 } from './feedBuild';
 
 /**
  * Builds the community event feed for publication: each authored event's metadata with its
@@ -42,11 +42,6 @@ export interface EventFeedEntry extends AuthoredEventMetadata {
   readonly projectSchemaVersion: number;
   /** Omitted at 0, since earlier planners refuse an event naming it. */
   readonly projectSchemaRevision?: number;
-}
-
-/** Folders whose name starts with `_` are templates and never published. */
-export function isTemplateFolder(folder: string): boolean {
-  return folder.startsWith('_');
 }
 
 function authoredMetadata(source: AuthoredEventSource): AuthoredEventMetadata {
@@ -87,25 +82,6 @@ interface BuildOptions {
   readonly checkEnded?: boolean;
 }
 
-/** The `schemaVersion` and `schemaRevision` (absent means 0) the project file is saved in. */
-function projectSchema(projectJson: string): {
-  readonly version: number;
-  readonly revision: number;
-} {
-  const value: unknown = JSON.parse(projectJson);
-  const record =
-    typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
-  const version = record.schemaVersion;
-  if (typeof version !== 'number' || !Number.isInteger(version) || version < 1) {
-    throw new Error('project.runplanner.json names no schemaVersion.');
-  }
-  const revision = record.schemaRevision ?? 0;
-  if (typeof revision !== 'number' || !Number.isInteger(revision) || revision < 0) {
-    throw new Error('project.runplanner.json has an invalid schemaRevision.');
-  }
-  return { version, revision };
-}
-
 async function buildEvent(
   source: AuthoredEventSource,
   options: BuildOptions,
@@ -120,7 +96,7 @@ async function buildEvent(
   if (ended && options.checkEnded !== true) {
     return { summary: `${metadata.id}: ended, not published`, project };
   }
-  const schema = projectSchema(source.projectJson);
+  const schema = projectFileSchema(source.projectJson, 'project.runplanner.json');
   compileEventProject(options.catalog, source.projectJson, metadata.title);
   if (ended) return { summary: `${metadata.id}: ended, valid, not published`, project };
   return {
@@ -143,31 +119,15 @@ export async function buildEventFeed(options: {
   /** Compiles ended events too, to validate every authored folder, without listing them. */
   readonly checkEnded?: boolean;
 }): Promise<EventFeedBuild> {
-  const entries: EventFeedEntry[] = [];
-  const projects: { fileName: string; json: string }[] = [];
-  const summary: string[] = [];
-  const sources = [...options.sources].sort((a, b) =>
-    a.folder < b.folder ? -1 : a.folder > b.folder ? 1 : 0,
-  );
-  const problems: string[] = [];
-  for (const source of sources) {
-    if (isTemplateFolder(source.folder)) {
-      summary.push(`${source.folder}: template, not published`);
-      continue;
-    }
-    try {
-      const built = await buildEvent(source, options);
-      summary.push(built.summary);
-      if (built.entry !== undefined) {
-        entries.push(built.entry);
-        projects.push(built.project);
-      }
-    } catch (error) {
-      problems.push(`${source.folder}: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  // Every folder is checked before any problem fails the build, so all are reported at once.
-  if (problems.length > 0) throw new Error(problems.join('\n'));
+  const { results, summary } = await buildFeedFolders(options.sources, async (source) => {
+    const built = await buildEvent(source, options);
+    return {
+      summary: built.summary,
+      result: built.entry === undefined ? null : { entry: built.entry, project: built.project },
+    };
+  });
+  const entries = results.map((built) => built.entry);
+  const projects = results.map((built) => built.project);
   return {
     feedJson: JSON.stringify({
       format: EVENT_FEED_FORMAT,

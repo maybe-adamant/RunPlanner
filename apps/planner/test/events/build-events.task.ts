@@ -6,11 +6,8 @@ import { join } from 'node:path';
 import { catalog } from '@run-planner/hades2-catalog';
 import { expect, it } from 'vitest';
 
-import {
-  buildEventFeed,
-  isTemplateFolder,
-  type AuthoredEventSource,
-} from '@planner/workspace/eventFeedBuilder';
+import { buildEventFeed, type AuthoredEventSource } from '@planner/workspace/eventFeedBuilder';
+import { isTemplateFolder } from '@planner/workspace/feedBuild';
 
 const environment = process.env;
 

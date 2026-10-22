@@ -309,6 +309,8 @@ export function createBrowserProjectLibraryAdapter(
         ? EMPTY_LIBRARY_SESSION
         : Object.freeze({
             previousFileOffered: session.previousFileOffered,
+            // Sessions stored before the catalog have no copies.
+            catalogCopies: Object.freeze({ ...(session.catalogCopies ?? {}) }),
           });
     },
     async writeSession(session: LibrarySession): Promise<void> {

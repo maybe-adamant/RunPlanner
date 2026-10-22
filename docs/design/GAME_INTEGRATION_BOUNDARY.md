@@ -489,6 +489,68 @@ installed module admits, the same button reads **Active**, disabled and at the s
 width. A dismissal is remembered
 per event id in the browser profile; the event slot is still written.
 
+### Plan catalog feed
+
+Template plans are authored and published in the separate
+[RunPlanner-Catalog](https://github.com/maybe-adamant/RunPlanner-Catalog)
+repository; the planner only reads its index. The repository name is one
+constant on each side (`CATALOG_REPOSITORY` in the game host's
+`catalog_feed.rs` and in `catalogFeedBuilder.ts`). The index is `catalog.json`
+with its signature `catalog.json.sig` on that repository's `catalog` release,
+each entry's plan published beside it as `<id>.runplanner.json`:
+
+```json
+{
+  "format": "run-planner-catalog-feed",
+  "formatVersion": 1,
+  "categories": [{ "id": "speedrun", "label": "Speedrun" }],
+  "entries": [<entry>]
+}
+```
+
+Each entry is `id` (the entry folder's slug), `title`, `description`,
+`category`, `tags`, `author`, `routeKey`, `biomeCount`, `planSchemaVersion`,
+optional `planSchemaRevision` (absent means 0), `planUrl` and `planSha256`.
+The builder (`npm run catalog:build`) refuses an `entry.json` that is not
+exactly `title` (one line, at most 80 characters), `description` (one line,
+at most 200), `category` (an id from `categories.json`), `tags` (at most 8
+distinct slugs of at most 24 characters, never the category's id or its label
+spelled as a tag) and `author` (one line, at most 64), a plan over 1 MiB, and
+a plan the planner cannot load and compile to a sendable plan; route, biome
+count and schema come from the loaded plan. Folders starting with `_` are
+templates. The categories, their labels and order are the catalog
+repository's `categories.json`, copied into the index; the planner has none of
+its own. The index carries plans as saved, so a planner release needs no
+republish. The signature and the replay rule are the event feed's, with a
+dedicated catalog key whose public half the app embeds from
+`apps/planner/src-tauri/catalog-feed.pub` (the catalog is off while it holds
+its placeholder), and the trusted comment must name `file:catalog.json`.
+
+- The game host's `signed_feed.rs` holds what both feeds share: signature and
+  file-name verification, the placeholder key, the replay floor, the cached
+  copy (`catalog-feed/catalog.cache` in application data, verified again when
+  read) and the session's fetch state; the app's `feed_fetch.rs` downloads
+  over HTTPS only and refreshes either feed.
+- The index is fetched at start-up and when the Catalog is shown (a failed
+  fetch is retried at once there), at most once every ten minutes otherwise,
+  at most 16 MiB. Offline the cached index stands; with neither, the Catalog
+  says it could not load.
+- Decoding is strict: a malformed index, category list (1 to 16 distinct
+  slugs with one-line labels) or one listing more than 2000 entries is refused
+  whole; an entry breaking the builder's rules, one whose `planUrl` is not
+  exactly its own file beside the index, or a repeated id is refused alone and
+  logged.
+- **Add to library** asks the host for the entry's plan (at most 1 MiB, HTTPS
+  only), which it downloads from the verified URL and refuses unless its
+  SHA-256 matches `planSha256`. The application refuses an entry saved in a
+  schema its loader does not open ("Needs a newer planner") without
+  downloading it.
+
+The catalog repository's workflows check every entry with the latest planner
+release's builder and the `catalog_ci` example (`check` decodes the index as
+the app does; `verify` checks a signature), and publish a changed index signed
+with the catalog key.
+
 ### Publication preconditions
 
 Sending a plan uses only the established target and performs no discovery.
