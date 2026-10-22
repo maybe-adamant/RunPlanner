@@ -1,4 +1,8 @@
-import type { ProjectCommand, SemanticAddress } from '../../authored-project';
+import type {
+  AuthoredKeepsakeEquipResults,
+  ProjectCommand,
+  SemanticAddress,
+} from '../../authored-project';
 import type { ProjectCandidateSession } from '../candidates/session';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import {
@@ -59,31 +63,47 @@ export function sampleFountainRarity(
   return false;
 }
 
-/** A keepsake's equip result among the possible ones whose trait the draft allows. */
+/**
+ * A keepsake's equip result: the player's own choice when it is possible here and its trait
+ * the draft allows, else one of the possible ones whose trait the draft allows.
+ */
 export function sampleKeepsakeEquipResult(
   context: DraftSampleContext,
   result: Extract<SemanticAddress, { readonly kind: 'keepsakeEquipResult' }>,
+  preferred?: DraftKeepsakeEquipValue,
 ): boolean {
+  const traitAllowed = context.traitGuard();
+  const command = (value: DraftKeepsakeEquipValue) =>
+    (result.resultKind === 'jeweledPom'
+      ? { kind: 'ReplaceJeweledPomEquipResult', result, value }
+      : result.resultKind === 'experimentalHammer'
+        ? { kind: 'ReplaceExperimentalHammerEquipResult', result, value }
+        : { kind: 'ReplaceTranscendentEmbryoEquipResult', result, value }) as ProjectCommand;
+  if (preferred !== undefined && (!('traitKey' in preferred) || traitAllowed(preferred.traitKey))) {
+    const own = context.evaluate({ kind: 'keepsakeEquipResult', result, value: preferred });
+    if (
+      own.kind === 'keepsakeEquipResult' &&
+      own.result.selectedPossible &&
+      context.apply(command(preferred))
+    )
+      return true;
+  }
   const evaluation = context.evaluate({ kind: 'keepsakeEquipResult', result });
   if (evaluation.kind !== 'keepsakeEquipResult') return false;
-  const traitAllowed = context.traitGuard();
   const allowed = evaluation.result.options.filter(
     (option) =>
       option.selectedPossible &&
       (!('traitKey' in option.value) || traitAllowed(option.value.traitKey)),
   );
-  for (const option of context.shuffle(allowed)) {
-    const command = (
-      option.resultKind === 'jeweledPom'
-        ? { kind: 'ReplaceJeweledPomEquipResult', result, value: option.value }
-        : option.resultKind === 'experimentalHammer'
-          ? { kind: 'ReplaceExperimentalHammerEquipResult', result, value: option.value }
-          : { kind: 'ReplaceTranscendentEmbryoEquipResult', result, value: option.value }
-    ) as ProjectCommand;
-    if (context.apply(command)) return true;
-  }
+  for (const option of context.shuffle(allowed))
+    if (context.apply(command(option.value))) return true;
   return false;
 }
+
+/** One keepsake equip result value: a Jeweled Pom trait, a Hammer pick or an Embryo blessing. */
+export type DraftKeepsakeEquipValue = NonNullable<
+  AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults]
+>;
 
 /** Figurine and Judgment: a random set of the required count among inactive Arcana. */
 export function sampleArcanaChoice(

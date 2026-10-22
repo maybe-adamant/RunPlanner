@@ -98,6 +98,26 @@ describe('ReplaceRoute', () => {
     });
   });
 
+  it('installs given placements that name hosts in the new biomes, and refuses others', () => {
+    const placed = loadSurfaceNResourcesCheckpoint();
+    const command = replaceWith(placed, placed);
+    const kept = applyProjectCommand(placed, catalog, {
+      ...command,
+      resourcePlacements: placed.route.resourcePlacements,
+    });
+    expect(kept.route.resourcePlacements).toEqual(placed.route.resourcePlacements);
+    const [family] = Object.entries(placed.route.resourcePlacements).find(([, p]) => p !== null)!;
+    expect(() =>
+      applyProjectCommand(placed, catalog, {
+        ...command,
+        resourcePlacements: {
+          ...placed.route.resourcePlacements,
+          [family]: { biomeKey: 'N', occurrenceId: 'missing' },
+        },
+      }),
+    ).toThrow(ProjectCommandContractError);
+  });
+
   it('carries the run modifiers, Practice start and draft spec, and refuses another route', () => {
     const source = loadUnderworldFGHICheckpoint();
     const practice = withPractice(source, 'G');

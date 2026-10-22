@@ -46,6 +46,7 @@ import {
 } from '../candidates/session';
 import type { StartRoomCandidateQuery } from '../candidates/start-room';
 import type { ForcePressureLedgerEntry } from '../generation';
+import { DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE } from '../../authored-project/draft-spec';
 import { countedRewardTypeDomain } from '../evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { assessmentRepairOwner } from '../finding-regions';
@@ -106,8 +107,6 @@ const SHOP_OUTRANKED_FACTOR = 0.001;
 /** The offer weight of a wanted god's boon; a due god's is higher. */
 const WANTED_GOD_WEIGHT = 30;
 
-/** Chance that a newly entered room places a resource point, as the game spawns them naturally. */
-const ESSENCE_CHANCE = 0.1;
 const RESOURCE_FAMILIES = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
 
 /**
@@ -265,8 +264,8 @@ export class DraftWalk {
   }
 
   /**
-   * Each newly entered room places an unplaced resource point with chance
-   * ESSENCE_CHANCE, preferring an element a waiting basket trait needs.
+   * Each newly entered room places an unplaced resource point at the spec's resource room
+   * chance, preferring an element a waiting basket trait needs.
    */
   private maybePlaceEssence(biomeIndex: number): void {
     const biomeKey = this.project.route.itineraryBiomeKeys[biomeIndex];
@@ -290,7 +289,8 @@ export class DraftWalk {
       !support.families.some((family) => route.resourcePlacements[family] === null)
     )
       return;
-    if (this.rng() >= ESSENCE_CHANCE) return;
+    const percent = this.spec.resourceRoomChance ?? DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE;
+    if (this.rng() >= percent / 100) return;
     const legal = routeResourceAuthoring(this.catalog, route).legalTargetsByFamily;
     const rules = support.rules;
     const families = RESOURCE_FAMILIES.filter(
@@ -408,7 +408,9 @@ export class DraftWalk {
       supply === 'hermes' || supply === 'hammer'
         ? this.steering.supplyNeed(supply, progress) === 'now'
         : god !== undefined
-          ? this.steering.godTakes(god, progress) && this.rng() < this.purchaseChance()
+          ? this.steering.purchasesPerBiome() > 0 &&
+            this.steering.godTakes(god, progress) &&
+            this.rng() < this.purchaseChance()
           : elements.some((element) => this.steering.wantedElements(progress).includes(element));
     if (!wanted) return;
     if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true })) return;
@@ -523,7 +525,14 @@ export class DraftWalk {
       case 'keepsakeEquipResultMissing':
       case 'keepsakeEquipResultUnavailable':
         return (
-          origin.kind === 'keepsakeEquipResult' && sampleKeepsakeEquipResult(this.samples, origin)
+          origin.kind === 'keepsakeEquipResult' &&
+          sampleKeepsakeEquipResult(
+            this.samples,
+            origin,
+            origin.selection.kind === 'keepsakeSelection' && origin.selection.owner === 'routeStart'
+              ? this.spec.loadout.keepsakeEquipResults?.[origin.resultKind]
+              : undefined,
+          )
         );
       case 'figurineOutcomeMissing':
       case 'figurineOutcomeWrongCardinality':

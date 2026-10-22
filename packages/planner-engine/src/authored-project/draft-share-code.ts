@@ -1,21 +1,38 @@
-import type { Catalog, HexDeclaration, HexLayoutDeclaration } from '../catalog-schema';
-import { createRouteAddress, createRouteStartKeepsakeSelectionAddress } from './addresses';
+import type { Catalog, HexDeclaration, HexLayoutDeclaration, TraitRarity } from '../catalog-schema';
+import {
+  createKeepsakeEquipResultAddress,
+  createRouteAddress,
+  createRouteStartKeepsakeSelectionAddress,
+} from './addresses';
 import { ProjectCommandContractError } from './commands/contract';
 import type { ProjectCommand } from './commands/dispatch';
 import {
   DRAFT_GOD_BOONS_RANGE,
   DRAFT_PER_GOD_CAP_RANGE,
+  DRAFT_PURCHASES_PER_BIOME_RANGE,
+  DRAFT_RESOURCE_ROOM_CHANCE_RANGE,
+  DRAFT_RETRIES_PER_BIOME_RANGE,
+  DRAFT_ROOM_FORCINGS,
   decodeDraftSpec,
   draftSpecCatalogKeys,
 } from './draft-spec';
 import { assessPublicDreamItinerary } from './dream-itinerary';
 import { assessStartingArcanaGrasp } from './loadout';
-import type { AuthoredDraftSpec, AuthoredRoutePlan, ProjectDocument, RouteLoadout } from './model';
+import type {
+  AuthoredDraftSpec,
+  AuthoredKeepsakeEquipResults,
+  AuthoredRoutePlan,
+  ProjectDocument,
+  RouteLoadout,
+} from './model';
 import { routeInitialProfile } from './route-profile';
 import { ProjectDocumentContractError } from './validation';
 import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from './traits/hex-tree';
 import { hexNodeTalentDomain } from './traits/hex-talent-tree';
-import type { AuthoredHexTreeConfiguration } from './traits/state';
+import {
+  normalizeAuthoredTranscendentEmbryoOutcome,
+  type AuthoredHexTreeConfiguration,
+} from './traits/state';
 
 /** The loadout choices a draft reads; the starting reward and equip results are generated. */
 export type DraftShareLoadout = Pick<
@@ -27,6 +44,7 @@ export type DraftShareLoadout = Pick<
   | 'manualArcanaKeys'
   | 'fearRanks'
   | 'aspectHexTree'
+  | 'keepsakeEquipResults'
 >;
 
 /** Everything a player authors for a draft: its route, "Plan up to", loadout and spec. */
@@ -39,22 +57,32 @@ export interface DraftShareInputs {
 }
 
 /**
- * `badLayout`: not a share code at all. `otherVersion` and `otherFingerprint`: a code from
- * another code layout or catalog. `otherRoute`: a code for another route or Dream itinerary.
- * `malformed`: the right layout but contents this catalog rejects.
+ * `badLayout`: not a share code at all. `olderVersion`: a code from an earlier code layout.
+ * `otherVersion` and `otherFingerprint`: a code from a later code layout or another catalog.
+ * `otherRoute`: a code for another route or Dream itinerary. `malformed`: the right layout but
+ * contents this catalog rejects.
  */
 export type DraftShareCodeRefusal =
-  'badLayout' | 'otherVersion' | 'otherFingerprint' | 'otherRoute' | 'malformed';
+  'badLayout' | 'olderVersion' | 'otherVersion' | 'otherFingerprint' | 'otherRoute' | 'malformed';
 
 export type DraftShareCodeDecoding =
   | { readonly ok: true; readonly inputs: DraftShareInputs }
   | { readonly ok: false; readonly refusal: DraftShareCodeRefusal };
 
-const LAYOUT_VERSION = 1;
+const LAYOUT_VERSION = 2;
 const FINGERPRINT_CHARS = 3;
 /** Crockford base32: no I, L, O or U, read case-insensitively. */
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const SELENE_SPELL = 'SpellMoonBeamTrait';
+/** Jeweled Pom rarities a code can carry, in order. */
+const POM_RARITIES: readonly TraitRarity[] = [
+  'Common',
+  'Rare',
+  'Epic',
+  'Heroic',
+  'Legendary',
+  'Duo',
+];
 
 /** The ordered key lists a code indexes; a code only decodes against the same lists. */
 interface ShareLists {
@@ -70,6 +98,8 @@ interface ShareLists {
   readonly fieldNpcKeys: readonly string[];
   readonly traitKeys: readonly string[];
   readonly hex: HexDeclaration | undefined;
+  /** In-run Chaos blessings Transcendent Embryo may grant, with their operands in order. */
+  readonly blessings: readonly { readonly key: string; readonly operandKeys: readonly string[] }[];
 }
 
 function shareLists(catalog: Catalog): ShareLists {
@@ -95,6 +125,12 @@ function shareLists(catalog: Catalog): ShareLists {
     fieldNpcKeys: keys.fieldNpcKeys,
     traitKeys: catalog.traits.values.map((trait) => trait.key),
     hex: catalog.hexes.byKey[SELENE_SPELL],
+    blessings: catalog.chaos.blessings.values
+      .filter((blessing) => blessing.fixedRarity === undefined)
+      .map((blessing) => ({
+        key: blessing.key,
+        operandKeys: blessing.operands.map((operand) => operand.key),
+      })),
   };
 }
 
@@ -131,6 +167,16 @@ function fingerprint(catalog: Catalog, lists: ShareLists): string {
     catalog.aspects.values.filter((aspect) => isSelene(catalog, aspect.key)).map((a) => a.key),
     [DRAFT_GOD_BOONS_RANGE.min, DRAFT_GOD_BOONS_RANGE.max],
     [DRAFT_PER_GOD_CAP_RANGE.min, DRAFT_PER_GOD_CAP_RANGE.max],
+    DRAFT_ROOM_FORCINGS,
+    [DRAFT_PURCHASES_PER_BIOME_RANGE.min, DRAFT_PURCHASES_PER_BIOME_RANGE.max],
+    [DRAFT_RETRIES_PER_BIOME_RANGE.min, DRAFT_RETRIES_PER_BIOME_RANGE.max],
+    [
+      DRAFT_RESOURCE_ROOM_CHANCE_RANGE.min,
+      DRAFT_RESOURCE_ROOM_CHANCE_RANGE.max,
+      DRAFT_RESOURCE_ROOM_CHANCE_RANGE.step,
+    ],
+    lists.blessings.map((blessing) => `${blessing.key}:${blessing.operandKeys.join(',')}`),
+    POM_RARITIES,
     lists.hex?.layouts.values.map((layout) => layout.key) ?? [],
     lists.hex === undefined
       ? []
@@ -248,6 +294,21 @@ const readKeyList = (reader: BitReader, list: readonly string[]): string[] =>
 
 const GOD_BOONS_WIDTH = widthFor(DRAFT_GOD_BOONS_RANGE.max + 1);
 const PER_GOD_CAP_WIDTH = widthFor(DRAFT_PER_GOD_CAP_RANGE.max + 1);
+const PURCHASES_WIDTH = widthFor(DRAFT_PURCHASES_PER_BIOME_RANGE.max + 1);
+const RETRIES_WIDTH = widthFor(DRAFT_RETRIES_PER_BIOME_RANGE.max + 1);
+/** The resource room chance travels in its steps. */
+const RESOURCE_STEPS_WIDTH = widthFor(
+  DRAFT_RESOURCE_ROOM_CHANCE_RANGE.max / DRAFT_RESOURCE_ROOM_CHANCE_RANGE.step + 1,
+);
+
+/** An optional number: a presence flag, then the value. */
+function writeOptional(writer: BitWriter, value: number | undefined, width: number): void {
+  writer.flag(value !== undefined);
+  if (value !== undefined) writer.write(value, width);
+}
+
+const readOptional = (reader: BitReader, width: number): number | undefined =>
+  reader.flag() ? reader.read(width) : undefined;
 
 /** The share code for these inputs: version, fingerprint, then the packed positions in base32. */
 export function encodeDraftShareCode(catalog: Catalog, inputs: DraftShareInputs): string {
@@ -284,6 +345,7 @@ export function encodeDraftShareCode(catalog: Catalog, inputs: DraftShareInputs)
       }
     if (isSelene(catalog, loadout.aspectKey))
       writeHexTree(writer, catalog, lists, loadout.aspectHexTree!);
+    writeEquipResults(writer, lists, loadout.keepsakeEquipResults);
   }
 
   const draft = inputs.draft;
@@ -301,10 +363,20 @@ export function encodeDraftShareCode(catalog: Catalog, inputs: DraftShareInputs)
   writeBiomeRecord(writer, lists, draft.godBoonsByBiome, (count) =>
     writer.write(count, GOD_BOONS_WIDTH),
   );
-  writer.flag(draft.perGodCap !== undefined);
-  if (draft.perGodCap !== undefined) writer.write(draft.perGodCap, PER_GOD_CAP_WIDTH);
+  writeOptional(writer, draft.perGodCap, PER_GOD_CAP_WIDTH);
   writer.flag(draft.preferMidshops === true);
   writer.flag(draft.pursueTartarusGoal === true);
+  writer.flag(draft.roomForcing !== undefined);
+  if (draft.roomForcing !== undefined) writer.index(DRAFT_ROOM_FORCINGS, draft.roomForcing);
+  writeOptional(writer, draft.purchasesPerBiome, PURCHASES_WIDTH);
+  writeOptional(writer, draft.retriesPerBiome, RETRIES_WIDTH);
+  writeOptional(
+    writer,
+    draft.resourceRoomChance === undefined
+      ? undefined
+      : draft.resourceRoomChance / DRAFT_RESOURCE_ROOM_CHANCE_RANGE.step,
+    RESOURCE_STEPS_WIDTH,
+  );
   writer.uint(draft.seed);
 
   while (writer.bits.length % 5 !== 0) writer.bits.push(0);
@@ -372,7 +444,9 @@ export function decodeDraftShareCode(
   const text = code.replace(/[\s-]/g, '').toUpperCase().replace(/[IL]/g, '1').replace(/O/g, '0');
   if (text.length <= 1 + FINGERPRINT_CHARS || [...text].some((char) => !ALPHABET.includes(char)))
     return refuse('badLayout');
-  if (text[0] !== ALPHABET[LAYOUT_VERSION]) return refuse('otherVersion');
+  const version = ALPHABET.indexOf(text[0]!);
+  if (version < LAYOUT_VERSION) return refuse('olderVersion');
+  if (version !== LAYOUT_VERSION) return refuse('otherVersion');
   const lists = shareLists(catalog);
   if (text.slice(1, 1 + FINGERPRINT_CHARS) !== fingerprint(catalog, lists))
     return refuse('otherFingerprint');
@@ -449,6 +523,8 @@ function readInputs(reader: BitReader, catalog: Catalog, lists: ShareLists): Dra
         ? { aspectHexTree: readHexTree(reader, catalog, lists) }
         : {}),
     };
+    const keepsakeEquipResults = readEquipResults(reader, catalog, lists);
+    if (keepsakeEquipResults !== undefined) loadout = { ...loadout, keepsakeEquipResults };
   }
 
   const godKeys = readKeyList(reader, lists.godKeys);
@@ -461,9 +537,13 @@ function readInputs(reader: BitReader, catalog: Catalog, lists: ShareLists): Dra
     reader.index(lists.keepsakeKeys),
   );
   const godBoonsByBiome = readBiomeRecord(reader, lists, () => reader.read(GOD_BOONS_WIDTH));
-  const perGodCap = reader.flag() ? reader.read(PER_GOD_CAP_WIDTH) : undefined;
+  const perGodCap = readOptional(reader, PER_GOD_CAP_WIDTH);
   const preferMidshops = reader.flag();
   const pursueTartarusGoal = reader.flag();
+  const roomForcing = reader.flag() ? reader.index(DRAFT_ROOM_FORCINGS) : undefined;
+  const purchasesPerBiome = readOptional(reader, PURCHASES_WIDTH);
+  const retriesPerBiome = readOptional(reader, RETRIES_WIDTH);
+  const resourceSteps = readOptional(reader, RESOURCE_STEPS_WIDTH);
   const seed = reader.uint();
   reader.finish();
   const draft = decodeDraftSpec(
@@ -478,6 +558,12 @@ function readInputs(reader: BitReader, catalog: Catalog, lists: ShareLists): Dra
       ...(perGodCap === undefined ? {} : { perGodCap }),
       ...(preferMidshops ? { preferMidshops: true } : {}),
       ...(pursueTartarusGoal ? { pursueTartarusGoal: true } : {}),
+      ...(roomForcing === undefined ? {} : { roomForcing }),
+      ...(purchasesPerBiome === undefined ? {} : { purchasesPerBiome }),
+      ...(retriesPerBiome === undefined ? {} : { retriesPerBiome }),
+      ...(resourceSteps === undefined
+        ? {}
+        : { resourceRoomChance: resourceSteps * DRAFT_RESOURCE_ROOM_CHANCE_RANGE.step }),
     },
     'draft',
     catalog,
@@ -508,6 +594,10 @@ export function projectDraftShareInputs(project: ProjectDocument): DraftShareInp
       manualArcanaKeys: loadout.manualArcanaKeys,
       fearRanks: loadout.fearRanks,
       ...(loadout.aspectHexTree === undefined ? {} : { aspectHexTree: loadout.aspectHexTree }),
+      ...(loadout.keepsakeEquipResults === undefined ||
+      Object.keys(loadout.keepsakeEquipResults).length === 0
+        ? {}
+        : { keepsakeEquipResults: loadout.keepsakeEquipResults }),
     }),
     draft: route.draft,
   });
@@ -561,8 +651,117 @@ export function draftShareCommands(
         selection: createRouteStartKeepsakeSelectionAddress(project.route.routeKey),
         keepsakeKey: loadout.startingKeepsakeKey!,
       },
+      ...equipResultCommands(project.route.routeKey, loadout.keepsakeEquipResults),
     );
   }
   commands.push({ kind: 'ReplaceDraftSpec', route, draft: inputs.draft });
   return Object.freeze(commands);
+}
+
+/** The starting keepsake's chosen equip results: a flag, then each kind present. */
+function writeEquipResults(
+  writer: BitWriter,
+  lists: ShareLists,
+  results: AuthoredKeepsakeEquipResults | undefined,
+): void {
+  const pom = results?.jeweledPom;
+  const hammer = results?.experimentalHammer;
+  const embryo = results?.transcendentEmbryo;
+  writer.flag(pom !== undefined || hammer !== undefined || embryo !== undefined);
+  if (pom === undefined && hammer === undefined && embryo === undefined) return;
+  writer.flag(pom !== undefined);
+  if (pom !== undefined) {
+    writer.index(lists.traitKeys, pom.traitKey);
+    writer.flag(pom.rarity !== undefined);
+    if (pom.rarity !== undefined) writer.index(POM_RARITIES, pom.rarity);
+  }
+  writer.flag(hammer !== undefined);
+  if (hammer !== undefined) {
+    writer.flag(hammer.kind === 'selected');
+    if (hammer.kind === 'selected') writer.index(lists.traitKeys, hammer.traitKey);
+  }
+  writer.flag(embryo !== undefined);
+  if (embryo !== undefined) {
+    const index = lists.blessings.findIndex((blessing) => blessing.key === embryo.blessingKey);
+    const blessing = lists.blessings[index];
+    if (blessing === undefined) throw new Error(`share code cannot index ${embryo.blessingKey}`);
+    writer.write(index, widthFor(lists.blessings.length));
+    for (const operandKey of blessing.operandKeys) {
+      const value = embryo.blessingValues[operandKey];
+      writer.flag(value !== undefined);
+      if (value === undefined) continue;
+      // Thousandths, signed: finer than any declared operand step.
+      writer.flag(value < 0);
+      writer.uint(Math.round(Math.abs(value) * 1000));
+    }
+  }
+}
+
+function readEquipResults(
+  reader: BitReader,
+  catalog: Catalog,
+  lists: ShareLists,
+): AuthoredKeepsakeEquipResults | undefined {
+  if (!reader.flag()) return undefined;
+  const results: {
+    jeweledPom?: NonNullable<AuthoredKeepsakeEquipResults['jeweledPom']>;
+    experimentalHammer?: NonNullable<AuthoredKeepsakeEquipResults['experimentalHammer']>;
+    transcendentEmbryo?: NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>;
+  } = {};
+  if (reader.flag()) {
+    const traitKey = reader.index(lists.traitKeys);
+    results.jeweledPom = reader.flag()
+      ? { traitKey, rarity: reader.index(POM_RARITIES) }
+      : { traitKey };
+  }
+  if (reader.flag())
+    results.experimentalHammer = reader.flag()
+      ? { kind: 'selected', traitKey: reader.index(lists.traitKeys) }
+      : { kind: 'exhausted' };
+  if (reader.flag()) {
+    const blessing = reader.index(lists.blessings);
+    const blessingValues: Record<string, number> = {};
+    for (const operandKey of blessing.operandKeys) {
+      if (!reader.flag()) continue;
+      const negative = reader.flag();
+      blessingValues[operandKey] = ((negative ? -1 : 1) * reader.uint()) / 1000;
+    }
+    try {
+      results.transcendentEmbryo = normalizeAuthoredTranscendentEmbryoOutcome(catalog, {
+        blessingKey: blessing.key,
+        blessingValues,
+      });
+    } catch {
+      throw new Malformed();
+    }
+  }
+  return Object.freeze(results);
+}
+
+/** Commands that install the starting keepsake's chosen equip results. */
+function equipResultCommands(
+  routeKey: string,
+  results: AuthoredKeepsakeEquipResults | undefined,
+): readonly ProjectCommand[] {
+  const selection = createRouteStartKeepsakeSelectionAddress(routeKey);
+  const commands: ProjectCommand[] = [];
+  if (results?.jeweledPom !== undefined)
+    commands.push({
+      kind: 'ReplaceJeweledPomEquipResult',
+      result: createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
+      value: results.jeweledPom,
+    });
+  if (results?.experimentalHammer !== undefined)
+    commands.push({
+      kind: 'ReplaceExperimentalHammerEquipResult',
+      result: createKeepsakeEquipResultAddress(selection, 'experimentalHammer'),
+      value: results.experimentalHammer,
+    });
+  if (results?.transcendentEmbryo !== undefined)
+    commands.push({
+      kind: 'ReplaceTranscendentEmbryoEquipResult',
+      result: createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo'),
+      value: results.transcendentEmbryo,
+    });
+  return commands;
 }

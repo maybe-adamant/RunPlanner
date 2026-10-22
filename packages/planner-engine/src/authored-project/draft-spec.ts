@@ -1,5 +1,5 @@
 import type { Catalog } from '../catalog-schema';
-import type { AuthoredDraftSpec } from './model';
+import type { AuthoredDraftSpec, DraftRoomForcing } from './model';
 import {
   expectArray,
   expectExactKeys,
@@ -27,6 +27,22 @@ export const DRAFT_GOD_BOONS_RANGE = Object.freeze({ min: 0, max: 10 });
 /** The range of the per-god boon cap; ten is past any god's useful core and other boons. */
 export const DRAFT_PER_GOD_CAP_RANGE = Object.freeze({ min: 1, max: 10 });
 export const DEFAULT_DRAFT_PER_GOD_CAP = 5;
+
+export const DRAFT_ROOM_FORCINGS: readonly DraftRoomForcing[] = Object.freeze([
+  'deadline',
+  'softened',
+  'game',
+]);
+export const DEFAULT_DRAFT_ROOM_FORCING: DraftRoomForcing = 'softened';
+/** Shop god boon purchases per planned biome; 0 never buys a god boon. */
+export const DRAFT_PURCHASES_PER_BIOME_RANGE = Object.freeze({ min: 0, max: 4 });
+export const DEFAULT_DRAFT_PURCHASES_PER_BIOME = 2;
+/** Further attempts per biome after its first success. */
+export const DRAFT_RETRIES_PER_BIOME_RANGE = Object.freeze({ min: 0, max: 10 });
+export const DEFAULT_DRAFT_RETRIES_PER_BIOME = 3;
+/** Percent chance a room rolls a resource point, in steps of five. */
+export const DRAFT_RESOURCE_ROOM_CHANCE_RANGE = Object.freeze({ min: 0, max: 50, step: 5 });
+export const DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE = 10;
 
 /**
  * Each biome's default planned god boons by biome key: the god boons a draft usually gains there,
@@ -100,6 +116,79 @@ export function withDraftPursueTartarusGoal(
   const { pursueTartarusGoal: _pursueTartarusGoal, ...rest } = draft;
   void _pursueTartarusGoal;
   return on ? { ...rest, pursueTartarusGoal: true } : rest;
+}
+
+/** The room forcing is stored only when not the softened default. */
+export function withDraftRoomForcing(
+  draft: AuthoredDraftSpec,
+  forcing: DraftRoomForcing,
+): AuthoredDraftSpec {
+  const { roomForcing: _old, ...rest } = draft;
+  void _old;
+  return forcing === DEFAULT_DRAFT_ROOM_FORCING ? rest : { ...rest, roomForcing: forcing };
+}
+
+/** Sets the Shop purchase pace, clamped; the default is not stored. */
+export function withDraftPurchasesPerBiome(
+  draft: AuthoredDraftSpec,
+  value: number,
+): AuthoredDraftSpec {
+  const { purchasesPerBiome: _old, ...rest } = draft;
+  void _old;
+  const clamped = clamp(value, DRAFT_PURCHASES_PER_BIOME_RANGE);
+  return clamped === DEFAULT_DRAFT_PURCHASES_PER_BIOME
+    ? rest
+    : { ...rest, purchasesPerBiome: clamped };
+}
+
+/** Sets the retries per biome, clamped; the default is not stored. */
+export function withDraftRetriesPerBiome(
+  draft: AuthoredDraftSpec,
+  value: number,
+): AuthoredDraftSpec {
+  const { retriesPerBiome: _old, ...rest } = draft;
+  void _old;
+  const clamped = clamp(value, DRAFT_RETRIES_PER_BIOME_RANGE);
+  return clamped === DEFAULT_DRAFT_RETRIES_PER_BIOME ? rest : { ...rest, retriesPerBiome: clamped };
+}
+
+/** Sets the resource room chance in percent, clamped to its steps; the default is not stored. */
+export function withDraftResourceRoomChance(
+  draft: AuthoredDraftSpec,
+  value: number,
+): AuthoredDraftSpec {
+  const { resourceRoomChance: _old, ...rest } = draft;
+  void _old;
+  const { step } = DRAFT_RESOURCE_ROOM_CHANCE_RANGE;
+  const clamped = clamp(Math.round(value / step) * step, DRAFT_RESOURCE_ROOM_CHANCE_RANGE);
+  return clamped === DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE
+    ? rest
+    : { ...rest, resourceRoomChance: clamped };
+}
+
+/** The Advanced options: every stored field the Advanced tab sets. */
+const ADVANCED_KEYS = [
+  'godBoonsByBiome',
+  'perGodCap',
+  'roomForcing',
+  'resourceRoomChance',
+  'purchasesPerBiome',
+  'retriesPerBiome',
+  'preferMidshops',
+  'pursueTartarusGoal',
+] as const satisfies readonly (keyof AuthoredDraftSpec)[];
+
+/** Whether any Advanced option differs from its default; a default is never stored. */
+export function draftAdvancedChanged(draft: AuthoredDraftSpec): boolean {
+  return ADVANCED_KEYS.some((key) => draft[key] !== undefined);
+}
+
+/** Every Advanced option back to its default in one edit. */
+export function withDraftAdvancedDefaults(draft: AuthoredDraftSpec): AuthoredDraftSpec {
+  const advanced: ReadonlySet<string> = new Set(ADVANCED_KEYS);
+  return Object.fromEntries(
+    Object.entries(draft).filter(([key]) => !advanced.has(key)),
+  ) as unknown as AuthoredDraftSpec;
 }
 
 /** The midshop preference is stored only when on. */
@@ -209,6 +298,10 @@ export function decodeDraftSpec(
       'godBoonsByBiome',
       'perGodCap',
       'pursueTartarusGoal',
+      'roomForcing',
+      'purchasesPerBiome',
+      'retriesPerBiome',
+      'resourceRoomChance',
     ],
     path,
   );
@@ -262,7 +355,66 @@ export function decodeDraftSpec(
     ...(raw.perGodCap === undefined
       ? {}
       : { perGodCap: expectInRange(raw.perGodCap, `${path}.perGodCap`, DRAFT_PER_GOD_CAP_RANGE) }),
+    ...nonDefault(
+      'roomForcing',
+      raw.roomForcing === undefined ? undefined : roomForcing(raw.roomForcing, path),
+      DEFAULT_DRAFT_ROOM_FORCING,
+    ),
+    ...nonDefault(
+      'purchasesPerBiome',
+      raw.purchasesPerBiome === undefined
+        ? undefined
+        : expectInRange(
+            raw.purchasesPerBiome,
+            `${path}.purchasesPerBiome`,
+            DRAFT_PURCHASES_PER_BIOME_RANGE,
+          ),
+      DEFAULT_DRAFT_PURCHASES_PER_BIOME,
+    ),
+    ...nonDefault(
+      'retriesPerBiome',
+      raw.retriesPerBiome === undefined
+        ? undefined
+        : expectInRange(
+            raw.retriesPerBiome,
+            `${path}.retriesPerBiome`,
+            DRAFT_RETRIES_PER_BIOME_RANGE,
+          ),
+      DEFAULT_DRAFT_RETRIES_PER_BIOME,
+    ),
+    ...nonDefault(
+      'resourceRoomChance',
+      raw.resourceRoomChance === undefined
+        ? undefined
+        : resourceRoomChance(raw.resourceRoomChance, `${path}.resourceRoomChance`),
+      DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE,
+    ),
   });
+}
+
+/** A decoded option equal to its default is dropped, as its setter never stores one. */
+function nonDefault<K extends string, T>(
+  key: K,
+  value: T | undefined,
+  defaultValue: T,
+): { readonly [P in K]?: T } {
+  return (value === undefined || value === defaultValue ? {} : { [key]: value }) as {
+    readonly [P in K]?: T;
+  };
+}
+
+function roomForcing(value: unknown, path: string): DraftRoomForcing {
+  const forcing = expectString(value, `${path}.roomForcing`);
+  if (!(DRAFT_ROOM_FORCINGS as readonly string[]).includes(forcing))
+    fail(`${path}.roomForcing`, `unknown room forcing ${forcing}`);
+  return forcing as DraftRoomForcing;
+}
+
+function resourceRoomChance(value: unknown, path: string): number {
+  const chance = expectInRange(value, path, DRAFT_RESOURCE_ROOM_CHANCE_RANGE);
+  if (chance % DRAFT_RESOURCE_ROOM_CHANCE_RANGE.step !== 0)
+    fail(path, `must be a multiple of ${DRAFT_RESOURCE_ROOM_CHANCE_RANGE.step}`);
+  return chance;
 }
 
 function godBoonOverrides(
@@ -307,6 +459,10 @@ export function sameDraftSpec(left: AuthoredDraftSpec, right: AuthoredDraftSpec)
     left.preferMidshops === right.preferMidshops &&
     left.pursueTartarusGoal === right.pursueTartarusGoal &&
     left.perGodCap === right.perGodCap &&
+    left.roomForcing === right.roomForcing &&
+    left.purchasesPerBiome === right.purchasesPerBiome &&
+    left.retriesPerBiome === right.retriesPerBiome &&
+    left.resourceRoomChance === right.resourceRoomChance &&
     sameRecord(left.godBoonsByBiome ?? {}, right.godBoonsByBiome ?? {}, (a, b) => a === b) &&
     sameKeys(left.godKeys, right.godKeys) &&
     sameKeys(left.basketTraitKeys, right.basketTraitKeys) &&

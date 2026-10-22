@@ -726,3 +726,64 @@ function prerequisitesQueuedAfter(order: DraftOrderContext, traitKey: string): r
   }
   return Object.freeze([...later]);
 }
+
+/** Why the player's starting keepsake result clearly contradicts the basket. */
+export type DraftKeepsakeResultConflict =
+  /** A Jeweled Pom trait in the slot a basket trait needs. */
+  | { readonly kind: 'slotTaken'; readonly traitKey: string }
+  /** An Experimental Hammer trait the basket queues after another Hammer. */
+  | { readonly kind: 'hammerOrder'; readonly traitKey: string }
+  /** One Hammer more than the run's Hammer cap. */
+  | { readonly kind: 'hammerCap'; readonly cap: number }
+  /** One Hermes or Hammer trait more than the planned biomes allow. */
+  | { readonly kind: 'supplyCap'; readonly cap: number };
+
+/** The clear contradictions between the starting keepsake result and the basket. */
+export function draftStartingKeepsakeConflicts(
+  catalog: Catalog,
+  route: DraftRoute,
+  spec: DraftSpec,
+): readonly { readonly traitKey: string; readonly conflict: DraftKeepsakeResultConflict }[] {
+  const results = spec.loadout.keepsakeEquipResults;
+  const conflicts: { traitKey: string; conflict: DraftKeepsakeResultConflict }[] = [];
+  const pom = results?.jeweledPom?.traitKey;
+  const slot = pom === undefined ? undefined : catalog.traits.byKey[pom]?.equipmentSlot;
+  if (pom !== undefined && slot !== undefined) {
+    const holder = spec.basketTraitKeys.find(
+      (key) => key !== pom && catalog.traits.byKey[key]?.equipmentSlot === slot,
+    );
+    if (holder !== undefined)
+      conflicts.push({ traitKey: pom, conflict: { kind: 'slotTaken', traitKey: holder } });
+  }
+  const hammer =
+    results?.experimentalHammer?.kind === 'selected'
+      ? results.experimentalHammer.traitKey
+      : undefined;
+  const giverKey =
+    hammer === undefined ? undefined : draftCappedGiver(catalog, spec, hammer)?.giverKey;
+  if (hammer !== undefined && giverKey !== undefined) {
+    const queue = spec.basketTraitKeys.filter(
+      (key) => draftCappedGiver(catalog, spec, key)?.giverKey === giverKey,
+    );
+    if (queue.includes(hammer)) {
+      if (queue[0] !== hammer)
+        conflicts.push({
+          traitKey: hammer,
+          conflict: { kind: 'hammerOrder', traitKey: queue[0]! },
+        });
+    } else {
+      if (queue.length + 1 > DRAFT_PROVIDER_CAPS.hammer)
+        conflicts.push({
+          traitKey: hammer,
+          conflict: { kind: 'hammerCap', cap: DRAFT_PROVIDER_CAPS.hammer },
+        });
+      const supply = spec.basketTraitKeys.filter((key) => isSupplyTrait(catalog, key)).length;
+      if (supply + 1 > supplyCap(route))
+        conflicts.push({
+          traitKey: hammer,
+          conflict: { kind: 'supplyCap', cap: supplyCap(route) },
+        });
+    }
+  }
+  return Object.freeze(conflicts.map((entry) => Object.freeze(entry)));
+}

@@ -1135,8 +1135,6 @@
 }
 
 /* Advanced-tab text shares the section labels' face and weight, in sentence case. */
-.draft-option,
-.draft-option-note,
 .draft-tags {
   font-size: 0.85rem;
   font-weight: 700;
@@ -1180,67 +1178,70 @@
   opacity: 1;
 }
 
-.draft-recommended {
+.draft-hint-pill {
+  display: inline-block;
   padding: 0.05rem 0.5rem;
   border: 1px solid #4b4c58;
-  border-radius: 999px;
+  border-radius: 0.75rem;
   font-size: 0.85rem;
   font-weight: 700;
 }
 
-.draft-budget-row {
-  align-items: start;
-}
-
-.draft-budget-biome {
+/* Every Advanced row shares one grid: label, control, right-aligned value, default hint. */
+.draft-row {
   display: grid;
-  gap: 0.2rem;
-  min-width: 11rem;
+  grid-template-columns: 13rem 9rem 4.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0 1rem;
+  min-height: 2rem;
 }
 
-.draft-budget-label {
+/* Row labels take the shared field label style ("Plan up to"). */
+.draft-row-label {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  color: var(--muted);
 }
 
-.draft-budget-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.draft-budget-control input[type='range'] {
-  width: 8rem;
+.draft-row-control {
+  width: 100%;
+  margin: 0;
   accent-color: var(--selection-accent);
 }
 
-.draft-budget-value {
-  min-width: 3.5rem;
+.draft-row-control > input[type='checkbox'] {
+  margin: 0;
+  accent-color: var(--selection-accent);
+}
+
+.draft-row-value {
   font-variant-numeric: tabular-nums;
   font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
 }
 
-.draft-budget-warning {
-  margin: 0;
-  max-width: 14rem;
-  color: var(--finding);
-  font-size: 0.85rem;
-}
-
-.draft-option {
-  display: inline-flex;
+.draft-row-hint {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  width: fit-content;
+  gap: 0.25rem 0.6rem;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* A control that spans the control, value and hint columns. */
+.draft-row-wide {
+  grid-column: 2 / -1;
+}
+
+label.draft-row-label {
   cursor: pointer;
 }
 
-.draft-option-note {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.85rem;
+.draft-advanced-reset {
+  margin-left: auto;
 }
 
 .draft-chip-groups {

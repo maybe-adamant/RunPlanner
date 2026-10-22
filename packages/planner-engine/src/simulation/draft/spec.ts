@@ -1,6 +1,8 @@
 import type { Catalog } from '../../catalog-schema';
 import type {
+  AuthoredKeepsakeEquipResults,
   AuthoredRoutePlan,
+  DraftRoomForcing,
   ProjectDocument,
   RouteLoadout,
 } from '../../authored-project/model';
@@ -31,6 +33,8 @@ export interface DraftLoadout {
   readonly fearRanks: Readonly<Record<string, number>>;
   readonly startingKeepsakeKey: string | null;
   readonly aspectHexTree?: RouteLoadout['aspectHexTree'];
+  /** The player's own result for the starting keepsake, honoured where possible. */
+  readonly keepsakeEquipResults?: AuthoredKeepsakeEquipResults;
 }
 
 /** The world the draft searches inside. */
@@ -57,6 +61,14 @@ export interface DraftSpec {
   readonly perGodCap?: number;
   /** In Tartarus, always take the Clockwork Goal door, below a selected story room. */
   readonly pursueTartarusGoal?: boolean;
+  /** How early a windowed room is forced; absent is the softened ramp. */
+  readonly roomForcing?: DraftRoomForcing;
+  /** Shop god boon purchases paced per planned biome; absent is the default. */
+  readonly purchasesPerBiome?: number;
+  /** Further attempts per biome after its first success; absent is the default. */
+  readonly retriesPerBiome?: number;
+  /** Percent chance a room rolls a resource point; absent is the default. */
+  readonly resourceRoomChance?: number;
 }
 
 export interface DraftKeepsakeOptions {

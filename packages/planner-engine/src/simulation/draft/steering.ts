@@ -22,17 +22,29 @@ import type { DraftNpcGiver, DraftWorldProduct } from './world';
 import type { RoomOccurrence } from '../../authored-project';
 import { draftNpcHosts, draftNpcWindowOpen, type DraftNpcHost } from './npc-windows';
 import type { ForcePressureLedgerEntry } from '../generation';
+import type { DraftRoomForcing } from '../../authored-project/model';
+import {
+  DEFAULT_DRAFT_PURCHASES_PER_BIOME,
+  DEFAULT_DRAFT_ROOM_FORCING,
+} from '../../authored-project/draft-spec';
 import type { DraftRng } from './rng';
 
 /**
- * The draft's chance a door forces a room at this depth of its window: the game's
- * `IsRoomForced` ramp 1 / (deadline - depth) shifted one step softer, 1 / (deadline - depth + 1),
- * forced at the deadline. A window one depth wide or less keeps the native rule.
+ * The draft's chance a door forces a room at this depth of its window, forced at the deadline:
+ * the game's `IsRoomForced` ramp 1 / (deadline - depth), that ramp shifted one step softer
+ * (1 / (deadline - depth + 1)), or only at the deadline. A window one depth wide or less
+ * keeps the game's rule under every setting.
  */
-export function draftWindowForceChance(depth: number, start: number, deadline: number): number {
+export function draftWindowForceChance(
+  depth: number,
+  start: number,
+  deadline: number,
+  forcing: DraftRoomForcing = DEFAULT_DRAFT_ROOM_FORCING,
+): number {
   if (depth < start) return 0;
   if (depth >= deadline) return 1;
-  return deadline - start <= 1 ? 1 / (deadline - depth) : 1 / (deadline - depth + 1);
+  if (deadline - start <= 1 || forcing === 'game') return 1 / (deadline - depth);
+  return forcing === 'softened' ? 1 / (deadline - depth + 1) : 0;
 }
 
 /** What the walk has acquired so far, read from the latest Run State snapshot. */
@@ -49,8 +61,6 @@ export interface DraftSteeringState {
   readonly biomeIndex: () => number;
 }
 
-/** The purchase pace's target: Shop purchases per planned biome, elemental boosts aside. */
-const PURCHASES_PER_BIOME = 2;
 /** The elements a pickup of this reward type contributes, as its acquisition declares them. */
 export function draftBoostElements(catalog: Catalog, rewardType: string): readonly TraitElement[] {
   return Object.keys(
@@ -649,9 +659,14 @@ export class DraftSteering {
     return due;
   }
 
+  /** Shop god boon purchases paced per planned biome; 0 buys none. */
+  purchasesPerBiome(): number {
+    return this.spec.purchasesPerBiome ?? DEFAULT_DRAFT_PURCHASES_PER_BIOME;
+  }
+
   /**
-   * How far the run's Shop purchases trail the soft pace of PURCHASES_PER_BIOME per
-   * planned biome, measured at mid-biome; negative when ahead. Elemental boosts aside.
+   * How far the run's Shop purchases trail the soft pace of purchases per planned biome,
+   * measured at mid-biome; negative when ahead. Elemental boosts aside.
    */
   purchasesBehind(): number {
     let made = 0;
@@ -666,7 +681,8 @@ export class DraftSteering {
           )
             made += 1;
         }
-    return PURCHASES_PER_BIOME * this.state.biomeIndex() + 1 - made;
+    const pace = this.purchasesPerBiome();
+    return pace * this.state.biomeIndex() + pace / 2 - made;
   }
 
   /** Whether the eligible boon entries of the bags this biome's doors draw from are nearly spent, which a Shop never is. */
@@ -705,7 +721,9 @@ export class DraftSteering {
         force.axis === 'biomeEncounterDepth'
           ? pressure.biomeEncounterDepth
           : pressure.biomeDepthCache;
-      return random() < draftWindowForceChance(depth, force.start, force.deadline);
+      return (
+        random() < draftWindowForceChance(depth, force.start, force.deadline, this.spec.roomForcing)
+      );
     });
     return hits.length === 0 ? undefined : hits[Math.floor(random() * hits.length)];
   }

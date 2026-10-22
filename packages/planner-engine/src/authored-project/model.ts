@@ -11,7 +11,7 @@ import type { RunStartPoint } from './practice-start';
 
 export const PROJECT_DOCUMENT_SCHEMA_VERSION = 98 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
-export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 0;
+export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 1;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -627,7 +627,18 @@ export interface AuthoredDraftSpec {
   readonly perGodCap?: number;
   /** In Tartarus, always take the Clockwork Goal door; absent is off, so it is saved only when on. */
   readonly pursueTartarusGoal?: true;
+  /** How early a windowed room is forced; absent is the softened ramp. */
+  readonly roomForcing?: DraftRoomForcing;
+  /** Shop god boon purchases paced per planned biome; absent is the default. */
+  readonly purchasesPerBiome?: number;
+  /** Further attempts per biome after its first success; absent is the default. */
+  readonly retriesPerBiome?: number;
+  /** Percent chance a room rolls a resource point; absent is the default. */
+  readonly resourceRoomChance?: number;
 }
+
+/** When a draft forces a room inside its depth window: only at the deadline, on a softened ramp, or at the game's odds. */
+export type DraftRoomForcing = 'deadline' | 'softened' | 'game';
 
 export interface ProjectDocument {
   readonly schemaVersion: typeof PROJECT_DOCUMENT_SCHEMA_VERSION;

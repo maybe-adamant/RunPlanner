@@ -4,7 +4,13 @@ import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-product
 import type { RunStateSnapshot } from '../rewards';
 import type { DraftSpec } from './spec';
 
-export type DraftTargetKind = 'basketTrait' | 'storyNpc' | 'fieldNpc' | 'rackKeepsake';
+export type DraftTargetKind =
+  | 'basketTrait'
+  | 'storyNpc'
+  | 'fieldNpc'
+  | 'rackKeepsake'
+  /** The player's own starting keepsake result, keyed by its result kind. */
+  | 'startingKeepsakeResult';
 
 export interface DraftTargetResult {
   readonly kind: DraftTargetKind;
@@ -110,6 +116,14 @@ export function draftReport(
         true,
     });
   });
+  const drafted = assembly.project.route.loadout.keepsakeEquipResults ?? {};
+  for (const [resultKind, wanted] of Object.entries(spec.loadout.keepsakeEquipResults ?? {}))
+    if (wanted !== undefined)
+      targets.push({
+        kind: 'startingKeepsakeResult',
+        key: resultKind,
+        met: sameValue(drafted[resultKind as keyof typeof drafted], wanted),
+      });
   const extras: DraftExtra[] = [...gods]
     .filter((god) => !spec.world.godKeys.includes(god))
     .map((key) => ({ kind: 'outsideGod', key }));
@@ -118,4 +132,17 @@ export function draftReport(
     extras: Object.freeze(extras),
     met: targets.filter((target) => target.met).length,
   });
+}
+
+/** Structural equality of plain authored values; record key order is not meaning. */
+function sameValue(left: unknown, right: unknown): boolean {
+  if (typeof left !== 'object' || left === null || typeof right !== 'object' || right === null)
+    return left === right;
+  const leftKeys = Object.keys(left);
+  return (
+    leftKeys.length === Object.keys(right).length &&
+    leftKeys.every((key) =>
+      sameValue((left as Record<string, unknown>)[key], (right as Record<string, unknown>)[key]),
+    )
+  );
 }

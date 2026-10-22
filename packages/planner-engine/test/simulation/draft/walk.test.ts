@@ -6,7 +6,7 @@ import type { AuthoredTraitOfferTraits } from '../../../src/authored-project';
 import type { DraftSpec } from '../../../src/simulation';
 import type { DraftWalk } from '../../../src/simulation/draft/walk';
 import { DEFAULT_DRAFT_BUDGET } from '../../../src/simulation/draft/generator';
-import { latestRunState } from '../../../src/simulation/draft/report';
+import { draftReport, latestRunState } from '../../../src/simulation/draft/report';
 import { draftDuoFires } from '../../../src/simulation/draft/trait-offers';
 import { startDraftWalk } from '../../support/draft-walk';
 import { decodeProjectDocument } from '../../../src/authored-project/codec';
@@ -269,5 +269,55 @@ describe('draft exit choice', () => {
     ).toBe(true);
     const selected = selectedExitTarget(exit);
     expect(selected && roomOf(selected.occurrenceId)).toBe('F_Story01');
+  });
+});
+
+describe("the starting keepsake's chosen result", () => {
+  const pomSpec = (traitKey: string, extra: Partial<DraftSpec> = {}): DraftSpec => ({
+    loadout: {
+      ...loadout,
+      startingKeepsakeKey: 'HadesAndPersephoneKeepsake',
+      keepsakeEquipResults: { jeweledPom: { traitKey } },
+    },
+    world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+    basketTraitKeys: [],
+    rackKeepsakeKeys: [null, null, null],
+    ...extra,
+  });
+  const drafted = (spec: DraftSpec) => {
+    const walk = startDraftWalk(base, spec, 1);
+    expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
+    return {
+      pom: walk.project.route.loadout.keepsakeEquipResults?.jeweledPom?.traitKey,
+      target: draftReport(catalog, spec, walk.assembly).targets.find(
+        (target) => target.kind === 'startingKeepsakeResult',
+      ),
+    };
+  };
+
+  it("takes the player's own Jeweled Pom trait and reports it met", () => {
+    expect(drafted(pomSpec('HadesPreDamageBoon'))).toEqual({
+      pom: 'HadesPreDamageBoon',
+      target: { kind: 'startingKeepsakeResult', key: 'jeweledPom', met: true },
+    });
+  });
+
+  it("falls back to an allowed trait when the basket's Hades trait holds the cap, reported unmet", () => {
+    const result = drafted(
+      pomSpec('HadesPreDamageBoon', {
+        world: {
+          godKeys: ['Zeus', 'Apollo', 'Hestia'],
+          storyNpcByBiome: { I: 'Hades' },
+          fieldNpcsByBiome: {},
+        },
+        basketTraitKeys: ['HadesLifestealBoon'],
+      }),
+    );
+    expect(result.pom).not.toBe('HadesPreDamageBoon');
+    expect(result.target).toEqual({
+      kind: 'startingKeepsakeResult',
+      key: 'jeweledPom',
+      met: false,
+    });
   });
 });

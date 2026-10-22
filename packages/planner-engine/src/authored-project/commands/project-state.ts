@@ -64,7 +64,7 @@ function isSeleneAspect(catalog: Catalog, aspectKey: string | null): boolean {
   );
 }
 
-/** Placements name hosts in the replaced biomes, so they reset. */
+/** Placements name hosts in the replaced biomes, so they reset unless the command gives new ones. */
 function replaceRoute(
   document: ProjectDocument,
   catalog: Catalog,
@@ -85,6 +85,17 @@ function replaceRoute(
     !catalog.runStartReward.incomingReward.allowedRewardTypes.includes(startingReward.rewardType)
   )
     failCommand(command, 'reward is not allowed by the run-start binding');
+  const placements = command.resourcePlacements ?? EMPTY_RESOURCE_PLACEMENTS;
+  for (const [family, placement] of Object.entries(placements)) {
+    if (placement === null) continue;
+    const host = command.biomes
+      .find((biome) => biome.biomeKey === placement.biomeKey)
+      ?.topology?.occurrences.some(
+        (occurrence) => occurrence.occurrenceId === placement.occurrenceId,
+      );
+    if (host !== true)
+      failCommand(command, `${family} placement names no occurrence in the biomes`);
+  }
   const runModifiers = route.loadout.runModifiers;
   return Object.freeze({
     ...document,
@@ -94,7 +105,7 @@ function replaceRoute(
         ...command.loadout,
         ...(runModifiers === undefined ? {} : { runModifiers }),
       }),
-      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
+      resourcePlacements: placements,
       biomes: Object.freeze([...command.biomes]),
     }),
   });

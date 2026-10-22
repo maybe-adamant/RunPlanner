@@ -14,6 +14,7 @@ import { latestRunState } from '../../../src/simulation/draft/report';
 import { DRAFT_ILLEGAL_ECHO_TRAIT_KEYS } from '../../../src/simulation/draft/basket';
 import { draftLoadoutProject } from '../../../src/simulation/draft/spec';
 import { startDraftWalk } from '../../support/draft-walk';
+import { DRAFT_CORPUS_SPEC_COUNT, draftCorpusEntry } from '../../draft-corpus/corpus';
 import type { ProjectEvaluationAssembly } from '../../../src/simulation/evaluation/evaluation-products';
 import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
@@ -354,6 +355,81 @@ describe('draftProject', () => {
       expect(shopBuys(result.project).length).toBeLessThanOrEqual(5);
     });
 
+    it('never buys a god boon at no purchases per biome, while Hermes still follows its need', () => {
+      const spec: DraftSpec = {
+        loadout,
+        world: {
+          godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+          storyNpcByBiome: {},
+          fieldNpcsByBiome: {},
+        },
+        basketTraitKeys: [
+          'ZeusWeaponBoon',
+          'ApolloCastBoon',
+          'HermesWeaponBoon',
+          'AphroditeSprintBoon',
+          'HestiaManaBoon',
+          'TimeStopLastStandBoon',
+          'ZeusSpecialBoon',
+        ],
+        rackKeepsakeKeys: [null, null, null],
+      };
+      const buys = (purchasesPerBiome?: number) => {
+        const result = draftProject(
+          catalog,
+          planned('Underworld', 3),
+          purchasesPerBiome === undefined ? spec : { ...spec, purchasesPerBiome },
+          3,
+        );
+        if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+        return shopBuys(result.project);
+      };
+      // At the default pace this seed buys a god-side boon; at none only the due Hermes boon.
+      expect(buys().some((buy) => !buy.includes(':ShopHermesUpgrade:'))).toBe(true);
+      expect(buys(0)).toEqual(['G:ShopHermesUpgrade:HermesWeaponBoon']);
+    });
+
+    it('takes the retries per biome after each first success', () => {
+      const entry = draftCorpusEntry(
+        Array.from({ length: DRAFT_CORPUS_SPEC_COUNT }, (_, index) => index).find(
+          (index) => draftCorpusEntry(index).name === 'U3 heavy Hermes Artemis trait',
+        )!,
+      );
+      const attempts = (retriesPerBiome: number) => {
+        const result = draftProject(catalog, entry.base, { ...entry.spec, retriesPerBiome }, 2);
+        if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+        return result.attempts;
+      };
+      // A seed whose first successes miss local targets: each retry is a further attempt.
+      expect(attempts(1)).toBeGreaterThan(attempts(0));
+    });
+
+    it('rolls resource rooms at the spec chance, none at 0', () => {
+      const spec: DraftSpec = {
+        loadout,
+        world: {
+          godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+          storyNpcByBiome: {},
+          fieldNpcsByBiome: {},
+        },
+        basketTraitKeys: ['ZeusWeaponBoon'],
+        rackKeepsakeKeys: [null, null, null],
+      };
+      const placed = (resourceRoomChance: number) => {
+        const result = draftProject(
+          catalog,
+          planned('Underworld', 2),
+          { ...spec, resourceRoomChance },
+          1,
+        );
+        if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+        return Object.values(result.project.route.resourcePlacements).filter((p) => p !== null)
+          .length;
+      };
+      expect(placed(0)).toBe(0);
+      expect(placed(50)).toBeGreaterThan(0);
+    });
+
     it("enters the planned biome's midshop when the player prefers midshops", () => {
       const spec: DraftSpec = {
         loadout,
@@ -430,6 +506,36 @@ describe('draftProject', () => {
       // Air for Zeus's waiting Infusion, from the first Dream Shop.
       expect(shopBuys(walk.project)).toContain('H:AirBoost:');
     });
+  });
+
+  it.each([
+    ['Underworld', underworld, 1],
+    ['Underworld', underworld, 2],
+    ['Surface', surface, 1],
+    ['Dream', dream, 1],
+  ] as const)(
+    "installs the %s draft's own route, resource points included, seed %i",
+    (_route, { base, spec }, seed) => {
+      const result = draftProject(catalog, base, spec, seed);
+      if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+      const applied = applyProjectCommand(base, catalog, result.command);
+      expect(applied.route.resourcePlacements).toEqual(result.project.route.resourcePlacements);
+      expect(applied.route.biomes).toEqual(result.project.route.biomes);
+      expect(applied.route.loadout).toEqual(result.project.route.loadout);
+      const evaluation = simulateProjectAssembly(catalog, applied).evaluation;
+      expect(evaluation.status).toBe('valid');
+      expect(evaluation.findings).toEqual([]);
+    },
+  );
+
+  it('places resource points the drafted route keeps', () => {
+    const result = draftProject(catalog, underworld.base, underworld.spec, 1);
+    if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+    expect(
+      Object.values(
+        applyProjectCommand(underworld.base, catalog, result.command).route.resourcePlacements,
+      ).some((placement) => placement !== null),
+    ).toBe(true);
   });
 
   it('drafts Fresh File from its null loadout, with Apollo met', () => {

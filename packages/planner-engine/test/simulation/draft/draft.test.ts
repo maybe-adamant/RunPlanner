@@ -18,7 +18,10 @@ import {
   type DraftSpec,
   type DraftWorld,
 } from '../../../src/simulation';
-import { draftFirstOfferTraitKeys } from '../../../src/simulation/draft/basket';
+import {
+  draftFirstOfferTraitKeys,
+  draftStartingKeepsakeConflicts,
+} from '../../../src/simulation/draft/basket';
 import { createTraitHistoryState } from '../../../src/simulation/traits/history/fold';
 
 function route(
@@ -419,6 +422,71 @@ describe('draft basket legality', () => {
     expect(assessment(underworld, spec([first!], world), second!).refusals).toContainEqual(capped);
     expect(assessment(underworld, spec([], world), second!).refusals).toEqual([]);
     expect(assessment(underworld, spec([first!], world), artemis).selectable).toBe(true);
+  });
+});
+
+describe("the starting keepsake's chosen result", () => {
+  const staff = route('Underworld', ['F', 'G', 'H', 'I'], {
+    weaponKey: 'WeaponStaffSwing',
+    aspectKey: catalog.weapons.byKey.WeaponStaffSwing!.defaultAspectKey,
+    startingKeepsakeKey: 'TempHammerKeepsake',
+  });
+  const hammer = (traitKey: string, basketTraitKeys: readonly string[], planned = 4) =>
+    draftStartingKeepsakeConflicts(
+      catalog,
+      { ...staff, biomes: staff.itineraryBiomeKeys.slice(0, planned) as never },
+      {
+        ...spec(basketTraitKeys),
+        loadout: {
+          ...staff,
+          keepsakeEquipResults: { experimentalHammer: { kind: 'selected', traitKey } },
+        },
+      },
+    ).map((entry) => entry.conflict);
+
+  it('keeps an Experimental Hammer first in the basket order and within the caps', () => {
+    expect(hammer('StaffDoubleAttackTrait', ['StaffDoubleAttackTrait'])).toEqual([]);
+    expect(hammer('StaffDoubleAttackTrait', [])).toEqual([]);
+    expect(
+      hammer('StaffLongAttackTrait', ['StaffDoubleAttackTrait', 'StaffLongAttackTrait']),
+    ).toEqual([{ kind: 'hammerOrder', traitKey: 'StaffDoubleAttackTrait' }]);
+    expect(
+      hammer('StaffDashAttackTrait', ['StaffDoubleAttackTrait', 'StaffLongAttackTrait']),
+    ).toContainEqual({ kind: 'hammerCap', cap: 2 });
+    // One planned biome holds one Hermes or Hammer trait.
+    expect(hammer('StaffDoubleAttackTrait', ['HermesWeaponBoon'], 1)).toEqual([
+      { kind: 'supplyCap', cap: 1 },
+    ]);
+  });
+
+  it('refuses the draft with the conflict, and leaves an Embryo blessing alone', () => {
+    expect(
+      refusals(staff, {
+        basketTraitKeys: ['StaffDoubleAttackTrait', 'StaffLongAttackTrait'],
+        loadout: {
+          ...staff,
+          keepsakeEquipResults: {
+            experimentalHammer: { kind: 'selected', traitKey: 'StaffLongAttackTrait' },
+          },
+        },
+      }),
+    ).toContainEqual({
+      kind: 'startingKeepsakeResult',
+      traitKey: 'StaffLongAttackTrait',
+      conflict: { kind: 'hammerOrder', traitKey: 'StaffDoubleAttackTrait' },
+    });
+    const blessing = catalog.chaos.blessings.values.find((b) => b.fixedRarity === undefined)!;
+    expect(
+      draftStartingKeepsakeConflicts(catalog, staff, {
+        ...spec(['StaffDoubleAttackTrait', 'StaffLongAttackTrait']),
+        loadout: {
+          ...staff,
+          keepsakeEquipResults: {
+            transcendentEmbryo: { blessingKey: blessing.key, blessingValues: {} },
+          },
+        },
+      }),
+    ).toEqual([]);
   });
 });
 
