@@ -357,9 +357,15 @@ pointer gestures and floating overlays account for screen versus layout coordina
 
 ### App home
 
-The app opens on Home with no plan open. Home's header has the Library,
-Catalog (desktop only), Game and Settings tabs and About (version, build, schema, catalog, the update check,
-a bug report and the keyboard shortcuts); the Game tab says "· update" or
+The app opens on Home with no plan open. Home's header has the brand and About
+(version, build, schema, catalog, the update check, a bug report and the
+keyboard shortcuts) on one row, and the Library, Catalog (desktop only), Game
+and Settings tabs on the next, with the Library's New folder, Import… and New
+plan at the row's end. Screens have no page titles: panels start under the tab
+row at one place on every tab, and the first panel's heading carries the
+screen's context from its projection ("Library · 10 plans · 3 in game" for the whole library, with "· 4 shown"
+while a search or chip filters it, "Catalog · 4 plans" for the entries shown, "Game module" with
+"Ready · 4 slots filled · Slot 2 plays next" leaving out what is not known); the Game tab says "· update" or
 "· event" in visible text while the game module has an update or a community
 event is active. Which Home tab shows, or whether the editor shows, and the
 Library folder shown are UI-session state in the library session slice; opening

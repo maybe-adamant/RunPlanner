@@ -43,29 +43,56 @@
   color: #e8c27a;
 }
 
-/* Header */
+/* Header: the brand and About, then the tabs with the shown tab's actions. */
 .home-header {
-  /* Keeps the figure and candles, left of centre in the scene, in view at any window shape. */
-  --window-backdrop-position: 30% 55%;
-  gap: 28px;
-  padding-bottom: 10px;
+  /* A flat, darker shade than the editor's, so headings never sit on bright art. */
+  --window-backdrop-shade: linear-gradient(rgb(17 18 22 / 60%), rgb(17 18 22 / 60%));
+  --home-text-shadow: 0 1px 2px rgb(0 0 0 / 75%), 0 0 18px rgb(0 0 0 / 55%);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.home-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home-brand-row h1 {
+  text-shadow: var(--home-text-shadow);
+}
+
+.home-tab-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  /* The Library's action row height, with the rule, on every tab, so panels start at one place. */
+  min-height: 45px;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
 }
 
 .home-nav {
   display: flex;
-  align-self: stretch;
-  align-items: flex-end;
-  gap: 4px;
+  gap: 6px;
 }
 
 .home-nav button {
-  margin-bottom: -11px;
-  padding: 8px 14px 9px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: -1px;
+  padding: 8px 16px 10px;
   border: 0;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   background: none;
-  color: var(--muted);
-  font-weight: 600;
+  color: #bdb7c3;
+  font-size: 1.12rem;
+  font-weight: 650;
+  text-shadow: var(--home-text-shadow);
   cursor: pointer;
 }
 
@@ -75,24 +102,62 @@
 
 .home-nav button[aria-current='page'] {
   border-bottom-color: var(--selection-accent);
-  color: var(--text);
+  color: #fff8ec;
 }
 
 .home-nav-note {
   color: var(--attention);
   font-size: 0.74rem;
+  font-weight: 650;
 }
 
-.home-header-spacer,
+.home-tab-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
 .editor-header-spacer {
   flex: 1;
 }
 
-.home-header-about {
+/* A panel's context after its name: " · 12 plans · 3 in game". */
+.home-context {
+  color: var(--muted);
+  white-space: pre;
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+
+.home-context[data-own-line] {
+  flex-basis: 100%;
+  margin-top: 2px;
+  white-space: normal;
+}
+
+.home-context [data-tone='ok'] {
+  color: #9fd6a8;
+  font-weight: 650;
+}
+
+.home-context [data-tone='next'] {
+  color: var(--selection-accent);
+  font-weight: 650;
+}
+
+.home-panel-heading {
   display: flex;
-  gap: 6px;
-  padding-left: 10px;
-  border-left: 1px solid #383943;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.home-panel-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 700;
 }
 
 /* Pages */
@@ -100,7 +165,7 @@
   min-height: 0;
   flex: 1;
   overflow: auto;
-  padding-top: 20px;
+  padding-top: 12px;
 }
 
 .home-page {
@@ -109,35 +174,10 @@
   align-content: start;
 }
 
-.home-page-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  /* The page actions' row height on every page, so the title never moves between tabs. */
-  min-height: 36px;
-}
-
-.home-page-heading h2 {
-  margin: 0;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 1.9rem;
-  font-weight: 500;
-  letter-spacing: -0.035em;
-}
-
-.home-page-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
 .home-panel {
   border: 1px solid #2e2f38;
   border-radius: 12px;
-  /* Opaque enough that tables read cleanly over the backdrop. */
-  background: rgb(24 25 31 / 95%);
+  background: var(--glass-panel);
 }
 
 .home-card {
@@ -206,10 +246,19 @@
 
 .library-toolbar {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 12px 10px;
+}
+
+.library-toolbar-spacer {
+  flex: 1;
+}
+
+/* The context follows the breadcrumb as one heading line. */
+.library-toolbar .home-context {
+  margin-left: -12px;
 }
 
 .library-toolbar select {
@@ -427,9 +476,21 @@ button.home-slot-name {
   margin-top: 4px;
 }
 
-.home-event {
-  display: grid;
-  gap: 8px;
+/* The active event's panel: the event's green as its accent, over a faintly green base. */
+.home-event-panel {
+  border-color: rgb(104 186 137 / 55%);
+  /* The panel glass's opacity, tinted with the event's green. */
+  background: rgb(24 36 30 / 91%);
+}
+
+.home-event-panel .home-section-title {
+  color: #9bd7af;
+}
+
+.home-event-panel .event-card {
+  padding: 0;
+  border: 0;
+  background: none;
 }
 
 .event-card {
@@ -819,9 +880,8 @@ button.home-slot-name {
 }
 
 @container app-viewport (max-width: 760px) {
-  .home-header {
+  .home-tab-row {
     flex-wrap: wrap;
-    gap: 12px;
   }
 
   .home-game-layout {
@@ -840,7 +900,7 @@ button.home-slot-name {
   }
 }
 
-.home-nav-note[data-tone='event'] {
+.home-nav-note [data-tone='event'] {
   color: #9fd6a8;
 }
 
@@ -1114,9 +1174,12 @@ button.home-slot-name {
 }
 
 /* Catalog */
-.catalog-note {
-  margin: 0;
-  font-size: 0.82rem;
+.catalog-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 12px 10px;
 }
 
 .catalog-tabs {

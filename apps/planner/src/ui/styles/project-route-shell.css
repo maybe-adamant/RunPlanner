@@ -360,7 +360,7 @@
   margin-top: 8px;
   border: 1px solid #2e2f38;
   border-radius: 12px;
-  background: rgb(28 29 35 / 91%);
+  background: var(--glass-panel);
   box-shadow: 0 32px 80px rgb(0 0 0 / 24%);
   overflow: clip;
 }

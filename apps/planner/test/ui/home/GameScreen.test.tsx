@@ -62,7 +62,7 @@ async function openGame(
   const rendered = renderPlannerForInteraction({ application, startWithProject: false });
   const home = screen.getByRole('navigation', { name: 'Home' });
   await rendered.user.click(within(home).getByRole('button', { name: /^Game/ }));
-  const dialog = await screen.findByRole('region', { name: 'Game module' });
+  const dialog = await screen.findByRole('region', { name: 'Game' });
   await within(dialog).findByRole('heading', { name: 'Game location' });
   return { ...rendered, dialog };
 }
@@ -110,7 +110,7 @@ describe('Game screen', () => {
     game.host.useDiscoveredTarget.mockResolvedValue(gameModuleStatus());
     const { dialog, user } = await openGame(game.host);
     expect(within(dialog).getByText('Choose where Hades II mods are installed.')).toBeTruthy();
-    expect(within(dialog).queryByRole('heading', { name: 'Status' })).toBeNull();
+    expect(within(dialog).queryByRole('heading', { name: 'Game module' })).toBeNull();
 
     await user.click(within(dialog).getByRole('button', { name: 'Find r2modman profiles' }));
     const search = await screen.findByRole('combobox', { name: 'r2modman profile choices' });
@@ -167,7 +167,7 @@ describe('Game screen', () => {
     expect(
       await within(dialog).findByText('Choose where Hades II mods are installed.'),
     ).toBeTruthy();
-    expect(within(dialog).queryByRole('heading', { name: 'Status' })).toBeNull();
+    expect(within(dialog).queryByRole('heading', { name: 'Game module' })).toBeNull();
     expect(game.host.remove).not.toHaveBeenCalled();
   });
 
@@ -411,7 +411,10 @@ describe('Game screen', () => {
     });
     await waitFor(() => expect(tab.textContent).toBe('Game · update · event'));
     expect(tab.getAttribute('aria-current')).toBe('page');
-    const card = within(dialog).getByRole('complementary', { name: 'Community event' });
+    // The active event is its own panel, last in the side column.
+    const panel = within(dialog).getByRole('region', { name: 'Community event' });
+    expect(panel.parentElement?.lastElementChild).toBe(panel);
+    const card = within(panel).getByRole('complementary', { name: 'Community event' });
     expect(within(card).getByText('Event: Week 42: Staff sprint')).toBeTruthy();
     expect(within(dialog).getByRole('button', { name: 'Update' }).className).toContain(
       'primary-action',
@@ -476,6 +479,11 @@ describe('Game screen', () => {
     expect(next('Slot 3').disabled).toBe(true);
     expect(within(row('Slot 4')).queryByRole('radio')).toBeNull();
     expect(within(row('Slot 4')).getByText('Empty')).toBeTruthy();
+    // The module card's context says it is ready, how many slots are filled and what plays next.
+    expect(
+      within(dialog).getByRole('region', { name: 'Game module' }).querySelector('.home-context')
+        ?.textContent,
+    ).toBe('Ready · 3 slots filled · Slot 1 plays next');
     // Home never sends.
     expect(within(table).queryByRole('button', { name: /Send|Replace/ })).toBeNull();
     // Present, outdated, unlinked, empty and active rows all keep one shape.
@@ -619,6 +627,8 @@ describe('Game screen', () => {
       name: 'Import event folder…',
     });
     expect(within(dialog).queryByRole('rowheader', { name: 'Event' })).toBeNull();
+    // Without an active event there is no event panel, only the development tools.
+    expect(within(dialog).queryByRole('region', { name: 'Community event' })).toBeNull();
 
     await user.click(importButton);
     expect(development.pickEventFolder).toHaveBeenCalledTimes(1);
@@ -702,7 +712,7 @@ describe('Game screen', () => {
     const { user } = renderPlannerForInteraction({ startWithProject: false });
     const home = screen.getByRole('navigation', { name: 'Home' });
     await user.click(within(home).getByRole('button', { name: 'Game' }));
-    const page = screen.getByRole('region', { name: 'Game module' });
+    const page = screen.getByRole('region', { name: 'Game' });
     expect(within(page).getByText(/available in the desktop application/)).toBeTruthy();
   });
 });

@@ -6,6 +6,8 @@
   container: app-viewport / inline-size;
 
   --surface: #1c1d23;
+  /* The glass of panels over a window backdrop, the editor's and Home's alike. */
+  --glass-panel: rgb(28 29 35 / 91%);
   --border: #3b3c46;
   --muted: #aaa7af;
   --danger: #e7a1a1;
@@ -231,7 +233,10 @@ input[type='checkbox']:checked:disabled {
   z-index: -1;
   inset: 0;
   background:
-    linear-gradient(to bottom, rgb(17 18 22 / 72%), rgb(17 18 22 / 35%) 18%, rgb(17 18 22 / 35%)),
+    var(
+      --window-backdrop-shade,
+      linear-gradient(to bottom, rgb(17 18 22 / 72%), rgb(17 18 22 / 35%) 18%, rgb(17 18 22 / 35%))
+    ),
     var(--window-backdrop) var(--window-backdrop-position, center) / cover no-repeat;
   content: '';
   pointer-events: none;

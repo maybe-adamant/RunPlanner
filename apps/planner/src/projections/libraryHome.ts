@@ -3,6 +3,7 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { GamePlanSlot, GamePlanSlotNumber } from '@planner/persistence/gameModuleHost';
 import { ownEntry } from '@planner/projections/gameSlotSummary';
 import type { LibraryItem } from '@planner/workspace/projectLibrary';
+import { plansText, type HomeContextPart } from '@planner/projections/homeContext';
 
 /**
  * A slot holding a library plan's identity. `current` when it holds the plan as it is now;
@@ -176,6 +177,8 @@ export interface LibraryView {
   readonly breadcrumb: readonly LibraryCrumb[];
   readonly folders: readonly LibraryFolderRow[];
   readonly rows: readonly LibraryRow[];
+  /** The whole library's plans and how many are in game, then how many a search shows. */
+  readonly context: readonly HomeContextPart[];
 }
 
 function edited(modifiedMs: number, now: number): LibraryRowEdited {
@@ -338,7 +341,13 @@ export function projectLibraryView(
             .length,
         }))
         .sort((left, right) => left.name.localeCompare(right.name));
-  return Object.freeze({ searching, breadcrumb, folders, rows });
+  const inGame = listing.items.filter(
+    (item) => item.kind === 'ready' && (links.byKey.get(item.key)?.length ?? 0) > 0,
+  ).length;
+  const context: HomeContextPart[] = [{ text: plansText(listing.items.length), tone: null }];
+  if (inGame > 0) context.push({ text: `${inGame} in game`, tone: 'ok' });
+  if (searching) context.push({ text: `${rows.length} shown`, tone: null });
+  return Object.freeze({ searching, breadcrumb, folders, rows, context });
 }
 
 /** An import's summary notice; `lasting` while a file could not be imported. */

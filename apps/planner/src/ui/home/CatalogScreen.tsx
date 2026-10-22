@@ -14,6 +14,7 @@ import {
   type CatalogFeedController,
 } from '@planner/workspace/catalogFeed';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
+import { HomeContext } from './HomeContext';
 import type { LibrarySlotIndex } from './useLibrarySlotLinks';
 
 function routeTone(routeKey: string): string {
@@ -156,11 +157,7 @@ export function CatalogScreen({
         )
       : null;
   return (
-    <section aria-labelledby="catalog-title" className="home-page">
-      <div className="home-page-heading">
-        <h2 id="catalog-title">Plans to start from</h2>
-        <p className="home-muted catalog-note">Adding a plan puts your own copy in the Library.</p>
-      </div>
+    <section aria-label="Catalog" className="home-page">
       {problem === null ? null : (
         <p className="home-problem" role="alert">
           {problem}
@@ -168,6 +165,12 @@ export function CatalogScreen({
       )}
 
       <div className="home-panel library-panel">
+        <div className="catalog-heading">
+          <h3 className="home-panel-title">
+            Catalog
+            <HomeContext parts={shown?.context ?? []} />
+          </h3>
+        </div>
         {state.kind === 'loading' ? (
           <p className="catalog-status">Loading the catalog…</p>
         ) : state.kind === 'disabled' ? (

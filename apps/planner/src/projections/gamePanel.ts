@@ -7,6 +7,7 @@ import type { SlotRebuildReport } from '@planner/workspace/slotRebuild';
 import { describeStartPointBlocked } from '@planner/projections/startPointCopy';
 import { ownEntry, slotLoadoutLabel } from '@planner/projections/gameSlotSummary';
 import { OUTDATED_REBUILD, OUTDATED_RESEND } from '@planner/projections/libraryHome';
+import type { HomeContextPart } from '@planner/projections/homeContext';
 import type { GameActivationFailure, GameSendFailure } from '@planner/state/gameSendSessionSlice';
 import type {
   GameActiveSlotNumber,
@@ -572,6 +573,29 @@ export function projectNextRunSlot(status: GameModuleStatus | null): GameActiveS
   const file = status?.inspection?.activeSlot;
   if (file === undefined) return null;
   return file.state === 'present' ? file.slot : 1;
+}
+
+/**
+ * The Game panel's context line: whether the module is ready, how many plan slots are filled
+ * and which slot plays next, leaving out what is not known. Without a game location it says
+ * only that it is not connected.
+ */
+export function projectGameContext(status: GameModuleStatus | null): readonly HomeContextPart[] {
+  if (status === null) return [];
+  const inspection = status.inspection;
+  if (status.target === null || inspection === null) return [{ text: 'Not connected', tone: null }];
+  const parts: HomeContextPart[] = [];
+  // Any other module state is the card's own status line.
+  if (projectGamePanel(status).module?.state === 'ready') parts.push({ text: 'Ready', tone: 'ok' });
+  const filled = inspection.planSlots.filter((slot) => slot.state !== 'empty').length;
+  parts.push({ text: `${filled} ${filled === 1 ? 'slot' : 'slots'} filled`, tone: null });
+  const next = projectNextRunSlot(status);
+  const nextSlot =
+    next === 0 ? inspection.eventSlot : inspection.planSlots.find((slot) => slot.slot === next);
+  if (next !== null && nextSlot?.state === 'present') {
+    parts.push({ text: `${next === 0 ? 'Event' : `Slot ${next}`} plays next`, tone: 'next' });
+  }
+  return parts;
 }
 
 /** Whether the next run plays the event slot, which holds a plan the module can play. */

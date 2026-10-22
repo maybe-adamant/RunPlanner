@@ -9,13 +9,10 @@ export function SettingsScreen({
   readonly scale: AppScale;
 }) {
   return (
-    <section aria-labelledby="settings-title" className="home-page">
-      <div className="home-page-heading">
-        <h2 id="settings-title">Settings</h2>
-      </div>
+    <section aria-label="Settings" className="home-page">
       <div className="home-settings">
         <section aria-labelledby="settings-display-title" className="home-panel home-card">
-          <h3 className="home-section-title" id="settings-display-title">
+          <h3 className="home-panel-title" id="settings-display-title">
             Display
           </h3>
           <div className="home-setting-row">

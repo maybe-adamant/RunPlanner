@@ -43,13 +43,13 @@ async function renderCatalog(
   });
   await application.startupReady;
   const rendered = renderPlannerForInteraction({ application, startWithProject: false });
-  await screen.findByRole('region', { name: 'Your plans' });
+  await screen.findByRole('region', { name: 'Library' });
   await rendered.user.click(
     within(screen.getByRole('navigation', { name: 'Home' })).getByRole('button', {
       name: 'Catalog',
     }),
   );
-  const page = await screen.findByRole('region', { name: 'Plans to start from' });
+  const page = await screen.findByRole('region', { name: 'Catalog' });
   return { ...rendered, application, feed, library, page };
 }
 
@@ -68,7 +68,7 @@ describe('Catalog screen', () => {
     const application = createApplication({ projectLibrary: createMemoryProjectLibrary().adapter });
     await application.startupReady;
     renderPlannerForInteraction({ application, startWithProject: false });
-    await screen.findByRole('region', { name: 'Your plans' });
+    await screen.findByRole('region', { name: 'Library' });
     expect(screen.queryByRole('button', { name: 'Catalog' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Browse catalog' })).toBeNull();
     cleanup();
@@ -76,7 +76,7 @@ describe('Catalog screen', () => {
     const { user, feed } = await renderCatalog();
     await user.click(screen.getByRole('button', { name: 'Library' }));
     await user.click(await screen.findByRole('button', { name: 'Browse catalog' }));
-    expect(await screen.findByRole('region', { name: 'Plans to start from' })).toBeTruthy();
+    expect(await screen.findByRole('region', { name: 'Catalog' })).toBeTruthy();
     // Showing the Catalog retries a failed read.
     expect(feed.host.refresh).toHaveBeenCalledWith(true);
   });
@@ -91,6 +91,10 @@ describe('Catalog screen', () => {
         .map((tab) => tab.textContent),
     ).toEqual(['All4', 'Speedrun3', 'Practice1']);
     expect(titles()).toEqual(['Chronos practice', 'Future run', 'Sub 3m Surface', 'Underworld WR']);
+    // The panel's heading counts the entries shown.
+    expect(within(page).getByRole('heading', { name: /^Catalog/ }).textContent).toBe(
+      'Catalog · 4 plans',
+    );
     const row = rowOf('Underworld WR');
     expect(within(row).getByText(wr.description)).toBeTruthy();
     expect(within(row).getByText('4 biomes')).toBeTruthy();

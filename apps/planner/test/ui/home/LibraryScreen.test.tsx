@@ -27,8 +27,9 @@ async function renderLibrary(
   const application = createApplication({ projectLibrary: library.adapter });
   await application.startupReady;
   const rendered = renderPlannerForInteraction({ application, startWithProject: false });
-  const page = await screen.findByRole('region', { name: 'Your plans' });
-  await within(page).findByText(/ in the library$/);
+  const page = await screen.findByRole('region', { name: 'Library' });
+  // The heading's count shows once the library has been read.
+  await waitFor(() => expect(page.querySelector('.library-toolbar .home-context')).not.toBeNull());
   return { ...rendered, application, library, page };
 }
 
@@ -94,7 +95,11 @@ describe('Library screen', () => {
       'disabled',
       false,
     );
-    expect(within(page).getByText('2 plans in the library')).toBeTruthy();
+    // The panel's context counts the whole library; Home's tab row carries the Library's actions.
+    expect(page.querySelector('.library-toolbar .home-context')?.textContent).toBe(' · 2 plans');
+    expect(
+      screen.getByRole('button', { name: 'New plan' }).closest('.home-tab-row'),
+    ).not.toBeNull();
     // The web library has no folder to reveal.
     expect(within(page).queryByRole('button', { name: 'Open folder' })).toBeNull();
   });
@@ -226,7 +231,7 @@ describe('Library screen', () => {
     });
     await application.startupReady;
     const { user } = renderPlannerForInteraction({ application, startWithProject: false });
-    const page = await screen.findByRole('region', { name: 'Your plans' });
+    const page = await screen.findByRole('region', { name: 'Library' });
     const offer = await within(page).findByRole('region', { name: 'Recovered unsaved plan' });
     await user.click(within(offer).getByRole('button', { name: 'Not now' }));
     await waitFor(() =>
@@ -307,6 +312,10 @@ describe('Library screen', () => {
 
     await user.type(screen.getByRole('searchbox', { name: 'Search plans by name' }), 'practice');
     expect(screen.getByRole('navigation', { name: 'Folder' }).textContent).toBe('Whole library');
+    // A search keeps the whole library's count and adds how many it shows.
+    expect(document.querySelector('.library-toolbar .home-context')?.textContent).toBe(
+      ' · 3 plans · 2 shown',
+    );
     expect(
       within(rowOf('Typhon practice')).getByRole('button', { name: 'in Practice › Bosses' }),
     ).toBeTruthy();

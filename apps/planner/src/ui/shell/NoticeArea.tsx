@@ -261,13 +261,19 @@ export function CommunityEventCard({
     eventPlaysNext,
   );
   if (event.kind !== 'active') return null;
+  // A panel of its own, shown only while an event is active.
   return (
-    <ActiveEventNotice
-      controller={communityEvents}
-      key={event.event.id}
-      notice={event}
-      playsNext={playsNext}
-    />
+    <section aria-labelledby="game-event-title" className="home-panel home-card home-event-panel">
+      <h3 className="home-section-title" id="game-event-title">
+        Community event
+      </h3>
+      <ActiveEventNotice
+        controller={communityEvents}
+        key={event.event.id}
+        notice={event}
+        playsNext={playsNext}
+      />
+    </section>
   );
 }
 
