@@ -208,6 +208,7 @@ export function CatalogScreen({
             </nav>
             <div className="library-filters catalog-filters">
               <input
+                autoComplete="off"
                 aria-label="Search the catalog"
                 onChange={(event) => setFilter(event.target.value)}
                 placeholder="Search title, god, aspect, author"

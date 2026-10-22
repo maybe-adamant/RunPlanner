@@ -20,8 +20,11 @@ import {
   type OutsideProjectFile,
   type ProjectLibraryAdapter,
   type ProjectLibraryEntry,
+  type ProjectLibraryListing,
   type ProjectLibrarySummary,
+  type UnreadableLibraryFolder,
 } from '../persistence/projectLibrary';
+import type { LegacyAutosave } from '../persistence/legacyAutosave';
 import { assertPublicProjectAdmission } from './project-admission';
 
 const FOLDER_NAME_MAX = 60;
@@ -106,21 +109,33 @@ export interface FiledPlan {
 export interface LibraryListing {
   readonly folders: readonly string[];
   readonly items: readonly LibraryItem[];
+  /** Folders that could not be read, whose plans are missing from the listing. */
+  readonly unreadableFolders?: readonly UnreadableLibraryFolder[];
 }
 
-/** A deleted plan's content, kept in memory so the deletion can be undone. */
+/** A deleted file's bytes as they were stored, kept in memory so the deletion can be undone. */
 export interface DeletedPlan {
   readonly key: string;
   readonly folder: string;
-  readonly json: string;
+  readonly bytes: Uint8Array;
 }
 
-/** A deleted folder: itself, its subfolders and its plans, kept in memory for undo. */
+/** A deleted folder: itself, its subfolders and its files, kept in memory for undo. */
 export interface DeletedFolder {
   readonly folder: string;
   readonly folders: readonly string[];
   readonly plans: readonly DeletedPlan[];
+  /** Files that could not be read before deleting; only the recycle bin keeps them. */
+  readonly unkept: readonly string[];
 }
+
+/** Text the planner kept before the library and may offer to import once. */
+export interface StartupImportOffer extends OutsideProjectFile {
+  /** The name an older document without one takes. */
+  readonly legacyName: string;
+}
+
+const RECOVERED_PLAN_NAME = 'Recovered plan';
 
 /** The files an import filed, and those it could not, each with its reason. */
 export interface ImportReport {
@@ -132,6 +147,8 @@ export interface ImportFileOptions {
   readonly newIdentity?: boolean;
   readonly folder?: string;
   readonly name?: string;
+  /** Names a document from before plans had names; defaults to the file's stem. */
+  readonly legacyName?: string;
 }
 
 export interface ProjectLibraryOperations {
@@ -143,6 +160,8 @@ export interface ProjectLibraryOperations {
   readJson(key: string): Promise<string>;
   /** Every stored plan and folder; a copy sharing an older plan's identity first takes a new one. */
   list(options?: { readonly openKey?: string }): Promise<LibraryListing>;
+  /** Every stored plan and folder as stored, changing nothing. */
+  scan(): Promise<LibraryListing>;
   /** Reads and loads one plan. */
   read(key: string): Promise<FiledPlan>;
   /** Files a new plan in a folder; it must not share an identity with a stored one. */
@@ -155,16 +174,24 @@ export interface ProjectLibraryOperations {
    */
   importFile(file: OutsideProjectFile, options?: ImportFileOptions): Promise<FiledPlan>;
   deletePlan(key: string): Promise<DeletedPlan>;
-  undoDelete(deleted: DeletedPlan): Promise<FiledPlan>;
+  /** Puts a deleted file back as it was, readable as a plan or not. */
+  undoDelete(deleted: DeletedPlan): Promise<LibraryItem>;
   /** Moves a plan to another folder; resolves its new key. */
   movePlan(key: string, folder: string): Promise<string>;
   createFolder(folder: string): Promise<void>;
   moveFolder(from: string, to: string): Promise<void>;
   deleteFolder(folder: string): Promise<DeletedFolder>;
+  /** Restores everything a folder deletion removed, or nothing when any of it fails. */
   undoDeleteFolder(deleted: DeletedFolder): Promise<void>;
   /** The file open before the library, until it is offered once or the library holds it. */
-  previousFileOffer(): Promise<OutsideProjectFile | null>;
+  previousFileOffer(): Promise<StartupImportOffer | null>;
   settlePreviousFileOffer(): Promise<void>;
+  /**
+   * The unsaved project the planner autosaved before the library, while it is kept and differs
+   * from the previously open file.
+   */
+  recoveredPlanOffer(): Promise<StartupImportOffer | null>;
+  settleRecoveredPlanOffer(): Promise<void>;
   /** The `projectId` of the copy each catalog entry was added as, by entry id. */
   catalogCopies(): Promise<Readonly<Record<string, string>>>;
   recordCatalogCopy(entryId: string, projectId: string): Promise<void>;
@@ -172,6 +199,8 @@ export interface ProjectLibraryOperations {
 
 interface CreateProjectLibraryOperationsOptions {
   readonly adapter: ProjectLibraryAdapter;
+  /** The autosave kept before the library, offered once for import. */
+  readonly legacyAutosave?: LegacyAutosave;
   readonly catalog: Catalog;
   readonly mintProjectId?: () => string;
 }
@@ -247,10 +276,8 @@ export function createProjectLibraryOperations(
   const { adapter, catalog } = options;
   const mintProjectId = options.mintProjectId ?? mintRandomProjectId;
 
-  const load = (json: string, fileName: string) => {
-    const loaded = loadProjectDocument(json, catalog, {
-      legacyName: projectFileStem(fileName),
-    });
+  const load = (json: string, fileName: string, legacyName = projectFileStem(fileName)) => {
+    const loaded = loadProjectDocument(json, catalog, { legacyName });
     assertPublicProjectAdmission(catalog, loaded.project);
     return loaded;
   };
@@ -271,11 +298,81 @@ export function createProjectLibraryOperations(
 
   const reidentifyCopy = async (item: LibraryItem): Promise<LibraryItem> => {
     try {
-      const project = reidentified(load(await adapter.read(item.key), item.key).project);
+      const loaded = load(await adapter.read(item.key), item.key);
+      const project = reidentified(loaded.project);
+      // A copy stored in an older schema keeps its original, as its first edit would.
+      if (loaded.migrationProvenance.length > 0) await adapter.preserveOriginal(item.key);
       return classify(await adapter.write(item.key, encodeProjectDocument(project)));
     } catch {
       // A copy the planner cannot open keeps its identity until it can.
       return item;
+    }
+  };
+
+  const listed = (listing: ProjectLibraryListing, items: LibraryItem[]): LibraryListing =>
+    Object.freeze({
+      folders: Object.freeze([...listing.folders]),
+      items: Object.freeze(items.sort(byAge)),
+      ...(listing.unreadableFolders === undefined || listing.unreadableFolders.length === 0
+        ? {}
+        : { unreadableFolders: Object.freeze([...listing.unreadableFolders]) }),
+    });
+
+  /** The pre-library file and the project it loads as, read once. */
+  let previousFile: Promise<{
+    readonly offer: StartupImportOffer;
+    readonly canonical: string | null;
+  } | null> | null = null;
+  const currentPreviousFile = () => {
+    previousFile ??= adapter.previousActiveFile().then((file) => {
+      if (file === null) return null;
+      const offer = Object.freeze({ ...file, legacyName: projectFileStem(file.fileName) });
+      let canonical: string | null;
+      try {
+        canonical = encodeProjectDocument(load(file.json, file.fileName).project);
+      } catch {
+        canonical = null;
+      }
+      return { offer, canonical };
+    });
+    return previousFile;
+  };
+  const readLegacyAutosave = (): string | null => {
+    try {
+      return options.legacyAutosave?.read() ?? null;
+    } catch {
+      return null;
+    }
+  };
+  /** The autosave as an offer, or null when there is none or it repeats the previous file. */
+  const recoveredOffer = async (): Promise<{
+    readonly offer: StartupImportOffer;
+    readonly repeatsPrevious: boolean;
+  } | null> => {
+    const json = readLegacyAutosave();
+    if (json === null) return null;
+    const previous = await currentPreviousFile().catch(() => null);
+    // The autosave was a copy of the file then open, so an older one takes that file's name.
+    const legacyName = previous?.offer.legacyName ?? RECOVERED_PLAN_NAME;
+    let canonical: string;
+    try {
+      canonical = encodeProjectDocument(
+        load(json, `${legacyName}.runplanner.json`, legacyName).project,
+      );
+    } catch {
+      return null;
+    }
+    return {
+      offer: Object.freeze({ fileName: `${legacyName}.runplanner.json`, json, legacyName }),
+      repeatsPrevious: previous !== null && previous.canonical === canonical,
+    };
+  };
+
+  const clearLegacyAutosave = () => {
+    try {
+      options.legacyAutosave?.clear();
+    } catch {
+      // Storage that cannot be cleared offers the plan again next launch.
     }
   };
 
@@ -305,7 +402,7 @@ export function createProjectLibraryOperations(
     file: OutsideProjectFile,
     importOptions: ImportFileOptions = {},
   ): Promise<FiledPlan> => {
-    const loaded = load(file.json, file.fileName);
+    const loaded = load(file.json, file.fileName, importOptions.legacyName);
     const { migrationProvenance } = loaded;
     const project =
       importOptions.name === undefined
@@ -348,10 +445,11 @@ export function createProjectLibraryOperations(
         }
         result.push(await reidentifyCopy(item));
       }
-      return Object.freeze({
-        folders: Object.freeze([...listing.folders]),
-        items: Object.freeze(result.sort(byAge)),
-      });
+      return listed(listing, result);
+    },
+    async scan(): Promise<LibraryListing> {
+      const listing = await adapter.list();
+      return listed(listing, listing.entries.map(classify));
     },
     read,
     create,
@@ -379,14 +477,13 @@ export function createProjectLibraryOperations(
       return Object.freeze({ filed: Object.freeze(filed), failed: Object.freeze(failed) });
     },
     async deletePlan(key: string): Promise<DeletedPlan> {
-      const json = await adapter.read(key);
+      const bytes = await adapter.readBytes(key);
       const entry = (await adapter.list()).entries.find((candidate) => candidate.key === key);
       await adapter.delete(key);
-      return Object.freeze({ key, folder: entry?.folder ?? '', json });
+      return Object.freeze({ key, folder: entry?.folder ?? '', bytes });
     },
-    async undoDelete(deleted: DeletedPlan): Promise<FiledPlan> {
-      const { project } = load(deleted.json, deleted.key);
-      return filed(await adapter.create(deleted.json, deleted.folder), project);
+    async undoDelete(deleted: DeletedPlan): Promise<LibraryItem> {
+      return classify(await adapter.restore(deleted.key, deleted.folder, deleted.bytes));
     },
     async movePlan(key: string, folder: string): Promise<string> {
       return (await adapter.movePlan(key, folder)).key;
@@ -397,39 +494,80 @@ export function createProjectLibraryOperations(
       const listing = await adapter.list();
       const inside = (path: string) => path === folder || path.startsWith(`${folder}/`);
       const plans: DeletedPlan[] = [];
+      const unkept: string[] = [];
       for (const entry of listing.entries.filter((candidate) => inside(candidate.folder))) {
-        plans.push(
-          Object.freeze({
-            key: entry.key,
-            folder: entry.folder,
-            json: await adapter.read(entry.key),
-          }),
-        );
+        try {
+          const bytes = await adapter.readBytes(entry.key);
+          plans.push(Object.freeze({ key: entry.key, folder: entry.folder, bytes }));
+        } catch {
+          // The folder still goes to the recycle bin with this file in it.
+          unkept.push(entry.key);
+        }
       }
       await adapter.deleteFolder(folder);
       return Object.freeze({
         folder,
         folders: Object.freeze(listing.folders.filter(inside)),
         plans: Object.freeze(plans),
+        unkept: Object.freeze(unkept),
       });
     },
     async undoDeleteFolder(deleted: DeletedFolder): Promise<void> {
-      for (const folder of [deleted.folder, ...deleted.folders]) await adapter.createFolder(folder);
-      for (const plan of deleted.plans) await adapter.create(plan.json, plan.folder);
+      const before = await adapter.list();
+      const taken = new Set(before.entries.map((entry) => entry.key));
+      const clash = deleted.plans.find((plan) => taken.has(plan.key));
+      if (clash !== undefined) throw new Error(`${clash.key} is already in the library.`);
+      const folderExisted = before.folders.includes(deleted.folder);
+      const restored: string[] = [];
+      try {
+        for (const folder of [deleted.folder, ...deleted.folders]) {
+          await adapter.createFolder(folder);
+        }
+        for (const plan of deleted.plans) {
+          await adapter.restore(plan.key, plan.folder, plan.bytes);
+          restored.push(plan.key);
+        }
+      } catch (error) {
+        // Nothing stays half restored: what this undo put back is removed again.
+        try {
+          if (folderExisted) {
+            for (const key of restored) await adapter.delete(key);
+          } else {
+            await adapter.deleteFolder(deleted.folder);
+          }
+        } catch {
+          // The original failure is the one to report.
+        }
+        throw error;
+      }
     },
-    async previousFileOffer(): Promise<OutsideProjectFile | null> {
+    async previousFileOffer(): Promise<StartupImportOffer | null> {
       if ((await currentSession()).previousFileOffered) return null;
-      const file = await adapter.previousActiveFile();
+      const file = await currentPreviousFile();
       if (file === null) return null;
       let projectId: unknown;
       try {
-        projectId = (JSON.parse(file.json) as { projectId?: unknown }).projectId;
+        projectId = (JSON.parse(file.offer.json) as { projectId?: unknown }).projectId;
       } catch {
-        return file;
+        return file.offer;
       }
-      return typeof projectId === 'string' && (await heldIdentities()).has(projectId) ? null : file;
+      return typeof projectId === 'string' && (await heldIdentities()).has(projectId)
+        ? null
+        : file.offer;
     },
-    settlePreviousFileOffer: () => updateSession({ previousFileOffered: true }),
+    async settlePreviousFileOffer(): Promise<void> {
+      await updateSession({ previousFileOffered: true });
+      // An autosave that only repeated the previous file is settled with it.
+      if ((await recoveredOffer())?.repeatsPrevious === true) clearLegacyAutosave();
+    },
+    async recoveredPlanOffer(): Promise<StartupImportOffer | null> {
+      const recovered = await recoveredOffer();
+      return recovered === null || recovered.repeatsPrevious ? null : recovered.offer;
+    },
+    settleRecoveredPlanOffer(): Promise<void> {
+      clearLegacyAutosave();
+      return Promise.resolve();
+    },
     catalogCopies: async () => (await currentSession()).catalogCopies,
     async recordCatalogCopy(entryId: string, projectId: string): Promise<void> {
       const { catalogCopies } = await currentSession();

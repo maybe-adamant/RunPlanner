@@ -143,13 +143,17 @@ export function installNavigationHistory(options: {
       const item =
         items.find((candidate) => candidate.key === key) ??
         items.find((candidate) => candidate.kind === 'ready' && candidate.projectId === projectId);
-      const opened =
-        item === undefined || item.kind !== 'ready' ? null : await operations.openPlan(item.key);
-      if (opened === null || opened.status !== 'success') {
+      if (item === undefined || item.kind !== 'ready') {
         store.dispatch(viewChanged({ kind: 'home', tab: 'library' }));
         store.dispatch(
           navigationNoticeShown('That plan is no longer in the library, so the Library is shown.'),
         );
+        return;
+      }
+      const opened = await operations.openPlan(item.key);
+      if (opened.status !== 'success') {
+        // Opening failed, as when the current plan cannot be saved first: stay where the app is.
+        store.dispatch(navigationNoticeShown(opened.message));
         return;
       }
     } else {

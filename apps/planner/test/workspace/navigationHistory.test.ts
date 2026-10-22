@@ -1,10 +1,11 @@
-import { createProjectDocument } from '@run-planner/engine/authored-project';
+import { createProjectAddress, createProjectDocument } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { routePanelSelected } from '@planner/state/editorSessionSlice';
 import { libraryFolderChanged, viewChanged } from '@planner/state/librarySessionSlice';
+import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import {
   installNavigationHistory,
   type NavigationHistoryEnvironment,
@@ -159,6 +160,40 @@ describe('navigation history', () => {
     expect(store.getState().librarySession.view).toEqual({ kind: 'home', tab: 'library' });
     // The entry now names where back landed.
     expect(fake.locations()[fake.index()]).toMatchObject({ view: 'home', tab: 'library' });
+  });
+
+  it('stays on the open plan and says why when it cannot be saved before going back', async () => {
+    const { application, fake, key, library, settle } = await setUp();
+    const { store } = application;
+    const other = await library.file(
+      createProjectDocument(catalog, {
+        projectId: 'p-surface',
+        name: 'Surface run',
+        routeKey: 'Surface',
+      }),
+    );
+    await application.projectOperations.openPlan(key);
+    await settle();
+    await application.projectOperations.openPlan(other);
+    await settle();
+    library.failWrites(new Error('disk full'));
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'RenameProject',
+        project: createProjectAddress(),
+        name: 'Edited',
+      }),
+    );
+
+    fake.environment.history.back();
+    await vi.waitFor(() =>
+      expect(store.getState().librarySession.navigationNotice).toBe(
+        'Open plan failed: Could not save the current plan: disk full',
+      ),
+    );
+    expect(store.getState().librarySession.view).toEqual({ kind: 'editor' });
+    expect(application.projectOperations.openKey()).toBe(other);
+    expect(fake.locations()[fake.index()]).toMatchObject({ plan: { key: other } });
   });
 
   it('steps back on the back mouse button only when the host did not', async () => {

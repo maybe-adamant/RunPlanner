@@ -26,10 +26,18 @@ export interface ProjectLibraryEntry {
   readonly content: ProjectLibraryEntryContent;
 }
 
+/** A folder the host could not read while listing, and why; its plans are not listed. */
+export interface UnreadableLibraryFolder {
+  readonly folder: string;
+  readonly message: string;
+}
+
 /** Every stored plan and every folder, nested folders as `/`-separated paths. */
 export interface ProjectLibraryListing {
   readonly folders: readonly string[];
   readonly entries: readonly ProjectLibraryEntry[];
+  /** Absent when every folder could be read. */
+  readonly unreadableFolders?: readonly UnreadableLibraryFolder[];
 }
 
 /** A plan file from outside the library, by its own file name. */
@@ -64,6 +72,13 @@ export interface ProjectLibraryAdapter {
   readonly supportsReveal: boolean;
   list(): Promise<ProjectLibraryListing>;
   read(key: string): Promise<string>;
+  /** A stored file's bytes as they are, whether or not it reads as a plan. */
+  readBytes(key: string): Promise<Uint8Array>;
+  /**
+   * Puts a deleted file back at its key with exactly these bytes, creating its folder; never
+   * replaces a file and asks nothing of the content.
+   */
+  restore(key: string, folder: string, bytes: Uint8Array): Promise<ProjectLibraryEntry>;
   /** Files a new plan in `folder`, which is created when missing. */
   create(json: string, folder: string): Promise<ProjectLibraryEntry>;
   /** Moves a plan to another folder under the same file name. */

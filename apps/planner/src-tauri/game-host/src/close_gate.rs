@@ -1,11 +1,23 @@
 //! Holds a window close while the planner writes pending edits. A close request is held only
 //! while the planner waits for one; a held close ends when the planner is ready, when it keeps
-//! the window open (to ask the user), or after a timeout if it never answers.
+//! the window open (to ask the user), or after a timeout if it never answers. Further close
+//! requests while one is held are absorbed, so they never skip the write.
 
 use std::sync::Mutex;
 
 /// Tells the waiting planner that the user asked to close; false when nobody received it.
 pub type CloseNotice = Box<dyn FnOnce() -> bool + Send>;
+
+/// What to do with a close request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CloseDecision {
+    /// Nobody waits for a close: the window closes now.
+    Close,
+    /// The close is held; it times out as `held` unless the planner answers first.
+    Hold { held: u64 },
+    /// A close is already held: keep the window open and leave that close to finish.
+    AlreadyHeld,
+}
 
 #[derive(Default)]
 struct GateState {
@@ -26,17 +38,32 @@ impl CloseGate {
         }
     }
 
-    /// Decides a close request: the number of the held close to time out, or None to let the
-    /// window close now.
-    pub fn intercept(&self) -> Option<u64> {
-        let mut state = self.0.lock().ok()?;
+    /// Decides a close request.
+    pub fn intercept(&self) -> CloseDecision {
+        let Ok(mut state) = self.0.lock() else {
+            return CloseDecision::Close;
+        };
         if state.held.is_some() {
-            return None;
+            return CloseDecision::AlreadyHeld;
         }
-        let waiter = state.waiter.take()?;
+        let Some(waiter) = state.waiter.take() else {
+            return CloseDecision::Close;
+        };
         if !waiter() {
-            return None;
+            return CloseDecision::Close;
         }
+        state.sequence += 1;
+        state.held = Some(state.sequence);
+        CloseDecision::Hold {
+            held: state.sequence,
+        }
+    }
+
+    /// The planner received the held close and is writing; the held close is renumbered so the
+    /// answer timeout no longer ends it, and the returned number times the write instead.
+    pub fn acknowledge(&self) -> Option<u64> {
+        let mut state = self.0.lock().ok()?;
+        state.held?;
         state.sequence += 1;
         state.held = Some(state.sequence);
         state.held
@@ -69,19 +96,53 @@ mod tests {
         })
     }
 
+    fn held(decision: CloseDecision) -> u64 {
+        match decision {
+            CloseDecision::Hold { held } => held,
+            other => panic!("expected a held close, got {other:?}"),
+        }
+    }
+
     #[test]
     fn holds_a_close_only_while_the_planner_waits_for_one() {
         let gate = CloseGate::default();
-        assert_eq!(gate.intercept(), None);
+        assert_eq!(gate.intercept(), CloseDecision::Close);
         let count = Arc::new(AtomicUsize::new(0));
         gate.wait(notice(&count, false));
-        assert_eq!(gate.intercept(), None);
+        assert_eq!(gate.intercept(), CloseDecision::Close);
         gate.wait(notice(&count, true));
-        let held = gate.intercept().expect("held close");
+        let first = held(gate.intercept());
         assert_eq!(count.load(Ordering::SeqCst), 2);
-        // A second request while one is held closes at once.
-        assert_eq!(gate.intercept(), None);
-        assert!(gate.timed_out(held));
+        assert!(gate.timed_out(first));
+    }
+
+    #[test]
+    fn absorbs_repeated_requests_while_a_close_is_held() {
+        let gate = CloseGate::default();
+        let count = Arc::new(AtomicUsize::new(0));
+        gate.wait(notice(&count, true));
+        let first = held(gate.intercept());
+        assert_eq!(gate.intercept(), CloseDecision::AlreadyHeld);
+        assert_eq!(gate.intercept(), CloseDecision::AlreadyHeld);
+        assert_eq!(count.load(Ordering::SeqCst), 1);
+        // The repeated requests neither ended nor renumbered the held close.
+        assert!(gate.timed_out(first));
+    }
+
+    #[test]
+    fn an_acknowledged_close_is_timed_by_its_write_instead_of_the_answer() {
+        let gate = CloseGate::default();
+        assert_eq!(gate.acknowledge(), None);
+        let count = Arc::new(AtomicUsize::new(0));
+        gate.wait(notice(&count, true));
+        let answer = held(gate.intercept());
+        let write = gate.acknowledge().expect("acknowledged close");
+        assert_ne!(answer, write);
+        assert!(!gate.timed_out(answer));
+        assert!(gate.timed_out(write));
+        assert_eq!(gate.intercept(), CloseDecision::AlreadyHeld);
+        gate.keep_open();
+        assert!(!gate.timed_out(write));
     }
 
     #[test]
@@ -89,11 +150,11 @@ mod tests {
         let gate = CloseGate::default();
         let count = Arc::new(AtomicUsize::new(0));
         gate.wait(notice(&count, true));
-        let first = gate.intercept().expect("held close");
+        let first = held(gate.intercept());
         gate.keep_open();
         assert!(!gate.timed_out(first));
         gate.wait(notice(&count, true));
-        let second = gate.intercept().expect("held again");
+        let second = held(gate.intercept());
         assert_ne!(first, second);
         assert!(!gate.timed_out(first));
         assert!(gate.timed_out(second));

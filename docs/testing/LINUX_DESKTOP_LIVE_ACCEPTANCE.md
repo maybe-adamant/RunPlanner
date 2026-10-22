@@ -18,8 +18,10 @@ Hades II profile.
 - [ ] Without FUSE 2, `APPIMAGE_EXTRACT_AND_RUN=1` starts it.
 - [ ] It starts in Steam Deck desktop mode.
 - [ ] About shows the release version and source commit.
-- [ ] Open, Save and Save As use the native file dialogs, and the remembered
-      project reopens after restarting.
+- [ ] The library lives in `~/Documents/RunPlanner/Projects` (or the XDG
+      documents directory); **Open folder** shows it in the file manager,
+      **Import…** uses the native file dialog, and an edited plan keeps its last
+      edit after restarting.
 
 ## Game setup
 

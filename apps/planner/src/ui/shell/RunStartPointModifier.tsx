@@ -163,6 +163,7 @@ export function RunStartPointModifier({
           Gold
         </label>
         <input
+          autoComplete="off"
           id={`${id}-gold`}
           className="route-run-modifier-gold"
           type="text"

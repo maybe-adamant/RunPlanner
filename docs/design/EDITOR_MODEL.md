@@ -496,7 +496,8 @@ was offered, and the copy each catalog entry was added as). The desktop host kee
 of any depth, created on demand; the key is the file's path inside the library,
 its name `<plan name> (<8 hex digits of the projectId's SHA-256>)`, made
 portable, and folder names are plain portable names. The host scans
-recursively, reading only each file's head, writes atomically, refuses a
+recursively, reading only each file's head (a bounded prefix), reports a
+subfolder it cannot read instead of failing the scan, writes atomically, refuses a
 document without a project identity and name, renames a file within its folder
 only when the plan's name or identity changes (never over another file), and
 deletes plans and folders to the system recycle bin. It keeps the session in
@@ -511,9 +512,13 @@ names by its file stem. Identity follows the engine across the whole library:
 a stored copy sharing an older plan's `projectId` (oldest by modified time
 keeps it; the open plan always keeps its own), or an imported file whose
 identity the library already holds, is loaded, given a new identity through
-`reidentifyProjectHistory` and written whole. A deleted plan's or folder's
-content is kept in memory, so undoing the delete files it again on every
-platform; the recycle bin is the longer-term net.
+`reidentifyProjectHistory` and written whole; a copy stored in an older schema
+keeps its original first, as its first edit would. Only a listing
+re-identifies; lookups for other operations read the library as stored, and
+library operations run one at a time. A deleted file's bytes are kept in
+memory, readable as a plan or not, so undo puts them back at the same key on
+every platform; undoing a folder deletion restores all of it or nothing. The
+recycle bin is the longer-term net.
 
 ### Continuous save
 
@@ -521,7 +526,8 @@ platform; the recycle bin is the longer-term net.
 (edit, Undo/Redo, discard) schedules a debounced write of the open item;
 changes coalesce, one write runs at a time and each writes the newest
 snapshot, so the last edit wins in order. A write that refiles the plan under a
-new key moves the saver to it. Nothing says the plan is saved; a failed write
+new key moves the saver to it; while the open plan or its folder moves, writes
+wait and then resume at the new key. Nothing says the plan is saved; a failed write
 is recorded in the library session and shown as "Not saved · Details" in a slot
 the editor header keeps for it; the next edit or flush retries it, and a
 success clears it. Navigation, findings and derived publication do not write.
@@ -533,10 +539,12 @@ waits until that succeeds.
 Pending writes are flushed before another plan opens, before an update
 installs, when the page is hidden, and before the desktop window closes: the
 host holds a close request while the planner writes, closing silently once the
-write succeeds, or after a timeout if the planner never answers. Only a write
-that still fails asks "Not saved — close anyway?" (Close anyway / Keep open),
-and the host keeps the window open while the user answers. The browser asks
-before unloading only while a write failure stands.
+write succeeds. Further close requests meanwhile are absorbed. A planner that
+does not take up the request within a few seconds is closed; once it has, its
+write gets a longer bound that covers keeping an original. Only a write that
+still fails asks "Not saved — close anyway?" (Close anyway / Keep open), and
+the host keeps the window open while the user answers. The browser asks before
+unloading while the open plan has an edit not yet written.
 
 ### Atomic replacement
 
@@ -553,7 +561,9 @@ before it opens.
 
 Startup shows the Library with no plan open. The file the planner kept open
 before plans lived in the library is offered once on the Library for import;
-importing or declining it is remembered.
+importing or declining it is remembered. An unsaved project the pre-library
+planner autosaved is offered alongside it as "Recovered unsaved plan" when it
+differs from that file, and kept until it is imported or declined.
 
 A shell fault boundary remains available after rendering or unhandled browser
 failure. It does not continue an unknown partial interaction. It offers

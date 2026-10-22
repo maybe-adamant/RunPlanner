@@ -19,6 +19,8 @@ export interface LibrarySessionState {
   readonly writeError: string | null;
   /** The file open before the library, offered once for import. */
   readonly previousFileOffer: { readonly fileName: string } | null;
+  /** Whether the project autosaved before the library is offered for import. */
+  readonly recoveredPlanOffer: boolean;
   /** Why back or forward could not show where it pointed; null once dismissed. */
   readonly navigationNotice: string | null;
 }
@@ -32,6 +34,7 @@ export const navigationNoticeShown = createAction<string | null>('library/naviga
 export const previousFileOffered = createAction<{ readonly fileName: string } | null>(
   'library/previousFileOffered',
 );
+export const recoveredPlanOfferChanged = createAction<boolean>('library/recoveredPlanOfferChanged');
 
 const HOME_LIBRARY: AppView = Object.freeze({ kind: 'home', tab: 'library' });
 const EDITOR: AppView = Object.freeze({ kind: 'editor' });
@@ -42,6 +45,7 @@ const INITIAL_STATE: LibrarySessionState = Object.freeze({
   opened: null,
   writeError: null,
   previousFileOffer: null,
+  recoveredPlanOffer: false,
   navigationNotice: null,
 });
 
@@ -80,6 +84,10 @@ export function createLibrarySessionReducer(): Reducer<LibrarySessionState> {
       .addCase(previousFileOffered, (state, action) => ({
         ...state,
         previousFileOffer: action.payload,
+      }))
+      .addCase(recoveredPlanOfferChanged, (state, action) => ({
+        ...state,
+        recoveredPlanOffer: action.payload,
       }));
   });
 }

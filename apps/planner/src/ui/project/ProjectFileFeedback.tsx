@@ -21,6 +21,7 @@ const failureLabels: Record<ProjectOperation, string> = {
   revert: 'Couldn’t revert plan',
   openCopy: 'Couldn’t open project',
   importPrevious: 'Couldn’t import file',
+  importRecovered: 'Couldn’t import plan',
   publishGame: 'Couldn’t publish to game',
 };
 
@@ -66,6 +67,7 @@ export function ProjectFileFeedback({
                   <label key={error.key}>
                     <span>{error.label}</span>
                     <textarea
+                      autoComplete="off"
                       aria-label={`${error.label} details`}
                       readOnly
                       value={error.detail ?? ''}

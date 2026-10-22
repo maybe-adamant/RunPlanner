@@ -212,6 +212,29 @@ describe('Library screen', () => {
     expect(again.store.getState().projectWorkspace.kind).toBe('noProject');
   });
 
+  it('offers the plan autosaved before the library and drops the offer once declined', async () => {
+    let autosave: string | null = encodeProjectDocument(plan('recovered', 'Unsaved edits'));
+    const library = createMemoryProjectLibrary();
+    const application = createApplication({
+      projectLibrary: library.adapter,
+      legacyAutosave: {
+        read: () => autosave,
+        clear: () => {
+          autosave = null;
+        },
+      },
+    });
+    await application.startupReady;
+    const { user } = renderPlannerForInteraction({ application, startWithProject: false });
+    const page = await screen.findByRole('region', { name: 'Your plans' });
+    const offer = await within(page).findByRole('region', { name: 'Recovered unsaved plan' });
+    await user.click(within(offer).getByRole('button', { name: 'Not now' }));
+    await waitFor(() =>
+      expect(within(page).queryByRole('region', { name: 'Recovered unsaved plan' })).toBeNull(),
+    );
+    expect(autosave).toBeNull();
+  });
+
   it('nests folders, moves plans between them and restores a deleted folder', async () => {
     const { user } = await renderLibrary(async (library) => {
       await library.file(plan('a', 'Erebus opener'));

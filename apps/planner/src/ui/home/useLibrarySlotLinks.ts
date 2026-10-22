@@ -66,6 +66,7 @@ export interface LibrarySlotIndex {
   /** When the library was last read, for relative edit times. */
   readonly readAt: number;
   readonly links: LibrarySlotLinks;
+  /** Why the library, or some of its folders, could not be read. */
   readonly error: string | null;
   refresh(): void;
 }
@@ -97,7 +98,13 @@ export function useLibrarySlotLinks(
       (read) => {
         if (!live) return;
         setListed({ items: read.items, folders: read.folders, readAt: Date.now() });
-        setError(null);
+        setError(
+          read.unreadableFolders === undefined
+            ? null
+            : read.unreadableFolders
+                .map(({ folder, message }) => `Couldn’t read the folder ${folder}: ${message}`)
+                .join(' '),
+        );
       },
       (failure: unknown) => {
         if (live) setError(failure instanceof Error ? failure.message : String(failure));

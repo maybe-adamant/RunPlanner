@@ -18,7 +18,7 @@ import { createMemoryIndexedDb } from './memoryIndexedDb';
  * from before the library, and injectable write failures.
  */
 export function createMemoryProjectLibrary(
-  options: { readonly previousFile?: OutsideProjectFile } = {},
+  options: { readonly previousFile?: OutsideProjectFile; readonly now?: () => number } = {},
 ) {
   const chosen: (readonly ChosenImportFile[])[] = [];
   let failWrites: Error | null = null;
@@ -29,6 +29,7 @@ export function createMemoryProjectLibrary(
     document: undefined as never,
     indexedDB: () => indexedDb,
     mintKey: () => `plan-${(keys += 1)}`,
+    ...(options.now === undefined ? {} : { now: options.now }),
   });
   const adapter: ProjectLibraryAdapter = {
     ...stored,
@@ -50,6 +51,10 @@ export function createMemoryProjectLibrary(
     /** Makes writes fail with `error` until called with null. */
     failWrites: (error: Error | null) => {
       failWrites = error;
+    },
+    /** Reads one stored plan, decoded. */
+    async plan(catalog: Catalog, key: string): Promise<ProjectDocument> {
+      return parseProjectDocument(await stored.read(key), catalog);
     },
     /** Stores `project` as a library plan in a folder and returns its key. */
     async file(project: ProjectDocument, folder = ''): Promise<string> {

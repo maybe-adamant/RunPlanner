@@ -22,6 +22,7 @@ import type { CatalogFeedHost } from '../persistence/catalogFeedHost';
 import { createLibrarySaver, type SaveScheduler } from '../workspace/librarySave';
 import { createCloseRequestController } from '../workspace/closeRequest';
 import type { ProjectLibraryAdapter } from '../persistence/projectLibrary';
+import type { LegacyAutosave } from '../persistence/legacyAutosave';
 import { createBugReportOperations } from '../workspace/bugReport';
 import {
   createCommunityEventController,
@@ -50,6 +51,8 @@ export interface CreateApplicationOptions {
   readonly devBuild?: boolean;
   /** Where plans are stored; every edit of the open plan is written there. */
   readonly projectLibrary?: ProjectLibraryAdapter;
+  /** The autosave kept before the library, offered once for import. */
+  readonly legacyAutosave?: LegacyAutosave;
   /** Debounces those writes; defaults to timers. */
   readonly saveScheduler?: SaveScheduler;
   readonly saveDelayMs?: number;
@@ -143,6 +146,9 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       : createProjectLibraryOperations({
           adapter: options.projectLibrary,
           catalog,
+          ...(options.legacyAutosave === undefined
+            ? {}
+            : { legacyAutosave: options.legacyAutosave }),
           ...(options.mintProjectId === undefined ? {} : { mintProjectId: options.mintProjectId }),
         });
   const librarySaver =
@@ -197,7 +203,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
             isDismissed: (eventId) => dismissed.has(eventId),
             dismiss: (eventId) => void dismissed.add(eventId),
           },
-          openProjectCopy: (json) => projectOperations.openProjectCopy(json),
+          openProjectCopy: (json, title) => projectOperations.openProjectCopy(json, title),
           setActiveSlot: (slot) => gameModuleHost.setActiveSlot(slot),
           onSlotsChanged: () =>
             gameStatus?.refresh().catch(() => {

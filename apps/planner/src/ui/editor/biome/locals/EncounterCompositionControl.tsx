@@ -132,6 +132,7 @@ function EnemyBudgetInput({
   };
   return (
     <input
+      autoComplete="off"
       aria-label={label}
       inputMode="decimal"
       type="text"
@@ -172,6 +173,7 @@ function ConvertedInput({
   return (
     <span className="encounter-budget-input">
       <input
+        autoComplete="off"
         aria-label={label}
         inputMode="numeric"
         type="text"

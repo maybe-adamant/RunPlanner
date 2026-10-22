@@ -89,6 +89,7 @@ export function DraftShareControls({
               }}
             >
               <input
+                autoComplete="off"
                 aria-describedby="draft-share-refusal"
                 aria-invalid={refusal === undefined ? undefined : true}
                 aria-label="Draft code"

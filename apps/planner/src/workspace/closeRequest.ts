@@ -1,4 +1,5 @@
 import type { PlannerStore } from '../state/store';
+import type { ProjectOperations } from './projectOperations';
 
 export type CloseRequestState =
   { readonly kind: 'idle' } | { readonly kind: 'confirming'; readonly message: string };
@@ -54,7 +55,13 @@ export function createCloseRequestController(
   });
 }
 
-/** A page about to unload asks first only while the open plan's latest write failed. */
-export function unloadNeedsConfirmation(store: PlannerStore): boolean {
-  return store.getState().librarySession.writeError !== null;
+/**
+ * A page about to unload asks first while the open plan has edits not yet written: a write
+ * pending or under way, or the latest write failed.
+ */
+export function unloadNeedsConfirmation(
+  store: PlannerStore,
+  operations: Pick<ProjectOperations, 'hasUnwrittenEdits'>,
+): boolean {
+  return store.getState().librarySession.writeError !== null || operations.hasUnwrittenEdits();
 }
