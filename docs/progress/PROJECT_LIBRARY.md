@@ -63,9 +63,12 @@ from. A catalog of template plans ships with the app.
      clears slots.
    - **Settings:** app scale.
    - **Editor header:** ← Home, the plan name with Rename, "Saved as you edit",
-     "Revert to opened", the readiness badge, Undo/Redo, "Send · Slot N" and a
-     "Slots · N" button that also shows "· K older" in visible text; its popover
-     lists this plan's slots and the picker for other slots.
+     "Revert to opened", the readiness badge, Undo/Redo as icon buttons,
+     "Send · Slot N" and a "Slots · N" button that also shows "· K older" in
+     visible text; its popover lists this plan's slots and the picker for other
+     slots. The route label, File, the zoom control, save status, the separate
+     Game and About buttons leave the editor header (Game and About on Home,
+     zoom in Settings).
    - No validity badge on library rows.
 5. **Catalog.** A scalable collection of template plans, bundled for now with
    room for a remote source later. Each entry is a project plus metadata: title,
