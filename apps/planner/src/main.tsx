@@ -8,6 +8,7 @@ import { readTextFile } from '@tauri-apps/plugin-fs';
 import { installDevBrowserErrorReporter } from './diagnostics/devBrowserErrorReporter';
 import { createBrowserProjectLibraryAdapter } from './persistence/browserProjectLibraryAdapter';
 import { createTauriProjectLibraryAdapter } from './persistence/tauriProjectLibraryAdapter';
+import { installNavigationHistory } from './workspace/navigationHistory';
 import { createTauriGameModuleHost } from './persistence/gameModuleHost';
 import {
   createBrowserEventDismissalPreference,
@@ -145,6 +146,19 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
   </StrictMode>,
 );
 
+installNavigationHistory({
+  store: application.store,
+  operations: application.projectOperations,
+  environment: {
+    history: globalThis.history,
+    addEventListener: globalThis.addEventListener.bind(globalThis),
+    removeEventListener: globalThis.removeEventListener.bind(globalThis),
+    setTimeout: (callback, ms) => globalThis.setTimeout(callback, ms),
+  },
+  // Whether the desktop WebView turns these into history steps by itself is not known for
+  // every platform, so the app steps when it has not.
+  explicitBackForward: tauriHost,
+});
 releaseUpdates?.checkAutomatically();
 void application.communityEvents?.sync();
 void application.planCatalog?.sync();

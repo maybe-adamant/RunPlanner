@@ -59,8 +59,8 @@ describe('library slot links', () => {
     const links = projectLibrarySlotLinks(items, slots, new Map([['a', 'a-now']]));
     expect(links.byKey.get('a')).toEqual([
       { slot: 1, marker: 'current', reason: null },
-      { slot: 2, marker: 'older', reason: 'Plan edited since it was sent' },
-      { slot: 3, marker: 'older', reason: 'Outdated for this module · rebuild to play' },
+      { slot: 2, marker: 'older', reason: 'edited since sent' },
+      { slot: 3, marker: 'older', reason: 'needs rebuild' },
     ]);
     // A plan whose fingerprint is not read yet is linked without a marker.
     expect(links.byKey.get('b')).toEqual([{ slot: 5, marker: null, reason: null }]);

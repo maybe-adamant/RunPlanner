@@ -53,7 +53,7 @@ export function EditorHeader({
         ? {}
         : {
             'data-route-banner': banner.routeKey,
-            style: { '--route-banner': `url("${banner.url}")` } as CSSProperties,
+            style: { '--window-backdrop': `url("${banner.url}")` } as CSSProperties,
           })}
     >
       <button

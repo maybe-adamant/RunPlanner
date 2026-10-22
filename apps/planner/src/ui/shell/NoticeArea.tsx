@@ -286,9 +286,18 @@ export function NoticeArea({
     updateSnapshot,
   );
   const event = useEventNotice(communityEvents);
+  // The area is one content layer above the window backdrop, whichever notice it holds.
   if (releaseUpdates !== undefined && releaseUpdateNoticeShown(update)) {
-    return <ReleaseUpdateNotice controller={releaseUpdates} />;
+    return (
+      <div className="notice-area">
+        <ReleaseUpdateNotice controller={releaseUpdates} />
+      </div>
+    );
   }
   if (communityEvents === undefined || event.kind !== 'ended') return null;
-  return <EndedEventNotice controller={communityEvents} notice={event} />;
+  return (
+    <div className="notice-area">
+      <EndedEventNotice controller={communityEvents} notice={event} />
+    </div>
+  );
 }

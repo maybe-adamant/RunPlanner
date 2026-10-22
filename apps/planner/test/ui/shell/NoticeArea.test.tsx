@@ -79,8 +79,13 @@ describe('Notice area', () => {
       />,
     );
     expect(screen.getByText('Event ended: Week 42.')).toBeTruthy();
+    // Every notice sits in the one area lifted above the window backdrop.
+    expect(screen.getByText('Event ended: Week 42.').closest('.notice-area')).not.toBeNull();
     releaseUpdates.checkAutomatically();
     expect(await screen.findByText('Run Planner 1.2.3 is available.')).toBeTruthy();
+    expect(
+      screen.getByText('Run Planner 1.2.3 is available.').closest('.notice-area'),
+    ).not.toBeNull();
     expect(screen.queryByText(/Event ended/)).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Later' }));
     expect(screen.getByText('Event ended: Week 42.')).toBeTruthy();

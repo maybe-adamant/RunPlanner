@@ -118,6 +118,8 @@ export function App({
     throw new Error(`Editor navigation references unavailable route ${workspace.route.routeKey}`);
   }
 
+  const notices = <NoticeArea communityEvents={communityEvents} releaseUpdates={releaseUpdates} />;
+
   return (
     <FindingTargetScope
       {...(workspace === undefined ? {} : { authoringReadiness: workspace.authoringReadiness })}
@@ -142,10 +144,12 @@ export function App({
           />
         ) : null}
 
-        <NoticeArea communityEvents={communityEvents} releaseUpdates={releaseUpdates} />
+        {/* Notices sit under the screen's own header: the editor's here, Home's in Home. */}
+        {showEditor ? notices : null}
 
         {showEditor ? null : (
           <HomeScreen
+            notices={notices}
             bugReport={bugReport}
             buildIdentity={buildIdentity}
             catalog={catalog}

@@ -13,7 +13,11 @@ import {
   type LibrarySort,
   type PlanSlotLink,
 } from '@planner/projections/libraryHome';
-import { libraryFolderChanged, viewChanged } from '@planner/state/librarySessionSlice';
+import {
+  libraryFolderChanged,
+  navigationNoticeShown,
+  viewChanged,
+} from '@planner/state/librarySessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import {
   parentFolder,
@@ -22,6 +26,7 @@ import {
 } from '@planner/workspace/projectLibrary';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import { NewPlanDialog } from '../project/NewPlanDialog';
+import { IconActionButton } from '../controls/IconActionButton';
 import { HomeToast } from './HomeToast';
 import { FolderNameDialog, MoveToDialog } from './LibraryDialogs';
 import type { LibrarySlotIndex } from './useLibrarySlotLinks';
@@ -150,6 +155,7 @@ export function LibraryScreen({
   const dispatch = useAppDispatch();
   const previousFile = useAppSelector((state) => state.librarySession.previousFileOffer);
   const shownFolder = useAppSelector((state) => state.librarySession.libraryFolder);
+  const navigationNotice = useAppSelector((state) => state.librarySession.navigationNotice);
   const [filter, setFilter] = useState('');
   const [chip, setChip] = useState<LibraryChip>(ALL_PLANS);
   // Each folder keeps the sort chosen while it was shown.
@@ -408,36 +414,30 @@ export function LibraryScreen({
                 </td>
                 <td>
                   <div className="library-row-actions">
-                    <button
-                      aria-label={`Rename folder ${row.name}`}
-                      className="text-action"
+                    <IconActionButton
                       disabled={pending}
+                      hint="Rename"
+                      icon="rename"
+                      label={`Rename folder ${row.name}`}
                       onClick={() =>
                         setFolderDialog({ kind: 'rename', path: row.path, name: row.name })
                       }
-                      type="button"
-                    >
-                      Rename
-                    </button>
-                    <button
-                      aria-label={`Delete folder ${row.name}`}
-                      className="text-action"
-                      data-tone="danger"
+                    />
+                    <IconActionButton
                       disabled={pending}
+                      hint="Delete"
+                      icon="trash"
+                      label={`Delete folder ${row.name}`}
                       onClick={() => removeFolder(row.path, row.name)}
-                      type="button"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      aria-label={`Open folder ${row.name}`}
-                      className="secondary-action action-compact"
+                      tone="danger"
+                    />
+                    <IconActionButton
                       disabled={pending}
+                      hint="Open"
+                      icon="chevronRight"
+                      label={`Open folder ${row.name}`}
                       onClick={() => openFolder(row.path)}
-                      type="button"
-                    >
-                      Open
-                    </button>
+                    />
                   </div>
                 </td>
               </tr>
@@ -445,7 +445,18 @@ export function LibraryScreen({
             {view?.rows.map((row) => (
               <tr data-kind={row.kind} key={row.key}>
                 <td>
-                  <div className="library-plan-name">{row.name}</div>
+                  {row.kind === 'ready' ? (
+                    <button
+                      className="library-plan-name"
+                      disabled={pending}
+                      onClick={() => report(() => operations.openPlan(row.key))}
+                      type="button"
+                    >
+                      {row.name}
+                    </button>
+                  ) : (
+                    <div className="library-plan-name">{row.name}</div>
+                  )}
                   {row.kind === 'ready' ? (
                     <div className="library-plan-summary">
                       <span
@@ -492,43 +503,35 @@ export function LibraryScreen({
                 </td>
                 <td>
                   <div className="library-row-actions">
-                    <button
-                      aria-label={`Duplicate ${row.name}`}
-                      className="text-action"
+                    <IconActionButton
                       disabled={pending || row.kind !== 'ready'}
+                      hint="Duplicate"
+                      icon="duplicate"
+                      label={`Duplicate ${row.name}`}
                       onClick={() => report(() => operations.duplicate(row.key))}
-                      type="button"
-                    >
-                      Duplicate
-                    </button>
-                    <button
-                      aria-label={`Move ${row.name}`}
-                      className="text-action"
+                    />
+                    <IconActionButton
                       disabled={pending}
+                      hint="Move to…"
+                      icon="move"
+                      label={`Move ${row.name}`}
                       onClick={() => setMoving(row)}
-                      type="button"
-                    >
-                      Move to…
-                    </button>
-                    <button
-                      aria-label={`Delete ${row.name}`}
-                      className="text-action"
-                      data-tone="danger"
+                    />
+                    <IconActionButton
                       disabled={pending}
+                      hint="Delete"
+                      icon="trash"
+                      label={`Delete ${row.name}`}
                       onClick={() => removePlan(row)}
-                      type="button"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      aria-label={`Open ${row.name}`}
-                      className="secondary-action action-compact"
+                      tone="danger"
+                    />
+                    <IconActionButton
                       disabled={pending || row.kind !== 'ready'}
+                      hint="Open"
+                      icon="openInEditor"
+                      label={`Open ${row.name}`}
                       onClick={() => report(() => operations.openPlan(row.key))}
-                      type="button"
-                    >
-                      Open
-                    </button>
+                    />
                   </div>
                 </td>
               </tr>
@@ -542,7 +545,14 @@ export function LibraryScreen({
         )}
       </div>
 
-      {notice === null ? null : (
+      {navigationNotice === null ? null : (
+        <HomeToast
+          key={navigationNotice}
+          onDismiss={() => dispatch(navigationNoticeShown(null))}
+          text={navigationNotice}
+        />
+      )}
+      {notice === null || navigationNotice !== null ? null : (
         <HomeToast
           {...(notice.undo === null
             ? {}

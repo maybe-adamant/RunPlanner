@@ -6,6 +6,7 @@ import type { CurrentGamePlan } from '@planner/workspace/projectOperations';
 import type { SlotRebuildReport } from '@planner/workspace/slotRebuild';
 import { describeStartPointBlocked } from '@planner/projections/startPointCopy';
 import { ownEntry, slotLoadoutLabel } from '@planner/projections/gameSlotSummary';
+import { OUTDATED_REBUILD, OUTDATED_RESEND } from '@planner/projections/libraryHome';
 import type { GameActivationFailure, GameSendFailure } from '@planner/state/gameSendSessionSlice';
 import type {
   GameActiveSlotNumber,
@@ -835,16 +836,19 @@ export function describeLastSendFailure(failure: GameSendFailure): string {
 }
 
 /** What a Home slot row says it holds. */
-export type HomeSlotPlan =
-  | {
-      readonly kind: 'library';
-      readonly key: string;
-      readonly name: string;
-      readonly marker: 'current' | 'older' | null;
-      readonly reason: string | null;
-    }
-  | { readonly kind: 'notInLibrary'; readonly name: string | null; readonly note: string | null }
-  | { readonly kind: 'event'; readonly title: string | null };
+/**
+ * A slot's plan on one line: its name, which may be shortened, and its state with any reason
+ * in a few words, which never is ("older, edited since sent").
+ */
+export type HomeSlotPlan = {
+  readonly name: string | null;
+  readonly state: string | null;
+  readonly tone: 'current' | 'older' | 'unlinked' | 'event' | null;
+} & (
+  | { readonly kind: 'library'; readonly key: string }
+  | { readonly kind: 'notInLibrary' }
+  | { readonly kind: 'event' }
+);
 
 /** The slot's place in the next run: it plays next, can be made to, or cannot be played. */
 export type HomeSlotNextRun =
@@ -862,7 +866,7 @@ export interface HomeSlotRow {
   readonly route: string | null;
   readonly aspect: string | null;
   readonly sent: GamePlanSentTime | null;
-  /** Null for a slot holding no plan. */
+  /** Null for an empty slot; an outdated or unreadable one cannot be played. */
   readonly nextRun: HomeSlotNextRun | null;
   /** Present for a filled plan slot; the event slot is never cleared from Home. */
   readonly clear: GameClearSlotIntent | null;
@@ -879,6 +883,8 @@ export interface HomeSlotsProduct {
     readonly available: boolean;
     /** How many outdated slots a rebuild would write, or the last rebuild's result. */
     readonly summary: string | null;
+    /** One line per slot the last rebuild could not write: "Slot 7 couldn’t rebuild: …". */
+    readonly failures: readonly string[];
   };
 }
 
@@ -914,7 +920,7 @@ export function projectHomeSlots(
   if (inspection === null) return null;
   const next = projectNextRunSlot(status);
   const nextRun = (slot: GamePlanSlot | GameEventSlot): HomeSlotNextRun | null => {
-    if (slot.state === 'empty' || slot.state === 'unreadable') return null;
+    if (slot.state === 'empty') return null;
     if (slot.slot === next && slot.state === 'present') return { kind: 'playsNext' };
     return slot.state === 'present'
       ? { kind: 'available', intent: { kind: 'setActiveSlot', slot: slot.slot } }
@@ -939,7 +945,12 @@ export function projectHomeSlots(
       slot: event.slot,
       label: 'Event',
       state: event.state,
-      plan: { kind: 'event', title: event.event?.title ?? event.displayName },
+      plan: {
+        kind: 'event',
+        name: event.event?.title ?? event.displayName,
+        state: 'community event',
+        tone: 'event',
+      },
       summary: null,
       ...columns(event),
       nextRun: nextRun(event),
@@ -959,10 +970,12 @@ export function projectHomeSlots(
     const outdated =
       slot.state !== 'stale'
         ? null
-        : (failure ??
-          (slot.hasSource
-            ? 'Outdated for this module · rebuild to play'
-            : 'Outdated for this module · send again to play'));
+        : failure !== null
+          ? 'couldn’t rebuild'
+          : slot.hasSource
+            ? OUTDATED_REBUILD
+            : OUTDATED_RESEND;
+    const reason = slot.state === 'stale' ? outdated : (linked?.link.reason ?? null);
     rows.push({
       slot: slot.slot,
       label: `Slot ${slot.slot}`,
@@ -970,13 +983,23 @@ export function projectHomeSlots(
       plan: !readable
         ? null
         : linked === undefined
-          ? { kind: 'notInLibrary', name: slot.displayName, note: outdated }
+          ? {
+              kind: 'notInLibrary',
+              name: slot.displayName,
+              state: outdated === null ? 'not in library' : `not in library, ${outdated}`,
+              tone: 'unlinked',
+            }
           : {
               kind: 'library',
               key: linked.key,
               name: linked.name,
-              marker: linked.link.marker,
-              reason: slot.state === 'stale' ? outdated : linked.link.reason,
+              state:
+                linked.link.marker === null
+                  ? null
+                  : reason === null
+                    ? linked.link.marker
+                    : `older, ${reason}`,
+              tone: linked.link.marker,
             },
       summary: slot.state === 'empty' ? 'Empty' : slot.state === 'unreadable' ? 'Unreadable' : null,
       ...columns(slot),
@@ -996,6 +1019,11 @@ export function projectHomeSlots(
         (rebuildable === 0
           ? null
           : `${slotsText(rebuildable)} ${rebuildable === 1 ? 'needs' : 'need'} a rebuild for module ${status.bundledVersion}.`),
+      failures: (rebuild?.outcomes ?? []).flatMap((outcome) =>
+        'reason' in outcome && (outcome.kind === 'failed' || outcome.kind === 'defect')
+          ? [`Slot ${outcome.slot} couldn’t rebuild: ${outcome.reason}`]
+          : [],
+      ),
     },
   });
 }

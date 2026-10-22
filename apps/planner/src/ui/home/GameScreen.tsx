@@ -27,6 +27,7 @@ import {
   type HomeSlotsProduct,
 } from '@planner/projections/gamePanel';
 import { ContextualPicker } from '../controls/ContextualPicker';
+import { IconActionButton } from '../controls/IconActionButton';
 import { ConfirmationDialog } from '../controls/ConfirmationDialog';
 import { ExternalPageLink } from '../controls/ExternalPageLink';
 import { ModalDialog } from '../controls/ModalDialog';
@@ -382,41 +383,54 @@ function ModuleCard({
   );
 }
 
-function SlotPlanCell({ row }: { readonly row: HomeSlotRow }) {
+// The name gives way to the state, which always shows in full.
+function SlotPlanCell({
+  onOpen,
+  pending,
+  row,
+}: {
+  readonly onOpen: (key: string) => void;
+  readonly pending: boolean;
+  readonly row: HomeSlotRow;
+}) {
   const plan = row.plan;
-  if (plan === null) return <td colSpan={4}>{row.summary}</td>;
-  switch (plan.kind) {
-    case 'event':
-      return (
-        <td className="home-slot-plan">
-          <span className="home-slot-name">{plan.title ?? 'Community event'}</span>
-          <span className="home-slot-event"> · community event</span>
-        </td>
-      );
-    case 'notInLibrary':
-      return (
-        <td className="home-slot-plan">
-          {plan.name === null ? null : <span className="home-slot-name">{plan.name} · </span>}
-          <span className="home-slot-unlinked">Not in library</span>
-          {plan.note === null ? null : <span className="home-slot-note">{plan.note}</span>}
-        </td>
-      );
-    case 'library':
-      return (
-        <td className="home-slot-plan">
-          <span className="home-slot-name">{plan.name}</span>
-          {plan.marker === null ? null : (
-            <>
-              {' · '}
-              <span className="slot-marker" data-marker={plan.marker}>
-                {plan.marker}
-              </span>
-            </>
-          )}
-          {plan.reason === null ? null : <span className="home-slot-note">{plan.reason}</span>}
-        </td>
-      );
+  if (plan === null) {
+    return (
+      <td className="home-slot-plan">
+        <span className="home-slot-line">{row.summary}</span>
+      </td>
+    );
   }
+  const state =
+    plan.state === null
+      ? null
+      : plan.name === null
+        ? plan.state.charAt(0).toUpperCase() + plan.state.slice(1)
+        : plan.state;
+  return (
+    <td className="home-slot-plan">
+      <span className="home-slot-line">
+        {plan.name === null ? null : plan.kind === 'library' ? (
+          <button
+            className="home-slot-name"
+            disabled={pending}
+            onClick={() => onOpen(plan.key)}
+            type="button"
+          >
+            {plan.name}
+          </button>
+        ) : (
+          <span className="home-slot-name">{plan.name}</span>
+        )}
+        {state === null ? null : (
+          <span className="home-slot-state" data-tone={plan.tone}>
+            {plan.name === null ? '' : ' · '}
+            {state}
+          </span>
+        )}
+      </span>
+    </td>
+  );
 }
 
 function SlotsTable({
@@ -437,6 +451,15 @@ function SlotsTable({
   return (
     <>
       <table aria-labelledby="game-slots-title" className="home-slots">
+        <colgroup>
+          <col className="home-slots-col-slot" />
+          <col />
+          <col className="home-slots-col-route" />
+          <col className="home-slots-col-aspect" />
+          <col className="home-slots-col-sent" />
+          <col className="home-slots-col-next" />
+          <col className="home-slots-col-actions" />
+        </colgroup>
         <thead>
           <tr>
             <th scope="col">Slot</th>
@@ -461,62 +484,63 @@ function SlotsTable({
               key={row.slot}
             >
               <th scope="row">{row.label}</th>
-              <SlotPlanCell row={row} />
-              {row.plan === null ? null : (
-                <>
-                  <td>{row.route}</td>
-                  <td>{row.aspect}</td>
-                  <td>
-                    {row.sent === null ? '—' : <time dateTime={row.sent.iso}>{row.sent.ago}</time>}
-                  </td>
-                </>
-              )}
-              <td className="home-slots-next">
-                {row.nextRun === null ? null : row.nextRun.kind === 'playsNext' ? (
-                  <span className="home-plays-next">Plays next</span>
+              <SlotPlanCell onOpen={onOpen} pending={pending} row={row} />
+              <td>{row.route}</td>
+              <td>{row.aspect}</td>
+              <td>
+                {row.sent === null ? (
+                  row.plan === null ? null : (
+                    '—'
+                  )
                 ) : (
-                  <button
+                  <time dateTime={row.sent.iso}>{row.sent.ago}</time>
+                )}
+              </td>
+              <td className="home-slots-next">
+                {row.nextRun === null ? null : (
+                  <input
                     aria-label={`Play ${row.label} next`}
-                    className="quiet-action action-compact"
+                    checked={row.nextRun.kind === 'playsNext'}
+                    className="home-next-run"
                     disabled={pending || row.nextRun.kind === 'unplayable'}
-                    onClick={() => {
+                    name="next-run"
+                    onChange={() => {
                       if (row.nextRun?.kind === 'available') onPlayNext(row.nextRun.intent);
                     }}
-                    type="button"
-                  >
-                    Play next
-                  </button>
+                    type="radio"
+                  />
                 )}
               </td>
               <td className="home-slots-open">
-                <div className="library-row-actions">
-                  {row.clear === null ? null : (
-                    <button
-                      aria-label={`Clear ${row.label}`}
-                      className="text-action"
-                      data-tone="danger"
-                      disabled={pending}
-                      onClick={() => {
-                        if (row.clear !== null) onClear(row.clear);
-                      }}
-                      type="button"
-                    >
-                      Clear
-                    </button>
-                  )}
-                  {row.plan?.kind === 'library' ? (
-                    <button
-                      aria-label={`Open ${row.plan.name}`}
-                      className="text-action"
-                      disabled={pending}
-                      onClick={() => {
-                        if (row.plan?.kind === 'library') onOpen(row.plan.key);
-                      }}
-                      type="button"
-                    >
-                      Open
-                    </button>
-                  ) : null}
+                {/* Clear and Open keep their own places, present or not. */}
+                <div className="home-slot-actions">
+                  <span>
+                    {row.clear === null ? null : (
+                      <IconActionButton
+                        disabled={pending}
+                        hint="Clear"
+                        icon="trash"
+                        label={`Clear ${row.label}`}
+                        onClick={() => {
+                          if (row.clear !== null) onClear(row.clear);
+                        }}
+                        tone="danger"
+                      />
+                    )}
+                  </span>
+                  <span>
+                    {row.plan?.kind === 'library' ? (
+                      <IconActionButton
+                        disabled={pending}
+                        hint="Open"
+                        icon="openInEditor"
+                        label={`Open ${row.plan.name ?? row.label}`}
+                        onClick={() => {
+                          if (row.plan?.kind === 'library') onOpen(row.plan.key);
+                        }}
+                      />
+                    ) : null}
+                  </span>
                 </div>
               </td>
             </tr>
@@ -540,6 +564,13 @@ function SlotsTable({
             <span role="status">{slots.rebuild.summary}</span>
           )}
         </div>
+      )}
+      {slots.rebuild.failures.length === 0 ? null : (
+        <ul className="home-rebuild-failures">
+          {slots.rebuild.failures.map((failure) => (
+            <li key={failure}>{failure}</li>
+          ))}
+        </ul>
       )}
     </>
   );
@@ -880,16 +911,6 @@ function GameSections({
             </h3>
             <span className="home-muted">Send a plan from its editor.</span>
           </div>
-          {lastFailure === null ? null : (
-            <p className="home-problem" role="alert">
-              {describeLastSendFailure(lastFailure)}
-            </p>
-          )}
-          {notActivated === null ? null : (
-            <p className="home-problem" role="alert">
-              {notActivated}
-            </p>
-          )}
           <SlotsTable
             onClear={(intent) => void clearSlot(intent)}
             onOpen={(key) => void operations.openPlan(key)}
@@ -906,6 +927,17 @@ function GameSections({
             pending={pending}
             slots={slots}
           />
+          {/* Problems sit below the table so it never moves. */}
+          {lastFailure === null ? null : (
+            <p className="home-problem" role="alert">
+              {describeLastSendFailure(lastFailure)}
+            </p>
+          )}
+          {notActivated === null ? null : (
+            <p className="home-problem" role="alert">
+              {notActivated}
+            </p>
+          )}
           {development === undefined ? null : (
             <div aria-label="Event slot (development)" className="home-event-dev" role="group">
               <button

@@ -383,7 +383,7 @@ describe('Game panel projection', () => {
             link: {
               slot: 4,
               marker: 'older',
-              reason: 'Outdated for this module · rebuild to play',
+              reason: 'needs rebuild',
             },
           },
         ],
@@ -395,7 +395,7 @@ describe('Game panel projection', () => {
       ...Array.from({ length: 12 }, (_, index) => `Slot ${index + 1}`),
     ]);
     expect(home?.rows[0]).toMatchObject({
-      plan: { kind: 'event', title: 'Week 42' },
+      plan: { kind: 'event', name: 'Week 42', state: 'community event' },
       aspect: 'Staff · Melinoë',
       nextRun: { kind: 'available', intent: { kind: 'setActiveSlot', slot: 0 } },
       clear: null,
@@ -405,25 +405,35 @@ describe('Game panel projection', () => {
       home?.rows.filter((row) => row.slot !== 0 && row.state !== 'empty').map((row) => row.slot),
     );
     expect(home?.rows[1]).toMatchObject({
-      plan: { kind: 'library', key: 'k', name: 'My plan', marker: 'current' },
+      plan: { kind: 'library', key: 'k', name: 'My plan', state: 'current', tone: 'current' },
       route: catalog.routes.byKey.Surface!.label,
       sent: { ago: '3m ago' },
       nextRun: { kind: 'playsNext' },
     });
-    expect(home?.rows[2]?.plan).toEqual({ kind: 'notInLibrary', name: 'Theirs', note: null });
-    expect(home?.rows[3]).toMatchObject({ plan: null, summary: 'Unreadable', nextRun: null });
+    expect(home?.rows[2]?.plan).toEqual({
+      kind: 'notInLibrary',
+      name: 'Theirs',
+      state: 'not in library',
+      tone: 'unlinked',
+    });
+    expect(home?.rows[3]).toMatchObject({
+      plan: null,
+      summary: 'Unreadable',
+      nextRun: { kind: 'unplayable' },
+    });
     expect(home?.rows[4]).toMatchObject({
-      plan: { kind: 'library', marker: 'older' },
+      plan: { kind: 'library', state: 'older, needs rebuild', tone: 'older' },
       nextRun: { kind: 'unplayable' },
     });
     expect(home?.rows[5]?.plan).toMatchObject({
       kind: 'notInLibrary',
-      note: 'Outdated for this module · send again to play',
+      state: 'not in library, send again',
     });
     expect(home?.rows[6]).toMatchObject({ summary: 'Empty', nextRun: null });
     expect(home?.rebuild).toEqual({
       available: true,
       summary: '1 slot needs a rebuild for module 0.1.0.',
+      failures: [],
     });
     expect(
       projectHomeSlots(status, catalog, now, links, {
@@ -434,6 +444,15 @@ describe('Game panel projection', () => {
         ],
       })?.rebuild.summary,
     ).toBe('Rebuilt 1 slot · couldn’t rebuild 1 slot');
+    // A failed rebuild says so in a few words in its row, and why under the table.
+    const failed = projectHomeSlots(status, catalog, now, links, {
+      problem: null,
+      outcomes: [{ slot: 5, kind: 'failed', reason: 'The source could not be read.' }],
+    });
+    expect(failed?.rows[5]?.plan).toMatchObject({ state: 'not in library, couldn’t rebuild' });
+    expect(failed?.rebuild.failures).toEqual([
+      'Slot 5 couldn’t rebuild: The source could not be read.',
+    ]);
     expect(
       projectHomeSlots(gameModuleStatus({ inspection: null }), catalog, now, NO_SLOT_LINKS),
     ).toBeNull();

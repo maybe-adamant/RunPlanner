@@ -67,6 +67,16 @@ async function openGame(
   return { ...rendered, dialog };
 }
 
+// Every row's shape: its cells, the plan cell's one line and the two action places.
+function rowShapes(table: HTMLElement) {
+  return [...table.querySelectorAll('tbody tr')].map((row) => [
+    row.children.length,
+    row.querySelector('.home-slot-plan')?.children.length,
+    row.querySelector('.home-slot-actions')?.children.length,
+    [...row.children].map((cell) => (cell as HTMLTableCellElement).colSpan),
+  ]);
+}
+
 function firstBiome() {
   const project = createCompleteFGProject();
   return { ...project, route: { ...project.route, biomes: project.route.biomes.slice(0, 1) } };
@@ -452,41 +462,49 @@ describe('Game screen', () => {
     ).toEqual(['Slot', 'Library plan', 'Route', 'Aspect', 'Sent', 'Next run', 'Actions']);
     const row = (label: string) =>
       within(table).getByRole('rowheader', { name: label }).closest('tr')!;
-    // A linked slot shows the plan's library name, and why it is older, in visible text.
+    // A linked slot shows the plan's library name, and why it is older, on one line.
     expect(within(row('Slot 1')).getByText('Erebus opener')).toBeTruthy();
-    expect(await within(row('Slot 1')).findByText('Plan edited since it was sent')).toBeTruthy();
-    expect(within(row('Slot 1')).getByText('Plays next')).toBeTruthy();
+    expect(await within(row('Slot 1')).findByText('· older, edited since sent')).toBeTruthy();
+    const next = (label: string) =>
+      within(row(label)).getByRole<HTMLInputElement>('radio', { name: `Play ${label} next` });
+    expect(next('Slot 1').checked).toBe(true);
     expect(within(row('Slot 1')).getByText('Staff · Melinoë')).toBeTruthy();
-    expect(within(row('Slot 2')).getByText('Their run ·')).toBeTruthy();
-    expect(within(row('Slot 2')).getByText('Not in library')).toBeTruthy();
+    expect(within(row('Slot 2')).getByText('Their run')).toBeTruthy();
+    expect(within(row('Slot 2')).getByText('· not in library')).toBeTruthy();
     expect(within(row('Slot 2')).queryByRole('button', { name: /^Open/ })).toBeNull();
-    expect(
-      within(row('Slot 3')).getByText('Outdated for this module · send again to play'),
-    ).toBeTruthy();
-    expect(within(row('Slot 3')).getByRole('button', { name: 'Play Slot 3 next' })).toHaveProperty(
-      'disabled',
-      true,
-    );
+    expect(within(row('Slot 3')).getByText('· older, send again')).toBeTruthy();
+    expect(next('Slot 3').disabled).toBe(true);
+    expect(within(row('Slot 4')).queryByRole('radio')).toBeNull();
     expect(within(row('Slot 4')).getByText('Empty')).toBeTruthy();
     // Home never sends.
     expect(within(table).queryByRole('button', { name: /Send|Replace/ })).toBeNull();
+    // Present, outdated, unlinked, empty and active rows all keep one shape.
+    const shape = rowShapes(table);
+    expect(new Set(shape.map((row) => JSON.stringify(row)))).toEqual(
+      new Set([JSON.stringify([7, 1, 2, [1, 1, 1, 1, 1, 1, 1]])]),
+    );
 
     game.host.status.mockResolvedValue(slots(2));
-    await user.click(within(row('Slot 2')).getByRole('button', { name: 'Play Slot 2 next' }));
+    await user.click(next('Slot 2'));
     expect(game.host.setActiveSlot).toHaveBeenCalledWith(2);
-    expect(await within(row('Slot 2')).findByText('Plays next')).toBeTruthy();
+    await waitFor(() => expect(next('Slot 2').checked).toBe(true));
+    expect(rowShapes(table)).toEqual(shape);
 
     game.host.setActiveSlot.mockResolvedValueOnce({
       status: 'nativeWrite',
       message: 'could not replace active slot file.',
       blockers: [],
     });
-    await user.click(within(row('Slot 1')).getByRole('button', { name: 'Play Slot 1 next' }));
+    await user.click(next('Slot 1'));
     expect(
       await within(dialog).findByText('Not made active: could not replace active slot file.'),
     ).toBeTruthy();
 
-    await user.click(within(row('Slot 1')).getByRole('button', { name: 'Open Erebus opener' }));
+    // An unlinked plan's name is plain text; a linked one's opens its library plan.
+    expect(within(row('Slot 2')).queryByRole('button', { name: 'Their run' })).toBeNull();
+    expect(within(row('Slot 1')).getByRole('button', { name: 'Open Erebus opener' })).toBeTruthy();
+    within(row('Slot 1')).getByRole('button', { name: 'Erebus opener' }).focus();
+    await user.keyboard('{Enter}');
     await waitFor(() =>
       expect(application.store.getState().librarySession.view).toEqual({ kind: 'editor' }),
     );
@@ -576,11 +594,13 @@ describe('Game screen', () => {
     const row = (await within(table).findByRole('rowheader', { name: 'Event' })).closest('tr')!;
     expect(within(row).getByText('Week 42: Staff sprint')).toBeTruthy();
     expect(within(row).getByText('· community event')).toBeTruthy();
+    const eventNext = () =>
+      within(row).getByRole<HTMLInputElement>('radio', { name: 'Play Event next' });
     expect(within(dialog).queryByRole('button', { name: 'Import event folder…' })).toBeNull();
     game.host.status.mockResolvedValue(withEvent(0));
-    await user.click(within(row).getByRole('button', { name: 'Play Event next' }));
+    await user.click(eventNext());
     expect(game.host.setActiveSlot).toHaveBeenCalledWith(0);
-    expect(await within(row).findByText('Plays next')).toBeTruthy();
+    await waitFor(() => expect(eventNext().checked).toBe(true));
   });
 
   it('syncs the event slot on opening and runs the development event actions', async () => {
@@ -660,14 +680,20 @@ describe('Game screen', () => {
     );
     const { dialog, user } = await openGame(game.host);
 
-    expect(within(dialog).getByText('Outdated for this module · send again to play')).toBeTruthy();
+    expect(within(dialog).getByText(/send again$/)).toBeTruthy();
     expect(within(dialog).getByText('2 slots need a rebuild for module 0.1.0.')).toBeTruthy();
     await user.click(await within(dialog).findByRole('button', { name: 'Rebuild outdated slots' }));
 
     expect(
       await within(dialog).findByText('Rebuilt 1 slot · couldn’t rebuild 1 slot'),
     ).toBeTruthy();
-    expect(within(dialog).getByText(/should still build — create a bug report/)).toBeTruthy();
+    // The failed slot says so in a few words, and why under the table.
+    expect(within(dialog).getByText(/couldn’t rebuild$/)).toBeTruthy();
+    expect(
+      within(dialog).getByText(
+        /^Slot 3 couldn’t rebuild: .*should still build — create a bug report/,
+      ),
+    ).toBeTruthy();
     expect(game.rebuilt.map((entry) => entry.slotNumber)).toEqual([2]);
     expect(game.host.setActiveSlot).not.toHaveBeenCalled();
   });
