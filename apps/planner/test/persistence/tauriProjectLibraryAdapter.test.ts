@@ -21,7 +21,7 @@ function createAdapter(paths: readonly string[] | null = null) {
 describe('Tauri project library adapter', () => {
   it('addresses each library operation to its host command', async () => {
     const { invoke, library } = createAdapter();
-    const session = { previousFileOffered: true };
+    const session = { previousFileOffered: true, catalogCopies: { 'sub-2m': 'run-plan-1' } };
 
     await library.list();
     await library.read('a.runplanner.json');

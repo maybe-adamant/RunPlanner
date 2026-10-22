@@ -17,6 +17,8 @@ import { createEditorNavigation } from '../projections/editorNavigation';
 import { createEditorSessionReconciliationCoordinator } from '../workspace/editorSessionReconciliation';
 import { createProjectOperations } from '../workspace/projectOperations';
 import { createProjectLibraryOperations } from '../workspace/projectLibrary';
+import { createCatalogFeedController } from '../workspace/catalogFeed';
+import type { CatalogFeedHost } from '../persistence/catalogFeedHost';
 import { createLibrarySaver, type SaveScheduler } from '../workspace/librarySave';
 import { createCloseRequestController } from '../workspace/closeRequest';
 import type { ProjectLibraryAdapter } from '../persistence/projectLibrary';
@@ -54,6 +56,8 @@ export interface CreateApplicationOptions {
   readonly gameModuleHost?: GameModuleHost;
   /** The signed community event feed; given with the game module host. */
   readonly communityEventHost?: CommunityEventHost;
+  /** The signed plan catalog; desktop only. */
+  readonly catalogFeedHost?: CatalogFeedHost;
   /** Local event files and export; used only in development builds. */
   readonly communityEventDevelopmentHost?: CommunityEventDevelopmentHost;
   readonly eventDismissals?: EventDismissalPreference;
@@ -200,6 +204,13 @@ export function createApplication(options: CreateApplicationOptions = {}) {
               // The header indicator reports a failed status read.
             }),
         });
+  const planCatalog =
+    options.catalogFeedHost === undefined || libraryOperations === undefined
+      ? undefined
+      : createCatalogFeedController({
+          host: options.catalogFeedHost,
+          addCatalogPlan: (entry, json) => projectOperations.addCatalogPlan(entry, json),
+        });
   const slotRebuild =
     gameModuleHost === undefined
       ? undefined
@@ -237,6 +248,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     communityEvents,
     draftRun,
     gameStatus,
+    planCatalog,
     projectLibrary: libraryOperations,
     projectOperations,
     slotRebuild,

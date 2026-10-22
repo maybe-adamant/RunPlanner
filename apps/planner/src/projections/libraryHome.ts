@@ -213,6 +213,19 @@ function loadoutText(
   return aspect === null ? weapon : `${weapon}, ${aspect}`;
 }
 
+/** Where a plan's planned biomes end, such as "to Tartarus", or the one biome; null when unknown. */
+export function plannedBiomeTrail(
+  catalog: Catalog,
+  routeKey: string | null,
+  planned: number,
+): string | null {
+  const route = ownEntry(catalog.routes.byKey, routeKey);
+  // A Dream itinerary is chosen per plan, so its biomes are not known from the route.
+  const endKey = route?.dreamItinerary === undefined ? route?.biomeKeys[planned - 1] : undefined;
+  const end = ownEntry(catalog.biomes.byKey, endKey)?.label ?? null;
+  return end === null ? null : planned > 1 ? `to ${end}` : end;
+}
+
 function biomeColumn(
   catalog: Catalog,
   routeKey: string | null,
@@ -221,13 +234,7 @@ function biomeColumn(
   const route = ownEntry(catalog.routes.byKey, routeKey);
   if (route === undefined || planned === null) return null;
   const total = route.dreamItinerary?.biomeCount ?? route.biomeKeys.length;
-  // A Dream itinerary is chosen per plan, so its biomes are not known from the route.
-  const endKey = route.dreamItinerary === undefined ? route.biomeKeys[planned - 1] : undefined;
-  const end = ownEntry(catalog.biomes.byKey, endKey)?.label ?? null;
-  return {
-    count: `${planned} of ${total}`,
-    trail: end === null ? null : planned > 1 ? `to ${end}` : end,
-  };
+  return { count: `${planned} of ${total}`, trail: plannedBiomeTrail(catalog, routeKey, planned) };
 }
 
 function chipMatches(item: LibraryItem, chip: LibraryChip, links: LibrarySlotLinks): boolean {

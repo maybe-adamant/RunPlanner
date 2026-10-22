@@ -46,14 +46,19 @@ pub struct CommunityEvent {
 
 /// Lower-case letters, digits and single inner hyphens, such as "2026-w42-staff".
 pub fn valid_event_id(id: &str) -> bool {
-    !id.is_empty()
-        && id.len() <= MAX_EVENT_ID_CHARS
-        && id
+    valid_slug(id, MAX_EVENT_ID_CHARS)
+}
+
+/// Lower-case letters, digits and single inner hyphens, at most `max_chars`.
+pub fn valid_slug(text: &str, max_chars: usize) -> bool {
+    !text.is_empty()
+        && text.len() <= max_chars
+        && text
             .bytes()
             .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
-        && !id.starts_with('-')
-        && !id.ends_with('-')
-        && !id.contains("--")
+        && !text.starts_with('-')
+        && !text.ends_with('-')
+        && !text.contains("--")
 }
 
 // Unicode format characters (category Cf): bidirectional controls, zero-width characters and

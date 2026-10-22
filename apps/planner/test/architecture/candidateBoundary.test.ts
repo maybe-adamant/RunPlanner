@@ -43,6 +43,7 @@ describe('candidate application boundary', () => {
       'draftRun',
       'editorNavigation',
       'gameStatus',
+      'planCatalog',
       'projectLibrary',
       'projectOperations',
       'selectStructuredWorkspace',

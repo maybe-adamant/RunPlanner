@@ -5,6 +5,7 @@
 
 pub mod atomic_file;
 pub mod bug_report;
+pub mod catalog_feed;
 pub mod close_gate;
 pub mod community_event;
 pub mod event_feed;
@@ -17,5 +18,6 @@ pub mod game_target;
 pub mod library_session;
 pub mod plan_slots;
 pub mod project_library;
+pub mod signed_feed;
 pub mod slot_overview;
 pub mod system_opener;

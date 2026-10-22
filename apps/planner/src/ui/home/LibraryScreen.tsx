@@ -13,7 +13,7 @@ import {
   type LibrarySort,
   type PlanSlotLink,
 } from '@planner/projections/libraryHome';
-import { libraryFolderChanged } from '@planner/state/librarySessionSlice';
+import { libraryFolderChanged, viewChanged } from '@planner/state/librarySessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import {
   parentFolder,
@@ -135,11 +135,14 @@ function FolderIcon() {
 
 export function LibraryScreen({
   catalog,
+  catalogShown,
   index,
   operations,
   routes,
 }: {
   readonly catalog: Catalog;
+  /** Whether the Catalog tab exists, so the page links to it. */
+  readonly catalogShown: boolean;
   readonly index: LibrarySlotIndex;
   readonly operations: ProjectOperations;
   readonly routes: readonly RouteEditorNavigation[];
@@ -239,6 +242,15 @@ export function LibraryScreen({
       <div className="home-page-heading">
         <h2 id="library-title">Your plans</h2>
         <div className="home-page-actions">
+          {catalogShown && (
+            <button
+              className="quiet-action"
+              onClick={() => dispatch(viewChanged({ kind: 'home', tab: 'catalog' }))}
+              type="button"
+            >
+              Browse catalog
+            </button>
+          )}
           {operations.libraryRevealable && (
             <button
               className="quiet-action"

@@ -53,6 +53,7 @@ import {
 } from './projectLibrary';
 
 export type ProjectOperation =
+  | 'addCatalog'
   | 'delete'
   | 'deleteFolder'
   | 'folder'
@@ -150,6 +151,16 @@ export interface ProjectOperations {
   revertToOpened(): ProjectOperationResult;
   /** Files a project document as a new plan with its own identity and opens it. */
   openProjectCopy(json: string): Promise<ProjectOperationResult>;
+  /**
+   * Files a catalog entry's plan at the top of the library as a copy with its own identity,
+   * named after the entry's title, and remembers which entry it came from.
+   */
+  addCatalogPlan(
+    entry: { readonly id: string; readonly title: string },
+    json: string,
+  ): Promise<ProjectOperationResult>;
+  /** The `projectId` of the copy each catalog entry was added as, by entry id. */
+  catalogCopies(): Promise<Readonly<Record<string, string>>>;
   /** Imports the file open before the library, once offered, and opens it. */
   acceptPreviousFile(): Promise<ProjectOperationResult>;
   declinePreviousFile(): Promise<void>;
@@ -179,6 +190,7 @@ interface CreateProjectOperationsOptions {
 }
 
 const operationLabels: Readonly<Record<ProjectOperation, string>> = Object.freeze({
+  addCatalog: 'Add to library',
   delete: 'Delete',
   deleteFolder: 'Delete folder',
   folder: 'Folder',
@@ -630,6 +642,22 @@ export function createProjectOperations(
         return failure('openCopy', error);
       }
     },
+    async addCatalogPlan(
+      entry: { readonly id: string; readonly title: string },
+      json: string,
+    ): Promise<ProjectOperationResult> {
+      try {
+        const plan = await library().importFile(
+          { fileName: `${entry.id}.runplanner.json`, json },
+          { newIdentity: true, name: entry.title },
+        );
+        await library().recordCatalogCopy(entry.id, plan.project.projectId);
+        return result('addCatalog', 'success', `Added “${plan.project.name}” to the library.`);
+      } catch (error) {
+        return failure('addCatalog', error);
+      }
+    },
+    catalogCopies: async () => (options.library === undefined ? {} : library().catalogCopies()),
     async acceptPreviousFile(): Promise<ProjectOperationResult> {
       try {
         if (previousFile === null) throw new Error('No earlier file is waiting to be imported');

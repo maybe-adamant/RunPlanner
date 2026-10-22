@@ -1,26 +1,23 @@
-use std::path::PathBuf;
 use std::sync::Mutex;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 
 use run_planner_game_host::community_event::{instant_from_unix, CommunityEvent, Instant};
 use run_planner_game_host::event_feed::{
-    self, project_url, EventSession, FeedSource, ProjectSchemaRange, VerifiedFeed,
-    EVENT_FEED_SIGNATURE_URL, EVENT_FEED_URL, MAX_EVENT_PROJECT_BYTES, MAX_FEED_BYTES,
-    MAX_FEED_SIGNATURE_BYTES,
+    self, decode_feed, project_url, DecodedFeed, EventSession, ProjectSchemaRange, EVENT_FEED,
+    MAX_EVENT_PROJECT_BYTES,
 };
 use run_planner_game_host::game_module_package::ModulePackage;
 use run_planner_game_host::game_plan_publication::{
     self, EventSlotClearing, EventSlotKeep, GamePlanPublication,
 };
+use run_planner_game_host::signed_feed::FeedSource;
 use run_planner_game_host::slot_overview::{SlotEvent, SlotSummary};
 
+use crate::feed_fetch::{self, FeedEndpoint};
 use crate::game_module_commands::config_dir;
-
-const CACHE_DIRECTORY: &str = "event-feed";
-const FETCH_TIMEOUT: Duration = Duration::from_secs(20);
 
 /// The verified community events of this session.
 #[derive(Default)]
@@ -64,86 +61,15 @@ fn now() -> Instant {
 fn session<'a>(
     events: &'a State<'_, CommunityEvents>,
 ) -> Result<std::sync::MutexGuard<'a, EventSession>, String> {
-    events
-        .0
-        .lock()
-        .map_err(|_| "Community event state is unavailable.".to_owned())
+    feed_fetch::lock(&events.0, "community event")
 }
 
-/// The event feed's own public key, checked in beside the app; not the updater's.
-const EVENT_PUBLIC_KEY: &str = include_str!("../event-feed.pub");
-
-fn public_key() -> Result<&'static str, String> {
-    event_feed::event_public_key(EVENT_PUBLIC_KEY).inspect_err(|problem| {
-        eprintln!("[RunPlanner] community events: {problem}");
-    })
-}
-
-fn cache_directory(app: &AppHandle) -> Result<PathBuf, String> {
-    app.path()
-        .app_data_dir()
-        .map(|directory| directory.join(CACHE_DIRECTORY))
-        .map_err(|error| format!("could not resolve application data directory: {error}"))
-}
-
-fn cached_feed(app: &AppHandle, key: &str) -> Option<VerifiedFeed> {
-    cache_directory(app)
-        .ok()
-        .and_then(|directory| event_feed::read_cached_feed(&directory, key).ok())
-}
-
-fn client() -> Result<reqwest::Client, String> {
-    reqwest::Client::builder()
-        .https_only(true)
-        .timeout(FETCH_TIMEOUT)
-        .build()
-        .map_err(|error| format!("Could not prepare the event feed download: {error}"))
-}
-
-async fn download(client: &reqwest::Client, url: &str, limit: usize) -> Result<Vec<u8>, String> {
-    let mut response = client
-        .get(url)
-        .send()
-        .await
-        .and_then(reqwest::Response::error_for_status)
-        .map_err(|error| format!("Could not download {url}: {error}"))?;
-    if response
-        .content_length()
-        .is_some_and(|length| length > limit as u64)
-    {
-        return Err(format!("{url} exceeds the {limit}-byte limit."));
-    }
-    let mut bytes = Vec::new();
-    while let Some(chunk) = response
-        .chunk()
-        .await
-        .map_err(|error| format!("Could not download {url}: {error}"))?
-    {
-        bytes.extend_from_slice(&chunk);
-        if bytes.len() > limit {
-            return Err(format!("{url} exceeds the {limit}-byte limit."));
-        }
-    }
-    Ok(bytes)
-}
-
-/// Fetches, verifies and decodes the feed, refusing one signed before the newest feed already
-/// verified, then keeps it for offline starts.
-async fn fetch_feed(
-    app: &AppHandle,
-    key: &str,
-    not_before: Option<u64>,
-) -> Result<VerifiedFeed, String> {
-    let client = client()?;
-    let feed = download(&client, EVENT_FEED_URL, MAX_FEED_BYTES).await?;
-    let signature = download(&client, EVENT_FEED_SIGNATURE_URL, MAX_FEED_SIGNATURE_BYTES).await?;
-    let verified = event_feed::verify_feed(&feed, &signature, key, not_before)?;
-    // A feed that cannot be cached is still used for this session.
-    if let Ok(directory) = cache_directory(app) {
-        let _ = event_feed::cache_feed(&directory, &feed, &signature);
-    }
-    Ok(verified)
-}
+/// The event feed with its own public key, checked in beside the app; not the updater's.
+const EVENT_ENDPOINT: FeedEndpoint<DecodedFeed> = FeedEndpoint {
+    feed: EVENT_FEED,
+    public_key: include_str!("../event-feed.pub"),
+    decode: decode_feed,
+};
 
 /// Downloads an event's project from beside the feed, verifies it against the signed hash and
 /// holds it for the session.
@@ -155,7 +81,7 @@ async fn verified_project(
         return Ok(held.to_owned());
     }
     let url = project_url(event)?.to_owned();
-    let bytes = download(&client()?, &url, MAX_EVENT_PROJECT_BYTES).await?;
+    let bytes = feed_fetch::download(&feed_fetch::client()?, &url, MAX_EVENT_PROJECT_BYTES).await?;
     let json = event_feed::verify_project(event, bytes)?;
     session(events)?.hold_project(event, json.clone(), now());
     Ok(json)
@@ -171,39 +97,7 @@ pub async fn event_feed_refresh(
     retry_failed: bool,
     project_schemas: ProjectSchemaRange,
 ) -> Result<EventFeedSnapshot, String> {
-    let started = std::time::Instant::now();
-    let mut problem = None;
-    let (fetch, held) = {
-        let session = session(&events)?;
-        (
-            session.needs_fetch(started, retry_failed),
-            session.signed_at(),
-        )
-    };
-    if fetch {
-        let Ok(key) = public_key() else {
-            session(&events)?.disable();
-            return Ok(EventFeedSnapshot {
-                active: None,
-                source: FeedSource::Disabled,
-                problem: None,
-            });
-        };
-        // A cached feed that verifies sets the floor even when it no longer decodes.
-        let not_before = held.or_else(|| {
-            cache_directory(&app)
-                .ok()
-                .and_then(|directory| event_feed::cached_signed_at(&directory, key))
-        });
-        match fetch_feed(&app, key, not_before).await {
-            Ok(verified) => session(&events)?.accept_fetched(verified, started),
-            Err(message) => {
-                let cached = cached_feed(&app, key);
-                session(&events)?.fetch_failed(|| cached, started);
-                problem = Some(message);
-            }
-        }
-    }
+    let problem = feed_fetch::refresh(&app, &EVENT_ENDPOINT, &events.0, retry_failed).await?;
     let (active, source) = {
         let session = session(&events)?;
         for refused in session.refused() {

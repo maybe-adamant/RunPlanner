@@ -6,3 +6,4 @@ test/fixtures/authored-project/checkpoints/*.runplanner.json
 external/
 # Signed bytes; reformatting would break the signature.
 apps/planner/src-tauri/game-host/tests/fixtures/event-feed/
+apps/planner/src-tauri/game-host/tests/fixtures/catalog-feed/

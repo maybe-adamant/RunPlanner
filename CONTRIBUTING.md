@@ -198,6 +198,27 @@ as a placeholder that turns events off. To set the key up once:
    and release the planner. The events workflows refuse a planner release that
    still ships the placeholder.
 
+### Plan catalog
+
+Template plans live in the separate
+[RunPlanner-Catalog](https://github.com/maybe-adamant/RunPlanner-Catalog)
+repository, whose workflows validate pull requests and publish the signed index
+the same way (see
+[Plan catalog feed](docs/design/GAME_INTEGRATION_BOUNDARY.md#plan-catalog-feed)).
+They call this repository's single catalog builder, `npm run catalog:build`
+(`apps/planner/src/workspace/catalogFeedBuilder.ts`, which loads and compiles
+every plan as the app would), and the `catalog_ci` example of the game host
+crate. The repository is the `external/RunPlanner-Catalog` submodule for local
+work; `npm run test:catalog-entries` builds its pinned entries with this
+planner and skips when the submodule is absent. It is opt-in, not part of
+`npm run check`.
+
+The index is signed with its own catalog key. The app embeds the public key
+from `apps/planner/src-tauri/catalog-feed.pub`, which ships as a placeholder
+that turns the catalog off; the catalog repository's README describes the
+one-time key setup, which ends by replacing that file and releasing the
+planner.
+
 The separate **Desktop host** workflow checks Rust compilation of the desktop
 application on Windows and Linux and runs the game host crate tests on Linux,
 and the **Game module** workflow runs `npm run test:game-module`, on pull

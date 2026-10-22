@@ -1,8 +1,10 @@
 use tauri::Manager;
 
 mod bug_report_commands;
+mod catalog_feed;
 mod close_gate;
 mod community_events;
+mod feed_fetch;
 mod game_module_commands;
 mod project_library_commands;
 mod release_updates;
@@ -37,6 +39,8 @@ pub fn run() {
             game_module_commands::game_active_slot_set,
             game_module_commands::game_slot_clear,
             game_module_commands::game_slot_restore,
+            catalog_feed::catalog_feed_refresh,
+            catalog_feed::catalog_plan_download,
             community_events::event_feed_refresh,
             community_events::event_project_download,
             community_events::game_event_publish,
@@ -74,6 +78,7 @@ pub fn run() {
         .manage(release_updates::PendingUpdate::default())
         .manage(bug_report_commands::LastBugReport::default())
         .manage(community_events::CommunityEvents::default())
+        .manage(catalog_feed::PlanCatalog::default())
         .manage(project_library_commands::ProjectLibraryLock::default())
         .manage(run_planner_game_host::close_gate::CloseGate::default())
         .on_window_event(|window, event| {

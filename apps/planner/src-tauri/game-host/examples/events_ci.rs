@@ -24,10 +24,9 @@ fn run(arguments: &[String]) -> Result<String, String> {
                 .collect::<Vec<_>>()
                 .join("\n"))
         }
-        [command, feed, signature, public_key] if command == "verify" => {
-            event_feed::verify_signature(&read(feed)?, &read(signature)?, public_key.trim())
-                .map(|signed_at| signed_at.to_string())
-        }
+        [command, feed, signature, public_key] if command == "verify" => event_feed::EVENT_FEED
+            .verify_signature(&read(feed)?, &read(signature)?, public_key.trim())
+            .map(|signed_at| signed_at.to_string()),
         _ => {
             Err("usage: events_ci check <feed> | verify <feed> <signature> <public-key>".to_owned())
         }

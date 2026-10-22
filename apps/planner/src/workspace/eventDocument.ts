@@ -4,6 +4,7 @@ import {
   EXECUTION_DISPLAY_NAME_MAX,
 } from '@run-planner/engine/execution-plan';
 
+import { validFeedText, validSlug } from './feedBuild';
 import { compileProjectFile } from './projectFileCompilation';
 
 /** The fields an event's author writes in `event.json`; the host decodes and validates them. */
@@ -17,27 +18,10 @@ export interface AuthoredEventMetadata {
   readonly endsAt: string;
 }
 
-const EVENT_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const ISO_INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?Z$/;
+const MAX_ID_CHARS = 64;
 const MAX_TITLE_CHARS = 80;
 const MAX_TEXT_CHARS = 2000;
-
-// Unicode format characters (category Cf) and the line and paragraph separators, which the
-// host refuses in every event text.
-const INVISIBLE = /[\p{Cf}\u2028\u2029]/u;
-// Control characters; multiline text may hold line breaks.
-const CONTROL = /\p{Cc}/u;
-const CONTROL_EXCEPT_BREAKS = /[^\P{Cc}\n\r]/u;
-
-/** Text the host accepts: non-blank, bounded, and without control or format characters. */
-function validText(text: string, maxChars: number, multiline: boolean): boolean {
-  return (
-    text.trim() !== '' &&
-    Array.from(text).length <= maxChars &&
-    !INVISIBLE.test(text) &&
-    !(multiline ? CONTROL_EXCEPT_BREAKS : CONTROL).test(text)
-  );
-}
 
 /** A real UTC calendar instant from year 2000, as comparable parts; null otherwise. */
 function instant(text: string): readonly number[] | null {
@@ -75,14 +59,14 @@ function compareInstants(left: readonly number[], right: readonly number[]): num
 
 /** The refusal the host's decoder would give this metadata, worded for its author. */
 export function eventMetadataProblem(metadata: AuthoredEventMetadata): string | null {
-  if (!EVENT_ID.test(metadata.id) || metadata.id.length > 64) {
+  if (!validSlug(metadata.id, MAX_ID_CHARS)) {
     return 'An event id uses lower-case letters, digits and single hyphens, at most 64 characters.';
   }
-  if (!validText(metadata.title, MAX_TITLE_CHARS, false)) {
+  if (!validFeedText(metadata.title, MAX_TITLE_CHARS, false)) {
     return 'An event title is one non-blank line of at most 80 characters, without control or invisible formatting characters.';
   }
   const texts = [metadata.description, ...(metadata.rules === undefined ? [] : [metadata.rules])];
-  if (!texts.every((text) => validText(text, MAX_TEXT_CHARS, true))) {
+  if (!texts.every((text) => validFeedText(text, MAX_TEXT_CHARS, true))) {
     return 'An event description, and its rules when given, are non-blank text of at most 2000 characters, without control or invisible formatting characters.';
   }
   const starts = instant(metadata.startsAt);
@@ -114,10 +98,4 @@ export const EVENTS_REPOSITORY = 'maybe-adamant/RunPlanner-Events';
 /** The URL an event's project file has beside the feed. */
 export function eventProjectUrl(id: string): string {
   return `https://github.com/${EVENTS_REPOSITORY}/releases/download/events/${id}.runplanner.json`;
-}
-
-/** Lower-case hex SHA-256 of a project file's text, as the event document records it. */
-export async function projectFileSha256(json: string): Promise<string> {
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(json));
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }

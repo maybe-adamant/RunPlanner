@@ -50,6 +50,21 @@ export function eventsBuildEnvironment(options, cwd = process.cwd()) {
   };
 }
 
+/** Runs a feed builder task through vitest from the repository root, exiting with its code. */
+export function runFeedTask(config, environment) {
+  const root = fileURLToPath(new URL('..', import.meta.url));
+  const child = spawn(
+    process.execPath,
+    ['node_modules/vitest/vitest.mjs', 'run', '--config', config],
+    {
+      cwd: root,
+      env: { ...process.env, ...environment },
+      stdio: 'inherit',
+    },
+  );
+  child.on('exit', (code) => process.exit(code ?? 1));
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   let options;
   try {
@@ -58,15 +73,5 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.stderr.write(`${error.message}\n`);
     process.exit(2);
   }
-  const root = fileURLToPath(new URL('..', import.meta.url));
-  const child = spawn(
-    process.execPath,
-    ['node_modules/vitest/vitest.mjs', 'run', '--config', 'vitest.events.config.ts'],
-    {
-      cwd: root,
-      env: { ...process.env, ...eventsBuildEnvironment(options) },
-      stdio: 'inherit',
-    },
-  );
-  child.on('exit', (code) => process.exit(code ?? 1));
+  runFeedTask('vitest.events.config.ts', eventsBuildEnvironment(options));
 }

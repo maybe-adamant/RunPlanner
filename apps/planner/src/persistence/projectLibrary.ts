@@ -46,10 +46,13 @@ export type ChosenImportFile =
 export interface LibrarySession {
   /** The file open before the library was offered once, and imported or declined. */
   readonly previousFileOffered: boolean;
+  /** The `projectId` of the copy each catalog entry was added as, by entry id. */
+  readonly catalogCopies: Readonly<Record<string, string>>;
 }
 
 export const EMPTY_LIBRARY_SESSION: LibrarySession = Object.freeze({
   previousFileOffered: false,
+  catalogCopies: Object.freeze({}),
 });
 
 /**

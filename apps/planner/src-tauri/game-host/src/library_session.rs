@@ -1,8 +1,10 @@
 //! What the planner remembers about the library between launches, in the configuration folder:
-//! whether the pre-library file was offered for import. It also
+//! whether the pre-library file was offered for import and which plans were added from the
+//! catalog. It also
 //! reads the file the planner kept open before it had a library.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -18,6 +20,9 @@ pub struct LibrarySession {
     /// The pre-library file was offered once, and imported or declined.
     #[serde(default)]
     pub previous_file_offered: bool,
+    /// The `projectId` of the copy each catalog entry was added as, by entry id.
+    #[serde(default)]
+    pub catalog_copies: BTreeMap<String, String>,
 }
 
 /// The remembered session; a missing or unreadable record is an empty one.
@@ -112,6 +117,7 @@ mod tests {
         assert_eq!(read(&folder.0), LibrarySession::default());
         let session = LibrarySession {
             previous_file_offered: true,
+            catalog_copies: BTreeMap::from([("sub-2m".to_owned(), "run-plan-1".to_owned())]),
         };
         write(&folder.0, &session).unwrap();
         assert_eq!(read(&folder.0), session);
