@@ -1053,6 +1053,13 @@ button.home-slot-name {
   stroke-width: 1.2;
 }
 
+.library-folder-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.3;
+}
+
 .library-folder-count {
   font-size: 0.82rem;
 }
