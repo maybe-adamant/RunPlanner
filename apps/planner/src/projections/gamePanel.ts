@@ -6,7 +6,11 @@ import type { CurrentGamePlan } from '@planner/workspace/projectOperations';
 import type { SlotRebuildReport } from '@planner/workspace/slotRebuild';
 import { describeStartPointBlocked } from '@planner/projections/startPointCopy';
 import { ownEntry, slotLoadoutLabel } from '@planner/projections/gameSlotSummary';
-import { OUTDATED_REBUILD, OUTDATED_RESEND } from '@planner/projections/libraryHome';
+import {
+  OUTDATED_REBUILD,
+  OUTDATED_RESEND,
+  type PlanSlotLink,
+} from '@planner/projections/libraryHome';
 import type { HomeContextPart } from '@planner/projections/homeContext';
 import type { GameActivationFailure, GameSendFailure } from '@planner/state/gameSendSessionSlice';
 import type {
@@ -521,6 +525,8 @@ function unavailableReason(current: CurrentGamePlan): string | null {
       return null;
     case 'noProject':
       return 'Open a project to send it to the game.';
+    case 'unreadable':
+      return `This plan can’t be read: ${current.message}`;
     case 'notPublishable':
       return current.code === 'startPointIneligible' && current.startPointReason !== undefined
         ? describeStartPointBlocked({ code: current.code, reason: current.startPointReason })
@@ -723,11 +729,15 @@ export type GameSendActivity =
   | { readonly kind: 'sent'; readonly slot: GamePlanSlotNumber; readonly atMs: number }
   | { readonly kind: 'failed' };
 
+export const GAME_SEND_IDLE: GameSendActivity = Object.freeze({ kind: 'idle' });
+
 export type GameSendButtonLabel =
   | 'Send to game'
   | 'Send to game…'
   | `Send to slot ${GamePlanSlotNumber}`
   | `Slot ${GamePlanSlotNumber} · up to date`
+  | `Update slot ${GamePlanSlotNumber}`
+  | `Slot ${GamePlanSlotNumber}`
   | 'Sending…'
   | `✓ Sent · Slot ${GamePlanSlotNumber}`
   | '! Not sent';
@@ -740,6 +750,7 @@ export interface GameSendButton {
     | 'chooseSlot'
     | 'ready'
     | 'upToDate'
+    | 'checking'
     | 'sending'
     | 'sent'
     | 'failed';
@@ -774,19 +785,12 @@ function inactive(
   return { state, label, action: null, description };
 }
 
-/**
- * The header's split send button; a send also makes its slot active. It sends to the plan's own
- * slot (the one that plays next when it has several), else the slot last sent this session while
- * it is still empty, else the first empty slot; with none of those it opens the slot picker. A
- * slot already holding the plan as it is now has nothing to send.
- */
-export function projectGameSendButton(
+/** A send in progress or its result, shown on the button for a while; null while idle. */
+function activityButton(
   status: GameModuleStatus | null,
-  project: GameSendProject | null,
-  lastSentSlot: GamePlanSlotNumber | null,
   activity: GameSendActivity,
-  activationFailure: GameActivationFailure | null = null,
-): GameSendButton {
+  activationFailure: GameActivationFailure | null,
+): GameSendButton | null {
   switch (activity.kind) {
     case 'sending':
       return inactive('sending', 'Sending…', null);
@@ -799,8 +803,44 @@ export function projectGameSendButton(
     case 'failed':
       return inactive('failed', '! Not sent', 'Details are in the slot picker.');
     case 'idle':
-      break;
+      return null;
   }
+}
+
+/** Nothing to send: the main part opens the slot picker, which lists the plan's other slots. */
+function upToDateButton(slot: GamePlanSlotNumber): GameSendButton {
+  return {
+    state: 'upToDate',
+    label: `Slot ${slot} · up to date`,
+    action: { kind: 'openPlans' },
+    description: null,
+  };
+}
+
+/** Of a plan's slots, the one that plays next, else the first. */
+function defaultOwnSlot<Slot extends { readonly slot: GamePlanSlotNumber }>(
+  status: GameModuleStatus,
+  own: readonly Slot[],
+): Slot | undefined {
+  const next = projectNextRunSlot(status);
+  return own.find((slot) => slot.slot === next) ?? own[0];
+}
+
+/**
+ * The header's split send button; a send also makes its slot active. It sends to the plan's own
+ * slot (the one that plays next when it has several), else the slot last sent this session while
+ * it is still empty, else the first empty slot; with none of those it opens the slot picker. A
+ * slot already holding the plan as it is now has nothing to send, so the button opens the picker.
+ */
+export function projectGameSendButton(
+  status: GameModuleStatus | null,
+  project: GameSendProject | null,
+  lastSentSlot: GamePlanSlotNumber | null,
+  activity: GameSendActivity,
+  activationFailure: GameActivationFailure | null = null,
+): GameSendButton {
+  const shown = activityButton(status, activity, activationFailure);
+  if (shown !== null) return shown;
   if (project === null) return inactive('noProject', 'Send to game', 'Open a plan first.');
   if (status === null || !isReady(status)) {
     return inactive('notReady', 'Send to game', 'Set up the game on the Game tab.');
@@ -820,15 +860,14 @@ export function projectGameSendButton(
     (slot) =>
       (slot.state === 'present' || slot.state === 'stale') && slot.projectId === project.projectId,
   );
-  const next = projectNextRunSlot(status);
-  const ownSlot = own.find((slot) => slot.slot === next) ?? own[0];
+  const ownSlot = defaultOwnSlot(status, own);
   if (ownSlot !== undefined) {
     const upToDate =
       ownSlot.state === 'present' &&
       project.planFingerprint != null &&
       ownSlot.planFingerprint === project.planFingerprint;
     return upToDate
-      ? inactive('upToDate', `Slot ${ownSlot.slot} · up to date`, null)
+      ? upToDateButton(ownSlot.slot)
       : {
           state: 'ready',
           label: `Send to slot ${ownSlot.slot}`,
@@ -852,6 +891,54 @@ export function projectGameSendButton(
     action: { kind: 'send', slot: target.slot },
     description: null,
   };
+}
+
+/** A Library row's send control, with how many more slots hold the plan. */
+export interface LibrarySendButton extends GameSendButton {
+  readonly more: number;
+}
+
+/**
+ * A Library row's quiet split send control, from the slots holding the plan. It names the plan's
+ * default slot (the one that plays next, else its first): up to date, Update when older, or the
+ * bare slot while its comparison is read. Without a slot, or while the game is not ready, it opens
+ * the slot picker; whether the plan can be sent is learned only when the user asks.
+ */
+export function projectLibrarySendButton(
+  status: GameModuleStatus | null,
+  slots: readonly PlanSlotLink[],
+  activity: GameSendActivity,
+  activationFailure: GameActivationFailure | null = null,
+): LibrarySendButton {
+  const more = Math.max(0, slots.length - 1);
+  const shown = activityButton(status, activity, activationFailure);
+  if (shown !== null) return { ...shown, more };
+  const own = status === null ? undefined : defaultOwnSlot(status, slots);
+  const choose: LibrarySendButton = {
+    state: 'chooseSlot',
+    label: 'Send to game…',
+    action: { kind: 'openPlans' },
+    description: null,
+    more,
+  };
+  if (own === undefined || status === null) return choose;
+  if (!isReady(status)) {
+    return { ...choose, state: 'notReady', label: `Slot ${own.slot}` };
+  }
+  switch (own.marker) {
+    case 'current':
+      return { ...upToDateButton(own.slot), more };
+    case 'older':
+      return {
+        state: 'ready',
+        label: `Update slot ${own.slot}`,
+        action: { kind: 'send', slot: own.slot },
+        description: null,
+        more,
+      };
+    case null:
+      return { ...inactive('checking', `Slot ${own.slot}`, null), more };
+  }
 }
 
 /** The Game panel's notice of the latest failed send. */

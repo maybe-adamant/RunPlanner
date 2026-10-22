@@ -11,6 +11,12 @@ import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
+import {
+  createFakeGameModuleHost,
+  gameModuleStatus,
+  planSlot,
+  planSlots,
+} from '@planner-test/fixtures/gameModuleHost';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 
@@ -340,5 +346,104 @@ describe('Library screen', () => {
     expect(within(chips).getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe(
       'true',
     );
+  });
+
+  it('sends each plan from its In game cell, saying why one cannot be sent', async () => {
+    const library = createMemoryProjectLibrary();
+    const sendable = createCompleteFGProject();
+    const opener = await library.file({
+      ...sendable,
+      projectId: 'opener',
+      name: 'Erebus opener',
+      route: { ...sendable.route, biomes: sendable.route.biomes.slice(0, 1) },
+    });
+    await library.file(plan('b', 'Unfinished idea'));
+    await library.file(plan('c', 'Not sent yet'));
+    await library.adapter.create('{"schemaVersion":120,"projectId":"f","name":"Future"}', '');
+    const game = createFakeGameModuleHost();
+    const application = createApplication({
+      gameModuleHost: game.host,
+      projectLibrary: library.adapter,
+    });
+    await application.startupReady;
+    const current = await application.projectOperations.inspectLibraryGamePlan(opener);
+    if (current.kind !== 'publishable') throw new Error('fixture must be sendable');
+    const held = (slot: 2 | 9, planFingerprint: string) =>
+      planSlot(slot, {
+        state: 'present',
+        modifiedAtMs: Date.now(),
+        routeKey: 'Underworld',
+        biomeKeys: ['F'],
+        planFingerprint,
+        projectId: 'opener',
+        displayName: 'Erebus opener',
+      });
+    game.host.status.mockResolvedValue(
+      gameModuleStatus({
+        inspection: { planSlots: planSlots(held(2, current.planFingerprint), held(9, 'older')) },
+      }),
+    );
+    const { user } = renderPlannerForInteraction({ application, startWithProject: false });
+    await screen.findByRole('region', { name: 'Library' });
+    const cell = (name: string) =>
+      within(rowOf(name)).getByRole('group', { name: `Send ${name} to game` });
+
+    // The default slot, up to date, with the other slot counted; the main part opens the picker.
+    await waitFor(() => expect(cell('Erebus opener').textContent).toBe('Slot 2 · up to date+1▾'));
+    expect(cell('Not sent yet').textContent).toBe('Send to game…▾');
+    // A file the planner cannot open has nothing to send.
+    expect(within(rowOf('Future')).queryByRole('group')).toBeNull();
+    await user.click(within(cell('Erebus opener')).getByText('Slot 2 · up to date'));
+    let picker = await screen.findByRole('dialog', { name: 'Slots' });
+    expect(within(picker).getByRole('list', { name: 'This plan in game' }).textContent).toContain(
+      'Slot 9 · older',
+    );
+    await user.click(within(picker).getByRole('button', { name: 'Update slot 9' }));
+    await waitFor(() => expect(game.published.map((sent) => sent.slotNumber)).toEqual([9]));
+    expect(JSON.parse(game.published[0]!.json)).toMatchObject({ displayName: 'Erebus opener' });
+
+    // Readiness is read when asked: the picker says why, and repairs it in the editor.
+    await user.click(within(cell('Unfinished idea')).getByText('Send to game…'));
+    picker = await screen.findByRole('dialog', { name: 'Slots' });
+    expect(
+      await within(picker).findByText('Resolve this plan’s findings before sending it.'),
+    ).toBeTruthy();
+    expect(within(picker).queryByRole('button', { name: /Send here/ })).toBeNull();
+    await user.click(within(picker).getByRole('button', { name: 'Open in editor' }));
+    await waitFor(() =>
+      expect(application.store.getState().librarySession.view).toEqual({ kind: 'editor' }),
+    );
+    expect(game.published).toHaveLength(1);
+  });
+
+  it('names the slots a deleted plan is still in, which keep it', async () => {
+    const library = createMemoryProjectLibrary();
+    await library.file(plan('a', 'Erebus opener'));
+    const game = createFakeGameModuleHost(
+      gameModuleStatus({
+        inspection: {
+          planSlots: planSlots(
+            ...([2, 9] as const).map((slot) =>
+              planSlot(slot, { state: 'present', projectId: 'a', planFingerprint: 'sent' }),
+            ),
+          ),
+        },
+      }),
+    );
+    const application = createApplication({
+      gameModuleHost: game.host,
+      projectLibrary: library.adapter,
+    });
+    await application.startupReady;
+    const { user } = renderPlannerForInteraction({ application, startWithProject: false });
+    await waitFor(() =>
+      expect(document.querySelector('.library-toolbar .home-context')?.textContent).toContain(
+        '1 in game',
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Delete Erebus opener' }));
+    const notice = await screen.findByText(/^Deleted “Erebus opener”/);
+    expect(notice.textContent).toBe('Deleted “Erebus opener” · still in slots 2 and 9');
+    expect(game.host.clearSlot).not.toHaveBeenCalled();
   });
 });

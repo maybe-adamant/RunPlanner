@@ -439,7 +439,12 @@ and each result names its folder. Sort is kept per folder. The slots come from
 older with the reason otherwise ("edited since sent", or "needs rebuild" or
 "send again" for the module). `ProjectOperations.inspectLibraryGamePlans` compiles only the
 plans a slot holds, cached by key and modified time, and the open plan as it
-is now.
+is now. The In game column is the shared split send control, quiet and of fixed
+width, from `projectLibrarySendButton`; its picker reads the plan through
+`ProjectOperations.inspectLibraryGamePlan` only when opened, and its sends go
+through `publishLibraryPlan`, which sends the open plan through the editor's
+path (see [Game integration](GAME_INTEGRATION_BOUNDARY.md)). A deleted plan's
+notice names the slots that still hold it.
 
 ### Catalog screen
 
@@ -479,12 +484,13 @@ slots a rebuild would write. Home plays a slot next and opens a linked plan;
 it never sends or clears slots, except that development builds keep Import
 event folder and Clear event.
 
-Sending belongs to the editor's split send button. `projectGameSendButton`
+The editor's split send button, shared with the Library's rows as
+`GameSendSplit` and `SendSlotsPanel`, sends the open plan. `projectGameSendButton`
 picks its slot (the plan's own slot, the one that plays next when it has
 several; else the slot last sent this session while still empty; else the
 first empty one) and its label ("Send to slot N", a quiet "Slot N · up to
-date" when that slot holds the plan as it is now, or "Send to game…" with no
-slot), from the evaluation's eligibility without compiling unless the plan is
+date" that opens the picker when that slot holds the plan as it is now, or
+"Send to game…" with no slot), from the evaluation's eligibility without compiling unless the plan is
 in a slot. Its ▾ opens the slot picker, `projectSendSlots`: the plan's own
 slots with Update for an older one, every slot to send to (Replace asks
 first), why the plan cannot be sent with Show findings, and the last send's

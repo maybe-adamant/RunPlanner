@@ -15,6 +15,7 @@ import {
   compileExecutionPlan,
   encodeExecutionPlan,
   ExecutionCompilerError,
+  type ExecutionPlan,
 } from '@run-planner/engine/execution-plan';
 
 import { createInitialProject } from '../composition/projectBootstrap';
@@ -77,6 +78,8 @@ export type ProjectOperation =
 
 export type CurrentGamePlan =
   | { readonly kind: 'noProject' }
+  /** A stored plan that could not be loaded, such as one made by a newer planner. */
+  | { readonly kind: 'unreadable'; readonly message: string }
   | {
       readonly kind: 'notPublishable';
       /** The compiler's reason, or null when compiling failed for another reason. */
@@ -95,6 +98,15 @@ export type ProjectOperationResult = {
   readonly operation: ProjectOperation;
   readonly status: 'cancelled' | 'failure' | 'success';
   readonly message: string;
+};
+
+/**
+ * A Library send; `blocked` says why the plan was not sendable, and `activationProblem` why a
+ * sent slot was not made active.
+ */
+export type LibrarySendResult = ProjectOperationResult & {
+  readonly blocked: CurrentGamePlan | null;
+  readonly activationProblem: string | null;
 };
 
 /** A deletion and what undoing it needs; `deleted` is null when nothing was deleted. */
@@ -184,6 +196,13 @@ export interface ProjectOperations {
   /** Whether the current project compiles to an execution plan, and its fingerprint. */
   inspectCurrentGamePlan(): CurrentGamePlan;
   publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult>;
+  /**
+   * Whether a library plan compiles to an execution plan: loaded, simulated and compiled as
+   * stored; the open plan as it is now.
+   */
+  inspectLibraryGamePlan(key: string): Promise<CurrentGamePlan>;
+  /** Sends a library plan to a slot, compiled as `inspectLibraryGamePlan` reads it. */
+  publishLibraryPlan(key: string, slotNumber: GamePlanSlotNumber): Promise<LibrarySendResult>;
   /** Writes the open plan's pending edits, before the planner closes or updates. */
   flush(): Promise<{ readonly status: 'failure' | 'success'; readonly message: string }>;
 }
@@ -245,6 +264,16 @@ function failure(operation: ProjectOperation, error: unknown): ProjectOperationR
   );
 }
 
+function notPublishable(error: unknown): CurrentGamePlan {
+  return Object.freeze({
+    kind: 'notPublishable',
+    code: error instanceof ExecutionCompilerError ? error.code : null,
+    ...(error instanceof ExecutionCompilerError && error.startPointReason !== undefined
+      ? { startPointReason: error.startPointReason }
+      : {}),
+  });
+}
+
 /** "X (copy)", shortened so it stays a valid plan name. */
 function copyName(name: string): string {
   const room = PROJECT_NAME_MAX - Array.from(COPY_SUFFIX).length;
@@ -304,11 +333,48 @@ export function createProjectOperations(
         : migratedPlanMessage(plan.project, plan.migrationProvenance),
     );
   };
+  /** Writes a compiled plan to a slot, with its document so the slot can be rebuilt. */
+  const publishCompiled = async (
+    slotNumber: GamePlanSlotNumber,
+    plan: ExecutionPlan,
+    project: ProjectDocument,
+  ): Promise<{
+    readonly outcome: ProjectOperationResult;
+    readonly activationProblem: string | null;
+  }> => {
+    if (options.gamePlanPublisher === undefined) {
+      throw new Error('Publish to Game is unavailable in this environment');
+    }
+    // The document and the options it compiled with, so the slot can be rebuilt.
+    const source = encodeSlotSource({
+      internalRunModifiers,
+      projectJson: encodeProjectDocument(project),
+    });
+    const publication = await options.gamePlanPublisher.publish(
+      slotNumber,
+      encodeExecutionPlan(plan),
+      source,
+      projectGameSlotSummary(plan, options.catalog, new Date()),
+    );
+    if (publication.status !== 'published') {
+      return {
+        outcome: result(
+          'publishGame',
+          'failure',
+          publication.blockers.length > 0
+            ? publication.blockers.map(describePublicationBlocker).join(' ')
+            : publication.message,
+        ),
+        activationProblem: null,
+      };
+    }
+    return {
+      outcome: result('publishGame', 'success', `Published to game, Slot ${slotNumber}.`),
+      activationProblem: publication.activationProblem,
+    };
+  };
   const sendToGame = async (slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult> => {
     try {
-      if (options.gamePlanPublisher === undefined) {
-        throw new Error('Publish to Game is unavailable in this environment');
-      }
       const workspace = options.store.getState().projectWorkspace;
       if (workspace.kind !== 'openProject') throw new Error('No project is open');
       const project = workspace.history.present;
@@ -320,41 +386,69 @@ export function createProjectOperations(
         }),
         displayName: project.name,
       });
-      // The document and the options it compiled with, so the slot can be rebuilt.
-      const source = encodeSlotSource({
-        internalRunModifiers,
-        projectJson: encodeProjectDocument(project),
-      });
-      const publication = await options.gamePlanPublisher.publish(
-        slotNumber,
-        encodeExecutionPlan(plan),
-        source,
-        projectGameSlotSummary(plan, options.catalog, new Date()),
-      );
-      if (publication.status !== 'published') {
-        return result(
-          'publishGame',
-          'failure',
-          publication.blockers.length > 0
-            ? publication.blockers.map(describePublicationBlocker).join(' ')
-            : publication.message,
-        );
-      }
+      const { outcome, activationProblem } = await publishCompiled(slotNumber, plan, project);
+      if (outcome.status !== 'success') return outcome;
       options.store.dispatch(gamePlanSent({ slot: slotNumber }));
-      if (publication.activationProblem !== null) {
+      if (activationProblem !== null) {
         options.store.dispatch(
           gameSentSlotNotActivated({
             slot: slotNumber,
-            message: publication.activationProblem,
+            message: activationProblem,
             atMs: Date.now(),
           }),
         );
       }
-      return result('publishGame', 'success', `Published to game, Slot ${slotNumber}.`);
+      return outcome;
     } catch (error) {
       return failure('publishGame', error);
     }
   };
+  type StoredCompilation =
+    | { readonly kind: 'compiled'; readonly plan: ExecutionPlan; readonly project: ProjectDocument }
+    | { readonly kind: 'blocked'; readonly blocked: CurrentGamePlan };
+  /** The last stored plan compiled, kept while its file is unchanged so a send reuses it. */
+  let lastStored: {
+    readonly key: string;
+    readonly json: string;
+    readonly compilation: StoredCompilation;
+  } | null = null;
+  /** A stored plan compiled as sent, or why it cannot be. */
+  const compileStored = async (key: string): Promise<StoredCompilation> => {
+    let json: string;
+    try {
+      json = await library().readJson(key);
+    } catch (error) {
+      return { kind: 'blocked', blocked: { kind: 'unreadable', message: errorDetail(error) } };
+    }
+    if (lastStored !== null && lastStored.key === key && lastStored.json === json) {
+      return lastStored.compilation;
+    }
+    let compilation: StoredCompilation;
+    try {
+      const compiled = compileProjectFile(options.catalog, json, { internalRunModifiers });
+      compilation = { kind: 'compiled', plan: compiled.plan, project: compiled.project };
+    } catch (error) {
+      compilation = {
+        kind: 'blocked',
+        blocked:
+          error instanceof ExecutionCompilerError
+            ? notPublishable(error)
+            : { kind: 'unreadable', message: errorDetail(error) },
+      };
+    }
+    lastStored = { key, json, compilation };
+    return compilation;
+  };
+
+  const publishGame = async (slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult> => {
+    options.store.dispatch(gameSendStarted());
+    const outcome = await sendToGame(slotNumber);
+    if (outcome.status === 'failure') {
+      options.store.dispatch(gameSendFailed({ message: outcome.message, atMs: Date.now() }));
+    }
+    return outcome;
+  };
+  const isOpenKey = (key: string) => options.library !== undefined && key === saver().openKey();
 
   const inspectCurrentGamePlan = (): CurrentGamePlan => {
     const workspace = options.store.getState().projectWorkspace;
@@ -376,13 +470,7 @@ export function createProjectOperations(
         planFingerprint: plan.planFingerprint,
       });
     } catch (error) {
-      current = Object.freeze({
-        kind: 'notPublishable',
-        code: error instanceof ExecutionCompilerError ? error.code : null,
-        ...(error instanceof ExecutionCompilerError && error.startPointReason !== undefined
-          ? { startPointReason: error.startPointReason }
-          : {}),
-      });
+      current = notPublishable(error);
     }
     currentPlans.set(workspace.assembly, current);
     return current;
@@ -773,13 +861,58 @@ export function createProjectOperations(
     hasUnwrittenEdits: () =>
       options.library === undefined ? false : options.library.saver.hasUnwrittenEdits(),
     inspectCurrentGamePlan,
-    async publishGame(slotNumber: GamePlanSlotNumber): Promise<ProjectOperationResult> {
-      options.store.dispatch(gameSendStarted());
-      const outcome = await sendToGame(slotNumber);
-      if (outcome.status === 'failure') {
-        options.store.dispatch(gameSendFailed({ message: outcome.message, atMs: Date.now() }));
+    publishGame,
+    async inspectLibraryGamePlan(key: string): Promise<CurrentGamePlan> {
+      if (isOpenKey(key)) return inspectCurrentGamePlan();
+      const compiled = await compileStored(key);
+      return compiled.kind === 'blocked'
+        ? compiled.blocked
+        : Object.freeze({
+            kind: 'publishable',
+            projectId: compiled.plan.projectId,
+            planFingerprint: compiled.plan.planFingerprint,
+          });
+    },
+    async publishLibraryPlan(
+      key: string,
+      slotNumber: GamePlanSlotNumber,
+    ): Promise<LibrarySendResult> {
+      const blockedResult = (blocked: CurrentGamePlan): LibrarySendResult =>
+        Object.freeze({
+          ...result('publishGame', 'cancelled', 'This plan can’t be sent.'),
+          blocked,
+          activationProblem: null,
+        });
+      try {
+        if (isOpenKey(key)) {
+          const current = inspectCurrentGamePlan();
+          if (current.kind !== 'publishable') return blockedResult(current);
+          const outcome = await publishGame(slotNumber);
+          const activation = options.store.getState().gameSendSession.lastActivationFailure;
+          return Object.freeze({
+            ...outcome,
+            blocked: null,
+            activationProblem:
+              outcome.status === 'success' && activation?.slot === slotNumber
+                ? activation.message
+                : null,
+          });
+        }
+        const compiled = await compileStored(key);
+        if (compiled.kind === 'blocked') return blockedResult(compiled.blocked);
+        const { outcome, activationProblem } = await publishCompiled(
+          slotNumber,
+          compiled.plan,
+          compiled.project,
+        );
+        return Object.freeze({ ...outcome, blocked: null, activationProblem });
+      } catch (error) {
+        return Object.freeze({
+          ...failure('publishGame', error),
+          blocked: null,
+          activationProblem: null,
+        });
       }
-      return outcome;
     },
     async flush() {
       if (options.library === undefined) {

@@ -684,8 +684,9 @@ eight seconds; Undo has the host write the removed files back while the slot is
 still empty, and makes the slot active again while slot 1, which took over,
 still is. A slot file that is not bounded text clears without an Undo.
 
-Sending belongs to the plan's editor, whose header has one split send button
-of stable width. Its main part sends to the plan's own slot (the one that plays
+Plans are sent from the editor's header and from the Library's In game column;
+both use one split send button and slot picker. The editor's button has a
+stable width. Its main part sends to the plan's own slot (the one that plays
 next when it has several), else to the slot last sent this session while it is
 still empty, else to the first empty slot; ▾ opens the slot picker. The planner
 remembers the last slot sent for the loaded project as UI-session state only;
@@ -695,7 +696,7 @@ loading, creating or replacing the document, or restarting, clears it.
 | ---------------------------------- | ----------------------------- | ----------------------------------------- |
 | Module not ready                   | Send to game                  | nothing (Set up the game on the Game tab) |
 | Engine reports the plan ineligible | Send to game                  | nothing (the picker's reason)             |
-| The slot holds the plan as it is   | Slot N · up to date (quiet)   | nothing                                   |
+| The slot holds the plan as it is   | Slot N · up to date (quiet)   | opens the slot picker                     |
 | A slot to send to                  | Send to slot N                | sends                                     |
 | No slot to choose                  | Send to game…                 | opens the slot picker                     |
 | Sending                            | Sending…                      | nothing                                   |
@@ -713,6 +714,21 @@ compiling, compiles to compare only while the plan is in a slot, and compiles
 to send only when clicked. A hidden status region announces each result. A
 failed send, or a send whose slot was not made active, is kept as UI-session
 state until the next send or a document replacement and shown in the picker.
+
+Each Library plan row has a quiet copy of the button, of fixed column width,
+that names the plan's default slot (the one that plays next, else its first)
+with "+N" for its other slots: **Slot N · up to date** opens the picker,
+**Update slot N** resends an older slot, a bare **Slot N** shows while the
+comparison is read or the module is not ready, and **Send to game…** opens the
+picker for a plan in no slot. A file the planner cannot open has no button. The
+row learns whether its plan can be sent only when asked: opening the picker or
+sending loads, simulates and compiles the stored file as a public project
+opened and sent would be, and the open plan as it is now; a send reuses the
+picker's compile while the file is unchanged. A plan that cannot be sent opens
+the picker with the reason and **Open in editor**. A Library send writes nothing
+and leaves the editor's send session alone. Deleting a library plan never
+touches a slot, whose source keeps the plan; its notice names the slots that
+still hold it.
 
 The compiler consumes the exact simulation assembly that the planner already
 validated. It does not rerun candidate policy or duplicate validation. The

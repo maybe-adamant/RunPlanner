@@ -374,17 +374,6 @@ button.home-slot-name {
   font-variant-numeric: tabular-nums;
 }
 
-.library-in-game {
-  display: grid;
-  gap: 2px;
-  margin: 0;
-  padding: 0;
-  color: #d7d2ca;
-  font-size: 0.82rem;
-  list-style: none;
-  white-space: nowrap;
-}
-
 .library-table time {
   font-size: 0.82rem;
   white-space: nowrap;
@@ -1323,4 +1312,88 @@ button.home-slot-name {
   .catalog-table td:nth-child(4) {
     display: none;
   }
+}
+
+/* The Library's In game column: fixed, so a row's quiet send control never moves the others. */
+.library-in-game-column {
+  width: 210px;
+}
+
+.send-split[data-variant='ghost'] {
+  max-width: 100%;
+  border-color: transparent;
+  border-radius: 6px;
+}
+
+.send-split[data-variant='ghost'] > button {
+  min-height: 30px;
+  color: #d7d2ca;
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.send-split[data-variant='ghost'] > .send-split-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  text-align: left;
+}
+
+.send-split[data-variant='ghost'] > .send-split-toggle {
+  padding: 4px 8px;
+  border-left: 1px solid transparent !important;
+  color: var(--muted);
+}
+
+.send-split[data-variant='ghost']:hover,
+.send-split[data-variant='ghost']:has([data-state='open']) {
+  border-color: #3a3b45;
+}
+
+.send-split[data-variant='ghost']:hover > .send-split-toggle,
+.send-split[data-variant='ghost']:has([data-state='open']) > .send-split-toggle {
+  border-left-color: #3a3b45 !important;
+}
+
+.send-split[data-variant='ghost'] > button:hover:not([aria-disabled='true']),
+.send-split[data-variant='ghost'] > .send-split-toggle[data-state='open'] {
+  background: #2b2c35;
+}
+
+.send-split[data-variant='ghost'][data-state='ready'] > .send-split-main {
+  color: var(--selection-accent);
+}
+
+.send-split[data-variant='ghost'][data-state='upToDate'] > .send-split-main {
+  color: #9fd6a8;
+  font-weight: 500;
+}
+
+.send-split[data-variant='ghost'][data-state='chooseSlot'] > .send-split-main,
+.send-split[data-variant='ghost'][data-state='notReady'] > .send-split-main,
+.send-split[data-variant='ghost'][data-state='checking'] > .send-split-main {
+  color: var(--muted);
+}
+
+.send-split[data-variant='ghost'][data-state='failed'] > .send-split-main {
+  color: #e8a27a;
+}
+
+.send-split-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.send-split-more {
+  flex: none;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: #2b2c35;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
 }

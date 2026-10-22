@@ -1,20 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 
 import type { GamePlanSlotNumber, GameStatusController } from '@planner/persistence/gameModuleHost';
 import {
   describeLastSendFailure,
+  GAME_SEND_IDLE,
   describeSent,
   describeSentNotActivated,
   projectGameSendButton,
   projectSendSlots,
-  type GameSendActivity,
+  type GameSendButton,
   type GameSendProject,
   type SendSlotOccupant,
+  type SendSlotsProduct,
 } from '@planner/projections/gamePanel';
 import { viewChanged } from '@planner/state/librarySessionSlice';
 import { useAppDispatch, useAppSelector, type RootState } from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
+import { slotNamesBySlot } from '@planner/projections/libraryHome';
 import { ConfirmationDialog } from '../controls/ConfirmationDialog';
 import { hintProps } from '../controls/hint';
 import {
@@ -22,10 +25,7 @@ import {
   useGameStatusSnapshot,
   useLibrarySlotLinks,
 } from '../home/useLibrarySlotLinks';
-
-const IDLE: GameSendActivity = Object.freeze({ kind: 'idle' });
-/** How long a send's result stays on the button. */
-const GAME_SEND_RESULT_MS = 3000;
+import { useSendActivity } from './useSendActivity';
 
 function sendProjectId(state: RootState): string | null {
   const workspace = state.projectWorkspace;
@@ -56,46 +56,37 @@ function Occupant({ occupant }: { readonly occupant: SendSlotOccupant }) {
   }
 }
 
-/** The Slots popover's content, read when it opens. */
-function SlotsPanel({
-  gameStatus,
+/**
+ * The slot picker: the plan's own slots, why it cannot be sent with what repairs that, and every
+ * slot to send it to. `slots` is null without a game location.
+ */
+export function SendSlotsPanel({
+  checking = false,
+  failure,
+  notActivated,
   onOpenGame,
   onSend,
-  onShowFindings,
-  operations,
   pending,
+  remedy,
+  slots,
 }: {
-  readonly gameStatus: GameStatusController;
+  /** While the plan is being compiled to learn whether it can be sent. */
+  readonly checking?: boolean;
+  readonly failure: string | null;
+  readonly notActivated: string | null;
   readonly onOpenGame: () => void;
   readonly onSend: (slot: GamePlanSlotNumber, confirm: boolean) => void;
-  readonly onShowFindings: (() => void) | undefined;
-  readonly operations: ProjectOperations;
   readonly pending: boolean;
+  /** What repairs an unsendable plan, such as Show findings. */
+  readonly remedy: { readonly label: string; readonly run: () => void } | undefined;
+  readonly slots: SendSlotsProduct | null;
 }) {
-  const snapshot = useGameStatusSnapshot(gameStatus);
-  const index = useLibrarySlotLinks(operations, gameStatus, { compare: false });
-  const projectId = useAppSelector(sendProjectId);
-  const lastFailure = useAppSelector((state) => state.gameSendSession.lastFailure);
-  const activationFailure = useAppSelector((state) => state.gameSendSession.lastActivationFailure);
-  const status = snapshot.status;
-  const names = new Map(
-    Array.from(index.links.bySlot, ([slot, linked]) => [slot, linked.name] as const),
-  );
-  const slots =
-    status === null
-      ? null
-      : projectSendSlots(
-          status,
-          operations.inspectCurrentGamePlan(),
-          projectId,
-          names,
-          snapshot.readAt,
-        );
-  const notActivated = describeSentNotActivated(activationFailure, status);
   return (
     <div className="send-slots">
       {slots === null ? (
         <p className="home-muted">Choose the game location on the Game tab to send this plan.</p>
+      ) : checking ? (
+        <p className="home-muted send-slots-checking">Checking this plan…</p>
       ) : (
         <>
           {slots.own.length === 0 ? null : (
@@ -132,13 +123,13 @@ function SlotsPanel({
           {slots.unavailableReason === null ? null : (
             <div className="send-unavailable" role="note">
               <p>{slots.unavailableReason}</p>
-              {onShowFindings === undefined ? null : (
+              {remedy === undefined ? null : (
                 <button
                   className="secondary-action action-compact"
-                  onClick={onShowFindings}
+                  onClick={remedy.run}
                   type="button"
                 >
-                  Show findings
+                  {remedy.label}
                 </button>
               )}
             </div>
@@ -173,9 +164,9 @@ function SlotsPanel({
           </ul>
         </>
       )}
-      {lastFailure === null ? null : (
+      {failure === null ? null : (
         <p className="home-problem" role="alert">
-          {describeLastSendFailure(lastFailure)}
+          {failure}
         </p>
       )}
       {notActivated === null ? null : (
@@ -190,6 +181,148 @@ function SlotsPanel({
         </button>
       </footer>
     </div>
+  );
+}
+
+/** The editor's Slots popover content, read when it opens. */
+function EditorSlotsPanel({
+  gameStatus,
+  operations,
+  ...panel
+}: {
+  readonly gameStatus: GameStatusController;
+  readonly operations: ProjectOperations;
+} & Pick<Parameters<typeof SendSlotsPanel>[0], 'onOpenGame' | 'onSend' | 'pending' | 'remedy'>) {
+  const snapshot = useGameStatusSnapshot(gameStatus);
+  const index = useLibrarySlotLinks(operations, gameStatus, { compare: false });
+  const projectId = useAppSelector(sendProjectId);
+  const lastFailure = useAppSelector((state) => state.gameSendSession.lastFailure);
+  const activationFailure = useAppSelector((state) => state.gameSendSession.lastActivationFailure);
+  const status = snapshot.status;
+  const slots =
+    status === null
+      ? null
+      : projectSendSlots(
+          status,
+          operations.inspectCurrentGamePlan(),
+          projectId,
+          slotNamesBySlot(index.links),
+          snapshot.readAt,
+        );
+  return (
+    <SendSlotsPanel
+      {...panel}
+      failure={lastFailure === null ? null : describeLastSendFailure(lastFailure)}
+      notActivated={describeSentNotActivated(activationFailure, status)}
+      slots={slots}
+    />
+  );
+}
+
+/** Asks before a send overwrites another plan's slot. */
+export function ReplaceSlotDialog({
+  onCancel,
+  onConfirm,
+  pending,
+  slot,
+}: {
+  readonly onCancel: () => void;
+  readonly onConfirm: () => void;
+  readonly pending: boolean;
+  readonly slot: GamePlanSlotNumber;
+}) {
+  return (
+    <ConfirmationDialog
+      confirmLabel="Replace"
+      describedBy="game-plan-replace-message"
+      id="game-plan-replace-title"
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+      pending={pending}
+      title={`Replace the plan in slot ${slot}?`}
+    >
+      <p className="game-publication-message" id="game-plan-replace-message">
+        The plan already in this slot is overwritten with this plan. A run already in progress keeps
+        the plan it started with.
+      </p>
+    </ConfirmationDialog>
+  );
+}
+
+/**
+ * A split send button: the main part acts on the button's product, ▾ opens the slot picker.
+ * The editor's is the gold primary; the Library's rows use the quiet `ghost` one.
+ */
+export function GameSendSplit({
+  announcement,
+  button,
+  children,
+  ghost = false,
+  label,
+  more = 0,
+  onOpenChange,
+  onSend,
+  open,
+}: {
+  readonly announcement: string;
+  readonly button: GameSendButton;
+  /** The picker's content. */
+  readonly children: ReactNode;
+  readonly ghost?: boolean;
+  readonly label: string;
+  /** How many more slots hold the plan than the button names. */
+  readonly more?: number;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly onSend: (slot: GamePlanSlotNumber) => void;
+  readonly open: boolean;
+}) {
+  return (
+    <Popover.Root onOpenChange={onOpenChange} open={open}>
+      <Popover.Anchor asChild>
+        <div
+          aria-label={label}
+          className="send-split"
+          data-state={button.state}
+          data-variant={ghost ? 'ghost' : undefined}
+          role="group"
+        >
+          <button
+            aria-disabled={button.action === null || undefined}
+            className="send-split-main"
+            {...hintProps(button.description ?? undefined)}
+            onClick={() => {
+              const action = button.action;
+              if (action === null) return;
+              if (action.kind === 'openPlans') onOpenChange(true);
+              else onSend(action.slot);
+            }}
+            type="button"
+          >
+            <span className="send-split-label">{button.label}</span>
+            {more === 0 ? null : <span className="send-split-more">+{more}</span>}
+          </button>
+          <Popover.Trigger asChild>
+            <button aria-label="Choose slot" className="send-split-toggle" type="button">
+              <span aria-hidden="true">▾</span>
+            </button>
+          </Popover.Trigger>
+        </div>
+      </Popover.Anchor>
+      <span className="visually-hidden game-send-status" role="status">
+        {announcement}
+      </span>
+      <Popover.Portal>
+        <Popover.Content
+          align="end"
+          aria-label="Slots"
+          className="send-slots-popover"
+          collisionPadding={12}
+          sideOffset={8}
+        >
+          {children}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
@@ -214,20 +347,13 @@ export function GameSendControls({
   const eligible = useAppSelector(sendEligible);
   const lastSentSlot = useAppSelector((state) => state.gameSendSession.lastSentSlot);
   const activationFailure = useAppSelector((state) => state.gameSendSession.lastActivationFailure);
-  const [activity, setActivity] = useState<GameSendActivity>(IDLE);
+  const [activity, setActivity] = useSendActivity();
   const [slotsOpen, setSlotsOpen] = useState(false);
   const [replaceSlot, setReplaceSlot] = useState<GamePlanSlotNumber | null>(null);
   // A successful send is announced from state, so it reflects the slot as last read.
   const [announcement, setAnnouncement] = useState<string | { readonly sent: GamePlanSlotNumber }>(
     '',
   );
-
-  // A send's result shows for a fixed time, then the button returns to its state.
-  useEffect(() => {
-    if (activity.kind !== 'sent' && activity.kind !== 'failed') return;
-    const timer = window.setTimeout(() => setActivity(IDLE), GAME_SEND_RESULT_MS);
-    return () => window.clearTimeout(timer);
-  }, [activity]);
 
   if (gameStatus === undefined) return null;
 
@@ -269,7 +395,7 @@ export function GameSendControls({
         setActivity({ kind: 'failed' });
         setAnnouncement(`Not sent: ${result.message}`);
       } else {
-        setActivity(IDLE);
+        setActivity(GAME_SEND_IDLE);
         setAnnouncement(result.message);
       }
       await gameStatus.refresh();
@@ -281,89 +407,52 @@ export function GameSendControls({
 
   return (
     <div className="editor-game-group">
-      <Popover.Root onOpenChange={setSlotsOpen} open={slotsOpen}>
-        <Popover.Anchor asChild>
-          <div
-            className="send-split"
-            data-state={button.state}
-            role="group"
-            aria-label="Send to game"
-          >
-            <button
-              aria-disabled={button.action === null || undefined}
-              className="send-split-main"
-              {...hintProps(button.description ?? undefined)}
-              onClick={() => {
-                const action = button.action;
-                if (action === null) return;
-                if (action.kind === 'openPlans') setSlotsOpen(true);
-                else void send(action.slot);
-              }}
-              type="button"
-            >
-              {button.label}
-            </button>
-            <Popover.Trigger asChild>
-              <button aria-label="Choose slot" className="send-split-toggle" type="button">
-                <span aria-hidden="true">▾</span>
-              </button>
-            </Popover.Trigger>
-          </div>
-        </Popover.Anchor>
-        <span className="visually-hidden game-send-status" role="status">
-          {typeof announcement === 'string'
+      <GameSendSplit
+        announcement={
+          typeof announcement === 'string'
             ? announcement
-            : describeSent(announcement.sent, activationFailure, snapshot.status)}
-        </span>
-        <Popover.Portal>
-          <Popover.Content
-            align="end"
-            aria-label="Slots"
-            className="send-slots-popover"
-            collisionPadding={12}
-            sideOffset={8}
-          >
-            <SlotsPanel
-              gameStatus={gameStatus}
-              onOpenGame={() => {
-                setSlotsOpen(false);
-                dispatch(viewChanged({ kind: 'home', tab: 'game' }));
-              }}
-              onSend={(slot, confirm) => {
-                // The picker closes so the button shows the send's result.
-                setSlotsOpen(false);
-                if (confirm) setReplaceSlot(slot);
-                else void send(slot);
-              }}
-              onShowFindings={
-                onShowFindings === undefined
-                  ? undefined
-                  : () => {
-                      setSlotsOpen(false);
-                      onShowFindings();
-                    }
-              }
-              operations={operations}
-              pending={activity.kind === 'sending'}
-            />
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
+            : describeSent(announcement.sent, activationFailure, snapshot.status)
+        }
+        button={button}
+        label="Send to game"
+        onOpenChange={setSlotsOpen}
+        onSend={(slot) => void send(slot)}
+        open={slotsOpen}
+      >
+        <EditorSlotsPanel
+          gameStatus={gameStatus}
+          onOpenGame={() => {
+            setSlotsOpen(false);
+            dispatch(viewChanged({ kind: 'home', tab: 'game' }));
+          }}
+          onSend={(slot, confirm) => {
+            // The picker closes so the button shows the send's result.
+            setSlotsOpen(false);
+            if (confirm) setReplaceSlot(slot);
+            else void send(slot);
+          }}
+          operations={operations}
+          pending={activity.kind === 'sending'}
+          remedy={
+            onShowFindings === undefined
+              ? undefined
+              : {
+                  label: 'Show findings',
+                  run: () => {
+                    setSlotsOpen(false);
+                    onShowFindings();
+                  },
+                }
+          }
+        />
+      </GameSendSplit>
       {replaceSlot !== null && (
-        <ConfirmationDialog
-          confirmLabel="Replace"
-          describedBy="game-plan-replace-message"
-          id="game-plan-replace-title"
+        <ReplaceSlotDialog
           onCancel={() => setReplaceSlot(null)}
           onConfirm={() => void send(replaceSlot)}
           pending={activity.kind === 'sending'}
-          title={`Replace the plan in slot ${replaceSlot}?`}
-        >
-          <p className="game-publication-message" id="game-plan-replace-message">
-            The plan already in this slot is overwritten with this plan. A run already in progress
-            keeps the plan it started with.
-          </p>
-        </ConfirmationDialog>
+          slot={replaceSlot}
+        />
       )}
     </div>
   );
