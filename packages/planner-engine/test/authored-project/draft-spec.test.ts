@@ -11,8 +11,15 @@ import {
   encodeProjectDocument,
   MAX_DRAFT_SEED,
   sameDraftSpec,
+  draftAdvancedChanged,
+  withDraftAdvancedDefaults,
   withDraftGodBoons,
   withDraftPerGodCap,
+  withDraftPreferMidshops,
+  withDraftPurchasesPerBiome,
+  withDraftResourceRoomChance,
+  withDraftRetriesPerBiome,
+  withDraftRoomForcing,
   ProjectCommandContractError,
   ProjectDocumentContractError,
   undoProjectHistory,
@@ -111,6 +118,73 @@ describe('draft spec', () => {
       { perGodCap: 11 },
     ])
       expect(() => decoded({ ...draft, ...bad })).toThrow(ProjectDocumentContractError);
+  });
+
+  it('stores the search options only when not default, clamped to their ranges and steps', () => {
+    expect(withDraftRoomForcing(draft, 'softened')).toEqual(draft);
+    expect(withDraftRoomForcing(draft, 'game').roomForcing).toBe('game');
+    expect(withDraftRoomForcing(withDraftRoomForcing(draft, 'game'), 'softened')).toEqual(draft);
+    expect(withDraftPurchasesPerBiome(draft, 2)).toEqual(draft);
+    expect(withDraftPurchasesPerBiome(draft, 0).purchasesPerBiome).toBe(0);
+    expect(withDraftPurchasesPerBiome(draft, 9).purchasesPerBiome).toBe(4);
+    expect(withDraftRetriesPerBiome(draft, 3)).toEqual(draft);
+    expect(withDraftRetriesPerBiome(draft, -1).retriesPerBiome).toBe(0);
+    expect(withDraftRetriesPerBiome(draft, 99).retriesPerBiome).toBe(10);
+    expect(withDraftResourceRoomChance(draft, 10)).toEqual(draft);
+    expect(withDraftResourceRoomChance(draft, 23).resourceRoomChance).toBe(25);
+    expect(withDraftResourceRoomChance(draft, 80).resourceRoomChance).toBe(50);
+    expect(withDraftResourceRoomChance(draft, 0).resourceRoomChance).toBe(0);
+    const decoded = (value: unknown) =>
+      decodeProjectDocument(withRawDraft(value), catalog).route.draft;
+    const options = {
+      roomForcing: 'deadline',
+      purchasesPerBiome: 0,
+      retriesPerBiome: 7,
+      resourceRoomChance: 35,
+    } as const;
+    expect(decoded({ ...draft, ...options })).toEqual({ ...draft, ...options });
+    // A stored default decodes away, as the setters never store one.
+    expect(
+      decoded({
+        ...draft,
+        roomForcing: 'softened',
+        purchasesPerBiome: 2,
+        retriesPerBiome: 3,
+        resourceRoomChance: 10,
+      }),
+    ).toEqual(draft);
+    for (const bad of [
+      { roomForcing: 'sometimes' },
+      { purchasesPerBiome: 5 },
+      { retriesPerBiome: 11 },
+      { resourceRoomChance: 55 },
+      { resourceRoomChance: 12 },
+    ])
+      expect(() => decoded({ ...draft, ...bad })).toThrow(ProjectDocumentContractError);
+  });
+
+  it('resets every Advanced option in one edit, keeping the world, basket and seed', () => {
+    expect(draftAdvancedChanged(draft)).toBe(false);
+    const advanced = withDraftPreferMidshops(
+      withDraftRetriesPerBiome(
+        withDraftRoomForcing(
+          withDraftPerGodCap(withDraftGodBoons(draft, 'Underworld', 'F', 9), 3),
+          'game',
+        ),
+        6,
+      ),
+      true,
+    );
+    expect(draftAdvancedChanged(advanced)).toBe(true);
+    expect(withDraftAdvancedDefaults(advanced)).toEqual(draft);
+    expect(
+      withDraftAdvancedDefaults({
+        ...draft,
+        purchasesPerBiome: 0,
+        resourceRoomChance: 50,
+        pursueTartarusGoal: true,
+      }),
+    ).toEqual(draft);
   });
 
   it('round-trips through ReplaceDraftSpec as one undoable edit, keeping off-itinerary biomes', () => {

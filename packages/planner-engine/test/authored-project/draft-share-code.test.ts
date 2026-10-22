@@ -48,6 +48,10 @@ const underworld: DraftShareInputs = {
     perGodCap: 3,
     preferMidshops: true,
     pursueTartarusGoal: true,
+    roomForcing: 'game',
+    purchasesPerBiome: 0,
+    retriesPerBiome: 10,
+    resourceRoomChance: 50,
   },
 };
 
@@ -110,6 +114,61 @@ describe('draft share codes', () => {
       expect(decoded(code.toLowerCase().replace(/1/g, 'l'))).toEqual(inputs);
     });
 
+  it('carries and installs the starting keepsake result of each keepsake that has one', () => {
+    const keepsakeOf = (kind: string) =>
+      catalog.keepsakes.values.find((keepsake) => keepsake.effect?.kind === kind)!.key;
+    const pomTrait = catalog.traitGivers.byKey.Hades!.traitKeys[0]!;
+    const pomRarity = catalog.traitGivers.byKey.Hades!.rarityPolicy;
+    const pom =
+      catalog.traits.byKey[pomTrait]!.rarityDomain.kind === 'none' || pomRarity?.kind !== 'fixed'
+        ? { traitKey: pomTrait }
+        : { traitKey: pomTrait, rarity: pomRarity.rarity };
+    const hammerTrait = catalog.traits.values.find(
+      (trait) =>
+        trait.hammerCompatibility?.weaponKey === underworld.loadout.weaponKey &&
+        trait.hammerCompatibility.aspectKeys.includes(underworld.loadout.aspectKey!),
+    )!.key;
+    const blessing = catalog.chaos.blessings.values.find(
+      (candidate) => candidate.fixedRarity === undefined && candidate.operands.length > 0,
+    )!;
+    const cases = [
+      ['jeweledPom', { jeweledPom: pom }],
+      ['experimentalHammer', { experimentalHammer: { kind: 'selected', traitKey: hammerTrait } }],
+      [
+        'transcendentEmbryo',
+        {
+          transcendentEmbryo: {
+            blessingKey: blessing.key,
+            blessingValues: Object.fromEntries(
+              blessing.operands.map((operand) => [operand.key, operand.authoringDefault]),
+            ),
+          },
+        },
+      ],
+    ] as const;
+    for (const [kind, keepsakeEquipResults] of cases) {
+      const inputs: DraftShareInputs = {
+        ...underworld,
+        loadout: {
+          ...underworld.loadout,
+          startingKeepsakeKey: keepsakeOf(kind),
+          keepsakeEquipResults,
+        },
+      };
+      const back = decoded(encodeDraftShareCode(catalog, inputs));
+      expect(back, kind).toEqual(inputs);
+      const base = project('Underworld');
+      const installed = applyProjectHistoryCommands(
+        createProjectHistory(base),
+        catalog,
+        draftShareCommands(catalog, base, back),
+      ).present;
+      expect(projectDraftShareInputs(installed).loadout.keepsakeEquipResults, kind).toEqual(
+        keepsakeEquipResults,
+      );
+    }
+  });
+
   it('round-trips an edited Hex tree, the seed range and a Vow at its top rank', () => {
     const hex = catalog.hexes.byKey.SpellMoonBeamTrait!;
     const tree = createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait', 'Pyramid');
@@ -137,17 +196,18 @@ describe('draft share codes', () => {
   });
 
   it('refuses set padding bits and an index past its list', () => {
-    // A Fresh File code packed by hand: route, prefix, one god, empty basket and records, seed 1.
+    // A Fresh File code packed by hand: route, prefix, one god, empty basket and records, no
+    // options, seed 2.
     const header = encodeDraftShareCode(catalog, freshFile).slice(0, 4);
     const code = (godIndex: number, padding: string) => {
-      const bits = `11${'010'}${'0001'}${godIndex.toString(2).padStart(4, '0')}${'0'.repeat(9)}0000${'000'}0000011${padding}`;
+      const bits = `11${'010'}${'0001'}${godIndex.toString(2).padStart(4, '0')}${'0'.repeat(9)}0000${'0000000'}00001010${padding}`;
       let text = header;
       for (let index = 0; index < bits.length; index += 5)
         text += '0123456789ABCDEFGHJKMNPQRSTVWXYZ'[parseInt(bits.slice(index, index + 5), 2)];
       return text;
     };
     const godKeys = catalog.traitGivers.values.filter((g) => g.providerKind === 'olympian');
-    expect(decoded(code(0, '0000')).draft).toMatchObject({ godKeys: [godKeys[0]!.key], seed: 1 });
+    expect(decoded(code(0, '0000')).draft).toMatchObject({ godKeys: [godKeys[0]!.key], seed: 2 });
     const refusal = (text: string) => {
       const result = decodeDraftShareCode(catalog, text);
       return result.ok ? 'decoded' : result.refusal;
@@ -167,7 +227,7 @@ describe('draft share codes', () => {
 
   it('keeps a light spec short', () => {
     expect(encodeDraftShareCode(catalog, freshFile).length).toBeLessThanOrEqual(17);
-    expect(encodeDraftShareCode(catalog, underworld).length).toBeLessThanOrEqual(49);
+    expect(encodeDraftShareCode(catalog, underworld).length).toBeLessThanOrEqual(52);
   });
 
   it('refuses other layouts, catalogs, routes and garbage', () => {
@@ -178,7 +238,9 @@ describe('draft share codes', () => {
     };
     expect(refusal('')).toBe('badLayout');
     expect(refusal('hello world!')).toBe('badLayout');
-    expect(refusal(`2${code.slice(1)}`)).toBe('otherVersion');
+    expect(refusal(`3${code.slice(1)}`)).toBe('otherVersion');
+    // A layout 1 code, from before the Advanced draft options.
+    expect(refusal(`1${code.slice(1)}`)).toBe('olderVersion');
     const otherFingerprint = code[1] === '0' ? 'Z' : '0';
     expect(refusal(`${code[0]}${otherFingerprint}${code.slice(2)}`)).toBe('otherFingerprint');
     expect(refusal(code.slice(0, 4))).toBe('badLayout');

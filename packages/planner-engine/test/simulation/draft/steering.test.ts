@@ -225,6 +225,20 @@ describe('windowed room forcing', () => {
     expect(draftWindowForceChance(9, 9, 9)).toBe(1);
   });
 
+  it('forces at the game odds or only at the deadline when the spec says so', () => {
+    const ramp = (forcing: 'deadline' | 'game') =>
+      [1, 2, 3, 4].map((depth) => draftWindowForceChance(depth, 2, 4, forcing));
+    expect(ramp('game')).toEqual([0, 1 / 2, 1, 1]);
+    expect(ramp('deadline')).toEqual([0, 0, 0, 1]);
+    // A window one depth wide keeps the game's rule under every setting.
+    for (const forcing of ['deadline', 'softened', 'game'] as const)
+      expect(draftWindowForceChance(0, 0, 1, forcing)).toBe(1);
+    const steering = draftSteeringFor(base, { ...spec({}), roomForcing: 'deadline' });
+    expect(
+      steering.windowForcedRoom([...combats, ...minibosses], pressure(minibosses), 'H', () => 0),
+    ).toBe(undefined);
+  });
+
   it('keeps a door that can show a wanted story room', () => {
     const legal = ['H_Bridge01', ...minibosses];
     expect(

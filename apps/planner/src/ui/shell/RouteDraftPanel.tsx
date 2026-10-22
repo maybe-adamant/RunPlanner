@@ -1,12 +1,26 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import {
+  DEFAULT_DRAFT_PURCHASES_PER_BIOME,
+  DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE,
+  DEFAULT_DRAFT_RETRIES_PER_BIOME,
+  DEFAULT_DRAFT_ROOM_FORCING,
+  DRAFT_PURCHASES_PER_BIOME_RANGE,
+  DRAFT_RESOURCE_ROOM_CHANCE_RANGE,
+  DRAFT_RETRIES_PER_BIOME_RANGE,
   createRouteAddress,
+  draftAdvancedChanged,
   routeInitialProfile,
+  withDraftAdvancedDefaults,
   withDraftGodBoons,
   withDraftPerGodCap,
   withDraftPreferMidshops,
+  withDraftPurchasesPerBiome,
   withDraftPursueTartarusGoal,
+  withDraftResourceRoomChance,
+  withDraftRetriesPerBiome,
+  withDraftRoomForcing,
   type AuthoredDraftSpec,
+  type DraftRoomForcing,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
@@ -81,8 +95,29 @@ function refusalHint(catalog: Catalog, refusal: DraftRefusal | undefined): strin
     case 'basketTrait':
     case 'unknownTrait':
       return 'Remove the marked basket traits first.';
+    case 'startingKeepsakeResult':
+      return keepsakeResultNote(catalog, refusal);
     default:
       return undefined;
+  }
+}
+
+/** Why the starting keepsake's chosen result contradicts the basket. */
+function keepsakeResultNote(
+  catalog: Catalog,
+  refusal: Extract<DraftRefusal, { readonly kind: 'startingKeepsakeResult' }>,
+): string {
+  const trait = (key: string) => catalog.traits.byKey[key]?.label ?? key;
+  const chosen = `The starting keepsake's ${trait(refusal.traitKey)}`;
+  switch (refusal.conflict.kind) {
+    case 'slotTaken':
+      return `${chosen} takes ${trait(refusal.conflict.traitKey)}'s slot.`;
+    case 'hammerOrder':
+      return `${chosen} comes after ${trait(refusal.conflict.traitKey)} in the basket.`;
+    case 'hammerCap':
+      return `${chosen} is one Hammer past the cap of ${refusal.conflict.cap}.`;
+    case 'supplyCap':
+      return `${chosen} is one Hermes or Hammer trait past the cap of ${refusal.conflict.cap}.`;
   }
 }
 
@@ -148,6 +183,10 @@ function targetLabel(
     }
     case 'rackKeepsake':
       return `${catalog.keepsakes.byKey[target.key]?.label ?? target.key} after ${biome}`;
+    case 'startingKeepsakeResult': {
+      const keepsake = catalog.keepsakes.values.find((k) => k.effect?.kind === target.key);
+      return `Starting keepsake result (${keepsake?.label ?? target.key})`;
+    }
   }
 }
 
@@ -464,6 +503,16 @@ export function RouteDraftPanel({
             Drafting replaces the current route plan.
           </span>
         ) : null}
+        {tab === 'advanced' ? (
+          <button
+            className="secondary-action draft-advanced-reset"
+            disabled={!draftAdvancedChanged(draft)}
+            onClick={() => replaceDraft(withDraftAdvancedDefaults(draft))}
+            type="button"
+          >
+            Reset to defaults
+          </button>
+        ) : null}
       </header>
       <fieldset
         aria-labelledby={`draft-tab-${tab}`}
@@ -710,10 +759,10 @@ export function RouteDraftPanel({
           </>
         ) : budget === undefined ? null : (
           <>
-            <section className="draft-section" aria-labelledby="draft-god-boons-heading">
+            <section className="draft-section" aria-labelledby="draft-targets-heading">
               <div className="draft-title-row">
-                <h3 className="draft-section-heading" id="draft-god-boons-heading">
-                  God boons · {budget.effectiveTotal ?? budget.total}
+                <h3 className="draft-section-heading" id="draft-targets-heading">
+                  Targets · {budget.effectiveTotal ?? budget.total} god boons
                 </h3>
                 {/* Fixed tags: each always present, outlined when it applies. */}
                 <ul aria-label="God boon rules" className="draft-tags">
@@ -724,113 +773,123 @@ export function RouteDraftPanel({
                   </li>
                 </ul>
               </div>
-              <div className="route-loadout-row draft-budget-row">
-                {budget.biomes.map((biome) => {
-                  const label = biomeLabel(biome.biomeKey);
-                  return (
-                    <div className="draft-budget-biome" key={biome.biomeKey}>
-                      <span className="draft-budget-label">
+              {budget.biomes.map((biome) => {
+                const label = biomeLabel(biome.biomeKey);
+                return (
+                  <DraftSlider
+                    key={biome.biomeKey}
+                    accessibleLabel={`God boons in ${label}`}
+                    defaultValue={biome.defaultValue}
+                    hint={biome.expected === undefined ? undefined : `expected ${biome.expected}`}
+                    label={
+                      <>
                         <ArtworkIcon
                           className="artwork-label-icon"
                           source={biomeIcon(biome.biomeKey)}
                         />
                         {label}
-                      </span>
-                      <span className="draft-budget-control">
-                        <input
-                          aria-label={`God boons in ${label}`}
-                          max={budget.range.max}
-                          min={budget.range.min}
-                          onChange={(event) =>
-                            replaceDraft(
-                              withDraftGodBoons(
-                                draft,
-                                project.route.routeKey,
-                                biome.biomeKey,
-                                Number(event.target.value),
-                              ),
-                            )
-                          }
-                          type="range"
-                          value={biome.value}
-                        />
-                        <span className="draft-budget-value">
-                          {biome.value}
-                          {biome.effective === undefined ? null : ` → ${biome.effective}`}
-                        </span>
-                      </span>
-                      <span className="draft-option-note">
-                        {biome.expected === undefined
-                          ? `Default: ${biome.defaultValue}`
-                          : `Default: ${biome.defaultValue} · expected: ${biome.expected}`}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-            <section className="draft-section" aria-labelledby="draft-per-god-heading">
-              <h3 className="draft-section-heading" id="draft-per-god-heading">
-                Traits per god
-              </h3>
-              <span className="draft-budget-control">
-                <input
-                  aria-label="Most boons from one god"
-                  max={budget.perGod.range.max}
-                  min={budget.perGod.range.min}
-                  onChange={(event) =>
-                    replaceDraft(
-                      withDraftPerGodCap(
-                        draft,
-                        Number(event.target.value),
-                        budget.perGod.defaultValue,
-                      ),
-                    )
-                  }
-                  type="range"
-                  value={budget.perGod.value}
-                />
-                <span className="draft-budget-value">{budget.perGod.value}</span>
-                <span className="draft-recommended">
-                  Recommended: {budget.perGod.defaults.withoutDenial} without Denial ·{' '}
-                  {budget.perGod.defaults.withDenial} with Denial
-                </span>
-              </span>
+                      </>
+                    }
+                    range={budget.range}
+                    value={biome.value}
+                    valueText={
+                      biome.effective === undefined
+                        ? undefined
+                        : `${biome.value} → ${biome.effective}`
+                    }
+                    onChange={(value) =>
+                      replaceDraft(
+                        withDraftGodBoons(draft, project.route.routeKey, biome.biomeKey, value),
+                      )
+                    }
+                  />
+                );
+              })}
+              <DraftSlider
+                accessibleLabel="Most boons from one god"
+                hint={`Recommended: ${budget.perGod.defaults.withoutDenial} without Denial · ${budget.perGod.defaults.withDenial} with Denial`}
+                label="Traits per god"
+                range={budget.perGod.range}
+                value={budget.perGod.value}
+                onChange={(value) =>
+                  replaceDraft(withDraftPerGodCap(draft, value, budget.perGod.defaultValue))
+                }
+              />
             </section>
             <section className="draft-section" aria-labelledby="draft-rooms-heading">
               <h3 className="draft-section-heading" id="draft-rooms-heading">
-                Rooms
+                Rooms &amp; shops
               </h3>
-              <label className="draft-option">
-                <input
-                  checked={draft.preferMidshops === true}
-                  onChange={(event) =>
-                    replaceDraft(withDraftPreferMidshops(draft, event.target.checked))
-                  }
-                  type="checkbox"
-                />
-                Prefer midshops
-              </label>
-              {draft.preferMidshops === true ? (
-                <p className="draft-option-note">Drafts take longer.</p>
-              ) : null}
+              <div className="draft-row">
+                <span className="draft-row-label" id="draft-room-forcing-label">
+                  Room forcing
+                </span>
+                <div
+                  aria-labelledby="draft-room-forcing-label"
+                  className="route-prefix-options draft-row-wide"
+                  role="radiogroup"
+                >
+                  {ROOM_FORCING_OPTIONS.map((option) => (
+                    <label key={option.forcing} {...hintProps(option.equation)}>
+                      <input
+                        checked={
+                          (draft.roomForcing ?? DEFAULT_DRAFT_ROOM_FORCING) === option.forcing
+                        }
+                        name={`${project.route.routeKey}-draft-room-forcing`}
+                        onChange={() => replaceDraft(withDraftRoomForcing(draft, option.forcing))}
+                        type="radio"
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <DraftSlider
+                defaultValue={DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE}
+                label="Resource rooms"
+                range={DRAFT_RESOURCE_ROOM_CHANCE_RANGE}
+                unit="%"
+                value={draft.resourceRoomChance ?? DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE}
+                onChange={(value) => replaceDraft(withDraftResourceRoomChance(draft, value))}
+              />
+              <DraftSlider
+                defaultValue={DEFAULT_DRAFT_PURCHASES_PER_BIOME}
+                label="Shop buys per biome"
+                range={DRAFT_PURCHASES_PER_BIOME_RANGE}
+                value={draft.purchasesPerBiome ?? DEFAULT_DRAFT_PURCHASES_PER_BIOME}
+                onChange={(value) => replaceDraft(withDraftPurchasesPerBiome(draft, value))}
+              />
+              <DraftCheckbox
+                checked={draft.preferMidshops === true}
+                hint={draft.preferMidshops === true ? 'Drafts take longer.' : undefined}
+                label="Prefer midshops"
+                onChange={(on) => replaceDraft(withDraftPreferMidshops(draft, on))}
+              />
               {budget.clockworkGoal ? (
-                <>
-                  <label className="draft-option">
-                    <input
-                      checked={draft.pursueTartarusGoal === true}
-                      onChange={(event) =>
-                        replaceDraft(withDraftPursueTartarusGoal(draft, event.target.checked))
-                      }
-                      type="checkbox"
-                    />
-                    Pursue the Tartarus goal aggressively
-                  </label>
-                  {draft.pursueTartarusGoal === true ? (
-                    <p className="draft-option-note">Tartarus gives few boons outside its Shop.</p>
-                  ) : null}
-                </>
+                <DraftCheckbox
+                  checked={draft.pursueTartarusGoal === true}
+                  hint={
+                    draft.pursueTartarusGoal === true
+                      ? 'Tartarus gives few boons outside its Shop.'
+                      : undefined
+                  }
+                  label="Pursue the Tartarus goal"
+                  onChange={(on) => replaceDraft(withDraftPursueTartarusGoal(draft, on))}
+                />
               ) : null}
+            </section>
+            <section className="draft-section" aria-labelledby="draft-search-heading">
+              <h3 className="draft-section-heading" id="draft-search-heading">
+                Search
+              </h3>
+              <DraftSlider
+                defaultValue={DEFAULT_DRAFT_RETRIES_PER_BIOME}
+                hint="More retries: better coverage, longer drafts"
+                label="Retries"
+                range={DRAFT_RETRIES_PER_BIOME_RANGE}
+                value={draft.retriesPerBiome ?? DEFAULT_DRAFT_RETRIES_PER_BIOME}
+                onChange={(value) => replaceDraft(withDraftRetriesPerBiome(draft, value))}
+              />
             </section>
           </>
         )}
@@ -886,5 +945,98 @@ export function RouteDraftPanel({
         />
       ) : null}
     </section>
+  );
+}
+
+const ROOM_FORCING_OPTIONS: readonly {
+  readonly forcing: DraftRoomForcing;
+  readonly label: string;
+  readonly equation: string;
+}[] = [
+  { forcing: 'deadline', label: 'At deadline', equation: '1 at the deadline' },
+  { forcing: 'softened', label: 'Softened', equation: '1 / (Max − depth + 1)' },
+  { forcing: 'game', label: 'Game odds', equation: '1 / (Max − depth)' },
+];
+
+/**
+ * One Advanced row on the shared grid: label, slider, value, and a hint slot that names the
+ * default only when the value differs from it.
+ */
+function DraftSlider({
+  label,
+  accessibleLabel,
+  defaultValue,
+  hint,
+  range,
+  unit = '',
+  value,
+  valueText,
+  onChange,
+}: {
+  readonly label: ReactNode;
+  readonly accessibleLabel?: string;
+  readonly defaultValue?: number;
+  readonly hint?: string | undefined;
+  readonly range: { readonly min: number; readonly max: number; readonly step?: number };
+  readonly unit?: string;
+  readonly value: number;
+  readonly valueText?: string | undefined;
+  readonly onChange: (value: number) => void;
+}) {
+  const changed = defaultValue !== undefined && value !== defaultValue;
+  return (
+    <div className="draft-row">
+      <span className="draft-row-label">{label}</span>
+      <input
+        aria-label={accessibleLabel ?? (typeof label === 'string' ? label : undefined)}
+        className="draft-row-control"
+        max={range.max}
+        min={range.min}
+        onChange={(event) => onChange(Number(event.target.value))}
+        step={range.step ?? 1}
+        type="range"
+        value={value}
+      />
+      <span className="draft-row-value">{valueText ?? `${value}${unit}`}</span>
+      {/* A fixed note pill leads, so it never moves; the default follows only when changed. */}
+      <span className="draft-row-hint">
+        {hint === undefined ? null : <span className="draft-hint-pill">{hint}</span>}
+        {changed ? <span>default {`${defaultValue}${unit}`}</span> : null}
+      </span>
+    </div>
+  );
+}
+
+/** A checkbox row on the same grid: its label in the label column, its note outside the name. */
+function DraftCheckbox({
+  checked,
+  hint,
+  label,
+  onChange,
+}: {
+  readonly checked: boolean;
+  readonly hint?: string | undefined;
+  readonly label: string;
+  readonly onChange: (on: boolean) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="draft-row">
+      <label className="draft-row-label" htmlFor={id}>
+        {label}
+      </label>
+      <span className="draft-row-control">
+        <input
+          checked={checked}
+          id={id}
+          onChange={(event) => onChange(event.target.checked)}
+          type="checkbox"
+        />
+      </span>
+      <span className="draft-row-value" />
+      <span className="draft-row-hint">
+        {hint === undefined ? null : <span className="draft-hint-pill">{hint}</span>}
+      </span>
+    </div>
   );
 }

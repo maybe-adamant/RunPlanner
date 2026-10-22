@@ -285,8 +285,9 @@ that are off, only when some value is non-native, separately from starting
 equipment.
 
 `ReplaceRoute` replaces the loadout (keeping run modifiers) and the planned
-biome prefix (one to every itinerary biome, in itinerary order) and clears
-resource placements, which name hosts in the replaced biomes; the route,
+biome prefix (one to every itinerary biome, in itinerary order). Resource
+placements name hosts in the replaced biomes, so they clear unless the command
+gives placements hosted in the new biomes, as a draft gives its own; the route,
 itinerary, Practice start and draft spec stay.
 
 The route also owns one always-present `draft` spec, the persisted Draft
@@ -294,8 +295,12 @@ settings: `godKeys`, `storyNpcByBiome`, `fieldNpcsByBiome`, `basketTraitKeys`,
 `rackKeepsakeByBiome` (a missing biome keeps the held keepsake) and `seed`, plus
 optional keys saved only when they differ from their defaults: `godBoonsByBiome`
 (each biome's planned god boons, 0–10, a missing biome keeping its biome's
-default, and a stored count equal to it is dropped on decode), `perGodCap` (1–10, default 5, or 4 under Denial) and the `preferMidshops` and
-`pursueTartarusGoal` preferences (`true` when on). Both arrays are ordered:
+default, and a stored count equal to it is dropped on decode), `perGodCap` (1–10, default 5, or 4 under Denial), the `preferMidshops` and
+`pursueTartarusGoal` preferences (`true` when on), `roomForcing` (`deadline`,
+`softened` or `game`, default `softened`), `purchasesPerBiome` (0–4, default
+2), `retriesPerBiome` (0–10, default 3) and `resourceRoomChance` (a percent,
+0–50 in steps of 5, default 10); a stored default of these four is dropped on
+decode. Both arrays are ordered:
 `godKeys` is the pool order and `basketTraitKeys` each god's acquisition order
 ([Draft spec meaning](SIMULATION_AND_VALIDATION.md#draft-spec-meaning)). A new
 route starts empty with seed 1. The codec is exact: gods are Olympian givers,
@@ -1388,6 +1393,8 @@ Schema 98 adds the plan's `name`; the 97 → 98 migration names the plan after
 the file it is loaded from (its stem, trimmed and bounded) and otherwise gives
 it the default. A slot source stored before 98 names its plan beside the
 project, and rebuilding the slot migrates the project under that name.
+Revision 98.1 adds the draft spec's `roomForcing`, `purchasesPerBiome`,
+`retriesPerBiome` and `resourceRoomChance`.
 
 ## Undo and Redo
 

@@ -1,7 +1,13 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument } from '../../authored-project/model';
 import { ProjectDocumentContractError } from '../../authored-project/validation';
-import { assessDraftBasket, draftFirstOfferBlocked, type DraftTraitRefusal } from './basket';
+import {
+  assessDraftBasket,
+  draftFirstOfferBlocked,
+  draftStartingKeepsakeConflicts,
+  type DraftKeepsakeResultConflict,
+  type DraftTraitRefusal,
+} from './basket';
 import { draftKeepsakeOptions, draftLoadoutProject, forcesGod, type DraftSpec } from './spec';
 import { draftRepeatedFieldNpcs, draftUnreachableGods, draftWorldOptions } from './world';
 
@@ -49,6 +55,12 @@ export type DraftRefusal =
       readonly kind: 'basketTrait';
       readonly traitKey: string;
       readonly refusals: readonly DraftTraitRefusal[];
+    }
+  /** The starting keepsake's chosen result contradicts the basket. */
+  | {
+      readonly kind: 'startingKeepsakeResult';
+      readonly traitKey: string;
+      readonly conflict: DraftKeepsakeResultConflict;
     };
 
 /** Reasons the base project cannot be drafted with this spec, from the engine's static rules. */
@@ -116,6 +128,9 @@ export function draftRefusals(
     for (const trait of assessDraftBasket(catalog, base.route, spec).traits)
       if (trait.inBasket && !trait.selectable)
         refusals.push({ kind: 'basketTrait', traitKey: trait.traitKey, refusals: trait.refusals });
+  if (loadoutValid && unknown.length === 0)
+    for (const conflict of draftStartingKeepsakeConflicts(catalog, base.route, spec))
+      refusals.push({ kind: 'startingKeepsakeResult', ...conflict });
   if (loadoutValid && worldValid && unknown.length === 0) {
     const blocked = draftFirstOfferBlocked(catalog, base.route, spec);
     if (blocked !== undefined) refusals.push({ kind: 'firstOfferBlocked', ...blocked });

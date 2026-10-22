@@ -129,6 +129,9 @@ export function projectDraftSpec(catalog: Catalog, project: ProjectDocument): Dr
         ...(route.loadout.aspectHexTree === undefined
           ? {}
           : { aspectHexTree: route.loadout.aspectHexTree }),
+        ...(route.loadout.keepsakeEquipResults === undefined
+          ? {}
+          : { keepsakeEquipResults: route.loadout.keepsakeEquipResults }),
       },
       world: {
         godKeys,
@@ -141,6 +144,14 @@ export function projectDraftSpec(catalog: Catalog, project: ProjectDocument): Dr
       ...(draft.pursueTartarusGoal === true ? { pursueTartarusGoal: true } : {}),
       ...(draft.godBoonsByBiome === undefined ? {} : { godBoonsByBiome: draft.godBoonsByBiome }),
       ...(draft.perGodCap === undefined ? {} : { perGodCap: draft.perGodCap }),
+      ...(draft.roomForcing === undefined ? {} : { roomForcing: draft.roomForcing }),
+      ...(draft.purchasesPerBiome === undefined
+        ? {}
+        : { purchasesPerBiome: draft.purchasesPerBiome }),
+      ...(draft.retriesPerBiome === undefined ? {} : { retriesPerBiome: draft.retriesPerBiome }),
+      ...(draft.resourceRoomChance === undefined
+        ? {}
+        : { resourceRoomChance: draft.resourceRoomChance }),
     }),
   });
 }
@@ -764,6 +775,7 @@ export type DraftSharePaste =
 
 const SHARE_REFUSAL_MESSAGES: Readonly<Record<DraftShareCodeRefusal, string>> = {
   badLayout: 'Not a draft code.',
+  olderVersion: 'This code is from an older planner version.',
   otherVersion: 'This code is from another planner version.',
   otherFingerprint: 'This code is from another planner version.',
   otherRoute: 'This code is for another route.',

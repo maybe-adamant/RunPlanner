@@ -13,11 +13,15 @@ import { draftRefusals, type DraftRefusal } from './refusals';
 import { draftLoadoutProject, type DraftSpec } from './spec';
 import { createDraftRng } from './rng';
 import { DraftWalk } from './walk';
+import { DEFAULT_DRAFT_RETRIES_PER_BIOME } from '../../authored-project/draft-spec';
 import { draftWorld } from './world';
 
 /** Attempt counts alone bound the search, so a seed drafts the same route on any machine. */
 export interface DraftBudget {
-  /** Further attempts per biome after its first success, keeping the best by target coverage. */
+  /**
+   * Further attempts per biome after its first success, keeping the best by target coverage;
+   * the spec's retries per biome take precedence.
+   */
   readonly attemptsPerBiome: number;
   /** Dead-end attempts a biome may take before any succeeds; then the draft fails. */
   readonly maxFailedAttemptsPerBiome: number;
@@ -26,7 +30,7 @@ export interface DraftBudget {
 }
 
 export const DEFAULT_DRAFT_BUDGET: DraftBudget = Object.freeze({
-  attemptsPerBiome: 3,
+  attemptsPerBiome: DEFAULT_DRAFT_RETRIES_PER_BIOME,
   maxFailedAttemptsPerBiome: 16,
   maxStepsPerBiome: 600,
 });
@@ -120,7 +124,7 @@ export function draftProject(
       let attempt = 0;
       best === undefined
         ? reasons.length < budget.maxFailedAttemptsPerBiome
-        : afterSuccess < budget.attemptsPerBiome;
+        : afterSuccess < (spec.retriesPerBiome ?? budget.attemptsPerBiome);
       attempt += 1
     ) {
       attempts += 1;
@@ -194,6 +198,7 @@ export function draftProject(
       route: createRouteAddress(base.route.routeKey),
       loadout,
       biomes: current.project.route.biomes,
+      resourcePlacements: current.project.route.resourcePlacements,
     }),
     project: current.project,
     report: draftReport(catalog, spec, current),

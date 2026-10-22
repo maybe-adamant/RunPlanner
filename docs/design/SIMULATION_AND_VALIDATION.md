@@ -685,9 +685,11 @@ basket claim and the planner caps.
 
 The contract is best effort with no compromise on validity: a drafted project
 always has zero findings, and the report lists each basket trait, story and
-field NPC and rack keepsake as met or unmet. A biome that dead-ends retries
-only itself; attempt counts alone bound the search, so a seed drafts the same
-project on every machine. The encounter post pass then makes every reached
+field NPC and rack keepsake as met or unmet. After a biome's first success
+that misses a target there, it retries up to the spec's retries per biome
+(default 3) and keeps the best. A biome that dead-ends retries only itself;
+attempt counts alone bound the search, so a seed drafts the same project on
+every machine. The encounter post pass then makes every reached
 encounter deterministic from the same seed.
 
 ### Draft spec meaning
@@ -716,6 +718,15 @@ admit, with its first-run god required as pool #1, no Hermes, Hammer, Selene,
 NPCs or racks, and a nullable loadout; a pool that leaves a god unreachable is
 refused.
 
+The loadout is input; the draft generates the starting reward, the biomes and
+their rack equip results and the resource points. The starting keepsake's
+equip result is input when the player set one: the walk takes it where it is
+possible and the basket's trait guard admits it, otherwise it samples one, and
+the report lists it met or unmet. A choice that clearly contradicts the basket
+is refused: a Jeweled Pom trait in a basket trait's slot, or an Experimental
+Hammer trait queued after another basket Hammer or one past the Hammer or the
+Hermes and Hammer cap.
+
 ### Draft steering
 
 Steering weights are draft policy over legal candidates, reading every room as
@@ -735,17 +746,23 @@ the route declares it, route overlays included:
   of about two purchases per planned biome. The pace steepens when behind or
   when the boon entries left in the bags this biome's doors draw from (its
   base-store policy, else the stores its rooms declare) are nearly spent; it never forces or blocks a purchase, and gold is not modelled.
+  The pace is the spec's purchases per biome (default 2); at 0 the draft
+  never buys a god boon, while Hermes, Hammer and Dream boosts keep their own
+  rules.
 - On a route whose save-file god history starts closed (Fresh File), a Shop
   stocks only gods already picked up, so a door offering a not-yet-met god
   with queued traits outranks a Shop door, midshop preference included.
 - A new door rolls each legal room inside its declared depth window and
-  places a hit first, softening the game's 1 / (deadline - depth) ramp one
-  step to 1 / (deadline - depth + 1) (a window one depth wide keeps the
-  native rule); a door that can show a wanted story room keeps it instead,
-  and an offered story room's door is always taken. Legality still only forces a room at its deadline.
+  places a hit first. The spec's room forcing picks the chance: by default the
+  game's 1 / (deadline - depth) ramp softened one step to
+  1 / (deadline - depth + 1), the game's own ramp, or nothing before the
+  deadline; a window one depth wide keeps the game's rule under every setting.
+  A door that can show a wanted story room keeps it instead, and an offered
+  story room's door is always taken. Legality still only forces a room at its
+  deadline.
 - Fountain rooms only break ties between equal doors and make a wanted god's
-  reward likelier. Resource points roll about one room in ten, preferring an
-  element a waiting trait needs; Dream buys elemental boosts instead.
+  reward likelier. Resource points roll at the spec's resource room chance
+  (default one room in ten), preferring an element a waiting trait needs; Dream buys elemental boosts instead.
 - Offer exclusions that hold in every branch stop the walk chasing that god or
   source for the biome rather than retrying it.
 
@@ -757,10 +774,11 @@ committed baseline records rates and medians, not plans.
 A share code carries what a player authors for a draft, so drafting a pasted
 code gives the same plan: the route (and a Dream itinerary), the configured
 prefix, the loadout choices the draft reads (weapon, aspect with its Hex tree,
-keepsake, familiar, Vows and manual Arcana; none on Fresh File), the ordered
-god pool and basket, NPC and rack picks, the Advanced overrides that differ
-from their defaults and the seed. It leaves out what the draft generates (the
-starting reward and keepsake equip results) and what sits outside the draft
+keepsake with its chosen equip result, familiar, Vows and manual Arcana; none
+on Fresh File), the ordered god pool and basket, NPC and rack picks, the
+Advanced overrides that differ from their defaults and the seed. Pasting
+installs a carried equip result and leaves one the code lacks. It leaves out
+what the draft generates (the starting reward) and what sits outside the draft
 (the Practice start and run modifiers), so a code reproduces the plan only
 when those match.
 
@@ -768,7 +786,7 @@ The engine codec (`encodeDraftShareCode`, `decodeDraftShareCode`) packs
 positions in catalog-ordered lists into base32 behind a layout version and a
 fingerprint of those lists and the catalog facts that shape the layout. A code
 from another layout, catalog or route is refused rather than decoded into other
-keys, and the decoded inputs pass the draft spec and loadout validation. Codes are made on demand and never
+keys (a code from an earlier layout as from an older planner), and the decoded inputs pass the draft spec and loadout validation. Codes are made on demand and never
 persisted, so they touch neither the project schema nor the plan wire. Pasting
 installs the spec and loadout through semantic commands (`draftShareCommands`)
 as one history edit.

@@ -122,11 +122,15 @@ export type ProjectStateCommand =
       readonly value: AuthoredFieldValue;
     }
   | {
-      /** Replaces the loadout (but not its run modifiers) and the planned biome prefix; the rest of the route stays. */
+      /**
+       * Replaces the loadout (but not its run modifiers) and the planned biome prefix; the rest of
+       * the route stays. Resource placements reset unless given, naming hosts in the new biomes.
+       */
       readonly kind: 'ReplaceRoute';
       readonly route: RouteAddress;
       readonly loadout: Omit<import('../model').RouteLoadout, 'runModifiers'>;
       readonly biomes: readonly import('../model').AuthoredBiomePlan[];
+      readonly resourcePlacements?: import('../model').ResourcePlacements;
     };
 
 export type ResourcePlacementCommand = {

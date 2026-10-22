@@ -11,6 +11,7 @@ import { createApplication } from '@planner/composition/createApplication';
 import { routePanelSelected } from '@planner/state/editorSessionSlice';
 import {
   authoredProjectCommandDispatched,
+  authoredProjectUndoRequested,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
 import type { DraftRunner, DraftRunRequest } from '@planner/workspace/draftRun';
@@ -456,16 +457,65 @@ describe('Draft panel', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Prefer midshops' }));
     expect(draft().preferMidshops).toBe(true);
     expect(screen.getByText('Drafts take longer.')).toBeTruthy();
-    fireEvent.click(
-      screen.getByRole('checkbox', { name: 'Pursue the Tartarus goal aggressively' }),
-    );
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Pursue the Tartarus goal' }));
     expect(draft().pursueTartarusGoal).toBe(true);
     // Tartarus's default 4 is above what it yields with the goal pursued.
-    expect(screen.getByText('Default: 4 · expected: 3')).toBeTruthy();
-    fireEvent.click(
-      screen.getByRole('checkbox', { name: 'Pursue the Tartarus goal aggressively' }),
-    );
+    expect(screen.getByText('expected 3')).toBeTruthy();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Pursue the Tartarus goal' }));
     expect(draft()).not.toHaveProperty('pursueTartarusGoal');
+  });
+
+  it('sets the room and search options, naming a default only when changed, and resets them as one edit', () => {
+    const { application } = open();
+    const history = () => application.store.getState().projectWorkspace.history!;
+    const draft = () => history().present.route.draft;
+    fireEvent.click(screen.getByRole('tab', { name: 'Advanced' }));
+    const reset = screen.getByRole('button', { name: 'Reset to defaults' }) as HTMLButtonElement;
+    expect(reset.disabled).toBe(true);
+    expect(screen.queryByText(/^default /)).toBeNull();
+    // Notes are fixed pills; the Retries note stays whatever its value.
+    expect(screen.getByText('More retries: better coverage, longer drafts').className).toBe(
+      'draft-hint-pill',
+    );
+
+    const forcing = screen.getByRole('radiogroup', { name: 'Room forcing' });
+    expect(
+      (within(forcing).getByRole('radio', { name: 'Softened' }) as HTMLInputElement).checked,
+    ).toBe(true);
+    expect(hintOf(within(forcing).getByText('Game odds'))).toBe('1 / (Max − depth)');
+    fireEvent.click(within(forcing).getByRole('radio', { name: 'Game odds' }));
+    expect(draft().roomForcing).toBe('game');
+    fireEvent.change(screen.getByRole('slider', { name: 'Resource rooms' }), {
+      target: { value: '25' },
+    });
+    expect(draft().resourceRoomChance).toBe(25);
+    expect(screen.getByText('default 10%')).toBeTruthy();
+    fireEvent.change(screen.getByRole('slider', { name: 'Shop buys per biome' }), {
+      target: { value: '0' },
+    });
+    expect(draft().purchasesPerBiome).toBe(0);
+    fireEvent.change(screen.getByRole('slider', { name: 'Retries' }), { target: { value: '6' } });
+    expect(draft().retriesPerBiome).toBe(6);
+    expect(screen.getByText('default 3')).toBeTruthy();
+    fireEvent.change(screen.getByRole('slider', { name: 'Retries' }), { target: { value: '3' } });
+    expect(draft()).not.toHaveProperty('retriesPerBiome');
+    expect(screen.queryByText('default 3')).toBeNull();
+
+    const before = history().past.length;
+    expect(reset.disabled).toBe(false);
+    fireEvent.click(reset);
+    expect(history().past).toHaveLength(before + 1);
+    for (const key of ['roomForcing', 'resourceRoomChance', 'purchasesPerBiome'])
+      expect(draft()).not.toHaveProperty(key);
+    expect(reset.disabled).toBe(true);
+    act(() => {
+      application.store.dispatch(authoredProjectUndoRequested());
+    });
+    expect(draft()).toMatchObject({
+      roomForcing: 'game',
+      resourceRoomChance: 25,
+      purchasesPerBiome: 0,
+    });
   });
 
   it('blocks drafting from a keepsake that brings in a god', () => {
