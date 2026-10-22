@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 97,
-  "schemaRevision": 3,
+  "schemaVersion": 98,
   "projectId": "surface-4",
+  "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
     "routeKey": "Surface",

@@ -37,7 +37,7 @@ export function createUnavailableProfileFileAdapter(): ProfileFileAdapter {
 
 const PROFILE_FILE_SUFFIX = '.runplanner.json';
 
-/** A saved file's name without its extension, used as the plan's display name. */
+/** A saved file's name without its extension; it names a plan saved before plans carried names. */
 export function profileFileStem(fileName: string): string {
   const base = fileName.split(/[\\/]/).at(-1) ?? fileName;
   const stem = base.toLowerCase().endsWith(PROFILE_FILE_SUFFIX)

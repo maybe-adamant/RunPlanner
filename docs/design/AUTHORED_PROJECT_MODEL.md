@@ -1301,10 +1301,16 @@ interface ProjectDocument {
   schemaVersion: typeof PROJECT_DOCUMENT_SCHEMA_VERSION;
   schemaRevision?: number; // on disk only; absent means 0
   projectId: string;
+  name: string; // trimmed, non-blank, at most 200 code points
   catalogVersion: string;
   route: AuthoredRoutePlan;
 }
 ```
+
+`name` is the plan's name, authored like any other field: a new project takes
+`"New plan"`, `RenameProject` replaces it (trimmed; blank or overlong is
+refused) as one history step, and the published plan's `displayName` is the
+name.
 
 Unknown fields, malformed discriminants, wrong schema or catalog versions,
 unauthorized cross-biome rooms, invalid leaf state, and malformed structural
@@ -1328,7 +1334,7 @@ Persistence excludes filenames, Redux state, editor tabs, graph positions,
 candidate sets, findings, simulation output, save baselines, autosave status,
 and an alternate profile wrapper. The application profile session remembers
 the selected file's basename for later saves; it is transport metadata, not
-authored project identity. A new project starts with a unique minted
+authored project identity or name. A new project starts with a unique minted
 `projectId`; a save keeps it, and Save As from an already-saved file writes the
 copy under a new one. That change replaces the identity in every history
 snapshot rather than adding a command step, so Undo and Redo never restore the
@@ -1378,6 +1384,10 @@ present; the 96 → 97 migration adds the empty draft, gives each rack-bearing
 occurrence without a rack an unchanged one ranked right after its fountain,
 drops a rack retained where the route has none, and moves the run modifiers'
 `startPoint` to `practiceStart`.
+Schema 98 adds the plan's `name`; the 97 → 98 migration names the plan after
+the file it is loaded from (its stem, trimmed and bounded) and otherwise gives
+it the default. A slot source stored before 98 names its plan beside the
+project, and rebuilding the slot migrates the project under that name.
 
 ## Undo and Redo
 

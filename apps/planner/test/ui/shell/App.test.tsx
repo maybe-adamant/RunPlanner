@@ -97,7 +97,7 @@ describe('App', () => {
     const markup = appMarkup(application);
 
     expect(markup).not.toContain('class="project-findings"');
-    expect(markup).toContain('class="app-route-identity">Underworld');
+    expect(markup).toContain('aria-label="Plan name"');
     expect(markup).toContain('About</button>');
     expect(markup).not.toContain('<h2 id="game-dialog-title">');
   });

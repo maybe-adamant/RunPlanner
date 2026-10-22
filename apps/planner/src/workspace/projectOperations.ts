@@ -9,7 +9,6 @@ import {
   assembleExecutionProduct,
   compileExecutionPlan,
   encodeExecutionPlan,
-  EXECUTION_DISPLAY_NAME_MAX,
   ExecutionCompilerError,
 } from '@run-planner/engine/execution-plan';
 
@@ -114,11 +113,6 @@ interface CreateProjectOperationsOptions {
   /** Mints the identity a saved copy takes; injectable for deterministic tests. */
   readonly mintProjectId?: () => string;
   readonly store: PlannerStore;
-}
-
-/** The saved file's stem, bounded in code points as the plan's display name. */
-function planDisplayName(fileName: string): string {
-  return Array.from(profileFileStem(fileName)).slice(0, EXECUTION_DISPLAY_NAME_MAX).join('');
 }
 
 function mintRandomProjectId(): string {
@@ -245,7 +239,7 @@ export function createProjectOperations(
         catalog: options.catalog,
         internalRunModifiers,
       });
-      // Sending needs a saved file with no unsaved changes; the file's name names the plan.
+      // Sending needs a saved file with no unsaved changes.
       let saved = false;
       const pendingSave = saveUnlessClean();
       if (pendingSave !== null) {
@@ -264,21 +258,18 @@ export function createProjectOperations(
         // Compile the document as saved, since the save may have re-identified its history.
         const savedWorkspace = options.store.getState().projectWorkspace;
         if (savedWorkspace.kind !== 'openProject') throw new Error('No project is open');
-        const fileName = selectProfileSession(options.store.getState()).fileName;
         const savedProject = selectPresentProject(options.store.getState());
         if (savedProject === undefined) throw new Error('No project is open');
-        const displayName = fileName === null ? undefined : planDisplayName(fileName);
         const plan = compileExecutionPlan({
           product: assembleExecutionProduct({
             assembly: savedWorkspace.assembly,
             catalog: options.catalog,
             internalRunModifiers,
           }),
-          ...(displayName === undefined ? {} : { displayName }),
+          displayName: savedProject.name,
         });
         // The saved document and the options it compiled with, so the slot can be rebuilt.
         const source = encodeSlotSource({
-          ...(displayName === undefined ? {} : { displayName }),
           internalRunModifiers,
           projectJson: encodeProjectDocument(savedProject),
         });
@@ -500,11 +491,13 @@ export function createProjectOperations(
         if (loaded === null) {
           return result('loadProfile', 'cancelled', 'Load Profile cancelled.');
         }
-        const loadedDocument = loadProjectDocument(loaded.json, options.catalog);
+        const fileName = loadedProfileFileName(loaded.file.fileName);
+        const loadedDocument = loadProjectDocument(loaded.json, options.catalog, {
+          legacyName: profileFileStem(fileName),
+        });
         const { project } = loadedDocument;
         assertPublicProjectAdmission(options.catalog, project);
         const baselineJson = encodeProjectDocument(project);
-        const fileName = loadedProfileFileName(loaded.file.fileName);
         const prepared = options.prepareProjectWorkspace(project);
         const autosaveRecovery = options.autosaveRecovery;
         let clearedRecoveryJson: string | null = null;

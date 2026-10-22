@@ -130,6 +130,7 @@ function applyUnchecked(
         locateBiome(document, catalog, command),
         command,
       );
+    case 'RenameProject':
     case 'ReplaceRouteLoadout':
     case 'ReplaceFamiliar':
     case 'ReplaceStartingReward':

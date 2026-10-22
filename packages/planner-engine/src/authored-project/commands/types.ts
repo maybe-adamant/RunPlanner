@@ -35,6 +35,7 @@ import type {
   FountainRarityOutcomeAddress,
   FieldsSpatialAddress,
   TargetAddress,
+  ProjectAddress,
 } from '../addresses';
 import type {
   AuthoredFieldValue,
@@ -52,6 +53,11 @@ import type {
 } from '../traits/state';
 
 export type ProjectStateCommand =
+  | {
+      readonly kind: 'RenameProject';
+      readonly project: ProjectAddress;
+      readonly name: string;
+    }
   | {
       readonly kind: 'ReplaceRunModifiers';
       readonly route: RouteAddress;

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 97,
-  "schemaRevision": 3,
+  "schemaVersion": 98,
   "projectId": "natural-chaos-unresolved-trial-upgrade",
+  "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
     "routeKey": "Underworld",

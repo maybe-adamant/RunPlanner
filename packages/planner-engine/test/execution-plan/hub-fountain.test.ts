@@ -45,6 +45,7 @@ import { migrateProjectDocument as migrateProject93To94 } from '../../../../sche
 import { migrateProjectDocument as migrateProject94To95 } from '../../../../schema/migrate-project-94-to-95.js';
 import { migrateProjectDocument as migrateProject95To96 } from '../../../../schema/migrate-project-95-to-96.js';
 import { migrateProjectDocument as migrateProject96To97 } from '../../../../schema/migrate-project-96-to-97.js';
+import { migrateProjectDocument as migrateProject97To98 } from '../../../../schema/migrate-project-97-to-98.js';
 
 const hub = createHubDecisionAddress(nBiome, 'hub');
 const fountain = createHubFountainAddress(nBiome, 'hub');
@@ -58,9 +59,11 @@ function migratedPhialProject(): ProjectDocument {
   });
   const legacy = legacyRareEpicHexTrees(JSON.parse(encodeProjectDocument(current))) as {
     schemaVersion: number;
+    name?: string;
     route: { biomes: { topology: { decisions: Record<string, unknown>[] } | null }[] };
   };
   legacy.schemaVersion = 87;
+  delete legacy.name;
   for (const biome of legacy.route.biomes)
     for (const decision of biome.topology?.decisions ?? []) {
       if (decision.kind !== 'hub') continue;
@@ -73,14 +76,16 @@ function migratedPhialProject(): ProjectDocument {
     }
   return parseProjectDocument(
     JSON.stringify(
-      migrateProject96To97(
-        migrateProject95To96(
-          migrateProject94To95(
-            migrateProject93To94(
-              migrateProject92To93(
-                migrateProject91To92(
-                  migrateProject90To91(
-                    migrateProject89To90(migrateProject88To89(migrateProject87To88(legacy))),
+      migrateProject97To98(
+        migrateProject96To97(
+          migrateProject95To96(
+            migrateProject94To95(
+              migrateProject93To94(
+                migrateProject92To93(
+                  migrateProject91To92(
+                    migrateProject90To91(
+                      migrateProject89To90(migrateProject88To89(migrateProject87To88(legacy))),
+                    ),
                   ),
                 ),
               ),

@@ -16,6 +16,7 @@ import { migrateProjectDocument as migrate93To94 } from './project-93-to-94.js';
 import { migrateProjectDocument as migrate94To95 } from './project-94-to-95.js';
 import { migrateProjectDocument as migrate95To96 } from './project-95-to-96.js';
 import { migrateProjectDocument as migrate96To97 } from './project-96-to-97.js';
+import { migrateProjectDocument as migrate97To98 } from './project-97-to-98.js';
 
 export const PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR = 86 as const;
 
@@ -31,10 +32,21 @@ export interface ProjectDocumentIdentity {
   readonly schemaVersion: number;
 }
 
+/** What a transition may know about the document beyond its content. */
+export interface ProjectMigrationContext {
+  /** The plan's name before the project carried one. */
+  readonly name?: string;
+}
+
 export interface ProjectDocumentTransition {
   readonly source: ProjectDocumentIdentity;
   readonly target: ProjectDocumentIdentity;
-  readonly migrate: (document: unknown) => unknown;
+  readonly migrate: (document: unknown, context: ProjectMigrationContext) => unknown;
+}
+
+export interface LoadProjectDocumentOptions {
+  /** Names a document saved before projects carried a name: its file's stem, when known. */
+  readonly legacyName?: string;
 }
 
 export interface ProjectMigrationProvenance {
@@ -105,10 +117,19 @@ const productionTransitions: readonly ProjectDocumentTransition[] = Object.freez
     target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 97 }),
     migrate: migrate96To97,
   }),
+  Object.freeze({
+    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 97 }),
+    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 98 }),
+    migrate: migrate97To98,
+  }),
 ]);
 const noMigrations: readonly ProjectMigrationProvenance[] = Object.freeze([]);
 
-export function loadProjectDocument(json: string, catalog: Catalog): LoadedProjectDocument {
+export function loadProjectDocument(
+  json: string,
+  catalog: Catalog,
+  options: LoadProjectDocumentOptions = {},
+): LoadedProjectDocument {
   const parsed = parseJson(json);
   const envelope = inspectEnvelope(parsed);
   if (envelope === undefined) {
@@ -147,6 +168,7 @@ export function loadProjectDocument(json: string, catalog: Catalog): LoadedProje
       schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
     }),
     transitions: productionTransitions,
+    context: options.legacyName === undefined ? {} : { name: options.legacyName },
   });
   const migratedJson = JSON.stringify(migrated.document);
   if (migratedJson === undefined) {
@@ -163,6 +185,7 @@ export function applyProjectDocumentTransitions(options: {
   readonly source: ProjectDocumentIdentity;
   readonly target: ProjectDocumentIdentity;
   readonly transitions: readonly ProjectDocumentTransition[];
+  readonly context?: ProjectMigrationContext;
 }): {
   readonly document: unknown;
   readonly migrationProvenance: readonly ProjectMigrationProvenance[];
@@ -172,7 +195,7 @@ export function applyProjectDocumentTransitions(options: {
   const migrationProvenance: ProjectMigrationProvenance[] = [];
   for (const transition of options.transitions) {
     if (!sameIdentity(currentIdentity, transition.source)) continue;
-    document = transition.migrate(document);
+    document = transition.migrate(document, options.context ?? {});
     const target = inspectEnvelope(document);
     if (target === undefined || !sameIdentity(target, transition.target)) {
       throw new Error('Project migration did not produce its declared target identity.');

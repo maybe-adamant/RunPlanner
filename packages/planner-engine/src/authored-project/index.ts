@@ -489,6 +489,7 @@ export {
   samePracticeStart,
   type RunStartPoint,
 } from './practice-start';
+export { DEFAULT_PROJECT_NAME, PROJECT_NAME_MAX, normalizeProjectName } from './project-name';
 export {
   DEFAULT_DRAFT_PER_GOD_CAP,
   DRAFT_GOD_BOONS_RANGE,

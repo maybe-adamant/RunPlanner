@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 97,
-  "schemaRevision": 3,
+  "schemaVersion": 98,
   "projectId": "execution-dream-q-f-n-h",
+  "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
   "route": {
     "routeKey": "Dream",

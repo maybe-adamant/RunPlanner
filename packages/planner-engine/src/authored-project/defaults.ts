@@ -9,11 +9,14 @@ import {
 import { ProjectDocumentContractError } from './validation';
 import { createInitialRouteLoadout } from './loadout';
 import { EMPTY_DRAFT_SPEC } from './draft-spec';
+import { DEFAULT_PROJECT_NAME } from './project-name';
 import { resolveRoutePosition } from './route-context';
 import { createDefaultStartTopology } from './topology/construction';
 
 export interface CreateProjectDocumentOptions {
   readonly projectId: string;
+  /** Absent, the project takes the default name. */
+  readonly name?: string;
   readonly routeKey: string;
   /** Internal complete itinerary; ordinary presets always use their declaration order. */
   readonly itineraryBiomeKeys?: readonly string[];
@@ -104,6 +107,7 @@ export function createProjectDocument(
     {
       schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
       projectId: options.projectId,
+      name: options.name ?? DEFAULT_PROJECT_NAME,
       catalogVersion: catalog.version,
       route: routePlan,
     },

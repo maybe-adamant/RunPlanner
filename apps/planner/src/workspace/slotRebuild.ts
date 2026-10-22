@@ -112,8 +112,9 @@ export function createSlotRebuildController(
     }
     let compiled: ProjectFileCompilation;
     try {
+      // An older source names its plan beside the project; migration moves it into the project.
       compiled = compileProjectFile(options.catalog, source.projectJson, {
-        ...(source.displayName === undefined ? {} : { displayName: source.displayName }),
+        ...(source.displayName === undefined ? {} : { legacyName: source.displayName }),
         internalRunModifiers: source.internalRunModifiers && options.devBuild,
       });
     } catch (error) {
@@ -128,7 +129,6 @@ export function createSlotRebuildController(
         slot,
         encodeExecutionPlan(compiled.plan),
         encodeSlotSource({
-          ...(source.displayName === undefined ? {} : { displayName: source.displayName }),
           internalRunModifiers: source.internalRunModifiers,
           projectJson: encodeProjectDocument(compiled.project),
         }),

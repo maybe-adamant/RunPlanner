@@ -38,6 +38,7 @@ import type { DraftRunController } from '@planner/workspace/draftRun';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { ProjectFileControls } from '../project/ProjectFileControls';
+import { ProjectNameField } from '../project/ProjectNameField';
 import { ProjectHistoryControls } from '../project/ProjectHistoryControls';
 import { ActionIcon } from '../controls/ActionIcon';
 import { HintLayer } from '../controls/HintLayer';
@@ -160,12 +161,12 @@ export function App({
         >
           <div className="app-brand">
             <h1>Run Planner</h1>
-            {activeRouteNavigation === undefined || showEntry ? null : (
+            {project === undefined || showEntry ? null : (
               <>
                 <span aria-hidden="true" className="app-brand-separator">
                   ·
                 </span>
-                <span className="app-route-identity">{activeRouteNavigation.label}</span>
+                <ProjectNameField key={project.name} name={project.name} />
               </>
             )}
           </div>

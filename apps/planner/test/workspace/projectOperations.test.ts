@@ -349,7 +349,9 @@ describe('project profile operations', () => {
     expect(JSON.parse(source.projectJson)).toEqual(
       JSON.parse(selectExplicitProfileBaselineJson(beforePublication)!),
     );
-    expect(source.displayName).toBe(JSON.parse(publication.json).displayName);
+    // The plan is named by the project, which the source already carries.
+    expect(source.displayName).toBeUndefined();
+    expect(JSON.parse(publication.json).displayName).toBe(JSON.parse(source.projectJson).name);
     // Sending records only UI-session state; authored state and history are untouched.
     expect(application.store.getState().gameSendSession.lastSentSlot).toBe(3);
     expect(application.store.getState().editorSession).toBe(beforePublication.editorSession);
@@ -599,7 +601,7 @@ describe('project profile operations', () => {
     expect(written.projectId).toBe('minted-copy');
     expect(presentProject(application).projectId).toBe('minted-copy');
     expect(sent.projectId).toBe('minted-copy');
-    expect(sent.displayName).toBe('Copy run');
+    expect(sent.displayName).toBe(presentProject(application).name);
     expect(application.projectOperations.inspectCurrentGamePlan()).toMatchObject({
       projectId: 'minted-copy',
       planFingerprint: sent.planFingerprint,
@@ -980,6 +982,7 @@ describe('project profile operations', () => {
       'schemaVersion',
       ...(PROJECT_DOCUMENT_SCHEMA_REVISION === 0 ? [] : ['schemaRevision']),
       'projectId',
+      'name',
       'catalogVersion',
       'route',
     ]);
@@ -1487,7 +1490,7 @@ describe('project profile operations', () => {
 
     for (const json of [
       JSON.stringify({ ...current, schemaVersion: 8 }),
-      JSON.stringify({ ...current, schemaVersion: 98 }),
+      JSON.stringify({ ...current, schemaVersion: 99 }),
       JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
     ]) {
       profile.setLoadJson(json);
@@ -1497,6 +1500,30 @@ describe('project profile operations', () => {
       });
       expect(application.store.getState()).toBe(state);
     }
+  });
+
+  it('names a loaded schema-97 profile after its file', async () => {
+    const profile = createProfileFixture();
+    const { name: _name, ...rest } = JSON.parse(
+      encodeProjectDocument(
+        createProjectDocument(catalog, {
+          configuredBiomeCount: 1,
+          projectId: 'legacy-unnamed',
+          routeKey: 'Underworld',
+        }),
+      ),
+    ) as Record<string, unknown>;
+    void _name;
+    profile.setLoadJson(
+      JSON.stringify({ ...rest, schemaVersion: 97 }),
+      'Staff run.runplanner.json',
+    );
+    const application = createApplication({ profileFile: profile.adapter });
+
+    await expect(application.projectOperations.loadProfile()).resolves.toMatchObject({
+      status: 'success',
+    });
+    expect(selectPresentProject(application.store.getState())?.name).toBe('Staff run');
   });
 
   it('reports retained generated choices needing repair when loading a schema-86 profile', async () => {
@@ -1518,14 +1545,14 @@ describe('project profile operations', () => {
       operation: 'loadProfile',
       status: 'success',
       message:
-        'Migrated the profile to schema 97; retained encounter choices may need missing fields repaired.',
+        'Migrated the profile to schema 98; retained encounter choices may need missing fields repaired.',
     });
     legacy.schemaVersion = 87;
     profile.setLoadJson(JSON.stringify(legacy));
     await expect(application.projectOperations.loadProfile()).resolves.toEqual({
       operation: 'loadProfile',
       status: 'success',
-      message: 'Migrated the profile to schema 97.',
+      message: 'Migrated the profile to schema 98.',
     });
     const hubLegacy = legacyRareEpicHexTrees(
       JSON.parse(encodeProjectDocument(loadSurfaceNProject())),
@@ -1547,7 +1574,7 @@ describe('project profile operations', () => {
       operation: 'loadProfile',
       status: 'success',
       message:
-        'Migrated the profile to schema 97; the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair.',
+        'Migrated the profile to schema 98; the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair.',
     });
 
     // A schema-88 Hub already has its authored fountain placement, so no repair is named.
@@ -1559,7 +1586,7 @@ describe('project profile operations', () => {
     await expect(application.projectOperations.loadProfile()).resolves.toEqual({
       operation: 'loadProfile',
       status: 'success',
-      message: 'Migrated the profile to schema 97.',
+      message: 'Migrated the profile to schema 98.',
     });
   });
 
