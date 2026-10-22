@@ -9,9 +9,9 @@ import type {
 import type { RunModifiersRecord } from './run-modifiers';
 import type { RunStartPoint } from './practice-start';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 97 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 98 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
-export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 3;
+export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 0;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -632,6 +632,8 @@ export interface AuthoredDraftSpec {
 export interface ProjectDocument {
   readonly schemaVersion: typeof PROJECT_DOCUMENT_SCHEMA_VERSION;
   readonly projectId: string;
+  /** The plan's name: trimmed, non-blank and bounded (see project-name). */
+  readonly name: string;
   readonly catalogVersion: string;
   readonly route: AuthoredRoutePlan;
 }

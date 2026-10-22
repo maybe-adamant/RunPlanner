@@ -4,6 +4,7 @@ import { assessStartingArcanaGrasp } from './loadout';
 import { decodeRunModifiers, encodeRunModifiers } from './run-modifiers';
 import { decodePracticeStart, samePracticeStart, type RunStartPoint } from './practice-start';
 import { decodeDraftSpec } from './draft-spec';
+import { normalizeProjectName, PROJECT_NAME_MAX } from './project-name';
 import { decodeAuthoredHexTree } from './traits/hex-tree';
 import { decodeBiomeTopology } from './topology/codec';
 import { decodeKeepsakeEquipResults } from './keepsake-equip-codec';
@@ -431,7 +432,7 @@ export function decodeProjectDocument(value: unknown, catalog: Catalog): Project
   const document = expectRecord(value, '$');
   expectExactKeys(
     document,
-    ['schemaVersion', 'schemaRevision', 'projectId', 'catalogVersion', 'route'],
+    ['schemaVersion', 'schemaRevision', 'projectId', 'name', 'catalogVersion', 'route'],
     '$',
   );
 
@@ -453,6 +454,9 @@ export function decodeProjectDocument(value: unknown, catalog: Catalog): Project
   }
 
   const projectId = expectNonBlankString(document.projectId, '$.projectId');
+  const name = expectString(document.name, '$.name');
+  if (normalizeProjectName(name) !== name)
+    fail('$.name', `must be a trimmed, non-blank name of at most ${PROJECT_NAME_MAX} characters`);
   const catalogVersion = expectString(document.catalogVersion, '$.catalogVersion');
   if (catalogVersion !== catalog.version) {
     fail(
@@ -470,6 +474,7 @@ export function decodeProjectDocument(value: unknown, catalog: Catalog): Project
   return Object.freeze({
     schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
     projectId,
+    name,
     catalogVersion,
     route: decodedRoute,
   });

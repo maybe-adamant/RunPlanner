@@ -45,6 +45,8 @@ function commandContractAddress(
   command: CommandContractSubject,
 ): SemanticAddress | AcquisitionSiteAddress {
   switch (command.kind) {
+    case 'RenameProject':
+      return command.project;
     case 'ConfigureRoutePrefix':
     case 'ReplaceRoute':
     case 'ReplaceRouteLoadout':

@@ -1,6 +1,10 @@
 import { encodeProjectDocument, type ProjectDocument } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
-import type { ProfileFileReference, ProfileFileRestoreResult } from './profileFile';
+import {
+  profileFileStem,
+  type ProfileFileReference,
+  type ProfileFileRestoreResult,
+} from './profileFile';
 import { loadProjectDocument } from './projectDocumentLoader';
 
 import {
@@ -38,8 +42,13 @@ export function restoreStartupProject<TPrepared>(
   prepareProject: (project: ProjectDocument) => TPrepared,
   profileRestore: ProfileFileRestoreResult = Object.freeze({ status: 'none' }),
 ): StartupProjectState<TPrepared> {
-  const prepareJson = (json: string) => {
-    const { project } = loadProjectDocument(json, catalog);
+  // An older document takes the file's name; the autosave is a copy of the restored file.
+  const prepareJson = (json: string, fileName: string | undefined) => {
+    const { project } = loadProjectDocument(
+      json,
+      catalog,
+      fileName === undefined ? {} : { legacyName: profileFileStem(fileName) },
+    );
     return Object.freeze({
       canonicalJson: encodeProjectDocument(project),
       preparedProject: prepareProject(project),
@@ -64,7 +73,7 @@ export function restoreStartupProject<TPrepared>(
       return Object.freeze({
         status: 'prepared' as const,
         file: restored.file,
-        ...prepareJson(restored.json),
+        ...prepareJson(restored.json, restored.file.fileName),
       });
     } catch (error) {
       return Object.freeze({ status: 'failure' as const, error });
@@ -98,7 +107,7 @@ export function restoreStartupProject<TPrepared>(
       });
     }
     try {
-      const recovered = prepareJson(recoveryJson.json);
+      const recovered = prepareJson(recoveryJson.json, fileName);
       const equivalent = recovered.canonicalJson === baseline;
       return Object.freeze({
         activeProfileFile: preparedDisk.file,
@@ -148,7 +157,7 @@ export function restoreStartupProject<TPrepared>(
     });
   }
   try {
-    const recovered = prepareJson(recoveryJson.json);
+    const recovered = prepareJson(recoveryJson.json, undefined);
     return Object.freeze({
       clearActiveProfileFile,
       preparedProject: recovered.preparedProject,

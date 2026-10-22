@@ -42,15 +42,18 @@ function incompleteProject(): ProjectDocument {
   });
 }
 
-// A project document saved under the given major, as an earlier planner wrote it.
+// A project document saved under the given major, as an earlier planner wrote it: before
+// schema 98 the plan's name is the source's, not the project's.
 function sourceJson(
   project: ProjectDocument,
   schemaVersion: number = PROJECT_DOCUMENT_SCHEMA_VERSION,
 ) {
   const document = JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
   document.schemaVersion = schemaVersion;
+  const legacy = schemaVersion < 98;
+  if (legacy) delete document.name;
   return encodeSlotSource({
-    displayName: 'Erebus opener',
+    ...(legacy ? { displayName: 'Erebus opener' } : {}),
     internalRunModifiers: false,
     projectJson: JSON.stringify(document),
   });
@@ -119,7 +122,12 @@ describe('slot rebuild', () => {
     const stored = decodeSlotSource(migrated.sourceJson);
     expect(JSON.parse(stored.projectJson)).toMatchObject({
       schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
+      name: 'Erebus opener',
     });
+    expect(stored.displayName).toBeUndefined();
+    expect(decodeExecutionPlan(JSON.parse(game.rebuilt[0]!.json)).displayName).toBe(
+      compilingProject().name,
+    );
   });
 
   it('keeps a migrated project that no longer builds outdated with its reason', async () => {
@@ -194,7 +202,6 @@ describe('slot rebuild', () => {
     await controller.rebuild(status);
 
     expect(compileProjectFile).toHaveBeenCalledWith(catalog, expect.any(String), {
-      displayName: 'Erebus opener',
       internalRunModifiers: false,
     });
     // The stored option is kept for a later development rebuild.

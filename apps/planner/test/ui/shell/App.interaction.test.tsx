@@ -103,7 +103,7 @@ async function expectAboutBuildIdentity(startWithProject: boolean): Promise<void
   const about = await screen.findByLabelText('About Run Planner');
   const summary = about.querySelector('.about-product-summary');
   expect(summary).not.toBeNull();
-  expect(summary!.textContent).toMatch(/^VersionDevelopmentBuildLocal buildSchema97Catalog/);
+  expect(summary!.textContent).toMatch(/^VersionDevelopmentBuildLocal buildSchema98Catalog/);
 }
 
 function profileReference(fileName: string): ProfileFileReference {
@@ -661,10 +661,10 @@ describe('planner history interaction', () => {
     }
     expect(application.store.getState().projectWorkspace.history!.present).toBe(project);
   });
-  it('keeps route identity, document history, and project information in the header', async () => {
+  it('keeps the plan name, document history, and project information in the header', async () => {
     const { user } = renderPlannerForInteraction();
 
-    expect(document.querySelector('.app-route-identity')?.textContent).toBe('Underworld');
+    expect(screen.getByRole('textbox', { name: 'Plan name' })).toBeTruthy();
     expect(screen.queryByRole('navigation', { name: 'Planner sections' })).toBeNull();
     expect(screen.getByRole('group', { name: 'Project history' })).toBeTruthy();
 
@@ -714,7 +714,11 @@ describe('planner history interaction', () => {
       profileFile: files.adapter,
       mintProjectId: () => 'copy-id',
     });
-    await files.openSaved(application, firstBiomeProject(), 'Erebus opener.runplanner.json');
+    await files.openSaved(
+      application,
+      { ...firstBiomeProject(), name: 'Erebus opener' },
+      'erebus.runplanner.json',
+    );
     return { application, files };
   }
 
@@ -942,7 +946,7 @@ describe('planner history interaction', () => {
     const { application, files } = await savedApplication(game);
     application.store.dispatch(gamePlanSent({ slot: 5 }));
     application.store.dispatch(
-      profileSaveSucceeded({ baselineJson: '{}', fileName: 'Erebus opener.runplanner.json' }),
+      profileSaveSucceeded({ baselineJson: '{}', fileName: 'erebus.runplanner.json' }),
     );
     renderPlannerForInteraction({ application });
     const button = await screen.findByRole('button', { name: 'Send · Slot 5' });
@@ -965,7 +969,7 @@ describe('planner history interaction', () => {
     fireEvent.click(button);
     expect(button.textContent).toBe('Saving…');
     await waitFor(() => expect(button.textContent).toBe('Sending…'));
-    expect(files.writes.map((write) => write.fileName)).toEqual(['Erebus opener.runplanner.json']);
+    expect(files.writes.map((write) => write.fileName)).toEqual(['erebus.runplanner.json']);
     act(() => publish?.());
     await waitFor(() => expect(button.textContent).toBe('✓ Sent · Slot 5'));
     expect(JSON.parse(game.published[0]!.json)).toMatchObject({ displayName: 'Erebus opener' });
@@ -1275,7 +1279,6 @@ describe('planner history interaction', () => {
     expect(application.store.getState().projectWorkspace.history?.present.route.routeKey).toBe(
       'Underworld',
     );
-    expect(document.querySelector('.app-route-identity')?.textContent).toBe('Underworld');
     expect(screen.getByRole('button', { name: 'Route' }).getAttribute('aria-current')).toBe('page');
     await user.click(
       within(screen.getByRole('radiogroup', { name: 'Biomes to configure' })).getByRole('radio', {
@@ -3324,7 +3327,9 @@ describe('project profile interaction', () => {
 
     expect(await screen.findByText('File loaded')).toBeTruthy();
     expect(screen.queryByRole('group', { name: 'Choose route' })).toBeNull();
-    expect(document.querySelector('.app-route-identity')?.textContent).toBe('Surface');
+    expect(application.store.getState().projectWorkspace.history?.present.route.routeKey).toBe(
+      'Surface',
+    );
   });
 
   it('preserves the initial route chooser when loading is cancelled', async () => {

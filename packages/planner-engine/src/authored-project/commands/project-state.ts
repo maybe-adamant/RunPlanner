@@ -24,6 +24,7 @@ import type { ProjectDocument } from '../model';
 import { decodePracticeStart, samePracticeStart } from '../practice-start';
 import { decodeDraftSpec, sameDraftSpec } from '../draft-spec';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../defaults';
+import { normalizeProjectName, PROJECT_NAME_MAX } from '../project-name';
 
 import { failCommand, locateBiome, withBiome } from './contract';
 import type { ProjectStateCommand } from './types';
@@ -234,6 +235,13 @@ export function applyProjectStateCommand(
   command: ProjectStateCommand,
 ): ProjectDocument {
   switch (command.kind) {
+    case 'RenameProject': {
+      const name = normalizeProjectName(command.name);
+      if (name === null)
+        failCommand(command, `name must be non-blank and at most ${PROJECT_NAME_MAX} characters`);
+      if (name === document.name) return document;
+      return Object.freeze({ ...document, name });
+    }
     case 'ReplaceStartingReward': {
       const { route } = routeForCommand(document, catalog, command);
       const binding = catalog.runStartReward.incomingReward;

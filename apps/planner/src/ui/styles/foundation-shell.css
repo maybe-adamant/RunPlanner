@@ -260,7 +260,8 @@ input[type='checkbox']:checked:disabled {
 
 .app-brand {
   display: flex;
-  flex: 0 0 auto;
+  min-width: 0;
+  flex: 0 1 auto;
   align-items: baseline;
   white-space: nowrap;
 }
@@ -271,11 +272,28 @@ input[type='checkbox']:checked:disabled {
   font-size: 1.35rem;
 }
 
-.app-route-identity {
-  color: #c6b1d4;
+.app-plan-name {
+  min-width: 6ch;
+  flex: 0 1 auto;
+  max-width: 32ch;
+  padding: 2px 6px;
+  margin: 0 0 0 -6px;
+  border: 1px solid transparent;
+  border-bottom-color: #5f5a66;
+  border-radius: 4px 4px 0 0;
+  background: transparent;
+  color: #e4dcea;
+  field-sizing: content;
+  font: inherit;
   font-size: 0.98rem;
-  font-weight: 700;
-  letter-spacing: 0.025em;
+  text-overflow: ellipsis;
+}
+
+.app-plan-name:focus-visible {
+  border-color: #8f7aa3;
+  border-radius: 4px;
+  background: rgb(17 18 22 / 70%);
+  outline: none;
 }
 
 .app-header-actions {

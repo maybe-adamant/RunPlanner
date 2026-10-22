@@ -239,6 +239,22 @@ describe('desktop active-profile startup', () => {
     expect(startup.profileSession.recoveryStatus).toBe('none');
   });
 
+  it('names an unnamed remembered file and its equal autosave after the file, staying clean', () => {
+    const { name: _name, ...rest } = JSON.parse(encodeProjectDocument(underworld)) as Record<
+      string,
+      unknown
+    >;
+    void _name;
+    const legacy = JSON.stringify({ ...rest, schemaVersion: 97 });
+    const startup = restoreStartupProject(catalog, createRecoveryFixture(legacy), (p) => p, {
+      status: 'loaded',
+      loaded: { file: profileReference('Staff practice.runplanner.json'), json: legacy },
+    });
+
+    expect(startup.preparedProject).toEqual({ ...underworld, name: 'Staff practice' });
+    expect(startup.profileSession.recoveryStatus).toBe('none');
+  });
+
   it('restores newer autosave work while retaining the disk baseline and Save target', async () => {
     const writes: string[] = [];
     const file: ProfileFileReference = {

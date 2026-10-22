@@ -111,7 +111,17 @@ const codecRejections: readonly {
   { name: 'a fractional revision', mutate: (document) => ({ ...document, schemaRevision: 0.5 }) },
   { name: 'a negative revision', mutate: (document) => ({ ...document, schemaRevision: -1 }) },
   { name: 'a blank project ID', mutate: (document) => ({ ...document, projectId: ' ' }) },
-  { name: 'a legacy project name', mutate: (document) => ({ ...document, name: 'Legacy' }) },
+  {
+    name: 'a missing plan name',
+    mutate: ({ name: _name, ...document }) => (void _name, document),
+  },
+  { name: 'a blank plan name', mutate: (document) => ({ ...document, name: '  ' }) },
+  { name: 'an untrimmed plan name', mutate: (document) => ({ ...document, name: ' Run ' }) },
+  { name: 'a non-string plan name', mutate: (document) => ({ ...document, name: 7 }) },
+  {
+    name: 'an overlong plan name',
+    mutate: (document) => ({ ...document, name: '🎲'.repeat(201) }),
+  },
   {
     name: 'an incompatible catalog version',
     mutate: (document) => ({ ...document, catalogVersion: 'incompatible' }),

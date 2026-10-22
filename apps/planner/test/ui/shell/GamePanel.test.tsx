@@ -77,6 +77,11 @@ function firstBiome() {
   return { ...project, route: { ...project.route, biomes: project.route.biomes.slice(0, 1) } };
 }
 
+// The plan names itself; the file it is saved to does not.
+function named(name: string) {
+  return { ...firstBiome(), name };
+}
+
 describe('Game panel', () => {
   afterEach(() => {
     cleanup();
@@ -429,7 +434,7 @@ describe('Game panel', () => {
     expect(within(table).queryAllByRole('button')).toEqual([]);
   });
 
-  it('sends a clean saved plan under its file name and confirms before replacing', async () => {
+  it('sends a clean saved plan under its project name and confirms before replacing', async () => {
     const fourHoursAgo = Date.now() - 4 * 3_600_000;
     const game = createFakeGameModuleHost(
       gameModuleStatus({
@@ -463,7 +468,8 @@ describe('Game panel', () => {
     const files = createFakeProfileFiles();
     const { dialog, user } = await openGame(
       game.host,
-      (application) => files.openSaved(application, firstBiome(), 'Erebus opener.runplanner.json'),
+      (application) =>
+        files.openSaved(application, named('Erebus opener'), 'erebus.runplanner.json'),
       { profileFile: files.adapter },
     );
     const table = within(dialog).getByRole('table', { name: 'Plans in game' });
@@ -746,7 +752,8 @@ describe('Game panel', () => {
     const files = createFakeProfileFiles();
     const { dialog, user } = await openGame(
       game.host,
-      (application) => files.openSaved(application, firstBiome(), 'Erebus opener.runplanner.json'),
+      (application) =>
+        files.openSaved(application, named('Erebus opener'), 'erebus.runplanner.json'),
       { profileFile: files.adapter },
     );
     const choice = within(dialog).getByRole<HTMLSelectElement>('combobox', {
@@ -785,16 +792,16 @@ describe('Game panel', () => {
     const { dialog, user } = await openGame(
       game.host,
       async (application) => {
-        await files.openSaved(application, firstBiome(), 'Erebus opener.runplanner.json');
+        await files.openSaved(application, named('Erebus opener'), 'erebus.runplanner.json');
         // A different saved baseline makes the open document dirty without an authored edit.
         application.store.dispatch(
-          profileSaveSucceeded({ baselineJson: '{}', fileName: 'Erebus opener.runplanner.json' }),
+          profileSaveSucceeded({ baselineJson: '{}', fileName: 'erebus.runplanner.json' }),
         );
       },
       { profileFile: files.adapter },
     );
     await user.click(await within(dialog).findByRole('button', { name: 'Save and send (slot 3)' }));
-    expect(files.writes.map((write) => write.fileName)).toEqual(['Erebus opener.runplanner.json']);
+    expect(files.writes.map((write) => write.fileName)).toEqual(['erebus.runplanner.json']);
     expect(game.published.map((publication) => publication.slotNumber)).toEqual([3]);
     expect(JSON.parse(game.published[0]!.json)).toMatchObject({ displayName: 'Erebus opener' });
     expect(await within(dialog).findByRole('button', { name: 'Send here (slot 4)' })).toBeTruthy();
@@ -806,7 +813,7 @@ describe('Game panel', () => {
     const { dialog, user } = await openGame(
       game.host,
       (application) => {
-        application.store.dispatch(authoredProjectReplaced(firstBiome()));
+        application.store.dispatch(authoredProjectReplaced(named('Surface Phial run')));
       },
       { profileFile: files.adapter },
     );
@@ -820,11 +827,9 @@ describe('Game panel', () => {
     expect(game.published).toHaveLength(0);
     expect(files.writes).toHaveLength(0);
 
-    files.chooseSaveAs('Surface Phial run.runplanner.json');
+    files.chooseSaveAs('phial.runplanner.json');
     await user.click(within(dialog).getByRole('button', { name: 'Save and send… (slot 1)' }));
-    expect(files.writes.map((write) => write.fileName)).toEqual([
-      'Surface Phial run.runplanner.json',
-    ]);
+    expect(files.writes.map((write) => write.fileName)).toEqual(['phial.runplanner.json']);
     expect(JSON.parse(game.published[0]!.json)).toMatchObject({
       displayName: 'Surface Phial run',
       // The first save of a never-saved project keeps its identity.

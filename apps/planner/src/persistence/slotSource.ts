@@ -3,7 +3,7 @@ export const SLOT_SOURCE_FORMAT = 'run-planner-slot-source';
 export const SLOT_SOURCE_FORMAT_VERSION = 1;
 
 export interface SlotSource {
-  /** The plan's name, from the saved file's name at send time. */
+  /** The plan's name stored by a planner whose projects had none: the saved file's stem. */
   readonly displayName?: string;
   /** Whether internal-stage run modifiers took part in the compile. */
   readonly internalRunModifiers: boolean;

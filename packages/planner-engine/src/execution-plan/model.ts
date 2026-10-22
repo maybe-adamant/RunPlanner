@@ -1366,7 +1366,7 @@ export interface ExecutionPlan {
   readonly schemaRevision: number;
   readonly projectId: string;
   readonly planFingerprint: string;
-  /** Presentation-only plan name (the saved file's name); outside the fingerprint. */
+  /** Presentation-only plan name (the project's name); outside the fingerprint. */
   readonly displayName?: string;
   readonly routeKey: ExecutionRouteKey;
   readonly runModifiers?: RunModifiers;
@@ -1410,7 +1410,7 @@ export interface ExecutionAssemblerInput {
 
 export interface ExecutionCompilerInput {
   readonly product: ExecutionSemanticProduct;
-  /** The saved file's name, carried for display only. */
+  /** The project's name, carried for display only. */
   readonly displayName?: string;
 }
 

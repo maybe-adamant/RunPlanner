@@ -19,14 +19,23 @@ export interface ProjectFileCompilation {
 /**
  * Compiles a project file headlessly, as a public project opened and sent would be: loaded
  * (migrated across majors), admitted, simulated and compiled through the execution-plan
- * assembly.
+ * assembly. The plan is named by the project unless `displayName` overrides it; `legacyName`
+ * names an older project that has no name of its own.
  */
 export function compileProjectFile(
   catalog: Catalog,
   projectJson: string,
-  options: { readonly displayName?: string; readonly internalRunModifiers?: boolean } = {},
+  options: {
+    readonly displayName?: string;
+    readonly legacyName?: string;
+    readonly internalRunModifiers?: boolean;
+  } = {},
 ): ProjectFileCompilation {
-  const { project } = loadProjectDocument(projectJson, catalog);
+  const { project } = loadProjectDocument(
+    projectJson,
+    catalog,
+    options.legacyName === undefined ? {} : { legacyName: options.legacyName },
+  );
   assertPublicProjectAdmission(catalog, project);
   const plan = compileExecutionPlan({
     product: assembleExecutionProduct({
@@ -34,7 +43,7 @@ export function compileProjectFile(
       catalog,
       ...(options.internalRunModifiers === true ? { internalRunModifiers: true } : {}),
     }),
-    ...(options.displayName === undefined ? {} : { displayName: options.displayName }),
+    displayName: options.displayName ?? project.name,
   });
   return Object.freeze({ plan, project });
 }

@@ -523,14 +523,15 @@ Sending also stores the plan's source beside its slot,
 {
   "format": "run-planner-slot-source",
   "formatVersion": 1,
-  "displayName": "Surface Phial run",
   "internalRunModifiers": false,
   "project": <the saved project document>
 }
 ```
 
-`displayName` is omitted for an unnamed plan, and `internalRunModifiers`
-records whether internal-stage run modifiers took part in the compile. The host
+`internalRunModifiers` records whether internal-stage run modifiers took part
+in the compile. A source written before projects carried a name (schema 98)
+also has `displayName`, the plan's name at send time; the planner no longer
+writes it. The host
 writes it in the send's transaction, refuses one that is not of this format or
 exceeds 8 MiB, reads it back under the same link and bound rules, and reports
 whether each slot has one. A send never leaves another plan's source beside a
@@ -542,9 +543,9 @@ when the Game panel's **Rebuild slots** is pressed, the application rebuilds
 every outdated slot that has a source, provided nothing blocks sending:
 
 - It loads the source's project through the project loader, which migrates an
-  older major, and compiles it exactly as a public project sent would be, with
-  the stored name and with internal run modifiers only when they were stored
-  and this is a development build.
+  older major (naming an unnamed project after the stored `displayName`), and
+  compiles it exactly as a public project sent would be, with internal run
+  modifiers only when they were stored and this is a development build.
 - A plan that compiles is written again with its source, now holding the
   document as loaded, and a summary whose sent time is the rebuild time. The
   slot number is kept, and the active slot is never changed. The host writes a
@@ -567,15 +568,14 @@ source, and the last rebuild's summary ("Rebuilt 2 slots · couldn’t rebuild 1
 slot") shows beneath it. Results last for the session.
 
 A sent plan's identity chain is the saved file, then the document's
-`projectId`, then the compiled `planFingerprint`. Its name is the saved file's
-stem (`Surface Phial run.runplanner.json` names "Surface Phial run"); there is
-no separate authored name. Sending therefore needs a saved file with no unsaved
-changes: a clean file sends, a file with unsaved changes offers **Save and
-send**, which saves in place first, and a never-saved project offers **Save and
-send…**, which opens Save As and sends under the chosen name, or sends nothing
-if cancelled. The plan carries the stem as the optional,
-presentation-only `displayName`, which is outside `planFingerprint`; the game module accepts it
-and only logs it. Save As from an already-saved file gives the copy a new `projectId`
+`projectId`, then the compiled `planFingerprint`. Its name is the project's
+authored [`name`](AUTHORED_PROJECT_MODEL.md#persistence-and-validation), not
+the file's. Sending needs a saved file with no unsaved changes: a clean file
+sends, a file with unsaved changes offers **Save and send**, which saves in
+place first, and a never-saved project offers **Save and send…**, which opens
+Save As first, or sends nothing if cancelled. The plan carries the name as the
+optional, presentation-only `displayName`, which is outside `planFingerprint`;
+the game module accepts it and only logs it. Save As from an already-saved file gives the copy a new `projectId`
 (the first save of a never-saved project keeps its own), so earlier sends no
 longer match it.
 
