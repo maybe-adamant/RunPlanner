@@ -191,6 +191,7 @@ export function HomeScreen({
   readonly notices: ReactNode;
 }) {
   const dispatch = useAppDispatch();
+  const [tabActions, setTabActions] = useState<HTMLElement | null>(null);
   useGameStatusRefresh(gameStatus);
   const snapshot = useGameStatusSnapshot(gameStatus);
   const index = useLibrarySlotLinks(operations, gameStatus);
@@ -209,33 +210,8 @@ export function HomeScreen({
         data-backdrop="home"
         style={{ '--window-backdrop': `url("${homeBackdropArtwork}")` } as CSSProperties}
       >
-        <h1>Run Planner</h1>
-        <nav aria-label="Home" className="home-nav">
-          {TABS.filter((entry) => entry.tab !== 'catalog' || planCatalog !== undefined).map(
-            (entry) => (
-              <button
-                aria-current={entry.tab === tab ? 'page' : undefined}
-                className="home-nav-tab"
-                key={entry.tab}
-                onClick={() => dispatch(viewChanged({ kind: 'home', tab: entry.tab }))}
-                type="button"
-              >
-                {entry.label}
-                {entry.tab === 'game' && moduleState === 'updateAvailable' ? (
-                  <span className="home-nav-note"> · update</span>
-                ) : null}
-                {entry.tab === 'game' && eventActive ? (
-                  <span className="home-nav-note" data-tone="event">
-                    {' '}
-                    · event
-                  </span>
-                ) : null}
-              </button>
-            ),
-          )}
-        </nav>
-        <span className="home-header-spacer" />
-        <div className="home-header-about">
+        <div className="home-brand-row">
+          <h1>Run Planner</h1>
           <AboutPopover
             bugReport={bugReport}
             buildIdentity={buildIdentity}
@@ -243,11 +219,37 @@ export function HomeScreen({
             releaseUpdates={releaseUpdates}
           />
         </div>
+        <div className="home-tab-row">
+          <nav aria-label="Home" className="home-nav">
+            {TABS.filter((entry) => entry.tab !== 'catalog' || planCatalog !== undefined).map(
+              (entry) => (
+                <button
+                  aria-current={entry.tab === tab ? 'page' : undefined}
+                  className="home-nav-tab"
+                  key={entry.tab}
+                  onClick={() => dispatch(viewChanged({ kind: 'home', tab: entry.tab }))}
+                  type="button"
+                >
+                  {entry.label}
+                  {entry.tab === 'game' && (moduleState === 'updateAvailable' || eventActive) ? (
+                    <span className="home-nav-note">
+                      {moduleState === 'updateAvailable' ? ' · update' : null}
+                      {eventActive ? <span data-tone="event"> · event</span> : null}
+                    </span>
+                  ) : null}
+                </button>
+              ),
+            )}
+          </nav>
+          {/* The shown tab's own actions, such as the Library's New plan. */}
+          <div className="home-tab-actions" ref={setTabActions} />
+        </div>
       </header>
       <div className="home-body">
         {notices}
         {tab === 'library' || (tab === 'catalog' && planCatalog === undefined) ? (
           <LibraryScreen
+            actionsSlot={tabActions}
             catalog={catalog}
             catalogShown={planCatalog !== undefined}
             index={index}

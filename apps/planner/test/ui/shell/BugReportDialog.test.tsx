@@ -115,7 +115,7 @@ describe('Bug report dialog', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: 'Create bug report' })).toBeNull(),
     );
-    expect(screen.getByRole('region', { name: 'Your plans' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Library' })).toBeTruthy();
   });
 
   it('opens from About in the desktop application only', async () => {

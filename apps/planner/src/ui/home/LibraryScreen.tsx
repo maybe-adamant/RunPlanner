@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
@@ -27,6 +28,7 @@ import {
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import { NewPlanDialog } from '../project/NewPlanDialog';
 import { IconActionButton } from '../controls/IconActionButton';
+import { HomeContext } from './HomeContext';
 import { HomeToast } from './HomeToast';
 import { FolderNameDialog, MoveToDialog } from './LibraryDialogs';
 import type { LibrarySlotIndex } from './useLibrarySlotLinks';
@@ -148,12 +150,15 @@ function FolderIcon() {
 }
 
 export function LibraryScreen({
+  actionsSlot,
   catalog,
   catalogShown,
   index,
   operations,
   routes,
 }: {
+  /** Where the Library's New folder, Import… and New plan show, on Home's tab row. */
+  readonly actionsSlot: HTMLElement | null;
   readonly catalog: Catalog;
   /** Whether the Catalog tab exists, so the page links to it. */
   readonly catalogShown: boolean;
@@ -256,55 +261,38 @@ export function LibraryScreen({
   const empty = view !== null && view.rows.length === 0 && view.folders.length === 0;
 
   return (
-    <section aria-labelledby="library-title" className="home-page">
-      <div className="home-page-heading">
-        <h2 id="library-title">Your plans</h2>
-        <div className="home-page-actions">
-          {catalogShown && (
-            <button
-              className="quiet-action"
-              onClick={() => dispatch(viewChanged({ kind: 'home', tab: 'catalog' }))}
-              type="button"
-            >
-              Browse catalog
-            </button>
+    <section aria-label="Library" className="home-page">
+      {actionsSlot === null
+        ? null
+        : createPortal(
+            <>
+              <button
+                className="quiet-action"
+                disabled={pending}
+                onClick={() => setFolderDialog({ kind: 'new' })}
+                type="button"
+              >
+                New folder
+              </button>
+              <button
+                className="secondary-action"
+                disabled={pending}
+                onClick={importPlans}
+                type="button"
+              >
+                Import…
+              </button>
+              <button
+                className="primary-action"
+                disabled={pending}
+                onClick={() => setNewPlanOpen(true)}
+                type="button"
+              >
+                New plan
+              </button>
+            </>,
+            actionsSlot,
           )}
-          {operations.libraryRevealable && (
-            <button
-              className="quiet-action"
-              disabled={pending}
-              onClick={() => report(() => operations.revealLibrary())}
-              type="button"
-            >
-              Open folder
-            </button>
-          )}
-          <button
-            className="quiet-action"
-            disabled={pending}
-            onClick={() => setFolderDialog({ kind: 'new' })}
-            type="button"
-          >
-            New folder
-          </button>
-          <button
-            className="secondary-action"
-            disabled={pending}
-            onClick={importPlans}
-            type="button"
-          >
-            Import…
-          </button>
-          <button
-            className="primary-action"
-            disabled={pending}
-            onClick={() => setNewPlanOpen(true)}
-            type="button"
-          >
-            New plan
-          </button>
-        </div>
-      </div>
 
       {previousFile === null ? null : (
         <StartupImportOffer
@@ -362,6 +350,27 @@ export function LibraryScreen({
               ))
             )}
           </nav>
+          <HomeContext parts={view?.context ?? []} />
+          <span className="library-toolbar-spacer" />
+          {catalogShown && (
+            <button
+              className="quiet-action action-compact"
+              onClick={() => dispatch(viewChanged({ kind: 'home', tab: 'catalog' }))}
+              type="button"
+            >
+              Browse catalog
+            </button>
+          )}
+          {operations.libraryRevealable && (
+            <button
+              className="quiet-action action-compact"
+              disabled={pending}
+              onClick={() => report(() => operations.revealLibrary())}
+              type="button"
+            >
+              Open folder
+            </button>
+          )}
           <label className="library-sort">
             Sort
             <select
@@ -567,11 +576,6 @@ export function LibraryScreen({
             ))}
           </tbody>
         </table>
-        {items === null ? null : (
-          <p className="library-footer">
-            {count} {count === 1 ? 'plan' : 'plans'} in the library
-          </p>
-        )}
       </div>
 
       {navigationNotice === null ? null : (

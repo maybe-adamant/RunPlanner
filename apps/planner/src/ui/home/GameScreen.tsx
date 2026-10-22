@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
+import type { HomeContextPart } from '@planner/projections/homeContext';
 import type {
   GameClearedSlot,
   GameStatusController,
@@ -17,6 +18,7 @@ import {
   describeSentNotActivated,
   projectGamePanel,
   projectGameProfileChoices,
+  projectGameContext,
   projectHomeSlots,
   projectSlotClearing,
   type GameActiveSlotIntent,
@@ -38,6 +40,7 @@ import type {
 } from '@planner/workspace/communityEvents';
 import type { SlotRebuildController } from '@planner/workspace/slotRebuild';
 import { CommunityEventCard } from '../shell/NoticeArea';
+import { HomeContext } from './HomeContext';
 import { HomeToast } from './HomeToast';
 import type { LibrarySlotIndex } from './useLibrarySlotLinks';
 
@@ -122,6 +125,7 @@ function SwitchAwayDialog({
 
 function LocationCard({
   changing,
+  context,
   discovery,
   location,
   onCancelChange,
@@ -137,6 +141,8 @@ function LocationCard({
 }: {
   readonly focusRequest: number;
   readonly changing: boolean;
+  /** The Game context, carried here while no module card leads the column. */
+  readonly context: readonly HomeContextPart[];
   readonly discovery: GameTargetDiscovery | null;
   readonly location: GameLocationProduct;
   readonly onCancelChange: () => void;
@@ -164,9 +170,12 @@ function LocationCard({
         className="home-panel home-card"
         ref={sectionRef}
       >
-        <h3 className="home-section-title" id="game-location-title">
-          Game location
-        </h3>
+        <div className="home-panel-heading">
+          <h3 className="home-section-title" id="game-location-title">
+            Game location
+          </h3>
+          <HomeContext parts={context} />
+        </div>
         <div className="home-status-line">
           <span className="home-status-text">
             {location.name} · {location.kindLabel}
@@ -212,9 +221,12 @@ function LocationCard({
       className="home-panel home-card"
       ref={sectionRef}
     >
-      <h3 className="home-section-title" id="game-location-title">
-        Game location
-      </h3>
+      <div className="home-panel-heading">
+        <h3 className="home-section-title" id="game-location-title">
+          Game location
+        </h3>
+        <HomeContext parts={context} />
+      </div>
       <p className="game-publication-hint">Choose where Hades II mods are installed.</p>
       <div className="game-panel-actions">
         <button
@@ -267,6 +279,7 @@ function LocationCard({
 }
 
 function ModuleCard({
+  context,
   feedback,
   module,
   onCheckoutInstall,
@@ -275,6 +288,8 @@ function ModuleCard({
   onRemove,
   pending,
 }: {
+  /** "Ready · 4 slots filled · Slot 2 plays next". */
+  readonly context: readonly HomeContextPart[];
   readonly onOpenPage: (url: string) => void;
   readonly feedback: Feedback | null;
   readonly module: GameModuleSectionProduct;
@@ -288,9 +303,12 @@ function ModuleCard({
   const otherSteps = module.steps.filter((step) => step !== moduleStep);
   return (
     <section aria-labelledby="game-module-title" className="home-panel home-card">
-      <h3 className="home-section-title" id="game-module-title">
-        Status
-      </h3>
+      <div className="home-panel-heading">
+        <h3 className="home-panel-title" id="game-module-title">
+          Game module
+        </h3>
+        <HomeContext ownLine parts={context} />
+      </div>
       <div className="home-status-line">
         <span className="home-status-text" data-tone={module.tone}>
           {module.summary}
@@ -661,6 +679,7 @@ function GameSections({
   }, [communityEvents]);
 
   const product = status === null ? null : projectGamePanel(status);
+  const context = projectGameContext(status);
   const notActivated = describeSentNotActivated(lastActivationFailure, status);
   const slots =
     status === null
@@ -851,6 +870,7 @@ function GameSections({
       <div className="home-game-side">
         {product.module === null ? null : (
           <ModuleCard
+            context={context}
             feedback={feedback}
             module={product.module}
             onCheckoutInstall={() => requestInstall(true)}
@@ -866,6 +886,7 @@ function GameSections({
         )}
         <LocationCard
           changing={changing}
+          context={product.module === null ? context : []}
           discovery={discovery}
           location={product.location}
           focusRequest={focusRequest}
@@ -894,13 +915,9 @@ function GameSections({
           pickerOpen={pickerOpen}
         />
         {product.module === null ? <FeedbackLine feedback={feedback} /> : null}
+        {/* Last in the column, so the event panel appearing moves nothing above it. */}
         {communityEvents === undefined ? null : (
-          <section aria-labelledby="game-event-title" className="home-event">
-            <h3 className="home-section-title" id="game-event-title">
-              Community event
-            </h3>
-            <CommunityEventCard communityEvents={communityEvents} gameStatus={gameStatus} />
-          </section>
+          <CommunityEventCard communityEvents={communityEvents} gameStatus={gameStatus} />
         )}
       </div>
       {slots === null ? null : (
@@ -1045,10 +1062,7 @@ export function GameScreen({
   readonly slotRebuild?: SlotRebuildController;
 }) {
   return (
-    <section aria-labelledby="game-title" className="home-page">
-      <div className="home-page-heading">
-        <h2 id="game-title">Game module</h2>
-      </div>
+    <section aria-label="Game" className="home-page">
       {gameStatus === undefined ? (
         <p className="game-publication-hint">
           Game location and game module management are available in the desktop application.

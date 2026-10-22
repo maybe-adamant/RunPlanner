@@ -81,6 +81,9 @@ describe('catalog view', () => {
       'Underworld WR',
     ]);
     expect(titles({ filter: 'OPENING' })).toEqual(['Sub 3m Surface']);
+    // The context counts the entries the category and filters show.
+    expect(view({ category: 'speedrun' }).context).toEqual([{ text: '3 plans', tone: null }]);
+    expect(view({ filter: 'OPENING' }).context).toEqual([{ text: '1 plan', tone: null }]);
     expect(titles({ filter: 'mel' })).toEqual(['Chronos practice']);
     expect(titles({ filter: 'zeus' })).toEqual(['Underworld WR']);
     expect(titles({ routeKey: 'Surface' })).toEqual(['Sub 3m Surface']);

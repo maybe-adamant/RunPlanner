@@ -196,6 +196,16 @@ describe('library view', () => {
     expect(inGame.rows).toMatchObject([
       { name: 'Boss practice', slots: [{ slot: 2, marker: null }] },
     ]);
+    // The context counts the whole library and its plans in game, and what a search shows.
+    expect(projectLibraryView(catalog, listing, links, NOW, query()).context).toEqual([
+      { text: '5 plans', tone: null },
+      { text: '1 in game', tone: 'ok' },
+    ]);
+    expect(inGame.context).toEqual([
+      { text: '5 plans', tone: null },
+      { text: '1 in game', tone: 'ok' },
+      { text: '1 shown', tone: null },
+    ]);
   });
 
   it('sorts by last edit or by name', () => {

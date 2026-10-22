@@ -81,7 +81,7 @@ describe('App', () => {
     const markup = appMarkup(application);
 
     expect(markup).toContain('Run Planner');
-    expect(markup).toContain('Your plans');
+    expect(markup).toContain('aria-label="Library"');
     expect(markup).toContain('aria-current="page"');
     expect(markup).toContain('>Library</button>');
     expect(markup).toContain('>Game</button>');

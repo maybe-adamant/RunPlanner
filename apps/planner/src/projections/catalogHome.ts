@@ -1,3 +1,4 @@
+import { plansText, type HomeContextPart } from '@planner/projections/homeContext';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 import type { CatalogCategory, CatalogEntry } from '@planner/persistence/catalogFeedHost';
@@ -66,6 +67,8 @@ export interface CatalogView {
   readonly rows: readonly CatalogRow[];
   /** Entries in the shown category before search and filters. */
   readonly total: number;
+  /** The entries shown under the category, search and filters. */
+  readonly context: readonly HomeContextPart[];
 }
 
 function matches(entry: CatalogEntry, needle: string): boolean {
@@ -142,5 +145,11 @@ export function projectCatalogView(
       ? left.route.localeCompare(right.route) || left.entry.title.localeCompare(right.entry.title)
       : left.entry.title.localeCompare(right.entry.title),
   );
-  return Object.freeze({ tabs, tags, rows, total: inCategory.length });
+  return Object.freeze({
+    tabs,
+    tags,
+    rows,
+    total: inCategory.length,
+    context: [{ text: plansText(rows.length), tone: null }],
+  });
 }

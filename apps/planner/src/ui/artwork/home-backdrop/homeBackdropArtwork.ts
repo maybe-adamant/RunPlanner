@@ -1,4 +1,4 @@
-import readingScene from './assets/ReadingScene.webp';
+import homeBackdrop from './assets/HomeBackdrop.webp';
 
-/** The Home screens' window backdrop: Melinoë reading by candlelight. */
-export const homeBackdropArtwork: string = readingScene;
+/** The Home screens' window backdrop. */
+export const homeBackdropArtwork: string = homeBackdrop;

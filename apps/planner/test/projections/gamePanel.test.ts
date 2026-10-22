@@ -4,6 +4,7 @@ import {
   describePublicationBlocker,
   describeRemoveOutcome,
   projectGamePanel,
+  projectGameContext,
   projectGameProfileChoices,
   projectGameSendButton,
   projectEventPlaysNext,
@@ -850,5 +851,41 @@ describe('Game panel projection', () => {
     expect(describeSlotRestoration({ ...restored, status: 'nativeWrite', message: 'x' })).toBe(
       'Not restored: x',
     );
+  });
+
+  it('says whether the module is ready, how many slots are filled and which plays next', () => {
+    const filled = gameModuleStatus({
+      inspection: {
+        planSlots: planSlots(
+          planSlot(1, { state: 'present' }),
+          planSlot(2, { state: 'stale' }),
+          planSlot(4, { state: 'present' }),
+        ),
+        activeSlot: { state: 'present', slot: 4 },
+      },
+    });
+    expect(projectGameContext(filled)).toEqual([
+      { text: 'Ready', tone: 'ok' },
+      { text: '3 slots filled', tone: null },
+      { text: 'Slot 4 plays next', tone: 'next' },
+    ]);
+    // A slot that cannot play is not named as playing next.
+    expect(
+      projectGameContext(
+        gameModuleStatus({
+          inspection: {
+            planSlots: planSlots(planSlot(2, { state: 'stale' })),
+            activeSlot: { state: 'present', slot: 2 },
+          },
+        }),
+      ),
+    ).toEqual([
+      { text: 'Ready', tone: 'ok' },
+      { text: '1 slot filled', tone: null },
+    ]);
+    expect(projectGameContext(gameModuleStatus({ target: null, inspection: null }))).toEqual([
+      { text: 'Not connected', tone: null },
+    ]);
+    expect(projectGameContext(null)).toEqual([]);
   });
 });
