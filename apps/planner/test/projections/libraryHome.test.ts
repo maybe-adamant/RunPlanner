@@ -116,7 +116,7 @@ describe('library view', () => {
       ['Broken.runplanner.json', 'unopenable'],
     ]);
     expect(root.rows[0]).toMatchObject({
-      reason: 'Made by a newer Run Planner (schema 120); update to open it.',
+      reason: 'Made by a newer Run Planner; update to open it.',
     });
     expect(root.rows[1]).toMatchObject({
       location: null,

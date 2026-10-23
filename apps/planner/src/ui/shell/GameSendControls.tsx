@@ -242,8 +242,7 @@ export function ReplaceSlotDialog({
       title={`Replace the plan in slot ${slot}?`}
     >
       <p className="game-publication-message" id="game-plan-replace-message">
-        The plan already in this slot is overwritten with this plan. A run already in progress keeps
-        the plan it started with.
+        A run in progress keeps its plan.
       </p>
     </ConfirmationDialog>
   );

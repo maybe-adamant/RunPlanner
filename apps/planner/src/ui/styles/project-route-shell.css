@@ -466,8 +466,8 @@
 }
 
 /* In the Draft panel the loadout follows "Plan up to" directly, as one block of route settings. */
-.draft-fieldset > .route-scope + .route-loadout-panel {
-  margin-top: -0.25rem;
+.draft-section > .route-scope + .route-loadout-panel {
+  margin-top: 0.25rem;
   padding-top: 0;
 }
 
@@ -1087,13 +1087,16 @@
   color: var(--muted);
 }
 
-.draft-heading {
+.route-draft > .draft-heading {
   margin-bottom: 0.25rem;
   padding-bottom: 0.6rem;
   border-bottom: 1px solid #30313a;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  /* Every tab's row is as tall as Advanced's compact Reset button, so the rule stays put. */
+  box-sizing: content-box;
+  min-height: var(--action-compact-height);
+  align-items: center;
   justify-content: space-between;
   gap: 0.5rem 1rem;
 }
@@ -1129,9 +1132,20 @@
   outline-offset: 3px;
 }
 
+/* A warning, not an action: a pill in the danger tones, as tall as the Advanced tab's Reset. */
 .draft-heading-meta {
-  color: var(--selection-accent);
+  display: inline-flex;
+  box-sizing: border-box;
+  height: var(--action-compact-height);
+  align-items: center;
+  margin-left: auto;
+  padding: 0 0.75rem;
+  border: 1px solid rgb(202 112 112 / 48%);
+  border-radius: 999px;
+  color: #eeb8b8;
+  background: rgb(110 43 43 / 16%);
   font-size: 0.85rem;
+  font-weight: 600;
 }
 
 /* Advanced-tab text shares the section labels' face and weight, in sentence case. */

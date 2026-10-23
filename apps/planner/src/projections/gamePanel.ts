@@ -99,7 +99,7 @@ function modpackLibLink(url: string): GameModuleLink {
   };
 }
 const R2MODMAN_MANAGED_WARNING =
-  'r2modman manages this Run Planner folder. Disabling or uninstalling Run Planner in r2modman renames or deletes the planner’s files. Remove the Run Planner package in r2modman.';
+  'r2modman manages this folder. Remove the Run Planner package in r2modman.';
 const UNREADABLE_MOD_LIST = 'r2modman’s mod list couldn’t be read';
 
 function majorOf(version: string): string {
@@ -180,9 +180,6 @@ function consentFacts(inspection: GameTargetInspection): readonly string[] {
   if (inspection.r2modman.state === 'managed') facts.push(R2MODMAN_MANAGED_WARNING);
   else if (inspection.r2modman.state === 'unreadable')
     facts.push(`${UNREADABLE_MOD_LIST}, so r2modman may manage this folder.`);
-  else if (inspection.r2modman.state === 'unmanaged')
-    facts.push('r2modman does not manage this folder.');
-  facts.push('The replaced copy is backed up to the planner’s application data.');
   return facts;
 }
 
@@ -234,8 +231,8 @@ function instructionSteps(
     steps.push({
       key: 'stranded',
       text: installStep
-        ? `A failed update left the previous module at ReturnOfModding/${inspection.strandedInstall}. Install again to recover; the planner backs it up first`
-        : `A failed update left an old module copy at ReturnOfModding/${inspection.strandedInstall}. The game does not load it; delete it once you no longer need it`,
+        ? `A failed update left a module at ReturnOfModding/${inspection.strandedInstall}. Install again to recover`
+        : `Old module copy at ReturnOfModding/${inspection.strandedInstall}; safe to delete`,
       found: null,
       tone: 'error',
       action: null,
@@ -299,8 +296,8 @@ function details(
       key: 'coordinator',
       label: 'Coordinator',
       value: inspection.coordinator.managed
-        ? 'The RunPlanner_Modpack coordinator is no longer needed. Remove it in r2modman.'
-        : 'The RunPlanner_Modpack coordinator is no longer needed. Remove its plugin folder.',
+        ? 'No longer needed; remove it in r2modman.'
+        : 'No longer needed; remove its plugin folder.',
     });
   }
   return result;
@@ -457,7 +454,7 @@ export function describeRemoveOutcome(outcome: GameModuleRemoveResult['outcome']
     case 'absent':
       return 'The game module is not installed.';
     case 'notPlannerInstalled':
-      return 'The planner did not install this module, so it was not removed.';
+      return 'Not removed: not installed by the planner.';
     case 'managedByR2modman':
       return 'r2modman manages this module. Remove it in r2modman.';
     case 'r2modmanUnreadable':

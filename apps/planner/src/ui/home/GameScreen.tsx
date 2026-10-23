@@ -100,8 +100,7 @@ function SwitchAwayDialog({
         <h2 id="game-location-switch-title">Switch game location?</h2>
       </header>
       <p className="game-publication-message" id="game-location-switch-message">
-        The planner installed the game module in {name}. A copy you keep there is no longer tracked
-        and won’t receive planner updates. Plan slots stay in place either way.
+        A module left in {name} won’t get planner updates.
       </p>
       {removal.available || removal.reason === null ? null : (
         <p className="game-publication-hint">{removal.reason}</p>
@@ -257,9 +256,7 @@ function LocationCard({
         )}
       </div>
       {discovery === null ? null : !discovery.supported ? (
-        <p className="game-publication-hint">
-          r2modman profile discovery is not available on this platform. Choose the folder instead.
-        </p>
+        <p className="game-publication-hint">Choose the folder.</p>
       ) : discovery.profiles.length === 0 ? (
         <p className="game-publication-hint">No r2modman Hades II profiles were found.</p>
       ) : (
@@ -314,12 +311,7 @@ function ModuleCard({
           {module.summary}
         </span>
         {moduleStep?.action == null ? null : (
-          <button
-            className="primary-action action-compact"
-            disabled={pending}
-            onClick={onInstall}
-            type="button"
-          >
+          <button className="primary-action" disabled={pending} onClick={onInstall} type="button">
             {moduleStep.action.label}
           </button>
         )}
@@ -847,7 +839,7 @@ function GameSections({
           leaveChange();
           return {
             tone: 'alert',
-            text: `The game module was removed, but the new location could not be set, so the game location did not change: ${errorText(error)}`,
+            text: `Module removed; location not changed: ${errorText(error)}`,
           };
         }
         return null;
@@ -1035,9 +1027,7 @@ function GameSections({
           pending={pending}
           title="Remove game module?"
         >
-          <p className="game-publication-message">
-            The planner-installed Run Planner folder is deleted. Plan slots and ModpackLib are kept.
-          </p>
+          <p className="game-publication-message">Plan slots and ModpackLib are kept.</p>
         </ConfirmationDialog>
       )}
     </div>
@@ -1064,9 +1054,7 @@ export function GameScreen({
   return (
     <section aria-label="Game" className="home-page">
       {gameStatus === undefined ? (
-        <p className="game-publication-hint">
-          Game location and game module management are available in the desktop application.
-        </p>
+        <p className="game-publication-hint">Available in the desktop app.</p>
       ) : (
         <GameSections
           catalog={catalog}

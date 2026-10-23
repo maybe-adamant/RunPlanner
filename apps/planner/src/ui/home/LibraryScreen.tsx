@@ -49,7 +49,7 @@ function StartupImportOffer({
 }: {
   readonly id: string;
   readonly title: string;
-  readonly description: string;
+  readonly description?: string;
   readonly accept: () => Promise<{ readonly status: string; readonly message: string }>;
   readonly decline: () => Promise<void>;
 }) {
@@ -68,7 +68,7 @@ function StartupImportOffer({
     <section aria-labelledby={id} className="home-panel library-offer">
       <div>
         <h3 id={id}>{title}</h3>
-        <p>{description}</p>
+        {description === undefined ? null : <p>{description}</p>}
         {message === null ? null : <p role="alert">{message}</p>}
       </div>
       <div className="library-offer-actions">
@@ -260,7 +260,7 @@ export function LibraryScreen({
         : createPortal(
             <>
               <button
-                className="quiet-action"
+                className="quiet-action action-compact"
                 disabled={pending}
                 onClick={() => setFolderDialog({ kind: 'new' })}
                 type="button"
@@ -268,7 +268,7 @@ export function LibraryScreen({
                 New folder
               </button>
               <button
-                className="secondary-action"
+                className="secondary-action action-compact"
                 disabled={pending}
                 onClick={importPlans}
                 type="button"
@@ -291,7 +291,7 @@ export function LibraryScreen({
         <StartupImportOffer
           accept={() => operations.acceptPreviousFile()}
           decline={() => operations.declinePreviousFile()}
-          description="This was the file you had open. Plans now live in your library and save as you edit."
+          description="The file you had open."
           id="previous-file-title"
           title={`Import ${previousFile.fileName}?`}
         />
@@ -300,7 +300,6 @@ export function LibraryScreen({
         <StartupImportOffer
           accept={() => operations.acceptRecoveredPlan()}
           decline={() => operations.declineRecoveredPlan()}
-          description="The planner kept these edits before plans lived in your library."
           id="recovered-plan-title"
           title="Recovered unsaved plan"
         />
@@ -423,7 +422,7 @@ export function LibraryScreen({
                   {view?.searching === true
                     ? 'No plan matches.'
                     : count === 0
-                      ? 'No plans yet. Start one with New plan, or import a plan file.'
+                      ? 'No plans yet.'
                       : 'This folder is empty.'}
                 </td>
               </tr>

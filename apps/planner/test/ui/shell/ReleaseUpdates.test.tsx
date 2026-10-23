@@ -61,7 +61,7 @@ describe('Release updates', () => {
     await user.click(screen.getByRole('button', { name: 'Check for updates' }));
     await user.click(await screen.findByRole('button', { name: 'Update' }));
     expect(installUpdate).not.toHaveBeenCalled();
-    expect(screen.getByText(/Run Planner closes, installs the update and reopens/)).toBeTruthy();
+    expect(screen.getByText(/The app restarts/)).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await user.click(screen.getByRole('button', { name: 'Update' }));

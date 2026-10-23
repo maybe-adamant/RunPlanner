@@ -53,9 +53,7 @@ describe('Library screen', () => {
     expect(screen.getByRole('button', { name: 'Library' }).getAttribute('aria-current')).toBe(
       'page',
     );
-    expect(
-      screen.getByText('No plans yet. Start one with New plan, or import a plan file.'),
-    ).toBeTruthy();
+    expect(screen.getByText('No plans yet.')).toBeTruthy();
     // Home starts with no plan open.
     expect(application.store.getState().projectWorkspace.kind).toBe('noProject');
 
@@ -91,7 +89,7 @@ describe('Library screen', () => {
     expect(within(row).getByText(`· ${catalog.biomes.byKey.F!.label}`)).toBeTruthy();
     const future = rowOf('Future');
     expect(
-      within(future).getByText('Made by a newer Run Planner (schema 120); update to open it.'),
+      within(future).getByText('Made by a newer Run Planner; update to open it.'),
     ).toBeTruthy();
     expect(within(future).getByRole('button', { name: 'Open Future' })).toHaveProperty(
       'disabled',

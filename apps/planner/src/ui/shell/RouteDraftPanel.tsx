@@ -126,7 +126,7 @@ function godRefusalNote(catalog: Catalog, refusal: DraftRefusal): string | undef
   const god = (key: string) => catalog.traitGivers.byKey[key]?.label ?? key;
   switch (refusal.kind) {
     case 'requiredGod':
-      return `The run opens with ${god(refusal.godKey)}'s boon, so ${god(refusal.godKey)} leads the pool.`;
+      return `Add ${god(refusal.godKey)}: the run opens with ${god(refusal.godKey)}'s boon.`;
     case 'godUnreachable':
       return `${god(refusal.godKey)} needs ${refusal.needsGodKeys.map(god).join(' or ')} in the pool.`;
     case 'firstOfferBlocked':
@@ -498,14 +498,14 @@ export function RouteDraftPanel({
             </button>
           ))}
         </div>
-        {overwrites ? (
+        {tab === 'draft' && overwrites ? (
           <span className="draft-heading-meta" role="note">
             Drafting replaces the current route plan.
           </span>
         ) : null}
         {tab === 'advanced' ? (
           <button
-            className="secondary-action draft-advanced-reset"
+            className="secondary-action action-compact draft-advanced-reset"
             disabled={!draftAdvancedChanged(draft)}
             onClick={() => replaceDraft(withDraftAdvancedDefaults(draft))}
             type="button"
@@ -524,25 +524,33 @@ export function RouteDraftPanel({
       >
         {tab === 'draft' ? (
           <>
-            <RoutePrefixControl
-              biomes={project.route.itineraryBiomeKeys.map((biomeKey) => ({
-                biomeKey,
-                label: biomeLabel(biomeKey),
-              }))}
-              configuredBiomeCount={project.route.biomes.length}
-              routeKey={project.route.routeKey}
-            />
-            {initialProfile.kind === 'freshFile' ? (
-              <FreshFileLoadout catalog={catalog} fixedWeaponKey={initialProfile.fixedWeaponKey} />
-            ) : (
-              <RouteLoadoutControls
-                authoredRoute={project.route}
-                catalog={catalog}
-                interactions={interactions}
-                keepsakeUnavailableHint={godKeepsakeHint}
-                workspaceRoute={workspaceRoute}
+            <section className="draft-section" aria-labelledby="draft-run-heading">
+              <h3 className="draft-section-heading" id="draft-run-heading">
+                Run
+              </h3>
+              <RoutePrefixControl
+                biomes={project.route.itineraryBiomeKeys.map((biomeKey) => ({
+                  biomeKey,
+                  label: biomeLabel(biomeKey),
+                }))}
+                configuredBiomeCount={project.route.biomes.length}
+                routeKey={project.route.routeKey}
               />
-            )}
+              {initialProfile.kind === 'freshFile' ? (
+                <FreshFileLoadout
+                  catalog={catalog}
+                  fixedWeaponKey={initialProfile.fixedWeaponKey}
+                />
+              ) : (
+                <RouteLoadoutControls
+                  authoredRoute={project.route}
+                  catalog={catalog}
+                  interactions={interactions}
+                  keepsakeUnavailableHint={godKeepsakeHint}
+                  workspaceRoute={workspaceRoute}
+                />
+              )}
+            </section>
             <section className="draft-section" aria-labelledby="draft-gods-heading">
               <div className="draft-title-row">
                 <h3 className="draft-section-heading" id="draft-gods-heading">
@@ -724,7 +732,7 @@ export function RouteDraftPanel({
                 </div>
                 <button
                   aria-haspopup="dialog"
-                  className="secondary-action"
+                  className="secondary-action action-compact"
                   disabled={basket === undefined}
                   id="draft-basket-edit"
                   onClick={() => setBasketOpen(true)}
