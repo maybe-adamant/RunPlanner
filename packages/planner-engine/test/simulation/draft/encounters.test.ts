@@ -303,4 +303,49 @@ describe('draft encounter keepsakes', () => {
       met: true,
     });
   });
+
+  it("decides a ship room's later combat once reached: a rack Gorgon's Athena and Icarus in Thessaly", () => {
+    const surface = createProjectDocument(catalog, {
+      projectId: 'o',
+      routeKey: 'Surface',
+      configuredBiomeCount: 2,
+    });
+    const result = draftProject(
+      catalog,
+      surface,
+      {
+        loadout: defaultLoadout,
+        world: {
+          godKeys: ['Zeus', 'Hera', 'Demeter', 'Ares'],
+          storyNpcByBiome: {},
+          fieldNpcsByBiome: { O: ['Icarus'] },
+        },
+        basketTraitKeys: ['FocusLastStandBoon'],
+        rackKeepsakeKeys: ['AthenaEncounterKeepsake', null, null],
+      },
+      1,
+    );
+    if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+    const thessaly = result.project.route.biomes.find((biome) => biome.biomeKey === 'O')!;
+    const combats = thessaly.topology!.occurrences.filter(
+      (occurrence) => occurrence.encounters.encounterKeyByPhase.Combat1 !== undefined,
+    );
+    expect(
+      combats.filter(
+        (occurrence) =>
+          occurrence.encounters.gorgonResultByPhase?.Combat1?.athenaTriggerConditionMet,
+      ),
+    ).toHaveLength(1);
+    expect(
+      combats.some(
+        (occurrence) => occurrence.encounters.encounterKeyByPhase.Combat1 === 'IcarusCombatO',
+      ),
+    ).toBe(true);
+    expect(result.report.targets).toEqual(
+      expect.arrayContaining([
+        { kind: 'basketTrait', key: 'FocusLastStandBoon', met: true },
+        { kind: 'fieldNpc', key: 'Icarus', biomeKey: 'O', met: true },
+      ]),
+    );
+  });
 });
