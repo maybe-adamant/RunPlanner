@@ -532,13 +532,6 @@ export function RoomActionsWorkbench({
         <TimelineRow
           data-action-accent={actionAccent}
           data-blocking-product={row.blockingProduct}
-          {...hintProps(
-            actionAccent === 'phase'
-              ? 'Required in this timeline section, not necessarily as the next action.'
-              : actionAccent === 'room'
-                ? 'Required before leaving the room.'
-                : undefined,
-          )}
           data-dragging={pointerDrag?.actionKey === row.key || undefined}
           data-drop-after={
             row.rank === null ? undefined : dropState({ kind: 'afterSlot', slotKey: row.key })

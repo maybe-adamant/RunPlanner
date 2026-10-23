@@ -718,7 +718,7 @@ describe('DecisionWorkbench', () => {
     expect(screen.queryByRole('button', { name: 'Add next decision' })).toBeNull();
     const uncommittedRemoval = screen.getByRole('button', { name: 'Remove these doors' });
     expect(uncommittedRemoval).toHaveProperty('disabled', true);
-    expect(hintOf(uncommittedRemoval)).toBe('No doors chosen yet.');
+    expect(hintOf(uncommittedRemoval)).toBeNull();
     expect(screen.queryByText('Add Preboss doors')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Check Preboss rooms' })).toBeNull();
 

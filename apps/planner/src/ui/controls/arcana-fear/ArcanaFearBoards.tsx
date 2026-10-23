@@ -100,9 +100,7 @@ export function ArcanaBoard({
               hint={
                 exceedsGrasp
                   ? `${toggle.grasp.cost} Grasp exceeds the starting capacity of ${toggle.grasp.capacity}.`
-                  : automatic
-                    ? 'Activates automatically'
-                    : undefined
+                  : undefined
               }
             />
           );

@@ -12,7 +12,7 @@ export function ArcanaCard({
   ...button
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   readonly cardKey: string;
-  /** Replaces the rank summary as the card's hint. */
+  /** Why the card cannot be chosen; the rank stays in its accessible description. */
   readonly hint?: string | undefined;
   readonly label: string;
   readonly rarity?: string | null | undefined;
@@ -45,7 +45,7 @@ export function ArcanaCard({
       className="arcana-card-control"
       aria-label={button['aria-label'] ?? label}
       {...hintProps(
-        hint ?? (rankText === undefined ? undefined : rankDescription),
+        hint,
         button['aria-description'] ??
           `${rankDescription}${selectionOrder === undefined ? '' : `; pick ${selectionOrder}`}`,
       )}

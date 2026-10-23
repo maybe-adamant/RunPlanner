@@ -193,7 +193,6 @@ function ExactRepairAction({
       {...(intent === undefined ? {} : { 'data-command': intent.command.kind })}
       disabled={intent === undefined}
       onClick={() => intent === undefined || executeIntent(intent)}
-      {...hintProps(intent === undefined ? 'No unavailable doors to remove.' : undefined)}
       type="button"
     >
       {adds ? 'Add missing Preboss doors' : 'Remove unavailable doors'}
@@ -208,14 +207,11 @@ function ExactRepairAction({
 export function TopologyRemovalAction({
   accessibleLabel,
   compact = false,
-  disabledHint,
   interaction,
   label,
 }: {
   readonly accessibleLabel?: string;
   readonly compact?: boolean;
-  /** Hint of the mounted slot while no removal applies. */
-  readonly disabledHint?: string;
   readonly interaction: WorkspaceTopologyRemovalInteraction | undefined;
   readonly label: string;
 }) {
@@ -230,7 +226,6 @@ export function TopologyRemovalAction({
         className={`danger-action${compact ? ' action-compact' : ''}`}
         disabled={interaction === undefined}
         onClick={() => interaction === undefined || executeIntent(interaction.intent)}
-        {...hintProps(interaction === undefined ? disabledHint : undefined)}
         type="button"
       >
         {label}
@@ -481,12 +476,13 @@ function AdditionalExitCard({
   );
 }
 
-function batchContinuationHint(node: BatchNode): string {
+/** Only a partial selection needs explaining; an empty one is obvious. */
+function batchContinuationHint(node: BatchNode): string | undefined {
   const doorSelected =
     node.targets.some((target) => target.selected) ||
     node.zagreusContract?.selected === true ||
     node.chaos?.selected === true;
-  return doorSelected ? 'Fill the remaining doors to continue.' : 'Select a door to continue.';
+  return doorSelected ? 'Fill the remaining doors to continue.' : undefined;
 }
 
 /** Moves to the occurrence a decision continues into; disabled while none is selected. */
@@ -495,7 +491,7 @@ export function SelectedContinuationAction({
   disabledHint,
 }: {
   readonly continuation: { readonly marker: WorkspaceMarker } | undefined;
-  readonly disabledHint?: string;
+  readonly disabledHint?: string | undefined;
 }) {
   const dispatch = useAppDispatch();
   return (
@@ -739,11 +735,7 @@ export function BatchWorkbench({
           continuation={node.selectedContinuation}
           disabledHint={batchContinuationHint(node)}
         />
-        <TopologyRemovalAction
-          disabledHint="No doors chosen yet."
-          interaction={removal}
-          label="Remove these doors"
-        />
+        <TopologyRemovalAction interaction={removal} label="Remove these doors" />
       </div>
     </section>
   );

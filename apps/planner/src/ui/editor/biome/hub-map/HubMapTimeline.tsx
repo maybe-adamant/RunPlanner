@@ -306,15 +306,7 @@ function TimelineFountainMarker({
           inert={markerDisabled}
           {...pointer}
           style={position}
-          {...hintProps(
-            appendWaits
-              ? candidateWaitingHint
-              : canAppend && !locked
-                ? 'Add the fountain to the visit order.'
-                : undefined,
-            undefined,
-            fountainLabel,
-          )}
+          {...hintProps(appendWaits ? candidateWaitingHint : undefined, undefined, fountainLabel)}
           type="button"
         >
           <HubMapFountainContent />

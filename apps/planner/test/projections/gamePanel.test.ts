@@ -678,7 +678,7 @@ describe('Game panel projection', () => {
         'chooseSlot',
         'Send to game…',
         { kind: 'openPlans' },
-        'Choose a slot.',
+        null,
       ],
       [
         projectGameSendButton(ready, mine, 2, { kind: 'sending' }),

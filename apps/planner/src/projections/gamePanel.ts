@@ -879,7 +879,7 @@ export function projectGameSendButton(
       state: 'chooseSlot',
       label: 'Send to game…',
       action: { kind: 'openPlans' },
-      description: 'Choose a slot.',
+      description: null,
     };
   }
   return {

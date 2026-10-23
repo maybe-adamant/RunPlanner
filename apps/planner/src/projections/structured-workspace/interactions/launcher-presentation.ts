@@ -8,7 +8,7 @@ import type { Catalog, TraitGiverDeclaration } from '@run-planner/engine/catalog
 
 import type { WorkspaceLauncherPresentation } from '../contracts/traits';
 
-/** The detail appears only when a chosen value exists to restate in full. */
+/** The detail appears only when the label cannot show the chosen value in full. */
 function presentation(
   label: string,
   detail?: string,
@@ -39,11 +39,7 @@ export function traitOfferLauncherPresentation(
         ? 'no curse'
         : (catalog.chaos.curses.byKey[curseKey]?.label ?? curseKey);
     const blessing = catalog.chaos.blessings.byKey[offer.blessingKey]?.label ?? offer.blessingKey;
-    return presentation(
-      `Edit Chaos · ${curse} → ${blessing}`,
-      `${curse} → ${blessing} · ${offer.rarity}`,
-      curseKey,
-    );
+    return presentation(`Edit Chaos · ${curse} → ${blessing}`, undefined, curseKey);
   }
   const kind = giver.providerKind === 'spell' ? 'Hex' : 'Trait';
   if (offer?.kind === 'fallbackGold') return presentation(`Edit ${kind} · Fallback Gold`);
@@ -54,7 +50,9 @@ export function traitOfferLauncherPresentation(
   const label = traitLabel(catalog, selected.traitKey);
   return presentation(
     `Edit ${kind} · ${label}`,
-    `${giver.label}: ${label}${selected.rarity === undefined ? '' : ` · ${selected.rarity}`}`,
+    kind === 'Hex'
+      ? `${giver.label}: ${label}${selected.rarity === undefined ? '' : ` · ${selected.rarity}`}`
+      : undefined,
     selected.traitKey,
   );
 }
@@ -70,14 +68,7 @@ export function levelResolutionLauncherPresentation(
   const target = value.kind === 'choice' ? value.selectedTraitKey : value.targetTraitKey;
   const levels = levelCount === undefined ? '' : ` +${levelCount}`;
   if (target === null) return presentation(`Edit Pom · Choose target${levels}`);
-  const label = traitLabel(catalog, target);
-  return presentation(
-    `Edit Pom · ${label}${levels}`,
-    `${label}${
-      levelCount === undefined ? '' : ` gains ${levelCount} level${levelCount === 1 ? '' : 's'}`
-    }`,
-    target,
-  );
+  return presentation(`Edit Pom · ${traitLabel(catalog, target)}${levels}`, undefined, target);
 }
 
 /** `Edit Anvil` carries no value; its removal and additions live in the summary. */

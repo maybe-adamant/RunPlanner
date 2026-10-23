@@ -19,7 +19,6 @@ import {
   useFindingMark,
   useFindingTarget,
 } from '@planner/ui/feedback/useFindingTarget';
-import { hintProps } from '@planner/ui/controls/hint';
 
 const wellIcon = (itemKey: string | null): string | undefined =>
   itemKey === null ? undefined : (wellArtwork[itemKey] ?? undefined);
@@ -204,14 +203,7 @@ export function RoomInventoryPanel({
                           actionInteraction === undefined ||
                           (proposal.structurallyAuthorable !== true && !slot.sale.sold);
                         return (
-                          <label
-                            className="shop-family-participation"
-                            {...hintProps(
-                              disabled && slot.traitKey === null
-                                ? 'Choose a trait to sell.'
-                                : undefined,
-                            )}
-                          >
+                          <label className="shop-family-participation">
                             <input
                               {...(saleRow === undefined ? {} : findingMark(saleRow.address))}
                               aria-label={`Sold ${slot.label}`}
@@ -403,7 +395,6 @@ export function StygianWellPurchasedControl({
         aria-label={`Purchased Stygian Well ${slot.label}`}
         checked={slot.purchased}
         disabled={slot.itemKey === null}
-        {...hintProps(slot.itemKey === null ? 'Choose the item first.' : undefined)}
         onChange={(event) => executeIntent(purchase.intentFor(event.target.checked))}
         type="checkbox"
       />
@@ -460,7 +451,6 @@ export function HermesShrineSlotEditor({
           <select
             aria-label={`Hermes Shrine ${label} delivery delay`}
             disabled={current === null}
-            {...hintProps(current === null ? 'Purchase the item first.' : undefined)}
             onChange={(event) => {
               if (current === null) return;
               executeIntent(
@@ -515,7 +505,6 @@ export function HermesShrinePurchasedControl({
         aria-label={`Purchased Hermes Shrine ${label}`}
         checked={purchase.purchase !== null}
         disabled={offer.rewardType === null}
-        {...hintProps(offer.rewardType === null ? 'Choose the item first.' : undefined)}
         onChange={(event) =>
           executeIntent(purchase.intentFor(event.target.checked ? { delay: 2 } : null))
         }

@@ -55,11 +55,7 @@ export function NavigationStatusMarker({ status }: { readonly status: StatusPres
 
 export function FindingCount({ count, label }: { readonly count: number; readonly label: string }) {
   return count === 0 ? null : (
-    <span
-      aria-label={`${count} ${label}`}
-      className="findings-count"
-      {...hintProps(`${count} ${label}`, undefined, `${count} ${label}`)}
-    >
+    <span aria-label={`${count} ${label}`} className="findings-count">
       {count}
     </span>
   );

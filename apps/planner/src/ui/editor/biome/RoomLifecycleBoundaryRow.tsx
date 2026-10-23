@@ -8,7 +8,6 @@ import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { TimelineRow } from './TimelineRow';
-import { hintProps } from '@planner/ui/controls/hint';
 
 /** Render-only boundary row; timeline placement remains the projection's authority. */
 export function LifecycleBoundaryRow({
@@ -58,7 +57,6 @@ export function LifecycleBoundaryRow({
               <button
                 className="timeline-banner-identity"
                 onClick={() => dispatch(semanticOwnerNavigated(identity.owner))}
-                {...hintProps('Edit in Room Overview.')}
                 type="button"
               >
                 {identity.label}
