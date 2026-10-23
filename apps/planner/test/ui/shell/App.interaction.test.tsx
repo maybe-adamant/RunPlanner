@@ -2213,7 +2213,10 @@ describe('route loadout interaction', () => {
     const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
     const weapon = screen.getByRole('button', { name: 'Starting weapon' });
     expect(startingKeepsake.closest('.route-loadout-row')).toBeTruthy();
-    expect(weapon.closest('.route-loadout-row')).toBeNull();
+    expect(weapon.closest('.route-loadout-row')).toBeTruthy();
+    expect(weapon.closest('.route-loadout-row')).not.toBe(
+      startingKeepsake.closest('.route-loadout-row'),
+    );
     await user.click(screen.getByRole('button', { name: 'Edit Arcana' }));
     const arcana = screen.getByRole('group', { name: 'Arcana, 0 active' });
     const artwork = Array.from(arcana.querySelectorAll('img'));
@@ -2232,7 +2235,7 @@ describe('route loadout interaction', () => {
       await user.click(screen.getByRole('button', { name: label }));
     }
 
-    expect(arcana.textContent).toContain('30 / 30 Grasp');
+    expect(screen.getByRole('dialog').querySelector('h2')?.textContent).toContain('30 / 30 Grasp');
     expect(screen.getByRole('button', { name: 'The Sorceress' })).toHaveProperty('disabled', true);
 
     await user.click(screen.getByRole('button', { name: 'Done' }));
@@ -2605,10 +2608,10 @@ describe('route loadout interaction', () => {
     expect(screen.getByRole('group', { name: 'Fear, 5 total' })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Done' }));
     expect(screen.getByRole('button', { name: 'Edit Fear' }).textContent).toBe(
-      'Fear · 1 active · 5/67 Fear',
+      '1 active · 5/67 Fear',
     );
     expect(screen.getByRole('button', { name: 'Edit Arcana' }).textContent).toBe(
-      'Arcana · 3 active · 1/30 Grasp',
+      '3 active · 1/30 Grasp',
     );
   });
 });

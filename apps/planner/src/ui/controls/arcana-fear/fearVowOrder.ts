@@ -27,3 +27,11 @@ export function fearVowsInGridOrder(catalog: Catalog) {
     return vow === undefined ? [] : [vow];
   });
 }
+
+/** The highest Fear the Vows allow together. */
+export function maximumFear(catalog: Catalog): number {
+  return fearVowsInGridOrder(catalog).reduce(
+    (total, vow) => total + vow.incrementalFear.reduce((sum, fear) => sum + fear, 0),
+    0,
+  );
+}

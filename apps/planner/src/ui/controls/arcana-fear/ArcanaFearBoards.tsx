@@ -6,7 +6,52 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 import { ArcanaCard } from './ArcanaCard';
 import { FearCard } from './FearCard';
-import { fearVowsInGridOrder } from './fearVowOrder';
+import { fearVowsInGridOrder, maximumFear } from './fearVowOrder';
+
+/** A picker dialog's title with its board's summary, such as "Arcana · 14 active · 30 / 30 Grasp". */
+export function ArcanaDialogTitle({
+  derived,
+  title,
+}: {
+  readonly derived: DerivedRouteLoadout;
+  readonly title: string;
+}) {
+  return (
+    <>
+      {title}
+      {/* The board's own group name carries the count for assistive technology. */}
+      <span aria-hidden="true" className="loadout-dialog-summary">
+        {' '}
+        · {derived.activeArcanaKeys.length} active · {derived.startingArcanaGrasp.cost} /{' '}
+        {derived.startingArcanaGrasp.capacity} Grasp
+      </span>
+    </>
+  );
+}
+
+/** Such as "Fear · 3 active · 12 / 67 Fear". */
+export function FearDialogTitle({
+  catalog,
+  derived,
+  fearRanks,
+  title,
+}: {
+  readonly catalog: Catalog;
+  readonly derived: DerivedRouteLoadout;
+  readonly fearRanks: Readonly<Record<string, number>>;
+  readonly title: string;
+}) {
+  const active = fearVowsInGridOrder(catalog).filter((vow) => (fearRanks[vow.key] ?? 0) > 0);
+  return (
+    <>
+      {title}
+      <span aria-hidden="true" className="loadout-dialog-summary">
+        {' '}
+        · {active.length} active · {derived.fearTotal} / {maximumFear(catalog)} Fear
+      </span>
+    </>
+  );
+}
 
 /**
  * The Arcana board over the engine's edit domain: each manual card toggles to the selection the
@@ -32,16 +77,6 @@ export function ArcanaBoard({
       aria-label={`Arcana, ${derived.activeArcanaKeys.length} active`}
       className="route-loadout-section"
     >
-      <div className="arcana-summary-line">
-        <p className="route-loadout-summary">
-          Arcana{' '}
-          <span>
-            {derived.activeArcanaKeys.length} active · {derived.startingArcanaGrasp.cost} /{' '}
-            {derived.startingArcanaGrasp.capacity} Grasp
-          </span>
-        </p>
-        <p className="arcana-legend">Grayscale: inactive · Color: active</p>
-      </div>
       <div className="arcana-board">
         {catalog.arcanaCards.values.map((card) => {
           const toggle = manualArcana.get(card.key);
@@ -96,9 +131,6 @@ export function FearBoard({
       aria-label={`Fear, ${derived.fearTotal} total`}
       className="route-loadout-section"
     >
-      <p className="route-loadout-summary">
-        Fear <span>{derived.fearTotal} total</span>
-      </p>
       <p className="panel-description">Click to cycle ranks · Right-click to reset</p>
       <div className="fear-rank-list">
         {fearVowsInGridOrder(catalog).map((vow) => {

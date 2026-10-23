@@ -22,8 +22,13 @@ import { AspectHexTreeDialog } from '@planner/ui/editor/rewards/AspectHexTreeDia
 import { useFindingTarget } from '../feedback/useFindingTarget';
 import { RouteFamiliarPicker } from './RouteFamiliarPicker';
 import { RouteWeaponPicker } from './RouteWeaponPicker';
-import { ArcanaBoard, FearBoard } from '@planner/ui/controls/arcana-fear/ArcanaFearBoards';
-import { fearVowsInGridOrder } from '@planner/ui/controls/arcana-fear/fearVowOrder';
+import {
+  ArcanaBoard,
+  ArcanaDialogTitle,
+  FearBoard,
+  FearDialogTitle,
+} from '@planner/ui/controls/arcana-fear/ArcanaFearBoards';
+import { fearVowsInGridOrder, maximumFear } from '@planner/ui/controls/arcana-fear/fearVowOrder';
 import { PresetChips } from '@planner/ui/controls/arcana-fear/PresetChips';
 import {
   projectArcanaPresetChips,
@@ -66,10 +71,6 @@ export function RouteLoadoutControls({
   const presets = useLoadoutPresets();
   const fearRanks = authoredRoute.loadout.fearRanks;
   const activeFearCount = fearVows.filter((vow) => fearRanks[vow.key]! > 0).length;
-  const maximumFear = fearVows.reduce(
-    (total, vow) => total + vow.incrementalFear.reduce((sum, fear) => sum + fear, 0),
-    0,
-  );
   const startingKeepsake = createRouteStartKeepsakeSelectionAddress(workspaceRoute.routeKey);
   const keepsake = interactions.keepsakeSelections.get(workspaceInteractionKey(startingKeepsake));
   if (keepsake === undefined)
@@ -83,59 +84,64 @@ export function RouteLoadoutControls({
     return result === undefined ? [] : [result];
   });
   const [dialog, setDialog] = useState<'Arcana' | 'Fear' | 'Hex'>();
-  const weaponCell = (
-    <div className="route-loadout-weapon-cell">
-      <RouteWeaponPicker
-        catalog={catalog}
-        id={`${workspaceRoute.routeKey}-weapon-aspect`}
-        weaponKey={weapon.key}
-        aspectKey={aspectKey}
-        onSelect={(weaponKey, aspectKey) =>
-          dispatch(
-            authoredProjectCommandDispatched({
-              kind: 'ReplaceRouteLoadout',
-              route: createRouteAddress(workspaceRoute.routeKey),
-              weaponKey,
-              aspectKey,
-            }),
-          )
-        }
-      />
-      {workspaceRoute.aspectHexTree === undefined ? null : (
-        <div className="field-control field-control-inline loadout-dialog-launcher">
-          <label htmlFor={`${workspaceRoute.routeKey}-aspect-hex`}>Sky Fall Hex</label>
-          <button
-            {...findingTarget(
-              workspaceRoute.aspectHexTree.address,
-              `${workspaceRoute.routeKey}-aspect-hex`,
-            )}
-            className="contextual-picker-trigger"
-            type="button"
-            aria-label="Edit Sky Fall Hex tree"
-            aria-haspopup="dialog"
-            onClick={() => setDialog('Hex')}
-          >
-            <span onMouseEnter={showTruncatedTitle}>
-              {workspaceRoute.aspectHexTree.layoutLabel} tree
-            </span>
-          </button>
-        </div>
-      )}
-    </div>
+  const weaponPicker = (
+    <RouteWeaponPicker
+      catalog={catalog}
+      id={`${workspaceRoute.routeKey}-weapon-aspect`}
+      weaponKey={weapon.key}
+      aspectKey={aspectKey}
+      onSelect={(weaponKey, aspectKey) =>
+        dispatch(
+          authoredProjectCommandDispatched({
+            kind: 'ReplaceRouteLoadout',
+            route: createRouteAddress(workspaceRoute.routeKey),
+            weaponKey,
+            aspectKey,
+          }),
+        )
+      }
+    />
   );
+  const hexLauncher =
+    workspaceRoute.aspectHexTree === undefined ? null : (
+      <div className="field-control field-control-inline loadout-dialog-launcher">
+        <label htmlFor={`${workspaceRoute.routeKey}-aspect-hex`}>Sky Fall Hex</label>
+        <button
+          {...findingTarget(
+            workspaceRoute.aspectHexTree.address,
+            `${workspaceRoute.routeKey}-aspect-hex`,
+          )}
+          className="contextual-picker-trigger"
+          type="button"
+          aria-label="Edit Sky Fall Hex tree"
+          aria-haspopup="dialog"
+          onClick={() => setDialog('Hex')}
+        >
+          <span onMouseEnter={showTruncatedTitle}>
+            {workspaceRoute.aspectHexTree.layoutLabel} tree
+          </span>
+        </button>
+      </div>
+    );
   return (
     <div className="route-loadout-panel">
       <div className="route-loadout-controls">
-        {/* The Hex belongs to the aspect, so it shares the weapon's cell. */}
+        {/* The weapon leads on its own row; every row's items share one width with the Draft racks. */}
         {beside === undefined ? (
-          weaponCell
+          <div className="route-loadout-row">
+            {weaponPicker}
+            {hexLauncher}
+          </div>
         ) : (
           <div className="route-loadout-lead-row">
-            {weaponCell}
+            {/* The Hex belongs to the aspect, so it shares the weapon's cell. */}
+            <div className="route-loadout-weapon-cell">
+              {weaponPicker}
+              {hexLauncher}
+            </div>
             {beside}
           </div>
         )}
-        {/* Arcana, Fear, Keepsake and Familiar share one width with the Draft racks. */}
         <div className="route-loadout-row">
           <div className="field-control field-control-inline loadout-dialog-launcher">
             <label htmlFor={`${workspaceRoute.routeKey}-arcana`}>Starting Arcana</label>
@@ -148,7 +154,7 @@ export function RouteLoadoutControls({
               onClick={() => setDialog('Arcana')}
             >
               <span onMouseEnter={showTruncatedTitle}>
-                Arcana · {derivedLoadout.activeArcanaKeys.length} active ·{' '}
+                {derivedLoadout.activeArcanaKeys.length} active ·{' '}
                 {derivedLoadout.startingArcanaGrasp.cost}/
                 {derivedLoadout.startingArcanaGrasp.capacity} Grasp
               </span>
@@ -165,7 +171,7 @@ export function RouteLoadoutControls({
               onClick={() => setDialog('Fear')}
             >
               <span onMouseEnter={showTruncatedTitle}>
-                Fear · {activeFearCount} active · {derivedLoadout.fearTotal}/{maximumFear} Fear
+                {activeFearCount} active · {derivedLoadout.fearTotal}/{maximumFear(catalog)} Fear
               </span>
             </button>
           </div>
@@ -207,7 +213,7 @@ export function RouteLoadoutControls({
           model={{ kind: 'live', onDone: () => setDialog(undefined) }}
           returnFocusId={`${workspaceRoute.routeKey}-arcana`}
           size="cards"
-          title="Arcana"
+          title={<ArcanaDialogTitle derived={derivedLoadout} title="Arcana" />}
         >
           {presets.snapshot.arcana.length === 0 ? null : (
             <PresetChips
@@ -246,7 +252,14 @@ export function RouteLoadoutControls({
           model={{ kind: 'live', onDone: () => setDialog(undefined) }}
           returnFocusId={`${workspaceRoute.routeKey}-fear`}
           size="cards"
-          title="Fear"
+          title={
+            <FearDialogTitle
+              catalog={catalog}
+              derived={derivedLoadout}
+              fearRanks={fearRanks}
+              title="Fear"
+            />
+          }
         >
           {presets.snapshot.vows.length === 0 ? null : (
             <PresetChips
