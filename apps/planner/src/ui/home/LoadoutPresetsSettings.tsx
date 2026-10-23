@@ -14,7 +14,12 @@ import {
   presetFearRanks,
   projectPresetLoadoutEditor,
 } from '@planner/projections/loadoutPresets';
-import { ArcanaBoard, FearBoard } from '../controls/arcana-fear/ArcanaFearBoards';
+import {
+  ArcanaBoard,
+  ArcanaDialogTitle,
+  FearBoard,
+  FearDialogTitle,
+} from '../controls/arcana-fear/ArcanaFearBoards';
 import { EditorDialog, EditorDialogDraftActions } from '../controls/EditorDialog';
 import { IconActionButton } from '../controls/IconActionButton';
 import { useLoadoutPresets } from '../shell/loadoutPresetsContext';
@@ -69,7 +74,18 @@ function PresetEditorDialog({
       }
       model={{ kind: 'draft', onCancel }}
       size="cards"
-      title={title}
+      title={
+        editing.kind === 'arcana' ? (
+          <ArcanaDialogTitle derived={editor.derived} title={title} />
+        ) : (
+          <FearDialogTitle
+            catalog={catalog}
+            derived={editor.derived}
+            fearRanks={loadout.fearRanks}
+            title={title}
+          />
+        )
+      }
     >
       <label className="library-dialog-field preset-name-field">
         Preset name

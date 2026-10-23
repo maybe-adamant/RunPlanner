@@ -45,11 +45,11 @@ export function PresetChips({
           </button>
         ))}
       </div>
-      <p className="preset-chip-reason" role="status">
+      <span className="preset-chip-reason" role="status">
         {refused === null
           ? null
           : `${chips.find((chip) => chip.id === refused.id)?.name ?? 'Preset'}: ${refused.reason}`}
-      </p>
+      </span>
     </div>
   );
 }

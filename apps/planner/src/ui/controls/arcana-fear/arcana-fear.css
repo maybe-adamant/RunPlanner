@@ -5,7 +5,6 @@
   margin-inline: auto;
   gap: 0.3rem;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  margin-top: 0.4rem;
 }
 
 .arcana-card-control {
@@ -27,17 +26,10 @@
   cursor: pointer;
 }
 
-.arcana-summary-line {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.35rem 1rem;
-}
-
-.arcana-legend {
-  margin: 0;
+/* A picker dialog's title carries its board's summary in the muted weight. */
+.loadout-dialog-summary {
   color: var(--muted);
-  font-size: 0.78rem;
+  font-weight: 500;
 }
 
 .arcana-card-artwork {
@@ -101,6 +93,11 @@
 .arcana-card-control:focus-visible {
   outline: 2px solid #e2b971;
   outline-offset: 2px;
+}
+
+/* The board opens with its hint, directly under the presets or the title. */
+.route-loadout-section > .panel-description:first-child {
+  margin-top: 0;
 }
 
 .fear-rank-list {
@@ -227,13 +224,15 @@
 
 /* The planner's presets atop the Arcana and Fear pickers. */
 .preset-chips {
-  display: grid;
-  gap: 4px;
-  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 6px 1rem;
 }
 
 .preset-chip-row {
   display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
@@ -250,10 +249,13 @@
   border-color: #8a6a3a;
 }
 
-/* Reserved, so a refusal never moves the picker. */
+/* The rest of the chip row, reserved so a refusal never moves the picker; a long one is cut short. */
 .preset-chip-reason {
-  min-height: 1.2em;
-  margin: 0;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
   color: #e8c27a;
   font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
