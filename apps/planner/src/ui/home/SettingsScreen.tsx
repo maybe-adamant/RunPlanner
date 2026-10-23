@@ -21,9 +21,7 @@ export function SettingsScreen({
               <div className="home-setting-label" id="settings-scale-label">
                 App scale
               </div>
-              <div className="home-setting-hint">
-                Size of all text and controls. Ctrl/Cmd + and − change it anywhere.
-              </div>
+              <div className="home-setting-hint">Ctrl/Cmd + / − anywhere</div>
             </div>
             <div aria-labelledby="settings-scale-label" className="home-stepper" role="group">
               <button

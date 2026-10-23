@@ -202,13 +202,9 @@ export function LoadoutPresetsSettings({ catalog }: { readonly catalog: Catalog 
       <h3 className="home-panel-title" id="settings-presets-title">
         Presets
       </h3>
-      <p className="home-setting-hint">
-        The editor’s Arcana and Fear pickers offer these to any plan. They stay in the planner,
-        never in a plan.
-      </p>
       {snapshot.dropped === 0 ? null : (
         <p className="home-problem" role="status">
-          Some saved presets named cards or Vows this planner doesn’t know; those were left out.
+          Some presets had unknown cards or Vows; those were removed.
         </p>
       )}
       <PresetList

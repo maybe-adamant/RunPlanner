@@ -183,9 +183,7 @@ describe('Game screen', () => {
     };
 
     let ask = await chooseNewFolder();
-    expect(
-      within(ask).getByText(/no longer tracked and won’t receive planner updates/),
-    ).toBeTruthy();
+    expect(within(ask).getByText(/won’t get planner updates/)).toBeTruthy();
     await user.click(within(ask).getByRole('button', { name: 'Cancel' }));
     expect(game.host.useChosenTarget).not.toHaveBeenCalled();
 
@@ -345,7 +343,7 @@ describe('Game screen', () => {
     await user.click(within(ask).getByRole('button', { name: 'Remove it, then switch' }));
     expect(
       await within(dialog).findByText(
-        'The game module was removed, but the new location could not be set, so the game location did not change: That folder is unavailable.',
+        'Module removed; location not changed: That folder is unavailable.',
       ),
     ).toBeTruthy();
     expect(screen.queryByRole('dialog', { name: 'Switch game location?' })).toBeNull();
@@ -713,6 +711,6 @@ describe('Game screen', () => {
     const home = screen.getByRole('navigation', { name: 'Home' });
     await user.click(within(home).getByRole('button', { name: 'Game' }));
     const page = screen.getByRole('region', { name: 'Game' });
-    expect(within(page).getByText(/available in the desktop application/)).toBeTruthy();
+    expect(within(page).getByText(/Available in the desktop app/)).toBeTruthy();
   });
 });

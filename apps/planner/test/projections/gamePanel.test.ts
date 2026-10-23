@@ -133,7 +133,7 @@ describe('Game panel projection', () => {
       ['r2modman', 'Remove the Run Planner package in r2modman', null, null],
       [
         'stranded',
-        'A failed update left the previous module at ReturnOfModding/.run-planner-replaced-01-2-3. Install again to recover; the planner backs it up first',
+        'A failed update left a module at ReturnOfModding/.run-planner-replaced-01-2-3. Install again to recover',
         null,
         null,
       ],
@@ -141,10 +141,12 @@ describe('Game panel projection', () => {
     ]);
     expect(module.steps.filter((step) => step.action !== null)).toHaveLength(1);
     expect(module.consent.required).toBe(true);
-    expect(module.consent.facts[1]).toContain('renames or deletes the planner’s files');
+    expect(module.consent.facts[1]).toBe(
+      'r2modman manages this folder. Remove the Run Planner package in r2modman.',
+    );
     expect(module.removeAvailable).toBe(false);
     expect(module.details.find((detail) => detail.key === 'coordinator')?.value).toBe(
-      'The RunPlanner_Modpack coordinator is no longer needed. Remove it in r2modman.',
+      'No longer needed; remove it in r2modman.',
     );
     expect(module.steps.some((step) => step.text.includes('coordinator'))).toBe(false);
   });
@@ -319,10 +321,7 @@ describe('Game panel projection', () => {
   it('words a stranded copy by whether an install step exists', () => {
     const current = moduleOf({ inspection: { strandedInstall: '.run-planner-replaced-01' } });
     expect(current.steps.map((step) => [step.key, step.text])).toEqual([
-      [
-        'stranded',
-        'A failed update left an old module copy at ReturnOfModding/.run-planner-replaced-01. The game does not load it; delete it once you no longer need it',
-      ],
+      ['stranded', 'Old module copy at ReturnOfModding/.run-planner-replaced-01; safe to delete'],
     ]);
     expect(current.steps.every((step) => step.action === null)).toBe(true);
   });

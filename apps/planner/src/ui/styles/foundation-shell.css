@@ -10,6 +10,8 @@
   --glass-panel: rgb(28 29 35 / 91%);
   --border: #3b3c46;
   --muted: #aaa7af;
+  /* The compact button size, for secondary in-panel and toolbar actions. */
+  --action-compact-height: 32px;
   --danger: #e7a1a1;
   --text: #ede8df;
   /* Gold of chosen values: selected radios and checkboxes, focus and selected offer cards. */
@@ -478,7 +480,7 @@ input[type='checkbox']:checked:disabled {
 }
 
 .action-compact {
-  min-height: 32px;
+  min-height: var(--action-compact-height);
   padding: 5px 9px;
   border-radius: 7px;
   font-size: 0.86rem;

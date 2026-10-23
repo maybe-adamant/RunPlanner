@@ -42,10 +42,7 @@ function noticeContent(controller: ReleaseUpdateController, state: ReleaseUpdate
     case 'confirming':
       return (
         <>
-          <span>
-            Install Run Planner {state.version}? Run Planner closes, installs the update and
-            reopens.
-          </span>
+          <span>Install Run Planner {state.version}? The app restarts.</span>
           <div className="release-update-actions">
             <button
               className="secondary-action action-compact"

@@ -114,6 +114,6 @@ describe('Settings presets', () => {
     await openSettings(
       presets({ arcana: [{ id: 'a', name: 'Old', cardKeys: ['RetiredCard'] }], vows: [] }),
     );
-    expect(screen.getByText(/this planner doesn’t know; those were left out/)).toBeTruthy();
+    expect(screen.getByText(/unknown cards or Vows; those were removed/)).toBeTruthy();
   });
 });

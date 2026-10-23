@@ -92,10 +92,7 @@ export class ApplicationFaultBoundary extends Component<
         <section aria-labelledby="application-fault-title" className="application-fault-card">
           <p className="eyebrow">Recovery</p>
           <h1 id="application-fault-title">Run Planner could not display this project</h1>
-          <p>
-            The plan is still in your library as it was last saved. You can open another file,
-            reload the application, or start without reopening this plan.
-          </p>
+          <p>Your plan is saved in the library.</p>
           {this.state.result === null ? null : (
             <p
               className="project-operation-result"

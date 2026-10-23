@@ -66,7 +66,7 @@ export function ArcanaBoard({
                 exceedsGrasp
                   ? `${toggle.grasp.cost} Grasp exceeds the starting capacity of ${toggle.grasp.capacity}.`
                   : automatic
-                    ? 'Activates automatically when its conditions are met.'
+                    ? 'Activates automatically'
                     : undefined
               }
             />
@@ -122,9 +122,7 @@ export function FearBoard({
               aria-disabled={!canAdvance}
               data-active={rank > 0 || undefined}
               hint={
-                canAdvance
-                  ? undefined
-                  : 'This rank would lower your starting Grasp below the cost of your chosen Arcana. Remove Arcana cards first.'
+                canAdvance ? undefined : 'Too little Grasp for your Arcana. Remove Arcana first.'
               }
               data-fear-vow-key={vow.key}
               data-rival={vow.key === 'BossDifficultyShrineUpgrade' || undefined}

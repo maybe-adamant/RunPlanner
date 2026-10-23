@@ -321,7 +321,7 @@ export function projectLibraryView(
           {
             ...place,
             kind: 'unopenable',
-            reason: `Made by a newer Run Planner (schema ${item.schemaVersion}); update to open it.`,
+            reason: 'Made by a newer Run Planner; update to open it.',
           },
         ];
       case 'unreadable':
