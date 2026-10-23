@@ -346,17 +346,13 @@ export function draftEncounterChoice(
   return draftOccurrenceEncounterChoice(context, origin.biomeKey, occurrenceId as OccurrenceId);
 }
 
-/** Encounter choice for one room once its phases are reached, made once per walk. */
+/** Encounter choice for one room's reached phases, each made once per walk when first reached. */
 export function draftOccurrenceEncounterChoice(
   context: DraftEncounterChoiceContext,
   biomeKey: string,
   occurrenceId: OccurrenceId,
 ): boolean {
-  const key = `encounters:${biomeKey}:${occurrenceId}`;
-  if (context.hooked.has(key)) return false;
-  const outcome = chooseEncounters(context, biomeKey, occurrenceId);
-  if (outcome.reached) context.hooked.add(key);
-  return outcome.changed;
+  return chooseEncounters(context, biomeKey, occurrenceId);
 }
 
 /** Selects wanted field NPC encounters, else a random combat encounter; never Nemesis events. */
@@ -364,13 +360,13 @@ function chooseEncounters(
   context: DraftEncounterChoiceContext,
   biomeKey: string,
   occurrenceId: OccurrenceId,
-): { readonly reached: boolean; readonly changed: boolean } {
+): boolean {
   const { catalog, steering } = context;
   const occurrence = context
     .assembly()
     .project.route.biomes.find((biome) => biome.biomeKey === biomeKey)
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
-  if (occurrence === undefined) return { reached: false, changed: false };
+  if (occurrence === undefined) return false;
   const wanted = context.spec.world.fieldNpcsByBiome[biomeKey] ?? [];
   const phaseOf = (phaseKey: string) =>
     createEncounterPhaseAddress(
@@ -379,15 +375,18 @@ function chooseEncounters(
       phaseKey,
     );
   let changed = false;
-  let reached = false;
   for (const phaseKey of Object.keys(occurrence.encounters.encounterKeyByPhase)) {
     const phase = phaseOf(phaseKey);
+    // A phase is decided once, when the chronology first reaches it; later phases of the room
+    // (a ship's combats after its wheel) wait for a later visit.
+    const key = `encounters:${semanticAddressKey(phase)}`;
+    if (context.hooked.has(key)) continue;
     let support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
       context.assembly(),
       phase,
     );
     if (support === undefined) continue;
-    reached = true;
+    context.hooked.add(key);
     if (!support.activationSatisfied) continue;
     // A field NPC whose wanted trait is not ready yet waits for a likely later room.
     const waits = (key: string) =>
@@ -425,7 +424,7 @@ function chooseEncounters(
   // Keepsake encounter effects follow the selected encounters, phase by phase.
   for (const phaseKey of Object.keys(occurrence.encounters.figLeafSkipByPhase))
     changed = draftEncounterKeepsakes(context, phaseOf(phaseKey)) || changed;
-  return { reached, changed };
+  return changed;
 }
 
 /** Fig Leaf's native skip chance; the draft ignores luck. */
