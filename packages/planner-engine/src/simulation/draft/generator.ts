@@ -97,7 +97,7 @@ export function draftProject(
     draftLoadoutProject(catalog, base, spec.loadout),
   );
   const biomeKeys = current.project.route.biomes.map((biome) => biome.biomeKey);
-  const world = draftWorld(catalog, current.project.route, spec.world, spec.basketTraitKeys);
+  const world = draftWorld(catalog, current.project.route, spec);
   const schedule = draftGodSchedule(
     catalog,
     current.project.route,

@@ -55,6 +55,24 @@ export function draftDuoFires(declined: number, roll: number): boolean {
 /** Outside traits tried in a row when no offered row may be taken. */
 const SUBSTITUTE_DRAWS = 20;
 
+/** A Gorgon Athena offer persists only its three traits and the selected row. */
+function offerCommand(trait: TraitOfferAddress, value: AuthoredTraitOffer): ProjectCommand {
+  if (trait.owner.kind !== 'gorgonPhase' || value.kind !== 'traits')
+    return { kind: 'ReplaceTraitOffer', trait, value };
+  const [first, second, third] = value.options;
+  // The command authority refuses a Gorgon offer of fewer rows.
+  if (second === undefined || third === undefined)
+    return { kind: 'ReplaceTraitOffer', trait, value };
+  return {
+    kind: 'ReplaceGorgonAthenaOffer',
+    trait,
+    value: {
+      traitKeys: [first.traitKey, second.traitKey, third.traitKey],
+      selectedOptionKey: value.selectedOptionKey,
+    },
+  };
+}
+
 /** Authors trait offers toward the basket, with every selected-outcome child complete. */
 export class DraftTraitOffers {
   private readonly denial: boolean;
@@ -145,8 +163,7 @@ export class DraftTraitOffers {
       semanticAddressKey(origin),
     );
     return (
-      this.offerSupported(trait, repicked) &&
-      this.context.apply({ kind: 'ReplaceTraitOffer', trait, value: repicked })
+      this.offerSupported(trait, repicked) && this.context.apply(offerCommand(trait, repicked))
     );
   }
 
@@ -186,11 +203,7 @@ export class DraftTraitOffers {
   }
 
   author(trait: TraitOfferAddress): boolean {
-    const command = (value: AuthoredTraitOffer): ProjectCommand => ({
-      kind: 'ReplaceTraitOffer',
-      trait,
-      value,
-    });
+    const command = (value: AuthoredTraitOffer) => offerCommand(trait, value);
     for (const giver of this.context.shuffle(this.catalog.traitGivers.values)) {
       if (giver.providerKind === 'olympian' && !this.context.steering.inWorld(giver.key)) continue;
       const draft = this.context.startingOutcome(trait, giver.key);

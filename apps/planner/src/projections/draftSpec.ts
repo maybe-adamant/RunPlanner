@@ -558,6 +558,9 @@ export function projectDraftBasket(
       )
         field.add(npc.giverKey);
   }
+  const keepsakeNpcs = caps.npcs
+    .map((usage) => usage.giverKey)
+    .filter((giverKey) => !story.has(giverKey) && !field.has(giverKey));
   const npcSections = [
     ...(story.size === 0
       ? []
@@ -581,11 +584,23 @@ export function projectDraftBasket(
             [...field].map((k) => giverSection(k, caps.npcs)),
           ),
         ]),
+    // An NPC the world meets through an equipped keepsake, such as the Gorgon Amulet's Athena.
+    ...(keepsakeNpcs.length === 0
+      ? []
+      : [
+          section(
+            'keepsake',
+            'Keepsake',
+            [],
+            undefined,
+            keepsakeNpcs.map((k) => giverSection(k, caps.npcs)),
+          ),
+        ]),
   ];
 
   // A route without bonus givers or NPCs, such as Fresh File, has no tab for them.
   const hasBonus = worldOptions.bonusGiverKeys.length > 0;
-  const hasNpcs = draftWorldHasNpcs(worldOptions);
+  const hasNpcs = draftWorldHasNpcs(worldOptions) || caps.npcs.length > 0;
   const tabs: DraftBasketTab[] = [
     {
       key: 'gods',

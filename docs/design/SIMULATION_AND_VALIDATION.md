@@ -765,6 +765,14 @@ the route declares it, route overlays included:
   (default one room in ten), preferring an element a waiting trait needs; Dream buys elemental boosts instead.
 - Offer exclusions that hold in every branch stop the walk chasing that god or
   source for the biome rather than retrying it.
+- Each reached encounter phase where the engine offers the Fig Leaf skip rolls
+  the native flat 37% (luck ignored) and is skipped on a hit; uses, the one skip
+  per biome and eligibility stay the engine's.
+- An unskipped phase where the engine offers Gorgon's Athena trigger takes it,
+  assuming the trigger condition met; the Athena offer that follows is authored
+  like any trait offer. While the amulet is equipped (starting keepsake, or a
+  rack keepsake for a later planned biome), Athena's traits join the basket
+  under her one shared NPC cap.
 
 A fixed corpus (`npm run test:draft-corpus`) measures these rules; its
 committed baseline records rates and medians, not plans.
