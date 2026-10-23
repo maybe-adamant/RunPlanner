@@ -6,7 +6,13 @@ import {
   routeSaveFileGodHistory,
 } from '../../authored-project/route-profile';
 import { traitGiverForAcquisitionRole } from '../../authored-project/traits/state';
-import { draftPlannedBiomeKeys, type DraftRoute, type DraftWorld } from './spec';
+import {
+  draftKeepsakeOptions,
+  draftPlannedBiomeKeys,
+  type DraftRoute,
+  type DraftSpec,
+  type DraftWorld,
+} from './spec';
 
 export interface DraftNpcOption {
   readonly npcKey: string;
@@ -391,14 +397,24 @@ export interface DraftNpcGiver {
   readonly story: boolean;
 }
 
-/** The selected trait-giving story and field NPCs of the planned biomes, in itinerary order. */
+/** What a draft's world reads from its spec: the world and the keepsakes it equips. */
+export type DraftWorldSpec = Pick<DraftSpec, 'world' | 'rackKeepsakeKeys'> & {
+  readonly loadout: Pick<DraftSpec['loadout'], 'startingKeepsakeKey'>;
+};
+
+/**
+ * The selected trait-giving story and field NPCs of the planned biomes, in itinerary order,
+ * then the Gorgon Amulet's Athena.
+ */
 function npcGivers(
+  catalog: Catalog,
   options: DraftWorldOptions,
-  world: DraftWorld,
+  spec: DraftWorldSpec,
   route: DraftRoute,
 ): readonly DraftNpcGiver[] {
+  const world = spec.world;
   const planned = draftPlannedBiomeKeys(route).length;
-  return options.biomes.slice(0, planned).flatMap((biome, biomeIndex) => {
+  const selectedNpcs = options.biomes.slice(0, planned).flatMap((biome, biomeIndex) => {
     const story = biome.storyNpc;
     const selected = world.fieldNpcsByBiome[biome.biomeKey] ?? [];
     return [
@@ -414,6 +430,33 @@ function npcGivers(
         : [Object.freeze({ giverKey: npc.giverKey, biomeIndex, story: isStory })],
     );
   });
+  const gorgon = gorgonGiver(catalog, route, spec);
+  return gorgon === undefined ? selectedNpcs : [...selectedNpcs, gorgon];
+}
+
+/**
+ * The Gorgon Amulet's Athena, met from the first planned biome the amulet is equipped for:
+ * the starting keepsake, or a rack keepsake equipped after a planned biome.
+ */
+function gorgonGiver(
+  catalog: Catalog,
+  route: DraftRoute,
+  spec: DraftWorldSpec,
+): DraftNpcGiver | undefined {
+  const keepsake = catalog.keepsakes.values.find((k) => k.effect?.kind === 'gorgonAmulet');
+  if (keepsake?.effect?.kind !== 'gorgonAmulet') return undefined;
+  const planned = draftPlannedBiomeKeys(route);
+  let biomeIndex: number | undefined;
+  if (spec.loadout.startingKeepsakeKey === keepsake.key) biomeIndex = 0;
+  else {
+    const slot = spec.rackKeepsakeKeys.indexOf(keepsake.key);
+    const after = draftKeepsakeOptions(catalog, route).rackSlots[slot]?.afterBiomeKey;
+    const next = after === undefined ? -1 : planned.indexOf(after) + 1;
+    if (next > 0 && next < planned.length) biomeIndex = next;
+  }
+  return biomeIndex === undefined
+    ? undefined
+    : Object.freeze({ giverKey: keepsake.effect.providerKey, biomeIndex, story: false });
 }
 
 /** Givers every world has where the route offers them: Hermes, Daedalus Hammers and Selene; Chaos is never drafted. */
@@ -437,10 +480,10 @@ function worldGiverKeys(
 export function draftWorldGiverKeys(
   catalog: Catalog,
   route: DraftRoute,
-  world: DraftWorld,
+  spec: DraftWorldSpec,
 ): readonly string[] {
   const options = draftWorldOptions(catalog, route);
-  return worldGiverKeys(options, world, npcGivers(options, world, route));
+  return worldGiverKeys(options, spec.world, npcGivers(catalog, options, spec, route));
 }
 
 /** What one draft reads from its world, derived once. */
@@ -454,18 +497,20 @@ export interface DraftWorldProduct {
 export function draftWorld(
   catalog: Catalog,
   route: DraftRoute,
-  world: DraftWorld,
-  basketTraitKeys: readonly string[],
+  spec: DraftWorldSpec & Pick<DraftSpec, 'basketTraitKeys'>,
 ): DraftWorldProduct {
   const options = draftWorldOptions(catalog, route);
-  const givers = npcGivers(options, world, route);
+  const givers = npcGivers(catalog, options, spec, route);
   const npcTraitBiomes = new Map<string, number>();
   for (const giver of givers)
     for (const traitKey of catalog.traitGivers.byKey[giver.giverKey]?.traitKeys ?? [])
-      if (basketTraitKeys.includes(traitKey) && !npcTraitBiomes.has(traitKey))
+      if (
+        spec.basketTraitKeys.includes(traitKey) &&
+        giver.biomeIndex < (npcTraitBiomes.get(traitKey) ?? Infinity)
+      )
         npcTraitBiomes.set(traitKey, giver.biomeIndex);
   return Object.freeze({
-    giverKeys: worldGiverKeys(options, world, givers),
+    giverKeys: worldGiverKeys(options, spec.world, givers),
     npcGivers: Object.freeze(givers),
     npcTraitBiomes,
   });

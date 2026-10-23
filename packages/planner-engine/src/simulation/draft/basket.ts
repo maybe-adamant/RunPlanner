@@ -116,7 +116,7 @@ export function assessDraftBasket(
   route: DraftRoute,
   spec: DraftSpec,
 ): DraftBasketAssessment {
-  const worldGivers = draftWorldGiverKeys(catalog, route, spec.world);
+  const worldGivers = draftWorldGiverKeys(catalog, route, spec);
   const traitKeys = new Set(
     worldGivers.flatMap((key) => catalog.traitGivers.byKey[key]!.traitKeys),
   );

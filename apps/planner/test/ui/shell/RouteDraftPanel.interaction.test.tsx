@@ -326,6 +326,37 @@ describe('Draft panel', () => {
     expect(screen.queryByRole('list', { name: 'Zeus basket traits' })).toBeNull();
   });
 
+  it("offers Athena's traits while the Gorgon Amulet is the starting keepsake", () => {
+    const { application, catalog } = open('Surface');
+    chooseGods(['Zeus']);
+    const athena = catalog.traitGivers.byKey.Athena!;
+    const athenaSection = () => {
+      const dialog = openBasket();
+      fireEvent.click(within(dialog).getByRole('tab', { name: /^NPCs/ }));
+      const section = within(dialog).queryByRole('region', { name: athena.label });
+      return { dialog, section };
+    };
+    const before = athenaSection();
+    expect(before.section).toBeNull();
+    fireEvent.keyDown(before.dialog, { key: 'Escape' });
+
+    act(() => {
+      application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceStartingKeepsake',
+          selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+          keepsakeKey: 'AthenaEncounterKeepsake',
+        }),
+      );
+    });
+    const section = athenaSection().section;
+    const dash = catalog.traits.byKey.InvulnerabilityDashBoon!.label;
+    fireEvent.click(within(section!).getByRole('button', { name: dash }));
+    expect(within(section!).getByRole('button', { name: dash }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+  });
+
   it("numbers and reorders each god's traits, never into an order the engine refuses", () => {
     const { catalog } = open();
     chooseGods(['Zeus', 'Apollo']);

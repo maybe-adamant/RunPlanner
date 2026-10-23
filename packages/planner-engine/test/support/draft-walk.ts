@@ -17,7 +17,7 @@ export function draftScheduleFor(
   spec: DraftSpec,
   seed: number,
 ): DraftGodSchedule {
-  const world = draftWorld(catalog, route, spec.world, spec.basketTraitKeys);
+  const world = draftWorld(catalog, route, spec);
   return draftGodSchedule(catalog, route, spec, world, createDraftRng(seed));
 }
 
@@ -36,7 +36,7 @@ export function startDraftWalk(
   } = {},
 ): DraftWalk {
   const route = base.route;
-  const world = draftWorld(catalog, route, spec.world, spec.basketTraitKeys);
+  const world = draftWorld(catalog, route, spec);
   const schedule = draftGodSchedule(
     catalog,
     route,
@@ -60,7 +60,7 @@ export function startDraftWalk(
 
 /** The walk's steering over the base project's drafted loadout, at its first biome. */
 export function draftSteeringFor(base: ProjectDocument, spec: DraftSpec): DraftSteering {
-  const world = draftWorld(catalog, base.route, spec.world, spec.basketTraitKeys);
+  const world = draftWorld(catalog, base.route, spec);
   const schedule = draftGodSchedule(catalog, base.route, spec, world, createDraftRng(1));
   const assembly = simulateProjectAssembly(
     catalog,

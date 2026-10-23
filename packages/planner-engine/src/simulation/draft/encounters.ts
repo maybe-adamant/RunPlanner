@@ -1,6 +1,7 @@
 import type { Catalog, EncounterCustomizationDecision } from '../../catalog-schema';
 import {
   createBiomeAddress,
+  semanticAddressKey,
   createEncounterPhaseAddress,
   type AuthoredEncounterCustomization,
   type AuthoredGeneratedEncounterCustomization,
@@ -15,12 +16,15 @@ import type { InfiniteRosterCandidateCapability } from '../encounters/infinite-r
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
+  encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   generatedEncounterSupportForProjectEvaluationAssembly,
   infiniteRosterSupportForProjectEvaluationAssembly,
   reachedEncounterPhasesForProjectEvaluationAssembly,
 } from '../evaluation/project-evaluation-assembly';
 import type { SemanticFinding } from '../model';
+import type { FigLeafPhaseCandidateSupport, GorgonPhaseCandidateSupport } from '../rewards/model';
 import type { DraftRng } from './rng';
 import { settleDraftCommandWithoutNewFinding } from './settle';
 import type { DraftSpec } from './spec';
@@ -288,6 +292,7 @@ export interface DraftEncounterChoiceContext {
   readonly assembly: () => ProjectEvaluationAssembly;
   readonly apply: (command: ProjectCommand) => boolean;
   readonly shuffle: <T>(values: readonly T[]) => T[];
+  readonly random: () => number;
   /** Re-authors an entered room's reward to a type outside `excluded`; false when none settles. */
   readonly reauthorReward: (
     biomeKey: string,
@@ -367,14 +372,16 @@ function chooseEncounters(
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   if (occurrence === undefined) return { reached: false, changed: false };
   const wanted = context.spec.world.fieldNpcsByBiome[biomeKey] ?? [];
-  let changed = false;
-  let reached = false;
-  for (const phaseKey of Object.keys(occurrence.encounters.encounterKeyByPhase)) {
-    const phase = createEncounterPhaseAddress(
+  const phaseOf = (phaseKey: string) =>
+    createEncounterPhaseAddress(
       createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
       { kind: 'occurrence', occurrenceId },
       phaseKey,
     );
+  let changed = false;
+  let reached = false;
+  for (const phaseKey of Object.keys(occurrence.encounters.encounterKeyByPhase)) {
+    const phase = phaseOf(phaseKey);
     let support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
       context.assembly(),
       phase,
@@ -415,7 +422,53 @@ function chooseEncounters(
     if (choice === undefined || choice === support.selectedEncounterKey) continue;
     changed = context.apply({ kind: 'SelectEncounter', phase, encounterKey: choice }) || changed;
   }
+  // Keepsake encounter effects follow the selected encounters, phase by phase.
+  for (const phaseKey of Object.keys(occurrence.encounters.figLeafSkipByPhase))
+    changed = draftEncounterKeepsakes(context, phaseOf(phaseKey)) || changed;
   return { reached, changed };
+}
+
+/** Fig Leaf's native skip chance; the draft ignores luck. */
+export const DRAFT_FIG_LEAF_SKIP_CHANCE = 0.37;
+
+/**
+ * One phase's keepsake edits in preference order: where the engine offers the Fig Leaf
+ * skip it fires at its native chance; otherwise, where the engine offers Gorgon's
+ * Athena trigger, it is met.
+ */
+export function draftEncounterKeepsakeCommands(
+  phase: EncounterPhaseAddress,
+  figLeaf: Pick<FigLeafPhaseCandidateSupport, 'supported'> | undefined,
+  gorgon: Pick<GorgonPhaseCandidateSupport, 'supported'> | undefined,
+  random: () => number,
+): readonly ProjectCommand[] {
+  return [
+    ...(figLeaf?.supported === true && random() < DRAFT_FIG_LEAF_SKIP_CHANCE
+      ? [{ kind: 'ReplaceFigLeafSkip', phase, value: true } as const]
+      : []),
+    ...(gorgon?.supported === true
+      ? [{ kind: 'ReplaceGorgonDeathDefianceCondition', phase, value: true } as const]
+      : []),
+  ];
+}
+
+/** Settles the first of a reached phase's keepsake edits that applies; each phase decides once. */
+function draftEncounterKeepsakes(
+  context: DraftEncounterChoiceContext,
+  phase: EncounterPhaseAddress,
+): boolean {
+  const key = `keepsakes:${semanticAddressKey(phase)}`;
+  if (context.hooked.has(key)) return false;
+  const figLeaf = encounterPhaseFigLeafSupportForProjectEvaluationAssembly(
+    context.assembly(),
+    phase,
+  );
+  const gorgon = encounterPhaseGorgonSupportForProjectEvaluationAssembly(context.assembly(), phase);
+  if (figLeaf === undefined && gorgon === undefined) return false;
+  context.hooked.add(key);
+  return draftEncounterKeepsakeCommands(phase, figLeaf, gorgon, context.random).some((command) =>
+    context.apply(command),
+  );
 }
 
 function metFieldNpc(context: DraftEncounterChoiceContext, biomeKey: string, npc: string): boolean {

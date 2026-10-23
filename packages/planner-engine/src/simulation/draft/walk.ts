@@ -197,6 +197,7 @@ export class DraftWalk {
       assembly: () => this.assembly,
       apply,
       shuffle,
+      random: () => this.rng(),
       reauthorReward: (biomeKey, occurrenceId, excluded) =>
         this.reauthorIncomingReward(biomeKey, occurrenceId, excluded),
     };

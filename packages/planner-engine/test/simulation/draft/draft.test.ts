@@ -127,9 +127,13 @@ describe('draft world options', () => {
 
   it('contributes the selected trait-giving NPCs and the always-present givers', () => {
     const givers = draftWorldGiverKeys(catalog, surface, {
-      godKeys: ['Hera'],
-      storyNpcByBiome: { O: 'Circe' },
-      fieldNpcsByBiome: { N: ['Artemis', 'Heracles'], P: ['Athena'] },
+      world: {
+        godKeys: ['Hera'],
+        storyNpcByBiome: { O: 'Circe' },
+        fieldNpcsByBiome: { N: ['Artemis', 'Heracles'], P: ['Athena'] },
+      },
+      loadout: { startingKeepsakeKey: null },
+      rackKeepsakeKeys: [],
     });
     expect([...givers].sort()).toEqual([
       'Artemis',
@@ -140,6 +144,59 @@ describe('draft world options', () => {
       'SpellDrop',
       'WeaponUpgrade',
     ]);
+  });
+
+  describe('Gorgon Amulet', () => {
+    const planned = (count: number) => ({
+      ...surface,
+      biomes: createProjectDocument(catalog, {
+        projectId: 'g',
+        routeKey: 'Surface',
+        configuredBiomeCount: count,
+      }).route.biomes,
+    });
+    const athena = (frame: DraftRoute & DraftLoadout, draft: Partial<DraftSpec>) => {
+      const assessed = assessDraftBasket(catalog, frame, {
+        loadout: frame,
+        world: { ...emptyWorld, godKeys: ['Zeus'] },
+        basketTraitKeys: [],
+        rackKeepsakeKeys: [null, null, null],
+        ...draft,
+      });
+      return {
+        selectable: assessed.traits.some(
+          (trait) => trait.traitKey === 'InvulnerabilityDashBoon' && trait.selectable,
+        ),
+        npcs: assessed.caps.npcs,
+      };
+    };
+    const gorgonStart = { ...surface, startingKeepsakeKey: 'AthenaEncounterKeepsake' };
+
+    it("admits Athena's traits under her one-trait cap while the amulet is equipped", () => {
+      expect(athena(gorgonStart, { loadout: gorgonStart })).toEqual({
+        selectable: true,
+        npcs: [{ giverKey: 'Athena', count: 0, cap: 1 }],
+      });
+      expect(
+        athena(surface, { rackKeepsakeKeys: [null, 'AthenaEncounterKeepsake', null] }),
+      ).toMatchObject({ selectable: true });
+      // Olympus's field Athena and the amulet share one giver cap.
+      expect(
+        athena(gorgonStart, {
+          loadout: gorgonStart,
+          world: { ...emptyWorld, godKeys: ['Zeus'], fieldNpcsByBiome: { P: ['Athena'] } },
+          basketTraitKeys: ['InvulnerabilityDashBoon'],
+        }).npcs,
+      ).toEqual([{ giverKey: 'Athena', count: 1, cap: 1 }]);
+    });
+
+    it('admits nothing without the amulet, or from a rack after the last planned biome', () => {
+      expect(athena(surface, {})).toEqual({ selectable: false, npcs: [] });
+      const two = planned(2);
+      expect(
+        athena(two, { loadout: two, rackKeepsakeKeys: [null, 'AthenaEncounterKeepsake', null] }),
+      ).toEqual({ selectable: false, npcs: [] });
+    });
   });
 });
 
