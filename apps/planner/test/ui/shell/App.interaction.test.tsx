@@ -2173,7 +2173,7 @@ describe('route loadout interaction', () => {
     expect(
       weaponTrigger.querySelector('.contextual-picker-trigger-sized > span:not([aria-hidden])')
         ?.textContent,
-    ).toBe(`${suit.label} · ${selene.label}`);
+    ).toBe('Coat · Selene');
     expect(
       weaponTrigger.querySelectorAll('.contextual-picker-trigger-sized > [aria-hidden="true"]'),
     ).toHaveLength(catalog.weapons.values.flatMap((option) => option.aspectKeys).length);

@@ -465,10 +465,43 @@
   padding-block: 1rem 0.75rem;
 }
 
-/* In the Draft panel the loadout follows "Plan up to" directly, as one block of route settings. */
-.draft-section > .route-scope + .route-loadout-panel {
-  margin-top: 0.25rem;
+/* In the Draft panel the loadout follows the section title directly. */
+.draft-section > .route-loadout-panel {
   padding-top: 0;
+}
+
+/* The weapon takes the first column of the loadout row below; what shares its row takes the rest,
+   wrapping beneath when it can't fit. */
+.route-loadout-lead-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.75rem 1rem;
+  min-width: 0;
+}
+
+.route-loadout-lead-row > .route-loadout-weapon-cell {
+  flex: 0 0 var(--route-loadout-item-width, auto);
+  align-items: start;
+  max-width: 100%;
+  margin: 0;
+}
+
+.route-loadout-lead-row > .route-loadout-weapon-cell > .field-control:first-child {
+  flex: 1 1 100%;
+}
+
+.route-loadout-lead-row dd {
+  margin: 0;
+  color: #d9d4dc;
+}
+
+.route-loadout-lead-row > .route-scope.field-control-inline {
+  flex: 1 1 auto;
+  grid-template-columns: minmax(0, 1fr);
+  /* The radios centre on the weapon's control, below the shared label line. */
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
 }
 
 /* Packed left at one shared width; a row wraps when it can't fit. */
