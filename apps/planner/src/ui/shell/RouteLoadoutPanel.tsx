@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { routeInitialProfile, type ProjectDocument } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import type {
@@ -52,13 +53,30 @@ export function RouteLoadoutPanel({
 
 /** A fresh profile's fixed weapon; Arcana, Fear, keepsake and starting reward do not exist there. */
 export function FreshFileLoadout({
+  beside,
   catalog,
   fixedWeaponKey,
 }: {
+  /** Shares the weapon's row, after the weapon, with its label above. */
+  readonly beside?: ReactNode;
   readonly catalog: Catalog;
   readonly fixedWeaponKey: string;
 }) {
   const weapon = catalog.weapons.byKey[fixedWeaponKey];
+  if (beside !== undefined)
+    return (
+      <div className="route-loadout-panel route-fixed-loadout">
+        <div className="route-loadout-lead-row">
+          <dl aria-label="Fixed starting loadout" className="route-loadout-weapon-cell">
+            <div className="field-control">
+              <dt>Starting weapon</dt>
+              <dd className="route-fixed-weapon">{weapon?.label ?? fixedWeaponKey}, no Aspect</dd>
+            </div>
+          </dl>
+          {beside}
+        </div>
+      </div>
+    );
   return (
     <div className="route-loadout-panel route-fixed-loadout">
       <dl aria-label="Fixed starting loadout" className="route-fixed-loadout-facts">

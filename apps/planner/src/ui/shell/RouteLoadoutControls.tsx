@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
@@ -37,12 +37,15 @@ import { showTruncatedTitle } from '@planner/ui/controls/truncatedTitle';
 /** Weapon, Arcana, Fear, starting keepsake, Hex and familiar, edited as the project's loadout. */
 export function RouteLoadoutControls({
   authoredRoute,
+  beside,
   catalog,
   interactions,
   keepsakeUnavailableHint,
   workspaceRoute,
 }: {
   readonly authoredRoute: ProjectDocument['route'];
+  /** Shares the weapon's row, after the weapon. */
+  readonly beside?: ReactNode;
   readonly catalog: Catalog;
   readonly interactions: WorkspaceInteractionCatalog;
   /** Dims starting keepsakes this panel can't use, with the reason. */
@@ -80,48 +83,58 @@ export function RouteLoadoutControls({
     return result === undefined ? [] : [result];
   });
   const [dialog, setDialog] = useState<'Arcana' | 'Fear' | 'Hex'>();
+  const weaponCell = (
+    <div className="route-loadout-weapon-cell">
+      <RouteWeaponPicker
+        catalog={catalog}
+        id={`${workspaceRoute.routeKey}-weapon-aspect`}
+        weaponKey={weapon.key}
+        aspectKey={aspectKey}
+        onSelect={(weaponKey, aspectKey) =>
+          dispatch(
+            authoredProjectCommandDispatched({
+              kind: 'ReplaceRouteLoadout',
+              route: createRouteAddress(workspaceRoute.routeKey),
+              weaponKey,
+              aspectKey,
+            }),
+          )
+        }
+      />
+      {workspaceRoute.aspectHexTree === undefined ? null : (
+        <div className="field-control field-control-inline loadout-dialog-launcher">
+          <label htmlFor={`${workspaceRoute.routeKey}-aspect-hex`}>Sky Fall Hex</label>
+          <button
+            {...findingTarget(
+              workspaceRoute.aspectHexTree.address,
+              `${workspaceRoute.routeKey}-aspect-hex`,
+            )}
+            className="contextual-picker-trigger"
+            type="button"
+            aria-label="Edit Sky Fall Hex tree"
+            aria-haspopup="dialog"
+            onClick={() => setDialog('Hex')}
+          >
+            <span onMouseEnter={showTruncatedTitle}>
+              {workspaceRoute.aspectHexTree.layoutLabel} tree
+            </span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
   return (
     <div className="route-loadout-panel">
       <div className="route-loadout-controls">
         {/* The Hex belongs to the aspect, so it shares the weapon's cell. */}
-        <div className="route-loadout-weapon-cell">
-          <RouteWeaponPicker
-            catalog={catalog}
-            id={`${workspaceRoute.routeKey}-weapon-aspect`}
-            weaponKey={weapon.key}
-            aspectKey={aspectKey}
-            onSelect={(weaponKey, aspectKey) =>
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'ReplaceRouteLoadout',
-                  route: createRouteAddress(workspaceRoute.routeKey),
-                  weaponKey,
-                  aspectKey,
-                }),
-              )
-            }
-          />
-          {workspaceRoute.aspectHexTree === undefined ? null : (
-            <div className="field-control field-control-inline loadout-dialog-launcher">
-              <label htmlFor={`${workspaceRoute.routeKey}-aspect-hex`}>Sky Fall Hex</label>
-              <button
-                {...findingTarget(
-                  workspaceRoute.aspectHexTree.address,
-                  `${workspaceRoute.routeKey}-aspect-hex`,
-                )}
-                className="contextual-picker-trigger"
-                type="button"
-                aria-label="Edit Sky Fall Hex tree"
-                aria-haspopup="dialog"
-                onClick={() => setDialog('Hex')}
-              >
-                <span onMouseEnter={showTruncatedTitle}>
-                  {workspaceRoute.aspectHexTree.layoutLabel} tree
-                </span>
-              </button>
-            </div>
-          )}
-        </div>
+        {beside === undefined ? (
+          weaponCell
+        ) : (
+          <div className="route-loadout-lead-row">
+            {weaponCell}
+            {beside}
+          </div>
+        )}
         {/* Arcana, Fear, Keepsake and Familiar share one width with the Draft racks. */}
         <div className="route-loadout-row">
           <div className="field-control field-control-inline loadout-dialog-launcher">

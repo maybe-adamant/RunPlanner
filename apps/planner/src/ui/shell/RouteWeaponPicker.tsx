@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { aspectArtwork } from '@planner/ui/controls/aspects/aspectArtwork';
+import { slotLoadoutLabel } from '@planner/projections/gameSlotSummary';
 
 export function RouteWeaponPicker({
   catalog,
@@ -18,8 +19,6 @@ export function RouteWeaponPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [pendingWeaponKey, setPendingWeaponKey] = useState<string>();
-  const weapon = catalog.weapons.byKey[weaponKey]!;
-  const aspect = catalog.aspects.byKey[aspectKey]!;
   const pendingWeapon =
     pendingWeaponKey === undefined ? undefined : catalog.weapons.byKey[pendingWeaponKey]!;
   const choices =
@@ -41,7 +40,8 @@ export function RouteWeaponPicker({
       label="Starting weapon"
       layout="inline"
       placeholder="Choose weapon and aspect"
-      triggerLabel={`${weapon.label} · ${aspect.label}`}
+      // The closed trigger uses the short form, such as "Staff · Melinoë"; the list keeps full names.
+      triggerLabel={slotLoadoutLabel(catalog, weaponKey, aspectKey)}
       triggerIcon={aspectArtwork[aspectKey]}
       // A weapon shows its default aspect's icon.
       itemIcon={(item) =>
@@ -50,7 +50,7 @@ export function RouteWeaponPicker({
         ]
       }
       triggerSizingLabels={catalog.weapons.values.flatMap((option) =>
-        option.aspectKeys.map((key) => `${option.label} · ${catalog.aspects.byKey[key]!.label}`),
+        option.aspectKeys.map((key) => slotLoadoutLabel(catalog, option.key, key)),
       )}
       choiceLabel={pendingWeapon === undefined ? 'Weapon' : `${pendingWeapon.label} · Aspect`}
       open={open}

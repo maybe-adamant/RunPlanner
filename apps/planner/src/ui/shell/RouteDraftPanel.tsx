@@ -471,6 +471,16 @@ export function RouteDraftPanel({
       ))}
     </div>
   );
+  const routePrefix = (
+    <RoutePrefixControl
+      biomes={project.route.itineraryBiomeKeys.map((biomeKey) => ({
+        biomeKey,
+        label: biomeLabel(biomeKey),
+      }))}
+      configuredBiomeCount={project.route.biomes.length}
+      routeKey={project.route.routeKey}
+    />
+  );
   return (
     <section className="route-overview route-draft" aria-label="Draft">
       <header className="panel-heading draft-heading">
@@ -528,22 +538,16 @@ export function RouteDraftPanel({
               <h3 className="draft-section-heading" id="draft-run-heading">
                 Run
               </h3>
-              <RoutePrefixControl
-                biomes={project.route.itineraryBiomeKeys.map((biomeKey) => ({
-                  biomeKey,
-                  label: biomeLabel(biomeKey),
-                }))}
-                configuredBiomeCount={project.route.biomes.length}
-                routeKey={project.route.routeKey}
-              />
               {initialProfile.kind === 'freshFile' ? (
                 <FreshFileLoadout
+                  beside={routePrefix}
                   catalog={catalog}
                   fixedWeaponKey={initialProfile.fixedWeaponKey}
                 />
               ) : (
                 <RouteLoadoutControls
                   authoredRoute={project.route}
+                  beside={routePrefix}
                   catalog={catalog}
                   interactions={interactions}
                   keepsakeUnavailableHint={godKeepsakeHint}
