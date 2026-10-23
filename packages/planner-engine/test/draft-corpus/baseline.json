@@ -6,37 +6,37 @@
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
-    "essencesPerRun": 3,
-    "purchasesPerRun": { "BlindBoxLoot": 0.125, "boon": 0.125 },
+    "essencesPerRun": 2.625,
+    "purchasesPerRun": { "boon": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 8446,
-    "msMax": 10534
+    "msMedian": 7946,
+    "msMax": 9759
   },
   "U2 medium Hermes Hammer Selene": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.984, "hermes": 1, "hammer": 1, "selene": 1, "story": 1 },
+    "targets": { "god": 1, "hermes": 1, "hammer": 1, "selene": 0.875, "story": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
-    "essencesPerRun": 2.625,
-    "purchasesPerRun": { "BlindBoxLoot": 0.125, "boon": 0.375 },
+    "essencesPerRun": 2.375,
+    "purchasesPerRun": { "boon": 0.625, "hammer": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 8859,
-    "msMax": 11236
+    "msMedian": 8488,
+    "msMax": 12091
   },
   "U3 heavy Hermes Artemis trait": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.946, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
+    "targets": { "god": 0.973, "hermes": 0.875, "npcTrait": 1, "story": 1, "field": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
-    "essencesPerRun": 1.75,
-    "purchasesPerRun": { "BlindBoxLoot": 0.75, "boon": 2.375 },
-    "attemptsMedian": 4.5,
-    "msMedian": 9118,
-    "msMax": 17652
+    "essencesPerRun": 2.5,
+    "purchasesPerRun": { "BlindBoxLoot": 0.5, "boon": 1.875 },
+    "attemptsMedian": 4,
+    "msMedian": 8626,
+    "msMax": 14471
   },
   "U4 medium Forfeit": {
     "runs": 8,
@@ -45,37 +45,37 @@
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
-    "essencesPerRun": 1.75,
-    "purchasesPerRun": { "BlindBoxLoot": 0.375, "boon": 0.5 },
+    "essencesPerRun": 2.75,
+    "purchasesPerRun": { "BlindBoxLoot": 0.375 },
     "attemptsMedian": 4,
-    "msMedian": 7425,
-    "msMax": 11084
+    "msMedian": 7773,
+    "msMax": 10284
   },
   "U5 medium prefix 1": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.958, "story": 1 },
+    "targets": { "god": 0.917, "story": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
-    "essencesPerRun": 1.25,
-    "purchasesPerRun": { "boon": 0.125 },
+    "essencesPerRun": 1.125,
+    "purchasesPerRun": { "BlindBoxLoot": 0.125 },
     "attemptsMedian": 1,
-    "msMedian": 2283,
-    "msMax": 3770
+    "msMedian": 2064,
+    "msMax": 2482
   },
   "U6 medium Hammer prefix 2": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.922, "hammer": 0.875, "story": 1, "field": 1 },
+    "targets": { "god": 0.922, "hammer": 1, "story": 1, "field": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
-    "elementDeferredRuns": 0,
-    "essencesPerRun": 1.875,
-    "purchasesPerRun": { "BlindBoxLoot": 0.125, "boon": 0.25, "hammer": 0.25 },
-    "attemptsMedian": 3.5,
-    "msMedian": 6211,
-    "msMax": 10462
+    "elementDeferredRuns": 0.125,
+    "essencesPerRun": 1.5,
+    "purchasesPerRun": { "BlindBoxLoot": 0.25, "hammer": 0.25 },
+    "attemptsMedian": 2,
+    "msMedian": 4519,
+    "msMax": 6238
   },
   "S1 light Icarus": {
     "runs": 8,
@@ -84,11 +84,11 @@
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 1,
-    "essencesPerRun": 2.75,
+    "essencesPerRun": 2,
     "purchasesPerRun": { "BlindBoxLoot": 0.125, "boon": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 7191,
-    "msMax": 8712
+    "msMedian": 7945,
+    "msMax": 9847
   },
   "S2 medium Hermes Hammer Selene Heracles": {
     "runs": 8,
@@ -97,24 +97,24 @@
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 1,
-    "essencesPerRun": 3.125,
-    "purchasesPerRun": { "BlindBoxLoot": 0.75, "boon": 0.875, "hermes": 0.125 },
+    "essencesPerRun": 3.375,
+    "purchasesPerRun": { "BlindBoxLoot": 0.75, "boon": 0.75, "hermes": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 7629,
-    "msMax": 9540
+    "msMedian": 8030,
+    "msMax": 9995
   },
   "S3 heavy Hermes Icarus trait": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.846, "duo": 1, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
+    "targets": { "god": 0.837, "duo": 1, "hermes": 0.875, "npcTrait": 1, "story": 1, "field": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0.625,
     "essencesPerRun": 3.125,
-    "purchasesPerRun": { "BlindBoxLoot": 1.375, "boon": 2.75 },
+    "purchasesPerRun": { "BlindBoxLoot": 1.25, "boon": 1.75 },
     "attemptsMedian": 4,
-    "msMedian": 8097,
-    "msMax": 11320
+    "msMedian": 8521,
+    "msMax": 13647
   },
   "S4 medium Forfeit prefix 2": {
     "runs": 8,
@@ -126,8 +126,8 @@
     "essencesPerRun": 1.375,
     "purchasesPerRun": { "BlindBoxLoot": 0.875, "boon": 1.125 },
     "attemptsMedian": 2,
-    "msMedian": 2654,
-    "msMax": 3126
+    "msMedian": 2714,
+    "msMax": 3259
   },
   "S5 light prefix 1": {
     "runs": 8,
@@ -139,34 +139,34 @@
     "essencesPerRun": 0.875,
     "purchasesPerRun": { "BlindBoxLoot": 0.25, "boon": 0.5 },
     "attemptsMedian": 1,
-    "msMedian": 1284,
-    "msMax": 1504
+    "msMedian": 1334,
+    "msMax": 1488
   },
   "S6 medium Artemis N": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.982, "duo": 1, "story": 1, "field": 1 },
+    "targets": { "god": 1, "duo": 1, "story": 1, "field": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
-    "essencesPerRun": 2.625,
-    "purchasesPerRun": { "BlindBoxLoot": 0.875, "boon": 1.375 },
+    "essencesPerRun": 3.125,
+    "purchasesPerRun": { "BlindBoxLoot": 0.75, "boon": 1.5 },
     "attemptsMedian": 4,
-    "msMedian": 7592,
-    "msMax": 8095
+    "msMedian": 8053,
+    "msMax": 8863
   },
   "S7 heavy Hermes Artemis trait N": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.964, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
+    "targets": { "god": 0.982, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 1,
-    "essencesPerRun": 2.875,
-    "purchasesPerRun": { "BlindBoxLoot": 1.625, "boon": 2.25 },
+    "essencesPerRun": 2.375,
+    "purchasesPerRun": { "BlindBoxLoot": 1.875, "boon": 1.875 },
     "attemptsMedian": 4,
-    "msMedian": 7773,
-    "msMax": 10123
+    "msMedian": 8020,
+    "msMax": 8462
   },
   "D1 light": {
     "runs": 8,
@@ -176,36 +176,36 @@
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "BlindBoxLoot": 0.25, "boon": 0.25 },
+    "purchasesPerRun": { "BlindBoxLoot": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 7243,
-    "msMax": 9983
+    "msMedian": 8320,
+    "msMax": 8794
   },
   "D2 medium Hammer Artemis prefix 2": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.969, "hammer": 1, "story": 1, "field": 1 },
+    "targets": { "god": 0.953, "hammer": 1, "story": 1, "field": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "BlindBoxLoot": 0.25, "boon": 0.5, "hammer": 0.25 },
+    "purchasesPerRun": { "BlindBoxLoot": 0.375 },
     "attemptsMedian": 2,
-    "msMedian": 3948,
-    "msMax": 4702
+    "msMedian": 4258,
+    "msMax": 4943
   },
   "D3 heavy Hermes Artemis trait": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.93, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
+    "targets": { "god": 0.883, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "BlindBoxLoot": 1.625, "boon": 2.5 },
+    "purchasesPerRun": { "BlindBoxLoot": 1.25, "boon": 3 },
     "attemptsMedian": 4,
-    "msMedian": 9346,
-    "msMax": 13205
+    "msMedian": 9555,
+    "msMax": 16979
   },
   "D4 medium Forfeit": {
     "runs": 8,
@@ -213,25 +213,25 @@
     "targets": { "god": 1, "story": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
-    "elementDeferredRuns": 1,
+    "elementDeferredRuns": 0.875,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "BlindBoxLoot": 0.75, "boon": 0.5 },
+    "purchasesPerRun": { "BlindBoxLoot": 0.625, "WaterBoost": 0.125, "boon": 1.125 },
     "attemptsMedian": 4,
-    "msMedian": 7213,
-    "msMax": 8256
+    "msMedian": 7913,
+    "msMax": 8589
   },
   "U7 medium 2 Hermes 2 Hammer": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 1, "hermes": 0.875, "hammer": 1, "story": 1 },
+    "targets": { "god": 1, "hermes": 1, "hammer": 1, "story": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0.5,
-    "essencesPerRun": 2.875,
-    "purchasesPerRun": { "BlindBoxLoot": 0.25, "boon": 0.375, "hammer": 0.125, "hermes": 0.5 },
+    "essencesPerRun": 2,
+    "purchasesPerRun": { "BlindBoxLoot": 0.25, "boon": 0.125, "hermes": 0.375 },
     "attemptsMedian": 4.5,
-    "msMedian": 8300,
-    "msMax": 10992
+    "msMedian": 9024,
+    "msMax": 11754
   },
   "S8 medium 2 Hermes 2 Hammer": {
     "runs": 8,
@@ -240,76 +240,76 @@
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 1,
-    "essencesPerRun": 2.75,
-    "purchasesPerRun": { "BlindBoxLoot": 1.5, "boon": 0.75, "hermes": 0.25 },
+    "essencesPerRun": 2.625,
+    "purchasesPerRun": { "BlindBoxLoot": 1.5, "boon": 0.625, "hermes": 0.375 },
     "attemptsMedian": 4,
-    "msMedian": 7583,
-    "msMax": 8873
+    "msMedian": 8197,
+    "msMax": 10249
   },
   "D5 medium 2 Hermes 2 Hammer": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 1, "hermes": 1, "hammer": 0.875, "story": 1 },
+    "targets": { "god": 0.969, "hermes": 1, "hammer": 0.875, "story": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "BlindBoxLoot": 0.375, "boon": 0.25, "hermes": 0.375 },
-    "attemptsMedian": 4.5,
-    "msMedian": 8183,
-    "msMax": 10616
+    "purchasesPerRun": { "BlindBoxLoot": 0.5, "boon": 1.125, "hermes": 0.375 },
+    "attemptsMedian": 4,
+    "msMedian": 8284,
+    "msMax": 10536
   },
   "U8 heavy 2 Duos": {
-    "runs": 8,
-    "drafted": 1,
-    "targets": { "god": 1, "duo": 1, "story": 1 },
-    "orderInversionRuns": 0,
-    "orderInversionsMedian": 0,
-    "elementDeferredRuns": 0.5,
-    "essencesPerRun": 2.75,
-    "purchasesPerRun": { "BlindBoxLoot": 0.625, "boon": 1.875 },
-    "attemptsMedian": 4,
-    "msMedian": 7819,
-    "msMax": 10719
-  },
-  "S9 heavy 2 Duos": {
     "runs": 8,
     "drafted": 1,
     "targets": { "god": 0.979, "duo": 1, "story": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
-    "elementDeferredRuns": 0,
-    "essencesPerRun": 2.5,
-    "purchasesPerRun": { "BlindBoxLoot": 1.625, "boon": 1.75 },
+    "elementDeferredRuns": 0.5,
+    "essencesPerRun": 2.375,
+    "purchasesPerRun": { "BlindBoxLoot": 0.875, "boon": 1 },
     "attemptsMedian": 4,
-    "msMedian": 7450,
-    "msMax": 7817
+    "msMedian": 8275,
+    "msMax": 9356
+  },
+  "S9 heavy 2 Duos": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 0.969, "duo": 1, "story": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 2.375,
+    "purchasesPerRun": { "BlindBoxLoot": 1.5, "boon": 1.75 },
+    "attemptsMedian": 4,
+    "msMedian": 8256,
+    "msMax": 9310
   },
   "D6 heavy 2 Duos": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.92, "duo": 1, "story": 1 },
+    "targets": { "god": 0.929, "duo": 1, "story": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
-    "elementDeferredRuns": 0.125,
+    "elementDeferredRuns": 0.25,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "BlindBoxLoot": 1.75, "FireBoost": 0.125, "boon": 2.875 },
+    "purchasesPerRun": { "BlindBoxLoot": 1.5, "FireBoost": 0.125, "boon": 2.5 },
     "attemptsMedian": 4,
-    "msMedian": 8742,
-    "msMax": 9732
+    "msMedian": 8803,
+    "msMax": 11140
   },
   "U9 heavy prefix 3": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 1, "hermes": 1, "story": 0.958 },
+    "targets": { "god": 0.963, "hermes": 1, "story": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
-    "elementDeferredRuns": 0.5,
-    "essencesPerRun": 2.625,
-    "purchasesPerRun": { "boon": 0.375, "hermes": 0.125 },
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 2.5,
+    "purchasesPerRun": { "BlindBoxLoot": 0.25, "boon": 0.125 },
     "attemptsMedian": 3,
-    "msMedian": 6258,
-    "msMax": 10455
+    "msMedian": 6322,
+    "msMax": 8205
   },
   "S10 heavy prefix 2": {
     "runs": 8,
@@ -321,21 +321,21 @@
     "essencesPerRun": 1.5,
     "purchasesPerRun": { "BlindBoxLoot": 0.875, "boon": 0.75 },
     "attemptsMedian": 2,
-    "msMedian": 2559,
-    "msMax": 2902
+    "msMedian": 2966,
+    "msMax": 3801
   },
   "D7 heavy prefix 3": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.923, "duo": 1, "hammer": 1, "story": 0.958 },
+    "targets": { "god": 0.923, "duo": 1, "hammer": 1, "story": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "BlindBoxLoot": 1, "boon": 1, "hammer": 0.125 },
+    "purchasesPerRun": { "BlindBoxLoot": 1, "boon": 0.5, "hammer": 0.125 },
     "attemptsMedian": 3,
-    "msMedian": 6275,
-    "msMax": 8158
+    "msMedian": 6382,
+    "msMax": 9614
   },
   "F1 light": {
     "runs": 8,
@@ -345,10 +345,10 @@
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "boon": 0.375 },
+    "purchasesPerRun": { "boon": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 7576,
-    "msMax": 8644
+    "msMedian": 7681,
+    "msMax": 9771
   },
   "F2 medium": {
     "runs": 8,
@@ -358,23 +358,23 @@
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "boon": 1 },
+    "purchasesPerRun": { "boon": 0.625 },
     "attemptsMedian": 4,
-    "msMedian": 7235,
-    "msMax": 7719
+    "msMedian": 7882,
+    "msMax": 9786
   },
   "F3 heavy": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.991 },
+    "targets": { "god": 0.964 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "boon": 2.125 },
+    "purchasesPerRun": { "boon": 3.125 },
     "attemptsMedian": 4,
-    "msMedian": 7965,
-    "msMax": 9033
+    "msMedian": 7928,
+    "msMax": 10999
   },
   "F4 heavy prefix 2": {
     "runs": 8,
@@ -384,90 +384,12 @@
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "boon": 0.625 },
+    "purchasesPerRun": { "boon": 1 },
     "attemptsMedian": 2,
-    "msMedian": 3620,
-    "msMax": 3937
+    "msMedian": 3828,
+    "msMax": 4182
   },
   "F5 medium prefix 1": {
-    "runs": 8,
-    "drafted": 1,
-    "targets": { "god": 0.9 },
-    "orderInversionRuns": 0,
-    "orderInversionsMedian": 0,
-    "elementDeferredRuns": 0,
-    "essencesPerRun": 0,
-    "purchasesPerRun": { "boon": 0.125 },
-    "attemptsMedian": 1,
-    "msMedian": 1607,
-    "msMax": 1890
-  },
-  "F6 heavy alt": {
-    "runs": 8,
-    "drafted": 1,
-    "targets": { "god": 0.904, "duo": 1 },
-    "orderInversionRuns": 0,
-    "orderInversionsMedian": 0,
-    "elementDeferredRuns": 0,
-    "essencesPerRun": 0,
-    "purchasesPerRun": { "boon": 2.875 },
-    "attemptsMedian": 4,
-    "msMedian": 7531,
-    "msMax": 7983
-  },
-  "U3 heavy Hermes Artemis trait midshops": {
-    "runs": 8,
-    "drafted": 1,
-    "targets": { "god": 0.973, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
-    "orderInversionRuns": 0,
-    "orderInversionsMedian": 0,
-    "elementDeferredRuns": 0,
-    "essencesPerRun": 2.375,
-    "purchasesPerRun": { "BlindBoxLoot": 0.625, "boon": 1.25 },
-    "attemptsMedian": 6,
-    "msMedian": 11109,
-    "msMax": 11889
-  },
-  "U6 medium Hammer prefix 2 midshops": {
-    "runs": 8,
-    "drafted": 1,
-    "targets": { "god": 0.922, "hammer": 1, "story": 0.938, "field": 1 },
-    "orderInversionRuns": 0,
-    "orderInversionsMedian": 0,
-    "elementDeferredRuns": 0.125,
-    "essencesPerRun": 2.125,
-    "purchasesPerRun": { "BlindBoxLoot": 0.375, "boon": 0.375, "hammer": 0.25 },
-    "attemptsMedian": 3,
-    "msMedian": 4993,
-    "msMax": 9276
-  },
-  "S2 medium Hermes Hammer Selene Heracles midshops": {
-    "runs": 8,
-    "drafted": 1,
-    "targets": { "god": 1, "hermes": 1, "hammer": 1, "selene": 1, "story": 1, "field": 1 },
-    "orderInversionRuns": 0,
-    "orderInversionsMedian": 0,
-    "elementDeferredRuns": 1,
-    "essencesPerRun": 3.125,
-    "purchasesPerRun": { "BlindBoxLoot": 0.625, "boon": 1.625, "hammer": 0.125 },
-    "attemptsMedian": 4,
-    "msMedian": 7638,
-    "msMax": 8649
-  },
-  "D3 heavy Hermes Artemis trait midshops": {
-    "runs": 8,
-    "drafted": 1,
-    "targets": { "god": 0.898, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
-    "orderInversionRuns": 0,
-    "orderInversionsMedian": 0,
-    "elementDeferredRuns": 0,
-    "essencesPerRun": 0,
-    "purchasesPerRun": { "BlindBoxLoot": 1.125, "boon": 3.125 },
-    "attemptsMedian": 5.5,
-    "msMedian": 10197,
-    "msMax": 18409
-  },
-  "F3 heavy midshops": {
     "runs": 8,
     "drafted": 1,
     "targets": { "god": 1 },
@@ -475,10 +397,88 @@
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "boon": 4.25 },
+    "purchasesPerRun": { "boon": 0.375 },
+    "attemptsMedian": 1,
+    "msMedian": 1919,
+    "msMax": 2097
+  },
+  "F6 heavy alt": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 0.942, "duo": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 0,
+    "purchasesPerRun": { "boon": 3.625 },
     "attemptsMedian": 4,
-    "msMedian": 7343,
-    "msMax": 7836
+    "msMedian": 7596,
+    "msMax": 8781
+  },
+  "U3 heavy Hermes Artemis trait midshops": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 0.955, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 2.5,
+    "purchasesPerRun": { "BlindBoxLoot": 0.625, "boon": 2.125 },
+    "attemptsMedian": 4.5,
+    "msMedian": 8380,
+    "msMax": 11951
+  },
+  "U6 medium Hammer prefix 2 midshops": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 0.891, "hammer": 1, "story": 1, "field": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 2.25,
+    "purchasesPerRun": { "BlindBoxLoot": 0.375, "hammer": 0.5 },
+    "attemptsMedian": 2,
+    "msMedian": 4322,
+    "msMax": 5596
+  },
+  "S2 medium Hermes Hammer Selene Heracles midshops": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 0.984, "hermes": 1, "hammer": 1, "selene": 1, "story": 1, "field": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0.875,
+    "essencesPerRun": 2.875,
+    "purchasesPerRun": { "BlindBoxLoot": 0.625, "boon": 1.5, "hammer": 0.125 },
+    "attemptsMedian": 4,
+    "msMedian": 7964,
+    "msMax": 8865
+  },
+  "D3 heavy Hermes Artemis trait midshops": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 0.93, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 0,
+    "purchasesPerRun": { "BlindBoxLoot": 1.25, "boon": 2.625 },
+    "attemptsMedian": 4,
+    "msMedian": 8296,
+    "msMax": 16265
+  },
+  "F3 heavy midshops": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 0.982 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 0,
+    "purchasesPerRun": { "boon": 3.875 },
+    "attemptsMedian": 4,
+    "msMedian": 8212,
+    "msMax": 9877
   },
   "U1 light Artemis tartarus": {
     "runs": 8,
@@ -487,24 +487,24 @@
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
-    "essencesPerRun": 2.75,
-    "purchasesPerRun": { "BlindBoxLoot": 0.125, "boon": 0.125 },
+    "essencesPerRun": 2.625,
+    "purchasesPerRun": { "boon": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 8078,
-    "msMax": 10162
+    "msMedian": 7993,
+    "msMax": 9862
   },
   "U3 heavy Hermes Artemis trait tartarus": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.938, "hermes": 1, "npcTrait": 1, "story": 0.969, "field": 1 },
+    "targets": { "god": 0.938, "hermes": 0.875, "npcTrait": 1, "story": 1, "field": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
-    "essencesPerRun": 1.75,
-    "purchasesPerRun": { "BlindBoxLoot": 1, "boon": 2.125 },
-    "attemptsMedian": 4.5,
-    "msMedian": 8517,
-    "msMax": 10586
+    "essencesPerRun": 2.5,
+    "purchasesPerRun": { "BlindBoxLoot": 0.5, "boon": 2.5 },
+    "attemptsMedian": 4,
+    "msMedian": 8552,
+    "msMax": 14395
   },
   "U4 medium Forfeit tartarus": {
     "runs": 8,
@@ -513,11 +513,11 @@
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
-    "essencesPerRun": 2.125,
-    "purchasesPerRun": { "BlindBoxLoot": 0.375, "boon": 0.875 },
-    "attemptsMedian": 4.5,
-    "msMedian": 6952,
-    "msMax": 9789
+    "essencesPerRun": 2.75,
+    "purchasesPerRun": { "BlindBoxLoot": 0.375 },
+    "attemptsMedian": 4,
+    "msMedian": 6407,
+    "msMax": 7770
   },
   "D1 light tartarus": {
     "runs": 8,
@@ -527,23 +527,23 @@
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "BlindBoxLoot": 0.25, "boon": 0.25 },
+    "purchasesPerRun": { "BlindBoxLoot": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 5621,
-    "msMax": 7878
+    "msMedian": 6243,
+    "msMax": 7278
   },
   "D3 heavy Hermes Artemis trait tartarus": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.906, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
+    "targets": { "god": 0.797, "hermes": 1, "npcTrait": 1, "story": 1, "field": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "BlindBoxLoot": 1.625, "boon": 2.75 },
+    "purchasesPerRun": { "BlindBoxLoot": 1.25, "boon": 3.25 },
     "attemptsMedian": 4,
-    "msMedian": 7981,
-    "msMax": 9190
+    "msMedian": 7763,
+    "msMax": 10317
   },
   "D4 medium Forfeit tartarus": {
     "runs": 8,
@@ -551,37 +551,37 @@
     "targets": { "god": 1, "story": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
-    "elementDeferredRuns": 1,
+    "elementDeferredRuns": 0.875,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "BlindBoxLoot": 0.75, "boon": 0.5 },
+    "purchasesPerRun": { "BlindBoxLoot": 0.625, "WaterBoost": 0.125, "boon": 1.125 },
     "attemptsMedian": 4,
-    "msMedian": 6795,
-    "msMax": 7882
+    "msMedian": 6608,
+    "msMax": 7796
   },
   "U8 heavy 2 Duos tartarus": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.979, "duo": 1, "story": 1 },
+    "targets": { "god": 0.969, "duo": 1, "story": 1 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0.5,
-    "essencesPerRun": 2.625,
-    "purchasesPerRun": { "BlindBoxLoot": 0.625, "boon": 1.625 },
+    "essencesPerRun": 2.375,
+    "purchasesPerRun": { "BlindBoxLoot": 1, "boon": 1.625 },
     "attemptsMedian": 4,
-    "msMedian": 5561,
-    "msMax": 7531
+    "msMedian": 6185,
+    "msMax": 6614
   },
   "F3 heavy tartarus": {
     "runs": 8,
     "drafted": 1,
-    "targets": { "god": 0.982 },
+    "targets": { "god": 0.964 },
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "boon": 1.875 },
+    "purchasesPerRun": { "boon": 3 },
     "attemptsMedian": 4,
-    "msMedian": 6618,
-    "msMax": 7308
+    "msMedian": 6503,
+    "msMax": 7469
   }
 }
