@@ -723,13 +723,6 @@ button.home-slot-name {
   margin-left: 8px;
 }
 
-.home-about-line {
-  margin: 0;
-  padding: 0 2px;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
 /* Editor header */
 .editor-header {
   gap: 16px;
@@ -1396,4 +1389,49 @@ button.home-slot-name {
   background: #2b2c35;
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
+}
+
+/* Settings' Presets lists. */
+.preset-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.preset-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.preset-rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preset-rows > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid #2c2d35;
+}
+
+.preset-row-text {
+  display: grid;
+  min-width: 0;
+}
+
+.preset-row-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preset-name-field {
+  max-width: 320px;
 }

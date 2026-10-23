@@ -7,7 +7,10 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectCommandsDispatched,
+} from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 import type {
   WorkspaceInteractionCatalog,
@@ -19,31 +22,17 @@ import { AspectHexTreeDialog } from '@planner/ui/editor/rewards/AspectHexTreeDia
 import { useFindingTarget } from '../feedback/useFindingTarget';
 import { RouteFamiliarPicker } from './RouteFamiliarPicker';
 import { RouteWeaponPicker } from './RouteWeaponPicker';
-import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
-import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
+import { ArcanaBoard, FearBoard } from '@planner/ui/controls/arcana-fear/ArcanaFearBoards';
+import { fearVowsInGridOrder } from '@planner/ui/controls/arcana-fear/fearVowOrder';
+import { PresetChips } from '@planner/ui/controls/arcana-fear/PresetChips';
+import {
+  projectArcanaPresetChips,
+  projectVowPresetChips,
+} from '@planner/projections/loadoutPresets';
+import { useLoadoutPresets } from './loadoutPresetsContext';
 
 import { EditorDialog } from '@planner/ui/controls/EditorDialog';
 import { showTruncatedTitle } from '@planner/ui/controls/truncatedTitle';
-
-const fearVowGridOrder = Object.freeze([
-  'EnemyDamageShrineUpgrade',
-  'EnemyHealthShrineUpgrade',
-  'EnemyShieldShrineUpgrade',
-  'EnemySpeedShrineUpgrade',
-  'EnemyCountShrineUpgrade',
-  'NextBiomeEnemyShrineUpgrade',
-  'EnemyRespawnShrineUpgrade',
-  'EnemyEliteShrineUpgrade',
-  'HealingReductionShrineUpgrade',
-  'ShopPricesShrineUpgrade',
-  'MinibossCountShrineUpgrade',
-  'BoonSkipShrineUpgrade',
-  'BiomeSpeedShrineUpgrade',
-  'LimitGraspShrineUpgrade',
-  'BoonManaReserveShrineUpgrade',
-  'BanUnpickedBoonsShrineUpgrade',
-  'BossDifficultyShrineUpgrade',
-] as const);
 
 /** Weapon, Arcana, Fear, starting keepsake, Hex and familiar, edited as the project's loadout. */
 export function RouteLoadoutControls({
@@ -70,16 +59,9 @@ export function RouteLoadoutControls({
   const familiarKey = authoredRoute.loadout.familiarKey;
   if (familiarKey === null) throw new Error('Missing familiar');
   const derivedLoadout = deriveRouteLoadout(catalog, authoredRoute.loadout);
-  const arcanaCards = catalog.arcanaCards.values;
-  const fearVows = fearVowGridOrder.flatMap((key) => {
-    const vow = catalog.fearVows.byKey[key];
-    return vow === undefined ? [] : [vow];
-  });
+  const fearVows = fearVowsInGridOrder(catalog);
+  const presets = useLoadoutPresets();
   const fearRanks = authoredRoute.loadout.fearRanks;
-  const manualArcana = new Map(
-    workspaceRoute.loadoutEditDomain.manualArcana.map((toggle) => [toggle.key, toggle]),
-  );
-  const vowRanks = new Map(workspaceRoute.loadoutEditDomain.fearVows.map((vow) => [vow.key, vow]));
   const activeFearCount = fearVows.filter((vow) => fearRanks[vow.key]! > 0).length;
   const maximumFear = fearVows.reduce(
     (total, vow) => total + vow.incrementalFear.reduce((sum, fear) => sum + fear, 0),
@@ -214,66 +196,35 @@ export function RouteLoadoutControls({
           size="cards"
           title="Arcana"
         >
-          <section
-            role="group"
-            aria-label={`Arcana, ${derivedLoadout.activeArcanaKeys.length} active`}
-            className="route-loadout-section"
-          >
-            <div className="arcana-summary-line">
-              <p className="route-loadout-summary">
-                Arcana{' '}
-                <span>
-                  {derivedLoadout.activeArcanaKeys.length} active ·{' '}
-                  {derivedLoadout.startingArcanaGrasp.cost} /{' '}
-                  {derivedLoadout.startingArcanaGrasp.capacity} Grasp
-                </span>
-              </p>
-              <p className="arcana-legend">Grayscale: inactive · Color: active</p>
-            </div>
-            <div className="arcana-board">
-              {arcanaCards.map((card) => {
-                const toggle = manualArcana.get(card.key);
-                const automatic = toggle === undefined;
-                const selected =
-                  toggle?.selected ?? derivedLoadout.automaticArcanaKeys.includes(card.key);
-                // Deselecting stays available so an over-capacity selection can be repaired.
-                const exceedsGrasp =
-                  toggle !== undefined && !toggle.selected && !toggle.grasp.legal;
-                return (
-                  <ArcanaCard
-                    key={card.key}
-                    cardKey={card.key}
-                    rarity={
-                      workspaceRoute.startingArcana.find((active) => active.key === card.key)
-                        ?.rarity
-                    }
-                    label={`${card.label}${automatic ? ' (automatic)' : ''}`}
-                    data-automatic={automatic}
-                    aria-pressed={selected}
-                    disabled={automatic || exceedsGrasp}
-                    type="button"
-                    onClick={() => {
-                      if (toggle === undefined) return;
-                      dispatch(
-                        authoredProjectCommandDispatched({
-                          kind: 'ReplaceManualArcanaSelection',
-                          route: createRouteAddress(workspaceRoute.routeKey),
-                          arcanaKeys: toggle.arcanaKeys,
-                        }),
-                      );
-                    }}
-                    hint={
-                      exceedsGrasp
-                        ? `${toggle.grasp.cost} Grasp exceeds the starting capacity of ${toggle.grasp.capacity}.`
-                        : automatic
-                          ? 'Activates automatically when its conditions are met.'
-                          : undefined
-                    }
-                  />
-                );
-              })}
-            </div>
-          </section>
+          {presets.snapshot.arcana.length === 0 ? null : (
+            <PresetChips
+              chips={projectArcanaPresetChips(
+                catalog,
+                workspaceRoute.routeKey,
+                authoredRoute.loadout,
+                presets.snapshot.arcana,
+              )}
+              label="Arcana presets"
+              onApply={(commands) => dispatch(authoredProjectCommandsDispatched(commands))}
+            />
+          )}
+          <ArcanaBoard
+            catalog={catalog}
+            derived={derivedLoadout}
+            domain={workspaceRoute.loadoutEditDomain}
+            onReplace={(arcanaKeys) =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceManualArcanaSelection',
+                  route: createRouteAddress(workspaceRoute.routeKey),
+                  arcanaKeys,
+                }),
+              )
+            }
+            rarityOf={(cardKey) =>
+              workspaceRoute.startingArcana.find((active) => active.key === cardKey)?.rarity
+            }
+          />
         </EditorDialog>
       ) : null}
       {dialog === 'Fear' ? (
@@ -284,60 +235,33 @@ export function RouteLoadoutControls({
           size="cards"
           title="Fear"
         >
-          <section
-            role="group"
-            aria-label={`Fear, ${derivedLoadout.fearTotal} total`}
-            className="route-loadout-section"
-          >
-            <p className="route-loadout-summary">
-              Fear <span>{derivedLoadout.fearTotal} total</span>
-            </p>
-            <p className="panel-description">Click to cycle ranks · Right-click to reset</p>
-            <div className="fear-rank-list">
-              {fearVows.map((vow) => {
-                const { rank, maximum, legalRanks } = vowRanks.get(vow.key)!;
-                const nextRank = rank >= maximum ? 0 : rank + 1;
-                const canAdvance = legalRanks.includes(nextRank);
-                const setRank = (value: number) => {
-                  if (value === rank || !legalRanks.includes(value)) return;
-                  dispatch(
-                    authoredProjectCommandDispatched({
-                      kind: 'ReplaceFearVowRank',
-                      route: createRouteAddress(workspaceRoute.routeKey),
-                      vowKey: vow.key,
-                      rank: value,
-                    }),
-                  );
-                };
-                return (
-                  <FearCard
-                    key={vow.key}
-                    vowKey={vow.key}
-                    label={vow.label}
-                    rank={rank}
-                    maximum={maximum}
-                    type="button"
-                    className="fear-rank-control"
-                    aria-label={`${vow.label}, rank ${rank} of ${maximum}`}
-                    aria-disabled={!canAdvance}
-                    data-active={rank > 0 || undefined}
-                    hint={
-                      canAdvance
-                        ? undefined
-                        : 'This rank would lower your starting Grasp below the cost of your chosen Arcana. Remove Arcana cards first.'
-                    }
-                    data-fear-vow-key={vow.key}
-                    data-rival={vow.key === 'BossDifficultyShrineUpgrade' || undefined}
-                    onClick={() => setRank(nextRank)}
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      setRank(0);
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </section>
+          {presets.snapshot.vows.length === 0 ? null : (
+            <PresetChips
+              chips={projectVowPresetChips(
+                catalog,
+                workspaceRoute.routeKey,
+                authoredRoute.loadout,
+                presets.snapshot.vows,
+              )}
+              label="Vow presets"
+              onApply={(commands) => dispatch(authoredProjectCommandsDispatched(commands))}
+            />
+          )}
+          <FearBoard
+            catalog={catalog}
+            derived={derivedLoadout}
+            domain={workspaceRoute.loadoutEditDomain}
+            onRank={(vowKey, rank) =>
+              dispatch(
+                authoredProjectCommandDispatched({
+                  kind: 'ReplaceFearVowRank',
+                  route: createRouteAddress(workspaceRoute.routeKey),
+                  vowKey,
+                  rank,
+                }),
+              )
+            }
+          />
         </EditorDialog>
       ) : null}
     </div>

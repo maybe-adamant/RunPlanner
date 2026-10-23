@@ -3,6 +3,7 @@ export type ActionIconName =
   | 'chevronRight'
   | 'close'
   | 'duplicate'
+  | 'edit'
   | 'load'
   | 'move'
   | 'openInEditor'
@@ -62,6 +63,14 @@ export function ActionIcon({ name }: { readonly name: ActionIconName }) {
           <>
             <path d="M1.5 4.5v8h13v-7h-6.5l-1.5-1.5h-5z" />
             <path d="m7.5 7.5 2 1.5-2 1.5M5 9h4.5" />
+          </>
+        );
+      case 'edit':
+        return (
+          <>
+            <path d="M2.5 4.5h3m3 0h5M2.5 11.5h7m3 0h1" />
+            <circle cx="7" cy="4.5" r="1.5" />
+            <circle cx="11" cy="11.5" r="1.5" />
           </>
         );
       case 'rename':

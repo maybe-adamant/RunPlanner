@@ -275,7 +275,7 @@ export function HomeScreen({
             {...(slotRebuild === undefined ? {} : { slotRebuild })}
           />
         ) : (
-          <SettingsScreen buildIdentity={buildIdentity} scale={scale} />
+          <SettingsScreen catalog={catalog} scale={scale} />
         )}
       </div>
     </>

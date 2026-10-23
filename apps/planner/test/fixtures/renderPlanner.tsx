@@ -5,6 +5,7 @@ import { Provider } from 'react-redux';
 
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import { createProjectDocument } from '@run-planner/engine/authored-project';
+import type { LoadoutPresetController } from '@planner/persistence/loadoutPresets';
 import { App } from '@planner/ui/shell/App';
 import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
@@ -12,6 +13,7 @@ import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 interface RenderPlannerOptions {
   readonly application?: PlannerApplication;
   readonly companion?: ReactNode;
+  readonly loadoutPresets?: LoadoutPresetController;
   /** Most editor interaction tests need an explicitly open route. */
   readonly startWithProject?: boolean;
 }
@@ -47,6 +49,9 @@ export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) 
         draftRun={application.draftRun}
         buildIdentity={application.buildIdentity}
         editorNavigation={application.editorNavigation}
+        {...(options.loadoutPresets === undefined
+          ? {}
+          : { loadoutPresets: options.loadoutPresets })}
         {...(application.bugReport === undefined ? {} : { bugReport: application.bugReport })}
         {...(application.communityEvents === undefined
           ? {}

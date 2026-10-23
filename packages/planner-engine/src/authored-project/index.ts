@@ -461,6 +461,11 @@ export {
   type RouteLoadoutEditDomain,
   type StartingArcanaGraspAssessment,
 } from './loadout';
+export {
+  planFearRanksReplacement,
+  planManualArcanaReplacement,
+  type LoadoutReplacement,
+} from './loadout-replacement';
 export { chaosGateSpawnPointIndices } from './chaos-gate-position';
 
 export {
