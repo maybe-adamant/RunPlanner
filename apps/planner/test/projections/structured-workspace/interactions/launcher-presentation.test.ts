@@ -30,7 +30,6 @@ describe('launcher presentation', () => {
       }),
     ).toEqual({
       label: 'Edit Trait · Nova Strike',
-      detail: 'Apollo: Nova Strike · Rare',
       traitKey: 'ApolloWeaponBoon',
     });
     expect(
@@ -63,7 +62,6 @@ describe('launcher presentation', () => {
     const blessing = catalog.chaos.blessings.byKey.ChaosWeaponBlessing!.label;
     expect(chaos).toEqual({
       label: `Edit Chaos · ${curse} → ${blessing}`,
-      detail: `${curse} → ${blessing} · Common`,
       traitKey: 'ChaosNoMoneyCurse',
     });
   });
@@ -77,7 +75,6 @@ describe('launcher presentation', () => {
       levelResolutionLauncherPresentation(catalog, random('ApolloWeaponBoon'), 2, false),
     ).toEqual({
       label: 'Edit Pom · Nova Strike +2',
-      detail: 'Nova Strike gains 2 levels',
       traitKey: 'ApolloWeaponBoon',
     });
     expect(levelResolutionLauncherPresentation(catalog, random(null), 1, true).label).toBe(

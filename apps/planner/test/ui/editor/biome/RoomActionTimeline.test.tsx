@@ -700,10 +700,6 @@ describe('OccurrenceRoomActions', () => {
       .closest<HTMLElement>('[data-room-action-key]')
       ?.querySelector<HTMLElement>('[data-room-action-drag-handle]');
     if (!handle) throw new Error('Athena drag handle missing');
-    const hinted = [...actions.querySelectorAll<HTMLElement>('.timeline-row[data-hint]')].map(
-      (element) => ({ element, hint: hintOf(element) }),
-    );
-    expect(hinted.length).toBeGreaterThan(0);
     Object.defineProperty(document, 'elementFromPoint', {
       configurable: true,
       value: () => within(actions).getByLabelText('Room entered'),
@@ -727,7 +723,6 @@ describe('OccurrenceRoomActions', () => {
     expect(
       screen.getByText(`Action not moved. ${blockedMove!.explanations.join(' ')}`),
     ).toBeTruthy();
-    for (const { element, hint } of hinted) expect(hintOf(element)).toBe(hint);
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(screen.getByRole('button', { name: 'Combat Order' }));
     await view.user.click(
@@ -1639,7 +1634,7 @@ describe('OccurrenceRoomActions', () => {
     const minor = within(actions).getByText('Buy Max Magick · Slot 3').closest('li');
     if (minor === null) throw new Error('Minor Shop action is missing');
     expect(minor.getAttribute('data-action-accent')).toBe('room');
-    expect(hintOf(minor)).toBe('Required before leaving the room.');
+    expect(hintOf(minor)).toBeNull();
     const minorRemoval = within(minor).getByRole('button', {
       name: 'Remove Buy Max Magick · Slot 3 from timeline',
     });

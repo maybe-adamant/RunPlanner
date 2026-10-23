@@ -273,7 +273,7 @@ function EncounterCustomizationControl({
                       layout="inline"
                       ariaLabel={`${decision.label} use ${index + 1}`}
                       {...(use.requiresEarlierUse
-                        ? { disabledHint: 'Choose Use 1 first.' }
+                        ? { locked: true }
                         : !decision.valueSupported && selected[index] !== undefined
                           ? { invalid: true }
                           : {})}

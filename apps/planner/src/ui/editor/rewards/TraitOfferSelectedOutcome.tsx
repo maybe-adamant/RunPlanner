@@ -166,7 +166,7 @@ function LatestModelTargetsOutcome({
           label={`Hammer ${index + 1}`}
           layout="inline"
           disabled={!result.branchAgreement}
-          {...(row.requiresEarlierRow ? { disabledHint: `Choose Hammer ${index} first.` } : {})}
+          locked={row.requiresEarlierRow}
           model={row.picker}
           onSelect={(target: string) => {
             const targets = row.valueByTraitKey[target];

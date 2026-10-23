@@ -27,7 +27,7 @@ describe('Arcana rank presentation', () => {
     expect(card.getAttribute('data-active')).toBe('true');
     expect(card.getAttribute('aria-pressed')).toBe('false');
     expect(screen.getByText(numeral)).toBeTruthy();
-    expect(hintOf(card)).toContain(`Current: ${rarity}`);
+    expect(card.getAttribute('aria-description')).toContain(`Current: ${rarity}`);
   });
 
   it('separates a selected grant preview from the current rank and restores it on deselection', () => {
@@ -47,6 +47,7 @@ describe('Arcana rank presentation', () => {
       'Grants: Heroic · Rank 4; pick 2',
     );
     expect(screen.getByText('Pick 2')).toBeTruthy();
+    expect(hintOf(screen.getByRole('button'))).toBeNull();
     rerender(
       <ArcanaCard
         cardKey="ChanneledCast"
@@ -80,6 +81,7 @@ describe('Arcana rank presentation', () => {
       />,
     );
     expect(screen.getByText('—')).toBeTruthy();
-    expect(hintOf(screen.getByRole('button'))).toContain('Rank varies');
+    expect(screen.getByRole('button').getAttribute('aria-description')).toContain('Rank varies');
+    expect(hintOf(screen.getByRole('button'))).toBeNull();
   });
 });

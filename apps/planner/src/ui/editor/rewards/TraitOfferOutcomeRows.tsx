@@ -239,9 +239,7 @@ export function NaturalSelectionOutcomeRows({
             onSelect={(traitKey: string) => choose(position, traitKey)}
             placeholder="Choose an eligible core trait"
             itemIcon={(item) => traitIcon(item.value)}
-            {...(row.requiresEarlierRow
-              ? { disabledHint: `Choose the ${ordinal(position)} core first.` }
-              : {})}
+            locked={row.requiresEarlierRow}
             {...(target === undefined || row.requiresEarlierRow
               ? {}
               : { triggerLabel: traitLabel(target), triggerIcon: traitIcon(target) })}

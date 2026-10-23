@@ -154,8 +154,7 @@ describe('generated encounter customization workflows', () => {
       owner,
     );
     const table = within(view.dialog).getByRole('table', { name: 'Wave 1 enemy budgets' });
-    expect(getByHint(table, '2 groups · 10 individual enemies.').textContent).toBe('2 (10)');
-    expect(getByHint(table, 'Cost: 16 per group of 5 enemies.')).toBeTruthy();
+    expect(within(table).getByText('2 (10)')).toBeTruthy();
     expect(getByHint(table, 'Wave budget / total encounter budget.')).toBeTruthy();
     expect(getAllByHint(table, 'Resulting cost after rounding and minimum counts.')).toHaveLength(
       2,

@@ -645,15 +645,7 @@ export function EncounterCompositionControl({
                     </span>
                   </th>
                   {tableKeys.map((key, index) => (
-                    <th
-                      scope="col"
-                      key={`${index}-${key}`}
-                      {...hintProps(
-                        cost(key) === undefined
-                          ? undefined
-                          : `Cost: ${budgetNumber.format(cost(key)!)} per ${groupSize(key) === undefined ? 'enemy' : `group of ${groupSize(key)} enemies`}.`,
-                      )}
-                    >
+                    <th scope="col" key={`${index}-${key}`}>
                       <span className="encounter-enemy-label">
                         <ArtworkIcon className="artwork-label-icon" source={enemyIcon(key)} />
                         {label(key)}
@@ -681,19 +673,11 @@ export function EncounterCompositionControl({
                     const size = groupSize(key);
                     return (
                       <td key={`${index}-${key}`}>
-                        {count === undefined ? (
-                          'NA'
-                        ) : size === undefined ? (
-                          count
-                        ) : (
-                          <span
-                            {...hintProps(
-                              `${count} ${count === 1 ? 'group' : 'groups'} · ${count * size} individual enemies.`,
-                            )}
-                          >
-                            {count} ({count * size})
-                          </span>
-                        )}
+                        {count === undefined
+                          ? 'NA'
+                          : size === undefined
+                            ? count
+                            : `${count} (${count * size})`}
                       </td>
                     );
                   })}
@@ -710,10 +694,7 @@ export function EncounterCompositionControl({
                         if (cell === undefined) return <td key={`${index}-${key}`}>NA</td>;
                         return (
                           <td key={`${index}-${key}`}>
-                            <div
-                              className="encounter-menace-replacement"
-                              {...hintProps(cell.replacementLabel)}
-                            >
+                            <div className="encounter-menace-replacement">
                               {cell.picker === undefined ? (
                                 <span className="encounter-enemy-label">
                                   <ArtworkIcon

@@ -31,6 +31,8 @@ interface ContextualPickerProps<T> {
   readonly disabled?: boolean;
   /** Disables the picker with this hint while still showing its current value. */
   readonly disabledHint?: string;
+  /** Disables the picker without a hint while still showing its current value. */
+  readonly locked?: boolean;
   readonly id: string;
   readonly label: string;
   readonly layout?: 'inline' | 'stacked';
@@ -270,6 +272,7 @@ export function ContextualPicker<T>({
   closeOnSelect = true,
   disabled = false,
   disabledHint,
+  locked = false,
   id,
   label,
   layout = 'stacked',
@@ -300,7 +303,7 @@ export function ContextualPicker<T>({
   const selected = model.selected;
   const choicesLabel = choiceLabel ?? label;
   const authoringLocked = findingTarget?.['data-authoring-locked'] === true;
-  const interactionDisabled = disabled || disabledHint !== undefined || authoringLocked;
+  const interactionDisabled = disabled || locked || disabledHint !== undefined || authoringLocked;
   const shownLabel = disabled ? placeholder : (triggerLabel ?? selected?.label ?? placeholder);
 
   const triggerText =
