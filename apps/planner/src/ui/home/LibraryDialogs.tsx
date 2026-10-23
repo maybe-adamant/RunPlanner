@@ -3,13 +3,15 @@ import { useState } from 'react';
 import { folderLocation } from '@planner/projections/libraryHome';
 import { ModalDialog } from '../controls/ModalDialog';
 
-/** Names a new folder, or renames one; the name is checked when it is applied. */
+/** Names a new folder, or renames a folder or preset; the name is checked when it is applied. */
 export function FolderNameDialog({
+  fieldLabel = 'Folder name',
   initial,
   onApply,
   onCancel,
   title,
 }: {
+  readonly fieldLabel?: string;
   readonly initial: string;
   /** Resolves a problem to show, or null once applied. */
   readonly onApply: (name: string) => Promise<string | null>;
@@ -45,7 +47,7 @@ export function FolderNameDialog({
           <h2 id="folder-name-title">{title}</h2>
         </header>
         <label className="library-dialog-field">
-          Folder name
+          {fieldLabel}
           <input
             autoComplete="off"
             autoFocus

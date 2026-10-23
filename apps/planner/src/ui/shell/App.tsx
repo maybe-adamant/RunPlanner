@@ -20,6 +20,7 @@ import { findingSelected } from '@planner/state/editorSessionSlice';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import type { StructuredWorkspaceProjection } from '@planner/projections/structured-workspace';
 import type { AppScalePreference } from '@planner/persistence/appScalePreference';
+import type { LoadoutPresetController } from '@planner/persistence/loadoutPresets';
 import type { BuildIdentity } from '@planner/composition/buildIdentity';
 import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdates';
 import type { GameStatusController } from '@planner/persistence/gameModuleHost';
@@ -36,6 +37,7 @@ import { HomeScreen } from '../home/HomeScreen';
 import { RouteWorkspace } from './RouteWorkspace';
 import { FindingTargetScope } from '../feedback/useFindingTarget';
 import { useAppScale } from './useAppScale';
+import { LoadoutPresetsContext } from './loadoutPresetsContext';
 import { NoticeArea } from './NoticeArea';
 import { EditorHeader } from './EditorHeader';
 import { CloseConfirmDialog } from './CloseConfirmDialog';
@@ -43,6 +45,8 @@ import { routeBannerArtwork } from '@planner/ui/artwork/route-banners/routeBanne
 
 interface AppProps {
   readonly appScalePreference?: AppScalePreference;
+  /** The planner's Arcana and Vow presets; absent where none are kept. */
+  readonly loadoutPresets?: LoadoutPresetController;
   /** Present only in the desktop application. */
   readonly bugReport?: BugReportOperations;
   readonly buildIdentity: BuildIdentity;
@@ -68,6 +72,7 @@ interface AppProps {
 
 export function App({
   appScalePreference,
+  loadoutPresets,
   bugReport,
   buildIdentity,
   catalog,
@@ -121,88 +126,92 @@ export function App({
   const notices = <NoticeArea communityEvents={communityEvents} releaseUpdates={releaseUpdates} />;
 
   return (
-    <FindingTargetScope
-      {...(workspace === undefined ? {} : { authoringReadiness: workspace.authoringReadiness })}
-      findings={workspace?.findingsByRepairTarget}
-    >
-      <main className="app-shell" data-view={showEditor ? 'editor' : 'home'}>
-        {showEditor && activeRouteFeedback !== undefined && activeRouteNavigation !== undefined ? (
-          <EditorHeader
-            banner={
-              routeBanner === null
-                ? null
-                : { routeKey: activeRouteNavigation.routeKey, url: routeBanner }
-            }
-            gameStatus={gameStatus}
-            name={project.name}
-            onShowFindings={showFindings}
-            operations={projectOperations}
-            readiness={activeRouteFeedback.status}
-            {...(activeWorkspaceRoute?.runModifiers.startPointBlock === undefined
-              ? {}
-              : { startPointBlock: activeWorkspaceRoute.runModifiers.startPointBlock })}
-          />
-        ) : null}
-
-        {/* Notices sit under the screen's own header: the editor's here, Home's in Home. */}
-        {showEditor ? notices : null}
-
-        {showEditor ? null : (
-          <HomeScreen
-            notices={notices}
-            bugReport={bugReport}
-            buildIdentity={buildIdentity}
-            catalog={catalog}
-            catalogSummary={catalogSummary}
-            communityEvents={communityEvents}
-            gameStatus={gameStatus}
-            operations={projectOperations}
-            planCatalog={planCatalog}
-            releaseUpdates={releaseUpdates}
-            routes={editorNavigation.routes.values}
-            scale={scale}
-            slotRebuild={slotRebuild}
-            tab={view.kind === 'home' ? view.tab : 'library'}
-          />
-        )}
-
-        {showEditor &&
-          evaluation !== undefined &&
-          workspace !== undefined &&
-          activeRouteNavigation !== undefined &&
+    <LoadoutPresetsContext.Provider value={loadoutPresets ?? null}>
+      <FindingTargetScope
+        {...(workspace === undefined ? {} : { authoringReadiness: workspace.authoringReadiness })}
+        findings={workspace?.findingsByRepairTarget}
+      >
+        <main className="app-shell" data-view={showEditor ? 'editor' : 'home'}>
+          {showEditor &&
           activeRouteFeedback !== undefined &&
-          activeWorkspaceRoute !== undefined && (
-            <RouteWorkspace
+          activeRouteNavigation !== undefined ? (
+            <EditorHeader
+              banner={
+                routeBanner === null
+                  ? null
+                  : { routeKey: activeRouteNavigation.routeKey, url: routeBanner }
+              }
+              gameStatus={gameStatus}
+              name={project.name}
+              onShowFindings={showFindings}
+              operations={projectOperations}
+              readiness={activeRouteFeedback.status}
+              {...(activeWorkspaceRoute?.runModifiers.startPointBlock === undefined
+                ? {}
+                : { startPointBlock: activeWorkspaceRoute.runModifiers.startPointBlock })}
+            />
+          ) : null}
+
+          {/* Notices sit under the screen's own header: the editor's here, Home's in Home. */}
+          {showEditor ? notices : null}
+
+          {showEditor ? null : (
+            <HomeScreen
+              notices={notices}
+              bugReport={bugReport}
+              buildIdentity={buildIdentity}
               catalog={catalog}
-              draftRun={draftRun}
-              feedback={activeRouteFeedback}
-              interactions={workspace.interactions}
-              navigation={activeRouteNavigation}
-              project={project}
-              projectEvaluation={evaluation}
-              workspace={workspace}
-              workspaceRoute={activeWorkspaceRoute}
+              catalogSummary={catalogSummary}
+              communityEvents={communityEvents}
+              gameStatus={gameStatus}
+              operations={projectOperations}
+              planCatalog={planCatalog}
+              releaseUpdates={releaseUpdates}
+              routes={editorNavigation.routes.values}
+              scale={scale}
+              slotRebuild={slotRebuild}
+              tab={view.kind === 'home' ? view.tab : 'library'}
             />
           )}
 
-        {!showEditor || traitDialogTarget === null || workspace === undefined ? null : (
-          <TraitOfferDialog
-            findings={workspace.traitDialogFindings(traitDialogTarget)}
-            interactions={workspace.interactions}
-            key={semanticAddressKey(traitDialogTarget)}
-            target={traitDialogTarget}
-          />
-        )}
-        {!showEditor || levelResolutionDialogTarget === null || workspace === undefined ? null : (
-          <PomResolutionDialog
-            interactions={workspace.interactions}
-            key={semanticAddressKey(levelResolutionDialogTarget)}
-            target={levelResolutionDialogTarget}
-          />
-        )}
-        {closeRequest === undefined ? null : <CloseConfirmDialog controller={closeRequest} />}
-        <HintLayer />
-      </main>
-    </FindingTargetScope>
+          {showEditor &&
+            evaluation !== undefined &&
+            workspace !== undefined &&
+            activeRouteNavigation !== undefined &&
+            activeRouteFeedback !== undefined &&
+            activeWorkspaceRoute !== undefined && (
+              <RouteWorkspace
+                catalog={catalog}
+                draftRun={draftRun}
+                feedback={activeRouteFeedback}
+                interactions={workspace.interactions}
+                navigation={activeRouteNavigation}
+                project={project}
+                projectEvaluation={evaluation}
+                workspace={workspace}
+                workspaceRoute={activeWorkspaceRoute}
+              />
+            )}
+
+          {!showEditor || traitDialogTarget === null || workspace === undefined ? null : (
+            <TraitOfferDialog
+              findings={workspace.traitDialogFindings(traitDialogTarget)}
+              interactions={workspace.interactions}
+              key={semanticAddressKey(traitDialogTarget)}
+              target={traitDialogTarget}
+            />
+          )}
+          {!showEditor || levelResolutionDialogTarget === null || workspace === undefined ? null : (
+            <PomResolutionDialog
+              interactions={workspace.interactions}
+              key={semanticAddressKey(levelResolutionDialogTarget)}
+              target={levelResolutionDialogTarget}
+            />
+          )}
+          {closeRequest === undefined ? null : <CloseConfirmDialog controller={closeRequest} />}
+          <HintLayer />
+        </main>
+      </FindingTargetScope>
+    </LoadoutPresetsContext.Provider>
   );
 }

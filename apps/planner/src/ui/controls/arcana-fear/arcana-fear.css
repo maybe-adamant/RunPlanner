@@ -224,3 +224,36 @@
   background: #ae98ca;
   border-color: #c9b5e1;
 }
+
+/* The planner's presets atop the Arcana and Fear pickers. */
+.preset-chips {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.preset-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.preset-chip-label {
+  margin-right: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.preset-chip[data-refused] {
+  border-color: #8a6a3a;
+}
+
+/* Reserved, so a refusal never moves the picker. */
+.preset-chip-reason {
+  min-height: 1.2em;
+  margin: 0;
+  color: #e8c27a;
+  font-size: 0.8rem;
+}

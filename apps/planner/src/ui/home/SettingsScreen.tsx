@@ -1,11 +1,12 @@
-import type { BuildIdentity } from '@planner/composition/buildIdentity';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { AppScale } from '../shell/useAppScale';
+import { LoadoutPresetsSettings } from './LoadoutPresetsSettings';
 
 export function SettingsScreen({
-  buildIdentity,
+  catalog,
   scale,
 }: {
-  readonly buildIdentity: BuildIdentity;
+  readonly catalog: Catalog;
   readonly scale: AppScale;
 }) {
   return (
@@ -57,7 +58,7 @@ export function SettingsScreen({
             </div>
           </div>
         </section>
-        <p className="home-about-line">Run Planner {buildIdentity.version}</p>
+        <LoadoutPresetsSettings catalog={catalog} />
       </div>
     </section>
   );

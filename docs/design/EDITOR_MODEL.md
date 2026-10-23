@@ -370,8 +370,24 @@ while a search or chip filters it, "Catalog · 4 plans" for the entries shown, "
 event is active. Which Home tab shows, or whether the editor shows, and the
 Library folder shown are UI-session state in the library session slice; opening
 any plan shows its editor, and closing it (its item deleted) returns to the
-Library. Going Home keeps the open plan open. Settings holds the app scale.
+Library. Going Home keeps the open plan open. Settings holds the app scale and
+the Arcana and Vow presets.
 App notices (an update, an ended event) show under the shown screen's header.
+
+Arcana and Vow presets are planner settings, kept beside the app scale in
+device-local storage by `createBrowserLoadoutPresets`; they are never project
+state, history or plan data. Their own versioned format holds named manual Arcana
+selections and named Vow ranks as separate kinds; on load, cards and Vows the
+catalog does not declare are dropped and Settings says so. Settings lists each
+kind with Add, Edit, Rename and Delete (Undo restores the preset where it was).
+Add and Edit open the Loadout's own Arcana or Fear board on a loadout of the
+preset's own through the engine's edit domain, an Arcana preset with no Vows and
+a Vow preset with no Arcana. While presets of its kind exist, the editor's Arcana
+or Fear picker shows them as chips above the board: `planManualArcanaReplacement`
+and `planFearRanksReplacement` turn one into the loadout commands, applied as one
+undoable step, or refuse it, with the reason in visible text, when the plan's
+starting Grasp could not hold the result. Fresh File has no pickers, so no
+presets.
 
 Navigation is mirrored into the History API by `installNavigationHistory`: each
 change of Home tab, Library folder, open plan or editor section (Route, Draft,

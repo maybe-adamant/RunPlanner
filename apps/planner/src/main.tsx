@@ -24,6 +24,7 @@ import './ui/styles.css';
 import { App } from './ui/shell/App';
 import { ApplicationFaultBoundary } from './ui/shell/ApplicationFaultBoundary';
 import { createBrowserAppScalePreference } from './persistence/appScalePreference';
+import { createBrowserLoadoutPresets } from './persistence/loadoutPresets';
 import type { BuildIdentity } from './composition/buildIdentity';
 import {
   createBrowserReleaseSkipPreference,
@@ -127,6 +128,10 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
       <Provider store={application.store}>
         <App
           appScalePreference={appScalePreference}
+          loadoutPresets={createBrowserLoadoutPresets(
+            application.catalog,
+            () => globalThis.localStorage,
+          )}
           {...(application.bugReport === undefined ? {} : { bugReport: application.bugReport })}
           buildIdentity={application.buildIdentity}
           catalog={application.catalog}
