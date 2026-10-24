@@ -39,7 +39,11 @@ import {
   resolveBiomeStart,
   routeRoomDeclaration,
 } from '../../authored-project/route-profile';
-import { locallyValidRewardOffers, type ResolvedRewardOffer } from '../../reward-kernel';
+import {
+  locallyValidRewardOffers,
+  ORDINARY_SOURCE_CAP,
+  type ResolvedRewardOffer,
+} from '../../reward-kernel';
 import {
   createPreparedProjectCandidateSession,
   type ProjectCandidateSession,
@@ -137,6 +141,8 @@ export class DraftWalk {
   private readonly stoppedGods = new Set<string>();
   /** Devotion sources found unacquired, with the acquired god count then. */
   private readonly unacquiredDevotionSources = new Map<string, number>();
+  /** Hub doors showing a god outside the pool, by biome; the walk never visits them. */
+  private readonly unvisitedHubDoors = new Map<string, Set<string>>();
 
   constructor(
     readonly catalog: Catalog,
@@ -725,8 +731,35 @@ export class DraftWalk {
     );
   }
 
-  /** Opens one more Hub door; a wanted story door goes first. */
+  /**
+   * Opens one more Hub door; a wanted story door goes first. A pool too small to fill the
+   * doors with distinct gods opens every door it can, leaving unvisited doors for other gods.
+   */
   private openHubSlot(openSet: Extract<SemanticAddress, { readonly kind: 'hubOpenSet' }>): boolean {
+    if (!this.openOneHubSlot(openSet)) return false;
+    if (this.spec.world.godKeys.length >= ORDINARY_SOURCE_CAP) return true;
+    const layout = this.catalog.biomeLayouts.byKey[openSet.biomeKey];
+    const maxOpen = layout?.progression.kind === 'hub' ? layout.progression.openCount.max : 0;
+    while (
+      (this.hubDecision(openSet.biomeKey, openSet.hubKey)?.openTargets.length ?? maxOpen) <
+        maxOpen &&
+      this.openOneHubSlot(openSet)
+    );
+    return true;
+  }
+
+  private hubDecision(biomeKey: string, hubKey: string): HubDecision | undefined {
+    return this.project.route.biomes
+      .find((biome) => biome.biomeKey === biomeKey)
+      ?.topology?.decisions.find(
+        (candidate): candidate is HubDecision =>
+          candidate.kind === 'hub' && candidate.hubKey === hubKey,
+      );
+  }
+
+  private openOneHubSlot(
+    openSet: Extract<SemanticAddress, { readonly kind: 'hubOpenSet' }>,
+  ): boolean {
     const layout = this.catalog.biomeLayouts.byKey[openSet.biomeKey];
     if (layout?.progression.kind !== 'hub') return false;
     const slots = this.weighted(layout.progression.slots, (slot) =>
@@ -772,13 +805,9 @@ export class DraftWalk {
   private extendHubVisits(
     visit: Extract<SemanticAddress, { readonly kind: 'hubVisit' | 'hubFountain' }>,
   ): boolean {
-    const decision = this.project.route.biomes
-      .find((biome) => biome.biomeKey === visit.biomeKey)
-      ?.topology?.decisions.find(
-        (candidate): candidate is HubDecision =>
-          candidate.kind === 'hub' && candidate.hubKey === visit.hubKey,
-      );
+    const decision = this.hubDecision(visit.biomeKey, visit.hubKey);
     if (decision === undefined) return false;
+    const unvisited = this.unvisitedHubDoors.get(visit.biomeKey);
     const hub = createHubDecisionAddress(
       createBiomeAddress(visit.routeKey, visit.biomeKey),
       visit.hubKey,
@@ -799,6 +828,7 @@ export class DraftWalk {
       const occurrence =
         target === undefined ? undefined : this.occurrence(visit.biomeKey, target.occurrenceId);
       if (occurrence === undefined) return 1;
+      if (unvisited?.has(occurrence.occurrenceId) === true) return 0;
       const reward = 'reward' in occurrence.state ? occurrence.state.reward : undefined;
       return (
         this.steering.npcVisitWeight(
@@ -1130,6 +1160,7 @@ export class DraftWalk {
           room.kind === 'Reprieve' ? 2 : 1,
           this.npcExcludedRewards(origin.biomeKey, occurrence),
           this.siblingHoldsBoon(origin.biomeKey, occurrence),
+          () => this.unvisitedHubDoorReward(origin, occurrence, types),
         )
       : this.tryOffers(
           types,
@@ -1147,6 +1178,7 @@ export class DraftWalk {
     wantedGodBoost = 1,
     npcExcluded: ReadonlySet<string> = new Set(),
     avoidBoon = false,
+    whenNoneLegal?: () => boolean,
   ): boolean {
     const legal = rewardTypes
       .flatMap((type) => locallyValidRewardOffers(this.catalog.rewards, type))
@@ -1158,6 +1190,7 @@ export class DraftWalk {
         if (result?.supported === false) this.noteExclusions(result.exclusions ?? []);
         return result?.supported === true && result.findings?.length === 0;
       });
+    if (legal.length === 0 && whenNoneLegal !== undefined) return whenNoneLegal();
     this.noteSupply(legal);
     const weight = (offer: ResolvedRewardOffer) => {
       const base = this.steering.offerWeight(offer);
@@ -1170,6 +1203,45 @@ export class DraftWalk {
     };
     const ordered = this.inPoolOrder(this.weighted(legal, weight), legal, (offer) => offer);
     for (const offer of ordered) if (apply(command(offer))) return true;
+    return false;
+  }
+
+  /**
+   * A Hub door with no pool reward left shows a boon of a god outside the pool and is never
+   * visited, while the board keeps its required visits; a story door stays pool-only.
+   */
+  private unvisitedHubDoorReward(
+    origin: Extract<SemanticAddress, { readonly kind: 'incomingReward' }>,
+    occurrence: RoomOccurrence,
+    rewardTypes: readonly string[],
+  ): boolean {
+    const layout = this.catalog.biomeLayouts.byKey[origin.biomeKey];
+    if (layout?.progression.kind !== 'hub') return false;
+    const decision = this.hubDecision(origin.biomeKey, layout.progression.hubKey);
+    if (!decision?.openTargets.some((t) => t.occurrenceId === occurrence.occurrenceId))
+      return false;
+    if (this.roomOf(occurrence.gameName)?.kind === 'Story') return false;
+    const unvisited = this.unvisitedHubDoors.get(origin.biomeKey) ?? new Set<string>();
+    if (unvisited.size + 1 > layout.progression.openCount.max - layout.progression.requiredVisits) {
+      this.failureReason ??= `unvisitedHubDoorsExhausted at ${origin.biomeKey}`;
+      return false;
+    }
+    const legal = rewardTypes
+      .flatMap((type) => locallyValidRewardOffers(this.catalog.rewards, type))
+      .filter((offer) => this.steering.unvisitedDoorGodWeight(offer) > 0)
+      .filter((offer) => {
+        const evaluation = this.evaluate({ kind: 'incomingReward', reward: origin, value: offer });
+        return (
+          evaluation.kind === 'incomingReward' &&
+          evaluation.result.supported &&
+          evaluation.result.findings.length === 0
+        );
+      });
+    for (const offer of this.weighted(legal, (o) => this.steering.unvisitedDoorGodWeight(o))) {
+      if (!this.apply({ kind: 'ReplaceIncomingReward', reward: origin, value: offer })) continue;
+      this.unvisitedHubDoors.set(origin.biomeKey, unvisited.add(occurrence.occurrenceId));
+      return true;
+    }
     return false;
   }
 

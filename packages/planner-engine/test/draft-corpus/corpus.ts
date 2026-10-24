@@ -340,6 +340,49 @@ const baseRecipes: readonly EntryRecipe[] = [
     godKeys: FRESH_ALT_GODS,
     basket: { godTraits: HEAVY },
   },
+  {
+    name: 'U10 light 1 god prefix 1',
+    routeKey: 'Underworld',
+    prefix: 1,
+    godKeys: ['Zeus'],
+    basket: { godTraits: LIGHT },
+  },
+  {
+    name: 'U11 medium 2 gods prefix 2',
+    routeKey: 'Underworld',
+    prefix: 2,
+    godKeys: ['Zeus', 'Apollo'],
+    basket: { godTraits: MEDIUM },
+  },
+  {
+    name: 'S11 light 2 gods prefix 1',
+    routeKey: 'Surface',
+    prefix: 1,
+    godKeys: ['Zeus', 'Hera'],
+    basket: { godTraits: LIGHT },
+  },
+  {
+    name: 'S12 light 1 god prefix 1',
+    routeKey: 'Surface',
+    prefix: 1,
+    godKeys: ['Hera'],
+    basket: { godTraits: LIGHT },
+  },
+  {
+    name: 'D8 light 2 gods prefix 3',
+    routeKey: 'Dream',
+    itineraryBiomeKeys: DREAM_ITINERARY,
+    prefix: 3,
+    godKeys: ['Zeus', 'Apollo'],
+    basket: { godTraits: LIGHT },
+  },
+  {
+    name: 'F7 light 1 god prefix 1',
+    routeKey: 'FreshFile',
+    prefix: 1,
+    godKeys: ['Apollo'],
+    basket: { godTraits: LIGHT },
+  },
 ];
 
 /** The same specs with the player's midshop preference on. */

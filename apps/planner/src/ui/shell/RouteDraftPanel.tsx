@@ -87,7 +87,7 @@ function refusalHint(catalog: Catalog, refusal: DraftRefusal | undefined): strin
     case 'invalidLoadout':
       return 'The loadout is not complete.';
     case 'tooFewGods':
-      return `Choose at least ${refusal.minGods} gods.`;
+      return 'Choose a god.';
     case 'requiredGod':
     case 'godUnreachable':
     case 'firstOfferBlocked':

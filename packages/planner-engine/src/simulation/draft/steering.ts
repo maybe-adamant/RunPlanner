@@ -556,6 +556,17 @@ export class DraftSteering {
     );
   }
 
+  /** An Olympian boon outside the pool, for a Hub door the draft leaves unvisited; a shown door gains no god. */
+  unvisitedDoorGodWeight(offer: ResolvedRewardOffer): number {
+    if (offer.payload?.kind !== 'BoonSource') return 0;
+    const giverKey = this.catalog.traitGiverByAcquisitionGameName[offer.payload.source];
+    return giverKey !== undefined &&
+      this.catalog.traitGivers.byKey[giverKey]?.providerKind === 'olympian' &&
+      !this.worldGivers.has(giverKey)
+      ? 1
+      : 0;
+  }
+
   /** Steering weight of a reward; Olympian sources outside the world and the Anvil weigh nothing. */
   offerWeight(offer: ResolvedRewardOffer): number {
     // The Anvil of Fates replaces held Hammers, so a monotonic draft never takes it.

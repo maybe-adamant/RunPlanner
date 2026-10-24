@@ -9,8 +9,8 @@
     "essencesPerRun": 2.625,
     "purchasesPerRun": { "boon": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 7946,
-    "msMax": 9759
+    "msMedian": 7995,
+    "msMax": 10146
   },
   "U2 medium Hermes Hammer Selene": {
     "runs": 8,
@@ -22,8 +22,8 @@
     "essencesPerRun": 2.375,
     "purchasesPerRun": { "boon": 0.625, "hammer": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 8488,
-    "msMax": 12091
+    "msMedian": 8462,
+    "msMax": 11492
   },
   "U3 heavy Hermes Artemis trait": {
     "runs": 8,
@@ -35,8 +35,8 @@
     "essencesPerRun": 2.5,
     "purchasesPerRun": { "BlindBoxLoot": 0.5, "boon": 1.875 },
     "attemptsMedian": 4,
-    "msMedian": 8626,
-    "msMax": 14471
+    "msMedian": 8839,
+    "msMax": 14560
   },
   "U4 medium Forfeit": {
     "runs": 8,
@@ -48,8 +48,8 @@
     "essencesPerRun": 2.75,
     "purchasesPerRun": { "BlindBoxLoot": 0.375 },
     "attemptsMedian": 4,
-    "msMedian": 7773,
-    "msMax": 10284
+    "msMedian": 7708,
+    "msMax": 10055
   },
   "U5 medium prefix 1": {
     "runs": 8,
@@ -61,8 +61,8 @@
     "essencesPerRun": 1.125,
     "purchasesPerRun": { "BlindBoxLoot": 0.125 },
     "attemptsMedian": 1,
-    "msMedian": 2064,
-    "msMax": 2482
+    "msMedian": 2014,
+    "msMax": 2433
   },
   "U6 medium Hammer prefix 2": {
     "runs": 8,
@@ -74,8 +74,8 @@
     "essencesPerRun": 1.5,
     "purchasesPerRun": { "BlindBoxLoot": 0.25, "hammer": 0.25 },
     "attemptsMedian": 2,
-    "msMedian": 4519,
-    "msMax": 6238
+    "msMedian": 4279,
+    "msMax": 6393
   },
   "S1 light Icarus": {
     "runs": 8,
@@ -87,8 +87,8 @@
     "essencesPerRun": 2,
     "purchasesPerRun": { "BlindBoxLoot": 0.125, "boon": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 7945,
-    "msMax": 9847
+    "msMedian": 7823,
+    "msMax": 9709
   },
   "S2 medium Hermes Hammer Selene Heracles": {
     "runs": 8,
@@ -100,8 +100,8 @@
     "essencesPerRun": 3.375,
     "purchasesPerRun": { "BlindBoxLoot": 0.75, "boon": 0.75, "hermes": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 8030,
-    "msMax": 9995
+    "msMedian": 7978,
+    "msMax": 9861
   },
   "S3 heavy Hermes Icarus trait": {
     "runs": 8,
@@ -113,8 +113,8 @@
     "essencesPerRun": 3.125,
     "purchasesPerRun": { "BlindBoxLoot": 1.25, "boon": 1.75 },
     "attemptsMedian": 4,
-    "msMedian": 8521,
-    "msMax": 13647
+    "msMedian": 7824,
+    "msMax": 14339
   },
   "S4 medium Forfeit prefix 2": {
     "runs": 8,
@@ -126,8 +126,8 @@
     "essencesPerRun": 1.375,
     "purchasesPerRun": { "BlindBoxLoot": 0.875, "boon": 1.125 },
     "attemptsMedian": 2,
-    "msMedian": 2714,
-    "msMax": 3259
+    "msMedian": 2726,
+    "msMax": 3364
   },
   "S5 light prefix 1": {
     "runs": 8,
@@ -139,8 +139,8 @@
     "essencesPerRun": 0.875,
     "purchasesPerRun": { "BlindBoxLoot": 0.25, "boon": 0.5 },
     "attemptsMedian": 1,
-    "msMedian": 1334,
-    "msMax": 1488
+    "msMedian": 1368,
+    "msMax": 1563
   },
   "S6 medium Artemis N": {
     "runs": 8,
@@ -152,8 +152,8 @@
     "essencesPerRun": 3.125,
     "purchasesPerRun": { "BlindBoxLoot": 0.75, "boon": 1.5 },
     "attemptsMedian": 4,
-    "msMedian": 8053,
-    "msMax": 8863
+    "msMedian": 7287,
+    "msMax": 9229
   },
   "S7 heavy Hermes Artemis trait N": {
     "runs": 8,
@@ -165,8 +165,8 @@
     "essencesPerRun": 2.375,
     "purchasesPerRun": { "BlindBoxLoot": 1.875, "boon": 1.875 },
     "attemptsMedian": 4,
-    "msMedian": 8020,
-    "msMax": 8462
+    "msMedian": 7917,
+    "msMax": 8940
   },
   "D1 light": {
     "runs": 8,
@@ -178,8 +178,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "BlindBoxLoot": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 8320,
-    "msMax": 8794
+    "msMedian": 8180,
+    "msMax": 8698
   },
   "D2 medium Hammer Artemis prefix 2": {
     "runs": 8,
@@ -191,8 +191,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "BlindBoxLoot": 0.375 },
     "attemptsMedian": 2,
-    "msMedian": 4258,
-    "msMax": 4943
+    "msMedian": 4218,
+    "msMax": 4801
   },
   "D3 heavy Hermes Artemis trait": {
     "runs": 8,
@@ -204,8 +204,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "BlindBoxLoot": 1.25, "boon": 3 },
     "attemptsMedian": 4,
-    "msMedian": 9555,
-    "msMax": 16979
+    "msMedian": 9858,
+    "msMax": 14804
   },
   "D4 medium Forfeit": {
     "runs": 8,
@@ -217,8 +217,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "BlindBoxLoot": 0.625, "WaterBoost": 0.125, "boon": 1.125 },
     "attemptsMedian": 4,
-    "msMedian": 7913,
-    "msMax": 8589
+    "msMedian": 6826,
+    "msMax": 7565
   },
   "U7 medium 2 Hermes 2 Hammer": {
     "runs": 8,
@@ -230,8 +230,8 @@
     "essencesPerRun": 2,
     "purchasesPerRun": { "BlindBoxLoot": 0.25, "boon": 0.125, "hermes": 0.375 },
     "attemptsMedian": 4.5,
-    "msMedian": 9024,
-    "msMax": 11754
+    "msMedian": 8085,
+    "msMax": 9941
   },
   "S8 medium 2 Hermes 2 Hammer": {
     "runs": 8,
@@ -243,8 +243,8 @@
     "essencesPerRun": 2.625,
     "purchasesPerRun": { "BlindBoxLoot": 1.5, "boon": 0.625, "hermes": 0.375 },
     "attemptsMedian": 4,
-    "msMedian": 8197,
-    "msMax": 10249
+    "msMedian": 7631,
+    "msMax": 8706
   },
   "D5 medium 2 Hermes 2 Hammer": {
     "runs": 8,
@@ -256,8 +256,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "BlindBoxLoot": 0.5, "boon": 1.125, "hermes": 0.375 },
     "attemptsMedian": 4,
-    "msMedian": 8284,
-    "msMax": 10536
+    "msMedian": 7596,
+    "msMax": 9079
   },
   "U8 heavy 2 Duos": {
     "runs": 8,
@@ -269,8 +269,8 @@
     "essencesPerRun": 2.375,
     "purchasesPerRun": { "BlindBoxLoot": 0.875, "boon": 1 },
     "attemptsMedian": 4,
-    "msMedian": 8275,
-    "msMax": 9356
+    "msMedian": 7466,
+    "msMax": 8664
   },
   "S9 heavy 2 Duos": {
     "runs": 8,
@@ -282,8 +282,8 @@
     "essencesPerRun": 2.375,
     "purchasesPerRun": { "BlindBoxLoot": 1.5, "boon": 1.75 },
     "attemptsMedian": 4,
-    "msMedian": 8256,
-    "msMax": 9310
+    "msMedian": 7202,
+    "msMax": 7848
   },
   "D6 heavy 2 Duos": {
     "runs": 8,
@@ -295,8 +295,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "BlindBoxLoot": 1.5, "FireBoost": 0.125, "boon": 2.5 },
     "attemptsMedian": 4,
-    "msMedian": 8803,
-    "msMax": 11140
+    "msMedian": 7691,
+    "msMax": 8994
   },
   "U9 heavy prefix 3": {
     "runs": 8,
@@ -308,8 +308,8 @@
     "essencesPerRun": 2.5,
     "purchasesPerRun": { "BlindBoxLoot": 0.25, "boon": 0.125 },
     "attemptsMedian": 3,
-    "msMedian": 6322,
-    "msMax": 8205
+    "msMedian": 5657,
+    "msMax": 7360
   },
   "S10 heavy prefix 2": {
     "runs": 8,
@@ -321,8 +321,8 @@
     "essencesPerRun": 1.5,
     "purchasesPerRun": { "BlindBoxLoot": 0.875, "boon": 0.75 },
     "attemptsMedian": 2,
-    "msMedian": 2966,
-    "msMax": 3801
+    "msMedian": 2593,
+    "msMax": 2871
   },
   "D7 heavy prefix 3": {
     "runs": 8,
@@ -334,8 +334,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "BlindBoxLoot": 1, "boon": 0.5, "hammer": 0.125 },
     "attemptsMedian": 3,
-    "msMedian": 6382,
-    "msMax": 9614
+    "msMedian": 5718,
+    "msMax": 7512
   },
   "F1 light": {
     "runs": 8,
@@ -347,8 +347,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "boon": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 7681,
-    "msMax": 9771
+    "msMedian": 6929,
+    "msMax": 8312
   },
   "F2 medium": {
     "runs": 8,
@@ -360,8 +360,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "boon": 0.625 },
     "attemptsMedian": 4,
-    "msMedian": 7882,
-    "msMax": 9786
+    "msMedian": 7133,
+    "msMax": 8414
   },
   "F3 heavy": {
     "runs": 8,
@@ -373,8 +373,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "boon": 3.125 },
     "attemptsMedian": 4,
-    "msMedian": 7928,
-    "msMax": 10999
+    "msMedian": 7059,
+    "msMax": 9263
   },
   "F4 heavy prefix 2": {
     "runs": 8,
@@ -386,8 +386,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "boon": 1 },
     "attemptsMedian": 2,
-    "msMedian": 3828,
-    "msMax": 4182
+    "msMedian": 3433,
+    "msMax": 3869
   },
   "F5 medium prefix 1": {
     "runs": 8,
@@ -399,8 +399,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "boon": 0.375 },
     "attemptsMedian": 1,
-    "msMedian": 1919,
-    "msMax": 2097
+    "msMedian": 1646,
+    "msMax": 1883
   },
   "F6 heavy alt": {
     "runs": 8,
@@ -412,8 +412,86 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "boon": 3.625 },
     "attemptsMedian": 4,
-    "msMedian": 7596,
-    "msMax": 8781
+    "msMedian": 7129,
+    "msMax": 8146
+  },
+  "U10 light 1 god prefix 1": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 1, "story": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 0.625,
+    "purchasesPerRun": {},
+    "attemptsMedian": 3,
+    "msMedian": 2391,
+    "msMax": 3417
+  },
+  "U11 medium 2 gods prefix 2": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 1, "story": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 1.25,
+    "purchasesPerRun": { "BlindBoxLoot": 0.25, "boon": 0.25 },
+    "attemptsMedian": 2,
+    "msMedian": 3484,
+    "msMax": 4041
+  },
+  "S11 light 2 gods prefix 1": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 1, "story": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 0.625,
+    "purchasesPerRun": { "BlindBoxLoot": 0.125, "boon": 0.125 },
+    "attemptsMedian": 1,
+    "msMedian": 1201,
+    "msMax": 1260
+  },
+  "S12 light 1 god prefix 1": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 0.792, "story": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 0.75,
+    "purchasesPerRun": {},
+    "attemptsMedian": 1,
+    "msMedian": 1083,
+    "msMax": 1183
+  },
+  "D8 light 2 gods prefix 3": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 1, "story": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 0,
+    "purchasesPerRun": { "BlindBoxLoot": 0.125 },
+    "attemptsMedian": 3,
+    "msMedian": 5329,
+    "msMax": 5963
+  },
+  "F7 light 1 god prefix 1": {
+    "runs": 8,
+    "drafted": 1,
+    "targets": { "god": 1 },
+    "orderInversionRuns": 0,
+    "orderInversionsMedian": 0,
+    "elementDeferredRuns": 0,
+    "essencesPerRun": 0,
+    "purchasesPerRun": {},
+    "attemptsMedian": 1,
+    "msMedian": 1556,
+    "msMax": 1637
   },
   "U3 heavy Hermes Artemis trait midshops": {
     "runs": 8,
@@ -425,8 +503,8 @@
     "essencesPerRun": 2.5,
     "purchasesPerRun": { "BlindBoxLoot": 0.625, "boon": 2.125 },
     "attemptsMedian": 4.5,
-    "msMedian": 8380,
-    "msMax": 11951
+    "msMedian": 8206,
+    "msMax": 11404
   },
   "U6 medium Hammer prefix 2 midshops": {
     "runs": 8,
@@ -438,8 +516,8 @@
     "essencesPerRun": 2.25,
     "purchasesPerRun": { "BlindBoxLoot": 0.375, "hammer": 0.5 },
     "attemptsMedian": 2,
-    "msMedian": 4322,
-    "msMax": 5596
+    "msMedian": 3667,
+    "msMax": 4941
   },
   "S2 medium Hermes Hammer Selene Heracles midshops": {
     "runs": 8,
@@ -451,8 +529,8 @@
     "essencesPerRun": 2.875,
     "purchasesPerRun": { "BlindBoxLoot": 0.625, "boon": 1.5, "hammer": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 7964,
-    "msMax": 8865
+    "msMedian": 7004,
+    "msMax": 7843
   },
   "D3 heavy Hermes Artemis trait midshops": {
     "runs": 8,
@@ -464,8 +542,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "BlindBoxLoot": 1.25, "boon": 2.625 },
     "attemptsMedian": 4,
-    "msMedian": 8296,
-    "msMax": 16265
+    "msMedian": 7886,
+    "msMax": 15358
   },
   "F3 heavy midshops": {
     "runs": 8,
@@ -477,8 +555,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "boon": 3.875 },
     "attemptsMedian": 4,
-    "msMedian": 8212,
-    "msMax": 9877
+    "msMedian": 7636,
+    "msMax": 8202
   },
   "U1 light Artemis tartarus": {
     "runs": 8,
@@ -490,8 +568,8 @@
     "essencesPerRun": 2.625,
     "purchasesPerRun": { "boon": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 7993,
-    "msMax": 9862
+    "msMedian": 6871,
+    "msMax": 7288
   },
   "U3 heavy Hermes Artemis trait tartarus": {
     "runs": 8,
@@ -503,8 +581,8 @@
     "essencesPerRun": 2.5,
     "purchasesPerRun": { "BlindBoxLoot": 0.5, "boon": 2.5 },
     "attemptsMedian": 4,
-    "msMedian": 8552,
-    "msMax": 14395
+    "msMedian": 6837,
+    "msMax": 11322
   },
   "U4 medium Forfeit tartarus": {
     "runs": 8,
@@ -516,8 +594,8 @@
     "essencesPerRun": 2.75,
     "purchasesPerRun": { "BlindBoxLoot": 0.375 },
     "attemptsMedian": 4,
-    "msMedian": 6407,
-    "msMax": 7770
+    "msMedian": 6372,
+    "msMax": 7768
   },
   "D1 light tartarus": {
     "runs": 8,
@@ -529,8 +607,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "BlindBoxLoot": 0.125 },
     "attemptsMedian": 4,
-    "msMedian": 6243,
-    "msMax": 7278
+    "msMedian": 6387,
+    "msMax": 7054
   },
   "D3 heavy Hermes Artemis trait tartarus": {
     "runs": 8,
@@ -542,8 +620,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "BlindBoxLoot": 1.25, "boon": 3.25 },
     "attemptsMedian": 4,
-    "msMedian": 7763,
-    "msMax": 10317
+    "msMedian": 6619,
+    "msMax": 8959
   },
   "D4 medium Forfeit tartarus": {
     "runs": 8,
@@ -555,8 +633,8 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "BlindBoxLoot": 0.625, "WaterBoost": 0.125, "boon": 1.125 },
     "attemptsMedian": 4,
-    "msMedian": 6608,
-    "msMax": 7796
+    "msMedian": 5710,
+    "msMax": 6954
   },
   "U8 heavy 2 Duos tartarus": {
     "runs": 8,
@@ -568,8 +646,8 @@
     "essencesPerRun": 2.375,
     "purchasesPerRun": { "BlindBoxLoot": 1, "boon": 1.625 },
     "attemptsMedian": 4,
-    "msMedian": 6185,
-    "msMax": 6614
+    "msMedian": 6129,
+    "msMax": 6645
   },
   "F3 heavy tartarus": {
     "runs": 8,
@@ -581,7 +659,7 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "boon": 3 },
     "attemptsMedian": 4,
-    "msMedian": 6503,
-    "msMax": 7469
+    "msMedian": 5997,
+    "msMax": 7212
   }
 }

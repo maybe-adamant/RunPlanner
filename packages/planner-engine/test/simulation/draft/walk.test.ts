@@ -321,3 +321,49 @@ describe("the starting keepsake's chosen result", () => {
     });
   });
 });
+
+describe('draft Ephyra doors with a small pool', () => {
+  const surface = createProjectDocument(catalog, {
+    projectId: 'ephyra',
+    routeKey: 'Surface',
+    configuredBiomeCount: 1,
+  });
+
+  it.each([[['Zeus']], [['Zeus', 'Hera']]])(
+    'shows outside gods only on Hub doors it never visits, with %j',
+    (godKeys) => {
+      const spec: DraftSpec = {
+        loadout,
+        world: { godKeys, storyNpcByBiome: {}, fieldNpcsByBiome: { N: ['Heracles'] } },
+        basketTraitKeys: [],
+        rackKeepsakeKeys: [],
+      };
+      const walk = startDraftWalk(surface, spec, 1);
+      expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
+      const topology = walk.project.route.biomes[0]!.topology!;
+      const hub = topology.decisions.find((decision) => decision.kind === 'hub')!;
+      const visited = new Set(
+        hub.actions.flatMap((action) => (action.kind === 'roomVisit' ? [action.hubSlotKey] : [])),
+      );
+      const outsideDoors = hub.openTargets.filter((target) => {
+        const occurrence = topology.occurrences.find((o) => o.occurrenceId === target.occurrenceId);
+        const reward =
+          occurrence !== undefined && 'reward' in occurrence.state ? occurrence.state.reward : null;
+        const source =
+          reward?.offer.payload?.kind === 'BoonSource' ? reward.offer.payload.source : '';
+        const giverKey = catalog.traitGiverByAcquisitionGameName[source];
+        return giverKey !== undefined && !godKeys.includes(giverKey);
+      });
+      expect(outsideDoors.length).toBeGreaterThan(0);
+      expect(outsideDoors.filter((door) => visited.has(door.hubSlotKey))).toEqual([]);
+      const report = draftReport(catalog, spec, walk.assembly);
+      expect(report.extras).toEqual([]);
+      expect(godsInAcquisitionOrder(walk.assembly).every((god) => godKeys.includes(god))).toBe(
+        true,
+      );
+      expect(report.targets.filter((target) => target.kind === 'fieldNpc')).toEqual([
+        { kind: 'fieldNpc', key: 'Heracles', biomeKey: 'N', met: true },
+      ]);
+    },
+  );
+});

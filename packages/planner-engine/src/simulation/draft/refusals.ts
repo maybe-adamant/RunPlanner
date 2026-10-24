@@ -11,8 +11,8 @@ import {
 import { draftKeepsakeOptions, draftLoadoutProject, forcesGod, type DraftSpec } from './spec';
 import { draftRepeatedFieldNpcs, draftUnreachableGods, draftWorldOptions } from './world';
 
-/** Devotion trials need two gods other than Ares, so fewer pool gods can dead-end a forced screen. */
-const MIN_DRAFT_GODS = 3;
+/** A draft offers boons only from pool gods, so the pool needs at least one. */
+const MIN_DRAFT_GODS = 1;
 
 export type DraftRefusal =
   /** The project codec rejects the loadout. */
