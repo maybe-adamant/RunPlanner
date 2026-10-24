@@ -33,11 +33,6 @@ export interface DraftTraitOfferContext {
   ) => AuthoredTraitOffer | undefined;
   readonly apply: (command: ProjectCommand) => boolean;
   readonly shuffle: <T>(values: readonly T[]) => T[];
-  readonly random: () => number;
-  /** Rooms of either god each ready basket Duo has been declined in, carried across biomes. */
-  readonly duoDeclines: Map<string, number>;
-  /** Whether the walked biome is the last one drafted, where a ready Duo is never declined. */
-  readonly finalBiome: () => boolean;
   /** Records why the biome cannot continue. */
   readonly fail: (reason: string) => void;
 }
@@ -45,13 +40,6 @@ export interface DraftTraitOfferContext {
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 /** Replacement traits tried for one unselected row that needs no change. */
 const FILLER_DRAWS = 4;
-/** A ready Duo is taken in its first god room with chance 1/3, then 2/3, then always. */
-const DUO_ROOMS = 3;
-/** Whether a ready Duo declined in `declined` earlier god rooms is taken on this roll. */
-export function draftDuoFires(declined: number, roll: number): boolean {
-  return roll < (declined + 1) / DUO_ROOMS;
-}
-
 /** Outside traits tried in a row when no offered row may be taken. */
 const SUBSTITUTE_DRAWS = 20;
 
@@ -78,8 +66,6 @@ export class DraftTraitOffers {
   private readonly denial: boolean;
   /** Trait offers this walk authored, by address, for re-picking a stale child. */
   private readonly authoredOffers = new Map<string, AuthoredTraitOfferTraits>();
-  /** The Duos each god room's roll took, by offer and giver, so re-authoring keeps the roll. */
-  private readonly duoRolls = new Map<string, readonly string[]>();
 
   constructor(private readonly context: DraftTraitOfferContext) {
     this.denial = draftDenialActive(context.catalog, context.spec.loadout);
@@ -297,26 +283,10 @@ export class DraftTraitOffers {
     return current;
   }
 
-  /** Rolls each ready basket Duo of the giver once per god room; the last drafted biome takes every one. */
-  private firedDuos(trait: TraitOfferAddress, giverKey: string): readonly string[] {
-    const key = `${semanticAddressKey(trait)}|${giverKey}`;
-    const known = this.duoRolls.get(key);
-    if (known !== undefined) return known;
-    const declines = this.context.duoDeclines;
-    const fired: string[] = [];
-    const final = this.context.finalBiome();
-    for (const duo of this.context.steering.readyDuos(giverKey, this.context.steering.progress())) {
-      const declined = declines.get(duo) ?? 0;
-      if (final || draftDuoFires(declined, this.context.random())) fired.push(duo);
-      else declines.set(duo, declined + 1);
-    }
-    this.duoRolls.set(key, fired);
-    return fired;
-  }
-
   /**
    * Wanted basket placements first, then every other legal row in random order.
-   * A god offers a fired Duo or its next queued trait; its later traits wait.
+   * A god offers a ready Duo or its next queued trait, the earlier target depth first; its later
+   * traits wait.
    */
   private steerTraitOffer(
     trait: TraitOfferAddress,
@@ -355,10 +325,12 @@ export class DraftTraitOffers {
     const olympian = providerKind === 'olympian';
     // Gods, Hermes and Hammers offer their next queued basket trait only.
     const queued = olympian || providerKind === 'hermes' || providerKind === 'hammer';
-    const fired = olympian ? this.firedDuos(trait, draft.giverKey) : [];
+    const duos = olympian ? steering.readyDuos(draft.giverKey, progress) : [];
     const next = queued ? steering.nextQueued(draft.giverKey, progress) : undefined;
     const wanted = queued
-      ? [...this.context.shuffle(fired), ...(next === undefined ? [] : [next])]
+      ? this.context
+          .shuffle([...duos, ...(next === undefined ? [] : [next])])
+          .sort((a, b) => steering.targetDepth(a) - steering.targetDepth(b))
       : this.context
           .shuffle(steering.wantedBasket(progress).filter((key) => giverTraits.includes(key)))
           .sort(
@@ -367,14 +339,10 @@ export class DraftTraitOffers {
               Number(prerequisites.has(b)) - Number(prerequisites.has(a)),
           );
     const wantedNow = steering.wantedBasket(progress);
-    // A fallback row never jumps a god's queue or takes a Duo its roll declined.
+    // A fallback row never jumps a god's queue.
     const fallbackAllowed = (candidate: AuthoredTraitOfferTraits) => {
       const key = candidate.options[OPTION_KEYS.indexOf(candidate.selectedOptionKey)]?.traitKey;
-      return (
-        key !== undefined &&
-        steering.orderAllows(key, progress) &&
-        !(steering.isBasketDuo(key) && wantedNow.includes(key) && !fired.includes(key))
-      );
+      return key !== undefined && steering.orderAllows(key, progress);
     };
     for (const traitKey of wanted) {
       const declaration = this.catalog.traits.byKey[traitKey];

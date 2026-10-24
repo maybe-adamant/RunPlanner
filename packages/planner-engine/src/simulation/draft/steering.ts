@@ -28,6 +28,7 @@ import {
   DEFAULT_DRAFT_ROOM_FORCING,
 } from '../../authored-project/draft-spec';
 import type { DraftRng } from './rng';
+import { draftGodBoonBudget } from './budget';
 
 /**
  * The draft's chance a door forces a room at this depth of its window, forced at the deadline:
@@ -72,6 +73,29 @@ export function draftBoostElements(catalog: Catalog, rewardType: string): readon
 const WANTED_GIVER_WEIGHT = 30;
 /** Offer weight of a giver whose basket trait is due now. */
 const DUE_GIVER_WEIGHT = 60;
+/** Offer weight of a god whose room takes no wanted basket trait. */
+const IDLE_GOD_WEIGHT = 4;
+/** Rooms over which a god's pull halves before its trait's target depth. */
+export const PACE_HALVING_ROOMS = 0.5;
+/** The pull's growth per room past a trait's target depth, as a share of the due weight. */
+export const PACE_RAMP = 0.5;
+/** Before its target, a god's pull falls below a non-god reward's weight. */
+const PACE_FLOOR = 0.2;
+/** A basket's targets span the biome when light; crowding shrinks the span to this share. */
+export const PACE_MIN_SPAN = 0.6;
+/** The span share is this less the biome's due traits per planned god boon. */
+export const PACE_SPAN_BASE = 1.5;
+
+/**
+ * A god's pull for a trait at this room depth of its target: halving per
+ * {@link PACE_HALVING_ROOMS} before the target, down to an idle god's weight, and growing past it.
+ */
+export function draftPaceWeight(depth: number, target: number): number {
+  const past = depth - target;
+  return past <= 0
+    ? Math.max(PACE_FLOOR, DUE_GIVER_WEIGHT * 2 ** (past / PACE_HALVING_ROOMS))
+    : DUE_GIVER_WEIGHT * (1 + PACE_RAMP * past);
+}
 /** A fountain door only breaks a tie with an otherwise equal door. */
 const FOUNTAIN_TIE_BREAK = 1.01;
 /** A preferred midshop's least weight: above any boon door (at most 90), below a story room. */
@@ -182,6 +206,10 @@ export class DraftSteering {
   private readonly queues: ReadonlyMap<string, readonly string[]>;
   /** Each biome's selected field NPC encounters the draft can steer toward. */
   private readonly npcHosts: ReadonlyMap<string, readonly DraftNpcHost[]>;
+  /** The biome index each scheduled basket trait falls due by. */
+  private readonly dueBiome: ReadonlyMap<string, number>;
+  /** Target room depths of the walked biome's due god traits, set when the biome starts. */
+  private targets: ReadonlyMap<string, number> = new Map();
 
   constructor(
     private readonly catalog: Catalog,
@@ -205,6 +233,82 @@ export class DraftSteering {
       state.assembly().project.route.routeKey,
       spec.world.fieldNpcsByBiome,
     );
+    this.dueBiome = new Map(
+      schedule.byBiome.flatMap((biome, index) => biome.traitKeys.map((key) => [key, index])),
+    );
+  }
+
+  /** Whether an Olympian offers this trait. */
+  private godTrait(traitKey: string): boolean {
+    return this.catalog.traitGivers.values.some(
+      (giver) => giver.providerKind === 'olympian' && giver.traitKeys.includes(traitKey),
+    );
+  }
+
+  /**
+   * Gives each god trait due in the walked biome a target room depth: spread in schedule order
+   * over a share of the biome's expected rooms that shrinks as the due traits crowd its planned
+   * god boons, each jittered within its stratum.
+   */
+  paceBiome(random: () => number): void {
+    const biomeIndex = this.state.biomeIndex();
+    const route = this.state.assembly().project.route;
+    const biomeKey = route.itineraryBiomeKeys[biomeIndex] ?? '';
+    const held = this.progress().equippedTraitKeys;
+    const wanted = (key: string) => this.godTrait(key) && !held.includes(key);
+    const due = (this.schedule.byBiome[biomeIndex]?.traitKeys ?? []).filter(wanted);
+    const overdue = this.schedule.byBiome
+      .slice(0, biomeIndex)
+      .flatMap((biome) => biome.traitKeys)
+      .filter(wanted);
+    const capacity =
+      draftGodBoonBudget(this.catalog, route, this.spec).biomes.find(
+        (biome) => biome.biomeKey === biomeKey,
+      )?.effective ?? 0;
+    const crowding = (due.length + overdue.length) / Math.max(capacity, 1);
+    const share = Math.min(1, Math.max(PACE_MIN_SPAN, PACE_SPAN_BASE - crowding));
+    const last = Math.max(1, this.biomeRooms(biomeKey) - 1);
+    const span = (last - 1) * share;
+    // Sorted uniform draws: random spacing, in schedule order.
+    const draws = due.map(() => random()).sort((a, b) => a - b);
+    this.targets = new Map(due.map((key, index) => [key, 1 + span * draws[index]!]));
+  }
+
+  /** Rooms the biome is expected to run: a Hub's required visits with its entry rooms, else its latest forced depth. */
+  private biomeRooms(biomeKey: string): number {
+    const progression = this.catalog.biomeLayouts.byKey[biomeKey]?.progression;
+    if (progression?.kind === 'hub') return progression.requiredVisits + 2;
+    return Math.max(this.lastForcedDepth(biomeKey), 4);
+  }
+
+  /** Rooms entered so far in the biome. */
+  private biomeDepth(biomeKey: string): number {
+    const biome = this.state
+      .assembly()
+      .evaluation.route.biomes.find((b) => b.biomeKey === biomeKey);
+    return biome !== undefined && 'history' in biome
+      ? biome.history.ledgers.roomAppearances.filter((a) => a.origin.biomeKey === biomeKey).length
+      : 0;
+  }
+
+  /** A wanted trait's pull at the next room: paced in its due biome, overdue after it, wanted before it. */
+  private traitPull(traitKey: string, paced: boolean): number {
+    const biomeIndex = this.state.biomeIndex();
+    const dueBiome = this.dueBiome.get(traitKey) ?? biomeIndex;
+    if (dueBiome > biomeIndex) return WANTED_GIVER_WEIGHT;
+    if (!paced) return DUE_GIVER_WEIGHT;
+    const biomeKey = this.state.assembly().project.route.itineraryBiomeKeys[biomeIndex] ?? '';
+    const w = draftPaceWeight(this.biomeDepth(biomeKey) + 1, this.targets.get(traitKey) ?? 0);
+    return w;
+  }
+
+  /** A wanted trait's target depth in the walked biome; earlier for an overdue trait, later for one due ahead. */
+  targetDepth(traitKey: string): number {
+    const biomeIndex = this.state.biomeIndex();
+    const dueBiome = this.dueBiome.get(traitKey) ?? biomeIndex;
+    if (dueBiome < biomeIndex) return 0;
+    if (dueBiome > biomeIndex) return Number.POSITIVE_INFINITY;
+    return this.targets.get(traitKey) ?? 0;
   }
 
   /** Selected field NPC encounters not yet met in this biome; one waiting on a trait waits while a later room is likely. */
@@ -344,16 +448,6 @@ export class DraftSteering {
     });
   }
 
-  /** Whether a basket trait is a Duo. */
-  isBasketDuo(traitKey: string): boolean {
-    const trait = this.catalog.traits.byKey[traitKey];
-    return (
-      this.spec.basketTraitKeys.includes(traitKey) &&
-      trait !== undefined &&
-      draftTraitKind(trait) === 'duo'
-    );
-  }
-
   /** A god whose room can take a basket trait now: its next queued trait or a Duo is ready. */
   godTakes(giverKey: string, progress: DraftProgress): boolean {
     const next = this.nextQueued(giverKey, progress);
@@ -426,6 +520,11 @@ export class DraftSteering {
    * a cheap stand-in for a later chance to meet an NPC.
    */
   laterRoomLikely(biomeKey: string): boolean {
+    return this.biomeDepth(biomeKey) + 1 < this.lastForcedDepth(biomeKey);
+  }
+
+  /** The latest depth at which a forced room of the biome falls due. */
+  private lastForcedDepth(biomeKey: string): number {
     let lastForced = 0;
     for (const room of this.routeRooms())
       if (
@@ -434,14 +533,7 @@ export class DraftSteering {
         room.force.axis === 'biomeDepthCache'
       )
         lastForced = Math.max(lastForced, room.force.deadline);
-    const biome = this.state
-      .assembly()
-      .evaluation.route.biomes.find((b) => b.biomeKey === biomeKey);
-    const depth =
-      biome !== undefined && 'history' in biome
-        ? biome.history.ledgers.roomAppearances.filter((a) => a.origin.biomeKey === biomeKey).length
-        : 0;
-    return depth + 1 < lastForced;
+    return lastForced;
   }
 
   /** Basket traits a Hermes, Hammer or Selene giver offers. */
@@ -567,8 +659,11 @@ export class DraftSteering {
       : 0;
   }
 
-  /** Steering weight of a reward; Olympian sources outside the world and the Anvil weigh nothing. */
-  offerWeight(offer: ResolvedRewardOffer): number {
+  /**
+   * Steering weight of a reward; Olympian sources outside the world and the Anvil weigh nothing.
+   * Unpaced, a god's due trait pulls as at its target depth, for doors whose visit comes later.
+   */
+  offerWeight(offer: ResolvedRewardOffer, paced = true): number {
     // The Anvil of Fates replaces held Hammers, so a monotonic draft never takes it.
     if (offer.rewardType === 'ChaosWeaponUpgrade') return 0;
     const progress = this.progress();
@@ -585,12 +680,10 @@ export class DraftSteering {
     const giver = giverKey === undefined ? undefined : this.catalog.traitGivers.byKey[giverKey];
     if (giver?.providerKind === 'olympian') {
       if (!this.worldGivers.has(giver.key)) return 0;
-      const needed = this.godTakes(giver.key, progress);
-      const weight = this.dueGods(progress).has(giver.key)
-        ? DUE_GIVER_WEIGHT
-        : needed
-          ? WANTED_GIVER_WEIGHT
-          : 4;
+      const weight = Math.max(
+        this.npcDueGods(progress).has(giver.key) ? DUE_GIVER_WEIGHT : 0,
+        this.godPull(giver.key, progress, paced),
+      );
       const prerequisites = this.neededPrerequisites(progress);
       const unlocks = giver.traitKeys.some(
         (key) =>
@@ -645,13 +738,20 @@ export class DraftSteering {
       });
   }
 
-  /**
-   * Gods with an offerable basket trait not yet held that is due by this
-   * biome or that a wanted NPC trait waits on.
-   */
-  private dueGods(progress: DraftProgress): ReadonlySet<string> {
+  /** A god's pull: its strongest takeable basket trait's paced pull, or an idle god's weight. */
+  private godPull(giverKey: string, progress: DraftProgress, paced: boolean): number {
+    const next = this.nextQueued(giverKey, progress);
+    const takeable = [
+      ...(next !== undefined && this.ready(next, progress) ? [next] : []),
+      ...this.readyDuos(giverKey, progress),
+    ];
+    return Math.max(IDLE_GOD_WEIGHT, ...takeable.map((key) => this.traitPull(key, paced)));
+  }
+
+  /** Gods with an offerable basket trait not yet held that a wanted NPC trait waits on. */
+  private npcDueGods(progress: DraftProgress): ReadonlySet<string> {
     const due = new Set<string>();
-    const traitKeys = [...this.dueTraits(), ...this.npcPrerequisites(progress)];
+    const traitKeys = [...this.npcPrerequisites(progress)];
     // A due trait behind its god's queue makes the god due once the queue's next trait is ready.
     for (const traitKey of traitKeys)
       if (!progress.equippedTraitKeys.includes(traitKey))

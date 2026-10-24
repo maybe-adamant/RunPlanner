@@ -13,6 +13,7 @@ import {
 } from '../../src/execution-plan';
 import { draftProject, simulateProjectAssembly, type DraftSpec } from '../../src/simulation';
 import type { DraftReport } from '../../src/simulation/draft/report';
+import { draftGrantsGodBoon } from '../../src/simulation/draft/steering';
 import { draftProvider } from '../../src/simulation/draft/schedule';
 import { draftSourceQueues, draftTraitKind } from '../../src/simulation/draft/basket';
 import type { ResolvedRewardOffer } from '../../src/reward-kernel';
@@ -33,6 +34,10 @@ export interface DraftCorpusRun {
   readonly orderInversions: number;
   /** Inverted pairs whose earlier trait waits on run state (element or rarity count), which the draft passes over. */
   readonly elementDeferred: number;
+  /** Rooms entered in its biome when each held basket trait was first equipped. */
+  readonly landingDepths: Readonly<Record<string, number>>;
+  /** God boon rooms over the taken rooms of each planned biome. */
+  readonly godRooms: GodRoomPacing;
   /** God traits first held in each biome, by biome key. */
   readonly godTraitsByBiome: Readonly<Record<string, number>>;
   /** Basket traits taken from a bought boon. */
@@ -50,6 +55,16 @@ export interface DraftCorpusRun {
   readonly purchases: Readonly<Record<string, number>>;
   readonly attempts: number;
   readonly ms: number;
+}
+
+/** Taken rooms whose reward grants a god boon (Mystery and Devotion included), per planned biome. */
+export interface GodRoomPacing {
+  readonly biomes: number;
+  readonly rooms: number;
+  /** Rooms between consecutive god boon rooms within a biome. */
+  readonly gaps: readonly number[];
+  /** God boon rooms among the first third of their biome's taken rooms. */
+  readonly early: number;
 }
 
 export const TARGET_KINDS = [
@@ -129,6 +144,54 @@ function godTraitsByBiome(project: ProjectDocument): Record<string, number> {
         counts[snapshot.biomeKey] = (counts[snapshot.biomeKey] ?? 0) + 1;
     }
   return counts;
+}
+
+/** Each held basket trait's landing depth: rooms entered in its biome up to its first holding snapshot. */
+function landingDepths(spec: DraftSpec, project: ProjectDocument): Record<string, number> {
+  const assembly = simulateProjectAssembly(catalog, project);
+  const snapshots = assembly.evaluation.route.biomes
+    .flatMap((biome) => ('rewards' in biome ? biome.rewards.runStateSnapshots : []))
+    .sort((a, b) => a.historySequence - b.historySequence);
+  const depths: Record<string, number> = {};
+  const entered = new Map<string, number>();
+  for (const snapshot of snapshots) {
+    if (snapshot.checkpoint === 'roomEntered')
+      entered.set(snapshot.biomeKey, (entered.get(snapshot.biomeKey) ?? 0) + 1);
+    for (const traitKey of Object.keys(snapshot.traits.equippedTraits))
+      if (spec.basketTraitKeys.includes(traitKey) && !(traitKey in depths))
+        depths[traitKey] = entered.get(snapshot.biomeKey) ?? 0;
+  }
+  return depths;
+}
+
+function godRoomPacing(project: ProjectDocument): GodRoomPacing {
+  const assembly = simulateProjectAssembly(catalog, project);
+  let biomes = 0;
+  let rooms = 0;
+  let early = 0;
+  const gaps: number[] = [];
+  for (const biome of assembly.evaluation.route.biomes) {
+    if (!('history' in biome)) continue;
+    const plan = project.route.biomes.find((b) => b.biomeKey === biome.biomeKey);
+    const taken = biome.history.ledgers.roomAppearances.filter(
+      (entry) => entry.origin.kind === 'occurrence' && entry.origin.biomeKey === biome.biomeKey,
+    );
+    if (plan === undefined || taken.length === 0) continue;
+    biomes += 1;
+    const indexes = taken.flatMap((entry, index) => {
+      const id = entry.origin.kind === 'occurrence' ? entry.origin.occurrenceId : '';
+      const occurrence = plan.topology?.occurrences.find((o) => o.occurrenceId === id);
+      const reward =
+        occurrence !== undefined && 'reward' in occurrence.state ? occurrence.state.reward : null;
+      return reward !== null && reward !== undefined && draftGrantsGodBoon(catalog, reward.offer)
+        ? [index]
+        : [];
+    });
+    rooms += indexes.length;
+    early += indexes.filter((index) => index < taken.length / 3).length;
+    indexes.slice(1).forEach((index, i) => gaps.push(index - indexes[i]!));
+  }
+  return { biomes, rooms, gaps, early };
 }
 
 function elementGated(traitKey: string): boolean {
@@ -316,6 +379,8 @@ export function measureDraft(
       essences: 0,
       essencesIntended: 0,
       boughtBasketTraits: [],
+      landingDepths: {},
+      godRooms: { biomes: 0, rooms: 0, gaps: [], early: 0 },
       godTraitsByBiome: {},
       elementGated: { total: 0, met: 0, withEssence: 0 },
       purchases: {},
@@ -333,6 +398,8 @@ export function measureDraft(
     ...essenceUse(entry.spec, result.project),
     purchases: purchases(result.project),
     boughtBasketTraits: boughtBasketTraits(entry.spec, result.project),
+    landingDepths: landingDepths(entry.spec, result.project),
+    godRooms: godRoomPacing(result.project),
     godTraitsByBiome: godTraitsByBiome(result.project),
     attempts: result.attempts,
   };

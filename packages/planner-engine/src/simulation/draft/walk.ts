@@ -136,7 +136,6 @@ export class DraftWalk {
   private biomeIndex = 0;
   /** Hermes and Hammer rewards some decision in this walk could legally take. */
   readonly legalSupply = new Set<DraftSupply>();
-  private readonly duoDeclineCounts: Map<string, number>;
   /** Gods the native cap or interaction rule bars for the rest of this walk. */
   private readonly stoppedGods = new Set<string>();
   /** Devotion sources found unacquired, with the acquired god count then. */
@@ -151,10 +150,8 @@ export class DraftWalk {
     readonly rng: DraftRng,
     schedule: DraftGodSchedule,
     world: DraftWorldProduct,
-    duoDeclines: ReadonlyMap<string, number> = new Map(),
   ) {
     this.assembly = start;
-    this.duoDeclineCounts = new Map(duoDeclines);
     const held = draftStartTraits(catalog, start.project.route, spec.loadout);
     this.steering = new DraftSteering(
       catalog,
@@ -178,9 +175,6 @@ export class DraftWalk {
         this.candidates().traitOfferStartingOutcome(trait, giverKey),
       apply,
       shuffle,
-      random: () => this.rng(),
-      duoDeclines: this.duoDeclineCounts,
-      finalBiome: () => this.biomeIndex === this.project.route.biomes.length - 1,
       fail: (reason) => {
         this.failureReason = reason;
       },
@@ -207,11 +201,6 @@ export class DraftWalk {
       reauthorReward: (biomeKey, occurrenceId, excluded) =>
         this.reauthorIncomingReward(biomeKey, occurrenceId, excluded),
     };
-  }
-
-  /** Rooms each ready basket Duo was declined in so far; the next biome's walk continues them. */
-  duoDeclines(): ReadonlyMap<string, number> {
-    return new Map(this.duoDeclineCounts);
   }
 
   /** Decisions taken so far, across every biome this walk ran. */
@@ -244,6 +233,7 @@ export class DraftWalk {
    */
   runBiome(biomeIndex: number, maxSteps: number): boolean {
     this.biomeIndex = biomeIndex;
+    this.steering.paceBiome(() => this.rng());
     while (this.stepCount < maxSteps) {
       if (this.issueBiomeIndex() > biomeIndex) {
         const rack = this.equipRack(biomeIndex);
@@ -1161,6 +1151,8 @@ export class DraftWalk {
           this.npcExcludedRewards(origin.biomeKey, occurrence),
           this.siblingHoldsBoon(origin.biomeKey, occurrence),
           () => this.unvisitedHubDoorReward(origin, occurrence, types),
+          // A Hub door is visited later, so its reward is not paced to the board's depth.
+          !this.hubDoor(origin.biomeKey, occurrence),
         )
       : this.tryOffers(
           types,
@@ -1179,6 +1171,7 @@ export class DraftWalk {
     npcExcluded: ReadonlySet<string> = new Set(),
     avoidBoon = false,
     whenNoneLegal?: () => boolean,
+    paced = true,
   ): boolean {
     const legal = rewardTypes
       .flatMap((type) => locallyValidRewardOffers(this.catalog.rewards, type))
@@ -1193,7 +1186,7 @@ export class DraftWalk {
     if (legal.length === 0 && whenNoneLegal !== undefined) return whenNoneLegal();
     this.noteSupply(legal);
     const weight = (offer: ResolvedRewardOffer) => {
-      const base = this.steering.offerWeight(offer);
+      const base = this.steering.offerWeight(offer, paced);
       const boosted =
         this.steering.offerGod(offer) !== undefined && base >= WANTED_GOD_WEIGHT
           ? base * wantedGodBoost
@@ -1210,15 +1203,24 @@ export class DraftWalk {
    * A Hub door with no pool reward left shows a boon of a god outside the pool and is never
    * visited, while the board keeps its required visits; a story door stays pool-only.
    */
+  /** Whether the occurrence is an open door of its biome's Hub board. */
+  private hubDoor(biomeKey: string, occurrence: RoomOccurrence): boolean {
+    const layout = this.catalog.biomeLayouts.byKey[biomeKey];
+    if (layout?.progression.kind !== 'hub') return false;
+    return (
+      this.hubDecision(biomeKey, layout.progression.hubKey)?.openTargets.some(
+        (target) => target.occurrenceId === occurrence.occurrenceId,
+      ) === true
+    );
+  }
+
   private unvisitedHubDoorReward(
     origin: Extract<SemanticAddress, { readonly kind: 'incomingReward' }>,
     occurrence: RoomOccurrence,
     rewardTypes: readonly string[],
   ): boolean {
     const layout = this.catalog.biomeLayouts.byKey[origin.biomeKey];
-    if (layout?.progression.kind !== 'hub') return false;
-    const decision = this.hubDecision(origin.biomeKey, layout.progression.hubKey);
-    if (!decision?.openTargets.some((t) => t.occurrenceId === occurrence.occurrenceId))
+    if (layout?.progression.kind !== 'hub' || !this.hubDoor(origin.biomeKey, occurrence))
       return false;
     if (this.roomOf(occurrence.gameName)?.kind === 'Story') return false;
     const unvisited = this.unvisitedHubDoors.get(origin.biomeKey) ?? new Set<string>();

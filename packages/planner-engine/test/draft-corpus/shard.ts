@@ -12,8 +12,12 @@ export const DRAFT_CORPUS_SHARDS = 8;
  * recorded. The first seed is drafted twice to witness determinism.
  */
 export function draftCorpusShard(shard: number): void {
+  // DRAFT_CORPUS_ONLY, a regular expression over spec names, drafts a subset.
+  const only = process.env.DRAFT_CORPUS_ONLY;
   const indexes = Array.from({ length: DRAFT_CORPUS_SPEC_COUNT }, (_, index) => index).filter(
-    (index) => index % DRAFT_CORPUS_SHARDS === shard,
+    (index) =>
+      index % DRAFT_CORPUS_SHARDS === shard &&
+      (only === undefined || new RegExp(only).test(draftCorpusEntry(index).name)),
   );
   for (const specIndex of indexes) {
     const entry = draftCorpusEntry(specIndex);

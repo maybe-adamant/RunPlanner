@@ -15,6 +15,17 @@ interface SpecSummary {
   readonly essencesPerRun: number;
   readonly purchasesPerRun: Readonly<Record<string, number>>;
   readonly attemptsMedian: number;
+  /** Across seeds, each basket trait's landing depth spread (stdev, rooms), averaged over traits. */
+  readonly depthSpread?: number;
+  /** Across seeds, each basket trait's distinct landing depths, averaged over traits. */
+  readonly depthDistinct?: number;
+  /** Taken god boon rooms per planned biome. */
+  readonly godRoomsPerBiome?: number;
+  /** Mean and per-run largest rooms between consecutive god boon rooms in a biome. */
+  readonly godGapMean?: number;
+  readonly godGapMax?: number;
+  /** Share of god boon rooms in the first third of their biome's taken rooms. */
+  readonly godEarlyShare?: number;
   readonly msMedian: number;
   readonly msMax: number;
 }
@@ -28,8 +39,50 @@ function median(values: readonly number[]): number {
   return sorted.length % 2 === 1 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
 }
 
+/** Per basket trait landing in two or more seeds: depth stdev and distinct depths, averaged. */
+function depthDiversity(drafted: readonly DraftCorpusRun[]): {
+  readonly spread: number;
+  readonly distinct: number;
+} {
+  const byTrait = new Map<string, number[]>();
+  for (const run of drafted)
+    for (const [traitKey, depth] of Object.entries(run.landingDepths ?? {}))
+      (byTrait.get(traitKey) ?? byTrait.set(traitKey, []).get(traitKey)!).push(depth);
+  const landed = [...byTrait.values()].filter((depths) => depths.length > 1);
+  if (landed.length === 0) return { spread: 0, distinct: 0 };
+  const stdev = (depths: readonly number[]) => {
+    const mean = depths.reduce((sum, depth) => sum + depth, 0) / depths.length;
+    return Math.sqrt(depths.reduce((sum, d) => sum + (d - mean) ** 2, 0) / depths.length);
+  };
+  return {
+    spread: round(landed.reduce((sum, depths) => sum + stdev(depths), 0) / landed.length),
+    distinct: round(landed.reduce((sum, depths) => sum + new Set(depths).size, 0) / landed.length),
+  };
+}
+
+function godRoomSummary(drafted: readonly DraftCorpusRun[]) {
+  const paced = drafted.filter((run) => run.godRooms !== undefined && run.godRooms.biomes > 0);
+  const sum = (value: (run: DraftCorpusRun) => number) =>
+    paced.reduce((total, run) => total + value(run), 0);
+  const gaps = paced.flatMap((run) => run.godRooms.gaps);
+  const rooms = sum((run) => run.godRooms.rooms);
+  return {
+    godRoomsPerBiome: round(
+      rooms /
+        Math.max(
+          sum((run) => run.godRooms.biomes),
+          1,
+        ),
+    ),
+    godGapMean: round(gaps.reduce((a, b) => a + b, 0) / Math.max(gaps.length, 1)),
+    godGapMax: round(sum((run) => Math.max(0, ...run.godRooms.gaps)) / Math.max(paced.length, 1)),
+    godEarlyShare: round(sum((run) => run.godRooms.early) / Math.max(rooms, 1)),
+  };
+}
+
 function summarize(runs: readonly DraftCorpusRun[]): SpecSummary {
   const drafted = runs.filter((run) => run.outcome === 'drafted');
+  const diversity = depthDiversity(drafted);
   const targets: Record<string, number> = {};
   for (const kind of TARGET_KINDS) {
     const total = drafted.reduce((sum, run) => sum + (run.targets[kind]?.total ?? 0), 0);
@@ -60,6 +113,9 @@ function summarize(runs: readonly DraftCorpusRun[]): SpecSummary {
     ),
     purchasesPerRun,
     attemptsMedian: median(drafted.map((run) => run.attempts)),
+    depthSpread: diversity.spread,
+    depthDistinct: diversity.distinct,
+    ...godRoomSummary(drafted),
     msMedian: Math.round(median(runs.map((run) => run.ms))),
     msMax: Math.max(...runs.map((run) => run.ms)),
   };
@@ -86,6 +142,12 @@ function table(
     'ess/run',
     'buys/run',
     'attMed',
+    'depSd',
+    'depN',
+    'god/bi',
+    'gap',
+    'gapMax',
+    'early',
     'msMed',
     'msMax',
   ];
@@ -104,6 +166,12 @@ function table(
       cell(now.essencesPerRun, was?.essencesPerRun),
       buys || '-',
       cell(now.attemptsMedian, was?.attemptsMedian),
+      cell(now.depthSpread, was?.depthSpread),
+      cell(now.depthDistinct, was?.depthDistinct),
+      cell(now.godRoomsPerBiome, was?.godRoomsPerBiome),
+      cell(now.godGapMean, was?.godGapMean),
+      cell(now.godGapMax, was?.godGapMax),
+      cell(now.godEarlyShare, was?.godEarlyShare),
       cell(now.msMedian, was?.msMedian),
       cell(now.msMax, was?.msMax),
     ];

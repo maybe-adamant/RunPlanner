@@ -106,13 +106,10 @@ export function draftProject(
     createDraftRng((seed * 2_654_435_761) >>> 0),
   );
   let attempts = 0;
-  // A Duo declined in a short biome keeps its escalated chance in the next.
-  let duoDeclines: ReadonlyMap<string, number> = new Map();
   for (const [biomeIndex, biomeKey] of biomeKeys.entries()) {
     let best:
       | {
           assembly: ProjectEvaluationAssembly;
-          duoDeclines: ReadonlyMap<string, number>;
           score: number;
           localMet: boolean;
         }
@@ -136,7 +133,6 @@ export function draftProject(
         createDraftRng(attemptSeed(seed, biomeIndex, attempt)),
         schedule,
         world,
-        duoDeclines,
       );
       if (!walk.runBiome(biomeIndex, budget.maxStepsPerBiome)) {
         reasons.push(walk.failure ?? 'unknown');
@@ -159,7 +155,7 @@ export function draftProject(
         score > best.score ||
         (score === best.score && localMet && !best.localMet)
       )
-        best = { assembly: walk.assembly, duoDeclines: walk.duoDeclines(), score, localMet };
+        best = { assembly: walk.assembly, score, localMet };
       // An unmet scheduled Hermes or Hammer some decision could take here earns one retry.
       if (
         localMet &&
@@ -173,7 +169,6 @@ export function draftProject(
       if (localMet) supplyRetried = true;
     }
     if (best === undefined) return Object.freeze({ kind: 'failed', biomeKey, reasons });
-    duoDeclines = best.duoDeclines;
     // Only the chosen attempt's encounters are drafted, before the next biome builds on them.
     current = draftEncounters(
       catalog,

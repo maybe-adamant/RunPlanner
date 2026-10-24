@@ -702,8 +702,7 @@ first Olympian pick is pool #1's. The basket's order is each god's own
 acquisition order; only a god's next unheld trait may be taken from it, and a
 trait waiting only on run state (an element threshold or a rarity count) is
 passed over until that state holds. Duos stand outside both gods' orders: once
-ready, a god room of either god takes one with chance 1/3, then 2/3, then
-always, the count carrying into the next biome.
+ready, a god room of either god may take one, paced like any other trait.
 
 Caps are engine-owned and scale with the plan. The god boon cap sums each
 planned biome's planned god boons (a route- and biome-keyed default, less one
@@ -737,6 +736,19 @@ the route declares it, route overlays included:
   NPC, once per route), outranks a due trait: hosting rooms are favoured while
   the window is open and their door reward avoids the excluded types. A missed
   window is reported as a miss.
+- Pacing spreads a biome's due god traits over its rooms. When a biome starts,
+  each god trait due there gets a target room depth: sorted random draws, in
+  schedule order (a Duo after its prerequisites), over a share of the biome's
+  expected rooms (its latest forced depth; a Hub's required visits plus its
+  entry rooms) that shrinks as the due traits crowd the biome's planned god
+  boons. A god's pull is a weight, not a threshold: below a non-god reward's
+  well before its trait's target, the due weight at it, growing past it, so a
+  trait can land early or a little late; an overdue trait is past its target
+  from the biome's first room, and one due in a later biome keeps the wanted
+  weight. A god room that comes up early still takes the trait; a room
+  offering both a ready Duo and the god's next trait takes the earlier target.
+  Hub board doors are authored at the due weight, since their visits come
+  later.
 - Each exit shows at most one god boon door when it can: once another door of
   the exit holds a god boon (a boon reward, Mystery boon or Devotion trial),
   such rewards on this door are strongly damped, since every shown door draws
@@ -774,8 +786,10 @@ the route declares it, route overlays included:
   rack keepsake for a later planned biome), Athena's traits join the basket
   under her one shared NPC cap.
 
-A fixed corpus (`npm run test:draft-corpus`) measures these rules; its
-committed baseline records rates and medians, not plans.
+A fixed corpus (`npm run test:draft-corpus`) measures these rules, including
+the spread of basket traits' in-biome landing depths and the god boon rooms'
+count, gaps and early share per biome; its committed baseline records rates
+and medians, not plans.
 
 ### Draft share codes
 

@@ -336,7 +336,7 @@ describe('draftProject', () => {
         ],
         rackKeepsakeKeys: [null, null, null],
       };
-      const result = draftProject(catalog, planned('Underworld', 2), spec, 1);
+      const result = draftProject(catalog, planned('Underworld', 2), spec, 2);
       if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
       // A trait taken from a bought god boon is a basket trait, in its god's order.
       const boughtTraits = shopBuys(result.project).flatMap((buy) => {
@@ -379,14 +379,14 @@ describe('draftProject', () => {
           catalog,
           planned('Underworld', 3),
           purchasesPerBiome === undefined ? spec : { ...spec, purchasesPerBiome },
-          3,
+          31,
         );
         if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
         return shopBuys(result.project);
       };
       // At the default pace this seed buys a god-side boon; at none only the due Hermes boon.
       expect(buys().some((buy) => !buy.includes(':ShopHermesUpgrade:'))).toBe(true);
-      expect(buys(0)).toEqual(['G:ShopHermesUpgrade:HermesWeaponBoon']);
+      expect(buys(0)).toEqual(['H:ShopHermesUpgrade:HermesWeaponBoon']);
     });
 
     it('takes the retries per biome after each first success', () => {
@@ -501,7 +501,7 @@ describe('draftProject', () => {
         ],
         rackKeepsakeKeys: [null, null, null],
       };
-      const walk = startDraftWalk(dream.base, spec, 33);
+      const walk = startDraftWalk(dream.base, spec, 1);
       expect(walk.runBiome(0, DEFAULT_DRAFT_BUDGET.maxStepsPerBiome), walk.failure).toBe(true);
       // Air for Zeus's waiting Infusion, from the first Dream Shop.
       expect(shopBuys(walk.project)).toContain('H:AirBoost:');

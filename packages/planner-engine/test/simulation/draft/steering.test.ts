@@ -10,6 +10,7 @@ import {
   draftDoorStoreKeys,
   draftSideDoorWeight,
   draftSiblingHoldsGodBoon,
+  draftPaceWeight,
   draftWindowForceChance,
 } from '../../../src/simulation/draft/steering';
 import { draftSteeringFor } from '../../support/draft-walk';
@@ -152,6 +153,72 @@ describe('midshop preference', () => {
     const boon = boonDoor.roomWeight('F_Combat01', 'F') * boonDoor.offerWeight(zeusBoon);
     expect(shop(true)).toBeGreaterThan(boon);
     expect(shop(false)).toBeLessThan(boon);
+  });
+});
+
+describe('depth pacing', () => {
+  const base = createProjectDocument(catalog, {
+    projectId: 'p',
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
+  });
+  const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
+  void _startingReward;
+  const steeringFor = (basketTraitKeys: string[]) =>
+    draftSteeringFor(base, {
+      loadout,
+      world: {
+        godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+        storyNpcByBiome: {},
+        fieldNpcsByBiome: {},
+      },
+      basketTraitKeys,
+      rackKeepsakeKeys: [],
+    });
+  const draws = (...values: number[]) => {
+    let index = 0;
+    return () => values[index++ % values.length]!;
+  };
+  const zeus = ['ZeusWeaponBoon', 'ZeusCastBoon', 'ZeusSpecialBoon'];
+
+  it('pulls a god softly: below a non-god reward well before the target, rising past it', () => {
+    expect(draftPaceWeight(1, 5)).toBeLessThan(1);
+    expect(draftPaceWeight(4, 5)).toBeGreaterThan(draftPaceWeight(3, 5));
+    expect(draftPaceWeight(5, 5)).toBe(60);
+    expect(draftPaceWeight(7, 5)).toBeGreaterThan(draftPaceWeight(6, 5));
+    expect(draftPaceWeight(6, 5)).toBeGreaterThan(60);
+  });
+
+  it("spreads a biome's due traits in schedule order with the seeded jitter", () => {
+    const targets = (random: () => number) => {
+      const steering = steeringFor(zeus);
+      steering.paceBiome(random);
+      return zeus.map((key) => steering.targetDepth(key));
+    };
+    const spread = targets(draws(0.9, 0.1, 0.5));
+    expect(spread).toEqual([...spread].sort((a, b) => a - b));
+    expect(spread[0]).toBeGreaterThanOrEqual(1);
+    expect(targets(draws(0.9, 0.1, 0.5))).toEqual(spread);
+    expect(targets(draws(0.2, 0.3, 0.4))).not.toEqual(spread);
+  });
+
+  it('compresses the targets as the due traits crowd the biome', () => {
+    const latest = (basket: string[]) => {
+      const steering = steeringFor(basket);
+      steering.paceBiome(() => 0.999);
+      return Math.max(...basket.map((key) => steering.targetDepth(key)));
+    };
+    const crowded = [...zeus, 'ApolloWeaponBoon', 'AphroditeCastBoon', 'HestiaSpecialBoon'];
+    expect(latest(crowded)).toBeLessThan(latest(['ZeusWeaponBoon']));
+  });
+
+  it("places a Duo's target after its prerequisites', with no ramp of its own", () => {
+    const duo = 'ApolloSecondStageCastBoon';
+    const basket = ['ApolloExCastBoon', 'ZeusWeaponBoon', duo];
+    const steering = steeringFor(basket);
+    steering.paceBiome(draws(0.1, 0.9, 0.2));
+    const prerequisites = basket.slice(0, 2).map((key) => steering.targetDepth(key));
+    expect(steering.targetDepth(duo)).toBeGreaterThanOrEqual(Math.max(...prerequisites));
   });
 });
 
