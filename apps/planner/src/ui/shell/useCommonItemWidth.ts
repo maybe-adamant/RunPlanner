@@ -2,7 +2,8 @@ import { useLayoutEffect, useRef } from 'react';
 
 /**
  * Gives every `.route-loadout-row` item under the container one width: the widest
- * item's natural width, published as `--route-loadout-item-width`.
+ * item's natural width, published as `--route-loadout-item-width`. A weapon that leads its
+ * own row counts too, so its widest weapon and aspect label shows in full.
  */
 export function useCommonItemWidth<Container extends HTMLElement>() {
   const ref = useRef<Container>(null);
@@ -10,7 +11,11 @@ export function useCommonItemWidth<Container extends HTMLElement>() {
     const container = ref.current;
     if (container === null) return;
     // A launcher's open dialog renders beside it but is not one of the row's controls.
-    const items = [...container.querySelectorAll<HTMLElement>('.route-loadout-row > :not(dialog)')];
+    const items = [
+      ...container.querySelectorAll<HTMLElement>(
+        '.route-loadout-row > :not(dialog), .route-loadout-weapon-cell > .field-control:first-child',
+      ),
+    ];
     for (const item of items) item.style.width = 'max-content';
     const widest = Math.max(0, ...items.map((item) => item.getBoundingClientRect().width));
     for (const item of items) item.style.width = '';

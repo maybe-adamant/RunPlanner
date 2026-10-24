@@ -9,7 +9,6 @@ import type {
   WorkspaceHexTreeNode,
 } from '@planner/projections/structured-workspace';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
-import { hexLayoutArtwork } from '@planner/ui/artwork/hex-layouts/hexLayoutArtwork';
 import { hexNodeArtwork } from '@planner/ui/artwork/hex-nodes/hexNodeArtwork';
 import { ContextualPicker, ContextualPickerPopover } from '@planner/ui/controls/ContextualPicker';
 import { hintProps } from '@planner/ui/controls/hint';
@@ -79,10 +78,6 @@ export function HexTreeBoard({
   return (
     <div className="hex-tree-editor" ref={setRoot}>
       <div className="hex-tree-toolbar">
-        <ArtworkIcon
-          className="hex-tree-layout-image"
-          source={hexLayoutArtwork[domain.value.layoutKey] ?? undefined}
-        />
         <ContextualPicker
           ariaLabel="Hex talent layout"
           id={`${idBase}-layout`}

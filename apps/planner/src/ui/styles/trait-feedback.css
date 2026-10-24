@@ -347,12 +347,6 @@ button.hex-tree-node {
   height: 1.3rem;
 }
 
-/* The layout's star map, at a fixed header width. */
-.hex-tree-layout-image {
-  width: 200px;
-  aspect-ratio: 1000 / 392;
-}
-
 .hex-tree-node[data-kind='keystone'] {
   border-color: #6f8fd6;
 }

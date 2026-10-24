@@ -19,7 +19,6 @@ import { enemyArtwork } from '@planner/ui/artwork/enemies/enemyArtwork';
 import { fangsPerkArtwork } from '@planner/ui/artwork/fangs/fangsPerkArtwork';
 import { hammerArtwork } from '@planner/ui/artwork/hammers/hammerArtwork';
 import { hermesBoonArtwork } from '@planner/ui/artwork/hermes/hermesBoonArtwork';
-import { hexLayoutArtwork } from '@planner/ui/artwork/hex-layouts/hexLayoutArtwork';
 import { hexNodeArtwork } from '@planner/ui/artwork/hex-nodes/hexNodeArtwork';
 import { hexSpellArtwork } from '@planner/ui/artwork/hex-spells/hexSpellArtwork';
 import { minibossArtwork } from '@planner/ui/artwork/minibosses/minibossArtwork';
@@ -119,11 +118,6 @@ const records: [string, Readonly<Record<string, string | null>>, readonly string
     [...catalog.chaos.blessings.values, ...catalog.chaos.curses.values].map((x) => x.key),
   ],
   ['hex-spells', hexSpellArtwork, catalog.hexes.values.map((h) => h.spellTraitKey)],
-  [
-    'hex-layouts',
-    hexLayoutArtwork,
-    catalog.hexes.values.flatMap((h) => h.layouts.values.map((l) => l.key)),
-  ],
   ['hex-nodes', hexNodeArtwork, hexNodeKeys],
   ['rewards', rewardArtwork, catalog.rewards.rewardTypes.values.map((r) => r.gameName)],
   ['clockwork', clockworkCountdownArtwork, ['0', '1', '2', '3', '4', '5', '6']],
