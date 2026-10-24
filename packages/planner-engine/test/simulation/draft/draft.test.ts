@@ -876,8 +876,9 @@ describe('draft keepsakes and route', () => {
     ]);
     const gods = (godKeys: string[]) =>
       refusals(underworld, { world: { godKeys, storyNpcByBiome: {}, fieldNpcsByBiome: {} } });
-    expect(gods(['Zeus', 'Apollo'])).toEqual([{ kind: 'tooFewGods', minGods: 3 }]);
-    expect(gods(['Zeus', 'Apollo', 'Hera'])).toEqual([]);
+    expect(gods([])).toEqual([{ kind: 'tooFewGods', minGods: 1 }]);
+    expect(gods(['Zeus'])).toEqual([]);
+    expect(gods(['Zeus', 'Apollo'])).toEqual([]);
   });
 
   it('refuses a once-per-run field NPC selected in more than one biome', () => {

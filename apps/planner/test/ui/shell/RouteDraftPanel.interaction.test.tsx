@@ -641,10 +641,9 @@ describe('Draft panel', () => {
 
   it('locks the panel and its navigation while drafting, then reports the targets', () => {
     const { application, runs } = open();
-    chooseGods(['Zeus', 'Apollo']);
     expect(draftButton().getAttribute('aria-disabled')).toBe('true');
-    expect(hintOf(draftButton())).toBe('Choose at least 3 gods.');
-    chooseGods(['Hera']);
+    expect(hintOf(draftButton())).toBe('Choose a god.');
+    chooseGods(['Zeus', 'Apollo', 'Hera']);
     fireEvent.click(draftButton());
     expect(runs).toHaveLength(1);
     // Draft uses the project's saved seed; only Reroll draws a new one.
