@@ -306,7 +306,8 @@ broad phase-closure verification:
   time aggregates with deltas against the committed
   `packages/planner-engine/test/draft-corpus/baseline.json`, and fails only on
   a refusal, a throw, a failed draft or a redrafted seed's changed plan;
-  `DRAFT_CORPUS_WRITE=1` rewrites the baseline.
+  `DRAFT_CORPUS_WRITE=1` rewrites the baseline; `DRAFT_CORPUS_ONLY=<regex>`
+  drafts a subset of specs.
 - `npm run test:performance:snapshot` and `npm run test:performance:compare`
   (below) for changes to rebuild, candidate, edit or Undo latency.
 

@@ -23,7 +23,7 @@ export function draftScheduleFor(
 
 /**
  * A walk over the base project's drafted loadout, or from `from`; the schedule
- * uses `scheduleSeed`, by default the walk's own seed; `duoDeclines` carries Duo rolls in.
+ * uses `scheduleSeed`, by default the walk's own seed.
  */
 export function startDraftWalk(
   base: ProjectDocument,
@@ -32,7 +32,6 @@ export function startDraftWalk(
   options: {
     readonly from?: ProjectEvaluationAssembly;
     readonly scheduleSeed?: number;
-    readonly duoDeclines?: ReadonlyMap<string, number>;
   } = {},
 ): DraftWalk {
   const route = base.route;
@@ -47,15 +46,7 @@ export function startDraftWalk(
   const start =
     options.from ??
     simulateProjectAssembly(catalog, draftLoadoutProject(catalog, base, spec.loadout));
-  return new DraftWalk(
-    catalog,
-    start,
-    spec,
-    createDraftRng(seed),
-    schedule,
-    world,
-    options.duoDeclines,
-  );
+  return new DraftWalk(catalog, start, spec, createDraftRng(seed), schedule, world);
 }
 
 /** The walk's steering over the base project's drafted loadout, at its first biome. */
