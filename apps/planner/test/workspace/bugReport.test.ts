@@ -50,6 +50,23 @@ describe('bug report operations', () => {
     });
   });
 
+  it('adds the fault the application stopped on', async () => {
+    const game = createFakeGameModuleHost();
+    const application = createApplication({ gameModuleHost: game.host });
+    const fault = { message: 'broken', stack: 'Error: broken', componentStack: '\n    at Editor' };
+
+    await application.bugReport!.create({
+      openPlan: false,
+      plansInGame: false,
+      gameLogs: false,
+      fault,
+    });
+    await application.bugReport!.create({ openPlan: false, plansInGame: false, gameLogs: false });
+
+    expect(game.host.createBugReport.mock.calls[0]![1].appFacts.fault).toEqual(fault);
+    expect(game.host.createBugReport.mock.calls[1]![1].appFacts).not.toHaveProperty('fault');
+  });
+
   it('carries the recorded settlement fault', () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHProject()));

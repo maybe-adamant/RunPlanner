@@ -10,6 +10,7 @@ import {
   type EditorNavigation,
 } from '@planner/projections/editorNavigation';
 import {
+  selectEditorShown,
   selectPresentProject,
   selectProjectEvaluation,
   type RootState,
@@ -105,8 +106,7 @@ export function App({
     project === undefined ? undefined : projectRouteNavigation(catalog, project.route);
   const activeRouteFeedback = feedback?.route;
   const activeWorkspaceRoute = workspace?.route;
-  // The editor shows only while a plan is open.
-  const showEditor = view.kind === 'editor' && project !== undefined;
+  const showEditor = useAppSelector(selectEditorShown) && project !== undefined;
   const routeBanner =
     activeRouteNavigation === undefined
       ? null

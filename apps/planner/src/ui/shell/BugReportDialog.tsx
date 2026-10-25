@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { selectPresentProject, useAppSelector } from '@planner/state/store';
-import type { BugReportContents, BugReportOperations } from '@planner/workspace/bugReport';
+import type {
+  BugReportContents,
+  BugReportFault,
+  BugReportOperations,
+} from '@planner/workspace/bugReport';
 import { ModalDialog } from '@planner/ui/controls/ModalDialog';
 
 type Stage =
@@ -13,15 +17,20 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+type BugReportChoices = Omit<BugReportContents, 'fault'>;
+
 export function BugReportDialog({
+  fault,
   onClose,
   operations,
 }: {
+  /** The error the application stopped on, always included. */
+  readonly fault?: BugReportFault;
   readonly onClose: () => void;
   readonly operations: BugReportOperations;
 }) {
   const hasOpenPlan = useAppSelector((state) => selectPresentProject(state) !== undefined);
-  const [contents, setContents] = useState<BugReportContents>({
+  const [contents, setContents] = useState<BugReportChoices>({
     openPlan: hasOpenPlan,
     plansInGame: true,
     gameLogs: true,
@@ -41,6 +50,7 @@ export function BugReportDialog({
       const outcome = await operations.create({
         ...contents,
         openPlan: contents.openPlan && hasOpenPlan,
+        ...(fault === undefined ? {} : { fault }),
       });
       setStage(outcome.kind === 'saved' ? outcome : { kind: 'choosing' });
     } catch (failure) {
@@ -52,7 +62,7 @@ export function BugReportDialog({
     setError(null);
     action().catch((failure: unknown) => setError(errorText(failure)));
   };
-  const option = (key: keyof BugReportContents, label: string, disabled = false) => (
+  const option = (key: keyof BugReportChoices, label: string, disabled = false) => (
     <label className="bug-report-option">
       <input
         checked={contents[key] && !disabled}
