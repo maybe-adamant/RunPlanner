@@ -4,6 +4,7 @@ import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpo
 import { createDefaultRouteLoadout } from '../../../src/authored-project/loadout';
 import { simulateProjectAssembly, type DraftSpec } from '../../../src/simulation';
 import { draftReport } from '../../../src/simulation/draft/report';
+import { draftBasket } from '../../support/draft-basket';
 
 describe('draft report', () => {
   it('reports a basket trait the evaluated route never equips as unmet', () => {
@@ -12,7 +13,7 @@ describe('draft report', () => {
     const spec: DraftSpec = {
       loadout,
       world: { godKeys: [], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
-      basketTraitKeys: ['SuperSacrificeBoonHera'],
+      basketByGiver: draftBasket(['SuperSacrificeBoonHera']),
       rackKeepsakeKeys: [null, null, null],
     };
     const project = loadUnderworldFGHICheckpoint();
@@ -30,7 +31,7 @@ describe('draft report', () => {
     const spec: DraftSpec = {
       loadout,
       world: { godKeys: ['Zeus', 'Hera'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
-      basketTraitKeys: [],
+      basketByGiver: {},
       rackKeepsakeKeys: [null, null, null],
     };
     const project = loadUnderworldFGHICheckpoint();

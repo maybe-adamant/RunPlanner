@@ -2,7 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import { routeRoomDeclaration } from '../../authored-project/route-profile';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import type { RunStateSnapshot } from '../rewards';
-import type { DraftSpec } from './spec';
+import { draftBasketTraitKeys, type DraftSpec } from './spec';
 
 export type DraftTargetKind =
   | 'basketTrait'
@@ -80,7 +80,7 @@ export function draftReport(
   }
   const configured = assembly.project.route.biomes.map((biome) => biome.biomeKey);
   const targets: DraftTargetResult[] = [];
-  for (const traitKey of spec.basketTraitKeys)
+  for (const traitKey of draftBasketTraitKeys(spec))
     targets.push({ kind: 'basketTrait', key: traitKey, met: equipped.includes(traitKey) });
   for (const [biomeKey, npc] of Object.entries(spec.world.storyNpcByBiome))
     if (configured.includes(biomeKey))

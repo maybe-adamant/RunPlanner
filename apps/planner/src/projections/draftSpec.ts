@@ -14,6 +14,7 @@ import type { Catalog, TraitOrdinaryBoonSlot } from '@run-planner/engine/catalog
 import {
   assessDraftBasket,
   assessDraftGods,
+  draftBasketTraitKeys,
   draftGodBoonBudget,
   draftFirstBoonRule,
   draftGodRules,
@@ -135,7 +136,7 @@ export function projectDraftSpec(catalog: Catalog, project: ProjectDocument): Dr
         storyNpcByBiome,
         fieldNpcsByBiome,
       },
-      basketTraitKeys: draft.basketTraitKeys,
+      basketByGiver: draft.basketByGiver,
       rackKeepsakeKeys: rackSlots.map((slot) => slot.keepsakeKey),
       ...(draft.preferMidshops === true ? { preferMidshops: true } : {}),
       ...(draft.pursueTartarusGoal === true ? { pursueTartarusGoal: true } : {}),
@@ -247,11 +248,27 @@ export function withDraftGodToggled(
   return { ...draft, godKeys };
 }
 
+/** Removes a basket trait from its giver's list, or adds it to its giver's (a Duo's first pool god). */
 export function withDraftBasketTraitToggled(
+  catalog: Catalog,
   draft: AuthoredDraftSpec,
   traitKey: string,
 ): AuthoredDraftSpec {
-  return { ...draft, basketTraitKeys: toggled(draft.basketTraitKeys, traitKey) };
+  const basket = draft.basketByGiver;
+  const holder = Object.keys(basket).find((key) => basket[key]!.includes(traitKey));
+  if (holder !== undefined) {
+    const { [holder]: list, ...rest } = basket;
+    const kept = list!.filter((key) => key !== traitKey);
+    return { ...draft, basketByGiver: kept.length === 0 ? rest : { ...rest, [holder]: kept } };
+  }
+  const givers = catalog.traitGivers.values.filter((giver) => giver.traitKeys.includes(traitKey));
+  const giverKey =
+    draft.godKeys.find((godKey) => givers.some((giver) => giver.key === godKey)) ?? givers[0]?.key;
+  if (giverKey === undefined) return draft;
+  return {
+    ...draft,
+    basketByGiver: { ...basket, [giverKey]: [...(basket[giverKey] ?? []), traitKey] },
+  };
 }
 
 export function withDraftStoryNpcToggled(
@@ -341,8 +358,8 @@ export interface DraftBasketChip {
    * absent at an end or where the swap would queue a trait above its prerequisite.
    */
   readonly order?: {
-    readonly earlierBasket?: readonly string[];
-    readonly laterBasket?: readonly string[];
+    readonly earlierBasket?: DraftSpec['basketByGiver'];
+    readonly laterBasket?: DraftSpec['basketByGiver'];
   };
 }
 
@@ -457,7 +474,13 @@ export function projectDraftBasket(
 ): DraftBasketProjection {
   const assessment = assessDraftBasket(catalog, project.route, spec);
   const byKey = new Map(assessment.traits.map((trait) => [trait.traitKey, trait]));
-  const queues = draftSourceQueues(catalog, spec).filter((queue) => queue.traitKeys.length > 0);
+  // Duos keep their own section and chips here, outside their host's order.
+  const queues = draftSourceQueues(catalog, spec)
+    .map((queue) => ({
+      ...queue,
+      traitKeys: queue.traitKeys.filter((key) => byKey.get(key)?.kind !== 'duo'),
+    }))
+    .filter((queue) => queue.traitKeys.length > 0);
   const orderNumbers = new Map(
     queues.flatMap((queue) => queue.traitKeys.map((key, index) => [key, index + 1] as const)),
   );
@@ -636,18 +659,23 @@ export function projectDraftBasket(
       ...(order === undefined ? {} : { order: Object.freeze(order) }),
     });
   };
-  const swapped = (a: string, b: string) =>
-    Object.freeze(spec.basketTraitKeys.map((key) => (key === a ? b : key === b ? a : key)));
+  const swapped = (giverKey: string, a: string, b: string) =>
+    Object.freeze({
+      ...spec.basketByGiver,
+      [giverKey]: (spec.basketByGiver[giverKey] ?? []).map((key) =>
+        key === a ? b : key === b ? a : key,
+      ),
+    });
   const orderRefusals = draftOrderRefusals(catalog, project.route, spec);
-  const current = orderRefusals(spec.basketTraitKeys).size;
+  const current = orderRefusals(spec.basketByGiver).size;
   // A move may not add an order refusal; while one stands, any move that adds none is open.
-  const legalMove = (basketTraitKeys: readonly string[]) => {
-    const after = orderRefusals(basketTraitKeys).size;
+  const legalMove = (basketByGiver: DraftSpec['basketByGiver']) => {
+    const after = orderRefusals(basketByGiver).size;
     return after === 0 || (current > 0 && after <= current);
   };
   const label = (key: string) => catalog.traits.byKey[key]?.label ?? key;
   const queued = new Set(queues.flatMap((queue) => queue.traitKeys));
-  const others = spec.basketTraitKeys.filter((key) => !queued.has(key));
+  const others = draftBasketTraitKeys(spec).filter((key) => !queued.has(key));
   const chipGroups: DraftBasketChipGroup[] = [
     ...queues.map((queue) =>
       Object.freeze({
@@ -661,9 +689,13 @@ export function projectDraftBasket(
         chips: Object.freeze(
           queue.traitKeys.map((traitKey, index, keys) => {
             const earlier =
-              keys[index - 1] === undefined ? undefined : swapped(traitKey, keys[index - 1]!);
+              keys[index - 1] === undefined
+                ? undefined
+                : swapped(queue.giverKey, traitKey, keys[index - 1]!);
             const later =
-              keys[index + 1] === undefined ? undefined : swapped(traitKey, keys[index + 1]!);
+              keys[index + 1] === undefined
+                ? undefined
+                : swapped(queue.giverKey, traitKey, keys[index + 1]!);
             return chip(traitKey, {
               ...(earlier === undefined || !legalMove(earlier) ? {} : { earlierBasket: earlier }),
               ...(later === undefined || !legalMove(later) ? {} : { laterBasket: later }),

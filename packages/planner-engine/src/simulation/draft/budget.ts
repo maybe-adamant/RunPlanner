@@ -60,7 +60,7 @@ export function draftDefaultPerGodCap(
   return DRAFT_OPTIONS.perGodCap.default - (draftDenialActive(catalog, loadout) ? 1 : 0);
 }
 
-/** The most boons one god's own traits may take, Legendary included and Duos not. */
+/** The most boons one god may take, Legendary and hosted Duos included. */
 export function draftPerGodCap(
   catalog: Catalog,
   spec: Pick<DraftSpec, 'loadout' | 'perGodCap'>,

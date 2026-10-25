@@ -42,7 +42,12 @@ const underworld: DraftShareInputs = {
     godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
     storyNpcByBiome: { F: 'Arachne', G: 'Narcissus', H: 'Echo', I: 'Hades' },
     fieldNpcsByBiome: { F: ['Artemis'], I: ['Nemesis'], Q: [] },
-    basketTraitKeys: ['ZeusWeaponBoon', 'ApolloCastBoon', 'AphroditeSprintBoon', 'HestiaManaBoon'],
+    basketByGiver: {
+      Zeus: ['ZeusWeaponBoon'],
+      Apollo: ['ApolloCastBoon'],
+      Aphrodite: ['AphroditeSprintBoon'],
+      Hestia: ['HestiaManaBoon'],
+    },
     rackKeepsakeByBiome: { F: 'DoorHealReserveKeepsake', H: 'BossPreDamageKeepsake' },
     seed: 3_141_592_653,
     godBoonsByBiome: { F: 8, I: 1 },
@@ -53,6 +58,20 @@ const underworld: DraftShareInputs = {
     purchasesPerBiome: 0,
     retriesPerBiome: 10,
     resourceRoomChance: 50,
+  },
+};
+
+const duoHosts: DraftShareInputs = {
+  ...underworld,
+  draft: {
+    ...underworld.draft,
+    basketByGiver: {
+      ...underworld.draft.basketByGiver,
+      Apollo: ['ApolloSecondStageCastBoon', 'ApolloCastBoon'],
+      Hestia: ['HestiaManaBoon', 'BurnRefreshBoon'],
+      Hermes: ['HermesWeaponBoon'],
+      WeaponUpgrade: ['StaffLongAttackTrait'],
+    },
   },
 };
 
@@ -75,7 +94,7 @@ const surface: DraftShareInputs = {
     godKeys: ['Zeus', 'Hera'],
     storyNpcByBiome: { N: 'Medea' },
     fieldNpcsByBiome: {},
-    basketTraitKeys: ['HeraCastBoon'],
+    basketByGiver: { Hera: ['HeraCastBoon'] },
     rackKeepsakeByBiome: {},
     seed: 7,
   },
@@ -94,7 +113,7 @@ const freshFile: DraftShareInputs = {
     godKeys: ['Apollo', 'Poseidon'],
     storyNpcByBiome: {},
     fieldNpcsByBiome: {},
-    basketTraitKeys: ['ApolloWeaponBoon', 'PoseidonCastBoon'],
+    basketByGiver: { Apollo: ['ApolloWeaponBoon'], Poseidon: ['PoseidonCastBoon'] },
     rackKeepsakeByBiome: {},
     seed: 1,
   },
@@ -107,13 +126,28 @@ const decoded = (code: string, route?: { routeKey: string; itineraryBiomeKeys: s
 };
 
 describe('draft share codes', () => {
-  for (const [name, inputs] of Object.entries({ underworld, surface, dream, freshFile }))
+  for (const [name, inputs] of Object.entries({ underworld, duoHosts, surface, dream, freshFile }))
     it(`round-trips ${name} inputs`, () => {
       const code = encodeDraftShareCode(catalog, inputs);
       expect(code).toMatch(/^[0-9A-HJKMNP-TV-Z]+$/);
       expect(decoded(code)).toEqual(inputs);
       expect(decoded(code.toLowerCase().replace(/1/g, 'l'))).toEqual(inputs);
     });
+
+  it('heals a Duo listed by both its gods through the draft spec decode', () => {
+    const twice = {
+      ...duoHosts,
+      draft: {
+        ...duoHosts.draft,
+        basketByGiver: { ...duoHosts.draft.basketByGiver, Zeus: ['ApolloSecondStageCastBoon'] },
+      },
+    };
+    // Zeus comes first in the pool, so his list keeps it.
+    expect(decoded(encodeDraftShareCode(catalog, twice)).draft.basketByGiver).toMatchObject({
+      Zeus: ['ApolloSecondStageCastBoon'],
+      Apollo: ['ApolloCastBoon'],
+    });
+  });
 
   it('carries and installs the starting keepsake result of each keepsake that has one', () => {
     const keepsakeOf = (kind: string) =>
@@ -307,7 +341,7 @@ describe('draft share codes', () => {
       draft: {
         ...freshFile.draft,
         godKeys: ['Zeus', 'Apollo', 'Hestia'],
-        basketTraitKeys: ['ZeusWeaponBoon'],
+        basketByGiver: { Zeus: ['ZeusWeaponBoon'] },
       },
     };
     const draftOf = (source: DraftShareInputs) => {
@@ -325,7 +359,7 @@ describe('draft share codes', () => {
           storyNpcByBiome: source.draft.storyNpcByBiome,
           fieldNpcsByBiome: source.draft.fieldNpcsByBiome,
         },
-        basketTraitKeys: source.draft.basketTraitKeys,
+        basketByGiver: source.draft.basketByGiver,
         rackKeepsakeKeys: [null, null, null],
       };
       const result = draftProject(catalog, history.present, spec, source.draft.seed);

@@ -53,7 +53,7 @@ it('keeps draft settings in the project through Undo, save and reload', async ()
   const authored = present().route.draft;
   expect(authored).toMatchObject({
     godKeys: ['Zeus', 'Hera', 'Apollo'],
-    basketTraitKeys: ['ZeusWeaponBoon'],
+    basketByGiver: { Zeus: ['ZeusWeaponBoon'] },
     rackKeepsakeByBiome: { G: 'DecayingBoostKeepsake' },
   });
   expect(Object.values(authored.fieldNpcsByBiome).flat()).toHaveLength(1);

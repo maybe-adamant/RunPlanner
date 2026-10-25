@@ -12,7 +12,13 @@ import { checkRequirement } from '../traits/level-effects';
 import { initialOfferCoreOnlyKeys } from '../traits/authoring/initial-composition';
 import type { TraitHistoryState } from '../traits/history/model';
 import type { TraitFindingCode } from '../model';
-import { draftPlannedBiomeKeys, type DraftLoadout, type DraftRoute, type DraftSpec } from './spec';
+import {
+  draftBasketTraitKeys,
+  draftPlannedBiomeKeys,
+  type DraftLoadout,
+  type DraftRoute,
+  type DraftSpec,
+} from './spec';
 import {
   createDraftPrerequisites,
   type DraftHeldTraits,
@@ -93,7 +99,7 @@ export interface DraftBasketCaps {
   readonly poolGodTotal: DraftCapUsage;
   /** Hermes and Hammer traits together: one per planned biome. */
   readonly supplyTotal: DraftCapUsage;
-  /** Each pool god's own traits, Legendaries included and Duos not; 4 under Denial. */
+  /** Each pool god's own traits, Legendaries and hosted Duos included; 4 under Denial. */
   readonly poolGods: readonly DraftGiverCapUsage[];
   /** Hammers, Hermes and Selene, in catalog order. */
   readonly providers: readonly (DraftGiverCapUsage & {
@@ -120,7 +126,8 @@ export function assessDraftBasket(
   const traitKeys = new Set(
     worldGivers.flatMap((key) => catalog.traitGivers.byKey[key]!.traitKeys),
   );
-  for (const key of spec.basketTraitKeys) traitKeys.add(key);
+  const basket = draftBasketTraitKeys(spec);
+  for (const key of basket) traitKeys.add(key);
   const routeStart = routeStartState(catalog, route, spec.loadout);
   const budget = draftGodBoonBudget(catalog, route, spec);
   const plan: DraftPlanScale = {
@@ -128,33 +135,35 @@ export function assessDraftBasket(
     perGodCap: budget.perGod,
     supplyCap: supplyCap(route),
   };
+  const queues = draftSourceQueues(catalog, spec);
   const order: DraftOrderContext = {
-    queues: draftSourceQueues(catalog, spec),
-    prerequisites: createDraftPrerequisites(catalog, spec.basketTraitKeys, heldTraits(routeStart)),
+    queues,
+    firstQueues: withoutDuos(catalog, queues),
+    prerequisites: createDraftPrerequisites(catalog, basket, heldTraits(routeStart)),
     firstPick: draftFirstPick(catalog, route.routeKey, spec, routeStart.traitHistory),
   };
   return Object.freeze({
     traits: Object.freeze(
       [...traitKeys].map((traitKey) =>
-        assessTrait(catalog, spec, worldGivers, routeStart, order, plan, traitKey),
+        assessTrait(catalog, spec, basket, worldGivers, routeStart, order, plan, traitKey),
       ),
     ),
-    caps: basketCaps(catalog, spec, worldGivers, plan),
+    caps: basketCaps(catalog, spec, basket, worldGivers, plan),
   });
 }
 
 function basketCaps(
   catalog: Catalog,
   spec: DraftSpec,
+  basket: readonly string[],
   worldGivers: readonly string[],
   plan: DraftPlanScale,
 ): DraftBasketCaps {
   const usage = (giverKey: string, cap: number): DraftGiverCapUsage =>
     Object.freeze({
       giverKey,
-      count: spec.basketTraitKeys.filter(
-        (key) => draftCappedGiver(catalog, spec, key)?.giverKey === giverKey,
-      ).length,
+      count: basket.filter((key) => draftCappedGiver(catalog, spec, key)?.giverKey === giverKey)
+        .length,
       cap,
     });
   const npcs = worldGivers
@@ -163,11 +172,11 @@ function basketCaps(
     .map((giver) => usage(giver.key, NPC_CAP));
   return Object.freeze({
     poolGodTotal: Object.freeze({
-      count: spec.basketTraitKeys.filter((key) => isGodTrait(catalog, key)).length,
+      count: basket.filter((key) => isGodTrait(catalog, key)).length,
       cap: plan.godTotalCap,
     }),
     supplyTotal: Object.freeze({
-      count: spec.basketTraitKeys.filter((key) => isSupplyTrait(catalog, key)).length,
+      count: basket.filter((key) => isSupplyTrait(catalog, key)).length,
       cap: plan.supplyCap,
     }),
     poolGods: Object.freeze(
@@ -214,6 +223,7 @@ function isSupplyTrait(catalog: Catalog, traitKey: string): boolean {
 function assessTrait(
   catalog: Catalog,
   spec: DraftSpec,
+  basket: readonly string[],
   worldGivers: readonly string[],
   routeStart: SimulationState,
   order: DraftOrderContext,
@@ -222,7 +232,8 @@ function assessTrait(
 ): DraftTraitAssessment {
   const trait = catalog.traits.byKey[traitKey];
   if (trait === undefined) throw new Error(`unknown draft trait ${traitKey}`);
-  const others = spec.basketTraitKeys.filter((key) => key !== traitKey);
+  const inBasket = basket.includes(traitKey);
+  const others = basket.filter((key) => key !== traitKey);
   const refusals: DraftTraitRefusal[] = [];
   const deferred = new Set<string>();
   // A Duo is offered only once both of its gods are met, so every giver listing it must be in the world.
@@ -242,11 +253,17 @@ function assessTrait(
   if (slot !== undefined && slotHolder !== undefined)
     refusals.push({ kind: 'slotTaken', slot, traitKey: slotHolder });
   const capped = draftCappedGiver(catalog, spec, traitKey);
-  if (capped !== undefined) {
-    const held = others.filter(
-      (key) => draftCappedGiver(catalog, spec, key)?.giverKey === capped.giverKey,
-    );
-    if (held.length >= capped.cap) refusals.push({ kind: 'cap', ...capped });
+  const full = (giver: { readonly giverKey: string; readonly cap: number }) =>
+    others.filter((key) => draftCappedGiver(catalog, spec, key)?.giverKey === giver.giverKey)
+      .length >= giver.cap;
+  if (capped !== undefined && full(capped)) refusals.push({ kind: 'cap', ...capped });
+  // A Duo outside the basket can join either pool god's list, so only both full refuses it.
+  if (capped === undefined && !inBasket && draftTraitKind(trait) === 'duo') {
+    const hosts = duoGods(catalog, spec, traitKey).map((giverKey) => ({
+      giverKey,
+      cap: draftPerGodCap(catalog, spec),
+    }));
+    if (hosts.length > 0 && hosts.every(full)) refusals.push({ kind: 'cap', ...hosts[0]! });
   }
   const godTotalCap = plan.godTotalCap;
   if (
@@ -285,20 +302,21 @@ function assessTrait(
       for (const failure of checkStatic(catalog, requirement, trait, state, deferred))
         refusals.push({ kind: 'requirement', ...failure });
   }
-  if (spec.basketTraitKeys.includes(traitKey)) {
-    const later = prerequisitesQueuedAfter(order, traitKey);
+  if (inBasket) {
+    // A Duo waits on its prerequisites in its host's queue, so its place there never refuses it.
+    const later = draftTraitKind(trait) === 'duo' ? [] : prerequisitesQueuedAfter(order, traitKey);
     if (later.length > 0) refusals.push({ kind: 'prerequisiteAfter', traitKeys: later });
     const firstPick = firstPickRefusal(order, traitKey);
     if (firstPick !== undefined) refusals.push(firstPick);
   } else {
     const pending = pendingFirstPick(order);
-    if (pending !== undefined) {
+    if (pending !== undefined && draftTraitKind(trait) !== 'duo') {
       if (capped?.giverKey === pending.godKey && !pending.traitKeys.includes(traitKey))
         refusals.push({ kind: 'firstGodPick', ...pending });
       else if (
         capped?.giverKey !== pending.godKey &&
         slot !== undefined &&
-        firstOfferSlotsHeld(catalog, pending, [...spec.basketTraitKeys, traitKey])
+        firstOfferSlotsHeld(catalog, pending, [...basket, traitKey])
       )
         refusals.push({ kind: 'firstOfferSlot', ...pending });
     }
@@ -307,7 +325,7 @@ function assessTrait(
   return Object.freeze({
     traitKey,
     kind: draftTraitKind(trait),
-    inBasket: spec.basketTraitKeys.includes(traitKey),
+    inBasket,
     selectable: refusals.length === 0,
     refusals: Object.freeze(refusals),
     checkedDuringSearch: Object.freeze([...deferred]),
@@ -368,15 +386,35 @@ function isGodTrait(catalog: Catalog, traitKey: string): boolean {
   );
 }
 
-/** The one giver whose cap a trait counts against; a Duo counts for neither god. */
+/** Pool gods listing a Duo, in pool order. */
+function duoGods(catalog: Catalog, spec: DraftSpec, traitKey: string): readonly string[] {
+  return spec.world.godKeys.filter(
+    (godKey) =>
+      catalog.traitGivers.byKey[godKey]?.providerKind === 'olympian' &&
+      catalog.traitGivers.byKey[godKey].traitKeys.includes(traitKey),
+  );
+}
+
+/**
+ * The one giver whose cap and queue a trait belongs to: the giver whose basket list holds it,
+ * else its only giver. A Duo outside the basket has no host, so it belongs to neither god.
+ */
 export function draftCappedGiver(
   catalog: Catalog,
   spec: DraftSpec,
   traitKey: string,
 ): { readonly giverKey: string; readonly cap: number } | undefined {
   const trait = catalog.traits.byKey[traitKey];
-  if (trait === undefined || draftTraitKind(trait) === 'duo') return undefined;
-  const givers = catalog.traitGivers.values.filter((g) => g.traitKeys.includes(traitKey));
+  if (trait === undefined) return undefined;
+  const listed = Object.keys(spec.basketByGiver).find((key) =>
+    spec.basketByGiver[key]!.includes(traitKey),
+  );
+  const givers =
+    listed !== undefined
+      ? [catalog.traitGivers.byKey[listed]].filter((giver) => giver !== undefined)
+      : draftTraitKind(trait) === 'duo'
+        ? []
+        : catalog.traitGivers.values.filter((g) => g.traitKeys.includes(traitKey));
   if (givers.length !== 1) return undefined;
   const giver = givers[0]!;
   const cap =
@@ -490,7 +528,7 @@ function withBasket(
 
 /**
  * One acquisition source's basket traits in basket order, the order the draft
- * takes them: a world god's own traits (Duos excluded), Hermes or a Hammer giver.
+ * takes them: a world god's own traits and hosted Duos, Hermes or a Hammer giver.
  */
 export interface DraftSourceQueue {
   readonly giverKey: string;
@@ -511,14 +549,23 @@ export function draftSourceQueues(catalog: Catalog, spec: DraftSpec): readonly D
     givers.map((giverKey) =>
       Object.freeze({
         giverKey,
-        traitKeys: Object.freeze(
-          spec.basketTraitKeys.filter(
-            (key) => draftCappedGiver(catalog, spec, key)?.giverKey === giverKey,
-          ),
-        ),
+        traitKeys: Object.freeze([...(spec.basketByGiver[giverKey] ?? [])]),
       }),
     ),
   );
+}
+
+function withoutDuos(
+  catalog: Catalog,
+  queues: readonly DraftSourceQueue[],
+): readonly DraftSourceQueue[] {
+  return queues.map((queue) => ({
+    giverKey: queue.giverKey,
+    traitKeys: queue.traitKeys.filter((key) => {
+      const trait = catalog.traits.byKey[key];
+      return trait === undefined || draftTraitKind(trait) !== 'duo';
+    }),
+  }));
 }
 
 /**
@@ -529,17 +576,21 @@ export function draftOrderRefusals(
   catalog: Catalog,
   route: DraftRoute,
   spec: DraftSpec,
-): (basketTraitKeys: readonly string[]) => ReadonlyMap<string, readonly DraftOrderRefusal[]> {
+): (
+  basketByGiver: DraftSpec['basketByGiver'],
+) => ReadonlyMap<string, readonly DraftOrderRefusal[]> {
   const routeStart = routeStartState(catalog, route, spec.loadout);
   const prerequisites = createDraftPrerequisites(
     catalog,
-    spec.basketTraitKeys,
+    draftBasketTraitKeys(spec),
     heldTraits(routeStart),
   );
   const firstPick = draftFirstPick(catalog, route.routeKey, spec, routeStart.traitHistory);
-  return (basketTraitKeys) => {
+  return (basketByGiver) => {
+    const queues = draftSourceQueues(catalog, { ...spec, basketByGiver });
     const order: DraftOrderContext = {
-      queues: draftSourceQueues(catalog, { ...spec, basketTraitKeys }),
+      queues,
+      firstQueues: withoutDuos(catalog, queues),
       prerequisites,
       firstPick,
     };
@@ -547,7 +598,11 @@ export function draftOrderRefusals(
     for (const queue of order.queues)
       for (const traitKey of queue.traitKeys) {
         const found: DraftOrderRefusal[] = [];
-        const later = prerequisitesQueuedAfter(order, traitKey);
+        const trait = catalog.traits.byKey[traitKey];
+        const later =
+          trait !== undefined && draftTraitKind(trait) === 'duo'
+            ? []
+            : prerequisitesQueuedAfter(order, traitKey);
         if (later.length > 0) found.push({ kind: 'prerequisiteAfter', traitKeys: later });
         const first = firstPickRefusal(order, traitKey);
         if (first !== undefined) found.push(first);
@@ -565,6 +620,8 @@ export type DraftOrderRefusal = Extract<
 
 interface DraftOrderContext {
   readonly queues: readonly DraftSourceQueue[];
+  /** The queues without Duos, which wait on their prerequisites and so never lead a god's first offer. */
+  readonly firstQueues: readonly DraftSourceQueue[];
   readonly prerequisites: DraftPrerequisites;
   readonly firstPick: DraftFirstPick | undefined;
 }
@@ -646,17 +703,17 @@ export function draftPendingFirstPick(
 ): DraftFirstPick | undefined {
   const routeStart = routeStartState(catalog, route, spec.loadout);
   return pendingFirstPick({
-    queues: draftSourceQueues(catalog, spec),
+    firstQueues: withoutDuos(catalog, draftSourceQueues(catalog, spec)),
     firstPick: draftFirstPick(catalog, route.routeKey, spec, routeStart.traitHistory),
   });
 }
 
 function pendingFirstPick(
-  order: Pick<DraftOrderContext, 'queues' | 'firstPick'>,
+  order: Pick<DraftOrderContext, 'firstQueues' | 'firstPick'>,
 ): DraftFirstPick | undefined {
   const first = order.firstPick;
   if (first === undefined) return undefined;
-  const queue = order.queues.find((candidate) => candidate.giverKey === first.godKey);
+  const queue = order.firstQueues.find((candidate) => candidate.giverKey === first.godKey);
   return queue === undefined || queue.traitKeys.length === 0 ? first : undefined;
 }
 
@@ -685,7 +742,7 @@ export function draftFirstOfferBlocked(
   spec: DraftSpec,
 ): DraftFirstPick | undefined {
   const pending = draftPendingFirstPick(catalog, route, spec);
-  return pending !== undefined && firstOfferSlotsHeld(catalog, pending, spec.basketTraitKeys)
+  return pending !== undefined && firstOfferSlotsHeld(catalog, pending, draftBasketTraitKeys(spec))
     ? pending
     : undefined;
 }
@@ -696,7 +753,7 @@ function firstPickRefusal(
 ): DraftOrderRefusal | undefined {
   const first = order.firstPick;
   if (first === undefined) return undefined;
-  const queue = order.queues.find((candidate) => candidate.giverKey === first.godKey);
+  const queue = order.firstQueues.find((candidate) => candidate.giverKey === first.godKey);
   if (queue?.traitKeys[0] !== traitKey || first.traitKeys.includes(traitKey)) return undefined;
   return { kind: 'firstGodPick', godKey: first.godKey, traitKeys: first.traitKeys };
 }
@@ -746,10 +803,11 @@ export function draftStartingKeepsakeConflicts(
 ): readonly { readonly traitKey: string; readonly conflict: DraftKeepsakeResultConflict }[] {
   const results = spec.loadout.keepsakeEquipResults;
   const conflicts: { traitKey: string; conflict: DraftKeepsakeResultConflict }[] = [];
+  const basket = draftBasketTraitKeys(spec);
   const pom = results?.jeweledPom?.traitKey;
   const slot = pom === undefined ? undefined : catalog.traits.byKey[pom]?.equipmentSlot;
   if (pom !== undefined && slot !== undefined) {
-    const holder = spec.basketTraitKeys.find(
+    const holder = basket.find(
       (key) => key !== pom && catalog.traits.byKey[key]?.equipmentSlot === slot,
     );
     if (holder !== undefined)
@@ -762,9 +820,7 @@ export function draftStartingKeepsakeConflicts(
   const giverKey =
     hammer === undefined ? undefined : draftCappedGiver(catalog, spec, hammer)?.giverKey;
   if (hammer !== undefined && giverKey !== undefined) {
-    const queue = spec.basketTraitKeys.filter(
-      (key) => draftCappedGiver(catalog, spec, key)?.giverKey === giverKey,
-    );
+    const queue = spec.basketByGiver[giverKey] ?? [];
     if (queue.includes(hammer)) {
       if (queue[0] !== hammer)
         conflicts.push({
@@ -777,7 +833,7 @@ export function draftStartingKeepsakeConflicts(
           traitKey: hammer,
           conflict: { kind: 'hammerCap', cap: DRAFT_PROVIDER_CAPS.hammer },
         });
-      const supply = spec.basketTraitKeys.filter((key) => isSupplyTrait(catalog, key)).length;
+      const supply = basket.filter((key) => isSupplyTrait(catalog, key)).length;
       if (supply + 1 > supplyCap(route))
         conflicts.push({
           traitKey: hammer,

@@ -600,6 +600,7 @@ export {
   type SettlementFault,
 } from './edit-settlement';
 export {
+  draftBasketTraitKeys,
   draftKeepsakeOptions,
   draftPlannedBiomeKeys,
   forcesGod,

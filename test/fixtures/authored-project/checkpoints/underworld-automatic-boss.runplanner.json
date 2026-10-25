@@ -57,7 +57,7 @@
       "godKeys": [],
       "storyNpcByBiome": {},
       "fieldNpcsByBiome": {},
-      "basketTraitKeys": [],
+      "basketByGiver": {},
       "rackKeepsakeByBiome": {},
       "seed": 1
     },

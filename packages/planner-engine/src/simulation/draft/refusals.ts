@@ -8,7 +8,13 @@ import {
   type DraftKeepsakeResultConflict,
   type DraftTraitRefusal,
 } from './basket';
-import { draftKeepsakeOptions, draftLoadoutProject, forcesGod, type DraftSpec } from './spec';
+import {
+  draftBasketTraitKeys,
+  draftKeepsakeOptions,
+  draftLoadoutProject,
+  forcesGod,
+  type DraftSpec,
+} from './spec';
 import { draftRepeatedFieldNpcs, draftUnreachableGods, draftWorldOptions } from './world';
 
 /** A draft offers boons only from pool gods, so the pool needs at least one. */
@@ -122,7 +128,9 @@ export function draftRefusals(
   for (const repeated of draftRepeatedFieldNpcs(catalog, options, world))
     refuse({ kind: 'repeatedFieldNpc', ...repeated });
 
-  const unknown = spec.basketTraitKeys.filter((key) => catalog.traits.byKey[key] === undefined);
+  const unknown = draftBasketTraitKeys(spec).filter(
+    (key) => catalog.traits.byKey[key] === undefined,
+  );
   for (const traitKey of unknown) refusals.push({ kind: 'unknownTrait', traitKey });
   if (loadoutValid && worldValid && unknown.length === 0)
     for (const trait of assessDraftBasket(catalog, base.route, spec).traits)

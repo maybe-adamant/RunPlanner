@@ -6,6 +6,7 @@ import { draftProject, simulateProjectAssembly, type DraftSpec } from '../../../
 import { draftAttemptScore } from '../../../src/simulation/draft/generator';
 import { draftNpcHostConditions, draftNpcHosts } from '../../../src/simulation/draft/npc-windows';
 import type { ProjectEvaluationAssembly } from '../../../src/simulation/evaluation/evaluation-products';
+import { draftBasket } from '../../support/draft-basket';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -91,7 +92,7 @@ function draftN(fieldNpcs: readonly string[], seed: number): ProjectEvaluationAs
       storyNpcByBiome: { N: 'Medea' },
       fieldNpcsByBiome: { N: fieldNpcs },
     },
-    basketTraitKeys: ['HeraCastBoon'],
+    basketByGiver: draftBasket(['HeraCastBoon']),
     rackKeepsakeKeys: [null, null, null],
   };
   const result = draftProject(catalog, surfaceN, spec, seed);

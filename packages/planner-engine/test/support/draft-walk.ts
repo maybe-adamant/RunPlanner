@@ -4,7 +4,7 @@ import { simulateProjectAssembly, type DraftRoute, type DraftSpec } from '../../
 import type { ProjectEvaluationAssembly } from '../../src/simulation/evaluation/evaluation-products';
 import { createDraftRng } from '../../src/simulation/draft/rng';
 import { draftGodSchedule, type DraftGodSchedule } from '../../src/simulation/draft/schedule';
-import { draftLoadoutProject } from '../../src/simulation/draft/spec';
+import { draftBasketTraitKeys, draftLoadoutProject } from '../../src/simulation/draft/spec';
 import { DraftWalk } from '../../src/simulation/draft/walk';
 import { DraftSteering } from '../../src/simulation/draft/steering';
 import { createDraftPrerequisites } from '../../src/simulation/draft/prerequisites';
@@ -63,7 +63,7 @@ export function draftSteeringFor(base: ProjectDocument, spec: DraftSpec): DraftS
     spec,
     schedule,
     world,
-    createDraftPrerequisites(catalog, spec.basketTraitKeys, held),
+    createDraftPrerequisites(catalog, draftBasketTraitKeys(spec), held),
     held,
     { assembly: () => assembly, biomeIndex: () => 0 },
   );

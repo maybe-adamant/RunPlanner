@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { createDefaultRouteLoadout } from '../../../src/authored-project/loadout';
 import { draftScheduleFor } from '../../support/draft-walk';
-import type { DraftSpec } from '../../../src/simulation';
+import { draftBasketTraitKeys, type DraftSpec } from '../../../src/simulation';
+import { draftBasket } from '../../support/draft-basket';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -10,13 +11,13 @@ const surface = { routeKey: 'Surface', itineraryBiomeKeys: ['N', 'O', 'P', 'Q'] 
 const spec: DraftSpec = {
   loadout,
   world: { godKeys: ['Zeus', 'Hera', 'Apollo', 'Ares'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
-  basketTraitKeys: [
+  basketByGiver: draftBasket([
     'ZeusWeaponBoon',
     'HeraCastBoon',
     'ApolloSprintBoon',
     'AresManaBoon',
     'ZeusManaBoon',
-  ],
+  ]),
   rackKeepsakeKeys: [null, null, null],
 };
 
@@ -28,7 +29,7 @@ describe('draft god schedule', () => {
       1,
     );
     expect(byBiome.flatMap((biome) => biome.traitKeys).sort()).toEqual(
-      [...spec.basketTraitKeys].sort(),
+      [...draftBasketTraitKeys(spec)].sort(),
     );
     expect(byBiome[0]!.traitKeys.length).toBeGreaterThan(byBiome[1]!.traitKeys.length);
   });
@@ -46,14 +47,14 @@ describe('draft god schedule', () => {
   it("keeps each god's traits due in basket order", () => {
     const ordered: DraftSpec = {
       ...spec,
-      basketTraitKeys: [
+      basketByGiver: draftBasket([
         'ZeusManaBoon',
         'HeraCastBoon',
         'ZeusSprintBoon',
         'ZeusWeaponBoon',
         'AresSpecialBoon',
         'ZeusSpecialBoon',
-      ],
+      ]),
     };
     const zeus = ['ZeusManaBoon', 'ZeusSprintBoon', 'ZeusWeaponBoon', 'ZeusSpecialBoon'];
     for (const seed of [1, 2, 3, 4, 5, 6]) {
@@ -74,16 +75,20 @@ describe('draft god schedule', () => {
     const chained: DraftSpec = {
       ...spec,
       world: { ...spec.world, godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hera'] },
-      basketTraitKeys: [
-        'HeraCastBoon',
-        'SprintEchoBoon',
-        'ApolloSprintBoon',
-        'TimeStopLastStandBoon',
-        'LuckyBoon',
-        'DoubleStrikeChanceBoon',
-        'AphroditeManaBoon',
-        'ZeusWeaponBoon',
-      ],
+      basketByGiver: draftBasket(
+        [
+          'HeraCastBoon',
+          'SprintEchoBoon',
+          'ApolloSprintBoon',
+          'TimeStopLastStandBoon',
+          'LuckyBoon',
+          'DoubleStrikeChanceBoon',
+          'AphroditeManaBoon',
+          'ZeusWeaponBoon',
+        ],
+        {},
+        ['Zeus', 'Apollo', 'Aphrodite', 'Hera'],
+      ),
     };
     const dueBiomes = (seed: number) => {
       const due = new Map<string, number>();
@@ -130,12 +135,12 @@ describe('draft god schedule', () => {
           storyNpcByBiome: {},
           fieldNpcsByBiome: { O: ['Icarus'] },
         },
-        basketTraitKeys: [
+        basketByGiver: draftBasket([
           'FocusLightningBoon',
           ...ares,
           'AresWeaponBoon',
           'FocusAttackDamageTrait',
-        ],
+        ]),
       };
       for (const seed of [1, 2, 3]) {
         const { byBiome } = draftScheduleFor(surface, icarus, seed);
@@ -157,7 +162,7 @@ describe('draft god schedule', () => {
         storyNpcByBiome: {},
         fieldNpcsByBiome: { G: ['Artemis'] },
       },
-      basketTraitKeys,
+      basketByGiver: draftBasket(basketTraitKeys),
       rackKeepsakeKeys: [],
     });
     const dueOf = (route: typeof underworld, draftSpec: DraftSpec, seed: number) => {

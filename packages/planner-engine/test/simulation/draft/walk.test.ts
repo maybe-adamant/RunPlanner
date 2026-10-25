@@ -10,6 +10,7 @@ import { draftReport } from '../../../src/simulation/draft/report';
 import { startDraftWalk } from '../../support/draft-walk';
 import type { ProjectEvaluationAssembly } from '../../../src/simulation/evaluation/evaluation-products';
 import { selectedExitTarget } from '../../../src/authored-project/topology/query';
+import { draftBasket } from '../../support/draft-basket';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -66,7 +67,7 @@ describe('draft trait offer filler', () => {
   const zeusOnly: DraftSpec = {
     loadout,
     world: { godKeys: ['Zeus'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
-    basketTraitKeys: [],
+    basketByGiver: {},
     rackKeepsakeKeys: [null, null, null],
   };
 
@@ -86,7 +87,7 @@ describe('draft trait offer filler', () => {
         ...loadout,
         fearRanks: { ...loadout.fearRanks, BanUnpickedBoonsShrineUpgrade: 1 },
       },
-      basketTraitKeys: zeusBasket,
+      basketByGiver: draftBasket(zeusBasket),
     };
     for (const offer of firstZeusOffers(denial, [1, 2, 3, 4])) {
       expect(zeusBasket).toContain(
@@ -102,7 +103,7 @@ describe('draft rack keepsakes', () => {
     const rack: DraftSpec = {
       loadout,
       world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
-      basketTraitKeys: [],
+      basketByGiver: {},
       rackKeepsakeKeys: ['TempHammerKeepsake', null, null],
     };
     const walk = startDraftWalk(base, rack, 1);
@@ -158,7 +159,7 @@ describe('draft walk order', () => {
     const spec: DraftSpec = {
       loadout,
       world,
-      basketTraitKeys: [...zeus, 'ApolloSpecialBoon'],
+      basketByGiver: draftBasket([...zeus, 'ApolloSpecialBoon']),
       rackKeepsakeKeys: [null, null, null],
     };
     for (const seed of [1]) {
@@ -175,7 +176,7 @@ describe('draft walk order', () => {
     const spec: DraftSpec = {
       loadout,
       world: { ...world, godKeys: pool },
-      basketTraitKeys: ['HestiaSpecialBoon', 'ApolloCastBoon'],
+      basketByGiver: draftBasket(['HestiaSpecialBoon', 'ApolloCastBoon']),
       rackKeepsakeKeys: [null, null, null],
     };
     for (const seed of [1]) {
@@ -197,7 +198,7 @@ describe('draft exit choice', () => {
         storyNpcByBiome: { F: 'Arachne' },
         fieldNpcsByBiome: {},
       },
-      basketTraitKeys: zeusBasket,
+      basketByGiver: draftBasket(zeusBasket),
       rackKeepsakeKeys: [null, null, null],
     };
     // A seed whose Arachne door shares its exit with a miniboss carrying a wanted boon.
@@ -230,7 +231,7 @@ describe("the starting keepsake's chosen result", () => {
       keepsakeEquipResults: { jeweledPom: { traitKey } },
     },
     world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
-    basketTraitKeys: [],
+    basketByGiver: {},
     rackKeepsakeKeys: [null, null, null],
     ...extra,
   });
@@ -260,7 +261,7 @@ describe("the starting keepsake's chosen result", () => {
           storyNpcByBiome: { I: 'Hades' },
           fieldNpcsByBiome: {},
         },
-        basketTraitKeys: ['HadesLifestealBoon'],
+        basketByGiver: draftBasket(['HadesLifestealBoon']),
       }),
     );
     expect(result.pom).not.toBe('HadesPreDamageBoon');
@@ -285,7 +286,7 @@ describe('draft Ephyra doors with a small pool', () => {
       const spec: DraftSpec = {
         loadout,
         world: { godKeys, storyNpcByBiome: {}, fieldNpcsByBiome: { N: ['Heracles'] } },
-        basketTraitKeys: [],
+        basketByGiver: {},
         rackKeepsakeKeys: [],
       };
       const walk = startDraftWalk(surface, spec, 1);

@@ -615,7 +615,8 @@ export interface AuthoredDraftSpec {
   /** Targeted story NPC by biome; a biome left out has no story target. */
   readonly storyNpcByBiome: Readonly<Record<string, string>>;
   readonly fieldNpcsByBiome: Readonly<Record<string, readonly string[]>>;
-  readonly basketTraitKeys: readonly string[];
+  /** Each giver's basket traits in its acquisition order; a Duo sits in its host god's list. */
+  readonly basketByGiver: Readonly<Record<string, readonly string[]>>;
   /** Rack keepsake by the biome its rack follows; a missing entry keeps the held keepsake. */
   readonly rackKeepsakeByBiome: Readonly<Record<string, string>>;
   readonly seed: number;

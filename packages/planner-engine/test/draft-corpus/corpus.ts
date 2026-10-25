@@ -13,6 +13,7 @@ import {
   type DraftWorld,
 } from '../../src/simulation';
 import { createDraftRng, shuffleDraft } from '../../src/simulation/draft/rng';
+import { draftBasket } from '../support/draft-basket';
 
 export interface DraftCorpusEntry {
   readonly name: string;
@@ -429,7 +430,7 @@ function buildBasket(
   const spec = (): DraftSpec => ({
     loadout,
     world,
-    basketTraitKeys: basket,
+    basketByGiver: draftBasket(basket, {}, world.godKeys),
     rackKeepsakeKeys: [],
   });
   // A capped kind stops at the planned share's cap; a named trait must be admitted.
@@ -449,7 +450,10 @@ function buildBasket(
         selectable.map((trait) => trait.traitKey),
       ).find(
         (key) =>
-          !draftRefusals(catalog, base, { ...spec(), basketTraitKeys: [...basket, key] }).some(
+          !draftRefusals(catalog, base, {
+            ...spec(),
+            basketByGiver: draftBasket([...basket, key], {}, world.godKeys),
+          }).some(
             (refusal) => refusal.kind === 'basketTrait' || refusal.kind === 'firstOfferBlocked',
           ),
       );
@@ -511,7 +515,7 @@ function buildEntry(recipe: EntryRecipe): DraftCorpusEntry {
   const spec: DraftSpec = {
     loadout,
     world,
-    basketTraitKeys: buildBasket(recipe, base, loadout, world),
+    basketByGiver: draftBasket(buildBasket(recipe, base, loadout, world), {}, world.godKeys),
     rackKeepsakeKeys,
     ...(recipe.preferMidshops === true ? { preferMidshops: true } : {}),
     ...(recipe.pursueTartarusGoal === true ? { pursueTartarusGoal: true } : {}),

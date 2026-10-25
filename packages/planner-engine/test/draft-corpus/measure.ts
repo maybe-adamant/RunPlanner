@@ -11,7 +11,12 @@ import {
   decodeExecutionPlan,
   encodeExecutionPlan,
 } from '../../src/execution-plan';
-import { draftProject, simulateProjectAssembly, type DraftSpec } from '../../src/simulation';
+import {
+  draftBasketTraitKeys,
+  draftProject,
+  simulateProjectAssembly,
+  type DraftSpec,
+} from '../../src/simulation';
 import type { DraftReport } from '../../src/simulation/draft/report';
 import { draftGrantsGodBoon } from '../../src/simulation/draft/steering';
 import { draftProvider } from '../../src/simulation/draft/schedule';
@@ -160,7 +165,7 @@ function landingDepths(spec: DraftSpec, project: ProjectDocument): Record<string
     if (snapshot.checkpoint === 'roomEntered')
       entered.set(snapshot.biomeKey, (entered.get(snapshot.biomeKey) ?? 0) + 1);
     for (const traitKey of Object.keys(snapshot.traits.equippedTraits))
-      if (spec.basketTraitKeys.includes(traitKey) && !(traitKey in depths))
+      if (draftBasketTraitKeys(spec).includes(traitKey) && !(traitKey in depths))
         depths[traitKey] = entered.get(snapshot.biomeKey) ?? 0;
   }
   return depths;
@@ -211,6 +216,11 @@ function godRoomPacing(project: ProjectDocument): GodRoomPacing {
   return { biomes, rooms, gaps, early };
 }
 
+function duoTrait(traitKey: string): boolean {
+  const trait = catalog.traits.byKey[traitKey];
+  return trait !== undefined && draftTraitKind(trait) === 'duo';
+}
+
 function elementGated(traitKey: string): boolean {
   const trait = catalog.traits.byKey[traitKey];
   const visit = (requirement: TraitRequirementExpression): boolean =>
@@ -238,7 +248,8 @@ function orderInversions(
       for (const later of own.slice(index + 1))
         if (first.get(later)! < first.get(earlier)!)
           if (elementGated(earlier)) elementDeferred += 1;
-          else inversions += 1;
+          // A hosted Duo waits on its prerequisites by design, so passing it over is no inversion.
+          else if (!duoTrait(earlier)) inversions += 1;
   }
   return { inversions, elementDeferred };
 }
@@ -267,7 +278,7 @@ function boughtBasketTraits(spec: DraftSpec, project: ProjectDocument): string[]
           if (offer?.kind !== 'traits') continue;
           const index = ['option1', 'option2', 'option3'].indexOf(offer.selectedOptionKey);
           const traitKey = offer.options[index]?.traitKey;
-          if (traitKey !== undefined && spec.basketTraitKeys.includes(traitKey))
+          if (traitKey !== undefined && draftBasketTraitKeys(spec).includes(traitKey))
             bought.push(traitKey);
         }
       }
@@ -311,7 +322,7 @@ function essenceUse(
   const snapshots = assembly.evaluation.route.biomes
     .flatMap((biome) => ('rewards' in biome ? biome.rewards.runStateSnapshots : []))
     .sort((a, b) => a.historySequence - b.historySequence);
-  const gated = spec.basketTraitKeys.filter((key) => gatedElements(key).length > 0);
+  const gated = draftBasketTraitKeys(spec).filter((key) => gatedElements(key).length > 0);
   const placements = Object.entries(project.route.resourcePlacements).flatMap(
     ([family, placement]) => {
       if (placement === null) return [];

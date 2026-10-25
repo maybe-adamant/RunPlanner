@@ -10,7 +10,12 @@ import {
 } from './prerequisites';
 import { shuffleDraft, type DraftRng } from './rng';
 import { draftGodBoonBudget } from './budget';
-import { draftPlannedBiomeKeys, type DraftRoute, type DraftSpec } from './spec';
+import {
+  draftBasketTraitKeys,
+  draftPlannedBiomeKeys,
+  type DraftRoute,
+  type DraftSpec,
+} from './spec';
 import type { DraftWorldProduct } from './world';
 
 /** The Hermes and Daedalus Hammer rewards whose basket traits are scheduled by route half. */
@@ -117,7 +122,7 @@ function pullNpcPrerequisites(
 
 /**
  * A soft due biome per basket trait over the planned biomes: god traits spread by capacity and in
- * each god's queue order, Hermes and Hammer traits one per half, each placed after its
+ * each god's queue order (a hosted Duo not before its prerequisites), Hermes and Hammer traits one per half, each placed after its
  * prerequisites' due biomes. An NPC basket trait's god-trait prerequisites are pulled toward its
  * NPC's biome where one option allows; a pulled trait brings its god's earlier traits along, which
  * can place them before their own prerequisites. Readiness is still checked room by room.
@@ -141,15 +146,10 @@ export function draftGodSchedule(
   );
   const capacity = (biomeKey: string) => planned.get(biomeKey) ?? 0;
   const firstHalf = biomeKeys.slice(0, Math.ceil(biomeKeys.length / 2));
-  const godsOf = (traitKey: string) =>
-    catalog.traitGivers.values
-      .filter((giver) => giver.providerKind === 'olympian' && giver.traitKeys.includes(traitKey))
-      .map((giver) => giver.key);
   const duo = (traitKey: string) => {
     const trait = catalog.traits.byKey[traitKey];
     return trait !== undefined && draftTraitKind(trait) === 'duo';
   };
-  const godTraits = spec.basketTraitKeys.filter((key) => godsOf(key).length > 0);
   const queues = new Map(
     draftSourceQueues(catalog, spec).map((queue) => [queue.giverKey, queue.traitKeys]),
   );
@@ -160,10 +160,10 @@ export function draftGodSchedule(
     for (const traits of byGod) if (traits[round] !== undefined) interleaved.push(traits[round]!);
   const { needs } = createDraftPrerequisites(
     catalog,
-    spec.basketTraitKeys,
+    draftBasketTraitKeys(spec),
     draftStartTraits(catalog, route, spec.loadout),
   );
-  const traitOrder = prerequisiteOrder([...interleaved, ...shuffle(godTraits.filter(duo))], needs);
+  const traitOrder = prerequisiteOrder(interleaved, needs);
   const traitPlaces = spread(traitOrder.length, biomeKeys, capacity);
   const last = biomeKeys.length - 1;
   const due = new Map<string, number>();
@@ -171,14 +171,26 @@ export function draftGodSchedule(
     prerequisiteDue(needs.get(key) ?? [], (member) => due.get(member), last);
   traitOrder.forEach((key, i) => due.set(key, Math.max(traitPlaces[i]!, dueAfterNeeds(key))));
   // Each god's slots go to its traits in queue order, never falling due before an earlier one.
+  // A hosted Duo waits on its prerequisites while its god's later traits go ahead, so it keeps
+  // its own place, no earlier than the god's traits queued before it.
+  const duoFloors = new Map<string, number>();
   for (const queue of godQueues) {
-    const slots = queue.map((key) => due.get(key)!).sort((a, b) => a - b);
+    const ordered = queue.filter((key) => !duo(key));
+    const slots = ordered.map((key) => due.get(key)!).sort((a, b) => a - b);
     let previous = 0;
-    queue.forEach((key, i) => {
+    let i = 0;
+    for (const key of queue) {
+      if (duo(key)) {
+        duoFloors.set(key, previous);
+        continue;
+      }
       previous = Math.max(slots[i]!, dueAfterNeeds(key), previous);
       due.set(key, previous);
-    });
+      i += 1;
+    }
   }
+  for (const [key, floor] of duoFloors)
+    due.set(key, Math.max(due.get(key)!, floor, dueAfterNeeds(key)));
   const supplied = (['hermes', 'hammer'] as const).flatMap((supply) => {
     const traitKeys = draftSupplyTraitKeys(catalog, supply);
     // Hermes and Hammer traits are taken in basket order, as their queues hold them.
@@ -191,8 +203,8 @@ export function draftGodSchedule(
     return ordered;
   });
   pullNpcPrerequisites(biomeKeys, world.npcTraitBiomes, needs, due, traitOrder, capacity);
-  // A pulled trait brings its god's earlier traits with it.
-  for (const queue of godQueues)
+  // A pulled trait brings its god's earlier traits with it; a Duo keeps its own due biome.
+  for (const queue of godQueues.map((traits) => traits.filter((key) => !duo(key))))
     for (let i = queue.length - 2; i >= 0; i -= 1)
       due.set(queue[i]!, Math.min(due.get(queue[i]!)!, due.get(queue[i + 1]!)!));
   const scheduled = [...traitOrder, ...supplied];
