@@ -11,10 +11,18 @@ import { selectPresentProject, type PlannerStore, type RootState } from '../stat
 import type { CurrentGamePlan } from './projectOperations';
 import type { SlotRebuildReport } from './slotRebuild';
 
+/** The error the application stopped on. */
+export interface BugReportFault {
+  readonly message: string;
+  readonly stack: string | null;
+  readonly componentStack: string | null;
+}
+
 export interface BugReportContents {
   readonly openPlan: boolean;
   readonly plansInGame: boolean;
   readonly gameLogs: boolean;
+  readonly fault?: BugReportFault;
 }
 
 export type BugReportOutcome =
@@ -109,12 +117,15 @@ export function createBugReportOperations(
       const state = options.store.getState();
       const project = selectPresentProject(state);
       const creation = await options.host.createBugReport(bugReportFileName(now()), {
-        appFacts: projectBugReportFacts(state, {
-          buildIdentity: options.buildIdentity,
-          catalogVersion: options.catalogVersion,
-          currentGamePlan: options.inspectCurrentGamePlan(),
-          slotRebuild: options.slotRebuildReport?.() ?? null,
-        }),
+        appFacts: {
+          ...projectBugReportFacts(state, {
+            buildIdentity: options.buildIdentity,
+            catalogVersion: options.catalogVersion,
+            currentGamePlan: options.inspectCurrentGamePlan(),
+            slotRebuild: options.slotRebuildReport?.() ?? null,
+          }),
+          ...(contents.fault === undefined ? {} : { fault: contents.fault }),
+        },
         openPlan:
           contents.openPlan && project !== undefined ? encodeProjectDocument(project) : null,
         includePlanSlots: contents.plansInGame,

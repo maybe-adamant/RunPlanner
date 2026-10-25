@@ -56,6 +56,9 @@ export const selectProjectEvaluation = (state: RootState) =>
     ? state.projectWorkspace.assembly.evaluation
     : undefined;
 export const selectLibrarySession = (state: RootState) => state.librarySession;
+/** The editor shows only while a plan is open. */
+export const selectEditorShown = (state: RootState) =>
+  state.librarySession.view.kind === 'editor' && selectPresentProject(state) !== undefined;
 
 const encodings = new WeakMap<object, string>();
 function encoded(project: Parameters<typeof encodeProjectDocument>[0]): string {

@@ -17,6 +17,8 @@ import {
   createTauriCommunityEventHost,
 } from './persistence/communityEventHost';
 import { createApplication } from './composition/createApplication';
+import { viewChanged } from './state/librarySessionSlice';
+import { selectEditorShown } from './state/store';
 import { createTauriCatalogFeedHost } from './persistence/catalogFeedHost';
 import { createWorkerDraftRunner } from './workspace/draftRun';
 import { unloadNeedsConfirmation } from './workspace/closeRequest';
@@ -116,16 +118,20 @@ const releaseUpdates =
 
 createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
   <StrictMode>
-    <ApplicationFaultBoundary
-      openFile={() => application.projectOperations.importPlan()}
-      reload={() => {
-        void application.projectOperations.flush().finally(() => {
-          application.dispose();
-          globalThis.window.location.reload();
-        });
-      }}
-    >
-      <Provider store={application.store}>
+    <Provider store={application.store}>
+      <ApplicationFaultBoundary
+        {...(application.bugReport === undefined ? {} : { bugReport: application.bugReport })}
+        editorOpen={() => selectEditorShown(application.store.getState())}
+        returnToLibrary={() =>
+          application.store.dispatch(viewChanged({ kind: 'home', tab: 'library' }))
+        }
+        reload={() => {
+          void application.projectOperations.flush().finally(() => {
+            application.dispose();
+            globalThis.window.location.reload();
+          });
+        }}
+      >
         <App
           appScalePreference={appScalePreference}
           loadoutPresets={createBrowserLoadoutPresets(
@@ -153,8 +159,8 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
           selectStructuredWorkspace={application.selectStructuredWorkspace}
           {...(releaseUpdates === undefined ? {} : { releaseUpdates })}
         />
-      </Provider>
-    </ApplicationFaultBoundary>
+      </ApplicationFaultBoundary>
+    </Provider>
   </StrictMode>,
 );
 
