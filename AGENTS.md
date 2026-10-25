@@ -406,6 +406,9 @@ evidence; it is not a bug-fix changelog.
   matrix, with one primary owner for each fact.
 - A fix that restores an already-documented contract normally needs only code,
   regression coverage, and a commit message—not another documentation paragraph.
+- Design documents state meaning, not code: no TypeScript or file/function
+  mirrors, UI copy, or tuning values the code owns. Mechanics a design needs
+  go in a short companion document or appendix linked from the owner.
 
 Revise the existing explanation or table row rather than appending a narrative
 for each fix. Do not duplicate the same lesson across design documents, audits,
