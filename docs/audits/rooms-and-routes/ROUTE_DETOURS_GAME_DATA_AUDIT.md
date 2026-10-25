@@ -704,7 +704,8 @@ The planner applies these deliberate normalizations:
 - normalize the game `Secrets` forced store, whose supported entry is
   `TrialUpgrade`, to one direct fixed planner reward presented as **Chaos
   Blessing**;
-- preserve fixed `Empty_Chaos`, the source-level offer marker, the
+- preserve fixed `Empty_Chaos`, the source-level offer marker (recorded whether
+  Chaos is selected or skipped), the
   prior-ten-room spacing window, and each Chaos map's ordinary visible fresh
   return batch;
 - omit `BaseChaos.PauseBiomeState` from production modeling because the planner

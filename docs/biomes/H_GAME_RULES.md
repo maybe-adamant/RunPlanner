@@ -6,6 +6,7 @@ This document is the game-rule authority for Mourning Fields (`H`) under the
 progressed-save static baseline with supported Nemesis combat. Shared generation and reward rules are in
 [`GAME_GENERATION_RULES.md`](../design/GAME_GENERATION_RULES.md); the H room
 and layout declarations own concrete candidates, exits, counters, and caps.
+[Fresh File Rules](FRESH_FILE_RULES.md#h) own the first-attempt differences.
 
 The route rules were checked against `RoomSets.lua`, `RoomDataH.lua`, Fields map
 data, encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18. The
@@ -27,6 +28,15 @@ rechecked on 2026-08-15; source details remain in the focused audit.
   interactions. One entered-room chronology owns them all;
   [`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md)
   owns the source evidence.
+- Optional participation is sequence membership, not a second boolean.
+  Lowering the active count removes newly dormant optional actions while
+  retaining their values, dispositions and compatible placement; restoring the
+  count does not silently restore participation. Cage interactions are
+  required after their matching completion and default after it and any
+  required NPC interaction, before the next cage, while other actions retain
+  their lifecycle defaults; optional interactions are
+  membership-controlled; a source selecting Artificer may add one later
+  source-owned replacement action.
 - Each FieldsCombat occurrence also owns its exact physical layout: one player
   entry, one retained cage-point assignment per cage slot, one retained
   optional-point assignment per optional slot, and one retained Nemesis point.
@@ -320,33 +330,6 @@ Passive encounter and each cage encounter are chosen by separate repeated
 cage in the resolved payload is a required encounter. Player entry has a native
 exact start/end override, while cage, optional-reward and Nemesis placement
 choose randomly from finite map point sets.
-
-## Fresh File
-
-`H_Bridge01` keeps its forced window and one-creation limit, but its Story
-reward needs lifetime `RoomsEntered.H_Boss01`, so it is the `BridgeShop`
-WorldShop with no Echo action (see [Baseline boundaries](#baseline-boundaries)).
-Choosing another offered door still consumes the bridge's creation.
-
-A cage may resolve `MournerIntro`, `LamiaIntro`, `LovesickIntro` or
-`LycanthropeIntro`, each three fixed waves with no authored composition. Each
-requires that it has not occurred this run, and `LycanthropeIntro` also needs
-the other three recorded on the route; `MinDepthBeforeIntros` is 0 in H. Cages
-are prepared in order before entry, so a later cage sees an earlier cage's
-recorded introduction, not its completion: a Mourner in cage 2 stays an
-ordinary enemy once cage 1 recorded `MournerIntro`, and a prepared cage never
-changes when an earlier cage completes. `GeneratedH_Screamer2` needs
-`ScreamerIntro` completed on the route
-([composition matrix](../audits/rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)).
-An uncustomized cage rolls natively without the enemies whose introduction
-would replace it at its preparation.
-
-`H_Intro` hosts Eris when observed and not yet cursed on the route; her
-required gift is 50 Psyche, which the planner does not track
-([Eris at a biome intro](G_GAME_RULES.md#eris-at-a-biome-intro)).
-The Postboss Pool of Purging spawns but is locked by `BlockedByRequirements`,
-so the planner has no Pool there; the Postboss Well and keepsake rack are
-absent and the fountain stays.
 
 ## Product boundary
 

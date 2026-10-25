@@ -1,5 +1,20 @@
 # Project schema boundary
 
+Revision 98.1 adds the draft spec's `roomForcing`, `purchasesPerBiome`,
+`retriesPerBiome` and `resourceRoomChance`. A revision changes no saved shape,
+so it has no transition.
+
+Schema 98 adds the plan's `name`.
+
+```bash
+npm run schema:migrate-97-to-98 -- path/to/schema-97-project.runplanner.json
+```
+
+The migration names the plan after the file it is loaded from (its stem,
+trimmed and bounded) and otherwise gives it the default. A slot source stored
+before 98 names its plan beside the project, and rebuilding the slot migrates
+the project under that name.
+
 Schema 97 saves the Draft settings in `route.draft`, makes every Postboss
 keepsake rack a permanent timeline row, and moves the Practice start point
 from `loadout.runModifiers.startPoint` to `route.practiceStart`.

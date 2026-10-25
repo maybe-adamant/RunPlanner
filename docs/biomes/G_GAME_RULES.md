@@ -145,7 +145,9 @@ consumes the once-per-route cap, generates one fresh hidden G continuation
 before its own commit, then commits as an ordinary room. The displaced G room
 never contributes phantom creation, reward, or history. Revert restores the
 remembered G declaration, retained reward, complete defaults, and no detour
-continuation. Natively, `ChooseNextRoomData` swaps an otherwise-chosen target
+continuation. Every Anomaly declaration owns only `exit1`, so takeover keeps a
+matching continuation as the hidden return and removes excess G targets and
+G-owned additional exits; revert never recreates them. Natively, `ChooseNextRoomData` swaps an otherwise-chosen target
 carrying `AllowAnomalyReplacement` for an `Anomaly` room-set map
 ([route detours audit](../audits/rooms-and-routes/ROUTE_DETOURS_GAME_DATA_AUDIT.md)).
 
@@ -280,7 +282,7 @@ event in `G_Intro`, `G_MiniBoss02` lifetime encounter-completion gates,
 Narcissus prior-run force, progression and bounty gates, and the Fountain
 world-upgrade gate are excluded. Their current-run room, counter, cap, force,
 and reward rules remain exact. The Fresh File route models the first two; see
-[Fresh File](#fresh-file).
+[Fresh File Rules](FRESH_FILE_RULES.md#g).
 
 ### Concrete encounter selection
 
@@ -300,52 +302,6 @@ events, and enemy-wave detail remain audit or future-feature concerns rather
 than production authored state. When `ArtemisCombatG` is selected and entered,
 its exact phase owns Artemis's three-choice trait offer and folds the selected
 trait at encounter completion.
-
-## Fresh File
-
-The first G combat resolves `FishmanIntro`: native `AlwaysForce` holds until
-its first completion, and its three fixed waves (FishmanMelee ×1; ×2 plus
-FishmanRanged ×1; ×3 each) neither count encounter depth nor skip. Later
-combats may resolve `FishSwarmerIntro` (FishSwarmerSquad ×4, then a
-generated wave) or `TurtleIntro` (Turtle ×2, then two generated waves).
-`TurtleIntro` is reached only through `Turtle_Elite` at G depth 3 or more,
-because the ordinary Turtle needs two lifetime `G_Intro` visits
-([composition matrix](../audits/rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)).
-WaterUnit is admissible only after a completed `MiniBossWaterUnit` on the
-route. An uncustomized G combat rolls natively without the enemies whose
-introduction would replace it.
-
-`G_Intro` hosts Eris when the author observes her spawn: talking applies
-`ErisCurseTrait` and drops a required 20-Ashes gift (see
-[Eris at a biome intro](#eris-at-a-biome-intro)). Narcissus's story room, Uh Oh, Chaos, the Anomaly, Zagreus Contract, Reprieve,
-field-NPC combats and cocoons, Wells, the Postboss Pool and keepsake rack are
-absent; Hellifish and Serpent remain. Scylla's featured performer is Jetty.
-
-### Eris at a biome intro
-
-On Fresh File, native `SpawnErisForCurse` places Eris in `G_Intro`, `H_Intro`
-and `I_Intro` as a room-required object while completed runs are at most 1, 4
-and 7, the hero lacks `ErisCurseTrait`, and `ErisCurseHealthThreshold` (no
-Death Defiance and health at most half) is false
-([source audit](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md#eris-is-a-required-object-at-a-young-profiles-biome-intro)).
-This section owns the planner rule for all three intros.
-
-Health is not simulated, so the spawn is the author's observation. When
-observed, the talk (`interactEris`) is a required action that applies
-`ErisCurseTrait` as a fixed direct trait grant, and her gift is a required
-pickup that depends on it. Both rank in the room's standard window before
-outgoing generation: exits unlock only after both required objects clear and
-`DoUnlockRoomExits` rolls the doors afterwards, so the gift's resources count
-toward that batch. The gift's producer is described in the
-[Reward Model](../design/REWARD_MODEL.md#generated-pickups); the curse's combat
-effect is not modeled.
-
-The curse grant is route trait history. Eris spawns on room entry, so the
-observation is Overview content: an intro observed while the curse is already
-equipped reports `erisSpawnUnavailable` on that observation at the room's
-Overview, and its talk applies nothing and drops no gift; the observation stays
-authored for repair. An intro without the observation derives no action and
-reports nothing.
 
 ## Current Product Boundary
 

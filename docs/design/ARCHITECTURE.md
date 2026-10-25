@@ -47,13 +47,20 @@ supported outcomes and checks conformance under the integration contract. It
 is not another planner or simulator, and its Lua/UI constraints must not shape
 the application's authored model or React editor.
 
-## Dependency Direction
+## Lanes and Runtime Flow
 
-```text
-catalog construction → pure core ← application composition → React UI
-```
+[`AGENTS.md`](../../AGENTS.md#ownership-lanes) owns the four ownership lanes,
+dependency direction, code placement, construction and data-flow rules, and
+refactoring discipline:
 
-This is a code-dependency map, not the runtime processing order. At runtime:
+| Lane        | Package          | Owns                                                                              |
+| ----------- | ---------------- | --------------------------------------------------------------------------------- |
+| Catalog     | `hades2-catalog` | Game declarations and their compilation into the engine's catalog contract        |
+| Engine      | `planner-engine` | Authored state, commands, history, simulation, candidates, findings and execution |
+| Application | `apps/planner`   | Composition, persistence adapters, Redux coordination, projections and React      |
+| Game module | `game-module/`   | Lua runtime execution and conformance of published plans                          |
+
+The dependency map is not the runtime processing order. At runtime:
 
 ```text
 source-backed declarations → immutable catalog
@@ -64,58 +71,22 @@ bound interaction → command → replacement project
 validated engine product → execution document → game module
 ```
 
-### Catalog — packages/hades2-catalog
+The application constructs the catalog and engine collaborators at its
+composition root. The draft worker (`apps/planner/src/workspace/draftWorker.ts`)
+is a second composition entry point and constructs its own catalog.
 
-Owns explicit game declarations and their compilation into the engine's
-supported catalog contract. It may import the engine's declared catalog-schema
-and normalized interfaces, but not authored state, simulation implementation,
-application composition or React.
+### Imports
 
-### Engine — packages/planner-engine
+Cross-package consumers use declared package exports. Within the planner,
+cross-root imports use `@planner/*` for composition, persistence, projections,
+state, ui and workspace. Test support uses `@planner-test/*`, and repository
+authored fixtures use `@run-planner/test-fixtures`. Immediate-neighborhood
+`./` and `../` imports remain appropriate; planner imports do not climb two
+or more parent directories. The engine uses direct internal relative imports
+instead of routing internal dependencies through public barrels. Pure package
+imports remain static, and planner aliases do not enter pure package source.
 
-Owns authored state, semantic addresses, codecs, commands, history,
-requirements, reward transitions, materialization, simulation, candidates,
-validation, findings, authoring queries and execution assembly/codecs.
-
-It defines the normalized interfaces it consumes. It must not import the
-catalog implementation, React, Redux, Tauri, browser/filesystem APIs or game
-runtime objects. Operations receive explicit inputs and return pure products
-or immutable transitions. Presentation labels invented by the editor, focus
-destinations and picker sections are not engine products.
-
-### Application — apps/planner
-
-Owns composition, persistence adapters, state coordination, projections,
-interaction binding and React presentation. It constructs the catalog and
-engine collaborators; it does not reconstruct their rules.
-
-Redux coordinates authored history, session state and atomic publication.
-React renders supported products and invokes bound intents or deliberately
-retained fixed semantic mappings. Neither layer repairs topology, determines
-eligibility or counts lifecycle events.
-
-### Game Module — game-module/
-
-Owns runtime execution of published plans in Hades II. It is Lua that
-consumes the execution protocol and the planner-engine execution fixtures; it
-imports no planner code and owns no planner semantics.
-
-## Construction and Publication
-
-Each producer returns every fact and capability its consumers need. Do not
-return an apparent result while hiding essential semantic data in module
-registration, initialization order or a result-keyed sidecar map.
-
-A stage may use a mutable builder internally. Its boundary returns a complete
-immutable product. A cache may reuse that product, and identity attestation
-may verify its provenance; neither substitutes for carrying the product.
-
-Application-wide collaborators are created at the composition root and
-passed as narrow capabilities. A parameter object or factory is justified by
-a real product boundary, not merely a long signature. Do not introduce an
-ambient context, service locator, mutable service table or dependency-injection
-container. The draft worker (`apps/planner/src/workspace/draftWorker.ts`) is
-a second composition entry point and constructs its own catalog.
+## Publication and Readiness
 
 The authored snapshot and its exact evaluation are published together.
 Undo/Redo may reuse an assembly for the identical immutable snapshot. It must
@@ -128,37 +99,7 @@ structure stays visible even without assessed facts. The engine owns the
 [horizon](SIMULATION_AND_VALIDATION.md#authoring-readiness); the application
 [binds it to controls](EDITOR_MODEL.md#authored-first-assembly).
 
-## Code Placement and Imports
-
-Place a module with the authority that owns its policy, not the first caller
-that needs it. Before adding a boundary, name its owner, inputs, returned
-product, consumers, primary tests and superseded path. Prefer the nearest
-existing semantic neighborhood over generic common/shared/helpers directories.
-
-An assembly module composes owned products; it does not become their policy
-owner. An `index.ts` is a deliberate supported surface, not a convenience
-barrel. Large chronological or atomic coordinators can be correct boundaries:
-splitting their mutable state across wrappers can make ownership worse.
-
-Cross-package consumers use declared package exports. Within the planner,
-cross-root imports use `@planner/*` for composition, persistence, projections,
-state, ui and workspace. Test support uses `@planner-test/*`, and repository
-authored fixtures use `@run-planner/test-fixtures`. Immediate-neighborhood
-`./` and `../` imports remain appropriate; planner imports do not climb two
-or more parent directories.
-
-Aliases identify ownership roots, not public APIs or injection boundaries.
-The engine uses direct internal relative imports instead of routing internal
-dependencies through public barrels. Pure package imports remain static, and
-planner aliases do not enter pure package source. Enforce mechanically
-observable boundaries through TypeScript, ESLint or architecture tests.
-
-Production source must not import test fixtures, harnesses, expected manifests
-or observers. Those belong under test support.
-
 ## Adding a Feature
-
-### Reuse existing meaning first
 
 A new room using existing templates should primarily be declaration work:
 supply its exact exits, encounter binding, reward surface, eligibility and
@@ -184,43 +125,15 @@ change; a supported declaration may need no application change. Execution
 publication consumes engine meaning rather than inventing an additional
 semantic interpretation.
 
-### Verify the handoff, not only the happy path
-
-Keep the complete policy matrix with its owning authority. Consumer suites
-retain representative contact witnesses rather than repeat that matrix.
 Where a policy has a callable owner, enumerate its edge cases against that
 owner with minimal inputs; whole-route evaluation proves the wiring with one or
-two witnesses rather than carrying the matrix. A slice that adds a stronger
-witness removes the one it supersedes.
-A targeted effect needs an incomplete-target repair witness, not just proof
-that a complete acquisition succeeds. A generated pickup needs a source edit
-and removal witness, not just proof that it appears once.
+two witnesses. A targeted effect needs an incomplete-target repair witness,
+not just proof that a complete acquisition succeeds. A generated pickup needs
+a source edit and removal witness, not just proof that it appears once.
+Route-spanning interactions use real
+[authored checkpoints](../../test/fixtures/authored-project/checkpoints/README.md).
 
-Use real authored checkpoints for interactions that span the route. Shared
-checkpoints are current-schema documents decoded and frozen through the
-production codec, not serialized evaluations or rendered workspaces. Their
-manifest attests identity, intent, provenance and canonical bytes. Static
-imports preserve changed-test reachability. Command/codec/history tests remain
-command-driven; downstream tests need not replay the entire route to obtain
-a starting state.
-
-Fixture migrations must preserve each scenario's intent, pass current strict
-decoding and regenerate canonical bytes and hashes. A one-to-many migration
-must emit all documents rather than silently select a sibling. Temporary
-transformers are removed after conversion; no permanent alternate fixture
-decoder is introduced. Generated execution fixtures follow the separate
-byte-preservation discipline in contributor instructions.
-
-Checkpoint support owns manifest/registry closure, static loader reachability,
-and recipe-backed canonical-byte integrity. Engine domain suites own reached
-scenario/export workflows. `fixtures:checkpoints:regenerate` explicitly
-rewrites only recipe-backed checkpoints through `encodeProjectDocument`; normal
-integrity verifies their recipe equality. This is not save migration: migrate
-source saves before regeneration when schema changes. Imported user-authored
-checkpoints retain canonical loader/integrity coverage and are not reconstructed
-by the command.
-
-## Hosts, Performance and Maintenance
+## Hosts and Build Identity
 
 Vite builds the same React application for browser and desktop. Tauri owns
 native windows, packaging, scoped file transport, the
@@ -244,29 +157,12 @@ Build identity is application metadata, separate from schema and catalog
 identity. Official CI builds supply one validated release version to Tauri and
 the frontend, together with the source commit. Local builds identify themselves
 as Development. About is on Home, which the app starts on with no plan open.
-
 Installer, updater and release workflow details belong to
 [Releasing](../RELEASING.md).
 
 TypeScript checks static contracts; runtime codecs protect external contacts.
-Vitest transformation alone is not a type proof. Correctness and performance
-are separate verification products: shared watchdogs detect likely hangs,
-while measured rebuild, candidate, edit and cached-Undo comparisons assess
-latency. Commands and calibrated thresholds belong to repository configuration
-and contributor instructions, not duplicated design tables.
-
-Optimize measured bottlenecks while preserving pure input/output contracts.
-Keep normalized data immutable, avoid duplicate derived Redux state and keep
-subscriptions narrow. Do not introduce workers, incremental invalidation or
-new infrastructure solely in anticipation of growth.
-
-Refactor in complete vertical slices: move an authority, its consumers and
-primary tests, then remove the superseded path. Separate behavior-preserving
-movement from behavior corrections. File count and line count are evidence,
-not quotas. Production checks protect real contacts; exhaustive structural
-closure and mutation auditing belong in tests, not a second production model.
-
-Stable documents describe current ownership, invariants, examples and safe
-extension. They do not accumulate version milestones or gate histories.
-Temporary investigations and delivery plans are retired after their durable
-conclusions have an owning home.
+Vitest transformation alone is not a type proof. Optimize measured bottlenecks
+while preserving pure input/output contracts: keep normalized data immutable,
+avoid duplicate derived Redux state and keep subscriptions narrow. Do not
+introduce workers, incremental invalidation or new infrastructure solely in
+anticipation of growth.

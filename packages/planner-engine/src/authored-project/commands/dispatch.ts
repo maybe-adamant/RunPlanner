@@ -349,9 +349,8 @@ export function applyProjectCommand(
   try {
     const proposal = applyUnchecked(document, catalog, command);
     if (proposal === document) return document;
-    // First close normal source actions, then derive source-owned pickup sites,
-    // then schedule the newly active generated actions. This is one ordered
-    // command-local composition rather than an ambient fixed-point pass.
+    // Close source actions, derive generated pickup sites, then close newly generated actions;
+    // the two required-action passes stay separate, since one early pass misses generated pickups.
     const withClearTopologyPlacements =
       command.kind === 'ClearTopology'
         ? retractResourcePlacementsForClearedBiome(proposal, command.biome.biomeKey)

@@ -74,7 +74,7 @@ The game has progression-controlled opening alternatives. The mature baseline
 uses counting `OpeningGeneratedF` for all three opening maps, and `F_Combat01`
 uses its ordinary `GeneratedF` encounter. `FCastTutorialFight` is an excluded
 save-profile variant. The Fresh File route resolves `OpeningEmpty` and
-`FIntroFight` instead; see [Fresh File](#fresh-file).
+`FIntroFight` instead; see [Fresh File Rules](FRESH_FILE_RULES.md#f).
 
 The opening begins with `biomeDepthCache = 0` and `biomeEncounterDepth`
 unset. Its counting encounter sets encounter depth to `2` at encounter start,
@@ -207,31 +207,6 @@ lifecycle compatibility rather than exact native identity: `Empty` and
 Both rooms are ordinary Room Declarations referenced by the fixed topology
 links. They are not generated candidates, authored topology choices, or editor
 controls.
-
-## Fresh File
-
-A brand-new profile starts directly in `F_Opening01` with `OpeningEmpty`, no
-reward and no Arcana, keepsake or aspect; the other openings are unreachable
-([route-position audit](../audits/rooms-and-routes/ROUTE_POSITION_GAME_DATA_AUDIT.md#fresh-profile-first-attempt)).
-`F_Combat01` is the forced second room: its native
-`ForceIfEncounterNotCompleted = "FIntroFight"` holds on this route, and it
-resolves the fixed four-wave `FIntroFight`, which does not count encounter
-depth, so later F encounter depths are one lower than after `GeneratedF`. Its
-reward is the native `ForcedRewards` Apollo boon, offered at room clear from
-the `ForceLootTableFirstRun` table (Attack, Sprint and Magick boons) at the
-`ForceCommonLootFirstRun` Common rarity
-([trait offer audit](../audits/traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md#first-run-forced-loot-table)).
-
-Later F combats may resolve `RadiatorIntro` or `ScreamerIntro` where the
-introduction's trigger enemy is admissible: a fixed first wave (Radiator ×5 or
-Screamer ×2) and a generated second wave
-([composition matrix](../audits/rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)).
-An uncustomized F combat rolls natively without the enemies whose introduction
-would replace it. No field-NPC combat,
-cocoon or Nemesis event occurs. Root Stalker is the only
-miniboss; Reprieve, Arachne's story room, Chaos, Zagreus Contract, Wells, the
-Postboss Pool and keepsake rack are absent, while the Postboss fountain stays.
-Hecate's interlude is Meteor Shower only.
 
 ## Current Product Boundary
 

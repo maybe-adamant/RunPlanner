@@ -60,43 +60,10 @@ its ordered target references, selection, batch field state, and (when the
 layout declares one) reward-store state. A target owns its room-local reward,
 shop, wheel, side-room, or Fields cage state.
 
-`CreateBatch` and `CreateTarget` create ordinary shape progressively. Target
-creation validates the source's current declaration-owned exit key. A source
-room replacement may retain structurally represented targets whose keys are no
-longer supplied by the new room. Those targets are context-invalid rather than
-silently deleted. `ReconcileBatchExitCapacity` is the explicit topology-removal
-repair: it removes unavailable targets and their downstream subtree, then
-normalizes selection from the retained keys. A takeover batch repairs through
-the same command as described under [Preboss batches](#preboss-batches).
-
-When a progressively authored width-one target already owns the next decision,
-adding another declared physical target promotes the derived continuation to an
-explicit normal selection. The established downstream subtree remains attached
-to that selected occurrence; completing a sibling door does not require the
-user to delete and recreate later authorship.
-
-Selecting another continuation does not discard an already authored next
-decision. `SetExitSelection` atomically re-anchors that outgoing decision to the
-new selected occurrence, then reconciles it against that occurrence's declared
-physical exits. The same primitive supports ordinary targets, Chaos additional
-exits, and Zagreus-contract additional exits. Matching targets and descendants
-survive; excess targets are removed with their descendants. Source-owned
-additional exits remain with the old occurrence rather than moving. The former
-selected occurrence becomes an unpicked leaf. Re-anchoring rejects a destination
-that already owns a decision, Preboss or fixed-completion involvement, and
-cycles. Explicit detour removal still removes that detour and its descendants.
-
-Anomaly takeover performs the same exit-capacity reconciliation atomically with
-its room replacement. Every Anomaly declaration owns only `exit1`, so a matching
-continuation survives as the declaration-derived hidden return while excess G
-targets, their descendants, and G-owned additional exits are removed. Revert
-restores the remembered G declaration without recreating removed exits.
-
-The retained-key rule is intentionally narrow. The codec accepts only normal
-exit keys present in the biome's authored declarations (or the one fixed Hub
-exit key); it never accepts an arbitrary string as a repair placeholder. A
-narrower replacement remains representable, while a corrupt key such as
-`banana` is rejected.
+Batch and target creation, continuation changes (reanchoring), exit-capacity
+repair and the retained-key codec rule are command behavior; the
+[authored model](AUTHORED_PROJECT_MODEL.md#reanchoring) is their single owner.
+Generation decides only which targets a source can offer.
 
 Generated progression has no catalog-owned batch or target maximum. Candidate
 declarations, entered history, and force pressure decide when it continues or
@@ -118,30 +85,8 @@ set. The first target owns the Preboss Shop state. Later targets own complete
 free offers only when `remainingOffers` is a counted binding; a width-one or
 `none` policy has no later offer.
 
-`CreateTakeoverBatch` and `ReplaceWithTakeoverBatch` create the whole shape,
-selection, and downstream cleanup atomically. They reconcile existing targets
-by physical exit key, not a supplied occurrence-ID order: a retained key keeps
-its occurrence ID, and a caller may not move an existing target ID to another
-physical door.
-
-A source replacement, Anomaly revert, or decode can leave a takeover batch
-wider or narrower than its source's declared doors. The prior targets remain
-structurally represented until `ReconcileBatchExitCapacity` repairs the whole
-batch. The repair is minimal: surviving targets keep their occurrence, Shop
-purchases, completion chain, and boss-door store. A missing declared door gains
-a default Preboss offer whose occurrence ID the engine derives as
-`<source occurrence ID>:<exit key>`, so a door removed and added again keeps
-its identity. An undeclared door is removed with its downstream topology. The
-selection follows ordinary capacity repair: a width-one result with no
-additional exits is derived,
-otherwise a surviving selected door stays selected (a derived width-one
-selection becomes explicit `exit1`) and a removed one becomes unresolved; a
-newly selected door gains its completion chain. Every automatic narrowing of a
-takeover batch, such as an Anomaly switch, uses the same removal. A `none`
-policy Preboss fills a single door only, so its batch has no repair when the
-source declares more; the out-of-depth source carries its own
-`targetRoomUnavailable` finding. A single takeover target is never edited in
-isolation.
+The takeover commands and their minimal exit-capacity repair are owned by the
+[authored model](AUTHORED_PROJECT_MODEL.md#takeover-batches).
 
 A `retainNormalPeers` Preboss is different: it is an ordinary target beside
 ordinary peers. Its selected declaration starts completion; unselected peers
@@ -196,7 +141,8 @@ visit order. It owns exactly one completed-Hub width-one normal exit whose
 persisted source is `{ kind: 'hubDecision', decisionKey }`, created and removed
 with the Hub. That exit holds the declaration-fixed Preboss occurrence in the
 same batch language as other biomes; the Hub's completion predicate gates its
-reachability, not its existence.
+reachability, not its existence. The [authored model](AUTHORED_PROJECT_MODEL.md#n-hub-progression)
+owns the Hub commands and board.
 
 Selecting any Preboss stops editable traversal and realizes its fixed Boss and
 route-position Postboss occurrences, when a Postboss exists. Those rooms are
@@ -214,23 +160,20 @@ preserves the first three when their ownership is structurally sound;
 evaluation reports the contextual problem at its semantic owner and stops
 progressive traversal at that frontier.
 
-Commands are the only topology-removal authority. They reject partial takeover
-shape, duplicate target keys, incompatible declarations, impossible selection
-states, and edits to a dead leaf with downstream state. Undo and redo record
-those semantic authored edits, not findings, focus, canvas positions, or
-transient expansion state.
+Commands are the only topology-removal authority
+([authored model](AUTHORED_PROJECT_MODEL.md#commands)). Undo and redo record
+semantic authored edits, not findings, focus, canvas positions, or transient
+expansion state.
 
 ## Explicit exclusions
 
 The canonical product does not model weighted RNG replay, combat-wave
 composition, NPC event/interactions outside selected combat definitions,
 unsupported detours, optional player interactions, or external profile gates.
-Natural Chaos is explicit: declared N/F/G/P source rooms may own one authored
-additional gate, while the host layout declares its concrete map domain,
-default, and preceding-ten-room offer window. The current source entry records
-the offer whether Chaos is selected or skipped; selected Chaos enters its fixed
-room and resumes through a fresh ordinary host target. P's source declaration
-adds its depth ceiling. Invalid retained gates report exact source, spacing, or
-map-domain findings rather than disappearing. Other features can enter only
+Natural Chaos, the Anomaly and the Zagreus contract are explicit detours whose
+source facts live in the
+[route detours audit](../audits/rooms-and-routes/ROUTE_DETOURS_GAME_DATA_AUDIT.md)
+and the biome documents; P's Chaos source declaration adds its depth ceiling.
+Other features can enter only
 with an explicit catalog/input model, authored owner, lifecycle rule,
 validation behavior, and UI projection.

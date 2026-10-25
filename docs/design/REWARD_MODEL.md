@@ -843,7 +843,7 @@ last-reward history but no counted-store membership.
 
 Eris's gift uses the `ErisCursePickup` producer: one required pickup generated
 at the `erisGift` site of a Fresh File intro by her talk
-([G rules](../biomes/G_GAME_RULES.md#eris-at-a-biome-intro)). The host declares
+([Fresh File rules](../biomes/FRESH_FILE_RULES.md#eris-at-a-biome-intro)). The host declares
 the gift (Ashes in G, Psyche in H, Bones in I); the producer carries the native
 overrides (20 Ashes, 300 Bones; H's native 50 Psyche is untracked and declares
 no amount), `resourceBonusExempt` for `NPCDrop`, `duplicationExempt` for
@@ -901,9 +901,47 @@ identity for its second use; only its Sea Star capability is cleared. A fresh
 full Pom instead uses the `RoomReward` lifecycle with fresh unresolved Pom
 detail and no copied Shop or source payload state.
 
+### Keepsake outcomes
+
+Only immediate equip outcomes are persisted beneath a keepsake selection.
+Jeweled Pom and Experimental Hammer use one closed `KeepsakeEquipResultAddress`
+family with effect-specific complete children; Transcendent Embryo stores its
+selected blessing and complete operand map at the reached automatic outcome.
+The result is reached on start or replacement. A route-start result is dormant
+while another starting keepsake is selected; a rack result does not survive a
+change of the rack's keepsake. Calling Card row actions stay on their exact
+trait offers, Time Piece conversion choices on exact acquisition roles, and Fig
+Leaf/Gorgon results on exact encounter phases, so every authored effect
+decision has one semantic owner rather than a keepsake-owned result bag.
+
+Gorgon Amulet owns one strict phase-local Athena child. It persists only three
+ordered distinct Athena trait identities and the selected option key. Athena
+provider, offer kind and reached rarity are derived; the Death Defiance
+condition (`athenaTriggerConditionMet`, an observed game condition the planner
+does not simulate) remains on the parent Gorgon phase. Keepsake rank and the
+result of Cherished Heirloom are never authored: ordinary selection is fixed
+at Epic and simulation derives both Cherished transitions from catalog facts
+and canonical trait history.
+
 ### Echo
 
-Echo reuses the same boundary in two ways; the
+Echo's active authored children add no generic effect-state container. Pom
+persists one selected greatest-level target or the explicit empty-domain
+`null` result. Boon persists one to three distinct trait-key rows whose giver
+identity and equipped rarity are explicit, plus only the selected trait's
+declaration-owned acquisition detail. Reward persists only the exact recreated
+acquisition's conversion, trait-offer and level children; the replayed source
+descriptor remains derived history. Gold uses the sole stable
+`echoDoubleShopReward` key: its complete payload may persist sparsely in
+`pickupEntries` before participation, and it enters the Shop's
+`roomActions.order` only when picked up. No source selector or source-keyed
+Gold child is persisted. Gift's captured keepsake, replay schedule and replay
+count remain chronological trait history; only a reached Experimental Hammer
+replay persists its selected-compatible or explicit exhausted result beneath
+that succeeding biome's start address. Dormant Echo option detail remains
+structurally retained but is not active authorship.
+
+Echo also reuses the acquisition boundary in two ways; the
 [acquisition audit](../audits/rewards-and-acquisition/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md#echo-reassessment-after-current-settlement-delivery)
 owns the native contacts.
 

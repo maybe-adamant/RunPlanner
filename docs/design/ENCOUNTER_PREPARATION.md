@@ -243,6 +243,8 @@ as resolved identity: each reachable enemy-triggered introduction is a member
 of its biome set, and the author selects the identity native would resolve. The
 model preserves the set of native-legal outcomes, not native selection order or
 probabilities.
+[Fresh File Rules](../biomes/FRESH_FILE_RULES.md) list each biome's reachable
+introductions.
 
 - **Member gate.** A declared requirement: route `FreshFile`, not completed on
   the route, in H not recorded this run, and for Lycanthrope the Mourner,

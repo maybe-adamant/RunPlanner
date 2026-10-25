@@ -138,6 +138,30 @@ loadout (`ActiveBounty`, `StoredGameState`).
 
 ## Practice Mode Start
 
+### Authored start point
+
+The route optionally owns `practiceStart`, absent for a normal run and present
+as `{ biomeKey, point: 'opening' | 'preboss' | 'boss', gold? }`. It decodes as
+tolerantly as a run modifier: a malformed shape decodes as absent, malformed
+gold as absent, and finite gold rounds and clamps to 0–99 999. Gold is a base
+amount added to the game's own starting gold. A well-formed start point whose
+biome is off the itinerary is kept. `ReplacePracticeStart` sets or clears it
+(null) as one route-owned history edit, preserves identity for an equal value,
+and rejects a malformed value rather than healing it.
+
+Its eligibility is the engine's start-installation availability
+(`authoredStartPointEligibility`): the biome is on the itinerary
+(`notOnItinerary`), the point is not the route-start biome's Opening, which is
+a normal run (`routeStart`), the simulation reaches it (`notReached`), and its
+installed state agrees across every reached branch (`branchesDisagree`, naming
+the families). The picker offers every itinerary biome's Opening, Preboss and
+Boss with that availability; it does not consult project validity. A start
+point publishes only from a valid project, through the ordinary publication
+gate: an ineligible one blocks publication with its reason and an eligible one
+publishes the [`startState`](#published-startstate). The start point and the
+run modifiers are editable in Fresh File without making its fixed equipment
+editable. Neither changes simulation, candidates, or encounter eligibility.
+
 ### Engine start installation
 
 A start installation is the pure projection of a Practice mode start point from
@@ -157,7 +181,7 @@ record per room-history ordinal advance, carrying its room's declared
 `NextRoomSet`; execution assembly adds a Dream route's `Dream_Intro` prologue,
 and the visited biomes are the itinerary prefix before the start (including its
 own biome for a Preboss or Boss). Availability and its reasons are
-[authored-model policy](AUTHORED_PROJECT_MODEL.md#route-loadout).
+[authored start point](#authored-start-point) policy.
 
 The same projection owns the held-keepsake rows and exact store contents that
 every [Run State snapshot](SIMULATION_AND_VALIDATION.md#run-state-snapshots),

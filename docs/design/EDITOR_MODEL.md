@@ -681,9 +681,21 @@ unloading while the open plan has an edit not yet written.
 
 Opening prepares the whole document before publication: the shared application
 loader's compatibility check and strict engine parsing, evaluation, and
-immediate workspace projection must all succeed. The
-[authored-document boundary](AUTHORED_PROJECT_MODEL.md#authored-document-boundary)
-owns migration support. Only then is the project replaced, with a new history
+immediate workspace projection must all succeed. Every open of a library plan
+or imported file goes through that loader. It inspects the source schema and
+catalog identity, applies only the registered ordered transitions, one per
+major from the support floor ([schema history](../../schema/README.md)) to the
+current schema, and strictly parses the result. Each transition declares its
+source and target identities; an old catalog identity is never blindly replaced
+with the current one. Within the current major a document at the current or an
+earlier revision loads as is; a later revision, an unsupported older schema or
+a future one is refused and left untouched. A migrated plan opens in memory in
+the current schema, names the repairs its migrations may need, and its file
+stays untouched until the first edit is saved (see
+[Continuous save](#continuous-save)); the desktop library's kept original is
+named `<file> (schema N original)`, while the browser library has no bin and
+rewrites the plan in place. Saving stamps the current major, and the current
+revision when it is not 0. Only then is the project replaced, with a new history
 and the opened snapshot. Failure leaves the current project, history,
 evaluation and library unchanged, except that an import or New files its item
 before it opens.
