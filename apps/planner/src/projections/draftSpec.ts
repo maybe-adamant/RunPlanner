@@ -149,6 +149,7 @@ export function projectDraftSpec(catalog: Catalog, project: ProjectDocument): Dr
       ...(draft.resourceRoomChance === undefined
         ? {}
         : { resourceRoomChance: draft.resourceRoomChance }),
+      ...(draft.fillerPriority === undefined ? {} : { fillerPriority: draft.fillerPriority }),
     }),
   });
 }

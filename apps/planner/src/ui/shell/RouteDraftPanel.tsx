@@ -8,6 +8,7 @@ import {
   withDraftGodBoons,
   withDraftOption,
   type AuthoredDraftSpec,
+  type DraftFillerKind,
   type DraftRoomForcing,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -52,6 +53,7 @@ import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
 import { traitGiverArtwork } from '@planner/ui/artwork/trait-givers/traitGiverArtwork';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { biomeIcon } from '@planner/ui/artwork/roomArtwork';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { KeepsakeLauncher, KeepsakeRackDialog } from '@planner/ui/controls/keepsakes/KeepsakeRack';
 import { ActionIcon } from '@planner/ui/controls/ActionIcon';
 import { hintProps } from '@planner/ui/controls/hint';
@@ -865,6 +867,101 @@ export function RouteDraftPanel({
                   replaceDraft(withDraftOption(draft, 'purchasesPerBiome', value))
                 }
               />
+              <div className="draft-row">
+                <span className="draft-row-label" id="draft-filler-label">
+                  Filler
+                </span>
+                <div
+                  aria-labelledby="draft-filler-label"
+                  className="draft-toggle-row draft-row-wide"
+                  role="group"
+                >
+                  {FILLER_KINDS.map(({ kind, label, rewardType }) => {
+                    const ranked = draft.fillerPriority ?? [];
+                    const rank = ranked.findIndex((entry) => entry.kind === kind) + 1;
+                    const amount = ranked[rank - 1]?.amount;
+                    // No amount ranks the kind all run.
+                    const setAmount = (next: number | undefined) =>
+                      replaceDraft(
+                        withDraftOption(
+                          draft,
+                          'fillerPriority',
+                          ranked.map((entry) =>
+                            entry.kind !== kind
+                              ? entry
+                              : next === undefined
+                                ? { kind }
+                                : { kind, amount: next },
+                          ),
+                        ),
+                      );
+                    return (
+                      <span className="draft-filler-item" key={kind}>
+                        <button
+                          aria-pressed={rank > 0}
+                          className="draft-toggle"
+                          data-has-icon
+                          onClick={() =>
+                            replaceDraft(
+                              withDraftOption(
+                                draft,
+                                'fillerPriority',
+                                rank > 0
+                                  ? ranked.filter((entry) => entry.kind !== kind)
+                                  : [...ranked, { kind }],
+                              ),
+                            )
+                          }
+                          type="button"
+                        >
+                          <ArtworkIcon
+                            className="draft-toggle-icon"
+                            source={rewardIcon(rewardType)}
+                          />
+                          {label}
+                          {rank === 0 ? null : (
+                            <span className="draft-order-number" aria-hidden="true">
+                              {rank}
+                            </span>
+                          )}
+                        </button>
+                        {rank === 0 ? null : (
+                          <select
+                            aria-label={`${label} per run`}
+                            className="draft-filler-select"
+                            data-unset={amount === undefined || undefined}
+                            onChange={(event) =>
+                              setAmount(
+                                event.target.value === '' ? undefined : Number(event.target.value),
+                              )
+                            }
+                            value={amount ?? ''}
+                          >
+                            <option value="">any</option>
+                            {Array.from(
+                              { length: amountRange.max - amountRange.min + 1 },
+                              (_, index) => amountRange.min + index,
+                            ).map((value) => (
+                              <option key={value} value={value}>
+                                {value}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </span>
+                    );
+                  })}
+                  <button
+                    aria-label="Reset filler order"
+                    className="draft-reset draft-pool-reset"
+                    disabled={draft.fillerPriority === undefined}
+                    onClick={() => replaceDraft(withDraftOption(draft, 'fillerPriority', []))}
+                    type="button"
+                  >
+                    <ActionIcon name="reset" />
+                  </button>
+                </div>
+              </div>
               <DraftCheckbox
                 checked={draft.preferMidshops === true}
                 hint={draft.preferMidshops === true ? 'Drafts take longer.' : undefined}
@@ -963,6 +1060,20 @@ export function RouteDraftPanel({
     </section>
   );
 }
+
+const amountRange = DRAFT_OPTIONS.fillerPriority.amount;
+
+/** The rankable filler kinds, each shown with a representative reward's icon. */
+const FILLER_KINDS: readonly {
+  readonly kind: DraftFillerKind;
+  readonly label: string;
+  readonly rewardType: string;
+}[] = [
+  { kind: 'maxHealth', label: 'Max Health', rewardType: 'MaxHealthDrop' },
+  { kind: 'maxMagick', label: 'Max Magick', rewardType: 'MaxManaDrop' },
+  { kind: 'gold', label: 'Gold', rewardType: 'RoomMoneyDrop' },
+  { kind: 'pom', label: 'Pom', rewardType: 'StackUpgrade' },
+];
 
 const ROOM_FORCING_OPTIONS: readonly {
   readonly forcing: DraftRoomForcing;
