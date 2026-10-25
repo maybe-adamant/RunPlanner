@@ -681,7 +681,7 @@ decision from an engine domain or candidate query through edit settlement,
 including every selected-trait child; it never computes game legality. Its own
 rules are draft policy, not legality: monotonic acquisition, the god pool,
 draft-illegal traits (the Ransoms and the replaying Echo choices), the per-slot
-basket claim and the planner caps.
+basket claim, the basket's exclusive sets and the planner caps.
 
 The contract is best effort with no compromise on validity: a drafted project
 always has zero findings, and the report lists each basket trait, story and
@@ -698,18 +698,23 @@ The draft covers the route's planned biome prefix: targets, racks, caps and the
 report stop at the last planned biome. The god pool's order is the order new
 gods arrive: whenever the walk would author an offer from a god not yet
 acquired this run, it uses the next unacquired pool god instead, so the run's
-first Olympian pick is pool #1's. The basket's order is each god's own
-acquisition order; only a god's next unheld trait may be taken from it, and a
-trait waiting only on run state (an element threshold or a rarity count) is
-passed over until that state holds. Duos stand outside both gods' orders: once
-ready, a god room of either god may take one, paced like any other trait.
+first Olympian pick is pool #1's. The basket holds one ordered list per giver,
+that giver's acquisition order; order across givers means nothing. Only a
+god's next unheld trait may be taken from it, and a trait waiting only on run
+state (an element threshold or a rarity count) is passed over until that state
+holds. A Duo sits in the list of one of its gods, its host: only the host
+offers it, it counts toward the host's per-god cap, and when the host's queue
+reaches it before its prerequisites are held the host takes its next trait and
+returns to the Duo once they are.
 
 Caps are engine-owned and scale with the plan. The god boon cap sums each
 planned biome's planned god boons (a route- and biome-keyed default, less one
 per biome under Forfeit); the per-god cap defaults to 5, or 4 under Denial;
 Hermes and Hammer share one cap equal to the planned biome count. An
 over-budget basket is refused, never trimmed. Static refusals also cover a
-basket order that places a trait above its own prerequisite and a pool #1 god
+basket order that places a trait (never a Duo) above its own prerequisite, a
+second trait of a mutually exclusive set (read from the catalog's
+`notEquippedTrait` requirements, such as the Cast boons), and a pool #1 god
 whose first queued trait cannot be the run's first pick (a core boon on a
 mature route, the route's first-run offer on Fresh File). World options read
 route legality: Fresh File offers only gods its acquisition requirements
@@ -721,7 +726,10 @@ The loadout is input; the draft generates the starting reward, the biomes and
 their rack equip results and the resource points. The starting keepsake's
 equip result is input when the player set one: the walk takes it where it is
 possible and the basket's trait guard admits it, otherwise it samples one, and
-the report lists it met or unmet. A choice that clearly contradicts the basket
+the report lists it met or unmet. The walk never takes a trait outside the
+basket while a basket trait it would exclude is still to come, and fills a
+Travel Deal refill from the refilled slot's options, as settlement reads it. A
+choice that clearly contradicts the basket
 is refused: a Jeweled Pom trait in a basket trait's slot, or an Experimental
 Hammer trait queued after another basket Hammer or one past the Hammer or the
 Hermes and Hammer cap.
@@ -745,16 +753,14 @@ the route declares it, route overlays included:
   well before its trait's target, the due weight at it, growing past it, so a
   trait can land early or a little late; an overdue trait is past its target
   from the biome's first room, and one due in a later biome keeps the wanted
-  weight. A god room that comes up early still takes the trait; a room
-  offering both a ready Duo and the god's next trait takes the earlier target.
-  Hub board doors are authored at the due weight, since their visits come
+  weight. A god room that comes up early still takes the trait. Hub board doors are authored at the due weight, since their visits come
   later.
 - Each exit shows at most one god boon door when it can: once another door of
   the exit holds a god boon (a boon reward, Mystery boon or Devotion trial),
   such rewards on this door are strongly damped, since every shown door draws
   from the bag whether taken or not.
 - Shop purchases buy a boon or Mystery boon of a god that can take its next
-  queued trait or a ready Duo, and Hermes or a Hammer when due, at a soft pace
+  queued trait, and Hermes or a Hammer when due, at a soft pace
   of about two purchases per planned biome. The pace steepens when behind or
   when the boon entries left in the bags this biome's doors draw from (its
   base-store policy, else the stores its rooms declare) are nearly spent; it never forces or blocks a purchase, and gold is not modelled.
@@ -812,7 +818,9 @@ The engine codec (`encodeDraftShareCode`, `decodeDraftShareCode`) packs
 positions in catalog-ordered lists into base32 behind a layout version (3) and
 a fingerprint of those lists and the catalog facts that shape the layout. The
 loadout and the draft world (gods, basket, NPCs, racks, seed) are positional;
-the stored Advanced options follow as tagged entries (a count, then each
+the basket is its traits giver by giver, each with one more position naming
+which of its givers lists it when more than one offers it (a Duo's host), and
+the fingerprint covers each giver's traits. The stored Advanced options follow as tagged entries (a count, then each
 option's `DRAFT_OPTIONS` tag, payload length and payload), and a reader skips
 an unknown tag, so a new option needs no layout change. A code from another
 layout, catalog or route is refused rather than decoded into other keys (a code

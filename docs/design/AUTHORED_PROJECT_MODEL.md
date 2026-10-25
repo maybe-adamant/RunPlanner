@@ -293,7 +293,7 @@ itinerary, Practice start and draft spec stay.
 The route also owns one always-present `draft` spec, the persisted Draft
 settings and the recipe a draft generates from; it plays no part in plan
 legality or execution. It holds `godKeys`, `storyNpcByBiome`,
-`fieldNpcsByBiome`, `basketTraitKeys`, `rackKeepsakeByBiome` (a missing biome
+`fieldNpcsByBiome`, `basketByGiver`, `rackKeepsakeByBiome` (a missing biome
 keeps the held keepsake) and `seed`, plus the Advanced options declared in
 `DRAFT_OPTIONS` (kind, range or choices, default and share-code tag), each saved
 only when it differs from its default: `godBoonsByBiome` (per biome, 0–10,
@@ -302,8 +302,9 @@ so a stored value is absolute), the `preferMidshops` and `pursueTartarusGoal`
 flags (`true` when on), `roomForcing` (`deadline`, `softened` or `game`, default
 `softened`), `purchasesPerBiome` (0–4, default 2), `retriesPerBiome` (0–10,
 default 3) and `resourceRoomChance` (a percent, 0–50 in steps of 5, default 10).
-Both arrays are ordered: `godKeys` is the pool order and `basketTraitKeys` each
-god's acquisition order
+`godKeys` is the pool order. `basketByGiver` maps each trait giver to its
+basket traits in that giver's acquisition order; a Duo sits in exactly one of
+its gods' lists, which makes that god its host
 ([Draft spec meaning](SIMULATION_AND_VALIDATION.md#draft-spec-meaning)). A new
 route starts empty with seed 1.
 
@@ -312,7 +313,11 @@ gods, NPCs, traits, keepsakes and biomes are dropped, duplicates keep their
 first occurrence, a value of the wrong type takes its default (a missing spec is
 the empty one, a bad seed is 1), numbers clamp to their range and steps, and a
 stored default is dropped. Records save in catalog biome order and entries for
-biomes off the itinerary are kept. Basket legality stays a draft-time refusal.
+biomes off the itinerary are kept. The basket keeps only known givers' traits
+they offer, a trait listed twice stays in its first list (pool gods in pool
+order first), lists save in catalog giver order and an empty list drops; an
+earlier flat `basketTraitKeys` is an unknown key, so such a basket loads empty.
+Basket legality stays a draft-time refusal.
 The project codec, `ReplaceDraftSpec` and share codes use the same decode, so a
 new option or a changed meaning needs no schema revision. The loadout and
 itinerary are read from the project, not duplicated. `ReplaceDraftSpec`

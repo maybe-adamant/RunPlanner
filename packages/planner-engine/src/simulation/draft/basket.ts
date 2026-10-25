@@ -585,52 +585,8 @@ function withoutDuos(
   }));
 }
 
-/**
- * Order legality for reorderings of the spec's basket: each basket trait queued above a
- * same-source trait its held-trait need must use, and a pool #1 first trait its first offer lacks.
- */
-export function draftOrderRefusals(
-  catalog: Catalog,
-  route: DraftRoute,
-  spec: DraftSpec,
-): (
-  basketByGiver: DraftSpec['basketByGiver'],
-) => ReadonlyMap<string, readonly DraftOrderRefusal[]> {
-  const routeStart = routeStartState(catalog, route, spec.loadout);
-  const prerequisites = createDraftPrerequisites(
-    catalog,
-    draftBasketTraitKeys(spec),
-    heldTraits(routeStart),
-  );
-  const firstPick = draftFirstPick(catalog, route.routeKey, spec, routeStart.traitHistory);
-  return (basketByGiver) => {
-    const queues = draftSourceQueues(catalog, { ...spec, basketByGiver });
-    const order: DraftOrderContext = {
-      queues,
-      firstQueues: withoutDuos(catalog, queues),
-      prerequisites,
-      firstPick,
-    };
-    const refusals = new Map<string, readonly DraftOrderRefusal[]>();
-    for (const queue of order.queues)
-      for (const traitKey of queue.traitKeys) {
-        const found: DraftOrderRefusal[] = [];
-        const trait = catalog.traits.byKey[traitKey];
-        const later =
-          trait !== undefined && draftTraitKind(trait) === 'duo'
-            ? []
-            : prerequisitesQueuedAfter(order, traitKey);
-        if (later.length > 0) found.push({ kind: 'prerequisiteAfter', traitKeys: later });
-        const first = firstPickRefusal(order, traitKey);
-        if (first !== undefined) found.push(first);
-        if (found.length > 0) refusals.set(traitKey, Object.freeze(found));
-      }
-    return refusals;
-  };
-}
-
 /** A refusal that depends only on where the trait sits in its source's queue. */
-export type DraftOrderRefusal = Extract<
+type DraftOrderRefusal = Extract<
   DraftTraitRefusal,
   { readonly kind: 'prerequisiteAfter' | 'firstGodPick' }
 >;
