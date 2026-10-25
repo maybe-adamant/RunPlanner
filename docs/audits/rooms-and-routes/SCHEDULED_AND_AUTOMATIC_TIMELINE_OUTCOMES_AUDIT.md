@@ -242,6 +242,37 @@ Catalog flags, not biome-name branches, control advancement:
 Noncombat or declaration-owned `SkipEndEncounterEffects` phases do not emit
 the transition. A Fig Leaf-skipped combat still does.
 
+### Encounter-end and boss contacts
+
+Planner disposition for the lifecycle seams these effects consume:
+
+- A qualifying non-final `bossDefeated` contact folds Personal Loan's retained
+  rarity block before subsequent encounter-end effects capture their target
+  domains. It does not depend on Judgment, Figurine or other Arcana outcomes.
+  Final bosses and encounters without this contact, including Zagreus
+  Contract, do not apply the payout. The trait remains equipped; this is not a
+  timeline action.
+- Steady Growth consumes the existing `encounterEndEffectsApplied` seam. Each
+  qualifying event advances every equipped Steady Growth acquisition once;
+  source-declared skipped subrooms do not advance it. A reached threshold
+  settles its authored rarity target at that checkpoint and publishes one fixed
+  automatic timeline effect inside End Encounter, after any required pre-effect
+  phase actions. It introduces no second lifecycle clock or scheduler.
+- One encounter-end checkpoint settles every fixed automatic outcome, in the
+  order above, before it publishes any pickup created by a matured clock.
+  Supply Chain and Shrine pickup frontiers observe the final post-automatic
+  branches and become ordinary acquisitions only after the checkpoint; their
+  rows may interleave with other pickups permitted in that interval, and
+  acquiring one can never affect an automatic outcome of the checkpoint that
+  created it.
+- The advancement seams also return compact correspondence evidence for edit
+  settlement: source acquisition, cycle, progress and applicable deferral, with
+  every input cohort represented. These facts travel through the chronology
+  product into lifecycle artifacts under the same blocking coverage. They
+  observe the existing clocks without advancing another, and never treat
+  matching phase names as timing equivalence. A missing later contact is
+  unknown unless reached room exit proves it absent.
+
 ### Exact semantic ownership
 
 Every reached random result has one semantic owner independent of rendered

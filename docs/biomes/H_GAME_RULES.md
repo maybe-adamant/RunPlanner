@@ -75,6 +75,11 @@ the Preboss declaration supplies its own required resolved stores. Optional
 Fields rewards, including optional MetaProgress, remain entered-room controls
 and do not become part of that outgoing cage surface.
 
+H normal batches therefore use base-store policy `none`: the game still
+computes a generic RunProgress/MetaProgress value, but every supported target
+is reward-free or resolves declaration-owned RunProgress provenance, so no
+canonical consumer observes it.
+
 H's absence of an authored store choice is not an absence of consequence. No H
 door is rolled at all: `BaseH` declares `IndividualRewardStore = "RunProgress"`
 alongside its `TargetMetaRewardsRatio` of `0.0`
@@ -105,11 +110,22 @@ declaration-owned one-door source. The room declaration, not a rendered
 branch, is the authority for that physical width. A later source can observe
 earlier peer creation, while only the selected peer enters the normal spine.
 
-FieldsCombat rooms own bounded `cages` children. Cage capacity, active-slot
-limit, and the RunProgress binding are concrete declaration facts. The normal
-H outcome selects the lower or upper supported cage count before targets are
-authored. Cages outside that active prefix remain dormant authored leaves;
-they are neither discarded nor acquired.
+FieldsCombat rooms own bounded `cages` children: three complete RunProgress
+counted reward values with Devotion excluded. Cage capacity, active-slot
+limit, and the RunProgress binding are concrete declaration facts. The
+surrounding batch owns one semantic Min/Max outcome, selected before targets
+are authored, and each target derives whether its active prefix holds two or
+three cages. A capacity-two peer can make both outcomes visibly activate two
+slots, so room state never stores the active count as reward authority. Cages
+outside the active prefix remain dormant authored leaves; they emit no
+canonical offer or acquisition and are neither discarded nor acquired.
+
+Offer resolution walks every generated occurrence in physical target order,
+resolving its ordinary incoming producer before its active cage slots. Picked
+and unpicked targets therefore share one counted-bag and Boon-source offer
+history; an earlier miniboss Boon can constrain a later combat cage source.
+Only active cage offers of the entered combat target can later be acquired, at
+the exact authored interaction after the matching cage completion.
 
 The exact ordinary optional-reward maxima are declaration-owned from the
 installed map assets:
@@ -126,7 +142,10 @@ planner default, not a probability or minimum claim. Active optional slots
 resolve sequentially on entry from the persistent 19-entry
 `FieldsOptionalRewards` bag without sibling exclusion. Generation consumes the
 bag whether or not a pickup is later taken, while unpicked optionals remain
-history-neutral.
+history-neutral: optional generation neither consumes `RunProgress` nor
+changes history, and only a later interaction reaches shared acquisition
+settlement. Refilling that bag is the ordinary append-one-full-set transition
+and retains ineligible leftovers.
 
 Nemesis does not mechanically subtract one from that ordinary maximum. Its
 active placement occupies one member of the same optional-point family, so the
@@ -159,13 +178,38 @@ reward. Reordering cage combat or pickup actions cannot move the Onion, and
 its pickup cannot consume Forfeit a second time. Unentered offered siblings
 and dormant cages do not participate in this spawn pass.
 
-The Passive phase is fixed entry evidence. The active cage count then creates a
-fixed sequence of two or three ordinal encounter cycles. Authored cage order
-chooses which cage occupies the first, second, and optional third cycle; it does
-not change the fixed `Start encounter -> End encounter` skeleton. Each cage
-action represents activation through completion as one indivisible planner
-step, and the model deliberately excludes pickup interaction during an active
-wave.
+Natively, Fields rejects a new cage while another required encounter or an
+object with `BlockFieldsEncounterStart` remains active. It then runs the
+selected cage encounter synchronously; only after completion does the cage
+reward become available and the cage obstacle disappear.
+
+The Passive phase is fixed entry evidence and creates no player-chosen cage
+cycle. The active cage count then creates a fixed sequence of two or three
+ordinal encounter cycles. Authored cage order chooses which cage occupies the
+first, second, and optional third cycle; it does not change the fixed
+`Start encounter -> End encounter` skeleton. Each `completeFieldsCage` action
+is a grouped simplification of activation through synchronous completion:
+derived `encounterStart` and `encounterEnd` seams bracket it, no modeled action
+occurs between them, and the model deliberately excludes pickup interaction
+during an active wave. The room lifecycle is:
+
+```text
+prepare all cage offers and encounter identities
+enter room
+materialize active Fields optional offers
+apply Passive entry effects
+run optional pre-combat actions
+for each active cage in authored order:
+  start the chosen cage encounter
+  complete that encounter atomically
+  run legal between-encounter actions
+resolve every remaining required cage/dependent pickup
+generate outgoing batch
+publish exit usability and room features
+enter Doors open
+run any remaining eligible optional actions
+commit and exit when chosen
+```
 
 A cage reward cannot be interacted with before its matching encounter ends,
 but leaving that reward unpicked does not block the next cage. Optional minor
@@ -181,6 +225,20 @@ at that exact readiness boundary. Eligible optional rewards and Artificer
 replacement pickups may be ordered before or after Cleanup; future door-open-
 only room features remain Cleanup-only. There is no cage-only order or
 Fields-private acquisition fold.
+
+The Fields action sequence is the room's only chronology, but it is not an
+unconstrained list. The active cage count fixes the ordinal Encounter start/end
+pairs, the ordered cage references assign cage identities to them, and flexible
+actions occupy the room-entry, between-encounter, pre-door and post-door
+Cleanup intervals according to their engine-owned availability. Every
+interaction uses the shared acquisition settlement fold.
+
+Selecting Artificer at a source interaction consumes the current `RunProgress`
+bag and creates, but does not acquire, its source-owned replacement. A required
+cage transfers its obligation to a later replacement action; an optional
+Fields source may omit that action and leave the replacement behind. Several
+conversions may therefore precede every generated replacement acquisition,
+all within the same room chronology.
 
 The editor preserves four distinct occurrence views. Room Doors authors the
 outgoing decision and projects the selected target's active cage reward group.
@@ -285,7 +343,7 @@ would replace it at its preparation.
 
 `H_Intro` hosts Eris when observed and not yet cursed on the route; her
 required gift is 50 Psyche, which the planner does not track
-([room action order](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md#eris-is-a-required-object-at-a-young-profiles-biome-intro)).
+([Eris at a biome intro](G_GAME_RULES.md#eris-at-a-biome-intro)).
 The Postboss Pool of Purging spawns but is locked by `BlockedByRequirements`,
 so the planner has no Pool there; the Postboss Well and keepsake rack are
 absent and the fountain stays.

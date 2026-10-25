@@ -779,7 +779,7 @@ The implementation uses encounter-owned native-or-full customization, including
 field-NPC generated combats, not a room-wide default-combat override. Native
 requires no authoring; its roll is unmodelled except for the published enemies
 it must not draw (the
-[introduction model](../../design/ROOM_LIFECYCLE_MODEL.md#enemy-introductions)
+[introduction model](../../design/ENCOUNTER_PREPARATION.md#enemy-introductions)
 owns that list). Customized encounters resolve complete ordered waves,
 shared highlight where applicable, budget allocations/counts and applicable
 Fangs/Menace outcomes. Fixed seeds remain declaration-owned. Incomplete active
@@ -800,7 +800,7 @@ acceptance. The implementation preserves the following boundaries:
    Existing boss-choice progression overrides do not automatically authorize
    bypassing enemy intros, room packages or native intro replacement. On Fresh
    File the scoped F/G/H introductions are authored set members; the
-   [introduction model](../../design/ROOM_LIFECYCLE_MODEL.md#enemy-introductions)
+   [introduction model](../../design/ENCOUNTER_PREPARATION.md#enemy-introductions)
    owns their gates, reachability and type-domain exclusion. A brand-new
    profile run (2026-09-30) confirmed `RadiatorIntro` and `FishSwarmerIntro`
    with their native fixed first wave and installed suffix; native traversal

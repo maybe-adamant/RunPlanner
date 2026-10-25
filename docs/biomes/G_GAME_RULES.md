@@ -316,12 +316,36 @@ route. An uncustomized G combat rolls natively without the enemies whose
 introduction would replace it.
 
 `G_Intro` hosts Eris when the author observes her spawn: talking applies
-`ErisCurseTrait` and drops a required 20-Ashes gift, exempt from resource
-bonuses and duplication, before the doors roll
-([room action order](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md#eris-is-a-required-object-at-a-young-profiles-biome-intro)).
-Narcissus's story room, Uh Oh, Chaos, the Anomaly, Zagreus Contract, Reprieve,
+`ErisCurseTrait` and drops a required 20-Ashes gift (see
+[Eris at a biome intro](#eris-at-a-biome-intro)). Narcissus's story room, Uh Oh, Chaos, the Anomaly, Zagreus Contract, Reprieve,
 field-NPC combats and cocoons, Wells, the Postboss Pool and keepsake rack are
 absent; Hellifish and Serpent remain. Scylla's featured performer is Jetty.
+
+### Eris at a biome intro
+
+On Fresh File, native `SpawnErisForCurse` places Eris in `G_Intro`, `H_Intro`
+and `I_Intro` as a room-required object while completed runs are at most 1, 4
+and 7, the hero lacks `ErisCurseTrait`, and `ErisCurseHealthThreshold` (no
+Death Defiance and health at most half) is false
+([source audit](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md#eris-is-a-required-object-at-a-young-profiles-biome-intro)).
+This section owns the planner rule for all three intros.
+
+Health is not simulated, so the spawn is the author's observation. When
+observed, the talk (`interactEris`) is a required action that applies
+`ErisCurseTrait` as a fixed direct trait grant, and her gift is a required
+pickup that depends on it. Both rank in the room's standard window before
+outgoing generation: exits unlock only after both required objects clear and
+`DoUnlockRoomExits` rolls the doors afterwards, so the gift's resources count
+toward that batch. The gift's producer is described in the
+[Reward Model](../design/REWARD_MODEL.md#generated-pickups); the curse's combat
+effect is not modeled.
+
+The curse grant is route trait history. Eris spawns on room entry, so the
+observation is Overview content: an intro observed while the curse is already
+equipped reports `erisSpawnUnavailable` on that observation at the room's
+Overview, and its talk applies nothing and drops no gift; the observation stays
+authored for repair. An intro without the observation derives no action and
+reports nothing.
 
 ## Current Product Boundary
 

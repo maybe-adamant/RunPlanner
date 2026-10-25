@@ -261,7 +261,7 @@ the native selection, introduction and lifecycle-policy facts.
   supplied base roll.
 - **Native-roll exclusions.** An uncustomized or declined generated phase rolls
   natively with its optional `excludedEnemies` (owned by the
-  [introduction model](ROOM_LIFECYCLE_MODEL.md#enemy-introductions)) added to
+  [introduction model](ENCOUNTER_PREPARATION.md#enemy-introductions)) added to
   the per-encounter generation copy's blacklist, so nothing is restored and
   run-wide state keeps only native additions.
 - **Infinite rosters** own only the ordered `FillEnemyTypes` draws of an

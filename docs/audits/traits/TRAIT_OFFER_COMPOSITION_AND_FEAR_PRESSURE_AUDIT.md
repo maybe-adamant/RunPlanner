@@ -18,7 +18,7 @@ Related authorities:
   chance arithmetic and later equipped mutations.
 - [Trait giver effect matrix](TRAIT_GIVER_EFFECT_MATRIX.md): which one-use
   and screen-wide effects apply to each giver.
-- [Reward model](../../design/REWARD_MODEL.md#trait-bearing-reward-leaves):
+- [Trait offers](../../design/TRAIT_OFFERS.md#assessment-and-settlement):
   planner assessment and chronological settlement.
 
 The source anchors below refer to the installed scripts audited on 2026-09-15.
@@ -476,7 +476,7 @@ effects are separate questions.
 Each offer's generation context follows the contacts above: creation, one
 rebuild per completed upgrade screen in the room, and deferred regeneration at
 open after any of the three invalidating operations. The
-[Reward Model](../../design/REWARD_MODEL.md#generation-time-offer-context) owns
+[Trait Offers](../../design/TRAIT_OFFERS.md#generation-time-context) owns
 the engine rule. The H miniboss reward is anchored at its encounter's start,
 before that encounter's own start effects (Fig Leaf, Gorgon), because both H
 miniboss encounters declare that they create the room reward before combat

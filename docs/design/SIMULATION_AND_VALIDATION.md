@@ -13,8 +13,10 @@ This is the engine entry document. Detailed contracts have narrower owners:
 | ----------------------------------------------------------- | -------------------------------------------------------------------------- |
 | [Authored Project Model](AUTHORED_PROJECT_MODEL.md)         | Persisted choices, addresses, codecs, atomic commands and topology closure |
 | [Game Generation Rules](GAME_GENERATION_RULES.md)           | Physical batches, generation support, takeover and completion              |
-| [Room Lifecycle Model](ROOM_LIFECYCLE_MODEL.md)             | Operation order, encounter composition, clocks, room history and resets    |
-| [Reward Model](REWARD_MODEL.md)                             | Stores, offers, acquisitions, settlement and trait-bearing leaves          |
+| [Room Lifecycle Model](ROOM_LIFECYCLE_MODEL.md)             | Operation order, Room Action order, clocks, room history and resets        |
+| [Encounter Preparation](ENCOUNTER_PREPARATION.md)           | Encounter choices, identity resolution, composition and introductions      |
+| [Reward Model](REWARD_MODEL.md)                             | Stores, producers, shops, offers, acquisitions and settlement              |
+| [Trait Offers](TRAIT_OFFERS.md)                             | Trait outcomes, generation-time context, screen support and trait history  |
 | [Candidate Evaluation Model](CANDIDATE_EVALUATION_MODEL.md) | Exact alternative queries and repair capabilities                          |
 | [Execution Protocol](EXECUTION_PROTOCOL.md)                 | Engine-owned execution products and downstream responsibilities            |
 | [Run-Start Installation](RUN_START_INSTALLATION.md)         | Start installations, loadout, run modifiers and snap mode                  |
@@ -330,7 +332,7 @@ the substates its options were built from, or a stale mark. They change only
 through spawn, open, room exit and one closed context transition: a screen
 completion rebuilds every record in the room, while Steady Growth, Transcendent
 Embryo, fountain rarity and a Nemesis trade mark them stale. The
-[Reward Model](REWARD_MODEL.md#generation-time-offer-context) owns the policy.
+[Trait Offers](TRAIT_OFFERS.md#generation-time-context) owns the policy.
 Transitions return a new state while retaining unchanged substates; replacing
 trait history also updates the reward kernel's derived trait facts and, when
 Barren starts or ends, the per-card Arcana it unequips or re-adds at Epic,
@@ -545,7 +547,7 @@ trait or target authorship retains the exact child finding rather than an
 additional generic purchase failure.
 
 Encounter identity, composition and
-[introduction](ROOM_LIFECYCLE_MODEL.md#enemy-introductions) findings stop
+[introduction](ENCOUNTER_PREPARATION.md#enemy-introductions) findings stop
 assessment at the room's Overview; the Fresh File introduction finding on the
 exact phase of a retained enemy withholds execution. Fig Leaf, Aetos and Gorgon findings have
 their own phase-child owners and stop assessment where the phase starts.
@@ -571,7 +573,7 @@ reuse without serializing the whole state or recomputing every projection.
 Ordinary occurrences expose entry and pre-exit snapshots. Ship phases expose
 pre-encounter snapshots and the occurrence exposes pre-exit. N also retains
 the meaningful pre-board and pre-handoff generation contacts. The
-[lifecycle checkpoint contract](ROOM_LIFECYCLE_MODEL.md#lifecycle-run-state-checkpoints)
+[lifecycle checkpoint contract](ROOM_LIFECYCLE_MODEL.md#run-state-checkpoints)
 owns their precise timing.
 
 A retained owner beyond coverage is unavailable with an explicit coverage

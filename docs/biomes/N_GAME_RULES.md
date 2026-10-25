@@ -203,8 +203,17 @@ ordinary sources and all six can subsequently be acquired through the visit
 order. The ordinary four-source limit is therefore not a hard Ephyra-board or
 post-Ephyra history cap.
 
-No N door rolls a base store and N's room declarations bank no store key, so
-Run State reports neither a target nor a banked key for N.
+Combat targets force `HubRewards`, PreHub and the miniboss targets force
+`RunProgress` (the minibosses filtered to Boon), and Story has its fixed
+producer, so every supported target resolves offer provenance from its Room
+Declaration and the Hub batch uses base-store policy `none`. Those forced
+stores are offer provenance only. Native `BaseN` and `BaseN_SubRooms` carry
+`IgnoreForRewardStoreCount` ([reward
+audit](../audits/rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#count-exclusions-and-their-inconsistency)),
+so every N room declaration—Opening, PreHub, Hub, main targets including the
+minibosses, side rooms and completion rooms—records entered-store history
+`none`. No N door rolls a base store and no N room banks a store key, so Run
+State reports neither a target nor a banked key for N.
 
 Complete selected validation remains atomic across that board. For incremental
 authoring, one changed reward is assessed after every other currently authored
@@ -218,10 +227,14 @@ unrelated repair stays available. The current selected value retains its
 complete-board finding, and visits remain withheld until the authored board as
 a whole admits a supported hidden ordering.
 
-All open Hub offers contribute to the Hub reward lookup before the final shop
-is validated. This includes unvisited targets, because the game creates the
-full board as one reward region. The Preboss Shop's lookup therefore cannot be
-computed from only the six visited entries.
+All open Hub offers contribute to the
+[Hub reward lookup](../design/REWARD_MODEL.md#offered-reward-lookups) before the
+final shop is validated. This includes unvisited targets, because the game
+creates the full board as one reward region. The Preboss Shop's lookup
+therefore cannot be computed from only the six visited entries. The completed
+board contributes at Hub departure: earlier checkpoints and the board's own
+generation cannot see it, restores are idempotent, later biomes inherit it, and
+rebuilding the simulation reconstructs it from authored state.
 
 ### Hub fountain
 
@@ -234,14 +247,38 @@ The planner models one Hub-owned fountain action in the same action list:
 initially, after a completed visit and its Hub return, or after the sixth visit
 before the Preboss handoff. It settles in the Hub before the next room's entry,
 reusing ordinary fountain Phial assessment, consumption, rarity mutation and
-offer invalidation. Its chronology follows
-[Ephyra restoration](../design/ROOM_LIFECYCLE_MODEL.md#ephyra-restoration).
-Side-room excursions stay inside their visit.
+offer invalidation. Side-room excursions stay inside their visit.
+
+### Restoration and departures
+
+Restoration returns to the persistent parent or Hub room and its door state
+without replaying room entry, encounters or earlier local actions. The planner
+therefore treats Hub/main/side traversal and restoration as topology between
+distinct entered-occurrence fragments, not additional `roomEntered`,
+`encounterStart` or `encounterEnd` events inside one room timeline.
+
+The fountain use emits one `fountainUsed` event in the Hub at its authored
+position, owned by the Hub fountain address rather than a room timeline; a
+completed visit's return includes its side-room excursions. The next room's
+entry therefore observes its rarity and Phial effects. The use replays no Hub
+entry or board generation and advances no counter.
+
+Every door use runs native `LeaveRoom`, so history records a `roomDeparted` for
+each first exit and for each departure from a restored room: the main room
+before each later side room and before the Hub return, and the Hub before each
+later visit and after the handoff generation. The Hub's first departure follows
+its fountain use rather than its `roomExited`. Each departure records its
+`destination`: a first-visit room, a restore, the next biome's first room, or
+the run end. A held Silken Sash gains its door armor only on a door into a room
+not visited before, which the run's first room and restores are not. The
+engine captures canonical Run State at every Hub departure, after any fountain
+use in that interval and before its departure clocks. These snapshots are
+execution conformance inputs, not additional Run State checkpoints, and exist
+even without a trait mutation. Parent and Hub restoration replay no lifecycle
+and therefore create no duplicate Run State checkpoint.
 
 ### Main targets, pylons, and side rooms
 
-Combat slots resolve their declared `HubRewards` support; Story has its fixed
-producer and miniboss declarations retain their own forced RunProgress facts.
 Every visited main target spawns the pylon needed for its departure and for the
 six-visit completion predicate. Main-room acquisition, pylon completion, and
 the return to the persisted Hub are separate history events.
@@ -251,7 +288,20 @@ Their generation is a parent-local unordered sibling region: all generated
 side offers are prepared together, availability pressure follows the declared
 rank, and the parent-sourced local-visit decision remains the generation/order
 authority across restores. Side visits are not Hub visits and must not become
-a second global topology or a graph-canvas edge set. Once entered, however,
+a second global topology or a graph-canvas edge set.
+
+A side slot retains its complete authored offer when its generation state is
+`notGenerated` or its parent target is unvisited; it becomes an active reward
+leaf only when the parent detail is active and the slot is generated. Slots
+resolve together from `SubRoomRewards` or `SubRoomRewardsHard`: generated
+unentered slots consume their bag, while entered slots also acquire. All
+generated siblings receive offers before any side room can be entered, share
+one same-batch duplicate set and mutate their declared bags, so they are
+jointly constrained rather than independent draws. Under the supported side
+bags eligibility is stable throughout that pass and no reward setup changes a
+sibling's candidates, so possibility validation checks the complete sibling
+assignment as an unordered batch; engine iteration order and later entry order
+do not change its support. Once entered, however,
 each side occurrence owns its own lifecycle; restoring the parent or Hub does
 not replay it.
 
