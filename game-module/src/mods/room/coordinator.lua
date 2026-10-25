@@ -196,7 +196,13 @@ local function occurrenceForNative(state, nativeRoom)
     if roomState == nil then return nil end
     local id = type(nativeRoom) == "table" and nativeRoom.__runPlannerExecutionRoomId or nil
     local active = coordinator.current(state)
-    if id == nil then return active and active.occurrence or nil end
+    if id == nil then
+        -- An unstamped room of another game name, such as the Dream Postboss
+        -- native pre-creates during its boss, is not the active occurrence.
+        local name = type(nativeRoom) == "table" and (nativeRoom.GenusName or nativeRoom.Name) or nil
+        if active == nil or (name ~= nil and name ~= active.occurrence.gameName) then return nil end
+        return active.occurrence
+    end
     if active ~= nil and active.occurrence.id == id then return active.occurrence end
     local prepared = roomState.prepared
     if prepared ~= nil and prepared.occurrence.id == id then return prepared.occurrence end

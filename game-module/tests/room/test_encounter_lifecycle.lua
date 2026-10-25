@@ -413,3 +413,27 @@ function TestEncounterLifecycle.testUnmodeledCarriersRemainExact()
     lu.assertNil(ok)
     lu.assertEquals(mismatch, { kind = "encounter", expected = "Empty", observed = "Story" })
 end
+
+function TestEncounterLifecycle.testOnlyTheActiveOccurrencesRoomIsSteered()
+    local context = world({ { slotKey = "Boss", encounterKey = "GeneratedF" } })
+    local eligibility = {}
+    _G.game.IsEncounterEligible = function(_, nativeRoom)
+        eligibility[#eligibility + 1] = nativeRoom.Name
+        return false
+    end
+    local function chooseIn(nativeRoom)
+        local forced
+        context.callbacks.ChooseEncounter(nil, {}, function(currentRun)
+            forced = currentRun.ForceNextEncounterData
+            return { Name = forced and forced.Name or "Native" }
+        end, {}, nativeRoom, {})
+        return forced
+    end
+    -- Native pre-creates the Dream Postboss while its boss is the active occurrence.
+    lu.assertNil(chooseIn({ Name = "Dream_PostBoss01" }))
+    lu.assertEquals({ eligibility, context.diagnostics }, { {}, {} })
+    _G.game.IsEncounterEligible = function() return true end
+    lu.assertEquals(chooseIn({ Name = "Room" }).Name, "GeneratedF")
+    context.restore()
+    lu.assertEquals({ context.diagnostics, context.mismatches }, { {}, {} })
+end
