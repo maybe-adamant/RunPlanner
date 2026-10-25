@@ -18,6 +18,7 @@ import {
   scheduleRequiredRoomActions,
   semanticAddressKey,
   shopOfferOptionValues,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
   takeoverPrebossGameNames,
   type BiomeAddress,
   type BatchRewardStoreAddress,
@@ -1034,6 +1035,26 @@ export class DraftWalk {
     return false;
   }
 
+  /** The Shop slot a Travel Deal refill restocks, as settlement derived it. */
+  private refilledSlotKey(
+    biomeKey: string,
+    occurrenceId: string,
+    profileKey: string,
+  ): string | undefined {
+    const biome = this.assembly.evaluation.route.biomes.find((b) => b.biomeKey === biomeKey);
+    if (biome === undefined || !('rewards' in biome)) return undefined;
+    const refill = biome.rewards.derivedAcquisitionEntries.find(
+      (entry) =>
+        entry.kind === 'travelDealRefill' &&
+        entry.address.site.owner.kind === 'occurrence' &&
+        entry.address.site.owner.occurrenceId === occurrenceId,
+    );
+    const slotIndex = refill?.slotIndex;
+    return slotIndex === undefined
+      ? undefined
+      : this.catalog.rewards.shops.byKey[profileKey]?.slots.values[slotIndex]?.key;
+  }
+
   /** A reward already authored here that became unavailable is not tried again, so repairs cannot cycle. */
   private authorReward(origin: SemanticAddress, retry: boolean): boolean {
     const apply = (command: ProjectCommand) => {
@@ -1057,11 +1078,16 @@ export class DraftWalk {
       const occurrence = this.occurrence(origin.biomeKey, origin.occurrenceId);
       const shop = occurrence?.state.kind === 'shop' ? occurrence.state.shop : undefined;
       if (occurrence === undefined || shop === undefined) return false;
+      const slotKey =
+        origin.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+          ? this.refilledSlotKey(origin.biomeKey, origin.occurrenceId, shop.profileKey)
+          : origin.offerKey;
+      if (slotKey === undefined) return false;
       const values = shopOfferOptionValues(
         this.catalog,
         occurrence.gameName,
         shop.profileKey,
-        origin.offerKey,
+        slotKey,
       ).filter((value) => {
         const evaluation = this.evaluate({ kind: 'shopOfferOption', offer: origin, value });
         return (
