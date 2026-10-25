@@ -1287,6 +1287,30 @@ label.draft-row-label {
   cursor: pointer;
 }
 
+/* A ranked filler chip beside its per-run amount. */
+.draft-filler-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* A ranked filler's per-run amount; "any" stores none. */
+.draft-filler-select {
+  width: 4.4rem;
+  min-height: 0;
+  height: 1.6rem;
+  padding: 0 1.2rem 0 0.4rem;
+  border-color: #3a3b45;
+  border-radius: 0.35rem;
+  color: color-mix(in srgb, var(--selection-accent) 85%, transparent);
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.draft-filler-select[data-unset] {
+  color: var(--muted);
+}
+
 .draft-advanced-reset {
   margin-left: auto;
 }

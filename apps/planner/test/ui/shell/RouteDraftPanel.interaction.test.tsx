@@ -646,6 +646,63 @@ describe('Draft panel', () => {
     });
   });
 
+  it('ranks filler kinds in pick order with per-run amounts, and drafts with them', () => {
+    const { application, runs } = open();
+    const draft = () => application.store.getState().projectWorkspace.history!.present.route.draft;
+    chooseGods(['Zeus', 'Apollo', 'Hera']);
+    fireEvent.click(screen.getByRole('tab', { name: 'Advanced' }));
+    const filler = () => within(screen.getByRole('group', { name: 'Filler' }));
+    const chip = (name: string) => filler().getByRole('button', { name });
+    const rank = (name: string) => chip(name).querySelector('.draft-order-number')?.textContent;
+    const amount = (name: string) =>
+      filler().queryByRole('combobox', { name: `${name} per run` }) as HTMLSelectElement | null;
+    const reset = () => filler().getByRole('button', { name: 'Reset filler order' });
+
+    expect((reset() as HTMLButtonElement).disabled).toBe(true);
+    expect(amount('Pom')).toBeNull();
+    for (const name of ['Pom', 'Max Health', 'Gold']) fireEvent.click(chip(name));
+    expect(['Pom', 'Max Health', 'Gold', 'Max Magick'].map(rank)).toEqual([
+      '1',
+      '2',
+      '3',
+      undefined,
+    ]);
+    expect(draft().fillerPriority).toEqual([
+      { kind: 'pom' },
+      { kind: 'maxHealth' },
+      { kind: 'gold' },
+    ]);
+
+    // An amount keeps the order; "any" stores none.
+    expect(amount('Max Health')!.value).toBe('');
+    fireEvent.change(amount('Max Health')!, { target: { value: '3' } });
+    expect(draft().fillerPriority).toEqual([
+      { kind: 'pom' },
+      { kind: 'maxHealth', amount: 3 },
+      { kind: 'gold' },
+    ]);
+    expect(amount('Max Health')!.value).toBe('3');
+    fireEvent.change(amount('Max Health')!, { target: { value: '' } });
+    expect(draft().fillerPriority?.[1]).toEqual({ kind: 'maxHealth' });
+
+    // Unpicking closes the gap.
+    fireEvent.click(chip('Pom'));
+    expect(['Max Health', 'Gold', 'Pom'].map(rank)).toEqual(['1', '2', undefined]);
+    expect(amount('Pom')).toBeNull();
+
+    fireEvent.change(amount('Gold')!, { target: { value: '2' } });
+    fireEvent.click(draftButton());
+    expect(runs.at(-1)!.request.spec.fillerPriority).toEqual([
+      { kind: 'maxHealth' },
+      { kind: 'gold', amount: 2 },
+    ]);
+    act(() => runs.at(-1)!.emit({ kind: 'error', message: 'stopped' }));
+
+    fireEvent.click(reset());
+    expect(draft()).not.toHaveProperty('fillerPriority');
+    expect(['Max Health', 'Gold'].map(rank)).toEqual([undefined, undefined]);
+  });
+
   it('blocks drafting from a keepsake that brings in a god', () => {
     const { application, catalog, runs } = open();
     const keepsake = catalog.keepsakes.values.find((candidate) =>
