@@ -89,7 +89,7 @@ the authoring surface to a narrow content column. A short structure rail does
 not advertise overflow merely because its connector decoration extends beyond
 a terminal stop.
 
-The Route and Loadout panels remain ordinary editor-panel content and may use that
+The Route, Draft and Loadout panels remain ordinary editor-panel content and may use that
 panel's scroll container. At narrow widths the layout intentionally returns to
 one document-flow column rather than retaining nested scrollports. These are
 CSS presentation boundaries only: scroll position remains transient and no
@@ -97,7 +97,7 @@ layout state enters the authored project or semantic commands.
 
 Before a project is open, the application presents a catalog-driven route
 chooser. Once a route is selected, the header displays its identity and the
-route-local navigation provides Route and Loadout, then configured
+route-local navigation provides Route, Draft and Loadout, then configured
 biomes and nonempty indexes;
 it does not switch between sibling authored runs. The route rail is the
 selected route's local overview and biome navigation, not a competing second
@@ -106,10 +106,11 @@ route selector.
 ### Route Rail
 
 The route rail projects the selected route's normalized biome order and current
-project evaluation. It shows the Route and Loadout panels, each
+project evaluation. It shows the Route, Draft and Loadout panels, each
 configured biome, its status, and whether contextual evaluation is active,
 complete, or blocked by an earlier biome. The workspace opens on Route, which
-holds Plan up to, the run modifiers with Practice mode, and the whole-plan status. Loadout holds the
+holds Plan up to, the run modifiers with Practice mode, and the whole-plan status. Draft holds
+the draft spec and runs a draft of the plan ([Draft generation](SIMULATION_AND_VALIDATION.md#draft-generation)). Loadout holds the
 starting choices (on Fresh File, only its fixed weapon) and carries the same
 status marker and finding count as a biome for route-start owners; every
 route-scoped or route-start finding opens it. Route carries no marker. The catalog route collection is used only to populate the
@@ -274,7 +275,7 @@ semantic focus, adds history or requires complete authoring. The route rail
 remains the navigation to room details.
 
 One image viewport serves inspection dialogs and inline editing references.
-Fields Layout and Ephyra Side Rooms keep controls on the left and a larger
+Fields Room Layout and Ephyra Side Rooms keep controls on the left and a larger
 reference on the right. Individual main/side-room dialogs remain independent of
 the Hub editor. Side Rooms uses an illustrative parent map with declared local
 slot status; generation and traversal are edited in the left controls. Its map
@@ -375,7 +376,9 @@ or child ownership moves to a composite editor.
 
 The application publishes one closed occurrence-presentation union rather than
 a generic room-details disclosure. Standard, Fields, and Shop occurrences
-render Room Overview, Room Timeline, and Room Doors. Overview contains read-only
+render Room Overview, Room Timeline, and Room Doors; Fields adds Room Layout,
+which edits the spawn-point placement of the entry, cages, optionals and
+Nemesis beside the room map. Overview contains read-only
 incoming context and meaningful room-local setup: Fields identities, World
 Shop inventory and Purchased markers, and Room features, whose Shrine and Well
 inventories likewise hold only their fixed slots (a Shrine slot shows Item,
@@ -439,7 +442,8 @@ occurrence. Exact semantic focus overrides it: setup and fixed-slot purchase
 markers and encounter identity and customization owners open Overview, Travel
 Deal refill markers, Fig Leaf, Gorgon, Aetos and Nemesis-response owners and
 action owners open the matching Room Timeline tab,
-inactive Ship actions open repair, and outgoing owners open Room Doors. The
+inactive Ship actions open repair, Fields spawn-point owners open Room Layout,
+and outgoing owners open Room Doors. The
 application publishes that closed destination; React does not parse addresses
 or labels. Tabs use one stable tabpanel identity and roving ArrowLeft,
 ArrowRight, Home, and End keyboard activation.
@@ -1044,7 +1048,7 @@ The structured workspace must ensure:
   destination, and one containing inspector even when route indexes or
   summaries also reference it;
 - Overview owns occurrence contents and feature inventory, Timeline owns
-  participating actions and their chronology, Layout owns read-only physical
+  participating actions and their chronology, Layout owns Fields spawn-point
   placement, and Doors owns outgoing offers and selection;
 - dormant, ungenerated, unvisited, and unpurchased children do not publish
   active Timeline controls merely because their authored detail is retained;
