@@ -929,7 +929,6 @@ export function RouteDraftPanel({
                           <select
                             aria-label={`${label} per run`}
                             className="draft-filler-select"
-                            data-unset={amount === undefined || undefined}
                             onChange={(event) =>
                               setAmount(
                                 event.target.value === '' ? undefined : Number(event.target.value),

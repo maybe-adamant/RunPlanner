@@ -1307,10 +1307,6 @@ label.draft-row-label {
   font-variant-numeric: tabular-nums;
 }
 
-.draft-filler-select[data-unset] {
-  color: var(--muted);
-}
-
 .draft-advanced-reset {
   margin-left: auto;
 }
