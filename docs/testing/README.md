@@ -5,7 +5,7 @@ plans in `docs/progress/`. These files track observations still needed, not
 unfinished implementation. Automated verification and delivery history belong in
 commits, not these checklists.
 
-- [Dream route](DREAM_ROUTE_LIVE_ACCEPTANCE.md)
+No checks are pending.
 
 Keep setup, actions and expected observations with each check. Confirm results
 from live testing or explicitly waive them; retire completed items and delete
