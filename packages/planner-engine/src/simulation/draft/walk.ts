@@ -50,7 +50,7 @@ import {
 } from '../candidates/session';
 import type { StartRoomCandidateQuery } from '../candidates/start-room';
 import type { ForcePressureLedgerEntry } from '../generation';
-import { DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE } from '../../authored-project/draft-spec';
+import { DRAFT_OPTIONS } from '../../authored-project/draft-spec';
 import { countedRewardTypeDomain } from '../evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { assessmentRepairOwner } from '../finding-regions';
@@ -286,7 +286,7 @@ export class DraftWalk {
       !support.families.some((family) => route.resourcePlacements[family] === null)
     )
       return;
-    const percent = this.spec.resourceRoomChance ?? DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE;
+    const percent = this.spec.resourceRoomChance ?? DRAFT_OPTIONS.resourceRoomChance.default;
     if (this.rng() >= percent / 100) return;
     const legal = routeResourceAuthoring(this.catalog, route).legalTargetsByFamily;
     const rules = support.rules;

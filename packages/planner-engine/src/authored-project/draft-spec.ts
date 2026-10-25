@@ -1,13 +1,5 @@
 import type { Catalog } from '../catalog-schema';
-import type { AuthoredDraftSpec, DraftRoomForcing } from './model';
-import {
-  expectArray,
-  expectExactKeys,
-  expectNonNegativeInteger,
-  expectRecord,
-  expectString,
-  failProjectDocument as fail,
-} from './validation';
+import type { AuthoredDraftSpec } from './model';
 
 /** A new route's draft settings: nothing selected and the first seed. */
 export const EMPTY_DRAFT_SPEC: AuthoredDraftSpec = Object.freeze({
@@ -22,27 +14,85 @@ export const EMPTY_DRAFT_SPEC: AuthoredDraftSpec = Object.freeze({
 /** The largest seed; the generator reads it as an unsigned 32-bit value. */
 export const MAX_DRAFT_SEED = 0xffff_ffff;
 
-/** The range of one biome's planned god boons. */
-export const DRAFT_GOD_BOONS_RANGE = Object.freeze({ min: 0, max: 10 });
-/** The range of the per-god boon cap; ten is past any god's useful core and other boons. */
-export const DRAFT_PER_GOD_CAP_RANGE = Object.freeze({ min: 1, max: 10 });
-export const DEFAULT_DRAFT_PER_GOD_CAP = 5;
+/** A whole number from `min` to `max`, in steps of `step` when given. */
+export interface IntegerDraftOptionDeclaration {
+  readonly kind: 'integer';
+  readonly min: number;
+  readonly max: number;
+  readonly step?: number;
+  readonly default: number;
+  /** The default moves with the loadout, so a stored value is absolute and kept on decode. */
+  readonly contextualDefault?: true;
+  readonly tag: number;
+}
 
-export const DRAFT_ROOM_FORCINGS: readonly DraftRoomForcing[] = Object.freeze([
-  'deadline',
-  'softened',
-  'game',
-]);
-export const DEFAULT_DRAFT_ROOM_FORCING: DraftRoomForcing = 'softened';
-/** Shop god boon purchases per planned biome; 0 never buys a god boon. */
-export const DRAFT_PURCHASES_PER_BIOME_RANGE = Object.freeze({ min: 0, max: 4 });
-export const DEFAULT_DRAFT_PURCHASES_PER_BIOME = 2;
-/** Further attempts per biome after its first success. */
-export const DRAFT_RETRIES_PER_BIOME_RANGE = Object.freeze({ min: 0, max: 10 });
-export const DEFAULT_DRAFT_RETRIES_PER_BIOME = 3;
-/** Percent chance a room rolls a resource point, in steps of five. */
-export const DRAFT_RESOURCE_ROOM_CHANCE_RANGE = Object.freeze({ min: 0, max: 50, step: 5 });
-export const DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE = 10;
+/** Off by default; stored as `true` only when on. */
+export interface FlagDraftOptionDeclaration {
+  readonly kind: 'flag';
+  readonly tag: number;
+}
+
+/** One of `choices`; share codes carry its index, so choices only append. */
+export interface ChoiceDraftOptionDeclaration {
+  readonly kind: 'choice';
+  readonly choices: readonly string[];
+  readonly default: string;
+  readonly tag: number;
+}
+
+/** A whole number per biome; each biome's default comes from `defaultDraftGodBoons`. */
+export interface PerBiomeDraftOptionDeclaration {
+  readonly kind: 'perBiome';
+  readonly min: number;
+  readonly max: number;
+  readonly tag: number;
+}
+
+export type DraftOptionDeclaration =
+  | IntegerDraftOptionDeclaration
+  | FlagDraftOptionDeclaration
+  | ChoiceDraftOptionDeclaration
+  | PerBiomeDraftOptionDeclaration;
+
+type DraftWorldKey =
+  | 'godKeys'
+  | 'storyNpcByBiome'
+  | 'fieldNpcsByBiome'
+  | 'basketTraitKeys'
+  | 'rackKeepsakeByBiome'
+  | 'seed';
+
+/** Every optional spec field: the Advanced options, saved only when they differ from defaults. */
+export type DraftOptionKey = Exclude<keyof AuthoredDraftSpec, DraftWorldKey>;
+
+/** The Advanced options in saved key order. A tag names the option in a share code; never reuse one. */
+export const DRAFT_OPTIONS = deepFreeze({
+  preferMidshops: { kind: 'flag', tag: 0 },
+  pursueTartarusGoal: { kind: 'flag', tag: 1 },
+  godBoonsByBiome: { kind: 'perBiome', min: 0, max: 10, tag: 2 },
+  // Ten is past any god's useful core and other boons; under Denial the default is 4.
+  perGodCap: { kind: 'integer', min: 1, max: 10, default: 5, contextualDefault: true, tag: 3 },
+  roomForcing: {
+    kind: 'choice',
+    choices: ['deadline', 'softened', 'game'],
+    default: 'softened',
+    tag: 4,
+  },
+  // Shop god boon purchases per planned biome; 0 never buys a god boon.
+  purchasesPerBiome: { kind: 'integer', min: 0, max: 4, default: 2, tag: 5 },
+  // Further attempts per biome after its first success.
+  retriesPerBiome: { kind: 'integer', min: 0, max: 10, default: 3, tag: 6 },
+  // Percent chance a room rolls a resource point.
+  resourceRoomChance: { kind: 'integer', min: 0, max: 50, step: 5, default: 10, tag: 7 },
+} as const satisfies { readonly [K in DraftOptionKey]: DraftOptionDeclaration });
+
+export const DRAFT_OPTION_KEYS = Object.freeze(Object.keys(DRAFT_OPTIONS) as DraftOptionKey[]);
+
+function deepFreeze<T extends object>(value: T): T {
+  for (const entry of Object.values(value))
+    if (typeof entry === 'object' && entry !== null) deepFreeze(entry);
+  return Object.freeze(value);
+}
 
 /**
  * Each biome's default planned god boons by biome key: the god boons a draft usually gains there,
@@ -71,8 +121,63 @@ export function defaultDraftGodBoons(routeKey: string, biomeKey: string): number
   );
 }
 
-const clamp = (value: number, range: { readonly min: number; readonly max: number }) =>
-  Math.min(Math.max(Math.round(value), range.min), range.max);
+/** The options a single setter edits; `godBoonsByBiome` is set per biome. */
+export type ScalarDraftOptionKey = Exclude<DraftOptionKey, 'godBoonsByBiome'>;
+
+/** A flag is set on or off; other options take their stored value. */
+export type DraftOptionValue<K extends ScalarDraftOptionKey> =
+  (typeof DRAFT_OPTIONS)[K] extends FlagDraftOptionDeclaration
+    ? boolean
+    : NonNullable<AuthoredDraftSpec[K]>;
+
+function clampToStep(
+  value: number,
+  range: { readonly min: number; readonly max: number; readonly step?: number },
+): number {
+  const step = range.step ?? 1;
+  return Math.min(Math.max(Math.round(value / step) * step, range.min), range.max);
+}
+
+/** An option's value as saved, or undefined for a value of the wrong type or an off flag. */
+function normalizedOption(
+  declaration: Exclude<DraftOptionDeclaration, PerBiomeDraftOptionDeclaration>,
+  value: unknown,
+): unknown {
+  switch (declaration.kind) {
+    case 'flag':
+      return value === true ? true : undefined;
+    case 'integer':
+      return typeof value === 'number' && Number.isFinite(value)
+        ? clampToStep(value, declaration)
+        : undefined;
+    case 'choice':
+      return typeof value === 'string' && declaration.choices.includes(value) ? value : undefined;
+  }
+}
+
+function withoutKey(draft: AuthoredDraftSpec, key: DraftOptionKey): AuthoredDraftSpec {
+  const { [key]: _old, ...rest } = draft;
+  void _old;
+  return rest;
+}
+
+/**
+ * Sets one option, clamped to its range and steps; a value equal to the default is not stored.
+ * `defaultValue` overrides a contextual default (the per-god cap is 4 under Denial).
+ */
+export function withDraftOption<K extends ScalarDraftOptionKey>(
+  draft: AuthoredDraftSpec,
+  key: K,
+  value: DraftOptionValue<K>,
+  defaultValue?: DraftOptionValue<K>,
+): AuthoredDraftSpec {
+  const declaration: Exclude<DraftOptionDeclaration, PerBiomeDraftOptionDeclaration> =
+    DRAFT_OPTIONS[key];
+  const stored = normalizedOption(declaration, value);
+  const rest = withoutKey(draft, key);
+  const unstored = defaultValue ?? (declaration.kind === 'flag' ? undefined : declaration.default);
+  return stored === undefined || stored === unstored ? rest : { ...rest, [key]: stored };
+}
 
 /** Sets one biome's planned god boons, clamped; its biome's default is not stored. */
 export function withDraftGodBoons(
@@ -83,165 +188,23 @@ export function withDraftGodBoons(
 ): AuthoredDraftSpec {
   const { [biomeKey]: _previous, ...others } = draft.godBoonsByBiome ?? {};
   void _previous;
-  const clamped = clamp(value, DRAFT_GOD_BOONS_RANGE);
+  const clamped = clampToStep(value, DRAFT_OPTIONS.godBoonsByBiome);
   const godBoonsByBiome =
     clamped === defaultDraftGodBoons(routeKey, biomeKey)
       ? others
       : { ...others, [biomeKey]: clamped };
-  const { godBoonsByBiome: _old, ...rest } = draft;
-  void _old;
+  const rest = withoutKey(draft, 'godBoonsByBiome');
   return Object.keys(godBoonsByBiome).length === 0 ? rest : { ...rest, godBoonsByBiome };
 }
 
-/**
- * Sets the per-god cap, clamped; the current default (5, or 4 under Denial) is not stored.
- * A stored value is absolute, so it holds when Denial is toggled later.
- */
-export function withDraftPerGodCap(
-  draft: AuthoredDraftSpec,
-  value: number,
-  defaultValue: number = DEFAULT_DRAFT_PER_GOD_CAP,
-): AuthoredDraftSpec {
-  const { perGodCap: _old, ...rest } = draft;
-  void _old;
-  const clamped = clamp(value, DRAFT_PER_GOD_CAP_RANGE);
-  return clamped === defaultValue ? rest : { ...rest, perGodCap: clamped };
-}
-
-/** The Tartarus goal preference is stored only when on. */
-export function withDraftPursueTartarusGoal(
-  draft: AuthoredDraftSpec,
-  on: boolean,
-): AuthoredDraftSpec {
-  const { pursueTartarusGoal: _pursueTartarusGoal, ...rest } = draft;
-  void _pursueTartarusGoal;
-  return on ? { ...rest, pursueTartarusGoal: true } : rest;
-}
-
-/** The room forcing is stored only when not the softened default. */
-export function withDraftRoomForcing(
-  draft: AuthoredDraftSpec,
-  forcing: DraftRoomForcing,
-): AuthoredDraftSpec {
-  const { roomForcing: _old, ...rest } = draft;
-  void _old;
-  return forcing === DEFAULT_DRAFT_ROOM_FORCING ? rest : { ...rest, roomForcing: forcing };
-}
-
-/** Sets the Shop purchase pace, clamped; the default is not stored. */
-export function withDraftPurchasesPerBiome(
-  draft: AuthoredDraftSpec,
-  value: number,
-): AuthoredDraftSpec {
-  const { purchasesPerBiome: _old, ...rest } = draft;
-  void _old;
-  const clamped = clamp(value, DRAFT_PURCHASES_PER_BIOME_RANGE);
-  return clamped === DEFAULT_DRAFT_PURCHASES_PER_BIOME
-    ? rest
-    : { ...rest, purchasesPerBiome: clamped };
-}
-
-/** Sets the retries per biome, clamped; the default is not stored. */
-export function withDraftRetriesPerBiome(
-  draft: AuthoredDraftSpec,
-  value: number,
-): AuthoredDraftSpec {
-  const { retriesPerBiome: _old, ...rest } = draft;
-  void _old;
-  const clamped = clamp(value, DRAFT_RETRIES_PER_BIOME_RANGE);
-  return clamped === DEFAULT_DRAFT_RETRIES_PER_BIOME ? rest : { ...rest, retriesPerBiome: clamped };
-}
-
-/** Sets the resource room chance in percent, clamped to its steps; the default is not stored. */
-export function withDraftResourceRoomChance(
-  draft: AuthoredDraftSpec,
-  value: number,
-): AuthoredDraftSpec {
-  const { resourceRoomChance: _old, ...rest } = draft;
-  void _old;
-  const { step } = DRAFT_RESOURCE_ROOM_CHANCE_RANGE;
-  const clamped = clamp(Math.round(value / step) * step, DRAFT_RESOURCE_ROOM_CHANCE_RANGE);
-  return clamped === DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE
-    ? rest
-    : { ...rest, resourceRoomChance: clamped };
-}
-
-/** The Advanced options: every stored field the Advanced tab sets. */
-const ADVANCED_KEYS = [
-  'godBoonsByBiome',
-  'perGodCap',
-  'roomForcing',
-  'resourceRoomChance',
-  'purchasesPerBiome',
-  'retriesPerBiome',
-  'preferMidshops',
-  'pursueTartarusGoal',
-] as const satisfies readonly (keyof AuthoredDraftSpec)[];
-
 /** Whether any Advanced option differs from its default; a default is never stored. */
 export function draftAdvancedChanged(draft: AuthoredDraftSpec): boolean {
-  return ADVANCED_KEYS.some((key) => draft[key] !== undefined);
+  return DRAFT_OPTION_KEYS.some((key) => draft[key] !== undefined);
 }
 
 /** Every Advanced option back to its default in one edit. */
 export function withDraftAdvancedDefaults(draft: AuthoredDraftSpec): AuthoredDraftSpec {
-  const advanced: ReadonlySet<string> = new Set(ADVANCED_KEYS);
-  return Object.fromEntries(
-    Object.entries(draft).filter(([key]) => !advanced.has(key)),
-  ) as unknown as AuthoredDraftSpec;
-}
-
-/** The midshop preference is stored only when on. */
-export function withDraftPreferMidshops(draft: AuthoredDraftSpec, on: boolean): AuthoredDraftSpec {
-  const { preferMidshops: _preferMidshops, ...rest } = draft;
-  void _preferMidshops;
-  return on ? { ...rest, preferMidshops: true } : rest;
-}
-
-function expectInRange(
-  value: unknown,
-  path: string,
-  range: { readonly min: number; readonly max: number },
-): number {
-  const number = expectNonNegativeInteger(value, path);
-  if (number < range.min || number > range.max)
-    fail(path, `must be from ${range.min} to ${range.max}`);
-  return number;
-}
-
-function distinctKeys(
-  value: unknown,
-  path: string,
-  known: (key: string) => boolean,
-  what: string,
-): readonly string[] {
-  const keys = expectArray(value, path).map((entry, index) => {
-    const key = expectString(entry, `${path}[${index}]`);
-    if (!known(key)) fail(`${path}[${index}]`, `unknown ${what} ${key}`);
-    return key;
-  });
-  if (new Set(keys).size !== keys.length) fail(path, `duplicates a ${what}`);
-  return Object.freeze(keys);
-}
-
-function biomeRecord<T>(
-  value: unknown,
-  path: string,
-  catalog: Catalog,
-  decode: (entry: unknown, path: string) => T,
-): Readonly<Record<string, T>> {
-  const record = expectRecord(value, path);
-  for (const biomeKey of Object.keys(record))
-    if (catalog.biomes.byKey[biomeKey] === undefined)
-      fail(`${path}.${biomeKey}`, `unknown biome ${biomeKey}`);
-  // Catalog biome order keeps the saved record stable whatever order it was authored in.
-  return Object.freeze(
-    Object.fromEntries(
-      catalog.biomes.values
-        .filter((biome) => Object.hasOwn(record, biome.key))
-        .map((biome) => [biome.key, decode(record[biome.key], `${path}.${biome.key}`)]),
-    ),
-  );
+  return DRAFT_OPTION_KEYS.reduce(withoutKey, draft);
 }
 
 /** The gods and NPCs a draft spec may name, in catalog order; the draft world reads the same facts. */
@@ -274,165 +237,117 @@ export function draftSpecCatalogKeys(catalog: Catalog): {
   });
 }
 
+const asArray = (value: unknown): readonly unknown[] => (Array.isArray(value) ? value : []);
+
+const asRecord = (value: unknown): Readonly<Record<string, unknown>> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+
+/** Known string keys in order, each at its first occurrence. */
+function knownKeys(value: unknown, known: (key: string) => boolean): readonly string[] {
+  return Object.freeze([
+    ...new Set(
+      asArray(value).filter((key): key is string => typeof key === 'string' && known(key)),
+    ),
+  ]);
+}
+
+/** Entries under catalog biomes, in catalog biome order; an entry that decodes to undefined drops. */
+function biomeRecord<T>(
+  value: unknown,
+  catalog: Catalog,
+  decode: (entry: unknown, biomeKey: string) => T | undefined,
+): Readonly<Record<string, T>> {
+  const record = asRecord(value);
+  return Object.freeze(
+    Object.fromEntries(
+      catalog.biomes.values.flatMap((biome) => {
+        if (!Object.hasOwn(record, biome.key)) return [];
+        const decoded = decode(record[biome.key], biome.key);
+        return decoded === undefined ? [] : [[biome.key, decoded]];
+      }),
+    ),
+  );
+}
+
+const knownKey = (known: (key: string) => boolean) => (entry: unknown) =>
+  typeof entry === 'string' && known(entry) ? entry : undefined;
+
 /**
- * Strict on keys and catalog references; biomes off the itinerary are kept, and a planned god
- * boon count equal to its route's default is dropped, as the setter never stores one.
+ * Tolerant: the spec is a recipe, not plan legality. Unknown keys, references and biomes drop,
+ * duplicates keep their first occurrence, a value of the wrong type takes its default, a number
+ * clamps to its range and steps, and a value equal to its default is not stored. Biomes off the
+ * itinerary are kept.
  */
 export function decodeDraftSpec(
   value: unknown,
-  path: string,
   catalog: Catalog,
   routeKey: string,
 ): AuthoredDraftSpec {
-  const raw = expectRecord(value, path);
-  expectExactKeys(
-    raw,
-    [
-      'godKeys',
-      'storyNpcByBiome',
-      'fieldNpcsByBiome',
-      'basketTraitKeys',
-      'rackKeepsakeByBiome',
-      'seed',
-      'preferMidshops',
-      'godBoonsByBiome',
-      'perGodCap',
-      'pursueTartarusGoal',
-      'roomForcing',
-      'purchasesPerBiome',
-      'retriesPerBiome',
-      'resourceRoomChance',
-    ],
-    path,
-  );
-  for (const flag of ['preferMidshops', 'pursueTartarusGoal'])
-    if (Object.hasOwn(raw, flag) && raw[flag] !== true)
-      fail(`${path}.${flag}`, 'must be true when present');
+  const raw = asRecord(value);
   const keys = draftSpecCatalogKeys(catalog);
   const godKeys = new Set(keys.godKeys);
   const storyNpcKeys = new Set(keys.storyNpcKeys);
   const fieldNpcKeys = new Set(keys.fieldNpcKeys);
-  const seed = expectNonNegativeInteger(raw.seed, `${path}.seed`);
-  if (seed > MAX_DRAFT_SEED) fail(`${path}.seed`, `exceeds ${MAX_DRAFT_SEED}`);
+  const seed =
+    Number.isInteger(raw.seed) &&
+    (raw.seed as number) >= 0 &&
+    (raw.seed as number) <= MAX_DRAFT_SEED
+      ? (raw.seed as number)
+      : EMPTY_DRAFT_SPEC.seed;
+  const options = Object.fromEntries(
+    DRAFT_OPTION_KEYS.flatMap((key) => {
+      const declaration: DraftOptionDeclaration = DRAFT_OPTIONS[key];
+      const stored =
+        declaration.kind === 'perBiome'
+          ? godBoonOverrides(raw[key], declaration, catalog, routeKey)
+          : normalizedOption(declaration, raw[key]);
+      const defaultValue =
+        declaration.kind === 'choice' ||
+        (declaration.kind === 'integer' && declaration.contextualDefault !== true)
+          ? declaration.default
+          : undefined;
+      return stored === undefined || stored === defaultValue ? [] : [[key, stored]];
+    }),
+  );
   return Object.freeze({
-    godKeys: distinctKeys(raw.godKeys, `${path}.godKeys`, (key) => godKeys.has(key), 'god'),
+    godKeys: knownKeys(raw.godKeys, (key) => godKeys.has(key)),
     storyNpcByBiome: biomeRecord(
       raw.storyNpcByBiome,
-      `${path}.storyNpcByBiome`,
       catalog,
-      (e, p) => {
-        const key = expectString(e, p);
-        if (!storyNpcKeys.has(key)) fail(p, `unknown story NPC ${key}`);
-        return key;
-      },
+      knownKey((key) => storyNpcKeys.has(key)),
     ),
-    fieldNpcsByBiome: biomeRecord(
-      raw.fieldNpcsByBiome,
-      `${path}.fieldNpcsByBiome`,
-      catalog,
-      (e, p) => distinctKeys(e, p, (key) => fieldNpcKeys.has(key), 'field NPC'),
+    fieldNpcsByBiome: biomeRecord(raw.fieldNpcsByBiome, catalog, (entry) =>
+      Array.isArray(entry) ? knownKeys(entry, (key) => fieldNpcKeys.has(key)) : undefined,
     ),
-    basketTraitKeys: distinctKeys(
+    basketTraitKeys: knownKeys(
       raw.basketTraitKeys,
-      `${path}.basketTraitKeys`,
       (key) => catalog.traits.byKey[key] !== undefined,
-      'trait',
     ),
     rackKeepsakeByBiome: biomeRecord(
       raw.rackKeepsakeByBiome,
-      `${path}.rackKeepsakeByBiome`,
       catalog,
-      (e, p) => {
-        const key = expectString(e, p);
-        if (catalog.keepsakes.byKey[key] === undefined) fail(p, `unknown keepsake ${key}`);
-        return key;
-      },
+      knownKey((key) => catalog.keepsakes.byKey[key] !== undefined),
     ),
     seed,
-    ...(raw.preferMidshops === true ? { preferMidshops: true as const } : {}),
-    ...(raw.pursueTartarusGoal === true ? { pursueTartarusGoal: true as const } : {}),
-    ...godBoonOverrides(raw.godBoonsByBiome, `${path}.godBoonsByBiome`, catalog, routeKey),
-    ...(raw.perGodCap === undefined
-      ? {}
-      : { perGodCap: expectInRange(raw.perGodCap, `${path}.perGodCap`, DRAFT_PER_GOD_CAP_RANGE) }),
-    ...nonDefault(
-      'roomForcing',
-      raw.roomForcing === undefined ? undefined : roomForcing(raw.roomForcing, path),
-      DEFAULT_DRAFT_ROOM_FORCING,
-    ),
-    ...nonDefault(
-      'purchasesPerBiome',
-      raw.purchasesPerBiome === undefined
-        ? undefined
-        : expectInRange(
-            raw.purchasesPerBiome,
-            `${path}.purchasesPerBiome`,
-            DRAFT_PURCHASES_PER_BIOME_RANGE,
-          ),
-      DEFAULT_DRAFT_PURCHASES_PER_BIOME,
-    ),
-    ...nonDefault(
-      'retriesPerBiome',
-      raw.retriesPerBiome === undefined
-        ? undefined
-        : expectInRange(
-            raw.retriesPerBiome,
-            `${path}.retriesPerBiome`,
-            DRAFT_RETRIES_PER_BIOME_RANGE,
-          ),
-      DEFAULT_DRAFT_RETRIES_PER_BIOME,
-    ),
-    ...nonDefault(
-      'resourceRoomChance',
-      raw.resourceRoomChance === undefined
-        ? undefined
-        : resourceRoomChance(raw.resourceRoomChance, `${path}.resourceRoomChance`),
-      DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE,
-    ),
+    ...options,
   });
 }
 
-/** A decoded option equal to its default is dropped, as its setter never stores one. */
-function nonDefault<K extends string, T>(
-  key: K,
-  value: T | undefined,
-  defaultValue: T,
-): { readonly [P in K]?: T } {
-  return (value === undefined || value === defaultValue ? {} : { [key]: value }) as {
-    readonly [P in K]?: T;
-  };
-}
-
-function roomForcing(value: unknown, path: string): DraftRoomForcing {
-  const forcing = expectString(value, `${path}.roomForcing`);
-  if (!(DRAFT_ROOM_FORCINGS as readonly string[]).includes(forcing))
-    fail(`${path}.roomForcing`, `unknown room forcing ${forcing}`);
-  return forcing as DraftRoomForcing;
-}
-
-function resourceRoomChance(value: unknown, path: string): number {
-  const chance = expectInRange(value, path, DRAFT_RESOURCE_ROOM_CHANCE_RANGE);
-  if (chance % DRAFT_RESOURCE_ROOM_CHANCE_RANGE.step !== 0)
-    fail(path, `must be a multiple of ${DRAFT_RESOURCE_ROOM_CHANCE_RANGE.step}`);
-  return chance;
-}
-
+/** Planned god boons that differ from their biome's default, or undefined when none do. */
 function godBoonOverrides(
   value: unknown,
-  path: string,
+  declaration: PerBiomeDraftOptionDeclaration,
   catalog: Catalog,
   routeKey: string,
-): { readonly godBoonsByBiome?: Readonly<Record<string, number>> } {
-  if (value === undefined) return {};
-  const decoded = biomeRecord(value, path, catalog, (e, p) =>
-    expectInRange(e, p, DRAFT_GOD_BOONS_RANGE),
-  );
-  const overrides = Object.entries(decoded).filter(
-    ([biomeKey, count]) => count !== defaultDraftGodBoons(routeKey, biomeKey),
-  );
-  return overrides.length === 0
-    ? {}
-    : { godBoonsByBiome: Object.freeze(Object.fromEntries(overrides)) };
+): Readonly<Record<string, number>> | undefined {
+  const overrides = biomeRecord(value, catalog, (entry, biomeKey) => {
+    if (typeof entry !== 'number' || !Number.isFinite(entry)) return undefined;
+    const count = clampToStep(entry, declaration);
+    return count === defaultDraftGodBoons(routeKey, biomeKey) ? undefined : count;
+  });
+  return Object.keys(overrides).length === 0 ? undefined : overrides;
 }
 
 function sameKeys(left: readonly string[], right: readonly string[]): boolean {
@@ -453,17 +368,14 @@ function sameRecord<T>(
 
 /** Structural equality; record key order is not meaning. */
 export function sameDraftSpec(left: AuthoredDraftSpec, right: AuthoredDraftSpec): boolean {
-  const same = (a: string, b: string) => a === b;
+  const same = (a: unknown, b: unknown) => a === b;
   return (
     left.seed === right.seed &&
-    left.preferMidshops === right.preferMidshops &&
-    left.pursueTartarusGoal === right.pursueTartarusGoal &&
-    left.perGodCap === right.perGodCap &&
-    left.roomForcing === right.roomForcing &&
-    left.purchasesPerBiome === right.purchasesPerBiome &&
-    left.retriesPerBiome === right.retriesPerBiome &&
-    left.resourceRoomChance === right.resourceRoomChance &&
-    sameRecord(left.godBoonsByBiome ?? {}, right.godBoonsByBiome ?? {}, (a, b) => a === b) &&
+    DRAFT_OPTION_KEYS.every((key) =>
+      DRAFT_OPTIONS[key].kind === 'perBiome'
+        ? sameRecord(asRecord(left[key]), asRecord(right[key]), same)
+        : left[key] === right[key],
+    ) &&
     sameKeys(left.godKeys, right.godKeys) &&
     sameKeys(left.basketTraitKeys, right.basketTraitKeys) &&
     sameRecord(left.storyNpcByBiome, right.storyNpcByBiome, same) &&

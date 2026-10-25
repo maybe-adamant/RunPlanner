@@ -7,14 +7,11 @@ import {
 import { ProjectCommandContractError } from './commands/contract';
 import type { ProjectCommand } from './commands/dispatch';
 import {
-  DRAFT_GOD_BOONS_RANGE,
-  DRAFT_PER_GOD_CAP_RANGE,
-  DRAFT_PURCHASES_PER_BIOME_RANGE,
-  DRAFT_RESOURCE_ROOM_CHANCE_RANGE,
-  DRAFT_RETRIES_PER_BIOME_RANGE,
-  DRAFT_ROOM_FORCINGS,
+  DRAFT_OPTION_KEYS,
+  DRAFT_OPTIONS,
   decodeDraftSpec,
   draftSpecCatalogKeys,
+  type DraftOptionDeclaration,
 } from './draft-spec';
 import { assessPublicDreamItinerary } from './dream-itinerary';
 import { assessStartingArcanaGrasp } from './loadout';
@@ -26,7 +23,6 @@ import type {
   RouteLoadout,
 } from './model';
 import { routeInitialProfile } from './route-profile';
-import { ProjectDocumentContractError } from './validation';
 import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from './traits/hex-tree';
 import { hexNodeTalentDomain } from './traits/hex-talent-tree';
 import {
@@ -69,7 +65,7 @@ export type DraftShareCodeDecoding =
   | { readonly ok: true; readonly inputs: DraftShareInputs }
   | { readonly ok: false; readonly refusal: DraftShareCodeRefusal };
 
-const LAYOUT_VERSION = 2;
+const LAYOUT_VERSION = 3;
 const FINGERPRINT_CHARS = 3;
 /** Crockford base32: no I, L, O or U, read case-insensitively. */
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
@@ -165,16 +161,6 @@ function fingerprint(catalog: Catalog, lists: ShareLists): string {
       : [dream.biomeCount, ...dream.initialBiomeKeys, '/', ...dream.laterAdditionalBiomeKeys],
     lists.routeKeys.filter((routeKey) => fixedLoadout(catalog, routeKey)),
     catalog.aspects.values.filter((aspect) => isSelene(catalog, aspect.key)).map((a) => a.key),
-    [DRAFT_GOD_BOONS_RANGE.min, DRAFT_GOD_BOONS_RANGE.max],
-    [DRAFT_PER_GOD_CAP_RANGE.min, DRAFT_PER_GOD_CAP_RANGE.max],
-    DRAFT_ROOM_FORCINGS,
-    [DRAFT_PURCHASES_PER_BIOME_RANGE.min, DRAFT_PURCHASES_PER_BIOME_RANGE.max],
-    [DRAFT_RETRIES_PER_BIOME_RANGE.min, DRAFT_RETRIES_PER_BIOME_RANGE.max],
-    [
-      DRAFT_RESOURCE_ROOM_CHANCE_RANGE.min,
-      DRAFT_RESOURCE_ROOM_CHANCE_RANGE.max,
-      DRAFT_RESOURCE_ROOM_CHANCE_RANGE.step,
-    ],
     lists.blessings.map((blessing) => `${blessing.key}:${blessing.operandKeys.join(',')}`),
     POM_RARITIES,
     lists.hex?.layouts.values.map((layout) => layout.key) ?? [],
@@ -219,11 +205,19 @@ class BitWriter {
   }
   /** A length-prefixed unsigned integer up to 32 bits. */
   uint(value: number): void {
-    const width = value === 0 ? 0 : Math.floor(Math.log2(value)) + 1;
-    this.write(width, 6);
-    this.write(value, width);
+    this.write(bitWidth(value), 6);
+    this.write(value, bitWidth(value));
+  }
+  /** A count behind its width, which takes `prefix` bits. */
+  count(value: number, prefix: number): void {
+    if (bitWidth(value) >= 2 ** prefix) throw new Error(`share code cannot count ${value}`);
+    this.write(bitWidth(value), prefix);
+    this.write(value, bitWidth(value));
   }
 }
+
+/** Bits to hold this unsigned value. */
+const bitWidth = (value: number): number => (value === 0 ? 0 : Math.floor(Math.log2(value)) + 1);
 
 class BitReader {
   private position = 0;
@@ -247,6 +241,15 @@ class BitReader {
     if (width > 32) throw new Malformed();
     return this.read(width);
   }
+  count(prefix: number): number {
+    return this.read(this.read(prefix));
+  }
+  /** The next `width` bits as their own reader. */
+  slice(width: number): BitReader {
+    if (this.position + width > this.bits.length) throw new Malformed();
+    this.position += width;
+    return new BitReader(this.bits.slice(this.position - width, this.position));
+  }
   /** Only the zero padding of the last character may remain. */
   finish(): void {
     const rest = this.bits.slice(this.position);
@@ -257,15 +260,14 @@ class BitReader {
 function writeBiomeRecord<T>(
   writer: BitWriter,
   lists: ShareLists,
-  record: Readonly<Record<string, T>> | undefined,
+  record: Readonly<Record<string, T>>,
   writeValue: (value: T) => void,
 ): void {
-  const entries = record ?? {};
-  writer.flag(Object.keys(entries).length > 0);
-  if (Object.keys(entries).length === 0) return;
+  writer.flag(Object.keys(record).length > 0);
+  if (Object.keys(record).length === 0) return;
   for (const biomeKey of lists.biomeKeys) {
-    writer.flag(Object.hasOwn(entries, biomeKey));
-    if (Object.hasOwn(entries, biomeKey)) writeValue(entries[biomeKey]!);
+    writer.flag(Object.hasOwn(record, biomeKey));
+    if (Object.hasOwn(record, biomeKey)) writeValue(record[biomeKey]!);
   }
 }
 
@@ -292,23 +294,91 @@ const writeKeyList = (
 const readKeyList = (reader: BitReader, list: readonly string[]): string[] =>
   Array.from({ length: reader.read(widthFor(list.length + 1)) }, () => reader.index(list));
 
-const GOD_BOONS_WIDTH = widthFor(DRAFT_GOD_BOONS_RANGE.max + 1);
-const PER_GOD_CAP_WIDTH = widthFor(DRAFT_PER_GOD_CAP_RANGE.max + 1);
-const PURCHASES_WIDTH = widthFor(DRAFT_PURCHASES_PER_BIOME_RANGE.max + 1);
-const RETRIES_WIDTH = widthFor(DRAFT_RETRIES_PER_BIOME_RANGE.max + 1);
-/** The resource room chance travels in its steps. */
-const RESOURCE_STEPS_WIDTH = widthFor(
-  DRAFT_RESOURCE_ROOM_CHANCE_RANGE.max / DRAFT_RESOURCE_ROOM_CHANCE_RANGE.step + 1,
-);
+const TAG_WIDTH = 5;
+/** Width prefixes: option counts stay below 128, payload lengths below 2^15. */
+const COUNT_PREFIX = 3;
+const LENGTH_PREFIX = 4;
 
-/** An optional number: a presence flag, then the value. */
-function writeOptional(writer: BitWriter, value: number | undefined, width: number): void {
-  writer.flag(value !== undefined);
-  if (value !== undefined) writer.write(value, width);
+/**
+ * The draft: its world in fixed order, then the stored options as tagged entries (a count, then
+ * per entry its tag, payload length and payload). A whole number fills its payload.
+ */
+function writeDraft(writer: BitWriter, lists: ShareLists, draft: AuthoredDraftSpec): void {
+  writeKeyList(writer, lists.godKeys, draft.godKeys);
+  writeKeyList(writer, lists.traitKeys, draft.basketTraitKeys);
+  writeBiomeRecord(writer, lists, draft.storyNpcByBiome, (key) =>
+    writer.index(lists.storyNpcKeys, key),
+  );
+  writeBiomeRecord(writer, lists, draft.fieldNpcsByBiome, (keys) =>
+    writeKeyList(writer, lists.fieldNpcKeys, keys),
+  );
+  writeBiomeRecord(writer, lists, draft.rackKeepsakeByBiome, (key) =>
+    writer.index(lists.keepsakeKeys, key),
+  );
+  writer.uint(draft.seed);
+  const stored = DRAFT_OPTION_KEYS.filter((key) => draft[key] !== undefined);
+  writer.count(stored.length, COUNT_PREFIX);
+  for (const key of stored) {
+    const value = draft[key]!;
+    const declaration: DraftOptionDeclaration = DRAFT_OPTIONS[key];
+    const payload = new BitWriter();
+    switch (declaration.kind) {
+      case 'flag':
+        break;
+      case 'integer':
+        payload.write(value as number, bitWidth(value as number));
+        break;
+      case 'choice': {
+        const index = declaration.choices.indexOf(value as string);
+        payload.write(index, bitWidth(index));
+        break;
+      }
+      case 'perBiome':
+        writeBiomeRecord(payload, lists, value as Readonly<Record<string, number>>, (count) =>
+          payload.count(count, LENGTH_PREFIX),
+        );
+        break;
+    }
+    writer.write(declaration.tag, TAG_WIDTH);
+    writer.count(payload.bits.length, LENGTH_PREFIX);
+    writer.bits.push(...payload.bits);
+  }
 }
 
-const readOptional = (reader: BitReader, width: number): number | undefined =>
-  reader.flag() ? reader.read(width) : undefined;
+/** The raw draft fields a code carries; an unknown option tag is skipped, a repeated one ignored. */
+function readDraft(reader: BitReader, lists: ShareLists): Record<string, unknown> {
+  const raw: Record<string, unknown> = {
+    godKeys: readKeyList(reader, lists.godKeys),
+    basketTraitKeys: readKeyList(reader, lists.traitKeys),
+    storyNpcByBiome: readBiomeRecord(reader, lists, () => reader.index(lists.storyNpcKeys)),
+    fieldNpcsByBiome: readBiomeRecord(reader, lists, () => readKeyList(reader, lists.fieldNpcKeys)),
+    rackKeepsakeByBiome: readBiomeRecord(reader, lists, () => reader.index(lists.keepsakeKeys)),
+    seed: reader.uint(),
+  };
+  for (let remaining = reader.count(COUNT_PREFIX); remaining > 0; remaining -= 1) {
+    const tag = reader.read(TAG_WIDTH);
+    const length = reader.count(LENGTH_PREFIX);
+    const payload = reader.slice(length);
+    const key = DRAFT_OPTION_KEYS.find((option) => DRAFT_OPTIONS[option].tag === tag);
+    if (key === undefined || Object.hasOwn(raw, key)) continue;
+    const declaration: DraftOptionDeclaration = DRAFT_OPTIONS[key];
+    switch (declaration.kind) {
+      case 'flag':
+        raw[key] = true;
+        break;
+      case 'integer':
+        raw[key] = payload.read(length);
+        break;
+      case 'choice':
+        raw[key] = declaration.choices[payload.read(length)];
+        break;
+      case 'perBiome':
+        raw[key] = readBiomeRecord(payload, lists, () => payload.count(LENGTH_PREFIX));
+        break;
+    }
+  }
+  return raw;
+}
 
 /** The share code for these inputs: version, fingerprint, then the packed positions in base32. */
 export function encodeDraftShareCode(catalog: Catalog, inputs: DraftShareInputs): string {
@@ -348,36 +418,7 @@ export function encodeDraftShareCode(catalog: Catalog, inputs: DraftShareInputs)
     writeEquipResults(writer, lists, loadout.keepsakeEquipResults);
   }
 
-  const draft = inputs.draft;
-  writeKeyList(writer, lists.godKeys, draft.godKeys);
-  writeKeyList(writer, lists.traitKeys, draft.basketTraitKeys);
-  writeBiomeRecord(writer, lists, draft.storyNpcByBiome, (key) =>
-    writer.index(lists.storyNpcKeys, key),
-  );
-  writeBiomeRecord(writer, lists, draft.fieldNpcsByBiome, (keys) =>
-    writeKeyList(writer, lists.fieldNpcKeys, keys),
-  );
-  writeBiomeRecord(writer, lists, draft.rackKeepsakeByBiome, (key) =>
-    writer.index(lists.keepsakeKeys, key),
-  );
-  writeBiomeRecord(writer, lists, draft.godBoonsByBiome, (count) =>
-    writer.write(count, GOD_BOONS_WIDTH),
-  );
-  writeOptional(writer, draft.perGodCap, PER_GOD_CAP_WIDTH);
-  writer.flag(draft.preferMidshops === true);
-  writer.flag(draft.pursueTartarusGoal === true);
-  writer.flag(draft.roomForcing !== undefined);
-  if (draft.roomForcing !== undefined) writer.index(DRAFT_ROOM_FORCINGS, draft.roomForcing);
-  writeOptional(writer, draft.purchasesPerBiome, PURCHASES_WIDTH);
-  writeOptional(writer, draft.retriesPerBiome, RETRIES_WIDTH);
-  writeOptional(
-    writer,
-    draft.resourceRoomChance === undefined
-      ? undefined
-      : draft.resourceRoomChance / DRAFT_RESOURCE_ROOM_CHANCE_RANGE.step,
-    RESOURCE_STEPS_WIDTH,
-  );
-  writer.uint(draft.seed);
+  writeDraft(writer, lists, inputs.draft);
 
   while (writer.bits.length % 5 !== 0) writer.bits.push(0);
   let payload = '';
@@ -432,7 +473,7 @@ function readHexTree(
 
 /**
  * Reads a share code, refusing one from another layout, catalog or route rather than
- * decoding it into other keys. The spec passes the project codec's draft spec validation.
+ * decoding it into other keys. The draft passes the project codec's tolerant draft decode.
  */
 export function decodeDraftShareCode(
   catalog: Catalog,
@@ -458,8 +499,7 @@ export function decodeDraftShareCode(
   try {
     inputs = readInputs(new BitReader(bits), catalog, lists);
   } catch (error) {
-    if (error instanceof Malformed || error instanceof ProjectDocumentContractError)
-      return refuse('malformed');
+    if (error instanceof Malformed) return refuse('malformed');
     throw error;
   }
   if (
@@ -527,48 +567,8 @@ function readInputs(reader: BitReader, catalog: Catalog, lists: ShareLists): Dra
     if (keepsakeEquipResults !== undefined) loadout = { ...loadout, keepsakeEquipResults };
   }
 
-  const godKeys = readKeyList(reader, lists.godKeys);
-  const basketTraitKeys = readKeyList(reader, lists.traitKeys);
-  const storyNpcByBiome = readBiomeRecord(reader, lists, () => reader.index(lists.storyNpcKeys));
-  const fieldNpcsByBiome = readBiomeRecord(reader, lists, () =>
-    readKeyList(reader, lists.fieldNpcKeys),
-  );
-  const rackKeepsakeByBiome = readBiomeRecord(reader, lists, () =>
-    reader.index(lists.keepsakeKeys),
-  );
-  const godBoonsByBiome = readBiomeRecord(reader, lists, () => reader.read(GOD_BOONS_WIDTH));
-  const perGodCap = readOptional(reader, PER_GOD_CAP_WIDTH);
-  const preferMidshops = reader.flag();
-  const pursueTartarusGoal = reader.flag();
-  const roomForcing = reader.flag() ? reader.index(DRAFT_ROOM_FORCINGS) : undefined;
-  const purchasesPerBiome = readOptional(reader, PURCHASES_WIDTH);
-  const retriesPerBiome = readOptional(reader, RETRIES_WIDTH);
-  const resourceSteps = readOptional(reader, RESOURCE_STEPS_WIDTH);
-  const seed = reader.uint();
+  const draft = decodeDraftSpec(readDraft(reader, lists), catalog, routeKey);
   reader.finish();
-  const draft = decodeDraftSpec(
-    {
-      godKeys,
-      storyNpcByBiome,
-      fieldNpcsByBiome,
-      basketTraitKeys,
-      rackKeepsakeByBiome,
-      seed,
-      ...(Object.keys(godBoonsByBiome).length === 0 ? {} : { godBoonsByBiome }),
-      ...(perGodCap === undefined ? {} : { perGodCap }),
-      ...(preferMidshops ? { preferMidshops: true } : {}),
-      ...(pursueTartarusGoal ? { pursueTartarusGoal: true } : {}),
-      ...(roomForcing === undefined ? {} : { roomForcing }),
-      ...(purchasesPerBiome === undefined ? {} : { purchasesPerBiome }),
-      ...(retriesPerBiome === undefined ? {} : { retriesPerBiome }),
-      ...(resourceSteps === undefined
-        ? {}
-        : { resourceRoomChance: resourceSteps * DRAFT_RESOURCE_ROOM_CHANCE_RANGE.step }),
-    },
-    'draft',
-    catalog,
-    routeKey,
-  );
   return Object.freeze({
     routeKey,
     itineraryBiomeKeys: Object.freeze([...itineraryBiomeKeys]),

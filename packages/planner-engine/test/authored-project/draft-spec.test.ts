@@ -11,17 +11,11 @@ import {
   encodeProjectDocument,
   MAX_DRAFT_SEED,
   sameDraftSpec,
+  DRAFT_OPTIONS,
   draftAdvancedChanged,
   withDraftAdvancedDefaults,
   withDraftGodBoons,
-  withDraftPerGodCap,
-  withDraftPreferMidshops,
-  withDraftPurchasesPerBiome,
-  withDraftResourceRoomChance,
-  withDraftRetriesPerBiome,
-  withDraftRoomForcing,
-  ProjectCommandContractError,
-  ProjectDocumentContractError,
+  withDraftOption,
   undoProjectHistory,
   type AuthoredDraftSpec,
 } from '@run-planner/engine/authored-project';
@@ -52,6 +46,7 @@ const withRawDraft = (value: unknown): unknown => ({
   ...project(),
   route: { ...project().route, draft: value },
 });
+const decoded = (value: unknown) => decodeProjectDocument(withRawDraft(value), catalog).route.draft;
 
 describe('draft spec', () => {
   it('starts empty with the first seed on every new route', () => {
@@ -66,22 +61,19 @@ describe('draft spec', () => {
     });
   });
 
-  it('saves the midshop and Tartarus preferences only when on, and refuses any value but true', () => {
+  it('saves the midshop and Tartarus preferences only when on; any other value is off', () => {
     const on = { ...draft, preferMidshops: true as const };
-    const decoded = (value: unknown) =>
-      decodeProjectDocument(withRawDraft(value), catalog).route.draft;
     expect(decoded(on)).toEqual(on);
     expect(decoded(draft)).not.toHaveProperty('preferMidshops');
-    expect(() => decoded({ ...draft, preferMidshops: false })).toThrow(
-      ProjectDocumentContractError,
-    );
+    expect(decoded({ ...draft, preferMidshops: false })).toEqual(draft);
+    expect(decoded({ ...draft, preferMidshops: 'yes' })).toEqual(draft);
     expect(decoded({ ...draft, pursueTartarusGoal: true })).toEqual({
       ...draft,
       pursueTartarusGoal: true,
     });
-    expect(() => decoded({ ...draft, pursueTartarusGoal: false })).toThrow(
-      ProjectDocumentContractError,
-    );
+    expect(decoded({ ...draft, pursueTartarusGoal: 1 })).toEqual(draft);
+    expect(withDraftOption(draft, 'preferMidshops', true)).toEqual(on);
+    expect(withDraftOption(on, 'preferMidshops', false)).toEqual(draft);
     expect(sameDraftSpec({ ...draft, pursueTartarusGoal: true }, draft)).toBe(false);
     expect(sameDraftSpec(on, draft)).toBe(false);
     expect(sameDraftSpec(on, { ...on })).toBe(true);
@@ -93,14 +85,12 @@ describe('draft spec', () => {
     expect(raised.godBoonsByBiome).toEqual({ G: 10 });
     expect(withDraftGodBoons(raised, 'Underworld', 'G', 2)).toEqual(draft);
     expect(withDraftGodBoons(draft, 'Underworld', 'F', -2).godBoonsByBiome).toEqual({ F: 0 });
-    expect(withDraftPerGodCap(draft, 5)).toEqual(draft);
+    expect(withDraftOption(draft, 'perGodCap', 5)).toEqual(draft);
     // Under Denial the default is 4; a stored 5 is absolute.
-    expect(withDraftPerGodCap(draft, 4, 4)).toEqual(draft);
-    expect(withDraftPerGodCap(draft, 5, 4).perGodCap).toBe(5);
-    expect(withDraftPerGodCap(draft, 0).perGodCap).toBe(1);
-    expect(withDraftPerGodCap(draft, 99).perGodCap).toBe(10);
-    const decoded = (value: unknown) =>
-      decodeProjectDocument(withRawDraft(value), catalog).route.draft;
+    expect(withDraftOption(draft, 'perGodCap', 4, 4)).toEqual(draft);
+    expect(withDraftOption(draft, 'perGodCap', 5, 4).perGodCap).toBe(5);
+    expect(withDraftOption(draft, 'perGodCap', 0).perGodCap).toBe(1);
+    expect(withDraftOption(draft, 'perGodCap', 99).perGodCap).toBe(10);
     expect(decoded({ ...draft, godBoonsByBiome: { G: 6 }, perGodCap: 7 })).toEqual({
       ...draft,
       godBoonsByBiome: { G: 6 },
@@ -111,31 +101,26 @@ describe('draft spec', () => {
       G: 6,
     });
     expect(decoded({ ...draft, godBoonsByBiome: { G: 2 } })).toEqual(draft);
-    for (const bad of [
-      { godBoonsByBiome: { G: 11 } },
-      { godBoonsByBiome: { Z: 4 } },
-      { perGodCap: 0 },
-      { perGodCap: 11 },
-    ])
-      expect(() => decoded({ ...draft, ...bad })).toThrow(ProjectDocumentContractError);
+    // A stored per-god cap is absolute, so one equal to the plain default is kept.
+    expect(decoded({ ...draft, perGodCap: 5 }).perGodCap).toBe(5);
   });
 
   it('stores the search options only when not default, clamped to their ranges and steps', () => {
-    expect(withDraftRoomForcing(draft, 'softened')).toEqual(draft);
-    expect(withDraftRoomForcing(draft, 'game').roomForcing).toBe('game');
-    expect(withDraftRoomForcing(withDraftRoomForcing(draft, 'game'), 'softened')).toEqual(draft);
-    expect(withDraftPurchasesPerBiome(draft, 2)).toEqual(draft);
-    expect(withDraftPurchasesPerBiome(draft, 0).purchasesPerBiome).toBe(0);
-    expect(withDraftPurchasesPerBiome(draft, 9).purchasesPerBiome).toBe(4);
-    expect(withDraftRetriesPerBiome(draft, 3)).toEqual(draft);
-    expect(withDraftRetriesPerBiome(draft, -1).retriesPerBiome).toBe(0);
-    expect(withDraftRetriesPerBiome(draft, 99).retriesPerBiome).toBe(10);
-    expect(withDraftResourceRoomChance(draft, 10)).toEqual(draft);
-    expect(withDraftResourceRoomChance(draft, 23).resourceRoomChance).toBe(25);
-    expect(withDraftResourceRoomChance(draft, 80).resourceRoomChance).toBe(50);
-    expect(withDraftResourceRoomChance(draft, 0).resourceRoomChance).toBe(0);
-    const decoded = (value: unknown) =>
-      decodeProjectDocument(withRawDraft(value), catalog).route.draft;
+    expect(withDraftOption(draft, 'roomForcing', 'softened')).toEqual(draft);
+    expect(withDraftOption(draft, 'roomForcing', 'game').roomForcing).toBe('game');
+    expect(
+      withDraftOption(withDraftOption(draft, 'roomForcing', 'game'), 'roomForcing', 'softened'),
+    ).toEqual(draft);
+    expect(withDraftOption(draft, 'purchasesPerBiome', 2)).toEqual(draft);
+    expect(withDraftOption(draft, 'purchasesPerBiome', 0).purchasesPerBiome).toBe(0);
+    expect(withDraftOption(draft, 'purchasesPerBiome', 9).purchasesPerBiome).toBe(4);
+    expect(withDraftOption(draft, 'retriesPerBiome', 3)).toEqual(draft);
+    expect(withDraftOption(draft, 'retriesPerBiome', -1).retriesPerBiome).toBe(0);
+    expect(withDraftOption(draft, 'retriesPerBiome', 99).retriesPerBiome).toBe(10);
+    expect(withDraftOption(draft, 'resourceRoomChance', 10)).toEqual(draft);
+    expect(withDraftOption(draft, 'resourceRoomChance', 23).resourceRoomChance).toBe(25);
+    expect(withDraftOption(draft, 'resourceRoomChance', 80).resourceRoomChance).toBe(50);
+    expect(withDraftOption(draft, 'resourceRoomChance', 0).resourceRoomChance).toBe(0);
     const options = {
       roomForcing: 'deadline',
       purchasesPerBiome: 0,
@@ -153,28 +138,15 @@ describe('draft spec', () => {
         resourceRoomChance: 10,
       }),
     ).toEqual(draft);
-    for (const bad of [
-      { roomForcing: 'sometimes' },
-      { purchasesPerBiome: 5 },
-      { retriesPerBiome: 11 },
-      { resourceRoomChance: 55 },
-      { resourceRoomChance: 12 },
-    ])
-      expect(() => decoded({ ...draft, ...bad })).toThrow(ProjectDocumentContractError);
   });
 
   it('resets every Advanced option in one edit, keeping the world, basket and seed', () => {
     expect(draftAdvancedChanged(draft)).toBe(false);
-    const advanced = withDraftPreferMidshops(
-      withDraftRetriesPerBiome(
-        withDraftRoomForcing(
-          withDraftPerGodCap(withDraftGodBoons(draft, 'Underworld', 'F', 9), 3),
-          'game',
-        ),
-        6,
-      ),
-      true,
-    );
+    let advanced = withDraftGodBoons(draft, 'Underworld', 'F', 9);
+    advanced = withDraftOption(advanced, 'perGodCap', 3);
+    advanced = withDraftOption(advanced, 'roomForcing', 'game');
+    advanced = withDraftOption(advanced, 'retriesPerBiome', 6);
+    advanced = withDraftOption(advanced, 'preferMidshops', true);
     expect(draftAdvancedChanged(advanced)).toBe(true);
     expect(withDraftAdvancedDefaults(advanced)).toEqual(draft);
     expect(
@@ -228,37 +200,92 @@ describe('draft spec', () => {
     expect(sameDraftSpec(draft, { ...draft, godKeys: ['Hera', 'Zeus'] })).toBe(false);
   });
 
-  it('rejects unknown keys, unknown catalog references, duplicates and a bad seed', () => {
-    for (const value of [
-      { ...draft, extra: true },
-      { ...draft, godKeys: ['NotAGod'] },
-      { ...draft, godKeys: [notAGod] },
-      { ...draft, storyNpcByBiome: { F: 'Zeus' } },
-      { ...draft, fieldNpcsByBiome: { G: ['Arachne'] } },
-      { ...draft, godKeys: ['Zeus', 'Zeus'] },
-      { ...draft, storyNpcByBiome: { NotABiome: 'Arachne' } },
-      { ...draft, fieldNpcsByBiome: { G: ['NotAnNpc'] } },
-      { ...draft, basketTraitKeys: ['NotATrait'] },
-      { ...draft, rackKeepsakeByBiome: { F: 'NotAKeepsake' } },
-      { ...draft, seed: -1 },
-      { ...draft, seed: 1.5 },
-      { ...draft, seed: MAX_DRAFT_SEED + 1 },
-    ]) {
-      expect(() => decodeProjectDocument(withRawDraft(value), catalog)).toThrow(
-        ProjectDocumentContractError,
-      );
-      expect(() =>
-        applyProjectCommand(project(), catalog, {
-          kind: 'ReplaceDraftSpec',
-          route,
-          draft: value as AuthoredDraftSpec,
-        }),
-      ).toThrow(ProjectCommandContractError);
-    }
+  it('heals a spec: drops unknown keys, references and biomes, collapses duplicates, defaults bad types', () => {
+    const healed = (value: unknown) => {
+      const fromCommand = applyProjectCommand(project(), catalog, {
+        kind: 'ReplaceDraftSpec',
+        route,
+        draft: value as AuthoredDraftSpec,
+      }).route.draft;
+      expect(fromCommand).toEqual(decoded(value));
+      return fromCommand;
+    };
+    for (const [value, expected] of [
+      [{ ...draft, extra: true }, draft],
+      [{ ...draft, godKeys: ['NotAGod', 'Zeus', notAGod, 7, 'Hera', 'Zeus'] }, draft],
+      [
+        { ...draft, godKeys: 'Zeus' },
+        { ...draft, godKeys: [] },
+      ],
+      [{ ...draft, storyNpcByBiome: { F: 'Arachne', G: 'Zeus', NotABiome: 'Arachne' } }, draft],
+      [
+        { ...draft, storyNpcByBiome: ['Arachne'] },
+        { ...draft, storyNpcByBiome: {} },
+      ],
+      [{ ...draft, fieldNpcsByBiome: { G: [fieldNpc, 'Arachne', fieldNpc], Q: [], H: 3 } }, draft],
+      [{ ...draft, fieldNpcsByBiome: { G: [fieldNpc], Q: ['NotAnNpc'] } }, draft],
+      [{ ...draft, basketTraitKeys: ['NotATrait', 'ZeusWeaponBoon', 'ZeusWeaponBoon'] }, draft],
+      [{ ...draft, rackKeepsakeByBiome: { F: 'BonusMoneyKeepsake', G: 'NotAKeepsake' } }, draft],
+      [
+        { ...draft, seed: -1 },
+        { ...draft, seed: 1 },
+      ],
+      [
+        { ...draft, seed: 1.5 },
+        { ...draft, seed: 1 },
+      ],
+      [
+        { ...draft, seed: '7' },
+        { ...draft, seed: 1 },
+      ],
+      [
+        { ...draft, seed: MAX_DRAFT_SEED + 1 },
+        { ...draft, seed: 1 },
+      ],
+      [
+        { ...draft, seed: MAX_DRAFT_SEED },
+        { ...draft, seed: MAX_DRAFT_SEED },
+      ],
+      [{ godKeys: ['Zeus'] }, { ...EMPTY_DRAFT_SPEC, godKeys: ['Zeus'] }],
+      ['not a spec', EMPTY_DRAFT_SPEC],
+    ] as const)
+      expect(healed(value), JSON.stringify(value)).toEqual(expected);
+  });
+
+  it('clamps options to their ranges and steps and defaults a value of the wrong type', () => {
+    for (const [value, expected] of [
+      [{ godBoonsByBiome: { G: 11, Z: 4, H: 'x' } }, { godBoonsByBiome: { G: 10 } }],
+      [{ godBoonsByBiome: { F: -3 } }, { godBoonsByBiome: { F: 0 } }],
+      [{ godBoonsByBiome: [4] }, {}],
+      [{ perGodCap: 0 }, { perGodCap: 1 }],
+      [{ perGodCap: 11 }, { perGodCap: 10 }],
+      [{ perGodCap: 'five' }, {}],
+      [{ roomForcing: 'sometimes' }, {}],
+      [{ roomForcing: 3 }, {}],
+      [{ purchasesPerBiome: 5 }, { purchasesPerBiome: 4 }],
+      [{ retriesPerBiome: 11 }, { retriesPerBiome: 10 }],
+      [{ retriesPerBiome: 3.4 }, {}],
+      [{ resourceRoomChance: 55 }, { resourceRoomChance: 50 }],
+      [{ resourceRoomChance: 12 }, {}],
+      [{ resourceRoomChance: 13 }, { resourceRoomChance: 15 }],
+      [{ resourceRoomChance: Number.NaN }, {}],
+    ] as const)
+      expect(decoded({ ...draft, ...value }), JSON.stringify(value)).toEqual({
+        ...draft,
+        ...expected,
+      });
+  });
+
+  it('gives every Advanced option its own share-code tag', () => {
+    const tags = Object.values(DRAFT_OPTIONS).map((declaration) => declaration.tag);
+    expect(new Set(tags).size).toBe(tags.length);
+  });
+
+  it('decodes a route without a draft spec to the empty spec', () => {
     const { draft: _missing, ...withoutDraft } = project().route;
     void _missing;
-    expect(() => decodeProjectDocument({ ...project(), route: withoutDraft }, catalog)).toThrow(
-      ProjectDocumentContractError,
-    );
+    expect(
+      decodeProjectDocument({ ...project(), route: withoutDraft }, catalog).route.draft,
+    ).toEqual(EMPTY_DRAFT_SPEC);
   });
 });

@@ -13,7 +13,7 @@ import { draftRefusals, type DraftRefusal } from './refusals';
 import { draftLoadoutProject, type DraftSpec } from './spec';
 import { createDraftRng } from './rng';
 import { DraftWalk } from './walk';
-import { DEFAULT_DRAFT_RETRIES_PER_BIOME } from '../../authored-project/draft-spec';
+import { DRAFT_OPTIONS } from '../../authored-project/draft-spec';
 import { draftWorld } from './world';
 
 /** Attempt counts alone bound the search, so a seed drafts the same route on any machine. */
@@ -30,7 +30,7 @@ export interface DraftBudget {
 }
 
 export const DEFAULT_DRAFT_BUDGET: DraftBudget = Object.freeze({
-  attemptsPerBiome: DEFAULT_DRAFT_RETRIES_PER_BIOME,
+  attemptsPerBiome: DRAFT_OPTIONS.retriesPerBiome.default,
   maxFailedAttemptsPerBiome: 16,
   maxStepsPerBiome: 600,
 });

@@ -195,25 +195,48 @@ describe('draft share codes', () => {
     }
   });
 
-  it('refuses set padding bits and an index past its list', () => {
-    // A Fresh File code packed by hand: route, prefix, one god, empty basket and records, no
-    // options, seed 2.
+  describe('hand-packed Fresh File codes', () => {
+    // Route, prefix, one god, empty basket and records, seed 2, then tagged option entries.
     const header = encodeDraftShareCode(catalog, freshFile).slice(0, 4);
-    const code = (godIndex: number, padding: string) => {
-      const bits = `11${'010'}${'0001'}${godIndex.toString(2).padStart(4, '0')}${'0'.repeat(9)}0000${'0000000'}00001010${padding}`;
+    const count = (value: number, prefix: number) => {
+      const bits = value === 0 ? '' : value.toString(2);
+      return `${bits.length.toString(2).padStart(prefix, '0')}${bits}`;
+    };
+    const entry = (tag: number, payload: string) =>
+      `${tag.toString(2).padStart(5, '0')}${count(payload.length, 4)}${payload}`;
+    const code = (godIndex: number, entries: readonly string[] = [], padding?: string) => {
+      let bits = `11${'010'}${'0001'}${godIndex.toString(2).padStart(4, '0')}${'0'.repeat(9)}000${'00001010'}`;
+      bits += `${count(entries.length, 3)}${entries.join('')}`;
+      bits += padding ?? '0'.repeat((5 - (bits.length % 5)) % 5);
       let text = header;
       for (let index = 0; index < bits.length; index += 5)
         text += '0123456789ABCDEFGHJKMNPQRSTVWXYZ'[parseInt(bits.slice(index, index + 5), 2)];
       return text;
     };
     const godKeys = catalog.traitGivers.values.filter((g) => g.providerKind === 'olympian');
-    expect(decoded(code(0, '0000')).draft).toMatchObject({ godKeys: [godKeys[0]!.key], seed: 2 });
     const refusal = (text: string) => {
       const result = decodeDraftShareCode(catalog, text);
       return result.ok ? 'decoded' : result.refusal;
     };
-    expect(refusal(code(0, '0001'))).toBe('malformed');
-    expect(refusal(code(godKeys.length, '0000'))).toBe('malformed');
+
+    it('refuses set padding bits and an index past its list', () => {
+      expect(decoded(code(0)).draft).toMatchObject({ godKeys: [godKeys[0]!.key], seed: 2 });
+      expect(refusal(code(0, [], '0001'))).toBe('malformed');
+      expect(refusal(code(godKeys.length))).toBe('malformed');
+    });
+
+    it('skips an unknown tag and heals option values through the draft spec decode', () => {
+      const plain = decoded(code(0)).draft;
+      expect(decoded(code(0, [entry(31, '1011001')])).draft).toEqual(plain);
+      // A per-god cap of 15 clamps to 10; a flag carries no payload.
+      expect(decoded(code(0, [entry(3, '1111'), entry(0, '')])).draft).toEqual({
+        ...plain,
+        perGodCap: 10,
+        preferMidshops: true,
+      });
+      // A room forcing index past the choices takes the default.
+      expect(decoded(code(0, [entry(4, '111')])).draft).toEqual(plain);
+    });
   });
 
   it('installs inputs only on a project of their own route', () => {
@@ -226,8 +249,8 @@ describe('draft share codes', () => {
   });
 
   it('keeps a light spec short', () => {
-    expect(encodeDraftShareCode(catalog, freshFile).length).toBeLessThanOrEqual(17);
-    expect(encodeDraftShareCode(catalog, underworld).length).toBeLessThanOrEqual(52);
+    expect(encodeDraftShareCode(catalog, freshFile).length).toBeLessThanOrEqual(16);
+    expect(encodeDraftShareCode(catalog, underworld).length).toBeLessThanOrEqual(69);
   });
 
   it('refuses other layouts, catalogs, routes and garbage', () => {
@@ -238,8 +261,9 @@ describe('draft share codes', () => {
     };
     expect(refusal('')).toBe('badLayout');
     expect(refusal('hello world!')).toBe('badLayout');
-    expect(refusal(`3${code.slice(1)}`)).toBe('otherVersion');
-    // A layout 1 code, from before the Advanced draft options.
+    expect(refusal(`4${code.slice(1)}`)).toBe('otherVersion');
+    // Layout 2 codes carried a positional draft section; layout 1 had no Advanced options.
+    expect(refusal(`2${code.slice(1)}`)).toBe('olderVersion');
     expect(refusal(`1${code.slice(1)}`)).toBe('olderVersion');
     const otherFingerprint = code[1] === '0' ? 'Z' : '0';
     expect(refusal(`${code[0]}${otherFingerprint}${code.slice(2)}`)).toBe('otherFingerprint');

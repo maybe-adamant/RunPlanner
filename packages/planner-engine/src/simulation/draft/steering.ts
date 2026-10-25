@@ -23,10 +23,7 @@ import type { RoomOccurrence } from '../../authored-project';
 import { draftNpcHosts, draftNpcWindowOpen, type DraftNpcHost } from './npc-windows';
 import type { ForcePressureLedgerEntry } from '../generation';
 import type { DraftRoomForcing } from '../../authored-project/model';
-import {
-  DEFAULT_DRAFT_PURCHASES_PER_BIOME,
-  DEFAULT_DRAFT_ROOM_FORCING,
-} from '../../authored-project/draft-spec';
+import { DRAFT_OPTIONS } from '../../authored-project/draft-spec';
 import type { DraftRng } from './rng';
 import { draftGodBoonBudget } from './budget';
 
@@ -40,7 +37,7 @@ export function draftWindowForceChance(
   depth: number,
   start: number,
   deadline: number,
-  forcing: DraftRoomForcing = DEFAULT_DRAFT_ROOM_FORCING,
+  forcing: DraftRoomForcing = DRAFT_OPTIONS.roomForcing.default,
 ): number {
   if (depth < start) return 0;
   if (depth >= deadline) return 1;
@@ -772,7 +769,7 @@ export class DraftSteering {
 
   /** Shop god boon purchases paced per planned biome; 0 buys none. */
   purchasesPerBiome(): number {
-    return this.spec.purchasesPerBiome ?? DEFAULT_DRAFT_PURCHASES_PER_BIOME;
+    return this.spec.purchasesPerBiome ?? DRAFT_OPTIONS.purchasesPerBiome.default;
   }
 
   /**

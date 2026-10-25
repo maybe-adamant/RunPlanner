@@ -399,7 +399,7 @@ function decodeRoutePlan(
       ? (plan.practiceStart as RunStartPoint | undefined)
       : healedStart;
   const draft = reuseDecoded(plan.draft, [catalog, route], () =>
-    decodeDraftSpec(plan.draft, `${path}.draft`, catalog, route.key),
+    decodeDraftSpec(plan.draft, catalog, route.key),
   );
   const previous = attested(plan, [catalog, route])
     ? (plan as unknown as AuthoredRoutePlan)

@@ -1,4 +1,5 @@
 import {
+  DRAFT_OPTIONS,
   decodeDraftShareCode,
   draftShareCommands,
   encodeDraftShareCode,
@@ -10,10 +11,6 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, TraitOrdinaryBoonSlot } from '@run-planner/engine/catalog-schema';
-import {
-  DRAFT_GOD_BOONS_RANGE,
-  DRAFT_PER_GOD_CAP_RANGE,
-} from '@run-planner/engine/authored-project';
 import {
   assessDraftBasket,
   assessDraftGods,
@@ -202,7 +199,7 @@ export function projectDraftBudget(
 ): DraftBudgetProjection {
   const budget = draftGodBoonBudget(catalog, project.route, spec);
   return Object.freeze({
-    range: DRAFT_GOD_BOONS_RANGE,
+    range: DRAFT_OPTIONS.godBoonsByBiome,
     biomes: Object.freeze(
       budget.biomes.map((biome) =>
         Object.freeze({
@@ -224,7 +221,7 @@ export function projectDraftBudget(
     }),
     perGod: Object.freeze({
       value: budget.perGod,
-      range: DRAFT_PER_GOD_CAP_RANGE,
+      range: DRAFT_OPTIONS.perGodCap,
       defaultValue: budget.perGodDefault,
       defaults: budget.perGodDefaults,
     }),
