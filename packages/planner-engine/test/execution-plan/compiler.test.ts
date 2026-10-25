@@ -71,16 +71,16 @@ import { overview as decodeExecutionOverview } from '../../src/execution-plan/co
 import { expandDiagnosticFrames } from '../../src/execution-plan/codec/diagnostics';
 import { fingerprint } from '../../src/execution-plan/fingerprint';
 import type { ExecutionSemanticProduct } from '../../src/execution-plan/model';
-import fOpeningFixture from './fixtures/f-opening.execution.json';
-import fgFixture from './fixtures/fg.execution.json';
-import fgAnomalyFixture from './fixtures/fg-anomaly.execution.json';
-import fgIxionChaosFixture from './fixtures/fg-ixion-chaos.execution.json';
-import underworldFGHFixture from './fixtures/underworld-fgh.execution.json';
-import underworldFGHIFixture from './fixtures/underworld-fghi.execution.json';
-import surfaceNFixture from './fixtures/surface-n.execution.json';
-import surfaceNOPQFixture from './fixtures/surface-nopq.execution.json';
-import freshFileFGHIFixture from './fixtures/fresh-file-fghi.execution.json';
-import surfaceQShopCorrelationFixture from './fixtures/surface-q-shop-correlation.execution.json';
+import fOpeningFixtureFile from './fixtures/f-opening.execution.json';
+import fgFixtureFile from './fixtures/fg.execution.json';
+import fgAnomalyFixtureFile from './fixtures/fg-anomaly.execution.json';
+import fgIxionChaosFixtureFile from './fixtures/fg-ixion-chaos.execution.json';
+import underworldFGHFixtureFile from './fixtures/underworld-fgh.execution.json';
+import underworldFGHIFixtureFile from './fixtures/underworld-fghi.execution.json';
+import surfaceNFixtureFile from './fixtures/surface-n.execution.json';
+import surfaceNOPQFixtureFile from './fixtures/surface-nopq.execution.json';
+import freshFileFGHIFixtureFile from './fixtures/fresh-file-fghi.execution.json';
+import surfaceQShopCorrelationFixtureFile from './fixtures/surface-q-shop-correlation.execution.json';
 import { surfaceScheduledLifecycleWithQSupplyChainSlicesProject } from '@run-planner/test-fixtures/scheduled-lifecycle';
 import {
   dreamMixedPrefixProject,
@@ -93,6 +93,18 @@ import {
   EMPTY_PLANNER_TIMELINE_FACTS,
   mergePlannerTimelineFacts,
 } from '../../src/simulation/timeline-facts';
+import { currentSchemaWire } from './support/current-schema-wire';
+
+const fOpeningFixture = currentSchemaWire(fOpeningFixtureFile);
+const fgFixture = currentSchemaWire(fgFixtureFile);
+const fgAnomalyFixture = currentSchemaWire(fgAnomalyFixtureFile);
+const fgIxionChaosFixture = currentSchemaWire(fgIxionChaosFixtureFile);
+const underworldFGHFixture = currentSchemaWire(underworldFGHFixtureFile);
+const underworldFGHIFixture = currentSchemaWire(underworldFGHIFixtureFile);
+const surfaceNFixture = currentSchemaWire(surfaceNFixtureFile);
+const surfaceNOPQFixture = currentSchemaWire(surfaceNOPQFixtureFile);
+const freshFileFGHIFixture = currentSchemaWire(freshFileFGHIFixtureFile);
+const surfaceQShopCorrelationFixture = currentSchemaWire(surfaceQShopCorrelationFixtureFile);
 
 function fOnlyProject(project = createCompleteFGProject()) {
   return Object.freeze({

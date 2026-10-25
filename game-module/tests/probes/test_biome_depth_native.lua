@@ -6,7 +6,6 @@
 -- luacheck: globals CurrentRun GameState UpdateRunHistoryCache GetBiomeDepth GetRunDepth IsEmpty
 package.path = "./src/?.lua;./src/?/init.lua;./tests/?.lua;./tests/?/init.lua;" .. package.path
 local fixtures = require("tests/harness/fixture_loader")
-local json = require("mods/protocol/json")
 local protocol = require("mods.protocol.decoder")
 
 local scriptsPath = (arg[1] or os.getenv("HADES2_SCRIPTS_PATH") or ""):gsub("/$", "")
@@ -111,8 +110,7 @@ local function endsBiomeRecords(room, dream)
 end
 
 local function plan(fileName)
-    local value = assert(json.decode(read(fixtures.path(fileName))))
-    return assert(protocol.decode(value))
+    return assert(protocol.decode(fixtures.decode(fileName)))
 end
 
 local function replay(fileName)

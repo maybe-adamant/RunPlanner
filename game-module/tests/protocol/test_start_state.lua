@@ -7,10 +7,7 @@ local protocol = require("mods.protocol.decoder")
 TestStartState = {}
 
 local function wire(name)
-    local file = assert(io.open(fixtures.path(name .. ".execution.json"), "rb"))
-    local value = assert(json.decode(file:read("*a")))
-    file:close()
-    return value
+    return fixtures.decode(name .. ".execution.json")
 end
 
 local function rejected(name, mutate, expected)

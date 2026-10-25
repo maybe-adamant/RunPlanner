@@ -34,6 +34,17 @@ import {
 import schema90ShrinePurchases from './fixtures/shrine-purchases.schema-90.runplanner.json';
 import schema91AnvilResults from './fixtures/anvil-results.schema-91.runplanner.json';
 
+/** Checkpoints keep the revision they were written under; a loaded project encodes the current one. */
+function currentRevisionText(checkpoint: unknown): string {
+  return (
+    JSON.stringify(
+      { ...(checkpoint as object), schemaRevision: PROJECT_DOCUMENT_SCHEMA_REVISION },
+      null,
+      2,
+    ) + '\n'
+  );
+}
+
 const project = createProjectDocument(catalog, {
   configuredBiomeCount: 1,
   projectId: 'project-loader-current',
@@ -176,7 +187,7 @@ describe('project document loader', () => {
     const checkpoint = surfaceCheckpointArtifacts['surface-nop'].raw as {
       route: { loadout: Record<string, unknown> };
     };
-    const current = JSON.stringify(checkpoint, null, 2) + '\n';
+    const current = currentRevisionText(checkpoint);
     const { familiarKey, ...loadout } = checkpoint.route.loadout;
     expect(familiarKey).toBe(catalog.defaultFamiliarKey);
     const legacy = JSON.stringify(
@@ -199,7 +210,7 @@ describe('project document loader', () => {
 
   it('loads a schema-93 Rare/Epic Hex tree as a complete tree with the picks in layout order', () => {
     const checkpoint = surfaceCheckpointArtifacts['surface-ordinary-hex-path'].raw;
-    const current = JSON.stringify(checkpoint, null, 2) + '\n';
+    const current = currentRevisionText(checkpoint);
     const unresolved = JSON.parse(current, (key, value: unknown) =>
       key === 'hexActivationsByAcquisitionRole' ? undefined : value,
     ) as object;
@@ -217,7 +228,7 @@ describe('project document loader', () => {
 
   it('loads schema-94 Path screens unresolved, leaving each reached screen to its author', () => {
     const checkpoint = surfaceCheckpointArtifacts['surface-selene-hex-path'].raw;
-    const current = JSON.stringify(checkpoint, null, 2) + '\n';
+    const current = currentRevisionText(checkpoint);
     expect(current.match(/hexActivationsByAcquisitionRole/g)).toHaveLength(2);
     const legacy = JSON.parse(current, (key, value: unknown) =>
       key === 'hexActivationsByAcquisitionRole' ? undefined : value,

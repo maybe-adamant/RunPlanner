@@ -59,13 +59,14 @@ A plan is admitted by its header, independent of the release number:
   `planFingerprint`. The module admits a plan only when all four equal its
   checked-in `execution-compatibility.json`,
   `{format, catalogVersion, schemaVersion, schemaRevision}`, which assembly
-  ships unchanged. The module's tests keep that file aligned with its decoder
-  and decode the planner-engine execution fixtures in place, so the decoder,
-  the file and the planner's
-  [schema pair](AUTHORED_PROJECT_MODEL.md#schema-change-approval) change
-  together. A module-only change keeps the pair, so plans already sent stay
-  admitted; a change to the plan wire or to plan validity bumps the pair, and
-  every plan sent under the previous pair is outdated.
+  ships unchanged. One planner-engine test keeps that file aligned with the
+  decoder and the planner's
+  [schema pair](AUTHORED_PROJECT_MODEL.md#schema-change-approval), so the
+  three change together. Execution fixtures and checkpoints keep the pair they
+  were generated under; tests read them under the current pair. A module-only
+  change keeps the pair, so plans already sent stay admitted; a change to the
+  plan wire or to plan validity bumps the pair, and every plan sent under the
+  previous pair is outdated.
 - The module's manifest version, the planner version stamped at assembly,
   decides whether an update is offered; whether an install is current is
   decided by its files (see below).

@@ -1,7 +1,6 @@
 -- luacheck: globals TestAnvilFixtures
 local lu = require("luaunit")
 local fixtures = require("tests/harness/fixture_loader")
-local json = require("mods.protocol.json")
 local protocol = require("mods.protocol.decoder")
 local roomSession = require("mods.room.session")
 local bindings = require("mods.room.timeline.bindings")
@@ -10,9 +9,7 @@ local transformations = require("mods.room.timeline.transformations.hooks")
 TestAnvilFixtures = {}
 
 local function loadOccurrence(name, id)
-    local file = assert(io.open(fixtures.path(name .. ".execution.json"), "rb"))
-    local plan = assert(protocol.decode(assert(json.decode(file:read("*a")))))
-    file:close()
+    local plan = assert(protocol.decode(fixtures.decode(name .. ".execution.json")))
     return assert(plan.occurrencesById[id], id)
 end
 

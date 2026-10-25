@@ -330,9 +330,7 @@ function TestRuntimeSession.testEntryProofFiresThePublishedRoomEnteredDeadline()
 end
 
 function TestRuntimeSession.testStrictDecodeTransactionOrderDoesNotChangeRuntimeReadiness()
-    local file = assert(io.open(fixtures.path("fg-ixion-chaos.execution.json"), "rb"))
-    local source = file:read("*a")
-    file:close()
+    local source = fixtures.raw("fg-ixion-chaos.execution.json")
     local function reverseTransactions(plan)
         for _, row in ipairs(plan.occurrences) do
             local transactions = row.timeline.transactions

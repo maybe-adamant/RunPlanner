@@ -4,7 +4,6 @@
 -- luacheck: globals TestFGStructureMatrix
 local lu = require("luaunit")
 local fixtures = require("tests/harness/fixture_loader")
-local json = require("mods/protocol/json")
 local protocol = require("mods.protocol.decoder")
 local overview = require("mods.room.overview")
 local encounters = require("mods.room.timeline.encounters.phases").create()
@@ -14,13 +13,8 @@ local doors = require("mods.navigation.doors")
 
 TestFGStructureMatrix = {}
 
-local fixtureRoot = fixtures.root
-
 local function fixture(name)
-    local file = assert(io.open(fixtureRoot .. name .. ".execution.json", "rb"))
-    local value = assert(json.decode(file:read("*a")))
-    file:close()
-    local plan, errorMessage = protocol.decode(value)
+    local plan, errorMessage = protocol.decode(fixtures.decode(name .. ".execution.json"))
     return assert(plan, errorMessage)
 end
 

@@ -33,9 +33,17 @@ function planSection(
       assembly,
       catalog: entry.catalog,
     });
-    const encoded = encodeExecutionPlan(compileExecutionPlan({ product }));
-    // The digest covers the exact wire bytes; the canonical tree only locates a change.
-    return { digest: sha256(encoded), canonical: canonicalDigest(JSON.parse(encoded)) };
+    // The digest covers the exact wire bytes outside the schema pair and the fingerprint
+    // over it; the canonical tree only locates a change.
+    const contents = JSON.parse(encodeExecutionPlan(compileExecutionPlan({ product }))) as Record<
+      string,
+      unknown
+    >;
+    delete contents.schemaVersion;
+    delete contents.schemaRevision;
+    delete contents.planFingerprint;
+    const encoded = JSON.stringify(contents);
+    return { digest: sha256(encoded), canonical: canonicalDigest(contents) };
   } catch (error) {
     if (!(error instanceof ExecutionCompilerError)) throw error;
     return { digest: `refused:${error.code}` };

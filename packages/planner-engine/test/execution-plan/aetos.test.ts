@@ -11,9 +11,14 @@ import {
   decodeExecutionPlan,
   encodeExecutionPlan,
 } from '../../src/execution-plan';
-import selectedFixture from './fixtures/surface-generated-precombat.execution.json';
-import noneFixture from './fixtures/surface-nopq.execution.json';
-import underworldFixture from './fixtures/f-opening.execution.json';
+import selectedFixtureFile from './fixtures/surface-generated-precombat.execution.json';
+import noneFixtureFile from './fixtures/surface-nopq.execution.json';
+import underworldFixtureFile from './fixtures/f-opening.execution.json';
+import { currentSchemaWire } from './support/current-schema-wire';
+
+const selectedFixture = currentSchemaWire(selectedFixtureFile);
+const noneFixture = currentSchemaWire(noneFixtureFile);
+const underworldFixture = currentSchemaWire(underworldFixtureFile);
 
 describe('Aetos biome execution directive', () => {
   it('translates reached assessed history into one exact native-wave target', () => {

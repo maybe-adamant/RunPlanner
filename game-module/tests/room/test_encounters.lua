@@ -2,7 +2,6 @@
 -- luacheck: globals TestEncounters
 local lu = require("luaunit")
 local fixtures = require("tests/harness/fixture_loader")
-local json = require("mods/protocol/json")
 local protocol = require("mods.protocol.decoder")
 local bindings = require("mods.room.timeline.bindings")
 local lifecycle = require("mods.room.timeline.lifecycle")
@@ -423,9 +422,7 @@ end
 
 function TestEncounters.testPublishedStoryCarrierIsForcedProvenAndBound()
     -- F postboss publishes Story_Chronos_01, the native carrier derived from Empty.
-    local file = assert(io.open(fixtures.path("fg.execution.json"), "rb"))
-    local plan = assert(protocol.decode(assert(json.decode(file:read("*a")))))
-    file:close()
+    local plan = assert(protocol.decode(fixtures.decode("fg.execution.json")))
     local occurrence
     for _, candidate in ipairs(plan.occurrences) do
         if candidate.gameName == "F_PostBoss01" then occurrence = candidate end
@@ -484,9 +481,7 @@ function TestEncounters.testPublishedStoryCarrierIsForcedProvenAndBound()
 end
 
 function TestEncounters.testPublishedFirstTartarusCombatInstallsItsExactIntroDefinition()
-    local file = assert(io.open(fixtures.path("underworld-fghi.execution.json"), "rb"))
-    local plan = assert(protocol.decode(assert(json.decode(file:read("*a")))))
-    file:close()
+    local plan = assert(protocol.decode(fixtures.decode("underworld-fghi.execution.json")))
     local occurrence
     for _, id in ipairs(plan.selectedOccurrenceIds) do
         local candidate = plan.occurrencesById[id]

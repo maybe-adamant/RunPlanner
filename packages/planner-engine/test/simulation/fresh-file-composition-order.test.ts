@@ -33,6 +33,7 @@ import {
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
 import { executionFixturePath } from '../execution-plan/support/execution-fixtures';
+import { currentSchemaWire } from '../execution-plan/support/current-schema-wire';
 
 describe('Fresh File room issue chronology with uncustomized compositions', () => {
   it('asks for no cage composition, only the room features and Timeline', () => {
@@ -146,7 +147,7 @@ describe('Fresh File room issue chronology with uncustomized compositions', () =
       }),
     });
     expect(JSON.parse(encodeExecutionPlan(plan))).toEqual(
-      JSON.parse(readFileSync(executionFixturePath('fresh-file-fghi'), 'utf8')),
+      currentSchemaWire(JSON.parse(readFileSync(executionFixturePath('fresh-file-fghi'), 'utf8'))),
     );
   });
 });

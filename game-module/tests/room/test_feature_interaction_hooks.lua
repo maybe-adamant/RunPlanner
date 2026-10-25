@@ -795,12 +795,9 @@ end
 -- is what native returns when asked about the planned-empty group.
 local function emptyGroupShop(probeResult, fixtureName)
     local fixtures = require("tests/harness/fixture_loader")
-    local json = require("mods/protocol/json")
     local protocol = require("mods.protocol.decoder")
-    local file = assert(io.open(fixtures.path((fixtureName or "underworld-fghi-empty-shop-group")
-        .. ".execution.json"), "rb"))
-    local plan = assert(protocol.decode(assert(json.decode(file:read("*a")))))
-    file:close()
+    local plan = assert(protocol.decode(fixtures.decode((fixtureName or "underworld-fghi-empty-shop-group")
+        .. ".execution.json")))
     local shop
     for _, occurrence in ipairs(plan.occurrences) do
         if occurrence.id == "golden-i-preboss" then shop = occurrence.overview.shop end

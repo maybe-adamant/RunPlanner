@@ -3,7 +3,6 @@ local lu = require("luaunit")
 local fixtures = require("tests/harness/fixture_loader")
 local guide = require("mods.presentation.room_guide")
 local names = require("mods.presentation.names")
-local json = require("mods.protocol.json")
 local protocol = require("mods.protocol.decoder")
 local route = require("mods.route.session")
 
@@ -287,10 +286,7 @@ function TestRoomGuide.testOPhaseProgressKeepsOneGuideAndTerminalPrefixHasNoFoot
 end
 
 function TestRoomGuide.testRealFieldsSixRowGuideFitsTheCompactWindow()
-    local file = assert(io.open(fixtures.path("underworld-fgh.execution.json"), "rb"))
-    local raw = file:read("*a")
-    file:close()
-    local plan = assert(protocol.decode(assert(json.decode(raw))))
+    local plan = assert(protocol.decode(fixtures.decode("underworld-fgh.execution.json")))
     local fields
     for _, occurrence in ipairs(plan.occurrences) do
         if occurrence.id == "golden-h-combat05" then fields = occurrence; break end
@@ -673,10 +669,7 @@ function TestRoomGuide.testEveryFixtureGuideFitsWithoutTheSafetyCut()
     local checked = 0
     for fileName in listing:lines() do
         if fileName:match("%.execution%.json$") then
-            local file = assert(io.open(fixtures.path(fileName), "rb"))
-            local raw = file:read("*a")
-            file:close()
-            local plan = assert(protocol.decode(assert(json.decode(raw))))
+            local plan = assert(protocol.decode(fixtures.decode(fileName)))
             local state = route.new(plan)
             local index = plan.startState and plan.startState.occurrenceIndex or nil
             if type(index) == "number" then state.index = index end
