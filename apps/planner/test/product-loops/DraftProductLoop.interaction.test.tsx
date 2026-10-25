@@ -57,7 +57,8 @@ it('drafts a zero-finding route as one undoable edit, and rerolls as one more', 
   expect(workspace.assembly!.evaluation.status).toBe('valid');
   expect(workspace.assembly!.evaluation.findings).toEqual([]);
   expect(workspace.history!.present.route.biomes).toHaveLength(4);
-  expect(screen.getByRole('region', { name: 'Draft report' })).toBeTruthy();
+  const actionRow = document.querySelector('.draft-action-row') as HTMLElement;
+  expect(within(actionRow).getByText(/^\d+ of \d+ targets met\.$/)).toBeTruthy();
   expect(screen.getByRole('note').textContent).toBe('Drafting replaces the current route plan.');
 
   expect(present().route.draft).toBe(before.route.draft);

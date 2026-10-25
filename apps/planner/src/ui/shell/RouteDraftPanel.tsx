@@ -29,6 +29,7 @@ import {
   type DraftRuleTag,
   projectDraftBasket,
   projectDraftSpec,
+  withDraftBasketGiverCleared,
   withDraftBasketTraitToggled,
   withDraftFieldNpcToggled,
   withDraftGodToggled,
@@ -36,6 +37,7 @@ import {
   withDraftRackKeepsake,
   withDraftStoryNpcToggled,
   type DraftBasketChipGroup,
+  type DraftBasketTabKey,
   type DraftRackSlot,
 } from '@planner/projections/draftSpec';
 import type {
@@ -55,7 +57,6 @@ import { ActionIcon } from '@planner/ui/controls/ActionIcon';
 import { hintProps } from '@planner/ui/controls/hint';
 import type { DraftRunController } from '@planner/workspace/draftRun';
 import { DraftBasketDialog } from './DraftBasketDialog';
-import { DraftCapCount } from './DraftCapCount';
 import { DraftShareControls } from './DraftShareControls';
 import { RouteLoadoutControls } from './RouteLoadoutControls';
 import { FreshFileLoadout } from './RouteLoadoutPanel';
@@ -220,12 +221,11 @@ function DraftOutcome({
         </p>
       );
     case 'drafted': {
+      // The met count sits on the action row; only the unmet and extra lists stay here.
       const unmet = run.report.targets.filter((target) => !target.met);
+      if (unmet.length === 0 && run.report.extras.length === 0) return null;
       return (
         <section aria-label="Draft report" className="draft-report">
-          <p>
-            {run.report.met} of {run.report.targets.length} targets met.
-          </p>
           {unmet.length === 0 ? null : (
             <ul aria-label="Unmet targets" className="draft-chip-list">
               {unmet.map((target) => (
@@ -313,6 +313,81 @@ function DraftRackKeepsake({
 
 const npcIcon = (npcKey: string): string | undefined => npcArtwork[npcKey] ?? undefined;
 
+const BASKET_ROWS: readonly {
+  readonly row: DraftBasketChipGroup['row'];
+  readonly label: string;
+}[] = [
+  { row: 'gods', label: 'God traits' },
+  { row: 'bonus', label: 'Bonus traits' },
+  { row: 'npcs', label: 'NPC traits' },
+];
+
+/** One read-only basket line: each giver's icon, then its trait icons in order; it opens the basket. */
+function BasketLine({
+  groups,
+  label,
+  onOpen,
+}: {
+  readonly groups: readonly DraftBasketChipGroup[];
+  readonly label: string;
+  /** The giver of the clicked chip or icon, when one was clicked. */
+  readonly onOpen: (giverKey: string | undefined) => void;
+}) {
+  const names = groups.flatMap((group) => group.chips.map((chip) => chip.label));
+  return (
+    <button
+      aria-haspopup="dialog"
+      aria-label={`${label}: ${names.join(', ')}`}
+      className="draft-basket-line"
+      onClick={(event) =>
+        onOpen((event.target as HTMLElement).closest<HTMLElement>('[data-giver]')?.dataset.giver)
+      }
+      type="button"
+    >
+      {groups.map((group) => (
+        <span className="draft-basket-giver" data-giver={group.key} key={group.key}>
+          <span className="draft-basket-giver-icon" {...hintProps(group.label)}>
+            <ArtworkIcon
+              className="draft-toggle-icon"
+              source={traitGiverArtwork[group.key] ?? undefined}
+            />
+          </span>
+          {group.chips.map((chip, index) => {
+            const icon = traitIcon(chip.traitKey);
+            const hint =
+              chip.refused && chip.hint !== undefined ? `${chip.label}: ${chip.hint}` : chip.label;
+            return (
+              <span
+                className="draft-chip"
+                data-refused={chip.refused || undefined}
+                key={chip.traitKey}
+                {...hintProps(hint)}
+              >
+                {icon === undefined ? (
+                  <span>{chip.label}</span>
+                ) : (
+                  <ArtworkIcon className="draft-chip-icon" source={icon} />
+                )}
+                {chip.partnerGiverKey === undefined ? null : (
+                  <ArtworkIcon
+                    className="draft-chip-partner"
+                    source={traitGiverArtwork[chip.partnerGiverKey] ?? undefined}
+                  />
+                )}
+                {group.queued ? (
+                  <span className="draft-chip-order" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                ) : null}
+              </span>
+            );
+          })}
+        </span>
+      ))}
+    </button>
+  );
+}
+
 /** Describes a world and basket; drafting fills the route's biomes and sets the loadout. */
 export function RouteDraftPanel({
   catalog,
@@ -329,7 +404,11 @@ export function RouteDraftPanel({
 }) {
   const dispatch = useAppDispatch();
   const run = useAppSelector((state) => state.draftSession.run);
-  const [basketOpen, setBasketOpen] = useState(false);
+  // The basket dialog's tab and the giver to bring into view; session-only.
+  const [basketOpen, setBasketOpen] = useState<{
+    readonly tab: DraftBasketTabKey;
+    readonly giverKey?: string;
+  } | null>(null);
   const [tab, setTab] = useState<'draft' | 'advanced'>('draft');
   // Racks line up under Arcana, Fear and Keepsake at one shared width.
   const rows = useCommonItemWidth<HTMLFieldSetElement>();
@@ -375,91 +454,6 @@ export function RouteDraftPanel({
   // Each planned biome's Postboss holds its rack; racks of later biomes are left out.
   const plannedRacks = rackSlots.filter((slot) =>
     projection.plannedBiomeKeys.includes(slot.afterBiomeKey),
-  );
-  const chipGroup = (group: DraftBasketChipGroup) => (
-    <div className="draft-chip-group" data-queued={group.queued || undefined} key={group.key}>
-      <span className="draft-chip-group-label">
-        <ArtworkIcon
-          className="draft-toggle-icon"
-          source={traitGiverArtwork[group.key] ?? undefined}
-        />
-        {group.label}
-      </span>
-      <ol aria-label={`${group.label} basket traits`} className="draft-chip-list">
-        {group.chips.map((chip) => {
-          // A chip shows the trait's icon; its name is the accessible name and the hint.
-          const icon = traitIcon(chip.traitKey);
-          const refusedHint = chip.refused ? chip.hint : undefined;
-          return (
-            <li
-              className="draft-chip"
-              data-refused={chip.refused || undefined}
-              data-ordered={chip.order === undefined ? undefined : true}
-              key={chip.traitKey}
-              {...(icon === undefined
-                ? hintProps(refusedHint)
-                : {
-                    'aria-label': chip.label,
-                    ...hintProps(
-                      refusedHint === undefined ? chip.label : `${chip.label}: ${refusedHint}`,
-                      undefined,
-                      chip.label,
-                    ),
-                  })}
-            >
-              {chip.order === undefined ? null : (
-                <button
-                  aria-label={`Move ${chip.label} earlier`}
-                  className="draft-chip-move"
-                  disabled={chip.order.earlierBasket === undefined}
-                  onClick={() => {
-                    const basketByGiver = chip.order?.earlierBasket;
-                    if (basketByGiver !== undefined) replaceDraft({ ...draft, basketByGiver });
-                  }}
-                  type="button"
-                >
-                  <ActionIcon name="chevronLeft" />
-                </button>
-              )}
-              {icon === undefined ? (
-                <span>{chip.label}</span>
-              ) : (
-                <ArtworkIcon className="draft-chip-icon" source={icon} />
-              )}
-              {chip.order === undefined ? null : (
-                <button
-                  aria-label={`Move ${chip.label} later`}
-                  className="draft-chip-move"
-                  disabled={chip.order.laterBasket === undefined}
-                  onClick={() => {
-                    const basketByGiver = chip.order?.laterBasket;
-                    if (basketByGiver !== undefined) replaceDraft({ ...draft, basketByGiver });
-                  }}
-                  type="button"
-                >
-                  <ActionIcon name="chevronRight" />
-                </button>
-              )}
-              <button
-                aria-label={`Remove ${chip.label}`}
-                className="draft-chip-remove"
-                onClick={() =>
-                  replaceDraft(withDraftBasketTraitToggled(catalog, draft, chip.traitKey))
-                }
-                type="button"
-              >
-                <ActionIcon name="close" />
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-      {group.orderNotes.map((note) => (
-        <p className="draft-chip-group-note" key={note}>
-          {note}
-        </p>
-      ))}
-    </div>
   );
   const routePrefix = (
     <RoutePrefixControl
@@ -544,6 +538,26 @@ export function RouteDraftPanel({
                   workspaceRoute={workspaceRoute}
                 />
               )}
+              {plannedRacks.length === 0 ? null : (
+                <div
+                  className="route-loadout-row draft-rack-row"
+                  role="group"
+                  aria-label="Rack keepsakes"
+                >
+                  {plannedRacks.map((slot, index) => (
+                    <DraftRackKeepsake
+                      catalog={catalog}
+                      index={index}
+                      key={`${slot.afterBiomeKey}-${index}`}
+                      label={`After ${biomeLabel(slot.afterBiomeKey)}`}
+                      onSelect={(keepsakeKey) =>
+                        replaceDraft(withDraftRackKeepsake(draft, slot, keepsakeKey))
+                      }
+                      slot={slot}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
             <section className="draft-section" aria-labelledby="draft-gods-heading">
               <div className="draft-title-row">
@@ -588,7 +602,7 @@ export function RouteDraftPanel({
                 })}
                 <button
                   aria-label="Reset god order"
-                  className="draft-chip-remove draft-pool-reset"
+                  className="draft-reset draft-pool-reset"
                   disabled={draft.godKeys.length === 0}
                   onClick={() => replaceDraft({ ...draft, godKeys: [] })}
                   type="button"
@@ -596,10 +610,8 @@ export function RouteDraftPanel({
                   <ActionIcon name="reset" />
                 </button>
               </div>
-            </section>
-            {!draftWorldHasNpcs(worldOptions) ? null : (
-              <section className="draft-section" aria-labelledby="draft-npcs-heading">
-                {/* The title shares the header row with the Story and Field column labels. */}
+              {!draftWorldHasNpcs(worldOptions) ? null : (
+                /* The NPC label shares the header row with the Story and Field column labels. */
                 <table className="draft-npc-table" aria-labelledby="draft-npcs-heading">
                   <thead>
                     <tr>
@@ -690,29 +702,8 @@ export function RouteDraftPanel({
                       })}
                   </tbody>
                 </table>
-              </section>
-            )}
-            {plannedRacks.length === 0 ? null : (
-              <section className="draft-section" aria-labelledby="draft-racks-heading">
-                <h3 className="draft-section-heading" id="draft-racks-heading">
-                  Rack keepsakes
-                </h3>
-                <div className="route-loadout-row">
-                  {plannedRacks.map((slot, index) => (
-                    <DraftRackKeepsake
-                      catalog={catalog}
-                      index={index}
-                      key={`${slot.afterBiomeKey}-${index}`}
-                      label={`After ${biomeLabel(slot.afterBiomeKey)}`}
-                      onSelect={(keepsakeKey) =>
-                        replaceDraft(withDraftRackKeepsake(draft, slot, keepsakeKey))
-                      }
-                      slot={slot}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
+              )}
+            </section>
             <section className="draft-section" aria-labelledby="draft-basket-heading">
               <div className="draft-section-header">
                 <div className="draft-title-row">
@@ -729,32 +720,36 @@ export function RouteDraftPanel({
                   className="secondary-action action-compact"
                   disabled={basket === undefined}
                   id="draft-basket-edit"
-                  onClick={() => setBasketOpen(true)}
+                  onClick={() => setBasketOpen({ tab: 'gods' })}
                   type="button"
                 >
                   Edit basket
                 </button>
               </div>
-              {basket === undefined ? null : (
-                <ul aria-label="Basket caps" className="draft-cap-list">
-                  {basket.summary.map(({ key, label, cap }) => (
-                    <li key={key}>
-                      {label}
-                      <DraftCapCount cap={cap} />
-                    </li>
-                  ))}
-                </ul>
-              )}
               {basket === undefined || basket.chipGroups.length === 0 ? null : (
-                <div className="draft-chip-groups">
-                  {basket.chipGroups.some((group) => group.queued) ? (
-                    <div className="draft-chip-table-scroll">
-                      <div className="draft-chip-table">
-                        {basket.chipGroups.filter((group) => group.queued).map(chipGroup)}
-                      </div>
-                    </div>
-                  ) : null}
-                  {basket.chipGroups.filter((group) => !group.queued).map(chipGroup)}
+                <div className="draft-basket-view">
+                  {BASKET_ROWS.map(({ row, label }) => {
+                    const groups = basket.chipGroups.filter((group) => group.row === row);
+                    return groups.length === 0 ? null : (
+                      <BasketLine
+                        groups={groups}
+                        key={row}
+                        label={label}
+                        onOpen={(giverKey) =>
+                          setBasketOpen(
+                            giverKey === undefined ? { tab: row } : { tab: row, giverKey },
+                          )
+                        }
+                      />
+                    );
+                  })}
+                  {basket.chipGroups.flatMap((group) =>
+                    group.orderNotes.map((note) => (
+                      <p className="draft-chip-group-note" key={note}>
+                        {note}
+                      </p>
+                    )),
+                  )}
                 </div>
               )}
             </section>
@@ -907,6 +902,11 @@ export function RouteDraftPanel({
       </fieldset>
       <div className="draft-actions">
         <div className="draft-action-row">
+          {running || run.kind !== 'drafted' ? null : (
+            <span className="draft-met">
+              {run.report.met} of {run.report.targets.length} targets met.
+            </span>
+          )}
           <span className="draft-meta">
             <span className="draft-seed">Seed {running ? run.seed : draft.seed}</span>
             {running ? null : <DraftShareControls catalog={catalog} project={project} />}
@@ -947,11 +947,14 @@ export function RouteDraftPanel({
         </div>
         <DraftOutcome catalog={catalog} run={run} worldOptions={worldOptions} />
       </div>
-      {basketOpen && basket !== undefined ? (
+      {basketOpen !== null && basket !== undefined ? (
         <DraftBasketDialog
-          onClose={() => setBasketOpen(false)}
-          onToggle={(traitKey) =>
-            replaceDraft(withDraftBasketTraitToggled(catalog, draft, traitKey))
+          initialGiverKey={basketOpen.giverKey}
+          initialTab={basketOpen.tab}
+          onClose={() => setBasketOpen(null)}
+          onClear={(giverKey) => replaceDraft(withDraftBasketGiverCleared(draft, giverKey))}
+          onToggle={(row) =>
+            replaceDraft(withDraftBasketTraitToggled(draft, row.traitKey, row.giverKey))
           }
           projection={basket}
           returnFocusId="draft-basket-edit"
