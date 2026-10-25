@@ -2,44 +2,15 @@
 
 ## Purpose
 
-This document defines contextual selection across the F/G/H/I and N/O/P/Q
-editors. Its goal is to make room and reward authoring context-aware, compact,
-and deliberate while preserving authored-project, simulation, validation, and
-semantic-command authority.
-
-This document owns contextual selector behavior. `EDITOR_MODEL.md` remains the
-broader authority for editor ownership, topology projection, findings,
-persistence, and undo/redo. `STRUCTURED_EDITOR_WORKSPACE.md` owns the route
-rail, shared biome structure, ordinary and Hub workbenches, inspector, and
-final placement of these controls. `CANDIDATE_EVALUATION_MODEL.md` owns
-candidate-session preparation, domain evaluation, and replay scope below this
-presentation policy.
-
-## Scope
-
-The contextual-selection contract covers six concerns:
-
-1. context-aware room selection;
-2. one grouped room picker instead of a required Type/Room sequence;
-3. reward choices constrained by their resolved store;
-4. reward choices constrained by jointly generated siblings;
-5. reward choices informed by counted-bag state;
-6. one compact compound interaction for reward type and payload.
-
-They share one assessment and presentation boundary and consume the progressive
-biome evaluation defined by `SIMULATION_AND_VALIDATION.md`;
-authoring-prefix support is not a seventh UI feature or a second candidate
-simulator.
-
-Frontier guidance consumes the same progressive coverage and candidate
-evidence as contextual selection. Ordinary-decision, takeover Preboss, I
-mixed-batch, completed-Hub, and declaration-fixed width-one Preboss behaviors
-do not collapse into one action.
-
-The broad visual treatment of route findings, enrichment color, and graph views
-is outside this contract. Existing
-semantic findings and navigation remain in force; contextual controls add
-local selection guidance rather than replacing validation.
+This document owns contextual selection across the F/G/H/I and N/O/P/Q
+editors and the popup editors that host it: which values a picker offers,
+how it explains them, and how drafts commit. It keeps room and reward
+authoring context-aware, compact and deliberate without taking over
+authored-project, simulation, validation or semantic-command authority.
+[Editor Model](EDITOR_MODEL.md) owns projection, binding, query caching and
+findings; [Structured Editor Workspace](STRUCTURED_EDITOR_WORKSPACE.md) owns
+where these controls appear; [Candidate Evaluation](CANDIDATE_EVALUATION_MODEL.md)
+owns candidate-session preparation, domain evaluation and replay scope.
 
 ## Product Contract
 
@@ -55,9 +26,7 @@ The editor helps the user choose a possible plan. It does not optimize for
 probability, automatically repair authored state, or silently replace a value
 that became invalid after another edit.
 
-## Ownership Boundary
-
-The data flow remains:
+## Ownership
 
 ```text
 simulation candidate assessment
@@ -67,115 +36,30 @@ simulation candidate assessment
   -> one semantic command
 ```
 
-The simulator owns game facts:
+The simulator owns game facts: candidate and force support, exact exclusion
+reasons, counter values and declared ranges, creation and appearance counts,
+reachable reward-store and counted-bag states, peer reward and source
+conflicts, and evaluation coverage. Candidate evidence preserves exact
+ownership and distinguishes unavailable coverage, upstream incompleteness,
+upstream invalidity, requirement failure, store exclusion, bag depletion, peer
+conflict and source exclusion. Concrete reward proposals continue through the
+selected-plan reward authority.
 
-- candidate support;
-- force support;
-- exact exclusion reasons;
-- counter values and declared ranges;
-- creation and appearance counts;
-- reachable reward-store and counted-bag states;
-- peer reward and source conflicts;
-- evaluation coverage.
+The application presentation layer maps typed simulation facts to the common
+contextual option vocabulary and owns ordering and grouping, room-category and
+Devotion-pair aggregation, ordinary versus diagnostic visibility,
+player-facing reason text, selected-invalid retention and compact summary
+values.
 
-The application presentation layer owns:
-
-- ordering and grouping;
-- ordinary versus diagnostic visibility;
-- player-facing reason text;
-- category aggregation;
-- selected-invalid retention;
-- compact summary values.
-
-React owns accessible interaction and transient picker state. It does not
-reevaluate requirements, bags, force pressure, or sibling legality.
-
-## Read-Only Run State Sheet
-
-An available decision Run State launcher opens a non-modal contextual sheet
-anchored to the left edge of the editor workspace. On desktop it overlays the
-route and general-navigation side while leaving the active inspector in place;
-at narrow widths it becomes a full-width sheet rather than a compressed column.
-It uses the workspace visual language and is descriptive only: no Save, Cancel,
-Apply, or authored controls appear. The sheet region keeps the accessible name
-`State before {title}`; its sticky header shows one moment line, such as
-`Before Combat 12 · Oceanus`, and keeps the close control visible while the
-content scrolls.
-
-Six tabs are always present in a fixed order, so switching never shifts the
-layout: Overview, Effects, Keepsakes, Arcana, Fear and More Info. A section
-without rows is omitted, and a tab with no sections reads `Nothing active`.
-
-Every tab uses one heading style and one row: `Name (bracket)` on the left and
-a fixed right column. When the row is too wide the name and bracket wrap; the
-right column stays in place and the bracket is never shortened. The bracket is
-one engine-published fact, never two:
-
-- a countdown or charge shows only what is left: `Calling Card (2 charges)`,
-  `Chimaera Jerky (3 encounters)`, `Pauper's → Strike (3 encounters)`;
-- a build-up shows progress toward its total: `Steady Growth (4/6 encounters)`,
-  `The Centaur (4/5 rooms)`;
-- a current value shows that value: `Lion Fang (+25%)`, a decaying trait's
-  `(60%)`;
-- an on/off or one-use state reads `(Active)`, `(Inactive)`, `(Ready)`,
-  `(Used)`, `(Pending)` or `(Consumed)`.
-
-The qualifier is one word from the engine's clock unit (charges, uses,
-encounters, rooms, guardians, biomes or boons), singular for a count of one.
-The right column holds `Rarity · Lv. N` (each part only when it applies),
-`Rank II` for an upgraded Hammer, `Lv. N` for a Path of Stars talent, keepsake
-stars, an Arcana rank (`Rank I` to `Rank IV`, always shown) or vow rank, or a
-plain value; rarityless traits and Rank I Hammers leave it blank. An Infusion's
-rarity carries no information, so its right column shows `Active`, `Inactive`
-or its element count (`Water 4`) instead, with no bracket; Chant keeps its
-rarity. Rows use catalog labels and never expose trait, giver, slot or store
-keys or raw engine states. Source-only markers are omitted: a keepsake-granted
-Hammer is an ordinary Hammer row with its encounters left, and an Aspect,
-Arcana or rarity effect shows only its result.
-
-Overview opens with the loadout (the aspect at Rank V, or VI once made Perfect,
-then the familiar), then Max Health and Max Magick with a Sources disclosure,
-and Armor, assuming no damage, with its own sources when it has any.
-The Keepsake block follows: the equipped keepsake, then each still-running
-effect of it or of a kept keepsake. A forced-boon keepsake such as Cloud Bangle
-reads `(Ready)` until its forced Boon is delivered and `(Used)` after; Jeweled
-Pom reads `(Active)` or, once invalidated, `(Inactive)`. Then come one Elements line of non-zero
-counts; Traits, with the Attack, Special, Cast, Sprint and Magick slot boons
-first (empty slots omitted) and every other trait, matured Chaos blessing and
-consumed Gold Gold Gold after them in acquisition order; and Hex, the spell
-followed by its invested talents.
-
-Effects has three groups by type: Well (timed buffs and remaining charges),
-Shrine (pending deliveries) and Chaos (active curses with the blessing each
-matures into). Keepsakes is history only: one row per entered biome with its
-keepsake, where a postboss rack swap reads `Erebus · Calling Card → Silver
-Wheel` on the biome that ends with it, then kept keepsakes, then Fated status
-only once it is known. Arcana lists equipped cards, then temporary cards, then Barren. Fear lists
-active vows, then Forfeit, Circe-disabled vows and banned traits.
-
-More Info lists the gods already in the ordinary pool (it does not list
-possible future sources or repeat the four-source-cap state), the Hex details
-(layout, capacity, God Sent, and Path points banked and invested, which appear
-before a Hex once Moon Beam has banked points), a `Reward Store Ratio` section,
-one key/value row per counter, and the reward bags. Reward Store Ratio states
-the run-wide entered-store tallies, the current ratio, and the biome target in
-effect so a reading can be compared against the live game. Where no door rolls
-it never prints the dead declared target: a biome that banks nothing reads
-`This biome ignores Reward Store.`, and one that banks a single key reads
-`This biome rolls only` that store's label. Individual reward bags retain their
-nested disclosures, using the projected `Eligible` and `Ineligible` groups;
-they do not claim which upcoming door can be selected. Opening moves focus to
-the sheet close control, Escape and that control close it, and close restores
-focus to the launcher. The target, tab and disclosure state are transient
-presentation state, outside authored history and persistence.
-
-The application also projects the ordered picker sections consumed by React.
-The shared component may mechanically render those sections, manage search and
-focus, and open an unavailable disclosure; it does not decide category order,
-required-first policy, selected-invalid pinning, or ordinary-versus-diagnostic
-visibility from raw candidates.
+React owns accessible interaction and transient picker state: search,
+disclosure and partial payload progress, all outside the authored project. It
+does not reevaluate requirements, bags, force pressure or sibling legality.
 
 ## Progressive Evaluation Input
+
+Frontier guidance uses the same progressive coverage and candidate evidence as
+selection; ordinary-decision, takeover Preboss, I mixed-batch, completed-Hub
+and width-one Preboss behaviours do not collapse into one action.
 
 Contextual selectors consume addressed candidate capabilities from the single
 project evaluation defined by `SIMULATION_AND_VALIDATION.md` and
@@ -190,8 +74,13 @@ input remains editable for repair. The application does not manufacture a seed
 from defaults, partial history, or hypothetical completion, and it does not
 replay simulation to recover candidate facts beyond the published horizon.
 
-Decision indexes and rendered rows are presentation only. Only semantic
-addresses identify candidate inputs, coverage, and findings.
+A downstream biome receives no contextual claim until every prior biome on its
+route is complete and valid, and an incomplete active biome publishes support
+for every covered decision without a canonical snapshot; a missing downstream
+decision or Preboss does not block earlier selectors. N's joint Hub board and
+ordered traversal publish coverage by semantic region rather than rendered
+slot order. Decision indexes and rendered rows are presentation only. Only
+semantic addresses identify candidate inputs, coverage, and findings.
 
 ## Shared Candidate Language
 
@@ -217,18 +106,9 @@ disabled on render with that hint while its retained value stays
 visible, and its candidates still load only on interaction. Decision-entry
 pickers keep their own rule: an ordinary target or an uncommitted Hub stays
 authorable before evaluation, while a takeover or a persisted Hub envelope
-requires evaluated support. Every hint renders through the one hint layer from
-the control's `data-hint`, beside the pointer on hover and beside the control on
-keyboard focus, and the same text leads the control's accessible description.
-
-Trait, Hex, Chaos, Pom, Anvil and Path of Stars dialog launchers share one
-neutral, fixed-width style. Their one-line label reads `{Verb} {kind} · {value}`:
-the chosen trait or Hex, the Pom target and its levels, or the Chaos curse and
-blessing; `Edit Anvil` and `Edit Path of Stars` name no value, and the Path
-summary lists the screen's talents, a repeat counted ("Omen ×2"). A long label
-ends in an ellipsis, and the full summary is the launcher's hint. An unset
-launcher says so in its text; findings mark a launcher only with the shared
-finding ring. The application projection supplies both label and summary.
+requires evaluated support. Every hint renders through the one shared hint
+layer, beside the pointer on hover and beside the control on keyboard focus,
+and the same text leads the control's accessible description.
 
 ### Selected-Value Invariant
 
@@ -243,25 +123,6 @@ Room replacement retains declaration-bounded compatible room-local leaves
 before this contextual policy evaluates their new simulation context. The
 picker does not decide leaf compatibility or reset retained values; that is the
 authored-model command contract.
-
-### Control-Existence Invariant
-
-Mandatory authored controls are projected from authored state and declaration
-requirements, not from findings, candidate support, or evaluation coverage.
-Those overlays may change a control's assessed state, availability, reason
-text, or emphasis, but they never suppress the control. An unassessed control
-remains visible without fabricated support; when its semantic owner lies after
-the engine's incomplete authoring horizon, it is visible but disabled.
-
-A structurally active set-backed encounter phase therefore keeps its declared
-selection and authoring control when coverage is unavailable. Only a genuinely
-dormant authored slot is absent.
-
-A missing interaction for a required semantic address is an application
-contract error, not a React visibility condition. Fine-grained finding
-navigation resolves the exact semantic owner, opens its containing workbench,
-and focuses its exact interaction even when that control is nested in a
-decision card.
 
 ### Ordinary and Diagnostic Presentation
 
@@ -278,8 +139,12 @@ An `Unavailable` disclosure may expose impossible values with their reasons.
 These entries are inspectable but not selectable, keeping ordinary choices
 compact while preserving on-demand diagnostic evidence.
 
-Color is supplementary. Text, grouping, icons, and accessible descriptions
-must carry the same meaning.
+The application projects the ordered picker sections (required, semantic
+categories, unassessed, unavailable) before React sees them. The shared
+component mechanically renders those sections, manages search and focus, and
+opens the unavailable disclosure; it does not decide category order,
+required-first policy, selected-invalid pinning or ordinary-versus-diagnostic
+visibility from raw candidates.
 
 ## Context-Aware Room Selection
 
@@ -328,17 +193,9 @@ reevaluating it. Alternative native definitions remain alternatives within one
 authoring profile; a supported variant produces no exclusion for that profile.
 Phase activation and consumed Gorgon exclusions retain their distinct reasons.
 
-A counter-range failure identifies at least:
-
-```ts
-interface CounterRangeFailure {
-  readonly kind: 'counterRange';
-  readonly axis: 'biomeDepthCache' | 'biomeEncounterDepth' | CounterAxis;
-  readonly actual: number;
-  readonly expected: CounterRange;
-}
-```
-
+A counter-range failure identifies its counter axis (including
+`biomeDepthCache` and `biomeEncounterDepth`), the actual value and the
+expected range.
 This is a general requirement-evidence contract. `biomeDepthCache` is a
 high-value consumer, not a UI special case. The same policy can distinguish:
 
@@ -504,24 +361,16 @@ The final replacement is one semantic command and one undo entry. Editing only
 an existing payload may open directly at the relevant source step while still
 committing one complete replacement.
 
-The closed control should occupy one row at normal editor widths. Its popover
-may use additional space without permanently expanding every room card.
+The closed control occupies one row; its popover may use more space without
+expanding every room card.
 
 ## Shared Contextual Picker Projection
 
-Room and reward controls should share a presentation vocabulary without
-sharing domain rules. A projected option is equivalent to:
-
-```ts
-interface ContextualOption<T> {
-  readonly value: T;
-  readonly label: string;
-  readonly category?: string;
-  readonly state: 'forced' | 'possible' | 'impossible' | 'unassessed';
-  readonly selected: boolean;
-  readonly explanation?: CandidateExplanation;
-}
-```
+Room and reward controls share a presentation vocabulary without sharing
+domain rules. A projected option carries its value, label, optional category,
+a state of forced, possible, impossible or unassessed, whether it is selected,
+and an optional explanation. This is application/UI vocabulary: it does not
+replace the richer typed simulation assessment or enter persisted state.
 
 The application projection bridge implements this vocabulary. It consumes
 typed candidate evidence, preserves the richer
@@ -539,10 +388,13 @@ does not monopolize one browser interaction task. Semantic sibling evidence
 identifies the conflicting Exit, cage, wheel offer, side room, or Hub room
 without exposing occurrence IDs.
 
-Before React consumption, the application projects these options into an
-ordered picker model containing required, semantic-category, unassessed, and
-unavailable sections. This preserves one presentation-policy authority while
-allowing room and reward controls to share one accessible component.
+The ordered picker model keeps one presentation-policy authority while room
+and reward controls share one accessible component. That component supports
+grouped and searchable values, an inspectable unavailable disclosure,
+selected-invalid pinning, keyboard traversal and typeahead, automatic
+continuation between compound payload steps, one completed intent per
+semantic command, and stable option projections rather than domains rebuilt on
+every draw.
 
 ### Control selection policy
 
@@ -572,7 +424,46 @@ feature is assessed, a selected declaration identity excluded by that evidence
 remains pinned as invalid for repair. Opening a contextual selector stays a
 lazy query boundary wherever a real candidate query exists.
 
-### Trait offer domains
+## Popup Editors
+
+A popup editor keeps a local draft and saves once when it edits one atomic
+authored value whose intermediate states are not meaningful plans (trait
+offers and their nested outcomes, Pom, Anvil, Judgment, Crystal Figurine,
+Path of Stars). Otherwise each control commits immediately (encounter
+customization, Loadout Arcana and Fear, Hub room popover, keepsake equip
+results). A nested editor saves into its parent draft; only the outer Save
+commits.
+
+Every popup editor uses one dialog shell: a title, the always-mounted
+[feedback region](EDITOR_MODEL.md#inner-layer-and-stable-rows), and a footer
+with Cancel and Save for drafts or Done for live editors; Escape is Cancel or
+Done, and an open nested picker is dismissed before its dialog. Initial focus
+lands on the exact repair control, else the first enabled control; focus
+returns to the launcher after close. A draft editor's open state lives in the
+editor session; its draft is replaced when the authored value changes and
+kept when only context changes; it closes when its owner leaves reached
+context; and history shortcuts are off while it is open. Its feedback region
+reflects the draft through the engine's draft assessment and matches the
+launcher at rest. A reset that only clears the draft is distinct from one that
+commits a reset to unresolved or to the default.
+
+Trait, Hex, Chaos, Pom, Anvil and Path of Stars launchers share one label
+form, `{Verb} {kind} · {value}`: the chosen trait or Hex, the Pom target and
+its levels, or the Chaos curse and blessing; Anvil and Path of Stars name no
+value, and the Path summary lists the screen's talents with repeats counted.
+The full summary is the launcher's hint, an unset launcher says so, and
+findings mark a launcher only with the shared finding mark. The application
+projection supplies label and summary.
+
+The selected trait outcome shows one labelled row per real choice, without
+repeating the trait name. A secondary effect such as Concave Stone gets its
+own block after the pick, with its granted trait's follow-ups nested under its
+grant. A grouped outcome (All Together sets, Natural Selection first-pass
+order) holds partial picks in its rows and enters the draft only as a complete
+engine-published value, so a partial group never enables Save. Row choices,
+gating and resulting values come from the engine.
+
+## Trait Offer Domains
 
 Each materialized trait-option card uses that same contextual-picker
 vocabulary for its trait and, when the giver's catalog policy is selectable,
@@ -633,14 +524,6 @@ nested Echo owner and the parent complete-offer boundary, not a synthetic
 standalone offer. Shared payload editors own prefix editing and cancellation;
 each binding supplies its exact domain, finding identity and completed update.
 
-Persisted workspace assembly and unsaved offer drafts use the same engine-owned
-child discovery. Intermediate controls carry a typed child collection; marker
-traversal and aggregate structural completion consume that collection rather
-than enumerate each trait's payload fields. Specialized bindings still own
-presentation and lazy domain contact, including Stone's contextual completion.
-Child queries retain the outer offer's prepared capability and pass the exact
-child selector; a child address is not a substitute capability lookup owner.
-
 A declaration-owned targeted option adds one target picker backed by the exact
 trait-offer capability. It uses the same lazy boundary and catalog labels as
 the trait picker; it does not inspect equipped history in the application or
@@ -648,19 +531,9 @@ switch on giver and trait names. A missing or stale selected target remains
 pinned for repair, and the complete draft cannot be saved until the engine
 supports that exact target.
 
-Opening one picker is the deliberate evaluation boundary. Static workspace and
-dialog rendering perform no focused trait queries. Results are cached by the
-immutable evaluation assembly, exact `TraitOfferAddress`, complete local draft,
-focused option key, and concrete domain. Reopening an unchanged picker or
-opening its rarity view reuses the same batch; a sibling edit creates a new
-draft identity, and stale asynchronous results cannot replace it.
-
-A cache miss for one unique focused domain emits at most one focused query
-batch whose query count equals the unique prepared concrete-variant count. This
-bound applies to ordinary ranked givers, replacement contexts, and the largest
-declaration-owned Hammer domain; work never scales with rendered control count.
-Cache hits, including reopening an unchanged picker and switching from its
-trait view to its rarity view, emit no additional batch.
+Opening one picker is the deliberate evaluation boundary; static workspace and
+dialog rendering perform no focused trait queries. Query caching and its
+bounds are [application contracts](EDITOR_MODEL.md#drafts-and-contextual-queries).
 
 Trait and rarity changes remain local modal edits. The complete-offer candidate
 continues to own the consolidated feedback and Save support, and Save dispatches
@@ -678,167 +551,79 @@ target in that order. Any target-owned controls appear beneath that picker,
 inside the Stone section rather than beside the primary acquisition's controls.
 Inactive Stone hides those controls without deleting retained payloads.
 
-This is application/UI vocabulary. It must not replace the richer typed
-simulation assessment or enter persisted state.
-
-The common component must support:
-
-- grouped and searchable values;
-- an inspectable unavailable disclosure;
-- selected-invalid pinning;
-- reason text independent of color;
-- keyboard traversal and typeahead;
-- automatic continuation between compound payload steps;
-- one completed user intent per semantic command;
-- cached stable option projections rather than rebuilding domains during
-  every draw.
-
 ### Trait dialog presentation
 
 The shared trait dialog keeps effective rarity and effective level in a stable
-summary for ordinary options. An inapplicable value uses an em dash rather than
-changing card geometry. These are engine-derived values, not UI-calculated
-levels or rarity. Echo's shared rows likewise display their engine-derived
-granted values rather than assuming that a shared component implies ordinary
-fresh-offer bonuses. Its large mixed-giver picker uses trait labels without
-redundant god prefixes.
+summary for ordinary options, with an inapplicable value shown as a dash
+rather than changing the card. These are engine-derived values, not
+UI-calculated levels or rarity. Echo's shared rows likewise display their
+engine-derived granted values rather than assuming ordinary fresh-offer
+bonuses; its large mixed-giver picker uses trait labels without redundant god
+prefixes.
 
 Selectable rarity uses its contextual picker; fixed Duo/Legendary rarity is
-read-only. Rarityless NPC and Hammer rows do not acquire a rarity control or
-label. Engine-supported replacement annotations show the exact prior trait,
-slot and promoted rarity without React deriving the transition. Rarity checks
-and replacement chance may appear in a read-only Offer State disclosure as
-branch-correlated engine facts, not normalized outcome probabilities or a
+read-only. Engine-supported replacement annotations show the exact prior
+trait, slot and promoted rarity without React deriving the transition. Rarity
+checks and replacement chance may appear in a read-only Offer State disclosure
+as branch-correlated engine facts, not normalized outcome probabilities or a
 global rarity ledger.
 
 Selected child controls follow the live draft immediately. Targeted traits use
 the shared target picker; Natural Selection uses one ordered compound result;
-Circe uses the engine-provided Arcana or Vow domain. Loadout, Circe, Judgment,
+Circe uses the engine-provided Arcana or Vow domain. Loadout, Circe, Judgment
 and Figurine share artwork cards and accessible dialogs, not selection policy.
-Loadout changes apply immediately. Effect dialogs keep a local selection until
-Save, which applies it and closes; Close discards only unsaved changes.
-Arcana borders and overlaid Roman numerals encode rank (Common green, Rare blue, Epic purple, Heroic red);
-checkmarks or numbered pick badges encode selection. Current ranks come from
-the exact engine context; selected effect targets explicitly preview the grant
-rank through hover and accessibility text, and branch-varying ranks are not collapsed to one color. Ransom effects have a
-read-only preview, not invented authored targets. A missing or stale selected
-child remains repairable and prevents saving the incomplete outcome.
+Loadout changes apply immediately; effect dialogs keep a local selection until
+Save, and Close discards only unsaved changes. Arcana cards show rank and
+selection; current ranks come from the exact engine context, selected effect
+targets preview the granted rank, and branch-varying ranks are not collapsed
+to one. Ransom effects have a read-only preview, not invented authored
+targets. A missing or stale selected child remains repairable and prevents
+saving the incomplete outcome.
+
+### Hex tree and Path of Stars
 
 A normal Spell Drop uses the shared three-row rarityless editor as Edit Hex.
-The launcher names the selected Hex. Position-owned Moonglow/Path bonuses
-remain per-row metadata, and the selected spell's Hex tree board is editable
-from the initial live draft: a layout picker over the tree drawn across the
-dialog on the native talent grid, where each node shows its full talent name.
-Visible copy names nodes by their talent; accessible names add kind and depth
-("Common Omen, depth 3"). Each editable node is its own picker trigger,
-opening a popover anchored to the node and headed by kind and talent. A Rare
-or Epic node's picker lists its pool and marks a talent another node holds. A
-Common node's picker groups "Swap in this column" (the talents at its depth,
-each a swap with the node holding it), "Trade with another column" (its deck's
-talents in other columns, "Omen — column 2") and, in the partial last deck,
-"Swap for an unused talent"; every Common edit keeps a legal tree legal.
-Common nodes are coloured by Common column (a theme token per column). The
-Common decks table, always shown below the board, carries the same colours on
-its column headers and has one row per deck and one cell per Common column,
-listing the talents that deck dealt there as equal-width chips sized to the
-catalog's longest Common label, so a trade never rewraps a cell; every column
-fits two chips side by side, and both Hex tree dialogs are wide enough for six
-columns. Each chip is a
-second trigger for its node's picker. Pickers open to the right of their
-trigger and flip or shift within the dialog; search appears only for more than
-eight options. While a picker is open its board node is marked as being edited,
-and the highlighted option marks the other node it involves; hovering or
-focusing a chip marks its node. A tree no deck sequence deals shows one muted
-line in place of the table body. These relations are projected, not derived in
-React. God Sent nodes are fixed. Choosing a layout
-generates its default tree; Reset to default restores it. An edit is kept as
-made: a tree-wide conflict is reported in the dialog feedback and marks its
-nodes. Saving and reopening is not a prerequisite. Both tree dialogs carry a
-header "?" explaining how common nodes are dealt. Aspect of Selene instead
-edits its Sky Fall tree in a loadout draft dialog whose launcher carries the
-tree's finding; a later Path acquisition does not expose a false replacement spell editor.
+Position-owned Moonglow/Path bonuses remain per-row metadata, and the selected
+spell's Hex tree is editable from the initial live draft: a layout picker over
+the tree drawn on the native talent grid. Each editable node is its own picker.
+A Rare or Epic node lists its pool and marks a talent another node holds. A
+Common node offers swaps within its column (with the node holding that
+talent), trades with its deck's talents in other columns and, in the partial
+last deck, swaps for an unused talent; every Common edit keeps a legal tree
+legal. A Common decks table below the board lists, per deck and Common
+column, the talents that deck dealt there; each entry also opens its node's
+picker, and a tree no deck sequence deals says so instead. The node being
+edited and the other node an option involves are marked; these relations are
+projected, not derived in React. God Sent nodes are fixed. Choosing a layout
+generates its default tree, and Reset to default restores it. An edit is kept
+as made: a tree-wide conflict is reported in the dialog feedback and marks its
+nodes, with no save-and-reopen step. Both tree dialogs explain how Common
+nodes are dealt. Aspect of Selene instead edits its Sky Fall tree in a loadout
+draft dialog whose launcher carries the tree's finding; a later Path
+acquisition does not expose a false replacement spell editor.
 
 Each Path of Stars reward, and the Spell Drop that Aspect of Selene routes to
 the tree, carries an Edit Path of Stars launcher beside its acquisition's other
 editors once its screen is reached; a screen whose context is later lost keeps
-its launcher, disabled with the waiting hint. The launcher opens a draft
-dialog that Save commits as one edit. It draws the plain tree on the same grid
-as the tree board, with no deck table and no column colours: nodes invested on earlier screens are filled, this screen's nodes are
-highlighted and removable, and nodes the engine says can be added are
-clickable; the rest are muted, and God Sent appears only once inserted. A fixed
-"N of M points" counter heads the board. Nothing is preselected: a reached
-screen without a choice opens at "0 of M points", and its required-choice
-finding marks the launcher. The screen's points are a budget like
-a trait offer's slots: once spent, no further node can be added, while removal
-always stays possible. Removing a node a selected dependant needs is allowed;
-the draft feedback then names the cut-off nodes and a wrong count, the cut-off
-nodes carry the finding mark, and a saved conflict marks the launcher.
+its launcher, disabled with the waiting hint. Its draft dialog draws the plain
+tree on the same grid: nodes invested on earlier screens are filled, this
+screen's nodes are highlighted and removable, nodes the engine says can be
+added are clickable, the rest are inert, and God Sent appears only once
+inserted. A points counter heads the board. Nothing is preselected: a reached
+screen without a choice opens at zero points and its required-choice finding
+marks the launcher. The screen's points are a budget like a trait offer's
+slots: once spent no node can be added, while removal always stays possible.
+Removing a node a selected dependant needs is allowed; the draft feedback then
+names the cut-off nodes and the wrong count, the cut-off nodes carry the
+finding mark, and a saved conflict marks the launcher.
+
+### Automatic outcomes
 
 Automatic Steady Growth and Embryo outcomes use their fixed timeline points
 and bound target controls, not draggable author-created effects. Immediate
-keepsake targets stay at their exact equip owner. Progress, rarity and magnitude
-come from engine products; React does not advance clocks or infer those values.
-Embryo magnitude edits preserve the active slider element and focus across
-candidate refreshes. Updated values and their numeric domain appear together,
-without briefly removing the control or retaining another binding's domain.
-
-## Ownership Seams
-
-### Simulation and Core
-
-Simulation publishes one progressive biome result carrying the authoring
-frontier and semantic evaluation coverage. Covered prefixes reuse normal
-materialization, lifecycle, history, room-generation, and reward authorities;
-canonical snapshots, final biome history, completion, and downstream seeding
-exist only for complete-valid results.
-
-Candidate evidence preserves exact ownership and distinguishes unavailable
-coverage, upstream incompleteness, upstream invalidity, requirement failure,
-store exclusion, bag depletion, peer conflict, and source exclusion. Concrete
-reward proposals continue through the selected-plan reward authority.
-
-### Application Projection
-
-Application projections map typed simulation facts to the common contextual
-option vocabulary, aggregate room categories and Devotion pair support,
-centralize player-facing explanations, and cache results by immutable project
-identity and semantic owner.
-
-### React UI
-
-React renders one accessible grouped room picker and one compound reward picker.
-Transient search, disclosure, and partial payload progress remain outside the
-authored project. Components render simulation facts and never infer them.
-
-## Required Invariants
-
-- an incomplete active biome publishes contextual support for every covered
-  decision without publishing a canonical snapshot;
-- a missing downstream decision or Preboss does not block earlier room and
-  reward selectors;
-- every downstream biome receives no contextual claim until every prior biome
-  on its route is complete and valid;
-- N's joint Hub board and ordered traversal publish coverage by semantic
-  region rather than rendered slot order;
-- F/G/H/I/O/P/Q room pickers show only context-supported ordinary choices
-  while retaining selected invalid rooms; N retains its fixed-slot controls;
-- every room exclusion can be explained from typed game evidence;
-- zero- and one-candidate room categories require no redundant selection;
-- reward choices follow their resolved store before authoring;
-- later sibling reward and source conflicts are visible before selection;
-- counted-bag depletion is distinguishable from store and peer exclusion;
-- Boon and Devotion use one compact, automatically advancing interaction;
-- incomplete payloads never enter the authored project or undo history;
-- unavailable upstream context is not presented as local invalidity;
-- no room, reward, bag, or force rule is implemented in React;
-- representative F/G/H/I/N/O/P/Q browser fixtures, accessibility checks,
-  responsiveness measurements, and the full repository validation suite pass.
-
-## Durable ownership cross-reference
-
-This document owns shared contextual-selection behavior, evidence/status
-distinctions, and player-facing candidate vocabulary. [`EDITOR_MODEL.md`](EDITOR_MODEL.md)
-owns the broader feedback, navigation, persistence, and interaction boundaries;
-[`STRUCTURED_EDITOR_WORKSPACE.md`](STRUCTURED_EDITOR_WORKSPACE.md) owns
-structured presentation; and `SIMULATION_AND_VALIDATION.md` owns the
-progressive evaluation foundation consumed by contextual selection.
+keepsake targets stay at their exact equip owner. Progress, rarity and
+magnitude come from engine products; React does not advance clocks or infer
+those values. Embryo magnitude edits keep the active slider and its focus
+across candidate refreshes; updated values and their numeric domain appear
+together, without briefly removing the control or retaining another binding's
+domain.

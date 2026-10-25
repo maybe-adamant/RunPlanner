@@ -48,7 +48,7 @@ add a feature. Then use the relevant lane entry:
 - [Planner Engine](docs/design/SIMULATION_AND_VALIDATION.md): authored inputs,
   evaluation products, chronology, candidates and findings.
 - [Planner Application and Editor](docs/design/EDITOR_MODEL.md): composition,
-  persistence, projections, interaction binding and presentation.
+  projections, interaction binding, readiness and findings.
 
 For a specific contract, go directly to its specialist authority:
 
@@ -61,9 +61,11 @@ For a specific contract, go directly to its specialist authority:
   [trait offers](docs/design/TRAIT_OFFERS.md) and
   [encounter preparation](docs/design/ENCOUNTER_PREPARATION.md) own their
   specialist slices.
-- [Structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md) owns layout
-  and workbenches; [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md) owns
-  picker and draft presentation.
+- [Application shell](docs/design/APPLICATION_SHELL.md) owns Home, the library,
+  saving, opening, the Game tab, the Route/Draft/Loadout panels and the Run
+  State sheet; [structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md)
+  owns what the biome workspace shows; [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md)
+  owns picker and popup-editor behaviour.
 - [Biome rules](docs/biomes/) contain the route authorities;
   [Fresh File rules](docs/biomes/FRESH_FILE_RULES.md) own the first-attempt
   route's differences from them.
