@@ -24,4 +24,5 @@ decoding and regenerates canonical bytes and hashes. A one-to-many migration
 emits every document rather than silently selecting a sibling. Temporary
 transformers are removed after conversion; no permanent alternate fixture
 decoder is introduced. Generated execution fixtures follow the separate
-generated-fixture discipline in [`AGENTS.md`](../../../../AGENTS.md#generated-fixture-discipline).
+discipline in their
+[README](../../../../packages/planner-engine/test/execution-plan/fixtures/README.md).

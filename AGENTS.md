@@ -6,19 +6,22 @@ sophisticated editor own planner meaning. The game module in `game-module/` is
 a downstream consumer of a declarative plan and must not shape the UI or
 simulation around ImGui or ModpackLib.
 
+The main delivery session follows
+[`docs/agents/ORCHESTRATION.md`](docs/agents/ORCHESTRATION.md); every other
+agent follows its role in [`docs/agents/roles/`](docs/agents/roles/) and its
+task packet.
+
 ## Read Before Editing
 
-Use `CONTRIBUTING.md` as the documentation map when a task does not already provide a
-focused navigation packet. Before changing architecture or domain behavior,
-read the exact relevant authority sections under `docs/`; do not read the whole
-README or broad document sets by default. Stable cross-cutting design lives in
-`docs/design/`, biome rules live in `docs/biomes/`, source evidence lives in
-`docs/audits/`, temporary implementation plans live in `docs/progress/`, and
-pending in-game acceptance checklists live in `docs/testing/`.
+Use `CONTRIBUTING.md` as the documentation map when a task does not already
+provide a focused navigation packet. Before changing architecture or domain
+behavior, read the exact relevant authority sections under `docs/`; do not read
+the whole README or broad document sets by default. Stable cross-cutting design
+lives in `docs/design/`, biome rules in `docs/biomes/`, source evidence in
+`docs/audits/`, temporary implementation plans in `docs/progress/`, and pending
+in-game acceptance checklists in `docs/testing/`.
 
 ## Dependency Direction
-
-The intended package direction is:
 
 ```text
 catalog construction -> pure core <- application composition -> React UI
@@ -26,18 +29,15 @@ catalog construction -> pure core <- application composition -> React UI
 
 The pure core may define the normalized interfaces it consumes, but it must
 not import React, Redux, Tauri, browser APIs, filesystem APIs, or UI component
-libraries.
-
-The UI may dispatch semantic commands and render derived projections. It must
-not implement room eligibility, reward bags, lifecycle counters, or topology
-repair.
+libraries. The UI may dispatch semantic commands and render derived
+projections. It must not implement room eligibility, reward bags, lifecycle
+counters, or topology repair.
 
 ## Ownership Lanes
 
-Treat the repository as four ownership lanes—two packages, one application,
-and one game module.
-Route a change by the question it answers, not by the layer that first needs
-the result.
+The repository has four ownership lanes—two packages, one application, and one
+game module. Route a change by the question it answers, not by the layer that
+first needs the result.
 
 ### Hades II Catalog — `packages/hades2-catalog`
 
@@ -49,16 +49,16 @@ the result.
 - May depend on planner-engine's declared catalog-schema and normalized
   contracts. It must not import the planner application or own authored-project,
   simulation, validation, candidate, Redux, or UI behavior.
-- Primary tests are declaration, compiler, normalization, and catalog regression
-  tests. Use `npm run test:catalog` while developing this lane.
+- Primary tests: declaration, compiler, normalization, and catalog regression
+  (`npm run test:catalog`).
 
 ### Planner Engine — `packages/planner-engine`
 
 - Before any engine work, read `docs/design/SIMULATION_AND_VALIDATION.md` in
-  full. It is the engine ownership and extension guide, including settlement
+  full: the engine ownership and extension guide, including settlement
   handoffs, exact candidate context, chronology, findings, and authoring
-  readiness. Then read the relevant specialist sections it links for the
-  boundary being changed; the entry guide does not replace those authorities.
+  readiness. Then read the specialist sections it links for the boundary being
+  changed; the entry guide does not replace those authorities.
 - Owns the pure authored model, addresses, codecs, defaults, semantic commands,
   history, requirements, reward kernel, materialization, simulation, candidates,
   validation, findings, engine-owned authoring queries, and execution-plan
@@ -70,8 +70,7 @@ the result.
   browser, filesystem, or presentation code.
 - Must not return picker sections, component state, focus destinations, labels
   invented by the editor, or other React-facing products.
-- Primary tests live beside the owning engine authority. Use
-  `npm run test:engine` while developing this lane.
+- Primary tests live beside the owning engine authority (`npm run test:engine`).
 
 ### Planner Application and React — `apps/planner`
 
@@ -89,10 +88,9 @@ the result.
   simulation, candidate policy, or finding policy.
 - Put browser/filesystem effects behind application-owned adapters. Keep Redux
   responsible for coordination and history publication, not domain semantics.
-- Primary tests are focused projection, interaction, Redux, UI, contract, and
-  product-loop witnesses. Use `npm run test:planner`, `npm run test:ui`,
-  `npm run test:contract`, or `npm run test:product` according to the boundary
-  changed.
+- Primary tests: focused projection, interaction, Redux, UI, contract, and
+  product-loop witnesses (`npm run test:planner`, `test:ui`, `test:contract`,
+  `test:product` by the boundary changed).
 
 ### Game Module — `game-module/`
 
@@ -103,22 +101,17 @@ the result.
   under `packages/planner-engine/test/execution-plan/fixtures/`. It must not
   own planner semantics, reproduce eligibility or candidate policy, or import
   planner code.
-- Primary tests are the Lua syntax pass, Lua suite, and Luacheck. Use
-  `npm run test:game-module` while developing this lane.
-- ModpackLib's source is the `external/adamant-ModpackLib` submodule, pinned to
-  a release tag. Before changing ModpackLib-facing code (status UI, overlays,
-  victory summary, config), read its `API.md` and `CHANGELOG.md` there. The
-  required version is the `adamant-ModpackLib` dependency in the game module's
-  manifest; bump the submodule with each ModpackLib release and raise the
-  manifest requirement only when the module needs the newer API. The submodule
-  is reference only: nothing builds against it, and lint, format and tests skip
-  `external/`.
+- Primary tests: Lua syntax pass, Lua suite, and Luacheck
+  (`npm run test:game-module`).
+- Before changing ModpackLib-facing code (status UI, overlays, victory
+  summary, config), follow
+  [ModpackLib](game-module/CONTRIBUTING.md#modpacklib): its pinned submodule,
+  required version, `API.md` and `CHANGELOG.md`.
 
 When a feature crosses lanes, establish the authoritative fact or transition in
-its owning lane first, expose the narrow supported product, and adapt it
-in the consuming lane. Keep the complete policy matrix with its authority;
-consumer and product-loop tests retain representative contact and workflow
-witnesses rather than copying that matrix.
+its owning lane first, expose the narrow supported product, and adapt it in the
+consuming lane. Keep the complete policy matrix with its authority; consumer
+and product-loop tests retain representative contact and workflow witnesses.
 
 ## Code Placement and Module Boundaries
 
@@ -128,16 +121,17 @@ witnesses rather than copying that matrix.
   area.
 - Before creating a module boundary, identify its owner, explicit inputs,
   returned product, consumers, primary tests, and the old code it displaces.
-- Use `index.ts` only for a deliberate supported surface. Do not add barrels
-  merely to shorten imports or hide dependency direction.
-- Use assembly or composition modules for wiring one level of owned products.
-  They must not become semantic policy owners or ambient dependency registries.
+- Use `index.ts` only for a deliberate supported surface, never merely to
+  shorten imports or hide dependency direction.
+- Assembly or composition modules wire one level of owned products; they must
+  not become semantic policy owners or ambient dependency registries.
 - Cross-package imports use declared package exports. Planner imports follow
   the aliases and immediate-neighborhood relative-import rules in
   `docs/design/ARCHITECTURE.md`; aliases identify ownership roots, not public
   APIs or dependency injection.
-- Put test-only fixtures, harnesses, builders, and observers under test support,
-  never production `src/`. Production code must not import test support.
+- Test-only fixtures, harnesses, builders, and observers live under test
+  support, never production `src/`. Production code must not import test
+  support.
 
 When a placement or import rule is mechanically observable, enforce it with
 TypeScript, ESLint, or an architecture test in addition to documenting it.
@@ -151,11 +145,10 @@ TypeScript, ESLint, or an architecture test in addition to documenting it.
   explicit product. It must not be the sole carrier of semantic facts or
   callable capabilities required by a consumer.
 - Construct application-wide collaborators at the composition root and inject
-  narrow capabilities. Do not introduce a dependency-injection container,
-  service locator, mutable service table, or catch-all context object.
+  narrow capabilities. No dependency-injection container, service locator,
+  mutable service table, or catch-all context object.
 - Use parameter objects, interfaces, and factories only for real construction
-  or product boundaries. Do not create them solely to make a long call shorter
-  or to prepare for a later refactor.
+  or product boundaries, not to shorten a call or prepare for a later refactor.
 - A mutable builder is acceptable inside one stage. Freeze and return its
   complete product before crossing the stage boundary.
 - Keep closed semantic dispatch explicit and exhaustive. An orchestrator may
@@ -177,58 +170,11 @@ TypeScript, ESLint, or an architecture test in addition to documenting it.
   make a refactor testable. Production validation protects real contact and
   invariant boundaries; independent closure and mutation auditing belongs in
   tests.
-- Give each policy and edge-case matrix one primary test owner. Facade,
-  integration, and product-loop suites retain representative boundary witnesses
-  rather than duplicate the complete matrix.
-- Treat line count, file count, test count, and directory size as diagnostic
-  evidence only. The acceptance target is a smaller, explicit change
-  neighborhood with no parallel path or unexplained production growth.
-
-## Main-Session Orchestration Only
-
-This section applies to the main delivery orchestrator. Subagents follow the
-shared repository rules, their custom-agent instructions, and their focused
-task packet; they must not adopt the orchestration role themselves.
-
-Use the multi-agent gate routine for substantial cross-lane features,
-foundational model corrections, schema changes, and explicitly gated plans—not
-for a small focused fix that one agent can safely implement and review.
-
-The main session owns scope, authority selection, locked plans, task packets,
-finding dispositions, final review, Git operations, and user communication. For
-each delegated gate it must:
-
-- inventory the base and worktree, then provide a self-contained packet naming
-  the exact gate, ownership, deliverables, exclusions, acceptance tests,
-  expected deletions, starting files or symbols, and governing document sections;
-- omit full parent history by default and permit only one write-capable agent in
-  the shared worktree, while allowing distinct bounded read-only investigations;
-- delegate to a standing executor for the task's lane and retire it when its
-  ownership or design changes materially, after about ten tasks, after its
-  second compaction (read from its transcript), or when it visibly regresses by
-  forgetting or reopening a settled decision; an executor continuing the same
-  design whose decisions live in a written spec or plan document keeps working
-  through its first compaction, because a fresh agent must re-read everything;
-  within a multi-gate plan, retire only at a gate boundary, handing off through
-  the plan document; when a large lane agent has gone cold and the task is
-  small, prefer a fresh agent with a tight packet;
-- review stabilized work with the lane's standing reviewer, never an agent that
-  executed the change; use a fresh independent reviewer for schema changes,
-  execution-protocol changes, foundational model corrections, and plan
-  closure; perform one bounded remediation pass rather than an open-ended
-  review loop; and
-- own broad phase-closure checks and the final bird's-eye review of contract
-  fidelity, ownership, superseded paths, tests, growth, and documentation.
-
-Keep a session roster of standing agents by lane, each with its task count and
-approximate size: executors for the engine, the planner application and UI,
-catalog declarations and game-source research, and the execution plan with its
-fixtures and game module; reviewers for engine/execution and planner/UI. The
-roster is session state, not a repository file.
-
-The main session decides whether a reported contract conflict requires a plan
-amendment, narrower scope, or user input. Delegation does not replace its own
-understanding of the live diff.
+- Give each policy and edge-case matrix one primary test owner; facade,
+  integration, and product-loop suites keep representative boundary witnesses.
+- Line, file, test and directory counts are diagnostic only. The target is a
+  smaller, explicit change neighborhood with no parallel path or unexplained
+  production growth.
 
 ## Modeling Rules
 
@@ -262,246 +208,100 @@ understanding of the live diff.
 
 Redux Toolkit is the application state coordinator, not the domain engine.
 Reducers own authored project and UI-session state. Simulation remains a pure
-operation over an authored snapshot and normalized catalog.
-
-Undo/redo records semantic authored edits. Navigation, hover, expanded panels,
-search text, and derived findings do not enter authored history.
+operation over an authored snapshot and normalized catalog. Undo/redo records
+semantic authored edits; navigation, hover, expanded panels, search text, and
+derived findings do not enter authored history.
 
 ## UI
 
 Start with normal React composition and CSS layout. Do not introduce a graph
 library until a concrete view requires it. If React Flow is later added, its
 nodes and positions are projections of domain topology, never topology
-authority.
-
-Use accessible component primitives for dialogs, menus, tabs, comboboxes, and
-keyboard interaction. Customize copied shadcn/ui components deliberately; do
-not accumulate wrapper layers that conceal ownership.
+authority. Use accessible component primitives for dialogs, menus, tabs,
+comboboxes, and keyboard interaction. Customize copied shadcn/ui components
+deliberately; do not accumulate wrapper layers that conceal ownership.
 
 ## Testing
 
 Use the narrowest truthful test lane during implementation. Executors own the
 affected lane and explicitly assigned acceptance tests; the main session owns
-broad phase-closure verification:
+broad phase-closure verification. [Testing](docs/TESTING.md) owns the shared
+execution policy and the measurement lanes' mechanics.
 
-- `npm run test:changed` for tests related to uncommitted source or fixture
-  changes;
-- `npm run test:ui` for leaf React/editor changes;
-- `npm run test:planner` for planner projection, Redux, workspace, UI, and
-  architecture-boundary changes;
-- `npm run test:contract` for application/workspace capability changes;
-- `npm run test:product` for cross-layer browser workflows;
-- `npm run test:engine` or `npm run test:catalog` for their owning packages;
-- `npm run test:game-module` for the game module's Lua syntax, tests, and
-  Luacheck;
-- `npm run test:equivalence` before and after engine refactors and any
-  chronology or settlement change. It compares digests of the
-  `simulateProject` product, the encoded execution plan and a candidate-session
-  probe for the execution fixtures, checkpoints and the listed route builders
-  with the committed
-  `packages/planner-engine/test/equivalence/baseline.json`; `EQUIVALENCE_WRITE=1`
-  rewrites the baseline, only for an intended product change.
-- `npm run test:draft-corpus` before and after a Draft change. It drafts a
-  fixed corpus of specs and seeds, prints target, order, purchase, attempt and
-  time aggregates with deltas against the committed
-  `packages/planner-engine/test/draft-corpus/baseline.json`, and fails only on
-  a refusal, a throw, a failed draft or a redrafted seed's changed plan;
-  `DRAFT_CORPUS_WRITE=1` rewrites the baseline; `DRAFT_CORPUS_ONLY=<regex>`
-  drafts a subset of specs.
-- `npm run test:performance:snapshot` and `npm run test:performance:compare`
-  (below) for changes to rebuild, candidate, edit or Undo latency.
+- `npm run test:changed`: tests related to uncommitted source or fixture changes.
+- `npm run test:ui`: leaf React/editor changes.
+- `npm run test:planner`: planner projection, Redux, workspace, UI, and
+  architecture-boundary changes.
+- `npm run test:contract`: application/workspace capability changes.
+- `npm run test:product`: cross-layer browser workflows.
+- `npm run test:engine` / `npm run test:catalog`: their owning packages.
+- `npm run test:game-module`: the game module's Lua syntax, tests, and Luacheck.
+- `npm run test:equivalence`: before and after engine refactors and any
+  chronology or settlement change.
+- `npm run test:draft-corpus`: before and after a Draft change.
+- `npm run test:performance:snapshot` / `test:performance:compare`: changes to
+  rebuild, candidate, edit or Undo latency.
 
 `npm run check` is the core-correctness gate for phase closure, push, and
 release; `npm run test` is its correctness test lane. Run the complete gate for
 test/configuration changes, shared package changes with broad downstream
-impact, and before declaring a phase closed. The equivalence, draft corpus and
-performance lanes are opt-in measurement and end-to-end witnesses outside the
-gate; run them when their trigger above applies.
+impact, and before declaring a phase closed—once, after narrow tests and review
+fixes are stable, recording the truthful result in the durable progress
+history; never repeatedly just to generate review evidence. The equivalence,
+draft corpus and performance lanes are opt-in witnesses outside the gate. Do
+not add local test timeout or retry overrides.
 
-### Shared test execution policy
-
-All package and application Vitest files run through the single
-`npm run test:correctness` lane; the performance witness and the opt-in
-equivalence and draft corpus lanes are its only excluded files. The repository uses the
-calibrated eight-worker setting, 120-second test and hook watchdogs, a
-30-second teardown watchdog, and zero retries. These values detect probable
-hangs; they are not correctness performance budgets. Fixture integrity
-intentionally remains a one-worker command, and all correctness tests use the
-shared watchdogs. Do not add local timeout or retry overrides. Testing
-Library asynchronous queries use the shared ten-second functional wait. The
-progress reporter's heartbeat and slowest-file output are diagnostic and never
-determine pass/fail.
-
-Performance is measured separately, outside `npm run check`, with
-`npm run test:performance:snapshot` and judged by
-`npm run test:performance:compare`; `npm run test:performance:absolute` is
-reserved for an explicitly canonical environment. The snapshot covers the
-eight Underworld/Surface rebuild, cold-candidate, edit, and cached-Undo
-operations. Full rebuild uses one warmed application and a freshly decoded
-copy of the project for one warmup plus three measured calls, so no cached
-biome is reused; each cold-candidate, edit, and cached-Undo
-sample uses a fresh prepared application and state, with medians reported. The
-generic comparison runs base and candidate sequentially on the same host,
-resolves dirty worktrees to `HEAD` and clean worktrees to `HEAD^` unless the
-`RUN_PLANNER_PERFORMANCE_BASE_REF` environment variable or `--base-ref`
-overrides the base, and rejects an identical clean base. It
-requires both a strict percentage increase and an inclusive absolute increase:
-20%/100 ms for non-Undo metrics and 50%/10 ms for cached Undo. The canonical
-1,000 ms interaction and 50 ms cached-Undo targets are report-only in generic
-comparisons.
-
-Keep tests near their authority:
-
-Use each package/application's `test/` tree rather than colocating tests in
-production `src/`. Mirror the owning source neighborhood for focused tests;
-keep architecture, product-loop, fixture and shared support neighborhoods
-separate under `test/`.
-
-- declaration normalization tests in the catalog package;
-- command and codec tests in the core project model;
-- lifecycle and game-rule fixtures in the simulator;
-- interaction tests at the UI adapter boundary;
-- end-to-end tests only for cross-layer behavior.
+Keep tests near their authority, in each package/application's `test/` tree
+rather than production `src/`, mirroring the owning source neighborhood;
+architecture, product-loop, fixture and shared support neighborhoods stay
+separate under `test/`. Declaration normalization tests belong in the catalog
+package, command and codec tests in the core project model, lifecycle and
+game-rule fixtures in the simulator, interaction tests at the UI adapter
+boundary, and end-to-end tests only for cross-layer behavior.
 
 Test helpers may construct inputs and observe outputs, but must not reproduce
 production eligibility, topology, lifecycle, reward, focus, or candidate
 policy. Do not test React, Redux Toolkit, or third-party component internals.
 
-### Generated fixture discipline
-
-Treat checked-in JSON execution fixtures as generated protocol products, not as
-scratch serialization output.
-
-- Generate their semantic content through the owning planner fixture/product
-  builder. Do not hand-author wire fields that production cannot emit.
-- Use the repository's Prettier JSON format for every checked-in execution
-  fixture, including its trailing newline. Generate through `encodeExecutionPlan`
-  and format that wire output with Prettier before writing it. Do not serialize
-  the expanded in-memory plan, use plain `JSON.stringify` indentation, or write
-  compact one-line fixtures. Published plans remain compact; this policy applies
-  only to checked-in fixtures.
-- For a generator using Prettier's API, resolve the repository configuration
-  for the destination and pass its filepath to `prettier.format`. A shell-based
-  refresh must finish with `npx prettier --write <changed-fixture-paths>` before
-  handoff. This is part of generation, not a later cleanup pass.
-  `npm run format:check` enforces the same format. Do not manually wrap lines or
-  reformat unrelated fixtures during semantic changes.
-- Regenerate only fixtures whose semantic product changed. For a protocol-wide
-  scalar such as the version number, use a bounded mechanical edit rather than
-  rebuilding otherwise unchanged products.
-- The planner-engine corpus is the only copy. The game module's Lua tests read
-  it in place; run `npm run test:game-module` after changing a fixture.
-- Before handoff, inspect fixture `git diff --numstat` and a representative diff.
-  Unexpected whole-file churn or formatting-only changes are a failed fixture
-  update and must be corrected before review.
+Checked-in execution fixtures are generated protocol products; follow the
+[execution fixture discipline](packages/planner-engine/test/execution-plan/fixtures/README.md)
+when changing one.
 
 ## Documentation
 
 Durable documentation describes the current model, contracts, and source
-evidence; it is not a bug-fix changelog.
+evidence; it is not a bug-fix changelog. The
+[documentation lifecycle](CONTRIBUTING.md#documentation-lifecycle) owns
+investigations, plans, audits and testing checklists in detail.
 
 - Update the owning document when a model, ownership, contract, or supported
   integration boundary changes, or when its existing explanation is inaccurate.
-- Integrate newly established game facts into the existing source audit or
-  matrix, with one primary owner for each fact.
+  Revise the existing explanation or table row rather than appending a
+  narrative for each fix.
+- Each fact has one primary owner: integrate newly established game facts into
+  the existing source audit or matrix, and do not duplicate the same lesson
+  across design documents, audits, and hook maps.
 - A fix that restores an already-documented contract normally needs only code,
   regression coverage, and a commit message—not another documentation paragraph.
 - Design documents state meaning, not code: no TypeScript or file/function
   mirrors, UI copy, or tuning values the code owns. Mechanics a design needs
   go in a short companion document or appendix linked from the owner.
+- Implementation history and verification results belong in commits or the
+  applicable progress tracker, not durable design authority.
+- Unknown game behavior belongs in focused audit notes or failing/skipped
+  research fixtures, never in generic `unsupported` values in production
+  models.
+- Temporary plans (`docs/progress/`) and investigations
+  (`docs/investigations/`) are deleted at delivery closure by default, after
+  their durable result is promoted; stable documents never link them.
+- `docs/testing/` holds only pending in-game acceptance checks.
 
-Revise the existing explanation or table row rather than appending a narrative
-for each fix. Do not duplicate the same lesson across design documents, audits,
-and hook maps. Keep implementation history and verification results in commits
-or the applicable progress tracker, separate from durable design authority.
-
-Unknown game behavior belongs in focused audit notes or failing/skipped
-research fixtures. Do not add generic `unsupported` values to production
-models merely to remember unfinished research.
-
-### Audit and Plan Lifecycle
-
-Use `docs/investigations/` for temporary pre-plan analysis: bug-family
-inventories, competing models, codebase assessments, and live-game probes. An
-investigation states its question, current evidence, uncertainties, and
-recommended disposition without becoming repository authority. Revise it
-freely while the question is open; do not link it from the root README or make
-stable documents depend on it.
-
-At delivery closure, delete the investigation and its temporary plan by
-default. Promote only the durable result: source-backed game facts and bounded
-unknowns to `docs/audits/`, accepted cross-cutting policy to `docs/design/`,
-and accepted biome behavior to `docs/biomes/`. An investigation may remain only
-while it owns a concrete unresolved question or pending probe; it must not
-survive merely as implementation history.
-
-Implementation closure and live acceptance are separate. Do not retain a
-completed plan or investigation solely because in-game verification remains.
-Move those remaining checks to `docs/testing/` and retire the completed delivery
-documents. This does not establish a live pass or waive an explicit release
-acceptance requirement.
-
-Use `docs/testing/` only for pending in-game acceptance: setup, actions, expected
-observations, and any necessary build or protocol constraints. Reuse the relevant
-checklist rather than creating one per delivery gate. Do not carry implementation
-plans, automated test counts, commit histories, or completed delivery narratives
-into these files. Automated tests and source probes are not live verification;
-confirm checks from actual in-game evidence or the owner's confirmation, or
-record an explicit owner waiver. Retire confirmed or waived items and delete
-empty trackers. Promote newly established game facts to the owning audits,
-design documents, or biome rules. The root documentation map may link to the
-`docs/testing/` index; stable authorities must not depend on pending checklists.
-
-Use `docs/audits/` for durable evidence. A source audit records game facts,
-source locations, uncertainties, discrepancies, and the final planner
-disposition. It must not become an implementation checklist or prescribe React
-layout, module names, commit sequencing, or temporary delivery mechanics.
-When the facts are not yet settled, finish or explicitly bound the audit before
-locking an implementation plan.
-
-Use a focused document under `docs/progress/` when a change is cross-lane,
-schema-affecting, lifecycle-sensitive, foundational, or large enough to need
-multiple reviewable gates. Ground it in the current code before locking it. A
-locked plan should state:
-
-- objective and user-visible outcome;
-- included and excluded scope;
-- source facts versus chosen planner simplifications;
-- exact authored, catalog, simulation, application, and UI ownership;
-- delivery gates and intended commit boundaries;
-- primary test owners, representative product witnesses, and audit-againsts;
-- deletion/retirement expectations and explicit non-goals.
-
-Challenge the plan adversarially before execution. Measure each gate against
-the problem it solves and remove speculative scaffolding, duplicated policy,
-and acceptance demands that require impossible or fabricated states. If the
-underlying model changes materially during discussion, rewrite the affected
-section cleanly rather than accumulating revision-scarring caveats.
-
-Temporary implementation plans are intentionally isolated:
-
-- do not add them to `README.md` or link them from stable design, biome, or
-  audit authorities;
-- do not make unrelated progress documents depend on them;
-- keep their status, base commit, locked decisions, gates, and verification
-  requirements self-contained;
-- commit a locked audit/plan before implementation when it is the execution
-  contract.
-
-At completion of the final slice, promote only new durable decisions or evidence
-into the smallest stable owning documents under `docs/design/`, `docs/biomes/`, and
-`docs/audits/`; remove gate language from production comments; and delete the
-temporary plan in the same closure change. Update an audit's planner
-disposition without erasing source facts or documented source/model
-discrepancies. `README.md` should link only durable authorities and long-lived
-project trackers that remain useful after the delivery branch is gone.
-
-Run one complete repository gate at phase closure, after narrow implementation
-tests and review fixes are stable. Record the truthful result in the durable
-progress history. Do not repeatedly run the full suite merely to generate
-review evidence.
+Code comments state the domain fact or invariant the code cannot show, briefly
+(one or two lines), and never reference plans, gates or process.
 
 ## Git
 
-Use Conventional Commits. Inspect the live worktree before editing and preserve
+Use Conventional Commits: subject-only by default, with a short body only when
+the why isn't obvious; a schema revision bump is always announced there.
+Inspect the live worktree before editing and preserve
 unrelated user work.

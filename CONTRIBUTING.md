@@ -106,7 +106,17 @@ Game facts and other references:
   the [feature-to-hook map](docs/audits/game-execution-contacts/FEATURE_HOOK_MAP.md)
   from published planner facts to native contacts.
 - [In-game testing](docs/testing/README.md): pending live acceptance checks.
+- [Testing](docs/TESTING.md): the shared test execution policy and the
+  equivalence, draft corpus and performance lanes.
 - [Releasing](docs/RELEASING.md): the installer, updater and release workflow.
+
+Working with agents:
+
+- [Orchestration](docs/agents/ORCHESTRATION.md): how the main session
+  delegates, reviews and verifies gated delivery.
+- [Agent roles](docs/agents/roles/): each delegated role's scope, first reads,
+  rules and report; [platform notes](docs/agents/PLATFORM_NOTES.md) cover
+  platform-specific mechanics.
 
 ### Lifecycle seams and profiles
 
@@ -141,6 +151,85 @@ whose offer affects offer history but never acquisition history; and an O Ship
 room with a Heracles Intro whose counting record precedes the later phases
 without trimming them, and whose active Combat2 wheel keeps independent
 offer/acquisition timing.
+
+## Documentation lifecycle
+
+Use `docs/investigations/` for temporary pre-plan analysis: bug-family
+inventories, competing models, codebase assessments, and live-game probes. An
+investigation states its question, current evidence, uncertainties, and
+recommended disposition without becoming repository authority. Revise it
+freely while the question is open; do not link it from the root README or make
+stable documents depend on it.
+
+At delivery closure, delete the investigation and its temporary plan by
+default. Promote only the durable result: source-backed game facts and bounded
+unknowns to `docs/audits/`, accepted cross-cutting policy to `docs/design/`,
+and accepted biome behavior to `docs/biomes/`. An investigation may remain only
+while it owns a concrete unresolved question or pending probe; it must not
+survive merely as implementation history.
+
+Implementation closure and live acceptance are separate. Do not retain a
+completed plan or investigation solely because in-game verification remains.
+Move those remaining checks to `docs/testing/` and retire the completed delivery
+documents. This does not establish a live pass or waive an explicit release
+acceptance requirement.
+
+Use `docs/testing/` only for pending in-game acceptance: setup, actions,
+expected observations, and any necessary build or protocol constraints. Reuse
+the relevant checklist rather than creating one per delivery gate. Do not carry
+implementation plans, automated test counts, commit histories, or completed
+delivery narratives into these files. Automated tests and source probes are not
+live verification; confirm checks from actual in-game evidence or the owner's
+confirmation, or record an explicit owner waiver. Retire confirmed or waived
+items and delete empty trackers. Promote newly established game facts to the
+owning audits, design documents, or biome rules. The root documentation map may
+link to the `docs/testing/` index; stable authorities must not depend on
+pending checklists.
+
+Use `docs/audits/` for durable evidence. A source audit records game facts,
+source locations, uncertainties, discrepancies, and the final planner
+disposition. It must not become an implementation checklist or prescribe React
+layout, module names, commit sequencing, or temporary delivery mechanics. When
+the facts are not yet settled, finish or explicitly bound the audit before
+locking an implementation plan.
+
+Use a focused document under `docs/progress/` when a change is cross-lane,
+schema-affecting, lifecycle-sensitive, foundational, or large enough to need
+multiple reviewable gates. Ground it in the current code before locking it. A
+locked plan states:
+
+- objective and user-visible outcome;
+- included and excluded scope;
+- source facts versus chosen planner simplifications;
+- exact authored, catalog, simulation, application, and UI ownership;
+- delivery gates and intended commit boundaries;
+- primary test owners, representative product witnesses, and audit-againsts;
+- deletion/retirement expectations and explicit non-goals.
+
+Challenge the plan adversarially before execution. Measure each gate against
+the problem it solves and remove speculative scaffolding, duplicated policy,
+and acceptance demands that require impossible or fabricated states. If the
+underlying model changes materially during discussion, rewrite the affected
+section cleanly rather than accumulating revision-scarring caveats.
+
+Temporary implementation plans are intentionally isolated:
+
+- do not add them to `README.md` or link them from stable design, biome, or
+  audit authorities;
+- do not make unrelated progress documents depend on them;
+- keep their status, base commit, locked decisions, gates, and verification
+  requirements self-contained;
+- commit a locked audit/plan before implementation when it is the execution
+  contract.
+
+At completion of the final slice, promote only new durable decisions or
+evidence into the smallest stable owning documents under `docs/design/`,
+`docs/biomes/`, and `docs/audits/`; remove gate language from production
+comments; and delete the temporary plan in the same closure change. Update an
+audit's planner disposition without erasing source facts or documented
+source/model discrepancies. `README.md` should link only durable authorities
+and long-lived project trackers that remain useful after the delivery branch is
+gone.
 
 ## Quickstart
 
