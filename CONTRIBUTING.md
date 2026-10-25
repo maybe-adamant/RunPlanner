@@ -39,49 +39,74 @@ UI-session state never enters authored history.
 
 ## Documentation
 
-Dependency direction and ownership lanes are in [`AGENTS.md`](AGENTS.md); start
-with [Architecture](docs/design/ARCHITECTURE.md) for runtime flow and how to
-add a feature. Then use the relevant lane entry:
+Dependency direction and ownership lanes are in [`AGENTS.md`](AGENTS.md).
+Start with [Architecture](docs/design/ARCHITECTURE.md), then read the entry
+document for your lane and go to a specialist document for a specific contract.
 
-- [Catalog Model](docs/design/CATALOG_MODEL.md): source-backed declarations and
-  normalization.
-- [Planner Engine](docs/design/SIMULATION_AND_VALIDATION.md): authored inputs,
-  evaluation products, chronology, candidates and findings.
-- [Planner Application and Editor](docs/design/EDITOR_MODEL.md): composition,
-  projections, interaction binding, readiness and findings.
+Catalog:
 
-For a specific contract, go directly to its specialist authority:
+- [Catalog model](docs/design/CATALOG_MODEL.md): source-backed declarations
+  and their normalization into the engine's catalog.
 
-- [Authored project](docs/design/AUTHORED_PROJECT_MODEL.md),
-  [game generation](docs/design/GAME_GENERATION_RULES.md),
-  [rewards](docs/design/REWARD_MODEL.md),
-  [room lifecycle](docs/design/ROOM_LIFECYCLE_MODEL.md),
-  [candidate evaluation](docs/design/CANDIDATE_EVALUATION_MODEL.md), and
-  [Draft mode](docs/design/DRAFT_MODE.md) own the detailed engine contracts;
-  [trait offers](docs/design/TRAIT_OFFERS.md) and
-  [encounter preparation](docs/design/ENCOUNTER_PREPARATION.md) own their
-  specialist slices.
-- [Application shell](docs/design/APPLICATION_SHELL.md) owns Home, the library,
-  saving, opening, the Game tab, the Route/Draft/Loadout panels and the Run
-  State sheet; [structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md)
-  owns what the biome workspace shows; [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md)
-  owns picker and popup-editor behaviour.
-- [Biome rules](docs/biomes/) contain the route authorities;
+Planner engine:
+
+- [Simulation and validation](docs/design/SIMULATION_AND_VALIDATION.md): the
+  engine entry guide; authored inputs, evaluation products, chronology,
+  candidates and findings.
+- [Authored project model](docs/design/AUTHORED_PROJECT_MODEL.md): persisted
+  project state, addresses, commands, schema and history.
+- [Game generation rules](docs/design/GAME_GENERATION_RULES.md): the shared
+  door, batch, cap and store contract the biome rules build on.
+- [Reward model](docs/design/REWARD_MODEL.md): reward declarations, stores,
+  shops, offers and acquisitions.
+- [Trait offers](docs/design/TRAIT_OFFERS.md): trait-bearing offers, their
+  assessment and settlement.
+- [Room lifecycle model](docs/design/ROOM_LIFECYCLE_MODEL.md): the ordered
+  single-room lifecycle and its history.
+- [Encounter preparation](docs/design/ENCOUNTER_PREPARATION.md): authoring,
+  resolving and preparing a room's encounters.
+- [Candidate evaluation model](docs/design/CANDIDATE_EVALUATION_MODEL.md): how
+  contextual alternatives are evaluated.
+- [Draft mode](docs/design/DRAFT_MODE.md): drafting a random valid route from a
+  described world.
+
+Planner application and editor:
+
+- [Editor model](docs/design/EDITOR_MODEL.md): the application entry guide;
+  composition, projections, interaction binding and findings.
+- [Application shell](docs/design/APPLICATION_SHELL.md): Home, the library,
+  saving and opening, the Game tab, the Route/Draft/Loadout panels and the Run
+  State sheet.
+- [Structured editor workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md):
+  what the route and biome workspace shows and where.
+- [Contextual editor UX](docs/design/CONTEXTUAL_EDITOR_UX.md): pickers and
+  popup editors.
+
+Game integration:
+
+- [Execution protocol](docs/design/EXECUTION_PROTOCOL.md): the published plan
+  wire and its conformance contract.
+- [Game module distribution](docs/design/GAME_MODULE_DISTRIBUTION.md):
+  installing and checking the module, plan admission and the bug report.
+- [Plan slots and publication](docs/design/PLAN_SLOTS_AND_PUBLICATION.md): plan
+  slots, sending, and the signed event and catalog feeds.
+- [Run-start installation](docs/design/RUN_START_INSTALLATION.md): run
+  modifiers, the starting loadout, Practice mode and snap corrections.
+- [Biome execution navigation](docs/design/BIOME_EXECUTION_NAVIGATION.md): each
+  biome's execution work beyond the shared F/G baseline.
+- [Game module](game-module/CONTRIBUTING.md): the module's layout,
+  dependencies and checks.
+
+Game facts and other references:
+
+- [Biome rules](docs/biomes/): each biome's route authority;
   [Fresh File rules](docs/biomes/FRESH_FILE_RULES.md) own the first-attempt
   route's differences from them.
-- [In-game testing](docs/testing/) tracks pending live acceptance checks separately
-  from implementation plans.
-- The [execution protocol](docs/design/EXECUTION_PROTOCOL.md) defines the
-  compiler/executor contract, beside
-  [game module distribution](docs/design/GAME_MODULE_DISTRIBUTION.md),
-  [plan slots and publication](docs/design/PLAN_SLOTS_AND_PUBLICATION.md) and
-  [run-start installation](docs/design/RUN_START_INSTALLATION.md); [biome execution navigation](docs/design/BIOME_EXECUTION_NAVIGATION.md)
-  defines only the biome-specific execution work beyond the shared F/G
-  baseline. The [feature-to-hook map](docs/audits/game-execution-contacts/FEATURE_HOOK_MAP.md)
-  maps published planner facts to native contacts and explains each intervention.
-- [Source audit map](docs/audits/README.md) routes source evidence by subject.
-- [Game module](game-module/CONTRIBUTING.md) describes the module's layout,
-  dependencies and checks.
+- [Source audits](docs/audits/README.md): source evidence by subject, including
+  the [feature-to-hook map](docs/audits/game-execution-contacts/FEATURE_HOOK_MAP.md)
+  from published planner facts to native contacts.
+- [In-game testing](docs/testing/README.md): pending live acceptance checks.
+- [Releasing](docs/RELEASING.md): the installer, updater and release workflow.
 
 ### Lifecycle seams and profiles
 
