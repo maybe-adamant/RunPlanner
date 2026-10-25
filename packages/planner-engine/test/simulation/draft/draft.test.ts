@@ -9,7 +9,6 @@ import {
   draftGodBoonBudget,
   draftKeepsakeOptions,
   draftExcludingTraitKeys,
-  draftOrderRefusals,
   draftSourceQueues,
   draftRefusals,
   draftWorldGiverKeys,
@@ -690,7 +689,6 @@ describe('draft basket order', () => {
     const draft = spec(['ApolloSecondStageCastBoon', 'ZeusCastBoon', 'ApolloExCastBoon']);
     expect(assessment(underworld, draft, 'ApolloSecondStageCastBoon').selectable).toBe(true);
     expect(assessment(underworld, draft, 'ZeusCastBoon').selectable).toBe(true);
-    expect(draftOrderRefusals(catalog, underworld, draft)(draft.basketByGiver).size).toBe(0);
   });
 
   it('refuses a Hermes trait queued before the Hermes trait it needs', () => {
@@ -774,6 +772,10 @@ describe('draft first god pick', () => {
         .refusals,
     ).toEqual([firstPick]);
     expect(
+      assessment(underworld, spec(['ZeusCastBoon', 'FocusLightningBoon']), 'FocusLightningBoon')
+        .refusals,
+    ).toEqual([]);
+    expect(
       refusals(underworld, {
         basketByGiver: draftBasket(['FocusLightningBoon', 'ApolloRetaliateBoon']),
       }),
@@ -784,18 +786,6 @@ describe('draft first god pick', () => {
     expect(refusals(underworld, { basketByGiver: draftBasket(['ApolloRetaliateBoon']) })).toEqual(
       [],
     );
-  });
-
-  it('blocks a reorder that moves a non-core to the front of pool #1', () => {
-    const order = draftOrderRefusals(
-      catalog,
-      underworld,
-      spec(['ZeusCastBoon', 'FocusLightningBoon']),
-    );
-    expect(order({ Zeus: ['ZeusCastBoon', 'FocusLightningBoon'] }).size).toBe(0);
-    expect(
-      order({ Zeus: ['FocusLightningBoon', 'ZeusCastBoon'] }).get('FocusLightningBoon'),
-    ).toEqual([firstPick]);
   });
 
   it('is unrestricted when the start already holds a core', () => {
