@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { createDefaultRouteLoadout } from '../../../src/authored-project/loadout';
 import { createProjectDocument } from '../../../src/authored-project/defaults';
@@ -219,6 +219,56 @@ describe('depth pacing', () => {
     steering.paceBiome(draws(0.1, 0.9, 0.2));
     const prerequisites = basket.slice(0, 2).map((key) => steering.targetDepth(key));
     expect(steering.targetDepth(duo)).toBeGreaterThanOrEqual(Math.max(...prerequisites));
+  });
+});
+
+describe('need-gated Shops', () => {
+  const base = createProjectDocument(catalog, {
+    projectId: 'n',
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
+  });
+  const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
+  void _startingReward;
+  const steering = () => {
+    const paced = draftSteeringFor(base, {
+      loadout,
+      world: {
+        godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+        storyNpcByBiome: {},
+        fieldNpcsByBiome: {},
+      },
+      basketTraitKeys: ['ZeusWeaponBoon'],
+      rackKeepsakeKeys: [],
+    });
+    // The trait's target lies deep in the biome, so nothing is overdue at its start.
+    paced.paceBiome(() => 0.99);
+    return paced;
+  };
+  const band = 100;
+
+  it('prefers a Preboss Shop only on a low boon bag or an overdue trait a god can take', () => {
+    const plain = steering();
+    expect(plain.roomWeight('F_PreBoss01', 'F')).toBe(1);
+    const low = steering();
+    vi.spyOn(low, 'boonBagLow').mockReturnValue(true);
+    expect(low.roomWeight('F_PreBoss01', 'F')).toBeGreaterThanOrEqual(band);
+    const overdue = steering();
+    vi.spyOn(overdue, 'targetDepth').mockReturnValue(0);
+    expect(overdue.roomWeight('F_PreBoss01', 'F')).toBeGreaterThanOrEqual(band);
+  });
+
+  it('prefers a mid-biome Shop only once the door bags hold no boon', () => {
+    const left = (count: number) => {
+      const shop = steering();
+      vi.spyOn(
+        shop as unknown as { boonEntriesLeft: () => number },
+        'boonEntriesLeft',
+      ).mockReturnValue(count);
+      return shop.roomWeight('F_Shop01', 'F');
+    };
+    expect(left(0)).toBeGreaterThanOrEqual(band);
+    expect(left(1)).toBeLessThan(2);
   });
 });
 

@@ -761,6 +761,10 @@ the route declares it, route overlays included:
   The pace is the spec's purchases per biome (default 2); at 0 the draft
   never buys a god boon, while Hermes, Hammer and Dream boosts keep their own
   rules.
+- Without the midshop preference, a Preboss Shop door still takes the
+  preferred-Shop weight when the boon bag runs low or a trait some god can take
+  is past its target, and a mid-biome Shop door does once the door bags hold no
+  boon.
 - On a route whose save-file god history starts closed (Fresh File), a Shop
   stocks only gods already picked up, so a door offering a not-yet-met god
   with queued traits outranks a Shop door, midshop preference included.
@@ -787,8 +791,8 @@ the route declares it, route overlays included:
   under her one shared NPC cap.
 
 A fixed corpus (`npm run test:draft-corpus`) measures these rules, including
-the spread of basket traits' in-biome landing depths and the god boon rooms'
-count, gaps and early share per biome; its committed baseline records rates
+the spread of basket traits' in-biome landing depths, the god boon rooms'
+count, gaps and early share per biome, and the Shops entered per run; its committed baseline records rates
 and medians, not plans.
 
 ### Draft share codes
