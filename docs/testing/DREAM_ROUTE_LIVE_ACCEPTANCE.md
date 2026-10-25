@@ -9,3 +9,7 @@ waives each check.
       `Dream_Intro` prologue, each biome in the plan's order is selected and
       entered as planned, and the run stays synchronized through every
       Postboss departure to the end of the configured prefix.
+- [ ] Play a Dream plan whose configured prefix ends at a Postboss. Leaving
+      that Postboss enters the next biome the game picks (never the same
+      Postboss again), and no boss encounter diagnostic names the Postboss
+      room.
