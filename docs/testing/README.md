@@ -5,22 +5,6 @@ plans in `docs/progress/`. These files track observations still needed, not
 unfinished implementation. Automated verification and delivery history belong in
 commits, not these checklists.
 
-- [Run modifiers](RUN_MODIFIERS_LIVE_ACCEPTANCE.md)
-- [Trait offer generation](TRAIT_OFFER_LIVE_ACCEPTANCE.md)
-- [Victory summary](VICTORY_SUMMARY_LIVE_ACCEPTANCE.md)
-- [Status window](STATUS_WINDOW_LIVE_ACCEPTANCE.md)
-- [Editor layout](EDITOR_LAYOUT_LIVE_ACCEPTANCE.md)
-- [Loadout install](LOADOUT_INSTALL_LIVE_ACCEPTANCE.md)
-- [Room guide](ROOM_GUIDE_LIVE_ACCEPTANCE.md)
-- [Biome depth](BIOME_DEPTH_LIVE_ACCEPTANCE.md)
-- [Generated encounters](GENERATED_ENCOUNTER_LIVE_ACCEPTANCE.md)
-- [Practice Boss start](PRACTICE_BOSS_START_LIVE_ACCEPTANCE.md)
-- [Linux desktop](LINUX_DESKTOP_LIVE_ACCEPTANCE.md)
-- [Community events](COMMUNITY_EVENTS_LIVE_ACCEPTANCE.md)
-- [Armor](ARMOR_LIVE_ACCEPTANCE.md)
-- [Slot rebuild](SLOT_REBUILD_LIVE_ACCEPTANCE.md)
-- [Draft Mode](DRAFT_MODE_LIVE_ACCEPTANCE.md)
-- [Project library](PROJECT_LIBRARY_LIVE_ACCEPTANCE.md)
 - [Dream route](DREAM_ROUTE_LIVE_ACCEPTANCE.md)
 
 Keep setup, actions and expected observations with each check. Confirm results
