@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { createDefaultRouteLoadout } from '../../../src/authored-project/loadout';
 import { createProjectDocument } from '../../../src/authored-project/defaults';
-import type { AuthoredTraitOfferTraits } from '../../../src/authored-project';
-import type { DraftSpec } from '../../../src/simulation';
+import type { AuthoredTraitOfferTraits, ProjectDocument } from '../../../src/authored-project';
+import { simulateProjectAssembly, type DraftSpec } from '../../../src/simulation';
+import { loadUnderworldWorldShopTravelDealCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import type { DraftWalk } from '../../../src/simulation/draft/walk';
 import { DEFAULT_DRAFT_BUDGET } from '../../../src/simulation/draft/generator';
 import { draftReport } from '../../../src/simulation/draft/report';
@@ -317,4 +318,41 @@ describe('draft Ephyra doors with a small pool', () => {
       ]);
     },
   );
+});
+
+describe('a Travel Deal refill', () => {
+  it("fills a missing refill from the refilled slot's options", () => {
+    const project = loadUnderworldWorldShopTravelDealCheckpoint();
+    const biome = project.route.biomes[0]!;
+    const occurrences = biome.topology!.occurrences.map((occurrence) => {
+      if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined)
+        return occurrence;
+      const { travelDealRefill: _refill, ...shop } = occurrence.state.shop;
+      void _refill;
+      return { ...occurrence, state: { ...occurrence.state, shop } };
+    });
+    const missing: ProjectDocument = {
+      ...project,
+      route: {
+        ...project.route,
+        biomes: [{ ...biome, topology: { ...biome.topology!, occurrences } }],
+      },
+    };
+    const assembly = simulateProjectAssembly(catalog, missing);
+    expect(assembly.evaluation.issue?.reasons[0]?.code).toBe('rewardMissing');
+    const { startingReward: _start, ...refillLoadout } = missing.route.loadout;
+    void _start;
+    const spec: DraftSpec = {
+      loadout: refillLoadout,
+      world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketByGiver: {},
+      rackKeepsakeKeys: [null, null, null],
+    };
+    const walk = startDraftWalk(missing, spec, 1, { from: assembly });
+    walk.runBiome(0, walk.steps + 1);
+    const shop = walk.project.route.biomes[0]!.topology!.occurrences.find(
+      (occurrence) => occurrence.state.kind === 'shop',
+    )!.state;
+    expect(shop.kind === 'shop' ? shop.shop?.travelDealRefill : undefined).toBeDefined();
+  });
 });
