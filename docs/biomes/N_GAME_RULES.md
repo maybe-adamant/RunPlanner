@@ -203,11 +203,16 @@ ordinary sources and all six can subsequently be acquired through the visit
 order. The ordinary four-source limit is therefore not a hard Ephyra-board or
 post-Ephyra history cap.
 
+No N door rolls a base store and N's room declarations bank no store key, so
+Run State reports neither a target nor a banked key for N.
+
 Complete selected validation remains atomic across that board. For incremental
 authoring, one changed reward is assessed after every other currently authored
-peer that can contribute once from the board's pre-generation frontier. Thus a
-singleton counted reward selected on one door is unavailable on the next door
-immediately, without waiting for board completion. An independently invalid
+peer that can contribute once from the board's pre-generation frontier, with
+the proposed reward evaluated last against those identities as one unordered
+prior-offer set. Thus a singleton counted reward selected on one door, and an
+ordinary god-source peer exclusion, apply to the next door immediately, without
+waiting for board completion. An independently invalid
 peer remains a precise board finding but is omitted from this focused fold so
 unrelated repair stays available. The current selected value retains its
 complete-board finding, and visits remain withheld until the authored board as
@@ -249,6 +254,18 @@ authority across restores. Side visits are not Hub visits and must not become
 a second global topology or a graph-canvas edge set. Once entered, however,
 each side occurrence owns its own lifecycle; restoring the parent or Hub does
 not replay it.
+
+### Native board and restore contacts
+
+The Hub calls `ChooseAvailableN_HubDoors` once to choose its persistent open
+board, ordinary exit generation assigns every open door its room and reward,
+and `PersistentExitDoorRewards` preserves those offers across later Hub
+returns. Visited main rooms use the same persistence for their local doors:
+`CheckN_SubRoomDoorUnavailable` decides which declared side doors generate, and
+ordinary exit generation assigns each generated side room and reward. The game
+records the used door in `DoorRoomHistory`, restores the same parent after a
+side visit and eventually the same Hub. These restores are native transitions,
+not newly entered planner occurrences.
 
 ### Concrete encounter selection
 

@@ -67,8 +67,12 @@ baseline.
 
 ### Clockwork state and physical capacity
 
-Entering `I_Intro` initializes five remaining Clockwork Goals and one authored
-non-goal cap from the supported `3 | 4 | 5 | 6` outcome set. These are separate
+Entering `I_Intro` (`InitClockworkGoalReward`) initializes five remaining
+Clockwork Goals and a native random non-goal cap, which the planner authors
+from the supported `3 | 4 | 5 | 6` outcome set. Tartarus declarations read
+those values for native reward and Preboss pressure, while room generation and
+reward selection still use the ordinary `ChooseNextRoomData` and
+`ChooseRoomReward` contacts. These are separate
 facts: a Goal decrements the countdown on entry, while an entered concrete
 Tartarus non-goal increments the non-goal count. An unselected target remains
 an offered occurrence and does not advance either entered counter.
@@ -127,7 +131,8 @@ their declaration-owned `TartarusRewards` provenance before their counted
 offer is validated. A biome-local store is still a counted store: every entered
 I room carrying `TartarusRewards` adds one entry to the run-wide ratio's
 denominator and none to its MetaProgress numerator, so I pulls `C` down exactly
-as a RunProgress room would. I's own `0.25` target is dead for door stores: no
+as a RunProgress room would; it is the only store key I banks, which Run State
+reports in place of a target. I's own `0.25` target is dead for door stores: no
 I door rolls, because `BaseI` declares `ForcedRewardStore = "TartarusRewards"`
 (`RoomDataI.lua:305`) and every I room inherits it, the boss included. The
 target is consumed only through that denominator — and since I closes the

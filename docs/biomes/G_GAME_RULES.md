@@ -145,7 +145,9 @@ consumes the once-per-route cap, generates one fresh hidden G continuation
 before its own commit, then commits as an ordinary room. The displaced G room
 never contributes phantom creation, reward, or history. Revert restores the
 remembered G declaration, retained reward, complete defaults, and no detour
-continuation.
+continuation. Natively, `ChooseNextRoomData` swaps an otherwise-chosen target
+carrying `AllowAnomalyReplacement` for an `Anomaly` room-set map
+([route detours audit](../audits/rooms-and-routes/ROUTE_DETOURS_GAME_DATA_AUDIT.md)).
 
 ## Room Families and Caps
 
