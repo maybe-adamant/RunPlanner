@@ -93,7 +93,7 @@ those two lists to native state by order and cardinality. Unmodeled carriers
 compare by concrete encounter key. A modeled phase also accepts a differently
 named native encounter whose inherited lifecycle policy matches in the same
 role (for example `Story_Chronos_01` and `Empty`); see the
-[integration boundary](../../design/GAME_INTEGRATION_BOUNDARY.md#prefer-the-published-answer).
+[execution protocol](../../design/EXECUTION_PROTOCOL.md#encounters).
 There are no room-name aliases or special `Empty` normalization. Timeline hooks continue to bind only the modeled phase
 list, so an unmodeled carrier cannot create a fake lifecycle window or
 transaction.

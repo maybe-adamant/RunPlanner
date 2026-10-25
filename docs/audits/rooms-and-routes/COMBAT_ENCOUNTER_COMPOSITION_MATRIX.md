@@ -818,7 +818,7 @@ acceptance. The implementation preserves the following boundaries:
    computes `DifficultyRating`, then installs the complete roster/count result
    at `FillEnemyTypes`; native template construction and count metadata
    initialization remain intact. No runtime budget or allocation solver exists.
-   The [integration boundary](../../design/GAME_INTEGRATION_BOUNDARY.md) owns
+   The [execution protocol](../../design/EXECUTION_PROTOCOL.md#encounters) owns
    the admission contract.
 
 NPC assist logic, prescribed spawns, perk application, spawn timing, active caps,

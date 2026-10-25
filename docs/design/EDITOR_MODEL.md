@@ -495,7 +495,7 @@ is now. The In game column is the shared split send control, quiet and of fixed
 width, from `projectLibrarySendButton`; its picker reads the plan through
 `ProjectOperations.inspectLibraryGamePlan` only when opened, and its sends go
 through `publishLibraryPlan`, which sends the open plan through the editor's
-path (see [Game integration](GAME_INTEGRATION_BOUNDARY.md)). A deleted plan's
+path (see [Plan Slots and Publication](PLAN_SLOTS_AND_PUBLICATION.md)). A deleted plan's
 notice names the slots that still hold it.
 
 ### Catalog screen
@@ -552,6 +552,69 @@ loaded project's last sent slot and the latest send failure as UI-session
 state, cleared by any document replacement. The button's transient Sending and
 three-second result labels are component state. The game target is neither
 authored state nor Redux state and never enters history.
+
+The host owns the [distribution](GAME_MODULE_DISTRIBUTION.md) and
+[slot](PLAN_SLOTS_AND_PUBLICATION.md) contracts; the Game tab presents them:
+
+- **Game location** offers the platform's r2modman profiles (none on macOS)
+  and a folder picker, and Forget. Switching away from a planner install asks
+  whether to keep or remove that copy. Replacing a copy the planner did not
+  install, or one r2modman manages, asks first and explains r2modman's effect
+  on it. The ModpackLib step links to its Thunderstore page. About offers the
+  desktop bug report and reveals the last one written.
+- **Slot table.** The event row (while slot 0 holds a plan, marked as the
+  community event, with no send action) and the twelve plan slots share fixed
+  columns (slot, library plan, route, aspect, sent, next run, Clear and Open)
+  in one-line rows of one height, so no change of state moves the table. A
+  linked slot shows its library plan as current or older with the reason in a
+  few words, shortening the name first and never the state; any other slot
+  shows its plan's name and that it is not in the library. Next run is a radio
+  group: the slot that plays next is filled, a playable slot hollow, an
+  outdated or unreadable one disabled; choosing one sets the active slot
+  without resending and re-reads the slots, and a failed write leaves a short
+  notice under the table. The route comes from the catalog and the loadout
+  reads as the weapon's short label and the aspect without "Aspect of"; sent
+  is a compact relative time and an unreadable slot shows only that.
+- **Rebuild** shows under the table while an outdated slot has a source, with
+  how many need it and the last rebuild's summary; a slot that could not be
+  rebuilt says so in its row with one reason line under the table.
+- **Clear** leaves a floating notice with Undo for about eight seconds.
+- **Event notice.** The notice area shows one notice, an app update first,
+  otherwise the active event with its title and end, Set as active, Details
+  (title, description and rules), Open project, Copy link and Dismiss. Set as
+  active is absent while the notice says why the event cannot be played, and
+  reads Active, disabled at the same width, while the event slot is active and
+  holds a plan the module admits. A dismissal is remembered per event id in
+  the browser profile; the event slot is still written. When an event ends
+  while its slot was active, the notice says which slot the next run uses, or
+  that it has no plan.
+
+The send button's states:
+
+| State                              | Label                         | Clicking                                  |
+| ---------------------------------- | ----------------------------- | ----------------------------------------- |
+| Module not ready                   | Send to game                  | nothing (Set up the game on the Game tab) |
+| Engine reports the plan ineligible | Send to game                  | nothing (the picker's reason)             |
+| The slot holds the plan as it is   | Slot N · up to date (quiet)   | opens the slot picker                     |
+| A slot to send to                  | Send to slot N                | sends                                     |
+| No slot to choose                  | Send to game…                 | opens the slot picker                     |
+| Sending                            | Sending…                      | nothing                                   |
+| Result, for 3 seconds              | ✓ Sent · Slot N or ! Not sent | nothing                                   |
+
+The picker explains a plan that cannot compile from the compiler's error code:
+a known route, extent or opening code gets its own sentence, and any other
+failure asks to resolve the plan's findings, never showing raw compiler text.
+A hidden status region announces each result. A failed send, or a send whose
+slot was not made active, is kept as UI-session state until the next send or a
+document replacement and shown in the picker. A Library row's copy of the
+button names the plan's default slot (the one that plays next, else its first)
+with "+N" for its others, and learns whether the plan can be sent only when
+asked: opening the picker or sending loads, simulates and compiles the stored
+file as a public project opened and sent would be, and a send reuses that
+compile while the file is unchanged. A plan that cannot be sent opens the
+picker with the reason and Open in editor; a file the planner cannot open has
+no button. A Library send leaves the editor's send session alone, and deleting
+a library plan never touches a slot.
 
 ### Project library
 

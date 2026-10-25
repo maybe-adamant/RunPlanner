@@ -558,7 +558,7 @@ Hymn, Extended), a consumable acquired under its own identity (Kiss of Styx,
 Centaur Soul), an immediate effect, or a play-spent holding recorded only by
 the purchase ledger. The Well state holds every active timed instance with its
 remaining uses and clock, the charges, and the direct-purchase ledger; the
-[integration boundary](../../design/GAME_INTEGRATION_BOUNDARY.md) owns which of
+[execution protocol](../../design/EXECUTION_PROTOCOL.md#conformance) owns which of
 them execution checks. Boss uses are spent only at a Boss-room defeat
 (`bossDefeated` is emitted only for the BossRoom lifecycle profile); Zagreus'
 `C_Boss01` is a ContractBoss room, so neither the game (`SkipBossTraits`) nor

@@ -265,7 +265,7 @@ with that availability; it does not consult project validity. A start point
 publishes only from a valid project, through the ordinary publication gate.
 An ineligible start point blocks publication with its reason and an eligible
 one publishes the execution plan's
-[`startState`](GAME_INTEGRATION_BOUNDARY.md#practice-mode-start). The start
+[`startState`](RUN_START_INSTALLATION.md#published-startstate). The start
 point and the run modifiers are editable in Fresh File without making its fixed
 equipment editable. Neither changes simulation, candidates, or encounter
 eligibility.

@@ -15,7 +15,8 @@ continues. It also presents that status: the **Run Planner** window, drawn as
 ModpackLib's standalone fallback window, the optional room guide and choice
 highlights, and the victory-screen row. Ownership rules for this lane live in
 the repository's [`AGENTS.md`](../AGENTS.md), and the contract with the planner
-in [Game integration](../docs/design/GAME_INTEGRATION_BOUNDARY.md).
+in the [Execution Protocol](../docs/design/EXECUTION_PROTOCOL.md) and its
+sibling documents.
 
 ## Layout
 
@@ -35,8 +36,29 @@ which logs and skips a surface that fails to load or attach, and passes the
 session, inbox and route inspection views it reads and, for the status window's
 slot picker, the active-slot write and inbox load capabilities. Surfaces
 register hooks and overlay callbacks through
-`src/mods/host/presentation_hooks.lua`, which contains and logs a presentation
-failure so it does not reach the native chain or execution; see [Game integration](../docs/design/GAME_INTEGRATION_BOUNDARY.md#distribution-and-the-game-target).
+`src/mods/host/presentation_hooks.lua`, which runs native base with its
+original arguments, returns base's results unchanged except the allowlisted
+map sub-icon decoration, and contains a presentation failure, logging it once,
+so it does not reach the native chain or execution. Execution notifies the
+planned-choice markers through the instance it is given.
+
+The status window's only player actions are its slot picker, which writes
+`active-slot.json`, and **Load**, which decodes the shown slot. Otherwise it
+never decodes a plan: it describes slots from the
+[slot overview](../docs/design/PLAN_SLOTS_AND_PUBLICATION.md#slot-overview),
+which it reads with the active slot when it opens, on **Load** and after its
+own write. It uses ModpackLib's module frame: the status header sits above one
+tab bar of the module's tabs and Lib's **Advanced** tab. **Plan** picks the
+next run's slot and describes it. **Current Run** shows the frozen session's
+room progress, counted from a Practice start's room, and words its first
+mismatch from the record's checkpoint and expected and observed values; an
+unrecognized record is shown only as readable fields. **Diagnostics** is always
+listed but shows its contents only in the module's Debug Mode: the raw slot
+status, identities and records. The window draws ASCII only, because its ImGui
+font has no other glyphs: names from the overview, the plan or the game are
+shown with accented Latin letters folded to their base letters and common
+punctuation folded to ASCII. It reports existing execution status without
+adding conformance checks or revalidating player state while rendering.
 
 The tests read the planner's execution fixtures in place from
 `packages/planner-engine/test/execution-plan/fixtures/`; there is no

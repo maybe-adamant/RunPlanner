@@ -86,7 +86,7 @@ planner eligibility.
 A local inability to install the intended steering is diagnostic. A standard
 checkpoint or required obligation determines whether the resulting run can
 remain synchronized, as defined by
-[Game Integration Boundary](../../design/GAME_INTEGRATION_BOUNDARY.md).
+[Execution Protocol](../../design/EXECUTION_PROTOCOL.md#conformance).
 
 Runtime fallback substitution is rejected because an alternative trait or
 item may later gain levels, change rarity, enable offers, participate in
