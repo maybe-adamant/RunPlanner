@@ -301,7 +301,10 @@ defaulting by route and biome), `perGodCap` (1–10, default 5, or 4 under Denia
 so a stored value is absolute), the `preferMidshops` and `pursueTartarusGoal`
 flags (`true` when on), `roomForcing` (`deadline`, `softened` or `game`, default
 `softened`), `purchasesPerBiome` (0–4, default 2), `retriesPerBiome` (0–10,
-default 3) and `resourceRoomChance` (a percent, 0–50 in steps of 5, default 10).
+default 3), `resourceRoomChance` (a percent, 0–50 in steps of 5, default 10)
+and `fillerPriority` (an ordered list of filler kinds, `maxHealth`,
+`maxMagick`, `gold` or `pom`, each with an optional per-run `amount` of 1–20;
+empty by default).
 `godKeys` is the pool order. `basketByGiver` maps each trait giver to its
 basket traits in that giver's acquisition order; a Duo sits in exactly one of
 its gods' lists, which makes that god its host
@@ -317,6 +320,8 @@ biomes off the itinerary are kept. The basket keeps only known givers' traits
 they offer, a trait listed twice stays in its first list (pool gods in pool
 order first), lists save in catalog giver order and an empty list drops; an
 earlier flat `basketTraitKeys` is an unknown key, so such a basket loads empty.
+A filler ranking keeps each known kind's first entry; an amount that is not a
+whole number drops and one out of range clamps.
 Basket legality stays a draft-time refusal.
 The project codec, `ReplaceDraftSpec` and share codes use the same decode, so a
 new option or a changed meaning needs no schema revision. The loadout and

@@ -766,7 +766,24 @@ the route declares it, route overlays included:
   base-store policy, else the stores its rooms declare) are nearly spent; it never forces or blocks a purchase, and gold is not modelled.
   The pace is the spec's purchases per biome (default 2); at 0 the draft
   never buys a god boon, while Hermes, Hammer and Dream boosts keep their own
-  rules.
+  rules. Filler purchases do not count toward the pace.
+- Filler ranking groups non-boon rewards into four kinds, each covering every
+  variant: Max Health (`MaxHealthDrop`, its Big, Small and Empty variants),
+  Max Magick (`MaxManaDrop` and its Big and Small variants), Gold (`Currency`
+  and the `RoomMoney` drops) and Pom (`StackUpgrade`, its Big and Triple
+  variants, and the Pom Slice `StoreRewardRandomStack`). Every pickup counts
+  one, whatever its size, at a door or in a Shop. Rank weights (6, 3, 2, 1.5
+  from the top) apply only to the ranked kinds still short of their per-run
+  amount, so the kinds below move up as one finishes; a finished or unranked
+  kind is plain filler at weight 1. While a ranked kind is still short, a god
+  with no basket trait left weighs below the top-ranked filler. Amounts are
+  preferences, never draft targets.
+- Once every slot of a Shop holds an item, so its boons are bought first, the
+  draft spends the biome's spare purchases (its purchases per biome less those
+  made there) on ranked Max Health, Max Magick and Pom still short of their
+  amount, each a weighted pick; Shops sell no Gold. A mid-biome Shop keeps one
+  spare purchase for the Preboss Shop, which may use them all. The reserve
+  counts purchases, not gold.
 - Without the midshop preference, a Preboss Shop door still takes the
   preferred-Shop weight when the boon bag runs low or a trait some god can take
   is past its target, and a mid-biome Shop door does once the door bags hold no
@@ -821,7 +838,8 @@ loadout and the draft world (gods, basket, NPCs, racks, seed) are positional;
 the basket is its traits giver by giver, each with one more position naming
 which of its givers lists it when more than one offers it (a Duo's host), and
 the fingerprint covers each giver's traits. The stored Advanced options follow as tagged entries (a count, then each
-option's `DRAFT_OPTIONS` tag, payload length and payload), and a reader skips
+option's `DRAFT_OPTIONS` tag, payload length and payload; a ranking's payload
+is each entry's counted choice index and counted amount, 0 for none), and a reader skips
 an unknown tag, so a new option needs no layout change. A code from another
 layout, catalog or route is refused rather than decoded into other keys (a code
 from an earlier layout as from an older planner); the loadout passes its
