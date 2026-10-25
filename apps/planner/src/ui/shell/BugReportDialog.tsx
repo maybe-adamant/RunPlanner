@@ -24,7 +24,7 @@ export function BugReportDialog({
   onClose,
   operations,
 }: {
-  /** The error the application stopped on, always included. */
+  /** The error the application stopped on; its report leaves out the game's files. */
   readonly fault?: BugReportFault;
   readonly onClose: () => void;
   readonly operations: BugReportOperations;
@@ -32,8 +32,8 @@ export function BugReportDialog({
   const hasOpenPlan = useAppSelector((state) => selectPresentProject(state) !== undefined);
   const [contents, setContents] = useState<BugReportChoices>({
     openPlan: hasOpenPlan,
-    plansInGame: true,
-    gameLogs: true,
+    plansInGame: fault === undefined,
+    gameLogs: fault === undefined,
   });
   const [stage, setStage] = useState<Stage>({ kind: 'choosing' });
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +82,9 @@ export function BugReportDialog({
       pending={saving}
     >
       <header className="panel-heading">
-        <h2 id="bug-report-title">Create bug report</h2>
+        <h2 id="bug-report-title">
+          {fault === undefined ? 'Create bug report' : 'Report this error'}
+        </h2>
       </header>
       {stage.kind === 'saved' ? (
         <p className="game-publication-message" role="status">
@@ -93,8 +95,12 @@ export function BugReportDialog({
           <fieldset className="bug-report-options">
             <legend>Include</legend>
             {option('openPlan', 'Open plan', !hasOpenPlan)}
-            {option('plansInGame', 'Plans in game')}
-            {option('gameLogs', 'Game logs')}
+            {fault === undefined ? (
+              <>
+                {option('plansInGame', 'Plans in game')}
+                {option('gameLogs', 'Game logs')}
+              </>
+            ) : null}
           </fieldset>
           <p className="game-publication-hint">Paths are replaced with %USERPROFILE%.</p>
         </>

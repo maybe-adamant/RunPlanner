@@ -82,11 +82,17 @@ describe('application fault recovery', () => {
     const { game } = await renderFault({ withPlan: true, desktop: true });
 
     await userEvent.click(screen.getByRole('button', { name: 'Generate bug report' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Create bug report' });
+    const dialog = await screen.findByRole('dialog', { name: 'Report this error' });
+    expect(
+      (within(dialog).getByRole('checkbox', { name: 'Open plan' }) as HTMLInputElement).checked,
+    ).toBe(true);
+    expect(within(dialog).queryByRole('checkbox', { name: 'Plans in game' })).toBeNull();
+    expect(within(dialog).queryByRole('checkbox', { name: 'Game logs' })).toBeNull();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create…' }));
     await within(dialog).findByRole('status');
 
     const [, request] = game.host.createBugReport.mock.calls[0]!;
+    expect(request).toMatchObject({ includePlanSlots: false, includeLogs: false });
     expect(request.openPlan).not.toBeNull();
     expect(request.appFacts).toMatchObject({
       fault: {
