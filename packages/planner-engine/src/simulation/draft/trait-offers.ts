@@ -172,7 +172,7 @@ export class DraftTraitOffers {
     if (traitKey === undefined) return false;
     const slot = this.catalog.traits.byKey[traitKey]?.equipmentSlot;
     if (slot === undefined || slot === 'Spell') return true;
-    const reserved = this.context.spec.basketTraitKeys.filter(
+    const reserved = this.context.steering.basket.filter(
       (key) => this.catalog.traits.byKey[key]?.equipmentSlot === slot,
     );
     return reserved.length === 0 || reserved.includes(traitKey);
@@ -285,8 +285,8 @@ export class DraftTraitOffers {
 
   /**
    * Wanted basket placements first, then every other legal row in random order.
-   * A god offers a ready Duo or its next queued trait, the earlier target depth first; its later
-   * traits wait.
+   * A god offers its next queued trait, a hosted Duo included; its later traits wait, and a Duo
+   * hosted by another god is never its row.
    */
   private steerTraitOffer(
     trait: TraitOfferAddress,
@@ -325,12 +325,11 @@ export class DraftTraitOffers {
     const olympian = providerKind === 'olympian';
     // Gods, Hermes and Hammers offer their next queued basket trait only.
     const queued = olympian || providerKind === 'hermes' || providerKind === 'hammer';
-    const duos = olympian ? steering.readyDuos(draft.giverKey, progress) : [];
     const next = queued ? steering.nextQueued(draft.giverKey, progress) : undefined;
     const wanted = queued
-      ? this.context
-          .shuffle([...duos, ...(next === undefined ? [] : [next])])
-          .sort((a, b) => steering.targetDepth(a) - steering.targetDepth(b))
+      ? next === undefined
+        ? []
+        : [next]
       : this.context
           .shuffle(steering.wantedBasket(progress).filter((key) => giverTraits.includes(key)))
           .sort(
@@ -339,10 +338,15 @@ export class DraftTraitOffers {
               Number(prerequisites.has(b)) - Number(prerequisites.has(a)),
           );
     const wantedNow = steering.wantedBasket(progress);
-    // A fallback row never jumps a god's queue.
+    // A fallback row never jumps a god's queue nor takes another god's hosted Duo.
     const fallbackAllowed = (candidate: AuthoredTraitOfferTraits) => {
       const key = candidate.options[OPTION_KEYS.indexOf(candidate.selectedOptionKey)]?.traitKey;
-      return key !== undefined && steering.orderAllows(key, progress);
+      const owner = key === undefined ? undefined : steering.queueGiver(key);
+      return (
+        key !== undefined &&
+        (!olympian || owner === undefined || owner === draft.giverKey) &&
+        steering.orderAllows(key, progress)
+      );
     };
     for (const traitKey of wanted) {
       const declaration = this.catalog.traits.byKey[traitKey];

@@ -7,6 +7,7 @@ import {
 } from '../../authored-project/route-profile';
 import { traitGiverForAcquisitionRole } from '../../authored-project/traits/state';
 import {
+  draftBasketTraitKeys,
   draftKeepsakeOptions,
   draftPlannedBiomeKeys,
   type DraftRoute,
@@ -497,15 +498,16 @@ export interface DraftWorldProduct {
 export function draftWorld(
   catalog: Catalog,
   route: DraftRoute,
-  spec: DraftWorldSpec & Pick<DraftSpec, 'basketTraitKeys'>,
+  spec: DraftWorldSpec & Pick<DraftSpec, 'basketByGiver'>,
 ): DraftWorldProduct {
   const options = draftWorldOptions(catalog, route);
   const givers = npcGivers(catalog, options, spec, route);
+  const basket = draftBasketTraitKeys(spec);
   const npcTraitBiomes = new Map<string, number>();
   for (const giver of givers)
     for (const traitKey of catalog.traitGivers.byKey[giver.giverKey]?.traitKeys ?? [])
       if (
-        spec.basketTraitKeys.includes(traitKey) &&
+        basket.includes(traitKey) &&
         giver.biomeIndex < (npcTraitBiomes.get(traitKey) ?? Infinity)
       )
         npcTraitBiomes.set(traitKey, giver.biomeIndex);

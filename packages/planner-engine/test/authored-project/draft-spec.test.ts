@@ -38,9 +38,15 @@ const draft: AuthoredDraftSpec = {
   godKeys: ['Zeus', 'Hera'],
   storyNpcByBiome: { F: 'Arachne' },
   fieldNpcsByBiome: { G: [fieldNpc], Q: [] },
-  basketTraitKeys: ['ZeusWeaponBoon'],
+  basketByGiver: { Zeus: ['ZeusWeaponBoon'] },
   rackKeepsakeByBiome: { F: 'BonusMoneyKeepsake' },
   seed: 424242,
+};
+const duo = 'ApolloSecondStageCastBoon';
+const hosted: AuthoredDraftSpec = {
+  ...draft,
+  godKeys: ['Zeus', 'Hera', 'Apollo'],
+  basketByGiver: { Zeus: ['ZeusWeaponBoon'], Apollo: ['ApolloCastBoon', duo] },
 };
 const withRawDraft = (value: unknown): unknown => ({
   ...project(),
@@ -55,7 +61,7 @@ describe('draft spec', () => {
       godKeys: [],
       storyNpcByBiome: {},
       fieldNpcsByBiome: {},
-      basketTraitKeys: [],
+      basketByGiver: {},
       rackKeepsakeByBiome: {},
       seed: 1,
     });
@@ -159,6 +165,24 @@ describe('draft spec', () => {
     ).toEqual(draft);
   });
 
+  it("keeps a Duo in its host's list through the codec and Reset Advanced", () => {
+    expect(
+      decodeProjectDocument(
+        JSON.parse(
+          encodeProjectDocument({ ...project(), route: { ...project().route, draft: hosted } }),
+        ),
+        catalog,
+      ).route.draft,
+    ).toEqual(hosted);
+    const zeusHosts = {
+      ...hosted,
+      basketByGiver: { Zeus: ['ZeusWeaponBoon', duo], Apollo: ['ApolloCastBoon'] },
+    };
+    expect(sameDraftSpec(zeusHosts, hosted)).toBe(false);
+    expect(draftAdvancedChanged(hosted)).toBe(false);
+    expect(withDraftAdvancedDefaults({ ...hosted, perGodCap: 3 })).toEqual(hosted);
+  });
+
   it('round-trips through ReplaceDraftSpec as one undoable edit, keeping off-itinerary biomes', () => {
     const history = applyProjectHistoryCommand(createProjectHistory(project()), catalog, {
       kind: 'ReplaceDraftSpec',
@@ -224,7 +248,30 @@ describe('draft spec', () => {
       ],
       [{ ...draft, fieldNpcsByBiome: { G: [fieldNpc, 'Arachne', fieldNpc], Q: [], H: 3 } }, draft],
       [{ ...draft, fieldNpcsByBiome: { G: [fieldNpc], Q: ['NotAnNpc'] } }, draft],
-      [{ ...draft, basketTraitKeys: ['NotATrait', 'ZeusWeaponBoon', 'ZeusWeaponBoon'] }, draft],
+      [
+        { ...draft, basketByGiver: { Zeus: ['NotATrait', 'ZeusWeaponBoon', 'ZeusWeaponBoon'] } },
+        draft,
+      ],
+      [
+        { ...draft, basketByGiver: { Zeus: ['ZeusWeaponBoon'], NotAGiver: ['ZeusWeaponBoon'] } },
+        draft,
+      ],
+      // A giver that does not offer a trait cannot list it, and an empty list drops.
+      [{ ...draft, basketByGiver: { Zeus: ['ZeusWeaponBoon'], Hera: ['ZeusCastBoon'] } }, draft],
+      [{ ...draft, basketByGiver: { Zeus: ['ZeusWeaponBoon', 7], Hera: [] } }, draft],
+      [
+        { ...draft, basketByGiver: { Zeus: 'ZeusWeaponBoon' } },
+        { ...draft, basketByGiver: {} },
+      ],
+      [
+        { ...draft, basketByGiver: ['ZeusWeaponBoon'] },
+        { ...draft, basketByGiver: {} },
+      ],
+      // The flat basket of earlier saves is an unknown key.
+      [
+        { ...draft, basketByGiver: undefined, basketTraitKeys: ['ZeusWeaponBoon'] },
+        { ...draft, basketByGiver: {} },
+      ],
       [{ ...draft, rackKeepsakeByBiome: { F: 'BonusMoneyKeepsake', G: 'NotAKeepsake' } }, draft],
       [
         { ...draft, seed: -1 },
@@ -248,6 +295,42 @@ describe('draft spec', () => {
       ],
       [{ godKeys: ['Zeus'] }, { ...EMPTY_DRAFT_SPEC, godKeys: ['Zeus'] }],
       ['not a spec', EMPTY_DRAFT_SPEC],
+      [hosted, hosted],
+      // A Duo listed by both its gods stays with the earlier pool god.
+      [
+        { ...hosted, basketByGiver: { ...hosted.basketByGiver, Zeus: ['ZeusWeaponBoon', duo] } },
+        {
+          ...hosted,
+          basketByGiver: { Zeus: ['ZeusWeaponBoon', duo], Apollo: ['ApolloCastBoon'] },
+        },
+      ],
+      [
+        {
+          ...hosted,
+          godKeys: ['Apollo', 'Zeus'],
+          basketByGiver: { ...hosted.basketByGiver, Zeus: ['ZeusWeaponBoon', duo] },
+        },
+        { ...hosted, godKeys: ['Apollo', 'Zeus'] },
+      ],
+      // A god outside the pool keeps its list, below the pool's gods.
+      [
+        {
+          ...hosted,
+          godKeys: ['Zeus', 'Hera'],
+          basketByGiver: { Apollo: [duo], Zeus: ['ZeusWeaponBoon', duo] },
+        },
+        { ...hosted, godKeys: ['Zeus', 'Hera'], basketByGiver: { Zeus: ['ZeusWeaponBoon', duo] } },
+      ],
+      [
+        { ...hosted, godKeys: ['Zeus', 'Hera'] },
+        { ...hosted, godKeys: ['Zeus', 'Hera'] },
+      ],
+      // A Hermes trait sits under Hermes; a Duo under a non-god giver drops.
+      [
+        { ...draft, basketByGiver: { Zeus: ['ZeusWeaponBoon'], Hermes: ['HermesWeaponBoon'] } },
+        { ...draft, basketByGiver: { Zeus: ['ZeusWeaponBoon'], Hermes: ['HermesWeaponBoon'] } },
+      ],
+      [{ ...draft, basketByGiver: { Zeus: ['ZeusWeaponBoon'], Hermes: [duo] } }, draft],
     ] as const)
       expect(healed(value), JSON.stringify(value)).toEqual(expected);
   });

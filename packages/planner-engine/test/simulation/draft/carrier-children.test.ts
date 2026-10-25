@@ -11,6 +11,7 @@ import type { DraftSpec } from '../../../src/simulation';
 import { latestRunState } from '../../../src/simulation/draft/report';
 import type { DraftWalk } from '../../../src/simulation/draft/walk';
 import { startDraftWalk } from '../../support/draft-walk';
+import { draftBasket } from '../../support/draft-basket';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -43,7 +44,7 @@ const spec = (
 ): DraftSpec => ({
   loadout: { ...loadout, ...loadoutChanges },
   world,
-  basketTraitKeys,
+  basketByGiver: draftBasket(basketTraitKeys, {}, world.godKeys),
   rackKeepsakeKeys: [null, null, null],
 });
 

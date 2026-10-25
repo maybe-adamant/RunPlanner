@@ -50,7 +50,8 @@ export interface DraftWorld {
 export interface DraftSpec {
   readonly loadout: DraftLoadout;
   readonly world: DraftWorld;
-  readonly basketTraitKeys: readonly string[];
+  /** Each giver's basket traits in its acquisition order; a Duo sits in its host god's list. */
+  readonly basketByGiver: Readonly<Record<string, readonly string[]>>;
   /** One entry per Postboss rack between biomes, in order; null keeps the held keepsake. */
   readonly rackKeepsakeKeys: readonly (string | null)[];
   /** The player's preference for mid-biome Shops, which have no combat. */
@@ -69,6 +70,17 @@ export interface DraftSpec {
   readonly retriesPerBiome?: number;
   /** Percent chance a room rolls a resource point; absent is the default. */
   readonly resourceRoomChance?: number;
+}
+
+/** Every basket trait: pool gods' lists in pool order, then the other givers' in record order. */
+export function draftBasketTraitKeys(
+  spec: Pick<DraftSpec, 'basketByGiver'> & { readonly world: Pick<DraftWorld, 'godKeys'> },
+): readonly string[] {
+  const givers = [
+    ...spec.world.godKeys.filter((key) => Object.hasOwn(spec.basketByGiver, key)),
+    ...Object.keys(spec.basketByGiver).filter((key) => !spec.world.godKeys.includes(key)),
+  ];
+  return Object.freeze(givers.flatMap((key) => spec.basketByGiver[key]!));
 }
 
 export interface DraftKeepsakeOptions {

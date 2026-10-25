@@ -29,6 +29,7 @@ import {
   generatedEncounterSupportForProjectEvaluationAssembly,
   reachedEncounterPhasesForProjectEvaluationAssembly,
 } from '../../../src/simulation/evaluation/project-evaluation-assembly';
+import { draftBasket } from '../../support/draft-basket';
 
 const { startingReward: _startingReward, ...defaultLoadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -51,7 +52,7 @@ const spec: DraftSpec = {
     storyNpcByBiome: { F: 'Arachne' },
     fieldNpcsByBiome: {},
   },
-  basketTraitKeys: [],
+  basketByGiver: {},
   rackKeepsakeKeys: [null, null, null],
 };
 
@@ -268,7 +269,7 @@ describe('draft encounter keepsakes', () => {
           storyNpcByBiome: {},
           fieldNpcsByBiome: {},
         },
-        basketTraitKeys: ['InvulnerabilityDashBoon'],
+        basketByGiver: draftBasket(['InvulnerabilityDashBoon']),
         rackKeepsakeKeys: [null, null, null],
       },
       1,
@@ -320,7 +321,7 @@ describe('draft encounter keepsakes', () => {
           storyNpcByBiome: {},
           fieldNpcsByBiome: { O: ['Icarus'] },
         },
-        basketTraitKeys: ['FocusLastStandBoon'],
+        basketByGiver: draftBasket(['FocusLastStandBoon']),
         rackKeepsakeKeys: ['AthenaEncounterKeepsake', null, null],
       },
       1,

@@ -78,7 +78,7 @@ import {
 import { draftProvider, type DraftGodSchedule, type DraftSupply } from './schedule';
 import { settleDraftCommand, settleDraftCommandWithoutNewFinding } from './settle';
 import { routeResourceAuthoring } from '../resources';
-import { draftKeepsakeOptions, type DraftSpec } from './spec';
+import { draftBasketTraitKeys, draftKeepsakeOptions, type DraftSpec } from './spec';
 import {
   draftBoostElements,
   DraftSteering,
@@ -158,7 +158,7 @@ export class DraftWalk {
       spec,
       schedule,
       world,
-      createDraftPrerequisites(catalog, spec.basketTraitKeys, held),
+      createDraftPrerequisites(catalog, draftBasketTraitKeys(spec), held),
       held,
       { assembly: () => this.assembly, biomeIndex: () => this.biomeIndex },
     );

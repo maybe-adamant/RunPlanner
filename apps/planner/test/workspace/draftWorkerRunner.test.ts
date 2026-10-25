@@ -56,7 +56,7 @@ function setup() {
         startingKeepsakeKey: 'MaxHealthKeepsake',
       },
       world: { godKeys: [], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
-      basketTraitKeys: [],
+      basketByGiver: {},
       rackKeepsakeKeys: [null, null, null],
     },
     seed: 5,

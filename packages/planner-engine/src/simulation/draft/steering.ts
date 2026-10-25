@@ -17,7 +17,7 @@ import {
   type DraftGodSchedule,
   type DraftSupply,
 } from './schedule';
-import type { DraftSpec } from './spec';
+import { draftBasketTraitKeys, type DraftSpec } from './spec';
 import type { DraftNpcGiver, DraftWorldProduct } from './world';
 import type { RoomOccurrence } from '../../authored-project';
 import { draftNpcHosts, draftNpcWindowOpen, type DraftNpcHost } from './npc-windows';
@@ -199,6 +199,8 @@ export class DraftSteering {
   private readonly npcGivers: readonly DraftNpcGiver[];
   /** Basket NPC traits by the itinerary index of their NPC's biome. */
   private readonly npcTraitBiomes: ReadonlyMap<string, number>;
+  /** Every basket trait, giver by giver. */
+  readonly basket: readonly string[];
   /** Each world god's basket traits in acquisition order. */
   private readonly queues: ReadonlyMap<string, readonly string[]>;
   /** Each biome's selected field NPC encounters the draft can steer toward. */
@@ -218,6 +220,7 @@ export class DraftSteering {
     private readonly state: DraftSteeringState,
   ) {
     this.worldGivers = new Set(world.giverKeys);
+    this.basket = draftBasketTraitKeys(spec);
     this.hermesTraits = draftSupplyTraitKeys(catalog, 'hermes');
     this.hammerTraits = draftSupplyTraitKeys(catalog, 'hammer');
     this.npcGivers = world.npcGivers;
@@ -400,14 +403,31 @@ export class DraftSteering {
 
   /**
    * The god's next basket trait not yet held; only it may be taken from the god.
-   * A trait waiting only on run state, an element threshold or a god boon rarity count, is passed
-   * over until that state holds.
+   * A trait waiting only on run state, an element threshold or a god boon rarity count, and a
+   * hosted Duo whose prerequisites are not all held are passed over until they hold.
    */
   nextQueued(godKey: string, progress: DraftProgress): string | undefined {
     const unmet = (this.queues.get(godKey) ?? []).filter(
       (key) => !progress.equippedTraitKeys.includes(key),
     );
-    return unmet.find((key) => !this.prerequisites.runStateWaiting(key, progress.held)) ?? unmet[0];
+    return unmet.find((key) => !this.passedOver(key, progress)) ?? unmet[0];
+  }
+
+  private passedOver(traitKey: string, progress: DraftProgress): boolean {
+    return this.duo(traitKey)
+      ? !this.ready(traitKey, progress)
+      : this.prerequisites.runStateWaiting(traitKey, progress.held);
+  }
+
+  private duo(traitKey: string): boolean {
+    const trait = this.catalog.traits.byKey[traitKey];
+    return trait !== undefined && draftTraitKind(trait) === 'duo';
+  }
+
+  /** The source whose queue holds a basket trait: a Duo's host, else its only giver. */
+  queueGiver(traitKey: string): string | undefined {
+    for (const [giverKey, queue] of this.queues) if (queue.includes(traitKey)) return giverKey;
+    return undefined;
   }
 
   /** Element thresholds a waiting basket trait still needs, first waiting trait first. */
@@ -431,27 +451,15 @@ export class DraftSteering {
     return true;
   }
 
-  /** Wanted basket Duos of this god whose prerequisites are held. */
-  readyDuos(giverKey: string, progress: DraftProgress): string[] {
-    const traitKeys = this.catalog.traitGivers.byKey[giverKey]?.traitKeys ?? [];
-    return this.wantedBasket(progress).filter((key) => {
-      const trait = this.catalog.traits.byKey[key];
-      return (
-        traitKeys.includes(key) &&
-        trait !== undefined &&
-        draftTraitKind(trait) === 'duo' &&
-        this.ready(key, progress)
-      );
-    });
+  /** The god's next queued trait when it is ready to take now. */
+  private takeable(giverKey: string, progress: DraftProgress): string | undefined {
+    const next = this.nextQueued(giverKey, progress);
+    return next !== undefined && this.ready(next, progress) ? next : undefined;
   }
 
-  /** A god whose room can take a basket trait now: its next queued trait or a Duo is ready. */
+  /** A god whose room can take a basket trait now: its next queued trait is ready. */
   godTakes(giverKey: string, progress: DraftProgress): boolean {
-    const next = this.nextQueued(giverKey, progress);
-    return (
-      (next !== undefined && this.ready(next, progress)) ||
-      this.readyDuos(giverKey, progress).length > 0
-    );
+    return this.takeable(giverKey, progress) !== undefined;
   }
 
   /** Whether the world contributes this trait giver. */
@@ -477,7 +485,7 @@ export class DraftSteering {
   }
 
   wantedBasket(progress: DraftProgress): string[] {
-    return this.spec.basketTraitKeys.filter((key) => !progress.equippedTraitKeys.includes(key));
+    return this.basket.filter((key) => !progress.equippedTraitKeys.includes(key));
   }
 
   /** Wanted basket traits another wanted basket trait still waits on. */
@@ -535,7 +543,7 @@ export class DraftSteering {
 
   /** Basket traits a Hermes, Hammer or Selene giver offers. */
   basketOf(providerKind: DraftSupply | 'spell'): string[] {
-    return this.spec.basketTraitKeys.filter((key) =>
+    return this.basket.filter((key) =>
       this.catalog.traitGivers.values.some(
         (giver) => giver.providerKind === providerKind && giver.traitKeys.includes(key),
       ),
@@ -737,12 +745,8 @@ export class DraftSteering {
 
   /** A god's pull: its strongest takeable basket trait's paced pull, or an idle god's weight. */
   private godPull(giverKey: string, progress: DraftProgress, paced: boolean): number {
-    const next = this.nextQueued(giverKey, progress);
-    const takeable = [
-      ...(next !== undefined && this.ready(next, progress) ? [next] : []),
-      ...this.readyDuos(giverKey, progress),
-    ];
-    return Math.max(IDLE_GOD_WEIGHT, ...takeable.map((key) => this.traitPull(key, paced)));
+    const next = this.takeable(giverKey, progress);
+    return Math.max(IDLE_GOD_WEIGHT, next === undefined ? 0 : this.traitPull(next, paced));
   }
 
   /** Gods with an offerable basket trait not yet held that a wanted NPC trait waits on. */
@@ -750,20 +754,21 @@ export class DraftSteering {
     const due = new Set<string>();
     const traitKeys = [...this.npcPrerequisites(progress)];
     // A due trait behind its god's queue makes the god due once the queue's next trait is ready.
-    for (const traitKey of traitKeys)
-      if (!progress.equippedTraitKeys.includes(traitKey))
-        for (const giver of this.catalog.traitGivers.values)
-          if (
-            giver.providerKind === 'olympian' &&
-            giver.traitKeys.includes(traitKey) &&
-            this.ready(
-              this.queues.get(giver.key)?.includes(traitKey) === true
-                ? this.nextQueued(giver.key, progress)!
-                : traitKey,
-              progress,
-            )
+    for (const traitKey of traitKeys) {
+      if (progress.equippedTraitKeys.includes(traitKey)) continue;
+      const queueGiver = this.queueGiver(traitKey);
+      for (const giver of this.catalog.traitGivers.values)
+        if (
+          giver.providerKind === 'olympian' &&
+          giver.traitKeys.includes(traitKey) &&
+          (queueGiver === undefined || queueGiver === giver.key) &&
+          this.ready(
+            queueGiver === giver.key ? this.nextQueued(giver.key, progress)! : traitKey,
+            progress,
           )
-            due.add(giver.key);
+        )
+          due.add(giver.key);
+    }
     return due;
   }
 
@@ -817,12 +822,8 @@ export class DraftSteering {
     const depth = this.biomeDepth(biomeKey) + 1;
     return [...this.worldGivers].some((giverKey) => {
       if (this.catalog.traitGivers.byKey[giverKey]?.providerKind !== 'olympian') return false;
-      const next = this.nextQueued(giverKey, progress);
-      const takeable = [
-        ...(next !== undefined && this.ready(next, progress) ? [next] : []),
-        ...this.readyDuos(giverKey, progress),
-      ];
-      return takeable.some((key) => this.targetDepth(key) < depth);
+      const next = this.takeable(giverKey, progress);
+      return next !== undefined && this.targetDepth(next) < depth;
     });
   }
 

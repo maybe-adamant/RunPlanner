@@ -12,7 +12,7 @@ import { DEFAULT_DRAFT_BUDGET } from '../../../src/simulation/draft/generator';
 import { authoredShopOffer } from '../../../src/authored-project/shop';
 import { latestRunState } from '../../../src/simulation/draft/report';
 import { DRAFT_ILLEGAL_ECHO_TRAIT_KEYS } from '../../../src/simulation/draft/basket';
-import { draftLoadoutProject } from '../../../src/simulation/draft/spec';
+import { draftBasketTraitKeys, draftLoadoutProject } from '../../../src/simulation/draft/spec';
 import { startDraftWalk } from '../../support/draft-walk';
 import { DRAFT_CORPUS_SPEC_COUNT, draftCorpusEntry } from '../../draft-corpus/corpus';
 import type { ProjectEvaluationAssembly } from '../../../src/simulation/evaluation/evaluation-products';
@@ -20,6 +20,7 @@ import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   reachedEncounterPhasesForProjectEvaluationAssembly,
 } from '../../../src/simulation/evaluation/project-evaluation-assembly';
+import { draftBasket } from '../../support/draft-basket';
 
 const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
 void _startingReward;
@@ -37,7 +38,7 @@ const underworld = {
       storyNpcByBiome: { F: 'Arachne', G: 'Narcissus', H: 'Echo', I: 'Hades' },
       fieldNpcsByBiome: { F: ['Artemis'], I: ['Nemesis'] },
     },
-    basketTraitKeys: ['ZeusWeaponBoon', 'ApolloCastBoon'],
+    basketByGiver: draftBasket(['ZeusWeaponBoon', 'ApolloCastBoon']),
     rackKeepsakeKeys: ['DoorHealReserveKeepsake', null, 'BossPreDamageKeepsake'],
   } satisfies DraftSpec,
 };
@@ -54,7 +55,7 @@ const surface = {
       storyNpcByBiome: { N: 'Medea', O: 'Circe', P: 'Dionysus' },
       fieldNpcsByBiome: { N: ['Heracles'], O: ['Icarus'], P: ['Athena'] },
     },
-    basketTraitKeys: ['HeraCastBoon'],
+    basketByGiver: draftBasket(['HeraCastBoon']),
     rackKeepsakeKeys: ['DoorHealReserveKeepsake', null, null],
   } satisfies DraftSpec,
 };
@@ -72,7 +73,7 @@ const dream = {
       storyNpcByBiome: { H: 'Echo', F: 'Arachne', N: 'Medea', I: 'Hades' },
       fieldNpcsByBiome: { F: ['Artemis'], N: ['Heracles'] },
     },
-    basketTraitKeys: ['ZeusWeaponBoon'],
+    basketByGiver: draftBasket(['ZeusWeaponBoon']),
     rackKeepsakeKeys: [null, 'DoorHealReserveKeepsake', null],
   } satisfies DraftSpec,
 };
@@ -181,19 +182,22 @@ describe('draftProject', () => {
     const waiting: DraftSpec = {
       ...spec,
       world: { ...spec.world, fieldNpcsByBiome: { G: ['Artemis'] } },
-      basketTraitKeys: ['CritBonusBoon', 'LuckyBoon', 'TimeStopLastStandBoon'],
+      basketByGiver: draftBasket(['CritBonusBoon', 'LuckyBoon', 'TimeStopLastStandBoon']),
     };
     const startWalk = (draft: DraftSpec) => startDraftWalk(base, draft, 1);
 
     it('reserves Hermes only while every free Hermes room is owed to a waiting trait', () => {
       expect(startWalk(waiting).hermesReserved()).toBe(true);
       expect(
-        startWalk({ ...waiting, basketTraitKeys: ['CritBonusBoon', 'LuckyBoon'] }).hermesReserved(),
+        startWalk({
+          ...waiting,
+          basketByGiver: draftBasket(['CritBonusBoon', 'LuckyBoon']),
+        }).hermesReserved(),
       ).toBe(false);
       expect(
         startWalk({
           ...waiting,
-          basketTraitKeys: ['HermesWeaponBoon', 'TimeStopLastStandBoon'],
+          basketByGiver: draftBasket(['HermesWeaponBoon', 'TimeStopLastStandBoon']),
         }).hermesReserved(),
       ).toBe(false);
     });
@@ -203,7 +207,7 @@ describe('draftProject', () => {
       const result = draftProject(catalog, planned('Underworld', 3), waiting, 1);
       if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
       const assembly = simulateProjectAssembly(catalog, result.project);
-      for (const traitKey of waiting.basketTraitKeys)
+      for (const traitKey of draftBasketTraitKeys(waiting))
         expect(result.report.targets).toContainEqual(
           expect.objectContaining({ kind: 'basketTrait', key: traitKey, met: true }),
         );
@@ -221,17 +225,21 @@ describe('draftProject', () => {
     const icarus: DraftSpec = {
       ...surface.spec,
       world: { ...surface.spec.world, fieldNpcsByBiome: { O: ['Icarus'] } },
-      basketTraitKeys: [
-        'HeraCastBoon',
-        'DemeterSpecialBoon',
-        'ZeusSprintBoon',
-        'AresManaBoon',
-        'AresWeaponBoon',
-        'KeepsakeLevelBoon',
-        'RootStrikeBoon',
-        'BloodRetentionBoon',
-        'FocusAttackDamageTrait',
-      ],
+      basketByGiver: draftBasket(
+        [
+          'HeraCastBoon',
+          'DemeterSpecialBoon',
+          'ZeusSprintBoon',
+          'AresManaBoon',
+          'AresWeaponBoon',
+          'KeepsakeLevelBoon',
+          'RootStrikeBoon',
+          'BloodRetentionBoon',
+          'FocusAttackDamageTrait',
+        ],
+        {},
+        surface.spec.world.godKeys,
+      ),
       rackKeepsakeKeys: [null, null, null],
     };
     const result = draftProject(catalog, planned('Surface', 2), icarus, 3);
@@ -244,6 +252,26 @@ describe('draftProject', () => {
       expect(result.report.targets).toContainEqual({ ...target, met: true });
   });
 
+  it('takes a hosted Duo from its host only', () => {
+    const duo = 'ApolloSecondStageCastBoon';
+    for (const host of ['Zeus', 'Apollo']) {
+      const spec: DraftSpec = {
+        ...underworld.spec,
+        basketByGiver: draftBasket(['ApolloCastBoon', 'ApolloExCastBoon', duo, 'ZeusWeaponBoon'], {
+          [duo]: host,
+        }),
+      };
+      const result = draftProject(catalog, underworld.base, spec, 1);
+      if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+      expect(result.report.targets).toContainEqual({ kind: 'basketTrait', key: duo, met: true });
+      const drafted = applyProjectCommand(underworld.base, catalog, result.command);
+      const held = latestRunState(simulateProjectAssembly(catalog, drafted))?.traits.equippedTraits[
+        duo
+      ];
+      expect(held?.giverKey).toBe(host);
+    }
+  });
+
   describe('a planned prefix', () => {
     const duo = 'ApolloSecondStageCastBoon';
     const prefixSpec: DraftSpec = {
@@ -253,7 +281,9 @@ describe('draftProject', () => {
         storyNpcByBiome: { F: 'Arachne', G: 'Narcissus', H: 'Echo' },
         fieldNpcsByBiome: {},
       },
-      basketTraitKeys: ['ApolloCastBoon', 'ApolloExCastBoon', 'ZeusWeaponBoon', duo],
+      basketByGiver: draftBasket(['ApolloCastBoon', 'ApolloExCastBoon', 'ZeusWeaponBoon', duo], {
+        [duo]: 'Zeus',
+      }),
       rackKeepsakeKeys: ['DoorHealReserveKeepsake', 'BossPreDamageKeepsake', null],
     };
     const fg = createProjectDocument(catalog, {
@@ -324,7 +354,7 @@ describe('draftProject', () => {
           storyNpcByBiome: {},
           fieldNpcsByBiome: {},
         },
-        basketTraitKeys: [
+        basketByGiver: draftBasket([
           'ZeusWeaponBoon',
           'ApolloSpecialBoon',
           'ZeusCastBoon',
@@ -333,7 +363,7 @@ describe('draftProject', () => {
           'DoubleBoltBoon',
           'FocusLightningBoon',
           'ApolloRetaliateBoon',
-        ],
+        ]),
         rackKeepsakeKeys: [null, null, null],
       };
       const result = draftProject(catalog, planned('Underworld', 2), spec, 2);
@@ -344,7 +374,7 @@ describe('draftProject', () => {
         return traits === undefined || traits === '' ? [] : traits.split('/');
       });
       expect(boughtTraits.length).toBeGreaterThan(0);
-      for (const traitKey of boughtTraits) expect(spec.basketTraitKeys).toContain(traitKey);
+      for (const traitKey of boughtTraits) expect(draftBasketTraitKeys(spec)).toContain(traitKey);
       const held = Object.keys(
         latestRunState(simulateProjectAssembly(catalog, result.project))?.traits.equippedTraits ??
           {},
@@ -363,7 +393,7 @@ describe('draftProject', () => {
           storyNpcByBiome: {},
           fieldNpcsByBiome: {},
         },
-        basketTraitKeys: [
+        basketByGiver: draftBasket([
           'ZeusWeaponBoon',
           'ApolloCastBoon',
           'HermesWeaponBoon',
@@ -371,7 +401,7 @@ describe('draftProject', () => {
           'HestiaManaBoon',
           'TimeStopLastStandBoon',
           'ZeusSpecialBoon',
-        ],
+        ]),
         rackKeepsakeKeys: [null, null, null],
       };
       const buys = (purchasesPerBiome?: number) => {
@@ -412,7 +442,7 @@ describe('draftProject', () => {
           storyNpcByBiome: {},
           fieldNpcsByBiome: {},
         },
-        basketTraitKeys: ['ZeusWeaponBoon'],
+        basketByGiver: draftBasket(['ZeusWeaponBoon']),
         rackKeepsakeKeys: [null, null, null],
       };
       const placed = (resourceRoomChance: number) => {
@@ -438,7 +468,7 @@ describe('draftProject', () => {
           storyNpcByBiome: {},
           fieldNpcsByBiome: {},
         },
-        basketTraitKeys: ['ZeusWeaponBoon', 'ApolloCastBoon'],
+        basketByGiver: draftBasket(['ZeusWeaponBoon', 'ApolloCastBoon']),
         rackKeepsakeKeys: [null, null, null],
         preferMidshops: true,
       };
@@ -489,7 +519,7 @@ describe('draftProject', () => {
           storyNpcByBiome: {},
           fieldNpcsByBiome: {},
         },
-        basketTraitKeys: [
+        basketByGiver: draftBasket([
           'PoseidonManaBoon',
           'FocusLightningBoon',
           'DoubleRewardBoon',
@@ -498,7 +528,7 @@ describe('draftProject', () => {
           'ElementalRallyBoon',
           'ApolloCastBoon',
           'ElementalHealthBoon',
-        ],
+        ]),
         rackKeepsakeKeys: [null, null, null],
       };
       const walk = startDraftWalk(dream.base, spec, 1);
@@ -553,7 +583,7 @@ describe('draftProject', () => {
         storyNpcByBiome: {},
         fieldNpcsByBiome: {},
       },
-      basketTraitKeys: ['ApolloWeaponBoon', 'PoseidonCastBoon', 'HestiaSprintBoon'],
+      basketByGiver: draftBasket(['ApolloWeaponBoon', 'PoseidonCastBoon', 'HestiaSprintBoon']),
       rackKeepsakeKeys: [],
     };
     const result = draftProject(catalog, base, spec, 1);

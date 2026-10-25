@@ -6,7 +6,7 @@ export const EMPTY_DRAFT_SPEC: AuthoredDraftSpec = Object.freeze({
   godKeys: Object.freeze([]),
   storyNpcByBiome: Object.freeze({}),
   fieldNpcsByBiome: Object.freeze({}),
-  basketTraitKeys: Object.freeze([]),
+  basketByGiver: Object.freeze({}),
   rackKeepsakeByBiome: Object.freeze({}),
   seed: 1,
 });
@@ -58,7 +58,7 @@ type DraftWorldKey =
   | 'godKeys'
   | 'storyNpcByBiome'
   | 'fieldNpcsByBiome'
-  | 'basketTraitKeys'
+  | 'basketByGiver'
   | 'rackKeepsakeByBiome'
   | 'seed';
 
@@ -311,8 +311,9 @@ export function decodeDraftSpec(
       return stored === undefined || stored === defaultValue ? [] : [[key, stored]];
     }),
   );
+  const pool = knownKeys(raw.godKeys, (key) => godKeys.has(key));
   return Object.freeze({
-    godKeys: knownKeys(raw.godKeys, (key) => godKeys.has(key)),
+    godKeys: pool,
     storyNpcByBiome: biomeRecord(
       raw.storyNpcByBiome,
       catalog,
@@ -321,10 +322,7 @@ export function decodeDraftSpec(
     fieldNpcsByBiome: biomeRecord(raw.fieldNpcsByBiome, catalog, (entry) =>
       Array.isArray(entry) ? knownKeys(entry, (key) => fieldNpcKeys.has(key)) : undefined,
     ),
-    basketTraitKeys: knownKeys(
-      raw.basketTraitKeys,
-      (key) => catalog.traits.byKey[key] !== undefined,
-    ),
+    basketByGiver: basketByGiver(raw.basketByGiver, catalog, pool),
     rackKeepsakeByBiome: biomeRecord(
       raw.rackKeepsakeByBiome,
       catalog,
@@ -333,6 +331,41 @@ export function decodeDraftSpec(
     seed,
     ...options,
   });
+}
+
+/**
+ * Each known giver's list of traits it offers, in catalog giver order; a trait listed twice keeps
+ * its first list, pool gods in pool order first, and an empty list drops.
+ */
+function basketByGiver(
+  value: unknown,
+  catalog: Catalog,
+  pool: readonly string[],
+): Readonly<Record<string, readonly string[]>> {
+  const record = asRecord(value);
+  const givers = catalog.traitGivers.values.filter((giver) => Object.hasOwn(record, giver.key));
+  const precedence = [
+    ...pool.flatMap((key) => givers.filter((giver) => giver.key === key)),
+    ...givers.filter((giver) => !pool.includes(giver.key)),
+  ];
+  const taken = new Set<string>();
+  const lists = new Map<string, readonly string[]>();
+  for (const giver of precedence) {
+    const traitKeys = knownKeys(
+      record[giver.key],
+      (key) => giver.traitKeys.includes(key) && !taken.has(key),
+    );
+    for (const key of traitKeys) taken.add(key);
+    if (traitKeys.length > 0) lists.set(giver.key, traitKeys);
+  }
+  return Object.freeze(
+    Object.fromEntries(
+      givers.flatMap((giver) => {
+        const traitKeys = lists.get(giver.key);
+        return traitKeys === undefined ? [] : [[giver.key, traitKeys]];
+      }),
+    ),
+  );
 }
 
 /** Planned god boons that differ from their biome's default, or undefined when none do. */
@@ -377,7 +410,7 @@ export function sameDraftSpec(left: AuthoredDraftSpec, right: AuthoredDraftSpec)
         : left[key] === right[key],
     ) &&
     sameKeys(left.godKeys, right.godKeys) &&
-    sameKeys(left.basketTraitKeys, right.basketTraitKeys) &&
+    sameRecord(left.basketByGiver, right.basketByGiver, sameKeys) &&
     sameRecord(left.storyNpcByBiome, right.storyNpcByBiome, same) &&
     sameRecord(left.fieldNpcsByBiome, right.fieldNpcsByBiome, sameKeys) &&
     sameRecord(left.rackKeepsakeByBiome, right.rackKeepsakeByBiome, same)

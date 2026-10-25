@@ -413,8 +413,8 @@ export function RouteDraftPanel({
                   className="draft-chip-move"
                   disabled={chip.order.earlierBasket === undefined}
                   onClick={() => {
-                    const basketTraitKeys = chip.order?.earlierBasket;
-                    if (basketTraitKeys !== undefined) replaceDraft({ ...draft, basketTraitKeys });
+                    const basketByGiver = chip.order?.earlierBasket;
+                    if (basketByGiver !== undefined) replaceDraft({ ...draft, basketByGiver });
                   }}
                   type="button"
                 >
@@ -432,8 +432,8 @@ export function RouteDraftPanel({
                   className="draft-chip-move"
                   disabled={chip.order.laterBasket === undefined}
                   onClick={() => {
-                    const basketTraitKeys = chip.order?.laterBasket;
-                    if (basketTraitKeys !== undefined) replaceDraft({ ...draft, basketTraitKeys });
+                    const basketByGiver = chip.order?.laterBasket;
+                    if (basketByGiver !== undefined) replaceDraft({ ...draft, basketByGiver });
                   }}
                   type="button"
                 >
@@ -443,7 +443,9 @@ export function RouteDraftPanel({
               <button
                 aria-label={`Remove ${chip.label}`}
                 className="draft-chip-remove"
-                onClick={() => replaceDraft(withDraftBasketTraitToggled(draft, chip.traitKey))}
+                onClick={() =>
+                  replaceDraft(withDraftBasketTraitToggled(catalog, draft, chip.traitKey))
+                }
                 type="button"
               >
                 <ActionIcon name="close" />
@@ -948,7 +950,9 @@ export function RouteDraftPanel({
       {basketOpen && basket !== undefined ? (
         <DraftBasketDialog
           onClose={() => setBasketOpen(false)}
-          onToggle={(traitKey) => replaceDraft(withDraftBasketTraitToggled(draft, traitKey))}
+          onToggle={(traitKey) =>
+            replaceDraft(withDraftBasketTraitToggled(catalog, draft, traitKey))
+          }
           projection={basket}
           returnFocusId="draft-basket-edit"
         />

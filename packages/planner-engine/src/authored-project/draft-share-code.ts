@@ -93,6 +93,7 @@ interface ShareLists {
   readonly storyNpcKeys: readonly string[];
   readonly fieldNpcKeys: readonly string[];
   readonly traitKeys: readonly string[];
+  readonly givers: readonly { readonly key: string; readonly traitKeys: readonly string[] }[];
   readonly hex: HexDeclaration | undefined;
   /** In-run Chaos blessings Transcendent Embryo may grant, with their operands in order. */
   readonly blessings: readonly { readonly key: string; readonly operandKeys: readonly string[] }[];
@@ -120,6 +121,10 @@ function shareLists(catalog: Catalog): ShareLists {
     storyNpcKeys: keys.storyNpcKeys,
     fieldNpcKeys: keys.fieldNpcKeys,
     traitKeys: catalog.traits.values.map((trait) => trait.key),
+    givers: catalog.traitGivers.values.map((giver) => ({
+      key: giver.key,
+      traitKeys: giver.traitKeys,
+    })),
     hex: catalog.hexes.byKey[SELENE_SPELL],
     blessings: catalog.chaos.blessings.values
       .filter((blessing) => blessing.fixedRarity === undefined)
@@ -156,6 +161,7 @@ function fingerprint(catalog: Catalog, lists: ShareLists): string {
     lists.storyNpcKeys,
     lists.fieldNpcKeys,
     lists.traitKeys,
+    lists.givers.map((giver) => `${giver.key}:${giver.traitKeys.join(',')}`),
     dream === undefined
       ? []
       : [dream.biomeCount, ...dream.initialBiomeKeys, '/', ...dream.laterAdditionalBiomeKeys],
@@ -300,12 +306,47 @@ const COUNT_PREFIX = 3;
 const LENGTH_PREFIX = 4;
 
 /**
+ * The basket: its trait count, then giver by giver in catalog order each trait's position, and for
+ * a trait more than one giver offers (a Duo) which of them lists it.
+ */
+function writeBasket(
+  writer: BitWriter,
+  lists: ShareLists,
+  basket: Readonly<Record<string, readonly string[]>>,
+): void {
+  const entries = lists.givers.flatMap((giver) =>
+    (basket[giver.key] ?? []).map((traitKey) => [giver.key, traitKey] as const),
+  );
+  writer.write(entries.length, widthFor(lists.traitKeys.length + 1));
+  for (const [giverKey, traitKey] of entries) {
+    writer.index(lists.traitKeys, traitKey);
+    const givers = traitGiverKeys(lists, traitKey);
+    if (givers.length > 1) writer.index(givers, giverKey);
+  }
+}
+
+function readBasket(reader: BitReader, lists: ShareLists): Record<string, string[]> {
+  const basket: Record<string, string[]> = {};
+  for (let count = reader.read(widthFor(lists.traitKeys.length + 1)); count > 0; count -= 1) {
+    const traitKey = reader.index(lists.traitKeys);
+    const givers = traitGiverKeys(lists, traitKey);
+    const giverKey = givers.length > 1 ? reader.index(givers) : givers[0];
+    if (giverKey === undefined) throw new Malformed();
+    (basket[giverKey] ??= []).push(traitKey);
+  }
+  return basket;
+}
+
+const traitGiverKeys = (lists: ShareLists, traitKey: string): readonly string[] =>
+  lists.givers.filter((giver) => giver.traitKeys.includes(traitKey)).map((giver) => giver.key);
+
+/**
  * The draft: its world in fixed order, then the stored options as tagged entries (a count, then
  * per entry its tag, payload length and payload). A whole number fills its payload.
  */
 function writeDraft(writer: BitWriter, lists: ShareLists, draft: AuthoredDraftSpec): void {
   writeKeyList(writer, lists.godKeys, draft.godKeys);
-  writeKeyList(writer, lists.traitKeys, draft.basketTraitKeys);
+  writeBasket(writer, lists, draft.basketByGiver);
   writeBiomeRecord(writer, lists, draft.storyNpcByBiome, (key) =>
     writer.index(lists.storyNpcKeys, key),
   );
@@ -349,7 +390,7 @@ function writeDraft(writer: BitWriter, lists: ShareLists, draft: AuthoredDraftSp
 function readDraft(reader: BitReader, lists: ShareLists): Record<string, unknown> {
   const raw: Record<string, unknown> = {
     godKeys: readKeyList(reader, lists.godKeys),
-    basketTraitKeys: readKeyList(reader, lists.traitKeys),
+    basketByGiver: readBasket(reader, lists),
     storyNpcByBiome: readBiomeRecord(reader, lists, () => reader.index(lists.storyNpcKeys)),
     fieldNpcsByBiome: readBiomeRecord(reader, lists, () => readKeyList(reader, lists.fieldNpcKeys)),
     rackKeepsakeByBiome: readBiomeRecord(reader, lists, () => reader.index(lists.keepsakeKeys)),

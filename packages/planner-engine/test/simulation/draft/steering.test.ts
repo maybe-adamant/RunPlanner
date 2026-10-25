@@ -16,6 +16,7 @@ import {
 import { draftSteeringFor } from '../../support/draft-walk';
 import { createDraftRng } from '../../../src/simulation/draft/rng';
 import type { ForcePressureLedgerEntry } from '../../../src/simulation/generation';
+import { draftBasket } from '../../support/draft-basket';
 
 function offer(rewardType: string, source?: string): ResolvedRewardOffer {
   const found = locallyValidRewardOffers(catalog.rewards, rewardType).find(
@@ -95,7 +96,7 @@ describe('god purchases', () => {
     const draft: DraftSpec = {
       loadout,
       world: { godKeys, storyNpcByBiome: {}, fieldNpcsByBiome: {} },
-      basketTraitKeys,
+      basketByGiver: draftBasket(basketTraitKeys, {}, godKeys),
       rackKeepsakeKeys: [],
     };
     return draftSteeringFor(base, draft);
@@ -141,7 +142,7 @@ describe('midshop preference', () => {
         storyNpcByBiome: {},
         fieldNpcsByBiome: {},
       },
-      basketTraitKeys: ['ZeusWeaponBoon'],
+      basketByGiver: draftBasket(['ZeusWeaponBoon']),
       rackKeepsakeKeys: [null, null, null],
     };
     const shop = (preferMidshops: boolean) =>
@@ -172,7 +173,7 @@ describe('depth pacing', () => {
         storyNpcByBiome: {},
         fieldNpcsByBiome: {},
       },
-      basketTraitKeys,
+      basketByGiver: draftBasket(basketTraitKeys, {}, ['Zeus', 'Apollo', 'Aphrodite', 'Hestia']),
       rackKeepsakeKeys: [],
     });
   const draws = (...values: number[]) => {
@@ -222,6 +223,57 @@ describe('depth pacing', () => {
   });
 });
 
+describe('hosted Duos', () => {
+  const base = createProjectDocument(catalog, {
+    projectId: 'd',
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
+  });
+  const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
+  void _startingReward;
+  const duo = 'ApolloSecondStageCastBoon';
+  const steeringFor = (basketTraitKeys: string[], host = 'Zeus') =>
+    draftSteeringFor(base, {
+      loadout,
+      world: {
+        godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+        storyNpcByBiome: {},
+        fieldNpcsByBiome: {},
+      },
+      basketByGiver: draftBasket(basketTraitKeys, { [duo]: host }),
+      rackKeepsakeKeys: [],
+    });
+  const holding = (traitKeys: string[]) => ({
+    equippedTraitKeys: traitKeys,
+    hermes: 0,
+    held: {
+      traitKeys: new Set(traitKeys),
+      elementCounts: { Air: 0, Earth: 0, Fire: 0, Water: 0, Aether: 0 },
+      godBoonRarityCounts: {},
+    },
+  });
+
+  it('passes over a Duo until its prerequisites are held, then returns to it', () => {
+    // Zeus hosts the Duo ahead of the Zeus core it needs.
+    const steering = steeringFor([duo, 'ZeusWeaponBoon', 'ZeusCastBoon', 'ApolloExCastBoon']);
+    expect(steering.nextQueued('Zeus', holding([]))).toBe('ZeusWeaponBoon');
+    expect(steering.nextQueued('Zeus', holding(['ZeusWeaponBoon']))).toBe('ZeusCastBoon');
+    expect(steering.nextQueued('Zeus', holding(['ZeusWeaponBoon', 'ApolloExCastBoon']))).toBe(duo);
+  });
+
+  it('lets only the host take a Duo', () => {
+    const ready = holding(['ZeusWeaponBoon', 'ApolloExCastBoon']);
+    const zeusHosts = steeringFor(['ZeusWeaponBoon', 'ApolloExCastBoon', duo]);
+    expect(zeusHosts.queueGiver(duo)).toBe('Zeus');
+    expect(zeusHosts.godTakes('Zeus', ready)).toBe(true);
+    expect(zeusHosts.godTakes('Apollo', ready)).toBe(false);
+    const apolloHosts = steeringFor(['ZeusWeaponBoon', 'ApolloExCastBoon', duo], 'Apollo');
+    expect(apolloHosts.queueGiver(duo)).toBe('Apollo');
+    expect(apolloHosts.godTakes('Zeus', ready)).toBe(false);
+    expect(apolloHosts.godTakes('Apollo', ready)).toBe(true);
+  });
+});
+
 describe('need-gated Shops', () => {
   const base = createProjectDocument(catalog, {
     projectId: 'n',
@@ -238,7 +290,7 @@ describe('need-gated Shops', () => {
         storyNpcByBiome: {},
         fieldNpcsByBiome: {},
       },
-      basketTraitKeys: ['ZeusWeaponBoon'],
+      basketByGiver: draftBasket(['ZeusWeaponBoon']),
       rackKeepsakeKeys: [],
     });
     // The trait's target lies deep in the biome, so nothing is overdue at its start.
@@ -283,7 +335,7 @@ describe('windowed room forcing', () => {
   const spec = (storyNpcByBiome: Readonly<Record<string, string>>): DraftSpec => ({
     loadout,
     world: { godKeys: ['Zeus'], storyNpcByBiome, fieldNpcsByBiome: {} },
-    basketTraitKeys: [],
+    basketByGiver: {},
     rackKeepsakeKeys: [null, null, null],
   });
   /** A Fields door inside the minibosses' window (start 2, deadline 4), by default at depth 2. */

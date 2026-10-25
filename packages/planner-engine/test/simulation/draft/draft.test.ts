@@ -23,6 +23,7 @@ import {
   draftStartingKeepsakeConflicts,
 } from '../../../src/simulation/draft/basket';
 import { createTraitHistoryState } from '../../../src/simulation/traits/history/fold';
+import { draftBasket } from '../../support/draft-basket';
 
 function route(
   routeKey: string,
@@ -47,7 +48,7 @@ function refusals(frame: DraftRoute & DraftLoadout, draft: Partial<DraftSpec> = 
   return draftRefusals(catalog, base, {
     loadout: frame,
     world: { godKeys: ['Zeus', 'Apollo', 'Hestia'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
-    basketTraitKeys: [],
+    basketByGiver: {},
     rackKeepsakeKeys: frame.itineraryBiomeKeys.slice(1).map(() => null),
     ...draft,
   });
@@ -57,11 +58,17 @@ const emptyWorld: DraftWorld = { godKeys: [], storyNpcByBiome: {}, fieldNpcsByBi
 /** Zeus behind pool #1, so order tests of Zeus's queue meet no first-pick rule. */
 const zeusSecond: Partial<DraftWorld> = { godKeys: ['Apollo', 'Zeus'] };
 
-function spec(basketTraitKeys: readonly string[], world: Partial<DraftWorld> = {}): DraftSpec {
+/** A Duo goes to the first pool god listing it unless `hosts` names another. */
+function spec(
+  basketTraitKeys: readonly string[],
+  world: Partial<DraftWorld> = {},
+  hosts: Readonly<Record<string, string>> = {},
+): DraftSpec {
+  const godKeys = world.godKeys ?? ['Zeus', 'Apollo'];
   return {
     loadout: underworld,
-    world: { ...emptyWorld, godKeys: ['Zeus', 'Apollo'], ...world },
-    basketTraitKeys,
+    world: { ...emptyWorld, ...world, godKeys },
+    basketByGiver: draftBasket(basketTraitKeys, hosts, godKeys),
     rackKeepsakeKeys: [],
   };
 }
@@ -159,7 +166,7 @@ describe('draft world options', () => {
       const assessed = assessDraftBasket(catalog, frame, {
         loadout: frame,
         world: { ...emptyWorld, godKeys: ['Zeus'] },
-        basketTraitKeys: [],
+        basketByGiver: {},
         rackKeepsakeKeys: [null, null, null],
         ...draft,
       });
@@ -185,7 +192,7 @@ describe('draft world options', () => {
         athena(gorgonStart, {
           loadout: gorgonStart,
           world: { ...emptyWorld, godKeys: ['Zeus'], fieldNpcsByBiome: { P: ['Athena'] } },
-          basketTraitKeys: ['InvulnerabilityDashBoon'],
+          basketByGiver: draftBasket(['InvulnerabilityDashBoon']),
         }).npcs,
       ).toEqual([{ giverKey: 'Athena', count: 1, cap: 1 }]);
     });
@@ -333,19 +340,29 @@ describe('draft basket legality', () => {
     expect(caps.poolGodTotal).toEqual({ count: 4, cap: 14 });
   });
 
-  it('counts a Legendary toward its god, and a held Duo toward neither', () => {
+  it('counts a Legendary and a hosted Duo toward their god', () => {
     const zeusCores = ['ZeusWeaponBoon', 'ZeusSpecialBoon', 'ZeusCastBoon', 'ZeusSprintBoon'];
     const zeusCap = { kind: 'cap', giverKey: 'Zeus', cap: 5 };
     expect(
       assessment(underworld, spec([...zeusCores, 'SpawnKillBoon']), 'ZeusManaBoon').refusals,
     ).toContainEqual(zeusCap);
+    // Zeus is pool #1, so he hosts the Zeus and Apollo Duo by default.
+    const withDuo = spec([...zeusCores, 'ApolloSecondStageCastBoon']);
+    expect(assessment(underworld, withDuo, 'ZeusManaBoon').refusals).toContainEqual(zeusCap);
     expect(
-      assessment(underworld, spec([...zeusCores, 'ApolloSecondStageCastBoon']), 'ZeusManaBoon')
-        .refusals,
+      assessment(
+        underworld,
+        spec(
+          [...zeusCores, 'ApolloSecondStageCastBoon'],
+          {},
+          { ApolloSecondStageCastBoon: 'Apollo' },
+        ),
+        'ZeusManaBoon',
+      ).refusals,
     ).not.toContainEqual(zeusCap);
   });
 
-  it('does not count a Duo toward either god', () => {
+  it("counts a Duo toward its host's cap only", () => {
     const zeusCores = [
       'ZeusWeaponBoon',
       'ZeusSpecialBoon',
@@ -353,12 +370,54 @@ describe('draft basket legality', () => {
       'ZeusSprintBoon',
       'ZeusManaBoon',
     ];
-    const duo = assessment(
-      underworld,
-      spec([...zeusCores, 'ApolloExCastBoon']),
-      'ApolloSecondStageCastBoon',
+    const basket = spec([...zeusCores, 'ApolloExCastBoon']);
+    expect(
+      assessment(underworld, spec([...zeusCores, 'ApolloSecondStageCastBoon']), 'ZeusManaBoon')
+        .refusals,
+    ).toContainEqual({ kind: 'cap', giverKey: 'Zeus', cap: 5 });
+    // Outside the basket it can still join Apollo's list.
+    expect(
+      assessment(underworld, basket, 'ApolloSecondStageCastBoon').refusals.some(
+        (refusal) => refusal.kind === 'cap',
+      ),
+    ).toBe(false);
+    const apolloFull = spec([
+      ...zeusCores,
+      'ApolloWeaponBoon',
+      'ApolloSpecialBoon',
+      'ApolloCastBoon',
+      'ApolloSprintBoon',
+      'ApolloManaBoon',
+    ]);
+    expect(assessment(underworld, apolloFull, 'ApolloSecondStageCastBoon').refusals).toContainEqual(
+      { kind: 'cap', giverKey: 'Zeus', cap: 5 },
     );
-    expect(duo.refusals.some((refusal) => refusal.kind === 'cap')).toBe(false);
+    const hostedByApollo = spec(
+      [...zeusCores, 'ApolloSecondStageCastBoon'],
+      {},
+      {
+        ApolloSecondStageCastBoon: 'Apollo',
+      },
+    );
+    expect(
+      assessment(underworld, hostedByApollo, 'ApolloSecondStageCastBoon').refusals.some(
+        (refusal) => refusal.kind === 'cap',
+      ),
+    ).toBe(false);
+  });
+
+  it('queues a Duo in the list of the god that holds it', () => {
+    const godKeys = ['Apollo', 'Zeus'];
+    const hosted = (host: string) =>
+      spec(['ApolloSecondStageCastBoon'], { godKeys }, { ApolloSecondStageCastBoon: host });
+    expect(draftSourceQueues(catalog, hosted('Apollo')).slice(0, 2)).toEqual([
+      { giverKey: 'Apollo', traitKeys: ['ApolloSecondStageCastBoon'] },
+      { giverKey: 'Zeus', traitKeys: [] },
+    ]);
+    expect(draftSourceQueues(catalog, hosted('Zeus')).slice(0, 2)).toEqual([
+      { giverKey: 'Apollo', traitKeys: [] },
+      { giverKey: 'Zeus', traitKeys: ['ApolloSecondStageCastBoon'] },
+    ]);
   });
 
   it('caps the basket at fourteen god traits, ten under Forfeit, leaving Hermes outside', () => {
@@ -460,7 +519,7 @@ describe('draft basket legality', () => {
     expect(
       refusals(underworld, {
         world: { ...emptyWorld, godKeys: ['Zeus', 'Hestia', 'Hera'] },
-        basketTraitKeys: ['ApolloSecondStageCastBoon'],
+        basketByGiver: { Zeus: ['ApolloSecondStageCastBoon'] },
       }),
     ).toContainEqual({
       kind: 'basketTrait',
@@ -519,7 +578,7 @@ describe("the starting keepsake's chosen result", () => {
   it('refuses the draft with the conflict, and leaves an Embryo blessing alone', () => {
     expect(
       refusals(staff, {
-        basketTraitKeys: ['StaffDoubleAttackTrait', 'StaffLongAttackTrait'],
+        basketByGiver: draftBasket(['StaffDoubleAttackTrait', 'StaffLongAttackTrait']),
         loadout: {
           ...staff,
           keepsakeEquipResults: {
@@ -548,7 +607,7 @@ describe("the starting keepsake's chosen result", () => {
 });
 
 describe('draft basket order', () => {
-  it("queues each god's, Hermes' and each Hammer's traits in basket order, Duos outside", () => {
+  it("queues each god's, Hermes' and each Hammer's traits in basket order, hosted Duos included", () => {
     const draft = spec([
       'ZeusCastBoon',
       'SpawnKillBoon',
@@ -565,7 +624,13 @@ describe('draft basket order', () => {
     expect(draftSourceQueues(catalog, draft)).toEqual([
       {
         giverKey: 'Zeus',
-        traitKeys: ['ZeusCastBoon', 'SpawnKillBoon', 'ZeusSprintBoon', 'ZeusWeaponBoon'],
+        traitKeys: [
+          'ZeusCastBoon',
+          'SpawnKillBoon',
+          'ZeusSprintBoon',
+          'ZeusWeaponBoon',
+          'ApolloSecondStageCastBoon',
+        ],
       },
       { giverKey: 'Apollo', traitKeys: ['ApolloWeaponBoon', 'ApolloExCastBoon'] },
       { giverKey: 'Hermes', traitKeys: ['HermesWeaponBoon', 'HermesSpecialBoon'] },
@@ -574,6 +639,14 @@ describe('draft basket order', () => {
         traitKeys: ['StaffLongAttackTrait', 'StaffDoubleAttackTrait'],
       },
     ]);
+  });
+
+  it('never refuses a hosted Duo for its place, since it waits on its prerequisites', () => {
+    // Zeus is pool #1 and hosts the Duo ahead of the Zeus core it needs.
+    const draft = spec(['ApolloSecondStageCastBoon', 'ZeusCastBoon', 'ApolloExCastBoon']);
+    expect(assessment(underworld, draft, 'ApolloSecondStageCastBoon').selectable).toBe(true);
+    expect(assessment(underworld, draft, 'ZeusCastBoon').selectable).toBe(true);
+    expect(draftOrderRefusals(catalog, underworld, draft)(draft.basketByGiver).size).toBe(0);
   });
 
   it('refuses a Hermes trait queued before the Hermes trait it needs', () => {
@@ -611,7 +684,7 @@ describe('draft basket order', () => {
     expect(
       refusals(underworld, {
         world: { ...emptyWorld, godKeys: ['Apollo', 'Zeus', 'Hestia'] },
-        basketTraitKeys: ['DoubleBoltBoon', 'ZeusCastBoon'],
+        basketByGiver: draftBasket(['DoubleBoltBoon', 'ZeusCastBoon']),
       }),
     ).toContainEqual({ kind: 'basketTrait', traitKey: 'DoubleBoltBoon', refusals: [refusal] });
   });
@@ -657,12 +730,16 @@ describe('draft first god pick', () => {
         .refusals,
     ).toEqual([firstPick]);
     expect(
-      refusals(underworld, { basketTraitKeys: ['FocusLightningBoon', 'ApolloRetaliateBoon'] }),
+      refusals(underworld, {
+        basketByGiver: draftBasket(['FocusLightningBoon', 'ApolloRetaliateBoon']),
+      }),
     ).toEqual([{ kind: 'basketTrait', traitKey: 'FocusLightningBoon', refusals: [firstPick] }]);
   });
 
   it('has no refusal while pool #1 has no basket trait', () => {
-    expect(refusals(underworld, { basketTraitKeys: ['ApolloRetaliateBoon'] })).toEqual([]);
+    expect(refusals(underworld, { basketByGiver: draftBasket(['ApolloRetaliateBoon']) })).toEqual(
+      [],
+    );
   });
 
   it('blocks a reorder that moves a non-core to the front of pool #1', () => {
@@ -671,10 +748,10 @@ describe('draft first god pick', () => {
       underworld,
       spec(['ZeusCastBoon', 'FocusLightningBoon']),
     );
-    expect(order(['ZeusCastBoon', 'FocusLightningBoon']).size).toBe(0);
-    expect(order(['FocusLightningBoon', 'ZeusCastBoon']).get('FocusLightningBoon')).toEqual([
-      firstPick,
-    ]);
+    expect(order({ Zeus: ['ZeusCastBoon', 'FocusLightningBoon'] }).size).toBe(0);
+    expect(
+      order({ Zeus: ['FocusLightningBoon', 'ZeusCastBoon'] }).get('FocusLightningBoon'),
+    ).toEqual([firstPick]);
   });
 
   it('is unrestricted when the start already holds a core', () => {
@@ -791,7 +868,7 @@ describe('draft basket caps', () => {
     const { caps } = assessDraftBasket(catalog, underworld, spec(basket, world));
     expect(caps.poolGodTotal).toEqual({ count: 4, cap: 14 });
     expect(caps.poolGods).toEqual([
-      { giverKey: 'Zeus', count: 2, cap: 5 },
+      { giverKey: 'Zeus', count: 3, cap: 5 },
       { giverKey: 'Apollo', count: 0, cap: 5 },
       { giverKey: 'Hestia', count: 0, cap: 5 },
       { giverKey: 'Aphrodite', count: 1, cap: 5 },
@@ -907,11 +984,13 @@ describe('draft keepsakes and route', () => {
 
   it('refuses basket traits the static legality rejects', () => {
     expect(
-      refusals(underworld, { basketTraitKeys: ['ZeusWeaponBoon', 'ApolloWeaponBoon', 'Missing'] }),
+      refusals(underworld, {
+        basketByGiver: draftBasket(['ZeusWeaponBoon', 'ApolloWeaponBoon', 'Missing']),
+      }),
     ).toEqual([{ kind: 'unknownTrait', traitKey: 'Missing' }]);
     expect(
       refusals(underworld, {
-        basketTraitKeys: ['ZeusWeaponBoon', 'ApolloWeaponBoon', 'HeraWeaponBoon'],
+        basketByGiver: draftBasket(['ZeusWeaponBoon', 'ApolloWeaponBoon', 'HeraWeaponBoon']),
       }).map((refusal) => refusal.kind === 'basketTrait' && refusal.traitKey),
     ).toEqual(['ZeusWeaponBoon', 'ApolloWeaponBoon', 'HeraWeaponBoon']);
   });
@@ -935,7 +1014,11 @@ describe('draft on Fresh File', () => {
   });
   const world = (godKeys: readonly string[]) => ({ ...emptyWorld, godKeys });
   const freshRefusals = (godKeys: readonly string[], basketTraitKeys: readonly string[] = []) =>
-    refusals(freshFile, { world: world(godKeys), basketTraitKeys, rackKeepsakeKeys: [] });
+    refusals(freshFile, {
+      world: world(godKeys),
+      basketByGiver: draftBasket(basketTraitKeys),
+      rackKeepsakeKeys: [],
+    });
 
   it('offers only the gods the route can, Apollo first, with no bonus givers, NPCs or racks', () => {
     const options = draftWorldOptions(catalog, freshFile);
