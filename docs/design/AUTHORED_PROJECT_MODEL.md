@@ -55,7 +55,7 @@ The current schema is the sole engine-authored-project contract. Its codec
 rejects other schemas and mismatched catalog versions rather than manufacturing
 current topology or leaf state from stale data. The application's shared loader
 migrates older documents before invoking the same strict parser; the
-[project loader](EDITOR_MODEL.md#atomic-replacement) owns that behavior and
+[project loader](APPLICATION_SHELL.md#opening-and-migration) owns that behavior and
 [`schema/README.md`](../../schema/README.md) the migration history.
 
 ### Schema change approval

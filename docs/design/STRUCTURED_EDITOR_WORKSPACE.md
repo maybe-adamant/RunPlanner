@@ -2,61 +2,56 @@
 
 ## Purpose
 
-This document defines the presentation structure for route and biome authoring.
-It composes contextual-editor products into a legible structured workspace
-without changing the authored-project model, simulation, validation, semantic
-commands, or persistence.
+This document defines what the route and biome workspace shows and where:
+the route rail, biome structure, focused inspector, occurrence workbenches,
+ordinary decisions, the Hub board, empty-biome outlines and removal repair. It
+composes engine and application products into a game-structured route rather
+than a database form, so a user can see where they are, which authored
+decisions form the picked continuation, which generated offers are unpicked
+leaves, how far evaluation has reached, where the first blocking owner is,
+what is being edited, and what remains structurally possible without invented
+future facts.
 
-This document owns:
+[Editor Model](EDITOR_MODEL.md) owns projection, binding, readiness and
+[findings and feedback](EDITOR_MODEL.md#findings-and-feedback);
+[Contextual Editor UX](CONTEXTUAL_EDITOR_UX.md) owns picker and popup-editor
+behaviour; [Application Shell](APPLICATION_SHELL.md) owns the route-level
+panels and the Run State sheet. This document determines where products
+appear, not what they mean.
 
-- route, biome-structure, and inspector composition;
-- shared ordinary-decision and Hub workspace presentation;
-- picked-path and unpicked-offer visual hierarchy;
-- progressive coverage and finding placement;
-- empty-biome outlines;
-- prompt-free removal editing, repair presentation, accessibility, and
-  responsive behavior.
+## Workspace Invariants
 
-[`CONTEXTUAL_EDITOR_UX.md`](CONTEXTUAL_EDITOR_UX.md) owns contextual room and
-reward selector behavior. [`EDITOR_MODEL.md`](EDITOR_MODEL.md) owns the broader
-projection, navigation, command, finding, and persistence boundaries.
-
-## Product Goal
-
-The editor should present a biome as a game-structured route rather than a
-database form. A user should be able to see:
-
-- where they are in the route and biome;
-- which authored decisions form the picked continuation;
-- which generated offers are unpicked leaves;
-- how far progressive evaluation has reached;
-- where the first blocking or invalid owner is;
-- which semantic owner is currently being edited;
-- what remains structurally possible without inventing future game facts.
-
-The workspace is a projection and command surface. It never becomes a second
-serialized topology.
-
-## Preserved Contracts
-
-- Authored topology and Room Occurrences remain the only topology authority.
+- The workspace is a projection and command surface, never a second
+  serialized topology. Authored topology and Room Occurrences remain the only
+  topology authority, and no authored field, topology identity, lifecycle rule
+  or simulation fact is introduced for presentation convenience.
 - Any non-complete-valid biome remains an authored-topology projection with
   only its reached assessment prefix overlaid. A complete-invalid biome does
-  not publish canonical topology merely because authorship is complete.
-- Only a complete-valid biome publishes canonical products and seeds the next
-  route biome.
-- UI destinations use occurrence IDs and semantic addresses, never rendered
-  indexes.
+  not publish canonical topology merely because authorship is complete. Only a
+  complete-valid biome publishes canonical products and seeds the next biome.
+- Every active semantic owner has one bound interaction, one finding
+  destination and one containing inspector even when route indexes or
+  summaries also reference it. UI destinations use occurrence IDs and semantic
+  addresses, never rendered indexes, ancestry or encoded identifiers.
+- Overview owns occurrence contents and feature inventory, Timeline owns
+  participating actions and their chronology, Layout owns Fields spawn-point
+  placement, and Doors owns outgoing offers and selection.
+- Dormant, ungenerated, unvisited and unpurchased children publish no active
+  Timeline control merely because their authored detail is retained.
 - Context-invalid authored values remain visible until explicitly replaced or
   removed by an owning structural command.
+- Ordinary decisions and N's Hub use their own declared topology products
+  without teaching either renderer the other's semantics.
 - React implements no eligibility, force, reward-store, bag, sibling,
-  Preboss-handoff, or route-gating rule.
-- One visible user intent dispatches one semantic command and creates one undo
-  entry.
-- Focus, expansion, search, disclosure, and viewport state remain transient
+  Preboss-handoff or route-gating rule; contextual controls consume
+  application-projected products.
+- One visible user intent dispatches one engine-owned semantic command and one
+  Undo entry; removal and repair rely on ordinary Undo/Redo for recovery.
+- Focus, expansion, search, disclosure and viewport state remain transient
   UI-session state.
-- The simulator models possibility, not probability. The workspace does not
-  display likelihood or an expected route length.
+- Empty and partial biomes show only truthful declared or evaluated structure.
+  The simulator models possibility, not probability: the workspace shows no
+  likelihood or expected route length.
 
 ## Desktop Composition
 
@@ -72,49 +67,19 @@ The primary authoring surface uses three conceptual regions:
 +----------------+-----------------------------+---------------------------+
 ```
 
-These are presentation regions, not persisted panels. The exact responsive
-composition may become two columns, stacked regions, or an inspector drawer at
-narrow widths.
-
-### Desktop Sizing and Scroll Ownership
-
-At desktop widths, the application shell occupies one viewport and gives the
-editor all height remaining below the compact project header.
-The document itself is not a vertical scrollport. The structure room list and
-Details region own overflow at their respective presentation boundaries. The
-compact repair banner and biome title stay above the scrolling room list;
-the banner has no separate scrolling reasons list.
-The desktop shell uses the available widescreen width rather than constraining
-the authoring surface to a narrow content column. A short structure rail does
-not advertise overflow merely because its connector decoration extends beyond
-a terminal stop.
-
-The Route, Draft and Loadout panels remain ordinary editor-panel content and may use that
-panel's scroll container. At narrow widths the layout intentionally returns to
-one document-flow column rather than retaining nested scrollports. These are
-CSS presentation boundaries only: scroll position remains transient and no
-layout state enters the authored project or semantic commands.
-
-Before a project is open, the application presents a catalog-driven route
-chooser. Once a route is selected, the header displays its identity and the
-route-local navigation provides Route, Draft and Loadout, then configured
-biomes and nonempty indexes;
-it does not switch between sibling authored runs. The route rail is the
-selected route's local overview and biome navigation, not a competing second
-route selector.
+These are presentation regions, not persisted panels; narrow layouts may stack
+them.
 
 ### Route Rail
 
-The route rail projects the selected route's normalized biome order and current
-project evaluation. It shows the Route, Draft and Loadout panels, each
-configured biome, its status, and whether contextual evaluation is active,
-complete, or blocked by an earlier biome. The workspace opens on Route, which
-holds Plan up to, the run modifiers with Practice mode, and the whole-plan status. Draft holds
-the draft spec and runs a draft of the plan ([Draft mode](DRAFT_MODE.md)). Loadout holds the
-starting choices (on Fresh File, only its fixed weapon) and carries the same
-status marker and finding count as a biome for route-start owners; every
-route-scoped or route-start finding opens it. Route carries no marker. The catalog route collection is used only to populate the
-chooser; it is not rendered as sibling project workspaces.
+The route rail projects the selected route's normalized biome order and
+current project evaluation. It shows the Route, Draft and Loadout panels
+([Application Shell](APPLICATION_SHELL.md#editor-panels)), then each
+configured biome with its status and whether contextual evaluation is active,
+complete or blocked by an earlier biome, then nonempty route-local indexes.
+The workspace opens on Route. Loadout carries the same status marker and
+finding count as a biome for route-start owners, and every route-scoped or
+route-start finding opens it; Route carries no marker.
 
 Selecting a biome changes UI-session navigation only. A downstream biome remains
 visible when blocked and its contextual state remains unassessed. Required
@@ -143,64 +108,16 @@ features, items, or other room-local products remain available through the conta
 decision or fixed-stage inspector unless a separate player-facing navigation
 need justifies another rail highlight.
 
-### Run State Join and Lifecycle Placement
+### Run State Launchers
 
 The workspace joins each engine-published Run State snapshot to its exact
-semantic owner. A structurally eligible owner projects one
-launcher: an available launcher binds that exact snapshot, while an unreached
-launcher carries the engine coverage reason and binds no invented state.
-Presentation owns structural titles, catalog-backed labels, section ordering,
-and compact requirement copy; it does not evaluate requirements, fold traits,
-derive bags, or infer availability.
-Equipped and banned trait labels come from the same engine snapshot. Forfeit's
-inactive, available, or consumed state is likewise passed through from the
-progressive Arcana/Fear ledger; the workspace does not infer it from the route
-loadout or room list. Keepsake presentation joins the engine's per-biome
-keepsake history to catalog labels; neither the projection nor React decodes
-when a postboss choice takes effect or reconstructs the sequence from current
-and removed inventories.
-
-Every bracket on the sheet comes from the snapshot's engine-derived `effects`
-product: each clock carries its unit and is either a countdown of what is left
-or a build-up with its progress and total, and each state is an engine fact.
-That product covers the aspect rank, the keepsake block and per-biome keepsake
-history, trait clocks (Steady Growth, clocked
-producers, `RoomsPerUpgrade` growth, keepsake-granted Hammer encounters),
-Infusion activation from the declared activation requirement, element-scaled
-Infusion counts, Gold Gold Gold's pending state, the acquisition order of
-non-slot traits and matured Chaos blessings, Arcana growth and Artificer
-charges, Barren, timed Well instances and held Well charges, Chaos curses,
-Shrine deliveries, and Path of Stars talent levels. The presentation formats
-those facts into finished rows, including max stats, the Reward Store Ratio,
-counters and bag totals, so React only renders them; it does not count
-lifecycle events, evaluate thresholds, or predict a future automatic target.
-
-The Route panel's run modifiers render from the engine's run modifier declarations: a toggle for a boolean kind, and for an optional percentage a
-checkbox plus a 0–100% slider that is disabled while unchecked, with the label
-and description taken from the declaration. The slider keeps its last value in
-UI state only, so re-enabling restores it until the panel is left; with none,
-enabling starts at 100%.
-Practice mode is the last row of the Route panel's run modifiers, on every route
-including Fresh File (where a practice run skips earlier first-time story, see
-[Practice mode start](RUN_START_INSTALLATION.md#practice-mode-start)): a checkbox, a Start at picker and a Gold field, the
-latter two disabled while unchecked. Checking opens the picker over the
-engine's start-point domain (biome rows of Opening, Preboss and Boss; an unavailable
-option is disabled, with a hover hint only when branches disagree, since an
-unreached or route-start point is evident), and only a choice sets the
-value; unchecking removes the start point and its gold in one edit. Gold is a
-base amount added to the game's own starting gold; empty adds none and shows a
-0 placeholder. Clicking the checkbox while the picker is open without a value
-cancels it and returns focus to the checkbox. An
-ineligible saved start point stays checked and its label carries a quiet
-"(unavailable)" without a hover; the slot picker states the reason. The row
-itself has no descriptive hover.
-An `internal` declaration appears only when the application composition marks
-a development build; no declared modifier is currently internal.
-
-Run State remains available through the covered lifecycle checkpoint that
-precedes or contains the first blocking value and unavailable afterward. The
-workspace consumes that engine-published coverage directly; it does not apply
-a second canonical or finding-order cut.
+semantic owner. A structurally eligible owner projects one launcher: an
+available launcher binds that exact snapshot, while an unreached launcher
+carries the engine coverage reason and binds no invented state. Run State is
+available through the covered lifecycle checkpoint that precedes or contains
+the first blocking value and unavailable afterward; the workspace applies no
+second canonical or finding-order cut. The
+[sheet](APPLICATION_SHELL.md#run-state-sheet) presents the snapshot.
 
 Only two decision-generation launchers remain public: the `HubDecisionAddress`
 before the Hub board is generated and the Hub-sourced `ExitDecisionAddress`
@@ -245,7 +162,7 @@ occurrences show their declaration-owned identity without a duplicate frontier
 picker.
 
 Before a physical offer's room is selected, the pending Reward row remains
-visible as `Choose room to show reward`; after selection it explicitly renders
+visible, asking for the room first; after selection it explicitly renders
 no reward, one editor, or all active editors for that room. This is one
 projection product, not a biome-specific presentation branch.
 Before a decision has one selected continuation, its numbered rail stop opens
@@ -274,24 +191,20 @@ ungenerated destinations. Viewing a map never edits participation, changes
 semantic focus, adds history or requires complete authoring. The route rail
 remains the navigation to room details.
 
-One image viewport serves inspection dialogs and inline editing references.
-Fields Room Layout and Ephyra Side Rooms keep controls on the left and a larger
-reference on the right. Individual main/side-room dialogs remain independent of
-the Hub editor. Side Rooms uses an illustrative parent map with declared local
-slot status; generation and traversal are edited in the left controls. Its map
-fits a 16:9 viewport, with scrolling reserved for zoomed inspection. Inline references
-are sticky only beside controls and stack above them in normal flow when space
-is narrow. Images fit a bounded viewport with zoom and dragging to pan;
-Close/Escape returns focus to the invoking control when it still exists.
-
-Visibility and zoom belong to the local host, not the authored project. Edits
-within that host preserve the reference; changing its room image resets Fit,
-and changing the host cannot inherit another room's open reference. Images,
-including placeholders and Fields annotations, are replaceable static assets.
-The Hub uses a clean background with shared door and fountain coordinates:
-read-only inspection and the interactive Overview/Timeline project their own
-markers over that same image. Coordinates are presentation data, not room topology.
-See the [asset replacement note](../../apps/planner/src/ui/room-maps/README.md).
+One image viewer serves inspection dialogs and inline references. Fields Room
+Layout and Ephyra Side Rooms keep controls beside a larger reference;
+individual main/side-room dialogs remain independent of the Hub editor. Side
+Rooms uses an illustrative parent map with declared local slot status;
+generation and traversal are edited in the controls. Images support zoom and
+pan, and Close/Escape returns focus to the invoking control when it still
+exists. Visibility and zoom belong to the local host, not the project: edits
+within that host keep the reference, changing its room image resets the zoom,
+and a new host cannot inherit another room's open reference. Images, including
+placeholders and Fields annotations, are replaceable static assets
+([asset note](../../apps/planner/src/ui/room-maps/README.md)). The Hub's
+read-only inspection and interactive Overview/Timeline draw their own markers
+over one shared background with shared door and fountain coordinates;
+coordinates are presentation data, not topology.
 
 ### Encounter Phase Products
 
@@ -402,16 +315,12 @@ blocking product, Room Doors and later rooms show their authored values the
 same way. A block at the Overview leaves the Overview as the repair surface and
 the Timeline and Doors read-only.
 
-Timeline action headings use **Buy** for paid World Shop, Shrine and Well
-items and their refills, **Collect** for pickups (including Contract items and
-Echo-generated pickups), and **Sell** for Pool sales. Omit generic `with` and
-`pickup` wording; retain distinguishing cage, phase, source-role, and boosted
-identities. Purchases use `Buy Item · Slot N` or `Buy Item · Travel Deal Offer`,
-with N matching inventory display order; Contract items use
-`Collect Item · Contract Item`. Timeline Pom names are
-**Pom**, **Double Pom**, **Triple Pom**, and
-**Pom Slice**, without changing catalog names. Headings, drag previews, and
-action controls share the projected label; outcome details remain separate.
+Timeline action headings name their verb (Buy for paid World Shop, Shrine and
+Well items and refills, Collect for pickups including Contract items and Echo-generated pickups, Sell for Pool sales) and keep
+distinguishing cage, phase, source-role, slot and boosted identities. Pom
+actions use their pickup names (Pom, Double Pom, Triple Pom, Pom Slice)
+without changing catalog names. Headings, drag previews and action controls
+share the projected label; outcome details remain separate.
 
 A Shrine purchase row carries its Rush checkbox. The purchase row that triggers
 Travel Deal renders the refill's inventory controls as its second line: for a
@@ -428,6 +337,9 @@ Travel Deal line. It stays mounted on every Anvil-bearing role and is disabled
 with a waiting hint until the engine reaches that role's Anvil frontier,
 which it does only under a `normal` disposition. While the result applies, its
 findings route to the launcher; otherwise they route to the row.
+
+In a Room Timeline action, the pickup-outcome control precedes everything that
+outcome enables: trait, Pom, Anvil, Artificer output and Fountain controls.
 
 Required chronology rows arrive ranked from the activating semantic command
 and expose only engine-assessed moves. React renders no Position or generic
@@ -562,7 +474,11 @@ the same reward-event stream as the other acquisition outcomes, the workspace
 marks the exact reward control with the realized acquisition, and React keeps
 the legal pickup interactions visible beneath a compact substitution status.
 Retained authored children remain in the document and reappear if an upstream
-edit makes the substitution no longer apply.
+edit makes the substitution no longer apply. The reward control names the
+realization inside its own picker trigger, `(Red Onion)` after the authored
+offer with the Vow named on hover; nothing renders beside the control, and the
+timeline row carries no provenance because its label already names the
+realized pickup.
 
 ### Keepsake Products
 
@@ -586,19 +502,6 @@ rack editor. The only authored replay child is a reached Experimental Hammer
 result at the succeeding biome-start owner. It reuses the shared keepsake-equip
 result interaction and is contained by that biome's entry inspector; a dormant
 future result publishes no marker, interaction, or finding destination.
-
-## Application Projection Boundary
-
-[Editor Model](EDITOR_MODEL.md#workspace-projection) owns the supported
-workspace entry, authored-first construction, interaction binding, exact
-finding routing and independent projection closure tests. This document owns
-the concrete workbenches composed from that product.
-
-The workspace renders authored structure with only reached evaluator overlays.
-Missing or invalid values remain at their semantic owners; candidate support
-never decides whether a mandatory control exists. Readiness disables controls
-beyond the engine's incomplete horizon without hiding them. A rendered position
-or tab is neither domain identity nor chronological authority.
 
 ## Ordinary Decision Workspace
 
@@ -640,8 +543,7 @@ offer keeps its Room and Reward rows at the same visual level, because the
 selected room owns the complete reward surface for that offered door. An
 unresolved offer keeps its pending Reward row, while a resolved room publishes
 `No reward`, one editor, or all active sibling editors. Fixed and empty rewards
-use the same labeled inline row as editable rewards, with a consistent gap
-from Room controls rather than a horizontal divider. The door contract keeps
+use the same labeled inline row as editable rewards. The door contract keeps
 game preview visibility separate from planner authorship. An Anomaly or
 Zagreus automatic return remains hidden in game, but
 its freshly generated host reward still consumes the ordinary reward store and
@@ -649,18 +551,17 @@ therefore retains its reward editor and finding destination in the decision.
 Single-choice controls live on those cards, and the picked card receives the
 strongest emphasis because it is the authored selected route. Evaluated entry
 is shown separately when materialization has actually reached that room.
-A decision with a reward pool shows one pool row of two fixed-height halves.
-The left half is the Reward Pool: the editable picker for an authored
-RunProgress/MetaProgress batch, or, where an O ShipCombat wheel already decided
-the pool, a fixed value tagged as from ship combat with a link to that wheel.
-The right half is the Effective Pool: what the selected exit records for the
-store ratio, read from the engine's entered-store product for the batch. It is
-blank while no exit is selected or when the counted store equals the left
-half; otherwise it names the different store (a forced sibling's flip), the
-discarding room (`Discarded by <room>`) for a room that records no entered
-store, or an additional exit's own store with its room. Both halves keep their
-place while blank, may stack at narrow widths, and React derives none of the
-values. A decision without a pool renders no pool row.
+A decision with a reward pool shows one pool row. Its Reward Pool half is the
+editable picker for an authored RunProgress/MetaProgress batch or, where an O
+ShipCombat wheel already decided the pool, a fixed value marked as from ship
+combat with a link to that wheel. Its Effective Pool half is what the selected
+exit records for the store ratio, read from the engine's entered-store
+product: blank while no exit is selected or when the counted store equals the
+pool; otherwise it names the different store (a forced sibling's flip), the
+discarding room for a room that records no entered store, or an additional
+exit's own store with its room. React derives none of these values. A decision
+without a pool renders no pool row. Batch-wide rules stay with the batch;
+reward visibility stays with the individual door.
 
 Unpicked targets remain fully visible in the decision workbench because they
 still affect reward bags, sibling conflicts, source support, and possibility
@@ -708,22 +609,12 @@ room-local, or finding products.
 
 ### Variant-Owned Structure
 
-- F/G/P use the same Door 1 flow for ordinary rooms and their required atomic
-  normal-door takeover at the declaration-admitted terminal source. N uses the
-  same flow for its required Hub candidate after PreHub or selected natural
-  Chaos.
-- H exposes the required takeover only after four qualifying H room records;
-  detours can therefore leave another ordinary Fields frontier even when four
-  topology transitions already exist.
-- I's Preboss remains a generated ordinary peer after Goal completion; it has
-  no over-bound terminal envelope and closes the biome only when picked.
-- O and Q reach a width-one takeover when their Preboss declarations become
-  eligible and required at depth 7. Q's exact ordinary room eligibility admits
-  no room at that depth; O's ordinary candidates are excluded by the required
-  Preboss pressure. Both use the common candidate and repair surface.
-
-The shared rail and inspector share a direct room-choice surface, not a
-universal ownership model or a separate Preboss action.
+Every biome's terminal takeover (the F/G/P/O/Q Preboss, N's Hub after PreHub
+or natural Chaos) appears as a candidate in the same Door 1 room picker; I's
+Preboss is an ordinary peer. When each becomes available is a biome rule (see
+[`docs/biomes/`](../biomes/)). The shared rail and inspector share a direct
+room-choice surface, not a universal ownership model or a separate Preboss
+action.
 
 ## Hub Decision Workspace
 
@@ -747,9 +638,8 @@ language, but its center is not an ordinary decision spine. The
 
 Hub Exit shows the Preboss as Door 1 with the shared `Open next room`
 continuation; it has no create or remove action. While the Hub is incomplete
-the chain is unreached: the continuation is disabled with the hint "Complete
-the Hub to continue." and the Preboss rooms follow the unreached-context
-policy. There is no status chip.
+the chain is unreached: the continuation is disabled with a hint and the
+Preboss rooms follow the unreached-context policy.
 
 Exact Hub inspector destinations also carry their presentation tab: Hub,
 slot-set, and main incoming-reward-identity owners open Hub Overview; main
@@ -773,17 +663,14 @@ attempt and opens the existing reward editor on success; rendering markers does
 not allocate occurrences or eagerly prepare every candidate. Open doors expose
 that same editor. **Details** opens the fixed-slot List, which remains the stable
 repair home for membership and reward findings; **Back to Map** returns to the
-visual editor. Finding navigation selects Details even when Map was open.
-The List keeps all 26 cards in declaration order, with four/two/one columns as
-space narrows and equal reward-control/closed-placeholder height.
-
+visual editor. Finding navigation selects Details even when Map was open. The List shows
+every fixed-slot card in declaration order.
 **Reset Board** dispatches one atomic command that closes all slots and removes
 their owned visits and rooms while retaining the Hub, its source and its
 completed-Hub chain. It differs from Remove Hub and participates in ordinary Undo/Redo.
 
 Timeline is map-only. Open doors retain their stable room labels and reward
-icons; transparent markers are unvisited, solid markers carry a badge above the
-room circle. Badges show the combined action order, while room visit ordinals
+icons; visited markers carry a badge with the combined action order, while room visit ordinals
 stay 1–6. Clicking an unvisited door appends it when fewer than six rooms are
 visited; the fountain's distinct marker appends its one use regardless of room
 capacity. Once all six visits and the fountain are placed, visited doors show
@@ -805,17 +692,14 @@ never depends on creating Preboss. That room owns no persistence, candidate,
 or execution product for them. Hub Timeline contains no fountain outcome editor. Ordering uses
 the same map append interaction as room visits: reset visits and rebuild the
 action order to change the fountain position. There is no separate fountain
-ordering control. The shared map legend identifies the fountain diamond beside
-the room-quality circles. Only **Reset visits** removes the fountain use,
+ordering control. Only **Reset visits** removes the fountain use,
 clearing its target with it.
 
 The existing Hub-owned interaction assesses complete proposals with Hub-level
 readiness, not the interior readiness of each visited room. Exact visit markers
 and the count target remain available for findings. Map controls, reward icons
 and badges are projections of the same workspace owners as Details; they do not
-create another membership, legality or chronology path. Zoom/Fit, Reset and
-Details controls stay fixed over the viewport while the background and door
-markers pan together.
+create another membership, legality or chronology path.
 
 The N rail gives its fixed Opening and PreHub stages and each authored Hub
 visit one read-only primary-reward token when the room projects one. This is
@@ -848,22 +732,6 @@ The local reward popover and keyboard focus remain transient presentation state;
 neither changes the rail selection or enters authored history. Explicit rail
 and finding actions retain their exact semantic owner destinations.
 
-## Progressive Coverage and Findings
-
-The workspace presents the single atomic project evaluation described by
-`EDITOR_MODEL.md`. Evaluated owners show their interactions and findings; the
-repair owner at the authoring horizon remains navigable; retained later
-authorship stays visible but unassessed and locked. Invalidity alone does not
-lock repair, and an upstream block is never restated as fabricated downstream
-invalidity.
-
-The route rail, inspector, tabs, and compact repair banner reference the same
-semantic destination. The engine-selected issue supplies the route's one
-repair agenda and global error treatment; detailed local explanations retain
-their exact child destinations. Summaries never create a second finding location.
-Color remains supplementary to labels, icons, descriptions, and accessible
-names.
-
 ## Empty and Future Outline
 
 A configured biome with no authored topology should show its declared structure
@@ -888,20 +756,6 @@ Any completion-horizon or remaining-structure summary must reach the application
 projection as a normalized layout fact or simulation result. Neither the
 application presentation layer nor React interprets force or timing declarations
 to calculate it.
-
-## Contextual Controls
-
-The workspace places the shared selector products defined by
-`CONTEXTUAL_EDITOR_UX.md` beside their exact semantic owners. It may arrange
-their labels, triggers, summaries, and responsive layout, but it does not
-restate candidate grouping, required-first behavior, selected-invalid
-retention, reward-store resolution, sibling awareness, or counted-bag policy.
-
-After any semantic edit, the workspace renders the newly projected authored
-snapshot. Compatible values remain at their stable owners, newly active leaves
-use declaration-owned defaults, and context-invalid values retain their normal
-finding presentation. No rendered position, open picker, or local draft becomes
-a second source of reconciliation policy.
 
 ## Removal Actions and Repair
 
@@ -930,143 +784,10 @@ of a missing door, which has no row of its own.
 
 Action labels invoke semantic commands; they do not calculate deletion scope
 or repair the project themselves. Persistent deletion-scope copy belongs only
-on a concrete action whose user research requires it. The application-wide
-session liveness reconciliation may clear a deleted finding or focus reference
-after a new workspace publication,
-but never rehomes it or supplies command focus.
-
-The authored-project core calculates the pure removal impact when it executes
-the semantic command. The workspace exposes a complete removal or repair
-command-intent capability with its declared before-focus behavior, not a
-projected impact closure. Neither the projection nor React walks authored
-descendants to infer deletion.
+on a concrete action whose user research requires it. In-project edits have no
+confirmation step; confirmation is reserved for operations that are both
+externally consequential and not recoverable through project history.
 
 Closing an unvisited slot that crosses the declared open-set minimum removes
 only the detached slot subtree. The resulting board remains visible as
 incomplete with its authored visits and completed-Hub chain retained.
-
-## Feedback Layers
-
-Every editing surface uses the same two feedback layers, so text never moves a
-control while the user edits.
-
-The outer layer is the findings panel and the timeline badges. The engine's one
-assessment issue folds its inner reasons into one finding per dialog owner
-(trait offer, encounter customization, Pom resolution), worded as attention plus
-a count; a reason is inner when its origin lies beneath the owner or when a
-same-origin reason carries dialog-level evidence (`traitKey`/`optionKey`,
-`decisionKey`). The entry navigates to the launcher that opens the editor and
-never opens the dialog itself. The panel holds only that single next-repair
-card; a blocked or unassessed biome view adds no entry or workbench banner and
-shows its state through its navigation marker and rail. Status badges may change
-their text width inside a pill.
-
-The inner layer is one always-mounted feedback region at the bottom of every
-visible dialog body (trait offer and its nested Echo choice, Pom, Circe, Chaos,
-Anvil, encounter composition and customization, Arcana activation). The region
-keeps a minimum height and an empty state; draft feedback (branch disagreement,
-an unassessable retained outcome, a carrier not yet complete) is reported there
-by reporter key and never between controls.
-Controls inside carry only an invalid marker and a hint; entries navigate
-to the control they correct. A loading choice region holds its loaded height so
-the dialog resizes once.
-
-Row stability: a control whose declaration exists stays mounted and is only
-enabled by evaluation; a pending control states on hover whether it waits on an
-earlier choice or has nothing to target. A message that stands in for a control
-(an ungenerated side-room reward, a door awaiting its room, a hidden or
-absent door reward, a dialog control without a value) keeps the control's label column and value frame through
-`control-placeholder`; section-wide empty states keep their paragraph form.
-Every Room Timeline row (action, lifecycle boundary, checkpoint, automatic
-effect, insertion point, Travel Deal line) renders the same cells in one
-list-owned column template: handle, ordinal, label, editors, and the placement
-and delete action slots; an empty cell stays mounted. Action rows keep both
-slots, disabled with a hint when no proposal applies, and the Door Exit
-continuation names on hover whether a door is still unselected or the batch is
-unfinished. Rows or sections created by an authored decision are expected
-changes. In the Room Timeline action column the
-pickup-outcome control precedes everything that outcome enables: trait, Pom,
-Anvil, Artificer output, and Fountain controls. A reward control names its Vow
-of Forfeit realization inside its own picker trigger text, `(Red Onion)` after
-the authored offer, with the vow named on hover; no element renders beside the
-control, and the timeline row carries no provenance because its label already
-names the realized pickup.
-
-Stable layout means a control has a reserved home when it appears, not that every
-control always renders. A timeline control (pickup outcome choices, Sea Star,
-Fig Leaf, Gorgon, Aetos) renders only where the engine product says its context
-applies at that point, or where an authored value exists; a retained stale value
-stays visible and editable with its finding. A finding never hides or disables
-its control, and the application never computes applicability itself.
-
-Information notes explain a rule or a result beneath their owning control:
-Fields and hidden-reward explanations share the `door-information-note`
-presentation; pool results live in the pool row's fixed Effective Pool half.
-Candidate explanations stay inside the picker popover; the trigger retains its
-accessible description and invalid state without adding layout space.
-Placement and rejected-drag feedback float outside document flow.
-
-## Component Foundation
-
-Use accessible primitives for popovers, radio groups, disclosures, status
-announcements, and keyboard navigation. The contextual picker uses Radix
-Popover plus `cmdk`, styled through the existing hand-written CSS. Shop
-supplemental states use the same item and participation columns. Batch-wide
-rules stay with the batch, while reward visibility stays with the individual
-door. No removal-confirmation dialog dependency is required for in-project
-editing. Confirmation is reserved for operations that are both externally
-consequential and not recoverable through project history. Tailwind adoption
-and literal shadcn component copying are out of scope.
-
-Dependency choice remains subordinate to the ownership contract. A component
-library must not hide semantic commands, make caller-owned option models mutable,
-or move presentation policy into generic wrappers.
-
-`ui/styles.css` is the ordered stylesheet entry. Its owned layers preserve the
-cascade: foundation/shell, project/route, trait feedback, biome layout, editor
-structure, room workbenches, shell metadata, responsive overrides and final
-finding overrides. Keep local container/media rules with their selectors and
-preserve the order of later refinements. A stylesheet relocation must not
-silently change layout or finding precedence; verify the expanded cascade and
-representative wide/narrow browser surfaces.
-
-Keep the room editor beside the rail only while it retains roughly half the
-available app width; otherwise stack them with shared scrolling, independently
-of the header and navigation's mobile layout.
-
-Compound controls must fit their actual container, not only a viewport breakpoint.
-Wrap complete target/value fields before compressing their contents; at narrower
-widths a label may sit above its slider, but the slider and displayed value stay
-together. Check descendants against their field and visible panel: an ancestor
-with clipped overflow can hide a defect from document-level overflow checks.
-
-## Workspace Invariants
-
-The structured workspace must ensure:
-
-- every active semantic owner has one bound interaction, one finding
-  destination, and one containing inspector even when route indexes or
-  summaries also reference it;
-- Overview owns occurrence contents and feature inventory, Timeline owns
-  participating actions and their chronology, Layout owns Fields spawn-point
-  placement, and Doors owns outgoing offers and selection;
-- dormant, ungenerated, unvisited, and unpurchased children do not publish
-  active Timeline controls merely because their authored detail is retained;
-- ordinary decisions and N's Hub use their own declared topology products
-  without teaching either renderer the other's semantics;
-- finding navigation focuses the exact repair surface and never derives a
-  destination from rendered ancestry or an encoded identifier;
-- empty and partial biomes show only truthful declared or evaluated structure;
-- contextual controls consume application-projected products without
-  rebuilding candidate policy;
-- removal and repair controls dispatch engine-owned semantic commands and rely
-  on ordinary Undo/Redo for recovery;
-- the layout remains keyboard operable, screen-reader legible, and responsive;
-  and
-- no authored field, topology identity, lifecycle rule, or simulation fact is
-  introduced solely for presentation convenience.
-
-Feature-specific authoring behavior belongs to `EDITOR_MODEL.md`, selector
-behavior to `CONTEXTUAL_EDITOR_UX.md`, and domain legality to the corresponding
-engine authority. This document determines where those products appear, not
-what they mean.

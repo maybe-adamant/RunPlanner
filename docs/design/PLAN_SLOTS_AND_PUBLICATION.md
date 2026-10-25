@@ -12,7 +12,7 @@ invalid selected slot is a bounded admission error.
 This document owns the shared configuration folder, the slot files and their
 publication transaction, slot sources and rebuild, the community event slot
 and the two signed feeds. The Game tab and send control that present these
-belong to the [editor](EDITOR_MODEL.md#game-screen-and-the-editors-send-control).
+belong to the [application shell](APPLICATION_SHELL.md#game-tab-and-send-control).
 
 ## Shared configuration folder
 

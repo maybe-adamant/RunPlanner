@@ -17,7 +17,7 @@ Start with the lane that owns the question:
 | How is that result edited, displayed, navigated and saved? | [Planner Application and Editor](EDITOR_MODEL.md) |
 
 The engine guide routes deeper authored-state, generation, lifecycle, reward
-and candidate contracts. The application guide routes workspace layout and
+and candidate contracts. The application guide routes the shell, workspace layout and
 contextual-picker behavior. [Biome documents](../biomes/) own concrete route
 rules; [audits](../audits/README.md) own source evidence and bounded unknowns.
 The [Execution Protocol](EXECUTION_PROTOCOL.md) owns the downstream execution
@@ -137,7 +137,7 @@ Route-spanning interactions use real
 
 Vite builds the same React application for browser and desktop. Tauri owns
 native windows, packaging, scoped file transport, the
-[project library](EDITOR_MODEL.md#project-library) folder (its subfolders,
+[project library](APPLICATION_SHELL.md#project-library) folder (its subfolders,
 recursive head-only scan, plan and folder moves, and deletes to the recycle
 bin) and its session, a
 close gate that lets the planner write pending edits, and the
