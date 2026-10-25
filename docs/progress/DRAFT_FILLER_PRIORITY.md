@@ -20,6 +20,14 @@ nothing left to give still outweighs any filler, and Shops never buy filler.
    of the four kinds, declared in `DRAFT_OPTIONS` with its own share-code tag
    and decoded tolerantly (unknown or repeated kinds dropped). Empty is the
    default and keeps today's behaviour exactly.
+   2a. **Amounts.** Each ranked entry carries an optional per-run amount
+   (`{ kind, amount? }`). Every filler pickup counts 1 whatever its size, Shop
+   buys included. Ranks apply to the kinds still short of their amount, so once a
+   kind reaches it the kinds below move up; a finished kind is plain unranked
+   filler (weight 1) and Shops stop buying it. An entry without an amount stays
+   ranked all run. Amounts are preferences, not draft targets, and stay out of
+   the targets-met count.
+
 3. **Door rewards.** A ranked kind weighs more the higher its rank; unranked
    filler keeps weight 1. The weight enters through `offerWeight`, so door
    choice and Shop slot weights follow it.
