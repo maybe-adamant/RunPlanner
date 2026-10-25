@@ -163,7 +163,13 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
             report(runtime)
             return base(currentRun, args)
         end
-        local occurrence = enteringDreamBiome and route.next(state.route) or route.expected(state.route)
+        -- A Dream plan ending at its Postboss has no next occurrence; native picks the room.
+        local occurrence
+        if enteringDreamBiome then
+            occurrence = route.next(state.route)
+        else
+            occurrence = route.expected(state.route)
+        end
         if occurrence == nil or room.prepare(state, occurrence) == nil
             or state.state ~= "synchronized" then
             report(runtime)

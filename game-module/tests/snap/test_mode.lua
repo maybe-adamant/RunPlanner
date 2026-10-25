@@ -483,6 +483,22 @@ function TestSnapMode.testTheDreamBiomeChoiceStaysNativeWithSnapOffAnOutOfSyncEn
     end
 end
 
+function TestSnapMode.testAnInSyncDreamPlanEndingAtItsPostbossLeavesTheNextBiomeOpeningNative()
+    local state = session.create()
+    state.plan = planOf({ occurrence("boss", "G_Boss01", "G"), occurrence("post", "Dream_PostBoss01", "Dream") },
+        "Dream")
+    assert(session.resumeAt(state, 2))
+    state.state, state.reason = "synchronized", "ready"
+    route.enter(state.route, "post", "Dream_PostBoss01")
+    local currentRun = { CurrentRoom = { Name = "Dream_PostBoss01" }, IsDreamRun = true }
+    local _, _, log, restore, callbacks, runtime = attached(state, false, nil, nil, { currentRun = currentRun })
+    local nextRoom = callbacks.ChooseStartingRoom(nil, runtime, function() return { Name = "P_Intro" } end,
+        currentRun, { StartingBiome = "P" })
+    restore()
+    lu.assertEquals({ nextRoom, log.created }, { { Name = "P_Intro" }, {} })
+    lu.assertEquals({ state.state, state.route.currentOccurrence.id }, { "synchronized", "post" })
+end
+
 function TestSnapMode.testABiomeEdgeStaysNativeAfterAnOutOfSyncEntryOrWhenThePlanEndsThere()
     local outOfSync = desynchronized(2)
     assert(route.exit(outOfSync.route))
