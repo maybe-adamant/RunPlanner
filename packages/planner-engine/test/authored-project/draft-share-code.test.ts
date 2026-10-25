@@ -7,6 +7,7 @@ import {
   decodeDraftShareCode,
   draftShareCommands,
   encodeDraftShareCode,
+  DRAFT_OPTIONS,
   MAX_DRAFT_SEED,
   ProjectCommandContractError,
   projectDraftShareInputs,
@@ -236,6 +237,15 @@ describe('draft share codes', () => {
       });
       // A room forcing index past the choices takes the default.
       expect(decoded(code(0, [entry(4, '111')])).draft).toEqual(plain);
+    });
+
+    it('keeps the first of a repeated option tag', () => {
+      expect(decoded(code(0, [entry(3, '111'), entry(3, '10')])).draft.perGodCap).toBe(7);
+    });
+
+    it('carries a room forcing as its index, so choices only append', () => {
+      expect(DRAFT_OPTIONS.roomForcing.choices).toEqual(['deadline', 'softened', 'game']);
+      expect(decoded(code(0, [entry(4, '10')])).draft.roomForcing).toBe('game');
     });
   });
 
