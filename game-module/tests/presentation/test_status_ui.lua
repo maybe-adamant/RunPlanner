@@ -1,6 +1,7 @@
 -- luacheck: globals TestStatusUi
 local lu = require("luaunit")
 local fixtures = require("tests/harness/fixture_loader")
+local protocol = require("mods.protocol.decoder")
 local statusUi = require("mods.presentation.status_ui")
 local hostData = require("mods.host.data")
 local nativeGame = require("tests.harness.native_game")
@@ -8,25 +9,22 @@ local nativeGame = require("tests.harness.native_game")
 TestStatusUi = {}
 
 local function matchesVersion(entry)
-    local protocol = require("mods.protocol.decoder")
     return protocol.matchesVersion(entry)
 end
 
 local function decodeFixture(name)
-    local file = assert(io.open(fixtures.path(name), "rb"))
-    local raw = file:read("*a")
-    file:close()
-    return assert(require("mods.protocol.decoder").decode(assert(require("mods.protocol.json").decode(raw))))
+    return assert(protocol.decode(fixtures.decode(name)))
 end
 
 local function publishedPlan() return decodeFixture("automatic-boss.execution.json") end
+local publishedFingerprint = publishedPlan().planFingerprint
 
 local function entry(fields)
     local value = {
         label = "Melinoe - Underworld", planName = "Staff practice", sentAt = "2026-10-12T10:00:00.000Z",
         aspect = "Melinoe (Staff)", route = "Underworld", endBiome = "Oceanus", startingFear = 8,
-        catalogVersion = "0.55.0-anvil-of-fates", schemaVersion = 98, schemaRevision = 1,
-        fingerprint = "b999ccce", matchesVersion = true,
+        catalogVersion = protocol.CATALOG_VERSION, schemaVersion = protocol.SCHEMA_VERSION,
+        schemaRevision = protocol.SCHEMA_REVISION, fingerprint = publishedFingerprint, matchesVersion = true,
     }
     for key, field in pairs(fields or {}) do value[key] = field end
     return value
@@ -317,8 +315,9 @@ function TestStatusUi.testFramesOpenNoFilesUntilTheWindowReopens()
         ["active-slot.json"] = '{"format":"run-planner-active-slot","formatVersion":1,"slot":2}',
         ["slots.runplanner.json"] = '{"format":"run-planner-slot-overview","formatVersion":2,"slots":{"2":'
             .. '{"label":"Melinoe - Underworld","sentAt":"2026-10-12T10:00:00.000Z","aspect":"Melinoe (Staff)",'
-            .. '"route":"Underworld","endBiome":"Oceanus","startingFear":8,"catalogVersion":"0.55.0-anvil-of-fates",'
-            .. '"schemaVersion":98,"schemaRevision":1,"fingerprint":"b999ccce"}}}',
+            .. '"route":"Underworld","endBiome":"Oceanus","startingFear":8,"catalogVersion":"'
+            .. protocol.CATALOG_VERSION .. '","schemaVersion":' .. protocol.SCHEMA_VERSION .. ',"schemaRevision":'
+            .. protocol.SCHEMA_REVISION .. ',"fingerprint":"' .. publishedFingerprint .. '"}}}',
         ["slot-2.runplanner.json"] = "{}",
     }
     local opens = 0

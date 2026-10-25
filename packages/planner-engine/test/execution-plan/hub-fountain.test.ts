@@ -32,9 +32,9 @@ import {
   phialFountainTargetTraitKey,
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNPhialIntermediateFountainCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
-import phialFountainFixture from './fixtures/surface-n-phial-intermediate-fountain.execution.json';
-import surfaceNFixture from './fixtures/surface-n.execution.json';
-import underworldFghFixture from './fixtures/underworld-fgh.execution.json';
+import phialFountainFixtureFile from './fixtures/surface-n-phial-intermediate-fountain.execution.json';
+import surfaceNFixtureFile from './fixtures/surface-n.execution.json';
+import underworldFghFixtureFile from './fixtures/underworld-fgh.execution.json';
 import { migrateProjectDocument as migrateProject87To88 } from '../../../../schema/migrate-project-87-to-88.js';
 import { migrateProjectDocument as migrateProject88To89 } from '../../../../schema/migrate-project-88-to-89.js';
 import { migrateProjectDocument as migrateProject89To90 } from '../../../../schema/migrate-project-89-to-90.js';
@@ -46,6 +46,11 @@ import { migrateProjectDocument as migrateProject94To95 } from '../../../../sche
 import { migrateProjectDocument as migrateProject95To96 } from '../../../../schema/migrate-project-95-to-96.js';
 import { migrateProjectDocument as migrateProject96To97 } from '../../../../schema/migrate-project-96-to-97.js';
 import { migrateProjectDocument as migrateProject97To98 } from '../../../../schema/migrate-project-97-to-98.js';
+import { currentSchemaWire } from './support/current-schema-wire';
+
+const phialFountainFixture = currentSchemaWire(phialFountainFixtureFile);
+const surfaceNFixture = currentSchemaWire(surfaceNFixtureFile);
+const underworldFghFixture = currentSchemaWire(underworldFghFixtureFile);
 
 const hub = createHubDecisionAddress(nBiome, 'hub');
 const fountain = createHubFountainAddress(nBiome, 'hub');

@@ -10,10 +10,7 @@ local shopping = require("mods.room.features.npc_shopping")
 TestNpcShopping = {}
 
 local function fixture()
-    local file = assert(io.open(fixtures.path("fg-npc-shopping-protection.execution.json"), "rb"))
-    local wire = assert(json.decode(file:read("*a")))
-    file:close()
-    return wire
+    return fixtures.decode("fg-npc-shopping-protection.execution.json")
 end
 
 function TestNpcShopping.testRealProducerProtectionSuppressesOnlyMatchingBoundCallback()

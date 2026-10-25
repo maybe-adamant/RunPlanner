@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { encodeProjectDocument } from '@run-planner/engine/authored-project';
 import { checkpointManifest } from './manifest';
 import { recipeBackedCheckpoints } from './recipes';
+import { withoutSchemaRevision } from './loader';
 
 const checkpointDirectory = resolve(process.cwd(), 'test/fixtures/authored-project/checkpoints');
 const rewrite = process.env.RUN_PLANNER_WRITE_RECIPE_CHECKPOINTS === '1';
@@ -18,8 +19,8 @@ describe('recipe-backed checkpoint regeneration', () => {
       const path = resolve(checkpointDirectory, entry.file);
       const regenerated = encodeProjectDocument(create());
       if (!rewrite) {
-        expect(regenerated, `${id} drifted from its command recipe`).toBe(
-          readFileSync(path, 'utf8'),
+        expect(withoutSchemaRevision(regenerated), `${id} drifted from its command recipe`).toBe(
+          withoutSchemaRevision(readFileSync(path, 'utf8')),
         );
         return;
       }

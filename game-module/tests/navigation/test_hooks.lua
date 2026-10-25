@@ -10,10 +10,7 @@ local capture, stub = support.capture, support.stub
 TestNavigationHooks = {}
 
 function TestNavigationHooks.testPublishedDreamPostbossRecoverySteersTheNextBiomeAndReleasesThePrefixEnd()
-    local file = assert(io.open(fixtures.path("dream-mixed-prefix.execution.json"), "rb"))
-    local source = file:read("*a")
-    file:close()
-    local plan = assert(require("mods.protocol.decoder").decode(assert(require("mods.protocol.json").decode(source))))
+    local plan = assert(require("mods.protocol.decoder").decode(fixtures.decode("dream-mixed-prefix.execution.json")))
     local module, _, callbacks = capture()
     local state = { state = "synchronized", plan = plan }
     local scope = navigation.attach(module, stub(), function() return state end, function() end, routeSession, {})

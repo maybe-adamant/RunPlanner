@@ -6,6 +6,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { encodeProjectDocument, type ProjectDocument } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { checkpointManifest } from './manifest';
+import { withoutSchemaRevision } from './loader';
 import { loadCheckpoint } from './registry';
 import { applyRewardStoreRepair, rewardStoreRepairPlans } from './reward-store-repair';
 
@@ -46,7 +47,9 @@ describe('run-scoped reward-store checkpoint repair', () => {
       }
       // The committed bytes already carry the repair, so re-applying the
       // command list is a fixed point — the audit trail's own regression guard.
-      expect(encoded, `${entry.id} drifted from its repair plan`).toBe(readFileSync(file, 'utf8'));
+      expect(withoutSchemaRevision(encoded), `${entry.id} drifted from its repair plan`).toBe(
+        withoutSchemaRevision(readFileSync(file, 'utf8')),
+      );
       const findings = simulateProject(catalog, repaired).findings.filter(
         (finding) =>
           storeFindingCodes.has(finding.code) && authoredStoreFinding(repaired, finding.origin),

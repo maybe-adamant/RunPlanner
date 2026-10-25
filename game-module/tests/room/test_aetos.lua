@@ -201,9 +201,7 @@ function TestAetos.testUnrelatedDispatchUnboundAndBiomeDepartureRemainNative()
 end
 
 function TestAetos.testPlannerProducedNativeWaveTargetDecodesWithoutLuaMirror()
-    local file = assert(io.open(fixtures.path("surface-generated-precombat.execution.json"), "rb"))
-    local raw = file:read("*a"); file:close()
-    local plan = assert(protocol.decode(assert(json.decode(raw))))
+    local plan = assert(protocol.decode(fixtures.decode("surface-generated-precombat.execution.json")))
     lu.assertEquals(plan.olympusAetos.kind, "target")
     lu.assertEquals(plan.olympusAetos.wave, 2)
     local room = plan.occurrencesById[plan.olympusAetos.occurrenceId]
@@ -215,8 +213,7 @@ function TestAetos.testPlannerProducedNativeWaveTargetDecodesWithoutLuaMirror()
 end
 
 function TestAetos.testMalformedDirectivesRejectedByRealDecoder()
-    local file = assert(io.open(fixtures.path("surface-generated-precombat.execution.json"), "rb"))
-    local raw = file:read("*a"); file:close()
+    local raw = fixtures.raw("surface-generated-precombat.execution.json")
     for _, value in ipairs({ false, {kind="target", occurrenceId="missing", phaseKey="Combat", wave=2},
         {kind="target", occurrenceId="target", phaseKey="Combat", wave=1},
         {kind="none", wave=2}, {kind="native"} }) do

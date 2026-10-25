@@ -14,7 +14,10 @@ import {
   encodeExecutionPlan,
 } from '../../src/execution-plan';
 import { overview } from '../../src/execution-plan/codec/overview';
-import positionedFixture from './fixtures/fg-ixion-chaos.execution.json';
+import positionedFixtureFile from './fixtures/fg-ixion-chaos.execution.json';
+import { currentSchemaWire } from './support/current-schema-wire';
+
+const positionedFixture = currentSchemaWire(positionedFixtureFile);
 
 describe('Chaos position publication', () => {
   it('exports an unpicked gate, preserving Default omission and the normal selection', () => {

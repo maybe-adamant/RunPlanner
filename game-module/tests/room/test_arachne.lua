@@ -236,11 +236,7 @@ end
 function TestArachne.testProducerCorpusSteersBothAndPositionOnlyWithoutExtraCocoons()
     local fixtures = require("tests.harness.fixture_loader")
     local protocol = require("mods.protocol.decoder")
-    local json = require("mods.protocol.json")
-    local file = assert(io.open(fixtures.path("underworld-arachne-cocoons.execution.json"), "rb"))
-    local wire = file:read("*a")
-    file:close()
-    local plan = assert(protocol.decode(assert(json.decode(wire))))
+    local plan = assert(protocol.decode(fixtures.decode("underworld-arachne-cocoons.execution.json")))
     local visited = 0
     for _, occurrence in ipairs(plan.occurrences) do
         for _, phase in ipairs(occurrence.overview.encounterPhases) do

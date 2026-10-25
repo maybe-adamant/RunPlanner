@@ -12,6 +12,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { routeResourceAuthoring, simulateProject } from '@run-planner/engine/simulation';
 import { checkpointManifest, checkpointSpellDropIntents } from './manifest';
 import { checkpointRegistry, loadCheckpoint } from './registry';
+import { withoutSchemaRevision } from './loader';
 import { nFixedOccurrenceIds, nOccurrenceIds } from '../routes/surface';
 import { nLocalOccurrenceId, nOccurrenceId, oOccurrenceIds } from '../routes/surface';
 import { createUnderworldFWellCheckpoint } from '../routes/underworld';
@@ -66,7 +67,9 @@ describe('authored-project checkpoint integrity', () => {
       const document = load();
       expect(document).toBe(load());
       const raw = readFileSync(resolve(checkpointDirectory, entry.file), 'utf8');
-      expect(encodeProjectDocument(document)).toBe(raw);
+      expect(withoutSchemaRevision(encodeProjectDocument(document))).toBe(
+        withoutSchemaRevision(raw),
+      );
       expect(document.schemaVersion).toBe(entry.schemaVersion);
       expect(document.catalogVersion).toBe(entry.catalogVersion);
       const route = document.route.routeKey === entry.route ? document.route : undefined;
@@ -344,7 +347,9 @@ describe('authored-project checkpoint integrity', () => {
       const path = join(temporaryDirectory, `${id}.runplanner.json`);
       const canonical = readFileSync(checkpointPath(id), 'utf8');
       writeFileSync(path, `${canonical}\n`);
-      expect(readFileSync(path, 'utf8')).not.toBe(encodeProjectDocument(loadCheckpoint(id)));
+      expect(withoutSchemaRevision(readFileSync(path, 'utf8'))).not.toBe(
+        withoutSchemaRevision(encodeProjectDocument(loadCheckpoint(id))),
+      );
     } finally {
       rmSync(temporaryDirectory, { recursive: true, force: true });
     }

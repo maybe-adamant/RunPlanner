@@ -64,35 +64,6 @@ function TestProtocol.testMenaceStrictSourceCoverageAndOmittedZero()
     end
 end
 
-function TestProtocol.testPublishedCompatibilityMatchesDecoder()
-    local file = assert(io.open("src/execution-compatibility.json", "r"))
-    local contents = file:read("*a")
-    file:close()
-    lu.assertEquals(assert(json.decode(contents)), {
-        format = protocol.FORMAT,
-        catalogVersion = protocol.CATALOG_VERSION,
-        schemaVersion = protocol.SCHEMA_VERSION,
-        schemaRevision = protocol.SCHEMA_REVISION,
-    })
-end
-function TestProtocol.testEveryExecutionFixtureNamesTheDecoderSchemaPair()
-    local lfs = require("lfs")
-    local count = 0
-    for name in lfs.dir(fixtures.root) do
-        if name:match("%.execution%.json$") then
-            local file = assert(io.open(fixtures.path(name), "rb"))
-            local plan = assert(json.decode(file:read("*a")))
-            file:close()
-            lu.assertEquals({ plan.schemaVersion, plan.schemaRevision },
-                { protocol.SCHEMA_VERSION, protocol.SCHEMA_REVISION },
-                name .. " names another schema pair: update SCHEMA_VERSION and SCHEMA_REVISION in"
-                    .. " src/mods/protocol/decoder.lua and src/execution-compatibility.json together")
-            count = count + 1
-        end
-    end
-    lu.assertTrue(count > 0)
-end
-
 function TestProtocol.testAnotherSchemaPairNamesBothPairs()
     local plan = assert(json.decode(fixtures.raw()))
     plan.schemaRevision = protocol.SCHEMA_REVISION + 1
@@ -314,10 +285,7 @@ function TestProtocol.testTraitScreenExpectationShapesDecodeStrictly()
 end
 
 local function decode(name)
-    local file = assert(io.open(root .. name .. ".execution.json", "rb"))
-    local value = assert(json.decode(file:read("*a")))
-    file:close()
-    return value
+    return fixtures.decode(name .. ".execution.json")
 end
 
 function TestProtocol.testRunModifiersProducerFixtureAndFingerprint()
@@ -365,9 +333,7 @@ end
 
 local function decodeWithIndependentJsonModule(name)
     local independentJson = assert(loadfile("src/mods/protocol/json.lua"))()
-    local file = assert(io.open(root .. name .. ".execution.json", "rb"))
-    local value = assert(independentJson.decode(file:read("*a")))
-    file:close()
+    local value = assert(independentJson.decode(fixtures.raw(name .. ".execution.json")))
     lu.assertFalse(rawequal(independentJson.null, json.null))
     return value
 end

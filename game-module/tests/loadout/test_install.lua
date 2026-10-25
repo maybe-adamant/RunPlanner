@@ -3,7 +3,6 @@ local lu = require("luaunit")
 local fixtures = require("tests/harness/fixture_loader")
 local nativeGame = require("tests/harness/native_game")
 local support = require("tests.harness.hook_composition")
-local json = require("mods/protocol/json")
 local decoder = require("mods.protocol.decoder")
 local session = require("mods.runtime.session")
 local roomCoordinator = require("mods.room.coordinator")
@@ -13,9 +12,7 @@ local install = require("mods.loadout.install")
 TestLoadoutInstall = {}
 
 local function decode(name)
-    local file = assert(io.open(fixtures.path(name .. ".execution.json"), "rb"))
-    local plan = assert(decoder.decode(assert(json.decode(file:read("*a")))))
-    file:close()
+    local plan = assert(decoder.decode(fixtures.decode(name .. ".execution.json")))
     return plan
 end
 

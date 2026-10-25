@@ -37,11 +37,18 @@ import {
 import { ExecutionCompilerError } from '../../src/execution-plan/assembler-errors';
 import { fingerprint } from '../../src/execution-plan/fingerprint';
 import { withStartPoint } from './support/execution-fixtures';
-import fghiWire from './fixtures/underworld-fghi.execution.json';
-import qOpeningWire from './fixtures/surface-start-q-opening.execution.json';
-import iPrebossWire from './fixtures/underworld-start-i-preboss.execution.json';
-import dreamOpeningWire from './fixtures/dream-start-n-opening.execution.json';
-import gBossWire from './fixtures/underworld-start-g-rivals-boss.execution.json';
+import fghiWireFile from './fixtures/underworld-fghi.execution.json';
+import qOpeningWireFile from './fixtures/surface-start-q-opening.execution.json';
+import iPrebossWireFile from './fixtures/underworld-start-i-preboss.execution.json';
+import dreamOpeningWireFile from './fixtures/dream-start-n-opening.execution.json';
+import gBossWireFile from './fixtures/underworld-start-g-rivals-boss.execution.json';
+import { currentSchemaWire } from './support/current-schema-wire';
+
+const fghiWire = currentSchemaWire(fghiWireFile);
+const qOpeningWire = currentSchemaWire(qOpeningWireFile);
+const iPrebossWire = currentSchemaWire(iPrebossWireFile);
+const dreamOpeningWire = currentSchemaWire(dreamOpeningWireFile);
+const gBossWire = currentSchemaWire(gBossWireFile);
 
 function compile(project: ProjectDocument): ExecutionPlan {
   return compileExecutionPlan({

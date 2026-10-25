@@ -4,7 +4,6 @@ local hooks = require("mods.room.features.hooks")
 local support = require("tests.harness.hook_composition")
 local fixtures = require("tests.harness.fixture_loader")
 local protocol = require("mods.protocol.decoder")
-local json = require("mods.protocol.json")
 
 TestChaosPosition = {}
 
@@ -35,9 +34,7 @@ local function spawn(callbacks, args)
 end
 
 function TestChaosPosition.testManualAndPublishedIxionUseSortedPointsAndNativeFlow()
-    local file = assert(io.open(fixtures.path("fg-ixion-chaos.execution.json"), "rb"))
-    local plan = assert(protocol.decode(assert(json.decode(file:read("*a")))))
-    file:close()
+    local plan = assert(protocol.decode(fixtures.decode("fg-ixion-chaos.execution.json")))
     local ixion
     for _, occurrence in ipairs(plan.occurrences) do
         for _, additional in ipairs(occurrence.overview.additional or {}) do

@@ -10,8 +10,12 @@ import {
   ExecutionPlanCodecError,
 } from '../../src/execution-plan';
 import { runModifiersProject } from './support/execution-fixtures';
-import nativeWire from './fixtures/f-opening.execution.json';
-import modifiersWire from './fixtures/run-modifiers.execution.json';
+import nativeWireFile from './fixtures/f-opening.execution.json';
+import modifiersWireFile from './fixtures/run-modifiers.execution.json';
+import { currentSchemaWire } from './support/current-schema-wire';
+
+const nativeWire = currentSchemaWire(nativeWireFile);
+const modifiersWire = currentSchemaWire(modifiersWireFile);
 
 function compile(project: ProjectDocument) {
   return compileExecutionPlan({

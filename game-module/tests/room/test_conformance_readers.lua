@@ -204,9 +204,7 @@ end
 local function freshIntro(gameName)
     local fixtures = require("tests/harness/fixture_loader")
     local decoder = require("mods.protocol.decoder")
-    local file = assert(io.open(fixtures.path("fresh-file-fghi.execution.json"), "rb"))
-    local plan = assert(decoder.decode(assert(json.decode(file:read("*a")))))
-    file:close()
+    local plan = assert(decoder.decode(fixtures.decode("fresh-file-fghi.execution.json")))
     for _, occurrence in ipairs(plan.occurrences) do
         if occurrence.gameName == gameName then return occurrence end
     end

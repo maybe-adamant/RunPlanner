@@ -1,7 +1,6 @@
 -- luacheck: globals TestShrineDeliveryFixtures
 local lu = require("luaunit")
 local fixtures = require("tests/harness/fixture_loader")
-local json = require("mods.protocol.json")
 local protocol = require("mods.protocol.decoder")
 local room = require("mods.room.session")
 local bindings = require("mods.room.timeline.bindings")
@@ -9,9 +8,7 @@ local bindings = require("mods.room.timeline.bindings")
 TestShrineDeliveryFixtures = {}
 
 local function loadPlan(name)
-    local file = assert(io.open(fixtures.path(name .. ".execution.json"), "rb"))
-    local plan = assert(protocol.decode(assert(json.decode(file:read("*a")))))
-    file:close()
+    local plan = assert(protocol.decode(fixtures.decode(name .. ".execution.json")))
     return plan
 end
 

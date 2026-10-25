@@ -420,13 +420,9 @@ function TestRouteRoomSessions.testPickupDiscoveryDoesNotRequireAuthoredEncounte
 end
 
 function TestRouteRoomSessions.testRealFieldsRewardsCanBeCollectedAfterBothCagesInEitherGiverOrder()
-    local json = require("mods.protocol.json")
     local protocol = require("mods.protocol.decoder")
     local ordinary = require("mods.room.timeline.acquisitions.traits.ordinary")
-    local file = assert(io.open(fixtures.path("underworld-fgh.execution.json"), "rb"))
-    local raw = file:read("*a")
-    file:close()
-    local plan = assert(protocol.decode(assert(json.decode(raw))))
+    local plan = assert(protocol.decode(fixtures.decode("underworld-fgh.execution.json")))
     local entry = assert(plan.occurrencesById["golden-h-combat09"])
     local port = timeline.new(entry)
     local function claim(name)
@@ -788,12 +784,8 @@ function TestRouteRoomSessions.testRouteAdvancesBetweenRoomEntryCheckpoints()
 end
 
 local function traitFenceRoom(occurrenceId)
-    local json = require("mods.protocol.json")
     local protocol = require("mods.protocol.decoder")
-    local file = assert(io.open(fixtures.path("surface-trait-fences.execution.json"), "rb"))
-    local raw = file:read("*a")
-    file:close()
-    local plan = assert(protocol.decode(assert(json.decode(raw))))
+    local plan = assert(protocol.decode(fixtures.decode("surface-trait-fences.execution.json")))
     local entry = assert(plan.occurrencesById[occurrenceId])
     local owners = {}
     for owner, transaction in pairs(entry.transactionsByOwner) do owners[transaction.kind] = owner end

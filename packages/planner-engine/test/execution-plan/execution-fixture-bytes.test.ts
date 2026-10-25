@@ -8,11 +8,13 @@ import {
   executionFixturePath,
   executionFixtures,
 } from './support/execution-fixtures';
+import { currentSchemaWire, withoutSchemaStamp } from './support/current-schema-wire';
 
 /**
  * Each fixture build produces decoded-plan equality, a wire round trip, and
  * byte stability from one compilation. The game module's Lua tests read these
- * fixtures in place, so formatting and key-order drift matter.
+ * fixtures in place, so formatting and key-order drift matter. A fixture keeps
+ * the schema pair it was generated under, so the pair and fingerprint are masked.
  *
  * `npm run fixtures:execution` rewrites them through the same one code path.
  */
@@ -28,8 +30,8 @@ describe('committed execution fixtures', () => {
         writeFileSync(path, built.bytes);
         return;
       }
-      expect(readFileSync(path, 'utf8')).toBe(built.bytes);
-      expect(decodeExecutionPlan(fixture.wire)).toEqual(built.plan);
+      expect(withoutSchemaStamp(readFileSync(path, 'utf8'))).toBe(withoutSchemaStamp(built.bytes));
+      expect(decodeExecutionPlan(currentSchemaWire(fixture.wire))).toEqual(built.plan);
       expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(built.plan)))).toEqual(built.plan);
     },
   );

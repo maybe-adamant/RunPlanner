@@ -20,3 +20,8 @@ export function checkpointArtifact(raw: RawCheckpoint): CheckpointArtifact {
     },
   });
 }
+
+/** Canonical checkpoint text without its revision line; checkpoints keep the revision they were written under. */
+export function withoutSchemaRevision(text: string): string {
+  return text.replace(/^ {2}"schemaRevision": \d+,\n/m, '');
+}
