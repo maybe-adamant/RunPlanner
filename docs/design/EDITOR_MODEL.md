@@ -598,13 +598,14 @@ planner autosaved is offered alongside it as "Recovered unsaved plan" when it
 differs from that file, and kept until it is imported or declined.
 
 A shell fault boundary remains available after rendering or unhandled browser
-failure. It does not continue an unknown partial interaction. It offers
-another file through the same open path, or a reload, which starts on Home.
+failure. It does not continue an unknown partial interaction. It offers a
+return to the Library when a plan is open, a bug report in the desktop
+application, and a reload, which starts on Home.
 
 ## Presentation and Accessibility
 
-The shell presents route identity, file/history operations, the Route and
-Loadout panels, ordered biome navigation and nonempty route-local
+The shell presents route identity, file/history operations, the Route, Draft
+and Loadout panels, ordered biome navigation and nonempty route-local
 indexes. Index visibility
 comes from the same rows as its panel, not a separate availability query.
 If an active index becomes empty after an edit, return to Route.

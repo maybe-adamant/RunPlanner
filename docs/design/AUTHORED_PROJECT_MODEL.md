@@ -19,8 +19,9 @@ Automatic migration support starts at schema 86. The loader inspects the source
 schema/catalog identity, applies only registered ordered transitions, and
 strictly parses the final document. Each transition declares its source and
 target identities; an old catalog identity is not blindly replaced with the
-current one. Unsupported older or future documents remain untouched. The
-transition list is empty while the current schema equals the support floor.
+current one. Unsupported older or future documents remain untouched. One
+transition is registered for each major from the support floor to the current
+schema.
 
 A migrated plan opens in memory in the current schema and its file stays
 untouched until the first edit is saved. Before that first write, the desktop

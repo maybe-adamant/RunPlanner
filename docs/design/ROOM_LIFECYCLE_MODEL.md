@@ -592,24 +592,23 @@ endings do not expose this Postboss interaction set in the supported topology.
 The semantic vocabulary is deliberately small:
 
 ```ts
-type RoomLifecycleOperation =
+type RoomLifecycleOperation = { effects: RoomLifecycleEffectKind[] } & (
   | { kind: 'prepareRoom' }
   | { kind: 'materializeOfferPoint'; offerPoint: string }
   | { kind: 'enterRoom' }
-  | { kind: 'startEncounter'; encounterRole: string }
-  | { kind: 'completeEncounter'; encounterRole: string }
+  | { kind: 'spawnRequiredObjects' }
+  | { kind: 'startEncounter'; encounter: EncounterSlotSelector }
+  | { kind: 'completeEncounter'; encounter: EncounterSlotSelector }
+  | { kind: 'completeRequiredObjects' }
   | { kind: 'runEncounterSequence' }
   | { kind: 'runRewardEncounterSequence' }
   | { kind: 'advanceProducer'; point: ProducerLifecyclePointKey }
   | { kind: 'generateOutgoingBatch' }
   | { kind: 'settleAcquisitionPoint'; point: string }
   | { kind: 'commitRoom' }
-  | { kind: 'exitRoom' };
+  | { kind: 'exitRoom' }
+);
 ```
-
-This is the stable semantic vocabulary. Production TypeScript may use narrower
-field names and grouped operation inputs, but it must preserve this ownership
-and ordering contract.
 
 `prepareRoom` resolves bounded room-entry structure from the state after the
 predecessor commits. It selects encounter phases and other entry facts; it does
@@ -1211,18 +1210,17 @@ separate history engine:
 ```text
 prepareRoom
 enterRoom
-startEncounter(intro)
-completeEncounter(intro)
-materializeOfferPoint(wheel1)
-startEncounter(combat1)
-completeEncounter(combat1)
-advanceProducer(wheel1Acquisition)
-applyEncounterEndEffects(combat1)
-... optional declared phases ...
+runRewardEncounterSequence
+  intro: start, complete
+  combat1: wheel1 offer point, start, complete, wheel1 acquisition, end effects
+  ... optional declared phases ...
 generateOutgoingBatch
 commitRoom
 exitRoom
 ```
+
+Encounter completion emits end effects unless the phase suppresses them; a
+phase carrying a reward wheel applies them after its wheel acquisition.
 
 The concrete O authority owns its exact active phases and offer points.
 `prepareRoom` derives whether its conditional phase exists from pre-room state;
