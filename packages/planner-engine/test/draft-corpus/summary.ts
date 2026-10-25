@@ -26,6 +26,8 @@ interface SpecSummary {
   readonly godGapMax?: number;
   /** Share of god boon rooms in the first third of their biome's taken rooms. */
   readonly godEarlyShare?: number;
+  /** Shops entered per drafted run, Preboss Shops included. */
+  readonly shopsPerRun?: number;
   readonly msMedian: number;
   readonly msMax: number;
 }
@@ -116,6 +118,9 @@ function summarize(runs: readonly DraftCorpusRun[]): SpecSummary {
     depthSpread: diversity.spread,
     depthDistinct: diversity.distinct,
     ...godRoomSummary(drafted),
+    shopsPerRun: round(
+      drafted.reduce((sum, run) => sum + (run.shops ?? 0), 0) / Math.max(drafted.length, 1),
+    ),
     msMedian: Math.round(median(runs.map((run) => run.ms))),
     msMax: Math.max(...runs.map((run) => run.ms)),
   };
@@ -148,6 +153,7 @@ function table(
     'gap',
     'gapMax',
     'early',
+    'shops',
     'msMed',
     'msMax',
   ];
@@ -172,6 +178,7 @@ function table(
       cell(now.godGapMean, was?.godGapMean),
       cell(now.godGapMax, was?.godGapMax),
       cell(now.godEarlyShare, was?.godEarlyShare),
+      cell(now.shopsPerRun, was?.shopsPerRun),
       cell(now.msMedian, was?.msMedian),
       cell(now.msMax, was?.msMax),
     ];

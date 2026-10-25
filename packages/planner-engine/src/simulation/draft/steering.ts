@@ -798,13 +798,46 @@ export class DraftSteering {
 
   /** Whether the eligible boon entries of the bags this biome's doors draw from are nearly spent, which a Shop never is. */
   boonBagLow(): boolean {
+    return (this.boonEntriesLeft() ?? LOW_BOON_BAG + 1) <= LOW_BOON_BAG;
+  }
+
+  /** Eligible boon entries left in the bags this biome's doors draw from. */
+  private boonEntriesLeft(): number | undefined {
     const assembly = this.state.assembly();
     const snapshot = latestRunState(assembly);
-    if (snapshot === undefined) return false;
+    if (snapshot === undefined) return undefined;
     const route = assembly.project.route;
     const biomeKey = route.itineraryBiomeKeys[this.state.biomeIndex()] ?? '';
     const storeKeys = draftDoorStoreKeys(this.catalog, route.routeKey, biomeKey);
-    return draftBoonEntriesLeft(snapshot.bags, storeKeys) <= LOW_BOON_BAG;
+    return draftBoonEntriesLeft(snapshot.bags, storeKeys);
+  }
+
+  /** A wanted basket trait some world god can take now that is past its target depth. */
+  private overdueTakeable(): boolean {
+    const progress = this.progress();
+    const biomeKey =
+      this.state.assembly().project.route.itineraryBiomeKeys[this.state.biomeIndex()] ?? '';
+    const depth = this.biomeDepth(biomeKey) + 1;
+    return [...this.worldGivers].some((giverKey) => {
+      if (this.catalog.traitGivers.byKey[giverKey]?.providerKind !== 'olympian') return false;
+      const next = this.nextQueued(giverKey, progress);
+      const takeable = [
+        ...(next !== undefined && this.ready(next, progress) ? [next] : []),
+        ...this.readyDuos(giverKey, progress),
+      ];
+      return takeable.some((key) => this.targetDepth(key) < depth);
+    });
+  }
+
+  /** The preferred Shop band: above any boon door, below a story room, higher behind the pace or on a low bag. */
+  private preferredShopWeight(): number {
+    return Math.min(
+      Math.max(
+        10 + 40 * Math.max(this.purchasesBehind(), 0) + (this.boonBagLow() ? 60 : 0),
+        PREFERRED_MIDSHOP_FLOOR,
+      ),
+      180,
+    );
   }
 
   /**
@@ -868,19 +901,20 @@ export class DraftSteering {
       return waits ? 0.1 : STORY_WEIGHT;
     }
     if (room?.kind === 'Shop') {
-      // A mid-biome Shop the player prefers is taken over any boon door, below a story room
-      // (200); more so the further purchases trail the pace or the boon bag runs low.
-      if (this.spec.preferMidshops === true)
-        return Math.min(
-          Math.max(
-            10 + 40 * Math.max(this.purchasesBehind(), 0) + (this.boonBagLow() ? 60 : 0),
-            PREFERRED_MIDSHOP_FLOOR,
-          ),
-          180,
-        );
+      // A mid-biome Shop the player prefers, or one beside doors that can no longer show a
+      // boon, is taken over any boon door, below a story room (200).
+      if (this.spec.preferMidshops === true || this.boonEntriesLeft() === 0)
+        return this.preferredShopWeight();
       // Behind the purchase pace a Shop door is more welcome, ahead of it less.
       return this.purchasesBehind() > 0 ? 1.5 : 0.4;
     }
+    // A Preboss Shop is preferred when the boon bag runs low or a takeable trait is overdue.
+    if (
+      room?.kind === 'Preboss' &&
+      room.incomingReward.kind === 'shop' &&
+      (this.boonBagLow() || this.overdueTakeable())
+    )
+      return this.preferredShopWeight();
     // A fountain door only breaks a tie with an otherwise equal door.
     if (room?.kind === 'Reprieve') return FOUNTAIN_TIE_BREAK;
     if (placing && this.npcHosting(gameName, undefined, biomeKey) === 'open')

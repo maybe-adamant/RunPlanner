@@ -36,6 +36,8 @@ export interface DraftCorpusRun {
   readonly elementDeferred: number;
   /** Rooms entered in its biome when each held basket trait was first equipped. */
   readonly landingDepths: Readonly<Record<string, number>>;
+  /** Taken rooms whose reward is a Shop, Preboss Shops included. */
+  readonly shops: number;
   /** God boon rooms over the taken rooms of each planned biome. */
   readonly godRooms: GodRoomPacing;
   /** God traits first held in each biome, by biome key. */
@@ -162,6 +164,21 @@ function landingDepths(spec: DraftSpec, project: ProjectDocument): Record<string
         depths[traitKey] = entered.get(snapshot.biomeKey) ?? 0;
   }
   return depths;
+}
+
+function shopsTaken(project: ProjectDocument): number {
+  return simulateProjectAssembly(catalog, project).evaluation.route.biomes.reduce(
+    (count, biome) =>
+      count +
+      ('history' in biome
+        ? biome.history.ledgers.roomAppearances.filter(
+            (entry) =>
+              entry.origin.biomeKey === biome.biomeKey &&
+              catalog.rooms.byKey[entry.gameName]?.incomingReward.kind === 'shop',
+          ).length
+        : 0),
+    0,
+  );
 }
 
 function godRoomPacing(project: ProjectDocument): GodRoomPacing {
@@ -381,6 +398,7 @@ export function measureDraft(
       boughtBasketTraits: [],
       landingDepths: {},
       godRooms: { biomes: 0, rooms: 0, gaps: [], early: 0 },
+      shops: 0,
       godTraitsByBiome: {},
       elementGated: { total: 0, met: 0, withEssence: 0 },
       purchases: {},
@@ -400,6 +418,7 @@ export function measureDraft(
     boughtBasketTraits: boughtBasketTraits(entry.spec, result.project),
     landingDepths: landingDepths(entry.spec, result.project),
     godRooms: godRoomPacing(result.project),
+    shops: shopsTaken(result.project),
     godTraitsByBiome: godTraitsByBiome(result.project),
     attempts: result.attempts,
   };

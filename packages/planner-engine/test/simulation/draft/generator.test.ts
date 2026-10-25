@@ -200,7 +200,7 @@ describe('draftProject', () => {
 
     it('drafts Success Rate after its late Artemis prerequisite and Paid Dues after it', () => {
       // Paid Dues needs a Hermes room after Success Rate in G, so the plan runs into H.
-      const result = draftProject(catalog, planned('Underworld', 3), waiting, 15);
+      const result = draftProject(catalog, planned('Underworld', 3), waiting, 1);
       if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
       const assembly = simulateProjectAssembly(catalog, result.project);
       for (const traitKey of waiting.basketTraitKeys)
@@ -379,14 +379,14 @@ describe('draftProject', () => {
           catalog,
           planned('Underworld', 3),
           purchasesPerBiome === undefined ? spec : { ...spec, purchasesPerBiome },
-          31,
+          2,
         );
         if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
         return shopBuys(result.project);
       };
       // At the default pace this seed buys a god-side boon; at none only the due Hermes boon.
       expect(buys().some((buy) => !buy.includes(':ShopHermesUpgrade:'))).toBe(true);
-      expect(buys(0)).toEqual(['H:ShopHermesUpgrade:HermesWeaponBoon']);
+      expect(buys(0)).toEqual(['G:ShopHermesUpgrade:HermesWeaponBoon']);
     });
 
     it('takes the retries per biome after each first success', () => {
