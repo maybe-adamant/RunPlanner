@@ -1,13 +1,15 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 
 import type {
   DraftBasketProjection,
   DraftBasketRow,
   DraftBasketSection,
   DraftBasketTab,
+  DraftBasketTabKey,
 } from '@planner/projections/draftSpec';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
+import { ActionIcon } from '@planner/ui/controls/ActionIcon';
 import { EditorDialog } from '@planner/ui/controls/EditorDialog';
 import { hintProps } from '@planner/ui/controls/hint';
 import { DraftCapCount } from './DraftCapCount';
@@ -16,7 +18,7 @@ function BasketRows({
   onToggle,
   rows,
 }: {
-  readonly onToggle: (traitKey: string) => void;
+  readonly onToggle: (row: DraftBasketRow) => void;
   readonly rows: readonly DraftBasketRow[];
 }) {
   if (rows.length === 0) return null;
@@ -33,7 +35,7 @@ function BasketRows({
             data-refused={(row.inBasket && !row.selectable) || undefined}
             key={row.traitKey}
             onClick={() => {
-              if (!unavailable) onToggle(row.traitKey);
+              if (!unavailable) onToggle(row);
             }}
             type="button"
             {...hintProps(row.selectable ? undefined : row.hint)}
@@ -54,43 +56,92 @@ function BasketRows({
 
 function BasketSection({
   level,
+  onClear,
   onToggle,
+  orderNotes,
   section,
 }: {
   readonly level: 3 | 4;
-  readonly onToggle: (traitKey: string) => void;
+  readonly onClear: (giverKey: string) => void;
+  readonly onToggle: (row: DraftBasketRow) => void;
+  readonly orderNotes: ReadonlyMap<string, readonly string[]>;
   readonly section: DraftBasketSection;
 }) {
   const Heading = level === 3 ? 'h3' : 'h4';
   return (
-    <section aria-label={section.label} className="draft-basket-section" data-level={level}>
+    <section
+      aria-label={section.label}
+      className="draft-basket-section"
+      data-level={level}
+      id={sectionId(section.key)}
+    >
       <Heading className="draft-section-heading">
         {section.label}
         <DraftCapCount cap={section.cap} />
+        {section.ordered === true ? (
+          <button
+            aria-label={`Clear ${section.label} picks`}
+            className="draft-reset draft-section-reset"
+            disabled={!section.rows.some((row) => row.inBasket)}
+            onClick={() => onClear(section.key)}
+            type="button"
+          >
+            <ActionIcon name="reset" />
+          </button>
+        ) : null}
       </Heading>
+      {(orderNotes.get(section.key) ?? []).map((note) => (
+        <p className="draft-chip-group-note" key={note}>
+          {note}
+        </p>
+      ))}
       <BasketRows onToggle={onToggle} rows={section.rows} />
       {section.subsections.map((subsection) => (
-        <BasketSection key={subsection.key} level={4} onToggle={onToggle} section={subsection} />
+        <BasketSection
+          key={subsection.key}
+          level={4}
+          onClear={onClear}
+          onToggle={onToggle}
+          orderNotes={orderNotes}
+          section={subsection}
+        />
       ))}
     </section>
   );
 }
 
+const sectionId = (key: string) => `draft-basket-section-${key}`;
+
 const tabId = (tab: DraftBasketTab['key']) => `draft-basket-tab-${tab}`;
 
 /** Basket traits in Gods, Bonus and NPC tabs; a refused trait stays listed but cannot be added. */
 export function DraftBasketDialog({
+  initialGiverKey,
+  initialTab,
+  onClear,
   onClose,
   onToggle,
   projection,
   returnFocusId,
 }: {
+  /** A giver whose section is brought into view on opening. */
+  readonly initialGiverKey?: string | undefined;
+  readonly initialTab: DraftBasketTabKey;
+  /** Clears a god, Hermes or Hammer list in one edit. */
+  readonly onClear: (giverKey: string) => void;
   readonly onClose: () => void;
-  readonly onToggle: (traitKey: string) => void;
+  readonly onToggle: (row: DraftBasketRow) => void;
   readonly projection: DraftBasketProjection;
   readonly returnFocusId: string;
 }) {
-  const [active, setActive] = useState<DraftBasketTab['key']>('gods');
+  const [active, setActive] = useState<DraftBasketTab['key']>(initialTab);
+  useEffect(() => {
+    if (initialGiverKey === undefined) return;
+    document.getElementById(sectionId(initialGiverKey))?.scrollIntoView?.({ block: 'nearest' });
+  }, [initialGiverKey]);
+  const orderNotes = new Map(
+    projection.chipGroups.map((group) => [group.key, group.orderNotes] as const),
+  );
   const tabRefs = useRef<Partial<Record<DraftBasketTab['key'], HTMLButtonElement | null>>>({});
   const tabs = projection.tabs;
   const activeTab = tabs.find((tab) => tab.key === active) ?? tabs[0]!;
@@ -146,7 +197,14 @@ export function DraftBasketDialog({
           </p>
         ) : (
           activeTab.sections.map((section) => (
-            <BasketSection key={section.key} level={3} onToggle={onToggle} section={section} />
+            <BasketSection
+              key={section.key}
+              level={3}
+              onClear={onClear}
+              onToggle={onToggle}
+              orderNotes={orderNotes}
+              section={section}
+            />
           ))
         )}
       </div>

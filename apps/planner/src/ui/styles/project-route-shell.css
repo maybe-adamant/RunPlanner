@@ -470,6 +470,15 @@
   padding-top: 0;
 }
 
+/* The racks continue the loadout's rows at its row gap, and take over its bottom padding. */
+.draft-section > .route-loadout-panel:has(+ .draft-rack-row) {
+  padding-bottom: 0.25rem;
+}
+
+.draft-section > .draft-rack-row {
+  padding-bottom: 0.75rem;
+}
+
 /* The weapon takes the first column of the loadout row below; what shares its row takes the rest,
    wrapping beneath when it can't fit. */
 .route-loadout-lead-row {
@@ -1055,16 +1064,6 @@
   font-weight: 400;
 }
 
-.draft-cap-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 1.25rem;
-  margin: 0;
-  padding: 0;
-  color: var(--muted);
-  list-style: none;
-}
-
 .draft-cap {
   margin-left: 0.4rem;
   color: var(--text);
@@ -1107,6 +1106,7 @@
 }
 
 .draft-chip {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -1291,70 +1291,77 @@ label.draft-row-label {
   margin-left: auto;
 }
 
-.draft-chip-groups {
+/* The read-only basket: one line each for god, bonus and NPC traits; a line opens the basket. */
+.draft-basket-view {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
-.draft-chip-group {
+.draft-basket-line {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem 0.3rem;
+  gap: 0.5rem 0.75rem;
+  width: 100%;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #30313a;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.draft-basket-line:hover,
+.draft-basket-line:focus-visible {
+  border-color: var(--selection-accent);
+}
+
+/* Each giver's traits follow its icon; a thin rule separates givers. */
+.draft-basket-giver {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.draft-basket-giver + .draft-basket-giver {
+  padding-left: 0.75rem;
+  border-left: 1px solid #3a3b45;
+}
+
+.draft-basket-giver-icon {
+  display: inline-flex;
+  opacity: 0.85;
+}
+
+.draft-basket-line .draft-chip {
+  padding: 0.1rem;
+  border-radius: 0.4rem;
+}
+
+.draft-basket-line .draft-chip > span {
+  padding: 0 0.3rem;
+  white-space: nowrap;
+}
+
+/* A god, Hermes or Hammer section's clear button sits after its count. */
+/* Negative block margins keep the button from growing the heading's line. */
+/* Centred on the uppercase heading's cap height rather than its x-height. */
+.draft-basket-section > .draft-section-heading {
+  display: flex;
+  align-items: center;
+}
+
+.draft-section-reset {
+  margin: -0.35rem 0 -0.35rem 0.5rem;
 }
 
 .draft-chip-group-note {
-  flex-basis: 100%;
-  margin: 0 0 0 7.3rem;
+  margin: 0;
   color: var(--finding);
   font-size: 0.85rem;
-}
-
-.draft-chip-group-label {
-  display: inline-flex;
-  flex: 0 0 7rem;
-  align-items: center;
-  white-space: nowrap;
-  gap: 0.35rem;
-  color: var(--muted);
-}
-
-/* Ordered rows share one grid: a label, then five equal trait columns as wide as the widest chip. */
-.draft-chip-table-scroll {
-  overflow-x: auto;
-}
-
-.draft-chip-table {
-  display: grid;
-  width: max-content;
-  grid-template-columns: 7rem repeat(5, 1fr);
-  gap: 0.35rem 0.3rem;
-  align-items: center;
-}
-
-.draft-chip-table > .draft-chip-group {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: subgrid;
-  gap: inherit;
-}
-
-.draft-chip-table > .draft-chip-group > .draft-chip-list {
-  display: grid;
-  grid-column: 2 / -1;
-  grid-template-columns: subgrid;
-  gap: inherit;
-}
-
-.draft-chip-table .draft-chip {
-  justify-content: space-between;
-  gap: 0.1rem;
-  padding: 0.15rem 0.2rem;
-}
-
-.draft-chip-table .draft-chip > span {
-  flex: 1;
-  white-space: nowrap;
 }
 
 .draft-chip-icon {
@@ -1363,13 +1370,33 @@ label.draft-row-label {
   object-fit: contain;
 }
 
-.draft-chip-table > .draft-chip-group > .draft-chip-group-note {
-  grid-column: 2 / -1;
-  margin: 0;
+/* A queued trait's place in its giver's order, small in the chip's lower corner. */
+.draft-chip-order {
+  position: absolute;
+  right: -0.3rem;
+  bottom: -0.35rem;
+  min-width: 0.85rem;
+  height: 0.85rem;
+  padding: 0 0.15rem;
+  border-radius: 999px;
+  background: #2a2b33;
+  color: var(--muted);
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 0.85rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
-.draft-chip[data-ordered] {
-  padding-left: 0.3rem;
+/* A Duo chip's other god, pinned to the corner like an order number. */
+.draft-chip-partner {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.4rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 /* A selected god trait's acquisition order, pinned to the corner so rows never shift. */
@@ -1390,84 +1417,53 @@ label.draft-row-label {
   font-variant-numeric: tabular-nums;
 }
 
-.draft-chip-move,
-.draft-chip-remove {
+/* The god pool's and basket sections' reset: a bare gold icon, apart from the heading text. */
+.draft-reset {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 1.2rem;
-  height: 1.2rem;
+  width: 1.6rem;
+  height: 1.6rem;
   padding: 0;
   border: 0;
-  border-radius: 4px;
-  background: transparent;
+  border-radius: 0.35rem;
+  background: none;
+  color: var(--selection-accent);
   font: inherit;
   line-height: 1;
   cursor: pointer;
 }
 
-.draft-chip-move {
-  color: var(--selection-accent);
+.draft-reset .action-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  stroke-width: 2;
 }
 
-.draft-chip-move .action-icon {
-  width: 0.8rem;
-  height: 0.8rem;
-  stroke-width: 2.6;
+.draft-reset:hover:not(:disabled) {
+  background: #2d2a24;
 }
 
-.draft-chip-move:hover:not(:disabled),
-.draft-chip-move:focus-visible {
-  color: #f6d68a;
-}
-
-.draft-chip-move:focus-visible,
-.draft-chip-remove:focus-visible {
+.draft-reset:focus-visible {
   outline: 2px solid var(--selection-accent);
   outline-offset: 1px;
 }
 
-.draft-chip-move:disabled {
-  opacity: 0.25;
+.draft-reset:disabled {
+  opacity: 0.45;
   cursor: default;
-}
-
-.draft-chip-remove {
-  color: var(--muted);
-}
-
-.draft-chip-remove .action-icon {
-  width: 0.75rem;
-  height: 0.75rem;
-  stroke-width: 1.8;
 }
 
 .draft-pool-reset {
   align-self: center;
-  width: 1.6rem;
-  height: 1.6rem;
-}
-
-.draft-pool-reset .action-icon {
-  width: 1rem;
-  height: 1rem;
-}
-
-.draft-pool-reset:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.draft-chip-remove:hover {
-  color: var(--text);
 }
 
 .draft-actions {
   display: grid;
   gap: 0.6rem;
-  margin-top: 1rem;
-  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
   border-top: 1px solid #30313a;
 }
 
@@ -1515,9 +1511,9 @@ label.draft-row-label {
   gap: 0.4rem;
 }
 
-/* One height for every tab, so switching tabs never moves the dialog. */
+/* One height for every tab, so switching tabs never moves the dialog; it fills a 1080p viewport. */
 .editor-dialog:has(.draft-basket) {
-  height: min(46rem, calc(100 * var(--app-vh) - 2rem));
+  height: min(64rem, calc(100 * var(--app-vh) - 2rem));
 }
 
 /* Keeps the footer at the bottom of the fixed-height dialog. */
@@ -1601,6 +1597,7 @@ label.draft-row-label {
 /* The seed and share actions read as one quiet line beside Reroll and Draft. */
 .draft-meta {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 0.4rem;
   margin-right: 0.25rem;
@@ -1609,6 +1606,12 @@ label.draft-row-label {
 
 .draft-meta .draft-seed {
   margin-right: 0;
+}
+
+/* The result count sits at the row's left, apart from the seed and actions. */
+.draft-met {
+  margin-right: auto;
+  white-space: nowrap;
 }
 
 .draft-ghost-action {

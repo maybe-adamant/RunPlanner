@@ -20,7 +20,6 @@ import {
   draftGodRules,
   draftSourceQueues,
   draftKeepsakeOptions,
-  draftOrderRefusals,
   draftPlannedBiomeKeys,
   draftWorldOptions,
   type DraftCapUsage,
@@ -248,11 +247,11 @@ export function withDraftGodToggled(
   return { ...draft, godKeys };
 }
 
-/** Removes a basket trait from its giver's list, or adds it to its giver's (a Duo's first pool god). */
+/** Removes a basket trait from the list holding it, or adds it to the end of the giver's list. */
 export function withDraftBasketTraitToggled(
-  catalog: Catalog,
   draft: AuthoredDraftSpec,
   traitKey: string,
+  giverKey: string,
 ): AuthoredDraftSpec {
   const basket = draft.basketByGiver;
   const holder = Object.keys(basket).find((key) => basket[key]!.includes(traitKey));
@@ -261,13 +260,22 @@ export function withDraftBasketTraitToggled(
     const kept = list!.filter((key) => key !== traitKey);
     return { ...draft, basketByGiver: kept.length === 0 ? rest : { ...rest, [holder]: kept } };
   }
-  const givers = catalog.traitGivers.values.filter((giver) => giver.traitKeys.includes(traitKey));
-  const giverKey =
-    draft.godKeys.find((godKey) => givers.some((giver) => giver.key === godKey)) ?? givers[0]?.key;
-  if (giverKey === undefined) return draft;
   return {
     ...draft,
     basketByGiver: { ...basket, [giverKey]: [...(basket[giverKey] ?? []), traitKey] },
+  };
+}
+
+/** Clears one giver's list, Duos it hosts included. */
+export function withDraftBasketGiverCleared(
+  draft: AuthoredDraftSpec,
+  giverKey: string,
+): AuthoredDraftSpec {
+  return {
+    ...draft,
+    basketByGiver: Object.fromEntries(
+      Object.entries(draft.basketByGiver).filter(([key]) => key !== giverKey),
+    ),
   };
 }
 
@@ -323,6 +331,8 @@ export function draftWorldHasNpcs(worldOptions: DraftWorldOptions): boolean {
 
 export interface DraftBasketRow {
   readonly traitKey: string;
+  /** The giver whose list picking this row adds it to. */
+  readonly giverKey: string;
   readonly label: string;
   readonly inBasket: boolean;
   readonly selectable: boolean;
@@ -338,10 +348,14 @@ export interface DraftBasketSection {
   readonly cap?: DraftCapUsage;
   readonly rows: readonly DraftBasketRow[];
   readonly subsections: readonly DraftBasketSection[];
+  /** A god, Hermes or Hammer list: taken in pick order and cleared as one. */
+  readonly ordered?: true;
 }
 
+export type DraftBasketTabKey = 'gods' | 'bonus' | 'npcs';
+
 export interface DraftBasketTab {
-  readonly key: 'gods' | 'bonus' | 'npcs';
+  readonly key: DraftBasketTabKey;
   readonly label: string;
   readonly cap?: DraftCapUsage;
   readonly sections: readonly DraftBasketSection[];
@@ -350,22 +364,21 @@ export interface DraftBasketTab {
 export interface DraftBasketChip {
   readonly traitKey: string;
   readonly label: string;
+  /** A Duo's other god, marked on the chip. */
+  readonly partnerGiverKey?: string;
   /** The engine refuses this basket trait, so the draft cannot start. */
   readonly refused: boolean;
   readonly hint?: string;
-  /**
-   * A source's queued trait: the basket with it swapped one place earlier or later,
-   * absent at an end or where the swap would queue a trait above its prerequisite.
-   */
-  readonly order?: {
-    readonly earlierBasket?: DraftSpec['basketByGiver'];
-    readonly laterBasket?: DraftSpec['basketByGiver'];
-  };
 }
 
-/** Basket chips by god, Hermes and Hammer in acquisition order, then every other basket trait. */
+/**
+ * One giver's basket chips, on the god, bonus or NPC row: pool gods (hosted Duos included),
+ * Hermes and Hammer in acquisition order, then Selene and NPC givers.
+ */
 export interface DraftBasketChipGroup {
   readonly key: string;
+  /** The outer line and basket tab it belongs to. */
+  readonly row: DraftBasketTabKey;
   readonly label: string;
   /** A god, Hermes or Hammer row, whose chips are in acquisition order. */
   readonly queued: boolean;
@@ -374,34 +387,30 @@ export interface DraftBasketChipGroup {
   readonly orderNotes: readonly string[];
 }
 
-/** One cap on the panel's basket summary. */
-export interface DraftBasketSummaryCap {
-  readonly key: string;
-  readonly label: string;
-  readonly cap: DraftCapUsage;
-}
-
 export interface DraftBasketProjection {
   readonly tabs: readonly DraftBasketTab[];
-  /** God boons, each bonus giver, then NPC traits. */
-  readonly summary: readonly DraftBasketSummaryCap[];
   readonly chipGroups: readonly DraftBasketChipGroup[];
 }
 
 function refusalHint(
   catalog: Catalog,
   refusals: DraftTraitAssessment['refusals'],
+  basket: ReadonlySet<string>,
 ): string | undefined {
   const label = (key: string) => catalog.traits.byKey[key]?.label ?? key;
   for (const refusal of refusals)
     switch (refusal.kind) {
       case 'slotTaken':
         return `Slot held by ${label(refusal.traitKey)}.`;
-      case 'requirement':
-        return refusal.requirementTraitKeys === undefined ||
-          refusal.requirementTraitKeys.length === 0
-          ? 'Requirements not met by the basket and loadout.'
-          : `Needs ${refusal.requirementTraitKeys.map(label).join(' or ')}.`;
+      case 'requirement': {
+        const keys = refusal.requirementTraitKeys ?? [];
+        if (keys.length === 0) return 'Requirements not met by the basket and loadout.';
+        if (refusal.code !== 'negativePrerequisite')
+          return `Needs ${keys.map(label).join(' or ')}.`;
+        // An exclusive set: name the held trait that rules this one out.
+        const held = keys.filter((key) => basket.has(key));
+        return `Excludes ${(held.length === 0 ? keys : held).map(label).join(' and ')}.`;
+      }
       case 'giverNotInWorld':
         return 'Its giver is not in the world.';
       case 'prerequisiteAfter':
@@ -448,12 +457,13 @@ export function draftSlotList(catalog: Catalog, traitKeys: readonly string[]): s
   return slots.length < 2 ? slots.join('') : `${slots.slice(0, -1).join(', ')} or ${slots.at(-1)}`;
 }
 
-/** Core slots first, then the other boons, then the Legendary. */
+/** Core slots first, then the other boons, the Legendary, then Duos. */
 function godOrder(
   catalog: Catalog,
   trait: DraftTraitAssessment | undefined,
   traitKey: string,
 ): number {
+  if (trait?.kind === 'duo') return SLOT_ORDER.length + 2;
   if (trait?.kind === 'legendary') return SLOT_ORDER.length + 1;
   const slot = catalog.traits.byKey[traitKey]?.equipmentSlot;
   const index = slot === undefined ? -1 : (SLOT_ORDER as readonly string[]).indexOf(slot);
@@ -461,10 +471,10 @@ function godOrder(
 }
 
 /**
- * The basket picker: pool gods with one shared Duo section, the always-present
- * Hermes, Hammer and Selene givers, then the selected NPCs. Rows a draft never
- * takes, Duos with a god outside the pool and Hammers for another weapon or
- * aspect are left out unless already in the basket.
+ * The basket picker: pool gods, each listing its Duos, the always-present Hermes,
+ * Hammer and Selene givers, then the selected NPCs. Rows a draft never takes,
+ * Duos with a god outside the pool and Hammers for another weapon or aspect are
+ * left out unless already in the basket.
  */
 export function projectDraftBasket(
   catalog: Catalog,
@@ -474,13 +484,12 @@ export function projectDraftBasket(
 ): DraftBasketProjection {
   const assessment = assessDraftBasket(catalog, project.route, spec);
   const byKey = new Map(assessment.traits.map((trait) => [trait.traitKey, trait]));
-  // Duos keep their own section and chips here, outside their host's order.
-  const queues = draftSourceQueues(catalog, spec)
-    .map((queue) => ({
-      ...queue,
-      traitKeys: queue.traitKeys.filter((key) => byKey.get(key)?.kind !== 'duo'),
-    }))
-    .filter((queue) => queue.traitKeys.length > 0);
+  const basketKeys = new Set(draftBasketTraitKeys(spec));
+  const allQueues = draftSourceQueues(catalog, spec);
+  const queuedGiverKeys = new Set(allQueues.map((queue) => queue.giverKey));
+  const queues = allQueues.filter((queue) => queue.traitKeys.length > 0);
+  const hostOf = (traitKey: string) =>
+    Object.keys(spec.basketByGiver).find((key) => spec.basketByGiver[key]!.includes(traitKey));
   const orderNumbers = new Map(
     queues.flatMap((queue) => queue.traitKeys.map((key, index) => [key, index + 1] as const)),
   );
@@ -488,10 +497,11 @@ export function projectDraftBasket(
     const number = orderNumbers.get(traitKey);
     return number === undefined ? {} : { orderNumber: number };
   };
-  const row = (trait: DraftTraitAssessment): DraftBasketRow => {
-    const hint = refusalHint(catalog, trait.refusals);
+  const row = (trait: DraftTraitAssessment, giverKey: string): DraftBasketRow => {
+    const hint = refusalHint(catalog, trait.refusals, basketKeys);
     return Object.freeze({
       traitKey: trait.traitKey,
+      giverKey,
       label: catalog.traits.byKey[trait.traitKey]?.label ?? trait.traitKey,
       inBasket: trait.inBasket,
       selectable: trait.selectable,
@@ -506,10 +516,10 @@ export function projectDraftBasket(
         (refusal.kind === 'wrongHammerLoadout' && !trait.inBasket) ||
         (refusal.kind === 'giverNotInWorld' && trait.kind === 'duo' && !trait.inBasket),
     );
-  const rowsOf = (traitKeys: readonly string[]): DraftBasketRow[] =>
+  const rowsOf = (giverKey: string, traitKeys: readonly string[]): DraftBasketRow[] =>
     traitKeys.flatMap((key) => {
       const trait = byKey.get(key);
-      return trait === undefined || hidden(trait) ? [] : [row(trait)];
+      return trait === undefined || hidden(trait) ? [] : [row(trait, giverKey)];
     });
   const section = (
     key: string,
@@ -521,6 +531,7 @@ export function projectDraftBasket(
     Object.freeze({
       key,
       label,
+      ...(queuedGiverKeys.has(key) ? { ordered: true as const } : {}),
       ...(cap === undefined ? {} : { cap }),
       rows: Object.freeze([...rows]),
       subsections: Object.freeze([...subsections]),
@@ -535,28 +546,41 @@ export function projectDraftBasket(
     const giver = catalog.traitGivers.byKey[giverKey]!;
     // The Hammer giver reads "Hammer", as in its basket row and count.
     const label = giver.providerKind === 'hammer' ? 'Hammer' : giver.label;
-    return section(giverKey, label, rowsOf(giver.traitKeys), giverCap(usages, giverKey));
+    return section(giverKey, label, rowsOf(giverKey, giver.traitKeys), giverCap(usages, giverKey));
   };
 
+  // A Duo shows under each of its gods: picked under one, the other shows it held there.
+  const godRow = (godKey: string, cap: DraftCapUsage | undefined) => (key: string) => {
+    const trait = byKey.get(key)!;
+    const base = row(trait, godKey);
+    if (trait.kind !== 'duo') return base;
+    const host = hostOf(key);
+    if (host !== undefined && host !== godKey)
+      return Object.freeze({
+        traitKey: key,
+        giverKey: godKey,
+        label: base.label,
+        inBasket: false,
+        selectable: false,
+        hint: `In ${giverLabel(catalog, host)}.`,
+      });
+    // An unhosted Duo joins this god's list, so this god's own cap decides.
+    const full = host === undefined && cap !== undefined && cap.count >= cap.cap;
+    return full ? Object.freeze({ ...base, selectable: false }) : base;
+  };
   const godSections = spec.world.godKeys.map((godKey) => {
     const giver = catalog.traitGivers.byKey[godKey]!;
-    const own = giver.traitKeys
-      .filter((key) => byKey.get(key)?.kind !== 'duo')
+    const cap = giverCap(caps.poolGods, godKey);
+    const rows = giver.traitKeys
+      .filter((key) => {
+        const trait = byKey.get(key);
+        return trait !== undefined && !hidden(trait);
+      })
       .map((key, index) => ({ key, index, order: godOrder(catalog, byKey.get(key), key) }))
       .sort((a, b) => a.order - b.order || a.index - b.index)
-      .map((entry) => entry.key);
-    return section(godKey, giver.label, rowsOf(own), giverCap(caps.poolGods, godKey));
+      .map((entry) => godRow(godKey, cap)(entry.key));
+    return section(godKey, giver.label, rows, cap);
   });
-  const duoKeys = [
-    ...new Set(
-      spec.world.godKeys.flatMap((godKey) =>
-        catalog.traitGivers.byKey[godKey]!.traitKeys.filter(
-          (key) => byKey.get(key)?.kind === 'duo',
-        ),
-      ),
-    ),
-  ];
-  const duos = rowsOf(duoKeys);
 
   const bonus = worldOptions.bonusGiverKeys.map((giverKey) =>
     giverSection(giverKey, caps.providers),
@@ -626,7 +650,7 @@ export function projectDraftBasket(
       key: 'gods',
       label: 'Gods',
       cap: caps.poolGodTotal,
-      sections: [...godSections, ...(duos.length === 0 ? [] : [section('duos', 'Duos', duos)])],
+      sections: godSections,
     },
     // Hermes and Hammers share one count, one per planned biome; Selene keeps its own.
     ...(hasBonus
@@ -637,7 +661,7 @@ export function projectDraftBasket(
       : []),
   ];
 
-  const chip = (traitKey: string, order?: DraftBasketChip['order']): DraftBasketChip => {
+  const chip = (traitKey: string): DraftBasketChip => {
     const trait = byKey.get(traitKey);
     // An order refusal is a visible note under its god's row, not a hint.
     const hint =
@@ -648,60 +672,50 @@ export function projectDraftBasket(
             trait.refusals.filter(
               (refusal) => refusal.kind !== 'prerequisiteAfter' && refusal.kind !== 'firstGodPick',
             ),
+            basketKeys,
           );
+    const host = hostOf(traitKey);
+    const partnerGiverKey =
+      trait?.kind !== 'duo'
+        ? undefined
+        : catalog.traitGivers.values.find(
+            (giver) =>
+              giver.providerKind === 'olympian' &&
+              giver.key !== host &&
+              giver.traitKeys.includes(traitKey),
+          )?.key;
     return Object.freeze({
       traitKey,
       label: catalog.traits.byKey[traitKey]?.label ?? traitKey,
+      ...(partnerGiverKey === undefined ? {} : { partnerGiverKey }),
       // The first-boon rule is the Basket title's tag, not a chip mark.
       refused:
         trait === undefined || trait.refusals.some((refusal) => refusal.kind !== 'firstGodPick'),
       ...(hint === undefined ? {} : { hint }),
-      ...(order === undefined ? {} : { order: Object.freeze(order) }),
     });
-  };
-  const swapped = (giverKey: string, a: string, b: string) =>
-    Object.freeze({
-      ...spec.basketByGiver,
-      [giverKey]: (spec.basketByGiver[giverKey] ?? []).map((key) =>
-        key === a ? b : key === b ? a : key,
-      ),
-    });
-  const orderRefusals = draftOrderRefusals(catalog, project.route, spec);
-  const current = orderRefusals(spec.basketByGiver).size;
-  // A move may not add an order refusal; while one stands, any move that adds none is open.
-  const legalMove = (basketByGiver: DraftSpec['basketByGiver']) => {
-    const after = orderRefusals(basketByGiver).size;
-    return after === 0 || (current > 0 && after <= current);
   };
   const label = (key: string) => catalog.traits.byKey[key]?.label ?? key;
-  const queued = new Set(queues.flatMap((queue) => queue.traitKeys));
-  const others = draftBasketTraitKeys(spec).filter((key) => !queued.has(key));
-  const chipGroups: DraftBasketChipGroup[] = [
+  const rowOf = (giverKey: string): DraftBasketChipGroup['row'] => {
+    const kind = catalog.traitGivers.byKey[giverKey]?.providerKind;
+    return kind === 'olympian' ? 'gods' : kind === 'npc' ? 'npcs' : 'bonus';
+  };
+  const queuedGivers = new Set(queues.map((queue) => queue.giverKey));
+  // Selene, NPC givers and a Duo host that left the pool keep their own unordered groups.
+  const others = Object.keys(spec.basketByGiver).filter(
+    (giverKey) => !queuedGivers.has(giverKey) && (spec.basketByGiver[giverKey]?.length ?? 0) > 0,
+  );
+  const groups: DraftBasketChipGroup[] = [
     ...queues.map((queue) =>
       Object.freeze({
         key: queue.giverKey,
+        row: rowOf(queue.giverKey),
         // The Hammer row drops "Daedalus" to fit the table's label column.
         label:
           catalog.traitGivers.byKey[queue.giverKey]?.providerKind === 'hammer'
             ? 'Hammer'
             : (catalog.traitGivers.byKey[queue.giverKey]?.label ?? queue.giverKey),
         queued: true,
-        chips: Object.freeze(
-          queue.traitKeys.map((traitKey, index, keys) => {
-            const earlier =
-              keys[index - 1] === undefined
-                ? undefined
-                : swapped(queue.giverKey, traitKey, keys[index - 1]!);
-            const later =
-              keys[index + 1] === undefined
-                ? undefined
-                : swapped(queue.giverKey, traitKey, keys[index + 1]!);
-            return chip(traitKey, {
-              ...(earlier === undefined || !legalMove(earlier) ? {} : { earlierBasket: earlier }),
-              ...(later === undefined || !legalMove(later) ? {} : { laterBasket: later }),
-            });
-          }),
-        ),
+        chips: Object.freeze(queue.traitKeys.map((traitKey) => chip(traitKey))),
         orderNotes: Object.freeze(
           queue.traitKeys.flatMap((traitKey) =>
             (byKey.get(traitKey)?.refusals ?? []).flatMap((refusal) =>
@@ -713,37 +727,21 @@ export function projectDraftBasket(
         ),
       }),
     ),
-    ...(others.length === 0
-      ? []
-      : [
-          Object.freeze({
-            key: 'other',
-            label: 'Other',
-            queued: false,
-            chips: Object.freeze(others.map((key) => chip(key))),
-            orderNotes: Object.freeze([]),
-          }),
-        ]),
+    ...others.map((giverKey) =>
+      Object.freeze({
+        key: giverKey,
+        row: rowOf(giverKey),
+        label: giverLabel(catalog, giverKey),
+        queued: false,
+        chips: Object.freeze(spec.basketByGiver[giverKey]!.map((key) => chip(key))),
+        orderNotes: Object.freeze([]),
+      }),
+    ),
   ];
-  const offered = (giverKey: string) => worldOptions.bonusGiverKeys.includes(giverKey);
-  const supplyOffered = caps.providers.some(
-    (usage) => usage.providerKind !== 'spell' && offered(usage.giverKey),
-  );
-  const summary: DraftBasketSummaryCap[] = [
-    { key: 'gods', label: 'God boons', cap: caps.poolGodTotal },
-    ...(supplyOffered ? [{ key: 'supply', label: 'Hermes + Hammer', cap: caps.supplyTotal }] : []),
-    ...caps.providers
-      .filter((usage) => usage.providerKind === 'spell' && offered(usage.giverKey))
-      .map((usage) => ({
-        key: usage.giverKey,
-        label: catalog.traitGivers.byKey[usage.giverKey]?.label ?? usage.giverKey,
-        cap: usage,
-      })),
-    ...(hasNpcs ? [{ key: 'npcs', label: 'NPCs', cap: caps.npcTotal }] : []),
-  ];
+  const rowOrder: readonly DraftBasketChipGroup['row'][] = ['gods', 'bonus', 'npcs'];
+  const chipGroups = rowOrder.flatMap((row) => groups.filter((group) => group.row === row));
   return Object.freeze({
     tabs: Object.freeze(tabs.map((tab) => Object.freeze(tab))),
-    summary: Object.freeze(summary),
     chipGroups: Object.freeze(chipGroups),
   });
 }

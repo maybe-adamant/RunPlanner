@@ -71,6 +71,20 @@ function openBasket() {
   return screen.getByRole('dialog');
 }
 
+/** A read-only basket line on the panel, named by its row: God, Bonus or NPC traits. */
+const basketLine = (row: 'God' | 'Bonus' | 'NPC') =>
+  screen.queryByRole('button', { name: new RegExp(`^${row} traits:`) });
+/** A basket line's chips, as their hover hints. */
+const lineChips = (row: 'God' | 'Bonus' | 'NPC') =>
+  [...(basketLine(row)?.querySelectorAll('.draft-chip') ?? [])].map((chip) => ({
+    hint: hintOf(chip),
+    refused: chip.hasAttribute('data-refused'),
+    order: chip.querySelector('.draft-chip-order')?.textContent,
+    partner: chip.querySelector('.draft-chip-partner') !== null,
+  }));
+const orderBadge = (dialog: HTMLElement, name: string) =>
+  within(dialog).getByRole('button', { name }).querySelector('.draft-order-number')?.textContent;
+
 describe('Draft panel', () => {
   it('is a route panel before Loadout, on every route', () => {
     for (const routeKey of ['Underworld', 'FreshFile']) {
@@ -206,16 +220,15 @@ describe('Draft panel', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: cast! }));
     expect(ringRow().getAttribute('aria-disabled')).toBeNull();
     fireEvent.click(ringRow());
+    // Unpicking the core leaves a non-core first: the tag turns active and the draft is blocked.
+    fireEvent.click(within(dialog).getByRole('button', { name: cast! }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
-    // Removing the core leaves a non-core first: the tag turns active and the draft is blocked.
-    const zeus = () => screen.getByRole('list', { name: 'Zeus basket traits' });
-    fireEvent.click(within(zeus()).getByRole('button', { name: `Remove ${cast}` }));
     expect(tag().hasAttribute('data-active')).toBe(true);
-    expect(within(zeus()).getByRole('listitem').hasAttribute('data-refused')).toBe(false);
+    expect(lineChips('God')).toEqual([expect.objectContaining({ hint: ring, refused: false })]);
     expect(draftButton().getAttribute('aria-disabled')).toBe('true');
   });
 
-  it('orders a god by core slot, then other boons, then its Legendary, with Duos last', () => {
+  it('orders a god by core slot, then other boons, then its Legendary, then its Duos', () => {
     const { catalog } = open();
     chooseGods(['Zeus', 'Apollo']);
     const dialog = openBasket();
@@ -231,13 +244,17 @@ describe('Draft panel', () => {
     const sections = within(dialog)
       .getAllByRole('region')
       .map((s) => s.getAttribute('aria-label'));
-    expect(sections).toEqual(['Zeus', 'Apollo', 'Duos']);
+    expect(sections).toEqual(['Zeus', 'Apollo']);
 
     const zeus = within(within(dialog).getByRole('region', { name: 'Zeus' }))
-      .getAllByRole('button')
+      .getAllByRole('button', { pressed: false })
       .map((button) => button.textContent);
     const trait = (label: string | null) =>
       catalog.traits.values.find((candidate) => candidate.label === label)!;
+    const rarity = (label: string | null) => {
+      const domain = trait(label).rarityDomain;
+      return domain.kind === 'ranked' ? domain.freshOfferRarities : [];
+    };
     expect(zeus.slice(0, 5).map((label) => trait(label).equipmentSlot)).toEqual([
       'Melee',
       'Secondary',
@@ -245,8 +262,10 @@ describe('Draft panel', () => {
       'Rush',
       'Mana',
     ]);
-    const last = trait(zeus.at(-1)!).rarityDomain;
-    expect(last.kind === 'ranked' && last.freshOfferRarities).toEqual(['Legendary']);
+    const firstDuo = zeus.findIndex((label) => rarity(label).includes('Duo'));
+    expect(firstDuo).toBeGreaterThan(5);
+    expect(rarity(zeus[firstDuo - 1]!)).toEqual(['Legendary']);
+    expect(zeus.slice(firstDuo).every((label) => rarity(label).includes('Duo'))).toBe(true);
 
     const shown = within(dialog)
       .getAllByRole('button', { pressed: false })
@@ -258,28 +277,67 @@ describe('Draft panel', () => {
     for (const ransom of ransoms) expect(shown).not.toContain(ransom.label);
   });
 
-  it('lists only Duos shared by pool gods, and none for a single god', () => {
+  it('lists a Duo under both its gods, held by the god it is picked under, and hides it without its partner', () => {
     const { catalog } = open();
-    chooseGods(['Zeus', 'Hera', 'Apollo']);
+    const label = (key: string) => catalog.traits.byKey[key]!.label;
+    // The Duo needs Apollo's Prominence Flare, which needs a Cast such as Zeus's Storm Ring.
+    const [duo, ring, flare] = [
+      'ApolloSecondStageCastBoon',
+      'ZeusCastBoon',
+      'ApolloExCastBoon',
+    ].map(label);
+    chooseGods(['Zeus']);
     let dialog = openBasket();
-    const duos = within(within(dialog).getByRole('region', { name: 'Duos' }))
-      .getAllByRole('button')
-      .map((button) => button.textContent);
-    const givers = (label: string | null) =>
-      catalog.traitGivers.values
-        .filter((giver) =>
-          giver.traitKeys.some((key) => catalog.traits.byKey[key]?.label === label),
-        )
-        .map((giver) => giver.key);
-    expect(duos.length).toBeGreaterThan(0);
-    for (const duo of duos)
-      expect(['Zeus', 'Hera', 'Apollo']).toEqual(expect.arrayContaining(givers(duo)));
+    const zeus = () => within(within(dialog).getByRole('region', { name: 'Zeus' }));
+    const apollo = () => within(within(dialog).getByRole('region', { name: 'Apollo' }));
+    expect(zeus().queryByRole('button', { name: duo! })).toBeNull();
     fireEvent.keyDown(dialog, { key: 'Escape' });
 
-    // Deselecting Hera and Apollo leaves Zeus alone.
-    chooseGods(['Hera', 'Apollo']);
+    chooseGods(['Apollo']);
     dialog = openBasket();
-    expect(within(dialog).queryByRole('region', { name: 'Duos' })).toBeNull();
+    fireEvent.click(zeus().getByRole('button', { name: ring! }));
+    fireEvent.click(apollo().getByRole('button', { name: flare! }));
+    fireEvent.click(apollo().getByRole('button', { name: duo! }));
+    expect(apollo().getByRole('button', { name: duo! }).getAttribute('aria-pressed')).toBe('true');
+    expect(
+      [flare!, duo!].map(
+        (name) =>
+          apollo().getByRole('button', { name }).querySelector('.draft-order-number')?.textContent,
+      ),
+    ).toEqual(['1', '2']);
+    const held = zeus().getByRole('button', { name: duo! });
+    expect(held.getAttribute('aria-pressed')).toBe('false');
+    expect(held.getAttribute('aria-disabled')).toBe('true');
+    expect(hintOf(held)).toBe('In Apollo.');
+    fireEvent.click(held);
+    expect(apollo().getByRole('button', { name: duo! }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    // The Duo sits in Apollo's order on the god line, marked with its other god.
+    expect(lineChips('God')).toEqual([
+      expect.objectContaining({ hint: ring, order: '1', partner: false }),
+      expect.objectContaining({ hint: flare, order: '1', partner: false }),
+      expect.objectContaining({ hint: duo, order: '2', partner: true }),
+    ]);
+
+    // Unpicking it under Apollo frees it under Zeus.
+    dialog = openBasket();
+    fireEvent.click(apollo().getByRole('button', { name: duo! }));
+    expect(zeus().getByRole('button', { name: duo! }).getAttribute('aria-disabled')).toBeNull();
+  });
+
+  it('keeps one trait of a mutually exclusive set, naming the picked one', () => {
+    const { catalog } = open();
+    const label = (key: string) => catalog.traits.byKey[key]!.label;
+    const [core, lance, coal] = ['ZeusCastBoon', 'CastAnywhereBoon', 'CastProjectileBoon'].map(
+      label,
+    );
+    chooseGods(['Zeus', 'Hestia']);
+    const dialog = openBasket();
+    fireEvent.click(within(dialog).getByRole('button', { name: core! }));
+    fireEvent.click(within(dialog).getByRole('button', { name: lance! }));
+    const excluded = within(dialog).getByRole('button', { name: coal! });
+    expect(excluded.getAttribute('aria-disabled')).toBe('true');
+    expect(hintOf(excluded)).toBe(`Excludes ${lance}.`);
   });
 
   it('adds basket traits, refuses a second trait for a held slot, and lists the selected NPCs', () => {
@@ -318,12 +376,52 @@ describe('Draft panel', () => {
         .map((s) => s.getAttribute('aria-label')),
     ).toEqual(['Field', catalog.traitGivers.byKey.Artemis!.label]);
     fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    expect(lineChips('God')).toEqual([expect.objectContaining({ hint: zeusAttack, order: '1' })]);
+  });
 
-    const chips = screen.getByRole('list', { name: 'Zeus basket traits' });
-    // An ordered cell shows the trait's icon, named and hinted by the trait.
-    expect(hintOf(within(chips).getByRole('listitem', { name: zeusAttack }))).toBe(zeusAttack);
-    fireEvent.click(within(chips).getByRole('button', { name: `Remove ${zeusAttack}` }));
-    expect(screen.queryByRole('list', { name: 'Zeus basket traits' })).toBeNull();
+  it('shows the basket read-only on the panel, each line opening its tab', () => {
+    const { catalog } = open();
+    chooseGods(['Zeus']);
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: `Artemis in ${catalog.biomes.byKey.F!.label}`,
+      }),
+    );
+    const label = (key: string) => catalog.traits.byKey[key]!.label;
+    const artemis = catalog.traitGivers.byKey.Artemis!;
+    let dialog = openBasket();
+    fireEvent.click(within(dialog).getByRole('button', { name: label('ZeusWeaponBoon') }));
+    fireEvent.click(within(dialog).getByRole('tab', { name: /^Bonus/ }));
+    fireEvent.click(within(dialog).getByRole('button', { name: label('HermesWeaponBoon') }));
+    fireEvent.click(within(dialog).getByRole('tab', { name: /^NPCs/ }));
+    const npcTrait = label(artemis.traitKeys[0]!);
+    fireEvent.click(within(dialog).getByRole('button', { name: npcTrait }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+
+    expect(basketLine('God')?.getAttribute('aria-label')).toBe(
+      `God traits: ${label('ZeusWeaponBoon')}`,
+    );
+    expect(lineChips('Bonus')).toEqual([
+      expect.objectContaining({ hint: label('HermesWeaponBoon'), order: '1' }),
+    ]);
+    // An NPC's single trait has no order.
+    expect(lineChips('NPC')).toEqual([
+      expect.objectContaining({ hint: npcTrait, order: undefined }),
+    ]);
+    expect(within(basketLine('God')!).queryByRole('button')).toBeNull();
+
+    const selectedTab = () =>
+      within(screen.getByRole('dialog')).getByRole('tab', { selected: true }).textContent;
+    for (const [row, tab] of [
+      ['Bonus', /^Bonus/],
+      ['NPC', /^NPCs/],
+      ['God', /^Gods/],
+    ] as const) {
+      fireEvent.click(basketLine(row)!);
+      expect(selectedTab()).toMatch(tab);
+      dialog = screen.getByRole('dialog');
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+    }
   });
 
   it("offers Athena's traits while the Gorgon Amulet is the starting keepsake", () => {
@@ -357,7 +455,7 @@ describe('Draft panel', () => {
     );
   });
 
-  it("numbers and reorders each god's traits, never into an order the engine refuses", () => {
+  it("numbers each giver's picks in pick order, notes an order the engine refuses, and clears a giver", () => {
     const { catalog } = open();
     chooseGods(['Zeus', 'Apollo']);
     const label = (key: string) => catalog.traits.byKey[key]!.label;
@@ -365,55 +463,54 @@ describe('Draft panel', () => {
     const dialog = openBasket();
     for (const name of [cast!, strike!, rush!])
       fireEvent.click(within(dialog).getByRole('button', { name }));
-    const badge = (name: string) =>
-      within(dialog).getByRole('button', { name }).querySelector('.draft-order-number')
-        ?.textContent;
-    expect([cast!, strike!, rush!].map(badge)).toEqual(['1', '2', '3']);
-    // Hermes takes its traits in basket order too; Selene's single trait has no number.
+    expect([cast!, strike!, rush!].map((name) => orderBadge(dialog, name))).toEqual([
+      '1',
+      '2',
+      '3',
+    ]);
+    // Hermes takes its traits in pick order too; Selene's single trait has no number.
     fireEvent.click(within(dialog).getByRole('tab', { name: /^Bonus/ }));
     const [first, second] = ['HermesWeaponBoon', 'HermesSpecialBoon'].map(label);
     const selene = label(catalog.traitGivers.byKey.SpellDrop!.traitKeys[0]!);
     for (const name of [second!, first!, selene])
       fireEvent.click(within(dialog).getByRole('button', { name }));
-    expect([second!, first!, selene].map(badge)).toEqual(['1', '2', undefined]);
+    expect([second!, first!, selene].map((name) => orderBadge(dialog, name))).toEqual([
+      '1',
+      '2',
+      undefined,
+    ]);
+    const hermes = within(dialog).getByRole('region', { name: 'Hermes' });
+    fireEvent.click(within(hermes).getByRole('button', { name: 'Clear Hermes picks' }));
+    expect(
+      [first!, second!].map((name) =>
+        within(dialog).getByRole('button', { name }).getAttribute('aria-pressed'),
+      ),
+    ).toEqual(['false', 'false']);
+    expect(
+      (within(hermes).getByRole('button', { name: 'Clear Hermes picks' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(within(dialog).getByRole('button', { name: selene }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+
+    // Unpicking Storm Ring leaves Double Strike first: refused, with a visible note.
+    fireEvent.click(within(dialog).getByRole('tab', { name: /^Gods/ }));
+    fireEvent.click(within(dialog).getByRole('button', { name: cast! }));
+    const note = `${strike} needs ${rush} first.`;
+    expect(within(dialog).getByText(note)).toBeTruthy();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
-    const hermes = screen.getByRole('list', { name: 'Hermes basket traits' });
-    fireEvent.click(within(hermes).getByRole('button', { name: `Move ${first} earlier` }));
-    expect(
-      within(screen.getByRole('list', { name: 'Hermes basket traits' }))
-        .getAllByRole('listitem')
-        .map((chip) => chip.getAttribute('aria-label')),
-    ).toEqual([first, second]);
-    expect(
-      within(screen.getByRole('list', { name: 'Other basket traits' })).getByRole('listitem', {
-        name: selene,
-      }),
-    ).toBeTruthy();
+    expect(screen.getByText(note)).toBeTruthy();
+    expect(lineChips('God').map((chip) => [chip.hint, chip.refused])).toEqual([
+      [strike, true],
+      [rush, false],
+    ]);
 
-    const zeus = () => screen.getByRole('list', { name: 'Zeus basket traits' });
-    const order = () =>
-      within(zeus())
-        .getAllByRole('listitem')
-        .map((chip) => chip.getAttribute('aria-label'));
-    const move = (name: string, direction: 'earlier' | 'later') =>
-      within(zeus()).getByRole('button', { name: `Move ${name} ${direction}` });
-    expect(order()).toEqual([cast, strike, rush]);
-    // Double Strike needs a Zeus core boon before it, and Storm Ring is its only earlier one.
-    expect((move(strike!, 'earlier') as HTMLButtonElement).disabled).toBe(true);
-    expect((move(cast!, 'earlier') as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(move(rush!, 'earlier'));
-    expect(order()).toEqual([cast, rush, strike]);
-    expect((move(strike!, 'later') as HTMLButtonElement).disabled).toBe(true);
-
-    // Removing Storm Ring leaves Double Strike first: refused, with a visible note, and repairable.
-    fireEvent.click(move(strike!, 'earlier'));
-    fireEvent.click(within(zeus()).getByRole('button', { name: `Remove ${cast}` }));
-    expect(order()).toEqual([strike, rush]);
-    expect(screen.getByText(`${strike} needs ${rush} first.`)).toBeTruthy();
-    expect((move(strike!, 'later') as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(move(strike!, 'later'));
-    expect(order()).toEqual([rush, strike]);
-    expect(screen.queryByText(`${strike} needs ${rush} first.`)).toBeNull();
+    const zeus = within(openBasket()).getByRole('region', { name: 'Zeus' });
+    fireEvent.click(within(zeus).getByRole('button', { name: 'Clear Zeus picks' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Done' }));
+    expect(basketLine('God')).toBeNull();
+    expect(screen.queryByText(note)).toBeNull();
   });
 
   it('plans up to a biome from the Draft tab, keeping only its NPC rows and racks', () => {
@@ -430,14 +527,14 @@ describe('Draft panel', () => {
       .getAllByRole('rowheader')
       .map((row) => row.textContent);
     expect(npcRows).toEqual([label('F'), label('G')]);
-    expect(screen.queryByRole('button', { name: `After ${label('G')}` })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: `After ${label('H')}` })).toBeNull();
-    const summary = screen.getByRole('list', { name: 'Basket caps' });
-    expect(
-      within(summary)
-        .getAllByRole('listitem')
-        .map((item) => item.textContent),
-    ).toContain('Hermes + Hammer0/2');
+    // The racks sit in the Run section, one per planned biome.
+    const racks = within(
+      within(screen.getByRole('region', { name: 'Run' })).getByRole('group', {
+        name: 'Rack keepsakes',
+      }),
+    );
+    expect(racks.queryByRole('button', { name: `After ${label('G')}` })).toBeTruthy();
+    expect(racks.queryByRole('button', { name: `After ${label('H')}` })).toBeNull();
   });
 
   it('sets per-biome god boons, the per-god cap and room preferences on the Advanced tab', () => {
