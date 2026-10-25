@@ -17,6 +17,7 @@ import {
   roomActionKey,
   scheduleRequiredRoomActions,
   semanticAddressKey,
+  authoredShopOffer,
   shopOfferOptionValues,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
   takeoverPrebossGameNames,
@@ -414,6 +415,49 @@ export class DraftWalk {
     if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true })) return;
     if (this.assembly.evaluation.issue?.kind === 'invalid')
       this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: false });
+  }
+
+  /**
+   * Once every slot of this Shop holds an item, so its boons are bought first, spends the biome's
+   * spare purchases on ranked filler, each a weighted pick. A mid-biome Shop keeps one spare
+   * purchase for the Preboss Shop; a purchase that invalidates the route is undone.
+   */
+  private buyFiller(origin: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>): void {
+    if (this.steering.fillerPriority().length === 0) return;
+    const occurrence = this.occurrence(origin.biomeKey, origin.occurrenceId);
+    const shop = occurrence?.state.kind === 'shop' ? occurrence.state.shop : undefined;
+    const profile = this.catalog.rewards.shops.byKey[shop?.profileKey ?? ''];
+    if (occurrence === undefined || shop === undefined || profile === undefined) return;
+    const slotKeys = profile.slots.values.map((slot) => slot.key);
+    if (slotKeys.some((key) => shop.offers[key]?.reward == null)) return;
+    const bought = new Set(
+      (occurrence.roomActions?.order ?? []).flatMap((action) =>
+        action.kind === 'interactShopOffer' ? [action.offerKey] : [],
+      ),
+    );
+    const weight = (key: string) => {
+      const offer = authoredShopOffer(occurrence, key)?.reward?.offer;
+      return offer === undefined || bought.has(key) ? 0 : this.steering.shopFillerWeight(offer);
+    };
+    const reserve = this.roomOf(occurrence.gameName)?.kind === 'Preboss' ? 0 : 1;
+    let spare =
+      this.steering.purchasesPerBiome() - this.steering.biomePurchases(origin.biomeKey) - reserve;
+    let candidates = [
+      ...slotKeys,
+      ...(shop.travelDealRefill === undefined ? [] : [TRAVEL_DEAL_REFILL_ENTRY_KEY]),
+    ].filter((key) => weight(key) > 0);
+    while (spare > 0 && candidates.length > 0) {
+      const offerKey = this.weighted(candidates, weight)[0]!;
+      candidates = candidates.filter((key) => key !== offerKey);
+      const offer = { ...origin, offerKey };
+      if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true }))
+        continue;
+      if (this.assembly.evaluation.issue?.kind === 'invalid') {
+        this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: false });
+        continue;
+      }
+      spare -= 1;
+    }
   }
 
   /** Ahead of the purchase pace a boon is bought less often, behind it more often; never always or never. */
@@ -1102,6 +1146,7 @@ export class DraftWalk {
       for (const value of this.inPoolOrder(ordered, values, (v) => v.offer))
         if (apply({ kind: 'ReplaceShopOfferOption', offer: origin, value })) {
           this.buyWanted(origin, value.offer);
+          this.buyFiller(origin);
           return true;
         }
       return false;

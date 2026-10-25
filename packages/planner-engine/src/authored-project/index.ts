@@ -394,6 +394,7 @@ export {
   type AuthoredRoutePlan,
   type AuthoredDraftSpec,
   type DraftRoomForcing,
+  type DraftFillerKind,
   type AuthoredKeepsakeRack,
   type ResourceFamily,
   type ResourcePlacement,
@@ -515,6 +516,7 @@ export {
   type FlagDraftOptionDeclaration,
   type IntegerDraftOptionDeclaration,
   type PerBiomeDraftOptionDeclaration,
+  type RankingDraftOptionDeclaration,
   type ScalarDraftOptionKey,
 } from './draft-spec';
 

@@ -250,6 +250,9 @@ class BitReader {
   count(prefix: number): number {
     return this.read(this.read(prefix));
   }
+  get done(): boolean {
+    return this.position >= this.bits.length;
+  }
   /** The next `width` bits as their own reader. */
   slice(width: number): BitReader {
     if (this.position + width > this.bits.length) throw new Malformed();
@@ -342,7 +345,8 @@ const traitGiverKeys = (lists: ShareLists, traitKey: string): readonly string[] 
 
 /**
  * The draft: its world in fixed order, then the stored options as tagged entries (a count, then
- * per entry its tag, payload length and payload). A whole number fills its payload.
+ * per entry its tag, payload length and payload). A whole number fills its payload; a ranking
+ * is its choices' counted indexes, highest first.
  */
 function writeDraft(writer: BitWriter, lists: ShareLists, draft: AuthoredDraftSpec): void {
   writeKeyList(writer, lists.godKeys, draft.godKeys);
@@ -378,6 +382,10 @@ function writeDraft(writer: BitWriter, lists: ShareLists, draft: AuthoredDraftSp
         writeBiomeRecord(payload, lists, value as Readonly<Record<string, number>>, (count) =>
           payload.count(count, LENGTH_PREFIX),
         );
+        break;
+      case 'ranking':
+        for (const choice of value as readonly string[])
+          payload.count(declaration.choices.indexOf(choice), COUNT_PREFIX);
         break;
     }
     writer.write(declaration.tag, TAG_WIDTH);
@@ -416,6 +424,12 @@ function readDraft(reader: BitReader, lists: ShareLists): Record<string, unknown
       case 'perBiome':
         raw[key] = readBiomeRecord(payload, lists, () => payload.count(LENGTH_PREFIX));
         break;
+      case 'ranking': {
+        const ranked: unknown[] = [];
+        while (!payload.done) ranked.push(declaration.choices[payload.count(COUNT_PREFIX)]);
+        raw[key] = ranked;
+        break;
+      }
     }
   }
   return raw;
