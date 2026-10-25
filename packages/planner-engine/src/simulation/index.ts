@@ -632,6 +632,7 @@ export {
 } from './draft/world';
 export {
   assessDraftBasket,
+  draftExcludingTraitKeys,
   draftSourceQueues,
   draftOrderRefusals,
   draftFirstBoonRule,

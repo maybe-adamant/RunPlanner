@@ -428,6 +428,23 @@ export function draftCappedGiver(
   return cap === undefined ? undefined : { giverKey: giver.key, cap };
 }
 
+/**
+ * Traits whose holding keeps this trait from being offered: its required `notEquippedTrait` sets,
+ * such as the mutually exclusive Cast boons.
+ */
+export function draftExcludingTraitKeys(catalog: Catalog, traitKey: string): readonly string[] {
+  const trait = catalog.traits.byKey[traitKey];
+  if (trait === undefined) return [];
+  const keys = new Set<string>();
+  const visit = (requirement: TraitRequirementExpression): void => {
+    if (requirement.kind === 'all') requirement.requirements.forEach(visit);
+    else if (requirement.kind === 'notEquippedTrait')
+      for (const key of requirement.traitKeys) keys.add(key);
+  };
+  [...trait.eligibilityRequirements, ...trait.linkedBoonRequirements].forEach(visit);
+  return Object.freeze([...keys]);
+}
+
 /** Loadout facts that cannot change during the run; the rest depend on run context. */
 function isStatic(requirement: TraitRequirementExpression): boolean {
   switch (requirement.kind) {

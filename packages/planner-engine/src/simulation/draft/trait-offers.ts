@@ -13,7 +13,7 @@ import {
 } from '../../authored-project';
 import { createDefaultAuthoredHexTree } from '../../authored-project/traits/hex-tree';
 import type { ProjectCandidateSession } from '../candidates/session';
-import { draftCappedGiver, draftIllegalTrait } from './basket';
+import { draftCappedGiver, draftExcludingTraitKeys, draftIllegalTrait } from './basket';
 import { completeCarrierChildren, type DraftCarrierChildContext } from './carrier-children';
 import { draftDenialActive, type DraftSpec } from './spec';
 import type { DraftProgress, DraftSteering } from './steering';
@@ -66,9 +66,16 @@ export class DraftTraitOffers {
   private readonly denial: boolean;
   /** Trait offers this walk authored, by address, for re-picking a stale child. */
   private readonly authoredOffers = new Map<string, AuthoredTraitOfferTraits>();
+  /** Each trait outside the basket by the basket traits its holding would keep from being offered. */
+  private readonly excludes = new Map<string, string[]>();
 
   constructor(private readonly context: DraftTraitOfferContext) {
     this.denial = draftDenialActive(context.catalog, context.spec.loadout);
+    const basket = context.steering.basket;
+    for (const basketKey of basket)
+      for (const key of draftExcludingTraitKeys(context.catalog, basketKey))
+        if (!basket.includes(key))
+          (this.excludes.get(key) ?? this.excludes.set(key, []).get(key)!).push(basketKey);
   }
 
   private get catalog(): Catalog {
@@ -91,7 +98,7 @@ export class DraftTraitOffers {
   traitAllowed(traitKey: string, progress: DraftProgress): boolean {
     const declaration = this.catalog.traits.byKey[traitKey];
     if (declaration === undefined || draftIllegalTrait(declaration)) return false;
-    if (!this.slotAllowed(traitKey)) return false;
+    if (!this.basketAllows(traitKey)) return false;
     if (!this.context.steering.orderAllows(traitKey, progress)) return false;
     const slot = declaration.equipmentSlot;
     if (
@@ -167,9 +174,17 @@ export class DraftTraitOffers {
     );
   }
 
-  /** A core slot holding a basket trait takes no other trait. */
-  private slotAllowed(traitKey: string | undefined): boolean {
+  /**
+   * A core slot holding a basket trait takes no other trait, and no trait outside the basket is
+   * taken while a basket trait it would keep from being offered is still to come.
+   */
+  private basketAllows(traitKey: string | undefined): boolean {
     if (traitKey === undefined) return false;
+    const excluded = this.excludes.get(traitKey);
+    if (excluded !== undefined) {
+      const held = this.context.steering.progress().equippedTraitKeys;
+      if (excluded.some((key) => !held.includes(key))) return false;
+    }
     const slot = this.catalog.traits.byKey[traitKey]?.equipmentSlot;
     if (slot === undefined || slot === 'Spell') return true;
     const reserved = this.context.steering.basket.filter(
@@ -197,11 +212,11 @@ export class DraftTraitOffers {
       if (draft === undefined || !this.accepts(command(draft))) continue;
       const values = draft.kind === 'traits' ? this.steerTraitOffer(trait, draft) : [draft];
       if (values.length === 0) {
-        const banned =
+        const reserved =
           draft.kind === 'traits' &&
-          draft.options.some((option) => !this.slotAllowed(option.traitKey));
+          draft.options.some((option) => !this.basketAllows(option.traitKey));
         this.context.fail(
-          `${banned ? 'slotBan' : 'noLegalRow'} at ${semanticAddressKey(trait)} from ${giver.key}`,
+          `${reserved ? 'noLegalRowBasketReserved' : 'noLegalRow'} at ${semanticAddressKey(trait)} from ${giver.key}`,
         );
         return false;
       }
@@ -307,7 +322,7 @@ export class DraftTraitOffers {
       } as AuthoredTraitOfferTraits;
     };
     const legal = (candidate: AuthoredTraitOfferTraits) =>
-      this.slotAllowed(
+      this.basketAllows(
         candidate.options[OPTION_KEYS.indexOf(candidate.selectedOptionKey)]?.traitKey,
       ) &&
       this.offerSupported(trait, candidate) &&
@@ -370,7 +385,7 @@ export class DraftTraitOffers {
     // Every offered row waits in a queue or is banned, so another of the giver's traits takes a row.
     const substitutes = this.context
       .shuffle(giverTraits)
-      .filter((key) => !wantedNow.includes(key) && this.slotAllowed(key))
+      .filter((key) => !wantedNow.includes(key) && this.basketAllows(key))
       .slice(0, SUBSTITUTE_DRAWS);
     for (const traitKey of substitutes) {
       const declaration = this.catalog.traits.byKey[traitKey];

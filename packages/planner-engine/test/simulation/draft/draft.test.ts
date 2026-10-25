@@ -8,6 +8,7 @@ import {
   assessDraftGods,
   draftGodBoonBudget,
   draftKeepsakeOptions,
+  draftExcludingTraitKeys,
   draftOrderRefusals,
   draftSourceQueues,
   draftRefusals,
@@ -603,6 +604,49 @@ describe("the starting keepsake's chosen result", () => {
         },
       }),
     ).toEqual([]);
+  });
+});
+
+describe('mutually exclusive draft traits', () => {
+  it('reads each exclusive set from the catalog', () => {
+    expect(new Set(draftExcludingTraitKeys(catalog, 'CastProjectileBoon'))).toEqual(
+      new Set(['HadesCastProjectileBoon', 'CastAnywhereBoon', 'CastLobBoon', 'SelfCastBoon']),
+    );
+    expect(draftExcludingTraitKeys(catalog, 'LobAmmoMagnetismTrait')).toEqual([
+      'LobPulseAmmoTrait',
+    ]);
+    expect(draftExcludingTraitKeys(catalog, 'ZeusWeaponBoon')).toEqual([]);
+  });
+
+  it('refuses a second trait of an exclusive set, either way round', () => {
+    const negative = (traitKey: string) =>
+      expect.objectContaining({
+        kind: 'requirement',
+        code: 'negativePrerequisite',
+        requirementTraitKeys: expect.arrayContaining([traitKey]),
+      });
+    const world = { godKeys: ['Zeus', 'Hestia'] };
+    expect(
+      assessment(
+        underworld,
+        spec(['ZeusCastBoon', 'CastAnywhereBoon'], world),
+        'CastProjectileBoon',
+      ).refusals,
+    ).toContainEqual(negative('CastAnywhereBoon'));
+    expect(
+      refusals(underworld, {
+        world: { ...emptyWorld, godKeys: ['Zeus', 'Hestia'] },
+        basketByGiver: {
+          Zeus: ['ZeusCastBoon', 'CastAnywhereBoon'],
+          Hestia: ['CastProjectileBoon'],
+        },
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'basketTrait', traitKey: 'CastProjectileBoon' }),
+        expect.objectContaining({ kind: 'basketTrait', traitKey: 'CastAnywhereBoon' }),
+      ]),
+    );
   });
 });
 
