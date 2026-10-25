@@ -75,7 +75,20 @@ reward selection still use the ordinary `ChooseNextRoomData` and
 `ChooseRoomReward` contacts. These are separate
 facts: a Goal decrements the countdown on entry, while an entered concrete
 Tartarus non-goal increments the non-goal count. An unselected target remains
-an offered occurrence and does not advance either entered counter.
+an offered occurrence and does not advance either entered counter, though a
+concrete non-goal still consumes its counted-bag entry.
+
+The planner seeds `clockworkGoalsRemaining` from the declaration-owned
+Clockwork `initialGoalCount`, `clockworkNonGoalRewardsAcquired = 0` and the
+authored `clockworkMaxNonGoalRewards` at `biomeStarted`. Every generated batch
+records that exact pre-generation view before its targets are created. An
+entered Goal emits `clockworkGoalAcquired` immediately after room entry and
+clamps the remaining count at zero; an entered concrete NonGoal emits
+`clockworkNonGoalRewardSpawned` at its actual reward-spawn boundary—after
+encounter completion for an ordinary reward, before the before-combat
+acquisition for Devotion—and advances only the non-goal count. Its physical
+pickup follows before continuation, so downstream generation cannot observe
+the difference between spawn and acquisition.
 
 Targets are created in physical-door order. The first eligible combat offer in
 a Clockwork batch receives the Goal realization; a later combat peer can
@@ -91,7 +104,12 @@ source room's own Goal is already counted, because its decrement
 shows the same count, and a Preboss door previews zero.
 
 Goal and NonGoal are derived realizations of one occurrence-owned room state,
-not alternate persisted topology. A dormant non-goal leaf survives while the
+not alternate persisted topology. `ClockworkDoorBatch` derives each combat
+target's realization from physical reward order, prior Goal offers in that
+batch and the non-goal cap. Every combat occurrence owns one complete potential
+resolved offer from `TartarusRewards`, with its declaration filters applied:
+under `Goal` it is dormant and emits no offer or bag mutation, under `NonGoal`
+it becomes the target's concrete counted offer. A dormant non-goal leaf survives while the
 same room currently resolves to Goal, so a compatible upstream edit can change
 the realization without destroying authored room-local intent.
 
@@ -126,7 +144,9 @@ modeled.
 
 ### Producers, special rooms, and Preboss
 
-I ordinary batches have no authored Run/Meta store. Supported targets resolve
+I ordinary batches have no authored Run/Meta store: every supported target has
+the declaration-owned forced-store override, so a Clockwork batch uses
+base-store policy `none`. Supported targets resolve
 their declaration-owned `TartarusRewards` provenance before their counted
 offer is validated. A biome-local store is still a counted store: every entered
 I room carrying `TartarusRewards` adds one entry to the run-wide ratio's
@@ -146,7 +166,10 @@ forced stores and caps.
 `I_PreBoss02` remains an ordinary target with `retainNormalPeers`: it may be
 offered beside a continuing room, has its one-creation-per-source cap, and
 only selection starts completion. Its `I_WorldShop` inventory materializes on
-entry. It never rewrites the batch into a synthetic Shop/free pair.
+entry; an unpicked Preboss occurrence requires no shop state. Its inherited
+Goal marker is a structural countdown producer after the counter has already
+reached zero, not a reward leaf or a free-reward realization, so the entered
+Preboss only confirms the zero state. It never rewrites the batch into a synthetic Shop/free pair.
 
 The thirteen-batch and twenty-three-target bounds cover five Goals, up to six
 non-goals, an optional entered Story, and the selected Preboss under the
@@ -169,7 +192,7 @@ natively.
 
 `I_Intro` hosts Eris when observed and not yet cursed on the route; her
 required gift is 300 Bones
-([room action order](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md#eris-is-a-required-object-at-a-young-profiles-biome-intro)).
+([Eris at a biome intro](G_GAME_RULES.md#eris-at-a-biome-intro)).
 `I_WorldShop` keeps five stable slots: its resource group has no eligible
 option (no lifetime Moondust, Nightmare or Charon card gains), so that trailing
 slot is validly empty and the shop shows four items

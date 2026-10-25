@@ -78,9 +78,14 @@ its pre-offer support remains authored and receives a wheel-owned finding.
 The final active wheel is the source-owned outgoing-store authority. A
 two-phase ShipCombat source supplies `wheel1.storeKey`; a three-phase source
 supplies `wheel2.storeKey`. Its outgoing batch persists the `sourceOfferPoint`
-policy, not a duplicated store choice. Non-ShipCombat O sources retain the
-ordinary authored base-store choice where their room-start selection is
-otherwise observable.
+policy, not a duplicated store choice; materialization resolves the batch base
+store from that addressed wheel and rejects a missing or inactive source.
+Non-ShipCombat O sources retain the ordinary authored base-store choice where
+their room-start selection is otherwise observable. The selected Preboss batch
+is also a physical generated-door decision with the same authority: a
+ShipCombat predecessor resolves it from the final active wheel, another O
+predecessor uses the authored Run/Meta base store, and the entered Preboss and
+its fixed-linked Boss/Postboss rooms retain that resolved store provenance.
 
 Natively, `SetupRoomMultipleEncountersData` prepares the ordered list before
 room entry: Intro and Combat1 are always active, while Combat2 is selected
@@ -91,7 +96,19 @@ and an active Combat2, `ShipsEncounterSetup` creates one or two wheel choices,
 selects their shared store, generates each offered reward and waits for the
 player to use one wheel; `UseShipWheel` records the selected store and reward
 on the current encounter, and native `SpawnRoomReward` creates that pickup
-after combat.
+after combat. The encounter's next-encounter readiness wait does not complete
+while a required object or blocking choice remains; only then can the room
+advance to the next selected encounter.
+
+The planner's `nextPhaseUsable(wheel)` is consequently a derived Ship-only
+barrier, not a free action and not one native callback. It means the preceding
+phase's required-object wait has cleared and the next phase's
+`ShipsEncounterSetup` may expose its wheel. Wheel configuration belongs at that
+next-phase boundary; `chooseRewardWheel` records the player's selection, and
+the selected pickup remains after the matching encounter end. There is no
+room-level Cleanup between Ship phases: room features and physical exits stay
+unavailable until the final active encounter and its required post-combat
+objects have resolved.
 
 ### Ship intro counter and end-effect policy
 

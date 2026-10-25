@@ -56,7 +56,10 @@ For a specific contract, go directly to its specialist authority:
   [rewards](docs/design/REWARD_MODEL.md),
   [room lifecycle](docs/design/ROOM_LIFECYCLE_MODEL.md),
   [candidate evaluation](docs/design/CANDIDATE_EVALUATION_MODEL.md), and
-  [Draft mode](docs/design/DRAFT_MODE.md) own the detailed engine contracts.
+  [Draft mode](docs/design/DRAFT_MODE.md) own the detailed engine contracts;
+  [trait offers](docs/design/TRAIT_OFFERS.md) and
+  [encounter preparation](docs/design/ENCOUNTER_PREPARATION.md) own their
+  specialist slices.
 - [Structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md) owns layout
   and workbenches; [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md) owns
   picker and draft presentation.
@@ -74,6 +77,40 @@ For a specific contract, go directly to its specialist authority:
 - [Source audit map](docs/audits/README.md) routes source evidence by subject.
 - [Game module](game-module/CONTRIBUTING.md) describes the module's layout,
   dependencies and checks.
+
+### Lifecycle seams and profiles
+
+A new or moved [room lifecycle](docs/design/ROOM_LIFECYCLE_MODEL.md) seam,
+operation, effect or profile lands with:
+
+1. the exact game function or state transition, or the grouped/derived
+   rationale, located in the game data;
+2. the pre-state it reads and the post-state later rules observe, including
+   commit-time depth/cache/ordinal effects and encounter counter effects;
+3. its relation to required objects, active encounters, offer and acquisition
+   points, and the already-frozen outgoing batch (or why the profile has none);
+4. whether optional actions may occur on both sides, and the
+   declaration/profile scope in which it exists;
+5. its placement: room-local, encounter-local, reward-local,
+   layout-structural or route-structural, reusing an existing operation with a
+   new declaration-owned effect when only state mutation differs;
+6. any intentional simplification, deferral or exclusion, recorded in the
+   owning audit and biome document;
+7. normalized references, strict dispatch, events and ledgers, with a
+   canonical event-order fixture that asserts both events and state
+   boundaries and fails if the seam crosses an incompatible Room Action window
+   or changes source history; and
+8. updates to the concrete biome authority and the shared room lifecycle
+   authority in the same change.
+
+The conformance fixtures keep, at minimum: a standard room whose acquired
+reward affects its outgoing batch; a Devotion whose acquisitions straddle
+combat; a World Shop whose purchase does not affect its already-generated
+batch (the fourth-shop-source/fifth-door-source trace); an unpicked target
+whose offer affects offer history but never acquisition history; and an O Ship
+room with a Heracles Intro whose counting record precedes the later phases
+without trimming them, and whose active Combat2 wheel keeps independent
+offer/acquisition timing.
 
 ## Quickstart
 

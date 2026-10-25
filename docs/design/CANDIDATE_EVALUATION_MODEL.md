@@ -553,7 +553,7 @@ fresh random rarity. Siblings are never equipped during candidate evaluation.
 All evidence for support must agree within one retained branch; one branch's
 eligibility cannot borrow another's generation or selected-effect result.
 
-The [reward model](REWARD_MODEL.md#trait-bearing-reward-leaves) owns settlement;
+The [trait offer model](TRAIT_OFFERS.md#assessment-and-settlement) owns settlement;
 the [construction audit](../audits/traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md)
 owns the source stages. The application must not reproduce either.
 
