@@ -54,9 +54,9 @@ For a specific contract, go directly to its specialist authority:
 - [Authored project](docs/design/AUTHORED_PROJECT_MODEL.md),
   [game generation](docs/design/GAME_GENERATION_RULES.md),
   [rewards](docs/design/REWARD_MODEL.md),
-  [room lifecycle](docs/design/ROOM_LIFECYCLE_MODEL.md), and
-  [candidate evaluation](docs/design/CANDIDATE_EVALUATION_MODEL.md) own the
-  detailed engine contracts.
+  [room lifecycle](docs/design/ROOM_LIFECYCLE_MODEL.md),
+  [candidate evaluation](docs/design/CANDIDATE_EVALUATION_MODEL.md), and
+  [Draft mode](docs/design/DRAFT_MODE.md) own the detailed engine contracts.
 - [Structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md) owns layout
   and workbenches; [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md) owns
   picker and draft presentation.

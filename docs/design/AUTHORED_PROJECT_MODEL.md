@@ -292,43 +292,10 @@ gives placements hosted in the new biomes, as a draft gives its own; the route,
 itinerary, Practice start and draft spec stay.
 
 The route also owns one always-present `draft` spec, the persisted Draft
-settings and the recipe a draft generates from; it plays no part in plan
-legality or execution. It holds `godKeys`, `storyNpcByBiome`,
-`fieldNpcsByBiome`, `basketByGiver`, `rackKeepsakeByBiome` (a missing biome
-keeps the held keepsake) and `seed`, plus the Advanced options declared in
-`DRAFT_OPTIONS` (kind, range or choices, default and share-code tag), each saved
-only when it differs from its default: `godBoonsByBiome` (per biome, 0–10,
-defaulting by route and biome), `perGodCap` (1–10, default 5, or 4 under Denial,
-so a stored value is absolute), the `preferMidshops` and `pursueTartarusGoal`
-flags (`true` when on), `roomForcing` (`deadline`, `softened` or `game`, default
-`softened`), `purchasesPerBiome` (0–4, default 2), `retriesPerBiome` (0–10,
-default 3), `resourceRoomChance` (a percent, 0–50 in steps of 5, default 10)
-and `fillerPriority` (an ordered list of filler kinds, `maxHealth`,
-`maxMagick`, `gold` or `pom`, each with an optional per-run `amount` of 1–20;
-empty by default).
-`godKeys` is the pool order. `basketByGiver` maps each trait giver to its
-basket traits in that giver's acquisition order; a Duo sits in exactly one of
-its gods' lists, which makes that god its host
-([Draft spec meaning](SIMULATION_AND_VALIDATION.md#draft-spec-meaning)). A new
-route starts empty with seed 1.
-
-The spec decodes tolerantly, unlike the rest of the project: unknown keys,
-gods, NPCs, traits, keepsakes and biomes are dropped, duplicates keep their
-first occurrence, a value of the wrong type takes its default (a missing spec is
-the empty one, a bad seed is 1), numbers clamp to their range and steps, and a
-stored default is dropped. Records save in catalog biome order and entries for
-biomes off the itinerary are kept. The basket keeps only known givers' traits
-they offer, a trait listed twice stays in its first list (pool gods in pool
-order first), lists save in catalog giver order and an empty list drops; an
-earlier flat `basketTraitKeys` is an unknown key, so such a basket loads empty.
-A filler ranking keeps each known kind's first entry; an amount that is not a
-whole number drops and one out of range clamps.
-Basket legality stays a draft-time refusal.
-The project codec, `ReplaceDraftSpec` and share codes use the same decode, so a
-new option or a changed meaning needs no schema revision. The loadout and
-itinerary are read from the project, not duplicated. `ReplaceDraftSpec`
-replaces the spec as one ordinary history edit and preserves identity for a
-structurally equal spec. Draft run state and results are not persisted.
+settings a draft generates from. It plays no part in plan legality or
+execution, decodes tolerantly rather than strictly, and changes through
+`ReplaceDraftSpec` as one ordinary history edit;
+[Draft Mode](DRAFT_MODE.md#the-draft-spec) owns its fields and decoding.
 
 Loadout also owns the nullable starting reward offer. A mature route reports a
 missing offer once any biome is configured; a Fresh File entry binds no

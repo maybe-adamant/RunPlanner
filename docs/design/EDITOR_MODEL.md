@@ -172,6 +172,42 @@ domain. Picker activation invokes a prepared, address-bound capability.
 Application projections translate its evidence into grouped/searchable options;
 React neither constructs engine queries nor recomputes legality.
 
+The application publishes one transient exact assembly and retrieves its
+[candidate session](CANDIDATE_EVALUATION_MODEL.md#candidate-session) from it;
+the ordinary evaluation selector returns only the data-only evaluation:
+
+```text
+Redux authored project + published exact assembly
+  -> data-only ProjectEvaluation selector
+  -> project-bound candidate projection session
+  -> contextual option and picker projection
+  -> structured workspace interaction catalog
+  -> single UI interaction adapter
+  -> React rendering and activation
+```
+
+Passing the exact assembly, rather than a general `evaluateProject(project)`
+callback or artifacts recovered from public evaluation, keeps identity,
+ownership and invalidation explicit. The assembly never enters stored plans or
+authored history, and React does not inspect its callable artifacts.
+
+The structured workspace owns the bound session and carries a typed interaction
+descriptor for every live candidate control: its semantic owner,
+declaration-owned choice domain, labels, authored selection and a
+zero-argument lazy loader. React receives neither the session, the unbound
+candidate service, a general evaluation callback, nor an API that accepts an
+owner and arbitrary domain values. One UI interaction adapter is the only
+React-side caller of those loaders. It invokes them on open, focus, pointer or
+other explicit activation, caches results against the immutable workspace
+interaction identity, and rejects pending results after an edit, Undo, Redo or
+profile replacement. React does not walk topology to discover candidate
+owners, rebuild grouping, choose a replay horizon or construct queries; room,
+reward, batch-store, Fields-outcome, O-wheel, Hub, side-room and Room Action
+order controls share this contract. I's bounded non-goal limit is a direct
+declaration-owned authored field rather than a contextual candidate
+interaction; room-target candidates read its value from their prepared
+generation context.
+
 The Route panel's Run modifiers section renders the released run-modifier
 declarations by declared kind, including in Fresh File: a toggle or a checkbox
 with a 0–100% slider. The Practice mode start point follows them in the same

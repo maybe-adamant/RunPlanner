@@ -82,6 +82,17 @@ policy, not a duplicated store choice. Non-ShipCombat O sources retain the
 ordinary authored base-store choice where their room-start selection is
 otherwise observable.
 
+Natively, `SetupRoomMultipleEncountersData` prepares the ordered list before
+room entry: Intro and Combat1 are always active, while Combat2 is selected
+through the third declaration entry's requirements and chance, and `StartRoom`
+runs the resulting encounters sequentially. The Intro carries an Empty reward
+and `SkipShipsEncounterSetup`, so it creates no wheel. At the start of Combat1
+and an active Combat2, `ShipsEncounterSetup` creates one or two wheel choices,
+selects their shared store, generates each offered reward and waits for the
+player to use one wheel; `UseShipWheel` records the selected store and reward
+on the current encounter, and native `SpawnRoomReward` creates that pickup
+after combat.
+
 ### Ship intro counter and end-effect policy
 
 A completed `GeneratedO_Intro01` is combat, not an empty-room encounter.

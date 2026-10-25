@@ -82,7 +82,8 @@ alongside its `TargetMetaRewardsRatio` of `0.0`
 An individual store beats both a forced override and any authored batch value,
 so H's `0.0` target is dead for door stores. It lives only through the
 denominator H fills: every entered Fields room banks a RunProgress entry into
-the run-wide count, a pure non-MetaProgress mass.
+the run-wide count, a pure non-MetaProgress mass. RunProgress is the only store
+key H banks, which Run State reports in place of a target.
 
 That mass is real but route-confined. H's successors on its own route are I,
 whose count it inflates but whose doors never roll, and — under a Dream
@@ -250,6 +251,18 @@ other unsupported NPC interactions, and unmodeled Shop interaction variants
 remain outside the planner's modeled surface; the fixed Echo Bridge offer is
 supported.
 
+### Native execution contacts
+
+While the previous room generates its doors, the game builds an ordered
+`CageRewards` array on each Fields target. After the selected target is
+entered, `SpawnRewardCages` creates those already-selected cage rewards, rolls
+and creates the optional rewards, and assigns their physical points. The
+Passive encounter and each cage encounter are chosen by separate repeated
+`ChooseEncounter` calls rather than `SetupRoomMultipleEncountersData`; every
+cage in the resolved payload is a required encounter. Player entry has a native
+exact start/end override, while cage, optional-reward and Nemesis placement
+choose randomly from finite map point sets.
+
 ## Fresh File
 
 `H_Bridge01` keeps its forced window and one-creation limit, but its Story
@@ -286,6 +299,6 @@ including Artificer, semantic commands, validation, candidates, and workspace
 projection. Room replacement resets declaration-scoped spatial state rather
 than carrying point identities into another map. Declaration-supported
 phase-produced NPC contacts and Gorgon Athena participate in the same room
-chronology. Static map visualization, H execution realization, other
+chronology. Static map visualization, other
 NPC/random-event variants, and unsupported player systems remain outside the
 baseline until modeled explicitly.

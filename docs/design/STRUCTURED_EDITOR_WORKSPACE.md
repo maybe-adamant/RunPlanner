@@ -110,7 +110,7 @@ project evaluation. It shows the Route, Draft and Loadout panels, each
 configured biome, its status, and whether contextual evaluation is active,
 complete, or blocked by an earlier biome. The workspace opens on Route, which
 holds Plan up to, the run modifiers with Practice mode, and the whole-plan status. Draft holds
-the draft spec and runs a draft of the plan ([Draft generation](SIMULATION_AND_VALIDATION.md#draft-generation)). Loadout holds the
+the draft spec and runs a draft of the plan ([Draft mode](DRAFT_MODE.md)). Loadout holds the
 starting choices (on Fresh File, only its fixed weapon) and carries the same
 status marker and finding count as a biome for route-start owners; every
 route-scoped or route-start finding opens it. Route carries no marker. The catalog route collection is used only to populate the

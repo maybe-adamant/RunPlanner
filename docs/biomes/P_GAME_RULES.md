@@ -119,8 +119,9 @@ separate minimum biome-depth requirement still excludes the entrance. Selecting
 
 Ordinary P room-local composition uses the game's ordered multiple-encounter
 protocol. The declaration supplies an `Intro` first position and a `Combat`
-terminal position; preparation chooses and records each active position in
-order, and execution starts and completes the prepared prefix in that same
+terminal position; preparation (`SetupRoomMultipleEncountersData`, one
+`ChooseEncounter` per eligible position) chooses and records each active
+position in order, and execution starts and completes the prepared prefix in that same
 order. `GeneratedP_PreCombat` is a real first encounter phase. It is
 non-counting and suppresses encounter-end effects, but it still starts and
 completes before the terminal phase.
