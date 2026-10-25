@@ -184,7 +184,11 @@ describe('ranked filler', () => {
   });
 
   it('weighs ranked filler by rank, a finished god below the top rank', () => {
-    const steering = steeringFor(['maxHealth', 'pom', 'gold']);
+    const steering = steeringFor([
+      { kind: 'maxHealth' },
+      { kind: 'pom', amount: 2 },
+      { kind: 'gold' },
+    ]);
     const health = steering.offerWeight(offer('MaxHealthDropBig'));
     const pom = steering.offerWeight(offer('StackUpgrade'));
     expect(health).toBeGreaterThan(pom);
@@ -196,8 +200,18 @@ describe('ranked filler', () => {
     expect(steering.offerWeight(zeusBoon)).toBe(steeringFor().offerWeight(zeusBoon));
   });
 
+  it('ranks a kind with an amount until its pickups reach it, counting none before the run', () => {
+    const steering = steeringFor([{ kind: 'pom', amount: 1 }, { kind: 'gold' }]);
+    expect(steering.fillerTaken().size).toBe(0);
+    expect(steering.fillerPriority()).toEqual(['pom', 'gold']);
+  });
+
   it('buys only ranked Max Health, Max Magick and Pom as Shop filler', () => {
-    const steering = steeringFor(['gold', 'pom', 'maxHealth']);
+    const steering = steeringFor([
+      { kind: 'gold' },
+      { kind: 'pom' },
+      { kind: 'maxHealth', amount: 1 },
+    ]);
     expect(steering.shopFillerWeight(offer('StoreRewardRandomStack'))).toBeGreaterThan(
       steering.shopFillerWeight(offer('MaxHealthDrop')),
     );

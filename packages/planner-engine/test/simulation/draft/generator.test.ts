@@ -445,7 +445,7 @@ describe('draftProject', () => {
       const filler = (project: ProjectDocument) =>
         shopBuys(project).filter((buy) => draftFillerKind(buy.split(':')[1]!) !== undefined);
       expect(filler(drafted())).toEqual([]);
-      const project = drafted(['pom', 'gold', 'maxHealth']);
+      const project = drafted([{ kind: 'pom' }, { kind: 'gold' }, { kind: 'maxHealth' }]);
       const bought = filler(project);
       expect(bought.length).toBeGreaterThan(0);
       // Gold is never Shop filler and unranked Max Magick is never bought.
@@ -463,6 +463,11 @@ describe('draftProject', () => {
           expect(buys.length).toBeLessThanOrEqual(2);
         }
       }
+      // Once a kind's pickups reach its amount, Shops stop buying it.
+      const capped = filler(drafted([{ kind: 'pom', amount: 1 }, { kind: 'maxHealth' }]));
+      expect(
+        capped.filter((buy) => draftFillerKind(buy.split(':')[1]!) === 'pom').length,
+      ).toBeLessThanOrEqual(1);
     });
 
     it('takes the retries per biome after each first success', () => {

@@ -346,7 +346,7 @@ const traitGiverKeys = (lists: ShareLists, traitKey: string): readonly string[] 
 /**
  * The draft: its world in fixed order, then the stored options as tagged entries (a count, then
  * per entry its tag, payload length and payload). A whole number fills its payload; a ranking
- * is its choices' counted indexes, highest first.
+ * is, highest first, each choice's counted index and counted amount (0 for none).
  */
 function writeDraft(writer: BitWriter, lists: ShareLists, draft: AuthoredDraftSpec): void {
   writeKeyList(writer, lists.godKeys, draft.godKeys);
@@ -384,8 +384,10 @@ function writeDraft(writer: BitWriter, lists: ShareLists, draft: AuthoredDraftSp
         );
         break;
       case 'ranking':
-        for (const choice of value as readonly string[])
-          payload.count(declaration.choices.indexOf(choice), COUNT_PREFIX);
+        for (const entry of value as readonly { kind: string; amount?: number }[]) {
+          payload.count(declaration.choices.indexOf(entry.kind), COUNT_PREFIX);
+          payload.count(entry.amount ?? 0, COUNT_PREFIX);
+        }
         break;
     }
     writer.write(declaration.tag, TAG_WIDTH);
@@ -426,7 +428,11 @@ function readDraft(reader: BitReader, lists: ShareLists): Record<string, unknown
         break;
       case 'ranking': {
         const ranked: unknown[] = [];
-        while (!payload.done) ranked.push(declaration.choices[payload.count(COUNT_PREFIX)]);
+        while (!payload.done) {
+          const kind = declaration.choices[payload.count(COUNT_PREFIX)];
+          const amount = payload.count(COUNT_PREFIX);
+          ranked.push(amount === 0 ? { kind } : { kind, amount });
+        }
         raw[key] = ranked;
         break;
       }

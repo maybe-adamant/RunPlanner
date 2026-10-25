@@ -48,10 +48,14 @@ export interface PerBiomeDraftOptionDeclaration {
   readonly tag: number;
 }
 
-/** An ordered subset of `choices`, empty by default; share codes carry indexes, so choices only append. */
+/**
+ * An ordered subset of `choices`, empty by default, each with an optional amount in its range;
+ * share codes carry indexes, so choices only append.
+ */
 export interface RankingDraftOptionDeclaration {
   readonly kind: 'ranking';
   readonly choices: readonly string[];
+  readonly amount: { readonly min: number; readonly max: number };
   readonly tag: number;
 }
 
@@ -92,10 +96,12 @@ export const DRAFT_OPTIONS = deepFreeze({
   retriesPerBiome: { kind: 'integer', min: 0, max: 10, default: 3, tag: 6 },
   // Percent chance a room rolls a resource point.
   resourceRoomChance: { kind: 'integer', min: 0, max: 50, step: 5, default: 10, tag: 7 },
-  // Filler kinds favoured at doors and bought with spare Shop purchases, highest first.
+  // Filler kinds favoured at doors and bought with spare Shop purchases, highest first, each
+  // until its pickups per run reach its amount.
   fillerPriority: {
     kind: 'ranking',
     choices: ['maxHealth', 'maxMagick', 'gold', 'pom'],
+    amount: { min: 1, max: 20 },
     tag: 8,
   },
 } as const satisfies { readonly [K in DraftOptionKey]: DraftOptionDeclaration });
@@ -167,10 +173,34 @@ function normalizedOption(
     case 'choice':
       return typeof value === 'string' && declaration.choices.includes(value) ? value : undefined;
     case 'ranking': {
-      const ranked = knownKeys(value, (key) => declaration.choices.includes(key));
+      const ranked = rankedEntries(value, declaration);
       return ranked.length === 0 ? undefined : ranked;
     }
   }
+}
+
+/**
+ * Known choices in order, each at its first occurrence; a bare choice is an entry without an
+ * amount, and an amount that is no whole number drops while one out of range clamps.
+ */
+function rankedEntries(
+  value: unknown,
+  declaration: RankingDraftOptionDeclaration,
+): readonly { readonly kind: string; readonly amount?: number }[] {
+  const seen = new Set<string>();
+  return Object.freeze(
+    asArray(value).flatMap((entry) => {
+      const raw = typeof entry === 'string' ? { kind: entry } : asRecord(entry);
+      const kind = raw.kind;
+      if (typeof kind !== 'string' || !declaration.choices.includes(kind) || seen.has(kind))
+        return [];
+      seen.add(kind);
+      const amount = Number.isInteger(raw.amount)
+        ? clampToStep(raw.amount as number, declaration.amount)
+        : undefined;
+      return [Object.freeze(amount === undefined ? { kind } : { kind, amount })];
+    }),
+  );
 }
 
 function withoutKey(draft: AuthoredDraftSpec, key: DraftOptionKey): AuthoredDraftSpec {
@@ -429,11 +459,11 @@ export function sameDraftSpec(left: AuthoredDraftSpec, right: AuthoredDraftSpec)
     DRAFT_OPTION_KEYS.every((key) => {
       const kind = DRAFT_OPTIONS[key].kind;
       if (kind === 'perBiome') return sameRecord(asRecord(left[key]), asRecord(right[key]), same);
-      if (kind === 'ranking')
-        return sameKeys(
-          (left[key] ?? []) as readonly string[],
-          (right[key] ?? []) as readonly string[],
-        );
+      if (kind === 'ranking') {
+        const ranks = (spec: AuthoredDraftSpec) =>
+          (spec.fillerPriority ?? []).map((entry) => `${entry.kind}:${entry.amount ?? ''}`);
+        return sameKeys(ranks(left), ranks(right));
+      }
       return left[key] === right[key];
     }) &&
     sameKeys(left.godKeys, right.godKeys) &&

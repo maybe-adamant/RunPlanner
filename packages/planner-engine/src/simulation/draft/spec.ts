@@ -2,7 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import type {
   AuthoredKeepsakeEquipResults,
   AuthoredRoutePlan,
-  DraftFillerKind,
+  DraftFillerRank,
   DraftRoomForcing,
   ProjectDocument,
   RouteLoadout,
@@ -72,7 +72,7 @@ export interface DraftSpec {
   /** Percent chance a room rolls a resource point; absent is the default. */
   readonly resourceRoomChance?: number;
   /** Filler kinds favoured at doors and bought with spare Shop purchases, highest first. */
-  readonly fillerPriority?: readonly DraftFillerKind[];
+  readonly fillerPriority?: readonly DraftFillerRank[];
 }
 
 /** Every basket trait: pool gods' lists in pool order, then the other givers' in record order. */
