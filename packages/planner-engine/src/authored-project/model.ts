@@ -636,7 +636,12 @@ export interface AuthoredDraftSpec {
   readonly retriesPerBiome?: number;
   /** Percent chance a room rolls a resource point; absent is the default. */
   readonly resourceRoomChance?: number;
+  /** Filler kinds a draft favours, highest first; absent ranks none. */
+  readonly fillerPriority?: readonly DraftFillerKind[];
 }
+
+/** A non-boon reward kind a draft can rank, each covering all its variants. */
+export type DraftFillerKind = 'maxHealth' | 'maxMagick' | 'gold' | 'pom';
 
 /** When a draft forces a room inside its depth window: only at the deadline, on a softened ramp, or at the game's odds. */
 export type DraftRoomForcing = 'deadline' | 'softened' | 'game';

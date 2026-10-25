@@ -2,7 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createProjectDocument } from '../../src/authored-project/defaults';
 import { routeInitialProfile } from '../../src/authored-project/route-profile';
-import type { ProjectDocument } from '../../src/authored-project';
+import type { DraftFillerKind, ProjectDocument } from '../../src/authored-project';
 import {
   assessDraftBasket,
   draftKeepsakeOptions,
@@ -49,6 +49,8 @@ interface EntryRecipe {
   readonly rackKeepsakeKey?: string;
   readonly preferMidshops?: boolean;
   readonly pursueTartarusGoal?: boolean;
+  readonly purchasesPerBiome?: number;
+  readonly fillerPriority?: readonly DraftFillerKind[];
 }
 
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
@@ -391,6 +393,23 @@ const MIDSHOP_VARIANTS = ['U3', 'S2', 'D3', 'U6', 'F3'];
 /** Full-route specs through Tartarus, with the Clockwork Goal pursued. */
 const TARTARUS_VARIANTS = ['U1', 'U3', 'U4', 'U8', 'D1', 'D3', 'D4', 'F3'];
 
+/** Ranked filler: the spec's suffix, its ranking and its Shop purchases per biome. */
+const FILLER_VARIANTS: readonly {
+  readonly base: string;
+  readonly suffix: string;
+  readonly fillerPriority: readonly DraftFillerKind[];
+  readonly purchasesPerBiome?: number;
+}[] = [
+  { base: 'U1', suffix: 'filler', fillerPriority: ['maxHealth', 'pom', 'gold', 'maxMagick'] },
+  { base: 'S2', suffix: 'filler', fillerPriority: ['maxHealth', 'pom', 'gold', 'maxMagick'] },
+  {
+    base: 'D1',
+    suffix: 'filler shops',
+    fillerPriority: ['pom', 'maxHealth', 'maxMagick'],
+    purchasesPerBiome: 3,
+  },
+];
+
 const recipes: readonly EntryRecipe[] = [
   ...baseRecipes,
   ...baseRecipes
@@ -399,10 +418,14 @@ const recipes: readonly EntryRecipe[] = [
   ...baseRecipes
     .filter((recipe) => TARTARUS_VARIANTS.includes(recipe.name.split(' ')[0]!))
     .map((recipe) => ({ ...recipe, name: `${recipe.name} tartarus`, pursueTartarusGoal: true })),
+  ...FILLER_VARIANTS.map(({ base, suffix, ...options }) => {
+    const recipe = baseRecipes.find((candidate) => candidate.name.split(' ')[0] === base)!;
+    return { ...recipe, ...options, name: `${recipe.name} ${suffix}` };
+  }),
 ];
 
 function baseName(recipe: EntryRecipe): string {
-  return recipe.name.replace(/ (midshops|tartarus)$/, '');
+  return recipe.name.replace(/ (midshops|tartarus|filler|filler shops)$/, '');
 }
 
 function nameSeed(name: string): number {
@@ -519,6 +542,10 @@ function buildEntry(recipe: EntryRecipe): DraftCorpusEntry {
     rackKeepsakeKeys,
     ...(recipe.preferMidshops === true ? { preferMidshops: true } : {}),
     ...(recipe.pursueTartarusGoal === true ? { pursueTartarusGoal: true } : {}),
+    ...(recipe.purchasesPerBiome === undefined
+      ? {}
+      : { purchasesPerBiome: recipe.purchasesPerBiome }),
+    ...(recipe.fillerPriority === undefined ? {} : { fillerPriority: recipe.fillerPriority }),
   };
   const refusals = draftRefusals(catalog, base, spec);
   if (refusals.length > 0)

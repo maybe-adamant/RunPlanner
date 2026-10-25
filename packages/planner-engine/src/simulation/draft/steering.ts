@@ -22,7 +22,7 @@ import type { DraftNpcGiver, DraftWorldProduct } from './world';
 import type { RoomOccurrence } from '../../authored-project';
 import { draftNpcHosts, draftNpcWindowOpen, type DraftNpcHost } from './npc-windows';
 import type { ForcePressureLedgerEntry } from '../generation';
-import type { DraftRoomForcing } from '../../authored-project/model';
+import type { DraftFillerKind, DraftRoomForcing } from '../../authored-project/model';
 import { DRAFT_OPTIONS } from '../../authored-project/draft-spec';
 import type { DraftRng } from './rng';
 import { draftGodBoonBudget } from './budget';
@@ -113,6 +113,41 @@ export const NPC_EXCLUDED_REWARD_FACTOR = 0.01;
 
 /** Shop weight of a boon whose god can take a basket trait now, above any due god. */
 const PURCHASABLE_GOD_WEIGHT = 120;
+
+/** The reward types of each rankable filler kind, every variant included. */
+const DRAFT_FILLER_REWARD_TYPES: Readonly<Record<DraftFillerKind, readonly string[]>> =
+  Object.freeze({
+    maxHealth: [
+      'MaxHealthDrop',
+      'MaxHealthDropBig',
+      'MaxHealthDropSmall',
+      'EmptyMaxHealthSmallDrop',
+      'EmptyMaxHealthDrop',
+    ],
+    maxMagick: ['MaxManaDrop', 'MaxManaDropBig', 'MaxManaDropSmall'],
+    gold: [
+      'Currency',
+      'RoomMoneyDrop',
+      'RoomMoneySmallDrop',
+      'RoomMoneyTripleDrop',
+      'RoomMoneyTinyDrop',
+    ],
+    pom: ['StackUpgrade', 'StackUpgradeBig', 'StackUpgradeTriple', 'StoreRewardRandomStack'],
+  });
+
+/** The rankable filler kind a reward type belongs to. */
+export function draftFillerKind(rewardType: string): DraftFillerKind | undefined {
+  return (Object.keys(DRAFT_FILLER_REWARD_TYPES) as DraftFillerKind[]).find((kind) =>
+    DRAFT_FILLER_REWARD_TYPES[kind].includes(rewardType),
+  );
+}
+
+/** Ranked filler weights, highest rank first; unranked filler weighs 1. */
+const FILLER_RANK_WEIGHTS = [6, 3, 2, 1.5] as const;
+/** While filler is ranked, a god with no basket trait left weighs below the top-ranked filler. */
+const FINISHED_GOD_WEIGHT = 1;
+/** Shops sell no gold, so Shop filler is the other ranked kinds. */
+const SHOP_FILLER_KINDS: readonly DraftFillerKind[] = ['maxHealth', 'maxMagick', 'pom'];
 
 /**
  * The stores a biome's doors draw from: its base-store policy's keys, or else the stores its
@@ -706,7 +741,7 @@ export class DraftSteering {
       if (spells.some((key) => npcPrerequisites.has(key))) return DUE_GIVER_WEIGHT;
       return spells.length > 0 ? WANTED_GIVER_WEIGHT : 1;
     }
-    if (provider === undefined) return 1;
+    if (provider === undefined) return this.fillerWeight(offer.rewardType);
     if (provider === 'hermes' && this.hermesReserved(progress)) return 0.2;
     const need = this.supplyNeed(provider, progress);
     return need === 'now' ? 25 : need === 'later' ? 3 : 1;
@@ -743,8 +778,35 @@ export class DraftSteering {
       });
   }
 
-  /** A god's pull: its strongest takeable basket trait's paced pull, or an idle god's weight. */
+  /** Filler kinds favoured, highest first. */
+  fillerPriority(): readonly DraftFillerKind[] {
+    return this.spec.fillerPriority ?? [];
+  }
+
+  /** A reward's weight by its filler kind's rank; 1 when unranked. */
+  private fillerWeight(rewardType: string): number {
+    const kind = draftFillerKind(rewardType);
+    const rank = kind === undefined ? -1 : this.fillerPriority().indexOf(kind);
+    return rank < 0 ? 1 : FILLER_RANK_WEIGHTS[rank]!;
+  }
+
+  /** A Shop item's weight as ranked Shop filler; 0 when it is none. */
+  shopFillerWeight(offer: ResolvedRewardOffer): number {
+    const kind = draftFillerKind(offer.rewardType);
+    return kind !== undefined &&
+      SHOP_FILLER_KINDS.includes(kind) &&
+      this.fillerPriority().includes(kind)
+      ? this.fillerWeight(offer.rewardType)
+      : 0;
+  }
+
+  /**
+   * A god's pull: its strongest takeable basket trait's paced pull, or an idle god's weight;
+   * below the top-ranked filler once its basket traits are all held.
+   */
   private godPull(giverKey: string, progress: DraftProgress, paced: boolean): number {
+    if (this.fillerPriority().length > 0 && this.nextQueued(giverKey, progress) === undefined)
+      return FINISHED_GOD_WEIGHT;
     const next = this.takeable(giverKey, progress);
     return Math.max(IDLE_GOD_WEIGHT, next === undefined ? 0 : this.traitPull(next, paced));
   }
@@ -779,11 +841,26 @@ export class DraftSteering {
 
   /**
    * How far the run's Shop purchases trail the soft pace of purchases per planned biome,
-   * measured at mid-biome; negative when ahead. Elemental boosts aside.
+   * measured at mid-biome; negative when ahead. Elemental boosts and filler aside.
    */
   purchasesBehind(): number {
-    let made = 0;
-    for (const biome of this.state.assembly().project.route.biomes)
+    const pace = this.purchasesPerBiome();
+    const made = this.purchasedOffers().filter(
+      (offer) => offer === undefined || draftFillerKind(offer.rewardType) === undefined,
+    ).length;
+    return pace * this.state.biomeIndex() + pace / 2 - made;
+  }
+
+  /** Shop purchases made in one biome, filler included; elemental boosts aside. */
+  biomePurchases(biomeKey: string): number {
+    return this.purchasedOffers(biomeKey).length;
+  }
+
+  /** Bought Shop items, in one biome or the whole run; elemental boosts aside. */
+  private purchasedOffers(biomeKey?: string): (ResolvedRewardOffer | undefined)[] {
+    const offers: (ResolvedRewardOffer | undefined)[] = [];
+    for (const biome of this.state.assembly().project.route.biomes) {
+      if (biomeKey !== undefined && biome.biomeKey !== biomeKey) continue;
       for (const occurrence of biome.topology?.occurrences ?? [])
         for (const action of occurrence.roomActions?.order ?? []) {
           if (action.kind !== 'interactShopOffer') continue;
@@ -792,10 +869,10 @@ export class DraftSteering {
             reward === undefined ||
             draftBoostElements(this.catalog, reward.rewardType).length === 0
           )
-            made += 1;
+            offers.push(reward);
         }
-    const pace = this.purchasesPerBiome();
-    return pace * this.state.biomeIndex() + pace / 2 - made;
+    }
+    return offers;
   }
 
   /** Whether the eligible boon entries of the bags this biome's doors draw from are nearly spent, which a Shop never is. */

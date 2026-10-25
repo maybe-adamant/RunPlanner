@@ -8,6 +8,7 @@ import type { RunStateSnapshot } from '../../../src/simulation/rewards';
 import {
   draftBoonEntriesLeft,
   draftDoorStoreKeys,
+  draftFillerKind,
   draftSideDoorWeight,
   draftSiblingHoldsGodBoon,
   draftPaceWeight,
@@ -123,6 +124,87 @@ describe('god purchases', () => {
     expect(fresh.queuedNewGod(offer('Boon', 'DemeterUpgrade'))).toBe(false);
     const mature = spec('Underworld', gods, [poseidonTrait]);
     expect(mature.queuedNewGod(offer('Boon', 'PoseidonUpgrade'))).toBe(false);
+  });
+});
+
+describe('ranked filler', () => {
+  const base = createProjectDocument(catalog, {
+    projectId: 'f',
+    routeKey: 'Underworld',
+    configuredBiomeCount: 1,
+  });
+  const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
+  void _startingReward;
+  const gods = ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'];
+  // Apollo has no basket trait, so the basket leaves nothing for him to give.
+  const steeringFor = (fillerPriority?: DraftSpec['fillerPriority']) =>
+    draftSteeringFor(base, {
+      loadout,
+      world: { godKeys: gods, storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketByGiver: draftBasket(['ZeusWeaponBoon'], {}, gods),
+      rackKeepsakeKeys: [],
+      ...(fillerPriority === undefined ? {} : { fillerPriority }),
+    });
+  const apolloBoon = offer('Boon', 'ApolloUpgrade');
+
+  it('groups every variant of the four filler kinds', () => {
+    const kinds = Object.fromEntries(
+      catalog.rewards.rewardTypes.values.flatMap((type) => {
+        const kind = draftFillerKind(type.gameName);
+        return kind === undefined ? [] : [[type.gameName, kind]];
+      }),
+    );
+    expect(kinds).toEqual({
+      StackUpgrade: 'pom',
+      StackUpgradeBig: 'pom',
+      StackUpgradeTriple: 'pom',
+      MaxHealthDrop: 'maxHealth',
+      MaxHealthDropBig: 'maxHealth',
+      MaxHealthDropSmall: 'maxHealth',
+      EmptyMaxHealthSmallDrop: 'maxHealth',
+      EmptyMaxHealthDrop: 'maxHealth',
+      MaxManaDrop: 'maxMagick',
+      MaxManaDropBig: 'maxMagick',
+      MaxManaDropSmall: 'maxMagick',
+      Currency: 'gold',
+      RoomMoneyDrop: 'gold',
+      RoomMoneySmallDrop: 'gold',
+      RoomMoneyTripleDrop: 'gold',
+      RoomMoneyTinyDrop: 'gold',
+      StoreRewardRandomStack: 'pom',
+    });
+  });
+
+  it('weighs filler evenly and a finished god above it when nothing is ranked', () => {
+    const steering = steeringFor();
+    expect(steering.offerWeight(money)).toBe(1);
+    expect(steering.offerWeight(offer('StackUpgrade'))).toBe(1);
+    expect(steering.offerWeight(apolloBoon)).toBeGreaterThan(steering.offerWeight(money));
+    expect(steering.shopFillerWeight(offer('MaxHealthDrop'))).toBe(0);
+  });
+
+  it('weighs ranked filler by rank, a finished god below the top rank', () => {
+    const steering = steeringFor(['maxHealth', 'pom', 'gold']);
+    const health = steering.offerWeight(offer('MaxHealthDropBig'));
+    const pom = steering.offerWeight(offer('StackUpgrade'));
+    expect(health).toBeGreaterThan(pom);
+    expect(pom).toBeGreaterThan(steering.offerWeight(money));
+    expect(steering.offerWeight(money)).toBeGreaterThan(steering.offerWeight(offer('MaxManaDrop')));
+    expect(steering.offerWeight(offer('MaxManaDrop'))).toBe(1);
+    expect(steering.offerWeight(apolloBoon)).toBeLessThan(health);
+    // A god with a queued basket trait keeps its pull.
+    expect(steering.offerWeight(zeusBoon)).toBe(steeringFor().offerWeight(zeusBoon));
+  });
+
+  it('buys only ranked Max Health, Max Magick and Pom as Shop filler', () => {
+    const steering = steeringFor(['gold', 'pom', 'maxHealth']);
+    expect(steering.shopFillerWeight(offer('StoreRewardRandomStack'))).toBeGreaterThan(
+      steering.shopFillerWeight(offer('MaxHealthDrop')),
+    );
+    expect(steering.shopFillerWeight(offer('MaxHealthDrop'))).toBeGreaterThan(0);
+    expect(steering.shopFillerWeight(money)).toBe(0);
+    expect(steering.shopFillerWeight(offer('MaxManaDrop'))).toBe(0);
+    expect(steering.shopFillerWeight(offer('RandomLoot', 'ZeusUpgrade'))).toBe(0);
   });
 });
 

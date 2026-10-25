@@ -48,11 +48,19 @@ export interface PerBiomeDraftOptionDeclaration {
   readonly tag: number;
 }
 
+/** An ordered subset of `choices`, empty by default; share codes carry indexes, so choices only append. */
+export interface RankingDraftOptionDeclaration {
+  readonly kind: 'ranking';
+  readonly choices: readonly string[];
+  readonly tag: number;
+}
+
 export type DraftOptionDeclaration =
   | IntegerDraftOptionDeclaration
   | FlagDraftOptionDeclaration
   | ChoiceDraftOptionDeclaration
-  | PerBiomeDraftOptionDeclaration;
+  | PerBiomeDraftOptionDeclaration
+  | RankingDraftOptionDeclaration;
 
 type DraftWorldKey =
   | 'godKeys'
@@ -84,6 +92,12 @@ export const DRAFT_OPTIONS = deepFreeze({
   retriesPerBiome: { kind: 'integer', min: 0, max: 10, default: 3, tag: 6 },
   // Percent chance a room rolls a resource point.
   resourceRoomChance: { kind: 'integer', min: 0, max: 50, step: 5, default: 10, tag: 7 },
+  // Filler kinds favoured at doors and bought with spare Shop purchases, highest first.
+  fillerPriority: {
+    kind: 'ranking',
+    choices: ['maxHealth', 'maxMagick', 'gold', 'pom'],
+    tag: 8,
+  },
 } as const satisfies { readonly [K in DraftOptionKey]: DraftOptionDeclaration });
 
 export const DRAFT_OPTION_KEYS = Object.freeze(Object.keys(DRAFT_OPTIONS) as DraftOptionKey[]);
@@ -152,6 +166,10 @@ function normalizedOption(
         : undefined;
     case 'choice':
       return typeof value === 'string' && declaration.choices.includes(value) ? value : undefined;
+    case 'ranking': {
+      const ranked = knownKeys(value, (key) => declaration.choices.includes(key));
+      return ranked.length === 0 ? undefined : ranked;
+    }
   }
 }
 
@@ -175,7 +193,11 @@ export function withDraftOption<K extends ScalarDraftOptionKey>(
     DRAFT_OPTIONS[key];
   const stored = normalizedOption(declaration, value);
   const rest = withoutKey(draft, key);
-  const unstored = defaultValue ?? (declaration.kind === 'flag' ? undefined : declaration.default);
+  const unstored =
+    defaultValue ??
+    (declaration.kind === 'flag' || declaration.kind === 'ranking'
+      ? undefined
+      : declaration.default);
   return stored === undefined || stored === unstored ? rest : { ...rest, [key]: stored };
 }
 
@@ -404,11 +426,16 @@ export function sameDraftSpec(left: AuthoredDraftSpec, right: AuthoredDraftSpec)
   const same = (a: unknown, b: unknown) => a === b;
   return (
     left.seed === right.seed &&
-    DRAFT_OPTION_KEYS.every((key) =>
-      DRAFT_OPTIONS[key].kind === 'perBiome'
-        ? sameRecord(asRecord(left[key]), asRecord(right[key]), same)
-        : left[key] === right[key],
-    ) &&
+    DRAFT_OPTION_KEYS.every((key) => {
+      const kind = DRAFT_OPTIONS[key].kind;
+      if (kind === 'perBiome') return sameRecord(asRecord(left[key]), asRecord(right[key]), same);
+      if (kind === 'ranking')
+        return sameKeys(
+          (left[key] ?? []) as readonly string[],
+          (right[key] ?? []) as readonly string[],
+        );
+      return left[key] === right[key];
+    }) &&
     sameKeys(left.godKeys, right.godKeys) &&
     sameRecord(left.basketByGiver, right.basketByGiver, sameKeys) &&
     sameRecord(left.storyNpcByBiome, right.storyNpcByBiome, same) &&

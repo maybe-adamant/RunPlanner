@@ -13,6 +13,7 @@ import { authoredShopOffer } from '../../../src/authored-project/shop';
 import { latestRunState } from '../../../src/simulation/draft/report';
 import { DRAFT_ILLEGAL_ECHO_TRAIT_KEYS } from '../../../src/simulation/draft/basket';
 import { draftBasketTraitKeys, draftLoadoutProject } from '../../../src/simulation/draft/spec';
+import { draftFillerKind } from '../../../src/simulation/draft/steering';
 import { startDraftWalk } from '../../support/draft-walk';
 import { DRAFT_CORPUS_SPEC_COUNT, draftCorpusEntry } from '../../draft-corpus/corpus';
 import type { ProjectEvaluationAssembly } from '../../../src/simulation/evaluation/evaluation-products';
@@ -417,6 +418,51 @@ describe('draftProject', () => {
       // At the default pace this seed buys a god-side boon; at none only the due Hermes boon.
       expect(buys().some((buy) => !buy.includes(':ShopHermesUpgrade:'))).toBe(true);
       expect(buys(0)).toEqual(['G:ShopHermesUpgrade:HermesWeaponBoon']);
+    });
+
+    it('spends spare purchases on ranked Shop filler, keeping one for the Preboss Shop', () => {
+      const spec: DraftSpec = {
+        loadout,
+        world: {
+          godKeys: ['Zeus', 'Apollo', 'Aphrodite', 'Hestia'],
+          storyNpcByBiome: {},
+          fieldNpcsByBiome: {},
+        },
+        basketByGiver: draftBasket(['ZeusWeaponBoon', 'ApolloCastBoon']),
+        rackKeepsakeKeys: [null, null, null],
+        purchasesPerBiome: 3,
+      };
+      const drafted = (fillerPriority?: DraftSpec['fillerPriority']) => {
+        const result = draftProject(
+          catalog,
+          planned('Underworld', 2),
+          fillerPriority === undefined ? spec : { ...spec, fillerPriority },
+          1,
+        );
+        if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
+        return result.project;
+      };
+      const filler = (project: ProjectDocument) =>
+        shopBuys(project).filter((buy) => draftFillerKind(buy.split(':')[1]!) !== undefined);
+      expect(filler(drafted())).toEqual([]);
+      const project = drafted(['pom', 'gold', 'maxHealth']);
+      const bought = filler(project);
+      expect(bought.length).toBeGreaterThan(0);
+      // Gold is never Shop filler and unranked Max Magick is never bought.
+      for (const buy of bought)
+        expect(['pom', 'maxHealth']).toContain(draftFillerKind(buy.split(':')[1]!));
+      for (const biome of project.route.biomes) {
+        expect(
+          shopBuys({ ...project, route: { ...project.route, biomes: [biome] } }).length,
+        ).toBeLessThanOrEqual(3);
+        for (const occurrence of biome.topology?.occurrences ?? []) {
+          if (catalog.rooms.byKey[occurrence.gameName]?.kind !== 'Shop') continue;
+          const buys = (occurrence.roomActions?.order ?? []).filter(
+            (action) => action.kind === 'interactShopOffer',
+          );
+          expect(buys.length).toBeLessThanOrEqual(2);
+        }
+      }
     });
 
     it('takes the retries per biome after each first success', () => {

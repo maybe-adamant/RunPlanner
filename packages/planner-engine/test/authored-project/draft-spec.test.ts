@@ -161,8 +161,29 @@ describe('draft spec', () => {
         purchasesPerBiome: 0,
         resourceRoomChance: 50,
         pursueTartarusGoal: true,
+        fillerPriority: ['pom'],
       }),
     ).toEqual(draft);
+  });
+
+  it('stores a filler ranking in order, dropping unknown and repeated kinds; empty is not stored', () => {
+    expect(withDraftOption(draft, 'fillerPriority', [])).toEqual(draft);
+    const ranked = withDraftOption(draft, 'fillerPriority', ['pom', 'maxHealth', 'pom']);
+    expect(ranked.fillerPriority).toEqual(['pom', 'maxHealth']);
+    expect(draftAdvancedChanged(ranked)).toBe(true);
+    expect(sameDraftSpec(ranked, { ...draft, fillerPriority: ['pom', 'maxHealth'] })).toBe(true);
+    expect(sameDraftSpec(ranked, { ...draft, fillerPriority: ['maxHealth', 'pom'] })).toBe(false);
+    expect(decoded(ranked)).toEqual(ranked);
+    for (const [value, expected] of [
+      [['gold', 'Gold', 'gold', 3, 'maxMagick'], { fillerPriority: ['gold', 'maxMagick'] }],
+      [['nope'], {}],
+      [[], {}],
+      ['gold', {}],
+    ] as const)
+      expect(decoded({ ...draft, fillerPriority: value }), JSON.stringify(value)).toEqual({
+        ...draft,
+        ...expected,
+      });
   });
 
   it("keeps a Duo in its host's list through the codec and Reset Advanced", () => {

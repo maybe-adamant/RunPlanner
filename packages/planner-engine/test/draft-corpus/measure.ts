@@ -18,7 +18,7 @@ import {
   type DraftSpec,
 } from '../../src/simulation';
 import type { DraftReport } from '../../src/simulation/draft/report';
-import { draftGrantsGodBoon } from '../../src/simulation/draft/steering';
+import { draftFillerKind, draftGrantsGodBoon } from '../../src/simulation/draft/steering';
 import { draftProvider } from '../../src/simulation/draft/schedule';
 import { draftSourceQueues, draftTraitKind } from '../../src/simulation/draft/basket';
 import type { ResolvedRewardOffer } from '../../src/reward-kernel';
@@ -43,6 +43,8 @@ export interface DraftCorpusRun {
   readonly landingDepths: Readonly<Record<string, number>>;
   /** Taken rooms whose reward is a Shop, Preboss Shops included. */
   readonly shops: number;
+  /** Taken rooms by the filler kind of their reward. */
+  readonly fillerRooms: Readonly<Record<string, number>>;
   /** God boon rooms over the taken rooms of each planned biome. */
   readonly godRooms: GodRoomPacing;
   /** God traits first held in each biome, by biome key. */
@@ -184,6 +186,35 @@ function shopsTaken(project: ProjectDocument): number {
         : 0),
     0,
   );
+}
+
+/** Each taken room's reward in route order, per planned biome. */
+function takenRewards(project: ProjectDocument): ResolvedRewardOffer[][] {
+  const assembly = simulateProjectAssembly(catalog, project);
+  return assembly.evaluation.route.biomes.flatMap((biome) => {
+    if (!('history' in biome)) return [];
+    const plan = project.route.biomes.find((b) => b.biomeKey === biome.biomeKey);
+    return [
+      biome.history.ledgers.roomAppearances.flatMap((entry) => {
+        if (entry.origin.kind !== 'occurrence' || entry.origin.biomeKey !== biome.biomeKey)
+          return [];
+        const id = entry.origin.occurrenceId;
+        const occurrence = plan?.topology?.occurrences.find((o) => o.occurrenceId === id);
+        const reward =
+          occurrence !== undefined && 'reward' in occurrence.state ? occurrence.state.reward : null;
+        return reward === null || reward === undefined ? [] : [reward.offer];
+      }),
+    ];
+  });
+}
+
+function fillerRooms(project: ProjectDocument): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const offer of takenRewards(project).flat()) {
+    const kind = draftFillerKind(offer.rewardType);
+    if (kind !== undefined) counts[kind] = (counts[kind] ?? 0) + 1;
+  }
+  return counts;
 }
 
 function godRoomPacing(project: ProjectDocument): GodRoomPacing {
@@ -410,6 +441,7 @@ export function measureDraft(
       landingDepths: {},
       godRooms: { biomes: 0, rooms: 0, gaps: [], early: 0 },
       shops: 0,
+      fillerRooms: {},
       godTraitsByBiome: {},
       elementGated: { total: 0, met: 0, withEssence: 0 },
       purchases: {},
@@ -430,6 +462,7 @@ export function measureDraft(
     landingDepths: landingDepths(entry.spec, result.project),
     godRooms: godRoomPacing(result.project),
     shops: shopsTaken(result.project),
+    fillerRooms: fillerRooms(result.project),
     godTraitsByBiome: godTraitsByBiome(result.project),
     attempts: result.attempts,
   };

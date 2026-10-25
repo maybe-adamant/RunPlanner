@@ -28,6 +28,8 @@ interface SpecSummary {
   readonly godEarlyShare?: number;
   /** Shops entered per drafted run, Preboss Shops included. */
   readonly shopsPerRun?: number;
+  /** Taken filler rooms per drafted run, by filler kind. */
+  readonly fillerRoomsPerRun?: Readonly<Record<string, number>>;
   readonly msMedian: number;
   readonly msMax: number;
 }
@@ -93,12 +95,17 @@ function summarize(runs: readonly DraftCorpusRun[]): SpecSummary {
         drafted.reduce((sum, run) => sum + (run.targets[kind]?.met ?? 0), 0) / total,
       );
   }
-  const purchasesPerRun: Record<string, number> = {};
-  for (const kind of [...new Set(drafted.flatMap((run) => Object.keys(run.purchases)))].sort())
-    purchasesPerRun[kind] = round(
-      drafted.reduce((sum, run) => sum + (run.purchases[kind] ?? 0), 0) /
-        Math.max(drafted.length, 1),
-    );
+  const perRun = (counts: (run: DraftCorpusRun) => Readonly<Record<string, number>>) => {
+    const means: Record<string, number> = {};
+    for (const kind of [...new Set(drafted.flatMap((run) => Object.keys(counts(run))))].sort())
+      means[kind] = round(
+        drafted.reduce((sum, run) => sum + (counts(run)[kind] ?? 0), 0) /
+          Math.max(drafted.length, 1),
+      );
+    return means;
+  };
+  const purchasesPerRun = perRun((run) => run.purchases);
+  const fillerRoomsPerRun = perRun((run) => run.fillerRooms ?? {});
   return {
     runs: runs.length,
     drafted: round(drafted.length / runs.length),
@@ -121,6 +128,7 @@ function summarize(runs: readonly DraftCorpusRun[]): SpecSummary {
     shopsPerRun: round(
       drafted.reduce((sum, run) => sum + (run.shops ?? 0), 0) / Math.max(drafted.length, 1),
     ),
+    fillerRoomsPerRun,
     msMedian: Math.round(median(runs.map((run) => run.ms))),
     msMax: Math.max(...runs.map((run) => run.ms)),
   };
@@ -154,6 +162,7 @@ function table(
     'gapMax',
     'early',
     'shops',
+    'filler/run',
     'msMed',
     'msMax',
   ];
@@ -161,6 +170,9 @@ function table(
     const was = baseline[name];
     const buys = Object.entries(now.purchasesPerRun)
       .map(([kind, count]) => `${kind}:${cell(count, was?.purchasesPerRun[kind])}`)
+      .join(' ');
+    const filler = Object.entries(now.fillerRoomsPerRun ?? {})
+      .map(([kind, count]) => `${kind}:${cell(count, was?.fillerRoomsPerRun?.[kind])}`)
       .join(' ');
     return [
       name,
@@ -179,6 +191,7 @@ function table(
       cell(now.godGapMax, was?.godGapMax),
       cell(now.godEarlyShare, was?.godEarlyShare),
       cell(now.shopsPerRun, was?.shopsPerRun),
+      filler || '-',
       cell(now.msMedian, was?.msMedian),
       cell(now.msMax, was?.msMax),
     ];

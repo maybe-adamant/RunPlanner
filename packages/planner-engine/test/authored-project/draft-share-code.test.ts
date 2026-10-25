@@ -72,6 +72,7 @@ const duoHosts: DraftShareInputs = {
       Hermes: ['HermesWeaponBoon'],
       WeaponUpgrade: ['StaffLongAttackTrait'],
     },
+    fillerPriority: ['pom', 'maxHealth', 'gold'],
   },
 };
 
@@ -280,6 +281,20 @@ describe('draft share codes', () => {
     it('carries a room forcing as its index, so choices only append', () => {
       expect(DRAFT_OPTIONS.roomForcing.choices).toEqual(['deadline', 'softened', 'game']);
       expect(decoded(code(0, [entry(4, '10')])).draft.roomForcing).toBe('game');
+    });
+
+    it('carries a filler ranking as counted indexes, healing repeated and unknown ones', () => {
+      expect(DRAFT_OPTIONS.fillerPriority.choices).toEqual([
+        'maxHealth',
+        'maxMagick',
+        'gold',
+        'pom',
+      ]);
+      const ranking = [3, 0, 3, 9].map((index) => count(index, 3)).join('');
+      expect(decoded(code(0, [entry(8, ranking)])).draft.fillerPriority).toEqual([
+        'pom',
+        'maxHealth',
+      ]);
     });
   });
 
