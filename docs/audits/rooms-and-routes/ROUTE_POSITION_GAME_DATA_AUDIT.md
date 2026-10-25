@@ -179,7 +179,7 @@ Planner disposition: the `FreshFile` route stores no weapon aspect, starting
 keepsake or Arcana, starts with empty god-use, god-pickup and resource-gain
 history, and has no run-start reward. The Executor realizes the opening at the
 nested `CreateRoom` contact
-([integration boundary](../../design/GAME_INTEGRATION_BOUNDARY.md)). A
+([execution protocol](../../design/EXECUTION_PROTOCOL.md#room-content)). A
 brand-new profile run on 2026-09-30 (module source as of `0d65c432`) bound the opening under
 `StartNewGame` and completed the published F–I plan with no mismatch.
 
@@ -251,7 +251,13 @@ last Devotion and Well depths, `Blacklist` and talent points. Run depth is
 `1 + #RoomHistory`, and biome depth counts back to the last record with a
 `NextRoomSet` (`RunLogic.lua:GetRunDepth`, `GetBiomeDepth`);
 `RoomSaveWhitelist` (`SaveLogic.lua:86-114`) is the record shape native
-already tolerates.
+already tolerates. A Dream run's `Dream_Intro` prologue gets its
+`NextRoomSet` from `SelectNextDreamBiome`, so run depth counts it
+(`DreamRunLogic.lua:1-40`). `StartNewRun` creates the reward stores in
+`InitializeRewardStores` before the start room (`RunLogic.lua:502-506`), so
+stores written after it are what the Intro's own draw reads. Neither a Preboss
+nor a Boss inherits `BiomeStartRoom` (`RoomDataF.lua:2019-2021`), so its
+`StartRoom` grants no Tight Deadline allowance.
 
 Every map load runs `DoPatches`, whose `UpdateRunHistoryCache` re-derives
 `RunDepthCache` and `BiomeDepthCache` from `RoomHistory` and the current room
@@ -271,7 +277,7 @@ which runs on every map load (`RoomLogic.lua:226`), are part of play; platform
 achievements can unlock irreversibly.
 
 Planner disposition: the
-[Practice mode start](../../design/GAME_INTEGRATION_BOUNDARY.md#practice-mode-start)
+[Practice mode start](../../design/RUN_START_INSTALLATION.md#practice-mode-start)
 installs a stub `RoomHistory` and the run-wide records the planner holds
 exactly, and its only record change is removing the run from `RunHistory`.
 

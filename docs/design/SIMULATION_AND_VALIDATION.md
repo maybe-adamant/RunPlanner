@@ -16,7 +16,8 @@ This is the engine entry document. Detailed contracts have narrower owners:
 | [Room Lifecycle Model](ROOM_LIFECYCLE_MODEL.md)             | Operation order, encounter composition, clocks, room history and resets    |
 | [Reward Model](REWARD_MODEL.md)                             | Stores, offers, acquisitions, settlement and trait-bearing leaves          |
 | [Candidate Evaluation Model](CANDIDATE_EVALUATION_MODEL.md) | Exact alternative queries and repair capabilities                          |
-| [Game Integration Boundary](GAME_INTEGRATION_BOUNDARY.md)   | Engine-owned execution products and downstream responsibilities            |
+| [Execution Protocol](EXECUTION_PROTOCOL.md)                 | Engine-owned execution products and downstream responsibilities            |
+| [Run-Start Installation](RUN_START_INSTALLATION.md)         | Start installations, loadout, run modifiers and snap mode                  |
 | [Draft Mode](DRAFT_MODE.md)                                 | Draft spec meaning, search contract, steering and share codes              |
 
 This document owns their composition, evaluation coverage, finding chronology,
@@ -62,7 +63,7 @@ Stages: [materialization](#materialization-products) and
 [first blocking region](#first-blocking-region),
 [selected cut](#selected-cut) and [authoring readiness](#authoring-readiness);
 [candidates](CANDIDATE_EVALUATION_MODEL.md),
-[execution plan](GAME_INTEGRATION_BOUNDARY.md) and [draft](DRAFT_MODE.md).
+[execution plan](EXECUTION_PROTOCOL.md) and [draft](DRAFT_MODE.md).
 
 These are responsibilities, not independent passes that may be freely reordered.
 Reward acquisitions can affect later generation, and generation determines
@@ -608,35 +609,10 @@ rarity, level and effect facts belong to the
 [trait audits](../audits/README.md#traits) and their owning reward/candidate
 contracts.
 
-### Start installations
-
-A start installation is the pure projection of a Practice mode start point
-from folded states; it adds no simulation. An Opening installs its
-predecessor biome's terminal branches in post-reset biome form, since the
-native Intro resets the biome records before anything reads them; it requires
-a complete, valid predecessor. A Preboss or Boss installs the states its start
-room's preparation received, captured for every Preboss and completion Boss
-(the Rivals map where Rivals applies) in every simulation, so they already
-include the room's own creation effects; a Boss's follow its Preboss's
-departure. Biome records are installed in current form for both, and I's
-Clockwork counters only at the Preboss. Every installed family must agree
-across the reached branches, or the start point is unavailable and names the
-disagreeing families. Reward stores are the one exception: a store exact
-across branches is installed, and one that differs by branch is left
-native-fresh. The stub room history has one record per room-history ordinal
-advance, carrying its room's declared `NextRoomSet`; execution assembly adds a
-Dream route's `Dream_Intro` prologue, and the visited biomes are the itinerary
-prefix before the start (including its own biome for a Preboss or Boss).
-Availability and its reasons are
-[authored-model policy](AUTHORED_PROJECT_MODEL.md#route-loadout); the published
-form is the execution plan's
-[`startState`](GAME_INTEGRATION_BOUNDARY.md#practice-mode-start).
-
-The same projection owns the held-keepsake rows and exact store contents that
-every Run State snapshot, and so every execution frame, carries. The engine
-also owns the room-exit fact kinds conformance reads from those snapshots and
-the traits Snap restores, from which the module's `modeled_traits.lua` is
-generated.
+A Practice mode start point installs a pure projection of these folded states,
+which also supplies every snapshot's held-keepsake rows and exact store
+contents; [Run-Start Installation](RUN_START_INSTALLATION.md#engine-start-installation)
+owns it.
 
 ## Extension and Verification
 

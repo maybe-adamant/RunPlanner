@@ -170,7 +170,7 @@ NPC rolls at first button build (UCL:117–121), which the module forces with
 (UCL:1144–1155). The roll sets `ForceCommon`, `ForceCommonWithoutCurse`,
 `RarityBoosted` and `UseSwapTrait` but never clears them, so they are sticky
 across re-rolls. The module's screen checks, steering and fences follow
-[Game Integration Boundary](../../design/GAME_INTEGRATION_BOUNDARY.md#execution-ownership)
+[Execution Protocol](../../design/EXECUTION_PROTOCOL.md#trait-screen-dependencies)
 (trait screen dependencies and screen checks). "Exit" below means room-exit
 conformance (`room/conformance/readers.lua`).
 

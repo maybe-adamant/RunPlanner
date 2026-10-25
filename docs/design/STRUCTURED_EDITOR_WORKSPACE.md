@@ -182,7 +182,7 @@ UI state only, so re-enabling restores it until the panel is left; with none,
 enabling starts at 100%.
 Practice mode is the last row of the Route panel's run modifiers, on every route
 including Fresh File (where a practice run skips earlier first-time story, see
-[Practice mode start](GAME_INTEGRATION_BOUNDARY.md#practice-mode-start)): a checkbox, a Start at picker and a Gold field, the
+[Practice mode start](RUN_START_INSTALLATION.md#practice-mode-start)): a checkbox, a Start at picker and a Gold field, the
 latter two disabled while unchecked. Checking opens the picker over the
 engine's start-point domain (biome rows of Opening, Preboss and Boss; an unavailable
 option is disabled, with a hover hint only when branches disagree, since an

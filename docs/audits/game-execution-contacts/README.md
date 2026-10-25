@@ -9,7 +9,7 @@ purchased item.
 These inventories preserve contact evidence, not delivery history. The
 planner/game ownership contract, transaction policy, checkpoints, and mismatch
 classification belong to
-[Game Integration Boundary](../../design/GAME_INTEGRATION_BOUNDARY.md). Source
+[Execution Protocol](../../design/EXECUTION_PROTOCOL.md). Source
 facts remain in the focused game-data audits linked by each inventory.
 
 Start with the [planner feature → native hook map](FEATURE_HOOK_MAP.md) for

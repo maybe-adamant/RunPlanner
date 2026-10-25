@@ -733,7 +733,7 @@ source-request consumption; retries and groups remain native.
 
 Runtime contact ownership and all-wave native admission are documented in
 [the encounter contact audit](../game-execution-contacts/NPCS_ENCOUNTERS_AND_AUTOMATICS.md#native-encounter-and-phase-identity)
-and [the integration boundary](../../design/GAME_INTEGRATION_BOUNDARY.md).
+and [the execution protocol](../../design/EXECUTION_PROTOCOL.md#encounters).
 Profile/introduction assumptions and known-history legality remain distinct.
 Earlier native compositions are unknown to the planner; selected first-appearance
 types carry that warning. Native-source probes do not establish live combat,

@@ -63,8 +63,11 @@ For a specific contract, go directly to its specialist authority:
 - [Biome rules](docs/biomes/) contain the route authorities.
 - [In-game testing](docs/testing/) tracks pending live acceptance checks separately
   from implementation plans.
-- [Game integration](docs/design/GAME_INTEGRATION_BOUNDARY.md) defines the
-  compiler/executor contract; [biome execution navigation](docs/design/BIOME_EXECUTION_NAVIGATION.md)
+- The [execution protocol](docs/design/EXECUTION_PROTOCOL.md) defines the
+  compiler/executor contract, beside
+  [game module distribution](docs/design/GAME_MODULE_DISTRIBUTION.md),
+  [plan slots and publication](docs/design/PLAN_SLOTS_AND_PUBLICATION.md) and
+  [run-start installation](docs/design/RUN_START_INSTALLATION.md); [biome execution navigation](docs/design/BIOME_EXECUTION_NAVIGATION.md)
   defines only the biome-specific execution work beyond the shared F/G
   baseline. The [feature-to-hook map](docs/audits/game-execution-contacts/FEATURE_HOOK_MAP.md)
   maps published planner facts to native contacts and explains each intervention.
@@ -145,26 +148,8 @@ The executable is written to
 
 ## Release process
 
-The manually dispatched **Release** workflow (`release.yml`) validates the
-version and the `main` commit once, then calls the reusable **Build Windows**
-and **Build Linux** workflows. Windows builds the NSIS installer; Linux builds
-the AppImage on Ubuntu 22.04. Each build embeds the release version and source
-commit shown in About, checks the bundle type stamped into the executable,
-signs its updater asset (the installer or the AppImage), launch-tests it (the
-AppImage under Xvfb), and uploads a workflow artifact. A single publish job
-then creates one draft release, uploads every platform's assets with one
-`latest.json` naming the Windows installer and the AppImage, and publishes it
-once all are present. The workflow needs the `TAURI_SIGNING_PRIVATE_KEY` and
-`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` repository secrets and refuses to build
-while `plugins.updater.pubkey` in `apps/planner/src-tauri/tauri.conf.json` is
-the placeholder.
-
-Its `dry_run` input builds, signs and launch-tests both platforms without
-tagging or publishing; dispatching **Build Windows** or **Build Linux**
-directly is a single-platform build-only check that never publishes. Each
-published version identifies one build; choose a new version for a new build.
-Run `npm run check` locally on the commit being released before dispatching
-it; packaging does not repeat that repository gate.
+[Releasing](docs/RELEASING.md) owns the installer, updater and release
+workflow.
 
 ### Community events
 
@@ -172,7 +157,7 @@ Events live in the separate
 [RunPlanner-Events](https://github.com/maybe-adamant/RunPlanner-Events)
 repository, which validates pull requests and publishes the signed feed with its
 own workflows; this repository only reads the feed (see
-[Event feed](docs/design/GAME_INTEGRATION_BOUNDARY.md#event-feed)). Those
+[Event feed](docs/design/PLAN_SLOTS_AND_PUBLICATION.md#event-feed)). Those
 workflows check out the latest planner release and call its single event
 builder, `npm run events:build` (`apps/planner/src/workspace/eventFeedBuilder.ts`,
 which compiles every event's project through the same `eventDocument.ts` the
@@ -204,7 +189,7 @@ Template plans live in the separate
 [RunPlanner-Catalog](https://github.com/maybe-adamant/RunPlanner-Catalog)
 repository, whose workflows validate pull requests and publish the signed index
 the same way (see
-[Plan catalog feed](docs/design/GAME_INTEGRATION_BOUNDARY.md#plan-catalog-feed)).
+[Plan catalog feed](docs/design/PLAN_SLOTS_AND_PUBLICATION.md#plan-catalog-feed)).
 They call this repository's single catalog builder, `npm run catalog:build`
 (`apps/planner/src/workspace/catalogFeedBuilder.ts`, which loads and compiles
 every plan as the app would), and the `catalog_ci` example of the game host

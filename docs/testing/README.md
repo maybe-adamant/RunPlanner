@@ -21,6 +21,7 @@ commits, not these checklists.
 - [Slot rebuild](SLOT_REBUILD_LIVE_ACCEPTANCE.md)
 - [Draft Mode](DRAFT_MODE_LIVE_ACCEPTANCE.md)
 - [Project library](PROJECT_LIBRARY_LIVE_ACCEPTANCE.md)
+- [Dream route](DREAM_ROUTE_LIVE_ACCEPTANCE.md)
 
 Keep setup, actions and expected observations with each check. Confirm results
 from live testing or explicitly waive them; retire completed items and delete

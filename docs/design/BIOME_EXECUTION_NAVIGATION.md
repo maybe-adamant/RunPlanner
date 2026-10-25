@@ -196,7 +196,20 @@ Planner legality matrices remain tested by their planner and catalog owners.
 Executor tests prove translation and native contact behavior, not that the
 planner's candidate, cap, or force rules are correct a second time.
 
-Dream Dives remain outside this fixed-route contract. They require a separate
-route-order and completion-room comparison; any implementation may reuse these
-biome contacts but must not make fixed-route adapters infer route position from
-room names.
+## Dream Navigation
+
+Dream execution publishes the ordered configured prefix, not an independently
+editable runtime itinerary, and reuses the biome contacts above. Startup
+requires the native run mode to match the plan. The native `Dream_Intro`
+prologue is outside the occurrence cursor; the first biome receives the
+published starting reward and later entries use their resolved rewardless
+declarations.
+
+The existing cursor supplies the next biome during native selection, including
+selection before Postboss departure; fixed-route adapters never infer route
+position from room names. Scoped pool removal preserves native bookkeeping, and
+the native starting-room choice prepares the published entry without replacing
+the active predecessor session. After the configured prefix, selection becomes
+native. Dream Points, difficulty, transitions and final completion remain game
+owned. The [hook map](../audits/game-execution-contacts/FEATURE_HOOK_MAP.md#dream-route-navigation)
+owns the exact contacts and scope lifetimes.

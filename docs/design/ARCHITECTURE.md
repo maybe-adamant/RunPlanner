@@ -20,8 +20,10 @@ The engine guide routes deeper authored-state, generation, lifecycle, reward
 and candidate contracts. The application guide routes workspace layout and
 contextual-picker behavior. [Biome documents](../biomes/) own concrete route
 rules; [audits](../audits/README.md) own source evidence and bounded unknowns.
-[Game Integration Boundary](GAME_INTEGRATION_BOUNDARY.md) owns the downstream
-execution contract.
+The [Execution Protocol](EXECUTION_PROTOCOL.md) owns the downstream execution
+contract, with [game module distribution](GAME_MODULE_DISTRIBUTION.md),
+[plan slots and publication](PLAN_SLOTS_AND_PUBLICATION.md) and
+[run-start installation](RUN_START_INSTALLATION.md) beside it.
 
 ## Product Contract
 
@@ -226,7 +228,7 @@ native windows, packaging, scoped file transport, the
 recursive head-only scan, plan and folder moves, and deletes to the recycle
 bin) and its session, a
 close gate that lets the planner write pending edits, and the
-[game module lane](GAME_INTEGRATION_BOUNDARY.md#distribution-and-the-game-target):
+[game module lane](GAME_MODULE_DISTRIBUTION.md):
 the compile-time embedded module, the game target setting, install checks,
 plan-slot writes and bug-report assembly. A single-instance guard hands a second
 launch to the running window, so one process writes the library. Rust does not
@@ -243,42 +245,8 @@ identity. Official CI builds supply one validated release version to Tauri and
 the frontend, together with the source commit. Local builds identify themselves
 as Development. About is on Home, which the app starts on with no plan open.
 
-The desktop application ships as a per-user NSIS installer (no administrator
-rights, no code signing). Installed and development builds share one data
-home: Tauri derives the configuration, data and WebView storage directories
-from the bundle identifier, not the executable location, so the installed
-application reads what earlier portable builds of the same identifier wrote
-and needs no import. The uninstaller's optional "delete app data" choice
-removes those directories.
-
-Updates are an optional host capability, not a startup dependency. Official
-desktop builds ask the Tauri updater once asynchronously, and About offers a
-manual check. The updater reads `latest.json` from the latest published
-release, orders versions, and verifies the update signature against the
-public key committed in `tauri.conf.json`. Application policy owns the notice
-state: a found update is announced, may be dismissed for the session or
-skipped by version, and installs only after the user confirms that the
-planner will close and reopen. The open plan's pending edits are written
-first; a failed write cancels the install. If
-the confirmed version was superseded, the pending one is offered instead.
-Native transport opens no other release URLs. React presents the notice and
-the manual check.
-
-The release workflow validates the version and the `main` commit once, then
-calls one reusable build workflow per platform (Windows NSIS installer; Linux
-AppImage). Each build refuses to start while the committed updater key is the
-placeholder or the signing secret is unset, builds uncached and without the
-signing key in its environment, checks that the bundler stamped the bundle type
-the updater selects by into the packaged executable, and signs its staged
-updater asset in a separate step that alone receives the key and password. Each
-smoke-launches what it built. One publish job uploads every platform's assets to
-a single draft release with one `latest.json`, whose signatures must all match
-the committed key, before publication. The manifest keys the AppImage by bundle
-type (`linux-x86_64-appimage`), the first target the updater tries. Publication
-does not replace assets on a published release. A dry run stops after the launch
-tests, creating no tag, draft or release, and each platform build can be
-dispatched alone as a build-only check. Moving both signing secrets into a
-`release` environment restricted to `main` is recommended hardening.
+Installer, updater and release workflow details belong to
+[Releasing](../RELEASING.md).
 
 TypeScript checks static contracts; runtime codecs protect external contacts.
 Vitest transformation alone is not a type proof. Correctness and performance

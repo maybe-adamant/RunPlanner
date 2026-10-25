@@ -232,7 +232,7 @@ before consuming Gorgon, which preserves the planner's documented ordering.
 ## Run-scoped loadout install
 
 The module installs the plan's starting loadout for one run
-([Loadout install](../../design/GAME_INTEGRATION_BOUNDARY.md#loadout-install)).
+([Loadout install](../../design/RUN_START_INSTALLATION.md#loadout-install)).
 These are the native facts that shape it.
 
 **Chaos Trial precedent.** A Chaos Trial backs up `PrimaryWeaponName`,
@@ -303,7 +303,7 @@ The catalog contains six weapons and 24 aspects:
 Weapon and aspect are part of the installed starting loadout: the module gives
 the hero the planned weapon and records the planned aspect at its planned rank
 for the run, and never unlocks either
-([Loadout install](../../design/GAME_INTEGRATION_BOUNDARY.md#loadout-install)).
+([Loadout install](../../design/RUN_START_INSTALLATION.md#loadout-install)).
 
 Two aspect consequences are already modeled by the planner:
 

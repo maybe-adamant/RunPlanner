@@ -181,8 +181,8 @@ implementation.
 ## Re-creating held traits
 
 These facts govern installing a planned hero into a fresh run (the
-[Practice mode start](../../design/GAME_INTEGRATION_BOUNDARY.md#practice-mode-start))
-and rewriting a live one ([snap mode](../../design/GAME_INTEGRATION_BOUNDARY.md#snap-mode)).
+[Practice mode start](../../design/RUN_START_INSTALLATION.md#practice-mode-start))
+and rewriting a live one ([snap mode](../../design/RUN_START_INSTALLATION.md#snap-mode)).
 
 - Every map load builds a fresh hero unit: `RunStateInit` clears
   `Hero.ObjectId` (`RunLogic.lua:433-435`) and `SetupHeroObject`
