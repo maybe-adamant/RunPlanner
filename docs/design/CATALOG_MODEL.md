@@ -18,9 +18,8 @@ Explicit TypeScript declarations are the application's catalog authority.
 Game scripts, focused [audits](../audits/README.md) and targeted native probes
 provide evidence. Do not maintain a parallel Lua catalog.
 
-Local source inspection uses `../../1GameData/Scripts/`. When scripts leave a
-relevant engine behavior uncertain, retain a bounded audit question and probe
-it. Do not turn uncertainty into a permissive production default.
+When scripts leave a relevant engine behavior uncertain, retain a bounded
+audit question and probe it. Do not turn uncertainty into a permissive production default.
 
 Each relevant source distinction has an explicit disposition:
 
@@ -116,11 +115,11 @@ behavior. Route declarations map completion rooms by biome and ordinal; the
 engine applies those mappings to the authored full itinerary, independently of
 its configured prefix. A physical room family is not its route position.
 
+### Save profiles and route availability
+
 Every route also declares the save profile its run starts from. Underworld,
-Surface and Dream start from a mature save. `FreshFile` is the first
-Underworld attempt on a brand-new profile: a fixed F → G → H → I route with the
-pre-true-ending `I_PreBoss01`, the aspectless Staff as its fixed weapon and
-`F_Opening01` as its one opening. The engine owns what that profile means for
+Surface and Dream start from a mature save; `FreshFile` is the first Underworld
+attempt on a brand-new profile. The engine owns what that profile means for
 loadout authorship, start resolution and initial history.
 
 Content a fresh profile's first attempt can never reach is closed on the
@@ -134,45 +133,26 @@ single-choice boss customization choices and the ordinary boon replacement
 roll (`boonReplacement`). A counted store entry may name the `routeKeys` whose
 bag holds it. Every listed route key must be a declared route.
 
-First-attempt content a fresh profile does reach uses the same ordinary
-facts. `F_Combat01` is forced on `FreshFile` by a `routeKeyEquals` force (its
-native `ForceIfEncounterNotCompleted = "FIntroFight"` holds only before that
-encounter's first completion) and resolves `FIntroFight` through a
-first-position contextual encounter rule. Its counted producer declares the
-native `ForcedRewards` Apollo boon under a save-file Apollo use requirement,
-and its `firstRunOffer` names the `ForceLootTableFirstRun` table and
-`ForceCommonLootFirstRun` rarity on that route.
-
-The G and I combat choices name `FishmanIntro` and `ClockworkIntro` as their
-`FreshFile` first-biome identity (`firstBiomeEncounterDefinitionKeyByRoute`,
-beside I's mature `GeneratedIChronosIntro` default), so the route resolves the
-native `AlwaysForce` intros instead of the Chronos variant that needs
-`ClockworkIntro` completed. Each key must be a member of its choice and each
-route a declared route. `H_Bridge01` declares a `FreshFile` route overlay: its
-native Story reward needs lifetime `RoomsEntered.H_Boss01`, so a fresh profile
-realizes the Shop fallback (Shop kind and template, WorldShop binding,
-`BridgeShop`, no lifecycle profile). Normalization builds the overlaid room as
-a complete declaration and accepts it only when every other normalized fact,
-including eligibility, force and caps, is unchanged. The GiftDrop producer
-bindings exclude `FreshFile` from their random boon level, which needs the
-`WorldUpgradeGiftDropRunProgress` upgrade.
-
-`G_Intro`, `H_Intro` and `I_Intro` declare a `FreshFile` `erisHost`: the curse
-trait (`ErisCurseTrait`, rarityless and offered by no giver), the gift reward
-type and its `ErisCursePickup` producer lifecycle. Normalization requires an
-Intro room, a declared route, a rarityless curse, and a payload-free gift the
-producer supports.
+Content a fresh profile does reach uses the same ordinary facts plus a few
+route-scoped declarations: a `routeKeyEquals` force, a room's `firstRunOffer`,
+`firstBiomeEncounterDefinitionKeyByRoute` on a combat choice (each key a member
+of its choice, each route a declared route), a route overlay, and an
+`erisHost`. [Fresh File Rules](../biomes/FRESH_FILE_RULES.md#catalog-declarations)
+own which rooms declare them and why.
 
 The catalog declares one counted run-start reward binding; entry rooms have no
-intrinsic incoming reward. A fresh profile's first entry has no run-start
-reward. Narrow contextual encounter rules express genuine route-mode and
-first-position differences without replacing the whole room declaration; a
-route overlay replaces only kind, template, label, reward binding and encounter,
-and every consumer of kind, template, label, reward, encounter and lifecycle
-facts reads it through the route's room lookup. The engine
-resolves these facts with itinerary position into one entry product:
-reward binding, lifecycle and declaration-owned entered-store participation.
-Editor visibility is not an alternate room declaration.
+intrinsic incoming reward. Narrow contextual encounter rules express genuine
+route-mode and first-position differences without replacing the whole room
+declaration. A route overlay replaces only kind, template, label, reward
+binding and encounter; normalization builds the overlaid room as a complete
+declaration and accepts it only when every other normalized fact, including
+eligibility, force and caps, is unchanged. Every consumer of kind, template,
+label, reward, encounter and lifecycle facts reads it through the route's room
+lookup. The engine resolves these facts with itinerary position into one entry
+product: reward binding, lifecycle and declaration-owned entered-store
+participation. Editor visibility is not an alternate room declaration.
+
+### Hub facts
 
 N's fixed Hub mapping, open-set rules and visit order are separate from ordinary
 room pools. Side-slot availability rank describes physical generation pressure;
@@ -251,26 +231,30 @@ presentation metadata, never requirement or history identity.
 
 Definitions may additionally declare optional generated-composition decisions:
 wave/budget bounds, shared-highlight rules, fixed seeds, native enemy costs/caps,
-ordered type exclusions, Fangs pools/filters and Menace mappings/replacement pools.
-Normalization preserves family-specific depth/hard
-context and fixed-template rules; it does not turn every Combat-room encounter
-into a generic generator. A mixed profile declares its fixed leading waves
-(spawns with fixed counts), its named generated seeds and native
-`RequireCompletedIntro`; the wave bounds are an exact total that exceeds the
-fixed waves. An all-fixed combat identity declares `fixedRoster` instead: its
-native SpawnWaves in order, each spawn an enemy identity some generated pool
-declares, with a positive count. It excludes generated composition, belongs
-only to combat identities and is not execution input; every combat identity
-declares generated composition, another customization or a fixed roster.
-An enemy choice may name its native introduction, which must be a
-declared definition; a definition marked as an enemy-triggered introduction must
-be named by some enemy. An enemy choice may also declare an admission
-requirement for its native profile gate. An authoring profile may name the only
-routes that offer it (`routeKeys`); other routes' domains omit it and reject
-selecting it. Each biome declares its `MinDepthBeforeIntros`.
-Introduction gates use `encounterCompletionCount` (route completions) beside
-`encounterKeyCount` (route or biome records); both are admitted only in
-Encounter Definition requirements and enemy `admission` requirements. The
+ordered type exclusions, Fangs pools/filters and Menace mappings/replacement
+pools. Normalization preserves family-specific depth/hard context and
+fixed-template rules; it does not turn every Combat-room encounter into a
+generic generator. Its closure rules:
+
+- every combat identity declares generated composition, another customization
+  or a `fixedRoster` (its native SpawnWaves in order, each spawn a positive
+  count of an enemy some generated pool declares; only on combat identities,
+  never with generated composition, never execution input);
+- a mixed profile declares its fixed leading waves, its named generated seeds
+  and native `RequireCompletedIntro`, with wave bounds an exact total that
+  exceeds the fixed waves;
+- an enemy choice may name its native introduction, which must be a declared
+  definition, and every definition marked as an enemy-triggered introduction
+  must be named by some enemy; an enemy choice may also declare an admission
+  requirement for its native profile gate;
+- an authoring profile may name the only routes that offer it (`routeKeys`);
+  other routes' domains omit it and reject selecting it;
+- each biome declares its `MinDepthBeforeIntros`;
+- `encounterCompletionCount` (route completions) and `encounterKeyCount`
+  (route or biome records) are admitted only in Encounter Definition
+  requirements and enemy `admission` requirements.
+
+The
 [composition matrix](../audits/rooms-and-routes/COMBAT_ENCOUNTER_COMPOSITION_MATRIX.md)
 owns the supported inventory. Engine assessment, not catalog declarations,
 determines whether an authored composition is possible in its exact context.

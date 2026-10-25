@@ -277,7 +277,7 @@ Planner disposition: health is not simulated, so the spawn is an authored
 observation on the `FreshFile` intros; the talk and gift follow as required
 actions before outgoing generation, and a repeat observation after the curse
 is reported rather than granted
-([G rules](../../biomes/G_GAME_RULES.md#eris-at-a-biome-intro)).
+([Fresh File rules](../../biomes/FRESH_FILE_RULES.md#eris-at-a-biome-intro)).
 The curse's combat effect is not modeled. Live acceptance on a brand-new
 profile (2026-09-30) confirmed the G talk, gift and curse trait.
 

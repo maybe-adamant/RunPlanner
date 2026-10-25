@@ -135,7 +135,7 @@ Commands answer whether a transition is structurally representable. They check
 ownership, supported shapes, static domains and topology closure; they do not
 require a successful simulation or erase choices that later become invalid.
 
-The [ordered command reconciliation](AUTHORED_PROJECT_MODEL.md#ordered-reconciliation)
+The [ordered command reconciliation](AUTHORED_PROJECT_MODEL.md#commands)
 closes source changes and generated state atomically, so a generated pickup's
 source, entry and action agree when the command returns.
 

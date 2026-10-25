@@ -39,8 +39,9 @@ UI-session state never enters authored history.
 
 ## Documentation
 
-Start with [Architecture](docs/design/ARCHITECTURE.md) for dependency direction,
-ownership and how to add a feature. Then use the relevant lane entry:
+Dependency direction and ownership lanes are in [`AGENTS.md`](AGENTS.md); start
+with [Architecture](docs/design/ARCHITECTURE.md) for runtime flow and how to
+add a feature. Then use the relevant lane entry:
 
 - [Catalog Model](docs/design/CATALOG_MODEL.md): source-backed declarations and
   normalization.
@@ -63,7 +64,9 @@ For a specific contract, go directly to its specialist authority:
 - [Structured workspace](docs/design/STRUCTURED_EDITOR_WORKSPACE.md) owns layout
   and workbenches; [contextual UX](docs/design/CONTEXTUAL_EDITOR_UX.md) owns
   picker and draft presentation.
-- [Biome rules](docs/biomes/) contain the route authorities.
+- [Biome rules](docs/biomes/) contain the route authorities;
+  [Fresh File rules](docs/biomes/FRESH_FILE_RULES.md) own the first-attempt
+  route's differences from them.
 - [In-game testing](docs/testing/) tracks pending live acceptance checks separately
   from implementation plans.
 - The [execution protocol](docs/design/EXECUTION_PROTOCOL.md) defines the

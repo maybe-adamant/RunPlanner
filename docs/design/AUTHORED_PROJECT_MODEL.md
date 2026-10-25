@@ -7,88 +7,84 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
+## Overview
+
+```mermaid
+flowchart TD
+  doc[ProjectDocument] --> route[Route plan: itinerary, loadout, Practice start, draft spec]
+  route --> biome[Biome plans for the configured prefix]
+  biome --> topo[Topology: occurrences, decisions, fixed room links]
+  topo --> occ[Room occurrences]
+  occ --> leaves[Occurrence-local leaves and one roomActions.order]
+  cmd[Semantic command] --> apply[applyProjectCommand: closure, then strict decode]
+  apply --> doc
+  apply --> hist[One ProjectHistory step]
+```
+
+```text
+ProjectDocument    durable, possibly incomplete authored intent
+ProjectEvaluation  replaceable pure simulation output for one document
+EditorSession      transient navigation, focus, search, and expansion state
+```
+
+Only `ProjectDocument` is persisted. Simulation output, findings, candidate
+lists, canvas positions, selected tabs, and history controls do not enter it.
+
+### Key terms
+
+| Term                 | Meaning                                                                                                                                                                                                                          |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Room Declaration     | Immutable catalog fact keyed by game room name: kind, occurrence mode, exits, requirements, force, caps, an Encounter Envelope with exact slot bindings, incoming reward binding, local-child descriptors and complete defaults. |
+| Room Occurrence      | One repeatable persisted appearance of a declaration in one biome: an opaque `occurrenceId`, the selected `gameName` and complete occurrence-local room state. Several occurrences may share a declaration.                      |
+| Exit Decision        | One ordinary next-room source, its normal-door batch and the selection among its normal exits.                                                                                                                                   |
+| Normal-door batch    | Batch reward-store state, batch-specific state such as H's cage outcome, and target references keyed by declaration-owned physical or semantic exit keys, never rendered indexes.                                                |
+| Hub Decision         | N's persistent board: fixed-slot open references, one ordered action list of room visits and the fountain use, that use's Phial outcome, and the completion predicate. It owns no N Preboss room-local state.                    |
+| Local Visit Decision | Parent-occurrence-owned topology for one declared N side-room group: generated slot membership and ordered references to entered side occurrences, each an ordinary occurrence with its own state and `roomActions`.             |
+| Preboss              | A Room Declaration role inside a normal-door batch. Offering it does not complete a biome; selecting it creates the fixed Boss and optional Postboss occurrences and their links.                                                |
+| Acquisition site     | Sparse occurrence-owned payload for one authorable lifecycle point. It owns generated pickup payload, never a second chronology.                                                                                                 |
+
+Topology owns editable occurrence relationships and decisions. Room state owns
+rewards, Shop inventory, one occurrence-owned Room Action order, exact concrete
+encounter selections, wheels, cages, side-room state, and fixed completion
+occurrence leaves. Boss and Postboss occurrences are not editable room choices
+but share ordinary room-local ownership. UI state owns no domain topology.
+
 ## Authored Document Boundary
 
 The current schema is the sole engine-authored-project contract. Its codec
 rejects other schemas and mismatched catalog versions rather than manufacturing
 current topology or leaf state from stale data. The application's shared loader
-handles every open of a library plan or imported file before invoking the same
-strict engine parser, including its existing reconciliation.
-
-Automatic migration support starts at schema 86. The loader inspects the source
-schema/catalog identity, applies only registered ordered transitions, and
-strictly parses the final document. Each transition declares its source and
-target identities; an old catalog identity is not blindly replaced with the
-current one. Unsupported older or future documents remain untouched. One
-transition is registered for each major from the support floor to the current
-schema.
-
-A migrated plan opens in memory in the current schema and its file stays
-untouched until the first edit is saved. Before that first write, the desktop
-library sends a copy of the original file to the system recycle bin, named
-`<file> (schema N original)`; the browser library has no bin and rewrites the
-plan in place. Opening a migrated plan names the repairs its migrations may
-need. Existing offline tools remain documented in
-[`schema/README.md`](../../schema/README.md).
+migrates older documents before invoking the same strict parser; the
+[project loader](EDITOR_MODEL.md#atomic-replacement) owns that behavior and
+[`schema/README.md`](../../schema/README.md) the migration history.
 
 ### Schema change approval
 
-The open-beta compatibility default is to preserve existing user saves. The
-document's version is a pair: `schemaVersion` is the major and the optional
-integer `schemaRevision` is the minor, read as 0 when absent.
+The document's version is a pair: `schemaVersion` is the major and the
+optional integer `schemaRevision` the minor, read as 0 when absent. The
+Modeling Rules in [`AGENTS.md`](../../AGENTS.md#modeling-rules) set when a
+change needs a major bump (with owner approval), a minor bump or none; a
+catalog change that can invalidate a previously valid project counts too, and
+changing a catalog-version requirement to reject existing saves needs the same
+approval rather than substituting for a bump. The
+same-version invariant holds throughout: a project that compiled under a
+version still compiles under the same version. A failure is a defect, a missing
+bump; the corpus compile test holds every checked-in project to it.
 
-- **Major bump.** The authored shape changes and saved documents must be
-  transformed. It needs a transition script and explicit approval from the
-  project owner before implementation.
-- **Minor bump.** A change can make a previously valid project invalid
-  (tightened validity) or alters the compiled plan wire. It has no script and
-  leaves the document unchanged; it is announced in the commit and change
-  summary and needs no approval. A catalog change that can invalidate a
-  previously valid project falls under this rule too.
-- **No bump** for module-only changes or planner changes that affect neither
-  validity nor the wire.
+Before proposing a major bump, determine whether the existing persisted
+representation can safely carry the choice. Internal naming, presentation and
+corrected derived calculations do not justify changing it; an explicit
+engine-owned conversion between a stable stored encoding and a clearer
+authoring value is acceptable, while silent reinterpretation or domain
+conversion in React is not. A proposal states what cannot be represented,
+which saves are affected, the compatible alternative and its cost, and the
+migration and release implications. Once approved, strict decoding stays and
+the migration is deliberate: no permissive parsing, speculative legacy support
+or silently discarded choices. The migration boundary distinguishes shipped
+formats from unreleased work, and an already-shipped schema version is never
+recycled for incompatible semantics.
 
-Same-version invariant: a project that compiled under a version still compiles
-under the same version. A failure is a defect, a missing bump; the corpus
-compile test (`planner-engine/test/equivalence/corpus-compiles.test.ts`) holds
-every checked-in project to it.
-
-The loader runs transitions across majors only. Within the current major it
-loads a document at the current or an earlier revision as is; a later revision,
-like a later major, is refused. Saving stamps the current major, and the
-current revision when it is not 0.
-
-Approval to fix a bug, refactor code, or deliver a feature does not itself
-authorize a major bump or a required user migration.
-
-First determine whether the existing persisted representation can safely carry
-the intended choice. Internal naming, editor presentation, and corrected
-derived calculations do not by themselves justify changing that representation.
-An explicit engine-owned conversion between a stable stored encoding and a
-clearer authoring value is acceptable; do not silently reinterpret existing
-values or put domain conversion rules in React.
-
-If preserving the representation is unsafe or requires disproportionate
-complexity, propose the incompatible change before making it. State what
-cannot be represented, which existing saves are affected, the compatible
-alternative and its cost, and the migration and release implications. A
-migration script or passing fixture refresh is not sufficient justification.
-
-The loadout `runModifiers` record is the one tolerant exception to exact
-decoding. Its owner is the engine's run-modifier declaration table
-(`authored-project/run-modifiers.ts`): decoding drops keys the table does not
-declare, clamps a finite number outside its declared domain to the nearest
-bound, and replaces any other malformed known value with its native value,
-so modifiers can be added, trialled and retired without a schema bump. Every
-other authored record stays exact.
-Changing a catalog-version requirement to reject existing saves is subject to
-the same approval requirement, not a substitute for a schema bump.
-
-Once approved, retain strict decoding and provide a deliberate migration; this
-policy does not authorize permissive parsing, speculative legacy support, or
-silently discarding unsupported choices. Distinguish shipped formats from
-unreleased work when deciding the migration boundary, and do not recycle an
-already-shipped schema version for incompatible semantics.
+### Document contents
 
 One document contains one selected route. Every supported main room, fixed
 Boss/Postboss room, and generated N side room is an occurrence in the same
@@ -133,72 +129,20 @@ type NextRoomDecision = ExitDecision | HubDecision | LocalVisitDecision;
 has not been authored. A non-null topology always has a real authored start;
 it never uses a null start ID or a positional synthetic parent.
 
-## Separation of Models
-
-```text
-ProjectDocument    durable, possibly incomplete authored intent
-ProjectEvaluation  replaceable pure simulation output for one document
-EditorSession      transient navigation, focus, search, and expansion state
-```
-
-Only `ProjectDocument` is persisted. Simulation output, findings, candidate
-lists, canvas positions, selected tabs, and history controls do not enter it.
-
-## Core Terms and Ownership
-
-`Room Declaration` is an immutable catalog fact keyed by game room name. It
-owns kind, occurrence mode, exits, requirements, force, caps, an
-Encounter Envelope with exact slot bindings, incoming reward binding,
-local-child descriptors, and complete declaration defaults.
-
-`Room Occurrence` is one repeatable persisted appearance of a declaration in
-one biome. It owns an opaque `occurrenceId`, selected `gameName`, and complete
-occurrence-local room state. Several occurrences may use the same declaration.
-
-`Exit Decision` owns one ordinary next-room source, its normal-door batch, and
-the selection among its normal exits.
-
-`Normal-door batch` owns batch reward-store state, batch-specific state such
-as H cage outcome, and target references. Its target keys are declaration-owned
-physical or semantic exit keys, never rendered indexes.
-
-`Hub Decision` owns N's persistent board: fixed-slot open references, one
-ordered action list of room visits and the fountain use, that use's Phial
-outcome, and completion predicate. It does not own N Preboss room-local state.
-
-`Local Visit Decision` is parent-occurrence-owned topology for one declared N
-side-room group. It owns generated/not-generated slot membership and ordered
-references to the entered side occurrences. Each referenced side room is an
-ordinary `RoomOccurrence` that owns its own encounter, payload, `roomActions`,
-and outgoing/return stage; the parent does not own a nested action list.
-
-`Preboss` is a Room Declaration role inside a normal-door batch, not a
-separate decision variant. Offering it does not complete a biome; selecting it
-does. Selecting it creates ordinary Boss and optional Postboss occurrences and
-the fixed links that connect them. Those occurrences are not editable room
-choices, but they are inside the same topology and share ordinary room-local
-ownership.
-
-Topology owns editable occurrence relationships and decisions. Room state owns
-rewards, Shop inventory, one occurrence-owned Room Action order, exact concrete
-encounter selections, wheels, cages, side-room state, and fixed completion
-occurrence leaves. Sparse acquisition sites own optional generated payloads,
-not a second chronology. UI state owns no domain topology.
-
 ## Route Scope
 
 One document persists one route identity, its complete `itineraryBiomeKeys`,
 and a contiguous configured prefix of that itinerary. Underworld, Surface and
-Fresh File use their catalog presets. Dream creation selects four distinct biomes once in
-a transient draft. Engine-owned public admission enforces the catalog start
-pool and directional successor exclusions for creation, import and restoration.
-Structural decoding remains separate from public admission so internal model
-fixtures can represent bounded non-public itineraries. Expansion initializes
-each biome from its declaration-owned start;
-shrinking explicitly removes the discarded plans and their state.
-`ConfigureRoutePrefix` is the only normal scope-edit command and undo restores
-the prior snapshot. Selecting another catalog route creates or opens another
-document; it does not switch a hidden sibling route inside the current one.
+Fresh File use their catalog presets. Dream creation selects four distinct
+biomes once in a transient draft. Engine-owned public admission enforces the
+catalog start pool and directional successor exclusions for creation, import
+and restoration. Structural decoding remains separate from public admission so
+internal model fixtures can represent bounded non-public itineraries.
+Expansion initializes each biome from its declaration-owned start; shrinking
+explicitly removes the discarded plans and their state. `ConfigureRoutePrefix`
+is the only normal scope-edit command and undo restores the prior snapshot.
+Selecting another catalog route creates or opens another document; it does not
+switch a hidden sibling route inside the current one.
 
 ```text
 Underworld: [] -> [F] -> [F, G] -> [F, G, H] -> [F, G, H, I]
@@ -218,72 +162,50 @@ The route's catalog-declared save profile is part of its identity, not a
 separate persisted field. Fresh File's profile resolves its F start to the one
 `F_Opening01` opening, which configuring F creates directly; the start codec,
 start commands and start candidates share that resolved start pool.
+[Fresh File Rules](../biomes/FRESH_FILE_RULES.md) own the route's game rules.
 
 ### Route Loadout
 
-Each route persists its weapon/aspect choice, starting keepsake, familiar, an unordered
-canonical selection of manually active Arcana cards, and one declaration-bounded
-rank for every Fear Vow. A mature-save route requires the weapon, aspect,
-keepsake and familiar keys. A Fresh File route stores all four as `null`, no manual Arcana,
-every Vow at rank 0, no starting reward and no keepsake equip result; the codec
-rejects any other value and native-equipment loadout commands fail, because none of these
-is a choice on a brand-new profile. The engine resolves the run's actual
-equipment from the profile, the aspectless Staff, so weapon-dependent rules see
-the Staff while aspect-dependent rules see no aspect. Automatic Arcana derive
-from the empty selection as none. The catalog owns card order, ordinary
-automatic-activation rules, Vow maxima, and Fear increments. The authored model
-owns only the player's starting selections; derived automatic cards and the
-configured Fear total are not persisted independently.
+Each route persists its weapon/aspect choice, starting keepsake, familiar, an
+unordered canonical selection of manually active Arcana cards, and one
+declaration-bounded rank for every Fear Vow. A mature-save route requires the
+weapon, aspect, keepsake and familiar keys; new routes start with the
+catalog's default familiar, Frinos. A Fresh File route stores all four as
+`null`, no manual Arcana, every Vow at rank 0, no starting reward and no
+keepsake equip result; the codec rejects any other value and native-equipment
+loadout commands fail, because none of these is a choice on a brand-new
+profile. The engine resolves the run's actual equipment from the profile, the
+aspectless Staff, so weapon-dependent rules see the Staff while
+aspect-dependent rules see no aspect. Automatic Arcana derive from the empty
+selection as none. The catalog owns card order, ordinary automatic-activation
+rules, Vow maxima, and Fear increments. The authored model owns only the
+player's starting selections; derived automatic cards and the configured Fear
+total are not persisted independently.
 
-Loadout optionally owns a `runModifiers` record whose keys, kinds, defaults
-and display domains come from the run-modifier declaration table. A boolean
-modifier is persisted only when it differs from its default. An optional
-percentage modifier is absent while off (native) and present as an enabled
-value from 0 to 100 while on; a malformed value decodes as off. Absence of the
-record means every modifier is native. A declaration's stage is `released`
-or `internal`; an internal one is authored and published only when the
-composition enables internal modifiers (development builds), and none is
-currently declared. The released modifiers are the optional
-percentages `enemyGoldDropChance` and `encounterGoldRange`.
+Familiar-shop upgrades are not authored: a mature save owns every
+familiar-shop level, at the catalog-declared rank, as keepsakes are fixed at
+rank III. `ReplaceFamiliar` replaces the identity as one route-owned history
+edit, preserves identity for a no-op, and fails on Fresh File.
 
-The route optionally owns `practiceStart` (Practice mode), absent for a normal
-run and present as `{ biomeKey, point: 'opening' | 'preboss' | 'boss', gold? }`.
-It decodes as tolerantly as a run modifier: a malformed shape decodes as
-absent, malformed gold as absent, and finite gold rounds and clamps to
-0–99 999. Gold is a base amount added to the game's own starting gold. A
-well-formed start point whose biome is off the itinerary is kept.
-`ReplacePracticeStart` sets or clears it (null) as one route-owned history edit,
-preserves identity for an equal value, and rejects a malformed value rather than
-healing it. Its
-eligibility is the engine's start-installation availability
-(`authoredStartPointEligibility`): the biome is on the itinerary
-(`notOnItinerary`), the point is not the route-start biome's Opening, which is
-a normal run (`routeStart`), the simulation reaches it (`notReached`), and its
-installed state agrees across every reached branch (`branchesDisagree`, naming
-the families). The picker offers every itinerary biome's Opening, Preboss and Boss
-with that availability; it does not consult project validity. A start point
-publishes only from a valid project, through the ordinary publication gate.
-An ineligible start point blocks publication with its reason and an eligible
-one publishes the execution plan's
-[`startState`](RUN_START_INSTALLATION.md#published-startstate). The start
-point and the run modifiers are editable in Fresh File without making its fixed
-equipment editable. Neither changes simulation, candidates, or encounter
-eligibility.
+Loadout optionally owns a `runModifiers` record whose keys, kinds, defaults,
+stages and display domains come from the engine's run-modifier declaration
+table. It is the one tolerant exception to exact decoding: decoding drops keys
+the table does not declare, clamps a finite number outside its declared domain
+to the nearest bound, and replaces any other malformed known value with its
+native value, so modifiers can be added, trialled and retired without a schema
+bump. A boolean modifier is persisted only when it differs from its default; an
+optional percentage is absent while off and present as a value from 0 to 100
+while on; absence of the record means every modifier is native. An `internal`
+declaration is authored and published only when the composition enables
+internal modifiers. `ReplaceRunModifiers` replaces the complete settings as one
+route-owned history edit through the same normalization, preserves identity
+for no-ops, and removes the record when every value is native.
+[Run-Start Installation](RUN_START_INSTALLATION.md#run-modifiers) owns the
+declared modifiers and their publication.
 
-A mature route's loadout requires one catalog `familiarKey`; new routes start
-with the catalog's default familiar, Frinos. A Fresh File route stores `null`,
-like its other native-equipment selections. Familiar-shop upgrades are not
-authored: a mature save owns every familiar-shop level, at the catalog-declared
-rank, as keepsakes are fixed at rank III. `ReplaceFamiliar` replaces the
-identity as one route-owned history edit, preserves identity for a no-op, and
-fails on Fresh File.
-
-`ReplaceRunModifiers` replaces the complete settings as one route-owned history
-edit, normalizes its value through the same tolerant decode, preserves identity
-for no-ops, and removes the record when every value is native. Execution
-assembly publishes the complete authored record, omitting optional modifiers
-that are off, only when some value is non-native, separately from starting
-equipment.
+The route optionally owns `practiceStart`, the Practice mode start point;
+[Run-Start Installation](RUN_START_INSTALLATION.md#authored-start-point) owns
+its decoding, command and eligibility.
 
 `ReplaceRoute` replaces the loadout (keeping run modifiers) and the planned
 biome prefix (one to every itinerary biome, in itinerary order). Resource
@@ -337,73 +259,30 @@ route. Every occurrence of a room whose rack the route offers
 no other occurrence may. `keepsakeKey: null` means unchanged: the rack is a
 no-op that carries the current keepsake, with no effect, lifecycle event, order
 dependency or execution transaction. A key authors a replacement. The
-occurrence and its local controls are active for every
-supported nonterminal route position. The ordinary terminal I and Q positions
-have no Postboss occurrence; physical biome identity alone does not determine
-finality.
+occurrence and its local controls are active for every supported nonterminal
+route position. The ordinary terminal I and Q positions have no Postboss
+occurrence; physical biome identity alone does not determine finality.
 
 Every structural Postboss state defaults to a `useFountain` action followed,
 where the route offers the rack, by the unchanged rack's `interactKeepsakeRack`
-action. The rack is a permanent
-timeline row: the codec requires exactly one rack action wherever the leaf
-exists, generic insertion and removal refuse it, and `MoveRoomAction` reorders
-it. `ReplacePostbossKeepsake { keepsakeKey: string | null }` sets or clears the
-key without moving the row. Each equip result belongs to one keepsake, so any
-key change, including null, drops the equip results. The action order is the sole
-chronology owner, and the Postboss occurrence owns its findings and history.
+action. The rack is a permanent timeline row: the codec requires exactly one
+rack action wherever the leaf exists, generic insertion and removal refuse it,
+and `MoveRoomAction` reorders it. `ReplacePostbossKeepsake { keepsakeKey:
+string | null }` sets or clears the key without moving the row. Each equip
+result belongs to one keepsake, so any key change, including null, drops the
+equip results. The action order is the sole chronology owner, and the Postboss
+occurrence owns its findings and history.
 
 Selection legality is contextual rather than codec policy. Unknown keys are
 malformed, while a structurally valid replacement that has already been
 removed, conflicts with Fated state, or is blocked by prior Athena history
 remains authored and repairable. Commands never silently delete it or move its
-effect detail to another frontier.
+effect detail to another frontier. Equip results and other keepsake effect
+outcomes each have one exact semantic owner;
+[Reward Model](REWARD_MODEL.md#keepsake-outcomes) owns their shapes and
+[Echo](REWARD_MODEL.md#echo) its children.
 
-Only immediate equip outcomes are persisted beneath a selection. Jeweled Pom
-and Experimental Hammer use one closed `KeepsakeEquipResultAddress` family with
-effect-specific complete children; Transcendent Embryo stores its selected
-blessing and complete operand map at the reached automatic outcome. The result
-is reached on start or replacement. A route-start result is dormant while
-another starting keepsake is selected; a rack result does not survive a change
-of the rack's keepsake.
-Calling Card row actions stay on their exact trait offers, Time Piece conversion
-choices stay on exact acquisition roles, and Fig Leaf/Gorgon results stay on
-exact encounter phases. This preserves one semantic owner for every authored
-effect decision rather than creating a keepsake-owned catch-all result bag.
-
-Gorgon Amulet owns one strict phase-local Athena child. It persists
-only three ordered distinct Athena trait identities and the selected option
-key. Athena provider, offer kind, and reached rarity are derived; the Death
-Defiance condition remains on the parent Gorgon phase. Keepsake rank and the
-result of Cherished Heirloom are never authored: ordinary selection is fixed at
-Epic and simulation derives both Cherished transitions from catalog facts and
-canonical trait history.
-
-Echo's active authored children do not add a generic effect-state container to
-the project. Pom persists one selected greatest-level target or the explicit
-empty-domain `null` result. Boon persists one to three distinct trait-key rows
-whose giver identity and equipped rarity are explicit, plus only the selected
-trait's declaration-owned acquisition detail. Reward persists only the exact
-recreated acquisition's conversion, trait-offer, and level children; the
-replayed source descriptor remains derived history. Gold uses the sole stable
-`echoDoubleShopReward` key: its complete payload may persist sparsely in
-`pickupEntries` before participation, and it enters the existing Shop
-`roomActions.order` only when picked up. No source selector or source-keyed Gold
-child is persisted. Gift's captured keepsake, replay schedule,
-and replay count remain chronological trait history; only a reached
-Experimental Hammer replay persists its selected-compatible or explicit
-exhausted result beneath that succeeding biome's start address. Dormant Echo
-option detail remains structurally retained but is not active authorship.
-
-Every Fields combat occurrence owns one selected optional-reward count,
-complete retained optional-reward values through the declaration's exact
-capacity, and its declaration-bounded spatial layout. Entry, cage,
-optional-reward, and Passive Nemesis points remain room-local placement facts;
-the action sequence independently contains atomic cage completions and
-interactions with cage, active optional, and Artificer-replacement pickups.
-Optional participation is sequence membership, not a second boolean. Lowering
-the active count removes newly dormant optional actions while retaining their
-values, dispositions, and compatible placement; restoring the count does not
-silently restore participation.
+### Acquisition dispositions and pickup effects
 
 Every authorable acquisition role has one exact disposition: `normal`,
 `timePiece`, or `artificer` with a complete `RunProgress` replacement reward.
@@ -411,10 +290,10 @@ The child belongs to its exact source and acquisition role. Ordinary ordered
 acquisition sites represent its later pickup with a collision-safe
 source-derived entry key; Fields uses its one room-action chronology. Mandatory
 singleton room rewards derive their required classification and pickup
-checkpoint, but activation/default reconciliation persists the exact pickup
-reference in the occurrence's one shared `roomActions.order`; there is no
-separate or synthetic one-row order. No pending Artificer map or remaining-use
-counter is authored.
+checkpoint, but the activating command persists the exact pickup reference in
+the occurrence's one shared `roomActions.order`; there is no separate or
+synthetic one-row order. No pending Artificer map or remaining-use counter is
+authored.
 
 A reward also owns the result of its concrete acquisition's declared pickup
 effect, wherever that reward settles. `anvilResultsByAcquisitionRole` holds one
@@ -424,7 +303,10 @@ the entry exactly for roles whose concrete acquisition declares the Anvil
 pickup effect and rejects it elsewhere, on every reward-state owner: a Shop or
 Contract slot, the Travel Deal refill and the Gold Gold Gold duplicate entry
 alike. `ReplaceAnvilResult` addresses the `AcquisitionRoleAddress`, not a Shop
-slot; replacing the reward with a non-Anvil offer drops the result.
+slot; replacing the reward with a non-Anvil offer drops the result. A Path of
+Stars screen likewise owns its invested nodes in
+`hexActivationsByAcquisitionRole`
+([Trait Offers](TRAIT_OFFERS.md#spell-drop-and-hex-trees)).
 
 ## Common Decision Model
 
@@ -481,11 +363,11 @@ normal targets or generic cross-room-set escapes.
 
 A Chaos additional exit may carry `spawnPointIndex`, a one-based physical
 point in the source room's declared SecretPoint domain. Omission leaves native
-random placement (shown as Any in the editor). `SetChaosSpawnPoint` edits only
-this leaf, independently of the selected outgoing door and Chaos destination.
-Positive out-of-domain retained indices are finding-backed, not silently reset.
-Surviving manual or Ixion-generated gates retain their position; a newly
-generated gate at another host starts without a selection.
+random placement. `SetChaosSpawnPoint` edits only this leaf, independently of
+the selected outgoing door and Chaos destination. Positive out-of-domain
+retained indices are finding-backed, not silently reset. Surviving manual or
+Ixion-generated gates retain their position; a newly generated gate at another
+host starts without a selection.
 
 Decision-array order is not reachability authority. Decoding follows semantic
 sources and selected targets to determine the selected spine. An unpicked
@@ -493,12 +375,20 @@ target is a real dead leaf but cannot own a downstream exit decision. Cycles,
 detached decisions, duplicate sources, multiply-owned occurrences, and orphan
 occurrences are contract errors.
 
-Changing the picked continuation is one authored edit, assessed against the
-proposed selected spine. A compatible ordinary decision reanchors to the new
-source using its reward-store and physical-exit declarations. Matching targets
-and their descendants retain identity and compatible room-local state. A Hub
-likewise reanchors only to a declaration-supported Hub source, preserving its
-board, visits, main/side occurrences and completed handoff.
+### Reanchoring
+
+This section is the command-level owner of continuation changes;
+[Game Generation Rules](GAME_GENERATION_RULES.md) own how the targets
+themselves are generated.
+
+Changing the picked continuation (`SetExitSelection`) is one authored edit,
+assessed against the proposed selected spine. A compatible ordinary decision
+reanchors to the new source using its reward-store and physical-exit
+declarations. The same primitive serves ordinary targets and Chaos and Zagreus
+additional exits. Matching targets and their descendants retain identity and
+compatible room-local state. A Hub likewise reanchors only to a
+declaration-supported Hub source, preserving its board, visits, main/side
+occurrences and completed handoff.
 
 An incompatible continuation is removed, not a reason to reject the selection.
 Reanchoring prunes unselected targets at doors the new source does not declare.
@@ -512,13 +402,19 @@ completion chain instead of attaching an ordinary or Hub continuation. The
 same reachable Preboss keeps its authored Boss/Postboss state; a different
 Preboss receives declaration-owned completion defaults.
 
-Extra doors owned by the old selected target are removed with their branches;
-they never transfer to the new host. The parent decision's offered normal and
-additional siblings remain. An unresolved selection retains those offerings
-but closes the old target's downstream continuation and fixed completion.
-The old target becomes an unselected leaf; room-local state never transfers
-between it and the new target. Actual cycles, duplicate ownership and an
-already-owned destination remain contract errors.
+Additional exits owned by the old selected target are removed with their
+branches; they never transfer to the new host. The parent decision's offered
+normal and additional siblings remain. An unresolved selection retains those
+offerings but closes the old target's downstream continuation and fixed
+completion. The old target becomes an unselected leaf; room-local state never
+transfers between it and the new target. A destination that already owns a
+decision or takes part in a fixed completion, an actual cycle, and duplicate
+ownership are contract errors.
+
+When a progressively authored width-one target already owns the next decision,
+adding another declared physical target promotes the derived continuation to an
+explicit normal selection. The established downstream subtree stays attached
+to that selected occurrence.
 
 ## Starts, Batches, Preboss, and Completion
 
@@ -542,10 +438,9 @@ applies the room's route overlay, if its declaration names the route, then
 binds the route-owned reward only at the first itinerary entry, applies narrow
 contextual encounter rules, and selects the lifecycle and entered-store
 participation consumed by defaults, decoding and simulation. An overlaid room
-is decoded and constructed as its realized room: a Fresh File `H_Bridge01`
-holds Shop state, and its Story state is rejected rather than converted. Later entries
-remain rewardless. Multi-choice entry identity belongs to biome Overview at
-every ordinal; the starting offer belongs to Loadout, and its acquisition
+is decoded and constructed as its realized room. Later entries remain
+rewardless. Multi-choice entry identity belongs to biome Overview at every
+ordinal; the starting offer belongs to Loadout, and its acquisition
 dispositions and outcomes belong to the first room's Timeline.
 
 Completion likewise resolves the exact allowed Preboss/Boss/Postboss chain; a
@@ -553,10 +448,20 @@ cross-family completion map does not authorize unrelated foreign rooms.
 
 Generated batches retain their layout's progression, reward-store, and
 batch-state contracts. Q's exact room depths are evaluated eligibility, so
-wrong-depth ordinary choices remain representable. H's Fields result remains batch-owned. O can
-derive a reward store from the active Ship wheel. I remains a normal Clockwork
-batch: `I_PreBoss02` may coexist with normal peers but its one-creation-per-
-source policy is declaration-owned.
+wrong-depth ordinary choices remain representable. H's Fields result remains
+batch-owned. O can derive a reward store from the active Ship wheel. I remains
+a normal Clockwork batch: `I_PreBoss02` may coexist with normal peers but its
+one-creation-per-source policy is declaration-owned.
+
+`CreateBatch` and `CreateTarget` create ordinary shape progressively. Target
+creation validates the source's current declaration-owned exit key. A source
+room replacement may retain structurally represented targets whose keys the
+new room no longer supplies; they are context-invalid rather than silently
+deleted. The codec accepts only normal exit keys present in the biome's
+authored declarations (or the one fixed Hub exit key), never an arbitrary
+string as a repair placeholder. `ReconcileBatchExitCapacity` is the explicit
+topology-removal repair: it removes unavailable targets and their downstream
+subtree, then normalizes selection from the retained keys.
 
 ### Empty decision envelopes
 
@@ -576,8 +481,8 @@ directly to the projected outgoing cards.
 
 The envelope is not a realized ordinary generated batch. It consumes neither
 ordinary batch/target progression nor a staged ordinal until its first
-ordinary target is created. The engine can explicitly create the next envelope while
-an ordinary slot remains. At the ordinary bound it can create one further
+ordinary target is created. The engine can explicitly create the next envelope
+while an ordinary slot remains. At the ordinary bound it can create one further
 empty envelope only when the selected source and layout admit a declared
 terminal resolution. F/G/H/O/P/Q admit a takeover Preboss; N admits its
 required Hub candidate after the bounded PreHub stage; I admits neither because
@@ -586,10 +491,9 @@ declaration-derived topology rules rather than the empty shape itself.
 
 The supported Zagreus command may atomically create a selected Midshop's empty
 normal envelope and append its closed additional contract to that Midshop
-occurrence. The active envelope exposes the sibling beside its normal lane.
-That incomplete normal lane remains authored and finding-backed until ordinary
-targets are added; the additional exit neither consumes nor repairs normal
-progression.
+occurrence. That incomplete normal lane remains authored and finding-backed
+until ordinary targets are added; the additional exit neither consumes nor
+repairs normal progression.
 
 The first Door 1 choice resolves the envelope. An ordinary or
 `retainNormalPeers` choice realizes an ordinary batch and must satisfy the
@@ -599,17 +503,38 @@ initializing declaration-owned Preboss defaults. Undo restores the exact
 empty envelope and any provisional setup; a takeover batch never consumes an
 ordinary progression slot.
 
-Takeover Preboss declarations F/G/H/O/P/Q own an atomic batch policy. A
-takeover command receives one occurrence ID for every declared normal exit and
-creates or repairs the whole batch in declaration order. The first target is a
-Shop leaf; later targets are counted-free leaves only when the policy declares
-them. A width-one policy has no later offer. Individual takeover targets are
-not room-replaceable or capacity-repairable.
+### Takeover batches
+
+Takeover Preboss declarations F/G/H/O/P/Q own an atomic batch policy.
+`CreateTakeoverBatch` and `ReplaceWithTakeoverBatch` receive one occurrence ID
+for every declared normal exit and create the whole shape, selection and
+downstream cleanup atomically in declaration order. They reconcile existing
+targets by physical exit key, not a supplied occurrence-ID order: a retained
+key keeps its occurrence ID, and a caller may not move an existing target ID to
+another physical door. Individual takeover targets are not room-replaceable or
+capacity-repairable, and a single takeover target is never edited in
+isolation.
+
+A source replacement, Anomaly revert, or decode can leave a takeover batch
+wider or narrower than its source's declared doors. The prior targets remain
+structurally represented until `ReconcileBatchExitCapacity` repairs the whole
+batch. The repair is minimal: surviving targets keep their occurrence, Shop
+purchases, completion chain, and boss-door store. A missing declared door gains
+a default Preboss offer whose occurrence ID the engine derives as
+`<source occurrence ID>:<exit key>`, so a door removed and added again keeps
+its identity. An undeclared door is removed with its downstream topology. A
+width-one result with no additional exits is derived; otherwise a surviving
+selected door stays selected (a derived width-one selection becomes explicit
+`exit1`) and a removed one becomes unresolved; a newly selected door gains its
+completion chain. Every automatic narrowing of a takeover batch, such as an
+Anomaly switch, uses the same removal. A `none`-policy Preboss fills a single
+door only, so its batch has no repair when the source declares more; the
+out-of-depth source carries its own `targetRoomUnavailable` finding.
 
 Selecting a Preboss creates and enters its fixed completion occurrences through
 the topology links. There is no persisted completion flag, entry mode, or
-`closesBiomeWhenPicked` duplicate. The selected Preboss's
-ordinary peers remain real unpicked occurrences.
+`closesBiomeWhenPicked` duplicate. The selected Preboss's ordinary peers
+remain real unpicked occurrences.
 
 The route declaration names the sole physical Preboss for each route position;
 alternative maps are not authoring choices. Underworld therefore uses
@@ -693,6 +618,7 @@ Every occurrence begins with complete declaration-owned offer-time defaults and
 complete static selections for each of its declaration's pool-backed potential
 encounter slots. Fixed slots and slots in an empty Encounter Envelope carry no
 redundant authored selection.
+
 Shop inventory is entry-time state: selecting a Shop occurrence materializes
 it; changing selection removes unselected inventory. Its materialized state
 owns declaration-keyed offers. Exact `interactShopOffer` membership in the
@@ -714,22 +640,22 @@ reference in `roomActions.order`, which owns its rush and its position among the
 Shrine's purchases; the codec rejects a missing, duplicate or unpurchased
 purchase action, and a same-room Shrine pickup without a rushed purchase
 action. Its rushed or delayed delivery owns concrete acquisition payload. A
-Stygian Well uses its
-`interacted` flag as the boundary between native-random inventory and three
-authored initial generations. Travel Deal refill state is occurrence-local to
-its Shop, Shrine, or Well carrier. Pending deliveries, temporary effects,
-Spell reservations, and expiry remain derived simulation state.
+Stygian Well uses its `interacted` flag as the boundary between native-random
+inventory and three authored initial generations. Travel Deal refill state is
+occurrence-local to its Shop, Shrine, or Well carrier. Pending deliveries,
+temporary effects, Spell reservations, and expiry remain derived simulation
+state.
 
-An intro room the catalog declares as an Eris host on the project's route
-(Fresh File G, H and I) may carry an optional `eris: { spawned: true }` leaf.
-Like Gorgon Amulet's `athenaTriggerConditionMet`, it records an observed game
-condition the planner does not simulate; absence means Eris did not spawn. The
-codec rejects the leaf on any other room or route. `SetErisSpawned` adds it,
-and ordered reconciliation inserts the required `interactEris` action, the
-fixed gift's `erisGift` acquisition site and its required pickup action.
-Clearing it removes the leaf, the talk and, through the same reconciliation,
-the gift site and pickup. Schema 90 admits the leaf additively; no migration
-writes it.
+An intro room the catalog declares as an Eris host on the project's route may
+carry an optional `eris: { spawned: true }` leaf, an observed game condition
+the planner does not simulate; absence means Eris did not spawn. The codec
+rejects the leaf on any other room or route. `SetErisSpawned` adds it together
+with the required `interactEris` action, the fixed gift's `erisGift`
+acquisition site and its required pickup action; clearing it removes all four.
+[Fresh File Rules](../biomes/FRESH_FILE_RULES.md#eris-at-a-biome-intro) own
+the hosts and their game rule.
+
+### Acquisition sites
 
 An acquisition site is sparse occurrence-owned payload state for one exact
 authorable lifecycle point. A declaration-produced pickup stores its exact
@@ -739,22 +665,22 @@ matching `interactAcquisitionEntry` in `roomActions.order`. Shop offers remain
 owned by Shop inventory, while their matching `interactShopOffer` references
 carry purchase participation and chronology. Mandatory singleton room rewards
 derive required classification and lifecycle timing and create no redundant
-persisted site state. Their activating semantic command nevertheless inserts
-the exact required action reference into the occurrence's sole
-`roomActions.order`; that row points back to the existing reward/acquisition
-owner rather than copying its payload.
-Gold Gold Gold's free Shop duplicate may retain its complete site payload without
-participating. Travel Deal owns `shop.travelDealRefill`, an optional ordinary
-`ShopOfferState` outside initial indexed inventory, addressed by `shopOffer` with
-the reserved refill key. Its retained `interactAcquisitionEntry` reference joins
-chronology; only a purchased Mystery has a separate site child, reconciled
-atomically on item replacement and purchase insertion/removal. Other reward
-children remain on the slot. Infernal Contract owns
-a conditional initial `shop.offers.infernalContractReward` slot, using the
-ordinary Shop offer and participation commands. Its room declaration binds it
-to the separate pedestal pool; the host's indexed slots remain unchanged.
-Like any Shop Mystery Boon, it has a sparse acquisition entry only when its
-hidden source must be resolved on collection.
+persisted site state; their activating command still inserts the exact
+required action reference, which points back to the existing reward owner
+rather than copying its payload.
+
+Gold Gold Gold's free Shop duplicate may retain its complete site payload
+without participating. Travel Deal owns `shop.travelDealRefill`, an optional
+ordinary `ShopOfferState` outside initial indexed inventory, addressed by
+`shopOffer` with the reserved refill key. Its retained `interactAcquisitionEntry`
+reference joins chronology; only a purchased Mystery has a separate site child,
+reconciled atomically on item replacement and purchase insertion/removal. Other
+reward children remain on the slot. Infernal Contract owns a conditional
+initial `shop.offers.infernalContractReward` slot, using the ordinary Shop
+offer and participation commands. Its room declaration binds it to the
+separate pedestal pool; the host's indexed slots remain unchanged. Like any
+Shop Mystery Boon, it has a sparse acquisition entry only when its hidden
+source must be resolved on collection.
 
 Trait-generated and Sea Star duplicate sites are closed source-scoped site
 keys, not new site variants. A selected Quick Buck, Buried Treasure, or
@@ -766,6 +692,8 @@ undo step. A retained result that becomes inactive remains authored for repair
 but has no active child action. The persisted entry is ordinary
 `AuthoredRewardState`, so no reward-copy tree or second timeline is needed.
 
+### Shop and pickup commands
+
 `ClearShopOffer` empties one declared inventory slot, removing its
 `interactShopOffer` reference and any acquisition-resolved entry in the same
 undo step; it is how a slot whose group has become empty is repaired, and it
@@ -775,6 +703,10 @@ is a no-op on an empty slot. The Travel refill is not a declared slot.
 that reference family so Overview's Purchased marker is the sole membership
 interaction; ranked purchases remain movable with the ordinary Room Action
 commands. Shrine and Well purchase references are rejected the same way.
+Removing participation remains accepted for a retained stale purchase after
+its Shop owner disappears, allowing exact repair without deleting unrelated
+actions.
+
 `SetHermesShrinePurchase` sets one generation's delay or clears its purchase: a
 new purchase inserts its unrushed purchase action at its canonical position,
 and clearing removes that action, its pickup and placed deliveries while
@@ -782,123 +714,128 @@ retaining delivery payload. `SetHermesShrinePurchaseRush` changes rush on one
 exact purchase action, ranking or retracting its optional same-room pickup.
 When either command changes the first rushed initial purchase, the refill's
 purchase action and pickup are rescheduled after the new trigger; when no
-rushed initial purchase remains, the refill's pickup is retracted. Removing participation remains accepted for a retained stale
-purchase after its Shop owner disappears, allowing exact repair without
-deleting unrelated actions. `MoveRoomAction` changes one ranked action's
-position within the complete chronology;
-`ReplaceAcquisitionEntryOffer` edits only a declaration-compatible materialized
-pickup. Neither command may infer entries from room names or rendered rows.
-Echo's history-derived replay may be effective while its structural pickup
-entry is empty or retains a former source. `EditEchoReplay` seeds that exact
-entry and applies its first child edit as one command, so Undo restores the
-previous payload without a separate identity-confirmation edit. The command
-trusts the caller's `sourceOffer` seed; evaluation derives the replay identity
-from history, overriding a stale seed with a `traitOfferMissing` finding.
+rushed initial purchase remains, the refill's pickup is retracted.
+
+`MoveRoomAction` changes one ranked action's position within the complete
+chronology; `ReplaceAcquisitionEntryOffer` edits only a declaration-compatible
+materialized pickup. Neither command may infer entries from room names or
+rendered rows. Echo's history-derived replay may be effective while its
+structural pickup entry is empty or retains a former source. `EditEchoReplay`
+seeds that exact entry and applies its first child edit as one command, so Undo
+restores the previous payload without a separate identity-confirmation edit.
+The command trusts the caller's `sourceOffer` seed; evaluation derives the
+replay identity from history, overriding a stale seed with a
+`traitOfferMissing` finding.
+
 Required Gold Gold Gold pickups join `roomActions.order` in the edit that newly
 activates them, after exact agreeing materialization evidence. Prior optional or
 inactive evidence establishes that delta; an unassessed prior Shop does not.
-Existing missing required pickups remain explicitly restorable, and loading stays
-read-only. `PlaceEchoGoldPickup` materializes unresolved children for that repair
-and for optional collection. Retained payload remains available for exact source
-mismatch repair; a changed trigger does not reset it. Subsequent outcome edits use
-the ordinary acquisition, trait, level, and conversion commands. Travel uses
-ordinary Shop inventory commands, not this derived-pickup family.
+Existing missing required pickups remain explicitly restorable, and loading
+stays read-only. `PlaceEchoGoldPickup` materializes unresolved children for
+that repair and for optional collection. Retained payload remains available for
+exact source mismatch repair; a changed trigger does not reset it. Subsequent
+outcome edits use the ordinary acquisition, trait, level, and conversion
+commands. Travel uses ordinary Shop inventory commands, not this
+derived-pickup family.
+
+### Required Room Actions
 
 The engine classifies every structurally active Room Action as required or
 optional from the same action domain consumed by simulation. The semantic
 command that newly activates a required reference inserts it in the
-occurrence's order at its engine-owned default position, preserving the
-relative sequence of retained rows. Fields cage pickups default after their
-matching encounter and required NPC interaction, before the next cage;
-other actions retain their lifecycle defaults. One command and one history entry therefore
-contain both the requested edit and its mandatory membership delta. Optional
-actions remain membership-controlled by their existing owner. An active
-required row may be moved within its legal range but cannot be generically
-removed.
+occurrence's order at its engine-owned lifecycle default position, preserving
+the relative sequence of retained rows. One command and one history entry
+therefore contain both the requested edit and its mandatory membership delta.
+Optional actions remain membership-controlled by their existing owner. An
+active required row may be moved within its legal range but cannot be
+generically removed.
 
-This guarantee is deliberately delta-only. A deliberately malformed document
-may already omit a required reference, and an unrelated edit does not normalize
-that omission. Evaluation retains the missing-required
-finding and publishes one engine-owned canonical restore intent. Dormant and
-stale rows likewise remain authored until an explicit owning command removes
-them; reactivation of the same key reuses its retained position rather than
-adding a duplicate.
+This guarantee is delta-only. A deliberately malformed document may already
+omit a required reference, and an unrelated edit does not normalize that
+omission. Evaluation retains the missing-required finding and publishes one
+engine-owned canonical restore intent. Dormant and stale rows likewise remain
+authored until an explicit owning command removes them; reactivation of the
+same key reuses its retained position rather than adding a duplicate.
 
-A Fields combat occurrence owns three related but non-duplicated products:
-declaration-bounded cage reward values, a complete retained optional inventory
-plus active count, and one mixed room-action order. That order alone owns cage
-completion and pickup chronology. `ReplaceFieldsCageOrder` accepts an exact
-permutation of the active cage identities. It resolves that permutation
-left-to-right with insertion-style moves of the existing completion references,
-retaining all other actions' relative sequence and each cage's leaves. The
-complete order is reconciled once; intermediate permutations are not published.
-Context-invalid retained interactions remain repairable through findings.
-Cage interactions are required after their
-matching completion; optional interactions are membership-controlled; and a
-source selecting Artificer may add one later source-owned replacement action.
+### Fields rooms
+
+Every Fields combat occurrence owns one selected optional-reward count,
+complete retained optional-reward values through the declaration's exact
+capacity, its declaration-bounded spatial layout, and one mixed room-action
+order. Entry, cage, optional-reward, and Passive Nemesis points remain
+room-local placement facts; the action order alone owns cage completion and
+pickup chronology. [H rules](../biomes/H_GAME_RULES.md#authored-shape) own
+participation and default ordering.
+
+`ReplaceFieldsCageOrder` accepts an exact permutation of the active cage
+identities. It resolves that permutation left-to-right with insertion-style
+moves of the existing completion references, retaining all other actions'
+relative sequence and each cage's leaves, and reconciles the complete order
+once. Context-invalid retained interactions remain repairable through findings.
 Commands and decoding use stable phase, slot, and acquisition-role identities,
 never rendered ordinals.
+
+### Room replacement and detours
 
 `ReplaceOccurrenceRoom` preserves occurrence identity and reconciles only
 declaration-compatible leaves. It never moves state to another occurrence or
 guesses a reward. It resets incompatible state to complete defaults and cannot
-bypass a bounded Hub-entry candidate pool, fixed start/Hub identity, or atomic takeover
-rule.
+bypass a bounded Hub-entry candidate pool, fixed start/Hub identity, or atomic
+takeover rule.
 
-Route detours use narrower commands than general room replacement. An Anomaly
-retains one normal G target occurrence identity, remembers its displaced G
-declaration, and owns its retained incoming offer plus success state. A
-Zagreus contract owns one `C_Boss01` occurrence as a declared additional exit.
-Anomaly replacements, the Zagreus contract, and Chaos are the declared
-detour ownership forms admitted by decoded topology. Anomaly and Zagreus each
-have one declaration-owned automatic host return; selected Chaos
-instead exposes one fresh, ordinary player-selected host continuation after its
-Chaos room.
+Route detours use narrower commands than general room replacement. Anomaly
+replacements, the Zagreus contract, and Chaos are the declared detour ownership
+forms admitted by decoded topology; their game rules live in the
+[G rules](../biomes/G_GAME_RULES.md#anomaly-detour) and the
+[route detours audit](../audits/rooms-and-routes/ROUTE_DETOURS_GAME_DATA_AUDIT.md).
+Anomaly and Zagreus each have one declaration-owned automatic host return;
+selected Chaos instead exposes one fresh, ordinary player-selected host
+continuation after its Chaos room.
 
-An Anomaly takeover preserves the target occurrence ID, incoming reward, and
-remembered displaced G game name. It resets incompatible room-local leaves,
-installs the declared Anomaly defaults, and never creates the remembered room.
-Map changes retain that offer, outcome, and provenance. Revert restores the
-remembered G identity, retains the offer, restores complete G defaults, and
-preserves the occurrence's compatible `exit1` host continuation. Takeover
-atomically reconciles the prior G decision to the Anomaly declaration's one
-automatic exit: excess normal targets, their descendants, and source-owned
-additional exits are removed, and the retained selection becomes derived.
-Revert keeps that width-one continuation; any additional exits exposed again by
-the restored G declaration are incomplete authoring rather than resurrected
+An Anomaly takeover retains one normal G target occurrence identity, its
+incoming reward, and the remembered displaced G game name; it owns the retained
+offer plus success state. It resets incompatible room-local leaves, installs
+the declared Anomaly defaults, and never creates the remembered room. Map
+changes retain that offer, outcome, and provenance. Takeover atomically
+reconciles the prior G decision to the Anomaly declaration's one automatic
+exit: excess normal targets, their descendants, and source-owned additional
+exits are removed, and the retained selection becomes derived. Revert restores
+the remembered G identity, retains the offer, restores complete G defaults, and
+keeps that width-one `exit1` continuation; any additional exits exposed again
+by the restored G declaration are incomplete authoring rather than resurrected
 state. An incompatible retained reward remains authored and finding-backed
 rather than being silently rerolled or refunded.
 
 The Zagreus command creates or extends the selected Midshop's ordinary decision
-and appends a closed `zagreusContract` to that Midshop occurrence. Its active
-decision exposes the sibling while preserving the normal lane and its
-selection; a width-one declaration-derived normal selection becomes explicit
-when the sibling makes selection ambiguous. Removing the sibling deletes only
-its occurrence and descendants and restores that derived selection when
-applicable. The additional exit is selected through the enclosing decision,
-not represented as a synthetic normal target.
+and appends a closed `zagreusContract`, owning one `C_Boss01` occurrence, to
+that Midshop occurrence. Its active decision exposes the sibling while
+preserving the normal lane and its selection; a width-one declaration-derived
+normal selection becomes explicit when the sibling makes selection ambiguous.
+Removing the sibling deletes only its occurrence and descendants and restores
+that derived selection when applicable.
 
 `AddChaos` attaches one declared `chaos` sibling to an eligible source
 occurrence; `ReplaceChaosMap` changes only that sibling's concrete map within
 the host layout's declared domain, trimming the Chaos room's outgoing
-continuation to the new map's doors by the reanchoring rule, and `RemoveChaos` deletes only the sibling
-and its descendants. A generated gate carries the exact Ixion purchase origin;
-an omitted origin is an authored gate. Contextual spacing and source
-requirements do not make the persisted gate undecodable: evaluation reports
-them at its additional-exit owner. A selected Chaos room owns its fixed
-`Empty_Chaos` encounter and direct `TrialUpgrade` reward, then its outgoing
-ordinary decision owns the fresh host continuation. That detour-owned return
-envelope remains authorable when the host biome has already exhausted its
-ordinary batch bound; the exception belongs only to the closed detour source.
+continuation to the new map's doors by the reanchoring rule, and `RemoveChaos`
+deletes only the sibling and its descendants. A generated gate carries the
+exact Ixion purchase origin; an omitted origin is an authored gate. Contextual
+spacing and source requirements do not make the persisted gate undecodable:
+evaluation reports them at its additional-exit owner. A selected Chaos room
+owns its fixed `Empty_Chaos` encounter and direct `TrialUpgrade` reward, then
+its outgoing ordinary decision owns the fresh host continuation. That
+detour-owned return envelope remains authorable when the host biome has
+already exhausted its ordinary batch bound; the exception belongs only to the
+closed detour source.
 
 Room-local commands address an occurrence and declaration-owned leaf key.
 They cover incoming rewards, Fields cages, Ship encounter counts and wheels,
 Ephyra side-room generation/order/rewards, Shop offers, sparse acquisition
 payloads, and the exact occurrence-owned Room Action order. Leaf edits do not
-rewrite topology.
-For existing detours, declaration lookup uses the occurrence's game name while
-the address retains its hosting biome. Automatic outcome edits validate that
-declaration's encounter phase, not equality between its room set and host biome.
+rewrite topology. For existing detours, declaration lookup uses the
+occurrence's game name while the address retains its hosting biome. Automatic
+outcome edits validate that declaration's encounter phase, not equality
+between its room set and host biome.
 
 ### Trait Offer Outcomes
 
@@ -943,7 +880,10 @@ declaration-owned child rather than a rendered position.
 
 Commands are semantic immutable transitions. Every successful proposal passes
 through the project decoder before publication. A structural failure reports
-its semantic owner and never leaves partial topology.
+its semantic owner and never leaves partial topology. Commands are the only
+topology-removal authority; they reject partial takeover shape, duplicate
+target keys, incompatible declarations, impossible selection states, and edits
+to a dead leaf with downstream state.
 
 Ordinary and detour commands share command-owned exit-capacity reconciliation:
 target pruning, descendant removal, selection retention, and selected-entry
@@ -960,47 +900,47 @@ activation result, or contextual trait assessment. Contextual impossibility is
 derived validation truth, so an authored value remains persisted until an
 explicit semantic command changes or removes it.
 
+Before decoding a successful proposal, the command boundary closes it in one
+explicit command-local order: newly required source actions, then generated
+pickup sites, then the newly active generated actions, with resource topology
+cleanup, Shrine-source and inactive clocked-pickup retraction and Chaos
+topology reconciliation in the same pass. Each closure compares the
+structurally active Room Action domains before and after its step and closes
+only the newly required delta. It may seed several newly active occurrences or
+one Fields/Ship cohort atomically, but it does not invoke simulation or
+materialization, repair pre-existing omissions, or remove rows made dormant by
+the command. Source-owned site, entry and action change together, preserving
+compatible authored children when their source survives; a later application
+projection never repairs the document or synthesizes a missing site. An
+extension joins this ordered closure rather than adding a second scheduler or
+replaying candidate evaluation; command tests own atomic insertion, retraction,
+compatible retention and Undo.
+
 Room replacement retains structurally representable Hermes and clocked-pickup
 payloads and automatic Steady Growth/Embryo phase choices. This is provisional
 retention, not a timing equivalence claim. Exact edit settlement compares the
-effect-owned source, cycle, progress and lifecycle contact across reached cohorts;
-unknown or mixed current evidence cannot justify erasure. Once current evidence
-agrees, inherited choices without established prior correspondence reset, including
-suffix choices revealed by a later blocker repair. This conservative fallback can
-lose choices even when clocks did not change; Undo restores them. The exact outcome
-or pickup child authored by the current command is protected. Retained unranked
-Hermes payload follows the same rule; placing an action does not author its nested
-choices. Vanished structural phases
-are removed under the existing codec and remain recoverable through Undo.
-
-Before decoding a successful proposed document, the command boundary compares
-the structurally active Room Action domains before and after the edit and
-closes only the newly required delta. This pure authored-domain step does not
-invoke simulation or materialization. It may seed several newly active
-occurrences or one Fields/Ship cohort atomically, but it neither repairs
-pre-existing omissions nor removes rows made dormant by the command.
-
-### Ordered reconciliation
-
-The single dispatcher in `authored-project/commands/dispatch.ts` closes a
-successful proposal before decoding it. Source action closure precedes generated
-pickup reconciliation; newly active generated actions are then scheduled.
-Resource topology cleanup, missing or newly inactive Shrine-source retraction,
-inactive clocked pickup retraction and Chaos topology reconciliation remain in that explicit
-command-local order.
+effect-owned source, cycle, progress and lifecycle contact across reached
+cohorts; unknown or mixed current evidence cannot justify erasure. Once current
+evidence agrees, inherited choices without established prior correspondence
+reset, including suffix choices revealed by a later blocker repair. This
+conservative fallback can lose choices even when clocks did not change; Undo
+restores them. The exact outcome or pickup child authored by the current
+command is protected. Retained unranked Hermes payload follows the same rule;
+placing an action does not author its nested choices. Vanished structural
+phases are removed under the existing codec and remain recoverable through
+Undo.
 
 `UnplaceGeneratedDelivery` removes an exact cross-room Shrine delivery action
 and its host-local payload, including nested reward choices, while preserving
 the source purchase and sibling deliveries. It validates structural ownership,
-not simulated validity. The structural command can represent an unplaced
-obligation; application edit settlement refuses to publish removal of a reached
-valid required delivery. Proven invalid placements retain this explicit repair. Due-contact validation continues to require that delivery before
-publication. Same-room rushed deliveries are optional actions ranked by the
-rush command and removed through `RemoveRoomAction`, never unplaced; a
-rushed purchase may stand without its pickup. Ordinary required actions remain
-protected from removal.
-Source reactivation uses the existing exact placement support rather than
-guessing a replacement host.
+not simulated validity; application edit settlement refuses to publish removal
+of a reached valid required delivery, proven invalid placements retain this
+explicit repair, and due-contact validation continues to
+require that delivery before publication. Same-room rushed deliveries are
+optional actions ranked by the rush command and removed through
+`RemoveRoomAction`, never unplaced; a rushed purchase may stand without its
+pickup. Source reactivation uses the existing exact placement support rather
+than guessing a replacement host.
 
 Retained clocked-pickup payload alone does not create an optional action. The
 simulator's reached due-entry capability exposes unplaced drops; ordered stale
@@ -1010,31 +950,13 @@ available to place again, while other recurring drops from the same source are
 untouched. Source retraction may retain dormant payload for repair, but must not
 resurrect it as an optional pickup.
 
-The two required-action contacts serve different inputs. The first closes
-newly active source actions; the second compares the generated-pickup result
-against its immediate predecessor and closes newly generated actions. Combining
-them into one early pass can miss a generated pickup; running an unrestricted
-repair loop can overwrite retained user choices or repair unrelated omissions.
-
-For example, changing a producer must not retain an action whose generated
-entry no longer exists. Reconcile source-owned site, entry and action together,
-preserving compatible authored children when their source survives. A later
-application projection must not repair the document or synthesize a missing
-site to make it renderable.
-
-An extension must identify which source or generated product it changes and
-join this ordered closure. Command tests own atomic insertion, retraction,
-compatible retention and Undo; lifecycle simulation separately owns when an
-effect matures. Do not add a second scheduler or replay candidate evaluation
-inside command handling.
-
 ### Command families
 
 The command language includes project and route commands; start, batch, target,
 takeover, selection, removal, and clear-topology commands; terminal Hub
 replacement, Hub board and visit commands; and occurrence-local state
 commands including `SelectEncounter` and `ResetEncounter`, plus the closed
-Anomaly and Zagreus detour commands. The current union is defined by
+Anomaly, Zagreus and Chaos detour commands. The current union is defined by
 `packages/planner-engine/src/authored-project/commands/types.ts`.
 
 `RemoveExitDecision` keeps the source occurrence but removes its normal and
@@ -1046,8 +968,8 @@ Navigation and focus are not commands and do not enter authored history.
 
 ## Persistence and Validation
 
-The portable document has exact keys, a validated full itinerary and its configured prefix, and
-stable indented JSON with a trailing newline:
+The portable document has exact keys, a validated full itinerary and its
+configured prefix, and stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
@@ -1069,19 +991,12 @@ Unknown fields, malformed discriminants, wrong schema or catalog versions,
 unauthorized cross-biome rooms, invalid leaf state, and malformed structural
 ownership fail at decode contact. The codec preserves structurally
 representable incomplete and context-invalid authored choices; simulation
-findings, not fallback, describe context invalidity.
-
-Structural topology decoding resolves each occurrence's additional-exit
-attachments once per invocation and carries the decoded arrays into its
-complete result. An invocation-local memo preserves first-demand validation
-order and diagnostic paths; it does not escape as a consumer dependency.
-
-Decision-form decoding validates declaration-owned source, target, batch and
-visit constraints using the same invocation's attachment reader. The structural
-coordinator retains global selected-spine, fixed-link, cycle and ownership
-checks in their diagnostic order. It returns resolved occurrence roles and
-entry-active facts for leaf decoding. This validation path never invokes
-command repair or silently prunes representable authored state.
+findings, not fallback, describe context invalidity. Decision-form decoding
+validates declaration-owned source, target, batch and visit constraints; the
+structural coordinator retains global selected-spine, fixed-link, cycle and
+ownership checks and returns resolved occurrence roles and entry-active facts
+for leaf decoding. Decoding never invokes command repair or silently prunes
+representable authored state.
 
 Persistence excludes filenames, library keys, Redux state, editor tabs, graph
 positions, candidate sets, findings, simulation output, write status, and an
@@ -1090,71 +1005,20 @@ project identity or name. A new project starts with a unique minted
 `projectId`; every write keeps it, and a duplicate, an event copy or an import
 whose identity the library already holds takes a new one through
 `reidentifyProjectHistory`, which replaces the identity in every snapshot
-rather than adding a command step. Schema 89 identities are unique: the 88 → 89 migration replaces
-schema 88's shared default `'run-plan'` with a unique identity, and there is no
-runtime rule for it. Schema 90 admits the Fresh File route's null equipment
-and keepsake selections; the 89 → 90 migration changes only the version, since
-every schema-89 route is a mature save whose selections stay as written.
-Schema 91 moves Shrine rush from the purchase terms onto the purchase action;
-the 90 → 91 migration inserts one action per purchased generation in slot
-order (`first`, `secondLeft`, `secondRight`, then the refill) carrying the old
-rush, before the Shrine room's own pickups, so the refill source is unchanged.
-Schema 92 moves the Anvil result from the Shop slot onto the reward; the
-91 → 92 migration moves each Shop slot's and Travel Deal refill's
-`anvilResult` onto its reward's `self` role and gives every other reward
-carrying an Anvil, such as a Gold Gold Gold duplicate, a `null` result.
-Schema 93 adds the loadout `familiarKey` and the optional Worry Free
-`maxHealthRoll`; the 92 → 93 migration equips Frinos on every mature route and
-`null` on Fresh File, and leaves every Worry Free roll omitted, which is its
-rarity minimum.
-Schema 94 replaces each Hex tree's Rare and Epic identity sets with the
-complete `nodes` map; the 93 → 94 migration places the Rare picks in the
-layout's Keystone nodes and the Epic picks in its Legendary nodes, both in
-layout order, and gives every repeatable node the catalog's default fill.
-
-Each writable Path of Stars screen—a Path reward's role, or a Spell Drop that
-Aspect of Selene routes to the tree—owns its invested nodes on the reward:
-`hexActivationsByAcquisitionRole[role] = { selectedNodeKeys }`, a set of
-`depth:slot` keys, like the Anvil result. The selection is the author's
-choice: nothing fills it, and a reached screen without one is the required
-input `hexActivationMissing`. The screen's count, invested set and God Sent
-presence are simulation facts. A selection is kept as authored; a wrong count,
-an absent, invested or unknown node, or a node no order can reach is a
-`hexActivationUnavailable` finding on the role with the nodes in evidence, and
-a branch the selection does not fit reports the same finding. The screen's
-candidate offers additions only while the selection is under its count; a
-saved selection over a count an upstream edit shrank is kept with its finding
-and can only shrink.
-
-Schema 95 adds that field. The 94 → 95 migration only bumps the version, so
-every screen is unresolved and each reached one asks for its nodes.
-Schema 96 requires every Hub's completed-Hub exit; the 95 → 96 migration gives
-each Hub without one its Preboss, Boss and Postboss with declaration-owned
-defaults and new biome-scoped identities, leaving existing identities intact.
-Schema 97 adds the route's draft spec and Practice start and makes every rack
-present; the 96 → 97 migration adds the empty draft, gives each rack-bearing
-occurrence without a rack an unchanged one ranked right after its fountain,
-drops a rack retained where the route has none, and moves the run modifiers'
-`startPoint` to `practiceStart`.
-Schema 98 adds the plan's `name`; the 97 → 98 migration names the plan after
-the file it is loaded from (its stem, trimmed and bounded) and otherwise gives
-it the default. A slot source stored before 98 names its plan beside the
-project, and rebuilding the slot migrates the project under that name.
-Revision 98.1 adds the draft spec's `roomForcing`, `purchasesPerBiome`,
-`retriesPerBiome` and `resourceRoomChance`.
+rather than adding a command step.
 
 ## Undo and Redo
 
 `ProjectHistory` holds frozen `past`, `present`, and `future` document
-snapshots. One effective semantic edit, including engine-owned timed-effect settlement,
-creates one history step and clears redo. A no-op command retains history identity. Undo and redo restore exact
-prior snapshots. Derived simulation and transient UI state remain outside this
-history.
+snapshots. One effective semantic edit, including engine-owned timed-effect
+settlement, creates one history step and clears redo. A no-op command retains
+history identity. Undo and redo restore exact prior snapshots. Derived
+simulation and transient UI state remain outside this history.
 
 ## Explicit Non-Goals
 
 The authored model contains no generic special-exit placeholder, probability
-score, RNG seed, game-profile predicate, generic graph edge,
-rendered coordinate, React state, ImGui storage, silent repair, or guessed
-fallback. Chaos uses the closed additional-exit envelope without altering the
-common biome-plan shape.
+score, RNG seed, game-profile predicate, generic graph edge, rendered
+coordinate, React state, ImGui storage, silent repair, or guessed fallback.
+Chaos uses the closed additional-exit envelope without altering the common
+biome-plan shape.

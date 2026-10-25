@@ -73,6 +73,20 @@ The [Hex layout
 audit](../audits/loadout-and-progression/HEX_TALENT_LAYOUT_GAME_DATA_AUDIT.md)
 owns the native layouts and draw rules.
 
+Each writable Path of Stars screen—a Path reward's role, or a Spell Drop that
+Aspect of Selene routes to the tree—owns its invested nodes on the reward:
+`hexActivationsByAcquisitionRole[role] = { selectedNodeKeys }`, a set of
+`depth:slot` keys, like the Anvil result. The selection is the author's
+choice: nothing fills it, and a reached screen without one is the required
+input `hexActivationMissing`. The screen's count, invested set and God Sent
+presence are simulation facts. A selection is kept as authored; a wrong count,
+an absent, invested or unknown node, or a node no order can reach is a
+`hexActivationUnavailable` finding on the role with the nodes in evidence, and
+a branch the selection does not fit reports the same finding. The screen's
+candidate offers additions only while the selection is under its count; a
+saved selection over a count an upstream edit shrank is kept with its finding
+and can only shrink.
+
 ### Option-owned results
 
 Some selected traits own one further frozen result on their option. A
