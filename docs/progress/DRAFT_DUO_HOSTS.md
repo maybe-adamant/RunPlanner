@@ -25,19 +25,22 @@ offer one once its prerequisites are held.
 4. **Cap.** The Duo counts toward its host's traits-per-god cap and no longer
    toward neither god.
 5. **Storage.** The draft spec gains an optional `duoHostByTrait` map
-   (`traitKey → godKey`). A Duo without an entry is hosted by the first pool god
-   (in pool order) that lists it, so existing baskets keep decoding. Minor
-   schema revision 98.1 → 98.2, announced; an existing basket whose default
-   host's cap is now exceeded is refused like any over-cap basket.
-6. **Share codes.** Layout 3 carries the host per Duo; layout 2 codes are
-   refused as from an older planner.
+   (`traitKey → godKey`), a world field beside the basket rather than an
+   Advanced option (Reset Advanced keeps it), decoded tolerantly like the rest
+   of the spec: an entry naming an unknown trait, a non-Duo or a
+   god that does not list the Duo is dropped. A Duo without an entry is hosted
+   by the first pool god (in pool order) that lists it. No schema revision and
+   no execution-fixture change; a basket whose default host's cap is now
+   exceeded is refused at draft time like any over-cap basket.
+6. **Share codes.** The host map travels as its own tag in layout 3's tagged
+   section, which a reader skips when unknown; no layout bump.
 
 ## Ownership
 
 - **Planner engine:** spec field, codec, defaults and equality; queues
   (`draftSourceQueues`, `draftCappedGiver`), refusals, budget, schedule,
   steering (`readyDuos` retired in favour of queue membership, `nextQueued`
-  deferral), trait offers; share-code layout 3.
+  deferral), trait offers; the host map's share-code tag.
 - **Planner application:** basket projection (Duo rows in both god sections,
   taken-by state, order numbers and reorder chips for Duos), the shared Duos
   section removed; picking a Duo in a god list sets its host through
@@ -49,9 +52,8 @@ offer one once its prerequisites are held.
    order, the other god's section showing it taken, and an unpicked Duo
    available in both.
 1. **Engine:** model items 1–6, tests at their owners (the Duo tests that pin
-   "outside every queue" and "counts toward neither god" flip), execution
-   fixtures' schema-revision edit, equivalence and corpus deltas (Duo-met
-   should hold or rise).
+   "outside every queue" and "counts toward neither god" flip), equivalence
+   and corpus deltas (Duo-met should hold or rise).
 2. **Application:** basket UI from the approved mock-up; UI tests.
 3. **Closure:** docs (authored model draft spec, draft steering), delete this
    plan.

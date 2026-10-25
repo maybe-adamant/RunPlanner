@@ -809,11 +809,17 @@ what the draft generates (the starting reward) and what sits outside the draft
 when those match.
 
 The engine codec (`encodeDraftShareCode`, `decodeDraftShareCode`) packs
-positions in catalog-ordered lists into base32 behind a layout version and a
-fingerprint of those lists and the catalog facts that shape the layout. A code
-from another layout, catalog or route is refused rather than decoded into other
-keys (a code from an earlier layout as from an older planner), and the decoded inputs pass the draft spec and loadout validation. Codes are made on demand and never
-persisted, so they touch neither the project schema nor the plan wire. Pasting
+positions in catalog-ordered lists into base32 behind a layout version (3) and
+a fingerprint of those lists and the catalog facts that shape the layout. The
+loadout and the draft world (gods, basket, NPCs, racks, seed) are positional;
+the stored Advanced options follow as tagged entries (a count, then each
+option's `DRAFT_OPTIONS` tag, payload length and payload), and a reader skips
+an unknown tag, so a new option needs no layout change. A code from another
+layout, catalog or route is refused rather than decoded into other keys (a code
+from an earlier layout as from an older planner); the loadout passes its
+validation and the draft spec heals through the tolerant draft spec decode.
+Codes are made on demand and never persisted, so they touch neither the project
+schema nor the plan wire. Pasting
 installs the spec and loadout through semantic commands (`draftShareCommands`)
 as one history edit.
 
