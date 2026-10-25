@@ -197,7 +197,7 @@ describe('draft spec', () => {
           fillerPriority: [
             { kind: 'gold', amount: 1 },
             { kind: 'maxMagick' },
-            { kind: 'pom', amount: 20 },
+            { kind: 'pom', amount: 10 },
             { kind: 'maxHealth' },
           ],
         },

@@ -101,7 +101,7 @@ export const DRAFT_OPTIONS = deepFreeze({
   fillerPriority: {
     kind: 'ranking',
     choices: ['maxHealth', 'maxMagick', 'gold', 'pom'],
-    amount: { min: 1, max: 20 },
+    amount: { min: 1, max: 10 },
     tag: 8,
   },
 } as const satisfies { readonly [K in DraftOptionKey]: DraftOptionDeclaration });

@@ -73,7 +73,7 @@ const duoHosts: DraftShareInputs = {
       WeaponUpgrade: ['StaffLongAttackTrait'],
     },
     fillerPriority: [
-      { kind: 'pom', amount: 20 },
+      { kind: 'pom', amount: 10 },
       { kind: 'maxHealth' },
       { kind: 'gold', amount: 1 },
     ],
