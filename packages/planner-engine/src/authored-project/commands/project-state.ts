@@ -448,12 +448,7 @@ export function applyProjectStateCommand(
     case 'ReplaceDraftSpec': {
       if (document.route.routeKey !== command.route.routeKey)
         failCommand(command, `project is missing route ${command.route.routeKey}`);
-      let draft;
-      try {
-        draft = decodeDraftSpec(command.draft, 'draft', catalog, document.route.routeKey);
-      } catch (error) {
-        failCommand(command, error instanceof Error ? error.message : 'invalid draft spec');
-      }
+      const draft = decodeDraftSpec(command.draft, catalog, document.route.routeKey);
       if (sameDraftSpec(document.route.draft, draft)) return document;
       return { ...document, route: { ...document.route, draft } };
     }

@@ -1,24 +1,12 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import {
-  DEFAULT_DRAFT_PURCHASES_PER_BIOME,
-  DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE,
-  DEFAULT_DRAFT_RETRIES_PER_BIOME,
-  DEFAULT_DRAFT_ROOM_FORCING,
-  DRAFT_PURCHASES_PER_BIOME_RANGE,
-  DRAFT_RESOURCE_ROOM_CHANCE_RANGE,
-  DRAFT_RETRIES_PER_BIOME_RANGE,
+  DRAFT_OPTIONS,
   createRouteAddress,
   draftAdvancedChanged,
   routeInitialProfile,
   withDraftAdvancedDefaults,
   withDraftGodBoons,
-  withDraftPerGodCap,
-  withDraftPreferMidshops,
-  withDraftPurchasesPerBiome,
-  withDraftPursueTartarusGoal,
-  withDraftResourceRoomChance,
-  withDraftRetriesPerBiome,
-  withDraftRoomForcing,
+  withDraftOption,
   type AuthoredDraftSpec,
   type DraftRoomForcing,
   type ProjectDocument,
@@ -824,7 +812,9 @@ export function RouteDraftPanel({
                 range={budget.perGod.range}
                 value={budget.perGod.value}
                 onChange={(value) =>
-                  replaceDraft(withDraftPerGodCap(draft, value, budget.perGod.defaultValue))
+                  replaceDraft(
+                    withDraftOption(draft, 'perGodCap', value, budget.perGod.defaultValue),
+                  )
                 }
               />
             </section>
@@ -845,10 +835,13 @@ export function RouteDraftPanel({
                     <label key={option.forcing} {...hintProps(option.equation)}>
                       <input
                         checked={
-                          (draft.roomForcing ?? DEFAULT_DRAFT_ROOM_FORCING) === option.forcing
+                          (draft.roomForcing ?? DRAFT_OPTIONS.roomForcing.default) ===
+                          option.forcing
                         }
                         name={`${project.route.routeKey}-draft-room-forcing`}
-                        onChange={() => replaceDraft(withDraftRoomForcing(draft, option.forcing))}
+                        onChange={() =>
+                          replaceDraft(withDraftOption(draft, 'roomForcing', option.forcing))
+                        }
                         type="radio"
                       />
                       {option.label}
@@ -857,25 +850,29 @@ export function RouteDraftPanel({
                 </div>
               </div>
               <DraftSlider
-                defaultValue={DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE}
+                defaultValue={DRAFT_OPTIONS.resourceRoomChance.default}
                 label="Resource rooms"
-                range={DRAFT_RESOURCE_ROOM_CHANCE_RANGE}
+                range={DRAFT_OPTIONS.resourceRoomChance}
                 unit="%"
-                value={draft.resourceRoomChance ?? DEFAULT_DRAFT_RESOURCE_ROOM_CHANCE}
-                onChange={(value) => replaceDraft(withDraftResourceRoomChance(draft, value))}
+                value={draft.resourceRoomChance ?? DRAFT_OPTIONS.resourceRoomChance.default}
+                onChange={(value) =>
+                  replaceDraft(withDraftOption(draft, 'resourceRoomChance', value))
+                }
               />
               <DraftSlider
-                defaultValue={DEFAULT_DRAFT_PURCHASES_PER_BIOME}
+                defaultValue={DRAFT_OPTIONS.purchasesPerBiome.default}
                 label="Shop buys per biome"
-                range={DRAFT_PURCHASES_PER_BIOME_RANGE}
-                value={draft.purchasesPerBiome ?? DEFAULT_DRAFT_PURCHASES_PER_BIOME}
-                onChange={(value) => replaceDraft(withDraftPurchasesPerBiome(draft, value))}
+                range={DRAFT_OPTIONS.purchasesPerBiome}
+                value={draft.purchasesPerBiome ?? DRAFT_OPTIONS.purchasesPerBiome.default}
+                onChange={(value) =>
+                  replaceDraft(withDraftOption(draft, 'purchasesPerBiome', value))
+                }
               />
               <DraftCheckbox
                 checked={draft.preferMidshops === true}
                 hint={draft.preferMidshops === true ? 'Drafts take longer.' : undefined}
                 label="Prefer midshops"
-                onChange={(on) => replaceDraft(withDraftPreferMidshops(draft, on))}
+                onChange={(on) => replaceDraft(withDraftOption(draft, 'preferMidshops', on))}
               />
               {budget.clockworkGoal ? (
                 <DraftCheckbox
@@ -886,7 +883,7 @@ export function RouteDraftPanel({
                       : undefined
                   }
                   label="Pursue the Tartarus goal"
-                  onChange={(on) => replaceDraft(withDraftPursueTartarusGoal(draft, on))}
+                  onChange={(on) => replaceDraft(withDraftOption(draft, 'pursueTartarusGoal', on))}
                 />
               ) : null}
             </section>
@@ -895,12 +892,12 @@ export function RouteDraftPanel({
                 Search
               </h3>
               <DraftSlider
-                defaultValue={DEFAULT_DRAFT_RETRIES_PER_BIOME}
+                defaultValue={DRAFT_OPTIONS.retriesPerBiome.default}
                 hint="More retries: better coverage, longer drafts"
                 label="Retries"
-                range={DRAFT_RETRIES_PER_BIOME_RANGE}
-                value={draft.retriesPerBiome ?? DEFAULT_DRAFT_RETRIES_PER_BIOME}
-                onChange={(value) => replaceDraft(withDraftRetriesPerBiome(draft, value))}
+                range={DRAFT_OPTIONS.retriesPerBiome}
+                value={draft.retriesPerBiome ?? DRAFT_OPTIONS.retriesPerBiome.default}
+                onChange={(value) => replaceDraft(withDraftOption(draft, 'retriesPerBiome', value))}
               />
             </section>
           </>

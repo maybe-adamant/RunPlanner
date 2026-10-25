@@ -1,5 +1,5 @@
 import type { Catalog } from '../../catalog-schema';
-import { DEFAULT_DRAFT_PER_GOD_CAP, defaultDraftGodBoons } from '../../authored-project/draft-spec';
+import { DRAFT_OPTIONS, defaultDraftGodBoons } from '../../authored-project/draft-spec';
 import { ORDINARY_SOURCE_CAP } from '../../reward-kernel';
 import {
   draftDenialActive,
@@ -57,7 +57,7 @@ export function draftDefaultPerGodCap(
   catalog: Catalog,
   loadout: Pick<DraftSpec, 'loadout'>['loadout'],
 ): number {
-  return DEFAULT_DRAFT_PER_GOD_CAP - (draftDenialActive(catalog, loadout) ? 1 : 0);
+  return DRAFT_OPTIONS.perGodCap.default - (draftDenialActive(catalog, loadout) ? 1 : 0);
 }
 
 /** The most boons one god's own traits may take, Legendary included and Duos not. */
@@ -98,8 +98,8 @@ export function draftGodBoonBudget(
     perGod,
     perGodDefault: draftDefaultPerGodCap(catalog, spec.loadout),
     perGodDefaults: Object.freeze({
-      withoutDenial: DEFAULT_DRAFT_PER_GOD_CAP,
-      withDenial: DEFAULT_DRAFT_PER_GOD_CAP - 1,
+      withoutDenial: DRAFT_OPTIONS.perGodCap.default,
+      withDenial: DRAFT_OPTIONS.perGodCap.default - 1,
     }),
     clockworkGoal: biomes.some((biome) => clockworkBiome(catalog, biome.biomeKey)),
     reachable: perGod * ORDINARY_SOURCE_CAP,

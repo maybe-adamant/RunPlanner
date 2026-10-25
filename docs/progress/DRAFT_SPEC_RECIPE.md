@@ -41,12 +41,14 @@ strict.
    `withDraftGodBoons` stays as the per-biome setter. Equality,
    `draftAdvancedChanged` and `withDraftAdvancedDefaults` read the table; the
    separate `DRAFT_*_RANGE` / `DEFAULT_DRAFT_*` constants and `ADVANCED_KEYS` go.
-4. **Share code layout 3.** The loadout section stays positional. The draft
-   section becomes tagged entries: a count, then per entry a tag, a payload
-   length and the payload. A reader skips an unknown tag; decoded values pass
-   the tolerant decoder. Option ranges and choices leave the fingerprint; the
-   catalog key lists stay. Layout 2 codes are refused as from an older planner;
-   no reader is kept.
+4. **Share code layout 3.** The loadout and the draft world (gods, basket,
+   story NPCs, field NPCs, racks, seed) stay positional. The stored Advanced
+   options follow as tagged entries: a count, then per entry the option's tag,
+   a payload length and the payload. A reader skips an unknown tag, so a later
+   option (a Duo host map, say) is a new tag, not a layout bump; decoded values
+   pass the tolerant decoder. Option ranges and choices leave the fingerprint;
+   the catalog key lists stay. Layout 2 codes are refused as from an older
+   planner; no reader is kept.
 5. **No schema revision.** Decoding only accepts more, no new key is written and
    the plan wire is unchanged. Projects encode byte-identically.
 
