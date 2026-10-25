@@ -442,13 +442,15 @@ export class DraftWalk {
     const reserve = this.roomOf(occurrence.gameName)?.kind === 'Preboss' ? 0 : 1;
     let spare =
       this.steering.purchasesPerBiome() - this.steering.biomePurchases(origin.biomeKey) - reserve;
-    let candidates = [
+    const keys = [
       ...slotKeys,
       ...(shop.travelDealRefill === undefined ? [] : [TRAVEL_DEAL_REFILL_ENTRY_KEY]),
-    ].filter((key) => weight(key) > 0);
-    while (spare > 0 && candidates.length > 0) {
-      const offerKey = this.weighted(candidates, weight)[0]!;
-      candidates = candidates.filter((key) => key !== offerKey);
+    ];
+    // A kind that reaches its amount stops being bought, so the weights are read per pick.
+    for (;;) {
+      const offerKey = spare > 0 ? this.weighted(keys, weight)[0] : undefined;
+      if (offerKey === undefined) return;
+      bought.add(offerKey);
       const offer = { ...origin, offerKey };
       if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true }))
         continue;

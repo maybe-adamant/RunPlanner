@@ -161,21 +161,48 @@ describe('draft spec', () => {
         purchasesPerBiome: 0,
         resourceRoomChance: 50,
         pursueTartarusGoal: true,
-        fillerPriority: ['pom'],
+        fillerPriority: [{ kind: 'pom' }],
       }),
     ).toEqual(draft);
   });
 
-  it('stores a filler ranking in order, dropping unknown and repeated kinds; empty is not stored', () => {
+  it('stores a filler ranking in order with optional amounts, healing kinds and amounts', () => {
     expect(withDraftOption(draft, 'fillerPriority', [])).toEqual(draft);
-    const ranked = withDraftOption(draft, 'fillerPriority', ['pom', 'maxHealth', 'pom']);
-    expect(ranked.fillerPriority).toEqual(['pom', 'maxHealth']);
+    const ranked = withDraftOption(draft, 'fillerPriority', [
+      { kind: 'pom', amount: 2 },
+      { kind: 'maxHealth' },
+      { kind: 'pom' },
+    ]);
+    expect(ranked.fillerPriority).toEqual([{ kind: 'pom', amount: 2 }, { kind: 'maxHealth' }]);
     expect(draftAdvancedChanged(ranked)).toBe(true);
-    expect(sameDraftSpec(ranked, { ...draft, fillerPriority: ['pom', 'maxHealth'] })).toBe(true);
-    expect(sameDraftSpec(ranked, { ...draft, fillerPriority: ['maxHealth', 'pom'] })).toBe(false);
+    const same = (fillerPriority: NonNullable<AuthoredDraftSpec['fillerPriority']>) =>
+      sameDraftSpec(ranked, { ...draft, fillerPriority });
+    expect(same([{ kind: 'pom', amount: 2 }, { kind: 'maxHealth' }])).toBe(true);
+    expect(same([{ kind: 'maxHealth' }, { kind: 'pom', amount: 2 }])).toBe(false);
+    expect(same([{ kind: 'pom', amount: 3 }, { kind: 'maxHealth' }])).toBe(false);
+    expect(same([{ kind: 'pom' }, { kind: 'maxHealth' }])).toBe(false);
     expect(decoded(ranked)).toEqual(ranked);
     for (const [value, expected] of [
-      [['gold', 'Gold', 'gold', 3, 'maxMagick'], { fillerPriority: ['gold', 'maxMagick'] }],
+      [
+        [
+          { kind: 'gold', amount: 0 },
+          { kind: 'Gold' },
+          { kind: 'gold', amount: 4 },
+          3,
+          'maxMagick',
+          { kind: 'pom', amount: 99 },
+          { kind: 'maxHealth', amount: 2.5 },
+        ],
+        {
+          fillerPriority: [
+            { kind: 'gold', amount: 1 },
+            { kind: 'maxMagick' },
+            { kind: 'pom', amount: 20 },
+            { kind: 'maxHealth' },
+          ],
+        },
+      ],
+      [[{ kind: 'pom', amount: 'two' }], { fillerPriority: [{ kind: 'pom' }] }],
       [['nope'], {}],
       [[], {}],
       ['gold', {}],

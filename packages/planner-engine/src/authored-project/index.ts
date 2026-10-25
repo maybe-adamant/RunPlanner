@@ -395,6 +395,7 @@ export {
   type AuthoredDraftSpec,
   type DraftRoomForcing,
   type DraftFillerKind,
+  type DraftFillerRank,
   type AuthoredKeepsakeRack,
   type ResourceFamily,
   type ResourcePlacement,

@@ -778,12 +778,48 @@ export class DraftSteering {
       });
   }
 
-  /** Filler kinds favoured, highest first. */
+  /** Ranked filler kinds still short of their amount, highest first. */
   fillerPriority(): readonly DraftFillerKind[] {
-    return this.spec.fillerPriority ?? [];
+    const ranks = this.spec.fillerPriority ?? [];
+    if (ranks.length === 0) return [];
+    const taken = this.fillerTaken();
+    return ranks
+      .filter((rank) => rank.amount === undefined || (taken.get(rank.kind) ?? 0) < rank.amount)
+      .map((rank) => rank.kind);
   }
 
-  /** A reward's weight by its filler kind's rank; 1 when unranked. */
+  private fillerTakenCache?: {
+    readonly assembly: ProjectEvaluationAssembly;
+    readonly taken: ReadonlyMap<DraftFillerKind, number>;
+  };
+
+  /** Filler pickups so far by kind, each counting 1: entered rooms' rewards and Shop purchases. */
+  fillerTaken(): ReadonlyMap<DraftFillerKind, number> {
+    const assembly = this.state.assembly();
+    if (this.fillerTakenCache?.assembly === assembly) return this.fillerTakenCache.taken;
+    const taken = new Map<DraftFillerKind, number>();
+    const count = (offer: ResolvedRewardOffer | undefined) => {
+      const kind = offer === undefined ? undefined : draftFillerKind(offer.rewardType);
+      if (kind !== undefined) taken.set(kind, (taken.get(kind) ?? 0) + 1);
+    };
+    for (const biome of assembly.evaluation.route.biomes) {
+      if (!('history' in biome)) continue;
+      const plan = assembly.project.route.biomes.find((b) => b.biomeKey === biome.biomeKey);
+      for (const entry of biome.history.ledgers.roomAppearances) {
+        if (entry.origin.kind !== 'occurrence' || entry.origin.biomeKey !== biome.biomeKey)
+          continue;
+        const id = entry.origin.occurrenceId;
+        const occurrence = plan?.topology?.occurrences.find((o) => o.occurrenceId === id);
+        if (occurrence !== undefined && 'reward' in occurrence.state)
+          count(occurrence.state.reward?.offer);
+      }
+    }
+    this.purchasedOffers().forEach(count);
+    this.fillerTakenCache = { assembly, taken };
+    return taken;
+  }
+
+  /** A reward's weight by its filler kind's rank among the kinds still short; 1 otherwise. */
   private fillerWeight(rewardType: string): number {
     const kind = draftFillerKind(rewardType);
     const rank = kind === undefined ? -1 : this.fillerPriority().indexOf(kind);

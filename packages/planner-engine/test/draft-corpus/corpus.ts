@@ -2,7 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createProjectDocument } from '../../src/authored-project/defaults';
 import { routeInitialProfile } from '../../src/authored-project/route-profile';
-import type { DraftFillerKind, ProjectDocument } from '../../src/authored-project';
+import type { DraftFillerRank, ProjectDocument } from '../../src/authored-project';
 import {
   assessDraftBasket,
   draftKeepsakeOptions,
@@ -50,7 +50,7 @@ interface EntryRecipe {
   readonly preferMidshops?: boolean;
   readonly pursueTartarusGoal?: boolean;
   readonly purchasesPerBiome?: number;
-  readonly fillerPriority?: readonly DraftFillerKind[];
+  readonly fillerPriority?: readonly DraftFillerRank[];
 }
 
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
@@ -397,15 +397,32 @@ const TARTARUS_VARIANTS = ['U1', 'U3', 'U4', 'U8', 'D1', 'D3', 'D4', 'F3'];
 const FILLER_VARIANTS: readonly {
   readonly base: string;
   readonly suffix: string;
-  readonly fillerPriority: readonly DraftFillerKind[];
+  readonly fillerPriority: readonly DraftFillerRank[];
   readonly purchasesPerBiome?: number;
 }[] = [
-  { base: 'U1', suffix: 'filler', fillerPriority: ['maxHealth', 'pom', 'gold', 'maxMagick'] },
-  { base: 'S2', suffix: 'filler', fillerPriority: ['maxHealth', 'pom', 'gold', 'maxMagick'] },
+  {
+    base: 'U1',
+    suffix: 'filler',
+    fillerPriority: [
+      { kind: 'maxHealth' },
+      { kind: 'pom' },
+      { kind: 'gold' },
+      { kind: 'maxMagick' },
+    ],
+  },
+  {
+    base: 'S2',
+    suffix: 'filler amounts',
+    fillerPriority: [
+      { kind: 'maxHealth', amount: 3 },
+      { kind: 'pom', amount: 2 },
+      { kind: 'gold' },
+    ],
+  },
   {
     base: 'D1',
     suffix: 'filler shops',
-    fillerPriority: ['pom', 'maxHealth', 'maxMagick'],
+    fillerPriority: [{ kind: 'pom' }, { kind: 'maxHealth' }, { kind: 'maxMagick' }],
     purchasesPerBiome: 3,
   },
 ];
@@ -425,7 +442,7 @@ const recipes: readonly EntryRecipe[] = [
 ];
 
 function baseName(recipe: EntryRecipe): string {
-  return recipe.name.replace(/ (midshops|tartarus|filler|filler shops)$/, '');
+  return recipe.name.replace(/ (midshops|tartarus|filler|filler amounts|filler shops)$/, '');
 }
 
 function nameSeed(name: string): number {
