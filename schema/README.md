@@ -1,7 +1,9 @@
 # Project schema boundary
 
 The application migrates documents from schema 86 onward to the current schema
-when it opens them. Earlier schemas are no longer supported. The same
+when it opens them. Earlier schemas are no longer supported. The floor moves
+only together with a major schema bump, and only by explicit owner decision;
+until then every transition from the floor stays. The same
 transitions run offline through one tool, which reads the file's own
 `schemaVersion`, applies every transition up to the current schema (or `--to`
 an older one) and writes a sibling `-schema<N>` file without overwriting the
