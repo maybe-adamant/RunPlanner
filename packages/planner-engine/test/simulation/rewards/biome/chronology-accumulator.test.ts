@@ -4,9 +4,13 @@ import {
   createBiomeAddress,
   createEchoKeepsakeReplayAddress,
   createHubDecisionAddress,
+  createIncomingRewardAddress,
   createKeepsakeEquipResultAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createSteadyGrowthOutcomeAddress,
+  createTraitOfferAddress,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 
 import { ownerRegion } from '../../../../src/simulation/finding-regions';
@@ -20,6 +24,7 @@ import {
 import type { AuthoredSiteSettlementResult } from '../../../../src/simulation/rewards/biome/generation/authored-site-settlement';
 import type { RewardBranchState } from '../../../../src/simulation/rewards/branch-primitives';
 import type { ReachedLevelResolutionEvaluation } from '../../../../src/simulation/traits';
+import type { ReachedSteadyGrowthThreshold } from '../../../../src/simulation/traits/history/transitions';
 import { rewardFinding } from '../../../../src/simulation/rewards/findings';
 import type { RewardProducerFrontier } from '../../../../src/simulation/rewards/producer-frontiers';
 import type { RunStateSnapshot } from '../../../../src/simulation/rewards/run-state';
@@ -240,5 +245,43 @@ describe('chronology accumulator', () => {
       { hub, precedingVisitCount: 0, departure: snapshot('first') },
       { hub, precedingVisitCount: 1, departure: snapshot('second') },
     ]);
+  });
+
+  it('keeps the first landing of a timed outcome and reports branches that land it elsewhere', () => {
+    const biome = createBiomeAddress('Underworld', 'F');
+    const address = createSteadyGrowthOutcomeAddress(
+      createTraitOfferAddress(
+        createIncomingRewardAddress(biome, createOccurrenceId('source')),
+        'self',
+      ),
+      1,
+    );
+    const landing = (id: string) => ({
+      owner: createOccurrenceAddress(biome, createOccurrenceId(id)),
+      phaseKey: 'Encounter',
+    });
+    const reached = (id: string): ChronologyEmission => ({
+      kind: 'steadyGrowthThresholds',
+      thresholds: [
+        {
+          address,
+          landing: landing(id),
+          threshold: { traitKey: 'BoonGrowthBoon' } as unknown as ReachedSteadyGrowthThreshold,
+        },
+      ],
+    });
+
+    const agreeing = createChronologyAccumulator(new Map());
+    agreeing.mergeEmissions([reached('first'), reached('first')]);
+    expect(agreeing.finish().divergentOutcomeLandings).toEqual([]);
+
+    const diverging = createChronologyAccumulator(new Map());
+    diverging.mergeEmissions([reached('first'), reached('second')]);
+    const accumulation = diverging.finish();
+    expect(accumulation.divergentOutcomeLandings).toEqual([address]);
+    expect(accumulation.steadyGrowthOutcomeAddresses.get(semanticAddressKey(address))).toEqual({
+      address,
+      landing: landing('first'),
+    });
   });
 });

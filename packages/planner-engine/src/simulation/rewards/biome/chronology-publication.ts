@@ -178,6 +178,9 @@ export function publishChronology(
         ];
       }),
     ),
+    ...(accumulation.divergentOutcomeLandings.length === 0
+      ? {}
+      : { divergentOutcomeLandings: accumulation.divergentOutcomeLandings }),
     transcendentEmbryoOutcomes: Object.freeze(
       [...accumulation.transcendentEmbryoCandidateContexts.entries()].flatMap(
         ([key, thresholds]) => {
