@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { migrateProjectDocument } from './migrate-project-87-to-88.js';
+import { migrateProjectDocument } from '../apps/planner/src/persistence/project-87-to-88.js';
 
 const hub = (visitOrder) => ({
   kind: 'hub',

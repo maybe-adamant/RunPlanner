@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { migrateProjectDocument, outputPath } from './migrate-project-91-to-92.js';
+import { migrateProjectDocument } from '../apps/planner/src/persistence/project-91-to-92.js';
 
 const anvil = (extra = {}) => ({
   offer: { rewardType: 'ChaosWeaponUpgrade' },
@@ -94,9 +94,5 @@ describe('schema 91 to 92 migration', () => {
       () => migrateProjectDocument({ ...document(), catalogVersion: 'other' }),
       /expects catalog/,
     );
-  });
-
-  it('writes a sibling schema-92 file name', () => {
-    assert.equal(outputPath('/plans/run.runplanner.json'), '/plans/run.runplanner-schema92.json');
   });
 });

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { migrateProjectDocument } from './migrate-project-86-to-87.js';
+import { migrateProjectDocument } from '../apps/planner/src/persistence/project-86-to-87.js';
 
 const document = () => ({
   schemaVersion: 86,
