@@ -131,6 +131,9 @@ export function prepareConcaveStoneSecondary(
         ]) as AuthoredTraitOfferTraits['options'],
         selectedOptionKey: 'option1',
         rarificationActions: Object.freeze([]),
+        ...(authored.steadyGrowthTargets === undefined
+          ? {}
+          : { steadyGrowthTargets: authored.steadyGrowthTargets }),
       }),
       ...(evaluation.levelResolutions[optionIndex(result.optionKey)] === undefined
         ? {}

@@ -871,14 +871,16 @@ export function recordReachedTraitOffer(
     options: evaluation.offer.options,
     selectedOptionKey: evaluation.offer.selectedOptionKey,
     acquisitionPoint,
-    ...(eventKind === 'traitOffer' && acquisitionIdentity !== undefined
+    // Natively a Concave Stone residual is an ordinary acquisition, so a
+    // residual Steady Growth keeps its own clock.
+    ...((eventKind === 'traitOffer' || selectedDisposition.kind === 'steadyGrowth') &&
+    acquisitionIdentity !== undefined
       ? { acquisitionIdentity }
       : {}),
     ...(eventKind === 'traitOffer' && echoRepeatedKeepsakeKey !== undefined
       ? { echoRepeatedKeepsakeKey }
       : {}),
-    ...(eventKind === 'traitOffer' &&
-    acquisitionIdentity !== undefined &&
+    ...(acquisitionIdentity !== undefined &&
     steadyGrowthSource !== undefined &&
     selectedDisposition.kind === 'steadyGrowth'
       ? { steadyGrowthSource }

@@ -16,6 +16,7 @@ import { withTestEncounterRecord } from '../support/simulation-state';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
 import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
+import { createKeepsakeState } from '../../src/simulation/keepsakes/state';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 
@@ -212,6 +213,51 @@ describe('Steady Growth outcomes by source and cycle', () => {
             createTraitOfferAddress(sourcePhase('source'), 'selection'),
             1,
           ),
+        },
+        chronology: { kind: 'history', occurrence: landing },
+      },
+    ]);
+  });
+
+  it('grows a Steady Growth gained as the Concave Stone residual from its source offer', () => {
+    const initial = initializeTestRewardBranches()[0]!;
+    const withStone = Object.freeze({
+      ...initial,
+      state: Object.freeze({
+        ...initial.state,
+        keepsakes: createKeepsakeState(catalog, 'UnpickedBoonKeepsake'),
+      }),
+    });
+    const apollo = acquire(
+      withStone,
+      'apollo',
+      offer('Apollo', ['ApolloWeaponBoon', 'ApolloSpecialBoon', 'ApolloCastBoon']),
+      1,
+    );
+    const residualOffer = (targets: Readonly<Record<string, string>>) =>
+      Object.freeze({
+        ...offer('Demeter', ['DemeterCastBoon', 'DemeterSprintBoon', 'BoonGrowthBoon'], targets),
+        concaveStoneResult: Object.freeze({ kind: 'proc', optionKey: 'option3' }),
+      }) as unknown as AuthoredTraitOffer;
+    const source = createTraitOfferAddress(sourcePhase('stone-source'), 'selection');
+
+    const branch = acquire(apollo, 'stone-source', residualOffer({ '1': 'ApolloWeaponBoon' }), 3);
+    expect(branch.state.traitHistory.equippedTraits.BoonGrowthBoon).toBeDefined();
+    const reached = untilInterval(branch, 10);
+    expect(reached.transition.steadyGrowthThresholds.map(({ address }) => address)).toEqual([
+      createSteadyGrowthOutcomeAddress(source, 1),
+    ]);
+    expect(reached.transition.findings).toEqual([]);
+    expect(
+      reached.transition.branches[0]!.state.traitHistory.equippedTraits.ApolloWeaponBoon?.rarity,
+    ).toBe('Rare');
+
+    const unauthored = untilInterval(acquire(apollo, 'stone-source', residualOffer({}), 3), 10);
+    expect(unauthored.transition.findings).toMatchObject([
+      {
+        finding: {
+          code: 'steadyGrowthOutcomeMissing',
+          origin: createSteadyGrowthOutcomeAddress(source, 1),
         },
         chronology: { kind: 'history', occurrence: landing },
       },
