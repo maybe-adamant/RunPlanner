@@ -5,19 +5,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import { migrateProjectDocument as migrate86To87 } from './project-86-to-87.js';
-import { migrateProjectDocument as migrate87To88 } from './project-87-to-88.js';
-import { migrateProjectDocument as migrate88To89 } from './project-88-to-89.js';
-import { migrateProjectDocument as migrate89To90 } from './project-89-to-90.js';
-import { migrateProjectDocument as migrate90To91 } from './project-90-to-91.js';
-import { migrateProjectDocument as migrate91To92 } from './project-91-to-92.js';
-import { migrateProjectDocument as migrate92To93 } from './project-92-to-93.js';
-import { migrateProjectDocument as migrate93To94 } from './project-93-to-94.js';
-import { migrateProjectDocument as migrate94To95 } from './project-94-to-95.js';
-import { migrateProjectDocument as migrate95To96 } from './project-95-to-96.js';
-import { migrateProjectDocument as migrate96To97 } from './project-96-to-97.js';
-import { migrateProjectDocument as migrate97To98 } from './project-97-to-98.js';
-import { migrateProjectDocument as migrate98To99 } from './project-98-to-99.js';
+import { PROJECT_TRANSITION_STEPS } from './project-transitions.js';
 
 export const PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR = 86 as const;
 
@@ -62,73 +50,22 @@ export interface LoadedProjectDocument {
   readonly project: ProjectDocument;
 }
 
-const productionTransitions: readonly ProjectDocumentTransition[] = Object.freeze([
-  Object.freeze({
-    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 86 }),
-    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 87 }),
-    migrate: migrate86To87,
-  }),
-  Object.freeze({
-    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 87 }),
-    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 88 }),
-    migrate: migrate87To88,
-  }),
-  Object.freeze({
-    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 88 }),
-    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 89 }),
-    migrate: migrate88To89,
-  }),
-  Object.freeze({
-    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 89 }),
-    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 90 }),
-    migrate: migrate89To90,
-  }),
-  Object.freeze({
-    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 90 }),
-    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 91 }),
-    migrate: migrate90To91,
-  }),
-  Object.freeze({
-    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 91 }),
-    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 92 }),
-    migrate: migrate91To92,
-  }),
-  Object.freeze({
-    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 92 }),
-    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 93 }),
-    migrate: migrate92To93,
-  }),
-  Object.freeze({
-    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 93 }),
-    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 94 }),
-    migrate: migrate93To94,
-  }),
-  Object.freeze({
-    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 94 }),
-    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 95 }),
-    migrate: migrate94To95,
-  }),
-  Object.freeze({
-    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 95 }),
-    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 96 }),
-    migrate: migrate95To96,
-  }),
-  Object.freeze({
-    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 96 }),
-    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 97 }),
-    migrate: migrate96To97,
-  }),
-  Object.freeze({
-    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 97 }),
-    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 98 }),
-    migrate: migrate97To98,
-  }),
-  Object.freeze({
-    source: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 98 }),
-    target: Object.freeze({ catalogVersion: '0.55.0-anvil-of-fates', schemaVersion: 99 }),
-    migrate: migrate98To99,
-  }),
-]);
+const productionTransitions: readonly ProjectDocumentTransition[] = Object.freeze(
+  PROJECT_TRANSITION_STEPS.map((step) =>
+    Object.freeze({
+      source: Object.freeze({
+        catalogVersion: step.CATALOG_VERSION,
+        schemaVersion: step.SOURCE_SCHEMA_VERSION,
+      }),
+      target: Object.freeze({
+        catalogVersion: step.CATALOG_VERSION,
+        schemaVersion: step.OUTPUT_SCHEMA_VERSION,
+      }),
+      migrate: (document: unknown, context: ProjectMigrationContext) =>
+        step.migrateProjectDocument(document, context),
+    }),
+  ),
+);
 const noMigrations: readonly ProjectMigrationProvenance[] = Object.freeze([]);
 
 export function loadProjectDocument(

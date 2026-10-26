@@ -14,8 +14,9 @@ npm run schema:migrate -- --to 98 path/to/project.runplanner.json
 
 A new schema adds its browser-safe transform beside the others in
 `apps/planner/src/persistence/project-<from>-to-<to>.js` (with its `.d.ts`),
-registers it in the application loader's transition list and in `TRANSITIONS`
-in `migrate-project.js`, and owns its behavior in a sibling
+appends it to `PROJECT_TRANSITION_STEPS` in
+`apps/planner/src/persistence/project-transitions.js`, which both the
+application loader and `migrate-project.js` read, and owns its behavior in a sibling
 `migrate-project-<from>-to-<to>.test.js` here. Run the boundary tests with:
 
 ```bash
