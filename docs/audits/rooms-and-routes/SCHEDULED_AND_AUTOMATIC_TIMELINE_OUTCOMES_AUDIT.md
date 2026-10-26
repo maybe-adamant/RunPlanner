@@ -265,18 +265,16 @@ Planner disposition for the lifecycle seams these effects consume:
   rows may interleave with other pickups permitted in that interval, and
   acquiring one can never affect an automatic outcome of the checkpoint that
   created it.
-- Every reached branch must land a given cycle at the same encounter, since
-  the authored path to it is deterministic; a disagreement is an engine
-  contract fault, not a finding.
+- Where a Steady Growth or Embryo cycle lands, and how its outcome is stored
+  and repaired, follows [Timed outcomes](../../design/TRAIT_OFFERS.md#timed-outcomes).
 
 ### Exact semantic ownership
 
 Every reached random result has one semantic owner independent of rendered
 position:
 
-- Steady Growth uses the trait offer that gives it plus a cycle counted per
-  instance, and Embryo the keepsake selection that installs it plus a cycle;
-  the occurrence and phase where the cycle lands are derived;
+- Steady Growth and Embryo use their source plus a cycle
+  ([Timed outcomes](../../design/TRAIT_OFFERS.md#timed-outcomes));
 - Judgment and Figurine use occurrence plus boss phase;
 - Supply Chain uses the producing trait acquisition identity, pickup key,
   maturity occurrence, and phase; and

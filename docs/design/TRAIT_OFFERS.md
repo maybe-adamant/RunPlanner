@@ -138,15 +138,8 @@ independently authored finding destination. A blocked Natural Selection child
 retains the pre-offer candidate capability for both prefix editing and the
 owning offer's complete-draft assessment.
 
-Steady Growth's random targets live on the offer that gives it, as a sparse
-`steadyGrowthTargets` map keyed by cycle from 1: the selected row, its Echo
-Boon Boon Boon pick or its Concave Stone residual, which matures like any other
-acquisition. Each instance counts its own cycles, and the simulation applies a
-cycle's target where that cycle lands. A missing target is unresolved only at a
-reached nonempty threshold; an empty target domain is a derived no-op. The
-semantic `ReplaceSteadyGrowthTarget` command owns one exact source and cycle
-and preserves retained invalid known keys for repair. Progress and threshold
-settlement are derived from trait history.
+Steady Growth's random targets are [timed outcomes](#timed-outcomes) stored on
+the offer that gives it.
 
 ### Encounter-owned offers
 
@@ -324,6 +317,33 @@ path do not trigger or consume Forfeit. The Red Onion keeps its normal pickup,
 Time Piece, and Sea Star contacts, but cannot start a trait offer, Artificer
 conversion, or Echo last-reward recreation. The Arcana/Fear ledger retains only
 the per-biome consumed flag needed by later settlement and Run State.
+
+## Timed outcomes
+
+Steady Growth targets and Transcendent Embryo blessings are automatic random
+outcomes stored on their source and keyed by cycle from 1:
+
+- **Storage.** A trait offer that gives Steady Growth owns
+  `steadyGrowthTargets`, whether Steady Growth is its selected row, that row's
+  Echo Boon Boon Boon pick or its Concave Stone residual. The keepsake
+  selection that installs the Embryo (route start or Postboss rack) owns
+  `transcendentEmbryoTransformations` in its equip results.
+- **Cycles.** Each installed instance counts its own cycles, so two Steady
+  Growths maturing at one encounter have separate targets. A Concave Stone
+  residual is an ordinary acquisition natively and grows like any other.
+- **Position.** An outcome has no authored position. The simulation applies it
+  at the encounter end where its cycle lands, and the editor shows it there, so
+  a timing shift moves it without an edit.
+- **Findings.** A reached cycle without a value is `…OutcomeMissing` (an
+  empty Steady Growth target domain is a legal no-op); a value illegal where
+  its cycle lands is `…OutcomeUnavailable` and stays for repair. An unreached
+  cycle stays dormant. Progress and thresholds derive from trait history.
+- **Source changes.** Picking another trait or another rack keepsake removes
+  the source's outcomes; a changed route-start keepsake leaves them dormant,
+  like its other equip results. Edit settlement never resets an outcome.
+- **Branch agreement.** The authored path to a landing is deterministic, so
+  reached branches that land one cycle at different encounters are an engine
+  contract failure, reported as a settlement fault rather than a finding.
 
 ## Equipped state and acquired effects
 

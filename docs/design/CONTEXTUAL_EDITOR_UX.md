@@ -619,9 +619,10 @@ finding mark, and a saved conflict marks the launcher.
 
 ### Automatic outcomes
 
-Automatic Steady Growth and Embryo outcomes use their fixed timeline points
-and bound target controls, not draggable author-created effects. Immediate
-keepsake targets stay at their exact equip owner. Progress, rarity and
+Automatic Steady Growth and Embryo outcomes appear at the timeline point where
+their [cycle lands](TRAIT_OFFERS.md#timed-outcomes) with bound target
+controls, not draggable author-created effects. Immediate keepsake targets
+stay at their exact equip owner. Progress, rarity and
 magnitude come from engine products; React does not advance clocks or infer
 those values. Embryo magnitude edits keep the active slider and its focus
 across candidate refreshes; updated values and their numeric domain appear

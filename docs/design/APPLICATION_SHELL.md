@@ -343,8 +343,9 @@ so, and a project changed during the draft reports that nothing was applied.
 ### Loadout
 
 Loadout holds the starting choices (on Fresh File only its fixed weapon) and
-is the anchor for route-scoped and route-start findings, except a timed
-outcome's, which opens in the biome where its cycle lands; it carries the same
+is the anchor for route-scoped and route-start findings, except a
+[timed outcome](TRAIT_OFFERS.md#timed-outcomes)'s, which opens in the biome
+where its cycle lands; it carries the same
 status marker and finding count as a biome.
 
 ## Run State sheet

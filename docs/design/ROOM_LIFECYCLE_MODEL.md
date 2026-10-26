@@ -271,7 +271,8 @@ same applies to all `nonCombat` phase kinds; only `combat`, `miniboss`, and
 `boss` phase kinds render a combat spine.
 
 **Automatic outcomes.** Fixed automatic outcomes (Steady Growth, Transcendent
-Embryo, Judgment, Crystal Figurine) settle at their seam and are never
+Embryo, Judgment, Crystal Figurine) settle at their seam (encounter end for
+[timed outcomes](TRAIT_OFFERS.md#timed-outcomes)) and are never
 reorderable Room Actions. One encounter-end checkpoint settles every fixed
 outcome before it publishes pickups created by matured clocks; the
 [scheduled-outcomes audit](../audits/rooms-and-routes/SCHEDULED_AND_AUTOMATIC_TIMELINE_OUTCOMES_AUDIT.md#encounter-end-and-boss-contacts)
