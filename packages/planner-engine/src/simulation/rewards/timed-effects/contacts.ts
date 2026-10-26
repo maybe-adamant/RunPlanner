@@ -10,8 +10,8 @@ export interface TimedEffectSourceContact {
   readonly progress: number;
   readonly interval?: number;
 }
+/** A clocked pickup producer's inputs at one encounter end. */
 export interface TimedEffectContact {
-  readonly effect: 'steadyGrowth' | 'transcendentEmbryo' | 'clockedPickup';
   readonly owner: OccurrenceAddress;
   readonly phaseKey: string;
   readonly sequence: number;
@@ -44,7 +44,6 @@ function sourceIdentity(history: TraitHistoryState, identity: string): string {
 /** Record the actual inputs at an effect owner's advancement seam, without advancing a clock. */
 export function timedEffectContact(
   catalog: Catalog,
-  effect: TimedEffectContact['effect'],
   owner: OccurrenceAddress,
   phaseKey: string,
   sequence: number,
@@ -53,7 +52,6 @@ export function timedEffectContact(
   deferred = false,
 ): TimedEffectContact {
   return Object.freeze({
-    effect,
     owner,
     phaseKey,
     sequence,
@@ -62,82 +60,30 @@ export function timedEffectContact(
       branches.map((branch) => {
         if (!advances) return Object.freeze([]);
         const history = branch.state.traitHistory;
-        if (effect === 'transcendentEmbryo') {
-          const source = branch.state.keepsakes.transcendentEmbryo;
-          const equippedAt = history.events.findLastIndex(
-            (event) =>
-              event.kind === 'directChaosBlessing' &&
-              event.acquisitionRole !== 'transcendentEmbryoTransformation',
-          );
-          const equipped = history.events[equippedAt];
-          return Object.freeze(
-            source === undefined
-              ? []
-              : [
-                  Object.freeze({
-                    source: JSON.stringify([
-                      source.origin,
-                      source.rarity,
-                      sourceIdentity(
-                        history,
-                        equipped?.kind === 'directChaosBlessing'
-                          ? equipped.acquisitionIdentity
-                          : source.markedBlessingAcquisitionIdentity,
-                      ),
-                    ]),
-                    cycle: history.events
-                      .slice(equippedAt + 1)
-                      .filter(
-                        (event) =>
-                          event.kind === 'directChaosBlessing' &&
-                          event.acquisitionRole === 'transcendentEmbryoTransformation',
-                      ).length,
-                    progress: source.progress,
-                  }),
-                ],
-          );
-        }
         return Object.freeze(
           Object.values(history.equippedTraits).flatMap((trait) => {
             const disposition = catalog.traits.byKey[trait.traitKey]?.selectedDisposition;
             if (
               trait.acquisitionIdentity === undefined ||
-              (effect === 'steadyGrowth'
-                ? disposition?.kind !== 'steadyGrowth'
-                : disposition?.kind !== 'producePickups' || disposition.clock === undefined)
+              disposition?.kind !== 'producePickups' ||
+              disposition.clock === undefined
             )
               return [];
-            const progress =
-              (effect === 'steadyGrowth'
-                ? trait.steadyGrowthProgress
-                : trait.pickupProducerProgress) ?? 0;
             const identity = trait.acquisitionIdentity;
-            const events = history.events.filter(
-              (event) =>
-                (effect === 'steadyGrowth'
-                  ? event.kind === 'steadyGrowthProgress'
-                  : event.kind === 'pickupProducerProgress') &&
-                'acquisitionIdentity' in event &&
-                event.acquisitionIdentity === identity,
-            );
             return [
               Object.freeze({
                 source: JSON.stringify([trait.traitKey, sourceIdentity(history, identity)]),
                 acquisitionIdentity: identity,
-                cycle: events.filter(
+                cycle: history.events.filter(
                   (event) =>
-                    (event.kind === 'steadyGrowthProgress' && event.newProgress === 0) ||
-                    (event.kind === 'pickupProducerProgress' && event.matured),
+                    event.kind === 'pickupProducerProgress' &&
+                    event.acquisitionIdentity === identity &&
+                    event.matured,
                 ).length,
-                progress,
-                interval:
-                  effect === 'clockedPickup'
-                    ? trait.pickupProducerInterval
-                    : disposition?.kind === 'steadyGrowth' && trait.rarity !== undefined
-                      ? Object.entries(disposition.intervalsByRarity).find(
-                          ([rarity]) => rarity === trait.rarity,
-                        )?.[1]
-                      : undefined,
+                progress: trait.pickupProducerProgress ?? 0,
+                ...(trait.pickupProducerInterval === undefined
+                  ? {}
+                  : { interval: trait.pickupProducerInterval }),
               }),
             ];
           }),

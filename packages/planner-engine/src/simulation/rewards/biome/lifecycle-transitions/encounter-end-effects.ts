@@ -474,7 +474,6 @@ export function applyEncounterEndEffectsTransition(
     timedEffects.push(
       timedEffectContact(
         catalog,
-        'clockedPickup',
         pickupOwner,
         event.phaseKey,
         event.sequence,
@@ -578,34 +577,10 @@ export function applyEncounterEndEffectsTransition(
           : Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes }) });
       }),
     );
-  if (steadyOwner !== undefined)
-    timedEffects.push(
-      timedEffectContact(
-        catalog,
-        'steadyGrowth',
-        steadyOwner,
-        event.phaseKey,
-        event.sequence,
-        next,
-        declaration?.skipRoomsPerUpgrade !== true,
-      ),
-    );
   const steadyAdvance =
     landing === undefined || declaration?.skipRoomsPerUpgrade === true
       ? undefined
       : advanceSteadyGrowthAt(catalog, next, landing, event.sequence);
-  if (steadyOwner !== undefined)
-    timedEffects.push(
-      timedEffectContact(
-        catalog,
-        'transcendentEmbryo',
-        steadyOwner,
-        event.phaseKey,
-        event.sequence,
-        steadyAdvance?.branches ?? next,
-        steadyAdvance !== undefined,
-      ),
-    );
   const embryoAdvance =
     steadyAdvance === undefined
       ? undefined

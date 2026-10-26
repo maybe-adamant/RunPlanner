@@ -69,7 +69,62 @@ function embryoTransformations(project: ProjectDocument) {
   return project.route.loadout.keepsakeEquipResults?.transcendentEmbryoTransformations;
 }
 
+/** Where each reached Steady Growth and Embryo cycle lands. */
+function outcomeLandings(assembly: ReturnType<typeof evaluate>) {
+  const biomes = assembly.evaluation.route.biomes.flatMap((biome) =>
+    'rewards' in biome ? [biome.rewards] : [],
+  );
+  return {
+    steadyGrowth: biomes.flatMap((rewards) =>
+      rewards.steadyGrowthOutcomes.map((outcome) => [
+        semanticAddressKey(outcome.address),
+        semanticAddressKey(outcome.owner),
+        outcome.phaseKey,
+      ]),
+    ),
+    embryo: biomes.flatMap((rewards) =>
+      rewards.transcendentEmbryoOutcomes.map((outcome) => [
+        semanticAddressKey(outcome.owner),
+        outcome.phaseKey,
+        outcome.address.cycle,
+      ]),
+    ),
+  };
+}
+const outcomeFindings = (assembly: ReturnType<typeof evaluate>) =>
+  assembly.evaluation.findings.filter(
+    (finding) =>
+      finding.origin.kind === 'steadyGrowthOutcome' ||
+      finding.origin.kind === 'transcendentEmbryoOutcome',
+  );
+
 describe('timed-effect edit settlement', () => {
+  it('keeps every downstream outcome through changing an N boon pick and changing it back', () => {
+    const project = loadSurfaceScheduledLifecycleCheckpoint();
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(
+        createBiomeAddress('Surface', 'N'),
+        createOccurrenceId('surface-n-combat11'),
+      ),
+      'source',
+    );
+    const changed = settle(project, {
+      kind: 'ReplaceTraitSelection',
+      trait,
+      selectedOptionKey: 'option2',
+    });
+    expect(steadyGrowthTargets(changed.project)).toEqual(steadyGrowthTargets(project));
+    expect(embryoTransformations(changed.project)).toEqual(embryoTransformations(project));
+    const reverted = settle(changed.project, {
+      kind: 'ReplaceTraitSelection',
+      trait,
+      selectedOptionKey: 'option1',
+    });
+    expect(steadyGrowthTargets(reverted.project)).toEqual(steadyGrowthTargets(project));
+    expect(embryoTransformations(reverted.project)).toEqual(embryoTransformations(project));
+    expect(outcomeFindings(reverted)).toEqual([]);
+    expect(outcomeLandings(reverted)).toEqual(outcomeLandings(evaluate(project)));
+  });
   it('retains an active downstream Embryo outcome through Shadow activation and removal', () => {
     const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
     const value = { blessingKey: 'ChaosElementalBlessing', blessingValues: {} } as const;
@@ -92,12 +147,8 @@ describe('timed-effect edit settlement', () => {
     });
     const before = evaluate(project);
     expect(before.evaluation.route.biomes[0]?.validity).toBe('valid');
-    const contacts =
-      candidateArtifactsForProjectEvaluationAssembly(before).biomeAt(f)?.roomLifecycles
-        .timedEffects;
-    expect(contacts?.some((contact) => contact.owner.occurrenceId === owner.occurrenceId)).toBe(
-      true,
-    );
+    const landings = outcomeLandings(before);
+    expect(landings.embryo).toContainEqual([semanticAddressKey(owner), 'Encounter', 1]);
     for (const rank of [1, 0]) {
       const settled = settle(project, {
         kind: 'ReplaceFearVowRank',
@@ -106,10 +157,7 @@ describe('timed-effect edit settlement', () => {
         rank,
       });
       expect(settled.evaluation.route.biomes[0]?.validity).toBe('valid');
-      expect(
-        candidateArtifactsForProjectEvaluationAssembly(settled).biomeAt(f)?.roomLifecycles
-          .timedEffects,
-      ).toEqual(contacts);
+      expect(outcomeLandings(settled)).toEqual(landings);
       expect(
         settled.project.route.loadout.keepsakeEquipResults?.transcendentEmbryoTransformations?.[
           '1'
@@ -131,12 +179,14 @@ describe('timed-effect edit settlement', () => {
       gameName,
     });
     const after = occurrence(settled.project, id);
-    const reached = candidateArtifactsForProjectEvaluationAssembly(settled)
-      .biomeAt(p)
-      ?.roomLifecycles.timedEffects.filter(
-        (contact) => contact.owner.occurrenceId === id && contact.phaseKey === 'Combat',
+    const landedHere = (assembly: ReturnType<typeof evaluate>) => {
+      const landings = outcomeLandings(assembly);
+      const owner = semanticAddressKey(createOccurrenceAddress(p, createOccurrenceId(id)));
+      return [...landings.steadyGrowth, ...landings.embryo].filter((landing) =>
+        landing.includes(owner),
       );
-    expect(reached).toHaveLength(3);
+    };
+    expect(landedHere(settled)).toEqual(landedHere(evaluate(project)));
     expect(
       settled.evaluation.findings.filter(
         (finding) =>
@@ -486,9 +536,7 @@ describe('timed-effect edit settlement', () => {
     const assembly = evaluate(loadSurfaceScheduledLifecycleCheckpoint());
     const contact = candidateArtifactsForProjectEvaluationAssembly(assembly)
       .biomeAt(p)!
-      .roomLifecycles.timedEffects.find(
-        (contact) => contact.effect === 'clockedPickup' && contact.cohorts[0]?.length,
-      )!;
+      .roomLifecycles.timedEffects.find((contact) => contact.cohorts[0]?.length)!;
     expect(agreedTimedEffectContact(contact)).toBeDefined();
     expect(
       agreedTimedEffectContact({ ...contact, cohorts: [contact.cohorts[0]!, []] }),
