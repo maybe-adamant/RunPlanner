@@ -487,6 +487,9 @@ export function foldTraitHistoryEvents(
           equipped[event.traitKey] = Object.freeze({
             ...target,
             steadyGrowthProgress: event.newProgress,
+            ...(event.newProgress === 0
+              ? { steadyGrowthCycles: (target.steadyGrowthCycles ?? 0) + 1 }
+              : {}),
           });
         continue;
       }
@@ -692,6 +695,9 @@ export function foldTraitHistoryEvents(
         ...(event.acquisitionIdentity === undefined
           ? {}
           : { acquisitionIdentity: event.acquisitionIdentity }),
+        ...(event.steadyGrowthSource === undefined
+          ? {}
+          : { steadyGrowthSource: event.steadyGrowthSource }),
         ...(event.pickupProducerInterval === undefined
           ? {}
           : { pickupProducerInterval: event.pickupProducerInterval }),

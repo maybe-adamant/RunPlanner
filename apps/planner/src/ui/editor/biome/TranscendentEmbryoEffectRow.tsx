@@ -74,7 +74,7 @@ export function TranscendentEmbryoEffectRow({
       aria-label="Transcendent Embryo"
       aria-description="Automatic effect"
       data-action-accent="automatic"
-      data-transcendent-embryo={control.address.phaseKey}
+      data-transcendent-embryo={control.phaseKey}
       editors={
         <div className="transcendent-embryo-outcome-row">
           <RandomTraitTargetPicker

@@ -22,10 +22,6 @@ const fPostboss = createOccurrenceAddress(
   createBiomeAddress('Underworld', 'F'),
   createOccurrenceId('golden-f-preboss-shop:postboss'),
 );
-const fBoss = createOccurrenceAddress(
-  createBiomeAddress('Underworld', 'F'),
-  createOccurrenceId('golden-f-preboss-shop:boss'),
-);
 
 describe('keepsake authored selections', () => {
   it('creates mandatory starting and unchanged Postboss defaults and round-trips replacements', () => {
@@ -118,7 +114,7 @@ describe('keepsake authored selections', () => {
     let project = createCompleteFGProject();
     const start = createRouteStartKeepsakeSelectionAddress('Underworld');
     const equipResult = createKeepsakeEquipResultAddress(start, 'transcendentEmbryo');
-    const transformation = createTranscendentEmbryoOutcomeAddress(fBoss, 'Encounter');
+    const transformation = createTranscendentEmbryoOutcomeAddress(start, 2);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: start,
@@ -133,6 +129,9 @@ describe('keepsake authored selections', () => {
       kind: 'ReplaceTranscendentEmbryoTransformation',
       outcome: transformation,
       value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
+    });
+    expect(project.route.loadout.keepsakeEquipResults?.transcendentEmbryoTransformations).toEqual({
+      2: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
     });
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
@@ -152,11 +151,50 @@ describe('keepsake authored selections', () => {
       outcome: transformation,
       value: null,
     });
-    expect(
-      project.route?.biomes[0]?.topology?.occurrences.find(
-        (occurrence) => occurrence.occurrenceId === fBoss.occurrenceId,
-      )?.encounters.transcendentEmbryoBlessingByPhase,
-    ).toBeUndefined();
+    expect(project.route.loadout.keepsakeEquipResults).toEqual({
+      transcendentEmbryo: {
+        blessingKey: 'ChaosWeaponBlessing',
+        blessingValues: { damageBonus: 0.7 },
+      },
+    });
+  });
+
+  it('keeps Embryo transformations with the selection that installed it', () => {
+    const start = createRouteStartKeepsakeSelectionAddress('Underworld');
+    const embryo = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'RandomBlessingKeepsake',
+    });
+    const authored = applyProjectCommand(embryo, catalog, {
+      kind: 'ReplaceTranscendentEmbryoTransformation',
+      outcome: createTranscendentEmbryoOutcomeAddress(start, 1),
+      value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
+    });
+    const transformations = authored.route.loadout.keepsakeEquipResults;
+    expect(transformations).toEqual({
+      transcendentEmbryoTransformations: {
+        1: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
+      },
+    });
+    const swapped = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'ReincarnationKeepsake',
+    });
+    expect(() =>
+      applyProjectCommand(swapped, catalog, {
+        kind: 'ReplaceTranscendentEmbryoTransformation',
+        outcome: createTranscendentEmbryoOutcomeAddress(start, 1),
+        value: null,
+      }),
+    ).toThrow(/does not match the current selection/);
+    const restored = applyProjectCommand(swapped, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'RandomBlessingKeepsake',
+    });
+    expect(restored.route.loadout.keepsakeEquipResults).toEqual(transformations);
   });
 
   it('accepts declaration-closed Embryo values for zero, one, and two operands', () => {

@@ -341,6 +341,7 @@ export function applyEchoKeepsakeReplayTransition(
                 branch,
                 giftState.capturedKeepsakeKey,
                 authored,
+                snapshot.echoKeepsakeReplayResults?.transcendentEmbryoTransformations,
                 echoEmbryoResult,
                 biomeStartSequence,
                 'echo',

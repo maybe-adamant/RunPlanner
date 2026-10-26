@@ -6,9 +6,7 @@ import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createLocalRewardAddress,
-  createOccurrenceAddress,
   createOccurrenceId,
-  createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
   semanticAddressKey,
   traitGeneratedPickupSiteKey,
@@ -61,7 +59,6 @@ function poseidonOffer(options: readonly [string, string, string], rarity: 'Comm
     selectedOptionKey: 'option1' as const,
   }) as unknown as AuthoredTraitOffer;
 }
-
 describe('Gold Gold Gold duplicate production', () => {
   it('keeps a duplicate Ashes spawned before Buried Treasure at its spawn amount', () => {
     // Poseidon was already met, so the Shop boon may offer Buried Treasure.
@@ -144,6 +141,8 @@ describe('screen-produced pickup production', () => {
           ),
         ),
         selectedOptionKey: 'option1',
+        // Its first interval lands at combat09's first cage and promotes Buried Treasure.
+        steadyGrowthTargets: Object.freeze({ '1': 'RoomRewardBonusBoon' }),
       }) as unknown as AuthoredTraitOffer,
       sequence,
       'encounterCompleted',
@@ -202,14 +201,6 @@ describe('screen-produced pickup production', () => {
         ]),
         selectedOptionKey: 'option1',
       }) as unknown as AuthoredTraitOffer,
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSteadyGrowthTarget',
-      outcome: createSteadyGrowthOutcomeAddress(
-        createOccurrenceAddress(goldenHBiome, combat09),
-        'Cage01',
-      ),
-      targetTraitKey: 'RoomRewardBonusBoon',
     });
     return replaceTestRoomActionOrder(project, catalog, goldenHBiome, combat09, [
       { kind: 'completeFieldsCage', phaseKey: 'Cage02' },

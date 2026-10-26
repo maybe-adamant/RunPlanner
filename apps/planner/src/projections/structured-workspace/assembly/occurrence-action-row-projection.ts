@@ -850,10 +850,10 @@ function roomActionsForOccurrence(
     ...goldPickupRows.filter((row) => row.participation === 'required'),
   ]);
   const steadyGrowthOutcomes = (input.steadyGrowthOutcomes ?? []).filter(
-    (outcome) => semanticAddressKey(outcome.address.owner) === semanticAddressKey(owner),
+    (outcome) => semanticAddressKey(outcome.owner) === semanticAddressKey(owner),
   );
   const transcendentEmbryoOutcomes = (input.transcendentEmbryoOutcomes ?? []).filter(
-    (outcome) => semanticAddressKey(outcome.address.owner) === semanticAddressKey(owner),
+    (outcome) => semanticAddressKey(outcome.owner) === semanticAddressKey(owner),
   );
   const activeLifecycleTimeline = scopeRoomLifecycleTimeline(
     appendTranscendentEmbryoTimelineEffects(
@@ -864,9 +864,9 @@ function roomActionsForOccurrence(
             (entry) => entry.kind !== 'action' || !skippedInteractionKeys.has(entry.action.key),
           ),
         },
-        steadyGrowthOutcomes.map((outcome) => outcome.address),
+        steadyGrowthOutcomes,
       ),
-      transcendentEmbryoOutcomes.map((outcome) => outcome.address),
+      transcendentEmbryoOutcomes,
     ),
     lifecycleTimeline.structure.activeEncounterSlotKeys.flatMap((phaseKey) => {
       const address = createEncounterPhaseAddress(
@@ -894,13 +894,9 @@ function roomActionsForOccurrence(
           address: outcome.address,
           marker: input.markerDestinations.marker(outcome.address),
           phaseKey: outcome.phaseKey,
-          ...(input.occurrence.encounters.steadyGrowthTargetByPhase?.[outcome.phaseKey] ===
-          undefined
+          ...(outcome.targetTraitKey === undefined
             ? {}
-            : {
-                targetTraitKey:
-                  input.occurrence.encounters.steadyGrowthTargetByPhase[outcome.phaseKey],
-              }),
+            : { targetTraitKey: outcome.targetTraitKey }),
         }),
       ];
     }),
@@ -924,13 +920,7 @@ function roomActionsForOccurrence(
           address: outcome.address,
           marker: input.markerDestinations.marker(outcome.address),
           phaseKey: outcome.phaseKey,
-          ...(input.occurrence.encounters.transcendentEmbryoBlessingByPhase?.[outcome.phaseKey] ===
-          undefined
-            ? {}
-            : {
-                value:
-                  input.occurrence.encounters.transcendentEmbryoBlessingByPhase[outcome.phaseKey],
-              }),
+          ...(outcome.value === undefined ? {} : { value: outcome.value }),
         }),
       ];
     }),

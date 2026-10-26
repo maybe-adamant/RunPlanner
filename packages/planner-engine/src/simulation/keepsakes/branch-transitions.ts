@@ -1,6 +1,10 @@
 import type { Catalog, KeepsakeRank } from '../../catalog-schema';
 
-import { semanticAddressKey, type SemanticAddress } from '../../authored-project/addresses';
+import {
+  semanticAddressKey,
+  type KeepsakeEquipResultAddress,
+  type SemanticAddress,
+} from '../../authored-project/addresses';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { AuthoredTraitOffer } from '../../authored-project/traits/state';
 
@@ -228,7 +232,8 @@ export function applyTranscendentEmbryoEquipResult(
   branch: RewardBranchState,
   equippedKeepsakeKey: string,
   result: NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>,
-  owner: SemanticAddress,
+  transformations: AuthoredKeepsakeEquipResults['transcendentEmbryoTransformations'],
+  owner: KeepsakeEquipResultAddress,
   sequence: number,
   origin: 'ordinary' | 'echo',
   equippedRank: KeepsakeRank,
@@ -271,6 +276,8 @@ export function applyTranscendentEmbryoEquipResult(
         rarity,
         result,
         acquisitionIdentity,
+        owner.selection,
+        transformations,
       ),
     }),
   });

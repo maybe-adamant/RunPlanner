@@ -1,6 +1,5 @@
 {
-  "schemaVersion": 98,
-  "schemaRevision": 1,
+  "schemaVersion": 99,
   "projectId": "surface-4",
   "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
@@ -55,6 +54,24 @@
           "blessingKey": "ChaosWeaponBlessing",
           "blessingValues": {
             "damageBonus": 0.7
+          }
+        },
+        "transcendentEmbryoTransformations": {
+          "1": {
+            "blessingKey": "ChaosElementalBlessing",
+            "blessingValues": {}
+          },
+          "2": {
+            "blessingKey": "ChaosElementalBlessing",
+            "blessingValues": {}
+          },
+          "3": {
+            "blessingKey": "ChaosElementalBlessing",
+            "blessingValues": {}
+          },
+          "4": {
+            "blessingKey": "ChaosElementalBlessing",
+            "blessingValues": {}
           }
         }
       }
@@ -775,12 +792,6 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "transcendentEmbryoBlessingByPhase": {
-                  "Encounter": {
-                    "blessingKey": "ChaosElementalBlessing",
-                    "blessingValues": {}
-                  }
-                },
                 "gorgonResultByPhase": {
                   "Encounter": {
                     "athenaTriggerConditionMet": false
@@ -1079,7 +1090,16 @@
                         }
                       ],
                       "selectedOptionKey": "option1",
-                      "rarificationActions": []
+                      "rarificationActions": [],
+                      "steadyGrowthTargets": {
+                        "1": "ApolloWeaponBoon",
+                        "2": "ApolloWeaponBoon",
+                        "3": "ApolloWeaponBoon",
+                        "4": "AresSpecialBoon",
+                        "5": "HermesWeaponBoon",
+                        "6": "HermesWeaponBoon",
+                        "7": "HermesWeaponBoon"
+                      }
                     }
                   },
                   "dispositionByAcquisitionRole": {
@@ -1700,9 +1720,6 @@
                   "Combat1": false,
                   "Combat2": false
                 },
-                "steadyGrowthTargetByPhase": {
-                  "Combat1": "ApolloWeaponBoon"
-                },
                 "gorgonResultByPhase": {
                   "Combat1": {
                     "athenaTriggerConditionMet": false
@@ -1868,9 +1885,6 @@
                   "Combat1": false,
                   "Combat2": false
                 },
-                "steadyGrowthTargetByPhase": {
-                  "Combat1": "ApolloWeaponBoon"
-                },
                 "gorgonResultByPhase": {
                   "Combat1": {
                     "athenaTriggerConditionMet": false
@@ -1989,12 +2003,6 @@
                 "encounterKeyByPhase": {},
                 "figLeafSkipByPhase": {
                   "Encounter": false
-                },
-                "transcendentEmbryoBlessingByPhase": {
-                  "Encounter": {
-                    "blessingKey": "ChaosElementalBlessing",
-                    "blessingValues": {}
-                  }
                 },
                 "gorgonResultByPhase": {}
               },
@@ -2237,9 +2245,6 @@
                 "encounterKeyByPhase": {},
                 "figLeafSkipByPhase": {
                   "Encounter": false
-                },
-                "steadyGrowthTargetByPhase": {
-                  "Encounter": "ApolloWeaponBoon"
                 },
                 "gorgonResultByPhase": {}
               },
@@ -2798,9 +2803,6 @@
                   "Intro": false,
                   "Combat": false
                 },
-                "steadyGrowthTargetByPhase": {
-                  "Combat": "AresSpecialBoon"
-                },
                 "gorgonResultByPhase": {
                   "Combat": {
                     "athenaTriggerConditionMet": false
@@ -2909,12 +2911,6 @@
                 "figLeafSkipByPhase": {
                   "Intro": false,
                   "Combat": false
-                },
-                "transcendentEmbryoBlessingByPhase": {
-                  "Combat": {
-                    "blessingKey": "ChaosElementalBlessing",
-                    "blessingValues": {}
-                  }
                 },
                 "gorgonResultByPhase": {
                   "Combat": {
@@ -3301,9 +3297,6 @@
                 "figLeafSkipByPhase": {
                   "Intro": false,
                   "Combat": false
-                },
-                "steadyGrowthTargetByPhase": {
-                  "Combat": "HermesWeaponBoon"
                 },
                 "gorgonResultByPhase": {
                   "Combat": {
@@ -3933,9 +3926,6 @@
                 "figLeafSkipByPhase": {
                   "Encounter": false
                 },
-                "steadyGrowthTargetByPhase": {
-                  "Encounter": "HermesWeaponBoon"
-                },
                 "gorgonResultByPhase": {}
               },
               "roomActions": {
@@ -4000,12 +3990,6 @@
                 "encounterKeyByPhase": {},
                 "figLeafSkipByPhase": {
                   "Encounter": false
-                },
-                "transcendentEmbryoBlessingByPhase": {
-                  "Encounter": {
-                    "blessingKey": "ChaosElementalBlessing",
-                    "blessingValues": {}
-                  }
                 },
                 "gorgonResultByPhase": {
                   "Encounter": {
@@ -4261,9 +4245,6 @@
                 "encounterKeyByPhase": {},
                 "figLeafSkipByPhase": {
                   "Encounter": false
-                },
-                "steadyGrowthTargetByPhase": {
-                  "Encounter": "HermesWeaponBoon"
                 },
                 "gorgonResultByPhase": {}
               },

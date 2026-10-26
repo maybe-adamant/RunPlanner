@@ -11,7 +11,6 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectHistory,
-  createSteadyGrowthOutcomeAddress,
   undoProjectHistory,
 } from '../../../src/authored-project';
 import { simulateProjectAssembly } from '../../../src/simulation';
@@ -26,6 +25,7 @@ import {
 import { goldenFBiome } from '@run-planner/test-fixtures/underworld';
 import { oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { compileEligibleProject, reloadProject } from '../support/authored-checkpoints';
+import { landedSteadyGrowthOutcome } from '../../support/timed-outcomes';
 
 it('reloads the intermediate Phial reset to its addressed repair finding', () => {
   const saved = loadSurfaceNPhialIntermediateFountainCheckpoint();
@@ -51,7 +51,8 @@ it('reloads the intermediate Phial reset to its addressed repair finding', () =>
 
 it('reloads a cleared reached Steady Growth target to its exact repair owner', () => {
   const saved = loadSurfaceScheduledLifecycleCheckpoint();
-  const outcome = createSteadyGrowthOutcomeAddress(
+  const outcome = landedSteadyGrowthOutcome(
+    saved,
     createOccurrenceAddress(oBiome, oOccurrenceIds.combat01),
     'Combat1',
   );

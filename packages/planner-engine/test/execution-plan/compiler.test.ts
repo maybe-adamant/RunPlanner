@@ -43,7 +43,6 @@ import {
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createRewardWheelOfferAddress,
-  createSteadyGrowthOutcomeAddress,
   createTranscendentEmbryoOutcomeAddress,
   createShopOfferAddress,
   parseHermesShrineDeliveryEntryKey,
@@ -94,6 +93,7 @@ import {
   mergePlannerTimelineFacts,
 } from '../../src/simulation/timeline-facts';
 import { currentSchemaWire } from './support/current-schema-wire';
+import { landedSteadyGrowthOutcome } from '../support/timed-outcomes';
 
 const fOpeningFixture = currentSchemaWire(fOpeningFixtureFile);
 const fgFixture = currentSchemaWire(fgFixtureFile);
@@ -647,7 +647,11 @@ describe('execution-plan compiler and codec', () => {
       offer: following,
       purchased: true,
     });
-    const outcome = createTranscendentEmbryoOutcomeAddress(room, 'Combat2');
+    // The extra Ship encounter brings the Embryo's second interval forward to this room.
+    const outcome = createTranscendentEmbryoOutcomeAddress(
+      createRouteStartKeepsakeSelectionAddress('Surface'),
+      2,
+    );
     const rarityAt = (blessingKey: string, blessingValues: Readonly<Record<string, number>>) => {
       let authored = authorLegalTraitOffers(
         applyProjectCommand(project, catalog, {
@@ -712,7 +716,8 @@ describe('execution-plan compiler and codec', () => {
       'offer1',
     );
     const trait = createTraitOfferAddress(offer, 'source');
-    const outcome = createSteadyGrowthOutcomeAddress(
+    const outcome = landedSteadyGrowthOutcome(
+      project,
       createOccurrenceAddress(oBiome, oOccurrenceIds.combat01),
       'Combat1',
     );

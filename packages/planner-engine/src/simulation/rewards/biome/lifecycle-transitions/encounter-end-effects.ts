@@ -13,6 +13,7 @@ import {
   createSteadyGrowthOutcomeAddress,
   createTranscendentEmbryoOutcomeAddress,
   semanticAddressKey,
+  type OccurrenceAddress,
   type SemanticAddress,
   type SteadyGrowthOutcomeAddress,
   type TranscendentEmbryoOutcomeAddress,
@@ -59,6 +60,7 @@ import {
   type PlannerTimelineNode,
 } from '../../../timeline-facts';
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
+import type { AutomaticOutcomeLanding } from '../../model';
 
 export interface EncounterEndEffectsTransition {
   readonly timedEffects: readonly TimedEffectContact[];
@@ -69,10 +71,12 @@ export interface EncounterEndEffectsTransition {
   readonly hermesShrineDeliveryPlacementRequired: boolean;
   readonly steadyGrowthThresholds: readonly {
     readonly address: SteadyGrowthOutcomeAddress;
+    readonly landing: AutomaticOutcomeLanding;
     readonly threshold: ReachedSteadyGrowthThreshold;
   }[];
   readonly transcendentEmbryoThresholds: readonly {
     readonly address: TranscendentEmbryoOutcomeAddress;
+    readonly landing: AutomaticOutcomeLanding;
     readonly threshold: ReachedTranscendentEmbryoThreshold;
   }[];
   readonly traitChildSettlements: readonly ReachedTraitChildCheckpoint[];
@@ -173,9 +177,7 @@ function advancePickupProducersAt(
 function advanceSteadyGrowthAt(
   catalog: Catalog,
   branches: readonly RewardBranchState[],
-  owner: SteadyGrowthOutcomeAddress['owner'],
-  phaseKey: string,
-  targetTraitKey: string | undefined,
+  landing: AutomaticOutcomeLanding,
   sequence: number,
 ): {
   readonly branches: readonly RewardBranchState[];
@@ -183,22 +185,23 @@ function advanceSteadyGrowthAt(
     readonly address: SteadyGrowthOutcomeAddress;
     readonly branch: RewardBranchState;
     readonly threshold: ReachedSteadyGrowthThreshold;
-    readonly targetTraitKey: string | undefined;
   }[];
   readonly thresholds: readonly {
     readonly address: SteadyGrowthOutcomeAddress;
+    readonly landing: AutomaticOutcomeLanding;
     readonly threshold: ReachedSteadyGrowthThreshold;
   }[];
 } {
+  const owner = landing.owner;
   const next: RewardBranchState[] = [];
   const blocked: {
     readonly address: SteadyGrowthOutcomeAddress;
     readonly branch: RewardBranchState;
     readonly threshold: ReachedSteadyGrowthThreshold;
-    readonly targetTraitKey: string | undefined;
   }[] = [];
   const thresholds: {
     readonly address: SteadyGrowthOutcomeAddress;
+    readonly landing: AutomaticOutcomeLanding;
     readonly threshold: ReachedSteadyGrowthThreshold;
   }[] = [];
   for (const branch of branches) {
@@ -207,15 +210,15 @@ function advanceSteadyGrowthAt(
     let traitHistory = advanced.history;
     let blockedAtThreshold = false;
     for (const threshold of advanced.thresholds) {
-      const address = createSteadyGrowthOutcomeAddress(owner, phaseKey);
-      thresholds.push(Object.freeze({ address, threshold }));
+      const address = createSteadyGrowthOutcomeAddress(threshold.source, threshold.cycle);
+      thresholds.push(Object.freeze({ address, landing, threshold }));
       const settled = settleSteadyGrowthThreshold(
         catalog,
         traitHistory,
         owner,
         sequence,
         threshold,
-        targetTraitKey,
+        threshold.targetTraitKey,
       );
       if (!settled.assessment.legal) {
         blocked.push(
@@ -226,7 +229,6 @@ function advanceSteadyGrowthAt(
               state: replaceSimulationTraitHistory(branch.state, traitHistory),
             }),
             threshold,
-            targetTraitKey,
           }),
         );
         blockedAtThreshold = true;
@@ -289,9 +291,7 @@ function branchReachedPickupMaturity(
 function advanceTranscendentEmbryoAt(
   catalog: Catalog,
   branches: readonly RewardBranchState[],
-  owner: TranscendentEmbryoOutcomeAddress['owner'],
-  phaseKey: string,
-  targetOutcome: AuthoredTranscendentEmbryoOutcome | null | undefined,
+  landing: AutomaticOutcomeLanding,
   sequence: number,
   routeKey: string,
   aspectKey: string,
@@ -301,25 +301,27 @@ function advanceTranscendentEmbryoAt(
     readonly address: TranscendentEmbryoOutcomeAddress;
     readonly branch: RewardBranchState;
     readonly threshold: ReachedTranscendentEmbryoThreshold;
-    readonly targetOutcome: AuthoredTranscendentEmbryoOutcome | null | undefined;
+    readonly targetOutcome: AuthoredTranscendentEmbryoOutcome | undefined;
   }[];
   readonly thresholds: readonly {
     readonly address: TranscendentEmbryoOutcomeAddress;
+    readonly landing: AutomaticOutcomeLanding;
     readonly threshold: ReachedTranscendentEmbryoThreshold;
   }[];
 } {
+  const owner = landing.owner;
   const next: RewardBranchState[] = [];
   const blocked: {
     readonly address: TranscendentEmbryoOutcomeAddress;
     readonly branch: RewardBranchState;
     readonly threshold: ReachedTranscendentEmbryoThreshold;
-    readonly targetOutcome: AuthoredTranscendentEmbryoOutcome | null | undefined;
+    readonly targetOutcome: AuthoredTranscendentEmbryoOutcome | undefined;
   }[] = [];
   const thresholds: {
     readonly address: TranscendentEmbryoOutcomeAddress;
+    readonly landing: AutomaticOutcomeLanding;
     readonly threshold: ReachedTranscendentEmbryoThreshold;
   }[] = [];
-  const address = createTranscendentEmbryoOutcomeAddress(owner, phaseKey);
   for (const branch of branches) {
     const source = branch.state.keepsakes.transcendentEmbryo;
     if (source === undefined) {
@@ -337,8 +339,12 @@ function advanceTranscendentEmbryoAt(
       continue;
     }
     const before = branch.state.traitHistory;
+    const cycle = source.cycles + 1;
+    const address = createTranscendentEmbryoOutcomeAddress(source.source, cycle);
+    const targetOutcome = source.transformations[String(cycle)];
     const threshold = Object.freeze({
       source,
+      cycle,
       before,
       eligibleBlessingKeys: transcendentEmbryoBlessingKeys(
         catalog,
@@ -351,7 +357,7 @@ function advanceTranscendentEmbryoAt(
         }),
       ),
     });
-    thresholds.push(Object.freeze({ address, threshold }));
+    thresholds.push(Object.freeze({ address, landing, threshold }));
     const assessment = assessTranscendentEmbryoTransformation(catalog, threshold, targetOutcome);
     if (!assessment.legal) {
       blocked.push(
@@ -556,8 +562,12 @@ export function applyEncounterEndEffectsTransition(
       }),
     );
   }
-  const steadyOwner: SteadyGrowthOutcomeAddress['owner'] | undefined =
+  const steadyOwner: OccurrenceAddress | undefined =
     event.origin.kind === 'occurrence' ? event.origin : undefined;
+  const landing: AutomaticOutcomeLanding | undefined =
+    steadyOwner === undefined
+      ? undefined
+      : Object.freeze({ owner: steadyOwner, phaseKey: event.phaseKey });
   // Fang decay and Bell growth share the RoomsPerUpgrade gate, before the chamber pass.
   if (steadyOwner !== undefined && declaration?.skipRoomsPerUpgrade !== true)
     next = Object.freeze(
@@ -568,10 +578,6 @@ export function applyEncounterEndEffectsTransition(
           : Object.freeze({ ...branch, state: Object.freeze({ ...branch.state, keepsakes }) });
       }),
     );
-  const steadyGrowthTarget =
-    room?.kind === 'authored'
-      ? room.encounters.steadyGrowthTargetByPhase?.[event.phaseKey]
-      : undefined;
   if (steadyOwner !== undefined)
     timedEffects.push(
       timedEffectContact(
@@ -585,20 +591,9 @@ export function applyEncounterEndEffectsTransition(
       ),
     );
   const steadyAdvance =
-    steadyOwner === undefined || declaration?.skipRoomsPerUpgrade === true
+    landing === undefined || declaration?.skipRoomsPerUpgrade === true
       ? undefined
-      : advanceSteadyGrowthAt(
-          catalog,
-          next,
-          steadyOwner,
-          event.phaseKey,
-          steadyGrowthTarget,
-          event.sequence,
-        );
-  const embryoTarget =
-    room?.kind === 'authored'
-      ? room.encounters.transcendentEmbryoBlessingByPhase?.[event.phaseKey]
-      : undefined;
+      : advanceSteadyGrowthAt(catalog, next, landing, event.sequence);
   if (steadyOwner !== undefined)
     timedEffects.push(
       timedEffectContact(
@@ -617,9 +612,7 @@ export function applyEncounterEndEffectsTransition(
       : advanceTranscendentEmbryoAt(
           catalog,
           steadyAdvance.branches,
-          steadyOwner!,
-          event.phaseKey,
-          embryoTarget,
+          landing!,
           event.sequence,
           event.origin.routeKey,
           '',
@@ -703,7 +696,7 @@ export function applyEncounterEndEffectsTransition(
     findings.push(
       Object.freeze({
         finding: rewardFinding(
-          blocked.targetTraitKey === undefined
+          blocked.threshold.targetTraitKey === undefined
             ? 'steadyGrowthOutcomeMissing'
             : 'steadyGrowthOutcomeUnavailable',
           blocked.address,
@@ -711,13 +704,18 @@ export function applyEncounterEndEffectsTransition(
             sourceTraitKey: blocked.threshold.traitKey,
             requiredInterval: blocked.threshold.requiredInterval,
             eligibleTargetKeys: blocked.threshold.eligibleTargetKeys,
-            ...(blocked.targetTraitKey === undefined
+            ...(blocked.threshold.targetTraitKey === undefined
               ? {}
-              : { targetTraitKey: blocked.targetTraitKey }),
+              : { targetTraitKey: blocked.threshold.targetTraitKey }),
           }),
         ),
         region: ownerRegion(blocked.address),
-        chronology: Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'at' }),
+        chronology: Object.freeze({
+          kind: 'history',
+          sequence: event.sequence,
+          boundary: 'at',
+          occurrence: landing!.owner,
+        }),
       }),
     );
   }
@@ -736,14 +734,16 @@ export function applyEncounterEndEffectsTransition(
             eligibleBlessingKeys: blocked.threshold.eligibleBlessingKeys,
             ...(blocked.targetOutcome === undefined
               ? {}
-              : {
-                  targetBlessingKey:
-                    blocked.targetOutcome === null ? null : blocked.targetOutcome.blessingKey,
-                }),
+              : { targetBlessingKey: blocked.targetOutcome.blessingKey }),
           }),
         ),
         region: ownerRegion(blocked.address),
-        chronology: Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'at' }),
+        chronology: Object.freeze({
+          kind: 'history',
+          sequence: event.sequence,
+          boundary: 'at',
+          occurrence: landing!.owner,
+        }),
       }),
     );
   }

@@ -402,6 +402,7 @@ export {
   type ResourcePlacements,
   type RouteLoadout,
   type AuthoredKeepsakeEquipResults,
+  type AuthoredKeepsakeEquipResultValue,
   type AuthoredFountainRarityResult,
   type AuthoredExperimentalHammerEquipResult,
   type RouteWeaponAspectLoadout,

@@ -336,22 +336,23 @@ export interface NaturalSelectionResultAddress extends BiomeOwnedAddress {
   readonly trait: TraitOfferAddress;
   readonly optionKey: 'option1' | 'option2' | 'option3';
 }
-/** One automatic end-effects rarity outcome, owned by an ordinary or fixed Boss phase. */
+/**
+ * One Steady Growth interval of the instance acquired from this trait offer;
+ * `cycle` counts its reached intervals from 1. Where it lands is derived.
+ */
 export interface SteadyGrowthOutcomeAddress extends BiomeOwnedAddress {
   readonly kind: 'steadyGrowthOutcome';
-  /**
-   * The ordinary occurrence or fixed Boss that emitted the end-effects
-   * checkpoint. `phaseKey` below is the sole phase identity; keeping an
-   * EncounterPhaseAddress here would permit contradictory double phase keys.
-   */
-  readonly owner: OccurrenceAddress;
-  readonly phaseKey: string;
+  readonly trait: TraitOfferAddress;
+  readonly cycle: number;
 }
-/** One automatic eight-room Embryo transformation at a reached encounter end. */
+/**
+ * One eight-room interval of the Embryo installed by this selection; `cycle`
+ * counts its reached intervals from 1. Where it lands is derived.
+ */
 export interface TranscendentEmbryoOutcomeAddress extends BiomeOwnedAddress {
   readonly kind: 'transcendentEmbryoOutcome';
-  readonly owner: OccurrenceAddress;
-  readonly phaseKey: string;
+  readonly selection: KeepsakeSelectionAddress | EchoKeepsakeReplayAddress;
+  readonly cycle: number;
 }
 /** Echo Boon Boon Boon's complete mixed-provider child beneath the selected outer row. */
 export interface EchoLastRunBoonAddress extends BiomeOwnedAddress {
@@ -1039,28 +1040,32 @@ export function createNaturalSelectionResultAddress(
     optionKey,
   });
 }
+function outcomeCycle(cycle: number): number {
+  if (!Number.isInteger(cycle) || cycle < 1) throw new Error('cycle must be a positive integer');
+  return cycle;
+}
 export function createSteadyGrowthOutcomeAddress(
-  owner: SteadyGrowthOutcomeAddress['owner'],
-  phaseKey: string,
+  trait: TraitOfferAddress,
+  cycle: number,
 ): SteadyGrowthOutcomeAddress {
   return Object.freeze({
     kind: 'steadyGrowthOutcome',
-    routeKey: owner.routeKey,
-    biomeKey: owner.biomeKey,
-    owner,
-    phaseKey: nonBlank(phaseKey, 'phaseKey'),
+    routeKey: trait.routeKey,
+    biomeKey: trait.biomeKey,
+    trait,
+    cycle: outcomeCycle(cycle),
   });
 }
 export function createTranscendentEmbryoOutcomeAddress(
-  owner: TranscendentEmbryoOutcomeAddress['owner'],
-  phaseKey: string,
+  selection: TranscendentEmbryoOutcomeAddress['selection'],
+  cycle: number,
 ): TranscendentEmbryoOutcomeAddress {
   return Object.freeze({
     kind: 'transcendentEmbryoOutcome',
-    routeKey: owner.routeKey,
-    biomeKey: owner.biomeKey,
-    owner,
-    phaseKey: nonBlank(phaseKey, 'phaseKey'),
+    routeKey: selection.routeKey,
+    biomeKey: selection.biomeKey,
+    selection,
+    cycle: outcomeCycle(cycle),
   });
 }
 export function createEchoLastRunBoonAddress(
@@ -1227,9 +1232,9 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'echoLastReward':
       return JSON.stringify([...base, semanticAddressKey(address.trait), address.optionKey]);
     case 'steadyGrowthOutcome':
-      return JSON.stringify([...base, semanticAddressKey(address.owner), address.phaseKey]);
+      return JSON.stringify([...base, semanticAddressKey(address.trait), address.cycle]);
     case 'transcendentEmbryoOutcome':
-      return JSON.stringify([...base, semanticAddressKey(address.owner), address.phaseKey]);
+      return JSON.stringify([...base, semanticAddressKey(address.selection), address.cycle]);
     case 'allTogetherSet':
       return JSON.stringify([
         ...base,

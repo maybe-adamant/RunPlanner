@@ -1,5 +1,5 @@
 import type {
-  AuthoredKeepsakeEquipResults,
+  AuthoredKeepsakeEquipResultValue,
   ProjectCommand,
   SemanticAddress,
 } from '../../authored-project';
@@ -101,9 +101,7 @@ export function sampleKeepsakeEquipResult(
 }
 
 /** One keepsake equip result value: a Jeweled Pom trait, a Hammer pick or an Embryo blessing. */
-export type DraftKeepsakeEquipValue = NonNullable<
-  AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults]
->;
+export type DraftKeepsakeEquipValue = NonNullable<AuthoredKeepsakeEquipResultValue>;
 
 /** Figurine and Judgment: a random set of the required count among inactive Arcana. */
 export function sampleArcanaChoice(

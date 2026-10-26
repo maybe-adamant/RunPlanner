@@ -5,7 +5,7 @@ import {
 import {
   semanticAddressKey,
   type AuthoredTraitOffer,
-  type AuthoredKeepsakeEquipResults,
+  type AuthoredKeepsakeEquipResultValue,
   type TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 
@@ -45,7 +45,7 @@ function offerWithFocusedOption(
 }
 
 function keepsakeEquipResultKey(
-  value: AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults] | undefined,
+  value: AuthoredKeepsakeEquipResultValue | undefined,
 ): string | undefined {
   if (value === undefined) return undefined;
   if ('kind' in value) return value.kind === 'selected' ? value.traitKey : '__exhausted';
@@ -236,10 +236,7 @@ export function createTraitCandidateAdapters(
         kind: 'acquisitionConversion',
         acquisition: owner,
       }) as EvaluatedAcquisitionConversionCandidate,
-    keepsakeEquipResult: (
-      owner,
-      value?: AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults],
-    ) => {
+    keepsakeEquipResult: (owner, value?: AuthoredKeepsakeEquipResultValue) => {
       const evaluation = aggregateEvaluation(core, {
         kind: 'keepsakeEquipResult',
         result: owner,

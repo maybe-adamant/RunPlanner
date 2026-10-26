@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
 import {
-  createOccurrenceAddress,
   createTranscendentEmbryoOutcomeAddress,
+  createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
   type AuthoredTranscendentEmbryoOutcome,
 } from '@run-planner/engine/authored-project';
@@ -19,7 +19,6 @@ import type {
   WorkspaceTranscendentEmbryoInteraction,
 } from '@planner/projections/structured-workspace';
 import { TranscendentEmbryoEffectRow } from '@planner/ui/editor/biome/TranscendentEmbryoEffectRow';
-import { goldenFBiome, goldenFOccurrenceId } from '@run-planner/test-fixtures/underworld';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -30,8 +29,8 @@ describe('TranscendentEmbryoEffectRow', () => {
     const application = createApplication();
     vi.spyOn(application.store, 'dispatch').mockImplementation(() => undefined as never);
     const address = createTranscendentEmbryoOutcomeAddress(
-      createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
-      'Encounter',
+      createRouteStartKeepsakeSelectionAddress('Underworld'),
+      1,
     );
     const intentFor = vi.fn((value: AuthoredTranscendentEmbryoOutcome | null) => ({
       command: {

@@ -1,5 +1,5 @@
 import type { Catalog, TraitPickupDeclaration, TraitRarity } from '../../../catalog-schema';
-import type { SemanticAddress } from '../../../authored-project/addresses';
+import type { SemanticAddress, TraitOfferAddress } from '../../../authored-project/addresses';
 import type {
   PickupProducerProgressEvent,
   RoomDecayProgressEvent,
@@ -203,6 +203,12 @@ export function advanceRoomDecay(
 export interface ReachedSteadyGrowthThreshold {
   readonly traitKey: string;
   readonly acquisitionIdentity: string;
+  /** The authored offer that gave this Steady Growth. */
+  readonly source: TraitOfferAddress;
+  /** This instance's reached intervals, counted from 1. */
+  readonly cycle: number;
+  /** The source's authored target for this cycle. */
+  readonly targetTraitKey?: string;
   readonly requiredInterval: number;
   /** Immutable pre-checkpoint frontier; candidates and settlement share it. */
   readonly before: TraitHistoryState;
@@ -399,10 +405,18 @@ export function advanceRoomsPerUpgradeProgress(
     const eligibleTargetKeys = candidates
       .filter((candidate) => candidates.length === 1 || candidate.traitKey !== trait.traitKey)
       .map((candidate) => candidate.traitKey);
+    const source = trait.steadyGrowthSource;
+    if (source === undefined)
+      throw new Error(`${trait.traitKey} reached an interval without its authored source offer`);
+    const cycle = (trait.steadyGrowthCycles ?? 0) + 1;
+    const targetTraitKey = source.targets[String(cycle)];
     thresholds.push(
       Object.freeze({
         traitKey: trait.traitKey,
         acquisitionIdentity: trait.acquisitionIdentity,
+        source: source.trait,
+        cycle,
+        ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
         requiredInterval,
         before,
         eligibleTargetKeys: Object.freeze(eligibleTargetKeys),

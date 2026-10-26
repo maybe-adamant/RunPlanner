@@ -131,6 +131,13 @@ function appendAutomaticTimelineEffects(
   return Object.freeze({ ...timeline, entries: Object.freeze(entries) });
 }
 
+/** A reached automatic outcome at the encounter end where its cycle landed. */
+export interface LandedTimelineOutcome<Address> {
+  readonly address: Address;
+  readonly owner: OccurrenceAddress;
+  readonly phaseKey: string;
+}
+
 /**
  * Add reached Steady Growth checkpoints to the engine-owned room timeline.
  * The effect is fixed at its phase's end-effects checkpoint, after required
@@ -138,7 +145,7 @@ function appendAutomaticTimelineEffects(
  */
 export function appendSteadyGrowthTimelineEffects(
   timeline: RoomLifecycleTimeline,
-  outcomes: readonly SteadyGrowthOutcomeAddress[],
+  outcomes: readonly LandedTimelineOutcome<SteadyGrowthOutcomeAddress>[],
 ): RoomLifecycleTimeline {
   const owned = outcomes.filter(
     (outcome) => semanticAddressKey(outcome.owner) === semanticAddressKey(timeline.owner),
@@ -156,7 +163,7 @@ export function appendSteadyGrowthTimelineEffects(
           Object.freeze({
             kind: 'automaticEffect' as const,
             effect: 'steadyGrowth' as const,
-            address: outcome,
+            address: outcome.address,
             boundary: boundary.boundary,
             phaseKey: outcome.phaseKey,
             rank: boundary.rank,
@@ -174,7 +181,7 @@ export function appendSteadyGrowthTimelineEffects(
  */
 export function appendTranscendentEmbryoTimelineEffects(
   timeline: RoomLifecycleTimeline,
-  outcomes: readonly TranscendentEmbryoOutcomeAddress[],
+  outcomes: readonly LandedTimelineOutcome<TranscendentEmbryoOutcomeAddress>[],
 ): RoomLifecycleTimeline {
   const owned = outcomes.filter(
     (outcome) => semanticAddressKey(outcome.owner) === semanticAddressKey(timeline.owner),
@@ -192,7 +199,7 @@ export function appendTranscendentEmbryoTimelineEffects(
           Object.freeze({
             kind: 'automaticEffect' as const,
             effect: 'transcendentEmbryo' as const,
-            address: outcome,
+            address: outcome.address,
             boundary: boundary.boundary,
             phaseKey: outcome.phaseKey,
             rank: boundary.rank,

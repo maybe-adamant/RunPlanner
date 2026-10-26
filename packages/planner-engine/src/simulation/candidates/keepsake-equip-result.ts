@@ -1,5 +1,9 @@
 import type { KeepsakeEquipResultAddress } from '../../authored-project/addresses';
-import type { AuthoredKeepsakeEquipResults, ProjectDocument } from '../../authored-project/model';
+import type {
+  AuthoredKeepsakeEquipResultValue,
+  AuthoredKeepsakeEquipResults,
+  ProjectDocument,
+} from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import { type KeepsakeEquipResultCandidateArtifacts } from '../keepsakes/candidate-artifacts';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
@@ -15,7 +19,7 @@ import { unavailableForBiome, type CandidateContextUnavailable } from './availab
 export interface KeepsakeEquipResultCandidateQuery {
   readonly kind: 'keepsakeEquipResult';
   readonly result: KeepsakeEquipResultAddress;
-  readonly value?: AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults];
+  readonly value?: AuthoredKeepsakeEquipResultValue;
 }
 
 export interface EvaluatedKeepsakeEquipResultCandidate {
@@ -45,7 +49,7 @@ export interface EvaluatedKeepsakeEquipResultCandidate {
 function authoredValue(
   project: ProjectDocument,
   address: KeepsakeEquipResultAddress,
-): AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults] | undefined {
+): AuthoredKeepsakeEquipResultValue | undefined {
   const route = project.route.routeKey === address.routeKey ? project.route : undefined;
   if (address.selection.kind === 'echoKeepsakeReplay') {
     const replay = route?.biomes.find(

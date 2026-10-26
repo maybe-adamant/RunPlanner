@@ -1,3 +1,4 @@
+import type { OccurrenceId } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import { deriveNpcShoppingExecutionPolicy } from '../encounters/npc-shopping';
 import {
@@ -105,9 +106,20 @@ function normalizeAuthoringHorizonPredecessor(evaluation: ProjectBiomeEvaluation
   }
 
   const prefix = 'materializedPrefix' in evaluation ? evaluation.materializedPrefix : undefined;
-  if (prefix !== undefined) return resolveAuthoringBoundary(prefix, input);
+  if (prefix !== undefined)
+    return resolveAuthoringBoundary(prefix, landedOutcomeOccurrence(evaluation) ?? input);
   if (input.kind === 'biome' || input.kind === 'biomeField') return input;
   return createBiomeAddress(evaluation.origin.routeKey, evaluation.origin.biomeKey);
+}
+
+/** An automatic outcome is addressed by its source; it blocks where its cycle landed. */
+function landedOutcomeOccurrence(evaluation: ProjectBiomeEvaluation): SemanticAddress | undefined {
+  const input = evaluation.requiredInput;
+  const occurrenceId = evaluation.requiredInputLocation?.roomOccurrenceId;
+  return (input?.kind === 'steadyGrowthOutcome' || input?.kind === 'transcendentEmbryoOutcome') &&
+    occurrenceId !== undefined
+    ? createOccurrenceAddress(evaluation.origin, occurrenceId as OccurrenceId)
+    : undefined;
 }
 
 type BiomeAssembly = ReturnType<typeof evaluateBiomeAssembly>;

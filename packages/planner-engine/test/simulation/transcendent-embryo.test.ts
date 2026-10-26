@@ -4,7 +4,9 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
   createIncomingRewardAddress,
+  createKeepsakeEquipResultAddress,
   createOccurrenceAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createOccurrenceId,
   createRoomActionAddress,
   semanticAddressKey,
@@ -108,8 +110,18 @@ function embryoMarker(
     markedBlessingKey: blessingKey,
     markedBlessingValues: embryoOutcome(blessingKey, rarity).blessingValues,
     markedBlessingAcquisitionIdentity: acquisitionIdentity,
+    source: embryoEquip.selection,
+    cycles: 0,
+    transformations: Object.freeze({}),
   });
 }
+
+const embryoEquip = createKeepsakeEquipResultAddress(
+  createRouteStartKeepsakeSelectionAddress('Underworld'),
+  'transcendentEmbryo',
+);
+/** The installing selection's blessing for the first eight-room interval. */
+const weaponTransformation = Object.freeze({ 1: embryoOutcome('ChaosWeaponBlessing') });
 
 describe('Transcendent Embryo declaration and direct Chaos fold', () => {
   it.each(['Underworld', 'Surface', 'Dream'])(
@@ -144,7 +156,8 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       ),
       'RandomBlessingKeepsake',
       embryoOutcome('ChaosElementalBlessing'),
-      encounterOwner,
+      weaponTransformation,
+      embryoEquip,
       0,
       'ordinary',
       'Epic',
@@ -155,11 +168,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       origin: encounterOwner,
       occurrenceId: encounterOwner.occurrenceId,
       gameName: 'RoomOpening01',
-      encounters: {
-        transcendentEmbryoBlessingByPhase: {
-          Encounter: embryoOutcome('ChaosWeaponBlessing'),
-        },
-      },
+      encounters: {},
       encounterPhases: [],
     } as unknown as CanonicalAuthoredRoom;
     const end = (sequence: number) =>
@@ -195,11 +204,22 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     const missing = applyEncounterEndEffectsTransition(
       catalog,
       end(9),
-      {
-        ...room,
-        encounters: {},
-      } as unknown as CanonicalAuthoredRoom,
-      suppressed.branches,
+      room,
+      suppressed.branches.map((branch) =>
+        Object.freeze({
+          ...branch,
+          state: Object.freeze({
+            ...branch.state,
+            keepsakes: Object.freeze({
+              ...branch.state.keepsakes,
+              transcendentEmbryo: Object.freeze({
+                ...branch.state.keepsakes.transcendentEmbryo!,
+                transformations: Object.freeze({}),
+              }),
+            }),
+          }),
+        }),
+      ),
     );
     expect(missing.branches).toHaveLength(0);
     expect(missing.findings).toMatchObject([
@@ -230,7 +250,8 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       ),
       'RandomBlessingKeepsake',
       embryoOutcome('ChaosElementalBlessing'),
-      encounterOwner,
+      weaponTransformation,
+      embryoEquip,
       0,
       'ordinary',
       'Epic',
@@ -246,11 +267,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       origin: encounterOwner,
       occurrenceId: encounterOwner.occurrenceId,
       gameName: 'RoomOpening01',
-      encounters: {
-        transcendentEmbryoBlessingByPhase: {
-          Encounter: embryoOutcome('ChaosWeaponBlessing'),
-        },
-      },
+      encounters: {},
       encounterPhases: [],
     } as unknown as CanonicalAuthoredRoom;
     let branches: readonly RewardBranchState[] = [
@@ -297,7 +314,8 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       ),
       'RandomBlessingKeepsake',
       embryoOutcome('ChaosElementalBlessing'),
-      encounterOwner,
+      weaponTransformation,
+      embryoEquip,
       0,
       'ordinary',
       'Epic',
@@ -328,11 +346,7 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       origin: encounterOwner,
       occurrenceId: encounterOwner.occurrenceId,
       gameName: 'F_Opening01',
-      encounters: {
-        transcendentEmbryoBlessingByPhase: {
-          Encounter: embryoOutcome('ChaosWeaponBlessing'),
-        },
-      },
+      encounters: {},
       encounterPhases: [
         {
           slotKey: 'Encounter',
@@ -439,7 +453,8 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       branchWithHistory(),
       'RandomBlessingKeepsake',
       embryoOutcome('ChaosElementalBlessing'),
-      owner,
+      weaponTransformation,
+      embryoEquip,
       1,
       'ordinary',
       'Epic',
@@ -466,7 +481,8 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       ),
       'RandomBlessingKeepsake',
       { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
-      owner,
+      weaponTransformation,
+      embryoEquip,
       1,
       'ordinary',
       'Heroic',
@@ -487,7 +503,8 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       ),
       'RandomBlessingKeepsake',
       { blessingKey: 'ChaosRarityBlessing', blessingValues: { rareBonus: 0.93 } },
-      owner,
+      weaponTransformation,
+      embryoEquip,
       1,
       'ordinary',
       'Heroic',
@@ -514,7 +531,8 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       ),
       'RandomBlessingKeepsake',
       { blessingKey: 'ChaosWeaponBlessing', blessingValues: { damageBonus: 0.73 } },
-      owner,
+      weaponTransformation,
+      embryoEquip,
       1,
       'ordinary',
       'Heroic',
@@ -554,7 +572,8 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       ),
       'RandomBlessingKeepsake',
       embryoOutcome('ChaosElementalBlessing'),
-      owner,
+      weaponTransformation,
+      embryoEquip,
       1,
       'ordinary',
       'Epic',
@@ -594,7 +613,8 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       ),
       'RandomBlessingKeepsake',
       embryoOutcome('ChaosElementalBlessing'),
-      rackOccurrence,
+      weaponTransformation,
+      embryoEquip,
       1,
       'ordinary',
       'Epic',
@@ -800,7 +820,11 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
         markedBlessingKey: 'ChaosElementalBlessing',
         markedBlessingValues: embryoOutcome('ChaosElementalBlessing').blessingValues,
         markedBlessingAcquisitionIdentity: 'embryo:marked',
+        source: embryoEquip.selection,
+        cycles: 0,
+        transformations: Object.freeze({}),
       },
+      cycle: 1,
       before: createTraitHistoryState(),
       eligibleBlessingKeys: ['ChaosElementalBlessing'],
     } satisfies ReachedTranscendentEmbryoThreshold;

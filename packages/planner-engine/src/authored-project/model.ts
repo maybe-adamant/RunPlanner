@@ -9,9 +9,9 @@ import type {
 import type { RunModifiersRecord } from './run-modifiers';
 import type { RunStartPoint } from './practice-start';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 98 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 99 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
-export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 1;
+export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 0;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -99,7 +99,15 @@ export interface AuthoredKeepsakeEquipResults {
   readonly experimentalHammer?: AuthoredExperimentalHammerEquipResult;
   /** Exact Chaos blessing granted by Transcendent Embryo at this frontier. */
   readonly transcendentEmbryo?: AuthoredTranscendentEmbryoOutcome;
+  /** Sparse blessing per eight-room interval of this Embryo, keyed by cycle from 1. */
+  readonly transcendentEmbryoTransformations?: Readonly<
+    Record<string, AuthoredTranscendentEmbryoOutcome>
+  >;
 }
+
+/** One immediate equip result, excluding the Embryo's later transformations. */
+export type AuthoredKeepsakeEquipResultValue = AuthoredKeepsakeEquipResults[
+  'jeweledPom' | 'experimentalHammer' | 'transcendentEmbryo'];
 
 /** Sparse Phial choice for one exact fountain use, owned by an occurrence or the Hub. */
 export interface AuthoredFountainRarityResult {
@@ -342,16 +350,10 @@ export interface RoomEncounterState {
   readonly encounterKeyByPhase: Readonly<Record<string, string>>;
   /** Complete declaration-owned phase-local Fig Leaf dispositions, including fixed slots. */
   readonly figLeafSkipByPhase: Readonly<Record<string, boolean>>;
-  /** Sparse automatic Steady Growth targets keyed to a reached end-effects phase. */
-  readonly steadyGrowthTargetByPhase?: Readonly<Record<string, string>>;
   /** Sparse Boss-defeated Judgment selections keyed by their exact Boss phase. */
   readonly judgmentArcanaKeysByPhase?: Readonly<Record<string, readonly string[]>>;
   /** Sparse Boss-defeated Crystal Figurine selections keyed by their exact Boss phase. */
   readonly figurineArcanaKeysByPhase?: Readonly<Record<string, readonly string[]>>;
-  /** Sparse reached eight-room Transcendent Embryo transformations. */
-  readonly transcendentEmbryoBlessingByPhase?: Readonly<
-    Record<string, AuthoredTranscendentEmbryoOutcome>
-  >;
   /** Complete declaration-owned Gorgon condition/result for each phase. */
   readonly gorgonResultByPhase: Readonly<Record<string, AuthoredGorgonPhaseResult>>;
   /** Sparse authored offers keyed by stable phase and concrete encounter. */

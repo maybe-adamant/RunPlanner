@@ -176,28 +176,6 @@ export function reconcileRoomEncounterState(
           ),
         }
       : {}),
-    ...(previous.steadyGrowthTargetByPhase === undefined
-      ? {}
-      : {
-          steadyGrowthTargetByPhase: Object.freeze(
-            Object.fromEntries(
-              Object.entries(previous.steadyGrowthTargetByPhase).filter(([phase]) =>
-                replacementBindings.has(phase),
-              ),
-            ),
-          ),
-        }),
-    ...(previous.transcendentEmbryoBlessingByPhase === undefined
-      ? {}
-      : {
-          transcendentEmbryoBlessingByPhase: Object.freeze(
-            Object.fromEntries(
-              Object.entries(previous.transcendentEmbryoBlessingByPhase).filter(([phase]) =>
-                replacementBindings.has(phase),
-              ),
-            ),
-          ),
-        }),
     encounterKeyByPhase: Object.freeze(selections),
     figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
     ...(Object.keys(aetosWaveByPhase).length === 0

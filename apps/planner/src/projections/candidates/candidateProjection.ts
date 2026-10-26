@@ -52,6 +52,7 @@ import {
   type TraitOptionKey,
   type TargetAddress,
   type AuthoredKeepsakeEquipResults,
+  type AuthoredKeepsakeEquipResultValue,
 } from '@run-planner/engine/authored-project';
 import type {
   AuthoredLevelResolution,
@@ -138,7 +139,7 @@ export interface CandidateOptionProjection<
 
 /** Engine-derived immediate Embryo grant facts, retained beside its candidate option. */
 export interface KeepsakeEquipResultOptionProjection extends CandidateOptionProjection<string> {
-  readonly resultValue: AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults];
+  readonly resultValue: AuthoredKeepsakeEquipResultValue;
   /** The engine's finding codes for this one result value. */
   readonly findings: readonly string[];
   readonly transcendentEmbryoSummary?: {
@@ -321,7 +322,7 @@ export interface CandidateProjectionSession {
   ) => readonly CandidateOptionProjection<string>[];
   readonly keepsakeEquipResult: (
     owner: KeepsakeEquipResultAddress,
-    value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults[keyof import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults],
+    value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResultValue,
   ) => readonly KeepsakeEquipResultOptionProjection[];
   readonly acquisitionConversion: (owner: AcquisitionRoleAddress) => CandidateProjectionEvaluation;
   /** Exact Anvil domain carried by the existing acquisition frontier. */

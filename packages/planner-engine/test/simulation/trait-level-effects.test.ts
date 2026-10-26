@@ -819,7 +819,10 @@ describe('Supply Chain lifecycle', () => {
       catalog,
       supplySettlement.branch,
       traitOrigin,
-      selectedTraitOffer('Demeter', 'BoonGrowthBoon'),
+      Object.freeze({
+        ...selectedTraitOffer('Demeter', 'BoonGrowthBoon'),
+        steadyGrowthTargets: Object.freeze({ '1': 'BoonDecayBoon' }),
+      }),
       3,
       'encounterCompleted',
       undefined,
@@ -901,7 +904,7 @@ describe('Supply Chain lifecycle', () => {
       origin: occurrence,
       occurrenceId: occurrence.occurrenceId,
       gameName: 'F_Opening01',
-      encounters: { steadyGrowthTargetByPhase: { Encounter: 'BoonDecayBoon' } },
+      encounters: {},
       encounterPhases: [
         {
           slotKey: 'Encounter',

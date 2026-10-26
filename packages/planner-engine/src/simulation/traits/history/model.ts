@@ -7,6 +7,7 @@ import type {
   AuthoredTraitOfferTraits,
   AuthoredChaosTraitOffer,
   EquippedTrait,
+  SteadyGrowthSource,
   TraitOptionKey,
 } from '../../../authored-project/traits/state';
 import type { TraitAssessmentFinding } from '../offer-domain';
@@ -43,6 +44,8 @@ export interface TraitOfferEvent {
   readonly acquisitionArmor?: number;
   /** Biome ordinal of a pick from a menu that scales by entered biomes. */
   readonly acquisitionOrdinal?: number;
+  /** The authored offer that owns an installed Steady Growth's targets. */
+  readonly steadyGrowthSource?: SteadyGrowthSource;
 }
 
 export interface MaxStatAmounts {
@@ -76,6 +79,8 @@ export interface ConcaveStoneSecondaryEvent {
   readonly acquisitionArmor?: number;
   /** Biome ordinal of a pick from a menu that scales by entered biomes. */
   readonly acquisitionOrdinal?: number;
+  /** The authored offer that owns an installed Steady Growth's targets. */
+  readonly steadyGrowthSource?: SteadyGrowthSource;
 }
 
 /** A closed derived mutation of an already-equipped Pom-eligible trait. */

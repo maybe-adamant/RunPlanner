@@ -39,6 +39,7 @@ import { decodeAuthoredHexTree } from '../../traits/hex-tree';
 import { levelResolutionEffectFor } from '../../../reward-kernel/level-effects';
 import { decodeEchoLastRunBoon } from './echo-last-run-codec';
 import { decodeAllTogetherResult } from './all-together-codec';
+import { decodeSteadyGrowthTargets } from './steady-growth-targets-codec';
 import { decodeMaxHealthRoll } from '../../traits/max-health-roll';
 
 export function decodePayload(
@@ -244,6 +245,7 @@ function decodeTraitOffers(
         ...(record.rejectedOptionKey === undefined ? [] : ['rejectedOptionKey']),
         ...('concaveStoneResult' in record ? ['concaveStoneResult'] : []),
         ...('hexTree' in record ? ['hexTree'] : []),
+        ...('steadyGrowthTargets' in record ? ['steadyGrowthTargets'] : []),
       ],
       rolePath,
     );
@@ -648,7 +650,7 @@ function decodeTraitOffers(
         failProjectDocument(`${rolePath}.concaveStoneResult.kind`, 'must be noProc or proc');
       }
     }
-    result[roleKey] = Object.freeze({
+    const offer: AuthoredTraitOfferTraits = Object.freeze({
       kind: 'traits',
       giverKey,
       options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
@@ -660,6 +662,14 @@ function decodeTraitOffers(
       ...(concaveStoneResult === undefined ? {} : { concaveStoneResult }),
       ...(hexTree === undefined ? {} : { hexTree }),
     });
+    const steadyGrowthTargets = decodeSteadyGrowthTargets(
+      record.steadyGrowthTargets,
+      catalog,
+      offer,
+      `${rolePath}.steadyGrowthTargets`,
+    );
+    result[roleKey] =
+      steadyGrowthTargets === undefined ? offer : Object.freeze({ ...offer, steadyGrowthTargets });
   }
   return Object.freeze(result);
 }

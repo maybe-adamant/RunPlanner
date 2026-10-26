@@ -503,7 +503,7 @@ export interface CanonicalBiome {
   readonly biomeState: CanonicalBiomeState;
   readonly echoKeepsakeReplayResults?: Pick<
     import('../../authored-project/model').AuthoredKeepsakeEquipResults,
-    'experimentalHammer' | 'transcendentEmbryo'
+    'experimentalHammer' | 'transcendentEmbryo' | 'transcendentEmbryoTransformations'
   >;
 }
 
@@ -581,7 +581,7 @@ export interface MaterializedBiomePrefix {
   readonly biomeState: CanonicalBiomeState;
   readonly echoKeepsakeReplayResults?: Pick<
     import('../../authored-project/model').AuthoredKeepsakeEquipResults,
-    'experimentalHammer' | 'transcendentEmbryo'
+    'experimentalHammer' | 'transcendentEmbryo' | 'transcendentEmbryoTransformations'
   >;
 }
 

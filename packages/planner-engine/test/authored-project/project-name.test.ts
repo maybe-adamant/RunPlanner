@@ -30,7 +30,6 @@ describe('plan name', () => {
     expect(project().name).toBe(DEFAULT_PROJECT_NAME);
     expect(Object.keys(JSON.parse(encodeProjectDocument(project('Staff run'))))).toEqual([
       'schemaVersion',
-      'schemaRevision',
       'projectId',
       'name',
       'catalogVersion',

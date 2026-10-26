@@ -302,10 +302,7 @@ function automaticOutcomeProject() {
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceTranscendentEmbryoTransformation',
-    outcome: createTranscendentEmbryoOutcomeAddress(
-      createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(7, 1)),
-      'Encounter',
-    ),
+    outcome: createTranscendentEmbryoOutcomeAddress(selection, 1),
     value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
   });
   const growthReward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(6, 1));
@@ -2325,10 +2322,7 @@ describe('engine-owned F/G execution semantic product', () => {
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTranscendentEmbryoTransformation',
-      outcome: createTranscendentEmbryoOutcomeAddress(
-        createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(7, 1)),
-        'Encounter',
-      ),
+      outcome: createTranscendentEmbryoOutcomeAddress(selection, 1),
       value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
     });
     project = applyProjectCommand(project, catalog, {

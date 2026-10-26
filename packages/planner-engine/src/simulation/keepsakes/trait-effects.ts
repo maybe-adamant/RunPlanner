@@ -1,5 +1,9 @@
 import type { Catalog, InRunTraitRarity } from '../../catalog-schema';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
+import type {
+  EchoKeepsakeReplayAddress,
+  KeepsakeSelectionAddress,
+} from '../../authored-project/addresses';
 import {
   chaosOperandAuthoringValues,
   chaosOperandsAtRarity,
@@ -236,6 +240,8 @@ export function equipTranscendentEmbryo(
   rarity: InRunTraitRarity,
   outcome: AuthoredTranscendentEmbryoOutcome,
   acquisitionIdentity: string,
+  source: KeepsakeSelectionAddress | EchoKeepsakeReplayAddress,
+  transformations: Readonly<Record<string, AuthoredTranscendentEmbryoOutcome>> | undefined,
 ): KeepsakeState {
   return Object.freeze({
     ...state,
@@ -246,6 +252,9 @@ export function equipTranscendentEmbryo(
       markedBlessingKey: outcome.blessingKey,
       markedBlessingValues: outcome.blessingValues,
       markedBlessingAcquisitionIdentity: acquisitionIdentity,
+      source,
+      cycles: 0,
+      transformations: transformations ?? Object.freeze({}),
     }),
   });
 }
@@ -268,14 +277,17 @@ export function advanceTranscendentEmbryoProgress(state: KeepsakeState): {
   return Object.freeze({
     state: Object.freeze({
       ...state,
-      transcendentEmbryo: Object.freeze({ ...source, progress: 0 }),
+      transcendentEmbryo: Object.freeze({ ...source, progress: 0, cycles: source.cycles + 1 }),
     }),
     reached: true,
   });
 }
 
 export interface ReachedTranscendentEmbryoThreshold {
+  /** The Embryo before this interval; its `cycles` excludes this one. */
   readonly source: NonNullable<KeepsakeState['transcendentEmbryo']>;
+  /** This interval, counted from 1 since the Embryo's install. */
+  readonly cycle: number;
   readonly before: TraitHistoryState;
   readonly eligibleBlessingKeys: readonly string[];
 }

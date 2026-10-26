@@ -19,7 +19,10 @@ export interface PendingKeepsakeEffects {
   readonly phial: KeepsakeState['phial'] | null;
   readonly figurine: KeepsakeState['figurine'] | null;
   readonly stone: KeepsakeState['stone'] | null;
-  readonly transcendentEmbryo: KeepsakeState['transcendentEmbryo'] | null;
+  readonly transcendentEmbryo: Omit<
+    NonNullable<KeepsakeState['transcendentEmbryo']>,
+    'source' | 'cycles' | 'transformations'
+  > | null;
 }
 
 export function pendingKeepsakeEffects(state: KeepsakeState): PendingKeepsakeEffects {
@@ -34,7 +37,15 @@ export function pendingKeepsakeEffects(state: KeepsakeState): PendingKeepsakeEff
     phial: state.phial ?? null,
     figurine: state.figurine ?? null,
     stone: state.stone ?? null,
-    transcendentEmbryo: state.transcendentEmbryo ?? null,
+    transcendentEmbryo: (() => {
+      if (state.transcendentEmbryo === undefined) return null;
+      // The authored source and its cycle-keyed choices are not run state.
+      const { source, cycles, transformations, ...embryo } = state.transcendentEmbryo;
+      void source;
+      void cycles;
+      void transformations;
+      return Object.freeze(embryo);
+    })(),
   });
 }
 

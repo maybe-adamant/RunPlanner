@@ -12,7 +12,6 @@ import {
   createRewardWheelOfferAddress,
   createRoomActionAddress,
   createShopOfferAddress,
-  createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
   roomActionKey,
   semanticAddressKey,
@@ -311,7 +310,7 @@ describe('trait offers evaluate against the state their options were built from'
   });
 
   it('regenerates an invalidated cage boon at its open, after a later silent maturation', () => {
-    const project = steadyGrowthProject(hermesBeforeHammer());
+    const project = hermesBeforeHammer();
     const ordinal = encounterEndOrdinal(combat09, 'Cage02');
     const favor = curseMaturingAt(combat09, 'Cage01');
     const withoutInterval = evaluateH(project, favor);
@@ -323,7 +322,7 @@ describe('trait offers evaluate against the state their options were built from'
   });
 
   it('rebuilds a stale boon at an intervening screen with the same result', () => {
-    const project = steadyGrowthProject(hammerAfterBothCages());
+    const project = hammerAfterBothCages();
     const ordinal = encounterEndOrdinal(combat09, 'Cage02');
     const favor = curseMaturingAt(combat09, 'Cage01');
     const evaluation = evaluateH(project, (branch) =>
@@ -345,30 +344,7 @@ describe('trait offers evaluate against the state their options were built from'
   });
 });
 
-/**
- * Authors the Steady Growth targets for its intervals: combat09's first cage
- * and, six encounters later, the Boss. Neither target is replaced later in H.
- */
-function steadyGrowthProject(project: ProjectDocument): ProjectDocument {
-  const withCage = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceSteadyGrowthTarget',
-    outcome: createSteadyGrowthOutcomeAddress(
-      createOccurrenceAddress(underworldH, combat09),
-      'Cage02',
-    ),
-    targetTraitKey: 'HestiaManaBoon',
-  });
-  return applyProjectCommand(withCage, catalog, {
-    kind: 'ReplaceSteadyGrowthTarget',
-    outcome: createSteadyGrowthOutcomeAddress(
-      createOccurrenceAddress(underworldH, createOccurrenceId('golden-h-preboss-shop:boss')),
-      'Encounter',
-    ),
-    targetTraitKey: 'HermesWeaponBoon',
-  });
-}
-
-/** A Steady Growth boon acquired before the biome, one interval short of `ordinal` ends. */
+/** A Steady Growth boon acquired before the biome, due as `ordinal` ends, with its targets. */
 function withSteadyGrowthDueAt(branch: RewardBranch, ordinal: number): RewardBranch {
   const sequence = lastSequence(branch);
   const offer: AuthoredTraitOffer = Object.freeze({
@@ -380,7 +356,9 @@ function withSteadyGrowthDueAt(branch: RewardBranch, ordinal: number): RewardBra
       Object.freeze({ traitKey: 'CastNovaBoon', rarity: 'Common' as const }),
     ]),
     selectedOptionKey: 'option1',
-  }) as AuthoredTraitOffer;
+    // Its intervals land at combat09's second cage and, six encounters later, the H Boss.
+    steadyGrowthTargets: Object.freeze({ '1': 'HestiaManaBoon', '2': 'HermesWeaponBoon' }),
+  }) as unknown as AuthoredTraitOffer;
   const settled = settleEncounterTraitOffer(
     catalog,
     Object.freeze({

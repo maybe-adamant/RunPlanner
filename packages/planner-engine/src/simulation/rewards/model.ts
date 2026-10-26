@@ -2,6 +2,7 @@ import type {
   AcquisitionEntryAddress,
   AcquisitionSiteAddress,
   BatchRewardStoreAddress,
+  OccurrenceAddress,
   SemanticAddress,
   SteadyGrowthOutcomeAddress,
   TranscendentEmbryoOutcomeAddress,
@@ -279,19 +280,27 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly figLeafPhaseCandidates: readonly FigLeafPhaseCandidateSupport[];
   readonly gorgonPhaseCandidates: readonly GorgonPhaseCandidateSupport[];
   readonly nemesisRandomEventCandidates: readonly NemesisRandomEventCandidateSupport[];
-  /** Exact reached automatic Steady Growth checkpoints for workspace timelines. */
+  /** Exact reached automatic Steady Growth checkpoints, each at its landing. */
   readonly steadyGrowthOutcomes: readonly {
     readonly address: SteadyGrowthOutcomeAddress;
+    /** The occurrence whose encounter end this cycle lands at. */
+    readonly owner: OccurrenceAddress;
     readonly sourceTraitKey: string;
     readonly phaseKey: string;
+    /** The source offer's authored target for this cycle. */
+    readonly targetTraitKey?: string;
     readonly requiredIntervals: readonly number[];
     readonly progressBefore: readonly number[];
   }[];
-  /** Exact reached automatic Transcendent Embryo checkpoints. */
+  /** Exact reached automatic Transcendent Embryo checkpoints, each at its landing. */
   readonly transcendentEmbryoOutcomes: readonly {
     readonly address: TranscendentEmbryoOutcomeAddress;
+    /** The occurrence whose encounter end this cycle lands at. */
+    readonly owner: OccurrenceAddress;
     readonly sourceBlessingKey: string;
     readonly phaseKey: string;
+    /** The installing selection's authored blessing for this cycle. */
+    readonly value?: import('../../authored-project/traits/state').AuthoredTranscendentEmbryoOutcome;
     readonly transformationRarities: readonly import('../../catalog-schema').InRunTraitRarity[];
     readonly progressBefore: readonly number[];
   }[];
@@ -308,3 +317,9 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
 }
 
 export type RewardSimulation = BiomeRewardSimulation;
+
+/** The encounter end where a source's cycle lands; derived, never authored. */
+export interface AutomaticOutcomeLanding {
+  readonly owner: OccurrenceAddress;
+  readonly phaseKey: string;
+}

@@ -222,14 +222,17 @@ describe('Boon Growth and Boon Decay target predicates', () => {
 
   it('requires one Steady Growth target to work for every reached branch', () => {
     const biome = createBiomeAddress('Underworld', 'F');
-    const outcome = createSteadyGrowthOutcomeAddress(
-      createOccurrenceAddress(biome, createOccurrenceId('steady-branch')),
-      'Combat',
+    const source = createTraitOfferAddress(
+      createIncomingRewardAddress(biome, createOccurrenceId('steady-branch')),
+      'source',
     );
+    const outcome = createSteadyGrowthOutcomeAddress(source, 1);
     const before = historyWith('Apollo', 'ApolloWeaponBoon', 'Common');
     const threshold = {
       traitKey: 'BoonGrowthBoon',
       acquisitionIdentity: 'steady',
+      source,
+      cycle: 1,
       requiredInterval: 6,
       before,
       eligibleTargetKeys: Object.freeze(['ApolloWeaponBoon']),
