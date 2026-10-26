@@ -34,19 +34,8 @@ import {
 import { loadSurfaceNPhialIntermediateFountainCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import phialFountainFixtureFile from './fixtures/surface-n-phial-intermediate-fountain.execution.json';
 import surfaceNFixtureFile from './fixtures/surface-n.execution.json';
+import { migrateProjectDocumentTo } from '../../../../schema/migrate-project.js';
 import underworldFghFixtureFile from './fixtures/underworld-fgh.execution.json';
-import { migrateProjectDocument as migrateProject87To88 } from '../../../../schema/migrate-project-87-to-88.js';
-import { migrateProjectDocument as migrateProject88To89 } from '../../../../schema/migrate-project-88-to-89.js';
-import { migrateProjectDocument as migrateProject89To90 } from '../../../../schema/migrate-project-89-to-90.js';
-import { migrateProjectDocument as migrateProject90To91 } from '../../../../schema/migrate-project-90-to-91.js';
-import { migrateProjectDocument as migrateProject91To92 } from '../../../../schema/migrate-project-91-to-92.js';
-import { migrateProjectDocument as migrateProject92To93 } from '../../../../schema/migrate-project-92-to-93.js';
-import { migrateProjectDocument as migrateProject93To94 } from '../../../../schema/migrate-project-93-to-94.js';
-import { migrateProjectDocument as migrateProject94To95 } from '../../../../schema/migrate-project-94-to-95.js';
-import { migrateProjectDocument as migrateProject95To96 } from '../../../../schema/migrate-project-95-to-96.js';
-import { migrateProjectDocument as migrateProject96To97 } from '../../../../schema/migrate-project-96-to-97.js';
-import { migrateProjectDocument as migrateProject97To98 } from '../../../../schema/migrate-project-97-to-98.js';
-import { migrateProjectDocument as migrateProject98To99 } from '../../../../schema/migrate-project-98-to-99.js';
 import { currentSchemaWire } from './support/current-schema-wire';
 
 const phialFountainFixture = currentSchemaWire(phialFountainFixtureFile);
@@ -80,30 +69,7 @@ function migratedPhialProject(): ProjectDocument {
       );
       delete decision.actions;
     }
-  return parseProjectDocument(
-    JSON.stringify(
-      migrateProject98To99(
-        migrateProject97To98(
-          migrateProject96To97(
-            migrateProject95To96(
-              migrateProject94To95(
-                migrateProject93To94(
-                  migrateProject92To93(
-                    migrateProject91To92(
-                      migrateProject90To91(
-                        migrateProject89To90(migrateProject88To89(migrateProject87To88(legacy))),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-    catalog,
-  );
+  return parseProjectDocument(JSON.stringify(migrateProjectDocumentTo(legacy)), catalog);
 }
 
 function placed(project: ProjectDocument, visits: number): ProjectDocument {

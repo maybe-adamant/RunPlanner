@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { migrateProjectDocument, outputPath } from './migrate-project-92-to-93.js';
+import { migrateProjectDocument } from '../apps/planner/src/persistence/project-92-to-93.js';
 
 const document = () => ({
   schemaVersion: 92,
@@ -60,9 +60,5 @@ describe('schema 92 to 93 migration', () => {
       () => migrateProjectDocument({ ...document(), catalogVersion: 'other' }),
       /expects catalog/,
     );
-  });
-
-  it('writes a sibling schema-93 file name', () => {
-    assert.equal(outputPath('/plans/run.runplanner.json'), '/plans/run.runplanner-schema93.json');
   });
 });

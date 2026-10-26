@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { migrateProjectDocument, outputPath } from './migrate-project-96-to-97.js';
+import { migrateProjectDocument } from '../apps/planner/src/persistence/project-96-to-97.js';
 
 const postboss = (gameName, extra = {}) => ({
   occurrenceId: `${gameName}:occurrence`,
@@ -193,9 +193,5 @@ describe('schema 96 to 97 migration', () => {
       () => migrateProjectDocument({ ...document(), catalogVersion: 'other' }),
       /expects catalog/,
     );
-  });
-
-  it('writes a sibling schema-97 file name', () => {
-    assert.equal(outputPath('/plans/run.runplanner.json'), '/plans/run.runplanner-schema97.json');
   });
 });
