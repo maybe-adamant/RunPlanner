@@ -1,23 +1,46 @@
 // @vitest-environment jsdom
 import { act, cleanup, screen, within } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
+import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createOccurrenceAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
+  createIncomingRewardAddress,
   createOccurrenceId,
+  createRouteStartKeepsakeSelectionAddress,
+  createSteadyGrowthOutcomeAddress,
   createTargetAddress,
+  createTraitOfferAddress,
+  createTranscendentEmbryoOutcomeAddress,
   hermesShrineDeliveryEntryKey,
+  semanticAddressKey,
+  type ProjectCommand,
+  type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 import {
   loadSurfaceScheduledLifecycleCheckpoint,
   loadSurfaceNOHermesShrineDeliveryCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
-import { pBiome, pOccurrenceIds, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import {
+  nBiome,
+  pBiome,
+  pOccurrenceIds,
+  oBiome,
+  oOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 import { createApplication } from '@planner/composition/createApplication';
+import {
+  findingDestinationLabel,
+  nextRepairSelection,
+  projectFeedbackHierarchy,
+} from '@planner/projections/evaluationProjection';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
-import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
+import { findingSelected, semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
+import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
+import { workspaceProjection } from '../support/biome-workbench';
 
 afterEach(cleanup);
 
@@ -99,5 +122,80 @@ it('inserts a purchased Hermes delivery automatically with Move and one Undo', a
   expect(within(row).queryByRole('button', { name: 'Remove action' })).toBeNull();
   await view.user.click(screen.getByRole('button', { name: 'Undo' }));
   expect(application.store.getState().projectWorkspace.history!.present).toBe(project);
+  application.dispose();
+});
+
+/** Opens the scheduled checkpoint with one cleared timed outcome and selects its repair. */
+function selectClearedOutcomeRepair(command: ProjectCommand, outcome: SemanticAddress) {
+  const project = applyProjectCommand(loadSurfaceScheduledLifecycleCheckpoint(), catalog, command);
+  const application = createApplication();
+  application.store.dispatch(authoredProjectReplaced(project));
+  renderPlannerForInteraction({ application });
+  const evaluation = application.store.getState().projectWorkspace.assembly!.evaluation;
+  const issue = evaluation.issue;
+  expect(issue?.owner).toEqual(outcome);
+  const workspace = workspaceProjection(application);
+  act(() =>
+    application.store.dispatch(
+      findingSelected(nextRepairSelection(issue!, workspace.focusByOwner)),
+    ),
+  );
+  const destination = workspace.focusByOwner.get(semanticAddressKey(outcome));
+  return {
+    application,
+    destination,
+    feedback: projectFeedbackHierarchy(evaluation).route,
+    label: findingDestinationLabel(catalog, outcome, destination, workspace.route),
+  };
+}
+
+it('opens an N Steady Growth cycle that lands in O at its O room timeline row', () => {
+  const outcome = createSteadyGrowthOutcomeAddress(
+    createTraitOfferAddress(
+      createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat23')),
+      'source',
+    ),
+    1,
+  );
+  const { application, destination, feedback, label } = selectClearedOutcomeRepair(
+    { kind: 'ReplaceSteadyGrowthTarget', outcome, targetTraitKey: null },
+    outcome,
+  );
+  expect(destination).toMatchObject({ biomeKey: 'O', roomTab: 'shipCombat1Actions' });
+  expect(application.store.getState().editorSession.activePanel).toEqual({
+    kind: 'biome',
+    biomeKey: 'O',
+  });
+  expect(label).toMatch(new RegExp(`^${catalog.biomes.byKey.O!.label}`));
+  expect(feedback.biomes.get('O')?.findingCount).toBe(1);
+  expect(feedback.biomes.get('N')?.findingCount).toBe(0);
+  const row = document
+    .getElementById(semanticOwnerControlElementId(outcome))
+    ?.closest('[aria-label="Steady Growth"]');
+  expect(row).toBeTruthy();
+  application.dispose();
+});
+
+it('opens a route-start Embryo cycle at its landing room rather than the Loadout', () => {
+  const outcome = createTranscendentEmbryoOutcomeAddress(
+    createRouteStartKeepsakeSelectionAddress('Surface'),
+    1,
+  );
+  const { application, destination, feedback, label } = selectClearedOutcomeRepair(
+    { kind: 'ReplaceTranscendentEmbryoTransformation', outcome, value: null },
+    outcome,
+  );
+  expect(destination).toMatchObject({ biomeKey: 'N', roomTab: 'actions' });
+  expect(application.store.getState().editorSession.activePanel).toEqual({
+    kind: 'biome',
+    biomeKey: 'N',
+  });
+  expect(label).not.toBe('Loadout');
+  expect(feedback.loadout.findingCount).toBe(0);
+  expect(feedback.biomes.get('N')?.findingCount).toBe(1);
+  const row = document
+    .getElementById(semanticOwnerControlElementId(outcome))
+    ?.closest('[aria-label="Transcendent Embryo"]');
+  expect(row).toBeTruthy();
   application.dispose();
 });

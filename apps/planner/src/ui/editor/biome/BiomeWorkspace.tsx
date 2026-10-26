@@ -49,9 +49,16 @@ type InspectorSubject =
   | { readonly kind: 'frontier'; readonly marker: WorkspaceMarker }
   | { readonly kind: 'node'; readonly node: WorkspaceNode };
 
-function ownsBiome(address: SemanticAddress, biome: WorkspaceBiome): boolean {
-  if (!('biomeKey' in address) || !('routeKey' in address)) return false;
-  return address.routeKey === biome.owner.routeKey && address.biomeKey === biome.owner.biomeKey;
+/** An owner belongs to the biome hosting its destination, e.g. where a timed outcome lands. */
+function ownsBiome(
+  address: SemanticAddress,
+  biome: WorkspaceBiome,
+  focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>,
+): boolean {
+  const destination = focusByOwner.get(semanticAddressKey(address));
+  const routeKey = destination?.routeKey ?? ('routeKey' in address ? address.routeKey : undefined);
+  const biomeKey = destination?.biomeKey ?? ('biomeKey' in address ? address.biomeKey : undefined);
+  return routeKey === biome.owner.routeKey && biomeKey === biome.owner.biomeKey;
 }
 
 /** React resolves projected keys only; containment and fallback policy stay in projection. */
@@ -463,11 +470,13 @@ export function BiomeWorkspace({
     (state) => state.editorSession.semanticNavigationRevision,
   );
   const findingOrigin =
-    selectedFinding !== null && ownsBiome(selectedFinding.origin, biome)
+    selectedFinding !== null && ownsBiome(selectedFinding.origin, biome, focusByOwner)
       ? selectedFinding.origin
       : undefined;
   const scopedFocusedOwner =
-    focusedOwner !== null && ownsBiome(focusedOwner, biome) ? focusedOwner : undefined;
+    focusedOwner !== null && ownsBiome(focusedOwner, biome, focusByOwner)
+      ? focusedOwner
+      : undefined;
   // A finding may focus a visible containing action while its origin owns the
   // complete inspector, rail, and tab destination. Keep those responsibilities
   // separate so a redirected marker cannot erase the finding's route target.

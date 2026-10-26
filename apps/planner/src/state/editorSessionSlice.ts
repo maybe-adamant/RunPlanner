@@ -19,8 +19,8 @@ export interface FindingSelection {
   readonly key: string;
   /** Stable finding owner that remains authoritative for workspace navigation. */
   readonly origin: SemanticAddress;
-  /** A projected finding may select Loadout while retaining its structural semantic owner. */
-  readonly presentationPanel?: Extract<RoutePanel, { readonly kind: 'loadout' }>;
+  /** The panel hosting the finding's destination, which may differ from its owner's biome. */
+  readonly presentationPanel?: Extract<RoutePanel, { readonly kind: 'loadout' | 'biome' }>;
   /** Projection-resolved containing dialog for a fine-grained finding. */
   readonly traitDialogTarget?: TraitOfferAddress | null;
   /** Projection-resolved containing Pom dialog for a fine-grained finding. */
@@ -374,7 +374,10 @@ export function createEditorSessionReducer(catalog: Catalog): Reducer<EditorSess
     } else if (findingSelected.match(action)) {
       const route = routeKey(action.payload.origin);
       if (route !== null) {
-        requirePanel(catalog, { routeKey: route, panel: panelForOrigin(action.payload.origin) });
+        requirePanel(catalog, {
+          routeKey: route,
+          panel: action.payload.presentationPanel ?? panelForOrigin(action.payload.origin),
+        });
       }
     }
     return editorSessionSlice.reducer(state, action);
