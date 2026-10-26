@@ -755,7 +755,9 @@ source's group is kept and reported `hermesShrineTravelDealRefillUnavailable`
 at the refill offer. A purchased refill with no rushed initial purchase, or
 whose source does not hold Travel Deal on every branch, keeps its item and
 reports the same finding at its purchase row with reason `noRushedPurchase` or
-`travelDealInactive`.
+`travelDealInactive`. Travel Deal must be held when the room's doors open,
+before any Shrine purchase, so a Travel Deal gained from a Shrine purchase never
+enables the refill.
 
 Refill activity comes from the reached simulation capability, not the presence
 of retained authored refill detail. Clearing the triggering Shop/Well purchase,

@@ -314,10 +314,28 @@ the first speed-up purchase with `FirstPurchaseDiscount` (Travel Deal) while
 `CurrentRoom.FirstSpeedUpPurchase` is unset regenerates that button's
 `StoreOptions` slot and sets the flag, then calls `CloseSurfaceShopScreen`,
 which spawns the rushed item. A later speed-up or delayed purchase refills
-nothing, and leaving the rushed item uncollected does not undo the refill. The
-planner realizes the refill when the room's Shrine purchases are scheduled,
-after outgoing generation, from the first rushed initial purchase in the
-authored timeline order.
+nothing, and leaving the rushed item uncollected does not undo the refill.
+Every Shrine purchase sets the room's shared `FirstPurchase`
+(`SurfaceShopLogic.lua:355-356`), while `FirstSpeedUpPurchase` is set only
+inside the trait-held branch (`:473`). A rushed item is spawned on screen close,
+after that check, so a rushed Travel Deal can never refill its own slot.
+
+Live play (2026-10-25) bounds when the trait must be held:
+
+- Travel Deal held before the Shrine became interactable, then a rush: the
+  vacated slot refilled.
+- In `P_Combat10`, with a non-Travel Deal Hermes room reward, a rushed Shrine
+  Hermes boon picked up as Travel Deal, then the Mystery boon bought and rushed
+  while holding it: no refill.
+
+Discrepancy: read literally, `:450` lets a later rush made with the trait
+refill, since a rush without it leaves `FirstSpeedUpPurchase` unset. Live play
+shows it does not; the cause is not identified, and the planner follows the
+observed behaviour. Planner disposition: Travel Deal must be held when the
+room's doors open, before any Shrine purchase; a Travel Deal gained from a
+Shrine purchase never enables the refill. The planner checks the trait when the
+room's Shrine purchases are scheduled, after outgoing generation, and refills
+the slot of the first rushed initial purchase in the authored timeline order.
 
 The game permits a rush after later purchases, such as buy 3, buy 1, rush 3.
 The planner authors rush on each Shrine purchase action and orders those
