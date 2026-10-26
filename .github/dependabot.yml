@@ -1,0 +1,43 @@
+# Maintenance-mode dependency updates: security advisories arrive as they are
+# published; routine minor and patch bumps arrive grouped once a month. Major
+# versions are left for a deliberate upgrade.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      npm-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
+    commit-message:
+      prefix: 'chore(deps)'
+
+  - package-ecosystem: cargo
+    directory: /apps/planner/src-tauri
+    schedule:
+      interval: monthly
+    groups:
+      cargo-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
+    commit-message:
+      prefix: 'chore(deps)'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'ci'
