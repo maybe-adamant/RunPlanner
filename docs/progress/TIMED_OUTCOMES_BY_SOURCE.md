@@ -63,6 +63,11 @@ keyed by their source, they need no reset rule.
    conservative reset; add the regression test (change an N boon pick and
    change it back; every downstream outcome survives) and a branch-disagreement
    fault test.
+   3b. **Source-keyed resets:** clocked pickups and Hermes deliveries are already
+   keyed by their source, so their conservative "reset inherited when newly
+   reached" rules go too: kept, with findings where invalid. Regression: the
+   change-and-revert round trip restores the project exactly.
+
 4. **Editor:** projections, interactions and rows bind to the new address; no
    visible change; draft samplers follow.
 5. **Closure:** docs (`AUTHORED_PROJECT_MODEL`, `TRAIT_OFFERS`, scheduled
@@ -75,5 +80,4 @@ at closure.
 ## Non-goals
 
 - Translating old outcomes by simulation.
-- Changing Steady Growth or Embryo game behaviour, the Embryo equip result, or
-  clocked pickups.
+- Changing Steady Growth or Embryo game behaviour or the Embryo equip result.
