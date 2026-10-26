@@ -7,13 +7,19 @@ import {
   createExitSelectionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createKeepsakeEquipResultAddress,
   createRouteAddress,
+  createRouteStartKeepsakeSelectionAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import { simulateProject } from '@run-planner/engine/simulation';
+import {
+  createPreparedProjectCandidateSession,
+  simulateProject,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
 import {
   createCompleteFGIxionChaosProject,
   createGoldenFGHIProject,
@@ -23,6 +29,11 @@ import {
 
 import { routeResourceAuthoring } from '../../src/simulation/resources';
 import { equivalenceCorpus } from '../equivalence/corpus';
+import { createHammerBridgeRouteProject } from '../equivalence/corpus-support';
+
+function freshlyDecoded(entryCatalog: Catalog, project: ProjectDocument): ProjectDocument {
+  return decodeProjectDocument(JSON.parse(encodeProjectDocument(project)) as unknown, entryCatalog);
+}
 
 /** Freshly decoded plans share no identity with any cached evaluation. */
 function simulatesAsCold(entryCatalog: Catalog, project: ProjectDocument): boolean {
@@ -135,5 +146,43 @@ describe('biome evaluation cache', () => {
     expect(second[1]).not.toBe(first[1]);
     expect(simulatesAsCold(catalog, withoutPurchase)).toBe(true);
     expect(simulatesAsCold(catalog, before)).toBe(true);
+  });
+
+  it('keeps route-start keepsake candidates exact across warm rebuilds and loadout edits', () => {
+    const project = createHammerBridgeRouteProject();
+    const routeStart = createRouteStartKeepsakeSelectionAddress('Underworld');
+    const routeStartCandidates = (document: ProjectDocument) => {
+      const session = createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, document),
+      );
+      return [
+        session.evaluate({ kind: 'keepsakeSelection', selection: routeStart }),
+        session.evaluate({
+          kind: 'keepsakeEquipResult',
+          result: createKeepsakeEquipResultAddress(routeStart, 'experimentalHammer'),
+        }),
+      ];
+    };
+    const first = biomes(project);
+    const warm = routeStartCandidates(project);
+    expect(warm.map((result) => result.kind)).toEqual(['keepsakeSelection', 'keepsakeEquipResult']);
+    const rebuilt = biomes(project);
+    for (const [index, evaluation] of rebuilt.entries()) expect(evaluation).toBe(first[index]);
+    expect(warm).toEqual(routeStartCandidates(freshlyDecoded(catalog, project)));
+
+    const replaced = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: routeStart,
+      keepsakeKey: 'ManaOverTimeRefundKeepsake',
+    });
+    const second = biomes(replaced);
+    for (const [index, evaluation] of second.entries()) expect(evaluation).not.toBe(first[index]);
+    expect(simulatesAsCold(catalog, replaced)).toBe(true);
+
+    // Undo restores the earlier loadout, whose biomes are all still cached.
+    const undone = biomes(project);
+    for (const [index, evaluation] of undone.entries()) expect(evaluation).toBe(first[index]);
+    expect(routeStartCandidates(project)).toEqual(warm);
   });
 });

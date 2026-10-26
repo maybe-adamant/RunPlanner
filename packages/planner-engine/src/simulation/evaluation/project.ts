@@ -194,14 +194,39 @@ function evaluateRouteAssembly(
   const startingReward = createStartingRewardAddress(route.routeKey);
   const routeStart = createRouteStartKeepsakeSelectionAddress(route.routeKey);
   const runStartReward = routeBindsRunStartReward(catalog, route.routeKey);
+  const startArcanaFear = createArcanaFearState(catalog, route.loadout);
+  const routeStartKeepsake =
+    route.loadout.startingKeepsakeKey === null
+      ? undefined
+      : catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey];
+  const declaredEffect = routeStartKeepsake?.effect;
+  const routeStartEffect =
+    declaredEffect?.kind === 'jeweledPom' ||
+    declaredEffect?.kind === 'experimentalHammer' ||
+    declaredEffect?.kind === 'transcendentEmbryo'
+      ? declaredEffect
+      : undefined;
+  // The reached route-start snapshot: declared loadout identity and the
+  // configured Arcana/Fear frontier, before any equip result is applied.
+  const routeStartState =
+    routeStartKeepsake === undefined || routeStartEffect === undefined
+      ? undefined
+      : createInitialSimulationState(
+          catalog,
+          route.loadout,
+          routeStartKeepsake.key,
+          startArcanaFear,
+          Object.freeze({
+            routePosition: resolveRoutePosition(catalog, route, route.itineraryBiomeKeys[0]!),
+            historyView: createRouteStartHistoryView(),
+          }),
+        );
   routeStartKeepsakes.set(
     semanticAddressKey(routeStart),
     Object.freeze({
-      state: createKeepsakeState(
-        catalog,
-        route.loadout.startingKeepsakeKey,
-        createArcanaFearState(catalog, route.loadout),
-      ),
+      state:
+        routeStartState?.keepsakes ??
+        createKeepsakeState(catalog, route.loadout.startingKeepsakeKey, startArcanaFear),
       encounterBlockedKeepsakeKeys: Object.freeze([]),
     }),
   );
@@ -222,32 +247,12 @@ function evaluateRouteAssembly(
     const origin = aspectHexFindings[0]!.origin;
     routeStartIssue = createAssessmentIssue(origin, authoringRegion(origin), findings);
   }
-  const routeStartKeepsake =
-    route.loadout.startingKeepsakeKey === null
-      ? undefined
-      : catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey];
-  const routeStartEffect = routeStartKeepsake?.effect;
   if (
     routeStartKeepsake !== undefined &&
     routeStartEffect !== undefined &&
-    (routeStartEffect.kind === 'jeweledPom' ||
-      routeStartEffect.kind === 'experimentalHammer' ||
-      routeStartEffect.kind === 'transcendentEmbryo')
+    routeStartState !== undefined
   ) {
     const result = createKeepsakeEquipResultAddress(routeStart, routeStartEffect.kind);
-    const startArcanaFear = createArcanaFearState(catalog, route.loadout);
-    // The reached route-start snapshot: declared loadout identity and the
-    // configured Arcana/Fear frontier, before any equip result is applied.
-    const routeStartState = createInitialSimulationState(
-      catalog,
-      route.loadout,
-      routeStartKeepsake.key,
-      startArcanaFear,
-      Object.freeze({
-        routePosition: resolveRoutePosition(catalog, route, route.itineraryBiomeKeys[0]!),
-        historyView: createRouteStartHistoryView(),
-      }),
-    );
     const authoredResult = route.loadout.keepsakeEquipResults?.[routeStartEffect.kind];
     if (authoredResult === undefined) {
       if (routeStartBlock === null) {
