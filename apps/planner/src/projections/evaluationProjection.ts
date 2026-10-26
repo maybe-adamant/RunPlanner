@@ -985,24 +985,36 @@ export function presentBiomeStatus(
   return evaluation.validity === 'valid' ? validBiomeStatus : invalidBiomeStatus;
 }
 
-/** Route-scoped and route-start owners, which the Loadout panel hosts. */
+/**
+ * Route-scoped and route-start owners, which the Loadout panel hosts. A
+ * route-start Embryo's transformation is hosted where its cycle lands.
+ */
 function isLoadoutOwner(owner: SemanticAddress | undefined): boolean {
-  if (owner === undefined || owner.kind === 'project') return false;
+  if (owner === undefined || owner.kind === 'project' || owner.kind === 'transcendentEmbryoOutcome')
+    return false;
   return !('biomeKey' in owner) || owner.biomeKey === 'routeStart';
 }
 
-function issueBelongsToBiome(
-  issue: AssessmentIssue | undefined,
-  routeKey: string,
-  biomeKey: string,
-): boolean {
-  if (issue === undefined || !('routeKey' in issue.owner) || !('biomeKey' in issue.owner)) {
-    return false;
-  }
-  return issue.owner.routeKey === routeKey && issue.owner.biomeKey === biomeKey;
+/** The biome whose evaluation stopped at the route's issue, e.g. where a timed outcome lands. */
+function issueBiomeKey(route: ProjectRouteEvaluation): string | undefined {
+  const issue = route.issue;
+  if (issue === undefined || isLoadoutOwner(issue.owner)) return undefined;
+  const ownerKey = semanticAddressKey(issue.owner);
+  return (
+    route.biomes.find(
+      (biome) =>
+        biome.issue !== undefined &&
+        biome.issue.regionKey === issue.regionKey &&
+        semanticAddressKey(biome.issue.owner) === ownerKey,
+    )?.biomeKey ?? ('biomeKey' in issue.owner ? issue.owner.biomeKey : undefined)
+  );
 }
 
-function biomeFeedback(route: ProjectRouteEvaluation, biomeKey: string): BiomeFeedbackPresentation {
+function biomeFeedback(
+  route: ProjectRouteEvaluation,
+  biomeKey: string,
+  issueBiome: string | undefined,
+): BiomeFeedbackPresentation {
   const evaluation = route.biomes.find((candidate) => candidate.biomeKey === biomeKey);
   if (evaluation === undefined) {
     if (!route.processing.blockedSuffix.includes(biomeKey)) {
@@ -1027,7 +1039,7 @@ function biomeFeedback(route: ProjectRouteEvaluation, biomeKey: string): BiomeFe
   return Object.freeze({
     biomeKey,
     context,
-    findingCount: issueBelongsToBiome(route.issue, route.routeKey, biomeKey) ? 1 : 0,
+    findingCount: issueBiome === biomeKey ? 1 : 0,
     status: presentBiomeStatus(evaluation),
   });
 }
@@ -1040,9 +1052,10 @@ export function projectFeedbackHierarchy(
     return existing;
   }
   const route = evaluation.route;
+  const issueBiome = issueBiomeKey(route);
   const biomes = new Map(
     route.configuredBiomeKeys.map(
-      (biomeKey) => [biomeKey, biomeFeedback(route, biomeKey)] as const,
+      (biomeKey) => [biomeKey, biomeFeedback(route, biomeKey, issueBiome)] as const,
     ),
   );
   const loadoutIssue = isLoadoutOwner(route.issue?.owner) ? route.issue : undefined;
@@ -1075,9 +1088,11 @@ export function nextRepairSelection(
     focusAddress: destination?.focusAddress ?? issue.owner,
     key: issue.regionKey,
     origin: issue.owner,
-    ...(destination?.presentationPanel === undefined
-      ? {}
-      : { presentationPanel: { kind: destination.presentationPanel } as const }),
+    ...(destination?.presentationPanel !== undefined
+      ? { presentationPanel: { kind: destination.presentationPanel } as const }
+      : destination?.biomeKey === undefined
+        ? {}
+        : { presentationPanel: { kind: 'biome', biomeKey: destination.biomeKey } as const }),
     // Selection reaches an existing visible launcher. Dialogs remain explicit
     // local editing actions, including for trait offers.
     traitDialogTarget: null,
@@ -1091,18 +1106,20 @@ export function findingDestinationLabel(
   destination?: import('./structured-workspace').WorkspaceInspectorDestination,
   route?: import('./structured-workspace').WorkspaceRoute,
 ): string {
-  if (
-    destination?.presentationPanel === 'loadout' ||
-    !('biomeKey' in origin) ||
-    origin.biomeKey === 'routeStart'
-  ) {
+  // A destination names the biome that hosts it, e.g. where a timed outcome lands.
+  const biomeKey =
+    destination?.presentationPanel === 'loadout'
+      ? undefined
+      : (destination?.biomeKey ??
+        ('biomeKey' in origin && origin.biomeKey !== 'routeStart' ? origin.biomeKey : undefined));
+  if (biomeKey === undefined) {
     return origin.kind === 'project' ? 'Project' : 'Loadout';
   }
-  const biome = catalog.biomes.byKey[origin.biomeKey];
+  const biome = catalog.biomes.byKey[biomeKey];
   if (biome === undefined) {
-    throw new Error(`Finding references unknown biome ${origin.biomeKey}`);
+    throw new Error(`Finding references unknown biome ${biomeKey}`);
   }
-  const workspaceBiome = route?.biomes.find((value) => value.biomeKey === origin.biomeKey);
+  const workspaceBiome = route?.biomes.find((value) => value.biomeKey === biomeKey);
   const railKey = destination?.selectedRailKey;
   const frontier = workspaceBiome?.frontier;
   // An uncreated outgoing decision is edited from its existing predecessor,
