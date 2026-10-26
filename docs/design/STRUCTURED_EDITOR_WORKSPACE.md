@@ -324,8 +324,8 @@ share the projected label; outcome details remain separate.
 
 A Shrine purchase row carries its Rush checkbox. The purchase row that triggers
 Travel Deal renders the refill's inventory controls as its second line: for a
-Shrine, the engine's refill source (the first rushed initial purchase) while
-Travel Deal applies; for a Well, its first purchase; for a World Shop, the
+Shrine, the engine's refill source (the first rushed initial purchase made
+with Travel Deal); for a Well, its first purchase; for a World Shop, the
 purchase the refill entry names as its source. The line has no placeholder. A
 purchased refill that no line hosts keeps its own purchase row with a bound
 removal, and refill findings route to the line's control or to that row.

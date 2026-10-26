@@ -893,6 +893,7 @@ function foldHistoryEventStream(
       case 'producerRoleAdvanced':
       case 'producerPointReached':
       case 'hermesShrineDeliveriesScheduled':
+      case 'hermesShrinePurchaseReached':
       case 'encounterInteractionReached':
       case 'roomCommitted':
         break;

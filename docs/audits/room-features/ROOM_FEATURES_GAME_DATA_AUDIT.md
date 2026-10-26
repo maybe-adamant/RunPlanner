@@ -349,8 +349,8 @@ earlier does not flush. The planner uses the resolved itinerary ordinal, not
 the room's biome name or terminality, for the shared required delivery-pickup
 product.
 
-Travel Deal applies its first-purchase treatment. Only the first rushed
-purchase refills its vacated slot with a fresh SurfaceShop option, excluding
+Travel Deal applies its first-purchase treatment. Only the first rush
+made while holding it refills its vacated slot with a fresh SurfaceShop option, excluding
 the rushed and visible names first and then using ordinary fallback. A normal
 delayed purchase does not refill. `Gold Gold Gold` and Infernal Contract are
 World Shop mechanisms and do not add Shrine offers.

@@ -248,7 +248,7 @@ function travelDealSourceAction(
 
 /**
  * A rushed Shrine pickup follows its purchase; the refill purchase follows the
- * first rushed initial purchase that created it.
+ * first rushed initial purchase, the earliest rush that can create it.
  */
 function hermesShrinePurchaseDependencies(
   occurrence: RoomOccurrence,

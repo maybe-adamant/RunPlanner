@@ -83,7 +83,7 @@ export interface ChronologyWalkState {
   readonly stygianWellAssessments: ReadonlyMap<string, StygianWellRoomAssessment>;
   readonly wellRefillRealizations: ReadonlyMap<string, WellRefillRealization>;
   readonly purgingPoolAssessments: ReadonlyMap<string, PurgingPoolRoomAssessment>;
-  /** Shrine-keyed Travel Deal refill domain, captured at the first rushed purchase. */
+  /** Shrine-keyed Travel Deal refill domain, captured at the first rush made with the trait. */
   readonly hermesShrineTravelDealRefills: ReadonlyMap<
     string,
     readonly HermesShrineTravelDealRefillAssessment[]
