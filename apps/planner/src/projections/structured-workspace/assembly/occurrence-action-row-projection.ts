@@ -849,12 +849,9 @@ function roomActionsForOccurrence(
     ...dueShrineRows,
     ...goldPickupRows.filter((row) => row.participation === 'required'),
   ]);
-  const steadyGrowthOutcomes = (input.steadyGrowthOutcomes ?? []).filter(
-    (outcome) => semanticAddressKey(outcome.owner) === semanticAddressKey(owner),
-  );
-  const transcendentEmbryoOutcomes = (input.transcendentEmbryoOutcomes ?? []).filter(
-    (outcome) => semanticAddressKey(outcome.owner) === semanticAddressKey(owner),
-  );
+  // The engine places each published outcome at its landing; this room keeps only its own.
+  const steadyGrowthOutcomes = input.steadyGrowthOutcomes ?? [];
+  const transcendentEmbryoOutcomes = input.transcendentEmbryoOutcomes ?? [];
   const activeLifecycleTimeline = scopeRoomLifecycleTimeline(
     appendTranscendentEmbryoTimelineEffects(
       appendSteadyGrowthTimelineEffects(
