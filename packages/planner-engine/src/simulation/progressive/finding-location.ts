@@ -3,7 +3,6 @@ import {
   createBiomeAddress,
   createOccurrenceAddress,
   semanticAddressKey,
-  type AcquisitionEntryAddress,
   type AcquisitionRoleAddress,
   type OccurrenceAddress,
   type SemanticAddress,
@@ -96,16 +95,6 @@ function acquisitionRoleAncestor(address: SemanticAddress): AcquisitionRoleAddre
   return address.kind === 'levelResolution'
     ? createAcquisitionRoleAddress(address.owner, address.acquisitionRole)
     : undefined;
-}
-
-export function derivedAcquisitionEntryAncestor(
-  address: SemanticAddress,
-): AcquisitionEntryAddress | undefined {
-  if (address.kind === 'acquisitionEntry') return address;
-  if (address.kind === 'acquisitionRole')
-    return address.owner.kind === 'acquisitionEntry' ? address.owner : undefined;
-  const owner = rewardOwnerAddress(address);
-  return owner?.kind === 'acquisitionEntry' ? owner : undefined;
 }
 
 export function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | undefined {

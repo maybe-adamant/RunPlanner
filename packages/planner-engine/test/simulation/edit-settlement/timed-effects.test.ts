@@ -122,6 +122,46 @@ describe('timed-effect edit settlement', () => {
     expect(outcomeFindings(reverted)).toEqual([]);
     expect(outcomeLandings(reverted)).toEqual(outcomeLandings(evaluate(project)));
   });
+  it('keeps an inherited Hermes delivery reached again after an upstream round trip', () => {
+    const project = loadSurfaceScheduledLifecycleCheckpoint();
+    const id = 'surface-p-1-1-p_combat03';
+    const delivery = (document: ProjectDocument) => {
+      const room = occurrence(document, id);
+      return {
+        rows: room.roomActions.order.filter(
+          (reference) =>
+            reference.kind === 'interactAcquisitionEntry' &&
+            reference.siteKey === 'hermesShrineDelivery',
+        ),
+        entries: room.acquisitionSites?.hermesShrineDelivery?.pickupEntries,
+      };
+    };
+    expect(delivery(project).rows).toHaveLength(1);
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(
+        createBiomeAddress('Surface', 'N'),
+        createOccurrenceId('surface-n-combat11'),
+      ),
+      'source',
+    );
+    const unreached = settle(project, {
+      kind: 'ReplaceTraitSelection',
+      trait,
+      selectedOptionKey: 'option2',
+    });
+    expect(delivery(unreached.project)).toEqual(delivery(project));
+    const reached = settle(unreached.project, {
+      kind: 'ReplaceTraitSelection',
+      trait,
+      selectedOptionKey: 'option1',
+    });
+    expect(delivery(reached.project)).toEqual(delivery(project));
+    expect(
+      reached.evaluation.findings.filter((finding) =>
+        semanticAddressKey(finding.origin).includes('hermesShrineDelivery'),
+      ),
+    ).toEqual([]);
+  });
   it('keeps an invalid inherited clocked pickup reached again, with its finding', () => {
     const id = 'surface-p-1-1-p_combat03';
     const checkpoint = loadSurfaceScheduledLifecycleCheckpoint();
