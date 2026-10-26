@@ -1,0 +1,36 @@
+name: Bug report
+description: Something in Run Planner or the in-game module behaves wrongly.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Attach the bug report file from Run Planner: **About → Create bug
+        report…** on the home screen, or **Report this error** if the planner
+        stopped. It includes the open plan, your plans in game and the game log.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: where
+    attributes:
+      label: Where
+      description: The route and the biome or room, if it happened during a run.
+  - type: input
+    id: version
+    attributes:
+      label: Planner version
+      description: Shown under About on the home screen; the in-game module ships with it.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Bug report file
+      description: Drag the bug report file here.
+    validations:
+      required: true

@@ -340,6 +340,31 @@ npm run desktop:build:windows
 The executable is written to
 `apps/planner/src-tauri/target/x86_64-pc-windows-gnu/release/run-planner.exe`.
 
+## When the game updates
+
+Hades II is fully released, so expect small patches (balance values, bug
+fixes) rather than new route rules. Most patches need nothing here: the planner
+models decisions and their legality, not damage or timing values.
+
+- **Signals:** a bug report whose module diagnostics or conformance
+  disagreements started after a patch, a planned choice the game reports as
+  native-ineligible, or patch notes that touch rewards, rooms, encounters,
+  traits or keepsakes.
+- **Check the facts:** diff the patched `Content/Scripts` against the copy the
+  [audits](docs/audits/README.md) cite, and follow the changed functions or
+  tables to the audit rows that cite them. Update the owning catalog
+  declaration and audit row together; game-module contacts that a changed
+  function moved are listed in the
+  [feature-to-hook map](docs/audits/game-execution-contacts/FEATURE_HOOK_MAP.md).
+- **Catalog version:** keep `0.55.0-anvil-of-fates` while saved plans stay
+  valid against the patched game. Bump it only when a declaration change makes
+  existing plans mean something else: the bump changes
+  `declarations.version`, `EXECUTION_CATALOG_VERSION`,
+  `game-module/src/execution-compatibility.json` and the decoder together, and
+  needs a persistence transition (the loader identifies a project by catalog
+  and schema), so treat it like a schema change.
+- Then the usual gate, a module release, and fresh plans sent to the game.
+
 ## Release process
 
 [Releasing](docs/RELEASING.md) owns the installer, updater and release
