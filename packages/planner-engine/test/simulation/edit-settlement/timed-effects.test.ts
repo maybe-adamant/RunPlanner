@@ -3,8 +3,6 @@ import {
   purchaseTestHermesShrineOffer,
   supportedTraitOffer,
 } from '@run-planner/test-fixtures/shared';
-import { agreedTimedEffectContact } from '../../../src/simulation/rewards/timed-effects/contacts';
-import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/evaluation/project-evaluation-assembly';
 import { describe, expect, it } from 'vitest';
 import {
   loadSurfaceNOPQProject,
@@ -120,10 +118,73 @@ describe('timed-effect edit settlement', () => {
       trait,
       selectedOptionKey: 'option1',
     });
-    expect(steadyGrowthTargets(reverted.project)).toEqual(steadyGrowthTargets(project));
-    expect(embryoTransformations(reverted.project)).toEqual(embryoTransformations(project));
+    expect(reverted.project).toEqual(project);
     expect(outcomeFindings(reverted)).toEqual([]);
     expect(outcomeLandings(reverted)).toEqual(outcomeLandings(evaluate(project)));
+  });
+  it('keeps an invalid inherited clocked pickup reached again, with its finding', () => {
+    const id = 'surface-p-1-1-p_combat03';
+    const checkpoint = loadSurfaceScheduledLifecycleCheckpoint();
+    // The Supply Chain pickup matures at Combat; ranking it at Intro makes it invalid.
+    const project: ProjectDocument = {
+      ...checkpoint,
+      route: {
+        ...checkpoint.route,
+        biomes: checkpoint.route.biomes.map((biome) => ({
+          ...biome,
+          ...(biome.topology == null
+            ? {}
+            : {
+                topology: {
+                  ...biome.topology,
+                  occurrences: biome.topology.occurrences.map((room) =>
+                    room.occurrenceId !== id
+                      ? room
+                      : {
+                          ...room,
+                          roomActions: {
+                            ...room.roomActions,
+                            order: room.roomActions.order.map((reference) =>
+                              reference.kind === 'interactAcquisitionEntry' &&
+                              reference.entryKey.startsWith('clockedTraitGenerated:')
+                                ? { ...reference, encounterPhaseKey: 'Intro' }
+                                : reference,
+                            ),
+                          },
+                        },
+                  ),
+                },
+              }),
+        })),
+      },
+    };
+    const stale = (assembly: ReturnType<typeof evaluate>) =>
+      assembly.evaluation.findings.filter(
+        (finding) =>
+          finding.code === 'roomActionOrderUnavailable' &&
+          finding.origin.kind === 'roomAction' &&
+          finding.origin.actionKey.includes('clockedTraitGenerated:'),
+      );
+    expect(stale(evaluate(project))).toHaveLength(1);
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(
+        createBiomeAddress('Surface', 'N'),
+        createOccurrenceId('surface-n-combat11'),
+      ),
+      'source',
+    );
+    const unreached = settle(project, {
+      kind: 'ReplaceTraitSelection',
+      trait,
+      selectedOptionKey: 'option2',
+    });
+    const reached = settle(unreached.project, {
+      kind: 'ReplaceTraitSelection',
+      trait,
+      selectedOptionKey: 'option1',
+    });
+    expect(reached.project).toEqual(project);
+    expect(stale(reached)).toHaveLength(1);
   });
   it('retains an active downstream Embryo outcome through Shadow activation and removal', () => {
     const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
@@ -531,18 +592,6 @@ describe('timed-effect edit settlement', () => {
     ).toBe(settled);
     const history = publishProjectHistoryEdit(createProjectHistory(project), settled.project);
     expect(undoProjectHistory(history).present).toBe(project);
-  });
-  it('treats mixed and missing reached cohorts as unknown correspondence', () => {
-    const assembly = evaluate(loadSurfaceScheduledLifecycleCheckpoint());
-    const contact = candidateArtifactsForProjectEvaluationAssembly(assembly)
-      .biomeAt(p)!
-      .roomLifecycles.timedEffects.find((contact) => contact.cohorts[0]?.length)!;
-    expect(agreedTimedEffectContact(contact)).toBeDefined();
-    expect(
-      agreedTimedEffectContact({ ...contact, cohorts: [contact.cohorts[0]!, []] }),
-    ).toBeUndefined();
-    expect(agreedTimedEffectContact({ ...contact, cohorts: [] })).toBeUndefined();
-    expect(agreedTimedEffectContact(undefined)).toBeUndefined();
   });
   it('places a delayed delivery flushed at the fourth-biome Preboss at its phase-less contact', () => {
     let project = loadSurfaceNOPQProject();

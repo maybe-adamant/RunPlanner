@@ -222,10 +222,7 @@ export function publishChronology(
       accumulation.producerFrontiers,
       reachedThrough,
     ),
-    lifecycleArtifacts: createRoomLifecycleCandidateArtifacts(
-      walk.shipLifecycleContexts,
-      accumulation.timedEffects,
-    ),
+    lifecycleArtifacts: createRoomLifecycleCandidateArtifacts(walk.shipLifecycleContexts),
     traitOfferArtifacts: createTraitOfferCandidateArtifacts(catalog, traitCandidateContexts),
     levelResolutionArtifacts: createLevelResolutionCandidateArtifacts(
       catalog,

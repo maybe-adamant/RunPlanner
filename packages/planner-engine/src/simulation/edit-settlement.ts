@@ -10,12 +10,9 @@ import {
   type SemanticAddress,
 } from '../authored-project/addresses';
 import { applyProjectCommand } from '../authored-project/commands/dispatch';
-import { projectCommandAuthoringAddresses } from '../authored-project/commands/contract';
-import { derivedAcquisitionEntryAncestor } from './progressive/finding-location';
 import type { ProjectCommand } from '../authored-project/commands/types';
 import type { ProjectDocument, RoomOccurrence } from '../authored-project/model';
 import { roomActionKey } from '../authored-project/room-actions/state';
-import { parseClockedTraitGeneratedPickupEntryKey } from '../authored-project/acquisition/pickup-producers';
 import {
   discardDisplacedHermesShrineDelivery,
   hermesShrineDeliverySourceAddress,
@@ -24,10 +21,6 @@ import {
   parseHermesShrineDeliveryEntryKey,
   purchaseFor,
 } from '../authored-project/hermes-shrine-delivery';
-import {
-  agreedTimedEffectContact,
-  type TimedEffectContact,
-} from './rewards/timed-effects/contacts';
 import {
   candidateArtifactsForProjectEvaluationAssembly,
   attestClockedTraitPickupPlacementForProjectEvaluationAssembly,
@@ -52,17 +45,6 @@ function occurrenceAt(
   return project.route.biomes
     .find((biome) => biome.biomeKey === owner.biomeKey)
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === owner.occurrenceId);
-}
-function contacts(assembly: ProjectEvaluationAssembly): readonly TimedEffectContact[] {
-  const artifacts = candidateArtifactsForProjectEvaluationAssembly(assembly);
-  return assembly.project.route.biomes.flatMap(
-    (biome) =>
-      artifacts.biomeAt(createBiomeAddress(assembly.project.route.routeKey, biome.biomeKey))
-        ?.roomLifecycles.timedEffects ?? [],
-  );
-}
-function contactKey(contact: TimedEffectContact): string {
-  return JSON.stringify([semanticAddressKey(contact.owner), contact.phaseKey]);
 }
 function placements(assembly: ProjectEvaluationAssembly) {
   return assembly.evaluation.route.biomes.flatMap((biome) =>
@@ -215,19 +197,9 @@ function settleProjectEditRepairs(options: ProjectEditSettlementOptions): Projec
     !attestClockedTraitPickupPlacementForProjectEvaluationAssembly(before, command)
   )
     return Object.freeze({ assembly: before });
-  const authoredAddresses = projectCommandAuthoringAddresses(command, before.project);
-  const authoredEntries = new Set(
-    command.kind === 'PlaceHermesShrineDelivery' || command.kind === 'PlaceClockedTraitPickup'
-      ? []
-      : authoredAddresses.flatMap((address) => {
-          const entry = derivedAcquisitionEntryAncestor(address);
-          return entry === undefined ? [] : [semanticAddressKey(entry)];
-        }),
-  );
   let project = applyProjectCommand(before.project, catalog, command);
   if (project === before.project) return Object.freeze({ assembly: before });
   let assembly = evaluate(project);
-  const beforeContacts = new Map(contacts(before).map((contact) => [contactKey(contact), contact]));
   // Each repair consumes one exact displaced owner or required obligation. A
   // repeated repair means an inconsistent contact, not permission to replay
   // forever: settlement stops with the last evaluated assembly and the fault.
@@ -238,86 +210,6 @@ function settleProjectEditRepairs(options: ProjectEditSettlementOptions): Projec
     return undefined;
   };
   for (;;) {
-    const repairs: {
-      readonly key: string;
-      readonly owner: SemanticAddress;
-      readonly command: ProjectCommand;
-    }[] = [];
-    const currentContacts = contacts(assembly);
-    const keys = new Set(currentContacts.map(contactKey));
-    const exitedOwners = new Set(
-      assembly.evaluation.route.biomes.flatMap((biome) =>
-        'history' in biome
-          ? biome.history.events.flatMap((event) =>
-              event.kind === 'roomExited' ? [semanticAddressKey(event.origin)] : [],
-            )
-          : [],
-      ),
-    );
-    const absentContacts = [...beforeContacts.values()]
-      .filter(
-        (contact) =>
-          !keys.has(contactKey(contact)) && exitedOwners.has(semanticAddressKey(contact.owner)),
-      )
-      .map((contact) => ({
-        ...contact,
-        cohorts: Object.freeze([Object.freeze([])]),
-        deferred: false,
-      }));
-    for (const contact of [...currentContacts, ...absentContacts]) {
-      const previous = beforeContacts.get(contactKey(contact));
-      const old = occurrenceAt(before.project, contact.owner);
-      const current = occurrenceAt(project, contact.owner);
-      if (old === undefined || current === undefined) continue;
-      for (const reference of current.roomActions.order) {
-        if (
-          reference.kind !== 'interactAcquisitionEntry' ||
-          reference.encounterPhaseKey !== contact.phaseKey ||
-          parseClockedTraitGeneratedPickupEntryKey(reference.entryKey) === undefined
-        )
-          continue;
-        if (
-          !old.roomActions.order.some((prior) => roomActionKey(prior) === roomActionKey(reference))
-        )
-          continue;
-        if (
-          authoredEntries.has(
-            semanticAddressKey(
-              createAcquisitionEntryAddress(
-                createAcquisitionSiteAddress(contact.owner, reference.siteKey),
-                reference.entryKey,
-              ),
-            ),
-          )
-        )
-          continue;
-        const source = parseClockedTraitGeneratedPickupEntryKey(reference.entryKey)!;
-        const oldSource = agreedTimedEffectContact(previous, source.acquisitionIdentity);
-        const newSource = agreedTimedEffectContact(contact, source.acquisitionIdentity);
-        if (newSource === undefined || oldSource === newSource) continue;
-        repairs.push({
-          key: `${contactKey(contact)}:${reference.entryKey}`,
-          owner: contact.owner,
-          command: {
-            kind: 'RemoveRoomAction',
-            action: createRoomActionAddress(
-              createBiomeAddress(contact.owner.routeKey, contact.owner.biomeKey),
-              contact.owner.occurrenceId,
-              roomActionKey(reference),
-            ),
-          },
-        });
-      }
-    }
-    if (repairs.length > 0) {
-      for (const repair of repairs) {
-        const fault = consume(repair.key, repair.owner);
-        if (fault !== undefined) return Object.freeze({ assembly, fault });
-        project = applyProjectCommand(project, catalog, repair.command);
-      }
-      assembly = evaluate(project);
-      continue;
-    }
     const displaced = placements(assembly).find(
       (placement) =>
         placement.assessment.kind === 'invalid' &&
@@ -412,13 +304,6 @@ function settleProjectEditRepairs(options: ProjectEditSettlementOptions): Projec
             reference.siteKey === site.pointKey &&
             reference.entryKey === address.entryKey,
         );
-        const inherited = occurrences(before.project).some(
-          ({ occurrence: prior }) =>
-            prior.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[address.entryKey] !==
-            undefined,
-        );
-        const oldProof =
-          beforePlacements.get(semanticAddressKey(address))?.assessment.kind === 'valid';
         const prior = occurrences(before.project).flatMap(({ occurrence, owner }) =>
           occurrence.roomActions.order.flatMap((reference) =>
             reference.kind === 'interactAcquisitionEntry' &&
@@ -438,25 +323,14 @@ function settleProjectEditRepairs(options: ProjectEditSettlementOptions): Projec
               semanticAddressKey(owner) !== semanticAddressKey(address.site.owner) ||
               reference.encounterPhaseKey !== capability.encounterPhaseKey,
           );
-        // A delivery already ranked at this exact due contact with an unchanged
-        // obligation corresponds to it; reaching it later proves nothing new.
-        const corresponds = prior.length > 0 && !incompatible;
-        const resetInherited =
-          inherited &&
-          !oldProof &&
-          !corresponds &&
-          !authoredEntries.has(semanticAddressKey(address)) &&
-          !repaired.has(`delivery:${semanticAddressKey(address)}`);
-        return ranked && !resetInherited
-          ? []
-          : [{ address, capability, incompatible, resetInherited }];
+        return ranked ? [] : [{ address, capability, incompatible }];
       });
     });
     if (due.length === 0) return Object.freeze({ assembly });
-    for (const { address, capability, incompatible, resetInherited } of due) {
+    for (const { address, capability, incompatible } of due) {
       const fault = consume(`delivery:${semanticAddressKey(address)}`, address);
       if (fault !== undefined) return Object.freeze({ assembly, fault });
-      if (incompatible || resetInherited)
+      if (incompatible)
         project = discardDisplacedHermesShrineDelivery(catalog, project, address.entryKey);
       project = applyProjectCommand(project, catalog, {
         kind: 'PlaceHermesShrineDelivery',
