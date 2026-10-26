@@ -3,7 +3,7 @@
 ## Installer and data home
 
 The desktop application ships as a per-user NSIS installer on Windows (no
-administrator rights, no code signing) and an AppImage on Linux. Installed and
+administrator rights) and an AppImage on Linux. Installed and
 development builds share one data home: Tauri derives the configuration, data
 and WebView storage directories from the bundle identifier, not the executable
 location, so the installed application reads what earlier portable builds of
@@ -54,3 +54,34 @@ creating a tag, draft or release; dispatching **Build Windows** or **Build
 Linux** directly is a single-platform build-only check that never publishes.
 Moving both signing secrets into a `release` environment restricted to `main`
 is recommended hardening.
+
+## Windows code signing
+
+The Windows build Authenticode-signs the installer through Azure Artifact
+Signing when the signing repository variables are set, and leaves it unsigned
+when none are. A partial configuration fails the build. It signs before the
+updater signature, so that signature covers the signed installer, and fails if
+the result is not a valid signature. It logs in to Azure with GitHub OIDC, so no
+Azure secret is stored. SmartScreen reputation follows the signing identity and
+accumulates over downloads; early signed releases may still show a warning.
+
+One-time setup, in an Azure subscription:
+
+1. Register the `Microsoft.CodeSigning` resource provider.
+2. Create an Artifact Signing account (Basic tier) and note its region's
+   endpoint, such as `https://eus.codesigning.azure.net/`.
+3. Grant yourself the Artifact Signing Identity Verifier role on the account and
+   complete a Public, Individual identity validation.
+4. Once validation succeeds, create a Public Trust certificate profile from it.
+5. Register a Microsoft Entra application and add a GitHub Actions federated
+   credential for this repository, entity type Branch, branch `main`.
+6. Grant that application the Artifact Signing Certificate Profile Signer role
+   on the certificate profile.
+7. Add these repository variables (Settings → Secrets and variables → Actions →
+   Variables): `AZURE_CLIENT_ID` (the application's client ID),
+   `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `ARTIFACT_SIGNING_ENDPOINT`,
+   `ARTIFACT_SIGNING_ACCOUNT` (the account name) and
+   `ARTIFACT_SIGNING_PROFILE` (the certificate profile name).
+
+The federated credential admits only runs on `main`; a build dispatched from
+another branch fails at the Azure login while the variables are set.

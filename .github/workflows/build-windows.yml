@@ -1,7 +1,7 @@
 name: Build Windows
 run-name: Build Windows v${{ inputs.version }}
 
-# Builds, updater-signs and launch-tests the Windows installer. The release
+# Builds, signs and launch-tests the Windows installer. The release
 # workflow calls it after validating the version; a manual dispatch is a
 # build-only check that never tags, drafts or publishes.
 on:
@@ -29,12 +29,17 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   build:
     name: Build signed Windows x64 installer
     runs-on: windows-latest
     timeout-minutes: 60
+    permissions:
+      contents: read
+      # Azure Artifact Signing logs in with GitHub OIDC.
+      id-token: write
     outputs:
       artifact_name: ${{ steps.package.outputs.artifact_name }}
 
@@ -129,6 +134,64 @@ jobs:
 
           "artifact_name=$artifactName" >> $env:GITHUB_OUTPUT
           "installer=$installer" >> $env:GITHUB_OUTPUT
+
+      # Authenticode signing through Azure Artifact Signing, authenticated by
+      # GitHub OIDC (no stored secret). It runs once all six repository
+      # variables are set; a partial configuration fails the build. It signs
+      # before the updater signature so that covers the final installer.
+      - name: Check Authenticode signing configuration
+        id: authenticode
+        shell: pwsh
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ARTIFACT_SIGNING_ENDPOINT: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          ARTIFACT_SIGNING_ACCOUNT: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          ARTIFACT_SIGNING_PROFILE: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+        run: |
+          $names = 'AZURE_CLIENT_ID', 'AZURE_TENANT_ID', 'AZURE_SUBSCRIPTION_ID',
+            'ARTIFACT_SIGNING_ENDPOINT', 'ARTIFACT_SIGNING_ACCOUNT', 'ARTIFACT_SIGNING_PROFILE'
+          $missing = @($names | Where-Object { [string]::IsNullOrEmpty([Environment]::GetEnvironmentVariable($_)) })
+          if ($missing.Count -eq $names.Count) {
+            Write-Host 'Authenticode signing is not configured; the installer stays unsigned.'
+            'enabled=false' >> $env:GITHUB_OUTPUT
+          } elseif ($missing.Count -gt 0) {
+            throw "Authenticode signing is partly configured; missing repository variables: $($missing -join ', ')."
+          } else {
+            'enabled=true' >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Log in to Azure
+        if: steps.authenticode.outputs.enabled == 'true'
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign installer with Authenticode
+        if: steps.authenticode.outputs.enabled == 'true'
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2.0.0
+        with:
+          endpoint: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
+          files: ${{ steps.package.outputs.installer }}
+          file-digest: SHA256
+          timestamp-digest: SHA256
+
+      - name: Verify Authenticode signature
+        if: steps.authenticode.outputs.enabled == 'true'
+        shell: pwsh
+        env:
+          INSTALLER: ${{ steps.package.outputs.installer }}
+        run: |
+          $signature = Get-AuthenticodeSignature $env:INSTALLER
+          if ($signature.Status -ne 'Valid') {
+            throw "The installer's Authenticode signature is $($signature.Status): $($signature.StatusMessage)"
+          }
+          Write-Host "Signed by $($signature.SignerCertificate.Subject)"
 
       - name: Sign installer for the updater
         shell: pwsh
