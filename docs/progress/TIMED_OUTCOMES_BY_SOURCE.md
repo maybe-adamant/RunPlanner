@@ -29,8 +29,11 @@ keyed by their source, they need no reset rule.
    the current marked blessing) is the existing `…OutcomeUnavailable` finding;
    a reached cycle without one is `…OutcomeMissing`. A cycle that is never
    reached keeps its outcome dormant, as unreached choices are today. Changing
-   the source away (another trait picked, another keepsake) removes its
-   outcomes through the ordinary source-owned rule.
+   the source away follows the source's existing rule: another trait picked or
+   another rack keepsake removes its outcomes; a changed route-start keepsake
+   leaves them dormant, like its other equip results. A Steady Growth gained
+   as the Concave Stone extra pick grows like any other (today it never
+   advances — fixed in gate 3).
 4. **Two Steady Growths are separate.** Each source has its own cycles, so two
    Steady Growths maturing at one encounter no longer share one target.
 5. **Branches must agree.** The authored path to a landing is deterministic, so
