@@ -331,6 +331,17 @@ reached-stage input, and weapon selectors receive local resolved weapon data.
 Shared declarations remain unchanged. Summon customization failure is diagnostic
 only; these optional choices add no acquisition or conformance obligations.
 
+Boss opening moves are not planner choices. `EnemyAILogic.lua:SelectWeapon`
+consumes an actor's `ForcedNextWeapon` once, bypassing `IsEnemyWeaponEligible`,
+but most `*_Boss01/02` openers are already scripted or forced (Zagreus, Hecate's
+intro and Dark Side transform, Scylla's belt, Cerberus's fire stream, Rival
+Chronos and Eris combos, Prometheus and the Eagle's joint intro, Typhon's tongue
+slam). The rest roll from distance-, angle-, line-of-sight- and
+attack-count-gated pools while player input is already live, so a forced opener
+would bypass native eligibility and still leave the fight nondeterministic.
+Unlike the selector decisions above, which narrow a declared random pool, this
+would override the AI's own move choice; the planner does not steer it.
+
 ## Closed automatic transaction union
 
 | Effect              | Planner trigger                     | Native contact                                                     | Status   |
