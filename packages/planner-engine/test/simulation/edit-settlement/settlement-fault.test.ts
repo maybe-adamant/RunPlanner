@@ -4,7 +4,10 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
+  createSteadyGrowthOutcomeAddress,
+  createTraitOfferAddress,
   hermesShrineDeliveryEntryKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -15,6 +18,7 @@ import {
   oOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import * as commands from '../../../src/authored-project/commands/dispatch';
+import * as chronology from '../../../src/simulation/rewards/biome/chronology-accumulator';
 
 const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, project);
 
@@ -54,5 +58,36 @@ describe('settlement repeat-repair guard', () => {
     expect(settled.assembly.evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'hermesShrineDeliveryPlacementRequired', origin: entry }),
     );
+  });
+
+  it('reports a timed outcome whose reached branches land it at different encounters', () => {
+    const outcome = createSteadyGrowthOutcomeAddress(
+      createTraitOfferAddress(createIncomingRewardAddress(oBiome, oOccurrenceIds.combat07), 'self'),
+      1,
+    );
+    const create = chronology.createChronologyAccumulator;
+    vi.spyOn(chronology, 'createChronologyAccumulator').mockImplementation((rooms) => {
+      const accumulator = create(rooms);
+      return Object.freeze({
+        ...accumulator,
+        finish: () =>
+          Object.freeze({ ...accumulator.finish(), divergentOutcomeLandings: [outcome] }),
+      });
+    });
+    const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
+    const command = {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+      slotKey: 'secondRight',
+      value: { rewardType: 'MaxManaDrop' },
+    } as const;
+    const settled = settleProjectEdit({ catalog, before: evaluate(project), command, evaluate });
+    expect(settled.fault).toEqual({
+      key: expect.stringMatching(/^divergentLanding:/),
+      owner: outcome,
+    });
+    expect(
+      settled.assembly.evaluation.findings.map((finding) => finding.origin),
+    ).not.toContainEqual(outcome);
   });
 });

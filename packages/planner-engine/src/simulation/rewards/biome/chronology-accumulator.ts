@@ -287,6 +287,10 @@ export interface ChronologyAccumulation {
     LandedOutcome<TranscendentEmbryoOutcomeAddress>
   >;
   readonly fountainRarityCandidateContexts: ReadonlyMap<string, FountainRarityCandidateCapability>;
+  /** Timed outcomes whose reached branches landed one cycle at different encounters. */
+  readonly divergentOutcomeLandings: readonly (
+    SteadyGrowthOutcomeAddress | TranscendentEmbryoOutcomeAddress
+  )[];
 }
 
 /**
@@ -436,6 +440,29 @@ export function createChronologyAccumulator(
     LandedOutcome<TranscendentEmbryoOutcomeAddress>
   >();
   const fountainRarityCandidateContexts = new Map<string, FountainRarityCandidateCapability>();
+  const divergentOutcomeLandings = new Map<
+    string,
+    SteadyGrowthOutcomeAddress | TranscendentEmbryoOutcomeAddress
+  >();
+
+  // The authored path to a landing is deterministic, so every reached branch
+  // must land one cycle at the same encounter; the first landing is kept.
+  function recordLanding<
+    Address extends SteadyGrowthOutcomeAddress | TranscendentEmbryoOutcomeAddress,
+  >(
+    landed: Map<string, LandedOutcome<Address>>,
+    key: string,
+    address: Address,
+    landing: AutomaticOutcomeLanding,
+  ): void {
+    const current = landed.get(key);
+    if (current === undefined) landed.set(key, Object.freeze({ address, landing }));
+    else if (
+      current.landing.phaseKey !== landing.phaseKey ||
+      semanticAddressKey(current.landing.owner) !== semanticAddressKey(landing.owner)
+    )
+      divergentOutcomeLandings.set(key, address);
+  }
 
   function recordTimelineNode(owner: SemanticAddress, included: boolean): void {
     const key = semanticAddressKey(owner);
@@ -842,7 +869,7 @@ export function createChronologyAccumulator(
       case 'steadyGrowthThresholds':
         for (const { address, landing, threshold } of emission.thresholds) {
           const key = semanticAddressKey(address);
-          steadyGrowthOutcomeAddresses.set(key, Object.freeze({ address, landing }));
+          recordLanding(steadyGrowthOutcomeAddresses, key, address, landing);
           latestSteadyGrowthOutcomes.set(semanticAddressKey(landing.owner), address);
           const current = steadyGrowthCandidateContexts.get(key) ?? [];
           current.push(threshold);
@@ -852,7 +879,7 @@ export function createChronologyAccumulator(
       case 'transcendentEmbryoThresholds':
         for (const { address, landing, threshold } of emission.thresholds) {
           const key = semanticAddressKey(address);
-          transcendentEmbryoOutcomeAddresses.set(key, Object.freeze({ address, landing }));
+          recordLanding(transcendentEmbryoOutcomeAddresses, key, address, landing);
           const current = transcendentEmbryoCandidateContexts.get(key) ?? [];
           current.push(threshold);
           transcendentEmbryoCandidateContexts.set(key, current);
@@ -935,6 +962,7 @@ export function createChronologyAccumulator(
         transcendentEmbryoCandidateContexts,
         transcendentEmbryoOutcomeAddresses,
         fountainRarityCandidateContexts,
+        divergentOutcomeLandings: Object.freeze([...divergentOutcomeLandings.values()]),
       });
     },
   });

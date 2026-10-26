@@ -292,6 +292,10 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
     readonly requiredIntervals: readonly number[];
     readonly progressBefore: readonly number[];
   }[];
+  /** Engine contract failures: outcomes whose reached branches disagree on their landing. */
+  readonly divergentOutcomeLandings?: readonly (
+    SteadyGrowthOutcomeAddress | TranscendentEmbryoOutcomeAddress
+  )[];
   /** Exact reached automatic Transcendent Embryo checkpoints, each at its landing. */
   readonly transcendentEmbryoOutcomes: readonly {
     readonly address: TranscendentEmbryoOutcomeAddress;
