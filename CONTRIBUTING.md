@@ -249,9 +249,9 @@ workspace symlinks must be created by Linux npm.
 ## Development and validation
 
 Clone with `git clone --recurse-submodules`, or run
-`git submodule update --init` afterwards, to fetch the ModpackLib source used
-for reference under `external/adamant-ModpackLib`. Builds and tests do not need
-it.
+`git submodule update --init` afterwards, to fetch the
+[external repositories](#external-repositories). Builds and tests do not need
+them.
 
 ```bash
 npm run check          # complete typecheck, tests, lint, format, and build gate
@@ -267,15 +267,53 @@ npm run test:game-host    # Rust game module package, target, install, and publi
 ```
 
 Individual `typecheck`, `lint`, `format:check`, `build`, and `test:watch`
-scripts are also available. The game host lane needs Rust (`cargo`). The game
-module lane needs Lua 5.2 (`lua` and `luac`) with LuaUnit and Luacheck from LuaRocks on
-`PATH`. Use the narrowest truthful lane while developing; configuration,
-dependency, shared setup, and cross-layer changes require the complete gate.
+scripts are also available. Use the narrowest truthful lane while developing;
+configuration, dependency, shared setup, and cross-layer changes require the
+complete gate.
 
 The app's compatible-loading baseline is schema 86. Current files open without
 conversion; future approved schema changes must supply explicit migrations and
 original-file preservation. Older files still need the relevant offline tool
 from [`schema/README.md`](schema/README.md).
+
+### Toolchain
+
+Each tool's version is pinned in one place; CI reads the same pin.
+
+| Tool                                            | Pin                                                                                                                    | Needed by                        |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| Node                                            | `.nvmrc`                                                                                                               | everything                       |
+| npm                                             | `packageManager` in `package.json`                                                                                     | everything                       |
+| Rust                                            | stable (`rust-version` in `apps/planner/src-tauri/Cargo.toml` is the floor; `dtolnay/rust-toolchain` in the workflows) | `test:game-host`, desktop builds |
+| Lua 5.2 with LuaUnit and Luacheck from LuaRocks | `.github/workflows/game-module.yml`                                                                                    | `test:game-module`               |
+
+Dependabot raises grouped minor and patch updates monthly and security updates
+as published; a major version is a deliberate upgrade. After any dependency
+change run the complete gate, and `npm run desktop:check` when the Rust
+lockfile changed.
+
+### External repositories
+
+`external/` holds three submodules. None is built or tested by `npm run check`;
+each pin is a commit this repository was last verified against, and a moved
+pointer shows up as a modified path in `git status`.
+
+| Submodule                     | Pinned to                                                                                                         | Used for                                                                                                  | Bump when                                                                                              |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `external/adamant-ModpackLib` | a ModpackLib release tag, at or above the `adamant-ModpackLib` dependency in `game-module/manifest.template.json` | reference source for ModpackLib-facing module code ([ModpackLib](game-module/CONTRIBUTING.md#modpacklib)) | ModpackLib publishes a release; raise the manifest dependency only when the module needs the newer API |
+| `external/RunPlanner-Catalog` | the catalog `main` the planner last validated                                                                     | `npm run test:catalog-entries` builds its entries locally                                                 | the catalog gains entries worth checking against planner changes                                       |
+| `external/RunPlanner-Events`  | the events `main` the planner last validated                                                                      | reference for the event folder shape; nothing here reads it                                               | the event folder shape changes                                                                         |
+
+To move a pin to the current upstream, or to a tag, and record it:
+
+```bash
+git submodule update --remote external/RunPlanner-Catalog          # upstream main
+git -C external/adamant-ModpackLib fetch --tags && git -C external/adamant-ModpackLib checkout 4.5.0
+git add external/<name> && git commit -m "chore(external): pin <name> to <ref>"
+```
+
+To discard a moved pointer instead, `git submodule update external/<name>`
+restores the recorded commit.
 
 ## Desktop development
 
