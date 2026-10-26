@@ -746,18 +746,19 @@ child exists only while purchased and resolves against the later
 pre-acquisition context, not the refill-generation context.
 
 A Shrine of Hermes refill is caused by the first rushed initial
-`purchaseHermesShrineOffer` in timeline order when it closes the Shrine screen,
-not by collecting the rushed item: it is realized with the purchase's
-scheduling, replaces that purchase's slot, and removing the optional rushed
+`purchaseHermesShrineOffer` in timeline order made while every branch holds
+Travel Deal, when it closes the Shrine screen, not by collecting the rushed
+item; a rush without the trait leaves the refill to a later rush. The refill is
+realized at that purchase, replaces its slot, and removing the optional rushed
 pickup leaves the refill and its own delivery intact. Reordering or re-rushing
-purchases can change the source; a retained refill item outside the new
-source's group is kept and reported `hermesShrineTravelDealRefillUnavailable`
-at the refill offer. A purchased refill with no rushed initial purchase, or
-whose source does not hold Travel Deal on every branch, keeps its item and
-reports the same finding at its purchase row with reason `noRushedPurchase` or
-`travelDealInactive`. Travel Deal must be held when the room's doors open,
-before any Shrine purchase, so a Travel Deal gained from a Shrine purchase never
-enables the refill.
+purchases, or gaining Travel Deal earlier or later in the room, can change the
+source; a retained refill item outside the new source's group is kept and
+reported `hermesShrineTravelDealRefillUnavailable` at the refill offer. A
+purchased refill ranked before any rushed initial purchase, or before any rush
+made with Travel Deal, keeps its item and reports the same finding at its
+purchase row with reason `noRushedPurchase` or `travelDealInactive`. Authoring
+keeps the refill purchase after the first rushed initial purchase only, since
+trait state is a simulation product.
 
 Refill activity comes from the reached simulation capability, not the presence
 of retained authored refill detail. Clearing the triggering Shop/Well purchase,

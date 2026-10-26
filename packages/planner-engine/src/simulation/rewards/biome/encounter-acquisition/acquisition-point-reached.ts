@@ -5,13 +5,10 @@ import {
 import { spawnDueHermesDeliveries } from '../offer-lifecycle/spawned-trait-offers';
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
-import type { PlannerTimelineFacts } from '../../../timeline-facts';
 import {
   createAcquisitionEntryAddress,
   createBiomeAddress,
-  createRoomFeatureAddress,
   createRoomActionAddress,
-  createTravelDealRefillRealizationAddress,
   semanticAddressKey,
 } from '../../../../authored-project/addresses';
 import {
@@ -22,13 +19,11 @@ import {
 } from '../../../../authored-project/acquisition/artificer';
 import {
   dueContactMatches,
-  firstRushedInitialPurchase,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
 } from '../../../../authored-project/hermes-shrine-delivery';
 import { parseClockedTraitGeneratedPickupEntryKey } from '../../../../authored-project/acquisition/pickup-producers';
 import { createUnresolvedPickupRewardState } from '../../../../authored-project/traits/state';
-import type { HermesShrineGenerationKey } from '../../../../authored-project/model';
 import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
@@ -36,10 +31,7 @@ import {
   isPurgingPoolEligibleTrait,
   type PurgingPoolAssessment,
 } from '../../../commerce/purging-pool';
-import {
-  assessHermesShrineTravelDealRefill,
-  type HermesShrineTravelDealRefillAssessment,
-} from '../../../commerce/hermes-shrine';
+import { pendingHermesShrineDelivery } from './hermes-shrine-purchase';
 import { foldTraitHistoryEvents } from '../../../traits';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { canonicalArtificerSource } from '../reward-sources';
@@ -79,10 +71,6 @@ export interface AcquisitionPointReachedTransition {
   readonly roleFrontiers: readonly AcquisitionRoleFrontier[];
   readonly traitChildSettlements: readonly ReachedTraitChildCheckpoint[];
   readonly authoredSiteSettlement: AuthoredSiteSettlementResult | undefined;
-  /** A dynamic Shrine Travel Deal owner, published when its refill is created. */
-  readonly timelineFacts?: PlannerTimelineFacts;
-  /** Per-branch Travel Deal refill domain, present when the first rush qualifies. */
-  readonly travelDealRefillAssessments?: readonly HermesShrineTravelDealRefillAssessment[];
 }
 
 export interface AcquisitionPointReachedInputs {
@@ -111,8 +99,6 @@ function transitionResult(input: {
   readonly roleFrontiers?: readonly AcquisitionRoleFrontier[] | undefined;
   readonly traitChildSettlements?: readonly ReachedTraitChildCheckpoint[] | undefined;
   readonly authoredSiteSettlement?: AuthoredSiteSettlementResult | undefined;
-  readonly travelDealRefillAssessments?: readonly HermesShrineTravelDealRefillAssessment[];
-  readonly timelineFacts?: PlannerTimelineFacts;
 }): AcquisitionPointReachedTransition {
   return Object.freeze({
     generatedPickupPlacements: Object.freeze(input.generatedPickupPlacements ?? []),
@@ -122,10 +108,6 @@ function transitionResult(input: {
     roleFrontiers: Object.freeze(input.roleFrontiers ?? []),
     traitChildSettlements: Object.freeze(input.traitChildSettlements ?? []),
     authoredSiteSettlement: input.authoredSiteSettlement,
-    ...(input.travelDealRefillAssessments === undefined
-      ? {}
-      : { travelDealRefillAssessments: input.travelDealRefillAssessments }),
-    ...(input.timelineFacts === undefined ? {} : { timelineFacts: input.timelineFacts }),
   });
 }
 
@@ -178,116 +160,17 @@ export function applyAcquisitionPointReachedTransition(
       hubBoardLookups: 'consulted',
     });
   if (event.kind === 'hermesShrineDeliveriesScheduled') {
-    const pendingDelivery = (
-      generationKey: HermesShrineGenerationKey,
-      rewardType: string,
-      purchase: { readonly delay: number; readonly rushed: boolean },
-    ) => {
-      const entryKey = hermesShrineDeliveryEntryKey(room.origin, generationKey);
-      return [
-        entryKey,
-        Object.freeze({
-          entryKey,
-          source: room.origin,
-          generationKey,
-          rewardType,
-          rushed: purchase.rushed,
-          remainingUses: purchase.delay,
-          ...(purchase.rushed
-            ? {
-                due: Object.freeze({
-                  host: room.origin,
-                  cause: 'rush' as const,
-                  historySequence: event.sequence,
-                }),
-              }
-            : {}),
-        }),
-      ] as const;
-    };
     const scheduled = Object.fromEntries(
       event.deliveries.map((delivery) =>
-        pendingDelivery(delivery.generationKey, delivery.rewardType, delivery),
+        pendingHermesShrineDelivery(
+          room,
+          delivery.generationKey,
+          delivery.rewardType,
+          delivery,
+          event.sequence,
+        ),
       ),
     );
-    // Travel Deal refills the slot of the first rushed purchase in timeline
-    // order when that purchase closes the Shrine screen, whether or not the
-    // item is collected.
-    const purchaseRows = room.roomActionRoster.rows
-      .filter((row) => row.rank !== null && row.reference.kind === 'purchaseHermesShrineOffer')
-      .sort((left, right) => left.rank! - right.rank!);
-    const sourceGenerationKey = firstRushedInitialPurchase(
-      purchaseRows.map((row) => row.reference),
-    )?.generationKey;
-    const refillRow = purchaseRows.find(
-      (row) =>
-        row.reference.kind === 'purchaseHermesShrineOffer' &&
-        row.reference.generationKey === 'travelDealRefill',
-    );
-    const shrine = room.hermesShrine;
-    const refillAssessments =
-      sourceGenerationKey === undefined ||
-      shrine === undefined ||
-      !inputs.sourceBranches.every(
-        (branch) => branch.state.traitHistory.equippedTraits.RestockBoon !== undefined,
-      )
-        ? undefined
-        : Object.freeze(
-            inputs.sourceBranches.flatMap((branch) => {
-              const assessment = assessHermesShrineTravelDealRefill(
-                catalog,
-                shrine,
-                sourceGenerationKey,
-                [factsAt(roomView.preOutgoing ?? roomView.entry, branch.state).requirements],
-              );
-              return assessment === undefined ? [] : [assessment];
-            }),
-          );
-    const refillOffer = shrine?.travelDealRefill?.offer;
-    const refillSupported =
-      refillAssessments !== undefined &&
-      refillOffer !== undefined &&
-      refillOffer !== null &&
-      refillAssessments.length === inputs.sourceBranches.length &&
-      refillAssessments.every((assessment) =>
-        assessment.candidateRewardTypes.includes(refillOffer.rewardType),
-      );
-    if (refillAssessments !== undefined && sourceGenerationKey !== undefined) {
-      const feature = createRoomFeatureAddress(room.origin, {
-        kind: 'hermesShrineOffer',
-        generationKey: 'travelDealRefill',
-      });
-      if (refillOffer === undefined || refillOffer === null)
-        addFinding('hermesShrineTravelDealRefillMissing', feature, {
-          generationKey: sourceGenerationKey,
-        });
-      else if (!refillSupported)
-        addFinding('hermesShrineTravelDealRefillUnavailable', feature, {
-          generationKey: sourceGenerationKey,
-          rewardType: refillOffer.rewardType,
-        });
-    }
-    const refillPurchase = shrine?.travelDealRefill?.purchase;
-    // Without a rushed purchase holding Travel Deal the purchased refill never exists.
-    if (refillPurchase !== undefined && refillAssessments === undefined && refillRow !== undefined)
-      addFinding('hermesShrineTravelDealRefillUnavailable', refillRow.owner, {
-        generationKey: 'travelDealRefill',
-        reason: sourceGenerationKey === undefined ? 'noRushedPurchase' : 'travelDealInactive',
-      });
-    if (
-      refillSupported &&
-      refillPurchase !== undefined &&
-      refillRow?.reference.kind === 'purchaseHermesShrineOffer' &&
-      refillOffer !== undefined &&
-      refillOffer !== null
-    ) {
-      const [refillKey, refillDelivery] = pendingDelivery(
-        'travelDealRefill',
-        refillOffer.rewardType,
-        { delay: refillPurchase.delay, rushed: refillRow.reference.rushed },
-      );
-      scheduled[refillKey] = refillDelivery;
-    }
     return publish({
       branches: inputs.sourceBranches.map((branch) =>
         spawnDueHermesDeliveries(
@@ -307,25 +190,6 @@ export function applyAcquisitionPointReachedTransition(
         ),
       ),
       findings,
-      ...(refillAssessments === undefined
-        ? {}
-        : { travelDealRefillAssessments: refillAssessments }),
-      ...(refillSupported
-        ? {
-            timelineFacts: Object.freeze({
-              nodes: Object.freeze([
-                Object.freeze({
-                  owner: createTravelDealRefillRealizationAddress(
-                    createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
-                    room.occurrenceId,
-                  ),
-                  included: true,
-                }),
-              ]),
-              dependencies: Object.freeze([]),
-            }),
-          }
-        : {}),
     });
   }
   // A Shrine delivery builds its loot inside the host room, so it reads that

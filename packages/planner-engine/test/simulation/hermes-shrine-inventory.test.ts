@@ -1581,6 +1581,106 @@ describe('Hermes Shrine Travel Deal generation', () => {
       );
     });
 
+    describe('with Travel Deal bought and rushed at the same Shrine', () => {
+      const hermesEntry = createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(shrine, 'hermesShrineDelivery'),
+        hermesShrineDeliveryEntryKey(shrine, 'initial:secondRight'),
+      );
+      const hermesPickup = createRoomActionAddress(
+        nBiome,
+        shrine.occurrenceId,
+        roomActionKey({
+          kind: 'interactAcquisitionEntry',
+          siteKey: 'hermesShrineDelivery',
+          entryKey: hermesEntry.entryKey,
+        }),
+      );
+      // The route has no earlier Hermes boon; the Shrine's rushed Hermes boon
+      // grants Travel Deal, then the first slot is rushed and the refill bought.
+      const shrineTravelDeal = (selectedOptionKey: 'option1' | 'option2') => {
+        let project = authorLegalTraitOffers(
+          applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
+            kind: 'ReplaceIncomingReward',
+            reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat09')),
+            value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+          }),
+        );
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceHermesShrineOffer',
+          occurrence: shrine,
+          slotKey: 'secondRight',
+          value: { rewardType: 'ShopHermesUpgrade' },
+        });
+        project = purchaseTestHermesShrineOffer(project, catalog, shrine, 'initial:secondRight', {
+          delay: 2,
+          rushed: true,
+        });
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceTraitOffer',
+          trait: createTraitOfferAddress(hermesEntry, 'hermes'),
+          value: {
+            kind: 'traits',
+            giverKey: 'Hermes',
+            options: [
+              { traitKey: 'RestockBoon', rarity: 'Common' },
+              { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+              { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+            ],
+            selectedOptionKey,
+          },
+        });
+        for (const [action, toIndex] of [
+          [testHermesShrinePurchaseAction(shrine, 'initial:secondRight'), 1],
+          [hermesPickup, 2],
+        ] as const)
+          project = applyProjectCommand(project, catalog, {
+            kind: 'MoveRoomAction',
+            action,
+            toIndex,
+          });
+        return project;
+      };
+
+      it('refills the slot of the first rush made while holding Travel Deal', () => {
+        const result = evaluate(shrineTravelDeal('option1'));
+        // The swapped Hermes reward strands a later O Pom; N itself is complete.
+        expect(
+          result.findings.filter(
+            (finding) => 'biomeKey' in finding.origin && finding.origin.biomeKey === 'N',
+          ),
+        ).toEqual([]);
+        expect(result.sources).toEqual(['initial:first']);
+      });
+
+      it('creates no refill when the Shrine boon is not Travel Deal', () => {
+        const result = evaluate(shrineTravelDeal('option2'));
+        expect(result.sources).toEqual([undefined]);
+        expect(result.findings).toContainEqual(
+          expect.objectContaining({
+            code: 'hermesShrineTravelDealRefillUnavailable',
+            origin: refillPurchase,
+            evidence: { generationKey: 'travelDealRefill', reason: 'travelDealInactive' },
+          }),
+        );
+      });
+
+      it('reports a refill purchase ranked before the rush that creates it', () => {
+        const project = applyProjectCommand(shrineTravelDeal('option1'), catalog, {
+          kind: 'MoveRoomAction',
+          action: refillPurchase,
+          toIndex: 3,
+        });
+        const result = evaluate(project);
+        expect(result.findings).toContainEqual(
+          expect.objectContaining({
+            code: 'hermesShrineTravelDealRefillUnavailable',
+            origin: refillPurchase,
+            evidence: { generationKey: 'travelDealRefill', reason: 'travelDealInactive' },
+          }),
+        );
+      });
+    });
+
     it('reports a refill purchase with no rushed purchase to create it', () => {
       const project = applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
         kind: 'SetHermesShrinePurchaseRush',

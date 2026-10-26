@@ -64,8 +64,8 @@ function withRushedHermesDelivery(
 }
 
 /**
- * Keeps the refill purchase, and its rushed pickup, after the purchase that now
- * triggers Travel Deal when an edit changes the first rushed initial purchase.
+ * Keeps the refill purchase, and its rushed pickup, after the first rushed
+ * initial purchase when an edit changes it.
  */
 function followRefillTrigger(
   document: ProjectDocument,

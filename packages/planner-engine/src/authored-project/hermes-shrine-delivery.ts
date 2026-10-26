@@ -85,8 +85,8 @@ export function hermesShrinePurchaseAction(
 }
 
 /**
- * The first rushed initial purchase in timeline order (`FirstSpeedUpPurchase`);
- * Travel Deal refills that purchase's slot.
+ * The first rushed initial purchase in timeline order: the earliest rush that can
+ * refill with Travel Deal. Simulation finds the first rush made with the trait.
  */
 export function firstRushedInitialPurchase(
   order: readonly RoomActionReference[],

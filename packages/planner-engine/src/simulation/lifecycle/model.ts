@@ -135,6 +135,12 @@ export type RoomLifecycleEvent =
       }[];
     })
   | (RoomLifecycleEventBase & {
+      /** One ranked Shrine purchase, where its rush can trigger the Travel Deal refill. */
+      readonly kind: 'hermesShrinePurchaseReached';
+      readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
+      readonly rushed: boolean;
+    })
+  | (RoomLifecycleEventBase & {
       readonly kind: 'acquisitionPointReached';
       readonly point: string;
       /** Exact persisted site identity for one chronology-owned acquisition entry. */

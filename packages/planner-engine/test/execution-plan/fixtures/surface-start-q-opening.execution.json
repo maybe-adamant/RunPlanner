@@ -9232,7 +9232,7 @@
                   "remainingUses": 0,
                   "rushed": false,
                   "dueOccurrenceId": "surface-q-preboss",
-                  "dueSequence": 815
+                  "dueSequence": 820
                 }
               ],
               "stygianWell": {
@@ -9727,5 +9727,5 @@
       }
     }
   ],
-  "planFingerprint": "ef0b6d26"
+  "planFingerprint": "969cb800"
 }

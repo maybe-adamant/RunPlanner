@@ -713,7 +713,7 @@ and clearing removes that action, its pickup and placed deliveries while
 retaining delivery payload. `SetHermesShrinePurchaseRush` changes rush on one
 exact purchase action, ranking or retracting its optional same-room pickup.
 When either command changes the first rushed initial purchase, the refill's
-purchase action and pickup are rescheduled after the new trigger; when no
+purchase action and pickup are rescheduled after it; when no
 rushed initial purchase remains, the refill's pickup is retracted.
 
 `MoveRoomAction` changes one ranked action's position within the complete

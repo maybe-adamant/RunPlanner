@@ -646,11 +646,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
             ];
       },
     );
-    if (
-      deliveries.length === 0 &&
-      context.input.hermesShrine.travelDealRefill?.purchase === undefined
-    )
-      return initial;
+    if (deliveries.length === 0) return initial;
     return appendEvent(
       initial,
       { ...context, operationIndex },
@@ -713,9 +709,13 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           generationKey: row.reference.generationKey,
         });
       case 'purchaseHermesShrineOffer':
-        // Shrine purchases are scheduled together at the room's Shrine checkpoint;
-        // the row authors their order and rush.
-        return state;
+        // Initial deliveries are scheduled together at the Shrine checkpoint; the
+        // row's position decides the Travel Deal refill and the refill's purchase.
+        return appendEvent(state, operationContext, {
+          kind: 'hermesShrinePurchaseReached',
+          generationKey: row.reference.generationKey,
+          rushed: row.reference.rushed,
+        });
       case 'interactShopOffer':
         return appendEvent(state, operationContext, {
           kind: 'acquisitionPointReached',

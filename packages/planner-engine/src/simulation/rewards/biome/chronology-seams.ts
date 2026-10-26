@@ -46,6 +46,7 @@ import {
 import { applyAcquisitionPointReachedTransition } from './encounter-acquisition/acquisition-point-reached';
 import { applyEncounterSettlementTransition } from './encounter-acquisition/encounter-settlement';
 import { applyGorgonStartedTransition } from './encounter-acquisition/gorgon-started';
+import { applyHermesShrinePurchaseReachedTransition } from './encounter-acquisition/hermes-shrine-purchase';
 import { applyWellPurchaseTransition } from './encounter-acquisition/well-purchase';
 import { rewardFindingChronologyForRoom } from './finding-chronology';
 import { flushHubBoard } from './generation/hub-board';
@@ -254,7 +255,6 @@ function acquisitionEmissions(
     { kind: 'generatedPickupPlacements', placements: transition.generatedPickupPlacements },
     { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
     { kind: 'acquisitionRoleFrontiers', frontiers: transition.roleFrontiers },
-    { kind: 'timelineFacts', facts: transition.timelineFacts },
     ...(room === undefined
       ? []
       : [
@@ -284,6 +284,29 @@ const hermesShrineDeliveriesScheduled: ChronologySeamHandler<'hermesShrineDelive
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
     purgingPoolAssessment: undefined,
   });
+  return {
+    state: withBranches(state, transition.branches),
+    emissions: acquisitionEmissions(transition, room),
+  };
+};
+
+const hermesShrinePurchaseReached: ChronologySeamHandler<'hermesShrinePurchaseReached'> = (
+  context,
+  state,
+  event,
+) => {
+  const room = authoredRoom(context, event.origin);
+  const key = semanticAddressKey(event.origin);
+  const transition = applyHermesShrinePurchaseReachedTransition({
+    catalog: context.catalog,
+    snapshot: context.snapshot,
+    event,
+    room,
+    declaration: roomDeclaration(context, room),
+    roomView: context.views.get(key),
+    branches: state.branches,
+    realized: state.hermesShrineTravelDealRefills.get(key),
+  });
   const refills = transition.travelDealRefillAssessments;
   return {
     state:
@@ -294,11 +317,14 @@ const hermesShrineDeliveriesScheduled: ChronologySeamHandler<'hermesShrineDelive
             branches: transition.branches,
             hermesShrineTravelDealRefills: withKeyed(
               state.hermesShrineTravelDealRefills,
-              semanticAddressKey(event.origin),
+              key,
               refills,
             ),
           }),
-    emissions: acquisitionEmissions(transition, room),
+    emissions: [
+      settledFindings(transition.findings),
+      { kind: 'timelineFacts', facts: transition.timelineFacts },
+    ],
   };
 };
 
@@ -1067,6 +1093,7 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     producerRoleAdvanced: { step: reachedOfferSettled },
     outgoingGenerationCheckpoint: { step: outgoingGenerationCheckpoint },
     hermesShrineDeliveriesScheduled: { step: hermesShrineDeliveriesScheduled },
+    hermesShrinePurchaseReached: { step: hermesShrinePurchaseReached },
     acquisitionPointReached: { step: acquisitionPointReached },
     wellPurchase: { step: wellPurchase },
     roomCommitted: { step: advanceOnly },

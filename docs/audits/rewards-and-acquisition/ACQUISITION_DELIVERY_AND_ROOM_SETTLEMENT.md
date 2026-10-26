@@ -310,32 +310,27 @@ picked-up/not-picked-up authoring fact beyond the optional row.
 
 Travel Deal's Shrine refill belongs to the purchase, not the pickup. In the
 speed-up branch of `HandleSurfaceShopAction` (`SurfaceShopLogic.lua:449-474`),
-the first speed-up purchase with `FirstPurchaseDiscount` (Travel Deal) while
-`CurrentRoom.FirstSpeedUpPurchase` is unset regenerates that button's
-`StoreOptions` slot and sets the flag, then calls `CloseSurfaceShopScreen`,
-which spawns the rushed item. A later speed-up or delayed purchase refills
-nothing, and leaving the rushed item uncollected does not undo the refill.
-Every Shrine purchase sets the room's shared `FirstPurchase`
-(`SurfaceShopLogic.lua:355-356`), while `FirstSpeedUpPurchase` is set only
-inside the trait-held branch (`:473`). A rushed item is spawned on screen close,
-after that check, so a rushed Travel Deal can never refill its own slot.
+a speed-up purchase made while holding `FirstPurchaseDiscount` (Travel Deal)
+and while `CurrentRoom.FirstSpeedUpPurchase` is unset regenerates that button's
+`StoreOptions` slot and sets the flag (`:473`), then calls
+`CloseSurfaceShopScreen`, which spawns the rushed item after the check. Every
+Shrine purchase sets the room's shared `FirstPurchase` (`:355-356`), but a rush
+without the trait leaves `FirstSpeedUpPurchase` unset, so it does not spend the
+refill. The first rush made while holding Travel Deal therefore refills its own
+slot, including after Travel Deal was bought, rushed and picked up at the same
+Shrine; a rushed Travel Deal cannot refill its own slot because it is not held
+until picked up. A later speed-up or delayed purchase refills nothing, and
+leaving the rushed item uncollected does not undo the refill.
 
-Live play (2026-10-25) bounds when the trait must be held:
-
-- Travel Deal held before the Shrine became interactable, then a rush: the
-  vacated slot refilled.
-- In `P_Combat10`, with a non-Travel Deal Hermes room reward, a rushed Shrine
-  Hermes boon picked up as Travel Deal, then the Mystery boon bought and rushed
-  while holding it: no refill.
-
-Discrepancy: read literally, `:450` lets a later rush made with the trait
-refill, since a rush without it leaves `FirstSpeedUpPurchase` unset. Live play
-shows it does not; the cause is not identified, and the planner follows the
-observed behaviour. Planner disposition: Travel Deal must be held when the
-room's doors open, before any Shrine purchase; a Travel Deal gained from a
-Shrine purchase never enables the refill. The planner checks the trait when the
-room's Shrine purchases are scheduled, after outgoing generation, and refills
-the slot of the first rushed initial purchase in the authored timeline order.
+A live probe (2026-10-25) logged `HandleSurfaceShopAction` in `P_Combat10`
+without Travel Deal on entry: buying and rushing `ShopHermesUpgrade` (slot 3)
+set `FirstPurchase` and left `FirstSpeedUpPurchase` unset; after Travel Deal
+was picked up, buying and rushing `BlindBoxLoot` (slot 2) set
+`FirstSpeedUpPurchase` and refilled slot 2. Travel Deal held on entry also
+refills at the first rush. An earlier report of no refill in the same scenario
+was a misread. The planner realizes the refill at the first rushed initial
+purchase, in authored timeline order, made while every branch holds Travel
+Deal, and refills that purchase's slot.
 
 The game permits a rush after later purchases, such as buy 3, buy 1, rush 3.
 The planner authors rush on each Shrine purchase action and orders those
