@@ -542,16 +542,17 @@ function evaluateAuthoredOffer(
         : `${traitOfferIdentity}:${sequence}`
       : undefined;
   // Steady Growth's targets live on the authored offer that gives it: the
-  // outer screen for an Echo Boon Boon Boon pick.
+  // outer screen for an Echo Boon Boon Boon pick or a Concave Stone residual.
   function steadyGrowthSourceFor(): SteadyGrowthSource | undefined {
     if (selectedForIdentityDisposition?.kind !== 'steadyGrowth') return undefined;
-    if (mode.kind === 'frozenConcaveStoneSecondary') return undefined;
     const trait =
-      reward.origin.kind === 'echoLastRunBoon'
-        ? reward.origin.trait
-        : acquisitionIdentityOwner === undefined
-          ? undefined
-          : createTraitOfferAddress(acquisitionIdentityOwner, role);
+      mode.kind === 'frozenConcaveStoneSecondary'
+        ? mode.sourceTraitAddress
+        : reward.origin.kind === 'echoLastRunBoon'
+          ? reward.origin.trait
+          : acquisitionIdentityOwner === undefined
+            ? undefined
+            : createTraitOfferAddress(acquisitionIdentityOwner, role);
     if (trait === undefined) return undefined;
     const source = authored ?? effectiveAuthored;
     const targets =
