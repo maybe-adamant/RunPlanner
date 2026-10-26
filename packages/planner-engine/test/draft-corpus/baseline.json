@@ -17,8 +17,8 @@
     "godEarlyShare": 0.278,
     "shopsPerRun": 4.625,
     "fillerRoomsPerRun": { "gold": 0.25, "maxHealth": 0.625, "maxMagick": 0.875, "pom": 1.5 },
-    "msMedian": 7781,
-    "msMax": 9572
+    "msMedian": 8470,
+    "msMax": 10279
   },
   "U2 medium Hermes Hammer Selene": {
     "runs": 8,
@@ -38,8 +38,8 @@
     "godEarlyShare": 0.19,
     "shopsPerRun": 4.25,
     "fillerRoomsPerRun": { "gold": 0.125, "maxHealth": 0.25, "maxMagick": 0.125, "pom": 0.5 },
-    "msMedian": 7710,
-    "msMax": 9081
+    "msMedian": 8313,
+    "msMax": 10053
   },
   "U3 heavy Hermes Artemis trait": {
     "runs": 8,
@@ -59,8 +59,8 @@
     "godEarlyShare": 0.309,
     "shopsPerRun": 4.25,
     "fillerRoomsPerRun": { "gold": 0.25, "maxHealth": 0.875, "maxMagick": 0.625, "pom": 0.875 },
-    "msMedian": 7827,
-    "msMax": 10900
+    "msMedian": 8703,
+    "msMax": 12219
   },
   "U4 medium Forfeit": {
     "runs": 8,
@@ -80,8 +80,8 @@
     "godEarlyShare": 0.265,
     "shopsPerRun": 4.375,
     "fillerRoomsPerRun": { "maxHealth": 0.5, "maxMagick": 0.875, "pom": 0.25 },
-    "msMedian": 7200,
-    "msMax": 9920
+    "msMedian": 8139,
+    "msMax": 10853
   },
   "U5 medium prefix 1": {
     "runs": 8,
@@ -101,8 +101,8 @@
     "godEarlyShare": 0.4,
     "shopsPerRun": 1,
     "fillerRoomsPerRun": { "gold": 0.125, "maxHealth": 0.25, "maxMagick": 0.125, "pom": 0.125 },
-    "msMedian": 1962,
-    "msMax": 2335
+    "msMedian": 2070,
+    "msMax": 2555
   },
   "U6 medium Hammer prefix 2": {
     "runs": 8,
@@ -122,8 +122,8 @@
     "godEarlyShare": 0.288,
     "shopsPerRun": 2.375,
     "fillerRoomsPerRun": { "gold": 0.5, "maxHealth": 0.375, "maxMagick": 0.375, "pom": 0.375 },
-    "msMedian": 3799,
-    "msMax": 4362
+    "msMedian": 4255,
+    "msMax": 4907
   },
   "S1 light Icarus": {
     "runs": 8,
@@ -143,8 +143,8 @@
     "godEarlyShare": 0.214,
     "shopsPerRun": 4.875,
     "fillerRoomsPerRun": { "gold": 0.375, "maxHealth": 1.25, "maxMagick": 1.125, "pom": 0.5 },
-    "msMedian": 7037,
-    "msMax": 8278
+    "msMedian": 7800,
+    "msMax": 8917
   },
   "S2 medium Hermes Hammer Selene Heracles": {
     "runs": 8,
@@ -153,19 +153,19 @@
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 1,
-    "essencesPerRun": 3.25,
-    "purchasesPerRun": { "BlindBoxLoot": 1.25, "boon": 0.75 },
+    "essencesPerRun": 3.375,
+    "purchasesPerRun": { "BlindBoxLoot": 1.25, "boon": 0.625 },
     "attemptsMedian": 4,
-    "depthSpread": 2.561,
+    "depthSpread": 2.535,
     "depthDistinct": 4.545,
-    "godRoomsPerBiome": 1.969,
-    "godGapMean": 2.278,
+    "godRoomsPerBiome": 1.938,
+    "godGapMean": 2.286,
     "godGapMax": 3.625,
-    "godEarlyShare": 0.206,
+    "godEarlyShare": 0.194,
     "shopsPerRun": 4.875,
-    "fillerRoomsPerRun": { "gold": 0.5, "maxHealth": 1.375, "maxMagick": 1, "pom": 0.75 },
-    "msMedian": 8149,
-    "msMax": 8756
+    "fillerRoomsPerRun": { "gold": 0.5, "maxHealth": 1.25, "maxMagick": 1.125, "pom": 0.75 },
+    "msMedian": 8681,
+    "msMax": 9520
   },
   "S3 heavy Hermes Icarus trait": {
     "runs": 8,
@@ -185,8 +185,8 @@
     "godEarlyShare": 0.185,
     "shopsPerRun": 5.125,
     "fillerRoomsPerRun": { "gold": 0.5, "maxHealth": 1.25, "maxMagick": 1.375, "pom": 0.75 },
-    "msMedian": 8470,
-    "msMax": 11032
+    "msMedian": 8800,
+    "msMax": 11727
   },
   "S4 medium Forfeit prefix 2": {
     "runs": 8,
@@ -206,8 +206,8 @@
     "godEarlyShare": 0.6,
     "shopsPerRun": 2.75,
     "fillerRoomsPerRun": { "maxHealth": 0.5, "maxMagick": 0.75 },
-    "msMedian": 2564,
-    "msMax": 3421
+    "msMedian": 2651,
+    "msMax": 3251
   },
   "S5 light prefix 1": {
     "runs": 8,
@@ -227,8 +227,8 @@
     "godEarlyShare": 0.4,
     "shopsPerRun": 1,
     "fillerRoomsPerRun": { "maxHealth": 0.625, "maxMagick": 0.25 },
-    "msMedian": 1208,
-    "msMax": 1387
+    "msMedian": 1286,
+    "msMax": 1577
   },
   "S6 medium Artemis N": {
     "runs": 8,
@@ -238,7 +238,7 @@
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 3,
-    "purchasesPerRun": { "BlindBoxLoot": 1.125, "boon": 0.75 },
+    "purchasesPerRun": { "BlindBoxLoot": 1, "boon": 0.75 },
     "attemptsMedian": 4,
     "depthSpread": 2.285,
     "depthDistinct": 4.75,
@@ -247,9 +247,9 @@
     "godGapMax": 3.625,
     "godEarlyShare": 0.174,
     "shopsPerRun": 5,
-    "fillerRoomsPerRun": { "gold": 0.5, "maxHealth": 1.75, "maxMagick": 1.375, "pom": 0.375 },
-    "msMedian": 7239,
-    "msMax": 8058
+    "fillerRoomsPerRun": { "gold": 0.5, "maxHealth": 1.75, "maxMagick": 1.5, "pom": 0.375 },
+    "msMedian": 7607,
+    "msMax": 8855
   },
   "S7 heavy Hermes Artemis trait N": {
     "runs": 8,
@@ -269,8 +269,8 @@
     "godEarlyShare": 0.154,
     "shopsPerRun": 5.125,
     "fillerRoomsPerRun": { "gold": 0.25, "maxHealth": 1.5, "maxMagick": 1.25, "pom": 0.75 },
-    "msMedian": 7619,
-    "msMax": 8844
+    "msMedian": 8095,
+    "msMax": 9541
   },
   "D1 light": {
     "runs": 8,
@@ -290,8 +290,8 @@
     "godEarlyShare": 0.256,
     "shopsPerRun": 4.25,
     "fillerRoomsPerRun": { "gold": 0.125, "maxHealth": 1, "maxMagick": 0.375, "pom": 0.75 },
-    "msMedian": 7737,
-    "msMax": 8651
+    "msMedian": 8135,
+    "msMax": 9686
   },
   "D2 medium Hammer Artemis prefix 2": {
     "runs": 8,
@@ -311,8 +311,8 @@
     "godEarlyShare": 0.235,
     "shopsPerRun": 2.125,
     "fillerRoomsPerRun": { "gold": 0.375, "maxHealth": 0.75, "maxMagick": 0.25, "pom": 0.25 },
-    "msMedian": 3900,
-    "msMax": 4272
+    "msMedian": 4172,
+    "msMax": 4409
   },
   "D3 heavy Hermes Artemis trait": {
     "runs": 8,
@@ -332,8 +332,8 @@
     "godEarlyShare": 0.235,
     "shopsPerRun": 4.25,
     "fillerRoomsPerRun": { "maxHealth": 0.875, "maxMagick": 1, "pom": 0.25 },
-    "msMedian": 9028,
-    "msMax": 10606
+    "msMedian": 9378,
+    "msMax": 10932
   },
   "D4 medium Forfeit": {
     "runs": 8,
@@ -353,8 +353,8 @@
     "godEarlyShare": 0.227,
     "shopsPerRun": 4.375,
     "fillerRoomsPerRun": { "gold": 0.125, "maxHealth": 0.375, "maxMagick": 1.125, "pom": 0.875 },
-    "msMedian": 6898,
-    "msMax": 8836
+    "msMedian": 7414,
+    "msMax": 9453
   },
   "U7 medium 2 Hermes 2 Hammer": {
     "runs": 8,
@@ -374,8 +374,8 @@
     "godEarlyShare": 0.257,
     "shopsPerRun": 4.5,
     "fillerRoomsPerRun": { "gold": 0.375, "maxHealth": 0.125, "maxMagick": 0.375, "pom": 0.75 },
-    "msMedian": 8201,
-    "msMax": 10712
+    "msMedian": 8275,
+    "msMax": 10718
   },
   "S8 medium 2 Hermes 2 Hammer": {
     "runs": 8,
@@ -395,8 +395,8 @@
     "godEarlyShare": 0.231,
     "shopsPerRun": 4.625,
     "fillerRoomsPerRun": { "gold": 0.625, "maxHealth": 1.125, "maxMagick": 0.75, "pom": 0.5 },
-    "msMedian": 7447,
-    "msMax": 8905
+    "msMedian": 7809,
+    "msMax": 9233
   },
   "D5 medium 2 Hermes 2 Hammer": {
     "runs": 8,
@@ -416,8 +416,8 @@
     "godEarlyShare": 0.247,
     "shopsPerRun": 4.375,
     "fillerRoomsPerRun": { "maxHealth": 0.625, "maxMagick": 0.5, "pom": 0.75 },
-    "msMedian": 8408,
-    "msMax": 12617
+    "msMedian": 8970,
+    "msMax": 13135
   },
   "U8 heavy 2 Duos": {
     "runs": 8,
@@ -437,8 +437,8 @@
     "godEarlyShare": 0.307,
     "shopsPerRun": 4.25,
     "fillerRoomsPerRun": { "maxHealth": 0.625, "maxMagick": 0.25, "pom": 0.125 },
-    "msMedian": 7608,
-    "msMax": 8882
+    "msMedian": 7781,
+    "msMax": 9135
   },
   "S9 heavy 2 Duos": {
     "runs": 8,
@@ -458,8 +458,8 @@
     "godEarlyShare": 0.224,
     "shopsPerRun": 4.75,
     "fillerRoomsPerRun": { "maxHealth": 1.25, "maxMagick": 1.375, "pom": 0.375 },
-    "msMedian": 7327,
-    "msMax": 7918
+    "msMedian": 7792,
+    "msMax": 8156
   },
   "D6 heavy 2 Duos": {
     "runs": 8,
@@ -479,8 +479,8 @@
     "godEarlyShare": 0.221,
     "shopsPerRun": 4.125,
     "fillerRoomsPerRun": { "maxHealth": 0.875, "maxMagick": 0.75, "pom": 0.75 },
-    "msMedian": 7390,
-    "msMax": 8625
+    "msMedian": 7835,
+    "msMax": 9305
   },
   "U9 heavy prefix 3": {
     "runs": 8,
@@ -500,8 +500,8 @@
     "godEarlyShare": 0.364,
     "shopsPerRun": 3.125,
     "fillerRoomsPerRun": { "gold": 0.125, "maxHealth": 0.375, "pom": 0.375 },
-    "msMedian": 6177,
-    "msMax": 7582
+    "msMedian": 6370,
+    "msMax": 7666
   },
   "S10 heavy prefix 2": {
     "runs": 8,
@@ -521,8 +521,8 @@
     "godEarlyShare": 0.444,
     "shopsPerRun": 2.625,
     "fillerRoomsPerRun": { "maxHealth": 0.625, "maxMagick": 0.75 },
-    "msMedian": 2499,
-    "msMax": 2816
+    "msMedian": 2568,
+    "msMax": 2817
   },
   "D7 heavy prefix 3": {
     "runs": 8,
@@ -542,8 +542,8 @@
     "godEarlyShare": 0.277,
     "shopsPerRun": 3.25,
     "fillerRoomsPerRun": { "gold": 0.25, "maxHealth": 0.625, "maxMagick": 0.625, "pom": 0.5 },
-    "msMedian": 5945,
-    "msMax": 7381
+    "msMedian": 6281,
+    "msMax": 7667
   },
   "F1 light": {
     "runs": 8,
@@ -563,8 +563,8 @@
     "godEarlyShare": 0.5,
     "shopsPerRun": 4.75,
     "fillerRoomsPerRun": { "gold": 1.875, "maxHealth": 1.5, "maxMagick": 1.25, "pom": 2 },
-    "msMedian": 6970,
-    "msMax": 7690
+    "msMedian": 7199,
+    "msMax": 8554
   },
   "F2 medium": {
     "runs": 8,
@@ -584,8 +584,8 @@
     "godEarlyShare": 0.388,
     "shopsPerRun": 5,
     "fillerRoomsPerRun": { "gold": 1.625, "maxHealth": 0.75, "maxMagick": 0.875, "pom": 1.625 },
-    "msMedian": 6941,
-    "msMax": 8193
+    "msMedian": 7579,
+    "msMax": 8849
   },
   "F3 heavy": {
     "runs": 8,
@@ -595,18 +595,18 @@
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "boon": 4.25 },
+    "purchasesPerRun": { "boon": 4.625 },
     "attemptsMedian": 4,
-    "depthSpread": 1.894,
-    "depthDistinct": 4,
-    "godRoomsPerBiome": 2.438,
-    "godGapMean": 1.612,
-    "godGapMax": 2.75,
-    "godEarlyShare": 0.449,
-    "shopsPerRun": 5,
-    "fillerRoomsPerRun": { "gold": 1.125, "maxHealth": 0.5, "maxMagick": 1.25, "pom": 1.875 },
-    "msMedian": 7242,
-    "msMax": 8479
+    "depthSpread": 1.864,
+    "depthDistinct": 4.286,
+    "godRoomsPerBiome": 2.375,
+    "godGapMean": 1.681,
+    "godGapMax": 3,
+    "godEarlyShare": 0.447,
+    "shopsPerRun": 5.125,
+    "fillerRoomsPerRun": { "gold": 1.125, "maxHealth": 0.5, "maxMagick": 1.375, "pom": 1.625 },
+    "msMedian": 7741,
+    "msMax": 9326
   },
   "F4 heavy prefix 2": {
     "runs": 8,
@@ -626,8 +626,8 @@
     "godEarlyShare": 0.381,
     "shopsPerRun": 3.125,
     "fillerRoomsPerRun": { "gold": 0.75, "maxHealth": 1, "maxMagick": 0.625, "pom": 1 },
-    "msMedian": 3526,
-    "msMax": 4045
+    "msMedian": 3705,
+    "msMax": 4118
   },
   "F5 medium prefix 1": {
     "runs": 8,
@@ -647,8 +647,8 @@
     "godEarlyShare": 0.45,
     "shopsPerRun": 1.375,
     "fillerRoomsPerRun": { "gold": 0.25, "maxHealth": 0.625, "maxMagick": 0.5, "pom": 1 },
-    "msMedian": 1721,
-    "msMax": 1948
+    "msMedian": 1755,
+    "msMax": 1961
   },
   "F6 heavy alt": {
     "runs": 8,
@@ -668,8 +668,8 @@
     "godEarlyShare": 0.409,
     "shopsPerRun": 4.875,
     "fillerRoomsPerRun": { "gold": 1, "maxHealth": 0.875, "maxMagick": 1.25, "pom": 2.125 },
-    "msMedian": 7725,
-    "msMax": 8566
+    "msMedian": 8018,
+    "msMax": 9174
   },
   "U10 light 1 god prefix 1": {
     "runs": 8,
@@ -689,8 +689,8 @@
     "godEarlyShare": 0.522,
     "shopsPerRun": 1.5,
     "fillerRoomsPerRun": { "gold": 0.25, "maxHealth": 0.625, "maxMagick": 0.375, "pom": 0.625 },
-    "msMedian": 1742,
-    "msMax": 2594
+    "msMedian": 1905,
+    "msMax": 2897
   },
   "U11 medium 2 gods prefix 2": {
     "runs": 8,
@@ -710,8 +710,8 @@
     "godEarlyShare": 0.294,
     "shopsPerRun": 2.375,
     "fillerRoomsPerRun": { "gold": 0.25, "maxHealth": 0.25, "maxMagick": 0.25, "pom": 0.25 },
-    "msMedian": 3401,
-    "msMax": 4002
+    "msMedian": 3609,
+    "msMax": 3809
   },
   "S11 light 2 gods prefix 1": {
     "runs": 8,
@@ -731,8 +731,8 @@
     "godEarlyShare": 0.316,
     "shopsPerRun": 1,
     "fillerRoomsPerRun": { "maxHealth": 0.625, "maxMagick": 0.875 },
-    "msMedian": 1175,
-    "msMax": 1314
+    "msMedian": 1209,
+    "msMax": 1439
   },
   "S12 light 1 god prefix 1": {
     "runs": 8,
@@ -752,8 +752,8 @@
     "godEarlyShare": 0.667,
     "shopsPerRun": 1,
     "fillerRoomsPerRun": { "maxHealth": 0.875, "maxMagick": 0.625, "pom": 0.125 },
-    "msMedian": 1208,
-    "msMax": 1313
+    "msMedian": 1288,
+    "msMax": 1312
   },
   "D8 light 2 gods prefix 3": {
     "runs": 8,
@@ -773,8 +773,8 @@
     "godEarlyShare": 0.31,
     "shopsPerRun": 3.5,
     "fillerRoomsPerRun": { "gold": 0.25, "maxHealth": 1.125, "maxMagick": 0.875, "pom": 0.625 },
-    "msMedian": 5489,
-    "msMax": 6131
+    "msMedian": 6004,
+    "msMax": 6507
   },
   "F7 light 1 god prefix 1": {
     "runs": 8,
@@ -794,8 +794,8 @@
     "godEarlyShare": 0.528,
     "shopsPerRun": 1.5,
     "fillerRoomsPerRun": { "gold": 0.375, "maxHealth": 0.875, "maxMagick": 0.25, "pom": 1 },
-    "msMedian": 1641,
-    "msMax": 1820
+    "msMedian": 1634,
+    "msMax": 1768
   },
   "U3 heavy Hermes Artemis trait midshops": {
     "runs": 8,
@@ -815,8 +815,8 @@
     "godEarlyShare": 0.263,
     "shopsPerRun": 4.25,
     "fillerRoomsPerRun": { "gold": 0.375, "maxHealth": 0.75, "maxMagick": 0.375, "pom": 0.5 },
-    "msMedian": 7594,
-    "msMax": 12062
+    "msMedian": 8227,
+    "msMax": 13350
   },
   "U6 medium Hammer prefix 2 midshops": {
     "runs": 8,
@@ -836,8 +836,8 @@
     "godEarlyShare": 0.298,
     "shopsPerRun": 2.25,
     "fillerRoomsPerRun": { "gold": 0.375, "maxHealth": 0.625, "maxMagick": 0.625, "pom": 0.75 },
-    "msMedian": 3479,
-    "msMax": 3727
+    "msMedian": 3618,
+    "msMax": 4004
   },
   "S2 medium Hermes Hammer Selene Heracles midshops": {
     "runs": 8,
@@ -846,19 +846,19 @@
     "orderInversionRuns": 0,
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 1,
-    "essencesPerRun": 3,
+    "essencesPerRun": 3.125,
     "purchasesPerRun": { "BlindBoxLoot": 1.75, "boon": 0.625 },
     "attemptsMedian": 4,
     "depthSpread": 2.362,
     "depthDistinct": 4.636,
-    "godRoomsPerBiome": 1.906,
-    "godGapMean": 2.278,
+    "godRoomsPerBiome": 1.844,
+    "godGapMean": 2.235,
     "godGapMax": 3.625,
-    "godEarlyShare": 0.197,
+    "godEarlyShare": 0.203,
     "shopsPerRun": 6,
-    "fillerRoomsPerRun": { "gold": 0.875, "maxHealth": 1.125, "maxMagick": 1.25, "pom": 0.375 },
-    "msMedian": 7498,
-    "msMax": 8306
+    "fillerRoomsPerRun": { "gold": 0.875, "maxHealth": 1.125, "maxMagick": 1.375, "pom": 0.375 },
+    "msMedian": 8144,
+    "msMax": 9242
   },
   "D3 heavy Hermes Artemis trait midshops": {
     "runs": 8,
@@ -878,8 +878,8 @@
     "godEarlyShare": 0.235,
     "shopsPerRun": 4.25,
     "fillerRoomsPerRun": { "maxHealth": 0.875, "maxMagick": 1, "pom": 0.25 },
-    "msMedian": 8481,
-    "msMax": 10527
+    "msMedian": 8947,
+    "msMax": 11019
   },
   "F3 heavy midshops": {
     "runs": 8,
@@ -891,16 +891,16 @@
     "essencesPerRun": 0,
     "purchasesPerRun": { "boon": 4 },
     "attemptsMedian": 4,
-    "depthSpread": 1.815,
+    "depthSpread": 1.793,
     "depthDistinct": 4.357,
-    "godRoomsPerBiome": 2.5,
-    "godGapMean": 1.837,
+    "godRoomsPerBiome": 2.531,
+    "godGapMean": 1.804,
     "godGapMax": 2.875,
-    "godEarlyShare": 0.388,
+    "godEarlyShare": 0.383,
     "shopsPerRun": 5.5,
-    "fillerRoomsPerRun": { "gold": 1.75, "maxHealth": 0.75, "maxMagick": 1.75, "pom": 1.375 },
-    "msMedian": 7427,
-    "msMax": 7940
+    "fillerRoomsPerRun": { "gold": 1.75, "maxHealth": 0.625, "maxMagick": 1.625, "pom": 1.375 },
+    "msMedian": 8083,
+    "msMax": 9126
   },
   "U1 light Artemis tartarus": {
     "runs": 8,
@@ -920,8 +920,8 @@
     "godEarlyShare": 0.313,
     "shopsPerRun": 4.625,
     "fillerRoomsPerRun": { "gold": 0.25, "maxHealth": 0.625, "maxMagick": 0.875, "pom": 1.125 },
-    "msMedian": 6498,
-    "msMax": 7810
+    "msMedian": 6662,
+    "msMax": 8360
   },
   "U3 heavy Hermes Artemis trait tartarus": {
     "runs": 8,
@@ -941,8 +941,8 @@
     "godEarlyShare": 0.316,
     "shopsPerRun": 4.25,
     "fillerRoomsPerRun": { "gold": 0.25, "maxHealth": 0.875, "maxMagick": 0.625, "pom": 0.875 },
-    "msMedian": 7378,
-    "msMax": 10306
+    "msMedian": 7481,
+    "msMax": 10769
   },
   "U4 medium Forfeit tartarus": {
     "runs": 8,
@@ -962,8 +962,8 @@
     "godEarlyShare": 0.272,
     "shopsPerRun": 4.375,
     "fillerRoomsPerRun": { "maxHealth": 0.5, "maxMagick": 0.875, "pom": 0.25 },
-    "msMedian": 7266,
-    "msMax": 8498
+    "msMedian": 7929,
+    "msMax": 8709
   },
   "D1 light tartarus": {
     "runs": 8,
@@ -983,8 +983,8 @@
     "godEarlyShare": 0.278,
     "shopsPerRun": 4.25,
     "fillerRoomsPerRun": { "gold": 0.125, "maxHealth": 1, "maxMagick": 0.375, "pom": 0.75 },
-    "msMedian": 6813,
-    "msMax": 7719
+    "msMedian": 7341,
+    "msMax": 7923
   },
   "D3 heavy Hermes Artemis trait tartarus": {
     "runs": 8,
@@ -1009,8 +1009,8 @@
     "godEarlyShare": 0.246,
     "shopsPerRun": 4.25,
     "fillerRoomsPerRun": { "maxHealth": 0.875, "maxMagick": 1, "pom": 0.25 },
-    "msMedian": 8075,
-    "msMax": 9827
+    "msMedian": 8474,
+    "msMax": 10066
   },
   "D4 medium Forfeit tartarus": {
     "runs": 8,
@@ -1030,8 +1030,8 @@
     "godEarlyShare": 0.254,
     "shopsPerRun": 4.375,
     "fillerRoomsPerRun": { "gold": 0.125, "maxHealth": 0.375, "maxMagick": 1.125, "pom": 0.75 },
-    "msMedian": 6027,
-    "msMax": 7017
+    "msMedian": 6422,
+    "msMax": 7529
   },
   "U8 heavy 2 Duos tartarus": {
     "runs": 8,
@@ -1051,8 +1051,8 @@
     "godEarlyShare": 0.329,
     "shopsPerRun": 4.25,
     "fillerRoomsPerRun": { "maxHealth": 0.625, "maxMagick": 0.25, "pom": 0.125 },
-    "msMedian": 6115,
-    "msMax": 7107
+    "msMedian": 6729,
+    "msMax": 7635
   },
   "F3 heavy tartarus": {
     "runs": 8,
@@ -1062,18 +1062,18 @@
     "orderInversionsMedian": 0,
     "elementDeferredRuns": 0,
     "essencesPerRun": 0,
-    "purchasesPerRun": { "boon": 4.375 },
+    "purchasesPerRun": { "boon": 4.75 },
     "attemptsMedian": 4,
-    "depthSpread": 1.835,
-    "depthDistinct": 3.929,
-    "godRoomsPerBiome": 2.344,
-    "godGapMean": 1.612,
-    "godGapMax": 2.75,
-    "godEarlyShare": 0.453,
-    "shopsPerRun": 5,
-    "fillerRoomsPerRun": { "gold": 1, "maxHealth": 0.5, "maxMagick": 1.25, "pom": 1.25 },
-    "msMedian": 6584,
-    "msMax": 6933
+    "depthSpread": 1.786,
+    "depthDistinct": 4.143,
+    "godRoomsPerBiome": 2.313,
+    "godGapMean": 1.681,
+    "godGapMax": 3,
+    "godEarlyShare": 0.459,
+    "shopsPerRun": 5.125,
+    "fillerRoomsPerRun": { "gold": 1, "maxHealth": 0.5, "maxMagick": 1.375, "pom": 1.125 },
+    "msMedian": 7011,
+    "msMax": 7547
   },
   "U1 light Artemis filler": {
     "runs": 8,
@@ -1102,8 +1102,8 @@
     "godEarlyShare": 0.362,
     "shopsPerRun": 4.625,
     "fillerRoomsPerRun": { "gold": 0.75, "maxHealth": 3, "maxMagick": 0.75, "pom": 1.875 },
-    "msMedian": 5661,
-    "msMax": 7343
+    "msMedian": 5939,
+    "msMax": 7474
   },
   "S2 medium Hermes Hammer Selene Heracles filler amounts": {
     "runs": 8,
@@ -1122,16 +1122,16 @@
       "boon": 1.375
     },
     "attemptsMedian": 4,
-    "depthSpread": 2.444,
-    "depthDistinct": 4.909,
-    "godRoomsPerBiome": 1.563,
-    "godGapMean": 2.44,
+    "depthSpread": 2.449,
+    "depthDistinct": 5,
+    "godRoomsPerBiome": 1.656,
+    "godGapMean": 2.481,
     "godGapMax": 3.5,
-    "godEarlyShare": 0.2,
+    "godEarlyShare": 0.17,
     "shopsPerRun": 4.5,
-    "fillerRoomsPerRun": { "gold": 1.5, "maxHealth": 1.875, "maxMagick": 1, "pom": 1.25 },
-    "msMedian": 6521,
-    "msMax": 7668
+    "fillerRoomsPerRun": { "gold": 1.875, "maxHealth": 1.875, "maxMagick": 0.875, "pom": 1.25 },
+    "msMedian": 7245,
+    "msMax": 8248
   },
   "D1 light filler shops": {
     "runs": 8,
@@ -1161,7 +1161,7 @@
     "godEarlyShare": 0.273,
     "shopsPerRun": 4.375,
     "fillerRoomsPerRun": { "gold": 0.5, "maxHealth": 1.625, "maxMagick": 1.375, "pom": 1.375 },
-    "msMedian": 6637,
-    "msMax": 7531
+    "msMedian": 6758,
+    "msMax": 7930
   }
 }
