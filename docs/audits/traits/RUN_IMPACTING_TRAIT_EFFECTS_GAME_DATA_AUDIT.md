@@ -310,7 +310,8 @@ pickup or player choice at the threshold.
 
 Steady Growth retains interval progress in derived trait history and advances
 at qualifying encounter-end-effect checkpoints. At each threshold, the
-selected eligible rarity target is the authored random outcome; applying that
+selected eligible rarity target is the authored random outcome, stored as a
+[timed outcome](../../design/TRAIT_OFFERS.md#timed-outcomes); applying that
 result is forced and automatic. Existing rarity replacement semantics own the
 actual Common-to-Rare, Rare-to-Epic, or Epic-to-Heroic change.
 

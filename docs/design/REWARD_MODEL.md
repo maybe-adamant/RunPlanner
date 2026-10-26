@@ -909,9 +909,8 @@ detail and no copied Shop or source payload state.
 Only equip outcomes are persisted beneath a keepsake selection. Jeweled Pom,
 Experimental Hammer and Transcendent Embryo use one closed
 `KeepsakeEquipResultAddress` family with effect-specific complete children; the
-Embryo's later transformations, each a blessing and complete operand map, sit
-beside its marked blessing as `transcendentEmbryoTransformations` keyed by cycle
-from 1 and apply where each cycle lands.
+Embryo's later transformations are
+[timed outcomes](TRAIT_OFFERS.md#timed-outcomes) beside its marked blessing.
 The result is reached on start or replacement. A route-start result is dormant
 while another starting keepsake is selected; a rack result does not survive a
 change of the rack's keepsake. Calling Card row actions stay on their exact

@@ -916,17 +916,18 @@ extension joins this ordered closure rather than adding a second scheduler or
 replaying candidate evaluation; command tests own atomic insertion, retraction,
 compatible retention and Undo.
 
-Automatic timed outcomes live on their source and are keyed by cycle from 1:
-a trait offer that gives Steady Growth owns `steadyGrowthTargets`, and the
-selection that installs the Transcendent Embryo owns
-`transcendentEmbryoTransformations` in its equip results. Their landing is
-derived, so a timing shift moves an outcome without an edit. Hermes deliveries
-and clocked pickups are likewise keyed by their source. Room replacement and
-other unrelated edits therefore retain all of them; edit settlement resets no
-inherited choice, and one that is invalid where it lands keeps its finding.
-Only a changed purchase or a moved due contact re-places a Hermes delivery
-without its old payload. Vanished structural phases are removed under the
-existing codec and remain recoverable through Undo.
+Steady Growth targets (`steadyGrowthTargets` on the giving trait offer) and
+Embryo blessings (`transcendentEmbryoTransformations` in the installing
+keepsake selection's equip results) are
+[timed outcomes](TRAIT_OFFERS.md#timed-outcomes), edited by
+`ReplaceSteadyGrowthTarget` and `ReplaceTranscendentEmbryoTransformation` at
+one source and cycle. Hermes deliveries and clocked pickups are likewise keyed
+by their source. Room replacement and other unrelated edits therefore retain
+all of them; edit settlement resets no inherited choice, and one that is
+invalid where it lands keeps its finding. Only a changed purchase or a moved
+due contact re-places a Hermes delivery without its old payload. Vanished
+structural phases are removed under the existing codec and remain recoverable
+through Undo.
 
 `UnplaceGeneratedDelivery` removes an exact cross-room Shrine delivery action
 and its host-local payload, including nested reward choices, while preserving
