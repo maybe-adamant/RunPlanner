@@ -916,19 +916,17 @@ extension joins this ordered closure rather than adding a second scheduler or
 replaying candidate evaluation; command tests own atomic insertion, retraction,
 compatible retention and Undo.
 
-Room replacement retains structurally representable Hermes and clocked-pickup
-payloads and automatic Steady Growth/Embryo phase choices. This is provisional
-retention, not a timing equivalence claim. Exact edit settlement compares the
-effect-owned source, cycle, progress and lifecycle contact across reached
-cohorts; unknown or mixed current evidence cannot justify erasure. Once current
-evidence agrees, inherited choices without established prior correspondence
-reset, including suffix choices revealed by a later blocker repair. This
-conservative fallback can lose choices even when clocks did not change; Undo
-restores them. The exact outcome or pickup child authored by the current
-command is protected. Retained unranked Hermes payload follows the same rule;
-placing an action does not author its nested choices. Vanished structural
-phases are removed under the existing codec and remain recoverable through
-Undo.
+Automatic timed outcomes live on their source and are keyed by cycle from 1:
+a trait offer that gives Steady Growth owns `steadyGrowthTargets`, and the
+selection that installs the Transcendent Embryo owns
+`transcendentEmbryoTransformations` in its equip results. Their landing is
+derived, so a timing shift moves an outcome without an edit. Hermes deliveries
+and clocked pickups are likewise keyed by their source. Room replacement and
+other unrelated edits therefore retain all of them; edit settlement resets no
+inherited choice, and one that is invalid where it lands keeps its finding.
+Only a changed purchase or a moved due contact re-places a Hermes delivery
+without its old payload. Vanished structural phases are removed under the
+existing codec and remain recoverable through Undo.
 
 `UnplaceGeneratedDelivery` removes an exact cross-room Shrine delivery action
 and its host-local payload, including nested reward choices, while preserving

@@ -138,12 +138,15 @@ independently authored finding destination. A blocked Natural Selection child
 retains the pre-offer candidate capability for both prefix editing and the
 owning offer's complete-draft assessment.
 
-Steady Growth persists only reached random targets: ordinary occurrences,
-including Boss occurrences, use a sparse `steadyGrowthTargetByPhase` map. A
-missing target is unresolved only at a reached nonempty threshold; an empty
-target domain is a derived no-op. The semantic `ReplaceSteadyGrowthTarget`
-command owns one exact phase/contact and preserves retained invalid known keys
-for repair. Progress and threshold settlement are derived from trait history.
+Steady Growth's random targets live on the offer that gives it, as a sparse
+`steadyGrowthTargets` map keyed by cycle from 1: the selected row, its Echo
+Boon Boon Boon pick or its Concave Stone residual, which matures like any other
+acquisition. Each instance counts its own cycles, and the simulation applies a
+cycle's target where that cycle lands. A missing target is unresolved only at a
+reached nonempty threshold; an empty target domain is a derived no-op. The
+semantic `ReplaceSteadyGrowthTarget` command owns one exact source and cycle
+and preserves retained invalid known keys for repair. Progress and threshold
+settlement are derived from trait history.
 
 ### Encounter-owned offers
 
