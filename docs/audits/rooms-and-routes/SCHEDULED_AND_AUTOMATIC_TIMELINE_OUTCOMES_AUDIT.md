@@ -265,20 +265,18 @@ Planner disposition for the lifecycle seams these effects consume:
   rows may interleave with other pickups permitted in that interval, and
   acquiring one can never affect an automatic outcome of the checkpoint that
   created it.
-- The advancement seams also return compact correspondence evidence for edit
-  settlement: source acquisition, cycle, progress and applicable deferral, with
-  every input cohort represented. These facts travel through the chronology
-  product into lifecycle artifacts under the same blocking coverage. They
-  observe the existing clocks without advancing another, and never treat
-  matching phase names as timing equivalence. A missing later contact is
-  unknown unless reached room exit proves it absent.
+- Every reached branch must land a given cycle at the same encounter, since
+  the authored path to it is deterministic; a disagreement is an engine
+  contract fault, not a finding.
 
 ### Exact semantic ownership
 
 Every reached random result has one semantic owner independent of rendered
 position:
 
-- Steady Growth and Embryo use occurrence plus encounter phase;
+- Steady Growth uses the trait offer that gives it plus a cycle counted per
+  instance, and Embryo the keepsake selection that installs it plus a cycle;
+  the occurrence and phase where the cycle lands are derived;
 - Judgment and Figurine use occurrence plus boss phase;
 - Supply Chain uses the producing trait acquisition identity, pickup key,
   maturity occurrence, and phase; and

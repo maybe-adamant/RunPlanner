@@ -82,27 +82,25 @@ plans are ordinary results. Malformed input, impossible catalog construction
 and violated internal contacts throw contract errors rather than masquerading
 as user findings.
 
-`settleProjectEdit` composes a structural command with exact timed-effect
-reconciliation and derived required-action activation before application
-history publication. It consumes the before assembly and returns the final
-project and its exact assembly.
+`settleProjectEdit` composes a structural command with exact delivery and
+pickup reconciliation and derived required-action activation before
+application history publication. It consumes the before assembly and returns
+the final project and its exact assembly.
 
 - Required Hermes obligations are inserted at reached due contacts read from
   the Hermes delivery obligation product; optional clocked pickups are never
   accepted automatically.
-- Proven displaced payload and automatic outcomes are reset, while unassessed
-  representable authorship is retained. When a later edit reaches inherited
-  timed-effect choices, agreeing current evidence without established prior
-  correspondence also resets them; the choice authored by that edit is
-  protected. A delivery already ranked at its exact due host and phase with an
-  unchanged obligation has that correspondence and is retained when first
-  reached.
+- A placement the edit proves displaced (valid before, invalid now) is
+  removed. Timed outcomes, deliveries and clocked pickups are keyed by their
+  source, so no inherited choice is reset for being newly reached; one that is
+  invalid where it lands keeps its finding.
 - Each repair consumes an explicit obligation or displaced owner. A repeated
   repair is not replayed: settlement stops and returns the last evaluated
-  assembly with a settlement fault naming the owner. A fault signals an engine
-  defect, not an authoring task: the application publishes it beside the
-  assembly, never as an editor finding; dev builds warn in the console and bug
-  reports carry the current one.
+  assembly with a settlement fault naming the owner. Reached branches that
+  land one timed-outcome cycle at different encounters are also reported as a
+  fault. A fault signals an engine defect, not an authoring task: the
+  application publishes it beside the assembly, never as an editor finding;
+  dev builds warn in the console and bug reports carry the current one.
 
 ```mermaid
 sequenceDiagram
