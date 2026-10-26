@@ -11,6 +11,7 @@ import type {
 import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
+  SteadyGrowthSource,
 } from '../../authored-project/traits/state';
 import type { SimulationState } from '../state/model';
 import type {
@@ -766,6 +767,7 @@ export function recordReachedTraitOffer(
   acquisitionIdentity?: string,
   echoRepeatedKeepsakeKey?: string,
   eventKind: 'traitOffer' | 'concaveStoneSecondary' = 'traitOffer',
+  steadyGrowthSource?: SteadyGrowthSource,
 ): {
   readonly history: TraitHistoryState;
   readonly event?: TraitOfferEvent | import('./history/model').ConcaveStoneSecondaryEvent;
@@ -874,6 +876,12 @@ export function recordReachedTraitOffer(
       : {}),
     ...(eventKind === 'traitOffer' && echoRepeatedKeepsakeKey !== undefined
       ? { echoRepeatedKeepsakeKey }
+      : {}),
+    ...(eventKind === 'traitOffer' &&
+    acquisitionIdentity !== undefined &&
+    steadyGrowthSource !== undefined &&
+    selectedDisposition.kind === 'steadyGrowth'
+      ? { steadyGrowthSource }
       : {}),
     ...(bannedTraitKeys === undefined ? {} : { bannedTraitKeys }),
     ...(selectedAssessment?.replacementTransition === undefined

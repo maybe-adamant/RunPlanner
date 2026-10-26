@@ -17,7 +17,6 @@ import { applyHexActivationCommand } from './acquisition/hex-activation';
 import { applySeaStarResultCommand } from './acquisition/sea-star';
 import { applyJudgmentArcanaCommand } from './judgment-arcana';
 import { applyFigurineArcanaCommand } from './figurine-arcana';
-import { applySteadyGrowthCommand } from './steady-growth';
 import { applyKeepsakeCommand } from './keepsake';
 import { applyResourcePlacementCommand } from './resources';
 import type { ProjectCommand } from './types';
@@ -262,6 +261,7 @@ function applyUnchecked(
     case 'ReplaceGorgonAthenaOffer':
     case 'ReplaceTraitSelection':
     case 'ReplaceConcaveStoneResult':
+    case 'ReplaceSteadyGrowthTarget':
       return applyTraitOfferCommand(
         document,
         catalog,
@@ -312,13 +312,6 @@ function applyUnchecked(
       );
     case 'ReplaceFigurineArcana':
       return applyFigurineArcanaCommand(
-        document,
-        catalog,
-        locateBiome(document, catalog, command),
-        command,
-      );
-    case 'ReplaceSteadyGrowthTarget':
-      return applySteadyGrowthCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

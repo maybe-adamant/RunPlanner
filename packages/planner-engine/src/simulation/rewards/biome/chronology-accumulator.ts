@@ -35,6 +35,13 @@ import {
 import type { ReachedLevelResolutionEvaluation, TraitOfferCandidateContext } from '../../traits';
 import { traitOfferContextIdentity } from '../../traits';
 import type { ReachedSteadyGrowthThreshold } from '../../traits/history/transitions';
+import type { AutomaticOutcomeLanding } from '../model';
+
+/** An automatic outcome with the encounter end its cycle reached. */
+export interface LandedOutcome<Address> {
+  readonly address: Address;
+  readonly landing: AutomaticOutcomeLanding;
+}
 import type {
   AcquisitionRoleFrontier,
   FixedAcquisitionRealization,
@@ -203,6 +210,7 @@ export type ChronologyEmission =
       readonly kind: 'steadyGrowthThresholds';
       readonly thresholds: readonly {
         readonly address: SteadyGrowthOutcomeAddress;
+        readonly landing: AutomaticOutcomeLanding;
         readonly threshold: ReachedSteadyGrowthThreshold;
       }[];
     }
@@ -210,6 +218,7 @@ export type ChronologyEmission =
       readonly kind: 'transcendentEmbryoThresholds';
       readonly thresholds: readonly {
         readonly address: TranscendentEmbryoOutcomeAddress;
+        readonly landing: AutomaticOutcomeLanding;
         readonly threshold: ReachedTranscendentEmbryoThreshold;
       }[];
     }
@@ -265,14 +274,17 @@ export interface ChronologyAccumulation {
     string,
     readonly ReachedSteadyGrowthThreshold[]
   >;
-  readonly steadyGrowthOutcomeAddresses: ReadonlyMap<string, SteadyGrowthOutcomeAddress>;
+  readonly steadyGrowthOutcomeAddresses: ReadonlyMap<
+    string,
+    LandedOutcome<SteadyGrowthOutcomeAddress>
+  >;
   readonly transcendentEmbryoCandidateContexts: ReadonlyMap<
     string,
     readonly ReachedTranscendentEmbryoThreshold[]
   >;
   readonly transcendentEmbryoOutcomeAddresses: ReadonlyMap<
     string,
-    TranscendentEmbryoOutcomeAddress
+    LandedOutcome<TranscendentEmbryoOutcomeAddress>
   >;
   readonly fountainRarityCandidateContexts: ReadonlyMap<string, FountainRarityCandidateCapability>;
 }
@@ -413,13 +425,16 @@ export function createChronologyAccumulator(
   const figurineArcanaContexts = new Map<string, FigurineArcanaCandidateCapability>();
   const bossArcanaOutcomes = new Map<string, BossArcanaOutcome>();
   const steadyGrowthCandidateContexts = new Map<string, ReachedSteadyGrowthThreshold[]>();
-  const steadyGrowthOutcomeAddresses = new Map<string, SteadyGrowthOutcomeAddress>();
+  const steadyGrowthOutcomeAddresses = new Map<string, LandedOutcome<SteadyGrowthOutcomeAddress>>();
   const latestSteadyGrowthOutcomes = new Map<string, SteadyGrowthOutcomeAddress>();
   const transcendentEmbryoCandidateContexts = new Map<
     string,
     ReachedTranscendentEmbryoThreshold[]
   >();
-  const transcendentEmbryoOutcomeAddresses = new Map<string, TranscendentEmbryoOutcomeAddress>();
+  const transcendentEmbryoOutcomeAddresses = new Map<
+    string,
+    LandedOutcome<TranscendentEmbryoOutcomeAddress>
+  >();
   const fountainRarityCandidateContexts = new Map<string, FountainRarityCandidateCapability>();
 
   function recordTimelineNode(owner: SemanticAddress, included: boolean): void {
@@ -825,19 +840,19 @@ export function createChronologyAccumulator(
           bossArcanaOutcomes.set(semanticAddressKey(outcome.owner), outcome);
         return;
       case 'steadyGrowthThresholds':
-        for (const { address, threshold } of emission.thresholds) {
+        for (const { address, landing, threshold } of emission.thresholds) {
           const key = semanticAddressKey(address);
-          steadyGrowthOutcomeAddresses.set(key, address);
-          latestSteadyGrowthOutcomes.set(semanticAddressKey(address.owner), address);
+          steadyGrowthOutcomeAddresses.set(key, Object.freeze({ address, landing }));
+          latestSteadyGrowthOutcomes.set(semanticAddressKey(landing.owner), address);
           const current = steadyGrowthCandidateContexts.get(key) ?? [];
           current.push(threshold);
           steadyGrowthCandidateContexts.set(key, current);
         }
         return;
       case 'transcendentEmbryoThresholds':
-        for (const { address, threshold } of emission.thresholds) {
+        for (const { address, landing, threshold } of emission.thresholds) {
           const key = semanticAddressKey(address);
-          transcendentEmbryoOutcomeAddresses.set(key, address);
+          transcendentEmbryoOutcomeAddresses.set(key, Object.freeze({ address, landing }));
           const current = transcendentEmbryoCandidateContexts.get(key) ?? [];
           current.push(threshold);
           transcendentEmbryoCandidateContexts.set(key, current);

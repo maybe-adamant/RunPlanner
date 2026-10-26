@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createKeepsakeEquipResultAddress,
+  createTranscendentEmbryoOutcomeAddress,
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -37,7 +38,7 @@ const {
 } = fixture;
 
 describe('progressive finding ancestry and chronology', () => {
-  it('retains a blocking automatic Embryo outcome as an occurrence-owned repair product', () => {
+  it('retains a blocking automatic Embryo outcome as a source-owned repair where it lands', () => {
     const selection = createRouteStartKeepsakeSelectionAddress('Underworld');
     let project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
@@ -61,10 +62,12 @@ describe('progressive finding ancestry and chronology', () => {
     )
       throw new Error('missing Embryo fixture did not produce a blocked F prefix');
     const blockedAt = evaluation.coverage.blockedAt;
-    expect(blockedAt).toMatchObject({
-      kind: 'transcendentEmbryoOutcome',
-      biomeKey: 'F',
-    });
+    expect(blockedAt).toEqual(createTranscendentEmbryoOutcomeAddress(selection, 1));
+    const landing = evaluation.rewards.transcendentEmbryoOutcomes.find(
+      (outcome) => semanticAddressKey(outcome.address) === semanticAddressKey(blockedAt),
+    )?.owner;
+    expect(landing?.biomeKey).toBe('F');
+    expect(evaluation.requiredInputLocation?.roomOccurrenceId).toBe(landing?.occurrenceId);
     expect(evaluation.rewards.transcendentEmbryoOutcomes).toContainEqual(
       expect.objectContaining({
         address: expect.objectContaining({ kind: 'transcendentEmbryoOutcome' }),

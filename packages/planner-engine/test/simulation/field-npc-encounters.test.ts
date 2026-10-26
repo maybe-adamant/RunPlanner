@@ -23,13 +23,13 @@ import {
   createRewardWheelOfferAddress,
   createRoomRunStateCheckpointAddress,
   createRouteStartKeepsakeSelectionAddress,
-  createSteadyGrowthOutcomeAddress,
   semanticAddressKey,
   type BiomeAddress,
   type AuthoredTraitOffer,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+import { landedSteadyGrowthOutcome } from '../support/timed-outcomes';
 
 function authoredTraits(
   offer: AuthoredTraitOffer | null | undefined,
@@ -625,7 +625,6 @@ function createHeraclesCombatFixture(project: ProjectDocument) {
     selectedP,
   });
 }
-
 describe('field NPC encounter requirements', () => {
   const fNpcPhase = phase(goldenFBiome, goldenFOccurrenceId(5, 1));
   const gNpcPhase = phase(goldenGBiome, goldenGOccurrenceId(4, 1));
@@ -1074,7 +1073,7 @@ describe('field NPC encounter requirements', () => {
       },
     });
     const boss = createOccurrenceAddress(pBiome, createOccurrenceId('surface-p-preboss-shop:boss'));
-    const growthOutcome = createSteadyGrowthOutcomeAddress(boss, 'Encounter');
+    const growthOutcome = landedSteadyGrowthOutcome(project, boss, 'Encounter');
     const assembly = simulateProjectAssembly(catalog, project);
     expect(assembly.evaluation.findings).toEqual([
       expect.objectContaining({ code: 'steadyGrowthOutcomeMissing', origin: growthOutcome }),

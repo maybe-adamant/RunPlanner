@@ -117,6 +117,8 @@ export interface AuthoredTraitOfferTraits {
   readonly hexTree?: AuthoredHexTreeConfiguration;
   /** Ordered explicit Calling Card row actions; base option rarity remains rolled/authored. */
   readonly rarificationActions?: readonly TraitOptionKey[];
+  /** Sparse random target per interval of the Steady Growth this offer gives, keyed by cycle from 1. */
+  readonly steadyGrowthTargets?: Readonly<Record<string, string>>;
   /** Rejected keeps this exact generated row visible but unavailable. */
   readonly rejectedOptionKey?: TraitOptionKey;
   /** Concave Stone's post-primary frozen residual choice. */
@@ -190,6 +192,11 @@ export const TRAIT_OPTION_KEYS: readonly TraitOptionKey[] = Object.freeze([
   'option3',
 ]);
 
+export interface SteadyGrowthSource {
+  readonly trait: import('../addresses').TraitOfferAddress;
+  readonly targets: Readonly<Record<string, string>>;
+}
+
 export interface EquippedTrait {
   readonly traitKey: string;
   readonly giverKey: string;
@@ -214,6 +221,10 @@ export interface EquippedTrait {
   readonly echoKeepsakeReplayCount?: number;
   /** Derived retained credit for this exact Steady Growth acquisition. */
   readonly steadyGrowthProgress?: number;
+  /** Intervals this Steady Growth instance has reached. */
+  readonly steadyGrowthCycles?: number;
+  /** The authored offer that installed this Steady Growth and its cycle-keyed targets. */
+  readonly steadyGrowthSource?: SteadyGrowthSource;
   /** Derived `RoomsPerUpgrade` stat-growth credit, grants and acquisition-time amount. */
   readonly roomsPerUpgradeGrowth?: {
     readonly progress: number;
@@ -441,6 +452,57 @@ export function normalizeAuthoredTranscendentEmbryoOutcome(
       ? lastError.message
       : 'blessingValues are outside every declared Embryo rarity domain',
   );
+}
+
+/** Whether a cycle key is the canonical decimal form of a positive integer. */
+export function isOutcomeCycleKey(key: string): boolean {
+  return /^[1-9][0-9]*$/.test(key) && Number.isSafeInteger(Number(key));
+}
+
+/** Validates sparse cycle-keyed outcomes; integer-like keys enumerate in cycle order. */
+export function normalizeCycleOutcomes<Value>(
+  value: Readonly<Record<string, Value>>,
+  normalize: (entry: Value, cycle: string) => Value,
+): Readonly<Record<string, Value>> {
+  const result: Record<string, Value> = {};
+  for (const [cycle, entry] of Object.entries(value)) {
+    if (!isOutcomeCycleKey(cycle)) throw new Error(`cycle ${cycle} must be a positive integer`);
+    result[cycle] = normalize(entry, cycle);
+  }
+  return Object.freeze(result);
+}
+
+/**
+ * Whether this offer's acquisition installs Steady Growth: its selected row,
+ * that row's Echo Boon Boon Boon pick, or its Concave Stone residual.
+ */
+export function traitOfferGivesSteadyGrowth(catalog: Catalog, offer: AuthoredTraitOffer): boolean {
+  if (offer.kind !== 'traits') return false;
+  const isSteadyGrowth = (traitKey: string | undefined) =>
+    traitKey !== undefined &&
+    catalog.traits.byKey[traitKey]?.selectedDisposition.kind === 'steadyGrowth';
+  const selected = offer.options[optionIndex(offer.selectedOptionKey)];
+  const echo = selected?.echoLastRunBoon;
+  const residual =
+    offer.concaveStoneResult?.kind === 'proc'
+      ? offer.options[optionIndex(offer.concaveStoneResult.optionKey)]
+      : undefined;
+  return (
+    isSteadyGrowth(selected?.traitKey) ||
+    isSteadyGrowth(echo?.options[optionIndex(echo.selectedOptionKey)]?.traitKey) ||
+    isSteadyGrowth(residual?.traitKey)
+  );
+}
+
+export function normalizeSteadyGrowthTargets(
+  catalog: Catalog,
+  value: Readonly<Record<string, string>>,
+): Readonly<Record<string, string>> {
+  return normalizeCycleOutcomes(value, (traitKey, cycle) => {
+    if (typeof traitKey !== 'string' || catalog.traits.byKey[traitKey] === undefined)
+      throw new Error(`cycle ${cycle} must target a declared trait`);
+    return traitKey;
+  });
 }
 
 export function normalizeAuthoredChaosTraitOffer(

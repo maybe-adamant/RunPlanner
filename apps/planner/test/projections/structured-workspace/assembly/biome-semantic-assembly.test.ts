@@ -262,12 +262,14 @@ describe('structured workspace biome semantic assembly', () => {
       nBiome,
       createOccurrenceId('surface-n-preboss:boss'),
     );
-    const outcome = createSteadyGrowthOutcomeAddress(completion, 'Encounter');
-    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      kind: 'ReplaceSteadyGrowthTarget',
-      outcome,
-      targetTraitKey: 'ApolloWeaponBoon',
-    });
+    const outcome = createSteadyGrowthOutcomeAddress(
+      createTraitOfferAddress(
+        createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat23')),
+        'source',
+      ),
+      1,
+    );
+    const project = loadSurfaceNOPQProject();
     const source = biomeSource(project);
     if (source.evaluation === undefined || !('rewards' in source.evaluation))
       throw new Error('N evaluation has no rewards product');
@@ -276,8 +278,10 @@ describe('structured workspace biome semantic assembly', () => {
       steadyGrowthOutcomes: Object.freeze([
         Object.freeze({
           address: outcome,
+          owner: completion,
           sourceTraitKey: 'BoonGrowthBoon',
           phaseKey: 'Encounter',
+          targetTraitKey: 'ApolloWeaponBoon',
           requiredIntervals: Object.freeze([4]),
           progressBefore: Object.freeze([1]),
         }),

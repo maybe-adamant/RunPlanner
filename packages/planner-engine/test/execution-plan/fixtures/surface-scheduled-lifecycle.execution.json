@@ -1,8 +1,8 @@
 {
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
-  "schemaVersion": 98,
-  "schemaRevision": 1,
+  "schemaVersion": 99,
+  "schemaRevision": 0,
   "projectId": "surface-4",
   "routeKey": "Surface",
   "startingLoadout": {
@@ -2640,7 +2640,7 @@
                       "progress": 0,
                       "markedBlessingKey": "ChaosElementalBlessing",
                       "markedBlessingValues": {},
-                      "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"N\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat03\\\"]\",\"Encounter\"]:248"
+                      "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
                     },
                     "gorgon": null
                   },
@@ -4434,7 +4434,7 @@
         "transactions": [
           {
             "kind": "automatic",
-            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"N\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat03\\\"]\",\"Encounter\"]",
+            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]",
             "effect": "transcendentEmbryo",
             "phaseKey": "Encounter",
             "source": "ChaosWeaponBlessing",
@@ -4482,7 +4482,7 @@
         "dependencies": [],
         "obligations": [
           {
-            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"N\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat03\\\"]\",\"Encounter\"]",
+            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]",
             "checkpoint": "roomExit"
           }
         ]
@@ -4601,7 +4601,7 @@
                   "progress": 0,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"N\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat03\\\"]\",\"Encounter\"]:248"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
                 },
                 "gorgon": null
               },
@@ -4779,7 +4779,7 @@
                   "progress": 1,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"N\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat03\\\"]\",\"Encounter\"]:248"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
                 },
                 "gorgon": null
               },
@@ -4966,7 +4966,7 @@
                   "progress": 1,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"N\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat03\\\"]\",\"Encounter\"]:248"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
                 },
                 "gorgon": null
               },
@@ -5119,7 +5119,7 @@
           },
           {
             "kind": "automatic",
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-combat04\\\"]\",\"Combat1\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",1]",
             "effect": "steadyGrowth",
             "phaseKey": "Combat1",
             "source": "BoonGrowthBoon",
@@ -5164,7 +5164,7 @@
             "checkpoint": "exitUsable"
           },
           {
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-combat04\\\"]\",\"Combat1\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",1]",
             "checkpoint": "roomExit"
           }
         ]
@@ -5326,7 +5326,7 @@
                   "progress": 3,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"N\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat03\\\"]\",\"Encounter\"]:248"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
                 },
                 "gorgon": null
               },
@@ -5549,7 +5549,7 @@
                   "progress": 5,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"N\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat03\\\"]\",\"Encounter\"]:248"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
                 },
                 "gorgon": null
               },
@@ -5656,7 +5656,7 @@
           },
           {
             "kind": "automatic",
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-combat01\\\"]\",\"Combat1\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",2]",
             "effect": "steadyGrowth",
             "phaseKey": "Combat1",
             "source": "BoonGrowthBoon",
@@ -5680,7 +5680,7 @@
             "checkpoint": "exitUsable"
           },
           {
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-combat01\\\"]\",\"Combat1\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",2]",
             "checkpoint": "roomExit"
           }
         ]
@@ -5848,7 +5848,7 @@
                   "progress": 7,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"N\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"N\\\",\\\"surface-n-combat03\\\"]\",\"Encounter\"]:248"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
                 },
                 "gorgon": null
               },
@@ -5934,7 +5934,7 @@
           },
           {
             "kind": "automatic",
-            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"Encounter\"]",
+            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]",
             "effect": "transcendentEmbryo",
             "phaseKey": "Encounter",
             "source": "ChaosElementalBlessing",
@@ -5991,7 +5991,7 @@
         "dependencies": [],
         "obligations": [
           {
-            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"Encounter\"]",
+            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]",
             "checkpoint": "roomExit"
           }
         ]
@@ -6128,7 +6128,7 @@
                   "progress": 0,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"Encounter\"]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
                 },
                 "gorgon": null
               },
@@ -6507,7 +6507,7 @@
                   "progress": 2,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"Encounter\"]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
                 },
                 "gorgon": null
               },
@@ -6615,7 +6615,7 @@
         "transactions": [
           {
             "kind": "automatic",
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-preboss:boss\\\"]\",\"Encounter\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",3]",
             "effect": "steadyGrowth",
             "phaseKey": "Encounter",
             "source": "BoonGrowthBoon",
@@ -6626,7 +6626,7 @@
         "dependencies": [],
         "obligations": [
           {
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-preboss:boss\\\"]\",\"Encounter\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",3]",
             "checkpoint": "roomExit"
           }
         ]
@@ -6729,7 +6729,7 @@
                   "progress": 3,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"Encounter\"]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
                 },
                 "gorgon": null
               },
@@ -6916,7 +6916,7 @@
                   "progress": 3,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"Encounter\"]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
                 },
                 "gorgon": null
               },
@@ -7090,7 +7090,7 @@
                   "progress": 4,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"Encounter\"]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
                 },
                 "gorgon": null
               },
@@ -7410,7 +7410,7 @@
                   "progress": 5,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"Encounter\"]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
                 },
                 "gorgon": null
               },
@@ -7617,7 +7617,7 @@
                   "progress": 6,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"Encounter\"]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
                 },
                 "gorgon": null
               },
@@ -7658,7 +7658,7 @@
         "transactions": [
           {
             "kind": "automatic",
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-3-1-p_combat04\\\"]\",\"Combat\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",4]",
             "effect": "steadyGrowth",
             "phaseKey": "Combat",
             "source": "BoonGrowthBoon",
@@ -7699,7 +7699,7 @@
         "dependencies": [],
         "obligations": [
           {
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-3-1-p_combat04\\\"]\",\"Combat\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",4]",
             "checkpoint": "roomExit"
           }
         ]
@@ -7872,7 +7872,7 @@
                   "progress": 7,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"O\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"O\\\",\\\"surface-o-devotion\\\"]\",\"Encounter\"]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
                 },
                 "gorgon": null
               },
@@ -7913,7 +7913,7 @@
         "transactions": [
           {
             "kind": "automatic",
-            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-4-1-p_combat07\\\"]\",\"Combat\"]",
+            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]",
             "effect": "transcendentEmbryo",
             "phaseKey": "Combat",
             "source": "ChaosElementalBlessing",
@@ -7968,7 +7968,7 @@
         "dependencies": [],
         "obligations": [
           {
-            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-4-1-p_combat07\\\"]\",\"Combat\"]",
+            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]",
             "checkpoint": "roomExit"
           }
         ]
@@ -8146,7 +8146,7 @@
                   "progress": 0,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-4-1-p_combat07\\\"]\",\"Combat\"]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
                 },
                 "gorgon": null
               },
@@ -8412,7 +8412,7 @@
                   "progress": 1,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-4-1-p_combat07\\\"]\",\"Combat\"]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
                 },
                 "gorgon": null
               },
@@ -8623,7 +8623,7 @@
                   "progress": 2,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-4-1-p_combat07\\\"]\",\"Combat\"]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
                 },
                 "gorgon": null
               },
@@ -8847,7 +8847,7 @@
         "transactions": [
           {
             "kind": "automatic",
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-8-1-p_combat12\\\"]\",\"Combat\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",5]",
             "effect": "steadyGrowth",
             "phaseKey": "Combat",
             "source": "BoonGrowthBoon",
@@ -8888,7 +8888,7 @@
         "dependencies": [],
         "obligations": [
           {
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-8-1-p_combat12\\\"]\",\"Combat\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",5]",
             "checkpoint": "roomExit"
           }
         ]
@@ -9066,7 +9066,7 @@
                   "progress": 3,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-4-1-p_combat07\\\"]\",\"Combat\"]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
                 },
                 "gorgon": null
               },
@@ -9241,7 +9241,7 @@
                   "progress": 4,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-4-1-p_combat07\\\"]\",\"Combat\"]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
                 },
                 "gorgon": null
               },
@@ -9494,7 +9494,7 @@
                   "progress": 5,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-4-1-p_combat07\\\"]\",\"Combat\"]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
                 },
                 "gorgon": null
               },
@@ -9662,7 +9662,7 @@
                   "progress": 6,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-4-1-p_combat07\\\"]\",\"Combat\"]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
                 },
                 "gorgon": null
               },
@@ -9703,7 +9703,7 @@
         "transactions": [
           {
             "kind": "automatic",
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"Q\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"Q\\\",\\\"surface-q-first-miniboss-1\\\"]\",\"Encounter\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",6]",
             "effect": "steadyGrowth",
             "phaseKey": "Encounter",
             "source": "BoonGrowthBoon",
@@ -9768,7 +9768,7 @@
         "dependencies": [],
         "obligations": [
           {
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"Q\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"Q\\\",\\\"surface-q-first-miniboss-1\\\"]\",\"Encounter\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",6]",
             "checkpoint": "roomExit"
           }
         ]
@@ -9887,7 +9887,7 @@
                   "progress": 7,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"P\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"P\\\",\\\"surface-p-4-1-p_combat07\\\"]\",\"Combat\"]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
                 },
                 "gorgon": null
               },
@@ -9922,7 +9922,7 @@
         "transactions": [
           {
             "kind": "automatic",
-            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"Q\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"Q\\\",\\\"surface-q-ordinary\\\"]\",\"Encounter\"]",
+            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]",
             "effect": "transcendentEmbryo",
             "phaseKey": "Encounter",
             "source": "ChaosElementalBlessing",
@@ -9935,7 +9935,7 @@
         "dependencies": [],
         "obligations": [
           {
-            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"Q\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"Q\\\",\\\"surface-q-ordinary\\\"]\",\"Encounter\"]",
+            "owner": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]",
             "checkpoint": "roomExit"
           }
         ]
@@ -10010,7 +10010,7 @@
                   "progress": 0,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"Q\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"Q\\\",\\\"surface-q-ordinary\\\"]\",\"Encounter\"]:774"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]:774"
                 },
                 "gorgon": null
               },
@@ -10176,7 +10176,7 @@
                   "progress": 1,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"Q\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"Q\\\",\\\"surface-q-ordinary\\\"]\",\"Encounter\"]:774"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]:774"
                 },
                 "gorgon": null
               },
@@ -10368,7 +10368,7 @@
                   "progress": 2,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"Q\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"Q\\\",\\\"surface-q-ordinary\\\"]\",\"Encounter\"]:774"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]:774"
                 },
                 "gorgon": null
               },
@@ -10489,7 +10489,7 @@
         "transactions": [
           {
             "kind": "automatic",
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"Q\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"Q\\\",\\\"surface-q-preboss:boss\\\"]\",\"Encounter\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",7]",
             "effect": "steadyGrowth",
             "phaseKey": "Encounter",
             "source": "BoonGrowthBoon",
@@ -10500,7 +10500,7 @@
         "dependencies": [],
         "obligations": [
           {
-            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"Q\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"Q\\\",\\\"surface-q-preboss:boss\\\"]\",\"Encounter\"]",
+            "owner": "[\"steadyGrowthOutcome\",\"Surface\",\"N\",\"[\\\"traitOffer\\\",\\\"Surface\\\",\\\"N\\\",\\\"[\\\\\\\"incomingReward\\\\\\\",\\\\\\\"Surface\\\\\\\",\\\\\\\"N\\\\\\\",\\\\\\\"surface-n-combat23\\\\\\\"]\\\",\\\"source\\\"]\",7]",
             "checkpoint": "roomExit"
           }
         ]
@@ -10600,7 +10600,7 @@
                   "progress": 3,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"Q\",\"[\\\"occurrence\\\",\\\"Surface\\\",\\\"Q\\\",\\\"surface-q-ordinary\\\"]\",\"Encounter\"]:774"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]:774"
                 },
                 "gorgon": null
               },
@@ -11015,5 +11015,5 @@
       }
     }
   ],
-  "planFingerprint": "8a6357a4"
+  "planFingerprint": "21c6264a"
 }

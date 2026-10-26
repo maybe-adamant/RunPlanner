@@ -53,8 +53,6 @@ export function traitOfferRoomOccurrence(address: SemanticAddress): OccurrenceAd
     case 'traitOffer':
     case 'acquisitionRole':
     case 'levelResolution':
-    case 'steadyGrowthOutcome':
-    case 'transcendentEmbryoOutcome':
       return traitOfferRoomOccurrence(address.owner);
     case 'fountainRarityOutcome':
       return traitOfferRoomOccurrence(address.action);

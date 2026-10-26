@@ -436,6 +436,7 @@ export function applyKeepsakeRackUsedTransition(
                     transition.branch,
                     keepsakeKey,
                     rack.equipResults.transcendentEmbryo,
+                    rack.equipResults.transcendentEmbryoTransformations,
                     createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo'),
                     event.sequence,
                     'ordinary',

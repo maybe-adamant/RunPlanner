@@ -56,8 +56,13 @@ type TimelineDependencyEndpoint =
   /** An owner outside this room, ordered by route order. */
   | 'otherRoom';
 
-/** Owners outside every authored room: the Hub board, the route start and a biome's start. */
-type EndpointPlace = { readonly occurrenceId: string } | 'hub' | 'routeStart' | 'biomeStart';
+/**
+ * Owners outside every authored room: the Hub board, the route start and a
+ * biome's start. An automatic outcome is published only where its cycle lands,
+ * so one that is not a transaction here belongs to another room.
+ */
+type EndpointPlace =
+  { readonly occurrenceId: string } | 'hub' | 'routeStart' | 'biomeStart' | 'automaticOutcome';
 
 /** The room an endpoint belongs to, or undefined when its address names none. */
 function endpointPlace(owner: SemanticAddress): EndpointPlace | undefined {
@@ -79,6 +84,9 @@ function endpointPlace(owner: SemanticAddress): EndpointPlace | undefined {
       return endpointPlace(owner.selection);
     case 'echoKeepsakeReplay':
       return 'biomeStart';
+    case 'steadyGrowthOutcome':
+    case 'transcendentEmbryoOutcome':
+      return 'automaticOutcome';
     case 'fountainRarityOutcome':
       return endpointPlace(owner.action);
     case 'acquisitionEntry':
@@ -127,7 +135,7 @@ export function classifyTimelineDependencyEndpoint(
       : typeof place === 'object'
         ? place.occurrenceId
         : undefined;
-  if (place === 'hub' || place === 'routeStart') return 'otherRoom';
+  if (place === 'hub' || place === 'routeStart' || place === 'automaticOutcome') return 'otherRoom';
   if (occurrenceId !== undefined && occurrenceId !== room.occurrenceId) return 'otherRoom';
   if (
     occurrenceId === room.occurrenceId &&

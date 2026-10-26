@@ -199,6 +199,7 @@ function applyStartingKeepsakeEquip(
           pomApplied,
           startingKeepsakeKey,
           startingKeepsakeEquipResults.transcendentEmbryo,
+          startingKeepsakeEquipResults.transcendentEmbryoTransformations,
           createKeepsakeEquipResultAddress(
             createRouteStartKeepsakeSelectionAddress(routeKey),
             'transcendentEmbryo',

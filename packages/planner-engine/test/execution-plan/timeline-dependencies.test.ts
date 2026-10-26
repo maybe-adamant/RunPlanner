@@ -15,6 +15,7 @@ import {
   createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createSteadyGrowthOutcomeAddress,
+  createTraitOfferAddress,
   createTranscendentEmbryoOutcomeAddress,
   roomActionKey,
   semanticAddressKey,
@@ -45,6 +46,10 @@ const biome = createBiomeAddress('Underworld', 'F');
 const occurrenceId = createOccurrenceId('fence-room');
 const otherOccurrenceId = createOccurrenceId('other-room');
 const occurrence = createOccurrenceAddress(biome, occurrenceId);
+const steadyGrowthOutcome = createSteadyGrowthOutcomeAddress(
+  createTraitOfferAddress(createIncomingRewardAddress(biome, occurrenceId), 'source'),
+  1,
+);
 const structure: RoomLifecycleStructure = {
   profileKey: 'Combat',
   activeEncounterSlotKeys: ['Encounter'],
@@ -254,14 +259,12 @@ describe('timeline dependency classification', () => {
   });
 
   it('rejects an owner of the room that is neither a transaction nor a room action', () => {
-    for (const address of [
-      occurrence,
-      owner('unranked'),
-      createSteadyGrowthOutcomeAddress(occurrence, 'Encounter'),
-    ])
+    for (const address of [occurrence, owner('unranked')])
       expect(() => classify(address)).toThrow(
         expect.objectContaining({ code: 'executionCoverageMissing' }),
       );
+    // An automatic outcome is a transaction only where its cycle lands.
+    expect(classify(steadyGrowthOutcome)).toBe('otherRoom');
     expect(() => classify(createEchoKeepsakeReplayAddress(biome), occurrenceId)).toThrow(
       expect.objectContaining({ code: 'executionCoverageMissing' }),
     );
@@ -287,8 +290,11 @@ describe('timeline dependency classification', () => {
 });
 
 describe('natively ordered trait mutations', () => {
-  const steadyGrowth = createSteadyGrowthOutcomeAddress(occurrence, 'Encounter');
-  const embryo = createTranscendentEmbryoOutcomeAddress(occurrence, 'Encounter');
+  const steadyGrowth = steadyGrowthOutcome;
+  const embryo = createTranscendentEmbryoOutcomeAddress(
+    createRouteStartKeepsakeSelectionAddress('Underworld'),
+    1,
+  );
   const reward = createIncomingRewardAddress(biome, occurrenceId);
   const chosen = createAcquisitionRoleAddress(reward, 'chosenSource');
   const spurned = createAcquisitionRoleAddress(reward, 'spurnedSource');

@@ -96,7 +96,8 @@ describe('slot rebuild', () => {
   it('rebuilds outdated slots from their sources and leaves admitted and unsourced slots', async () => {
     const { controller, game, status, changed } = setup({
       2: sourceJson(compilingProject()),
-      3: sourceJson(compilingProject(), PROJECT_DOCUMENT_SCHEMA_VERSION - 1),
+      // Before schema 98 the slot source names its plan beside the project.
+      3: sourceJson(compilingProject(), 97),
     });
 
     const report = await controller.rebuild(status);

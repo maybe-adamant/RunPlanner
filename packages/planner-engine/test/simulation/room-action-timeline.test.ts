@@ -6,8 +6,12 @@ import {
   type RoomActionRoster,
 } from '../../src/simulation';
 import {
+  createBiomeAddress,
+  createIncomingRewardAddress,
   createOccurrenceId,
+  createRouteStartKeepsakeSelectionAddress,
   createSteadyGrowthOutcomeAddress,
+  createTraitOfferAddress,
   createTranscendentEmbryoOutcomeAddress,
   type OccurrenceAddress,
 } from '../../src/authored-project/addresses';
@@ -23,6 +27,31 @@ const owner: OccurrenceAddress = Object.freeze({
   biomeKey: 'F',
   occurrenceId: createOccurrenceId('timeline-test'),
 });
+
+const steadyGrowthSource = createTraitOfferAddress(
+  createIncomingRewardAddress(createBiomeAddress('Underworld', 'F'), createOccurrenceId('source')),
+  'self',
+);
+
+/** A reached outcome landing at this test room's encounter end. */
+function steadyGrowthAt(phaseKey: string, cycle = 1) {
+  return Object.freeze({
+    address: createSteadyGrowthOutcomeAddress(steadyGrowthSource, cycle),
+    owner,
+    phaseKey,
+  });
+}
+
+function embryoAt(phaseKey: string, cycle = 1) {
+  return Object.freeze({
+    address: createTranscendentEmbryoOutcomeAddress(
+      createRouteStartKeepsakeSelectionAddress('Underworld'),
+      cycle,
+    ),
+    owner,
+    phaseKey,
+  });
+}
 
 function roster(overrides: Partial<RoomActionRoster> = {}): RoomActionRoster {
   return Object.freeze({
@@ -201,7 +230,7 @@ describe('room lifecycle timeline', () => {
       encounterPhases: Object.freeze([encounter('Combat')]),
       roomActionRoster: roster(),
     });
-    const outcome = createSteadyGrowthOutcomeAddress(owner, 'Combat');
+    const outcome = steadyGrowthAt('Combat');
     const enriched = appendSteadyGrowthTimelineEffects(timeline, [outcome]);
     const entryKinds = enriched.entries.map((entry) => entry.kind);
     const endIndex = enriched.entries.findIndex(
@@ -209,7 +238,7 @@ describe('room lifecycle timeline', () => {
     );
     expect(entryKinds[endIndex + 1]).toBe('automaticEffect');
     expect(enriched.entries[endIndex + 1]).toMatchObject({
-      address: outcome,
+      address: outcome.address,
       effect: 'steadyGrowth',
       phaseKey: 'Combat',
     });
@@ -222,8 +251,8 @@ describe('room lifecycle timeline', () => {
       encounterPhases: Object.freeze([encounter('Combat')]),
       roomActionRoster: roster(),
     });
-    const steadyGrowth = createSteadyGrowthOutcomeAddress(owner, 'Combat');
-    const embryo = createTranscendentEmbryoOutcomeAddress(owner, 'Combat');
+    const steadyGrowth = steadyGrowthAt('Combat');
+    const embryo = embryoAt('Combat');
     const enriched = appendTranscendentEmbryoTimelineEffects(
       appendSteadyGrowthTimelineEffects(timeline, [steadyGrowth]),
       [embryo],
@@ -242,15 +271,12 @@ describe('room lifecycle timeline', () => {
       encounterPhases: Object.freeze([encounter('Combat1'), encounter('Combat2')]),
       roomActionRoster: roster(),
     });
-    const outcomes = [
-      createSteadyGrowthOutcomeAddress(owner, 'Combat1'),
-      createSteadyGrowthOutcomeAddress(owner, 'Combat2'),
-    ];
+    const outcomes = [steadyGrowthAt('Combat1', 1), steadyGrowthAt('Combat2', 2)];
     const enriched = appendSteadyGrowthTimelineEffects(timeline, outcomes);
     const entries = enriched.entries;
     for (const outcome of outcomes) {
       const effectIndex = entries.findIndex(
-        (entry) => entry.kind === 'automaticEffect' && entry.address === outcome,
+        (entry) => entry.kind === 'automaticEffect' && entry.address === outcome.address,
       );
       const endIndex = entries.findIndex(
         (entry) =>
@@ -861,8 +887,8 @@ describe('room lifecycle timeline', () => {
         ]),
       }),
     });
-    const steadyGrowth = createSteadyGrowthOutcomeAddress(owner, 'Combat1');
-    const embryo = createTranscendentEmbryoOutcomeAddress(owner, 'Combat2');
+    const steadyGrowth = steadyGrowthAt('Combat1');
+    const embryo = embryoAt('Combat2');
     const enriched = appendTranscendentEmbryoTimelineEffects(
       appendSteadyGrowthTimelineEffects(timeline, [steadyGrowth]),
       [embryo],
@@ -874,7 +900,7 @@ describe('room lifecycle timeline', () => {
       (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(reward1),
     );
     const effect1 = indexOf(
-      (entry) => entry.kind === 'automaticEffect' && entry.address === steadyGrowth,
+      (entry) => entry.kind === 'automaticEffect' && entry.address === steadyGrowth.address,
     );
     const nextPhase = indexOf(
       (entry) =>
@@ -886,7 +912,7 @@ describe('room lifecycle timeline', () => {
       (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(reward2),
     );
     const effect2 = indexOf(
-      (entry) => entry.kind === 'automaticEffect' && entry.address === embryo,
+      (entry) => entry.kind === 'automaticEffect' && entry.address === embryo.address,
     );
     const cleanup = indexOf(
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
@@ -939,13 +965,13 @@ describe('room lifecycle timeline', () => {
         ]),
       }),
     });
-    const steadyGrowth = createSteadyGrowthOutcomeAddress(owner, 'Combat1');
+    const steadyGrowth = steadyGrowthAt('Combat1');
     const entries = appendSteadyGrowthTimelineEffects(timeline, [steadyGrowth]).entries;
     const requiredIndex = entries.findIndex(
       (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(wheel),
     );
     const effectIndex = entries.findIndex(
-      (entry) => entry.kind === 'automaticEffect' && entry.address === steadyGrowth,
+      (entry) => entry.kind === 'automaticEffect' && entry.address === steadyGrowth.address,
     );
     const optionalIndex = entries.findIndex(
       (entry) => entry.kind === 'action' && entry.action.key === roomActionKey(generated),

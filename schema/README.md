@@ -1,5 +1,19 @@
 # Project schema boundary
 
+Schema 99 keys Steady Growth targets and Transcendent Embryo blessings by their
+source and cycle: a trait offer that gives Steady Growth owns
+`steadyGrowthTargets`, and the keepsake selection that installs the Embryo owns
+`transcendentEmbryoTransformations` in its equip results, each keyed by cycle
+from 1. A room's encounter state no longer has `steadyGrowthTargetByPhase` or
+`transcendentEmbryoBlessingByPhase`.
+
+```bash
+npm run schema:migrate-98-to-99 -- path/to/schema-98-project.runplanner.json
+```
+
+The migration drops the phase-keyed outcomes; each reached interval then reports
+its missing target or blessing until it is chosen again.
+
 Revision 98.1 adds the draft spec's `roomForcing`, `purchasesPerBiome`,
 `retriesPerBiome` and `resourceRoomChance`. A revision changes no saved shape,
 so it has no transition.

@@ -46,6 +46,7 @@ import { migrateProjectDocument as migrateProject94To95 } from '../../../../sche
 import { migrateProjectDocument as migrateProject95To96 } from '../../../../schema/migrate-project-95-to-96.js';
 import { migrateProjectDocument as migrateProject96To97 } from '../../../../schema/migrate-project-96-to-97.js';
 import { migrateProjectDocument as migrateProject97To98 } from '../../../../schema/migrate-project-97-to-98.js';
+import { migrateProjectDocument as migrateProject98To99 } from '../../../../schema/migrate-project-98-to-99.js';
 import { currentSchemaWire } from './support/current-schema-wire';
 
 const phialFountainFixture = currentSchemaWire(phialFountainFixtureFile);
@@ -81,15 +82,17 @@ function migratedPhialProject(): ProjectDocument {
     }
   return parseProjectDocument(
     JSON.stringify(
-      migrateProject97To98(
-        migrateProject96To97(
-          migrateProject95To96(
-            migrateProject94To95(
-              migrateProject93To94(
-                migrateProject92To93(
-                  migrateProject91To92(
-                    migrateProject90To91(
-                      migrateProject89To90(migrateProject88To89(migrateProject87To88(legacy))),
+      migrateProject98To99(
+        migrateProject97To98(
+          migrateProject96To97(
+            migrateProject95To96(
+              migrateProject94To95(
+                migrateProject93To94(
+                  migrateProject92To93(
+                    migrateProject91To92(
+                      migrateProject90To91(
+                        migrateProject89To90(migrateProject88To89(migrateProject87To88(legacy))),
+                      ),
                     ),
                   ),
                 ),

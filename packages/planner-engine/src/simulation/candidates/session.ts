@@ -397,9 +397,10 @@ function evaluateCandidateQuery(
         catalog,
         project,
         evaluation,
-        candidateArtifacts.biomeAt(
-          createBiomeAddress(query.outcome.routeKey, query.outcome.biomeKey),
-        )?.steadyGrowth,
+        // A cycle's capability lives in the biome where it landed.
+        evaluation.route.biomes
+          .map((biome) => candidateArtifacts.biomeAt(biome.origin)?.steadyGrowth)
+          .find((artifacts) => artifacts?.at(query.outcome) !== undefined),
         query,
       );
     case 'fountainRarityOutcome':
@@ -417,9 +418,9 @@ function evaluateCandidateQuery(
         catalog,
         project,
         evaluation,
-        candidateArtifacts.biomeAt(
-          createBiomeAddress(query.outcome.routeKey, query.outcome.biomeKey),
-        )?.transcendentEmbryo,
+        evaluation.route.biomes
+          .map((biome) => candidateArtifacts.biomeAt(biome.origin)?.transcendentEmbryo)
+          .find((artifacts) => artifacts?.at(query.outcome) !== undefined),
         query,
       );
     case 'fieldsSpatialPoint':

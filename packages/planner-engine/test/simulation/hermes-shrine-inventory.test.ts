@@ -27,6 +27,7 @@ import {
   semanticAddressKey,
   createDefaultAuthoredHexTree,
   resolveRoutePosition,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
@@ -859,15 +860,7 @@ describe('Hermes Shrine delayed deliveries', () => {
 
   it('withholds the host automatic outcome behind its Shrine Overview block and restores it', () => {
     const project = loadSurfacePSteadyGrowthShrineFrontierCheckpoint();
-    const finding = simulateProjectAssembly(catalog, project).evaluation.findings.find(
-      (candidate) =>
-        candidate.code === 'steadyGrowthOutcomeMissing' &&
-        candidate.origin.kind === 'steadyGrowthOutcome' &&
-        candidate.origin.biomeKey === 'P',
-    );
-    if (finding?.origin.kind !== 'steadyGrowthOutcome')
-      throw new Error('checkpoint lost the reached P outcome');
-    const host = finding.origin.owner;
+    const { finding, host } = reachedPSteadyGrowth(project);
     const outcomeKey = semanticAddressKey(finding.origin);
     const assertOutcome = (candidate: typeof project, reached: boolean) => {
       const biome = simulateProjectAssembly(catalog, candidate).evaluation.route.biomes.find(
@@ -910,14 +903,7 @@ describe('Hermes Shrine delayed deliveries', () => {
     let project = loadSurfacePSteadyGrowthShrineFrontierCheckpoint();
     const occurrenceId = createOccurrenceId('c34604d0-c4e3-4c26-8539-54a82158716f');
     const host = createOccurrenceAddress(pBiome, occurrenceId);
-    const finding = simulateProjectAssembly(catalog, project).evaluation.findings.find(
-      (candidate) =>
-        candidate.code === 'steadyGrowthOutcomeMissing' &&
-        candidate.origin.kind === 'steadyGrowthOutcome' &&
-        candidate.origin.biomeKey === 'P',
-    );
-    if (finding?.origin.kind !== 'steadyGrowthOutcome')
-      throw new Error('checkpoint lost the reached P outcome');
+    const { finding } = reachedPSteadyGrowth(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceSteadyGrowthTarget',
       outcome: finding.origin,
@@ -2514,3 +2500,25 @@ it('publishes active-source wrong-host rejection without a derived candidate cap
   );
   expect(derivedAcquisitionEntriesForProjectEvaluationAssembly(assembly, entry.site)).toEqual([]);
 });
+
+/** The missing Steady Growth outcome that lands in P, and the room it lands in. */
+function reachedPSteadyGrowth(project: ProjectDocument) {
+  const biome = simulateProjectAssembly(catalog, project).evaluation.route.biomes.find(
+    (candidate) => candidate.biomeKey === 'P',
+  );
+  if (biome === undefined || !('rewards' in biome) || biome.rewards === undefined)
+    throw new Error('checkpoint lost its P reward evaluation');
+  const finding = biome.findings.find(
+    (candidate) =>
+      candidate.code === 'steadyGrowthOutcomeMissing' &&
+      candidate.origin.kind === 'steadyGrowthOutcome',
+  );
+  const origin = finding?.origin;
+  if (origin?.kind !== 'steadyGrowthOutcome')
+    throw new Error('checkpoint lost the reached P outcome');
+  const host = biome.rewards.steadyGrowthOutcomes.find(
+    (outcome) => semanticAddressKey(outcome.address) === semanticAddressKey(origin),
+  )?.owner;
+  if (host === undefined) throw new Error('reached P outcome has no landing');
+  return { finding: Object.freeze({ ...finding!, origin }), host };
+}

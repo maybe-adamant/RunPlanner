@@ -4,11 +4,7 @@ import type {
   AuthoredNemesisRandomEventOutcome,
   RoomEncounterState,
 } from '../../model';
-import {
-  normalizeAuthoredTranscendentEmbryoOutcome,
-  type AuthoredTraitOffer,
-  type AuthoredTranscendentEmbryoOutcome,
-} from '../../traits/state';
+import type { AuthoredTraitOffer } from '../../traits/state';
 import {
   expectArray,
   expectBoolean,
@@ -59,12 +55,8 @@ export function decodeRoomEncounterState(
       ...(state.traitOffersByPhase === undefined ? [] : ['traitOffersByPhase']),
       ...(state.nemesisRandomEventByPhase === undefined ? [] : ['nemesisRandomEventByPhase']),
       ...(state.customizationByPhase === undefined ? [] : ['customizationByPhase']),
-      ...(state.steadyGrowthTargetByPhase === undefined ? [] : ['steadyGrowthTargetByPhase']),
       ...(state.judgmentArcanaKeysByPhase === undefined ? [] : ['judgmentArcanaKeysByPhase']),
       ...(state.figurineArcanaKeysByPhase === undefined ? [] : ['figurineArcanaKeysByPhase']),
-      ...(state.transcendentEmbryoBlessingByPhase === undefined
-        ? []
-        : ['transcendentEmbryoBlessingByPhase']),
     ],
     path,
   );
@@ -100,7 +92,6 @@ export function decodeRoomEncounterState(
       `${path}.figLeafSkipByPhase.${phaseKey}`,
     );
   }
-  const steadyGrowthTargetByPhase: Record<string, string> = {};
   const aetosWaveByPhase: Record<string, number> = {};
   if (state.aetosWaveByPhase !== undefined) {
     for (const [phaseKey, wave] of Object.entries(
@@ -112,20 +103,6 @@ export function decodeRoomEncounterState(
         wave,
         `${path}.aetosWaveByPhase.${phaseKey}`,
       );
-    }
-  }
-  if (state.steadyGrowthTargetByPhase !== undefined) {
-    const rawTargets = expectRecord(
-      state.steadyGrowthTargetByPhase,
-      `${path}.steadyGrowthTargetByPhase`,
-    );
-    for (const [phaseKey, value] of Object.entries(rawTargets)) {
-      if (!bindings.has(phaseKey))
-        failProjectDocument(`${path}.steadyGrowthTargetByPhase.${phaseKey}`, 'unknown phase');
-      const traitKey = expectNonBlankString(value, `${path}.steadyGrowthTargetByPhase.${phaseKey}`);
-      if (catalog.traits.byKey[traitKey] === undefined)
-        failProjectDocument(`${path}.steadyGrowthTargetByPhase.${phaseKey}`, 'unknown trait');
-      steadyGrowthTargetByPhase[phaseKey] = traitKey;
     }
   }
   const judgmentArcanaKeysByPhase: Record<string, readonly string[]> = {};
@@ -190,57 +167,6 @@ export function decodeRoomEncounterState(
       figurineArcanaKeysByPhase[phaseKey] = Object.freeze(
         catalog.arcanaCards.values.filter((card) => seen.has(card.key)).map((card) => card.key),
       );
-    }
-  }
-  const transcendentEmbryoBlessingByPhase: Record<string, AuthoredTranscendentEmbryoOutcome> = {};
-  if (state.transcendentEmbryoBlessingByPhase !== undefined) {
-    const values = expectRecord(
-      state.transcendentEmbryoBlessingByPhase,
-      `${path}.transcendentEmbryoBlessingByPhase`,
-    );
-    for (const [phaseKey, value] of Object.entries(values)) {
-      if (!bindings.has(phaseKey))
-        failProjectDocument(
-          `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}`,
-          'unknown encounter phase',
-        );
-      const outcome = expectRecord(value, `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}`);
-      expectExactKeys(
-        outcome,
-        ['blessingKey', 'blessingValues'],
-        `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}`,
-      );
-      const blessingKey = expectNonBlankString(
-        outcome.blessingKey,
-        `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}.blessingKey`,
-      );
-      const rawValues = expectRecord(
-        outcome.blessingValues,
-        `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}.blessingValues`,
-      );
-      const blessingValues: Record<string, number> = {};
-      for (const [key, rawValue] of Object.entries(rawValues)) {
-        if (typeof rawValue !== 'number' || !Number.isFinite(rawValue))
-          failProjectDocument(
-            `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}.blessingValues.${key}`,
-            'must be a finite number',
-          );
-        blessingValues[key] = rawValue;
-      }
-      try {
-        transcendentEmbryoBlessingByPhase[phaseKey] = normalizeAuthoredTranscendentEmbryoOutcome(
-          catalog,
-          {
-            blessingKey,
-            blessingValues,
-          },
-        );
-      } catch (error) {
-        failProjectDocument(
-          `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}.blessingValues`,
-          error instanceof Error ? error.message : 'has invalid declared operand values',
-        );
-      }
     }
   }
   const gorgonResultByPhase = decodeGorgonPhaseResults(
@@ -514,20 +440,12 @@ export function decodeRoomEncounterState(
     ...(Object.keys(aetosWaveByPhase).length === 0
       ? {}
       : { aetosWaveByPhase: Object.freeze(aetosWaveByPhase) }),
-    ...(Object.keys(steadyGrowthTargetByPhase).length === 0
-      ? {}
-      : { steadyGrowthTargetByPhase: Object.freeze(steadyGrowthTargetByPhase) }),
     ...(Object.keys(judgmentArcanaKeysByPhase).length === 0
       ? {}
       : { judgmentArcanaKeysByPhase: Object.freeze(judgmentArcanaKeysByPhase) }),
     ...(Object.keys(figurineArcanaKeysByPhase).length === 0
       ? {}
       : { figurineArcanaKeysByPhase: Object.freeze(figurineArcanaKeysByPhase) }),
-    ...(Object.keys(transcendentEmbryoBlessingByPhase).length === 0
-      ? {}
-      : {
-          transcendentEmbryoBlessingByPhase: Object.freeze(transcendentEmbryoBlessingByPhase),
-        }),
     gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}

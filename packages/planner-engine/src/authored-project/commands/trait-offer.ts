@@ -10,6 +10,8 @@ import {
   normalizeAllTogetherResult,
   normalizeAuthoredChaosTraitOffer,
   normalizeAuthoredConcaveStoneResult,
+  normalizeSteadyGrowthTargets,
+  traitOfferGivesSteadyGrowth,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -28,7 +30,9 @@ import {
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { sameOccurrenceValue } from './occurrence/leaf-value';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence/mutation';
-import type { TraitOfferCommand } from './types';
+import type { SteadyGrowthCommand, TraitOfferCommand } from './types';
+
+type TraitOfferOwnedCommand = TraitOfferCommand | SteadyGrowthCommand;
 import {
   authoredAcquisitionEntry,
   authoredAcquisitionEntryAtSite,
@@ -36,18 +40,80 @@ import {
   replaceAuthoredAcquisitionEntryAtSite,
 } from '../shop';
 
-function commandTraitAddress(command: TraitOfferCommand): TraitOfferAddress {
-  return command.trait;
+function commandTraitAddress(command: TraitOfferOwnedCommand): TraitOfferAddress {
+  return command.kind === 'ReplaceSteadyGrowthTarget' ? command.outcome.trait : command.trait;
+}
+
+/**
+ * Steady Growth targets belong to the offer while its acquisition gives
+ * Steady Growth; a complete replacement without them keeps the current ones.
+ */
+function reconcileSteadyGrowthTargets(
+  catalog: Catalog,
+  existing: AuthoredTraitOffer | null,
+  next: AuthoredTraitOffer | null,
+  command: TraitOfferOwnedCommand,
+): AuthoredTraitOffer | null {
+  if (next === null || next.kind !== 'traits') return next;
+  const inherited =
+    command.kind === 'ReplaceTraitOffer' && command.value.kind === 'traits'
+      ? (command.value.steadyGrowthTargets ??
+        (existing?.kind === 'traits' ? existing.steadyGrowthTargets : undefined))
+      : next.steadyGrowthTargets;
+  const { steadyGrowthTargets: _targets, ...withoutTargets } = next;
+  void _targets;
+  if (
+    inherited === undefined ||
+    Object.keys(inherited).length === 0 ||
+    !traitOfferGivesSteadyGrowth(catalog, next)
+  )
+    return Object.freeze(withoutTargets);
+  try {
+    return Object.freeze({
+      ...withoutTargets,
+      steadyGrowthTargets: normalizeSteadyGrowthTargets(catalog, inherited),
+    });
+  } catch (error) {
+    return failCommand(
+      command,
+      error instanceof Error ? error.message : 'invalid Steady Growth targets',
+    );
+  }
 }
 
 function replaceTraitOfferValue(
   catalog: Catalog,
   existing: AuthoredTraitOffer | null,
-  command: TraitOfferCommand,
+  command: TraitOfferOwnedCommand,
+): AuthoredTraitOffer | null {
+  return reconcileSteadyGrowthTargets(
+    catalog,
+    existing,
+    replaceTraitOfferValueWithoutTargets(catalog, existing, command),
+    command,
+  );
+}
+
+function replaceTraitOfferValueWithoutTargets(
+  catalog: Catalog,
+  existing: AuthoredTraitOffer | null,
+  command: TraitOfferOwnedCommand,
 ): AuthoredTraitOffer | null {
   if (command.kind === 'ResetEncounterTraitOffer') return null;
   if (command.kind === 'ReplaceTraitOffer') return validateOffer(catalog, command.value, command);
   if (existing === null) failCommand(command, 'trait offer must be authored as one complete offer');
+  if (command.kind === 'ReplaceSteadyGrowthTarget') {
+    const target = command.targetTraitKey;
+    if (target !== null && catalog.traits.byKey[target] === undefined)
+      failCommand(command, `unknown trait ${target}`);
+    if (!traitOfferGivesSteadyGrowth(catalog, existing))
+      failCommand(command, 'trait offer does not give Steady Growth');
+    if (existing.kind !== 'traits') return existing;
+    const targets: Record<string, string> = { ...existing.steadyGrowthTargets };
+    if (target === null) delete targets[String(command.outcome.cycle)];
+    else targets[String(command.outcome.cycle)] = target;
+    return Object.freeze({ ...existing, steadyGrowthTargets: Object.freeze(targets) });
+  }
   if (command.kind === 'ReplaceTraitSelection')
     if (existing.kind === 'traits') {
       const selected = existing.options[optionIndex(command.selectedOptionKey)];
@@ -98,7 +164,7 @@ function replaceTraitOfferValue(
 function validateGorgonAthenaOffer(
   catalog: Catalog,
   value: AuthoredGorgonAthenaOffer,
-  command: TraitOfferCommand,
+  command: TraitOfferOwnedCommand,
 ): AuthoredGorgonAthenaOffer {
   const effect = catalog.keepsakes.values.find(
     (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
@@ -123,7 +189,7 @@ function validateGorgonAthenaOffer(
 function validateOffer(
   catalog: Catalog,
   value: AuthoredTraitOffer,
-  command: TraitOfferCommand,
+  command: TraitOfferOwnedCommand,
 ): AuthoredTraitOffer {
   const giver = catalog.traitGivers.byKey[value.giverKey];
   if (giver === undefined) failCommand(command, `unknown trait giver ${value.giverKey}`);
@@ -397,7 +463,7 @@ export function applyTraitOfferCommand(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: TraitOfferCommand,
+  command: TraitOfferOwnedCommand,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   const trait = commandTraitAddress(command);
@@ -453,6 +519,8 @@ export function applyTraitOfferCommand(
         failCommand(command, 'Gorgon Athena persists only its bound author decisions');
       if (command.kind === 'ReplaceConcaveStoneResult')
         failCommand(command, 'Gorgon Athena does not support Concave Stone results');
+      if (command.kind === 'ReplaceSteadyGrowthTarget')
+        failCommand(command, 'Gorgon Athena does not give Steady Growth');
       const value =
         command.kind === 'ResetEncounterTraitOffer'
           ? null

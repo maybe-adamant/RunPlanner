@@ -760,7 +760,7 @@ export function materializeBiome(
   loadout: BiomeMaterializationLoadout,
   echoKeepsakeReplayResults?: Pick<
     import('../../authored-project/model').AuthoredKeepsakeEquipResults,
-    'experimentalHammer' | 'transcendentEmbryo'
+    'experimentalHammer' | 'transcendentEmbryo' | 'transcendentEmbryoTransformations'
   >,
 ): CanonicalBiome {
   loadout = requireLoadout(loadout);

@@ -20,6 +20,8 @@ export interface HistoryFindingChronology {
   readonly kind: 'history';
   readonly sequence: number;
   readonly boundary: 'before' | 'at' | 'after';
+  /** Where an automatic outcome landed; its address names only its source and cycle. */
+  readonly occurrence?: import('../authored-project/addresses').OccurrenceAddress;
 }
 
 export type FindingChronology =

@@ -1,7 +1,9 @@
+import type { OccurrenceId } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createOccurrenceAddress,
   semanticAddressKey,
   type AcquisitionSiteAddress,
   type AcquisitionRoleAddress,
@@ -470,7 +472,16 @@ export function blockedOccurrenceRoomForProjectEvaluationAssembly(
   ) {
     return undefined;
   }
-  const blockedOccurrence = occurrenceOwnerAddress(biome.coverage.blockedAt);
+  // An automatic outcome names its source; its block sits where its cycle landed.
+  const landedOccurrenceId =
+    biome.coverage.blockedAt.kind === 'steadyGrowthOutcome' ||
+    biome.coverage.blockedAt.kind === 'transcendentEmbryoOutcome'
+      ? biome.requiredInputLocation?.roomOccurrenceId
+      : undefined;
+  const blockedOccurrence =
+    landedOccurrenceId === undefined
+      ? occurrenceOwnerAddress(biome.coverage.blockedAt)
+      : createOccurrenceAddress(biome.origin, landedOccurrenceId as OccurrenceId);
   if (
     blockedOccurrence === undefined ||
     semanticAddressKey(blockedOccurrence) !== semanticAddressKey(occurrence)

@@ -601,12 +601,14 @@ describe('structured workspace actions assembly', () => {
   it('carries a reached O Ship Steady Growth effect in engine timeline order', () => {
     const occurrenceId = oOccurrenceIds.combat04;
     const owner = createOccurrenceAddress(oBiome, occurrenceId);
-    const outcome = createSteadyGrowthOutcomeAddress(owner, 'Combat1');
-    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      kind: 'ReplaceSteadyGrowthTarget',
-      outcome,
-      targetTraitKey: 'ApolloWeaponBoon',
-    });
+    const outcome = createSteadyGrowthOutcomeAddress(
+      createTraitOfferAddress(
+        createIncomingRewardAddress(nBiome, createOccurrenceId('surface-n-combat23')),
+        'source',
+      ),
+      1,
+    );
+    const project = loadSurfaceNOPQProject();
     const assembled = assemble(
       project,
       'Surface',
@@ -618,8 +620,10 @@ describe('structured workspace actions assembly', () => {
       [
         Object.freeze({
           address: outcome,
+          owner,
           sourceTraitKey: 'BoonGrowthBoon',
           phaseKey: 'Combat1',
+          targetTraitKey: 'ApolloWeaponBoon',
           requiredIntervals: Object.freeze([4]),
           progressBefore: Object.freeze([1]),
         }),

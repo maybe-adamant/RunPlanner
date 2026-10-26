@@ -59,6 +59,7 @@ import {
   traitGiverForAcquisitionRole,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
+  type SteadyGrowthSource,
 } from '../../../authored-project/traits/state';
 import { advanceCurrentKeepsake, silkenSashArmorTransferredOnAdvance } from '../../keepsakes/state';
 import { consumeConcaveStone, concaveStoneProcSupport } from '../../keepsakes/trait-effects';
@@ -133,6 +134,8 @@ export interface PriorTraitMutation {
 interface EchoLastRunBoonSettlement {
   readonly address: EchoLastRunBoonAddress;
   readonly outcome: EchoLastRunBoonOutcome;
+  /** The outer offer's targets, owned there when this pick installs Steady Growth. */
+  readonly steadyGrowthTargets: Readonly<Record<string, string>> | undefined;
 }
 
 /** Upgrade screens close through `CloseUpgradeChoiceScreen`; Spell screens do not. */
@@ -538,6 +541,27 @@ function evaluateAuthoredOffer(
         ? traitOfferIdentity
         : `${traitOfferIdentity}:${sequence}`
       : undefined;
+  // Steady Growth's targets live on the authored offer that gives it: the
+  // outer screen for an Echo Boon Boon Boon pick.
+  function steadyGrowthSourceFor(): SteadyGrowthSource | undefined {
+    if (selectedForIdentityDisposition?.kind !== 'steadyGrowth') return undefined;
+    if (mode.kind === 'frozenConcaveStoneSecondary') return undefined;
+    const trait =
+      reward.origin.kind === 'echoLastRunBoon'
+        ? reward.origin.trait
+        : acquisitionIdentityOwner === undefined
+          ? undefined
+          : createTraitOfferAddress(acquisitionIdentityOwner, role);
+    if (trait === undefined) return undefined;
+    const source = authored ?? effectiveAuthored;
+    const targets =
+      echoLastRunBoon !== undefined
+        ? echoLastRunBoon.steadyGrowthTargets
+        : source.kind === 'traits'
+          ? source.steadyGrowthTargets
+          : undefined;
+    return Object.freeze({ trait, targets: targets ?? Object.freeze({}) });
+  }
   const applied = recordReachedTraitOffer(
     catalog,
     evaluation,
@@ -549,6 +573,7 @@ function evaluateAuthoredOffer(
       ? (branch.state.keepsakes.currentKey ?? undefined)
       : undefined,
     mode.kind === 'frozenConcaveStoneSecondary' ? 'concaveStoneSecondary' : 'traitOffer',
+    steadyGrowthSourceFor(),
   );
   // A Stone residual is an acquisition from the already-evaluated source
   // screen, not a second authored offer. Keep its callback machinery private
@@ -1222,6 +1247,7 @@ function applyEchoLastRunBoonForAcquisition(
   screenGiverKey: string,
   offer: AuthoredTraitOfferTraits,
   outcome: EchoLastRunBoonOutcome,
+  steadyGrowthTargets: Readonly<Record<string, string>> | undefined,
   context: TraitOfferSourceContext,
   lifecyclePoint: string,
   sequence: number,
@@ -1240,7 +1266,7 @@ function applyEchoLastRunBoonForAcquisition(
     sequence,
     findingChronology,
     Object.freeze({ mode: Object.freeze({ kind: 'direct' as const, screenGiverKey }) }),
-    Object.freeze({ address, outcome }),
+    Object.freeze({ address, outcome, steadyGrowthTargets }),
   );
   const settlement = settlementOf(product);
   // The nested acquisition is edited atomically through its Echo choice owner;
@@ -1457,6 +1483,7 @@ function settleEchoLastRunBoon(
     offer.giverKey,
     nestedOffer,
     outcome,
+    offer.steadyGrowthTargets,
     Object.freeze({
       freshRarityOverride: outcome.effectiveRarity,
       ordinarySlotReplacement: 'forbidden',

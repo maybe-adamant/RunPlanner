@@ -8,9 +8,39 @@ import {
   failProjectDocument as fail,
 } from './validation';
 import {
+  isOutcomeCycleKey,
   normalizeAuthoredTranscendentEmbryoOutcome,
   type AuthoredTranscendentEmbryoOutcome,
 } from './traits/state';
+
+function decodeEmbryoOutcome(
+  value: unknown,
+  path: string,
+  catalog: Catalog,
+): AuthoredTranscendentEmbryoOutcome {
+  const embryo = expectRecord(value, path);
+  expectExactKeys(embryo, ['blessingKey', 'blessingValues'], path);
+  const blessingKey = expectNonBlankString(embryo.blessingKey, `${path}.blessingKey`);
+  const blessing = catalog.chaos.blessings.byKey[blessingKey];
+  if (blessing === undefined) fail(`${path}.blessingKey`, 'must be a declared Chaos blessing');
+  if (blessing.fixedRarity !== undefined)
+    fail(`${path}.blessingKey`, 'must be a declared in-run Chaos blessing');
+  const rawValues = expectRecord(embryo.blessingValues, `${path}.blessingValues`);
+  const blessingValues: Record<string, number> = {};
+  for (const [key, rawValue] of Object.entries(rawValues)) {
+    if (typeof rawValue !== 'number' || !Number.isFinite(rawValue))
+      fail(`${path}.blessingValues.${key}`, 'must be a finite number');
+    blessingValues[key] = rawValue;
+  }
+  try {
+    return normalizeAuthoredTranscendentEmbryoOutcome(catalog, { blessingKey, blessingValues });
+  } catch (error) {
+    return fail(
+      `${path}.blessingValues`,
+      error instanceof Error ? error.message : 'has an invalid declared operand value',
+    );
+  }
+}
 
 /** Decode the sparse immediate result of an authored keepsake selection. */
 export function decodeKeepsakeEquipResults(
@@ -19,52 +49,48 @@ export function decodeKeepsakeEquipResults(
   catalog: Catalog,
 ): AuthoredKeepsakeEquipResults {
   const results = expectRecord(value, path);
-  expectExactKeys(results, ['jeweledPom', 'experimentalHammer', 'transcendentEmbryo'], path);
+  expectExactKeys(
+    results,
+    ['jeweledPom', 'experimentalHammer', 'transcendentEmbryo', 'transcendentEmbryoTransformations'],
+    path,
+  );
   if (
     results.jeweledPom === undefined &&
     results.experimentalHammer === undefined &&
-    results.transcendentEmbryo === undefined
+    results.transcendentEmbryo === undefined &&
+    results.transcendentEmbryoTransformations === undefined
   )
     return Object.freeze({});
 
-  const embryo =
+  const embryoValue =
     results.transcendentEmbryo === undefined
       ? undefined
-      : expectRecord(results.transcendentEmbryo, `${path}.transcendentEmbryo`);
-  let embryoValue: AuthoredTranscendentEmbryoOutcome | undefined;
-  if (embryo !== undefined) {
-    expectExactKeys(embryo, ['blessingKey', 'blessingValues'], `${path}.transcendentEmbryo`);
-    const blessingKey = expectNonBlankString(
-      embryo.blessingKey,
-      `${path}.transcendentEmbryo.blessingKey`,
+      : decodeEmbryoOutcome(results.transcendentEmbryo, `${path}.transcendentEmbryo`, catalog);
+  let transformations: Record<string, AuthoredTranscendentEmbryoOutcome> | undefined;
+  if (results.transcendentEmbryoTransformations !== undefined) {
+    const raw = expectRecord(
+      results.transcendentEmbryoTransformations,
+      `${path}.transcendentEmbryoTransformations`,
     );
-    const blessing = catalog.chaos.blessings.byKey[blessingKey];
-    if (blessing === undefined)
-      fail(`${path}.transcendentEmbryo.blessingKey`, 'must be a declared Chaos blessing');
-    if (blessing.fixedRarity !== undefined)
-      fail(`${path}.transcendentEmbryo.blessingKey`, 'must be a declared in-run Chaos blessing');
-    const rawValues = expectRecord(
-      embryo.blessingValues,
-      `${path}.transcendentEmbryo.blessingValues`,
-    );
-    const blessingValues: Record<string, number> = {};
-    for (const [key, rawValue] of Object.entries(rawValues)) {
-      if (typeof rawValue !== 'number' || !Number.isFinite(rawValue))
-        fail(`${path}.transcendentEmbryo.blessingValues.${key}`, 'must be a finite number');
-      blessingValues[key] = rawValue;
-    }
-    try {
-      embryoValue = normalizeAuthoredTranscendentEmbryoOutcome(catalog, {
-        blessingKey,
-        blessingValues,
-      });
-    } catch (error) {
-      fail(
-        `${path}.transcendentEmbryo.blessingValues`,
-        error instanceof Error ? error.message : 'has an invalid declared operand value',
+    transformations = {};
+    for (const [cycle, value] of Object.entries(raw)) {
+      if (!isOutcomeCycleKey(cycle))
+        fail(`${path}.transcendentEmbryoTransformations.${cycle}`, 'unknown cycle');
+      transformations[cycle] = decodeEmbryoOutcome(
+        value,
+        `${path}.transcendentEmbryoTransformations.${cycle}`,
+        catalog,
       );
     }
+    if (Object.keys(transformations).length === 0)
+      fail(`${path}.transcendentEmbryoTransformations`, 'must not be empty');
   }
+  const embryo = Object.freeze({
+    ...(embryoValue === undefined ? {} : { transcendentEmbryo: embryoValue }),
+    ...(transformations === undefined
+      ? {}
+      : { transcendentEmbryoTransformations: Object.freeze(transformations) }),
+  });
 
   const hammer =
     results.experimentalHammer === undefined
@@ -83,12 +109,9 @@ export function decodeKeepsakeEquipResults(
   }
 
   if (results.jeweledPom === undefined) {
-    if (hammer === undefined)
-      return Object.freeze(
-        embryoValue === undefined ? {} : { transcendentEmbryo: Object.freeze(embryoValue) },
-      );
+    if (hammer === undefined) return embryo;
     return Object.freeze({
-      ...(embryoValue === undefined ? {} : { transcendentEmbryo: Object.freeze(embryoValue) }),
+      ...embryo,
       experimentalHammer: Object.freeze({
         ...(hammer.kind === 'selected'
           ? { kind: 'selected' as const, traitKey: hammer.traitKey as string }
@@ -127,7 +150,7 @@ export function decodeKeepsakeEquipResults(
     rarity = authoredRarity as TraitRarity;
   }
   return Object.freeze({
-    ...(embryoValue === undefined ? {} : { transcendentEmbryo: Object.freeze(embryoValue) }),
+    ...embryo,
     jeweledPom: Object.freeze({
       traitKey,
       ...(rarity === undefined ? {} : { rarity }),

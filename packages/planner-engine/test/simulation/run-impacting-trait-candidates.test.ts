@@ -1,21 +1,15 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  applyProjectHistoryCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
   createNaturalSelectionResultAddress,
-  createOccurrenceAddress,
   createOccurrenceId,
-  createProjectHistory,
   createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
   semanticAddressKey,
   type AuthoredTraitOffer,
   type AuthoredTraitOption,
-  type BiomeAddress,
-  type SteadyGrowthOutcomeAddress,
-  undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 import {
   foldTraitHistoryEvents,
@@ -28,7 +22,7 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import { createSteadyGrowthCandidateArtifacts } from '../../src/simulation/candidates/steady-growth';
 import { evaluateSteadyGrowthOutcomeCandidate } from '../../src/simulation/candidates/steady-growth';
 import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer/query';
-import { loadSurfaceNOProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures/surface';
+import { nBiome, nOccurrenceId } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNNaturalSelectionCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   createFGenerationProject,
@@ -78,13 +72,6 @@ function selectedNaturalOffer(): Extract<AuthoredTraitOffer, { readonly kind: 't
     options,
     selectedOptionKey: 'option1',
   });
-}
-
-function bossCompletionOwner(biome: BiomeAddress): SteadyGrowthOutcomeAddress['owner'] {
-  return createOccurrenceAddress(
-    biome,
-    createOccurrenceId(`surface-${biome.biomeKey.toLowerCase()}-preboss:boss`),
-  );
 }
 
 function cycleEight(
@@ -391,13 +378,18 @@ describe('run-impacting trait candidate contacts', () => {
     expect(semanticAddressKey(repaired.coverage.blockedAt)).not.toBe(semanticAddressKey(result));
   });
 
-  it('publishes an ordinary threshold as a missing repair, and the exact command stores its selected continuation target', () => {
+  it('assesses a reached threshold from its exact frontier: missing, then the chosen target', () => {
     const biome = createBiomeAddress('Surface', 'N');
-    const occurrence = createOccurrenceAddress(biome, createOccurrenceId('steady-occurrence'));
-    const outcome = createSteadyGrowthOutcomeAddress(occurrence, 'Encounter');
+    const source = createTraitOfferAddress(
+      createIncomingRewardAddress(biome, createOccurrenceId('steady-source')),
+      'source',
+    );
+    const outcome = createSteadyGrowthOutcomeAddress(source, 1);
     const threshold = Object.freeze({
       traitKey: 'BoonGrowthBoon',
       acquisitionIdentity: 'steady-occurrence',
+      source,
+      cycle: 1,
       requiredInterval: 6,
       before: historyWithCoreTrait('ApolloWeaponBoon'),
       eligibleTargetKeys: Object.freeze(['ApolloWeaponBoon']),
@@ -430,70 +422,20 @@ describe('run-impacting trait candidate contacts', () => {
       kind: 'steadyGrowthOutcome',
       result: { branchSupport: [true], selectedPossible: true },
     });
+  });
 
-    const project = loadSurfaceNOProject();
-    const actualOccurrence = project.route.biomes.find((candidate) => candidate.biomeKey === 'N')!
-      .topology!.startOccurrenceId;
-    const actualOutcome = createSteadyGrowthOutcomeAddress(
-      createOccurrenceAddress(biome, actualOccurrence),
-      'Encounter',
+  it('keeps each threshold under its own source cycle and rejects branch-divergent Natural results', () => {
+    const biome = createBiomeAddress('Surface', 'N');
+    const source = createTraitOfferAddress(
+      createIncomingRewardAddress(biome, createOccurrenceId('steady-source')),
+      'source',
     );
-    const repaired = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSteadyGrowthTarget',
-      outcome: actualOutcome,
-      targetTraitKey: 'ApolloWeaponBoon',
-    });
-    const repairedOccurrence = repaired.route.biomes
-      .find((candidate) => candidate.biomeKey === 'N')!
-      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === actualOccurrence)!;
-    expect(repairedOccurrence.encounters.steadyGrowthTargetByPhase).toMatchObject({
-      Encounter: 'ApolloWeaponBoon',
-    });
-  });
-
-  it('sets and clears the exact Boss threshold target as one undoable semantic edit', () => {
-    const project = loadSurfaceNOProject();
-    const biome = createBiomeAddress('Surface', 'N');
-    const bossOwner = bossCompletionOwner(biome);
-    const outcome = createSteadyGrowthOutcomeAddress(bossOwner, 'Encounter');
-    const selected = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
-      kind: 'ReplaceSteadyGrowthTarget',
-      outcome,
-      targetTraitKey: 'ApolloWeaponBoon',
-    });
-    expect(
-      selected.present.route.biomes
-        .find((candidate) => candidate.biomeKey === 'N')
-        ?.topology?.occurrences.find(
-          (occurrence) => occurrence.occurrenceId === bossOwner.occurrenceId,
-        )?.encounters.steadyGrowthTargetByPhase?.Encounter,
-    ).toBe('ApolloWeaponBoon');
-    expect(() =>
-      applyProjectCommand(selected.present, catalog, {
-        kind: 'ReplaceSteadyGrowthTarget',
-        outcome: createSteadyGrowthOutcomeAddress(bossOwner, 'NotBoss'),
-        targetTraitKey: 'ApolloWeaponBoon',
-      }),
-    ).toThrow(/has no encounter phase NotBoss/);
-
-    const cleared = applyProjectHistoryCommand(selected, catalog, {
-      kind: 'ReplaceSteadyGrowthTarget',
-      outcome,
-      targetTraitKey: null,
-    });
-    expect(
-      cleared.present.route.biomes.find((candidate) => candidate.biomeKey === 'N'),
-    ).not.toHaveProperty('bossCompletionSteadyGrowthTarget');
-    expect(undoProjectHistory(cleared).present).toBe(selected.present);
-  });
-
-  it('keeps the Boss threshold on its completion-room owner and rejects branch-divergent Natural results', () => {
-    const biome = createBiomeAddress('Surface', 'N');
-    const bossOwner = bossCompletionOwner(biome);
-    const boss = createSteadyGrowthOutcomeAddress(bossOwner, 'Boss');
+    const boss = createSteadyGrowthOutcomeAddress(source, 2);
     const threshold = Object.freeze({
       traitKey: 'BoonGrowthBoon',
       acquisitionIdentity: 'steady-boss',
+      source,
+      cycle: 2,
       requiredInterval: 6,
       before: historyWithCoreTrait('ApolloWeaponBoon'),
       eligibleTargetKeys: Object.freeze(['ApolloWeaponBoon']),
@@ -503,6 +445,7 @@ describe('run-impacting trait candidate contacts', () => {
       new Map([[semanticAddressKey(boss), Object.freeze([threshold])]]),
     );
     expect(bossArtifacts.at(boss)?.thresholds[0]?.requiredInterval).toBe(6);
+    expect(bossArtifacts.at(createSteadyGrowthOutcomeAddress(source, 1))).toBeUndefined();
 
     const trait = createTraitOfferAddress(
       createIncomingRewardAddress(

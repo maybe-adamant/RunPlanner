@@ -36,10 +36,15 @@ import type {
   HexActivationCommand,
   TraitOfferCommand,
   LevelResolutionCommand,
+  SteadyGrowthCommand,
 } from '../types';
 
 type RewardCommand =
-  TraitOfferCommand | LevelResolutionCommand | AnvilResultCommand | HexActivationCommand;
+  | TraitOfferCommand
+  | SteadyGrowthCommand
+  | LevelResolutionCommand
+  | AnvilResultCommand
+  | HexActivationCommand;
 
 export interface LocatedReward {
   readonly reward: AuthoredRewardState;

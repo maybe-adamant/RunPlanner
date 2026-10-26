@@ -155,14 +155,16 @@ export function publishChronology(
     nemesisRandomEventCandidates: accumulation.nemesisRandomEventCandidates,
     steadyGrowthOutcomes: Object.freeze(
       [...accumulation.steadyGrowthCandidateContexts.entries()].flatMap(([key, thresholds]) => {
-        const address = accumulation.steadyGrowthOutcomeAddresses.get(key);
+        const landed = accumulation.steadyGrowthOutcomeAddresses.get(key);
         const first = thresholds[0];
-        if (address === undefined || first === undefined) return [];
+        if (landed === undefined || first === undefined) return [];
         return [
           Object.freeze({
-            address,
+            address: landed.address,
+            owner: landed.landing.owner,
             sourceTraitKey: first.traitKey,
-            phaseKey: address.phaseKey,
+            phaseKey: landed.landing.phaseKey,
+            ...(first.targetTraitKey === undefined ? {} : { targetTraitKey: first.targetTraitKey }),
             requiredIntervals: Object.freeze(
               thresholds.map((threshold) => threshold.requiredInterval),
             ),
@@ -179,14 +181,17 @@ export function publishChronology(
     transcendentEmbryoOutcomes: Object.freeze(
       [...accumulation.transcendentEmbryoCandidateContexts.entries()].flatMap(
         ([key, thresholds]) => {
-          const address = accumulation.transcendentEmbryoOutcomeAddresses.get(key);
+          const landed = accumulation.transcendentEmbryoOutcomeAddresses.get(key);
           const first = thresholds[0];
-          if (address === undefined || first === undefined) return [];
+          if (landed === undefined || first === undefined) return [];
+          const value = first.source.transformations[String(first.cycle)];
           return [
             Object.freeze({
-              address,
+              address: landed.address,
+              owner: landed.landing.owner,
               sourceBlessingKey: first.source.markedBlessingKey,
-              phaseKey: address.phaseKey,
+              phaseKey: landed.landing.phaseKey,
+              ...(value === undefined ? {} : { value }),
               transformationRarities: Object.freeze(
                 thresholds.map((threshold) => threshold.source.rarity),
               ),

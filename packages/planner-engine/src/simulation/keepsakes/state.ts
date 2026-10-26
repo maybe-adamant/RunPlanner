@@ -1,6 +1,11 @@
 import type { Catalog, InRunTraitRarity, KeepsakeRank } from '../../catalog-schema';
 import type { ArcanaFearState } from '../arcana-fear';
 import type { TraitHistoryState } from '../traits/history/model';
+import type {
+  EchoKeepsakeReplayAddress,
+  KeepsakeSelectionAddress,
+} from '../../authored-project/addresses';
+import type { AuthoredTranscendentEmbryoOutcome } from '../../authored-project/traits/state';
 
 export type FatedStatus = 'Unknown' | 'Fated' | 'Unfated';
 export interface KeepsakeHistoryEntry {
@@ -63,6 +68,12 @@ export interface KeepsakeState {
     readonly markedBlessingKey: string;
     readonly markedBlessingValues: Readonly<Record<string, number>>;
     readonly markedBlessingAcquisitionIdentity: string;
+    /** The selection that installed this Embryo, which owns its transformations. */
+    readonly source: KeepsakeSelectionAddress | EchoKeepsakeReplayAddress;
+    /** Eight-room intervals reached since that install. */
+    readonly cycles: number;
+    /** The source's authored blessing per cycle. */
+    readonly transformations: Readonly<Record<string, AuthoredTranscendentEmbryoOutcome>>;
   };
   /** Discordant Bell's accumulated multiplier; the permanent source stays after a swap. */
   readonly discordantBell?: { readonly rank: KeepsakeRank; readonly multiplier: number };

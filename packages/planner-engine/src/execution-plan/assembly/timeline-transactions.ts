@@ -508,9 +508,9 @@ export function executionTimelineTransactions(
   const timeline = appendTranscendentEmbryoTimelineEffects(
     appendSteadyGrowthTimelineEffects(
       room.roomLifecycleTimeline,
-      biome.rewards.steadyGrowthOutcomes.map((outcome) => outcome.address),
+      biome.rewards.steadyGrowthOutcomes,
     ),
-    biome.rewards.transcendentEmbryoOutcomes.map((outcome) => outcome.address),
+    biome.rewards.transcendentEmbryoOutcomes,
   );
   for (const timelineEntry of timeline.entries) {
     const timeline = timelineEntry;
@@ -541,7 +541,7 @@ export function executionTimelineTransactions(
             'executionCoverageMissing',
             `missing automatic outcome ${semanticAddressKey(timeline.address)}`,
           );
-        const selected = room.encounters.steadyGrowthTargetByPhase?.[timeline.phaseKey];
+        const selected = outcome.targetTraitKey;
         if (selected === undefined)
           throw new CompilerError(
             'executionCoverageMissing',
@@ -566,7 +566,7 @@ export function executionTimelineTransactions(
             'executionCoverageMissing',
             `missing automatic outcome ${semanticAddressKey(timeline.address)}`,
           );
-        const selected = room.encounters.transcendentEmbryoBlessingByPhase?.[timeline.phaseKey];
+        const selected = outcome.value;
         const rarities = outcome.transformationRarities;
         if (selected === undefined || rarities.length !== 1)
           throw new CompilerError(

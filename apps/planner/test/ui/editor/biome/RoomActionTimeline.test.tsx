@@ -16,6 +16,7 @@ import {
   createShopOfferAddress,
   createStartingRewardAddress,
   createSteadyGrowthOutcomeAddress,
+  createTraitOfferAddress,
   decodeProjectDocument,
   semanticAddressKey,
   roomActionKey,
@@ -229,8 +230,11 @@ describe('OccurrenceRoomActions', () => {
   it('reopens the shared Steady Growth target picker on exact finding navigation', async () => {
     const application = createOpenTestApplication('Underworld');
     const outcome = createSteadyGrowthOutcomeAddress(
-      createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
-      'Encounter',
+      createTraitOfferAddress(
+        createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+        'source',
+      ),
+      1,
     );
     const control = {
       address: outcome,
@@ -326,8 +330,11 @@ describe('OccurrenceRoomActions', () => {
     const application = createOpenTestApplication('Surface');
     vi.spyOn(application.store, 'dispatch').mockImplementation(() => undefined as never);
     const outcome = createSteadyGrowthOutcomeAddress(
-      createOccurrenceAddress(nBiome, nOccurrenceIds.opening),
-      'Encounter',
+      createTraitOfferAddress(
+        createIncomingRewardAddress(nBiome, nOccurrenceIds.opening),
+        'source',
+      ),
+      1,
     );
     const clearIntent = vi.fn(() => ({
       command: {

@@ -21,6 +21,7 @@ import {
 } from '../../validation';
 import { decodeEchoLastRunBoon } from './echo-last-run-codec';
 import { decodeAllTogetherResult } from './all-together-codec';
+import { decodeSteadyGrowthTargets } from './steady-growth-targets-codec';
 import { encounterSetForBinding } from '../encounter-envelope';
 import { decodeMaxHealthRoll } from '../../traits/max-health-roll';
 
@@ -55,6 +56,7 @@ export function decodeEncounterTraitOffer(
       'rarificationActions',
       ...('rejectedOptionKey' in record ? ['rejectedOptionKey'] : []),
       ...('concaveStoneResult' in record ? ['concaveStoneResult'] : []),
+      ...('steadyGrowthTargets' in record ? ['steadyGrowthTargets'] : []),
     ],
     path,
   );
@@ -440,7 +442,7 @@ export function decodeEncounterTraitOffer(
       failProjectDocument(`${path}.concaveStoneResult.kind`, 'must be noProc or proc');
     }
   }
-  return Object.freeze({
+  const offer: AuthoredTraitOfferTraits = Object.freeze({
     kind: 'traits',
     giverKey,
     options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
@@ -451,6 +453,15 @@ export function decodeEncounterTraitOffer(
       : { rejectedOptionKey: rejectedOptionKey as TraitOptionKey }),
     ...(concaveStoneResult === undefined ? {} : { concaveStoneResult }),
   });
+  const steadyGrowthTargets = decodeSteadyGrowthTargets(
+    record.steadyGrowthTargets,
+    catalog,
+    offer,
+    `${path}.steadyGrowthTargets`,
+  );
+  return steadyGrowthTargets === undefined
+    ? offer
+    : Object.freeze({ ...offer, steadyGrowthTargets });
 }
 
 export function legalTraitOfferEncounterKeys(

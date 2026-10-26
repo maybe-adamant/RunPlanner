@@ -21,6 +21,8 @@ const {
   createOccurrenceId,
   createRoomActionAddress,
   createSteadyGrowthOutcomeAddress,
+  createIncomingRewardAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createTranscendentEmbryoOutcomeAddress,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -102,7 +104,13 @@ describe('resolution-interactions', () => {
   it('binds Steady Growth to its phase-owned candidate and exact target command', () => {
     const project = createGoldenFGHIProject();
     const owner = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
-    const outcome = createSteadyGrowthOutcomeAddress(owner, 'Encounter');
+    const outcome = createSteadyGrowthOutcomeAddress(
+      createTraitOfferAddress(
+        createIncomingRewardAddress(goldenFBiome, owner.occurrenceId),
+        'source',
+      ),
+      1,
+    );
     const control: WorkspaceSteadyGrowthControl = Object.freeze({
       address: outcome,
       marker: Object.freeze({
@@ -163,8 +171,10 @@ describe('resolution-interactions', () => {
 
   it('binds an automatic Embryo transformation to its exact blessing command', () => {
     const project = createGoldenFGHIProject();
-    const owner = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
-    const outcome = createTranscendentEmbryoOutcomeAddress(owner, 'Encounter');
+    const outcome = createTranscendentEmbryoOutcomeAddress(
+      createRouteStartKeepsakeSelectionAddress('Underworld'),
+      1,
+    );
     const control: WorkspaceTranscendentEmbryoControl = Object.freeze({
       address: outcome,
       value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },

@@ -56,8 +56,6 @@ function findingParentAddress(address: SemanticAddress): SemanticAddress | undef
   switch (address.kind) {
     case 'levelResolution':
     case 'acquisitionRole':
-    case 'steadyGrowthOutcome':
-    case 'transcendentEmbryoOutcome':
     case 'acquisitionSite':
       return address.owner;
     case 'nemesisRandomEvent':
@@ -750,9 +748,11 @@ export function locateOwner(
   address: SemanticAddress,
   chronology?: FindingRegionEntry['chronology'],
 ): OwnerLocation | undefined {
-  const structural = locateStructuralOwner(prefix, address, chronology);
+  // An automatic outcome is addressed by its source; it sits where it landed.
+  const landing = chronology?.kind === 'history' ? chronology.occurrence : undefined;
+  const structural = locateStructuralOwner(prefix, landing ?? address, chronology);
   if (structural === undefined) return undefined;
-  const occurrence = occurrenceOwnerAddress(address);
+  const occurrence = landing ?? occurrenceOwnerAddress(address);
   if (occurrence === undefined) return structural;
   const rooms: CanonicalAuthoredRoom[] = [];
   if (prefix.entryRoom !== undefined) rooms.push(prefix.entryRoom);

@@ -5,8 +5,6 @@ import {
   createBiomeAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
-  createSteadyGrowthOutcomeAddress,
-  createTranscendentEmbryoOutcomeAddress,
   semanticAddressKey,
   type OccurrenceAddress,
   type SemanticAddress,
@@ -202,7 +200,6 @@ export function settleProjectEdit(options: {
           return entry === undefined ? [] : [semanticAddressKey(entry)];
         }),
   );
-  const authoredOutcomes = new Set(authoredAddresses.map(semanticAddressKey));
   let project = applyProjectCommand(before.project, catalog, command);
   if (project === before.project) return Object.freeze({ assembly: before });
   let assembly = evaluate(project);
@@ -244,104 +241,50 @@ export function settleProjectEdit(options: {
         deferred: false,
       }));
     for (const contact of [...currentContacts, ...absentContacts]) {
+      // Steady Growth and Embryo outcomes are keyed by their source and cycle.
+      if (contact.effect !== 'clockedPickup') continue;
       const previous = beforeContacts.get(contactKey(contact));
-      const oldSignature = agreedTimedEffectContact(previous);
-      const signature = agreedTimedEffectContact(contact);
-      if (
-        contact.effect !== 'clockedPickup' &&
-        (signature === undefined || signature === oldSignature)
-      )
-        continue;
       const old = occurrenceAt(before.project, contact.owner);
       const current = occurrenceAt(project, contact.owner);
       if (old === undefined || current === undefined) continue;
-      if (contact.effect === 'steadyGrowth') {
+      for (const reference of current.roomActions.order) {
         if (
-          authoredOutcomes.has(
-            semanticAddressKey(createSteadyGrowthOutcomeAddress(contact.owner, contact.phaseKey)),
-          )
+          reference.kind !== 'interactAcquisitionEntry' ||
+          reference.encounterPhaseKey !== contact.phaseKey ||
+          parseClockedTraitGeneratedPickupEntryKey(reference.entryKey) === undefined
         )
           continue;
-        const value = current.encounters.steadyGrowthTargetByPhase?.[contact.phaseKey];
         if (
-          value !== undefined &&
-          value === old.encounters.steadyGrowthTargetByPhase?.[contact.phaseKey]
+          !old.roomActions.order.some((prior) => roomActionKey(prior) === roomActionKey(reference))
         )
-          repairs.push({
-            key: contactKey(contact),
-            owner: contact.owner,
-            command: {
-              kind: 'ReplaceSteadyGrowthTarget',
-              outcome: createSteadyGrowthOutcomeAddress(contact.owner, contact.phaseKey),
-              targetTraitKey: null,
-            },
-          });
-      } else if (contact.effect === 'transcendentEmbryo') {
+          continue;
         if (
-          authoredOutcomes.has(
+          authoredEntries.has(
             semanticAddressKey(
-              createTranscendentEmbryoOutcomeAddress(contact.owner, contact.phaseKey),
+              createAcquisitionEntryAddress(
+                createAcquisitionSiteAddress(contact.owner, reference.siteKey),
+                reference.entryKey,
+              ),
             ),
           )
         )
           continue;
-        const value = current.encounters.transcendentEmbryoBlessingByPhase?.[contact.phaseKey];
-        if (
-          value !== undefined &&
-          JSON.stringify(value) ===
-            JSON.stringify(old.encounters.transcendentEmbryoBlessingByPhase?.[contact.phaseKey])
-        )
-          repairs.push({
-            key: contactKey(contact),
-            owner: contact.owner,
-            command: {
-              kind: 'ReplaceTranscendentEmbryoTransformation',
-              outcome: createTranscendentEmbryoOutcomeAddress(contact.owner, contact.phaseKey),
-              value: null,
-            },
-          });
-      } else {
-        for (const reference of current.roomActions.order) {
-          if (
-            reference.kind !== 'interactAcquisitionEntry' ||
-            reference.encounterPhaseKey !== contact.phaseKey ||
-            parseClockedTraitGeneratedPickupEntryKey(reference.entryKey) === undefined
-          )
-            continue;
-          if (
-            !old.roomActions.order.some(
-              (prior) => roomActionKey(prior) === roomActionKey(reference),
-            )
-          )
-            continue;
-          if (
-            authoredEntries.has(
-              semanticAddressKey(
-                createAcquisitionEntryAddress(
-                  createAcquisitionSiteAddress(contact.owner, reference.siteKey),
-                  reference.entryKey,
-                ),
-              ),
-            )
-          )
-            continue;
-          const source = parseClockedTraitGeneratedPickupEntryKey(reference.entryKey)!;
-          const oldSource = agreedTimedEffectContact(previous, source.acquisitionIdentity);
-          const newSource = agreedTimedEffectContact(contact, source.acquisitionIdentity);
-          if (newSource === undefined || oldSource === newSource) continue;
-          repairs.push({
-            key: `${contactKey(contact)}:${reference.entryKey}`,
-            owner: contact.owner,
-            command: {
-              kind: 'RemoveRoomAction',
-              action: createRoomActionAddress(
-                createBiomeAddress(contact.owner.routeKey, contact.owner.biomeKey),
-                contact.owner.occurrenceId,
-                roomActionKey(reference),
-              ),
-            },
-          });
-        }
+        const source = parseClockedTraitGeneratedPickupEntryKey(reference.entryKey)!;
+        const oldSource = agreedTimedEffectContact(previous, source.acquisitionIdentity);
+        const newSource = agreedTimedEffectContact(contact, source.acquisitionIdentity);
+        if (newSource === undefined || oldSource === newSource) continue;
+        repairs.push({
+          key: `${contactKey(contact)}:${reference.entryKey}`,
+          owner: contact.owner,
+          command: {
+            kind: 'RemoveRoomAction',
+            action: createRoomActionAddress(
+              createBiomeAddress(contact.owner.routeKey, contact.owner.biomeKey),
+              contact.owner.occurrenceId,
+              roomActionKey(reference),
+            ),
+          },
+        });
       }
     }
     if (repairs.length > 0) {

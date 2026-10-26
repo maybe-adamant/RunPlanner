@@ -77,30 +77,24 @@ function createGoldenEchoGiftKeepsakePendingProject(
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTranscendentEmbryoTransformation',
       outcome: createTranscendentEmbryoOutcomeAddress(
-        createOccurrenceAddress(
-          createBiomeAddress('Underworld', 'F'),
-          createOccurrenceId('golden-f-b7-e1'),
-        ),
-        'Encounter',
+        createRouteStartKeepsakeSelectionAddress('Underworld'),
+        1,
       ),
       value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTranscendentEmbryoTransformation',
       outcome: createTranscendentEmbryoOutcomeAddress(
-        createOccurrenceAddress(
-          createBiomeAddress('Underworld', 'G'),
-          createOccurrenceId('golden-g-b6-e1'),
-        ),
-        'Encounter',
+        createRouteStartKeepsakeSelectionAddress('Underworld'),
+        2,
       ),
       value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTranscendentEmbryoTransformation',
       outcome: createTranscendentEmbryoOutcomeAddress(
-        createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-combat05')),
-        'Cage02',
+        createRouteStartKeepsakeSelectionAddress('Underworld'),
+        3,
       ),
       value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
     });
@@ -138,8 +132,8 @@ function createGoldenEchoGiftKeepsakePendingProject(
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTranscendentEmbryoTransformation',
       outcome: createTranscendentEmbryoOutcomeAddress(
-        createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop:boss')),
-        'Encounter',
+        createRouteStartKeepsakeSelectionAddress('Underworld'),
+        4,
       ),
       value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
     });

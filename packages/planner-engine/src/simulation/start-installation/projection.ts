@@ -69,11 +69,21 @@ function traits(state: SimulationState): readonly StartInstalledTrait[] {
   return sorted(
     Object.values(equippedTraits).map((equipped) => {
       // Offer provenance is planner evidence; the game installs the instance.
-      const { giverKey, providerKind, sourceRole, acquisitionIdentity, ...installed } = equipped;
+      const {
+        giverKey,
+        providerKind,
+        sourceRole,
+        acquisitionIdentity,
+        steadyGrowthSource,
+        steadyGrowthCycles,
+        ...installed
+      } = equipped;
       void giverKey;
       void providerKind;
       void sourceRole;
       void acquisitionIdentity;
+      void steadyGrowthSource;
+      void steadyGrowthCycles;
       const slotKey = slotByTrait.get(equipped.traitKey);
       return Object.freeze({
         ...installed,

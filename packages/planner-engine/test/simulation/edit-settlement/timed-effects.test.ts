@@ -49,6 +49,25 @@ function occurrence(project: ProjectDocument, id: string) {
     .flatMap((biome) => biome.topology?.occurrences ?? [])
     .find((room) => room.occurrenceId === id)!;
 }
+const steadyGrowthSource = createTraitOfferAddress(
+  createIncomingRewardAddress(
+    createBiomeAddress('Surface', 'N'),
+    createOccurrenceId('surface-n-combat23'),
+  ),
+  'source',
+);
+/** The scheduled checkpoint's Steady Growth targets, owned by its source offer. */
+function steadyGrowthTargets(project: ProjectDocument) {
+  const source = occurrence(project, 'surface-n-combat23');
+  if (source.state.kind !== 'ephyraCombat') throw new Error('Steady Growth source missing');
+  const offer = source.state.reward?.traitOffersByAcquisitionRole.source;
+  if (offer?.kind !== 'traits') throw new Error('Steady Growth offer missing');
+  return offer.steadyGrowthTargets;
+}
+/** The route-start Embryo's transformations, owned by its equip results. */
+function embryoTransformations(project: ProjectDocument) {
+  return project.route.loadout.keepsakeEquipResults?.transcendentEmbryoTransformations;
+}
 
 describe('timed-effect edit settlement', () => {
   it('retains an active downstream Embryo outcome through Shadow activation and removal', () => {
@@ -68,7 +87,7 @@ describe('timed-effect edit settlement', () => {
     const owner = createOccurrenceAddress(f, createOccurrenceId('golden-f-b7-e1'));
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTranscendentEmbryoTransformation',
-      outcome: createTranscendentEmbryoOutcomeAddress(owner, 'Encounter'),
+      outcome: createTranscendentEmbryoOutcomeAddress(selection, 1),
       value,
     });
     const before = evaluate(project);
@@ -92,45 +111,11 @@ describe('timed-effect edit settlement', () => {
           .timedEffects,
       ).toEqual(contacts);
       expect(
-        occurrence(settled.project, owner.occurrenceId).encounters.transcendentEmbryoBlessingByPhase
-          ?.Encounter,
+        settled.project.route.loadout.keepsakeEquipResults?.transcendentEmbryoTransformations?.[
+          '1'
+        ],
       ).toEqual(value);
       project = settled.project;
-    }
-  });
-  it('retains both minibosses’ dormant automatic choices through Shadow activation and removal', () => {
-    let project = loadUnderworldFGProject();
-    const f = createBiomeAddress('Underworld', 'F');
-    const rooms = project.route.biomes[0]!.topology!.occurrences.filter(
-      (room) => room.gameName === 'F_MiniBoss01' || room.gameName === 'F_MiniBoss02',
-    );
-    expect(rooms).toHaveLength(2);
-    for (const room of rooms) {
-      const owner = createOccurrenceAddress(f, room.occurrenceId);
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceSteadyGrowthTarget',
-        outcome: createSteadyGrowthOutcomeAddress(owner, 'Encounter'),
-        targetTraitKey: 'ApolloWeaponBoon',
-      });
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceTranscendentEmbryoTransformation',
-        outcome: createTranscendentEmbryoOutcomeAddress(owner, 'Encounter'),
-        value: { blessingKey: 'ChaosElementalBlessing', blessingValues: {} },
-      });
-    }
-    const original = project;
-    for (const rank of [1, 0]) {
-      project = settle(project, {
-        kind: 'ReplaceFearVowRank',
-        route: { kind: 'route', routeKey: 'Underworld' },
-        vowKey: 'MinibossCountShrineUpgrade',
-        rank,
-      }).project;
-      for (const room of rooms) {
-        expect(occurrence(project, room.occurrenceId).encounters).toEqual(
-          occurrence(original, room.occurrenceId).encounters,
-        );
-      }
     }
   });
   it.each([
@@ -161,12 +146,8 @@ describe('timed-effect edit settlement', () => {
       ),
     ).toEqual([]);
     expect(after.acquisitionSites).toEqual(before.acquisitionSites);
-    expect(after.encounters.steadyGrowthTargetByPhase).toEqual(
-      before.encounters.steadyGrowthTargetByPhase,
-    );
-    expect(after.encounters.transcendentEmbryoBlessingByPhase).toEqual(
-      before.encounters.transcendentEmbryoBlessingByPhase,
-    );
+    expect(steadyGrowthTargets(settled.project)).toEqual(steadyGrowthTargets(project));
+    expect(embryoTransformations(settled.project)).toEqual(embryoTransformations(project));
     expect(after.roomActions.order).toEqual(before.roomActions.order);
     const history = publishProjectHistoryEdit(createProjectHistory(project), settled.project);
     expect(undoProjectHistory(history).present).toBe(project);
@@ -174,27 +155,22 @@ describe('timed-effect edit settlement', () => {
   });
   it('retains an unassessed timed suffix when an earlier target is cleared', () => {
     const project = loadSurfaceScheduledLifecycleCheckpoint();
-    const owner = createOccurrenceAddress(p, createOccurrenceId('surface-p-3-1-p_combat04'));
+    // Cycle 4 lands at surface-p-3-1-p_combat04.
     const settled = settle(project, {
       kind: 'ReplaceSteadyGrowthTarget',
-      outcome: createSteadyGrowthOutcomeAddress(owner, 'Combat'),
+      outcome: createSteadyGrowthOutcomeAddress(steadyGrowthSource, 4),
       targetTraitKey: null,
     });
     expect(
       settled.evaluation.findings.some((finding) => finding.code === 'steadyGrowthOutcomeMissing'),
     ).toBe(true);
-    expect(
-      occurrence(settled.project, 'surface-p-4-1-p_combat07').encounters
-        .transcendentEmbryoBlessingByPhase,
-    ).toEqual(
-      occurrence(project, 'surface-p-4-1-p_combat07').encounters.transcendentEmbryoBlessingByPhase,
-    );
+    expect(embryoTransformations(settled.project)).toEqual(embryoTransformations(project));
   });
   it('keeps a context-invalid target when equivalent replacement did not change its clock', () => {
     const owner = createOccurrenceAddress(p, createOccurrenceId('surface-p-3-1-p_combat04'));
     const project = applyProjectCommand(loadSurfaceScheduledLifecycleCheckpoint(), catalog, {
       kind: 'ReplaceSteadyGrowthTarget',
-      outcome: createSteadyGrowthOutcomeAddress(owner, 'Combat'),
+      outcome: createSteadyGrowthOutcomeAddress(steadyGrowthSource, 4),
       targetTraitKey: 'ZeusWeaponBoon',
     });
     const settled = settle(project, {
@@ -202,11 +178,9 @@ describe('timed-effect edit settlement', () => {
       occurrence: owner,
       gameName: 'P_Combat05',
     });
-    expect(
-      occurrence(settled.project, owner.occurrenceId).encounters.steadyGrowthTargetByPhase?.Combat,
-    ).toBe('ZeusWeaponBoon');
+    expect(steadyGrowthTargets(settled.project)?.['4']).toBe('ZeusWeaponBoon');
   });
-  it('resets only vanished combat contacts when replacing combat with story', () => {
+  it('keeps every source-owned outcome when replacing combat with story', () => {
     const project = loadSurfaceScheduledLifecycleCheckpoint();
     const owner = createOccurrenceAddress(p, createOccurrenceId('surface-p-3-1-p_combat04'));
     const settled = settle(project, {
@@ -214,15 +188,8 @@ describe('timed-effect edit settlement', () => {
       occurrence: owner,
       gameName: 'P_Story01',
     });
-    expect(
-      occurrence(settled.project, owner.occurrenceId).encounters.steadyGrowthTargetByPhase?.Combat,
-    ).toBeUndefined();
-    expect(
-      occurrence(settled.project, 'surface-p-4-1-p_combat07').encounters
-        .transcendentEmbryoBlessingByPhase,
-    ).toEqual(
-      occurrence(project, 'surface-p-4-1-p_combat07').encounters.transcendentEmbryoBlessingByPhase,
-    );
+    expect(steadyGrowthTargets(settled.project)).toEqual(steadyGrowthTargets(project));
+    expect(embryoTransformations(settled.project)).toEqual(embryoTransformations(project));
   });
   it('refuses deleting a valid required Hermes obligation without adding history', () => {
     const project = loadSurfaceScheduledLifecycleCheckpoint();
@@ -304,11 +271,9 @@ describe('timed-effect edit settlement', () => {
     expect(occurrence(settled.project, 'surface-p-1-1-p_combat03').acquisitionSites).toEqual(
       occurrence(project, 'surface-p-1-1-p_combat03').acquisitionSites,
     );
-    expect(
-      occurrence(settled.project, 'surface-p-3-1-p_combat04').encounters.steadyGrowthTargetByPhase,
-    ).toEqual(occurrence(project, 'surface-p-3-1-p_combat04').encounters.steadyGrowthTargetByPhase);
+    expect(steadyGrowthTargets(settled.project)).toEqual(steadyGrowthTargets(project));
   });
-  it('resets a reached displaced Steady Growth target after an earlier acquired interval changes', () => {
+  it('keeps every Steady Growth target when its acquired interval changes', () => {
     const project = loadSurfaceScheduledLifecycleCheckpoint();
     const source = occurrence(project, 'surface-n-combat23');
     if (source.state.kind !== 'ephyraCombat') throw new Error('Steady Growth source missing');
@@ -325,78 +290,12 @@ describe('timed-effect edit settlement', () => {
         options: [{ ...offer.options[0], rarity: 'Rare' }, offer.options[1]!, offer.options[2]!],
       },
     });
-    expect(
-      occurrence(settled.project, 'surface-o-combat04').encounters.steadyGrowthTargetByPhase
-        ?.Combat1,
-    ).toBeUndefined();
-    expect(
-      settled.evaluation.findings.some((finding) => finding.code === 'steadyGrowthOutcomeMissing'),
-    ).toBe(true);
-    expect(
-      occurrence(settled.project, 'surface-p-3-1-p_combat04').encounters.steadyGrowthTargetByPhase,
-    ).toEqual(occurrence(project, 'surface-p-3-1-p_combat04').encounters.steadyGrowthTargetByPhase);
+    expect(steadyGrowthTargets(settled.project)).toEqual(steadyGrowthTargets(project));
   });
-  it('resets an inherited changed-cycle target after a second edit reveals the suffix', () => {
-    const project = loadSurfaceScheduledLifecycleCheckpoint();
-    const source = occurrence(project, 'surface-n-combat23');
-    if (source.state.kind !== 'ephyraCombat') throw new Error('Steady Growth source missing');
-    const offer = source.state.reward?.traitOffersByAcquisitionRole.source;
-    if (offer?.kind !== 'traits') throw new Error('Steady Growth offer missing');
-    const changed = settle(project, {
-      kind: 'ReplaceTraitOffer',
-      trait: createTraitOfferAddress(
-        createIncomingRewardAddress(createBiomeAddress('Surface', 'N'), source.occurrenceId),
-        'source',
-      ),
-      value: {
-        ...offer,
-        options: [{ ...offer.options[0], rarity: 'Common' }, offer.options[1]!, offer.options[2]!],
-      },
-    });
-    const owner = createOccurrenceAddress(
-      createBiomeAddress('Surface', 'O'),
-      createOccurrenceId('surface-o-combat07'),
-    );
-    const repairCommand = {
-      kind: 'ReplaceSteadyGrowthTarget',
-      outcome: createSteadyGrowthOutcomeAddress(owner, 'Combat1'),
-      targetTraitKey: 'ApolloWeaponBoon',
-    } as const;
-    expect(
-      occurrence(changed.project, 'surface-o-preboss:boss').encounters.steadyGrowthTargetByPhase
-        ?.Encounter,
-    ).toBe('ApolloWeaponBoon');
-    const proposed = evaluate(applyProjectCommand(changed.project, catalog, repairCommand));
-    const bossContact = candidateArtifactsForProjectEvaluationAssembly(proposed)
-      .biomeAt(createBiomeAddress('Surface', 'O'))
-      ?.roomLifecycles.timedEffects.find(
-        (contact) =>
-          contact.effect === 'steadyGrowth' &&
-          contact.owner.occurrenceId === 'surface-o-preboss:boss',
-      );
-    expect(bossContact?.cohorts[0]?.[0]).toMatchObject({ cycle: 1, progress: 5, interval: 6 });
-    const repaired = settle(changed.project, repairCommand);
-    expect(
-      occurrence(repaired.project, 'surface-o-combat07').encounters.steadyGrowthTargetByPhase
-        ?.Combat1,
-    ).toBe('ApolloWeaponBoon');
-    expect(
-      occurrence(repaired.project, 'surface-o-preboss:boss').encounters.steadyGrowthTargetByPhase
-        ?.Encounter,
-    ).toBeUndefined();
-    const history = publishProjectHistoryEdit(
-      createProjectHistory(changed.project),
-      repaired.project,
-    );
-    expect(undoProjectHistory(history).present).toBe(changed.project);
-    expect(redoProjectHistory(undoProjectHistory(history)).present).toBe(repaired.project);
-  });
-  it('conservatively resets newly reached inherited choices after an ordinary blocker repair', () => {
+  it('keeps newly reached inherited choices after an ordinary blocker repair', () => {
     const original = loadSurfaceScheduledLifecycleCheckpoint();
-    const owner = createOccurrenceAddress(p, createOccurrenceId('surface-p-3-1-p_combat04'));
-    const outcome = createSteadyGrowthOutcomeAddress(owner, 'Combat');
-    const target = occurrence(original, owner.occurrenceId).encounters.steadyGrowthTargetByPhase
-      ?.Combat;
+    const outcome = createSteadyGrowthOutcomeAddress(steadyGrowthSource, 4);
+    const target = steadyGrowthTargets(original)?.['4'];
     if (target === undefined) throw new Error('Scheduled target missing');
     const incomplete = applyProjectCommand(original, catalog, {
       kind: 'ReplaceSteadyGrowthTarget',
@@ -408,18 +307,8 @@ describe('timed-effect edit settlement', () => {
       outcome,
       targetTraitKey: target,
     });
-    expect(
-      occurrence(repaired.project, owner.occurrenceId).encounters.steadyGrowthTargetByPhase?.Combat,
-    ).toBe(target);
-    expect(
-      occurrence(repaired.project, 'surface-p-4-1-p_combat07').encounters
-        .transcendentEmbryoBlessingByPhase?.Combat,
-    ).toBeUndefined();
-    expect(
-      repaired.evaluation.findings.some(
-        (finding) => finding.code === 'transcendentEmbryoOutcomeMissing',
-      ),
-    ).toBe(true);
+    expect(repaired.project).toEqual(original);
+    expect(repaired.evaluation.findings).toEqual([]);
   });
   it('settles multiple reached missing deliveries in one edit', () => {
     let project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
@@ -448,17 +337,14 @@ describe('timed-effect edit settlement', () => {
       ),
     ).toBe(false);
   });
-  it('clears a reached Embryo transformation when its active keepsake source is removed', () => {
+  it('leaves Embryo transformations dormant when its keepsake source is removed', () => {
     const project = loadSurfaceScheduledLifecycleCheckpoint();
     const settled = settle(project, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'ManaOverTimeRefundKeepsake',
     });
-    expect(
-      occurrence(settled.project, 'surface-n-combat03').encounters.transcendentEmbryoBlessingByPhase
-        ?.Encounter,
-    ).toBeUndefined();
+    expect(embryoTransformations(settled.project)).toEqual(embryoTransformations(project));
     expect(
       settled.evaluation.findings.some(
         (finding) => finding.code === 'transcendentEmbryoOutcomeMissing',

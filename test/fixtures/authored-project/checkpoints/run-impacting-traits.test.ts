@@ -21,6 +21,7 @@ import {
   routeStartIncomingReward,
   seaStarDuplicateSiteKey,
   selectedPickupProducers,
+  semanticAddressKey,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 import {
@@ -364,12 +365,15 @@ describe('run-impacting trait checkpoint workflows', () => {
     expect(histories).toHaveLength(1);
     expect(findings).toHaveLength(1);
     const outcome = findings[0]?.origin;
-    expect(outcome).toMatchObject({
-      kind: 'steadyGrowthOutcome',
+    expect(outcome).toMatchObject({ kind: 'steadyGrowthOutcome', cycle: 1 });
+    if (outcome?.kind !== 'steadyGrowthOutcome') throw new Error('Steady outcome is missing');
+    const landed = assembly.evaluation.route.biomes
+      .flatMap((biome) => ('rewards' in biome ? biome.rewards.steadyGrowthOutcomes : []))
+      .find((candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(outcome));
+    expect(landed).toMatchObject({
       owner: { kind: 'occurrence', occurrenceId: 'surface-n-combat11' },
       phaseKey: 'Encounter',
     });
-    if (outcome?.kind !== 'steadyGrowthOutcome') throw new Error('Steady outcome is missing');
     expect(
       createPreparedProjectCandidateSession(catalog, assembly).evaluate({
         kind: 'steadyGrowthOutcome',
