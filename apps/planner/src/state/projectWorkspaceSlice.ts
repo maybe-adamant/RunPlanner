@@ -25,7 +25,7 @@ export interface OpenProjectWorkspaceState {
   readonly kind: 'openProject';
   readonly assembly: ProjectEvaluationAssembly;
   readonly history: ProjectHistory;
-  /** The repair the last edit's settlement could not finish; cleared by the next publication. */
+  /** The last edit's settlement fault; cleared by the next publication. */
   readonly settlementFault?: SettlementFault;
 }
 export interface NoProjectWorkspaceState {
@@ -95,7 +95,7 @@ function publishPreparedWorkspace(
   });
 }
 
-/** Warns once per recorded settlement fault; a fault signals an engine repair defect. */
+/** Warns once per recorded settlement fault; a fault signals an engine contract defect. */
 export const settlementFaultWarning: Middleware<
   object,
   { readonly projectWorkspace: ProjectWorkspaceState }
@@ -105,7 +105,7 @@ export const settlementFaultWarning: Middleware<
   const fault = api.getState().projectWorkspace.settlementFault;
   if (fault !== undefined && fault !== before) {
     globalThis.console.warn(
-      `Settlement could not finish repairing ${semanticAddressKey(fault.owner)} (${fault.key}).`,
+      `Planner settlement fault at ${semanticAddressKey(fault.owner)} (${fault.key}).`,
     );
   }
   return result;
