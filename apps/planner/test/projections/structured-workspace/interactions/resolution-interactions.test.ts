@@ -101,7 +101,7 @@ describe('resolution-interactions', () => {
     });
   });
 
-  it('binds Steady Growth to its phase-owned candidate and exact target command', () => {
+  it('binds Steady Growth to its source-owned candidate and exact target command', () => {
     const project = createGoldenFGHIProject();
     const owner = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
     const outcome = createSteadyGrowthOutcomeAddress(

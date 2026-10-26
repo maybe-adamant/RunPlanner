@@ -60,7 +60,6 @@ export function SteadyGrowthEffectRow({
       aria-label="Steady Growth"
       aria-description="Automatic effect"
       data-action-accent="automatic"
-      data-steady-growth={control.phaseKey}
       editors={
         <div className="scheduled-trait-effect-identity">
           <RandomTraitTargetPicker
