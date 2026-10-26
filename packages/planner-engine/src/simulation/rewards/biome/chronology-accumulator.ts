@@ -1,4 +1,3 @@
-import type { TimedEffectContact } from '../timed-effects/contacts';
 import {
   createAcquisitionRoleAddress,
   createBiomeAddress,
@@ -203,10 +202,6 @@ export type ChronologyEmission =
     }
   | { readonly kind: 'bossArcanaOutcomes'; readonly outcomes: readonly BossArcanaOutcome[] }
   | {
-      readonly kind: 'timedEffectContacts';
-      readonly contacts: readonly TimedEffectContact[];
-    }
-  | {
       readonly kind: 'steadyGrowthThresholds';
       readonly thresholds: readonly {
         readonly address: SteadyGrowthOutcomeAddress;
@@ -238,7 +233,6 @@ export interface TraitChildSettlementAccumulation {
 
 /** The biome accumulators, complete once the walk and finalization have merged everything. */
 export interface ChronologyAccumulation {
-  readonly timedEffects: readonly TimedEffectContact[];
   readonly generatedPickupPlacements: readonly GeneratedPickupPlacement[];
   readonly findingRegions: readonly FindingRegionEntry[];
   readonly producerFrontiers: ReadonlyMap<string, RewardProducerFrontier>;
@@ -405,7 +399,6 @@ export function createChronologyAccumulator(
   const reachedTraitOfferCandidateFingerprints = new Map<string, Set<string>>();
   const acquisitionConversionContexts = new Map<string, readonly AcquisitionRoleFrontier[]>();
   const fixedAcquisitionRealizations = new Map<string, FixedAcquisitionRealization>();
-  const timedEffects: TimedEffectContact[] = [];
   const generatedPickupPlacements = new Map<string, GeneratedPickupPlacement>();
   const derivedAcquisitionEntryContexts = new Map<
     string,
@@ -764,9 +757,6 @@ export function createChronologyAccumulator(
 
   function mergeEmission(emission: ChronologyEmission): void {
     switch (emission.kind) {
-      case 'timedEffectContacts':
-        timedEffects.push(...emission.contacts);
-        return;
       case 'generatedPickupPlacements':
         for (const placement of emission.placements) {
           const key = semanticAddressKey(placement.address);
@@ -927,7 +917,6 @@ export function createChronologyAccumulator(
     finish(): ChronologyAccumulation {
       finished = true;
       return Object.freeze({
-        timedEffects: Object.freeze(timedEffects),
         findingRegions: Object.freeze([...findings.values()]),
         generatedPickupPlacements: Object.freeze([...generatedPickupPlacements.values()]),
         producerFrontiers,
