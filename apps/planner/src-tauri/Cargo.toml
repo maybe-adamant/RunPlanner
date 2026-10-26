@@ -31,5 +31,5 @@ tauri-plugin-updater = { version = "2", default-features = false, features = ["n
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 # Already in the build through wry; used to switch off WebView2 autofill.
-webview2-com = "0.38"
-windows-core = "0.61"
+webview2-com = "0.39"
+windows-core = "0.62"
