@@ -62,7 +62,7 @@ function contacts(assembly: ProjectEvaluationAssembly): readonly TimedEffectCont
   );
 }
 function contactKey(contact: TimedEffectContact): string {
-  return JSON.stringify([contact.effect, semanticAddressKey(contact.owner), contact.phaseKey]);
+  return JSON.stringify([semanticAddressKey(contact.owner), contact.phaseKey]);
 }
 function placements(assembly: ProjectEvaluationAssembly) {
   return assembly.evaluation.route.biomes.flatMap((biome) =>
@@ -265,8 +265,6 @@ function settleProjectEditRepairs(options: ProjectEditSettlementOptions): Projec
         deferred: false,
       }));
     for (const contact of [...currentContacts, ...absentContacts]) {
-      // Steady Growth and Embryo outcomes are keyed by their source and cycle.
-      if (contact.effect !== 'clockedPickup') continue;
       const previous = beforeContacts.get(contactKey(contact));
       const old = occurrenceAt(before.project, contact.owner);
       const current = occurrenceAt(project, contact.owner);

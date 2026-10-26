@@ -619,9 +619,7 @@ describe('Supply Chain lifecycle', () => {
       beforeThreshold.branches,
     );
     expect(deferred.derivedAcquisitionEntryFrontiers).toEqual([]);
-    expect(
-      deferred.timedEffects.find((contact) => contact.effect === 'clockedPickup'),
-    ).toMatchObject({
+    expect(deferred.timedEffects[0]).toMatchObject({
       deferred: true,
       cohorts: [[expect.objectContaining({ progress: 6, interval: 7 })]],
     });
@@ -698,9 +696,7 @@ describe('Supply Chain lifecycle', () => {
       } as unknown as CanonicalAuthoredRoom,
       afterBoss,
     );
-    expect(
-      released.timedEffects.find((contact) => contact.effect === 'clockedPickup'),
-    ).toMatchObject({
+    expect(released.timedEffects[0]).toMatchObject({
       deferred: false,
       cohorts: [[expect.objectContaining({ progress: 6, interval: 7 })]],
     });
