@@ -273,6 +273,12 @@ describe('run guesses', () => {
         { area: 'traitOffer', reason: 'notInRecord', ...at(1) },
         { area: 'shop', reason: 'unsupportedArea', ...at(5) },
         { area: 'encounter', reason: 'inverseMismatch', ...at(4) },
+        {
+          area: 'traits',
+          reason: 'mismatch',
+          ...at(5),
+          mismatch: { field: 'ZeusWeaponBoon', expected: 'Rare', actual: 'Common' },
+        },
         { area: 'route', reason: 'stopped' },
       ]),
     );
@@ -284,6 +290,7 @@ describe('run guesses', () => {
       ['Boon offers', null],
       ['Shops', null],
       ['Encounters', null],
+      ['Traits', null],
       ['Route', null],
     ]);
     expect(groups.find((group) => group.area === 'roomActionOrder')!.lines).toEqual([]);
@@ -295,6 +302,7 @@ describe('run guesses', () => {
       [2, room('Chaos_03'), 'Guessed'],
       [6, `Erebus · ${room('F_Story01')}`, 'Not supported'],
       [5, `Erebus · ${room('F_Combat21')}`, 'Default foes'],
+      [6, `Erebus · ${room('F_Story01')}`, 'Differs'],
       [null, null, 'Plan ends here'],
     ]);
   });

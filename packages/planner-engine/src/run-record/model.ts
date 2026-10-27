@@ -125,6 +125,51 @@ export interface RunRecordRoom {
    * screen rerolls, each matched by a reward-store draw no offer explains.
    */
   readonly rerolls?: number;
+  /** Run state of the room's entry save, which leaving the previous room writes. */
+  readonly entry?: RunRecordRoomEntry;
+}
+
+/**
+ * Run state an entry save holds. A record carries it on every room or on none;
+ * a zero counter or empty list is absent.
+ */
+export interface RunRecordRoomEntry {
+  /**
+   * `Hero.Traits` by name, each the first instance the game's trait queries
+   * resolve, where it differs from the previous room's entry save; the first
+   * room holds every trait.
+   */
+  readonly traits?: Readonly<Record<string, RunRecordHeldTrait>>;
+  /** Names the previous room's entry save held and this one does not, sorted. */
+  readonly lostTraits?: readonly string[];
+  /** `Hero.SlottedTraits.Keepsake`. */
+  readonly keepsake?: string;
+  /** `Hero.Elements`. */
+  readonly elements?: Readonly<Record<string, number>>;
+  /**
+   * `RewardStores` entry counts by name, for each store whose contents differ
+   * from the previous room's entry save; the first room holds every store.
+   */
+  readonly rewardStores?: Readonly<Record<string, Readonly<Record<string, number>>>>;
+  /** `BannedTraits`, sorted. */
+  readonly bannedTraits?: readonly string[];
+  /** `MetaConversionUses`: Artificer conversions spent this run. */
+  readonly metaConversionUses?: number;
+  /** `WellShopPurchases` by item name. */
+  readonly wellShopPurchases?: Readonly<Record<string, number>>;
+  /** `BiomeBoonSkipCount`: Forfeit skips this biome. */
+  readonly biomeBoonSkipCount?: number;
+  /** Invested Path of Stars nodes by `depth:slot`, sorted. */
+  readonly investedTalents?: readonly string[];
+}
+
+export interface RunRecordHeldTrait {
+  readonly rarity?: string;
+  /** `StackNum`. */
+  readonly level?: number;
+  readonly remainingUses?: number;
+  /** `BoonConversionUses`: the Time Piece's remaining conversions. */
+  readonly boonConversionUses?: number;
 }
 
 export interface RunRecordSpell {

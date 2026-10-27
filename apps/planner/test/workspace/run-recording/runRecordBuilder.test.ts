@@ -73,6 +73,7 @@ interface Step {
   readonly run?: Partial<SavedRunState>;
   readonly traits?: readonly SavedTrait[] | null;
   readonly spell?: SavedSpell;
+  readonly elements?: Readonly<Record<string, number>>;
   readonly worldTime?: number;
 }
 
@@ -96,6 +97,7 @@ function save(step: Step): SaveCheckpoint {
             traits,
             slotted: { Keepsake: 'GoldifyKeepsake', Aspect: 'StaffClearCastAspect' },
             ...(step.spell === undefined ? {} : { spell: step.spell }),
+            elements: step.elements ?? {},
           },
         }),
     profile: {
@@ -423,6 +425,86 @@ describe('run record builder', () => {
     expect(record.rooms[0]?.spell?.layout).toBe('Pyramid');
   });
 
+  it("records each room's entry save, repeating traits and stores only where they changed", () => {
+    const zeus: SavedTrait = { name: 'ZeusWeaponBoon', id: '1.1', rarity: 'Rare', stackNum: 2 };
+    const curse: SavedTrait = { name: 'ChaosDashCurse', id: '1.2', remainingUses: 3 };
+    const stores = (boons: number) => ({
+      RunProgress: ['Boon', ...Array.from({ length: boons }, () => 'Boon'), 'StackUpgrade'],
+      MetaProgress: ['GiftDrop'],
+    });
+    const record = buildRunRecord([
+      save({
+        history: [],
+        current: room('F_Combat01'),
+        traits: [...startTraits, zeus],
+        run: { rewardStores: stores(2) },
+      }),
+      save({
+        history: ['F_Combat01'],
+        current: room('F_Combat02'),
+        departure: room('F_Combat01'),
+        traits: [
+          ...startTraits,
+          { ...zeus, stackNum: 3 },
+          { ...zeus, id: '1.9', stackNum: 1 },
+          curse,
+        ],
+        elements: { Air: 2, Fire: 0 },
+        spell: {
+          name: 'SpellLeapTrait',
+          talents: {
+            '2:1': { name: 'LeapCooldownSpeedTalent', invested: true },
+            '1:1': { name: 'LeapArmorDamageTalent', invested: true },
+            '1:2': { name: 'LeapAoETalent', invested: false },
+          },
+        },
+        run: {
+          rewardStores: stores(1),
+          bannedTraits: ['ZeusSprintBoon', 'HeraManaBoon'],
+          metaConversionUses: 1,
+          wellShopPurchases: { TemporaryMoveSpeedTrait: 1 },
+          biomeBoonSkipCount: 1,
+        },
+      }),
+      save({
+        history: ['F_Combat01', 'F_Combat02'],
+        current: room('F_Combat03'),
+        departure: room('F_Combat02'),
+        traits: [...startTraits, { ...zeus, stackNum: 3 }],
+        run: { rewardStores: stores(1) },
+      }),
+    ]);
+    expect(record.rooms.map((entry) => entry.entry)).toEqual([
+      {
+        traits: {
+          GoldifyKeepsake: { rarity: 'Epic', boonConversionUses: 3 },
+          ZeusWeaponBoon: { rarity: 'Rare', level: 2 },
+        },
+        keepsake: 'GoldifyKeepsake',
+        rewardStores: {
+          RunProgress: { Boon: 3, StackUpgrade: 1 },
+          MetaProgress: { GiftDrop: 1 },
+        },
+      },
+      {
+        // The game's trait queries resolve the first of two same-named instances.
+        traits: {
+          ZeusWeaponBoon: { rarity: 'Rare', level: 3 },
+          ChaosDashCurse: { remainingUses: 3 },
+        },
+        keepsake: 'GoldifyKeepsake',
+        elements: { Air: 2 },
+        rewardStores: { RunProgress: { Boon: 2, StackUpgrade: 1 } },
+        bannedTraits: ['HeraManaBoon', 'ZeusSprintBoon'],
+        metaConversionUses: 1,
+        wellShopPurchases: { TemporaryMoveSpeedTrait: 1 },
+        biomeBoonSkipCount: 1,
+        investedTalents: ['1:1', '2:1'],
+      },
+      { lostTraits: ['ChaosDashCurse'], keepsake: 'GoldifyKeepsake' },
+    ]);
+  });
+
   it('keeps the last write of a rewritten checkpoint', () => {
     const record = buildRunRecord([
       save({ history: [], current: room('F_Opening01') }),
@@ -696,6 +778,7 @@ describe('run record builder', () => {
           Aspect: 'StaffClearCastAspect',
           Familiar: 'DodgeFamiliar',
         },
+        elements: {},
       },
     };
     const second = save({
@@ -744,7 +827,11 @@ describe('run record builder', () => {
     };
     const swappedSave: SaveCheckpoint = {
       ...third,
-      hero: { traits: third.hero!.traits, slotted: { Keepsake: 'LowHealthCritKeepsake' } },
+      hero: {
+        traits: third.hero!.traits,
+        slotted: { Keepsake: 'LowHealthCritKeepsake' },
+        elements: {},
+      },
     };
     const record = buildRunRecord([first, second, swappedSave]);
     expect(record.rooms[0]).toMatchObject({

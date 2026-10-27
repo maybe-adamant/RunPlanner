@@ -11,7 +11,9 @@ import {
   type RunRecordOutcome,
   type RunRecordPool,
   type RunRecordPurchase,
+  type RunRecordHeldTrait,
   type RunRecordRoom,
+  type RunRecordRoomEntry,
   type RunRecordSpell,
   type RunRecordStartingTrait,
   type RunRecordStore,
@@ -561,6 +563,78 @@ function buildRoom(
     ...optional('toolElements', toolElements(before, after)),
     ...optional('grantedArcana', grantedArcana(room)),
     ...optional('rerolls', doorRerolls(room, settled)),
+    entry: roomEntry(room.entry, saves[room.index - 1]?.entry),
+  };
+}
+
+/** Entry counts by name of each reward store. */
+function storeCounts(save: SaveCheckpoint): Map<string, Counts> {
+  return new Map(
+    Object.entries(save.run.rewardStores).map(([store, names]) => {
+      const counts: Record<string, number> = {};
+      for (const name of names) counts[name] = (counts[name] ?? 0) + 1;
+      return [store, counts];
+    }),
+  );
+}
+
+function sameCounts(left: Counts | undefined, right: Counts): boolean {
+  if (left === undefined) return false;
+  const keys = Object.keys(right);
+  return keys.length === Object.keys(left).length && keys.every((key) => left[key] === right[key]);
+}
+
+/** Held traits by name, each its first instance: the one the game's trait queries resolve. */
+function heldTraits(save: SaveCheckpoint): Map<string, RunRecordHeldTrait> {
+  const traits = new Map<string, RunRecordHeldTrait>();
+  for (const trait of save.hero?.traits ?? [])
+    if (!traits.has(trait.name))
+      traits.set(trait.name, {
+        ...optional('rarity', trait.rarity),
+        ...optional('level', whole(trait.stackNum, 1)),
+        ...optional('remainingUses', whole(trait.remainingUses)),
+        ...optional('boonConversionUses', whole(trait.boonConversionUses)),
+      });
+  return traits;
+}
+
+/**
+ * The run state of a room's entry save. Traits and stores repeat only where
+ * they differ from the previous room's entry save, so the first room holds
+ * every one.
+ */
+function roomEntry(save: SaveCheckpoint, previous: SaveCheckpoint | undefined): RunRecordRoomEntry {
+  const hero = save.hero;
+  const held = heldTraits(save);
+  const heldBefore = previous === undefined ? undefined : heldTraits(previous);
+  const traits = Object.fromEntries(
+    [...held].filter(
+      ([name, row]) => JSON.stringify(heldBefore?.get(name)) !== JSON.stringify(row),
+    ),
+  );
+  const lostTraits = [...(heldBefore?.keys() ?? [])].filter((name) => !held.has(name)).sort();
+  const before = previous === undefined ? undefined : storeCounts(previous);
+  const stores = Object.fromEntries(
+    [...storeCounts(save)].filter(([store, counts]) => !sameCounts(before?.get(store), counts)),
+  );
+  const invested = Object.entries(hero?.spell?.talents ?? {})
+    .filter(([, talent]) => talent.invested)
+    .map(([node]) => node)
+    .sort();
+  return {
+    ...optional('traits', nonEmpty(traits)),
+    ...optional('lostTraits', lostTraits.length > 0 ? lostTraits : undefined),
+    ...optional('keepsake', hero?.slotted.Keepsake),
+    ...optional('elements', nonEmpty(wholeCounts(hero?.elements ?? {}))),
+    ...optional('rewardStores', nonEmpty(stores)),
+    ...optional(
+      'bannedTraits',
+      save.run.bannedTraits.length > 0 ? [...save.run.bannedTraits].sort() : undefined,
+    ),
+    ...optional('metaConversionUses', whole(save.run.metaConversionUses, 1)),
+    ...optional('wellShopPurchases', nonEmpty(wholeCounts(save.run.wellShopPurchases))),
+    ...optional('biomeBoonSkipCount', whole(save.run.biomeBoonSkipCount, 1)),
+    ...optional('investedTalents', invested.length > 0 ? invested : undefined),
   };
 }
 

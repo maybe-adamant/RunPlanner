@@ -98,7 +98,123 @@
         "upgraded": []
       },
       "npcInteractions": { "HeraUpgrade": 1 },
-      "toolElements": ["ToolShovel2"]
+      "toolElements": ["ToolShovel2"],
+      "entry": {
+        "traits": {
+          "HadesAndPersephoneKeepsake": { "rarity": "Epic" },
+          "HadesInvisibilityRetaliateBoon": {},
+          "DodgeFamiliar": { "level": 4 },
+          "FamiliarPolecatResourceBonus": { "level": 4 },
+          "FamiliarPolecatDamage": { "level": 4 },
+          "StaffClearCastAspect": { "rarity": "Legendary" },
+          "EpicRarityBoostMetaUpgrade": { "rarity": "Epic" },
+          "HealthManaBonusMetaUpgrade": { "rarity": "Epic" },
+          "SprintShieldMetaUpgrade": { "rarity": "Epic" },
+          "StartingGoldMetaUpgrade": { "rarity": "Epic" },
+          "DoorHealMetaUpgrade": { "rarity": "Epic" },
+          "EffectVulnerabilityMetaUpgrade": { "rarity": "Epic" },
+          "MetaToRunMetaUpgrade": { "rarity": "Epic" },
+          "LowHealthBuffMetaUpgrade": { "rarity": "Epic" },
+          "InsideCastBuffMetaUpgrade": { "rarity": "Epic" },
+          "ChannelSlowMetaUpgrade": { "rarity": "Epic" },
+          "LowManaDamageMetaupgrade": { "rarity": "Epic" },
+          "ChamberHealthMetaUpgrade": { "rarity": "Epic" },
+          "DodgeBonusMetaUpgrade": { "rarity": "Epic" },
+          "BossShieldMetaUpgrade": { "rarity": "Epic" }
+        },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "rewardStores": {
+          "TartarusRewards": {
+            "RoomMoneyTripleDrop": 1,
+            "StackUpgradeTriple": 1,
+            "WeaponUpgrade": 2,
+            "Devotion": 1,
+            "TalentBigDrop": 1,
+            "Boon": 3
+          },
+          "MetaProgress": {
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 4,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 8,
+            "MetaCardPointsCommonBigDrop": 4
+          },
+          "TyphonBossRewards": {
+            "Boon": 2,
+            "TalentBigDrop": 1,
+            "StackUpgradeTriple": 1,
+            "WeaponUpgrade": 2
+          },
+          "InvalidOverrides": {},
+          "HubRewards": {
+            "MaxHealthDropBig": 1,
+            "MaxManaDropBig": 1,
+            "WeaponUpgrade": 1,
+            "HermesUpgrade": 1,
+            "SpellDrop": 1,
+            "Boon": 5
+          },
+          "FieldsCombatRewards": {},
+          "PreHubRewards": {},
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 3
+          },
+          "Secrets": { "TrialUpgrade": 1 },
+          "SubRoomRewardsHard": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "RoomMoneyDrop": 2
+          },
+          "MinorRunProgress": {
+            "MaxManaDropSmall": 3,
+            "MaxHealthDropSmall": 3,
+            "EmptyMaxHealthSmallDrop": 2,
+            "MinorTalentDrop": 2,
+            "StoreRewardRandomStack": 1,
+            "ElementalBoost": 1,
+            "ArmorBoost": 1
+          },
+          "FieldsOptionalRewards": {
+            "MaxManaDropSmall": 3,
+            "MaxHealthDropSmall": 3,
+            "RoomMoneyTinyDrop": 3,
+            "RoomRewardHealDrop": 1,
+            "ArmorBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 1,
+            "MetaCardPointsCommonDrop": 4,
+            "MinorTalentDrop": 2
+          },
+          "SubRoomRewards": {
+            "MaxManaDropSmall": 1,
+            "MaxHealthDropSmall": 1,
+            "EmptyMaxHealthSmallDrop": 1,
+            "RoomMoneyTinyDrop": 1,
+            "AirBoost": 1,
+            "EarthBoost": 1,
+            "FireBoost": 1,
+            "WaterBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 2,
+            "MetaCardPointsCommonDrop": 2,
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "RoomMoneyDrop": 2,
+            "MinorTalentDrop": 2
+          }
+        }
+      }
     },
     {
       "name": "Chaos_03",
@@ -136,7 +252,22 @@
         "upgraded": []
       },
       "npcInteractions": { "NPC_Nyx_Story_01": 1, "TrialUpgrade": 1 },
-      "toolElements": ["ToolPickaxe2"]
+      "toolElements": ["ToolPickaxe2"],
+      "entry": {
+        "traits": { "HeraSpecialBoon": { "rarity": "Common", "level": 4 }, "EarthEssence": {} },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Earth": 2 },
+        "rewardStores": {
+          "MetaProgress": {
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 4,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 7,
+            "MetaCardPointsCommonBigDrop": 4
+          },
+          "Secrets": {}
+        }
+      }
     },
     {
       "name": "F_Combat08",
@@ -182,7 +313,21 @@
           }
         ]
       },
-      "conversions": { "artificer": 1 }
+      "conversions": { "artificer": 1 },
+      "entry": {
+        "traits": { "ChaosDashCurse": { "remainingUses": 5 }, "FireEssence": {}, "WetState": {} },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Earth": 2, "Fire": 1 },
+        "rewardStores": {
+          "MetaProgress": {
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 3,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 7,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        }
+      }
     },
     {
       "name": "F_Combat22",
@@ -243,6 +388,28 @@
           { "slot": 3, "name": "TemporaryMoveSpeedTrait", "type": "Trait" }
         ],
         "purchases": [{ "slot": 2 }, { "slot": 3 }]
+      },
+      "entry": {
+        "traits": {
+          "ChaosDashCurse": { "remainingUses": 4 },
+          "HeraSpecialBoon": { "rarity": "Common", "level": 5 }
+        },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Earth": 2, "Fire": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 1,
+            "RoomMoneyDrop": 2,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 3
+          }
+        },
+        "metaConversionUses": 1
       }
     },
     {
@@ -319,7 +486,27 @@
         "upgraded": []
       },
       "conversions": { "artificer": 1 },
-      "npcInteractions": { "NPC_Artemis_Field_01": 1 }
+      "npcInteractions": { "NPC_Artemis_Field_01": 1 },
+      "entry": {
+        "traits": {
+          "ChaosDashCurse": { "remainingUses": 3 },
+          "HeraSpecialBoon": { "rarity": "Common", "level": 6 },
+          "TemporaryEmptySlotDamageTrait": { "remainingUses": 6 },
+          "TemporaryMoveSpeedTrait": { "remainingUses": 8 }
+        },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Earth": 2, "Fire": 1 },
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 2,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 7,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        },
+        "metaConversionUses": 1,
+        "wellShopPurchases": { "TemporaryEmptySlotDamageTrait": 1, "TemporaryMoveSpeedTrait": 1 }
+      }
     },
     {
       "name": "F_Story01",
@@ -353,7 +540,34 @@
         "removed": [],
         "upgraded": []
       },
-      "npcInteractions": { "NPC_Arachne_01": 1 }
+      "npcInteractions": { "NPC_Arachne_01": 1 },
+      "entry": {
+        "traits": {
+          "ChaosDashCurse": { "remainingUses": 2 },
+          "TemporaryEmptySlotDamageTrait": { "remainingUses": 5 },
+          "TemporaryMoveSpeedTrait": { "remainingUses": 7 },
+          "RoomRewardMaxManaTrait": {},
+          "RoomRewardMaxHealthTrait": {},
+          "HighHealthCritBoon": { "rarity": "Common" }
+        },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Earth": 3, "Fire": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 1,
+            "RoomMoneyDrop": 1,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 2
+          }
+        },
+        "metaConversionUses": 2,
+        "wellShopPurchases": { "TemporaryEmptySlotDamageTrait": 1, "TemporaryMoveSpeedTrait": 1 }
+      }
     },
     {
       "name": "F_Shop01",
@@ -399,6 +613,26 @@
           { "slot": 3, "name": "StackUpgrade", "type": "Consumable", "baseCost": 100 }
         ],
         "purchases": [{ "slot": 1 }]
+      },
+      "entry": {
+        "traits": { "CastDamageCostume": { "rarity": "Common" } },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Earth": 3, "Fire": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 1,
+            "RoomMoneyDrop": 1,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 1
+          }
+        },
+        "metaConversionUses": 2,
+        "wellShopPurchases": { "TemporaryEmptySlotDamageTrait": 1, "TemporaryMoveSpeedTrait": 1 }
       }
     },
     {
@@ -434,7 +668,28 @@
         "removed": [],
         "upgraded": []
       },
-      "npcInteractions": { "AresUpgrade": 1 }
+      "npcInteractions": { "AresUpgrade": 1 },
+      "entry": {
+        "traits": {
+          "BoonDecayBoon": { "rarity": "Common" },
+          "HeraSpecialBoon": { "rarity": "Heroic", "level": 7 }
+        },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Earth": 3, "Fire": 1, "Water": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "RoomMoneyDrop": 1,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1
+          }
+        },
+        "metaConversionUses": 2,
+        "wellShopPurchases": { "TemporaryEmptySlotDamageTrait": 1, "TemporaryMoveSpeedTrait": 1 }
+      }
     },
     {
       "name": "F_Combat06",
@@ -479,7 +734,27 @@
         "removed": [],
         "upgraded": []
       },
-      "conversions": { "artificer": 1 }
+      "conversions": { "artificer": 1 },
+      "entry": {
+        "traits": {
+          "ChaosDashCurse": { "remainingUses": 1 },
+          "TemporaryEmptySlotDamageTrait": { "remainingUses": 4 },
+          "TemporaryMoveSpeedTrait": { "remainingUses": 6 },
+          "AresCastBoon": { "rarity": "Epic", "level": 4 }
+        },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Earth": 4, "Fire": 1, "Water": 1 },
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 2,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 6,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        },
+        "metaConversionUses": 2,
+        "wellShopPurchases": { "TemporaryEmptySlotDamageTrait": 1, "TemporaryMoveSpeedTrait": 1 }
+      }
     },
     {
       "name": "F_Combat18",
@@ -526,6 +801,36 @@
             "worldTime": 218.38284488034
           }
         ]
+      },
+      "entry": {
+        "traits": {
+          "TemporaryEmptySlotDamageTrait": { "remainingUses": 3 },
+          "TemporaryMoveSpeedTrait": { "remainingUses": 5 },
+          "ChaosExSpeedBlessing": { "rarity": "Epic" },
+          "StaffJumpSpecialTrait": { "rarity": "Common" }
+        },
+        "lostTraits": ["ChaosDashCurse"],
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Earth": 4, "Fire": 1, "Water": 1 },
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 6,
+            "MetaCurrencyBigDrop": 4,
+            "MetaCardPointsCommonDrop": 13,
+            "MetaCardPointsCommonBigDrop": 8
+          },
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "RoomMoneyDrop": 1,
+            "WeaponUpgrade": 1,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "TemporaryEmptySlotDamageTrait": 1, "TemporaryMoveSpeedTrait": 1 }
       }
     },
     {
@@ -597,6 +902,26 @@
           "5:5": { "name": "LeapCritTalent", "invested": false },
           "6:3": { "name": "LeapTwiceTalent", "invested": false }
         }
+      },
+      "entry": {
+        "traits": {
+          "TemporaryEmptySlotDamageTrait": { "remainingUses": 2 },
+          "TemporaryMoveSpeedTrait": { "remainingUses": 4 },
+          "AresCastBoon": { "rarity": "Epic", "level": 5 }
+        },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Earth": 4, "Fire": 1, "Water": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "WeaponUpgrade": 1,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "TalentDrop": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "TemporaryEmptySlotDamageTrait": 1, "TemporaryMoveSpeedTrait": 1 }
       }
     },
     {
@@ -642,6 +967,26 @@
           { "slot": 3, "name": "MaxManaDrop", "type": "Consumable" }
         ],
         "purchases": [{ "slot": 1 }]
+      },
+      "entry": {
+        "traits": {
+          "TemporaryEmptySlotDamageTrait": { "remainingUses": 1 },
+          "TemporaryMoveSpeedTrait": { "remainingUses": 3 },
+          "SpellLeapTrait": {}
+        },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Earth": 4, "Fire": 1, "Water": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 1,
+            "WeaponUpgrade": 1,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "TalentDrop": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "TemporaryEmptySlotDamageTrait": 1, "TemporaryMoveSpeedTrait": 2 }
       }
     },
     {
@@ -654,7 +999,14 @@
       "kills": { "LightRanged": 12, "Hecate": 1, "Breakable_F": 5 },
       "traitScreens": [],
       "traits": { "acquired": [], "removed": ["TemporaryEmptySlotDamageTrait"], "upgraded": [] },
-      "npcInteractions": { "Hecate": 1 }
+      "npcInteractions": { "Hecate": 1 },
+      "entry": {
+        "traits": { "AphroditeManaBoon": { "rarity": "Common", "level": 4 } },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Earth": 4, "Fire": 1, "Air": 1, "Water": 1 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "TemporaryEmptySlotDamageTrait": 1, "TemporaryMoveSpeedTrait": 2 }
+      }
     },
     {
       "name": "F_PostBoss01",
@@ -705,7 +1057,15 @@
         "soldSlots": [1],
         "sales": 1
       },
-      "keepsakeSwap": { "from": "HadesAndPersephoneKeepsake", "to": "RandomBlessingKeepsake" }
+      "keepsakeSwap": { "from": "HadesAndPersephoneKeepsake", "to": "RandomBlessingKeepsake" },
+      "entry": {
+        "traits": { "TemporaryMoveSpeedTrait": { "remainingUses": 2 } },
+        "lostTraits": ["TemporaryEmptySlotDamageTrait"],
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Earth": 4, "Fire": 1, "Air": 1, "Water": 1 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "TemporaryEmptySlotDamageTrait": 1, "TemporaryMoveSpeedTrait": 2 }
+      }
     },
     {
       "name": "G_Intro",
@@ -730,6 +1090,22 @@
         ],
         "removed": ["TemporaryForcedSecretDoorTrait"],
         "upgraded": []
+      },
+      "entry": {
+        "traits": {
+          "RandomBlessingKeepsake": { "rarity": "Epic" },
+          "ChaosManaCostBlessing": { "rarity": "Epic" },
+          "TemporaryForcedSecretDoorTrait": { "remainingUses": 1 }
+        },
+        "lostTraits": ["BoonDecayBoon", "WetState"],
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 4, "Fire": 1, "Air": 1 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 2,
+          "TemporaryEmptySlotDamageTrait": 1
+        }
       }
     },
     {
@@ -771,6 +1147,25 @@
         ],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "lostTraits": ["TemporaryForcedSecretDoorTrait"],
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 4, "Fire": 1, "Air": 1 },
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 6,
+            "MetaCurrencyBigDrop": 4,
+            "MetaCardPointsCommonDrop": 13,
+            "MetaCardPointsCommonBigDrop": 7
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 2,
+          "TemporaryEmptySlotDamageTrait": 1
+        }
       }
     },
     {
@@ -809,6 +1204,25 @@
         "acquired": [{ "name": "RoomRewardMaxHealthTrait", "worldTime": 395.27058429632 }],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "traits": { "ChaosDashCurse": { "remainingUses": 5 } },
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 4, "Fire": 1, "Air": 1 },
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 6,
+            "MetaCurrencyBigDrop": 3,
+            "MetaCardPointsCommonDrop": 13,
+            "MetaCardPointsCommonBigDrop": 6
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 2,
+          "TemporaryEmptySlotDamageTrait": 1
+        }
       }
     },
     {
@@ -851,7 +1265,29 @@
         ],
         "purchases": []
       },
-      "npcInteractions": { "NPC_Narcissus_01": 1 }
+      "npcInteractions": { "NPC_Narcissus_01": 1 },
+      "entry": {
+        "traits": {
+          "TemporaryMoveSpeedTrait": { "remainingUses": 1 },
+          "ChaosDashCurse": { "remainingUses": 4 }
+        },
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 4, "Fire": 1, "Air": 1 },
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 6,
+            "MetaCurrencyBigDrop": 3,
+            "MetaCardPointsCommonDrop": 13,
+            "MetaCardPointsCommonBigDrop": 5
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 2,
+          "TemporaryEmptySlotDamageTrait": 1
+        }
+      }
     },
     {
       "name": "G_Combat19",
@@ -870,7 +1306,21 @@
       "kills": { "Breakable_G": 10 },
       "traitScreens": [],
       "traits": { "acquired": [], "removed": [], "upgraded": [] },
-      "npcInteractions": { "NPC_Nemesis_01": 1 }
+      "npcInteractions": { "NPC_Nemesis_01": 1 },
+      "entry": {
+        "traits": { "NarcissusG": { "rarity": "Common" }, "ElementalEssence": {} },
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 6, "Fire": 3, "Air": 3, "Water": 2 },
+        "rewardStores": {
+          "RunProgress": { "WeaponUpgrade": 1, "HermesUpgrade": 1, "Devotion": 1, "TalentDrop": 1 }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 2,
+          "TemporaryEmptySlotDamageTrait": 1
+        }
+      }
     },
     {
       "name": "G_Combat20",
@@ -955,6 +1405,30 @@
           "5:5": { "name": "LeapCritTalent", "invested": false },
           "6:3": { "name": "LeapTwiceTalent", "invested": false }
         }
+      },
+      "entry": {
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 6, "Fire": 3, "Air": 3, "Water": 2 },
+        "rewardStores": {
+          "RunProgress": {
+            "WeaponUpgrade": 3,
+            "HermesUpgrade": 2,
+            "Devotion": 2,
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 3
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 2,
+          "TemporaryEmptySlotDamageTrait": 1
+        }
       }
     },
     {
@@ -1004,7 +1478,38 @@
         "removed": [],
         "upgraded": []
       },
-      "npcInteractions": { "ZeusUpgrade": 1 }
+      "npcInteractions": { "ZeusUpgrade": 1 },
+      "entry": {
+        "traits": {
+          "TemporaryMoveSpeedTrait": { "remainingUses": 5 },
+          "ChaosDashCurse": { "remainingUses": 3 },
+          "LeapArmorDamageTalent": { "rarity": "Common", "level": 2 },
+          "LeapCooldownSpeedTalent": { "rarity": "Common", "level": 2 }
+        },
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 6, "Fire": 3, "Air": 3, "Water": 2 },
+        "rewardStores": {
+          "RunProgress": {
+            "WeaponUpgrade": 3,
+            "HermesUpgrade": 2,
+            "Devotion": 2,
+            "MaxHealthDrop": 1,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 2,
+          "TemporaryEmptySlotDamageTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2"]
+      }
     },
     {
       "name": "G_Combat09",
@@ -1049,6 +1554,30 @@
         "acquired": [{ "name": "RoomRewardMaxHealthTrait", "worldTime": 521.00969408033 }],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "traits": {
+          "TemporaryMoveSpeedTrait": { "remainingUses": 4 },
+          "ChaosDashCurse": { "remainingUses": 2 },
+          "ZeusWeaponBoon": { "rarity": "Rare", "level": 4 }
+        },
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 6, "Fire": 3, "Air": 4, "Water": 2 },
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 6,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 13,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 2,
+          "TemporaryEmptySlotDamageTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2"]
       }
     },
     {
@@ -1094,6 +1623,35 @@
           { "slot": 3, "name": "StoreRewardRandomStack", "type": "Consumable", "baseCost": 50 }
         ],
         "purchases": [{ "slot": 1 }, { "slot": 3 }]
+      },
+      "entry": {
+        "traits": {
+          "TemporaryMoveSpeedTrait": { "remainingUses": 3 },
+          "ChaosDashCurse": { "remainingUses": 1 }
+        },
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 6, "Fire": 3, "Air": 4, "Water": 2 },
+        "rewardStores": {
+          "RunProgress": {
+            "WeaponUpgrade": 3,
+            "HermesUpgrade": 1,
+            "Devotion": 2,
+            "MaxHealthDrop": 1,
+            "MaxManaDrop": 1,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 2,
+          "TemporaryEmptySlotDamageTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2"]
       }
     },
     {
@@ -1106,7 +1664,19 @@
       "kills": { "SirenKeytarist": 1, "SirenDrummer": 1, "FishSwarmer": 11, "Scylla": 1 },
       "traitScreens": [],
       "traits": { "acquired": [], "removed": [], "upgraded": [] },
-      "npcInteractions": { "Scylla": 1 }
+      "npcInteractions": { "Scylla": 1 },
+      "entry": {
+        "traits": { "HighHealthOffenseBoon": { "rarity": "Common", "level": 5 } },
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 6, "Fire": 3, "Air": 5, "Water": 2 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 2,
+          "TemporaryEmptySlotDamageTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2"]
+      }
     },
     {
       "name": "G_PostBoss01",
@@ -1151,6 +1721,22 @@
         ],
         "soldSlots": [],
         "sales": 0
+      },
+      "entry": {
+        "traits": {
+          "TemporaryMoveSpeedTrait": { "remainingUses": 2 },
+          "ChaosWeaponBlessing": { "rarity": "Common" }
+        },
+        "lostTraits": ["ChaosDashCurse"],
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 6, "Fire": 3, "Air": 5, "Water": 2 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 2,
+          "TemporaryEmptySlotDamageTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2"]
       }
     },
     {
@@ -1161,7 +1747,20 @@
       "encounters": [{ "name": "Empty" }],
       "uses": { "FieldsExitDoor": 1 },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": { "LimitedSwapBonusTrait": {} },
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 6, "Fire": 3, "Air": 5, "Water": 2 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 3,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "LimitedSwapTraitDrop": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2"]
+      }
     },
     {
       "name": "H_Combat15",
@@ -1309,7 +1908,32 @@
         ]
       },
       "npcInteractions": { "HermesUpgrade": 1 },
-      "toolElements": ["ToolFishingRod2"]
+      "toolElements": ["ToolFishingRod2"],
+      "entry": {
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 6, "Fire": 3, "Air": 5, "Water": 2 },
+        "rewardStores": {
+          "RunProgress": {
+            "WeaponUpgrade": 2,
+            "Devotion": 2,
+            "MaxHealthDrop": 1,
+            "MaxManaDrop": 1,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 3,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "LimitedSwapTraitDrop": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2"]
+      }
     },
     {
       "name": "H_MiniBoss01",
@@ -1364,6 +1988,45 @@
         ],
         "removed": ["ChaosManaCostBlessing", "LimitedSwapBonusTrait"],
         "upgraded": []
+      },
+      "entry": {
+        "traits": {
+          "TemporaryMoveSpeedTrait": { "remainingUses": 6 },
+          "StaffAttackRecoveryTrait": { "rarity": "Common" },
+          "RestockBoon": { "rarity": "Common" },
+          "WaterEssence": {}
+        },
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 6, "Fire": 4, "Air": 5, "Water": 3 },
+        "rewardStores": {
+          "RunProgress": {
+            "WeaponUpgrade": 2,
+            "Devotion": 2,
+            "MaxManaDrop": 1,
+            "RoomMoneyDrop": 1,
+            "StackUpgrade": 2,
+            "SpellDrop": 1
+          },
+          "FieldsOptionalRewards": {
+            "MaxManaDropSmall": 2,
+            "MaxHealthDropSmall": 3,
+            "RoomMoneyTinyDrop": 3,
+            "RoomRewardHealDrop": 1,
+            "ArmorBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 1,
+            "MetaCardPointsCommonDrop": 3,
+            "MinorTalentDrop": 2
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 3,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "LimitedSwapTraitDrop": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2"]
       }
     },
     {
@@ -1402,7 +2065,34 @@
         ],
         "purchases": []
       },
-      "npcInteractions": { "NPC_Echo_01": 1 }
+      "npcInteractions": { "NPC_Echo_01": 1 },
+      "entry": {
+        "traits": {
+          "TemporaryMoveSpeedTrait": { "remainingUses": 5 },
+          "ChaosCastBlessing": { "rarity": "Epic" },
+          "DamageSharePotencyBoon": { "rarity": "Rare", "level": 4 }
+        },
+        "lostTraits": ["ChaosManaCostBlessing", "LimitedSwapBonusTrait"],
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 6, "Fire": 4, "Air": 5, "Water": 4 },
+        "rewardStores": {
+          "RunProgress": {
+            "WeaponUpgrade": 2,
+            "Devotion": 2,
+            "MaxManaDrop": 1,
+            "StackUpgrade": 1,
+            "SpellDrop": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 3,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "LimitedSwapTraitDrop": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2"]
+      }
     },
     {
       "name": "H_Combat07",
@@ -1599,6 +2289,32 @@
           "5:5": { "name": "LeapCritTalent", "invested": false },
           "6:3": { "name": "LeapTwiceTalent", "invested": false }
         }
+      },
+      "entry": {
+        "traits": { "EchoRepeatKeepsakeBoon": { "rarity": "Epic" } },
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 6, "Fire": 4, "Air": 5, "Water": 4 },
+        "rewardStores": {
+          "RunProgress": {
+            "WeaponUpgrade": 4,
+            "Devotion": 3,
+            "SpellDrop": 2,
+            "MaxHealthDrop": 1,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Boon": 2
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 3,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "LimitedSwapTraitDrop": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2"]
       }
     },
     {
@@ -1645,6 +2361,48 @@
           { "slot": 3, "name": "MaxManaDrop", "type": "Consumable" }
         ],
         "purchases": [{ "slot": 1 }]
+      },
+      "entry": {
+        "traits": {
+          "TemporaryMoveSpeedTrait": { "remainingUses": 2 },
+          "DoubleBoltBoon": { "rarity": "Epic", "level": 4 },
+          "LeapAoETalent": { "rarity": "Rare" },
+          "DamageShareRetaliateBoon": { "rarity": "Epic" }
+        },
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 6, "Fire": 5, "Air": 6, "Water": 4 },
+        "rewardStores": {
+          "RunProgress": {
+            "WeaponUpgrade": 4,
+            "Devotion": 3,
+            "SpellDrop": 2,
+            "MaxHealthDrop": 1,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 1,
+            "HermesUpgrade": 1,
+            "Boon": 2
+          },
+          "FieldsOptionalRewards": {
+            "MaxManaDropSmall": 2,
+            "MaxHealthDropSmall": 3,
+            "RoomMoneyTinyDrop": 2,
+            "RoomRewardHealDrop": 1,
+            "ArmorBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 1,
+            "MetaCardPointsCommonDrop": 3,
+            "MinorTalentDrop": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 3,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "LimitedSwapTraitDrop": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2", "5:1"]
       }
     },
     {
@@ -1657,7 +2415,23 @@
       "kills": { "Mourner_Elite": 3, "InfestedCerberus": 1 },
       "traitScreens": [],
       "traits": { "acquired": [], "removed": ["CastDamageCostume"], "upgraded": [] },
-      "npcInteractions": { "InfestedCerberus": 1 }
+      "npcInteractions": { "InfestedCerberus": 1 },
+      "entry": {
+        "traits": {
+          "BloodDropRevengeBoon": { "rarity": "Epic", "level": 4 },
+          "DummyBloodDisplayBoon": {}
+        },
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 7, "Fire": 5, "Air": 6, "Water": 4 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 3,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "LimitedSwapTraitDrop": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2", "5:1"]
+      }
     },
     {
       "name": "H_PostBoss01",
@@ -1701,7 +2475,21 @@
         "soldSlots": [],
         "sales": 0
       },
-      "keepsakeSwap": { "from": "RandomBlessingKeepsake", "to": "LowHealthCritKeepsake" }
+      "keepsakeSwap": { "from": "RandomBlessingKeepsake", "to": "LowHealthCritKeepsake" },
+      "entry": {
+        "traits": { "TemporaryMoveSpeedTrait": { "remainingUses": 1 } },
+        "lostTraits": ["CastDamageCostume"],
+        "keepsake": "RandomBlessingKeepsake",
+        "elements": { "Earth": 7, "Fire": 5, "Air": 6, "Water": 4 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "TemporaryMoveSpeedTrait": 3,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "LimitedSwapTraitDrop": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2", "5:1"]
+      }
     },
     {
       "name": "I_Intro",
@@ -1718,6 +2506,24 @@
         ],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "traits": {
+          "LowHealthCritKeepsake": { "rarity": "Epic" },
+          "TemporaryDiscountTrait": { "remainingUses": 6 }
+        },
+        "lostTraits": ["RandomBlessingKeepsake"],
+        "keepsake": "LowHealthCritKeepsake",
+        "elements": { "Earth": 7, "Fire": 5, "Air": 6, "Water": 4 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "LimitedSwapTraitDrop": 1,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "TemporaryMoveSpeedTrait": 4,
+          "TemporaryDiscountTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2", "5:1"]
       }
     },
     {
@@ -1762,6 +2568,23 @@
         ],
         "removed": ["TemporaryMoveSpeedTrait"],
         "upgraded": []
+      },
+      "entry": {
+        "traits": {
+          "RandomBlessingKeepsake": { "rarity": "Common" },
+          "ChaosSpeedBlessing": { "rarity": "Common" }
+        },
+        "keepsake": "LowHealthCritKeepsake",
+        "elements": { "Earth": 7, "Fire": 5, "Air": 6, "Water": 4 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "LimitedSwapTraitDrop": 1,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "TemporaryMoveSpeedTrait": 4,
+          "TemporaryDiscountTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2", "5:1"]
       }
     },
     {
@@ -1797,7 +2620,24 @@
         "GoldElemental": 9
       },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": {
+          "TemporaryDiscountTrait": { "remainingUses": 5 },
+          "TemporaryMoveSpeedTrait": { "remainingUses": 7 }
+        },
+        "keepsake": "LowHealthCritKeepsake",
+        "elements": { "Earth": 7, "Fire": 5, "Air": 6, "Water": 4 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "LimitedSwapTraitDrop": 1,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "TemporaryMoveSpeedTrait": 4,
+          "TemporaryDiscountTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2", "5:1"]
+      }
     },
     {
       "name": "I_Combat23",
@@ -1832,7 +2672,24 @@
         "removed": [],
         "upgraded": []
       },
-      "toolElements": ["ToolExorcismBook2"]
+      "toolElements": ["ToolExorcismBook2"],
+      "entry": {
+        "traits": {
+          "TemporaryDiscountTrait": { "remainingUses": 4 },
+          "TemporaryMoveSpeedTrait": { "remainingUses": 6 }
+        },
+        "keepsake": "LowHealthCritKeepsake",
+        "elements": { "Earth": 7, "Fire": 5, "Air": 6, "Water": 4 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "LimitedSwapTraitDrop": 1,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "TemporaryMoveSpeedTrait": 4,
+          "TemporaryDiscountTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2", "5:1"]
+      }
     },
     {
       "name": "I_Combat07",
@@ -1878,6 +2735,24 @@
           { "slot": 3, "name": "TemporaryForcedSecretDoorTrait", "type": "Trait" }
         ],
         "purchases": [{ "slot": 3 }]
+      },
+      "entry": {
+        "traits": {
+          "TemporaryDiscountTrait": { "remainingUses": 3 },
+          "TemporaryMoveSpeedTrait": { "remainingUses": 5 },
+          "AirEssence": {}
+        },
+        "keepsake": "LowHealthCritKeepsake",
+        "elements": { "Earth": 7, "Fire": 5, "Air": 7, "Water": 4 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 1,
+          "LimitedSwapTraitDrop": 1,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "TemporaryMoveSpeedTrait": 4,
+          "TemporaryDiscountTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2", "5:1"]
       }
     },
     {
@@ -1924,7 +2799,25 @@
         "Breakable_I": 1
       },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": ["TemporaryForcedSecretDoorTrait"], "upgraded": [] }
+      "traits": { "acquired": [], "removed": ["TemporaryForcedSecretDoorTrait"], "upgraded": [] },
+      "entry": {
+        "traits": {
+          "TemporaryDiscountTrait": { "remainingUses": 2 },
+          "TemporaryMoveSpeedTrait": { "remainingUses": 4 },
+          "TemporaryForcedSecretDoorTrait": { "remainingUses": 1 }
+        },
+        "keepsake": "LowHealthCritKeepsake",
+        "elements": { "Earth": 7, "Fire": 5, "Air": 7, "Water": 4 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 2,
+          "LimitedSwapTraitDrop": 1,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "TemporaryMoveSpeedTrait": 4,
+          "TemporaryDiscountTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2", "5:1"]
+      }
     },
     {
       "name": "Chaos_03",
@@ -1956,6 +2849,24 @@
         ],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "traits": {
+          "TemporaryDiscountTrait": { "remainingUses": 1 },
+          "TemporaryMoveSpeedTrait": { "remainingUses": 3 }
+        },
+        "lostTraits": ["TemporaryForcedSecretDoorTrait"],
+        "keepsake": "LowHealthCritKeepsake",
+        "elements": { "Earth": 7, "Fire": 5, "Air": 7, "Water": 4 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 2,
+          "LimitedSwapTraitDrop": 1,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "TemporaryMoveSpeedTrait": 4,
+          "TemporaryDiscountTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2", "5:1"]
       }
     },
     {
@@ -1997,6 +2908,20 @@
           { "slot": 5, "name": "CharonPointsDrop", "type": "Consumable" }
         ],
         "purchases": [{ "slot": 4 }]
+      },
+      "entry": {
+        "traits": { "ChaosDashCurse": { "remainingUses": 3 } },
+        "keepsake": "LowHealthCritKeepsake",
+        "elements": { "Earth": 7, "Fire": 5, "Air": 7, "Water": 4 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 2,
+          "LimitedSwapTraitDrop": 1,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "TemporaryMoveSpeedTrait": 4,
+          "TemporaryDiscountTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2", "5:1"]
       }
     },
     {
@@ -2014,7 +2939,22 @@
       },
       "traitScreens": [],
       "traits": { "acquired": [], "removed": ["TemporaryDiscountTrait"], "upgraded": [] },
-      "npcInteractions": { "Chronos": 2 }
+      "npcInteractions": { "Chronos": 2 },
+      "entry": {
+        "traits": { "StaffLongAttackTrait": {}, "StaffOneWayAttackTrait": {} },
+        "lostTraits": ["StaffAttackRecoveryTrait"],
+        "keepsake": "LowHealthCritKeepsake",
+        "elements": { "Earth": 7, "Fire": 5, "Air": 7, "Water": 4 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": {
+          "TemporaryForcedSecretDoorTrait": 2,
+          "LimitedSwapTraitDrop": 1,
+          "TemporaryEmptySlotDamageTrait": 1,
+          "TemporaryMoveSpeedTrait": 4,
+          "TemporaryDiscountTrait": 1
+        },
+        "investedTalents": ["1:2", "2:1", "3:2", "4:2", "5:1"]
+      }
     }
   ]
 }

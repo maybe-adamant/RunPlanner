@@ -126,6 +126,36 @@ describe('run record codec', () => {
     rejects((record) => (room(record, 1).rerolls = 0), /rerolls must be an integer >= 1/);
   });
 
+  it("keeps each room's entry save on every room or none", () => {
+    const withEntries = minimal();
+    room(withEntries, 0).entry = {
+      traits: {
+        ZeusWeaponBoon: { rarity: 'Rare', level: 2 },
+        ChaosDashCurse: { remainingUses: 3 },
+      },
+      keepsake: 'GoldifyKeepsake',
+      rewardStores: { RunProgress: { Boon: 3 }, Secrets: {} },
+      bannedTraits: ['HeraManaBoon', 'ZeusSprintBoon'],
+      investedTalents: ['1:1', '2:1'],
+    };
+    room(withEntries, 1).entry = {};
+    expect(decodeRunRecord(withEntries).rooms.map((entry) => entry.entry)).toEqual([
+      room(withEntries, 0).entry,
+      {},
+    ]);
+    rejects((record) => (room(record, 0).entry = {}), /rooms must all carry an entry save or none/);
+    const entry = (value: Record<string, unknown>) => (record: Record<string, unknown>) => {
+      room(record, 0).entry = value;
+      room(record, 1).entry = {};
+    };
+    rejects(entry({ bannedTraits: ['ZeusSprintBoon', 'HeraManaBoon'] }), /sorted without repeats/);
+    rejects(entry({ investedTalents: ['1-1'] }), /must be depth:slot/);
+    rejects(entry({ metaConversionUses: 0 }), /metaConversionUses must be an integer >= 1/);
+    rejects(entry({ lostTraits: [] }), /lostTraits must not be empty/);
+    rejects(entry({ traits: { ZeusWeaponBoon: { level: 0 } } }), /level must be an integer >= 1/);
+    rejects(entry({ elements: { Air: 0 } }), /elements.Air must be an integer >= 1/);
+  });
+
   it("keeps an acquired trait's saved values as finite numbers by dotted save path", () => {
     const acquire = (savedValues: unknown) => (record: Record<string, unknown>) =>
       ((room(record, 1).traits as Record<string, unknown>).acquired = [

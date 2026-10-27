@@ -42,6 +42,7 @@ import { answerWheels, importWheelConversions, importWheels } from './wheels';
 import { areaOfFinding, isQuestionFinding } from './areas';
 import { importResourcePlacements } from './resources';
 import { routeKeyForRecord } from './vocabulary';
+import { compareImportToRecord } from './conformance';
 
 /**
  * A complete import settles every question; a stopped one ends its plan before
@@ -160,6 +161,15 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
       entries.push({ area: 'reroll', reason: 'unsupportedArea', record: { roomIndex, visit: 0 } });
   const stop = walk.run();
   walk.reportUnusedScreens(stop);
+  entries.push(
+    ...compareImportToRecord(
+      catalog,
+      record,
+      walk.occurrences,
+      walk.assembly,
+      stop === undefined ? record.rooms.length : (stop.record?.roomIndex ?? 0),
+    ),
+  );
   return finish(walk.assembly.project, stop);
 }
 

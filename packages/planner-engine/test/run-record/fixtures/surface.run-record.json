@@ -88,7 +88,123 @@
         "upgraded": []
       },
       "forfeitSkips": 1,
-      "toolElements": ["ToolFishingRod2"]
+      "toolElements": ["ToolFishingRod2"],
+      "entry": {
+        "traits": {
+          "HadesAndPersephoneKeepsake": { "rarity": "Epic" },
+          "HadesChronosDebuffBoon": {},
+          "DodgeFamiliar": { "level": 4 },
+          "FamiliarPolecatResourceBonus": { "level": 4 },
+          "FamiliarPolecatDamage": { "level": 4 },
+          "StaffClearCastAspect": { "rarity": "Legendary" },
+          "ChamberHealthMetaUpgrade": { "rarity": "Epic" },
+          "HealthManaBonusMetaUpgrade": { "rarity": "Epic" },
+          "StartingGoldMetaUpgrade": { "rarity": "Epic" },
+          "DoorHealMetaUpgrade": { "rarity": "Epic" },
+          "DodgeBonusMetaUpgrade": { "rarity": "Epic" },
+          "EpicRarityBoostMetaUpgrade": { "rarity": "Epic" },
+          "LowManaDamageMetaupgrade": { "rarity": "Epic" },
+          "InsideCastBuffMetaUpgrade": { "rarity": "Epic" },
+          "MetaToRunMetaUpgrade": { "rarity": "Epic" },
+          "ChannelSlowMetaUpgrade": { "rarity": "Epic" },
+          "LastStandSlowTimeMetaUpgrade": { "rarity": "Epic" },
+          "SprintShieldMetaUpgrade": { "rarity": "Epic" },
+          "BossShieldMetaUpgrade": { "rarity": "Epic" },
+          "EffectVulnerabilityMetaUpgrade": { "rarity": "Epic" }
+        },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "rewardStores": {
+          "TyphonBossRewards": {
+            "Boon": 2,
+            "TalentBigDrop": 1,
+            "StackUpgradeTriple": 1,
+            "WeaponUpgrade": 2
+          },
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 3
+          },
+          "FieldsCombatRewards": {},
+          "TartarusRewards": {
+            "RoomMoneyTripleDrop": 1,
+            "StackUpgradeTriple": 1,
+            "WeaponUpgrade": 2,
+            "Devotion": 1,
+            "TalentBigDrop": 1,
+            "Boon": 3
+          },
+          "InvalidOverrides": {},
+          "SubRoomRewardsHard": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "RoomMoneyDrop": 2
+          },
+          "MetaProgress": {
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 4,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 8,
+            "MetaCardPointsCommonBigDrop": 4
+          },
+          "MinorRunProgress": {
+            "MaxManaDropSmall": 3,
+            "MaxHealthDropSmall": 3,
+            "EmptyMaxHealthSmallDrop": 2,
+            "MinorTalentDrop": 2,
+            "StoreRewardRandomStack": 1,
+            "ElementalBoost": 1,
+            "ArmorBoost": 1
+          },
+          "PreHubRewards": {},
+          "FieldsOptionalRewards": {
+            "MaxManaDropSmall": 3,
+            "MaxHealthDropSmall": 3,
+            "RoomMoneyTinyDrop": 3,
+            "RoomRewardHealDrop": 1,
+            "ArmorBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 1,
+            "MetaCardPointsCommonDrop": 4,
+            "MinorTalentDrop": 2
+          },
+          "Secrets": { "TrialUpgrade": 1 },
+          "SubRoomRewards": {
+            "MaxManaDropSmall": 1,
+            "MaxHealthDropSmall": 1,
+            "EmptyMaxHealthSmallDrop": 1,
+            "RoomMoneyTinyDrop": 1,
+            "AirBoost": 1,
+            "EarthBoost": 1,
+            "FireBoost": 1,
+            "WaterBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 2,
+            "MetaCardPointsCommonDrop": 2,
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "RoomMoneyDrop": 2,
+            "MinorTalentDrop": 2
+          },
+          "HubRewards": {
+            "MaxHealthDropBig": 1,
+            "MaxManaDropBig": 1,
+            "WeaponUpgrade": 1,
+            "HermesUpgrade": 1,
+            "SpellDrop": 1,
+            "Boon": 5
+          }
+        }
+      }
     },
     {
       "name": "N_PreHub01",
@@ -136,7 +252,27 @@
         "upgraded": []
       },
       "npcInteractions": { "AphroditeUpgrade": 1 },
-      "bannedTraits": ["AphroditeManaBoon", "AphroditeSprintBoon"]
+      "bannedTraits": ["AphroditeManaBoon", "AphroditeSprintBoon"],
+      "entry": {
+        "traits": { "WaterEssence": {} },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 2
+          }
+        },
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_Hub",
@@ -205,7 +341,14 @@
       "encounters": [{ "name": "Empty" }],
       "uses": { "EphyraZoomObject": 1, "EphyraExitDoor": 1 },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": { "AphroditeSpecialBoon": { "rarity": "Rare", "level": 4 } },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2 },
+        "bannedTraits": ["AphroditeManaBoon", "AphroditeSprintBoon"],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_Combat02",
@@ -271,7 +414,28 @@
         "upgraded": []
       },
       "npcInteractions": { "ZeusUpgrade": 1 },
-      "bannedTraits": ["ZeusManaBoltBoon", "ZeusSprintBoon"]
+      "bannedTraits": ["ZeusManaBoltBoon", "ZeusSprintBoon"],
+      "entry": {
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 1
+          },
+          "HubRewards": { "Boon": 1 }
+        },
+        "bannedTraits": ["AphroditeManaBoon", "AphroditeSprintBoon"],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_Sub01",
@@ -305,6 +469,38 @@
         ],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "traits": { "BoltRetaliateBoon": { "rarity": "Common", "level": 4 } },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 1 },
+        "rewardStores": {
+          "SubRoomRewards": {
+            "MaxManaDropSmall": 1,
+            "MaxHealthDropSmall": 1,
+            "EmptyMaxHealthSmallDrop": 1,
+            "RoomMoneyTinyDrop": 1,
+            "AirBoost": 1,
+            "EarthBoost": 1,
+            "FireBoost": 1,
+            "WaterBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 2,
+            "MetaCardPointsCommonDrop": 2,
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "RoomMoneyDrop": 1,
+            "MinorTalentDrop": 2
+          }
+        },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
       }
     },
     {
@@ -321,7 +517,38 @@
       "encounters": [],
       "uses": { "EphyraExitDoorReturnNE": 1 },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": { "RoomRewardMaxManaTrait": {}, "RoomRewardMaxHealthTrait": {} },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 1 },
+        "rewardStores": {
+          "SubRoomRewards": {
+            "MaxManaDropSmall": 1,
+            "MaxHealthDropSmall": 1,
+            "EmptyMaxHealthSmallDrop": 1,
+            "AirBoost": 1,
+            "EarthBoost": 1,
+            "FireBoost": 1,
+            "WaterBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 2,
+            "MetaCardPointsCommonDrop": 2,
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "RoomMoneyDrop": 1,
+            "MinorTalentDrop": 2
+          }
+        },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_Hub",
@@ -389,7 +616,18 @@
       "encounters": [],
       "uses": { "EphyraExitDoor": 1 },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 1 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_Combat14",
@@ -461,7 +699,18 @@
         "upgraded": []
       },
       "npcInteractions": { "ApolloUpgrade": 1 },
-      "bannedTraits": ["ApolloCastBoon", "ApolloManaBoon"]
+      "bannedTraits": ["ApolloCastBoon", "ApolloManaBoon"],
+      "entry": {
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 1 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_Hub",
@@ -530,7 +779,22 @@
       "uses": { "EphyraZoomObject": 1, "EphyraExitDoor": 1 },
       "kills": { "Breakable_N": 1 },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": { "PerfectDamageBonusBoon": { "rarity": "Epic", "level": 4 } },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 2 },
+        "rewardStores": { "HubRewards": {} },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_Combat06",
@@ -597,6 +861,19 @@
         "acquired": [{ "name": "StaffDashAttackTrait", "worldTime": 219.49710697168 }],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 2 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
       }
     },
     {
@@ -665,7 +942,31 @@
       "encounters": [],
       "uses": { "EphyraZoomObject": 1, "EphyraExitDoor": 1, "HealthFountainN": 1 },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": { "StaffDashAttackTrait": {} },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 2 },
+        "rewardStores": {
+          "HubRewards": {
+            "MaxHealthDropBig": 1,
+            "MaxManaDropBig": 1,
+            "WeaponUpgrade": 1,
+            "HermesUpgrade": 1,
+            "SpellDrop": 1,
+            "Boon": 4
+          }
+        },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_Combat10",
@@ -762,7 +1063,20 @@
         "removed": [],
         "upgraded": []
       },
-      "bannedTraits": ["AphroditeWeaponBoon", "HealthRewardBonusBoon"]
+      "bannedTraits": ["AphroditeWeaponBoon", "HealthRewardBonusBoon"],
+      "entry": {
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 2 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_Hub",
@@ -830,7 +1144,39 @@
       "encounters": [],
       "uses": { "EphyraExitDoor": 1 },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": { "HighHealthOffenseBoon": { "rarity": "Common", "level": 4 } },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 3 },
+        "rewardStores": {
+          "SubRoomRewardsHard": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "RoomMoneyDrop": 1
+          },
+          "HubRewards": {
+            "MaxHealthDropBig": 1,
+            "MaxManaDropBig": 1,
+            "WeaponUpgrade": 1,
+            "HermesUpgrade": 1,
+            "SpellDrop": 1,
+            "Boon": 3
+          }
+        },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "HealthRewardBonusBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_Combat01",
@@ -895,6 +1241,21 @@
         "acquired": [{ "name": "RoomRewardMaxHealthTrait", "worldTime": 350.35835209268 }],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 3 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "HealthRewardBonusBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
       }
     },
     {
@@ -963,7 +1324,31 @@
       "encounters": [],
       "uses": { "EphyraExitDoor": 1 },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 3 },
+        "rewardStores": {
+          "HubRewards": {
+            "MaxHealthDropBig": 1,
+            "MaxManaDropBig": 1,
+            "WeaponUpgrade": 1,
+            "SpellDrop": 1,
+            "Boon": 3
+          }
+        },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "HealthRewardBonusBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_MiniBoss02",
@@ -1019,7 +1404,22 @@
         "removed": [],
         "upgraded": []
       },
-      "bannedTraits": ["FocusRawDamageBoon", "ManaBurstBoon"]
+      "bannedTraits": ["FocusRawDamageBoon", "ManaBurstBoon"],
+      "entry": {
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 3 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "HealthRewardBonusBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_Hub",
@@ -1088,7 +1488,25 @@
       "encounters": [],
       "uses": { "EphyraExitBossDoor": 1 },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": { "AphroditeCastBoon": { "rarity": "Rare", "level": 4 } },
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 4 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "FocusRawDamageBoon",
+          "HealthRewardBonusBoon",
+          "ManaBurstBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_PreBoss01",
@@ -1114,6 +1532,23 @@
           { "slot": 3, "name": "MaxManaDrop", "type": "Consumable" }
         ],
         "purchases": []
+      },
+      "entry": {
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 4 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "FocusRawDamageBoon",
+          "HealthRewardBonusBoon",
+          "ManaBurstBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
       }
     },
     {
@@ -1132,7 +1567,24 @@
       },
       "traitScreens": [],
       "traits": { "acquired": [], "removed": [], "upgraded": [] },
-      "npcInteractions": { "Polyphemus": 1 }
+      "npcInteractions": { "Polyphemus": 1 },
+      "entry": {
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 4 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "FocusRawDamageBoon",
+          "HealthRewardBonusBoon",
+          "ManaBurstBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "N_PostBoss01",
@@ -1177,7 +1629,24 @@
         "purchaseCount": 2
       },
       "keepsakeSwap": { "from": "HadesAndPersephoneKeepsake", "to": "GoldifyKeepsake" },
-      "bannedTraits": ["DoorHealToFullBoon", "WeakVulnerabilityBoon"]
+      "bannedTraits": ["DoorHealToFullBoon", "WeakVulnerabilityBoon"],
+      "entry": {
+        "keepsake": "HadesAndPersephoneKeepsake",
+        "elements": { "Water": 2, "Air": 4 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "FocusRawDamageBoon",
+          "HealthRewardBonusBoon",
+          "ManaBurstBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "O_Intro",
@@ -1188,7 +1657,30 @@
       "uses": { "ShipFirstExit": 1 },
       "kills": { "Breakable_N": 3 },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": {
+          "GoldifyKeepsake": { "rarity": "Epic", "boonConversionUses": 4 },
+          "WeakPotencyBoon": { "rarity": "Rare", "level": 4 }
+        },
+        "keepsake": "GoldifyKeepsake",
+        "elements": { "Water": 3, "Air": 4 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "DoorHealToFullBoon",
+          "FocusRawDamageBoon",
+          "HealthRewardBonusBoon",
+          "ManaBurstBoon",
+          "WeakVulnerabilityBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "O_Combat01",
@@ -1283,7 +1775,25 @@
           "unpicked": { "type": "MetaCardPointsCommonBigDrop" }
         }
       ],
-      "conversions": { "artificer": 1 }
+      "conversions": { "artificer": 1 },
+      "entry": {
+        "keepsake": "GoldifyKeepsake",
+        "elements": { "Water": 3, "Air": 4 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "DoorHealToFullBoon",
+          "FocusRawDamageBoon",
+          "HealthRewardBonusBoon",
+          "ManaBurstBoon",
+          "WeakVulnerabilityBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ]
+      }
     },
     {
       "name": "O_Combat06",
@@ -1356,7 +1866,48 @@
         }
       ],
       "forfeitSkips": 1,
-      "conversions": { "timePiece": 1 }
+      "conversions": { "timePiece": 1 },
+      "entry": {
+        "traits": { "AphroditeCastBoon": { "rarity": "Rare", "level": 5 } },
+        "keepsake": "GoldifyKeepsake",
+        "elements": { "Water": 3, "Air": 4 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 1,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 1
+          },
+          "MetaProgress": {
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 4,
+            "MetaCurrencyBigDrop": 1,
+            "MetaCardPointsCommonDrop": 8,
+            "MetaCardPointsCommonBigDrop": 3
+          }
+        },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "DoorHealToFullBoon",
+          "FocusRawDamageBoon",
+          "HealthRewardBonusBoon",
+          "ManaBurstBoon",
+          "WeakVulnerabilityBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "metaConversionUses": 1
+      }
     },
     {
       "name": "O_MiniBoss01",
@@ -1391,7 +1942,42 @@
       },
       "npcInteractions": { "PoseidonUpgrade": 1 },
       "bannedTraits": ["PoseidonExCastBoon", "PoseidonWeaponBoon"],
-      "toolElements": ["ToolPickaxe2"]
+      "toolElements": ["ToolPickaxe2"],
+      "entry": {
+        "traits": { "GoldifyKeepsake": { "rarity": "Epic", "boonConversionUses": 3 } },
+        "keepsake": "GoldifyKeepsake",
+        "elements": { "Water": 3, "Air": 4 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 4,
+            "MaxManaDrop": 4,
+            "RoomMoneyDrop": 4,
+            "StackUpgrade": 3,
+            "WeaponUpgrade": 4,
+            "HermesUpgrade": 2,
+            "Devotion": 2,
+            "SpellDrop": 2,
+            "TalentDrop": 2,
+            "Boon": 3
+          }
+        },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "DoorHealToFullBoon",
+          "FocusRawDamageBoon",
+          "HealthRewardBonusBoon",
+          "ManaBurstBoon",
+          "WeakVulnerabilityBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "metaConversionUses": 1,
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "O_Reprieve01",
@@ -1432,7 +2018,47 @@
         "purchaseCount": 3
       },
       "conversions": { "timePiece": 1 },
-      "bannedTraits": ["ElementalUnifiedBoon", "HermesWeaponBoon"]
+      "bannedTraits": ["ElementalUnifiedBoon", "HermesWeaponBoon"],
+      "entry": {
+        "traits": {
+          "EncounterStartOffenseBuffBoon": { "rarity": "Epic", "level": 4 },
+          "FireEssence": {}
+        },
+        "keepsake": "GoldifyKeepsake",
+        "elements": { "Fire": 1, "Water": 4, "Air": 4 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 4,
+            "MaxManaDrop": 3,
+            "RoomMoneyDrop": 4,
+            "StackUpgrade": 3,
+            "WeaponUpgrade": 4,
+            "HermesUpgrade": 2,
+            "Devotion": 2,
+            "SpellDrop": 2,
+            "TalentDrop": 2,
+            "Boon": 3
+          }
+        },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "DoorHealToFullBoon",
+          "FocusRawDamageBoon",
+          "HealthRewardBonusBoon",
+          "ManaBurstBoon",
+          "PoseidonExCastBoon",
+          "PoseidonWeaponBoon",
+          "WeakVulnerabilityBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "metaConversionUses": 1,
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "O_Combat05",
@@ -1533,7 +2159,36 @@
           "unpicked": { "type": "MaxManaDrop" }
         }
       ],
-      "conversions": { "artificer": 1, "timePiece": 1 }
+      "conversions": { "artificer": 1, "timePiece": 1 },
+      "entry": {
+        "traits": {
+          "GoldifyKeepsake": { "rarity": "Epic", "boonConversionUses": 2 },
+          "StorePendingDeliveryItem": { "remainingUses": 8 },
+          "SlowProjectileBoon": { "rarity": "Common" }
+        },
+        "keepsake": "GoldifyKeepsake",
+        "elements": { "Fire": 1, "Water": 4, "Air": 5 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "DoorHealToFullBoon",
+          "ElementalUnifiedBoon",
+          "FocusRawDamageBoon",
+          "HealthRewardBonusBoon",
+          "HermesWeaponBoon",
+          "ManaBurstBoon",
+          "PoseidonExCastBoon",
+          "PoseidonWeaponBoon",
+          "WeakVulnerabilityBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "metaConversionUses": 1,
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "O_Devotion01",
@@ -1638,7 +2293,55 @@
         "ApolloRetaliateBoon",
         "OmegaPoseidonProjectileBoon",
         "PoseidonManaBoon"
-      ]
+      ],
+      "entry": {
+        "traits": {
+          "GoldifyKeepsake": { "rarity": "Epic", "boonConversionUses": 1 },
+          "StorePendingDeliveryItem": { "remainingUses": 5 }
+        },
+        "keepsake": "GoldifyKeepsake",
+        "elements": { "Fire": 1, "Water": 4, "Air": 5 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 3,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 4,
+            "StackUpgrade": 3,
+            "WeaponUpgrade": 4,
+            "HermesUpgrade": 2,
+            "Devotion": 2,
+            "SpellDrop": 1,
+            "TalentDrop": 2,
+            "Boon": 3
+          },
+          "MetaProgress": {
+            "MetaCurrencyDrop": 4,
+            "MetaCurrencyBigDrop": 1,
+            "MetaCardPointsCommonDrop": 8,
+            "MetaCardPointsCommonBigDrop": 2
+          }
+        },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "DoorHealToFullBoon",
+          "ElementalUnifiedBoon",
+          "FocusRawDamageBoon",
+          "HealthRewardBonusBoon",
+          "HermesWeaponBoon",
+          "ManaBurstBoon",
+          "PoseidonExCastBoon",
+          "PoseidonWeaponBoon",
+          "WeakVulnerabilityBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "metaConversionUses": 2,
+        "biomeBoonSkipCount": 1
+      }
     },
     {
       "name": "O_PreBoss01",
@@ -1674,6 +2377,39 @@
           { "slot": 3, "name": "MaxManaDrop", "type": "Consumable" }
         ],
         "purchases": [{ "slot": 1 }]
+      },
+      "entry": {
+        "traits": {
+          "StorePendingDeliveryItem": { "remainingUses": 4 },
+          "ApolloSprintBoon": { "rarity": "Common", "level": 4 },
+          "FocusDamageShaveBoon": { "rarity": "Common", "level": 4 }
+        },
+        "keepsake": "GoldifyKeepsake",
+        "elements": { "Fire": 2, "Water": 5, "Air": 5 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastAreaBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "ApolloRetaliateBoon",
+          "DoorHealToFullBoon",
+          "ElementalUnifiedBoon",
+          "FocusRawDamageBoon",
+          "HealthRewardBonusBoon",
+          "HermesWeaponBoon",
+          "ManaBurstBoon",
+          "OmegaPoseidonProjectileBoon",
+          "PoseidonExCastBoon",
+          "PoseidonManaBoon",
+          "PoseidonWeaponBoon",
+          "WeakVulnerabilityBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "metaConversionUses": 2,
+        "biomeBoonSkipCount": 1
       }
     },
     {
@@ -1691,7 +2427,36 @@
       },
       "traitScreens": [],
       "traits": { "acquired": [], "removed": [], "upgraded": [] },
-      "npcInteractions": { "Eris": 1 }
+      "npcInteractions": { "Eris": 1 },
+      "entry": {
+        "traits": { "ElementalDodgeBoon": { "rarity": "Common" } },
+        "keepsake": "GoldifyKeepsake",
+        "elements": { "Fire": 2, "Water": 5, "Air": 5 },
+        "bannedTraits": [
+          "AphroditeManaBoon",
+          "AphroditeSprintBoon",
+          "AphroditeWeaponBoon",
+          "ApolloCastAreaBoon",
+          "ApolloCastBoon",
+          "ApolloManaBoon",
+          "ApolloRetaliateBoon",
+          "DoorHealToFullBoon",
+          "ElementalUnifiedBoon",
+          "FocusRawDamageBoon",
+          "HealthRewardBonusBoon",
+          "HermesWeaponBoon",
+          "ManaBurstBoon",
+          "OmegaPoseidonProjectileBoon",
+          "PoseidonExCastBoon",
+          "PoseidonManaBoon",
+          "PoseidonWeaponBoon",
+          "WeakVulnerabilityBoon",
+          "ZeusManaBoltBoon",
+          "ZeusSprintBoon"
+        ],
+        "metaConversionUses": 2,
+        "biomeBoonSkipCount": 1
+      }
     }
   ]
 }

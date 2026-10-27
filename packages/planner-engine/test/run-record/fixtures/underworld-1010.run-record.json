@@ -83,7 +83,115 @@
         "removed": [],
         "upgraded": []
       },
-      "npcInteractions": { "DemeterUpgrade": 1 }
+      "npcInteractions": { "DemeterUpgrade": 1 },
+      "entry": {
+        "traits": {
+          "BossMetaUpgradeKeepsake": { "rarity": "Epic", "remainingUses": 1 },
+          "DodgeFamiliar": { "level": 4 },
+          "FamiliarPolecatResourceBonus": { "level": 4 },
+          "FamiliarPolecatDamage": { "level": 4 },
+          "SuitHexAspect": { "rarity": "Legendary" },
+          "SpellMoonBeamTrait": {},
+          "BossProgressionMetaUpgrade": { "rarity": "Epic" },
+          "ChannelSlowMetaUpgrade": { "rarity": "Epic" },
+          "DuoRarityBoostMetaUpgrade": { "rarity": "Epic" },
+          "MetaToRunMetaUpgrade": { "rarity": "Epic" },
+          "MagicCritMetaUpgrade": { "rarity": "Epic" },
+          "SorceryRegenMetaUpgrade": { "rarity": "Epic" }
+        },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "rewardStores": {
+          "SubRoomRewards": {
+            "MaxManaDropSmall": 1,
+            "MaxHealthDropSmall": 1,
+            "EmptyMaxHealthSmallDrop": 1,
+            "RoomMoneyTinyDrop": 1,
+            "AirBoost": 1,
+            "EarthBoost": 1,
+            "FireBoost": 1,
+            "WaterBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 2,
+            "MetaCardPointsCommonDrop": 2,
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "RoomMoneyDrop": 2,
+            "MinorTalentDrop": 2
+          },
+          "PreHubRewards": {},
+          "MinorRunProgress": {
+            "MaxManaDropSmall": 3,
+            "MaxHealthDropSmall": 3,
+            "EmptyMaxHealthSmallDrop": 2,
+            "MinorTalentDrop": 2,
+            "StoreRewardRandomStack": 1,
+            "ElementalBoost": 1,
+            "ArmorBoost": 1
+          },
+          "InvalidOverrides": {},
+          "TartarusRewards": {
+            "RoomMoneyTripleDrop": 1,
+            "StackUpgradeTriple": 1,
+            "WeaponUpgrade": 2,
+            "Devotion": 1,
+            "TalentBigDrop": 1,
+            "Boon": 3
+          },
+          "SubRoomRewardsHard": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "RoomMoneyDrop": 2
+          },
+          "HubRewards": {
+            "MaxHealthDropBig": 1,
+            "MaxManaDropBig": 1,
+            "WeaponUpgrade": 1,
+            "HermesUpgrade": 1,
+            "SpellDrop": 1,
+            "Boon": 5
+          },
+          "FieldsCombatRewards": {},
+          "TyphonBossRewards": {
+            "Boon": 2,
+            "TalentBigDrop": 1,
+            "StackUpgradeTriple": 1,
+            "WeaponUpgrade": 2
+          },
+          "Secrets": { "TrialUpgrade": 1 },
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 2,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 3
+          },
+          "FieldsOptionalRewards": {
+            "MaxManaDropSmall": 3,
+            "MaxHealthDropSmall": 3,
+            "RoomMoneyTinyDrop": 3,
+            "RoomRewardHealDrop": 1,
+            "ArmorBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 1,
+            "MetaCardPointsCommonDrop": 4,
+            "MinorTalentDrop": 2
+          },
+          "MetaProgress": {
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 4,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 8,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        }
+      }
     },
     {
       "name": "F_Combat19",
@@ -131,7 +239,25 @@
         "upgraded": []
       },
       "conversions": { "artificer": 1 },
-      "npcInteractions": { "ZeusUpgrade": 1 }
+      "npcInteractions": { "ZeusUpgrade": 1 },
+      "entry": {
+        "traits": {
+          "SuitInherentSpeedBoon": {},
+          "VanillaState": {},
+          "DemeterSprintBoon": { "rarity": "Common" }
+        },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "elements": { "Water": 1 },
+        "rewardStores": {
+          "MetaProgress": {
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 4,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 7,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        }
+      }
     },
     {
       "name": "F_Combat10",
@@ -172,6 +298,26 @@
         ],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "traits": { "ZeusCastBoon": { "rarity": "Rare" } },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "elements": { "Air": 1, "Water": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "MaxManaDrop": 2,
+            "RoomMoneyDrop": 2,
+            "StackUpgrade": 1,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 1
+          }
+        },
+        "metaConversionUses": 1
       }
     },
     {
@@ -207,7 +353,21 @@
         "removed": [],
         "upgraded": []
       },
-      "conversions": { "artificer": 1 }
+      "conversions": { "artificer": 1 },
+      "entry": {
+        "traits": { "FocusLightningBoon": { "rarity": "Rare" } },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "elements": { "Air": 2, "Water": 1 },
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 4,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 7,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        },
+        "metaConversionUses": 1
+      }
     },
     {
       "name": "F_Combat15",
@@ -273,6 +433,24 @@
           { "slot": 3, "name": "MemPointsCommonRange", "type": "Consumable" }
         ],
         "purchases": []
+      },
+      "entry": {
+        "traits": { "RoomRewardMaxManaTrait": {} },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "elements": { "Air": 2, "Water": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 2,
+            "RoomMoneyDrop": 2,
+            "WeaponUpgrade": 2,
+            "HermesUpgrade": 1,
+            "Devotion": 1,
+            "SpellDrop": 1,
+            "TalentDrop": 1,
+            "Boon": 1
+          }
+        },
+        "metaConversionUses": 2
       }
     },
     {
@@ -308,6 +486,26 @@
         ],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "traits": { "FocusLightningBoon": { "rarity": "Rare", "level": 2 } },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "elements": { "Air": 2, "Water": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 4,
+            "RoomMoneyDrop": 4,
+            "WeaponUpgrade": 4,
+            "HermesUpgrade": 2,
+            "Devotion": 2,
+            "SpellDrop": 2,
+            "TalentDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "Boon": 3
+          }
+        },
+        "metaConversionUses": 2
       }
     },
     {
@@ -371,7 +569,27 @@
         "removed": [],
         "upgraded": []
       },
-      "npcInteractions": { "NPC_Artemis_Field_01": 1 }
+      "npcInteractions": { "NPC_Artemis_Field_01": 1 },
+      "entry": {
+        "traits": { "DemeterWeaponBoon": { "rarity": "Rare" } },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "elements": { "Air": 2, "Water": 2 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 4,
+            "RoomMoneyDrop": 3,
+            "WeaponUpgrade": 4,
+            "HermesUpgrade": 2,
+            "Devotion": 2,
+            "SpellDrop": 2,
+            "TalentDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "Boon": 3
+          }
+        },
+        "metaConversionUses": 2
+      }
     },
     {
       "name": "F_Shop01",
@@ -408,6 +626,26 @@
           { "slot": 3, "name": "StackUpgrade", "type": "Consumable", "baseCost": 100 }
         ],
         "purchases": [{ "slot": 1 }]
+      },
+      "entry": {
+        "traits": { "DashOmegaBuffBoon": { "rarity": "Rare" } },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "elements": { "Air": 3, "Water": 2 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 3,
+            "RoomMoneyDrop": 3,
+            "WeaponUpgrade": 4,
+            "HermesUpgrade": 2,
+            "Devotion": 2,
+            "SpellDrop": 2,
+            "TalentDrop": 2,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "Boon": 3
+          }
+        },
+        "metaConversionUses": 2
       }
     },
     {
@@ -494,6 +732,20 @@
           "5:5": { "name": "MoonBeamDefenseTalent", "invested": false },
           "6:3": { "name": "MoonBeamTargetTalent", "invested": false }
         }
+      },
+      "entry": {
+        "traits": { "CastNovaBoon": { "rarity": "Common" } },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "elements": { "Air": 3, "Water": 3 },
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 3,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 6,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        },
+        "metaConversionUses": 2
       }
     },
     {
@@ -543,6 +795,30 @@
         ],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "traits": {
+          "AresSpecialBoon": { "rarity": "Common" },
+          "TemporaryImprovedCastTrait": { "remainingUses": 5 }
+        },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "elements": { "Air": 3, "Earth": 1, "Water": 3 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 3,
+            "RoomMoneyDrop": 3,
+            "WeaponUpgrade": 4,
+            "HermesUpgrade": 2,
+            "Devotion": 2,
+            "SpellDrop": 2,
+            "TalentDrop": 2,
+            "MaxManaDrop": 1,
+            "StackUpgrade": 2,
+            "Boon": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 }
       }
     },
     {
@@ -580,6 +856,25 @@
         "acquired": [{ "name": "RoomRewardMaxHealthTrait", "worldTime": 6098.8490200372 }],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "traits": {
+          "TemporaryImprovedCastTrait": { "remainingUses": 4 },
+          "BloodDropRevengeBoon": { "rarity": "Common" },
+          "DummyBloodDisplayBoon": {}
+        },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 2,
+            "MetaCurrencyBigDrop": 2,
+            "MetaCardPointsCommonDrop": 5,
+            "MetaCardPointsCommonBigDrop": 4
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 }
       }
     },
     {
@@ -606,6 +901,30 @@
         ],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "traits": {
+          "TemporaryImprovedCastTrait": { "remainingUses": 3 },
+          "RoomRewardMaxHealthTrait": {}
+        },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 3,
+            "RoomMoneyDrop": 3,
+            "WeaponUpgrade": 3,
+            "HermesUpgrade": 2,
+            "Devotion": 2,
+            "SpellDrop": 2,
+            "TalentDrop": 2,
+            "MaxManaDrop": 1,
+            "StackUpgrade": 2,
+            "Boon": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 }
       }
     },
     {
@@ -643,7 +962,14 @@
         "ScreenReroll",
         "StartingGold",
         "EpicRarityBoost"
-      ]
+      ],
+      "entry": {
+        "traits": { "SuitAttackRangeTrait": { "rarity": "Common" } },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 }
+      }
     },
     {
       "name": "F_PostBoss01",
@@ -679,7 +1005,24 @@
         "soldSlots": [],
         "sales": 0
       },
-      "keepsakeSwap": { "from": "BossMetaUpgradeKeepsake", "to": "SpellTalentKeepsake" }
+      "keepsakeSwap": { "from": "BossMetaUpgradeKeepsake", "to": "SpellTalentKeepsake" },
+      "entry": {
+        "traits": {
+          "BossMetaUpgradeKeepsake": { "rarity": "Epic", "remainingUses": 0 },
+          "TemporaryImprovedCastTrait": { "remainingUses": 2 },
+          "HealthManaBonusMetaUpgrade": { "rarity": "Epic" },
+          "DoorRerollMetaUpgrade": { "rarity": "Epic" },
+          "RerollTradeOffMetaUpgrade": { "rarity": "Epic" },
+          "EffectVulnerabilityMetaUpgrade": { "rarity": "Epic" },
+          "PanelRerollMetaUpgrade": { "rarity": "Epic" },
+          "StartingGoldMetaUpgrade": { "rarity": "Epic" },
+          "EpicRarityBoostMetaUpgrade": { "rarity": "Epic" }
+        },
+        "keepsake": "BossMetaUpgradeKeepsake",
+        "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 }
+      }
     },
     {
       "name": "G_Intro",
@@ -690,7 +1033,15 @@
       "uses": { "OceanusExitDoor": 1 },
       "kills": { "Breakable_G": 11 },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": { "SpellTalentKeepsake": { "rarity": "Epic" } },
+        "lostTraits": ["BossMetaUpgradeKeepsake", "VanillaState"],
+        "keepsake": "SpellTalentKeepsake",
+        "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 }
+      }
     },
     {
       "name": "G_Combat20",
@@ -775,6 +1126,26 @@
           "5:5": { "name": "MoonBeamDefenseTalent", "invested": false },
           "6:3": { "name": "MoonBeamTargetTalent", "invested": false }
         }
+      },
+      "entry": {
+        "keepsake": "SpellTalentKeepsake",
+        "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 3,
+            "RoomMoneyDrop": 3,
+            "WeaponUpgrade": 3,
+            "HermesUpgrade": 2,
+            "Devotion": 2,
+            "TalentDrop": 2,
+            "MaxManaDrop": 1,
+            "StackUpgrade": 2,
+            "SpellDrop": 1,
+            "Boon": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 }
       }
     },
     {
@@ -817,6 +1188,31 @@
             "worldTime": 21.0754178036
           }
         ]
+      },
+      "entry": {
+        "traits": {
+          "TemporaryImprovedCastTrait": { "remainingUses": 1 },
+          "ChargeRegenTalent": { "rarity": "Common" },
+          "MoonBeamConsecutiveDamageTalent": { "rarity": "Rare" },
+          "MoonBeamAresTalent": {},
+          "OlympianSpellCountTalent": { "rarity": "Common" },
+          "MoonBeamCountTalent": { "rarity": "Common" },
+          "MoonBeamVulnerabilityTalent": { "rarity": "Common" },
+          "MoonBeamDamageTalent": { "rarity": "Common", "level": 2 }
+        },
+        "keepsake": "SpellTalentKeepsake",
+        "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 6,
+            "MetaCurrencyBigDrop": 3,
+            "MetaCardPointsCommonDrop": 13,
+            "MetaCardPointsCommonBigDrop": 7
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 },
+        "investedTalents": ["1:2", "2:1", "2:2", "3:2", "3:3", "4:2", "4:3", "5:2"]
       }
     },
     {
@@ -864,6 +1260,23 @@
           { "slot": 3, "name": "MaxManaDrop", "type": "Consumable" }
         ],
         "purchases": [{ "slot": 1 }, { "slot": 2 }]
+      },
+      "entry": {
+        "traits": { "ZeusCastBoon": { "rarity": "Rare", "level": 2 } },
+        "lostTraits": ["TemporaryImprovedCastTrait"],
+        "keepsake": "SpellTalentKeepsake",
+        "elements": { "Water": 3, "Earth": 2, "Air": 3 },
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 6,
+            "MetaCurrencyBigDrop": 3,
+            "MetaCardPointsCommonDrop": 13,
+            "MetaCardPointsCommonBigDrop": 6
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 },
+        "investedTalents": ["1:2", "2:1", "2:2", "3:2", "3:3", "4:2", "4:3", "5:2"]
       }
     },
     {
@@ -895,6 +1308,28 @@
         "acquired": [{ "name": "RootStrikeBoon", "rarity": "Duo", "worldTime": 78.139502847276 }],
         "removed": [],
         "upgraded": []
+      },
+      "entry": {
+        "traits": { "RestockBoon": { "rarity": "Common" }, "MinorArmorBoon": {} },
+        "keepsake": "SpellTalentKeepsake",
+        "elements": { "Water": 3, "Earth": 2, "Fire": 1, "Air": 3 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 5,
+            "RoomMoneyDrop": 5,
+            "WeaponUpgrade": 5,
+            "HermesUpgrade": 3,
+            "Devotion": 3,
+            "TalentDrop": 3,
+            "MaxManaDrop": 3,
+            "StackUpgrade": 4,
+            "SpellDrop": 2,
+            "Boon": 3
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 },
+        "investedTalents": ["1:2", "2:1", "2:2", "3:2", "3:3", "4:2", "4:3", "5:2"]
       }
     },
     {
@@ -955,6 +1390,28 @@
           { "slot": 3, "name": "TemporaryMoveSpeedTrait", "type": "Trait" }
         ],
         "purchases": []
+      },
+      "entry": {
+        "traits": { "RootStrikeBoon": { "rarity": "Duo" } },
+        "keepsake": "SpellTalentKeepsake",
+        "elements": { "Water": 3, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 5,
+            "RoomMoneyDrop": 4,
+            "WeaponUpgrade": 5,
+            "HermesUpgrade": 3,
+            "Devotion": 3,
+            "TalentDrop": 3,
+            "MaxManaDrop": 3,
+            "StackUpgrade": 4,
+            "SpellDrop": 2,
+            "Boon": 3
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 },
+        "investedTalents": ["1:2", "2:1", "2:2", "3:2", "3:3", "4:2", "4:3", "5:2"]
       }
     },
     {
@@ -1000,6 +1457,21 @@
             "worldTime": 135.0542228375
           }
         ]
+      },
+      "entry": {
+        "keepsake": "SpellTalentKeepsake",
+        "elements": { "Water": 3, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "rewardStores": {
+          "MetaProgress": {
+            "MetaCurrencyDrop": 10,
+            "MetaCardPointsCommonDrop": 21,
+            "MetaCardPointsCommonBigDrop": 9,
+            "MetaCurrencyBigDrop": 4
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 },
+        "investedTalents": ["1:2", "2:1", "2:2", "3:2", "3:3", "4:2", "4:3", "5:2"]
       }
     },
     {
@@ -1077,6 +1549,29 @@
           "5:5": { "name": "MoonBeamDefenseTalent", "invested": false },
           "6:3": { "name": "MoonBeamTargetTalent", "invested": true }
         }
+      },
+      "entry": {
+        "traits": { "DemeterWeaponBoon": { "rarity": "Rare", "level": 2 } },
+        "lostTraits": ["MinorArmorBoon"],
+        "keepsake": "SpellTalentKeepsake",
+        "elements": { "Water": 3, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 5,
+            "RoomMoneyDrop": 3,
+            "WeaponUpgrade": 5,
+            "HermesUpgrade": 3,
+            "Devotion": 3,
+            "MaxManaDrop": 3,
+            "StackUpgrade": 3,
+            "SpellDrop": 2,
+            "TalentDrop": 2,
+            "Boon": 3
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 },
+        "investedTalents": ["1:2", "2:1", "2:2", "3:2", "3:3", "4:2", "4:3", "5:2"]
       }
     },
     {
@@ -1142,6 +1637,44 @@
           { "slot": 3, "name": "StoreRewardRandomStack", "type": "Consumable", "baseCost": 50 }
         ],
         "purchases": [{ "slot": 1 }, { "slot": 3 }]
+      },
+      "entry": {
+        "traits": {
+          "MoonBeamVulnerabilityTalent": { "rarity": "Common", "level": 2 },
+          "MoonBeamTargetTalent": { "rarity": "Epic" },
+          "MoonBeamPrimaryTalent": { "rarity": "Rare" }
+        },
+        "keepsake": "SpellTalentKeepsake",
+        "elements": { "Water": 3, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 5,
+            "RoomMoneyDrop": 3,
+            "WeaponUpgrade": 5,
+            "HermesUpgrade": 3,
+            "Devotion": 3,
+            "MaxManaDrop": 3,
+            "StackUpgrade": 3,
+            "SpellDrop": 2,
+            "TalentDrop": 2,
+            "Boon": 2
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 },
+        "investedTalents": [
+          "1:2",
+          "2:1",
+          "2:2",
+          "3:2",
+          "3:3",
+          "4:2",
+          "4:3",
+          "5:1",
+          "5:2",
+          "5:3",
+          "6:3"
+        ]
       }
     },
     {
@@ -1178,7 +1711,31 @@
         "RarityBoost",
         "LowManaDamageBonus",
         "LowHealthBonus"
-      ]
+      ],
+      "entry": {
+        "traits": {
+          "ElementalDamageFloorBoon": { "rarity": "Common" },
+          "EncounterStartOffenseBuffBoon": { "rarity": "Rare" },
+          "DemeterWeaponBoon": { "rarity": "Rare", "level": 3 }
+        },
+        "keepsake": "SpellTalentKeepsake",
+        "elements": { "Water": 4, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 },
+        "investedTalents": [
+          "1:2",
+          "2:1",
+          "2:2",
+          "3:2",
+          "3:3",
+          "4:2",
+          "4:3",
+          "5:1",
+          "5:2",
+          "5:3",
+          "6:3"
+        ]
+      }
     },
     {
       "name": "G_PostBoss01",
@@ -1230,7 +1787,33 @@
         "soldSlots": [],
         "sales": 0
       },
-      "keepsakeSwap": { "from": "SpellTalentKeepsake", "to": "AthenaEncounterKeepsake" }
+      "keepsakeSwap": { "from": "SpellTalentKeepsake", "to": "AthenaEncounterKeepsake" },
+      "entry": {
+        "traits": {
+          "DodgeBonusMetaUpgrade": { "rarity": "Epic" },
+          "ManaOverTimeMetaUpgrade": { "rarity": "Epic" },
+          "RarityBoostMetaUpgrade": { "rarity": "Epic" },
+          "LowManaDamageMetaupgrade": { "rarity": "Epic" },
+          "LowHealthBuffMetaUpgrade": { "rarity": "Epic" }
+        },
+        "keepsake": "SpellTalentKeepsake",
+        "elements": { "Water": 4, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "RandomStoreItem": 1 },
+        "investedTalents": [
+          "1:2",
+          "2:1",
+          "2:2",
+          "3:2",
+          "3:3",
+          "4:2",
+          "4:3",
+          "5:1",
+          "5:2",
+          "5:3",
+          "6:3"
+        ]
+      }
     },
     {
       "name": "H_Intro",
@@ -1240,7 +1823,31 @@
       "encounters": [{ "name": "Empty" }],
       "uses": { "FieldsExitDoor": 1 },
       "traitScreens": [],
-      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "entry": {
+        "traits": {
+          "AthenaEncounterKeepsake": { "rarity": "Epic", "remainingUses": 1 },
+          "TemporaryImprovedSecondaryTrait": { "remainingUses": 5 }
+        },
+        "lostTraits": ["SpellTalentKeepsake"],
+        "keepsake": "AthenaEncounterKeepsake",
+        "elements": { "Water": 4, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "TemporaryImprovedSecondaryTrait": 1, "RandomStoreItem": 1 },
+        "investedTalents": [
+          "1:2",
+          "2:1",
+          "2:2",
+          "3:2",
+          "3:3",
+          "4:2",
+          "4:3",
+          "5:1",
+          "5:2",
+          "5:3",
+          "6:3"
+        ]
+      }
     },
     {
       "name": "H_Combat07",
@@ -1418,6 +2025,39 @@
           "5:5": { "name": "MoonBeamDefenseTalent", "invested": false },
           "6:3": { "name": "MoonBeamTargetTalent", "invested": true }
         }
+      },
+      "entry": {
+        "keepsake": "AthenaEncounterKeepsake",
+        "elements": { "Water": 4, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 5,
+            "RoomMoneyDrop": 3,
+            "WeaponUpgrade": 5,
+            "HermesUpgrade": 3,
+            "Devotion": 3,
+            "MaxManaDrop": 3,
+            "StackUpgrade": 2,
+            "SpellDrop": 2,
+            "TalentDrop": 1,
+            "Boon": 2
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "TemporaryImprovedSecondaryTrait": 1, "RandomStoreItem": 1 },
+        "investedTalents": [
+          "1:2",
+          "2:1",
+          "2:2",
+          "3:2",
+          "3:3",
+          "4:2",
+          "4:3",
+          "5:1",
+          "5:2",
+          "5:3",
+          "6:3"
+        ]
       }
     },
     {
@@ -1464,7 +2104,62 @@
         "removed": [],
         "upgraded": []
       },
-      "toolElements": ["ToolExorcismBook2"]
+      "toolElements": ["ToolExorcismBook2"],
+      "entry": {
+        "traits": {
+          "AthenaEncounterKeepsake": { "rarity": "Epic", "remainingUses": 0 },
+          "TemporaryImprovedSecondaryTrait": { "remainingUses": 3 },
+          "MoonBeamCountTalent": { "rarity": "Common", "level": 2 },
+          "MoonBeamVulnerabilityTalent": { "rarity": "Common", "level": 4 },
+          "InvulnerabilityCastBoon": { "rarity": "Epic" },
+          "DemeterWeaponBoon": { "rarity": "Rare", "level": 4 }
+        },
+        "keepsake": "AthenaEncounterKeepsake",
+        "elements": { "Water": 4, "Earth": 2, "Fire": 2, "Air": 3, "Aether": 1 },
+        "rewardStores": {
+          "FieldsOptionalRewards": {
+            "MaxManaDropSmall": 3,
+            "MaxHealthDropSmall": 1,
+            "RoomMoneyTinyDrop": 3,
+            "RoomRewardHealDrop": 1,
+            "ArmorBoost": 1,
+            "GiftDrop": 1,
+            "MetaCurrencyDrop": 1,
+            "MetaCardPointsCommonDrop": 3,
+            "MinorTalentDrop": 2
+          },
+          "RunProgress": {
+            "MaxHealthDrop": 5,
+            "RoomMoneyDrop": 2,
+            "WeaponUpgrade": 5,
+            "HermesUpgrade": 3,
+            "Devotion": 3,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 2,
+            "SpellDrop": 2,
+            "TalentDrop": 1,
+            "Boon": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "TemporaryImprovedSecondaryTrait": 1, "RandomStoreItem": 1 },
+        "investedTalents": [
+          "1:2",
+          "1:4",
+          "2:1",
+          "2:2",
+          "2:4",
+          "3:2",
+          "3:3",
+          "3:4",
+          "4:2",
+          "4:3",
+          "5:1",
+          "5:2",
+          "5:3",
+          "6:3"
+        ]
+      }
     },
     {
       "name": "H_Bridge01",
@@ -1504,7 +2199,48 @@
           }
         ]
       },
-      "npcInteractions": { "NPC_Echo_01": 1 }
+      "npcInteractions": { "NPC_Echo_01": 1 },
+      "entry": {
+        "traits": {
+          "TemporaryImprovedSecondaryTrait": { "remainingUses": 2 },
+          "FocusDamageShaveBoon": { "rarity": "Rare" },
+          "AirEssence": {}
+        },
+        "keepsake": "AthenaEncounterKeepsake",
+        "elements": { "Water": 5, "Earth": 2, "Fire": 2, "Air": 4, "Aether": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 5,
+            "RoomMoneyDrop": 2,
+            "WeaponUpgrade": 5,
+            "HermesUpgrade": 2,
+            "Devotion": 3,
+            "MaxManaDrop": 2,
+            "StackUpgrade": 1,
+            "SpellDrop": 2,
+            "TalentDrop": 1,
+            "Boon": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "TemporaryImprovedSecondaryTrait": 1, "RandomStoreItem": 1 },
+        "investedTalents": [
+          "1:2",
+          "1:4",
+          "2:1",
+          "2:2",
+          "2:4",
+          "3:2",
+          "3:3",
+          "3:4",
+          "4:2",
+          "4:3",
+          "5:1",
+          "5:2",
+          "5:3",
+          "6:3"
+        ]
+      }
     },
     {
       "name": "H_Combat04",
@@ -1621,6 +2357,45 @@
           }
         ],
         "optionalRewards": []
+      },
+      "entry": {
+        "traits": {
+          "EchoDoubleLevelBoon": { "rarity": "Epic" },
+          "DemeterWeaponBoon": { "rarity": "Rare", "level": 8 }
+        },
+        "keepsake": "AthenaEncounterKeepsake",
+        "elements": { "Water": 5, "Earth": 2, "Fire": 2, "Air": 4, "Aether": 1 },
+        "rewardStores": {
+          "RunProgress": {
+            "MaxHealthDrop": 4,
+            "WeaponUpgrade": 4,
+            "HermesUpgrade": 1,
+            "Devotion": 3,
+            "MaxManaDrop": 1,
+            "SpellDrop": 2,
+            "TalentDrop": 1,
+            "RoomMoneyDrop": 1,
+            "Boon": 1
+          }
+        },
+        "metaConversionUses": 3,
+        "wellShopPurchases": { "TemporaryImprovedSecondaryTrait": 1, "RandomStoreItem": 1 },
+        "investedTalents": [
+          "1:2",
+          "1:4",
+          "2:1",
+          "2:2",
+          "2:4",
+          "3:2",
+          "3:3",
+          "3:4",
+          "4:2",
+          "4:3",
+          "5:1",
+          "5:2",
+          "5:3",
+          "6:3"
+        ]
       }
     }
   ]

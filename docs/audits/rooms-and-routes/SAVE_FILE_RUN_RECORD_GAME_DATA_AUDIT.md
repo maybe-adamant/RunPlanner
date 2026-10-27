@@ -480,3 +480,18 @@ screen rerolls and a relaunch mid-run.
   before `564448`. In the live Underworld recording's reward-bag replay that
   generates the Mini-Boss door first, refilling the store, so `H_Combat07`'s
   recorded Hestia cage finds a Boon; ascending id leaves it none.
+- An imported plan is checked against each room's entry save, which leaving
+  the previous room writes: the plan's `beforeRoomExit` of that room holds the
+  same moment. The checked state is held traits (rarity, and level as
+  `StackNum`), the slotted keepsake, reward store counts, Denial bans,
+  Artificer and Time Piece uses, Well purchases, Chaos curses' remaining uses
+  and blessings, invested Path of Stars nodes, Forfeit and elements; each
+  difference is reported as a mismatch where it begins. Elements are read
+  from the plan's entry into the next room, since the plan grants a gathered
+  element as the room is left, after `beforeRoomExit`. Two native facts bound
+  the comparison: `BiomeBoonSkipCount` resets in the next biome's first room
+  (`EndBiomeRecords`, `RunLogic.lua:1912`, after its entry save),
+  and each store fill or refill (`RewardLogic.lua:157`) keeps every entry
+  declared for another route, so store names with such an entry are not
+  compared. The first room and rooms left from a revisited occurrence are not
+  checked.

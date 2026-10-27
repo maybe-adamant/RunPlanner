@@ -13,7 +13,9 @@ export type RunImportReason =
   /** The record holds the fact, but its mapping onto the plan rests on a stated assumption. */
   | 'assumption'
   /** No answer or guess settled this question; the plan ends before it. */
-  | 'stopped';
+  | 'stopped'
+  /** The plan's run state differs from the state the game saved on entering the room. */
+  | 'mismatch';
 
 export type RunImportArea =
   | 'loadout'
@@ -41,6 +43,13 @@ export type RunImportArea =
   | 'menace'
   | 'reroll'
   | 'dream'
+  | 'traits'
+  | 'keepsake'
+  | 'stores'
+  | 'denial'
+  | 'chaos'
+  | 'forfeit'
+  | 'elements'
   | 'other';
 
 /** One record room visit: its `rooms` index and the visit ordinal of its occurrence. */
@@ -59,6 +68,18 @@ export interface RunImportReportEntry {
   /** The command the importer applied in place of the record's answer, if any. */
   readonly applied?: ProjectCommand;
   readonly record?: RunImportRecordLocation;
+  /** What a `mismatch` entry found. */
+  readonly mismatch?: RunImportMismatch;
+}
+
+/** One run-state value the game saved and the plan's simulation holds otherwise. */
+export interface RunImportMismatch {
+  /** The game's name of the value: a trait, store, item, element or counter. */
+  readonly field: string;
+  /** The saved value. */
+  readonly expected: string;
+  /** The simulated value. */
+  readonly actual: string;
 }
 
 export interface RunImportReport {

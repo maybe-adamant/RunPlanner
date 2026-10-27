@@ -107,6 +107,16 @@ function entryLines(report: RunImportReport): readonly string[] {
     .map(describeEntry);
 }
 
+/** The run-state differences from the entry saves, one stable line each. */
+function mismatchLines(report: RunImportReport): readonly string[] {
+  return report.entries
+    .filter((entry) => entry.reason === 'mismatch')
+    .map(
+      (entry) =>
+        `${entry.area} r${entry.record?.roomIndex ?? '-'} ${entry.mismatch?.field}: ${entry.mismatch?.expected} | ${entry.mismatch?.actual}`,
+    );
+}
+
 /** Rooms the imported plan enters, in order, read from the evaluated route history. */
 function enteredRooms(project: ProjectDocument): readonly string[] {
   const evaluation = simulateProjectAssembly(catalog, project).evaluation;
@@ -319,6 +329,8 @@ describe('run import of the Underworld capture', () => {
         traitOffer: 3,
       },
       // The three Chaos screens stay: their unpicked curses' durations are never saved.
+      // The entry saves' run state where the plan's simulation holds another.
+      mismatch: { elements: 2, pathOfStars: 1, stores: 3, traits: 6 },
       notInRecord: { fields: 4, pathOfStars: 1, traitOffer: 5 },
       refused: { doors: 1, fields: 2, pool: 1, traitOffer: 1 },
       // G_MiniBoss01's refused Zeus screen and H_Combat07's cage boon screen stay unused.
@@ -370,6 +382,27 @@ describe('run import of the Underworld capture', () => {
       'assumption roomActionOrder r26 occurrence@H-r26',
       'assumption roomActionOrder r29 occurrence@H-r29',
       'assumption roomActionOrder r32 occurrence@H-r30:postboss',
+    ]);
+    expect(mismatchLines(imported.report)).toEqual([
+      // The game rolls each Chaos gate's Trial reward from Secrets; the plan does not draw it.
+      'stores r1 Secrets: TrialUpgrade 0 | TrialUpgrade 1',
+      // Narcissus's two Elemental Essences are not collected in the plan.
+      'elements r18 Elements: Air 3, Earth 6, Fire 3, Water 2 | Air 1, Earth 4, Fire 1, Water 0',
+      // The refused Zeus screen keeps the guessed Common rarity.
+      'traits r21 ZeusWeaponBoon: Rare level 4 | Common level 4',
+      // G_PreBoss01's random Pom targets Hera's boon; the game raised the Aphrodite boon it sold.
+      'traits r23 HeraSpecialBoon: Heroic level 7 | Heroic level 8',
+      'traits r23 HighHealthOffenseBoon: Common level 5 | Common level 4',
+      // H_Combat07's guessed cages of its twin door take other store entries.
+      'stores r29 RunProgress: Boon 2, RoomMoneyDrop 2 | Boon 3, RoomMoneyDrop 1',
+      // H_Combat07's unused cage screen, its Talent and its optional rewards.
+      'traits r30 HeraSpecialBoon: Heroic level 7 | Heroic level 9',
+      'traits r30 DoubleBoltBoon: Epic level 4 | absent',
+      'stores r30 FieldsOptionalRewards: MinorTalentDrop 1, RoomMoneyTinyDrop 2 | MinorTalentDrop 2, RoomMoneyTinyDrop 3',
+      'pathOfStars r30 Invested: 5:1 | none other',
+      'elements r30 Elements: Air 6, Earth 6, Fire 5, Water 4 | Air 3, Earth 4, Fire 3, Water 2',
+      // The plan's armor is never damaged, so Arachne's costume never breaks.
+      'traits r32 CastDamageCostume: absent | held',
     ]);
   });
 });
@@ -508,6 +541,7 @@ describe('run import of the Surface capture', () => {
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { conversion: 2, menace: 14, roomActionOrder: 5 },
+      mismatch: { stores: 5 },
       notInRecord: { menace: 17, shop: 10 },
     });
     expect(entryLines(imported.report)).toEqual([
@@ -532,6 +566,14 @@ describe('run import of the Surface capture', () => {
       'assumption roomActionOrder r22 occurrence@O-r22',
       'assumption roomActionOrder r24 occurrence@O-r24',
       'assumption roomActionOrder r25 occurrence@O-r25',
+    ]);
+    // Ephyra's side-room and Hub stores lose entries the plan does not draw.
+    expect(mismatchLines(imported.report)).toEqual([
+      'stores r5 SubRoomRewards: RoomMoneyTinyDrop 0 | RoomMoneyTinyDrop 1',
+      'stores r8 HubRewards: Boon 0 | Boon 1',
+      'stores r10 HubRewards: Boon 4, HermesUpgrade 1, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 1, WeaponUpgrade 1 | Boon 1, HermesUpgrade 0, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 0, WeaponUpgrade 0',
+      'stores r12 HubRewards: Boon 3, HermesUpgrade 1, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 1, WeaponUpgrade 1 | Boon 1, HermesUpgrade 0, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 0, WeaponUpgrade 0',
+      'stores r14 HubRewards: Boon 3, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 1, WeaponUpgrade 1 | Boon 1, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 0, WeaponUpgrade 0',
     ]);
   });
 });
@@ -747,6 +789,7 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { conversion: 3, doors: 15, fields: 3, roomActionOrder: 9, traitOffer: 1 },
+      mismatch: { elements: 1, stores: 1, traits: 2 },
       // The run was reset in H_Combat04: the rest of Ephyra's Fields is guessed.
       notInRecord: { doors: 1, fields: 6, other: 1, reward: 1, route: 1, traitOffer: 3 },
       refused: { reward: 3 },
@@ -790,6 +833,15 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       'assumption roomActionOrder r24 occurrence@G-r22:postboss',
       'assumption roomActionOrder r26 occurrence@H-r26',
       'assumption roomActionOrder r29 occurrence@H-r29',
+    ]);
+    expect(mismatchLines(imported.report)).toEqual([
+      // G_Combat05 raised the Zeus boon's level with no screen the importer reads.
+      'traits r17 ZeusCastBoon: Rare level 2 | Rare level 1',
+      // G_PreBoss01's Poseidon boon came from the unread Travel Deal refill; it and its Water are missing.
+      'traits r23 EncounterStartOffenseBuffBoon: Rare | absent',
+      'elements r23 Elements: Water 4 | Water 3',
+      // H_Combat07's optional rewards are guessed: one was collected during combat, without a point.
+      'stores r27 FieldsOptionalRewards: MaxHealthDropSmall 1 | MaxHealthDropSmall 2',
     ]);
   });
 

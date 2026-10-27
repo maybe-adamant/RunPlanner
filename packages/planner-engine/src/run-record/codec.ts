@@ -8,6 +8,7 @@ import {
   type RunRecordDoorTarget,
   type RunRecordEncounter,
   type RunRecordFields,
+  type RunRecordHeldTrait,
   type RunRecordKeepsakeSwap,
   type RunRecordLoadout,
   type RunRecordOutcome,
@@ -15,6 +16,7 @@ import {
   type RunRecordPurchase,
   type RunRecordRankedTrait,
   type RunRecordRoom,
+  type RunRecordRoomEntry,
   type RunRecordRoomReward,
   type RunRecordSpawn,
   type RunRecordSpell,
@@ -607,6 +609,101 @@ function spell(value: unknown, label: string): RunRecordSpell {
   }) as RunRecordSpell;
 }
 
+function sortedNames(value: unknown, label: string, item = text): readonly string[] {
+  const names = list(value, label, item);
+  if (names.length === 0) fail(`${label} must not be empty`);
+  if (names.some((name, index) => index > 0 && names[index - 1]! >= name))
+    fail(`${label} must be sorted without repeats`);
+  return names;
+}
+
+function heldTraits(value: unknown, label: string): Readonly<Record<string, RunRecordHeldTrait>> {
+  const traits = object(value, label);
+  const names = Object.keys(traits);
+  if (names.length === 0 || names.length > MAX_ITEMS)
+    fail(`${label} must hold 1 to ${MAX_ITEMS} traits`);
+  return Object.freeze(
+    Object.fromEntries(
+      names.map((name) => {
+        const path = `${label}.${name}`;
+        text(name, `${label} key`);
+        const row = object(traits[name], path);
+        exact(row, [], ['rarity', 'level', 'remainingUses', 'boonConversionUses'], path);
+        return [
+          name,
+          Object.freeze({
+            ...optional(row, 'rarity', path, text),
+            ...optional(row, 'level', path, (item, at) => integer(item, at, 1)),
+            ...optional(row, 'remainingUses', path, (item, at) => integer(item, at)),
+            ...optional(row, 'boonConversionUses', path, (item, at) => integer(item, at)),
+          }),
+        ];
+      }),
+    ),
+  );
+}
+
+function roomEntry(value: unknown, label: string): RunRecordRoomEntry {
+  const record = object(value, label);
+  exact(
+    record,
+    [],
+    [
+      'traits',
+      'lostTraits',
+      'keepsake',
+      'elements',
+      'rewardStores',
+      'bannedTraits',
+      'metaConversionUses',
+      'wellShopPurchases',
+      'biomeBoonSkipCount',
+      'investedTalents',
+    ],
+    label,
+  );
+  const stores =
+    record.rewardStores === undefined
+      ? undefined
+      : object(record.rewardStores, `${label}.rewardStores`);
+  if (stores !== undefined && Object.keys(stores).length > MAX_ITEMS)
+    fail(`${label}.rewardStores is too large`);
+  const nonEmptyCounts = (entry: unknown, path: string) => {
+    const result = counts(entry, path);
+    if (Object.keys(result).length === 0) fail(`${path} must not be empty`);
+    return result;
+  };
+  return Object.freeze({
+    ...optional(record, 'traits', label, heldTraits),
+    ...optional(record, 'lostTraits', label, sortedNames),
+    ...optional(record, 'keepsake', label, text),
+    ...optional(record, 'elements', label, nonEmptyCounts),
+    ...(stores === undefined
+      ? {}
+      : {
+          rewardStores: Object.freeze(
+            Object.fromEntries(
+              Object.entries(stores).map(([store, entries]) => {
+                text(store, `${label}.rewardStores key`);
+                return [store, counts(entries, `${label}.rewardStores.${store}`)];
+              }),
+            ),
+          ),
+        }),
+    ...optional(record, 'bannedTraits', label, sortedNames),
+    ...optional(record, 'metaConversionUses', label, (entry, path) => integer(entry, path, 1)),
+    ...optional(record, 'wellShopPurchases', label, nonEmptyCounts),
+    ...optional(record, 'biomeBoonSkipCount', label, (entry, path) => integer(entry, path, 1)),
+    ...optional(record, 'investedTalents', label, (entry, path) =>
+      sortedNames(entry, path, (item, at) => {
+        const node = text(item, at);
+        if (!/^[1-9]\d*:[1-9]\d*$/.test(node)) fail(`${at} must be depth:slot`);
+        return node;
+      }),
+    ),
+  }) as RunRecordRoomEntry;
+}
+
 const ROOM_REQUIRED = ['name', 'doors', 'encounters', 'uses', 'traitScreens', 'traits'] as const;
 const ROOM_OPTIONAL = [
   'reward',
@@ -626,6 +723,7 @@ const ROOM_OPTIONAL = [
   'toolElements',
   'grantedArcana',
   'rerolls',
+  'entry',
 ] as const;
 
 function room(value: unknown, label: string): RunRecordRoom {
@@ -670,6 +768,7 @@ function room(value: unknown, label: string): RunRecordRoom {
       return names;
     }),
     ...optional(record, 'rerolls', label, (entry, path) => integer(entry, path, 1)),
+    ...optional(record, 'entry', label, roomEntry),
   }) as RunRecordRoom;
 }
 
@@ -683,6 +782,8 @@ export function decodeRunRecord(value: unknown): RunRecord {
   exact(route, ['biomes', 'dream'], ['maxClockworkNonGoalRewards'], 'run record.route');
   const rooms = list(record.rooms, 'run record.rooms', room, MAX_ROOMS);
   if (rooms.length === 0) fail('run record.rooms must not be empty');
+  if (rooms.some((entry) => (entry.entry === undefined) !== (rooms[0]!.entry === undefined)))
+    fail('run record.rooms must all carry an entry save or none');
   rooms.forEach((entry, index) => {
     const next = rooms[index + 1];
     if (next === undefined) {

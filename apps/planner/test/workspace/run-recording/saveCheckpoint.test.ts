@@ -187,6 +187,25 @@ describe('save checkpoint extraction', () => {
     );
   });
 
+  it("reads the hero's element counts, leaving out zeros", () => {
+    const save = sample('underworld-062');
+    const run = save.globals.CurrentRun as LuaTable;
+    const withElements: DecodedSave = {
+      ...save,
+      globals: {
+        ...save.globals,
+        CurrentRun: {
+          ...run,
+          Hero: { ...(run.Hero as LuaTable), Elements: { Earth: 6, Fire: 3, Aether: 0 } },
+        },
+      },
+    };
+    expect(extractSaveCheckpoint(withElements, true, NO_SAVED_VALUES).hero?.elements).toEqual({
+      Earth: 6,
+      Fire: 3,
+    });
+  });
+
   it('folds the first checkpoints of a run into an abandoned record', () => {
     const checkpoints = ['002', '004', '006', '009', '011'].map((id) =>
       extractSaveCheckpoint(sample(`surface-${id}`), true, NO_SAVED_VALUES),

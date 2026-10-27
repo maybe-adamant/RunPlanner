@@ -252,6 +252,13 @@ const AREA_LABELS: Readonly<Record<RunImportArea, string>> = {
   menace: 'Menace',
   reroll: 'Rerolls',
   dream: 'Dream',
+  traits: 'Traits',
+  keepsake: 'Keepsake',
+  stores: 'Reward stores',
+  denial: 'Vow of Denial',
+  chaos: 'Chaos',
+  forfeit: 'Vow of Forfeit',
+  elements: 'Elements',
   other: 'Other',
 };
 
@@ -262,6 +269,7 @@ const REASON_TEXT: Readonly<Record<RunImportReason, string>> = {
   unsupportedArea: 'Not supported',
   assumption: 'Assumed',
   stopped: 'Plan ends here',
+  mismatch: 'Differs',
 };
 
 /** The trait a trait offer selected, when it offers traits. */
