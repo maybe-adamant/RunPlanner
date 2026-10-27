@@ -1,4 +1,9 @@
-import type { ProjectCommand } from '@run-planner/engine/authored-project';
+import {
+  TRAIT_OPTION_KEYS,
+  type AuthoredTraitOffer,
+  type AuthoredTraitOption,
+  type ProjectCommand,
+} from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RunImportArea, RunImportReason } from '@run-planner/engine/simulation';
 
@@ -34,7 +39,8 @@ export interface RecentRunRow {
   readonly identity: string;
   /** Biome names in visit order, such as "Erebus › Oceanus". */
   readonly route: string;
-  readonly surface: boolean;
+  /** The catalog route whose biomes the run walked, null when none matches. */
+  readonly routeKey: string | null;
   readonly rooms: string;
   readonly loadout: string | null;
   readonly outcome: {
@@ -62,7 +68,14 @@ const OUTCOME_TEXT: Readonly<Record<RecentRunSummary['outcome'], string>> = {
   unfinished: 'Unfinished',
 };
 
-const SURFACE_BIOMES = new Set(['N', 'O', 'P', 'Q']);
+/** The catalog route a recorded run walked: the Dream route, or the route opening on its first biome. */
+function recordedRouteKey(catalog: Catalog, route: RecentRunSummary['route']): string | null {
+  const first = route.biomes[0];
+  const match = catalog.routes.values.find((candidate) =>
+    route.dream ? candidate.dreamItinerary !== undefined : candidate.biomeKeys[0] === first,
+  );
+  return match?.key ?? null;
+}
 
 function played(startedAt: number, now: number): { readonly text: string; readonly iso: string } {
   const date = new Date(startedAt * 1000);
@@ -142,7 +155,7 @@ export function projectRecentRunsView(
       played: played(summary.startedAt, now),
       identity,
       route,
-      surface: SURFACE_BIOMES.has(summary.route.biomes[0] ?? ''),
+      routeKey: recordedRouteKey(catalog, summary.route),
       rooms: `${summary.route.rooms} ${summary.route.rooms === 1 ? 'room' : 'rooms'}`,
       loadout: loadoutText(catalog, summary),
       outcome: {
@@ -229,25 +242,34 @@ const REASON_TEXT: Readonly<Record<RunImportReason, string>> = {
   stopped: 'Plan ends here',
 };
 
+/** The trait a trait offer selected, when it offers traits. */
+function selectedTraitKey(offer: AuthoredTraitOffer): string | undefined {
+  if (offer.kind !== 'traits') return undefined;
+  const options: readonly AuthoredTraitOption[] = offer.options;
+  return options[TRAIT_OPTION_KEYS.indexOf(offer.selectedOptionKey)]?.traitKey;
+}
+
 /** The value an applied command chose, by its catalog name, when it names one. */
-function appliedValue(catalog: Catalog, command: ProjectCommand | undefined): string | null {
+export function appliedValue(catalog: Catalog, command: ProjectCommand | undefined): string | null {
   if (command === undefined) return null;
-  const fields = command as unknown as Record<string, unknown>;
-  if (typeof fields['gameName'] === 'string')
-    return ownEntry(catalog.rooms.byKey, fields['gameName'])?.label ?? fields['gameName'];
-  const value = fields['value'] as Record<string, unknown> | undefined;
-  if (typeof value?.['rewardType'] === 'string')
-    return (
-      ownEntry(catalog.rewards.rewardTypes.byKey, value['rewardType'])?.label ?? value['rewardType']
-    );
-  if (Array.isArray(value?.['options'])) {
-    // Option keys name positions: option1 is the first.
-    const options = value['options'] as readonly { traitKey?: string }[];
-    const position = Number(String(value['selectedOptionKey']).replace('option', '')) - 1;
-    const traitKey = options[position]?.traitKey;
-    if (traitKey !== undefined) return ownEntry(catalog.traits.byKey, traitKey)?.label ?? traitKey;
+  switch (command.kind) {
+    case 'CreateTarget':
+      return ownEntry(catalog.rooms.byKey, command.gameName)?.label ?? command.gameName;
+    case 'ReplaceAcquisitionEntryOffer':
+    case 'ReplaceLocalReward':
+      return (
+        ownEntry(catalog.rewards.rewardTypes.byKey, command.value.rewardType)?.label ??
+        command.value.rewardType
+      );
+    case 'ReplaceTraitOffer': {
+      const traitKey = selectedTraitKey(command.value);
+      return traitKey === undefined
+        ? null
+        : (ownEntry(catalog.traits.byKey, traitKey)?.label ?? traitKey);
+    }
+    default:
+      return null;
   }
-  return null;
 }
 
 export interface RunGuessLine {

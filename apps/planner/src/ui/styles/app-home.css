@@ -1370,6 +1370,12 @@ button.home-slot-name {
   background: var(--danger);
 }
 
+.recent-runs-unreadable {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
 .recent-runs-problem {
   display: flex;
   align-items: baseline;

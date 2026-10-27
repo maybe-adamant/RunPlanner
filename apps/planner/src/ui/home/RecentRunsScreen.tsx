@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
@@ -20,14 +20,19 @@ import { HomeToast } from './HomeToast';
 import { useLibraryCopies } from './useLibraryCopies';
 import type { LibrarySlotIndex } from './useLibrarySlotLinks';
 
+function routeTone(routeKey: string | null): string {
+  return routeKey === 'Surface' || routeKey === 'Dream' ? 'surface' : 'underworld';
+}
+
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
-/** The save folder recording uses, read again whenever the watch changes. */
-function useSaveFolder(controller: RecordingController, revision: unknown) {
+/** The save folder recording uses, read again whenever the watch changes and on request. */
+function useSaveFolder(controller: RecordingController, status: unknown) {
   const [folder, setFolder] = useState<{
     readonly folder: string | null;
     readonly chosen: boolean;
   } | null>(null);
+  const [revision, setRevision] = useState(0);
   useEffect(() => {
     let live = true;
     controller.saveFolder().then(
@@ -39,8 +44,8 @@ function useSaveFolder(controller: RecordingController, revision: unknown) {
     return () => {
       live = false;
     };
-  }, [controller, revision]);
-  return folder;
+  }, [controller, status, revision]);
+  return { folder, refresh: useCallback(() => setRevision((current) => current + 1), []) };
 }
 
 function GuessList({ groups }: { readonly groups: readonly RunGuessGroup[] }) {
@@ -147,14 +152,19 @@ export function RecentRunsScreen({
     (state) => state.recordingSession,
   );
   const { copies, refresh: refreshCopies } = useLibraryCopies(operations);
-  const folder = useSaveFolder(controller, status);
+  const { folder, refresh: refreshFolder } = useSaveFolder(controller, status);
   const [busy, setBusy] = useState<string | null>(null);
   const [actionProblem, setActionProblem] = useState<string | null>(null);
-  const [deleted, setDeleted] = useState<{
-    readonly entry: RecentRunEntry;
-    readonly text: string;
-    readonly id: number;
-  } | null>(null);
+  /** Deleted runs whose Undo is still offered, oldest first; each toast shows in turn. */
+  const [deleted, setDeleted] = useState<
+    readonly { readonly entry: RecentRunEntry; readonly text: string; readonly id: number }[]
+  >([]);
+  const undoable = deleted[0];
+  // A fresh toast key per deletion, so each Undo keeps its own timer.
+  const undoCount = useRef(0);
+  const nextUndo = () => (undoCount.current += 1);
+  const settleUndo = (id: number) =>
+    setDeleted((current) => current.filter((pending) => pending.id !== id));
   const [expanded, setExpanded] = useState<{
     readonly id: string;
     readonly groups: readonly RunGuessGroup[] | null;
@@ -169,6 +179,12 @@ export function RecentRunsScreen({
   const recording = status.kind !== 'off' && status.kind !== 'error';
   const shownProblem = actionProblem ?? (status.kind === 'error' ? status.message : problem);
 
+  /** Changes the save folder, reporting a failure with recording's problems. */
+  const changeFolder = (task: () => Promise<void>) => {
+    void task()
+      .catch((error: unknown) => dispatch(recordingProblemReported(message(error))))
+      .finally(refreshFolder);
+  };
   const act = (id: string, task: () => Promise<void>) => {
     setBusy(id);
     setActionProblem(null);
@@ -179,7 +195,10 @@ export function RecentRunsScreen({
   const add = (row: RecentRunRow) =>
     act(row.id, async () => {
       const entry = await controller.readRun(row.id);
-      if (entry.project === undefined) return;
+      if (entry.project === undefined) {
+        setActionProblem('This run has no plan to add.');
+        return;
+      }
       const result = await operations.addLibraryCopy(
         { key: recentRunCopyKey(row.id), title: row.planName },
         entry.project,
@@ -245,7 +264,7 @@ export function RecentRunsScreen({
             <button
               aria-label="Change save folder"
               className="quiet-action action-compact"
-              onClick={() => void controller.chooseFolder()}
+              onClick={() => changeFolder(() => controller.chooseFolder())}
               type="button"
             >
               Change…
@@ -253,7 +272,7 @@ export function RecentRunsScreen({
             {folder?.chosen === true ? (
               <button
                 className="text-action"
-                onClick={() => void controller.setFolder(null)}
+                onClick={() => changeFolder(() => controller.setFolder(null))}
                 type="button"
               >
                 Use default
@@ -295,7 +314,7 @@ export function RecentRunsScreen({
                       <span
                         aria-hidden="true"
                         className="route-dot"
-                        data-tone={row.surface ? 'surface' : 'underworld'}
+                        data-tone={routeTone(row.routeKey)}
                       />
                       {row.route}
                     </div>
@@ -359,7 +378,11 @@ export function RecentRunsScreen({
                           act(row.id, async () => {
                             const entry = await controller.deleteRun(row.id);
                             if (expanded?.id === row.id) setExpanded(null);
-                            setDeleted({ entry, text: `Deleted ${row.identity}`, id: Date.now() });
+                            if (entry !== null)
+                              setDeleted((current) => [
+                                ...current,
+                                { entry, text: `Deleted ${row.identity}`, id: nextUndo() },
+                              ]);
                           })
                         }
                         tone="danger"
@@ -383,26 +406,39 @@ export function RecentRunsScreen({
           </tbody>
         </table>
         {unreadableRuns.length === 0 ? null : (
-          <p className="library-footer">
-            {unreadableRuns.length === 1
-              ? '1 run can’t be read.'
-              : `${unreadableRuns.length} runs can’t be read.`}
+          <p className="library-footer recent-runs-unreadable">
+            <span>
+              {unreadableRuns.length === 1
+                ? '1 run can’t be read.'
+                : `${unreadableRuns.length} runs can’t be read.`}
+            </span>
+            <button
+              className="text-action"
+              disabled={busy !== null}
+              onClick={() =>
+                act('unreadable', async () => {
+                  for (const { id } of unreadableRuns) await controller.deleteRun(id);
+                })
+              }
+              type="button"
+            >
+              {unreadableRuns.length === 1 ? 'Delete it' : 'Delete them'}
+            </button>
           </p>
         )}
       </div>
-      {deleted === null ? null : (
+      {undoable === undefined ? null : (
         <HomeToast
           action={{
             label: 'Undo',
             run: () => {
-              const { entry } = deleted;
-              setDeleted(null);
-              act(entry.id, () => controller.restoreRun(entry));
+              settleUndo(undoable.id);
+              act(undoable.entry.id, () => controller.restoreRun(undoable.entry));
             },
           }}
-          key={deleted.id}
-          onDismiss={() => setDeleted(null)}
-          text={deleted.text}
+          key={undoable.id}
+          onDismiss={() => settleUndo(undoable.id)}
+          text={undoable.text}
         />
       )}
     </section>

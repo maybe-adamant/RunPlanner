@@ -117,8 +117,17 @@ export function createOpenRunStore(host: RecentRunsHost): OpenRunStore {
           // An unreadable memory only restarts that profile's attempt numbering.
           try {
             const value: unknown = JSON.parse(await host.read(id));
-            if (isObject(value) && isWhole(value.runCount) && isWhole(value.attempt))
-              attempts.set(attemptOf, { runCount: value.runCount, attempt: value.attempt });
+            if (
+              isObject(value) &&
+              isWhole(value.runCount) &&
+              isWhole(value.attempt) &&
+              isWhole(value.startedAt)
+            )
+              attempts.set(attemptOf, {
+                runCount: value.runCount,
+                attempt: value.attempt,
+                startedAt: value.startedAt,
+              });
           } catch {
             // Read failures fall through to numbering from 1.
           }
@@ -144,7 +153,11 @@ export function createOpenRunStore(host: RecentRunsHost): OpenRunStore {
     saveAttempt: (profile: number, attempt: RunAttempt) =>
       host.write(
         attemptId(profile),
-        JSON.stringify({ runCount: attempt.runCount, attempt: attempt.attempt }),
+        JSON.stringify({
+          runCount: attempt.runCount,
+          attempt: attempt.attempt,
+          startedAt: attempt.startedAt,
+        }),
       ),
   });
 }

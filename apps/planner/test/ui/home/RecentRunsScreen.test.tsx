@@ -11,6 +11,7 @@ import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
+import type { RecordingPreference } from '@planner/persistence/recordHost';
 import type { RecentRunEntry } from '@planner/workspace/run-recording/recentRuns';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
@@ -62,12 +63,25 @@ const reset: RecentRunEntry = {
   failure: 'room 3 has no entry save',
 };
 
-async function renderRecentRuns(options: { readonly startOnRuns?: boolean } = {}) {
+const statusName = (status: string) => `Recording status: ${status}. Open Recent runs`;
+
+async function renderRecentRuns(
+  options: {
+    readonly startOnRuns?: boolean;
+    readonly recordingPreference?: RecordingPreference;
+  } = {},
+) {
   const host = createMemoryRecordHost();
   for (const entry of [victory, reset]) host.recentRuns.files.set(entry.id, JSON.stringify(entry));
   host.recentRuns.files.set(`p2-${NOW_SECONDS - 90_000}-990`, '{"entryVersion":7}');
   const library = createMemoryProjectLibrary();
-  const application = createApplication({ projectLibrary: library.adapter, recordHost: host });
+  const application = createApplication({
+    projectLibrary: library.adapter,
+    recordHost: host,
+    ...(options.recordingPreference === undefined
+      ? {}
+      : { recordingPreference: options.recordingPreference }),
+  });
   await application.startupReady;
   await application.recording!.start();
   const rendered = renderPlannerForInteraction({ application, startWithProject: false });
@@ -113,7 +127,7 @@ describe('Recent runs screen', () => {
     const { application, host, user } = await renderRecentRuns({ startOnRuns: false });
     const toggle = screen.getByRole('button', { name: 'Record runs' });
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
-    expect(screen.getByRole('button', { name: 'Off' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: statusName('Off') })).toBeTruthy();
     await user.click(toggle);
     await waitFor(() => expect(toggle.getAttribute('aria-pressed')).toBe('true'));
     expect(host.watched()).toBe('/saves/Hades II');
@@ -122,7 +136,7 @@ describe('Recent runs screen', () => {
       kind: 'home',
       tab: 'library',
     });
-    await user.click(screen.getByRole('button', { name: 'Waiting for a run' }));
+    await user.click(screen.getByRole('button', { name: statusName('Waiting for a run') }));
     expect(await screen.findByRole('region', { name: 'Recent runs' })).toBeTruthy();
     await user.click(toggle);
     await waitFor(() => expect(toggle.getAttribute('aria-pressed')).toBe('false'));
@@ -189,6 +203,66 @@ describe('Recent runs screen', () => {
       'textContent',
       'No Hades II save folder was found.',
     );
-    expect(screen.getByRole('button', { name: 'Stopped' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: statusName('Stopped') })).toBeTruthy();
+  });
+
+  it('keeps the Undo of each deleted run until its notice is dismissed', async () => {
+    const { host, user } = await renderRecentRuns();
+    for (const identity of ['Profile 2 · Run 1003 · Attempt 1', 'Profile 2 · Run 1002 · Attempt 2'])
+      await user.click(within(rowOf(identity)).getByRole('button', { name: `Delete ${identity}` }));
+    await waitFor(() => expect(host.recentRuns.files.has(reset.id)).toBe(false));
+    const first = await screen.findByRole('status');
+    expect(within(first).getByText('Deleted Profile 2 · Run 1003 · Attempt 1')).toBeTruthy();
+    await user.click(within(first).getByRole('button', { name: 'Undo' }));
+    const second = await screen.findByText('Deleted Profile 2 · Run 1002 · Attempt 2');
+    await user.click(
+      within(second.closest('[role="status"]')!).getByRole('button', { name: 'Undo' }),
+    );
+    await waitFor(() =>
+      expect([host.recentRuns.files.has(victory.id), host.recentRuns.files.has(reset.id)]).toEqual([
+        true,
+        true,
+      ]),
+    );
+    expect(await within(page()).findByText('Profile 2 · Run 1002 · Attempt 2')).toBeTruthy();
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('deletes unreadable runs without an Undo', async () => {
+    const { host, user } = await renderRecentRuns();
+    await user.click(within(page()).getByRole('button', { name: 'Delete it' }));
+    await waitFor(() => expect(within(page()).queryByText('1 run can’t be read.')).toBeNull());
+    expect([...host.recentRuns.files.keys()].sort()).toEqual([reset.id, victory.id].sort());
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('shows the save folder again after it changes, with recording off', async () => {
+    const { host, user } = await renderRecentRuns();
+    expect(await within(page()).findByText('/saves/Hades II')).toBeTruthy();
+    host.chosenFolder = '/elsewhere';
+    await user.click(within(page()).getByRole('button', { name: 'Change save folder' }));
+    expect(await within(page()).findByText('/elsewhere')).toBeTruthy();
+    await user.click(within(page()).getByRole('button', { name: 'Use default' }));
+    expect(await within(page()).findByText('/saves/Hades II')).toBeTruthy();
+    expect(within(page()).queryByRole('button', { name: 'Use default' })).toBeNull();
+  });
+
+  it('reports a recording change that fails', async () => {
+    const { user } = await renderRecentRuns({
+      recordingPreference: {
+        read: () => ({ enabled: false, folder: null }),
+        write: () => {
+          throw new Error('Settings could not be saved.');
+        },
+      },
+    });
+    await user.click(screen.getByRole('button', { name: 'Record runs' }));
+    expect((await within(page()).findByRole('alert')).textContent).toContain(
+      'Settings could not be saved.',
+    );
+    await user.click(within(page()).getByRole('button', { name: 'Change save folder' }));
+    expect((await within(page()).findByRole('alert')).textContent).toContain(
+      'Settings could not be saved.',
+    );
   });
 });

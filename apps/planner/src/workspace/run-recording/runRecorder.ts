@@ -50,7 +50,24 @@ export interface OpenRun {
 export interface RunAttempt {
   readonly runCount: number;
   readonly attempt: number;
+  /** Unix seconds of that start save, so the same save delivered again keeps its number. */
+  readonly startedAt: number;
 }
+
+/** The later of two run starts: by run count, then attempt. */
+function laterAttempt(left: RunAttempt | undefined, right: RunAttempt): RunAttempt {
+  if (left === undefined) return right;
+  return right.runCount > left.runCount ||
+    (right.runCount === left.runCount && right.attempt > left.attempt)
+    ? right
+    : left;
+}
+
+const openRunAttempt = (run: OpenRun): RunAttempt => ({
+  runCount: run.runCount,
+  attempt: run.attempt,
+  startedAt: run.checkpoints[0]!.timestamp,
+});
 
 export interface RecorderState {
   /** At most one open run per save profile. */
@@ -198,8 +215,17 @@ export function advanceRecorder(state: RecorderState, observation: SaveObservati
   // A run is recorded only from its start save.
   if (isRunStart(checkpoint)) {
     const previous = attempts.get(profile);
-    const attempt = previous?.runCount === checkpoint.runCount ? previous.attempt + 1 : 1;
-    attempts.set(profile, { runCount: checkpoint.runCount, attempt });
+    const attempt =
+      previous?.runCount !== checkpoint.runCount
+        ? 1
+        : previous.startedAt === checkpoint.timestamp
+          ? previous.attempt
+          : previous.attempt + 1;
+    attempts.set(profile, {
+      runCount: checkpoint.runCount,
+      attempt,
+      startedAt: checkpoint.timestamp,
+    });
     runs.set(profile, {
       profile,
       runCount: checkpoint.runCount,
@@ -210,16 +236,24 @@ export function advanceRecorder(state: RecorderState, observation: SaveObservati
   return closed.length === 0 && !runs.has(profile) ? { state, closed } : settle();
 }
 
-/** Adds open runs kept across a restart; a profile already recording keeps its run. */
+/**
+ * Adds open runs kept across a restart; a profile already recording keeps its run. Each
+ * profile's attempt memory becomes the latest of the known, stored and open-run starts, so a
+ * lost memory write never repeats a number.
+ */
 export function restoreOpenRuns(
   state: RecorderState,
   runs: readonly OpenRun[],
   attempts: ReadonlyMap<number, RunAttempt>,
 ): RecorderState {
   const restoredAttempts = new Map(state.attempts);
-  for (const [profile, attempt] of attempts)
-    if (!restoredAttempts.has(profile)) restoredAttempts.set(profile, attempt);
+  const remember = (profile: number, attempt: RunAttempt) => {
+    const latest = laterAttempt(restoredAttempts.get(profile), attempt);
+    if (latest !== restoredAttempts.get(profile)) restoredAttempts.set(profile, latest);
+  };
+  for (const [profile, attempt] of attempts) remember(profile, attempt);
   const restored = new Map(state.runs);
+  for (const run of [...restored.values(), ...runs]) remember(run.profile, openRunAttempt(run));
   for (const run of runs) if (!restored.has(run.profile)) restored.set(run.profile, run);
   return { runs: restored, attempts: restoredAttempts, error: state.error };
 }

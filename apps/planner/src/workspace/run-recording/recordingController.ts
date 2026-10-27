@@ -49,8 +49,8 @@ export interface RecordingController {
   /** Asks for a save folder and watches it; nothing changes when the user cancels. */
   chooseFolder(): Promise<void>;
   readRun(id: string): Promise<RecentRunEntry>;
-  /** Deletes a stored run; resolves with it, for Undo. */
-  deleteRun(id: string): Promise<RecentRunEntry>;
+  /** Deletes a stored run; resolves with it for Undo, or null when it could not be read. */
+  deleteRun(id: string): Promise<RecentRunEntry | null>;
   /** Writes a deleted run back. */
   restoreRun(entry: RecentRunEntry): Promise<void>;
   /** Settles once every delivered save has been handled. */
@@ -252,7 +252,8 @@ export function createRecordingController(options: {
       const restored = await openRuns.restore();
       for (const problem of restored.problems) report(problem);
       recorder = restoreOpenRuns(recorder, restored.runs, restored.attempts);
-      for (const [profile, attempt] of recorder.attempts) savedAttempts.set(profile, attempt);
+      // A memory raised from an open run is written at the next save.
+      for (const [profile, attempt] of restored.attempts) savedAttempts.set(profile, attempt);
     });
     if (watch !== generation) return;
     try {
@@ -304,7 +305,7 @@ export function createRecordingController(options: {
     },
     readRun: (id: string) => recentRuns.read(id),
     async deleteRun(id: string) {
-      const entry = await recentRuns.read(id);
+      const entry = await recentRuns.read(id).catch(() => null);
       await recentRuns.delete(id);
       await reloadRuns();
       return entry;

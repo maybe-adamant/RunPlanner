@@ -6,6 +6,19 @@ import type { RunImportReportEntry } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
+  createBiomeAddress,
+  createExitDecisionAddress,
+  createLocalRewardAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
+  createTargetAddress,
+  createTraitOfferAddress,
+  type ProjectCommand,
+} from '@run-planner/engine/authored-project';
+import {
+  appliedValue,
   projectRecentRunsView,
   projectRunGuesses,
   recentRunCopyKey,
@@ -77,7 +90,7 @@ describe('recent runs view', () => {
     expect(row).toMatchObject({
       identity: 'Profile 2 · Run 1001 · Attempt 2',
       route: 'Erebus › Oceanus',
-      surface: false,
+      routeKey: 'Underworld',
       rooms: '18 rooms',
       loadout: `${catalog.weapons.byKey.WeaponStaffSwing!.label}, ${
         catalog.aspects.byKey.StaffClearCastAspect!.label
@@ -126,6 +139,17 @@ describe('recent runs view', () => {
         .action,
     ).toEqual({ kind: 'inLibrary', key: 'Run.runplanner.json' });
   });
+
+  it('classifies the route from the catalog route opening on the first biome', () => {
+    const routeOf = (route: Partial<RecentRunSummary['route']>) =>
+      view([summary({ route: { ...summary().route, ...route } })]).rows[0]!.routeKey;
+    expect(routeOf({ biomes: ['N', 'O'] })).toBe('Surface');
+    expect(routeOf({ biomes: ['F', 'G'] })).toBe('Underworld');
+    expect(routeOf({ biomes: ['F'], dream: true })).toBe(
+      catalog.routes.values.find((route) => route.dreamItinerary !== undefined)!.key,
+    );
+    expect(routeOf({ biomes: ['Z'] })).toBeNull();
+  });
 });
 
 describe('recording indicator', () => {
@@ -143,6 +167,64 @@ describe('recording indicator', () => {
       text: 'Stopped',
       tone: 'error',
     });
+  });
+});
+
+const biome = createBiomeAddress('Underworld', 'F');
+const occurrence = createOccurrenceAddress(biome, createOccurrenceId('F-r2'));
+const cage = createLocalRewardAddress(biome, createOccurrenceId('H-r29'), 'cage', 'cage1');
+const COMMANDS = {
+  target: {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, occurrence, 'exit1'),
+    occurrenceId: createOccurrenceId('F-r3'),
+    gameName: 'F_Combat21',
+  },
+  acquisition: {
+    kind: 'ReplaceAcquisitionEntryOffer',
+    entry: createAcquisitionEntryAddress(createAcquisitionSiteAddress(occurrence, 'reward'), 'e1'),
+    value: { rewardType: 'StackUpgrade' },
+  },
+  localReward: {
+    kind: 'ReplaceLocalReward',
+    reward: cage,
+    value: { rewardType: 'MaxManaDrop' },
+  },
+  traits: {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(cage, 'self'),
+    value: {
+      kind: 'traits',
+      giverKey: 'ZeusUpgrade',
+      options: [
+        { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ZeusManaBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option2',
+    },
+  },
+  fallbackGold: {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(cage, 'self'),
+    value: { kind: 'fallbackGold', giverKey: 'ZeusUpgrade' },
+  },
+  other: {
+    kind: 'InitializeExitDecision',
+    decision: createExitDecisionAddress(biome, occurrence),
+    edit: { kind: 'rewardStore', storeKey: 'RunProgress' },
+  },
+} satisfies Record<string, ProjectCommand>;
+
+describe('applied values', () => {
+  it('name the value each typed command chose, by its catalog name', () => {
+    const label = (command: ProjectCommand | undefined) => appliedValue(catalog, command);
+    expect(label(COMMANDS.target)).toBe(catalog.rooms.byKey.F_Combat21!.label);
+    expect(label(COMMANDS.acquisition)).toBe(catalog.rewards.rewardTypes.byKey.StackUpgrade!.label);
+    expect(label(COMMANDS.localReward)).toBe(catalog.rewards.rewardTypes.byKey.MaxManaDrop!.label);
+    expect(label(COMMANDS.traits)).toBe(catalog.traits.byKey.ZeusManaBoon!.label);
+    expect(label(COMMANDS.fallbackGold)).toBeNull();
+    expect(label(COMMANDS.other)).toBeNull();
+    expect(label(undefined)).toBeNull();
   });
 });
 
@@ -173,18 +255,13 @@ describe('run guesses', () => {
           area: 'conversion',
           reason: 'assumption',
           ...at(2),
-          applied: {
-            kind: 'ReplaceAcquisitionEntryOffer',
-            value: { rewardType: 'StackUpgrade' },
-          } as unknown as NonNullable<RunImportReportEntry['applied']>,
+          applied: COMMANDS.acquisition,
         },
         {
           area: 'doors',
           reason: 'refused',
           ...at(3),
-          applied: { kind: 'CreateTarget', gameName: 'F_Combat21' } as unknown as NonNullable<
-            RunImportReportEntry['applied']
-          >,
+          applied: COMMANDS.target,
         },
         { area: 'traitOffer', reason: 'notInRecord', ...at(1) },
         { area: 'shop', reason: 'unsupportedArea', ...at(5) },

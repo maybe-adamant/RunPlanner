@@ -1,5 +1,6 @@
 import { recordingIndicator } from '@planner/projections/recentRunsHome';
 import { viewChanged } from '@planner/state/librarySessionSlice';
+import { recordingProblemReported } from '@planner/state/recordingSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import type { RecordingController } from '@planner/workspace/run-recording/recordingController';
 
@@ -12,6 +13,7 @@ export function RecordingControl({ controller }: { readonly controller: Recordin
   return (
     <div className="recording-control">
       <button
+        aria-label={`Recording status: ${indicator.text}. Open Recent runs`}
         className="recording-indicator"
         data-tone={indicator.tone ?? undefined}
         onClick={() => dispatch(viewChanged({ kind: 'home', tab: 'runs' }))}
@@ -23,7 +25,15 @@ export function RecordingControl({ controller }: { readonly controller: Recordin
       <button
         aria-pressed={recording}
         className="library-chip recording-toggle"
-        onClick={() => void controller.setEnabled(!recording)}
+        onClick={() =>
+          void controller
+            .setEnabled(!recording)
+            .catch((error: unknown) =>
+              dispatch(
+                recordingProblemReported(error instanceof Error ? error.message : String(error)),
+              ),
+            )
+        }
         type="button"
       >
         Record runs

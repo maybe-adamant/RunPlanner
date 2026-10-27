@@ -314,8 +314,8 @@ describe('run recorder', () => {
       [1, 7, 2, 'reset'],
       [1, 7, 3, 'death'],
     ]);
-    expect(state.attempts.get(1)).toEqual({ runCount: 8, attempt: 1 });
-    expect(state.attempts.get(2)).toEqual({ runCount: 40, attempt: 1 });
+    expect(state.attempts.get(1)).toEqual({ runCount: 8, attempt: 1, startedAt: 4_000 });
+    expect(state.attempts.get(2)).toEqual({ runCount: 40, attempt: 1, startedAt: 1_000 });
     expect(state.runs.get(1)?.attempt).toBe(1);
   });
 
@@ -323,13 +323,47 @@ describe('run recorder', () => {
     const restored = restoreOpenRuns(
       EMPTY_RECORDER,
       [],
-      new Map([[1, { runCount: 7, attempt: 4 }]]),
+      new Map([[1, { runCount: 7, attempt: 4, startedAt: 500 }]]),
     );
     const { state } = feed([seen({ depth: 0 })], restored);
     expect(state.runs.get(1)?.attempt).toBe(5);
     // A memory of an earlier run count starts the new count at 1.
-    const older = restoreOpenRuns(EMPTY_RECORDER, [], new Map([[1, { runCount: 6, attempt: 4 }]]));
+    const older = restoreOpenRuns(
+      EMPTY_RECORDER,
+      [],
+      new Map([[1, { runCount: 6, attempt: 4, startedAt: 500 }]]),
+    );
     expect(feed([seen({ depth: 0 })], older).state.runs.get(1)?.attempt).toBe(1);
+  });
+
+  it('keeps the attempt of a start save delivered again after recording restarts', () => {
+    const first = feed([seen({ depth: 0 })]);
+    const stopped = abandonOpenRuns(first.state).state;
+    // The watch starts again and the folder's latest save, the same start, is delivered again.
+    const again = feed([seen({ depth: 0 }), seen({ depth: 0, timestamp: 2_000 })], stopped);
+    expect(again.closed.map((run) => [run.attempt, run.outcome])).toEqual([[1, 'reset']]);
+    expect(again.state.runs.get(1)?.attempt).toBe(2);
+  });
+
+  it('raises a restored memory that lags behind an open run', () => {
+    const open = feed([seen({ depth: 0 }), seen({ depth: 0, timestamp: 2_000 })]).state.runs.get(
+      1,
+    )!;
+    expect(open.attempt).toBe(2);
+    // The memory write was lost: it still holds attempt 1, or nothing at all.
+    for (const memory of [
+      new Map([[1, { runCount: 7, attempt: 1, startedAt: 1_000 }]]),
+      new Map(),
+    ]) {
+      const restored = restoreOpenRuns(EMPTY_RECORDER, [open], memory);
+      expect(restored.attempts.get(1)).toEqual({ runCount: 7, attempt: 2, startedAt: 2_000 });
+      const reset = feed([seen({ depth: 0, timestamp: 3_000 })], restored);
+      expect(reset.closed.map((run) => run.attempt)).toEqual([2]);
+      expect(reset.state.runs.get(1)?.attempt).toBe(3);
+    }
+    // A memory ahead of the open run is kept.
+    const ahead = new Map([[1, { runCount: 8, attempt: 1, startedAt: 9_000 }]]);
+    expect(restoreOpenRuns(EMPTY_RECORDER, [open], ahead).attempts.get(1)).toBe(ahead.get(1));
   });
 
   it('keeps the attempt memory as recording stops or meets an unknown format', () => {

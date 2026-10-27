@@ -90,6 +90,7 @@ describe('recording controller', () => {
     expect(JSON.parse(context.host.recentRuns.files.get('attempts-p1')!)).toEqual({
       runCount: 1003,
       attempt: 1,
+      startedAt: 1_793_057_328,
     });
   });
 
@@ -124,7 +125,7 @@ describe('recording controller', () => {
     expect(deleted).toEqual(stored);
     expect(context.state().recentRuns).toEqual([]);
     // Undo writes the deleted run back as it was.
-    await context.controller.restoreRun(deleted);
+    await context.controller.restoreRun(deleted!);
     expect(context.state().recentRuns).toEqual([summary]);
     expect(await context.controller.readRun(summary!.id)).toEqual(stored);
   });
@@ -328,6 +329,24 @@ describe('recording controller', () => {
     expect(JSON.parse(second.host.recentRuns.files.get('attempts-p1')!)).toEqual({
       runCount: 1002,
       attempt: 3,
+      startedAt: 1_793_061_000,
+    });
+  });
+
+  it('keeps the attempt of a run start delivered again when recording is turned off and on', async () => {
+    const context = setup();
+    await context.controller.setEnabled(true);
+    await context.deliver('Profile1_Temp.sav', sampleSaveBytes('surface-002'));
+    await context.controller.setEnabled(false);
+    await context.controller.setEnabled(true);
+    // The restarted watch delivers the folder's latest save, the same start, again.
+    await context.deliver('Profile1_Temp.sav', sampleSaveBytes('surface-002'));
+    expect(JSON.parse(context.host.recentRuns.files.get('attempts-p1')!)).toMatchObject({
+      runCount: 1002,
+      attempt: 1,
+    });
+    expect(JSON.parse(context.host.recentRuns.files.get('open-p1')!)).toMatchObject({
+      attempt: 1,
     });
   });
 

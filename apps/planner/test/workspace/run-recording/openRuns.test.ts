@@ -49,15 +49,17 @@ describe('open run documents', () => {
     const host = createMemoryRecordHost().recentRuns;
     const store = createOpenRunStore(host);
     await store.save(run);
-    await store.saveAttempt(1, { runCount: 1002, attempt: 2 });
-    await store.saveAttempt(3, { runCount: 40, attempt: 1 });
+    await store.saveAttempt(1, { runCount: 1002, attempt: 2, startedAt: 50 });
+    await store.saveAttempt(3, { runCount: 40, attempt: 1, startedAt: 60 });
+    // A memory without its start save is unreadable too.
+    host.files.set('attempts-p5', JSON.stringify({ runCount: 9, attempt: 1 }));
     // An unreadable memory only restarts that profile's numbering.
     host.files.set('attempts-p4', '{');
     const restored = await store.restore();
     expect(restored.runs).toEqual([run]);
     expect([...restored.attempts].sort()).toEqual([
-      [1, { runCount: 1002, attempt: 2 }],
-      [3, { runCount: 40, attempt: 1 }],
+      [1, { runCount: 1002, attempt: 2, startedAt: 50 }],
+      [3, { runCount: 40, attempt: 1, startedAt: 60 }],
     ]);
     expect(restored.problems).toEqual([]);
   });
