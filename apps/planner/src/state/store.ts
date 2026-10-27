@@ -11,6 +11,7 @@ import { createDraftSessionReducer } from './draftSessionSlice';
 import { createEditorSessionReducer } from './editorSessionSlice';
 import { createGameSendSessionReducer } from './gameSendSessionSlice';
 import { createLibrarySessionReducer } from './librarySessionSlice';
+import { createRecordingSessionReducer } from './recordingSessionSlice';
 import {
   createProjectWorkspaceReducer,
   type ProjectEvaluationAssembler,
@@ -37,6 +38,7 @@ export function createPlannerStore(options: CreatePlannerStoreOptions) {
       librarySession: createLibrarySessionReducer(),
       gameSendSession: createGameSendSessionReducer(),
       draftSession: createDraftSessionReducer(),
+      recordingSession: createRecordingSessionReducer(),
     },
   });
 }

@@ -20,6 +20,8 @@ import { createApplication } from './composition/createApplication';
 import { viewChanged } from './state/librarySessionSlice';
 import { selectEditorShown } from './state/store';
 import { createTauriCatalogFeedHost } from './persistence/catalogFeedHost';
+import { createBrowserRecordingPreference, createTauriRecordHost } from './persistence/recordHost';
+import { createWorkerRunImporter } from './workspace/run-recording/runImport';
 import { createWorkerDraftRunner } from './workspace/draftRun';
 import { unloadNeedsConfirmation } from './workspace/closeRequest';
 import './ui/styles.css';
@@ -70,6 +72,14 @@ const application = createApplication({
         communityEventHost: createTauriCommunityEventHost(),
         eventDismissals: createBrowserEventDismissalPreference(() => globalThis.localStorage),
         gameModuleHost: createTauriGameModuleHost(),
+        recordHost: createTauriRecordHost(),
+        recordingPreference: createBrowserRecordingPreference(() => globalThis.localStorage),
+        runImporter: createWorkerRunImporter(
+          () =>
+            new Worker(new URL('./workspace/run-recording/runImportWorker.ts', import.meta.url), {
+              type: 'module',
+            }),
+        ),
       }
     : {}),
 });
@@ -180,3 +190,5 @@ installNavigationHistory({
 releaseUpdates?.checkAutomatically();
 void application.communityEvents?.sync();
 void application.planCatalog?.sync();
+// Recording reports its own failures in its status; a failed resume leaves it off.
+void application.recording?.start().catch(() => undefined);

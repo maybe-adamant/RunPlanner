@@ -19,6 +19,10 @@ import { createProjectOperations } from '../workspace/projectOperations';
 import { createProjectLibraryOperations } from '../workspace/projectLibrary';
 import { createCatalogFeedController } from '../workspace/catalogFeed';
 import type { CatalogFeedHost } from '../persistence/catalogFeedHost';
+import type { RecordHost, RecordingPreference } from '../persistence/recordHost';
+import { createRecordingController } from '../workspace/run-recording/recordingController';
+import { createInProcessRunImporter, type RunImporter } from '../workspace/run-recording/runImport';
+import { prebossRoomsByBiome } from '../workspace/run-recording/runRecorder';
 import { createLibrarySaver, type SaveScheduler } from '../workspace/librarySave';
 import { createCloseRequestController } from '../workspace/closeRequest';
 import type { ProjectLibraryAdapter } from '../persistence/projectLibrary';
@@ -61,6 +65,12 @@ export interface CreateApplicationOptions {
   readonly communityEventHost?: CommunityEventHost;
   /** The signed plan catalog; desktop only. */
   readonly catalogFeedHost?: CatalogFeedHost;
+  /** The Hades II save watch and recent-runs store; desktop only. */
+  readonly recordHost?: RecordHost;
+  /** Recording on or off and the chosen save folder; given with the record host. */
+  readonly recordingPreference?: RecordingPreference;
+  /** Builds and imports recorded runs; defaults to the calling thread. */
+  readonly runImporter?: RunImporter;
   /** Local event files and export; used only in development builds. */
   readonly communityEventDevelopmentHost?: CommunityEventDevelopmentHost;
   readonly eventDismissals?: EventDismissalPreference;
@@ -229,6 +239,16 @@ export function createApplication(options: CreateApplicationOptions = {}) {
               // The header indicator reports a failed status read.
             }),
         });
+  const recording =
+    options.recordHost === undefined
+      ? undefined
+      : createRecordingController({
+          host: options.recordHost,
+          preference: options.recordingPreference ?? memoryRecordingPreference(),
+          store,
+          importer: options.runImporter ?? createInProcessRunImporter(catalog),
+          prebossRooms: prebossRoomsByBiome(catalog),
+        });
   const buildIdentity = options.buildIdentity ?? createDevelopmentBuildIdentity();
   const catalogSummary = summarizeCatalog(catalog);
 
@@ -257,6 +277,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
     planCatalog,
     projectLibrary: libraryOperations,
     projectOperations,
+    recording,
     slotRebuild,
     store,
     selectStructuredWorkspace,
@@ -267,7 +288,16 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       draftRun.dispose();
       librarySaver?.dispose();
       communityEvents?.dispose();
+      recording?.dispose();
     },
+  };
+}
+
+function memoryRecordingPreference(): RecordingPreference {
+  let value = { enabled: false, folder: null as string | null };
+  return {
+    read: () => value,
+    write: (next) => void (value = { enabled: next.enabled, folder: next.folder }),
   };
 }
 

@@ -8,6 +8,7 @@ mod feed_fetch;
 mod game_module_commands;
 mod project_library_commands;
 mod release_updates;
+mod run_recording_commands;
 mod webview_settings;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -68,6 +69,14 @@ pub fn run() {
             project_library_commands::project_library_previous_active,
             project_library_commands::project_library_session_read,
             project_library_commands::project_library_session_write,
+            run_recording_commands::record_save_folder_discover,
+            run_recording_commands::record_watch_start,
+            run_recording_commands::record_watch_stop,
+            run_recording_commands::record_save_read,
+            run_recording_commands::recent_runs_list,
+            run_recording_commands::recent_runs_read,
+            run_recording_commands::recent_runs_write,
+            run_recording_commands::recent_runs_delete,
             close_gate::app_close_requested,
             close_gate::app_close_acknowledged,
             close_gate::app_close_ready,
@@ -84,6 +93,7 @@ pub fn run() {
         .manage(community_events::CommunityEvents::default())
         .manage(catalog_feed::PlanCatalog::default())
         .manage(project_library_commands::ProjectLibraryLock::default())
+        .manage(run_recording_commands::SaveWatch::default())
         .manage(run_planner_game_host::close_gate::CloseGate::default())
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {

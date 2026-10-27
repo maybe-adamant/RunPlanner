@@ -46,6 +46,7 @@ describe('candidate application boundary', () => {
       'planCatalog',
       'projectLibrary',
       'projectOperations',
+      'recording',
       'selectStructuredWorkspace',
       'slotRebuild',
       'startupReady',
