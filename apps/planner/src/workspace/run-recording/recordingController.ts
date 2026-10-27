@@ -16,6 +16,7 @@ import {
   summarizeRecentRun,
   type RecentRunEntry,
 } from './recentRuns';
+import { createOpenRunStore } from './openRuns';
 import type { RunImporter } from './runImport';
 import {
   abandonOpenRuns,
@@ -23,6 +24,8 @@ import {
   EMPTY_RECORDER,
   observeSave,
   reachesFirstPreboss,
+  restoreOpenRuns,
+  type OpenRun,
   type ClosedRun,
   type RecorderState,
   type RecorderStep,
@@ -65,6 +68,7 @@ export function createRecordingController(options: {
   const delay =
     options.delay ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const recentRuns = createRecentRunsStore(host.recentRuns);
+  const openRuns = createOpenRunStore(host.recentRuns);
   let recorder: RecorderState = EMPTY_RECORDER;
   let folder: string | null = null;
   /** Bumped whenever the watch starts or stops, so deliveries of an earlier watch are dropped. */
@@ -149,9 +153,34 @@ export function createRecordingController(options: {
     }
   };
 
+  /**
+   * Keeps each profile's open run on disk for a restart; a closed run's
+   * document goes only once the run has been kept, so a crash mid-import
+   * restores it.
+   */
+  const persist = async (
+    before: ReadonlyMap<number, OpenRun>,
+    after: ReadonlyMap<number, OpenRun>,
+  ) => {
+    for (const profile of new Set([...before.keys(), ...after.keys()])) {
+      const run = after.get(profile);
+      if (run === before.get(profile)) continue;
+      try {
+        if (run === undefined) await openRuns.remove(profile);
+        else await openRuns.save(run);
+      } catch (error) {
+        report(
+          `The run being recorded on profile ${profile} could not be kept for a restart: ${message(error)}`,
+        );
+      }
+    }
+  };
+
   const advance = async (step: RecorderStep) => {
+    const before = recorder.runs;
     recorder = step.state;
     await keep(step.closed);
+    await persist(before, recorder.runs);
   };
 
   const stopHost = () => host.stop().catch((error: unknown) => report(message(error)));
@@ -188,22 +217,29 @@ export function createRecordingController(options: {
     // Stopping ends the runs being recorded where their saves stop, as they stand once
     // every earlier save has been handled.
     await enqueue(async () => {
-      const step = abandonOpenRuns(recorder);
+      await advance(abandonOpenRuns(recorder));
       recorder = EMPTY_RECORDER;
-      await keep(step.closed);
     });
   };
 
   const startWatching = async (chosen: string | null) => {
     await stopWatching();
     const watch = generation;
+    store.dispatch(recordingProblemReported(null));
+    // Runs being recorded when the planner last closed continue before the first poll.
+    await enqueue(async () => {
+      if (watch !== generation) return;
+      const restored = await openRuns.restore();
+      for (const problem of restored.problems) report(problem);
+      recorder = restoreOpenRuns(recorder, restored.runs);
+    });
+    if (watch !== generation) return;
     try {
       const watched = await host.start(chosen, deliver(watch), (problem) => {
         if (watch === generation) report(problem);
       });
       if (watch !== generation || disposed) return;
       folder = watched;
-      store.dispatch(recordingProblemReported(null));
       publishWatching();
     } catch (error) {
       publish({ kind: 'error', message: message(error) });

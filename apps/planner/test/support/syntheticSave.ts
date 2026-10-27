@@ -122,6 +122,7 @@ interface TrimmedSample {
 export function sampleSaveBytes(
   name: string,
   override: Partial<SyntheticSaveHeader> = {},
+  editGlobals: (globals: LuaTable) => LuaTable = (globals) => globals,
 ): Uint8Array {
   const sample = JSON.parse(
     readFileSync(
@@ -139,6 +140,6 @@ export function sampleSaveBytes(
       nextMap: sample.header.nextMap,
       ...override,
     },
-    sample.globals,
+    editGlobals(sample.globals),
   );
 }

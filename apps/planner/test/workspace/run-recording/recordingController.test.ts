@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createMemoryRecordHost } from '@planner-test/support/memoryRecordHost';
 import { encodeSyntheticSave, sampleSaveBytes } from '@planner-test/support/syntheticSave';
+import type { LuaValue } from '@planner/workspace/run-recording/luabins';
 import type { RecordingPreference } from '@planner/persistence/recordHost';
 import {
   createRecordingSessionReducer,
@@ -22,6 +23,7 @@ function setup(
     readonly prebossRooms?: ReadonlyMap<string, ReadonlySet<string>>;
     readonly enabled?: boolean;
     readonly importer?: RunImporter;
+    readonly host?: ReturnType<typeof createMemoryRecordHost>;
   } = {},
 ) {
   const reducer = createRecordingSessionReducer();
@@ -35,7 +37,7 @@ function setup(
     read: () => saved,
     write: (value) => void (saved = { ...value }),
   };
-  const host = createMemoryRecordHost();
+  const host = options.host ?? createMemoryRecordHost();
   const controller = createRecordingController({
     host,
     preference,
@@ -83,7 +85,8 @@ describe('recording controller', () => {
     });
     await context.deliver('Profile1_Temp.sav', sampleSaveBytes('surface-002', { runCount: 1003 }));
     expect(context.state().recentRuns).toEqual([]);
-    expect(context.host.recentRuns.files.size).toBe(0);
+    // Only run 1003, now being recorded, is kept on disk.
+    expect([...context.host.recentRuns.files.keys()]).toEqual(['open-p1']);
   });
 
   it('imports and stores a kept run with its record, plan and report', async () => {
@@ -255,5 +258,98 @@ describe('recording controller', () => {
     expect(context.state().recentRuns).toMatchObject([
       { runCount: 1002, failure: 'worker lost', reportCount: 0 },
     ]);
+  });
+
+  const kept = new Map([['N', new Set(['N_Hub'])]]);
+
+  it('resumes a run after a restart and completes it as one record', async () => {
+    const first = setup({ prebossRooms: kept });
+    await first.controller.setEnabled(true);
+    for (const id of ['002', '004', '006', '009'])
+      await first.deliver('Profile1_Temp.sav', sampleSaveBytes(`surface-${id}`));
+    first.controller.dispose();
+    expect([...first.host.recentRuns.files.keys()]).toEqual(['open-p1']);
+
+    const second = setup({ prebossRooms: kept, host: first.host, enabled: true });
+    await second.controller.start();
+    expect(second.state().status).toMatchObject({ kind: 'runOpen', runs: [{ rooms: 2 }] });
+    // The first poll delivers the last checkpoint again, then play goes on.
+    await second.deliver('Profile1_Temp.sav', sampleSaveBytes('surface-009'));
+    await second.deliver('Profile1_Temp.sav', sampleSaveBytes('surface-011'));
+    await second.deliver('Profile1_Temp.sav', sampleSaveBytes('surface-002', { runCount: 1003 }));
+    const [summary] = second.state().recentRuns!;
+    expect(summary).toMatchObject({ runCount: 1002, startedAt: 1_793_057_328, gap: false });
+    const stored = await second.controller.readRun(summary!.id);
+    expect(stored.record?.rooms.map((room) => room.name)).toEqual([
+      'N_Opening01',
+      'N_PreHub01',
+      'N_Hub',
+    ]);
+  });
+
+  it('closes a run that ended while the planner was closed', async () => {
+    const first = setup({ prebossRooms: kept });
+    await first.controller.setEnabled(true);
+    await playSurfaceOpening(first);
+    first.controller.dispose();
+
+    const second = setup({ prebossRooms: kept, host: first.host, enabled: true });
+    await second.controller.start();
+    // The first poll finds the hub save the run's death wrote.
+    const end = sampleSaveBytes(
+      'surface-011',
+      { nextMap: '', location: 'Location_Home' },
+      (globals) => {
+        const run = globals.CurrentRun as Record<string, LuaValue>;
+        const hero = run.Hero as Record<string, LuaValue>;
+        return {
+          ...globals,
+          CurrentRun: {
+            ...run,
+            RoomHistory: [...(run.RoomHistory as LuaValue[]), run.CurrentRoom!],
+            Hero: { ...hero, IsDead: true },
+            RunResult: 2,
+            KilledByName: 'Scimiterror',
+          },
+        };
+      },
+    );
+    await second.deliver('Profile1.sav', end);
+    const [summary] = second.state().recentRuns!;
+    expect(summary).toMatchObject({ runCount: 1002, outcome: 'death', gap: false });
+    expect(summary).not.toHaveProperty('failure');
+    expect(second.state().status).toMatchObject({ kind: 'watching' });
+    expect(second.host.recentRuns.files.has('open-p1')).toBe(false);
+  });
+
+  it('reports and discards an open run it cannot restore', async () => {
+    const context = setup({ enabled: true });
+    context.host.recentRuns.files.set('open-p2', '{"openRunVersion":1,"profile":2');
+    await context.controller.start();
+    expect(context.state().problem).toBe(
+      'The run being recorded on profile 2 could not be restored: the open run is not JSON',
+    );
+    expect(context.host.recentRuns.files.has('open-p2')).toBe(false);
+    expect(context.state().status).toEqual({ kind: 'watching', folder: '/saves/Hades II' });
+    expect(context.state().unreadableRuns).toEqual([]);
+  });
+
+  it('keeps recording when the open run cannot be written, and writes it at the next save', async () => {
+    const context = setup();
+    await context.controller.setEnabled(true);
+    const write = context.host.recentRuns.write;
+    let failWrites = 1;
+    context.host.recentRuns.write = (id, json) =>
+      failWrites-- > 0 ? Promise.reject(new Error('disk full')) : write(id, json);
+    await context.deliver('Profile1_Temp.sav', sampleSaveBytes('surface-002'));
+    expect(context.state().problem).toBe(
+      'The run being recorded on profile 1 could not be kept for a restart: disk full',
+    );
+    expect(context.state().status).toMatchObject({ kind: 'runOpen' });
+    await context.deliver('Profile1_Temp.sav', sampleSaveBytes('surface-004'));
+    const document = JSON.parse(context.host.recentRuns.files.get('open-p1')!) as {
+      checkpoints: unknown[];
+    };
+    expect(document.checkpoints).toHaveLength(2);
   });
 });

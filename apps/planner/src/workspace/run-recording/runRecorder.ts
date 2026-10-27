@@ -174,6 +174,14 @@ export function advanceRecorder(state: RecorderState, observation: SaveObservati
   return closed.length === 0 && !runs.has(profile) ? { state, closed } : settle();
 }
 
+/** Adds open runs kept across a restart; a profile already recording keeps its run. */
+export function restoreOpenRuns(state: RecorderState, runs: readonly OpenRun[]): RecorderState {
+  if (runs.length === 0) return state;
+  const restored = new Map(state.runs);
+  for (const run of runs) if (!restored.has(run.profile)) restored.set(run.profile, run);
+  return { runs: restored, error: state.error };
+}
+
 /** Ends every open run as abandoned, as recording stops. */
 export function abandonOpenRuns(state: RecorderState): RecorderStep {
   return {
