@@ -52,6 +52,23 @@ describe('record host adapters', () => {
     ]);
   });
 
+  it('read the home folder once, and none when it cannot be read', async () => {
+    const readHome = vi.fn().mockResolvedValue('C:\\Users\\Melinoe');
+    const host = createTauriRecordHost(vi.fn(), () => 'channel', vi.fn(), readHome);
+    expect([await host.homeFolder(), await host.homeFolder()]).toEqual([
+      'C:\\Users\\Melinoe',
+      'C:\\Users\\Melinoe',
+    ]);
+    expect(readHome).toHaveBeenCalledTimes(1);
+    const denied = createTauriRecordHost(
+      vi.fn(),
+      () => 'channel',
+      vi.fn(),
+      () => Promise.reject(new Error('not allowed')),
+    );
+    expect(await denied.homeFolder()).toBeNull();
+  });
+
   it('invoke the raw-save commands, sending the bytes as the request body', async () => {
     const invoke = vi.fn().mockResolvedValue(Uint8Array.of(7).buffer);
     const host = createTauriRecordHost(invoke, () => 'channel');

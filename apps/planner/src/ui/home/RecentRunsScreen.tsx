@@ -5,6 +5,7 @@ import {
   projectRecentRunsView,
   projectRunGuesses,
   recentRunCopyKey,
+  shownSaveFolder,
   type RecentRunRow,
   type RunGuessGroup,
 } from '@planner/projections/recentRunsHome';
@@ -32,6 +33,7 @@ function useSaveFolder(controller: RecordingController, status: unknown) {
   const [folder, setFolder] = useState<{
     readonly folder: string | null;
     readonly chosen: boolean;
+    readonly home: string | null;
   } | null>(null);
   const [revision, setRevision] = useState(0);
   useEffect(() => {
@@ -274,7 +276,11 @@ export function RecentRunsScreen({
           <div className="recent-runs-folder">
             <span className="home-muted">Save folder</span>
             <span className="recent-runs-folder-path">
-              {folder === null ? '…' : (folder.folder ?? 'Not found')}
+              {folder === null
+                ? '…'
+                : folder.folder === null
+                  ? 'Not found'
+                  : shownSaveFolder(folder.folder, folder.home)}
             </span>
             <button
               aria-label="Change save folder"

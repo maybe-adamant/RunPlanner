@@ -23,6 +23,7 @@ import {
   projectRunGuesses,
   recentRunCopyKey,
   recordingIndicator,
+  shownSaveFolder,
 } from '@planner/projections/recentRunsHome';
 import type { LibraryItem } from '@planner/workspace/projectLibrary';
 import type { RecentRunEntry, RecentRunSummary } from '@planner/workspace/run-recording/recentRuns';
@@ -296,5 +297,46 @@ describe('run guesses', () => {
       [5, `Erebus · ${room('F_Combat21')}`, 'Default foes'],
       [null, null, 'Plan ends here'],
     ]);
+  });
+
+  it('shows a save folder inside the home folder from the home marker', () => {
+    const windowsHome = 'C:\\Users\\Melinoe';
+    expect(
+      [
+        'C:\\Users\\Melinoe\\Saved Games\\Hades II',
+        'c:\\users\\MELINOE\\Saved Games\\Hades II',
+        'C:/Users/Melinoe/Saved Games/Hades II',
+        'C:\\Users\\Melinoe',
+        'C:\\Users\\MelinoeOld\\Saved Games',
+        'D:\\Games\\Hades II',
+      ].map((folder) => shownSaveFolder(folder, windowsHome)),
+    ).toEqual([
+      '%USERPROFILE%\\Saved Games\\Hades II',
+      '%USERPROFILE%\\Saved Games\\Hades II',
+      '%USERPROFILE%/Saved Games/Hades II',
+      '%USERPROFILE%',
+      'C:\\Users\\MelinoeOld\\Saved Games',
+      'D:\\Games\\Hades II',
+    ]);
+    expect(shownSaveFolder('C:\\Users\\Melinoe\\Saves', 'C:\\Users\\Melinoe\\')).toBe(
+      '%USERPROFILE%\\Saves',
+    );
+    expect(
+      [
+        '/home/melinoe/.local/share/Steam/Hades II',
+        '/home/melinoe',
+        '/home/Melinoe/.local/share',
+        '/home/melinoe-old/saves',
+        '/mnt/games/Hades II',
+      ].map((folder) => shownSaveFolder(folder, '/home/melinoe/')),
+    ).toEqual([
+      '~/.local/share/Steam/Hades II',
+      '~',
+      '/home/Melinoe/.local/share',
+      '/home/melinoe-old/saves',
+      '/mnt/games/Hades II',
+    ]);
+    expect(shownSaveFolder('/home/melinoe/saves', null)).toBe('/home/melinoe/saves');
+    expect(shownSaveFolder('/saves', '/')).toBe('/saves');
   });
 });

@@ -1,4 +1,5 @@
 import { Channel, invoke as tauriInvoke } from '@tauri-apps/api/core';
+import { homeDir } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
 
 /** One changed profile save, read when its change was seen. */
@@ -50,6 +51,8 @@ export interface RecordHost {
   readSave(fileName: string): Promise<Uint8Array>;
   /** Asks for a save folder, starting at `current`; null when the user cancels. */
   chooseFolder(current: string | null): Promise<string | null>;
+  /** The user's home folder, or null when it cannot be read. */
+  homeFolder(): Promise<string | null>;
   readonly recentRuns: RecentRunsHost;
   readonly rawSaves: RawSavesHost;
 }
@@ -91,7 +94,9 @@ export function createTauriRecordHost(
   createChannel: (onMessage: (frame: ArrayBuffer) => void) => unknown = (onMessage) =>
     new Channel<ArrayBuffer>(onMessage),
   chooseFolder: OpenFolderDialog = openFolderDialog,
+  readHome: () => Promise<string> = homeDir,
 ): RecordHost {
+  let home: Promise<string | null> | null = null;
   return Object.freeze({
     discoverFolder: () => invoke<string | null>('record_save_folder_discover'),
     start: (
@@ -116,6 +121,7 @@ export function createTauriRecordHost(
     readSave: async (fileName: string) =>
       new Uint8Array(await invoke<ArrayBuffer>('record_save_read', { fileName })),
     chooseFolder,
+    homeFolder: () => (home ??= readHome().catch(() => null)),
     recentRuns: Object.freeze({
       list: () => invoke<readonly string[]>('recent_runs_list'),
       read: (id: string) => invoke<string>('recent_runs_read', { id }),

@@ -51,8 +51,15 @@ export interface RecordingController {
   setEnabled(enabled: boolean): Promise<void>;
   /** Watches `folder` instead of the discovered save folder; null returns to discovery. */
   setFolder(folder: string | null): Promise<void>;
-  /** The folder recording watches: the chosen one, else the one found on this computer. */
-  saveFolder(): Promise<{ readonly folder: string | null; readonly chosen: boolean }>;
+  /**
+   * The folder recording watches: the chosen one, else the one found on this computer; with
+   * the user's home folder, which it is shown relative to.
+   */
+  saveFolder(): Promise<{
+    readonly folder: string | null;
+    readonly chosen: boolean;
+    readonly home: string | null;
+  }>;
   /** Asks for a save folder and watches it; nothing changes when the user cancels. */
   chooseFolder(): Promise<void>;
   readRun(id: string): Promise<RecentRunEntry>;
@@ -413,9 +420,10 @@ export function createRecordingController(options: {
     },
     async saveFolder() {
       const chosen = preference.read().folder;
+      const home = await host.homeFolder();
       return chosen === null
-        ? { folder: await host.discoverFolder(), chosen: false }
-        : { folder: chosen, chosen: true };
+        ? { folder: await host.discoverFolder(), chosen: false, home }
+        : { folder: chosen, chosen: true, home };
     },
     async chooseFolder() {
       const saved = preference.read();

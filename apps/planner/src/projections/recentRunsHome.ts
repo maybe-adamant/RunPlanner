@@ -186,6 +186,23 @@ export function projectRecentRunsView(
   });
 }
 
+/**
+ * A save folder as shown on screen: inside the home folder it starts at `%USERPROFILE%` on
+ * Windows or `~` elsewhere, so the user name stays off screen.
+ */
+export function shownSaveFolder(folder: string, home: string | null): string {
+  // A drive letter or UNC share marks a Windows home, whose paths ignore case and take either
+  // separator.
+  const windows = home !== null && /^([A-Za-z]:[\\/]|\\\\)/.test(home);
+  const base = home?.replace(/[\\/]+$/, '') ?? '';
+  if (base === '') return folder;
+  const comparable = (path: string) => (windows ? path.replaceAll('/', '\\').toLowerCase() : path);
+  const rest = folder.slice(base.length);
+  if (comparable(folder.slice(0, base.length)) !== comparable(base)) return folder;
+  if (rest !== '' && !(windows ? /^[\\/]/ : /^\//).test(rest)) return folder;
+  return `${windows ? '%USERPROFILE%' : '~'}${rest}`;
+}
+
 /** The recording indicator: what the watch is doing, in a few words. */
 export function recordingIndicator(status: RecordingStatus): {
   readonly text: string;

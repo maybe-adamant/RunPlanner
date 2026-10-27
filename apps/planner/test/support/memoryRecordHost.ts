@@ -22,7 +22,10 @@ export interface MemoryRecordHost extends RecordHost {
   chosenFolder: string | null;
 }
 
-export function createMemoryRecordHost(discovered = '/saves/Hades II'): MemoryRecordHost {
+export function createMemoryRecordHost(
+  discovered = '/saves/Hades II',
+  home: string | null = null,
+): MemoryRecordHost {
   const files = new Map<string, string>();
   const folder = new Map<string, Uint8Array>();
   const raw = new Map<string, Map<string, Uint8Array>>();
@@ -44,6 +47,7 @@ export function createMemoryRecordHost(discovered = '/saves/Hades II'): MemoryRe
       return Promise.resolve();
     },
     chooseFolder: () => Promise.resolve(host.chosenFolder),
+    homeFolder: () => Promise.resolve(home),
     readSave(fileName) {
       const bytes = folder.get(fileName);
       return bytes === undefined

@@ -5,5 +5,9 @@
   "local": true,
   "windows": ["main"],
   "platforms": ["linux", "macOS", "windows"],
-  "permissions": ["dialog:allow-open", "fs:allow-read-text-file"]
+  "permissions": [
+    "dialog:allow-open",
+    "fs:allow-read-text-file",
+    "core:path:allow-resolve-directory"
+  ]
 }

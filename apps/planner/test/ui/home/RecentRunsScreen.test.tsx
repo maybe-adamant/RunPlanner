@@ -73,9 +73,10 @@ async function renderRecentRuns(
     readonly startOnRuns?: boolean;
     readonly recordingPreference?: RecordingPreference;
     readonly runImporter?: RunImporter;
+    readonly home?: string;
   } = {},
 ) {
-  const host = createMemoryRecordHost();
+  const host = createMemoryRecordHost(undefined, options.home);
   for (const entry of [victory, reset]) host.recentRuns.files.set(entry.id, JSON.stringify(entry));
   host.recentRuns.files.set(`p2-${NOW_SECONDS - 90_000}-990`, '{"entryVersion":7}');
   const library = createMemoryProjectLibrary();
@@ -318,13 +319,16 @@ describe('Recent runs screen', () => {
   });
 
   it('shows the save folder again after it changes, with recording off', async () => {
-    const { host, user } = await renderRecentRuns();
-    expect(await within(page()).findByText('/saves/Hades II')).toBeTruthy();
+    const { host, user } = await renderRecentRuns({ home: '/saves' });
+    expect(await within(page()).findByText('~/Hades II')).toBeTruthy();
+    host.chosenFolder = '/saves/Other';
+    await user.click(within(page()).getByRole('button', { name: 'Change save folder' }));
+    expect(await within(page()).findByText('~/Other')).toBeTruthy();
     host.chosenFolder = '/elsewhere';
     await user.click(within(page()).getByRole('button', { name: 'Change save folder' }));
     expect(await within(page()).findByText('/elsewhere')).toBeTruthy();
     await user.click(within(page()).getByRole('button', { name: 'Use default' }));
-    expect(await within(page()).findByText('/saves/Hades II')).toBeTruthy();
+    expect(await within(page()).findByText('~/Hades II')).toBeTruthy();
     expect(within(page()).queryByRole('button', { name: 'Use default' })).toBeNull();
   });
 
