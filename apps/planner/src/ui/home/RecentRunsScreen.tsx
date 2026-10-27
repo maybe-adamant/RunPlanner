@@ -276,11 +276,15 @@ export function RecentRunsScreen({
           <div className="recent-runs-folder">
             <span className="home-muted">Save folder</span>
             <span className="recent-runs-folder-path">
-              {folder === null
-                ? '…'
-                : folder.folder === null
-                  ? 'Not found'
-                  : shownSaveFolder(folder.folder, folder.home)}
+              {folder === null ? (
+                '…'
+              ) : folder.folder === null ? (
+                'Not found'
+              ) : (
+                // The container is right-to-left so long paths truncate from the start;
+                // isolate the path as left-to-right so its punctuation stays in place.
+                <bdi dir="ltr">{shownSaveFolder(folder.folder, folder.home)}</bdi>
+              )}
             </span>
             <button
               aria-label="Change save folder"
