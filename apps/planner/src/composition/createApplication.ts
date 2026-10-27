@@ -51,7 +51,10 @@ import { createDevelopmentBuildIdentity, type BuildIdentity } from './buildIdent
 export interface CreateApplicationOptions {
   readonly allocateOccurrenceId?: OccurrenceIdFactory;
   readonly buildIdentity?: BuildIdentity;
-  /** Authors `internal` run modifiers; defaults to the Vite development build flag. */
+  /**
+   * Authors `internal` run modifiers and keeps recorded runs' raw saves; defaults to the Vite
+   * development build flag.
+   */
   readonly devBuild?: boolean;
   /** Where plans are stored; every edit of the open plan is written there. */
   readonly projectLibrary?: ProjectLibraryAdapter;
@@ -249,6 +252,8 @@ export function createApplication(options: CreateApplicationOptions = {}) {
           store,
           importer: options.runImporter ?? createInProcessRunImporter(catalog),
           prebossRooms: prebossRoomsByBiome(catalog),
+          // Raw saves are kept for importer work in development builds only.
+          ...(devBuild ? { rawSaves: options.recordHost.rawSaves } : {}),
         });
   const buildIdentity = options.buildIdentity ?? createDevelopmentBuildIdentity();
   const catalogSummary = summarizeCatalog(catalog);

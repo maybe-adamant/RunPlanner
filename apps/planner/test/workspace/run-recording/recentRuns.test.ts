@@ -87,6 +87,7 @@ describe('recent runs store', () => {
       route: gapped.route,
       importKind: 'complete',
       reportCount: 0,
+      hasRecord: false,
       gap: true,
     });
   });

@@ -53,6 +53,7 @@ function summary(values: Partial<RecentRunSummary> = {}): RecentRunSummary {
     importKind: 'complete',
     loadout: { weapon: 'WeaponStaffSwing', aspect: 'StaffClearCastAspect' },
     reportCount: 4,
+    hasRecord: true,
     gap: false,
     ...values,
   };
@@ -129,6 +130,11 @@ describe('recent runs view', () => {
       ['Partial', 'The plan ends early; see guesses.'],
     ]);
     expect(rows.map((row) => row.action.kind)).toEqual(['none', 'add', 'add']);
+  });
+
+  it('offers a rebuild only for a run whose record is stored', () => {
+    const rows = view([summary(), summary({ hasRecord: false, failure: 'no entry save' })]).rows;
+    expect(rows.map((row) => row.rebuildable)).toEqual([true, false]);
   });
 
   it('shows a run in the library while the copy it was added as is still there', () => {

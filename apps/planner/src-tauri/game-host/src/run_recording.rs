@@ -1,6 +1,7 @@
 //! Run recording's host side: the Hades II save folder, change detection over
-//! its profile saves, and the recent-runs document folder. The host reads
-//! bytes only; the planner decodes saves and owns every run rule.
+//! its profile saves, the recent-runs document folder and its raw-save byte
+//! folders. The host reads and stores bytes only; the planner decodes saves and
+//! owns every run rule.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -304,6 +305,105 @@ pub fn delete_recent_run(folder: &Path, id: &str) -> Result<(), String> {
     }
 }
 
+/// A raw-save file name: letters, digits, dashes, underscores and inner dots.
+pub fn is_raw_save_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 128
+        && !name.starts_with('.')
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+}
+
+fn raw_save_folder(root: &Path, folder: &str) -> Result<PathBuf, String> {
+    if !is_recent_run_id(folder) {
+        return Err(format!("{folder} is not a raw-save folder."));
+    }
+    Ok(root.join(folder))
+}
+
+fn raw_save_path(root: &Path, folder: &str, name: &str) -> Result<PathBuf, String> {
+    if !is_raw_save_name(name) {
+        return Err(format!("{name} is not a raw-save name."));
+    }
+    Ok(raw_save_folder(root, folder)?.join(name))
+}
+
+fn directory_names(directory: &Path, want_directories: bool) -> Result<Vec<String>, String> {
+    let entries = match fs::read_dir(directory) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(error) => return Err(format!("Could not read {}: {error}", directory.display())),
+    };
+    let mut names: Vec<String> = entries
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name().to_str()?.to_owned();
+            let kind = entry.file_type().ok()?;
+            let wanted = if want_directories {
+                kind.is_dir() && is_recent_run_id(&name)
+            } else {
+                kind.is_file() && is_raw_save_name(&name)
+            };
+            wanted.then_some(name)
+        })
+        .collect();
+    names.sort();
+    Ok(names)
+}
+
+/// The raw-save folders under `root`, sorted.
+pub fn list_raw_save_folders(root: &Path) -> Result<Vec<String>, String> {
+    directory_names(root, true)
+}
+
+/// The files of one raw-save folder, sorted; a missing folder holds none.
+pub fn list_raw_saves(root: &Path, folder: &str) -> Result<Vec<String>, String> {
+    directory_names(&raw_save_folder(root, folder)?, false)
+}
+
+pub fn read_raw_save(root: &Path, folder: &str, name: &str) -> Result<Vec<u8>, String> {
+    read_limited(&raw_save_path(root, folder, name)?, MAX_SAVE_BYTES)
+}
+
+pub fn write_raw_save(root: &Path, folder: &str, name: &str, bytes: &[u8]) -> Result<(), String> {
+    let path = raw_save_path(root, folder, name)?;
+    if bytes.len() as u64 > MAX_SAVE_BYTES {
+        return Err(format!("{name} is too large."));
+    }
+    fs::create_dir_all(raw_save_folder(root, folder)?)
+        .map_err(|error| format!("Could not create raw-save folder {folder}: {error}"))?;
+    atomic_file::write(&path, bytes, "raw save")
+}
+
+/// Removes a raw-save folder and its files; one already gone counts as removed.
+pub fn delete_raw_save_folder(root: &Path, folder: &str) -> Result<(), String> {
+    match fs::remove_dir_all(raw_save_folder(root, folder)?) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!(
+            "Could not delete raw-save folder {folder}: {error}"
+        )),
+    }
+}
+
+/// Renames a raw-save folder over `to`, replacing it; a missing `from` only clears `to`.
+pub fn move_raw_save_folder(root: &Path, from: &str, to: &str) -> Result<(), String> {
+    let source = raw_save_folder(root, from)?;
+    let target = raw_save_folder(root, to)?;
+    if source == target {
+        return Ok(());
+    }
+    delete_raw_save_folder(root, to)?;
+    match fs::rename(&source, &target) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!(
+            "Could not move raw-save folder {from} to {to}: {error}"
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -549,5 +649,63 @@ mod tests {
         );
         assert!(write_recent_run(&store, "../escape", "{}").is_err());
         assert!(read_recent_run(&store, "a/b").is_err());
+    }
+    #[test]
+    fn stores_lists_moves_and_deletes_raw_saves() {
+        let folder = TestFolder::new();
+        let root = folder.0.join("recent-runs").join("raw");
+        assert!(list_raw_save_folders(&root).unwrap().is_empty());
+        assert!(list_raw_saves(&root, "open-p1").unwrap().is_empty());
+        write_raw_save(&root, "open-p1", "001-Profile1_Temp.sav", b"SGB1 b").unwrap();
+        write_raw_save(&root, "open-p1", "000-Profile1_Temp.sav", b"SGB1 a").unwrap();
+        fs::write(root.join("open-p1").join("notes"), "x").unwrap();
+        fs::write(root.join("stray.json"), "{}").unwrap();
+        assert_eq!(list_raw_save_folders(&root).unwrap(), vec!["open-p1"]);
+        assert_eq!(
+            list_raw_saves(&root, "open-p1").unwrap(),
+            vec!["000-Profile1_Temp.sav", "001-Profile1_Temp.sav", "notes"]
+        );
+        assert_eq!(
+            read_raw_save(&root, "open-p1", "000-Profile1_Temp.sav").unwrap(),
+            b"SGB1 a"
+        );
+
+        // Moving replaces an earlier folder of the same id.
+        write_raw_save(&root, "p1-100-1002", "000-old.sav", b"old").unwrap();
+        move_raw_save_folder(&root, "open-p1", "p1-100-1002").unwrap();
+        assert_eq!(list_raw_save_folders(&root).unwrap(), vec!["p1-100-1002"]);
+        assert_eq!(
+            read_raw_save(&root, "p1-100-1002", "001-Profile1_Temp.sav").unwrap(),
+            b"SGB1 b"
+        );
+        assert!(read_raw_save(&root, "p1-100-1002", "000-old.sav").is_err());
+        // A missing source leaves nothing behind.
+        move_raw_save_folder(&root, "open-p2", "p2-1-1").unwrap();
+        assert_eq!(list_raw_save_folders(&root).unwrap(), vec!["p1-100-1002"]);
+
+        delete_raw_save_folder(&root, "p1-100-1002").unwrap();
+        delete_raw_save_folder(&root, "p1-100-1002").unwrap();
+        assert!(list_raw_save_folders(&root).unwrap().is_empty());
+    }
+
+    #[test]
+    fn refuses_raw_save_paths_outside_their_folder() {
+        let folder = TestFolder::new();
+        let root = folder.0.join("raw");
+        for name in ["../escape.sav", "a/b.sav", ".hidden", "", "a\\b"] {
+            assert!(
+                write_raw_save(&root, "open-p1", name, b"x").is_err(),
+                "{name}"
+            );
+        }
+        for id in ["..", "a/b", "", "a.b"] {
+            assert!(
+                write_raw_save(&root, id, "000-Profile1.sav", b"x").is_err(),
+                "{id}"
+            );
+            assert!(delete_raw_save_folder(&root, id).is_err(), "{id}");
+            assert!(move_raw_save_folder(&root, "open-p1", id).is_err(), "{id}");
+        }
+        assert!(!folder.0.join("escape.sav").exists());
     }
 }

@@ -1,17 +1,23 @@
 import { encodeProjectDocument } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import { encodeRunRecord, type RunRecord } from '@run-planner/engine/run-record';
+import { decodeRunRecord, encodeRunRecord, type RunRecord } from '@run-planner/engine/run-record';
 import { projectFromRunRecord, type RunImportReport } from '@run-planner/engine/simulation';
 
 import { buildRunRecord } from './runRecordBuilder';
 import type { SaveCheckpoint } from './saveCheckpoint';
 
-/** A closed run's saves, structured-cloned to the import worker. */
-export interface RunImportRequest {
-  readonly id: number;
-  readonly checkpoints: readonly SaveCheckpoint[];
-  readonly end?: SaveCheckpoint;
-}
+/**
+ * A closed run's saves, or a stored run's record to import again, structured-cloned to the
+ * import worker.
+ */
+export type RunImportRequest =
+  | {
+      readonly id: number;
+      readonly source: 'saves';
+      readonly checkpoints: readonly SaveCheckpoint[];
+      readonly end?: SaveCheckpoint;
+    }
+  | { readonly id: number; readonly source: 'record'; readonly recordJson: string };
 
 /**
  * The import of one run. `failed` keeps the record when only the plan import
@@ -35,7 +41,10 @@ export interface RunImportResponse {
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
-/** Builds the run record, then imports it as a plan; shared by the worker and in-process runners. */
+/**
+ * Builds the run record, or reads the given one through the strict codec, then imports it as
+ * a plan; shared by the worker and in-process runners.
+ */
 export function answerRunImportRequest(
   catalog: Catalog,
   request: RunImportRequest,
@@ -43,7 +52,10 @@ export function answerRunImportRequest(
   let record: RunRecord;
   let recordJson: string;
   try {
-    record = buildRunRecord(request.checkpoints, request.end);
+    record =
+      request.source === 'saves'
+        ? buildRunRecord(request.checkpoints, request.end)
+        : decodeRunRecord(JSON.parse(request.recordJson));
     recordJson = encodeRunRecord(record);
   } catch (error) {
     return { id: request.id, result: { kind: 'failed', message: message(error) } };

@@ -77,6 +77,18 @@ pub fn run() {
             run_recording_commands::recent_runs_read,
             run_recording_commands::recent_runs_write,
             run_recording_commands::recent_runs_delete,
+            #[cfg(any(debug_assertions, internal_features))]
+            run_recording_commands::raw_saves_folders,
+            #[cfg(any(debug_assertions, internal_features))]
+            run_recording_commands::raw_saves_list,
+            #[cfg(any(debug_assertions, internal_features))]
+            run_recording_commands::raw_saves_read,
+            #[cfg(any(debug_assertions, internal_features))]
+            run_recording_commands::raw_saves_write,
+            #[cfg(any(debug_assertions, internal_features))]
+            run_recording_commands::raw_saves_move,
+            #[cfg(any(debug_assertions, internal_features))]
+            run_recording_commands::raw_saves_delete,
             close_gate::app_close_requested,
             close_gate::app_close_acknowledged,
             close_gate::app_close_ready,

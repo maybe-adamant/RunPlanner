@@ -5,12 +5,16 @@ use std::thread;
 use std::time::Duration;
 
 use tauri::ipc::{Channel, Response};
+#[cfg(any(debug_assertions, internal_features))]
+use tauri::ipc::{InvokeBody, Request};
 use tauri::{Manager, State};
 
 use run_planner_game_host::run_recording::{self, SaveFolderWatch};
 
 const POLL_INTERVAL: Duration = Duration::from_millis(250);
 const RECENT_RUNS_DIRECTORY: &str = "recent-runs";
+#[cfg(any(debug_assertions, internal_features))]
+const RAW_SAVES_DIRECTORY: &str = "raw";
 
 /// The save folder being watched and the flag that stops its poller.
 #[derive(Default)]
@@ -152,4 +156,72 @@ pub(crate) fn recent_runs_write(
 #[tauri::command(async)]
 pub(crate) fn recent_runs_delete(app: tauri::AppHandle, id: String) -> Result<(), String> {
     run_recording::delete_recent_run(&recent_runs_folder(&app)?, &id)
+}
+
+// Raw saves kept beside each recorded run; development builds only.
+
+#[cfg(any(debug_assertions, internal_features))]
+fn raw_saves_root(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    Ok(recent_runs_folder(app)?.join(RAW_SAVES_DIRECTORY))
+}
+
+#[cfg(any(debug_assertions, internal_features))]
+#[tauri::command(async)]
+pub(crate) fn raw_saves_folders(app: tauri::AppHandle) -> Result<Vec<String>, String> {
+    run_recording::list_raw_save_folders(&raw_saves_root(&app)?)
+}
+
+#[cfg(any(debug_assertions, internal_features))]
+#[tauri::command(async)]
+pub(crate) fn raw_saves_list(app: tauri::AppHandle, folder: String) -> Result<Vec<String>, String> {
+    run_recording::list_raw_saves(&raw_saves_root(&app)?, &folder)
+}
+
+#[cfg(any(debug_assertions, internal_features))]
+#[tauri::command(async)]
+pub(crate) fn raw_saves_read(
+    app: tauri::AppHandle,
+    folder: String,
+    name: String,
+) -> Result<Response, String> {
+    run_recording::read_raw_save(&raw_saves_root(&app)?, &folder, &name).map(Response::new)
+}
+
+/// Writes the raw request body to `folder`/`name`, both given as request headers.
+#[cfg(any(debug_assertions, internal_features))]
+#[tauri::command(async)]
+pub(crate) fn raw_saves_write(app: tauri::AppHandle, request: Request<'_>) -> Result<(), String> {
+    let header = |key: &str| {
+        request
+            .headers()
+            .get(key)
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_owned)
+            .ok_or_else(|| format!("The raw save has no {key}."))
+    };
+    let InvokeBody::Raw(bytes) = request.body() else {
+        return Err("The raw save is not binary.".to_owned());
+    };
+    run_recording::write_raw_save(
+        &raw_saves_root(&app)?,
+        &header("x-raw-folder")?,
+        &header("x-raw-name")?,
+        bytes,
+    )
+}
+
+#[cfg(any(debug_assertions, internal_features))]
+#[tauri::command(async)]
+pub(crate) fn raw_saves_move(
+    app: tauri::AppHandle,
+    from: String,
+    to: String,
+) -> Result<(), String> {
+    run_recording::move_raw_save_folder(&raw_saves_root(&app)?, &from, &to)
+}
+
+#[cfg(any(debug_assertions, internal_features))]
+#[tauri::command(async)]
+pub(crate) fn raw_saves_delete(app: tauri::AppHandle, folder: String) -> Result<(), String> {
+    run_recording::delete_raw_save_folder(&raw_saves_root(&app)?, &folder)
 }

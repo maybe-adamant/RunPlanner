@@ -15,6 +15,22 @@ export interface RecentRunsHost {
   delete(id: string): Promise<void>;
 }
 
+/**
+ * Raw save bytes in named folders beside the recent-runs documents; a byte store with no
+ * meaning of its own. The desktop host serves it only to development builds.
+ */
+export interface RawSavesHost {
+  folders(): Promise<readonly string[]>;
+  /** The folder's file names, sorted; a missing folder holds none. */
+  list(folder: string): Promise<readonly string[]>;
+  read(folder: string, name: string): Promise<Uint8Array>;
+  write(folder: string, name: string, bytes: Uint8Array): Promise<void>;
+  /** Renames `from` over `to`, replacing it; a missing `from` only clears `to`. */
+  move(from: string, to: string): Promise<void>;
+  /** Removes a folder with its files; one already gone counts as removed. */
+  delete(folder: string): Promise<void>;
+}
+
 /** The desktop host's Hades II save watch; the web build has none. */
 export interface RecordHost {
   /** The save folder found on this computer, if any. */
@@ -35,9 +51,14 @@ export interface RecordHost {
   /** Asks for a save folder, starting at `current`; null when the user cancels. */
   chooseFolder(current: string | null): Promise<string | null>;
   readonly recentRuns: RecentRunsHost;
+  readonly rawSaves: RawSavesHost;
 }
 
-type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
+type Invoke = <T>(
+  command: string,
+  args?: Record<string, unknown> | Uint8Array,
+  options?: { readonly headers: Record<string, string> },
+) => Promise<T>;
 
 const utf8 = new TextDecoder('utf-8');
 
@@ -100,6 +121,19 @@ export function createTauriRecordHost(
       read: (id: string) => invoke<string>('recent_runs_read', { id }),
       write: (id: string, json: string) => invoke<void>('recent_runs_write', { id, json }),
       delete: (id: string) => invoke<void>('recent_runs_delete', { id }),
+    }),
+    rawSaves: Object.freeze({
+      folders: () => invoke<readonly string[]>('raw_saves_folders'),
+      list: (folder: string) => invoke<readonly string[]>('raw_saves_list', { folder }),
+      read: async (folder: string, name: string) =>
+        new Uint8Array(await invoke<ArrayBuffer>('raw_saves_read', { folder, name })),
+      // The bytes travel as the raw request body; the folder and name as headers.
+      write: (folder: string, name: string, bytes: Uint8Array) =>
+        invoke<void>('raw_saves_write', bytes, {
+          headers: { 'x-raw-folder': folder, 'x-raw-name': name },
+        }),
+      move: (from: string, to: string) => invoke<void>('raw_saves_move', { from, to }),
+      delete: (folder: string) => invoke<void>('raw_saves_delete', { folder }),
     }),
   });
 }

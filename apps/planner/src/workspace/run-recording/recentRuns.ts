@@ -2,6 +2,7 @@ import { decodeRunRecord, type RunRecord } from '@run-planner/engine/run-record'
 import type { RunImportReport } from '@run-planner/engine/simulation';
 
 import type { RecentRunsHost } from '@planner/persistence/recordHost';
+import type { RawSaveCapture } from './rawSaves';
 import type { RunImportResult } from './runImportProtocol';
 import type { ClosedRun } from './runRecorder';
 
@@ -57,6 +58,8 @@ export interface RecentRunSummary {
   /** Weapon and aspect game names, when the record was built. */
   readonly loadout?: { readonly weapon: string; readonly aspect?: string };
   readonly reportCount: number;
+  /** The run's record is stored, so its plan can be imported again. */
+  readonly hasRecord: boolean;
   readonly gap: boolean;
   readonly failure?: string;
 }
@@ -118,6 +121,7 @@ export function summarizeRecentRun(entry: RecentRunEntry): RecentRunSummary {
           },
         }),
     reportCount: entry.report?.entries.length ?? 0,
+    hasRecord: entry.record !== undefined,
     gap: entry.gap === true,
     ...(entry.failure === undefined ? {} : { failure: entry.failure }),
   };
@@ -222,15 +226,23 @@ export interface RecentRunsStore {
    * started before every kept run of a full store is not written.
    */
   add(entry: RecentRunEntry): Promise<'stored' | 'olderThanKept'>;
+  /** Writes a stored run again in place, such as with a rebuilt plan. */
+  replace(entry: RecentRunEntry): Promise<void>;
   delete(id: string): Promise<void>;
 }
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
+/** A run's raw saves, when they are captured, go with the run. */
 export function createRecentRunsStore(
   host: RecentRunsHost,
   limit: number = RECENT_RUNS_LIMIT,
+  rawSaves?: Pick<RawSaveCapture, 'delete'>,
 ): RecentRunsStore {
+  const remove = async (id: string) => {
+    await host.delete(id);
+    await rawSaves?.delete(id);
+  };
   const read = async (id: string) => decodeRecentRunEntry(await host.read(id));
   /** Stored ids with a run identity, newest start first; other files never count. */
   const kept = async () =>
@@ -262,9 +274,10 @@ export function createRecentRunsStore(
       if (before.length >= limit && entry.startedAt < before[limit - 1]!.start)
         return 'olderThanKept';
       await host.write(entry.id, JSON.stringify(entry));
-      for (const { id } of (await kept()).slice(limit)) await host.delete(id);
+      for (const { id } of (await kept()).slice(limit)) await remove(id);
       return 'stored';
     },
-    delete: (id: string) => host.delete(id),
+    replace: (entry: RecentRunEntry) => host.write(entry.id, JSON.stringify(entry)),
+    delete: remove,
   });
 }

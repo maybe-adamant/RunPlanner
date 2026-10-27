@@ -5,13 +5,16 @@ import { resolve } from 'node:path';
 
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { encodeProjectDocument } from '@run-planner/engine/authored-project';
-import { decodeRunRecord } from '@run-planner/engine/run-record';
+import { decodeRunRecord, encodeRunRecord } from '@run-planner/engine/run-record';
 import { catalog } from '@run-planner/hades2-catalog';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import type { RecordingPreference } from '@planner/persistence/recordHost';
+import { recordingStatusChanged } from '@planner/state/recordingSessionSlice';
+import type { RunImporter } from '@planner/workspace/run-recording/runImport';
+import type { RunImportResult } from '@planner/workspace/run-recording/runImportProtocol';
 import type { RecentRunEntry } from '@planner/workspace/run-recording/recentRuns';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
@@ -69,6 +72,7 @@ async function renderRecentRuns(
   options: {
     readonly startOnRuns?: boolean;
     readonly recordingPreference?: RecordingPreference;
+    readonly runImporter?: RunImporter;
   } = {},
 ) {
   const host = createMemoryRecordHost();
@@ -78,6 +82,7 @@ async function renderRecentRuns(
   const application = createApplication({
     projectLibrary: library.adapter,
     recordHost: host,
+    ...(options.runImporter === undefined ? {} : { runImporter: options.runImporter }),
     ...(options.recordingPreference === undefined
       ? {}
       : { recordingPreference: options.recordingPreference }),
@@ -193,6 +198,82 @@ describe('Recent runs screen', () => {
     await user.click(within(toast).getByRole('button', { name: 'Undo' }));
     expect(await within(page()).findByText('Profile 2 · Run 1002 · Attempt 2')).toBeTruthy();
     expect(JSON.parse(host.recentRuns.files.get(reset.id)!)).toEqual(reset);
+  });
+
+  /** An importer whose record imports wait until the test settles them. */
+  function heldImporter() {
+    const held: ((result: RunImportResult) => void)[] = [];
+    const importer: RunImporter = {
+      importRun: () => Promise.resolve({ kind: 'failed', message: 'not used' }),
+      importRecord: () => new Promise((resolve) => held.push(resolve)),
+    };
+    return { importer, settle: (result: RunImportResult) => held.shift()!(result) };
+  }
+
+  it('rebuilds a run’s plan from its row, with the status shown while it runs', async () => {
+    const { importer, settle } = heldImporter();
+    const { host, library, user } = await renderRecentRuns({ runImporter: importer });
+    const row = rowOf('Profile 2 · Run 1003 · Attempt 1');
+    const rebuild = within(row).getByRole('button', { name: 'Rebuild plan' });
+    expect(rebuild.hasAttribute('data-hint')).toBe(false);
+    // The trash icon follows it.
+    expect(rebuild.nextElementSibling?.getAttribute('aria-label')).toBe(
+      'Delete Profile 2 · Run 1003 · Attempt 1',
+    );
+    await user.click(rebuild);
+    expect(await within(row).findByText('Rebuilding…')).toBeTruthy();
+    expect(rebuild).toHaveProperty('disabled', true);
+    settle({
+      kind: 'imported',
+      recordJson: encodeRunRecord(record),
+      projectJson: victory.project!,
+      report: { entries: [{ area: 'doors', reason: 'assumption' }] },
+      importKind: 'stopped',
+    });
+    expect(
+      await within(rowOf('Profile 2 · Run 1003 · Attempt 1')).findByRole('button', {
+        name: '1 guess',
+      }),
+    ).toBeTruthy();
+    expect(within(rowOf('Profile 2 · Run 1003 · Attempt 1')).getByText('Partial')).toBeTruthy();
+    expect(within(page()).queryByText('Rebuilding…')).toBeNull();
+    const stored = JSON.parse(host.recentRuns.files.get(victory.id)!) as RecentRunEntry;
+    expect(stored.report).toEqual({ entries: [{ area: 'doors', reason: 'assumption' }] });
+    expect(stored.importKind).toBe('stopped');
+    // Library copies are separate plans.
+    expect(await library.plans(catalog)).toEqual([]);
+  });
+
+  it('keeps the plan and reports a rebuild that fails', async () => {
+    const { importer, settle } = heldImporter();
+    const { host, user } = await renderRecentRuns({ runImporter: importer });
+    const before = host.recentRuns.files.get(victory.id);
+    await user.click(
+      within(rowOf('Profile 2 · Run 1003 · Attempt 1')).getByRole('button', {
+        name: 'Rebuild plan',
+      }),
+    );
+    await within(page()).findByText('Rebuilding…');
+    settle({ kind: 'failed', message: 'the importer broke' });
+    expect((await within(page()).findByRole('alert')).textContent).toContain(
+      'Run 1003 could not be rebuilt: the importer broke',
+    );
+    expect(host.recentRuns.files.get(victory.id)).toBe(before);
+    expect(
+      within(rowOf('Profile 2 · Run 1003 · Attempt 1')).getByRole('button', { name: '2 guesses' }),
+    ).toBeTruthy();
+  });
+
+  it('offers no rebuild for a run without a record, nor while a run is importing', async () => {
+    const { application } = await renderRecentRuns();
+    const rebuildOf = (identity: string) =>
+      within(rowOf(identity)).getByRole('button', { name: 'Rebuild plan' });
+    expect(rebuildOf('Profile 2 · Run 1002 · Attempt 2')).toHaveProperty('disabled', true);
+    expect(rebuildOf('Profile 2 · Run 1003 · Attempt 1')).toHaveProperty('disabled', false);
+    application.store.dispatch(recordingStatusChanged({ kind: 'importing', folder: '/saves' }));
+    await waitFor(() =>
+      expect(rebuildOf('Profile 2 · Run 1003 · Attempt 1')).toHaveProperty('disabled', true),
+    );
   });
 
   it('shows why recording stopped', async () => {

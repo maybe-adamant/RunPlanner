@@ -24,9 +24,10 @@ Evidence: the save-file run record audit
 3. **End of run only.** The plan is built when the run ends (or is abandoned,
    below); while recording, the tab shows a recording indicator, not a live
    plan.
-4. **The record is kept beside the plan**, so an improved importer can rebuild
-   older runs. Raw saves are never kept: each checkpoint is reduced to the
-   record as soon as it is read.
+4. **The record is kept beside the plan**, and a row's Rebuild action
+   re-imports it with the current importer. Release builds never keep raw
+   saves; dev builds keep each run's accepted saves beside its entry, and
+   Rebuild then rebuilds the record from them first.
 5. **Assumptions:** aspect and keepsake at maximum level (the planner-wide
    rule; not reported). Everything else the record cannot answer is guessed
    and reported (decision 8): an unpicked ship-wheel boon takes the first
@@ -136,5 +137,3 @@ Evidence: the save-file run record audit
 - Seeds, enemy spawn positions, or any
   value the audit lists as never saved.
 - An exact-roster encounter form, or any game-module change.
-- Re-import of stored records from the UI (the stored record only keeps it
-  possible).

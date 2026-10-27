@@ -1412,7 +1412,12 @@ button.home-slot-name {
 }
 
 .recent-runs-actions-column {
-  width: 210px;
+  width: 240px;
+}
+
+.recent-run-rebuilding {
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .recent-runs-table tr[data-expanded] td {

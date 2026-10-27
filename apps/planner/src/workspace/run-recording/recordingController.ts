@@ -1,4 +1,7 @@
+import { decodeRunRecord, encodeRunRecord } from '@run-planner/engine/run-record';
+
 import type {
+  RawSavesHost,
   RecordHost,
   RecordingPreference,
   SaveFileDelivery,
@@ -12,12 +15,16 @@ import {
 import type { PlannerStore } from '@planner/state/store';
 import {
   createRecentRunsStore,
+  RECENT_RUNS_LIMIT,
   recentRunEntry,
+  recentRunId,
   summarizeRecentRun,
   type RecentRunEntry,
 } from './recentRuns';
 import { createOpenRunStore } from './openRuns';
+import { createRawSaveCapture } from './rawSaves';
 import type { RunImporter } from './runImport';
+import type { RunImportResult } from './runImportProtocol';
 import {
   abandonOpenRuns,
   advanceRecorder,
@@ -53,12 +60,24 @@ export interface RecordingController {
   deleteRun(id: string): Promise<RecentRunEntry | null>;
   /** Writes a deleted run back. */
   restoreRun(entry: RecentRunEntry): Promise<void>;
+  /**
+   * Imports a stored run again with the current importer, from its raw saves when they were
+   * captured, else from its record, and replaces its plan and report. A failure leaves the run
+   * as it was and rejects with the reason.
+   */
+  rebuildRun(id: string): Promise<void>;
   /** Settles once every delivered save has been handled. */
   idle(): Promise<void>;
   dispose(): void;
 }
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+/** A rebuild keeps the stored run unless the import succeeded. */
+function imported(result: RunImportResult): Extract<RunImportResult, { kind: 'imported' }> {
+  if (result.kind === 'failed') throw new Error(result.message);
+  return result;
+}
 
 /**
  * Feeds delivered saves, in arrival order, through the run recorder; a closed
@@ -70,12 +89,16 @@ export function createRecordingController(options: {
   readonly store: Pick<PlannerStore, 'dispatch'>;
   readonly importer: RunImporter;
   readonly prebossRooms: ReadonlyMap<string, ReadonlySet<string>>;
+  /** Keeps every accepted save of a recorded run beside it; development builds only. */
+  readonly rawSaves?: RawSavesHost;
   readonly delay?: (ms: number) => Promise<void>;
 }): RecordingController {
   const { host, preference, store, importer, prebossRooms } = options;
   const delay =
     options.delay ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
-  const recentRuns = createRecentRunsStore(host.recentRuns);
+  const capture =
+    options.rawSaves === undefined ? undefined : createRawSaveCapture(options.rawSaves);
+  const recentRuns = createRecentRunsStore(host.recentRuns, RECENT_RUNS_LIMIT, capture);
   const openRuns = createOpenRunStore(host.recentRuns);
   let recorder: RecorderState = EMPTY_RECORDER;
   /** Each profile's attempt memory as last written to the store. */
@@ -92,6 +115,12 @@ export function createRecordingController(options: {
     });
     return queue;
   };
+  /** Runs after every queued save, like one, but settles with the task's own outcome. */
+  const exclusive = (task: () => Promise<void>) => {
+    const done = queue.then(task);
+    queue = done.catch(() => undefined);
+    return done;
+  };
   const publish = (status: RecordingStatus) => store.dispatch(recordingStatusChanged(status));
   const publishWatching = () => {
     if (folder === null) return;
@@ -102,6 +131,14 @@ export function createRecordingController(options: {
     publish(runs.length === 0 ? { kind: 'watching', folder } : { kind: 'runOpen', folder, runs });
   };
   const report = (problem: string) => store.dispatch(recordingProblemReported(problem));
+  /** A raw-save failure is reported; recording goes on without those bytes. */
+  const raw = async (task: () => Promise<void>) => {
+    try {
+      await task();
+    } catch (error) {
+      report(`Raw saves could not be kept: ${message(error)}`);
+    }
+  };
   const reloadRuns = async () => {
     const listing = await recentRuns.list();
     store.dispatch(
@@ -114,13 +151,16 @@ export function createRecordingController(options: {
 
   /** Runs whose store write failed; each later step writes them again. */
   let unsaved: RecentRunEntry[] = [];
-  const write = async (entry: RecentRunEntry) => {
+  /** Whether the run is kept, now or once a later write succeeds. */
+  const write = async (entry: RecentRunEntry): Promise<boolean> => {
     try {
-      if ((await recentRuns.add(entry)) === 'olderThanKept')
-        report(`Run ${entry.runCount} started before every kept run, so it was not kept.`);
+      if ((await recentRuns.add(entry)) === 'stored') return true;
+      report(`Run ${entry.runCount} started before every kept run, so it was not kept.`);
+      return false;
     } catch (error) {
       unsaved.push(entry);
       report(`Run ${entry.runCount} could not be saved yet: ${message(error)}`);
+      return true;
     }
   };
   const writeUnsaved = async () => {
@@ -135,26 +175,37 @@ export function createRecordingController(options: {
     await writeUnsaved();
     let stored = retried;
     for (const run of runs) {
-      if (!reachesFirstPreboss(prebossRooms, run)) continue;
+      if (!reachesFirstPreboss(prebossRooms, run)) {
+        if (capture !== undefined) await raw(() => capture.discard(run.profile));
+        continue;
+      }
       stored = true;
+      let kept = false;
       try {
         if (folder !== null) publish({ kind: 'importing', folder });
         const result = await importer
           .importRun(run)
           .catch((error: unknown) => ({ kind: 'failed' as const, message: message(error) }));
-        await write(recentRunEntry(run, result));
+        kept = await write(recentRunEntry(run, result));
       } catch (error) {
         report(`Run ${run.runCount} could not be kept: ${message(error)}`);
       }
+      if (capture !== undefined)
+        await raw(() =>
+          kept ? capture.keep(run.profile, recentRunId(run)) : capture.discard(run.profile),
+        );
     }
     if (stored) await reloadRuns().catch((error: unknown) => report(message(error)));
   };
 
-  const observe = async (delivery: SaveFileDelivery): Promise<SaveObservation | undefined> => {
+  /** The save's observation and the bytes it was read from, after any re-read. */
+  const observe = async (
+    delivery: SaveFileDelivery,
+  ): Promise<{ readonly observation: SaveObservation | undefined; readonly bytes: Uint8Array }> => {
     let bytes = delivery.bytes;
     for (let attempt = 1; ; attempt += 1) {
       try {
-        return observeSave(delivery.fileName, bytes);
+        return { observation: observeSave(delivery.fileName, bytes), bytes };
       } catch (error) {
         if (!(error instanceof SaveFileError) || attempt >= SAVE_READ_ATTEMPTS) throw error;
       }
@@ -209,20 +260,83 @@ export function createRecordingController(options: {
     await persist(before, recorder.runs);
   };
 
+  /** The stored run rebuilt from its raw saves: decoded, folded and imported as when recorded. */
+  const rebuildFromSaves = async (entry: RecentRunEntry): Promise<RecentRunEntry | undefined> => {
+    const saves = capture === undefined ? [] : await capture.read(entry.id);
+    if (saves.length === 0) return undefined;
+    let state: RecorderState = EMPTY_RECORDER;
+    const closed: ClosedRun[] = [];
+    for (const save of saves) {
+      const observation = observeSave(save.fileName, save.bytes);
+      if (observation === undefined) continue;
+      const step = advanceRecorder(state, observation);
+      state = step.state;
+      closed.push(...step.closed);
+    }
+    closed.push(...abandonOpenRuns(state).closed);
+    const found = closed.find((run) => recentRunId(run) === entry.id);
+    if (found === undefined) throw new Error('its raw saves do not hold this run');
+    // The saves alone cannot show the attempt number or how a reset run ended.
+    const run: ClosedRun = { ...found, attempt: entry.attempt, outcome: entry.outcome };
+    return recentRunEntry(run, imported(await importer.importRun(run)));
+  };
+
+  const rebuildFromRecord = async (entry: RecentRunEntry): Promise<RecentRunEntry> => {
+    if (entry.record === undefined) throw new Error('it has no record');
+    const result = imported(await importer.importRecord(encodeRunRecord(entry.record)));
+    const { failure: _failure, ...kept } = entry;
+    void _failure;
+    return {
+      ...kept,
+      record: decodeRunRecord(JSON.parse(result.recordJson)),
+      project: result.projectJson,
+      report: result.report,
+      importKind: result.importKind,
+    };
+  };
+
   const stopHost = () => host.stop().catch((error: unknown) => report(message(error)));
+
+  /**
+   * Where a delivered save goes among the raw saves: an open run's save is added before the
+   * step, so a run it ends takes it along; a run start's begins its folder after the step has
+   * moved the ended run's away.
+   */
+  const rawPlacement = (
+    observation: SaveObservation,
+    step: RecorderStep,
+  ): 'before' | 'start' | undefined => {
+    if (observation.kind !== 'checkpoint') return undefined;
+    const { profile, checkpoint } = observation;
+    if (step.closed.some((run) => run.profile === profile && run.end === checkpoint))
+      return 'before';
+    const open = step.state.runs.get(profile);
+    const previous = recorder.runs.get(profile);
+    if (open === undefined || open === previous) return undefined;
+    return previous === undefined || step.closed.some((run) => run.profile === profile)
+      ? 'start'
+      : 'before';
+  };
 
   const deliver = (watch: number) => (delivery: SaveFileDelivery) => {
     void enqueue(async () => {
       if (watch !== generation) return;
       let observation: SaveObservation | undefined;
+      let bytes: Uint8Array;
       try {
-        observation = await observe(delivery);
+        ({ observation, bytes } = await observe(delivery));
       } catch (error) {
         report(`${delivery.fileName} could not be read: ${message(error)}`);
         return;
       }
       if (observation === undefined || watch !== generation) return;
-      await advance(advanceRecorder(recorder, observation));
+      const step = advanceRecorder(recorder, observation);
+      const placement = capture === undefined ? undefined : rawPlacement(observation, step);
+      const { profile } = observation;
+      const kept = { fileName: delivery.fileName, bytes };
+      if (placement === 'before') await raw(() => capture!.append(profile, kept, false));
+      await advance(step);
+      if (placement === 'start') await raw(() => capture!.append(profile, kept, true));
       // A stop or restart while this save was imported owns the status and the watch.
       if (watch !== generation) return;
       publishWatching();
@@ -253,6 +367,14 @@ export function createRecordingController(options: {
       recorder = restoreOpenRuns(recorder, restored.runs, restored.attempts);
       // A memory raised from an open run is written at the next save.
       for (const [profile, attempt] of restored.attempts) savedAttempts.set(profile, attempt);
+      // Raw saves left by a run that is neither stored nor still open go.
+      if (capture !== undefined)
+        await raw(async () =>
+          capture.prune(
+            new Set([...(await host.recentRuns.list()), ...unsaved.map((entry) => entry.id)]),
+            new Set(recorder.runs.keys()),
+          ),
+        );
     });
     if (watch !== generation) return;
     try {
@@ -313,6 +435,20 @@ export function createRecordingController(options: {
       await write(entry);
       await reloadRuns();
     },
+    rebuildRun: (id: string) =>
+      exclusive(async () => {
+        const entry = await recentRuns.read(id);
+        let rebuilt: RecentRunEntry;
+        try {
+          rebuilt = (await rebuildFromSaves(entry)) ?? (await rebuildFromRecord(entry));
+        } catch (error) {
+          throw new Error(`Run ${entry.runCount} could not be rebuilt: ${message(error)}`, {
+            cause: error,
+          });
+        }
+        await recentRuns.replace(rebuilt);
+        await reloadRuns();
+      }),
     idle: () => queue,
     dispose() {
       disposed = true;

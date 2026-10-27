@@ -13,6 +13,7 @@ import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import type { RecordingController } from '@planner/workspace/run-recording/recordingController';
 import type { RecentRunEntry } from '@planner/workspace/run-recording/recentRuns';
+import { ActionIcon } from '@planner/ui/controls/ActionIcon';
 import { IconActionButton } from '@planner/ui/controls/IconActionButton';
 import { hintProps } from '@planner/ui/controls/hint';
 import { HomeContext } from './HomeContext';
@@ -154,6 +155,7 @@ export function RecentRunsScreen({
   const { copies, refresh: refreshCopies } = useLibraryCopies(operations);
   const { folder, refresh: refreshFolder } = useSaveFolder(controller, status);
   const [busy, setBusy] = useState<string | null>(null);
+  const [rebuilding, setRebuilding] = useState<string | null>(null);
   const [actionProblem, setActionProblem] = useState<string | null>(null);
   /** Deleted runs whose Undo is still offered, oldest first; each toast shows in turn. */
   const [deleted, setDeleted] = useState<
@@ -177,6 +179,7 @@ export function RecentRunsScreen({
     index.readAt,
   );
   const recording = status.kind !== 'off' && status.kind !== 'error';
+  const importing = status.kind === 'importing';
   const shownProblem = actionProblem ?? (status.kind === 'error' ? status.message : problem);
 
   /** Changes the save folder, reporting a failure with recording's problems. */
@@ -207,6 +210,18 @@ export function RecentRunsScreen({
       refreshCopies();
       index.refresh();
     });
+  const rebuild = (row: RecentRunRow) => {
+    setRebuilding(row.id);
+    act(row.id, async () => {
+      try {
+        await controller.rebuildRun(row.id);
+        // The open guesses belong to the plan that was replaced.
+        setExpanded((current) => (current?.id === row.id ? null : current));
+      } finally {
+        setRebuilding(null);
+      }
+    });
+  };
   const open = (key: string) => {
     setActionProblem(null);
     void operations.openPlan(key).then((result) => {
@@ -363,12 +378,26 @@ export function RecentRunsScreen({
                   </td>
                   <td>
                     <div className="library-row-actions">
+                      {rebuilding === row.id ? (
+                        <span className="home-muted recent-run-rebuilding" role="status">
+                          Rebuilding…
+                        </span>
+                      ) : null}
                       <RowAction
                         busy={busy !== null}
                         onAdd={() => add(row)}
                         onOpen={open}
                         row={row}
                       />
+                      <button
+                        aria-label="Rebuild plan"
+                        className="icon-action"
+                        disabled={busy !== null || importing || !row.rebuildable}
+                        onClick={() => rebuild(row)}
+                        type="button"
+                      >
+                        <ActionIcon name="reset" />
+                      </button>
                       <IconActionButton
                         disabled={busy !== null}
                         hint="Delete"

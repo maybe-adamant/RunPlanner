@@ -234,6 +234,7 @@ describe('recording controller', () => {
             finish: () => void real.importRun(run).then(resolve),
           });
         }),
+      importRecord: (json) => real.importRecord(json),
     };
     const context = setup({ prebossRooms: new Map([['N', new Set(['N_Hub'])]]), importer });
     await context.controller.setEnabled(true);
@@ -265,6 +266,7 @@ describe('recording controller', () => {
         calls += 1;
         return calls === 1 ? Promise.reject(new Error('worker lost')) : real.importRun(run);
       },
+      importRecord: (json) => real.importRecord(json),
     };
     const context = setup({ prebossRooms: new Map([['N', new Set(['N_Hub'])]]), importer });
     await context.controller.setEnabled(true);

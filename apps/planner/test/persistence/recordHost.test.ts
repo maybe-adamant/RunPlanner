@@ -52,6 +52,29 @@ describe('record host adapters', () => {
     ]);
   });
 
+  it('invoke the raw-save commands, sending the bytes as the request body', async () => {
+    const invoke = vi.fn().mockResolvedValue(Uint8Array.of(7).buffer);
+    const host = createTauriRecordHost(invoke, () => 'channel');
+    await host.rawSaves.folders();
+    await host.rawSaves.list('open-p1');
+    expect(await host.rawSaves.read('open-p1', '000-Profile1.sav')).toEqual(Uint8Array.of(7));
+    await host.rawSaves.write('open-p1', '000-Profile1.sav', Uint8Array.of(1, 2));
+    await host.rawSaves.move('open-p1', 'p1-1-2');
+    await host.rawSaves.delete('p1-1-2');
+    expect(invoke.mock.calls).toEqual([
+      ['raw_saves_folders'],
+      ['raw_saves_list', { folder: 'open-p1' }],
+      ['raw_saves_read', { folder: 'open-p1', name: '000-Profile1.sav' }],
+      [
+        'raw_saves_write',
+        Uint8Array.of(1, 2),
+        { headers: { 'x-raw-folder': 'open-p1', 'x-raw-name': '000-Profile1.sav' } },
+      ],
+      ['raw_saves_move', { from: 'open-p1', to: 'p1-1-2' }],
+      ['raw_saves_delete', { folder: 'p1-1-2' }],
+    ]);
+  });
+
   it('reject a cut save frame', () => {
     expect(() => readSaveFrame(Uint8Array.of(1).buffer)).toThrow('too short');
     expect(() => readSaveFrame(Uint8Array.of(9, 0, 65).buffer)).toThrow('cut short');

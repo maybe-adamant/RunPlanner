@@ -25,6 +25,7 @@ describe('run import protocol', () => {
   it('builds the record and imports it as a plan with its report', () => {
     const { id, result } = answerRunImportRequest(catalog, {
       id: 4,
+      source: 'saves',
       checkpoints: sampleCheckpoints(),
     });
     expect(id).toBe(4);
@@ -39,13 +40,37 @@ describe('run import protocol', () => {
 
   it('reports a record that cannot be built, without a plan', () => {
     const checkpoints = sampleCheckpoints();
-    expect(answerRunImportRequest(catalog, { id: 1, checkpoints: checkpoints.slice(1) })).toEqual({
+    expect(
+      answerRunImportRequest(catalog, {
+        id: 1,
+        source: 'saves',
+        checkpoints: checkpoints.slice(1),
+      }),
+    ).toEqual({
       id: 1,
       result: {
         kind: 'failed',
         message: 'a run starts with an entry save and an empty room history',
       },
     });
+  });
+
+  it('imports a stored record again, and reports one the codec refuses', () => {
+    const built = answerRunImportRequest(catalog, {
+      id: 1,
+      source: 'saves',
+      checkpoints: sampleCheckpoints(),
+    }).result;
+    if (built.kind !== 'imported') throw new Error(built.message);
+    const { result } = answerRunImportRequest(catalog, {
+      id: 2,
+      source: 'record',
+      recordJson: built.recordJson,
+    });
+    expect(result).toEqual(built);
+    expect(
+      answerRunImportRequest(catalog, { id: 3, source: 'record', recordJson: '{}' }).result,
+    ).toMatchObject({ kind: 'failed' });
   });
 });
 

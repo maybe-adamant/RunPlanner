@@ -52,6 +52,8 @@ export interface RecentRunRow {
   readonly guesses: number;
   readonly marker: RecentRunMarker | null;
   readonly action: RecentRunRowAction;
+  /** The plan can be imported again from the stored record. */
+  readonly rebuildable: boolean;
   /** The name a library copy takes. */
   readonly planName: string;
 }
@@ -174,6 +176,7 @@ export function projectRecentRunsView(
           : summary.failure === undefined
             ? { kind: 'add' }
             : { kind: 'none' },
+      rebuildable: summary.hasRecord,
       planName: `${identity} (${OUTCOME_TEXT[summary.outcome]})`,
     };
   });
