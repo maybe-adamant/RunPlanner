@@ -115,6 +115,16 @@ export interface RunRecordRoom {
   readonly spell?: RunRecordSpell;
   /** Gathering tools whose element the hero gained in this room (`ToolElementsSpawned`). */
   readonly toolElements?: readonly string[];
+  /**
+   * Arcana cards drawn into `TemporaryMetaUpgrades` in this room (Judgment, the
+   * Crystal Figurine), in grant order: each card's trait joins `Hero.Traits` as drawn.
+   */
+  readonly grantedArcana?: readonly string[];
+  /**
+   * Door and ship-wheel rerolls spent here: `NumRerolls` spent beyond the room's
+   * screen rerolls, each matched by a reward-store draw no offer explains.
+   */
+  readonly rerolls?: number;
 }
 
 export interface RunRecordSpell {

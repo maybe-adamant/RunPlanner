@@ -39,6 +39,7 @@ export type RunImportArea =
   | 'resource'
   | 'npc'
   | 'menace'
+  | 'reroll'
   | 'dream'
   | 'other';
 

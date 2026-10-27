@@ -200,7 +200,16 @@ U: two each in `H_Combat15` and `H_Combat07`).
   unpicked options, timestamped after that screen's pick and before the room's
   next one. Inferred while the Stone is held (live Underworld recording:
   `HestiaManaBoon` after the Hestia screen in `H_Combat07`).
-- Rerolls leave only the `NumRerolls` counter; the pre-reroll options are lost.
+- Rerolls leave only `NumRerolls` and the pre-reroll options are lost. A
+  screen reroll (`AttemptPanelReroll`, `InteractLogic.lua:1311`) also counts
+  in `CurrentRoom.SpentRerolls` by screen id, the n-th reroll of one screen
+  costing n, and draws nothing from the stores; `SpentRerolls` survives only on
+  the departed room's history entry. A door or ship-wheel reroll
+  (`AttemptReroll`, `:1351`) costs 1, leaves no mark of its own and draws a
+  fresh reward from the stores (`AttemptRerollDoor`, `AttemptRerollShipWheel`),
+  so it is inferred where `NumRerolls` falls beyond the room's screen rerolls
+  and the stores lose more than the bracket's offers and known rolls. Run 1010
+  rerolled two boon screens (`G_MiniBoss02`, `G_PreBoss01`) and no door.
 - A Forfeit skip increments `CurrentRun.BiomeBoonSkipCount` in the bracket of
   the room whose boon it replaced and spawns `RoomRewardConsolationPrize`
   (`ShrineLogic.lua:917`); the prize appears in `UseRecord` only when collected
@@ -298,18 +307,19 @@ adds a second count to `SurfaceShopPurchases`; capture S totals matched both.
 
 ### Room features and run items
 
-| Fact                  | Save source                                                                                                                                                                                                                                               | Status                         |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| Stygian Well          | stock in entry `Store`; purchases by bracket diff of cumulative `CurrentRun.WellShopPurchases` (`StoreLogic.lua:1169`), `UseRecord.WellShop`                                                                                                              | exact                          |
-| Pool of Purging       | departure record `SellOptions` (offered slots, sold slot removed, `SellTraitLogic.lua:333`); `UseRecord.SellTraitShop` counts opens; `TraitsSold` counts sales; sold trait by `Hero.Traits` diff                                                          | exact                          |
-| Anvil of Fates        | World Shop purchase `ChaosWeaponUpgrade`, then the hammer swap as a `Hero.Traits` diff                                                                                                                                                                    | inferred                       |
-| Path of Stars         | `Hero.SlottedSpell`: spell name and `Talents` layout with `Invested` flags                                                                                                                                                                                | exact                          |
-| Spell Drop            | picked spell only (`SlottedSpell.Name`); its position by the bonus points the first Path screen spends (`SpellTalentData.InitialBonuses`)                                                                                                                 | exact; options lost            |
-| Chaos gate            | source room `ExitDoorRooms` and `OfferedRewards` (`TrialUpgrade`), `ForceSecretDoor`, `SecretDoorHealthCost`, `UseRecord.SecretDoor`; the Chaos room in `RoomHistory`                                                                                     | exact                          |
-| Artificer conversion  | `CurrentRun.MetaConversionUses` increment (`GiftLogic.lua:20`) in the room's bracket; the replacement in `UseRecord`; its RunProgress roll in the store diff                                                                                              | inferred                       |
-| Time Piece conversion | `GoldifyKeepsake.BoonConversionUses` decrement (`GiftLogic.lua:117`) in the room's bracket, with the gold gain; the converted reward never reaches `UseRecord`                                                                                            | exact by bracket               |
-| Fountains             | `UseRecord.HealthFountain*`                                                                                                                                                                                                                               | exact                          |
-| Resource points       | `Num*Points` per room records presence; the room whose point granted a tool's element by `CurrentRun.ToolElementsSpawned` bracket diff (`GrantElementFromTool`, `HarvestLogic.lua:266`, once per tool per run); `FishCaught` names carry the biome letter | element room exact; point lost |
+| Fact                          | Save source                                                                                                                                                                                                                                                                                                                 | Status                         |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| Stygian Well                  | stock in entry `Store`; purchases by bracket diff of cumulative `CurrentRun.WellShopPurchases` (`StoreLogic.lua:1169`), `UseRecord.WellShop`                                                                                                                                                                                | exact                          |
+| Pool of Purging               | departure record `SellOptions` (offered slots, sold slot removed, `SellTraitLogic.lua:333`); `UseRecord.SellTraitShop` counts opens; `TraitsSold` counts sales; sold trait by `Hero.Traits` diff                                                                                                                            | exact                          |
+| Anvil of Fates                | World Shop purchase `ChaosWeaponUpgrade`, then the hammer swap as a `Hero.Traits` diff                                                                                                                                                                                                                                      | inferred                       |
+| Path of Stars                 | `Hero.SlottedSpell`: spell name and `Talents` layout with `Invested` flags                                                                                                                                                                                                                                                  | exact                          |
+| Spell Drop                    | picked spell only (`SlottedSpell.Name`); its position by the bonus points the first Path screen spends (`SpellTalentData.InitialBonuses`)                                                                                                                                                                                   | exact; options lost            |
+| Chaos gate                    | source room `ExitDoorRooms` and `OfferedRewards` (`TrialUpgrade`), `ForceSecretDoor`, `SecretDoorHealthCost`, `UseRecord.SecretDoor`; the Chaos room in `RoomHistory`                                                                                                                                                       | exact                          |
+| Artificer conversion          | `CurrentRun.MetaConversionUses` increment (`GiftLogic.lua:20`) in the room's bracket; the replacement in `UseRecord`; its RunProgress roll in the store diff                                                                                                                                                                | inferred                       |
+| Time Piece conversion         | `GoldifyKeepsake.BoonConversionUses` decrement (`GiftLogic.lua:117`) in the room's bracket, with the gold gain; the converted reward never reaches `UseRecord`                                                                                                                                                              | exact by bracket               |
+| Judgment and Crystal Figurine | Arcana cards gained in `CurrentRun.TemporaryMetaUpgrades` in the boss room's bracket; their traits join `Hero.Traits` in draw order with the card as `SourceName`, Judgment's call before the Figurine's (`CombatLogic.lua:3969-3980`, `EncounterLogic.lua:1640-1654`, `AddRandomMetaUpgrades`, `MetaUpgradeLogic.lua:499`) | exact                          |
+| Fountains                     | `UseRecord.HealthFountain*`                                                                                                                                                                                                                                                                                                 | exact                          |
+| Resource points               | `Num*Points` per room records presence; the room whose point granted a tool's element by `CurrentRun.ToolElementsSpawned` bracket diff (`GrantElementFromTool`, `HarvestLogic.lua:266`, once per tool per run); `FishCaught` names carry the biome letter                                                                   | element room exact; point lost |
 
 Artificer converts a dropped MetaProgress pickup into a fresh RunProgress roll
 (`GiftLogic.lua:1`–`:40`); see
@@ -366,11 +376,14 @@ pickups.
 
 `Hero.Traits` is an array in insertion order, and every trait added during a
 run carries an `Id` built by `GetTraitUniqueId` (`TraitLogic.lua:593-597`) as
-the concatenation of the trait count, the run depth, `_worldTime` and a random
-float, with no separators. The random part always begins `0.`, and the count
-and depth are bounded by the trait's position and the room list, so the world
-time parses out; every save also stores its own `_worldTime`. Together they
-order and timestamp every trait-granting acquisition (boons, hammers, Chaos
+the concatenation of the trait count, the run depth (`1 + #RoomHistory`),
+`_worldTime` and a random float, with no separators. The random part always
+begins `0.`, and the count and depth are bounded by the trait's position and
+the room list, so the world time parses out, and where several splits fall
+between the two checkpoints the room's depth picks one; every save also stores
+its own `_worldTime`. Relaunching the game restarts `_worldTime` from zero
+while `TotalTime` continues from the save (run 1010, `G_Combat05`), so the
+window after a relaunch starts at zero. Together they order and timestamp every trait-granting acquisition (boons, hammers, Chaos
 blessings, talents, keepsakes and swaps, Max Health and Max Magick traits,
 pending Hermes deliveries, Essences) and place each one between two
 checkpoints. A trait later removed (sold, swapped, expired) survives only in
@@ -399,17 +412,18 @@ counters without order.
 
 ## Not exercised by either capture
 
-Duo and Legendary offers, trait replacement screens, rerolls,
-Jeweled Pom and Experimental Hammer equip results, Sea Star,
-Echo replay, Aspect Hex trees, Cocoons, Aetos,
-Judgment and Crystal Figurine, Phial, Eris, Oceanus Anomaly,
-Gold Gold Gold, Travel Deal refills at the Hermes Shrine
-or Well, the Fields Nemesis event, Dream runs,
-Surface victory, I-biome ending saves, resume after closing the game, and quit
-to menu. A later Underworld recording without raw saves exercised Steady
-Growth, Gorgon and Athena, Echo's Pom, the Zagreus contract, Infernal
-Contract pedestals, Fig Leaf skips and Concave Stone's extra pick; a fresh
-profile's first attempt is still unrecorded.
+Duo and Legendary offers, trait replacement screens, door and ship-wheel
+rerolls, Jeweled Pom and Experimental Hammer equip results, Sea Star, Echo
+replay, Cocoons, Aetos, Phial, Eris, Oceanus Anomaly, Gold Gold Gold, Travel
+Deal refills at the Hermes Shrine or Well, the Fields Nemesis event, Dream
+runs, Surface victory, I-biome ending saves, and quit to menu. A later
+Underworld recording without raw saves exercised Steady Growth, Gorgon and
+Athena, Echo's Pom, the Zagreus contract, Infernal Contract pedestals, Fig
+Leaf skips and Concave Stone's extra pick; a fresh profile's first attempt is
+still unrecorded. Run 1010, an Underworld attempt
+reset in `H_Combat04` with every save kept, exercised Judgment and the
+Crystal Figurine, Aspect of Selene with God Sent nodes, Artificer boons,
+screen rerolls and a relaunch mid-run.
 
 ## Uncertainties
 
@@ -453,6 +467,12 @@ profile's first attempt is still unrecorded.
   enemies the room never killed, and reports it as an assumption.
 - Concave Stone's extra pick is imported as the result of the screen it
   followed.
+- Judgment's and the Crystal Figurine's cards are imported exactly from the
+  boss room's draw order. Aspect of Selene's tree is the run's first Spell
+  snapshot without its God Sent nodes.
+- Door and ship-wheel rerolls are not modelled: each inferred one is reported
+  as an unsupported area, since the plan's stores keep the rewards they
+  replaced.
 - A batch's doors are ordered by the catalog's declared native door order for
   the source room, an exact order; a room without one takes ascending door id
   and reports the order as an assumption. The one declared room is inferred,

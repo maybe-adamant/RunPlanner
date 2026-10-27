@@ -58,6 +58,7 @@ const baseRun: SavedRunState = {
   rewardStores: {},
   lootChoices: [],
   bannedTraits: [],
+  temporaryMetaUpgrades: [],
 };
 
 const startTraits: readonly SavedTrait[] = [
@@ -884,6 +885,97 @@ describe('run record builder', () => {
     });
   });
 
+  it('reads trait world times across a relaunch, which restarts the world clock', () => {
+    // Count 3, depth 2 (the second room), world time 11.075; depth 21 or 1 would read 1.075.
+    const boon: SavedTrait = { name: 'ZeusCastBoon', id: '3211.0750.46', rarity: 'Rare' };
+    const record = buildRunRecord([
+      save({ history: [], current: room('F_Opening01'), worldTime: 6000 }),
+      save({
+        history: ['F_Opening01'],
+        current: room('F_Combat01'),
+        departure: room('F_Opening01'),
+        worldTime: 6312.5,
+      }),
+      save({
+        history: ['F_Opening01', 'F_Combat01'],
+        current: room('F_Combat02'),
+        departure: room('F_Combat01'),
+        traits: [...startTraits, boon],
+        worldTime: 21.3,
+      }),
+    ]);
+    expect(record.rooms[1]?.traits.acquired).toEqual([
+      { name: 'ZeusCastBoon', rarity: 'Rare', worldTime: 11.075 },
+    ]);
+  });
+
+  it('records the Arcana a boss drew in the order their traits joined', () => {
+    const card = (name: string, sourceName: string, count: number): SavedTrait => ({
+      name,
+      id: `${count}1100.50.5`,
+      rarity: 'Epic',
+      sourceName,
+    });
+    const record = buildRunRecord([
+      save({ history: [], current: room('F_Boss01') }),
+      save({
+        history: ['F_Boss01'],
+        current: room('F_PostBoss01'),
+        departure: room('F_Boss01'),
+        run: { temporaryMetaUpgrades: ['DoorReroll', 'EpicRarityBoost', 'StartingGold'] },
+        traits: [
+          ...startTraits,
+          card('StartingGoldMetaUpgrade', 'StartingGold', 2),
+          card('DoorRerollMetaUpgrade', 'DoorReroll', 3),
+          card('EpicRarityBoostMetaUpgrade', 'EpicRarityBoost', 4),
+        ],
+      }),
+    ]);
+    expect(record.rooms[0]?.grantedArcana).toEqual([
+      'StartingGold',
+      'DoorReroll',
+      'EpicRarityBoost',
+    ]);
+    expect(record.rooms[1]?.grantedArcana).toBeUndefined();
+  });
+
+  it('counts a door reroll by the store draw no offer explains, never a screen reroll', () => {
+    const visit = (left: readonly string[], spentRerolls?: Record<string, number>) => {
+      const source = room('F_Combat01', {
+        exitDoors: [
+          { door: 1, room: 'F_Combat02' },
+          { door: 2, room: 'F_Combat03' },
+        ],
+        offeredRewards: {
+          '1': { type: 'Boon', lootName: 'ZeusUpgrade' },
+          '2': { type: 'MaxHealthDrop' },
+        },
+        ...(spentRerolls === undefined ? {} : { spentRerolls }),
+      });
+      return buildRunRecord([
+        save({
+          history: [],
+          current: source,
+          run: {
+            numRerolls: 3,
+            rewardStores: { RunProgress: ['Boon', 'MaxHealthDrop', 'TalentDrop', 'StackUpgrade'] },
+          },
+        }),
+        save({
+          history: ['F_Combat01'],
+          current: room('F_Combat02'),
+          departure: source,
+          run: { numRerolls: 2, rewardStores: { RunProgress: left } },
+        }),
+      ]).rooms[0]?.rerolls;
+    };
+    expect(visit(['StackUpgrade'])).toBe(1);
+    // The rerolled screen spent the reroll; its doors drew only their offers.
+    expect(visit(['TalentDrop', 'StackUpgrade'], { '2000591': 1 })).toBeUndefined();
+    // A screen reroll does not explain a draw beyond the offers.
+    expect(visit(['StackUpgrade'], { '2000591': 1 })).toBeUndefined();
+  });
+
   it('ends a run on the hub save of the dead hero', () => {
     const boss = room('I_Boss01', { useRecord: { MixerIBossDrop: 1 } });
     const record = buildRunRecord(
@@ -930,5 +1022,12 @@ describe('trait world time', () => {
     expect(traitWorldTime('3522565.273677085760.33186322567053', 520, 567)).toBe(565.27367708576);
     expect(traitWorldTime('1234560.5', 0, 1e6)).toBeUndefined();
     expect(traitWorldTime('not-an-id', 0, 10)).toBeUndefined();
+  });
+
+  it("takes the reading at the trait's run depth when several fall in the window", () => {
+    // 3|2|11.075, 3|21|1.075 and 32|1|1.075.
+    expect(traitWorldTime('3211.0750.46', 0, 21.3)).toBeUndefined();
+    expect(traitWorldTime('3211.0750.46', 0, 21.3, 2)).toBe(11.075);
+    expect(traitWorldTime('3211.0750.46', 0, 21.3, 5)).toBeUndefined();
   });
 });

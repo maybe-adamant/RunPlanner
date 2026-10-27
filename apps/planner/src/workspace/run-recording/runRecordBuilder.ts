@@ -338,7 +338,7 @@ function startingTraits(
       ...grade(trait),
       ...optional(
         'worldTime',
-        trait.id === undefined ? undefined : traitWorldTime(trait.id, 0, first.worldTime),
+        trait.id === undefined ? undefined : traitWorldTime(trait.id, 0, first.worldTime, 1),
       ),
     }));
 }
@@ -377,7 +377,8 @@ function traitChanges(saves: readonly RoomSaves[], roomCount: number): readonly 
     const before = previous.hero?.traits ?? [];
     const after = save.hero?.traits;
     if (after === undefined) continue;
-    const since = previous.worldTime;
+    // A relaunch restarts `_worldTime` from zero.
+    const since = save.worldTime < previous.worldTime ? 0 : previous.worldTime;
     previous = save;
     const target = rooms[room];
     if (target === undefined) continue;
@@ -386,7 +387,7 @@ function traitChanges(saves: readonly RoomSaves[], roomCount: number): readonly 
     const lost = before.filter((trait) => trait.id !== undefined && !afterIds.has(trait.id));
     for (const trait of after) {
       if (trait.id === undefined || beforeIds.has(trait.id)) continue;
-      const time = traitWorldTime(trait.id, since, save.worldTime);
+      const time = traitWorldTime(trait.id, since, save.worldTime, room + 1);
       const to = grade(trait);
       const replaced = lost.findIndex(
         (old) => old.name === trait.name && JSON.stringify(grade(old)) !== JSON.stringify(to),
@@ -558,7 +559,98 @@ function buildRoom(
     ...optional('bannedTraits', bannedTraits(before.bannedTraits, after.bannedTraits)),
     ...optional('spell', spellChange(traitsBefore?.spell, traitsAfter?.spell)),
     ...optional('toolElements', toolElements(before, after)),
+    ...optional('grantedArcana', grantedArcana(room)),
+    ...optional('rerolls', doorRerolls(room, settled)),
   };
+}
+
+/** The last room save of a visit: its PostReward or entry save when the hub save closes it. */
+function lastRoomSave(room: RoomSaves): SaveCheckpoint {
+  return room.closing !== undefined && room.closing.kind !== 'hub'
+    ? room.closing
+    : (room.postReward ?? room.entry);
+}
+
+/**
+ * Arcana cards drawn into `TemporaryMetaUpgrades` within the room's bracket, in
+ * the order their traits joined `Hero.Traits` (each card's `SourceName`).
+ */
+function grantedArcana(room: RoomSaves): string[] | undefined {
+  const last = lastRoomSave(room);
+  const held = new Set(room.entry.run.temporaryMetaUpgrades);
+  const drawn = new Set(last.run.temporaryMetaUpgrades.filter((card) => !held.has(card)));
+  if (drawn.size === 0) return undefined;
+  const ordered: string[] = [];
+  for (const trait of last.hero?.traits ?? [])
+    if (trait.sourceName !== undefined && drawn.delete(trait.sourceName))
+      ordered.push(trait.sourceName);
+  return [...ordered, ...[...drawn].sort()];
+}
+
+/** Total store entries removed from `before` to `after`; undefined when a store gained one (a refill). */
+function storeLoss(before: SaveCheckpoint, after: SaveCheckpoint): number | undefined {
+  if (storeRemovals(after, before).size > 0) return undefined;
+  let loss = 0;
+  for (const bag of storeRemovals(before, after).values())
+    for (const count of bag.values()) loss += count;
+  return loss;
+}
+
+/**
+ * Door and ship-wheel rerolls (`AttemptReroll`) spend one `NumRerolls` each and
+ * draw a fresh reward from the stores; screen rerolls (`AttemptPanelReroll`)
+ * draw nothing and mark the room's `SpentRerolls`, the n-th reroll of one
+ * screen costing n. A bracket counts rerolls only where `NumRerolls` fell and
+ * the stores lost more than its known rolls: the room's wheel offers and
+ * Artificer rolls in the room, the doors' offers and the entered room's cages
+ * on leaving. A refill, or an untaken door without an offer whose cage rolls
+ * are not known, leaves the bracket uncounted.
+ */
+function doorRerolls(room: RoomSaves, settled: SavedRoom): number | undefined {
+  const brackets: { start: SaveCheckpoint; end: SaveCheckpoint; known: number | undefined }[] = [];
+  if (room.postReward !== undefined) {
+    // Every rolled wheel offer leaves its store; one with an unknown offer count leaves it unknown.
+    const rolled = (wheels(room, settled, settled.useRecord) ?? []).map((wheel) => wheel.offers);
+    const conversions = room.postReward.run.metaConversionUses - room.entry.run.metaConversionUses;
+    brackets.push({
+      start: room.entry,
+      end: room.postReward,
+      known: rolled.includes(undefined)
+        ? undefined
+        : rolled.reduce<number>((total, offers) => total + offers!, Math.max(0, conversions)),
+    });
+  }
+  const closing = room.closing;
+  if (closing !== undefined && closing.kind !== 'hub') {
+    const next = closing.currentRoom;
+    const offered = settled.exitDoors.filter(
+      (door) => settled.offeredRewards[String(door.door)] !== undefined,
+    ).length;
+    const unknownCages = settled.exitDoors.some(
+      (door) => settled.offeredRewards[String(door.door)] === undefined && door.room !== next.name,
+    );
+    brackets.push({
+      start: room.postReward ?? room.entry,
+      end: closing,
+      known: unknownCages ? undefined : offered + next.cages.length,
+    });
+  }
+  let spent = 0;
+  let counted = 0;
+  for (const { start, end, known } of brackets) {
+    if (start.run.numRerolls === undefined || end.run.numRerolls === undefined) continue;
+    const fell = start.run.numRerolls - end.run.numRerolls;
+    if (fell <= 0) continue;
+    spent += fell;
+    const loss = storeLoss(start, end);
+    if (known !== undefined && loss !== undefined && loss > known)
+      counted += Math.min(fell, loss - known);
+  }
+  const screens = Object.values(settled.spentRerolls ?? {}).reduce(
+    (cost, count) => cost + (count * (count + 1)) / 2,
+    0,
+  );
+  return whole(Math.min(counted, spent - screens), 1);
 }
 
 /** Gathering tools whose element first spawned within the room's bracket. */

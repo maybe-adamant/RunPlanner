@@ -74,6 +74,7 @@ function checkpoint(spec: SaveSpec): SaveCheckpoint {
       rewardStores: {},
       lootChoices: [],
       bannedTraits: [],
+      temporaryMetaUpgrades: [],
     },
     profile: { shrineUpgrades: {}, arcana: {}, money: 0 },
   };

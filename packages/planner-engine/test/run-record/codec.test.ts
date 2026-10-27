@@ -9,7 +9,7 @@ import {
   RunRecordCodecError,
 } from '@run-planner/engine/run-record';
 
-const fixtures = ['surface', 'underworld'].map((name) => {
+const fixtures = ['surface', 'underworld', 'underworld-1010'].map((name) => {
   const url = new URL(`./fixtures/${name}.run-record.json`, import.meta.url);
   return { name, path: url.pathname, bytes: readFileSync(url, 'utf8') };
 });
@@ -119,6 +119,11 @@ describe('run record codec', () => {
       (record) => ((room(record, 1).encounters as Record<string, unknown>[])[0]!.skipped = false),
       /encounters\[0\].skipped must be true when present/,
     );
+    rejects(
+      (record) => (room(record, 1).grantedArcana = ['DoorReroll', 'DoorReroll']),
+      /grantedArcana must not repeat a card/,
+    );
+    rejects((record) => (room(record, 1).rerolls = 0), /rerolls must be an integer >= 1/);
   });
 
   it("keeps an acquired trait's saved values as finite numbers by dotted save path", () => {

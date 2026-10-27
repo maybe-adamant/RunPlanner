@@ -669,6 +669,122 @@ describe('run import of the live Underworld recording', () => {
   });
 });
 
+describe('run import of the Underworld attempt reset at H_Combat04', () => {
+  const record = fixture('underworld-1010');
+  let imported: RunImport;
+  beforeAll(() => {
+    imported = projectFromRunRecord(catalog, record);
+  });
+
+  it('completes as a valid plan entering every recorded room before completing its biome', () => {
+    expect(imported.kind).toBe('complete');
+    expect(enteredRooms(imported.project).slice(0, record.rooms.length)).toEqual(
+      record.rooms.map((room) => room.name),
+    );
+  });
+
+  it("imports each Artificer boon from its god's screen", () => {
+    const boon = (occurrenceId: string) =>
+      Object.values(occurrence(imported.project, occurrenceId).acquisitionSites ?? {}).flatMap(
+        (site) => Object.values(site.pickupEntries ?? {}),
+      )[0];
+    expect(boon('F-r1')).toMatchObject({
+      offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+      traitOffersByAcquisitionRole: { source: { giverKey: 'Zeus', selectedOptionKey: 'option2' } },
+    });
+    expect(boon('F-r8')).toMatchObject({
+      offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } },
+      traitOffersByAcquisitionRole: { source: { giverKey: 'Ares', selectedOptionKey: 'option1' } },
+    });
+  });
+
+  it('splits the boss Arcana between Judgment and the Crystal Figurine', () => {
+    const fBoss = occurrence(imported.project, 'F-r11:boss').encounters;
+    expect([...(fBoss.judgmentArcanaKeysByPhase?.['Encounter'] ?? [])].sort()).toEqual([
+      'BonusHealth',
+      'DoorReroll',
+      'ScreenReroll',
+      'StatusVulnerability',
+      'TradeOff',
+    ]);
+    expect([...(fBoss.figurineArcanaKeysByPhase?.['Encounter'] ?? [])].sort()).toEqual([
+      'EpicRarityBoost',
+      'StartingGold',
+    ]);
+    expect(
+      occurrence(imported.project, 'G-r22:boss').encounters.judgmentArcanaKeysByPhase?.[
+        'Encounter'
+      ],
+    ).toHaveLength(5);
+  });
+
+  it("imports Aspect of Selene's rolled tree without its God Sent nodes", () => {
+    expect(imported.project.route.loadout.aspectHexTree).toMatchObject({ layoutKey: 'Pyramid' });
+    expect(imported.project.route.loadout.aspectHexTree?.nodes['4:3']).toBeUndefined();
+  });
+
+  it('reports every value the record did not answer exactly', () => {
+    expect(grouped(imported.report)).toEqual({
+      assumption: { conversion: 3, doors: 15, fields: 3, roomActionOrder: 9, traitOffer: 1 },
+      // The run was reset in H_Combat04: the rest of Ephyra's Fields is guessed.
+      notInRecord: { doors: 1, fields: 6, other: 1, reward: 1, route: 1, traitOffer: 3 },
+      refused: { reward: 3 },
+      unsupportedArea: { shop: 1, well: 1 },
+    });
+    // G_Combat20's ascending door ids are not its native order: the game drew the GiftDrop door
+    // last, from a refilled MetaProgress store, so its three door offers are refused and guessed.
+    expect(entryLines(imported.report)).toEqual([
+      'assumption conversion r1 acquisitionEntry@F-r1 -> ReplaceAcquisitionEntryOffer(F-r1 Boon)',
+      'assumption doors r1 exitDecision@F-r1',
+      'assumption conversion r3 acquisitionEntry@F-r3 -> ReplaceAcquisitionEntryOffer(F-r3 MaxManaDrop)',
+      'assumption doors r3 exitDecision@F-r3',
+      'assumption doors r4 exitDecision@F-r4',
+      'assumption doors r6 exitDecision@F-r6',
+      'assumption doors r7 exitDecision@F-r7',
+      'assumption conversion r8 acquisitionEntry@F-r8 -> ReplaceAcquisitionEntryOffer(F-r8 Boon)',
+      'assumption doors r8 exitDecision@F-r8',
+      'assumption doors r9 exitDecision@F-r9',
+      'assumption doors r15 exitDecision@G-r15',
+      'refused reward r16 incomingReward@G-r16 -> ReplaceIncomingReward(G-r16 MetaCardPointsCommonBigDrop)',
+      'refused reward r15 incomingReward@G-r15-d776584 -> ReplaceIncomingReward(G-r15-d776584 MetaCurrencyBigDrop)',
+      'refused reward r15 incomingReward@G-r15-d776586 -> ReplaceIncomingReward(G-r15-d776586 GiftDrop)',
+      'assumption doors r16 exitDecision@G-r16',
+      'assumption doors r17 exitDecision@G-r17',
+      'assumption doors r19 exitDecision@G-r19',
+      'assumption doors r20 exitDecision@G-r20',
+      'assumption traitOffer r22 traitOffer@G-r22:source -> ReplaceTraitOffer(G-r22 ZeusManaBoon|CastAnywhereBoon|ElementalDamageFloorBoon#option3)',
+      'assumption doors r26 exitDecision@H-r26',
+      'assumption fields r26 localReward@H-r26-d564448:cage1',
+      'assumption doors r27 exitDecision@H-r27',
+      'assumption fields r27 localReward@H-r27-d621470:cage1',
+      'assumption doors r28 exitDecision@H-r28',
+      'assumption fields r28 localReward@H-r28-d565616:cage1',
+      'assumption roomActionOrder r1 occurrence@F-r1',
+      'assumption roomActionOrder r3 occurrence@F-r3',
+      'assumption roomActionOrder r6 occurrence@F-r6',
+      'assumption roomActionOrder r8 occurrence@F-r8',
+      'assumption roomActionOrder r13 occurrence@F-r11:postboss',
+      'assumption roomActionOrder r17 occurrence@G-r17',
+      'assumption roomActionOrder r24 occurrence@G-r22:postboss',
+      'assumption roomActionOrder r26 occurrence@H-r26',
+      'assumption roomActionOrder r29 occurrence@H-r29',
+    ]);
+  });
+
+  it('reports each door or wheel reroll as an unsupported area', () => {
+    const rerolled = projectFromRunRecord(catalog, {
+      ...record,
+      route: { ...record.route, biomes: ['F'] },
+      rooms: record.rooms
+        .slice(0, 14)
+        .map((room, index) => (index === 5 ? { ...room, rerolls: 2 } : room)),
+    });
+    expect(
+      rerolled.report.entries.filter((entry) => entry.area === 'reroll').map(describeEntry),
+    ).toEqual(['unsupportedArea reroll r5 -', 'unsupportedArea reroll r5 -']);
+  });
+});
+
 describe('run import of Fig Leaf skip marks in the live Underworld recording', () => {
   /**
    * The live run through H; `skipped` marks the named phases as a record written

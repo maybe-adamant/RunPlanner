@@ -16,7 +16,12 @@ import {
   type AuthoredChaosTraitOffer,
 } from '../../authored-project/traits/state';
 import { roomActionDomainForOccurrence } from '../../authored-project/room-actions/defaults';
-import type { ChaosNumericOperand, HexLayoutKey, InRunTraitRarity } from '../../catalog-schema';
+import type {
+  Catalog,
+  ChaosNumericOperand,
+  HexLayoutKey,
+  InRunTraitRarity,
+} from '../../catalog-schema';
 import type {
   RunRecordSpell,
   RunRecordTraitAcquisition,
@@ -71,6 +76,32 @@ function spellVisit(
   return undefined;
 }
 
+/**
+ * A Spell snapshot's rolled tree as authored: God Sent nodes hold their native
+ * talents and are never authored. Undefined without a declared layout.
+ */
+export function recordedHexTree(
+  catalog: Catalog,
+  spellTraitKey: string,
+  spell: RunRecordSpell,
+):
+  | { readonly layoutKey: HexLayoutKey; readonly nodes: Readonly<Record<string, string>> }
+  | undefined {
+  const layout = catalog.hexes.byKey[spellTraitKey]?.layouts.byKey[spell.layout as HexLayoutKey];
+  if (layout === undefined) return undefined;
+  return {
+    layoutKey: layout.key,
+    nodes: Object.fromEntries(
+      Object.entries(spell.talents)
+        .filter(([node]) => {
+          const kind = layout.nodes.byKey[node]?.kind;
+          return kind !== 'olympianSpell' && kind !== 'olympianCount';
+        })
+        .map(([node, talent]) => [node, talent.name]),
+    ),
+  };
+}
+
 /** The Spell snapshot in force before a room: the latest earlier one. */
 function spellBefore(context: RunImportContext, roomIndex: number): RunRecordSpell | undefined {
   for (let index = roomIndex - 1; index >= 0; index -= 1) {
@@ -95,14 +126,9 @@ function answerSpellOffer(context: RunImportContext, trait: Origin<'traitOffer'>
   )
     return false;
   const chosen = giver.traitKeys.find((key) => key === `Spell${visit.spell.name}Trait`);
-  const layoutKey = visit.spell.layout as HexLayoutKey | undefined;
-  if (chosen === undefined || layoutKey === undefined) return false;
-  const hexTree = {
-    layoutKey,
-    nodes: Object.fromEntries(
-      Object.entries(visit.spell.talents).map(([node, talent]) => [node, talent.name]),
-    ),
-  };
+  const hexTree =
+    chosen === undefined ? undefined : recordedHexTree(context.catalog, chosen, visit.spell);
+  if (chosen === undefined || hexTree === undefined) return false;
   const position = spellPickPosition(
     context,
     visit.roomIndex,

@@ -114,4 +114,45 @@ describe('run record capture fixtures', () => {
       ),
     ).toEqual(['0:ToolShovel2', '1:ToolPickaxe2', '26:ToolFishingRod2', '36:ToolExorcismBook2']);
   });
+
+  it('records the Underworld attempt reset at H_Combat04', () => {
+    const record = fixture('underworld-1010');
+    expect(record.rooms).toHaveLength(30);
+    expect(record.outcome).toEqual({ kind: 'abandoned', endingRoom: 'H_Combat04' });
+    const room = (index: number) => record.rooms[index]!;
+    // Judgment's five cards, then the Crystal Figurine's two, as their traits joined.
+    expect(room(12)).toMatchObject({
+      name: 'F_Boss01',
+      grantedArcana: [
+        'BonusHealth',
+        'DoorReroll',
+        'TradeOff',
+        'StatusVulnerability',
+        'ScreenReroll',
+        'StartingGold',
+        'EpicRarityBoost',
+      ],
+    });
+    expect(room(23)).toMatchObject({
+      name: 'G_Boss01',
+      grantedArcana: [
+        'BonusDodge',
+        'ManaOverTime',
+        'RarityBoost',
+        'LowManaDamageBonus',
+        'LowHealthBonus',
+      ],
+    });
+    // The game was relaunched in G_Combat05, restarting the world clock.
+    expect(room(16).traits.upgraded).toEqual([
+      {
+        name: 'ZeusCastBoon',
+        from: { rarity: 'Rare' },
+        to: { rarity: 'Rare', level: 2 },
+        worldTime: 21.0754178036,
+      },
+    ]);
+    // G_MiniBoss02 and G_PreBoss01 rerolled a boon screen; no door was rerolled.
+    expect(record.rooms.filter((entry) => entry.rerolls !== undefined)).toEqual([]);
+  });
 });

@@ -31,11 +31,12 @@ import { answerHub, importSideRoomVisits } from './hub';
 import { answerTopology } from './topology';
 import { answerReward } from './rewards';
 import { answerLevelResolution, answerSteadyGrowth, answerTraitOffer } from './trait-offers';
+import { answerArcanaGrant } from './arcana';
 import { importDispositions, reportUnplacedDispositions } from './dispositions';
 import { importRoomActionOrders } from './action-order';
 import { importEncounters } from './encounters';
 import { answerCommerce, importCommerce } from './commerce';
-import { answerFeatures, importFeatures, reportDenialBans } from './features';
+import { answerFeatures, importFeatures, recordedHexTree, reportDenialBans } from './features';
 import { answerFields, importFieldsRooms } from './fields';
 import { answerWheels, importWheelConversions, importWheels } from './wheels';
 import { areaOfFinding, isQuestionFinding } from './areas';
@@ -153,6 +154,10 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
     entries,
   );
   walk.importLoadout();
+  // Door and wheel rerolls are not modelled: the plan's stores keep the rewards they replaced.
+  for (const [roomIndex, room] of record.rooms.entries())
+    for (let count = 0; count < (room.rerolls ?? 0); count += 1)
+      entries.push({ area: 'reroll', reason: 'unsupportedArea', record: { roomIndex, visit: 0 } });
   const stop = walk.run();
   return finish(walk.assembly.project, stop);
 }
@@ -324,6 +329,16 @@ class RunImportWalk {
     if (aspectKey !== undefined)
       tryApply({ kind: 'ReplaceRouteLoadout', route, weaponKey: loadout.weapon, aspectKey });
     else this.report('loadout', 'notInRecord', route);
+    // Aspect of Selene's rolled Hex tree is the run's first Spell snapshot; its talents never change.
+    if (this.assembly.project.route.loadout.aspectHexTree !== undefined) {
+      const spell = this.record.rooms.find((room) => room.spell !== undefined)?.spell;
+      const value =
+        spell === undefined
+          ? undefined
+          : recordedHexTree(this.catalog, 'SpellMoonBeamTrait', spell);
+      if (value === undefined) this.report('pathOfStars', 'notInRecord', route);
+      else tryApply({ kind: 'ReplaceAspectHexTree', route, value });
+    }
     if (loadout.familiar !== undefined)
       tryApply({ kind: 'ReplaceFamiliar', route, familiarKey: loadout.familiar.name });
     if (loadout.keepsake !== undefined)
@@ -427,6 +442,7 @@ class RunImportWalk {
       answerWheels(this.context, reason) ||
       answerFields(this.context, reason) ||
       answerNemesis(this.context, reason) ||
+      answerArcanaGrant(this.context, reason) ||
       answerTopology(this.context, reason) ||
       answerReward(this.context, reason) ||
       answerTraitOffer(this.context, reason) ||
@@ -458,10 +474,7 @@ class RunImportWalk {
   }
 }
 
-/**
- * Questions of areas no capture has exercised: Travel Deal refills, Judgment
- * and the Crystal Figurine.
- */
+/** Questions of areas no capture has exercised: Travel Deal refills. */
 function isUnreadQuestion(reason: SemanticFinding): boolean {
   const origin = reason.origin;
   switch (origin.kind) {
@@ -472,9 +485,6 @@ function isUnreadQuestion(reason: SemanticFinding): boolean {
         (origin.target.kind === 'stygianWellOffer' || origin.target.kind === 'hermesShrineOffer') &&
         origin.target.generationKey === 'travelDealRefill'
       );
-    case 'judgmentArcana':
-    case 'figurineArcana':
-      return true;
     default:
       return false;
   }

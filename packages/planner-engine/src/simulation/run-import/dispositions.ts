@@ -5,6 +5,7 @@ import {
   type AcquisitionRoleAddress,
   type ProjectCommand,
 } from '../../authored-project';
+import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { RunImportContext } from './import';
 
 export type ConversionKind = 'artificer' | 'timePiece';
@@ -86,9 +87,12 @@ export function convertAcquisition(
     after.kind === 'acquisitionConversion'
       ? (after.result.artificerReplacementRewardTypes ?? [])
       : [];
-  const replacement = types.find(
-    (type) => type !== convertedRewardType && (room.uses[type] ?? 0) > 0,
-  );
+  const replacement = types
+    .filter((type) => type !== convertedRewardType)
+    .flatMap((type) =>
+      type === 'Boon' ? replacementBoons(context, roomIndex) : [{ rewardType: type }],
+    )
+    .find((offer) => offer.rewardType === 'Boon' || (room.uses[offer.rewardType] ?? 0) > 0);
   if (entry === undefined || replacement === undefined) {
     context.note({ area: 'conversion', reason: 'notInRecord', address: acquisition, record });
     return true;
@@ -96,7 +100,7 @@ export function convertAcquisition(
   const command: ProjectCommand = {
     kind: 'ReplaceAcquisitionEntryOffer',
     entry,
-    value: { rewardType: replacement },
+    value: replacement,
   };
   // The replacement is inferred from the room's uses, not recorded as such.
   context.note({
@@ -107,6 +111,22 @@ export function convertAcquisition(
     record,
   });
   return true;
+}
+
+/**
+ * A boon pickup counts under its god's loot name, not `Boon`: a replacement boon
+ * is a god loot the room used, whose screen it opened, that its own reward is not.
+ */
+function replacementBoons(context: RunImportContext, roomIndex: number): ResolvedRewardOffer[] {
+  const room = context.record.rooms[roomIndex]!;
+  return Object.keys(room.uses)
+    .filter(
+      (loot) =>
+        loot !== room.reward?.lootName &&
+        context.catalog.traitGiverByAcquisitionGameName[loot] !== undefined &&
+        room.traitScreens.some((screen) => screen.giver === loot),
+    )
+    .map((loot) => ({ rewardType: 'Boon', payload: { kind: 'BoonSource', source: loot } }));
 }
 
 /**

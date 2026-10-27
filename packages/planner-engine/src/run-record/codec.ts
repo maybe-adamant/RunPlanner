@@ -624,6 +624,8 @@ const ROOM_OPTIONAL = [
   'bannedTraits',
   'spell',
   'toolElements',
+  'grantedArcana',
+  'rerolls',
 ] as const;
 
 function room(value: unknown, label: string): RunRecordRoom {
@@ -661,6 +663,13 @@ function room(value: unknown, label: string): RunRecordRoom {
       if (names.length === 0) fail(`${path} must not be empty`);
       return names;
     }),
+    ...optional(record, 'grantedArcana', label, (entry, path) => {
+      const names = list(entry, path, text, 32);
+      if (names.length === 0) fail(`${path} must not be empty`);
+      if (new Set(names).size !== names.length) fail(`${path} must not repeat a card`);
+      return names;
+    }),
+    ...optional(record, 'rerolls', label, (entry, path) => integer(entry, path, 1)),
   }) as RunRecordRoom;
 }
 

@@ -250,6 +250,7 @@ const AREA_LABELS: Readonly<Record<RunImportArea, string>> = {
   resource: 'Gathering points',
   npc: 'NPCs',
   menace: 'Menace',
+  reroll: 'Rerolls',
   dream: 'Dream',
   other: 'Other',
 };

@@ -47,6 +47,10 @@ export interface SavedRunState {
   readonly lootChoices: readonly SavedLootChoice[];
   /** `BannedTraits` names, sorted. */
   readonly bannedTraits: readonly string[];
+  /** `TemporaryMetaUpgrades`: Arcana cards drawn this biome, sorted. */
+  readonly temporaryMetaUpgrades: readonly string[];
+  /** `NumRerolls`: rerolls left. */
+  readonly numRerolls?: number;
 }
 
 export interface SavedLootChoice {
@@ -64,6 +68,8 @@ export interface SavedTrait {
   readonly stackNum?: number;
   readonly boonConversionUses?: number;
   readonly remainingUses?: number;
+  /** `SourceName`: the Arcana card that granted the trait. */
+  readonly sourceName?: string;
   /** The numbers at the paths kept for this trait's name, by dotted path. */
   readonly savedValues?: Readonly<Record<string, number>>;
 }
@@ -158,6 +164,8 @@ export interface SavedRoom {
   readonly wellShop: boolean;
   readonly surfaceShop: boolean;
   readonly sellShop: boolean;
+  /** `SpentRerolls`: screen rerolls by the rerolled screen's id. */
+  readonly spentRerolls?: Readonly<Record<string, number>>;
 }
 
 export class SaveCheckpointError extends Error {
@@ -372,6 +380,10 @@ function room(value: LuaValue | undefined): SavedRoom | undefined {
     wellShop: value.WellShopChanceSuccess === true,
     surfaceShop: value.SurfaceShopChanceSuccess === true,
     sellShop: value.SellShopChanceSuccess === true,
+    ...optional(
+      'spentRerolls',
+      Object.keys(counts(value.SpentRerolls)).length > 0 ? counts(value.SpentRerolls) : undefined,
+    ),
   };
 }
 
@@ -447,6 +459,7 @@ function hero(
         ...optional('stackNum', number(entry.StackNum)),
         ...optional('boonConversionUses', number(entry.BoonConversionUses)),
         ...optional('remainingUses', number(entry.RemainingUses)),
+        ...optional('sourceName', text(entry.SourceName)),
         ...optional('savedValues', savedValues(entry, savedValuePaths.get(name))),
       },
     ];
@@ -550,6 +563,11 @@ export function extractSaveCheckpoint(
         .filter(([, banned]) => banned === true)
         .map(([name]) => name)
         .sort(),
+      temporaryMetaUpgrades: Object.entries(table(run.TemporaryMetaUpgrades))
+        .filter(([, drawn]) => drawn === true)
+        .map(([name]) => name)
+        .sort(),
+      ...optional('numRerolls', number(run.NumRerolls)),
     },
     ...optional('hero', savedHero),
     profile: {
