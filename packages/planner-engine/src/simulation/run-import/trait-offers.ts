@@ -1,9 +1,10 @@
 import type {
   AuthoredTraitOffer,
   AuthoredTraitOption,
+  ProjectCommand,
   TraitOfferAddress,
 } from '../../authored-project';
-import type { TraitRarity } from '../../catalog-schema';
+import { concaveStoneProcGiver, type TraitRarity } from '../../catalog-schema';
 import type { RunRecordTraitScreen } from '../../run-record/model';
 import type { SemanticFinding } from '../model';
 import type { RunImportContext } from './import';
@@ -55,6 +56,67 @@ function echoPomTarget(
   return doubled.length === 1 ? doubled[0]!.name : undefined;
 }
 
+/** The keepsake held at `worldTime` in a record room: the latest swap that preceded it. */
+function keepsakeHeldAt(
+  context: RunImportContext,
+  roomIndex: number,
+  worldTime: number,
+): string | undefined {
+  let held = context.record.loadout.keepsake?.name;
+  for (const [index, room] of context.record.rooms.slice(0, roomIndex + 1).entries()) {
+    const swap = room.keepsakeSwap;
+    if (swap === undefined) continue;
+    const swappedAt = room.traits.acquired.find((trait) => trait.name === swap.to)?.worldTime;
+    if (index < roomIndex || swappedAt === undefined || swappedAt <= worldTime) held = swap.to;
+  }
+  return held;
+}
+
+/**
+ * Concave Stone's extra pick: the game logs no screen for it (`LogUpgradeChoice`
+ * is skipped under `DoubleBoonChance`), so it is a trait the room acquired that
+ * no screen of the room chose, one of this screen's unpicked options, acquired
+ * after this screen's pick and before the room's next pick, while the Stone is held.
+ */
+function concaveStoneResidual(
+  context: RunImportContext,
+  screen: RunRecordTraitScreen,
+  roomIndex: number,
+  giverKey: string,
+): number | undefined {
+  if (!concaveStoneProcGiver(context.catalog.traitGivers.byKey[giverKey])) return undefined;
+  const stone = context.catalog.keepsakes.values.find(
+    (keepsake) => keepsake.effect?.kind === 'concaveStone',
+  )?.key;
+  const room = context.record.rooms[roomIndex]!;
+  const acquiredAt = (name: string | undefined) =>
+    room.traits.acquired.find((trait) => trait.name === name)?.worldTime;
+  const pickedAt = acquiredAt(screen.options.find((option) => option.chosen)?.name);
+  if (pickedAt === undefined || keepsakeHeldAt(context, roomIndex, pickedAt) !== stone)
+    return undefined;
+  const chosen = new Set(
+    room.traitScreens.flatMap((entry) =>
+      entry.options.filter((option) => option.chosen).map((option) => option.name),
+    ),
+  );
+  const nextPick = Math.min(
+    ...room.traitScreens
+      .map((entry) => acquiredAt(entry.options.find((option) => option.chosen)?.name))
+      .filter((at): at is number => at !== undefined && at > pickedAt),
+  );
+  const residuals = screen.options.flatMap((option, index) => {
+    const at = acquiredAt(option.name);
+    return !option.chosen &&
+      !chosen.has(option.name) &&
+      at !== undefined &&
+      at >= pickedAt &&
+      at < nextPick
+      ? [index]
+      : [];
+  });
+  return residuals.length === 1 ? residuals[0] : undefined;
+}
+
 function traitsOffer(
   context: RunImportContext,
   screen: RunRecordTraitScreen,
@@ -63,6 +125,7 @@ function traitsOffer(
   const giverKey = screenGiver(context, screen);
   const selected = screen.options.findIndex((option) => option.chosen);
   if (giverKey === undefined || selected < 0 || screen.options.length > 3) return undefined;
+  const residual = concaveStoneResidual(context, screen, roomIndex, giverKey);
   const options = screen.options.map((option): AuthoredTraitOption => ({
     traitKey: option.name,
     ...(option.chosen && promotionTarget(context, roomIndex, option.name) !== undefined
@@ -77,7 +140,23 @@ function traitsOffer(
       ? { rarity: option.rarity as TraitRarity }
       : {}),
   })) as unknown as readonly [AuthoredTraitOption];
-  return { kind: 'traits', giverKey, options, selectedOptionKey: OPTION_KEYS[selected]! };
+  return {
+    kind: 'traits',
+    giverKey,
+    options,
+    selectedOptionKey: OPTION_KEYS[selected]!,
+    ...(residual === undefined
+      ? {}
+      : { concaveStoneResult: { kind: 'proc', optionKey: OPTION_KEYS[residual]! } }),
+  };
+}
+
+/** The offer without its Concave Stone result. */
+function withoutConcaveStone(value: AuthoredTraitOffer): AuthoredTraitOffer {
+  if (value.kind !== 'traits' || value.concaveStoneResult === undefined) return value;
+  const { concaveStoneResult: _result, ...rest } = value;
+  void _result;
+  return rest;
 }
 
 /**
@@ -106,10 +185,18 @@ function withoutIllegalRows(
   );
   if (kept.length === value.options.length) return undefined;
   const pick = value.options[selected]!;
+  const { concaveStoneResult: stone, ...rest } = value;
+  const residual =
+    stone?.kind === 'proc'
+      ? kept.indexOf(value.options[OPTION_KEYS.indexOf(stone.optionKey)]!)
+      : -1;
   return {
-    ...value,
+    ...rest,
     options: kept as unknown as typeof value.options,
     selectedOptionKey: OPTION_KEYS[kept.indexOf(pick)]!,
+    ...(residual < 0
+      ? {}
+      : { concaveStoneResult: { kind: 'proc', optionKey: OPTION_KEYS[residual]! } }),
   };
 }
 
@@ -271,6 +358,59 @@ function ownerGiver(context: RunImportContext, trait: TraitOfferAddress): string
 }
 
 /**
+ * Applies a screen's offer, else the offer without the unselected rows the
+ * engine refuses, reported. An offer carrying a Concave Stone result is kept
+ * only when its extra pick settles without a finding.
+ */
+function applyScreenOffer(
+  context: RunImportContext,
+  trait: TraitOfferAddress,
+  value: AuthoredTraitOffer,
+  record: { readonly roomIndex: number; readonly visit: number },
+  ambiguous: boolean,
+): boolean {
+  const stone = value.kind === 'traits' && value.concaveStoneResult !== undefined;
+  const apply = (command: ProjectCommand) =>
+    stone ? context.applyValid(command) : context.apply(command);
+  const command = { kind: 'ReplaceTraitOffer', trait, value } as const;
+  const evaluation = context.candidates().evaluate({ kind: 'traitOffer', trait, value });
+  if (evaluation.kind !== 'traitOffer') return false;
+  if (evaluation.result.supported && evaluation.result.findings.length === 0) {
+    if (!apply(command)) return false;
+    if (ambiguous)
+      context.note({
+        area: 'traitOffer',
+        reason: 'assumption',
+        address: trait,
+        applied: command,
+        record,
+      });
+    return true;
+  }
+  context.refuse();
+  // The engine refuses some unselected rows here; the observed pick keeps the others.
+  const reduced = withoutIllegalRows(value, evaluation.result.assessments);
+  if (reduced === undefined) return false;
+  const retry = context.candidates().evaluate({ kind: 'traitOffer', trait, value: reduced });
+  const reducedCommand = { kind: 'ReplaceTraitOffer', trait, value: reduced } as const;
+  if (
+    retry.kind !== 'traitOffer' ||
+    !retry.result.supported ||
+    retry.result.findings.length > 0 ||
+    !apply(reducedCommand)
+  )
+    return false;
+  context.note({
+    area: 'traitOffer',
+    reason: 'refused',
+    address: trait,
+    applied: reducedCommand,
+    record,
+  });
+  return true;
+}
+
+/**
  * Answers a trait offer from its room's next unconsumed screen of the owner's
  * giver, in screen order. Where the owner names no giver, the first screen the
  * engine admits is used and the choice reported when the room held several.
@@ -302,42 +442,15 @@ export function answerTraitOffer(context: RunImportContext, reason: SemanticFind
     }
     const value = traitsOffer(context, screen, roomIndex);
     if (value === undefined) continue;
-    const command = { kind: 'ReplaceTraitOffer', trait, value } as const;
-    const evaluation = context.candidates().evaluate({ kind: 'traitOffer', trait, value });
-    if (evaluation.kind !== 'traitOffer') continue;
-    if (evaluation.result.supported && evaluation.result.findings.length === 0) {
-      if (!context.apply(command)) continue;
+    if (applyScreenOffer(context, trait, value, record, ambiguous)) {
       context.used.add(key);
-      if (ambiguous)
-        context.note({
-          area: 'traitOffer',
-          reason: 'assumption',
-          address: trait,
-          applied: command,
-          record,
-        });
       return true;
     }
-    context.refuse();
-    // The engine refuses some unselected rows here; the observed pick keeps the others.
-    const reduced = withoutIllegalRows(value, evaluation.result.assessments);
-    if (reduced === undefined) continue;
-    const retry = context.candidates().evaluate({ kind: 'traitOffer', trait, value: reduced });
-    const reducedCommand = { kind: 'ReplaceTraitOffer', trait, value: reduced } as const;
-    if (
-      retry.kind === 'traitOffer' &&
-      retry.result.supported &&
-      retry.result.findings.length === 0 &&
-      context.apply(reducedCommand)
-    ) {
+    // The engine refused the Stone's extra pick; the screen's own pick may still stand.
+    const plain = withoutConcaveStone(value);
+    if (plain !== value && applyScreenOffer(context, trait, plain, record, ambiguous)) {
       context.used.add(key);
-      context.note({
-        area: 'traitOffer',
-        reason: 'refused',
-        address: trait,
-        applied: reducedCommand,
-        record,
-      });
+      context.note({ area: 'traitOffer', reason: 'refused', address: trait, record });
       return true;
     }
     // A screen tied to its owner is that owner's answer; a later screen is not.

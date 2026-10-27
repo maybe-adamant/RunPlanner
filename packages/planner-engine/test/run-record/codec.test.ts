@@ -76,6 +76,12 @@ describe('run record codec', () => {
       'F_Opening01',
       'F_Combat01',
     ]);
+    const skipped = minimal();
+    (room(skipped, 1).encounters as Record<string, unknown>[])[0]!.skipped = true;
+    expect(decodeRunRecord(skipped).rooms[1]?.encounters[0]).toEqual({
+      name: 'GeneratedF',
+      skipped: true,
+    });
   });
 
   it('rejects unknown fields at every level', () => {
@@ -108,6 +114,10 @@ describe('run record codec', () => {
           { giver: 'ZeusUpgrade', options: [{ name: 'ZeusWeaponBoon', chosen: 'true' }] },
         ]),
       /chosen must be a boolean/,
+    );
+    rejects(
+      (record) => ((room(record, 1).encounters as Record<string, unknown>[])[0]!.skipped = false),
+      /encounters\[0\].skipped must be true when present/,
     );
   });
 

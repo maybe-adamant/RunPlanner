@@ -109,6 +109,8 @@ export interface SavedEncounter {
   readonly eligibleSpawnPoints?: readonly number[];
   readonly rewardStoreName?: string;
   readonly roomRewardOverride?: string;
+  /** Fig Leaf skipped the encounter's spawns, set when the encounter starts. */
+  readonly spawnsSkipped: boolean;
   /** Uncollected optional rewards by object id. */
   readonly rewardsToRestore: readonly { reward: string; point: number; objectId: string }[];
 }
@@ -261,6 +263,7 @@ function encounter(value: LuaValue | undefined): SavedEncounter | undefined {
     ...optional('eligibleSpawnPoints', points.length > 0 ? points : undefined),
     ...optional('rewardStoreName', text(value.RewardStoreName)),
     ...optional('roomRewardOverride', text(value.EncounterRoomRewardOverride)),
+    spawnsSkipped: value.SpawnsSkipped === true,
     rewardsToRestore,
   };
 }

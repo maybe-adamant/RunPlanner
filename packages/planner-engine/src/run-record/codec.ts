@@ -286,13 +286,14 @@ function fangs(value: unknown, label: string): Readonly<Record<string, readonly 
 
 function encounter(value: unknown, label: string): RunRecordEncounter {
   const record = object(value, label);
-  exact(record, ['name'], ['difficulty', 'waves', 'blacklist', 'fangs'], label);
+  exact(record, ['name'], ['difficulty', 'waves', 'blacklist', 'fangs', 'skipped'], label);
   return Object.freeze({
     name: text(record.name, `${label}.name`),
     ...optional(record, 'difficulty', label, finite),
     ...optional(record, 'waves', label, (entry, path) => list(entry, path, wave, 16)),
     ...optional(record, 'blacklist', label, (entry, path) => list(entry, path, text)),
     ...optional(record, 'fangs', label, fangs),
+    ...optional(record, 'skipped', label, flag),
   });
 }
 

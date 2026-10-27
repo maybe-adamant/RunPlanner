@@ -15,6 +15,7 @@ import type { EncounterPhaseCandidateSupport } from '../encounters/preparation';
 import { invertGeneratedEncounter, invertInfiniteRoster } from '../encounters/encounter-inverse';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   generatedEncounterSupportForProjectEvaluationAssembly,
@@ -128,6 +129,13 @@ export function importEncounters(context: RunImportContext): void {
     context.used.add(`custom:${key}`);
     customizeEncounter(context, phase, recorded.encounter, record!);
   }
+  // After selection, so eligibility reads the recorded encounter; a phase without support retries.
+  for (const phase of reachedEncounterPhasesForProjectEvaluationAssembly(context.assembly())) {
+    if (context.used.has(`figLeaf:${semanticAddressKey(phase)}`)) continue;
+    const recorded = recordedEncounter(context, phase);
+    if (recorded !== undefined)
+      importFigLeafSkip(context, phase, recorded.encounter, recorded.roomIndex);
+  }
 }
 
 /**
@@ -188,6 +196,92 @@ function importGorgonAthena(
     if (applied) context.used.add(key);
     return;
   }
+}
+
+/** Every encounter a record room saved: its phases, then its Fields cages. */
+const roomEncounters = (context: RunImportContext, roomIndex: number) => {
+  const room = context.record.rooms[roomIndex]!;
+  return [...room.encounters, ...(room.fields?.cages.map((cage) => cage.encounter) ?? [])];
+};
+
+/** Whether the record carries Fig Leaf skips at all; a record that predates the field has none. */
+const recordsSkips = new WeakMap<RunImportContext, boolean>();
+
+/**
+ * A rolled phase none of whose enemies the room killed beyond what its other
+ * phases rolled: in a multi-phase room, kills are per room.
+ */
+function rolledWithoutKills(
+  context: RunImportContext,
+  encounter: RunRecordEncounter,
+  roomIndex: number,
+): boolean {
+  const spawns = (encounter.waves ?? []).flatMap((wave) => wave.spawns);
+  if (!spawns.some((spawn) => (spawn.count ?? 0) > 0)) return false;
+  const kills = context.record.rooms[roomIndex]!.kills ?? {};
+  const rolledElsewhere = new Map<string, number>();
+  for (const other of roomEncounters(context, roomIndex))
+    if (other !== encounter)
+      for (const wave of other.waves ?? [])
+        for (const spawn of wave.spawns)
+          rolledElsewhere.set(
+            spawn.enemy,
+            (rolledElsewhere.get(spawn.enemy) ?? 0) + (spawn.count ?? 0),
+          );
+  return spawns.every(
+    (spawn) => (kills[spawn.enemy] ?? 0) <= (rolledElsewhere.get(spawn.enemy) ?? 0),
+  );
+}
+
+/**
+ * Fig Leaf: a phase the record marks skipped is skipped. A record without any
+ * mark, written before the record carried it, infers a skip where the engine
+ * admits one and the room killed none of the phase's rolled enemies, reported
+ * as an assumption.
+ */
+function importFigLeafSkip(
+  context: RunImportContext,
+  phase: EncounterPhaseAddress,
+  encounter: RunRecordEncounter,
+  roomIndex: number,
+): void {
+  const key = `figLeaf:${semanticAddressKey(phase)}`;
+  if (context.used.has(key)) return;
+  const support = encounterPhaseFigLeafSupportForProjectEvaluationAssembly(
+    context.assembly(),
+    phase,
+  );
+  if (support === undefined) return;
+  context.used.add(key);
+  let marked = recordsSkips.get(context);
+  if (marked === undefined) {
+    marked = context.record.rooms.some((_room, index) =>
+      roomEncounters(context, index).some((entry) => entry.skipped === true),
+    );
+    recordsSkips.set(context, marked);
+  }
+  const exact = encounter.skipped === true;
+  if (
+    !exact &&
+    (marked || !support.supported || !rolledWithoutKills(context, encounter, roomIndex))
+  )
+    return;
+  // A skip at a room's first phase marks every later phase too; the first phase owns it.
+  const phases = context.record.rooms[roomIndex]!.encounters;
+  if (exact && phases.slice(0, phases.indexOf(encounter)).some((entry) => entry.skipped === true))
+    return;
+  const command: ProjectCommand = { kind: 'ReplaceFigLeafSkip', phase, value: true };
+  const record = { roomIndex, visit: 0 };
+  if (!support.supported || !context.applyValid(command))
+    context.note({ area: 'encounter', reason: 'refused', address: phase, record });
+  else if (!exact)
+    context.note({
+      area: 'encounter',
+      reason: 'assumption',
+      address: phase,
+      applied: command,
+      record,
+    });
 }
 
 const resolvedDefinition = (context: RunImportContext, phase: EncounterPhaseAddress) => {

@@ -191,9 +191,13 @@ U: two each in `H_Combat15` and `H_Combat07`).
   (`UpgradeChoiceLogic.lua:974-989`), so the bracket's newly banned names
   recover those curses; for god boons they name the banned unpicked boons.
   Without Denial the unpicked curses are lost, but inert.
-- A choice made under a `DoubleBoonChance` keepsake roll is not logged
-  (`UpgradeChoiceLogic.lua:990`); only the trait diff shows the extra boon.
-  Source-only.
+- Concave Stone's extra pick, made under its `DoubleBoonChance` roll, is not
+  logged (`UpgradeChoiceLogic.lua:990`); the game picks a random unpicked
+  non-replacement option of the same screen (`:1002-1023`). The trait diff
+  shows it as an acquisition no screen of the room chose, one of the screen's
+  unpicked options, timestamped after that screen's pick and before the room's
+  next one. Inferred while the Stone is held (live Underworld recording:
+  `HestiaManaBoon` after the Hestia screen in `H_Combat07`).
 - Rerolls leave only the `NumRerolls` counter; the pre-reroll options are lost.
 - A Forfeit skip increments `CurrentRun.BiomeBoonSkipCount` in the bracket of
   the room whose boon it replaced and spawns `RoomRewardConsolationPrize`
@@ -221,14 +225,15 @@ starting one.
 
 ### Encounters, Fangs, and Menace
 
-| Fact               | Save source                                                                         | Status   |
-| ------------------ | ----------------------------------------------------------------------------------- | -------- |
-| Generated waves    | entry-save `CurrentRoom.Encounter.SpawnWaves`: ordered types, `TotalCount`, budgets | exact    |
-| Multi-phase waves  | each `Encounters[k].SpawnWaves`                                                     | exact    |
-| Blocked types      | `Encounter.Blacklist`, spawn `GeneratorData.BlockEnemyTypes`                        | exact    |
-| Fangs attributes   | `Encounter.EliteAttributes` (elite type to perk list) in PostReward or departure    | exact    |
-| Kills              | `CurrentRoom.Kills` (`CombatLogic.lua:3855`), PostReward or departure record        | exact    |
-| Menace conversions | rolled `SpawnWaves` versus `Kills`                                                  | inferred |
+| Fact               | Save source                                                                         | Status      |
+| ------------------ | ----------------------------------------------------------------------------------- | ----------- |
+| Generated waves    | entry-save `CurrentRoom.Encounter.SpawnWaves`: ordered types, `TotalCount`, budgets | exact       |
+| Multi-phase waves  | each `Encounters[k].SpawnWaves`                                                     | exact       |
+| Blocked types      | `Encounter.Blacklist`, spawn `GeneratorData.BlockEnemyTypes`                        | exact       |
+| Fangs attributes   | `Encounter.EliteAttributes` (elite type to perk list) in PostReward or departure    | exact       |
+| Fig Leaf skip      | `SpawnsSkipped` on the started phase or cage encounter, PostReward or departure     | source-only |
+| Kills              | `CurrentRoom.Kills` (`CombatLogic.lua:3855`), PostReward or departure record        | exact       |
+| Menace conversions | rolled `SpawnWaves` versus `Kills`                                                  | inferred    |
 
 Older `RoomHistory` entries keep only the encounter name and store; waves
 survive in the room's own entry save, PostReward save, and departure record.
@@ -240,6 +245,18 @@ Observed counts match the generator rule in
 Fangs attributes are written by `PickEncounterEliteAttributes`
 (`RoomLogic.lua:5297`) at encounter start, so the entry save lacks them.
 Room-level `CurrentRoom.EliteAttributes` is a different field.
+
+A Fig Leaf skip sets `SpawnsSkipped` on the encounter table at its start
+(`HandleEncounterPreSpawns`, `EncounterLogic.lua:352-372`, or
+`HandleEnemySpawns`, `:479-497`), which the saved `CurrentRoom.Encounter`,
+`Encounters` or cage `Encounter` carries, so it is exact like the Fangs
+attributes. A skipped first phase that declares `SkipEndEncounterEffects`
+also marks every later phase of `Encounters`, those with
+`MultiEncounterSpawnSkip`; the first phase owns the skip. No capture skipped an
+encounter. The live Underworld recording predates the record's skip mark: its
+skips show as rolled phases with no kills (`G_Combat05`, `H_Combat05`'s second
+cage, `I_Combat11`), which identify a skip only while Fig Leaf's effect can
+still trigger.
 
 Menace swaps a shallow copy of the spawn request inside `HandleNextSpawn`
 (`EncounterLogic.lua:783`–`:808`) without rewriting `SpawnWaves`. A source type
@@ -376,15 +393,16 @@ counters without order.
 ## Not exercised by either capture
 
 Duo and Legendary offers, trait replacement screens, rerolls,
-Jeweled Pom and Experimental Hammer equip results, Concave Stone, Sea Star,
-Echo replay, Aspect Hex trees, Cocoons, Aetos, Fig Leaf,
+Jeweled Pom and Experimental Hammer equip results, Sea Star,
+Echo replay, Aspect Hex trees, Cocoons, Aetos,
 Judgment and Crystal Figurine, Phial, Eris, Oceanus Anomaly,
 Gold Gold Gold, Travel Deal refills at the Hermes Shrine
-or Well, `DoubleBoonChance` keepsakes, the Fields Nemesis event, Dream runs,
+or Well, the Fields Nemesis event, Dream runs,
 Surface victory, I-biome ending saves, resume after closing the game, and quit
 to menu. A later Underworld recording without raw saves exercised Steady
-Growth, Gorgon and Athena, Echo's Pom, the Zagreus contract and Infernal
-Contract pedestals; a fresh profile's first attempt is still unrecorded.
+Growth, Gorgon and Athena, Echo's Pom, the Zagreus contract, Infernal
+Contract pedestals, Fig Leaf skips and Concave Stone's extra pick; a fresh
+profile's first attempt is still unrecorded.
 
 ## Uncertainties
 
@@ -423,3 +441,8 @@ Contract pedestals; a fresh profile's first attempt is still unrecorded.
   - a collected Fields optional reward takes the first free optional point;
   - aspect and keepsake levels are assumed to be maximum, although the save
     records the equipped rarity.
+- A Fig Leaf skip is imported exactly from `SpawnsSkipped`. A record without
+  the skip mark infers a skip at a phase Fig Leaf may skip whose rolled
+  enemies the room never killed, and reports it as an assumption.
+- Concave Stone's extra pick is imported as the result of the screen it
+  followed.

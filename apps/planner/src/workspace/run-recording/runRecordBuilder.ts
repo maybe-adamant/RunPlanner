@@ -123,14 +123,15 @@ function recordEncounter(
       ),
     }),
   );
-  // Fangs perks are rolled when the encounter starts, after the room is entered.
-  const fangs = (settled ?? phase).eliteAttributes;
+  // Fangs perks and a Fig Leaf skip are decided when the encounter starts, after the room is entered.
+  const started = settled ?? phase;
   return Object.freeze({
     name: phase.name,
     ...optional('difficulty', phase.difficulty),
     ...optional('waves', waves.length > 0 ? waves : undefined),
     ...optional('blacklist', phase.blacklist.length > 0 ? phase.blacklist : undefined),
-    ...optional('fangs', nonEmpty(fangs)),
+    ...optional('fangs', nonEmpty(started.eliteAttributes)),
+    ...optional('skipped', started.spawnsSkipped ? (true as const) : undefined),
   });
 }
 

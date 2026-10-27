@@ -164,6 +164,8 @@ export interface RunRecordEncounter {
   readonly blacklist?: readonly string[];
   /** Fangs perks by elite enemy name. */
   readonly fangs?: Readonly<Record<string, readonly string[]>>;
+  /** Fig Leaf skipped the phase's spawns (`SpawnsSkipped`). */
+  readonly skipped?: true;
 }
 
 export interface RunRecordWave {

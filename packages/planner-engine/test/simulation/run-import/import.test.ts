@@ -568,6 +568,7 @@ describe('run import of the live Underworld recording', () => {
       assumption: {
         conversion: 3,
         doors: 19,
+        encounter: 3,
         traitOffer: 1,
         reward: 1,
         fields: 1,
@@ -576,8 +577,11 @@ describe('run import of the live Underworld recording', () => {
       notInRecord: { traitOffer: 5, fields: 2, shop: 3, route: 1 },
       refused: { fields: 2, traitOffer: 12, pool: 2, shop: 1 },
     });
+    // Fig Leaf, racked at F_PostBoss01, skipped one encounter in each of G, H and I: the record
+    // predates the skip mark, so each is inferred from a rolled phase with no kills.
     // In ascending door id H_Combat07's cages roll before H_Combat05's Mini-Boss door and
     // find no Boon left; the game generated the Mini-Boss door first, which refilled the store.
+    // That leaves H_Combat07's Hestia screen, and Concave Stone's extra pick from it, unanswered.
     // H_PreBoss01's Shop stock was recorded as a Well, so its purchases are unknown.
     // I_WorldShop replaces ShopHermesUpgrade's own requirements; the catalog keeps them.
     // The unattributed Denial lines follow the H_Combat07 cage guess.
@@ -594,11 +598,13 @@ describe('run import of the live Underworld recording', () => {
       'assumption conversion r10 acquisitionEntry@F-r10 -> ReplaceAcquisitionEntryOffer(F-r10 StackUpgrade)',
       'assumption traitOffer r15 traitOffer@G-r15:self -> ReplaceTraitOffer(G-r15 chaos)',
       'assumption doors r15 exitDecision@G-r15',
+      'assumption encounter r16 encounterPhase@G-r16:Encounter -> ReplaceFigLeafSkip(G-r16)',
       'assumption doors r16 exitDecision@G-r16',
       'assumption doors r17 exitDecision@G-r17',
       'assumption doors r19 exitDecision@G-r19',
       'assumption doors r20 exitDecision@G-r20',
       'assumption reward r20 incomingReward@G-r20-d737226 -> ReplaceIncomingReward(G-r20-d737226 Devotion)',
+      'assumption encounter r26 encounterPhase@H-r26:Cage02 -> ReplaceFigLeafSkip(H-r26)',
       'assumption doors r26 exitDecision@H-r26',
       'refused fields r27 localReward@H-r27:cage2 -> ReplaceLocalReward(H-r27 HermesUpgrade)',
       'assumption doors r27 exitDecision@H-r27',
@@ -608,6 +614,7 @@ describe('run import of the live Underworld recording', () => {
       'refused traitOffer r30 traitOffer@H-r30:hiddenSource -> ReplaceTraitOffer(H-r30 CoverRegenerationBoon|DoubleExManaBoon#option1)',
       'refused pool r32 roomFeature@H-r30:postboss -> ReplacePurgingPoolSlot(H-r30:postboss)',
       'refused pool r32 roomFeature@H-r30:postboss -> ReplacePurgingPoolSlot(H-r30:postboss)',
+      'assumption encounter r34 encounterPhase@I-r34:Encounter -> ReplaceFigLeafSkip(I-r34)',
       'assumption doors r34 exitDecision@I-r34',
       'assumption doors r35 exitDecision@I-r35',
       'assumption doors r36 exitDecision@I-r36',
@@ -638,6 +645,70 @@ describe('run import of the live Underworld recording', () => {
       'refused traitOffer r- -',
       'refused traitOffer r- -',
     ]);
+  });
+});
+
+describe('run import of Fig Leaf and Concave Stone in the live Underworld recording', () => {
+  /**
+   * The live run through H, with H_Combat05's two door ids exchanged so ascending
+   * door id generates its Mini-Boss door first, as the game did; `skipped` marks
+   * the named phases as a record written after the skip mark would.
+   */
+  function liveThroughH(skipped: readonly number[] = []): RunRecord {
+    const record = fixture('underworld-live');
+    const [low, high] = [564448, 621199];
+    return {
+      ...record,
+      route: { ...record.route, biomes: ['F', 'G', 'H'] },
+      rooms: record.rooms.slice(0, 33).map((room, index) => ({
+        ...room,
+        ...(index !== 26
+          ? {}
+          : {
+              doors: room.doors.map((door) => ({
+                ...door,
+                door: door.door === low ? high : low,
+              })),
+            }),
+        ...(!skipped.includes(index)
+          ? {}
+          : {
+              encounters: room.encounters.map((encounter) => ({
+                ...encounter,
+                skipped: true as const,
+              })),
+            }),
+      })),
+    };
+  }
+
+  it("imports Concave Stone's extra pick at the screen whose pick preceded it", () => {
+    const imported = projectFromRunRecord(catalog, liveThroughH());
+    expect(imported.kind).toBe('complete');
+    const cage = occurrence(imported.project, 'H-r27').state;
+    const offer =
+      cage.kind === 'fieldsCombat'
+        ? cage.cages['cage2']?.traitOffersByAcquisitionRole['source']
+        : undefined;
+    expect(offer).toMatchObject({
+      giverKey: 'Hestia',
+      selectedOptionKey: 'option3',
+      concaveStoneResult: { kind: 'proc', optionKey: 'option1' },
+    });
+    expect(offer?.kind === 'traits' && offer.options[0]?.traitKey).toBe('HestiaManaBoon');
+  });
+
+  it('imports a marked Fig Leaf skip exactly and infers none beside it', () => {
+    const imported = projectFromRunRecord(catalog, liveThroughH([16]));
+    expect(imported.kind).toBe('complete');
+    expect(occurrence(imported.project, 'G-r16').encounters.figLeafSkipByPhase).toEqual({
+      Encounter: true,
+    });
+    // A record that marks skips leaves H's unmarked zero-kill cage as played.
+    expect(occurrence(imported.project, 'H-r26').encounters.figLeafSkipByPhase['Cage02']).toBe(
+      false,
+    );
+    expect(imported.report.entries.filter((entry) => entry.area === 'encounter')).toEqual([]);
   });
 });
 

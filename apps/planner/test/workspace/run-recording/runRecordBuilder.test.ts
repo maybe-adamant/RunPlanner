@@ -32,7 +32,15 @@ function room(name: string, values: Partial<SavedRoom> = {}): SavedRoom {
 }
 
 function encounter(name: string, values: Partial<SavedEncounter> = {}): SavedEncounter {
-  return { name, waves: [], blacklist: [], eliteAttributes: {}, rewardsToRestore: [], ...values };
+  return {
+    name,
+    waves: [],
+    blacklist: [],
+    eliteAttributes: {},
+    spawnsSkipped: false,
+    rewardsToRestore: [],
+    ...values,
+  };
 }
 
 const baseRun: SavedRunState = {
@@ -629,6 +637,44 @@ describe('run record builder', () => {
       optionalRewards: [{ reward: 'MaxManaDropSmall', point: 572849 }],
     });
     expect(partial?.optionalRewards[0]).not.toHaveProperty('collected');
+  });
+
+  it('marks the phases and cages Fig Leaf skipped once their encounter started', () => {
+    const wave = {
+      spawns: [
+        {
+          name: 'Mourner',
+          totalCount: 3,
+          generated: true,
+          requiredMiniBossShrine: false,
+          infiniteSpawns: false,
+        },
+      ],
+    };
+    const phasesOf = (skipped: boolean) => [
+      encounter('GeneratedP_Intro', { waves: [wave], spawnsSkipped: skipped }),
+      encounter('GeneratedP', { waves: [wave], spawnsSkipped: skipped }),
+    ];
+    const cages = (skipped: boolean) => [
+      { rewardType: 'Boon', encounter: encounter('GeneratedH', { startTime: 4 }) },
+      {
+        rewardType: 'MaxHealthDrop',
+        encounter: encounter('GeneratedH', { startTime: 9, spawnsSkipped: skipped }),
+      },
+    ];
+    const entered = room('P_Combat01', { encounters: phasesOf(false), cages: cages(false) });
+    const settled = room('P_Combat01', { encounters: phasesOf(true), cages: cages(true) });
+    const record = buildRunRecord([
+      save({ history: [], current: entered }),
+      save({ kind: 'postReward', history: [], current: settled }),
+      save({ history: ['P_Combat01'], current: room('P_Combat02'), departure: settled }),
+    ]);
+    expect(record.rooms[0]?.encounters.map((phase) => phase.skipped)).toEqual([true, true]);
+    expect(record.rooms[0]?.fields?.cages.map((cage) => cage.encounter.skipped)).toEqual([
+      undefined,
+      true,
+    ]);
+    expect(record.rooms[0]?.fields?.cages[0]?.encounter).not.toHaveProperty('skipped');
   });
 
   it('records the run-start traits the loadout does not describe', () => {

@@ -109,6 +109,27 @@ describe('save checkpoint extraction', () => {
     expect(extractSaveCheckpoint(sample('surface-004'), false).kind).toBe('hub');
   });
 
+  it("reads a Fig Leaf skip from the started encounter's SpawnsSkipped", () => {
+    const save = sample('surface-004');
+    expect(extractSaveCheckpoint(save, true).currentRoom.encounter?.spawnsSkipped).toBe(false);
+    const run = save.globals.CurrentRun as LuaTable;
+    const room = run.CurrentRoom as LuaTable;
+    const skipped: DecodedSave = {
+      ...save,
+      globals: {
+        ...save.globals,
+        CurrentRun: {
+          ...run,
+          CurrentRoom: {
+            ...room,
+            Encounter: { ...(room.Encounter as LuaTable), SpawnsSkipped: true },
+          },
+        },
+      },
+    };
+    expect(extractSaveCheckpoint(skipped, true).currentRoom.encounter?.spawnsSkipped).toBe(true);
+  });
+
   it('folds the first checkpoints of a run into an abandoned record', () => {
     const checkpoints = ['002', '004', '006', '009', '011'].map((id) =>
       extractSaveCheckpoint(sample(`surface-${id}`), true),
