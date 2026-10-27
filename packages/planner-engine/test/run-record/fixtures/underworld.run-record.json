@@ -43,7 +43,8 @@
       "EnemyCountShrineUpgrade": 0,
       "BoonManaReserveShrineUpgrade": 0
     },
-    "startingGold": 300
+    "startingGold": 300,
+    "startingTraits": [{ "name": "HadesInvisibilityRetaliateBoon", "worldTime": 5.9500003103167 }]
   },
   "rooms": [
     {

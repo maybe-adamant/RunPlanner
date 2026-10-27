@@ -590,6 +590,40 @@ describe('run record builder', () => {
     expect(partial?.optionalRewards[0]).not.toHaveProperty('collected');
   });
 
+  it('records the run-start traits the loadout does not describe', () => {
+    const traits: SavedTrait[] = [
+      { name: 'HadesAndPersephoneKeepsake', id: '015.950.54', rarity: 'Epic' },
+      { name: 'HadesInvisibilityRetaliateBoon', id: '115.950.40' },
+      { name: 'DodgeFamiliar', id: '215.950.34', stackNum: 4 },
+      { name: 'FamiliarPolecatDamage', id: '315.950.35', stackNum: 4 },
+      { name: 'StaffClearCastAspect', id: '415.950.01', rarity: 'Legendary' },
+      { name: 'LowManaDamageMetaupgrade', id: '515.950.42', rarity: 'Epic' },
+    ];
+    const first: SaveCheckpoint = {
+      ...save({ history: [], current: room('F_Opening01'), traits, worldTime: 5.98 }),
+      hero: {
+        traits,
+        slotted: {
+          Keepsake: 'HadesAndPersephoneKeepsake',
+          Aspect: 'StaffClearCastAspect',
+          Familiar: 'DodgeFamiliar',
+        },
+      },
+    };
+    const second = save({
+      history: ['F_Opening01'],
+      current: room('F_Combat01'),
+      departure: room('F_Opening01'),
+      traits,
+      worldTime: 20,
+    });
+    const record = buildRunRecord([first, second]);
+    expect(record.loadout.startingTraits).toEqual([
+      { name: 'HadesInvisibilityRetaliateBoon', worldTime: 5.95 },
+    ]);
+    expect(record.rooms[0]!.traits.acquired).toEqual([]);
+  });
+
   it('attributes trait gains, losses, keepsake swaps and Time Piece uses to rooms', () => {
     const boon = {
       name: 'ZeusWeaponBoon',

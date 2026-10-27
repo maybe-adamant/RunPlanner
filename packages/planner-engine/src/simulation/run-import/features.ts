@@ -309,16 +309,21 @@ function answerEmbryoEquip(
 
 /**
  * Jeweled Pom's Hades trait and Experimental Hammer's hammer are granted with
- * the keepsake, in the bracket of the room that equips it. The run-start grant
- * precedes the record's first trait snapshot, so only rack and Echo equips are read.
+ * the keepsake: among the run's starting traits, or in the bracket of the room
+ * whose rack or Echo equips it.
  */
 function answerGrantedTrait(
   context: RunImportContext,
   result: Origin<'keepsakeEquipResult'>,
 ): boolean {
-  if ('owner' in result.selection && result.selection.owner === 'routeStart') return false;
-  const roomIndex = selectionRoom(context, result.selection);
-  if (roomIndex === undefined) return false;
+  const atStart = 'owner' in result.selection && result.selection.owner === 'routeStart';
+  const roomIndex = atStart ? undefined : selectionRoom(context, result.selection);
+  const acquired = atStart
+    ? context.record.loadout.startingTraits
+    : roomIndex === undefined
+      ? undefined
+      : context.record.rooms[roomIndex]!.traits.acquired;
+  if (acquired === undefined) return false;
   const evaluation = context.candidates().evaluate({ kind: 'keepsakeEquipResult', result });
   if (evaluation.kind !== 'keepsakeEquipResult') return false;
   const options = evaluation.result.options.filter(
@@ -327,7 +332,6 @@ function answerGrantedTrait(
   const traitOf = (option: (typeof options)[number]) =>
     'traitKey' in option.value ? option.value.traitKey : undefined;
   const offered = new Set(options.map(traitOf));
-  const acquired = context.record.rooms[roomIndex]!.traits.acquired;
   const keepsakeAt = acquired.find(
     (trait) => context.catalog.keepsakes.byKey[trait.name] !== undefined,
   )?.worldTime;

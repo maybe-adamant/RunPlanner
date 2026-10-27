@@ -142,6 +142,7 @@ describe('run import of the Underworld capture', () => {
       aspectKey: 'StaffClearCastAspect',
       familiarKey: record.loadout.familiar!.name,
       startingKeepsakeKey: 'HadesAndPersephoneKeepsake',
+      keepsakeEquipResults: { jeweledPom: { traitKey: 'HadesInvisibilityRetaliateBoon' } },
       startingReward: {
         rewardType: 'Boon',
         payload: { kind: 'BoonSource', source: 'HeraUpgrade' },
@@ -281,7 +282,7 @@ describe('run import of the Underworld capture', () => {
         roomActionOrder: 9,
         traitOffer: 3,
       },
-      notInRecord: { embryo: 3, fields: 4, loadout: 1, pathOfStars: 1, route: 1, traitOffer: 5 },
+      notInRecord: { embryo: 3, fields: 4, pathOfStars: 1, route: 1, traitOffer: 5 },
       refused: { doors: 1, fields: 2, pool: 1, traitOffer: 1 },
       unsupportedArea: { shop: 2, well: 1 },
     });
@@ -458,7 +459,7 @@ describe('run import of the Surface capture', () => {
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { conversion: 2, menace: 14, roomActionOrder: 5 },
-      notInRecord: { loadout: 1, menace: 17, reward: 1, shop: 10 },
+      notInRecord: { menace: 17, reward: 1, shop: 10 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption menace r1 encounterPhase@N-r1:Encounter -> ReplaceEncounterCustomization(N-r1 generated)',

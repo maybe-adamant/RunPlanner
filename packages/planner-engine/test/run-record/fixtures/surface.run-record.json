@@ -48,7 +48,8 @@
       "EnemyDamageShrineUpgrade": 3,
       "EnemyHealthShrineUpgrade": 3
     },
-    "startingGold": 300
+    "startingGold": 300,
+    "startingTraits": [{ "name": "HadesChronosDebuffBoon" }]
   },
   "rooms": [
     {

@@ -25,6 +25,7 @@ function minimal(): Record<string, unknown> {
       arcana: [{ name: 'StartingGold', level: 3 }],
       vows: { EnemySpeedShrineUpgrade: 0 },
       startingGold: 300,
+      startingTraits: [{ name: 'HadesChronosDebuffBoon', worldTime: 10.11 }],
     },
     rooms: [
       {

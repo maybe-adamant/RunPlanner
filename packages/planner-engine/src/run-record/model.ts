@@ -46,6 +46,19 @@ export interface RunRecordLoadout {
   /** Every Fear Vow rank, zero ranks included. */
   readonly vows: Readonly<Record<string, number>>;
   readonly startingGold: number;
+  /**
+   * Traits held at the run's first save that the fields above do not describe,
+   * such as the trait Jeweled Pom or Experimental Hammer grants on equip.
+   */
+  readonly startingTraits: readonly RunRecordStartingTrait[];
+}
+
+export interface RunRecordStartingTrait {
+  readonly name: string;
+  readonly rarity?: string;
+  readonly level?: number;
+  /** `_worldTime` of the grant, parsed from the trait id. */
+  readonly worldTime?: number;
 }
 
 export interface RunRecordRankedTrait {

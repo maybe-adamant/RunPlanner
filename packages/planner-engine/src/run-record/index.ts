@@ -30,6 +30,7 @@ export {
   type RunRecordStockOption,
   type RunRecordStore,
   type RunRecordStoreKind,
+  type RunRecordStartingTrait,
   type RunRecordTraitAcquisition,
   type RunRecordTraitGrade,
   type RunRecordTraitUpgrade,

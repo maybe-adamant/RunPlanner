@@ -13,6 +13,7 @@ import {
   type RunRecordPurchase,
   type RunRecordRoom,
   type RunRecordSpell,
+  type RunRecordStartingTrait,
   type RunRecordStore,
   type RunRecordTraitAcquisition,
   type RunRecordTraitGrade,
@@ -294,7 +295,38 @@ function loadout(first: SaveCheckpoint): RunRecordLoadout {
       Object.entries(first.profile.shrineUpgrades).filter(([, rank]) => whole(rank) !== undefined),
     ),
     startingGold: first.profile.money,
+    startingTraits: startingTraits(first, hero.traits, hero.slotted),
   };
+}
+
+/**
+ * The first save's traits the loadout fields do not describe. The slotted
+ * aspect, keepsake and familiar, the familiar's `Familiar*` traits and the
+ * Arcana's `*MetaUpgrade` traits are the loadout itself.
+ */
+function startingTraits(
+  first: SaveCheckpoint,
+  traits: readonly SavedTrait[],
+  slotted: Readonly<Record<string, string>>,
+): RunRecordStartingTrait[] {
+  const described = new Set(
+    ['Aspect', 'Keepsake', 'Familiar'].flatMap((slot) => slotted[slot] ?? []),
+  );
+  return traits
+    .filter(
+      (trait) =>
+        !described.has(trait.name) &&
+        !trait.name.startsWith('Familiar') &&
+        !/MetaUpgrade$/i.test(trait.name),
+    )
+    .map((trait) => ({
+      name: trait.name,
+      ...grade(trait),
+      ...optional(
+        'worldTime',
+        trait.id === undefined ? undefined : traitWorldTime(trait.id, 0, first.worldTime),
+      ),
+    }));
 }
 
 interface TraitRoom {

@@ -154,7 +154,7 @@ function loadout(value: unknown): RunRecordLoadout {
   const record = object(value, label);
   exact(
     record,
-    ['weapon', 'arcana', 'vows', 'startingGold'],
+    ['weapon', 'arcana', 'vows', 'startingGold', 'startingTraits'],
     ['aspect', 'familiar', 'keepsake'],
     label,
   );
@@ -190,6 +190,16 @@ function loadout(value: unknown): RunRecordLoadout {
     arcana,
     vows: counts(record.vows, `${label}.vows`, 0),
     startingGold: integer(record.startingGold, `${label}.startingGold`),
+    startingTraits: list(record.startingTraits, `${label}.startingTraits`, (entry, path) => {
+      const row = object(entry, path);
+      exact(row, ['name'], ['rarity', 'level', 'worldTime'], path);
+      return Object.freeze({
+        name: text(row.name, `${path}.name`),
+        ...optional(row, 'rarity', path, text),
+        ...optional(row, 'level', path, (item, at) => integer(item, at, 1)),
+        ...optional(row, 'worldTime', path, worldTime),
+      });
+    }),
   }) as RunRecordLoadout;
 }
 
