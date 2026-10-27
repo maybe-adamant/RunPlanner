@@ -64,6 +64,33 @@ describe('room template contracts', () => {
     expect(() => createCatalog(missingEntryPartner)).toThrow(/endPointId/);
   });
 
+  it('accepts cage spawn representatives only for distinct declared cage points', () => {
+    const withRepresentatives = (
+      edit: (entries: { cagePointId: number; spawnPointId: number }[]) => void,
+    ) => {
+      const raw = input();
+      const room = raw.rooms.find((candidate) => candidate.gameName === 'H_Combat01');
+      if (room?.fieldsSpatial === undefined) throw new Error('missing H spatial fixture');
+      const entries = room.fieldsSpatial.cageSpawnRepresentatives.map((entry) => ({ ...entry }));
+      edit(entries);
+      (room.fieldsSpatial as { cageSpawnRepresentatives: unknown }).cageSpawnRepresentatives =
+        entries;
+      return raw;
+    };
+
+    expect(() =>
+      createCatalog(withRepresentatives((entries) => (entries[0]!.cagePointId = 736880))),
+    ).toThrow(/is not a cage point 736880/);
+    expect(() =>
+      createCatalog(withRepresentatives((entries) => entries.push({ ...entries[0]! }))),
+    ).toThrow(/cagePointId.*duplicates/);
+    expect(() =>
+      createCatalog(
+        withRepresentatives((entries) => (entries[1]!.spawnPointId = entries[0]!.spawnPointId)),
+      ),
+    ).toThrow(/spawnPointId.*duplicates/);
+  });
+
   it('rejects physical domains that cannot satisfy declaration-owned capacities', () => {
     const raw = input();
     const room = raw.rooms.find((candidate) => candidate.gameName === 'H_Combat09');

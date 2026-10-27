@@ -76,7 +76,7 @@ Evidence: the save-file run record audit
   no save-format knowledge.
 - **Hades II catalog** adds, per Fields cage point, one representative point id
   of its enemy spawn group (from the room maps), so a cage's saved spawn group
-  resolves to its cage point; catalog version bump.
+  resolves to its cage point. No catalog version bump: no plan changes meaning.
 - **Planner application** owns the save decoder (SGB1 header, LZ4 block,
   luabins) and the extractor from decoded save tables to the run record, the
   run-boundary state machine that accumulates checkpoints, the import worker,

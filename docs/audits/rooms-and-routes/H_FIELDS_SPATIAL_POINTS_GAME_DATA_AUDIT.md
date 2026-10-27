@@ -55,8 +55,9 @@ The map binaries were decoded with HadesMapper commit
 
 - the map's fixed `_PlayerUnit` object;
 - objects named `HeroStart` and `HeroEnd`;
-- objects named `LootPoint`; and
-- objects whose `GroupNames` contain `BonusRewardSpawnPoints`.
+- objects named `LootPoint`;
+- objects whose `GroupNames` contain `BonusRewardSpawnPoints`; and
+- objects whose `GroupNames` contain `SpawnPointsA` through `SpawnPointsE`.
 
 Coordinates below are the decoded single-precision world coordinates rounded
 to the nearest integer for readable evidence. Object IDs are exact. The map
@@ -279,23 +280,31 @@ The suffix `/A` through `/E` denotes the corresponding
 `RewardCageSpawnPoints` enemy group. It does not number logical cages or imply
 placement order.
 
-| Room         | Finite `LootPoint` set                                                                                                                        |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `H_Combat01` | `40055@(6264, 5360)/D`<br>`568803@(7521, 7303)/C`<br>`568804@(7152, 9974)/B`<br>`568805@(9755, 5587)/E`<br>`568806@(10245, 9240)/A`           |
-| `H_Combat02` | `621502@(12284, 10136)/A`<br>`622508@(14079, 8691)/B`<br>`622860@(15674, 7894)/C`                                                             |
-| `H_Combat03` | `40055@(6837, 7646)/A`<br>`568938@(8722, 7862)/B`<br>`568943@(10960, 7759)/C`                                                                 |
-| `H_Combat04` | `569103@(4895, 9546)/C`<br>`573087@(4322, 7008)/D`<br>`573088@(8507, 7279)/B`<br>`573089@(12216, 8751)/A`                                     |
-| `H_Combat05` | `573087@(14758, 7466)/A`<br>`621494@(14329, 10395)/D`<br>`621539@(9453, 7763)/E`<br>`622143@(19197, 10553)/C`<br>`622144@(17385, 6390)/B`     |
-| `H_Combat06` | `573087@(9187, 8192)/B`<br>`621502@(12339, 6981)/A`<br>`622316@(8544, 5870)/C`<br>`622317@(7983, 3503)/E`<br>`622318@(5177, 5700)/D`          |
-| `H_Combat07` | `573087@(9298, 7371)/A`<br>`621494@(16392, 7190)/C`<br>`621503@(12834, 5484)/B`                                                               |
-| `H_Combat08` | `573087@(10948, 5979)/C`<br>`621402@(13855, 8369)/A`<br>`621428@(10215, 8608)/B`                                                              |
-| `H_Combat09` | `621502@(13504, 10048)/A`<br>`715348@(11988, 8423)/C`<br>`715375@(11397, 9313)/B`                                                             |
-| `H_Combat10` | `624446@(19414, 14777)/B`<br>`624455@(22730, 16666)/C`<br>`624464@(21865, 14280)/E`<br>`624473@(24972, 14791)/D`<br>`624513@(19917, 16794)/A` |
-| `H_Combat11` | `621502@(17633, 16745)/B`<br>`622748@(13988, 15451)/A`<br>`622753@(15358, 13803)/D`<br>`622758@(17840, 13311)/E`<br>`622768@(18717, 15035)/C` |
-| `H_Combat12` | `627077@(20085, 23537)/C`<br>`627110@(17069, 23057)/B`<br>`627112@(16433, 25377)/A`                                                           |
-| `H_Combat13` | `621502@(12447, 8763)/unmapped`<br>`715356@(11457, 6668)/B`                                                                                   |
-| `H_Combat14` | `621502@(13345, 8364)/A`<br>`736882@(11490, 6938)/B`                                                                                          |
-| `H_Combat15` | `621502@(13206, 8578)/C`<br>`737521@(12449, 8108)/B`<br>`737530@(12053, 8756)/A`                                                              |
+On every map the `SpawnPointsA` through `SpawnPointsE` groups are pairwise
+disjoint, with 36 to 89 members each. The spawn representative, listed in the
+same order as the cage points, is the lowest object ID in the cage point's
+group. Because the groups are disjoint, no other group on the map contains it.
+An opened cage's `EligibleSpawnPoints` is that group's complete ID list, so it
+contains exactly one representative. That representative identifies the cage
+point.
+
+| Room         | Finite `LootPoint` set                                                                                                                        | Spawn representative                                     |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `H_Combat01` | `40055@(6264, 5360)/D`<br>`568803@(7521, 7303)/C`<br>`568804@(7152, 9974)/B`<br>`568805@(9755, 5587)/E`<br>`568806@(10245, 9240)/A`           | `572726`<br>`572967`<br>`572815`<br>`572761`<br>`685585` |
+| `H_Combat02` | `621502@(12284, 10136)/A`<br>`622508@(14079, 8691)/B`<br>`622860@(15674, 7894)/C`                                                             | `621276`<br>`623047`<br>`623048`                         |
+| `H_Combat03` | `40055@(6837, 7646)/A`<br>`568938@(8722, 7862)/B`<br>`568943@(10960, 7759)/C`                                                                 | `568951`<br>`568971`<br>`686963`                         |
+| `H_Combat04` | `569103@(4895, 9546)/C`<br>`573087@(4322, 7008)/D`<br>`573088@(8507, 7279)/B`<br>`573089@(12216, 8751)/A`                                     | `686366`<br>`686471`<br>`686572`<br>`686651`             |
+| `H_Combat05` | `573087@(14758, 7466)/A`<br>`621494@(14329, 10395)/D`<br>`621539@(9453, 7763)/E`<br>`622143@(19197, 10553)/C`<br>`622144@(17385, 6390)/B`     | `702788`<br>`623688`<br>`703038`<br>`702790`<br>`702789` |
+| `H_Combat06` | `573087@(9187, 8192)/B`<br>`621502@(12339, 6981)/A`<br>`622316@(8544, 5870)/C`<br>`622317@(7983, 3503)/E`<br>`622318@(5177, 5700)/D`          | `623162`<br>`622291`<br>`623230`<br>`623414`<br>`623319` |
+| `H_Combat07` | `573087@(9298, 7371)/A`<br>`621494@(16392, 7190)/C`<br>`621503@(12834, 5484)/B`                                                               | `621713`<br>`624900`<br>`624766`                         |
+| `H_Combat08` | `573087@(10948, 5979)/C`<br>`621402@(13855, 8369)/A`<br>`621428@(10215, 8608)/B`                                                              | `686172`<br>`686024`<br>`685738`                         |
+| `H_Combat09` | `621502@(13504, 10048)/A`<br>`715348@(11988, 8423)/C`<br>`715375@(11397, 9313)/B`                                                             | `715403`<br>`715404`<br>`715402`                         |
+| `H_Combat10` | `624446@(19414, 14777)/B`<br>`624455@(22730, 16666)/C`<br>`624464@(21865, 14280)/E`<br>`624473@(24972, 14791)/D`<br>`624513@(19917, 16794)/A` | `625484`<br>`624602`<br>`624613`<br>`624606`<br>`624590` |
+| `H_Combat11` | `621502@(17633, 16745)/B`<br>`622748@(13988, 15451)/A`<br>`622753@(15358, 13803)/D`<br>`622758@(17840, 13311)/E`<br>`622768@(18717, 15035)/C` | `626466`<br>`627301`<br>`626489`<br>`626473`<br>`626453` |
+| `H_Combat12` | `627077@(20085, 23537)/C`<br>`627110@(17069, 23057)/B`<br>`627112@(16433, 25377)/A`                                                           | `628297`<br>`628270`<br>`628299`                         |
+| `H_Combat13` | `621502@(12447, 8763)/unmapped`<br>`715356@(11457, 6668)/B`                                                                                   | none<br>`715598`                                         |
+| `H_Combat14` | `621502@(13345, 8364)/A`<br>`736882@(11490, 6938)/B`                                                                                          | `621276`<br>`737002`                                     |
+| `H_Combat15` | `621502@(13206, 8578)/C`<br>`737521@(12449, 8108)/B`<br>`737530@(12053, 8756)/A`                                                              | `737970`<br>`737969`<br>`621276`                         |
 
 ### `H_Combat13` source discrepancy
 
@@ -396,7 +405,9 @@ or an authored assignment.
 
 Schema 78 and catalog normalization now carry each audited room's finite,
 room-scoped entry, cage, and optional point declarations into one
-occurrence-owned Fields spatial state. That state retains the selected entry,
+occurrence-owned Fields spatial state. The catalog also declares each mapped
+cage point's spawn representative; unmapped `H_Combat13` point `621502` has
+none. That state retains the selected entry,
 slot-keyed cage and optional assignments, and a Nemesis assignment. The engine
 derives activation and uniqueness from the existing logical cage prefix,
 optional prefix, and Passive encounter rather than introducing a second room

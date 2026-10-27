@@ -59,10 +59,28 @@ export function normalizeFieldsSpatial(
   });
   if (new Set(excluded).size !== excluded.length)
     fail(`${path}.nemesisExcludedOptionalPointIds`, 'must not contain duplicates');
+  const cageSet = new Set(cagePointIds);
+  const representedCages = new Set<number>();
+  const representatives = new Set<number>();
+  const cageSpawnRepresentatives = raw.cageSpawnRepresentatives.map((entry, index) => {
+    const entryPath = `${path}.cageSpawnRepresentatives[${index}]`;
+    const cagePointId = requirePositiveInteger(entry.cagePointId, `${entryPath}.cagePointId`);
+    const spawnPointId = requirePositiveInteger(entry.spawnPointId, `${entryPath}.spawnPointId`);
+    if (!cageSet.has(cagePointId))
+      fail(`${entryPath}.cagePointId`, `is not a cage point ${cagePointId}`);
+    if (representedCages.has(cagePointId))
+      fail(`${entryPath}.cagePointId`, `duplicates ${cagePointId}`);
+    if (representatives.has(spawnPointId))
+      fail(`${entryPath}.spawnPointId`, `duplicates ${spawnPointId}`);
+    representedCages.add(cagePointId);
+    representatives.add(spawnPointId);
+    return Object.freeze({ cagePointId, spawnPointId });
+  });
   return Object.freeze({
     entryPairs: Object.freeze(entryPairs),
     cagePointIds,
     optionalPointIds,
     nemesisExcludedOptionalPointIds: Object.freeze(excluded),
+    cageSpawnRepresentatives: Object.freeze(cageSpawnRepresentatives),
   });
 }

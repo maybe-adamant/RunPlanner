@@ -8,6 +8,13 @@ export const hFieldsSpatial: Readonly<Record<HCombatRoom, FieldsSpatialDeclarati
     cagePointIds: [40055, 568803, 568804, 568805, 568806],
     optionalPointIds: [685784, 685785, 685786, 685787],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [
+      { cagePointId: 40055, spawnPointId: 572726 },
+      { cagePointId: 568803, spawnPointId: 572967 },
+      { cagePointId: 568804, spawnPointId: 572815 },
+      { cagePointId: 568805, spawnPointId: 572761 },
+      { cagePointId: 568806, spawnPointId: 685585 },
+    ],
   },
   H_Combat02: {
     entryPairs: [
@@ -17,12 +24,22 @@ export const hFieldsSpatial: Readonly<Record<HCombatRoom, FieldsSpatialDeclarati
     cagePointIds: [621502, 622508, 622860],
     optionalPointIds: [572849, 622840, 736792],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [
+      { cagePointId: 621502, spawnPointId: 621276 },
+      { cagePointId: 622508, spawnPointId: 623047 },
+      { cagePointId: 622860, spawnPointId: 623048 },
+    ],
   },
   H_Combat03: {
     entryPairs: [{ startPointId: 755842, endPointId: 755845 }],
     cagePointIds: [40055, 568938, 568943],
     optionalPointIds: [686839, 686840, 686841, 686910, 686939],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [
+      { cagePointId: 40055, spawnPointId: 568951 },
+      { cagePointId: 568938, spawnPointId: 568971 },
+      { cagePointId: 568943, spawnPointId: 686963 },
+    ],
   },
   H_Combat04: {
     entryPairs: [
@@ -34,6 +51,12 @@ export const hFieldsSpatial: Readonly<Record<HCombatRoom, FieldsSpatialDeclarati
     cagePointIds: [569103, 573087, 573088, 573089],
     optionalPointIds: [572848, 572849, 572851, 572886, 572888, 572890, 633100],
     nemesisExcludedOptionalPointIds: [572886],
+    cageSpawnRepresentatives: [
+      { cagePointId: 569103, spawnPointId: 686366 },
+      { cagePointId: 573087, spawnPointId: 686471 },
+      { cagePointId: 573088, spawnPointId: 686572 },
+      { cagePointId: 573089, spawnPointId: 686651 },
+    ],
   },
   H_Combat05: {
     entryPairs: [
@@ -43,6 +66,13 @@ export const hFieldsSpatial: Readonly<Record<HCombatRoom, FieldsSpatialDeclarati
     cagePointIds: [573087, 621494, 621539, 622143, 622144],
     optionalPointIds: [572849, 621492, 622138, 622142, 623602, 623964, 623973],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [
+      { cagePointId: 573087, spawnPointId: 702788 },
+      { cagePointId: 621494, spawnPointId: 623688 },
+      { cagePointId: 621539, spawnPointId: 703038 },
+      { cagePointId: 622143, spawnPointId: 702790 },
+      { cagePointId: 622144, spawnPointId: 702789 },
+    ],
   },
   H_Combat06: {
     entryPairs: [
@@ -54,6 +84,13 @@ export const hFieldsSpatial: Readonly<Record<HCombatRoom, FieldsSpatialDeclarati
     cagePointIds: [573087, 621502, 622316, 622317, 622318],
     optionalPointIds: [572849, 622428, 622432, 622511],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [
+      { cagePointId: 573087, spawnPointId: 623162 },
+      { cagePointId: 621502, spawnPointId: 622291 },
+      { cagePointId: 622316, spawnPointId: 623230 },
+      { cagePointId: 622317, spawnPointId: 623414 },
+      { cagePointId: 622318, spawnPointId: 623319 },
+    ],
   },
   H_Combat07: {
     entryPairs: [
@@ -65,6 +102,11 @@ export const hFieldsSpatial: Readonly<Record<HCombatRoom, FieldsSpatialDeclarati
     cagePointIds: [573087, 621494, 621503],
     optionalPointIds: [621561, 621563, 621565],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [
+      { cagePointId: 573087, spawnPointId: 621713 },
+      { cagePointId: 621494, spawnPointId: 624900 },
+      { cagePointId: 621503, spawnPointId: 624766 },
+    ],
   },
   H_Combat08: {
     entryPairs: [
@@ -74,12 +116,22 @@ export const hFieldsSpatial: Readonly<Record<HCombatRoom, FieldsSpatialDeclarati
     cagePointIds: [573087, 621402, 621428],
     optionalPointIds: [572849, 621572, 621574],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [
+      { cagePointId: 573087, spawnPointId: 686172 },
+      { cagePointId: 621402, spawnPointId: 686024 },
+      { cagePointId: 621428, spawnPointId: 685738 },
+    ],
   },
   H_Combat09: {
     entryPairs: [{ startPointId: 755837, endPointId: 755840 }],
     cagePointIds: [621502, 715348, 715375],
     optionalPointIds: [572849, 715349],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [
+      { cagePointId: 621502, spawnPointId: 715403 },
+      { cagePointId: 715348, spawnPointId: 715404 },
+      { cagePointId: 715375, spawnPointId: 715402 },
+    ],
   },
   H_Combat10: {
     entryPairs: [
@@ -90,6 +142,13 @@ export const hFieldsSpatial: Readonly<Record<HCombatRoom, FieldsSpatialDeclarati
     cagePointIds: [624446, 624455, 624464, 624473, 624513],
     optionalPointIds: [624525, 624527, 624721, 625847],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [
+      { cagePointId: 624446, spawnPointId: 625484 },
+      { cagePointId: 624455, spawnPointId: 624602 },
+      { cagePointId: 624464, spawnPointId: 624613 },
+      { cagePointId: 624473, spawnPointId: 624606 },
+      { cagePointId: 624513, spawnPointId: 624590 },
+    ],
   },
   H_Combat11: {
     entryPairs: [
@@ -100,6 +159,13 @@ export const hFieldsSpatial: Readonly<Record<HCombatRoom, FieldsSpatialDeclarati
     cagePointIds: [621502, 622748, 622753, 622758, 622768],
     optionalPointIds: [625917, 627263],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [
+      { cagePointId: 621502, spawnPointId: 626466 },
+      { cagePointId: 622748, spawnPointId: 627301 },
+      { cagePointId: 622753, spawnPointId: 626489 },
+      { cagePointId: 622758, spawnPointId: 626473 },
+      { cagePointId: 622768, spawnPointId: 626453 },
+    ],
   },
   H_Combat12: {
     entryPairs: [
@@ -109,6 +175,11 @@ export const hFieldsSpatial: Readonly<Record<HCombatRoom, FieldsSpatialDeclarati
     cagePointIds: [627077, 627110, 627112],
     optionalPointIds: [627062, 627063, 627093],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [
+      { cagePointId: 627077, spawnPointId: 628297 },
+      { cagePointId: 627110, spawnPointId: 628270 },
+      { cagePointId: 627112, spawnPointId: 628299 },
+    ],
   },
   H_Combat13: {
     entryPairs: [
@@ -118,6 +189,7 @@ export const hFieldsSpatial: Readonly<Record<HCombatRoom, FieldsSpatialDeclarati
     cagePointIds: [621502, 715356],
     optionalPointIds: [572849, 736822],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [{ cagePointId: 715356, spawnPointId: 715598 }],
   },
   H_Combat14: {
     entryPairs: [
@@ -127,6 +199,10 @@ export const hFieldsSpatial: Readonly<Record<HCombatRoom, FieldsSpatialDeclarati
     cagePointIds: [621502, 736882],
     optionalPointIds: [572849, 737000],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [
+      { cagePointId: 621502, spawnPointId: 621276 },
+      { cagePointId: 736882, spawnPointId: 737002 },
+    ],
   },
   H_Combat15: {
     entryPairs: [
@@ -136,5 +212,10 @@ export const hFieldsSpatial: Readonly<Record<HCombatRoom, FieldsSpatialDeclarati
     cagePointIds: [621502, 737521, 737530],
     optionalPointIds: [572849, 737955],
     nemesisExcludedOptionalPointIds: [],
+    cageSpawnRepresentatives: [
+      { cagePointId: 621502, spawnPointId: 737970 },
+      { cagePointId: 737521, spawnPointId: 737969 },
+      { cagePointId: 737530, spawnPointId: 621276 },
+    ],
   },
 };

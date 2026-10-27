@@ -1093,6 +1093,15 @@ export interface FieldsSpatialDeclaration {
   readonly cagePointIds: readonly number[];
   readonly optionalPointIds: readonly number[];
   readonly nemesisExcludedOptionalPointIds: readonly number[];
+  /**
+   * One enemy spawn point exclusive to each mapped cage point's
+   * `RewardCageSpawnPoints` group; an opened cage's eligible spawn points
+   * contain only its own representative. Unmapped cage points have none.
+   */
+  readonly cageSpawnRepresentatives: readonly {
+    readonly cagePointId: number;
+    readonly spawnPointId: number;
+  }[];
 }
 
 export type AuthoredFieldInitialization<T> =
