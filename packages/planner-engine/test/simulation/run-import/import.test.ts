@@ -281,9 +281,9 @@ describe('run import of the Underworld capture', () => {
         roomActionOrder: 9,
         traitOffer: 3,
       },
-      notInRecord: { embryo: 3, fields: 4, pathOfStars: 1, route: 1, traitOffer: 5 },
+      notInRecord: { embryo: 3, fields: 4, loadout: 1, pathOfStars: 1, route: 1, traitOffer: 5 },
       refused: { doors: 1, fields: 2, pool: 1, traitOffer: 1 },
-      unsupportedArea: { loadout: 1, shop: 2, well: 1 },
+      unsupportedArea: { shop: 2, well: 1 },
     });
     // G_Combat20's positional first door (G_Combat08) is refused at its exit and moves later.
     // H_Combat07's first two cages lose their store entries to the guessed cages of its twin door.
@@ -458,8 +458,7 @@ describe('run import of the Surface capture', () => {
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { conversion: 2, menace: 14, roomActionOrder: 5 },
-      notInRecord: { menace: 17, reward: 1, shop: 10 },
-      unsupportedArea: { loadout: 1 },
+      notInRecord: { loadout: 1, menace: 17, reward: 1, shop: 10 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption menace r1 encounterPhase@N-r1:Encounter -> ReplaceEncounterCustomization(N-r1 generated)',
@@ -539,6 +538,49 @@ describe('run import door assignment', () => {
     expect(reward(imported.project, 'F-r10-d560915').offer).toEqual({
       rewardType: 'MaxHealthDrop',
     });
+  });
+});
+
+describe('run import of keepsake equip grants', () => {
+  /** Erebus with a neutral starting keepsake, its rack swapped to `to` and granting `granted`. */
+  function erebusRackSwap(to: string, granted: string): RunRecord {
+    const record = fixture('underworld');
+    const worldTime = 340.65;
+    return {
+      ...record,
+      route: { biomes: ['F'], dream: false },
+      loadout: { ...record.loadout, keepsake: { name: 'LowHealthCritKeepsake', rarity: 'Epic' } },
+      rooms: record.rooms.slice(0, 14).map((room, index) =>
+        index !== 13
+          ? room
+          : {
+              ...room,
+              keepsakeSwap: { from: 'LowHealthCritKeepsake', to },
+              traits: {
+                ...room.traits,
+                acquired: [
+                  { name: to, rarity: 'Epic', worldTime },
+                  { name: granted, worldTime },
+                ],
+              },
+            },
+      ),
+    };
+  }
+
+  it.each([
+    ['HadesAndPersephoneKeepsake', 'HadesInvisibilityRetaliateBoon', 'jeweledPom'],
+    ['TempHammerKeepsake', 'StaffDoubleAttackTrait', 'experimentalHammer'],
+  ] as const)('imports the trait a rack swap to %s grants', (to, granted, resultKind) => {
+    const imported = projectFromRunRecord(catalog, erebusRackSwap(to, granted));
+    expect(imported.kind).toBe('complete');
+    const result = occurrence(imported.project, 'F-r11:postboss').keepsakeRack?.equipResults?.[
+      resultKind
+    ];
+    expect(result).toMatchObject({ traitKey: granted });
+    expect(
+      imported.report.entries.filter((entry) => entry.area === 'rack' || entry.area === 'loadout'),
+    ).toEqual([]);
   });
 });
 

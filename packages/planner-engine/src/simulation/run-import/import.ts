@@ -456,9 +456,8 @@ class RunImportWalk {
 }
 
 /**
- * Questions of areas no capture has exercised: Travel Deal refills, Jeweled
- * Pom and Experimental Hammer equip results, Steady Growth, Judgment and the
- * Crystal Figurine.
+ * Questions of areas no capture has exercised: Travel Deal refills, Steady
+ * Growth, Judgment and the Crystal Figurine.
  */
 function isUnreadQuestion(reason: SemanticFinding): boolean {
   const origin = reason.origin;
@@ -470,8 +469,6 @@ function isUnreadQuestion(reason: SemanticFinding): boolean {
         (origin.target.kind === 'stygianWellOffer' || origin.target.kind === 'hermesShrineOffer') &&
         origin.target.generationKey === 'travelDealRefill'
       );
-    case 'keepsakeEquipResult':
-      return origin.resultKind !== 'transcendentEmbryo';
     case 'steadyGrowthOutcome':
     case 'judgmentArcana':
     case 'figurineArcana':

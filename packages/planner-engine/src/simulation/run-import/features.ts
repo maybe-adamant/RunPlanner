@@ -2,6 +2,7 @@ import {
   createBiomeAddress,
   createOccurrenceAddress,
   createPostbossKeepsakeSelectionAddress,
+  type AuthoredExperimentalHammerEquipResult,
   type AuthoredTraitOffer,
   type AuthoredTraitOption,
   type ProjectCommand,
@@ -28,7 +29,10 @@ type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { read
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 const record = (roomIndex: number) => ({ roomIndex, visit: 0 });
 
-/** Answers the Spell pick, Path of Stars screens and Transcendent Embryo blessings from the record. */
+/**
+ * Answers the Spell pick, Path of Stars screens, Transcendent Embryo blessings
+ * and Jeweled Pom and Experimental Hammer grants from the record.
+ */
 export function answerFeatures(context: RunImportContext, reason: SemanticFinding): boolean {
   const origin = reason.origin;
   if (reason.code === 'traitOfferMissing' && origin.kind === 'traitOffer')
@@ -41,6 +45,8 @@ export function answerFeatures(context: RunImportContext, reason: SemanticFindin
     origin.resultKind === 'transcendentEmbryo'
   )
     return answerEmbryoEquip(context, origin);
+  if (reason.code === 'keepsakeEquipResultMissing' && origin.kind === 'keepsakeEquipResult')
+    return answerGrantedTrait(context, origin);
   if (
     reason.code === 'transcendentEmbryoOutcomeMissing' &&
     origin.kind === 'transcendentEmbryoOutcome'
@@ -298,6 +304,60 @@ function answerEmbryoEquip(
     applied: command,
     record: record(roomIndex),
   });
+  return true;
+}
+
+/**
+ * Jeweled Pom's Hades trait and Experimental Hammer's hammer are granted with
+ * the keepsake, in the bracket of the room that equips it. The run-start grant
+ * precedes the record's first trait snapshot, so only rack and Echo equips are read.
+ */
+function answerGrantedTrait(
+  context: RunImportContext,
+  result: Origin<'keepsakeEquipResult'>,
+): boolean {
+  if ('owner' in result.selection && result.selection.owner === 'routeStart') return false;
+  const roomIndex = selectionRoom(context, result.selection);
+  if (roomIndex === undefined) return false;
+  const evaluation = context.candidates().evaluate({ kind: 'keepsakeEquipResult', result });
+  if (evaluation.kind !== 'keepsakeEquipResult') return false;
+  const options = evaluation.result.options.filter(
+    (option) => option.resultKind === result.resultKind,
+  );
+  const traitOf = (option: (typeof options)[number]) =>
+    'traitKey' in option.value ? option.value.traitKey : undefined;
+  const offered = new Set(options.map(traitOf));
+  const acquired = context.record.rooms[roomIndex]!.traits.acquired;
+  const keepsakeAt = acquired.find(
+    (trait) => context.catalog.keepsakes.byKey[trait.name] !== undefined,
+  )?.worldTime;
+  const granted = acquired.filter((trait) => offered.has(trait.name));
+  const timed = granted.filter(
+    (trait) => keepsakeAt !== undefined && trait.worldTime === keepsakeAt,
+  );
+  const traitKey = (timed.length === 1 ? timed : granted.length === 1 ? granted : [])[0]?.name;
+  // A Hammer equipped with no eligible hammer left grants nothing.
+  const option =
+    traitKey === undefined
+      ? options.find((candidate) => !('traitKey' in candidate.value) && candidate.selectedPossible)
+      : options.find((candidate) => traitOf(candidate) === traitKey);
+  if (option === undefined) return false;
+  const command: ProjectCommand =
+    result.resultKind === 'jeweledPom'
+      ? {
+          kind: 'ReplaceJeweledPomEquipResult',
+          result: result as typeof result & { readonly resultKind: 'jeweledPom' },
+          value: { traitKey: traitKey! },
+        }
+      : {
+          kind: 'ReplaceExperimentalHammerEquipResult',
+          result: result as typeof result & { readonly resultKind: 'experimentalHammer' },
+          value: option.value as AuthoredExperimentalHammerEquipResult,
+        };
+  if (!option.selectedPossible || !context.applyValid(command)) {
+    context.refuse();
+    return false;
+  }
   return true;
 }
 
