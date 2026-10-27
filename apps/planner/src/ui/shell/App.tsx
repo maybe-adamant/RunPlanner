@@ -27,6 +27,7 @@ import type { ReleaseUpdateController } from '@planner/persistence/releaseUpdate
 import type { GameStatusController } from '@planner/persistence/gameModuleHost';
 import type { BugReportOperations } from '@planner/workspace/bugReport';
 import type { CatalogFeedController } from '@planner/workspace/catalogFeed';
+import type { RecordingController } from '@planner/workspace/run-recording/recordingController';
 import type { CommunityEventController } from '@planner/workspace/communityEvents';
 import type { SlotRebuildController } from '@planner/workspace/slotRebuild';
 import type { DraftRunController } from '@planner/workspace/draftRun';
@@ -63,6 +64,8 @@ interface AppProps {
   /** Present only in the desktop application. */
   readonly planCatalog?: CatalogFeedController;
   readonly projectOperations: ProjectOperations;
+  /** Present only in the desktop application. */
+  readonly recording?: RecordingController;
   readonly releaseUpdates?: ReleaseUpdateController;
   /** Present only in the desktop application. */
   readonly slotRebuild?: SlotRebuildController;
@@ -85,6 +88,7 @@ export function App({
   gameStatus,
   planCatalog,
   projectOperations,
+  recording,
   releaseUpdates,
   slotRebuild,
   selectStructuredWorkspace,
@@ -166,6 +170,7 @@ export function App({
               gameStatus={gameStatus}
               operations={projectOperations}
               planCatalog={planCatalog}
+              recording={recording}
               releaseUpdates={releaseUpdates}
               routes={editorNavigation.routes.values}
               scale={scale}

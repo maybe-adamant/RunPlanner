@@ -16,6 +16,7 @@ import type { BugReportOperations } from '@planner/workspace/bugReport';
 import type { CatalogFeedController } from '@planner/workspace/catalogFeed';
 import type { CommunityEventController } from '@planner/workspace/communityEvents';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
+import type { RecordingController } from '@planner/workspace/run-recording/recordingController';
 import type { SlotRebuildController } from '@planner/workspace/slotRebuild';
 import { hintProps } from '@planner/ui/controls/hint';
 import { BugReportDialog } from '../shell/BugReportDialog';
@@ -24,6 +25,8 @@ import { ReleaseUpdateCheck } from '../shell/ReleaseUpdates';
 import type { AppScale } from '../shell/useAppScale';
 import { GameScreen } from './GameScreen';
 import { LibraryScreen } from './LibraryScreen';
+import { RecentRunsScreen } from './RecentRunsScreen';
+import { RecordingControl } from './RecordingControl';
 import { SettingsScreen } from './SettingsScreen';
 import {
   useGameStatusRefresh,
@@ -37,6 +40,7 @@ const noSubscription = () => () => undefined;
 const TABS: readonly { readonly tab: HomeTab; readonly label: string }[] = [
   { tab: 'library', label: 'Library' },
   { tab: 'catalog', label: 'Catalog' },
+  { tab: 'runs', label: 'Recent runs' },
   { tab: 'game', label: 'Game' },
   { tab: 'settings', label: 'Settings' },
 ];
@@ -166,6 +170,7 @@ export function HomeScreen({
   gameStatus,
   operations,
   planCatalog,
+  recording,
   releaseUpdates,
   routes,
   scale,
@@ -182,6 +187,8 @@ export function HomeScreen({
   readonly operations: ProjectOperations;
   /** The plan catalog; absent where there is no host to read it, as in the browser. */
   readonly planCatalog: CatalogFeedController | undefined;
+  /** Run recording; absent where there is no host to watch saves, as in the browser. */
+  readonly recording: RecordingController | undefined;
   readonly releaseUpdates: ReleaseUpdateController | undefined;
   readonly routes: readonly RouteEditorNavigation[];
   readonly scale: AppScale;
@@ -195,7 +202,11 @@ export function HomeScreen({
   useGameStatusRefresh(gameStatus);
   const snapshot = useGameStatusSnapshot(gameStatus);
   const index = useLibrarySlotLinks(operations, gameStatus);
-  useLibraryRescan(index.refresh, tab === 'library' || tab === 'catalog');
+  useLibraryRescan(index.refresh, tab === 'library' || tab === 'catalog' || tab === 'runs');
+  const shown =
+    (tab === 'catalog' && planCatalog === undefined) || (tab === 'runs' && recording === undefined)
+      ? 'library'
+      : tab;
   const eventActive = useSyncExternalStore(
     communityEvents?.subscribe ?? noSubscription,
     () => communityEvents?.getSnapshot().kind === 'active',
@@ -212,34 +223,39 @@ export function HomeScreen({
       >
         <div className="home-brand-row">
           <h1>Run Planner</h1>
-          <AboutPopover
-            bugReport={bugReport}
-            buildIdentity={buildIdentity}
-            catalogSummary={catalogSummary}
-            releaseUpdates={releaseUpdates}
-          />
+          <div className="home-brand-actions">
+            {recording === undefined ? null : <RecordingControl controller={recording} />}
+            <AboutPopover
+              bugReport={bugReport}
+              buildIdentity={buildIdentity}
+              catalogSummary={catalogSummary}
+              releaseUpdates={releaseUpdates}
+            />
+          </div>
         </div>
         <div className="home-tab-row">
           <nav aria-label="Home" className="home-nav">
-            {TABS.filter((entry) => entry.tab !== 'catalog' || planCatalog !== undefined).map(
-              (entry) => (
-                <button
-                  aria-current={entry.tab === tab ? 'page' : undefined}
-                  className="home-nav-tab"
-                  key={entry.tab}
-                  onClick={() => dispatch(viewChanged({ kind: 'home', tab: entry.tab }))}
-                  type="button"
-                >
-                  {entry.label}
-                  {entry.tab === 'game' && (moduleState === 'updateAvailable' || eventActive) ? (
-                    <span className="home-nav-note">
-                      {moduleState === 'updateAvailable' ? ' · update' : null}
-                      {eventActive ? <span data-tone="event"> · event</span> : null}
-                    </span>
-                  ) : null}
-                </button>
-              ),
-            )}
+            {TABS.filter(
+              (entry) =>
+                (entry.tab !== 'catalog' || planCatalog !== undefined) &&
+                (entry.tab !== 'runs' || recording !== undefined),
+            ).map((entry) => (
+              <button
+                aria-current={entry.tab === tab ? 'page' : undefined}
+                className="home-nav-tab"
+                key={entry.tab}
+                onClick={() => dispatch(viewChanged({ kind: 'home', tab: entry.tab }))}
+                type="button"
+              >
+                {entry.label}
+                {entry.tab === 'game' && (moduleState === 'updateAvailable' || eventActive) ? (
+                  <span className="home-nav-note">
+                    {moduleState === 'updateAvailable' ? ' · update' : null}
+                    {eventActive ? <span data-tone="event"> · event</span> : null}
+                  </span>
+                ) : null}
+              </button>
+            ))}
           </nav>
           {/* The shown tab's own actions, such as the Library's New plan. */}
           <div className="home-tab-actions" ref={setTabActions} />
@@ -247,7 +263,7 @@ export function HomeScreen({
       </header>
       <div className="home-body">
         {notices}
-        {tab === 'library' || (tab === 'catalog' && planCatalog === undefined) ? (
+        {shown === 'library' ? (
           <LibraryScreen
             actionsSlot={tabActions}
             catalog={catalog}
@@ -257,7 +273,14 @@ export function HomeScreen({
             operations={operations}
             routes={routes}
           />
-        ) : tab === 'catalog' ? (
+        ) : shown === 'runs' ? (
+          <RecentRunsScreen
+            catalog={catalog}
+            controller={recording!}
+            index={index}
+            operations={operations}
+          />
+        ) : shown === 'catalog' ? (
           <CatalogScreen
             catalog={catalog}
             controller={planCatalog!}
@@ -265,7 +288,7 @@ export function HomeScreen({
             operations={operations}
             routes={routes}
           />
-        ) : tab === 'game' ? (
+        ) : shown === 'game' ? (
           <GameScreen
             catalog={catalog}
             {...(communityEvents === undefined ? {} : { communityEvents })}

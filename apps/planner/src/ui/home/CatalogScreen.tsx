@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { CatalogEntry } from '@planner/persistence/catalogFeedHost';
@@ -15,31 +15,11 @@ import {
 } from '@planner/workspace/catalogFeed';
 import type { ProjectOperations } from '@planner/workspace/projectOperations';
 import { HomeContext } from './HomeContext';
+import { useLibraryCopies } from './useLibraryCopies';
 import type { LibrarySlotIndex } from './useLibrarySlotLinks';
 
 function routeTone(routeKey: string): string {
   return routeKey === 'Surface' || routeKey === 'Dream' ? 'surface' : 'underworld';
-}
-
-const NO_COPIES: Readonly<Record<string, string>> = Object.freeze({});
-
-/** Which catalog entries were added to the library, read again after each addition. */
-function useCatalogCopies(operations: ProjectOperations) {
-  const [copies, setCopies] = useState(NO_COPIES);
-  const [revision, setRevision] = useState(0);
-  useEffect(() => {
-    let live = true;
-    operations.catalogCopies().then(
-      (read) => {
-        if (live) setCopies(read);
-      },
-      () => undefined,
-    );
-    return () => {
-      live = false;
-    };
-  }, [operations, revision]);
-  return { copies, refresh: useCallback(() => setRevision((current) => current + 1), []) };
 }
 
 function RowAction({
@@ -112,7 +92,7 @@ export function CatalogScreen({
     controller.getSnapshot,
     controller.getSnapshot,
   );
-  const { copies, refresh: refreshCopies } = useCatalogCopies(operations);
+  const { copies, refresh: refreshCopies } = useLibraryCopies(operations);
   const [category, setCategory] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
   const [routeKey, setRouteKey] = useState<string | null>(null);

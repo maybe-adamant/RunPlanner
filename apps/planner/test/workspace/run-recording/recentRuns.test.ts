@@ -16,6 +16,7 @@ function entry(startedAt: number, values: Partial<RecentRunEntry> = {}): RecentR
     id: `p1-${startedAt}-${startedAt + 1000}`,
     profile: 1,
     runCount: startedAt + 1000,
+    attempt: 1,
     startedAt,
     outcome: 'death',
     route: { biomes: ['F'], dream: false, rooms: 9, endingRoom: 'F_Boss01' },
@@ -67,7 +68,8 @@ describe('recent runs store', () => {
   it('round-trips an entry and lists a document it cannot read as unreadable', async () => {
     const host = createMemoryRecordHost().recentRuns;
     const store = createRecentRunsStore(host);
-    const gapped = entry(7, { gap: true, outcome: 'abandoned' });
+    // A cut run keeps the outcome its end save showed.
+    const gapped = entry(7, { gap: true, outcome: 'death', attempt: 3 });
     await store.add(gapped);
     host.files.set('p1-8-1008', JSON.stringify({ ...entry(8), entryVersion: 2 }));
     expect(await store.list()).toEqual({
@@ -79,8 +81,9 @@ describe('recent runs store', () => {
       id: 'p1-7-1007',
       profile: 1,
       runCount: 1007,
+      attempt: 3,
       startedAt: 7,
-      outcome: 'abandoned',
+      outcome: 'death',
       route: gapped.route,
       importKind: 'complete',
       reportCount: 0,

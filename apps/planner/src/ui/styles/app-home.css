@@ -1293,6 +1293,245 @@ button.home-slot-name {
   gap: 12px;
 }
 
+/* Recent runs */
+.home-brand-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.recording-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.recording-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-shadow: var(--home-text-shadow);
+}
+
+.recording-indicator:hover .recording-status-text {
+  text-decoration: underline;
+}
+
+.recording-status-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recording-toggle {
+  flex: none;
+}
+
+.recording-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #55535d;
+}
+
+.recording-indicator[data-tone='ok'] {
+  color: #9fd6a8;
+}
+
+.recording-indicator[data-tone='ok'] .recording-dot {
+  background: #9fd6a8;
+}
+
+.recording-indicator[data-tone='next'] {
+  color: var(--selection-accent);
+}
+
+.recording-indicator[data-tone='next'] .recording-dot {
+  background: #e06b5f;
+  box-shadow: 0 0 0 3px rgb(224 107 95 / 22%);
+}
+
+.recording-indicator[data-tone='error'] {
+  color: var(--danger);
+}
+
+.recording-indicator[data-tone='error'] .recording-dot {
+  background: var(--danger);
+}
+
+.recent-runs-problem {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.recent-runs-folder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 0.8rem;
+}
+
+.recent-runs-folder-path {
+  overflow: hidden;
+  color: #d7d2ca;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  max-width: 34rem;
+}
+
+.recent-runs-table th:first-child {
+  width: 17%;
+}
+
+.recent-runs-table th:nth-child(2) {
+  width: 31%;
+}
+
+.recent-runs-table th:nth-child(4) {
+  width: 15%;
+}
+
+.recent-runs-actions-column {
+  width: 210px;
+}
+
+.recent-runs-table tr[data-expanded] td {
+  border-bottom-color: transparent;
+}
+
+.recent-run-count {
+  margin-top: 3px;
+  font-size: 0.78rem;
+}
+
+.recent-run-route {
+  margin-top: 0;
+  color: #f3eee5;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.recent-run-outcome {
+  font-weight: 650;
+}
+
+.recent-run-outcome[data-tone='ok'] {
+  color: #9fd6a8;
+}
+
+.recent-run-guess-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.recent-run-marker {
+  padding: 1px 7px;
+  border: 1px solid #4a4030;
+  border-radius: 999px;
+  color: #e8c27a;
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.recent-run-marker[data-kind='failed'] {
+  border-color: #4d3434;
+  color: var(--danger);
+}
+
+.recent-run-guesses-row td {
+  padding-top: 0;
+}
+
+.recent-run-guesses {
+  columns: 280px auto;
+  column-gap: 22px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #1b1c22;
+}
+
+.recent-run-guess-group {
+  break-inside: avoid;
+  padding-bottom: 10px;
+}
+
+.recent-run-guess-group h4 {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.recent-run-guess-group ul,
+ul.recent-run-assumed {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+}
+
+.recent-run-guess-group li {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.recent-run-guesses ul.recent-run-assumed {
+  padding-bottom: 10px;
+}
+
+.recent-run-assumed li,
+.recent-run-guess-assumed {
+  color: #d7d2ca;
+}
+
+.recent-run-guess-assumed {
+  padding-left: 2.1rem;
+}
+
+.recent-run-guess-order {
+  min-width: 1.6rem;
+  color: #77747e;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.recent-run-guess-room {
+  color: #d7d2ca;
+  white-space: nowrap;
+}
+
+.recent-run-guess-text {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-run-guesses-empty {
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+}
+
 @container app-viewport (max-width: 760px) {
   .catalog-table th:nth-child(2),
   .catalog-table td:nth-child(2) {

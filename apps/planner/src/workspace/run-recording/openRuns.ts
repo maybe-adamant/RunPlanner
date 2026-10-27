@@ -1,5 +1,5 @@
 import type { RecentRunsHost } from '@planner/persistence/recordHost';
-import type { OpenRun } from './runRecorder';
+import type { OpenRun, RunAttempt } from './runRecorder';
 import type { SaveCheckpoint } from './saveCheckpoint';
 
 const DOCUMENT_VERSION = 1;
@@ -17,6 +17,14 @@ export const openRunId = (profile: number) => `${PREFIX}${profile}`;
 
 const openRunProfile = (id: string): number | undefined => {
   const match = /^open-p(\d{1,4})$/.exec(id);
+  return match === null ? undefined : Number(match[1]);
+};
+
+/** Each profile's latest run start shares the folder too, under its own prefix. */
+export const attemptId = (profile: number) => `attempts-p${profile}`;
+
+const attemptProfile = (id: string): number | undefined => {
+  const match = /^attempts-p(\d{1,4})$/.exec(id);
   return match === null ? undefined : Number(match[1]);
 };
 
@@ -50,6 +58,7 @@ export function encodeOpenRun(run: OpenRun): string {
     openRunVersion: DOCUMENT_VERSION,
     profile: run.profile,
     runCount: run.runCount,
+    attempt: run.attempt,
     checkpoints: run.checkpoints,
   });
 }
@@ -63,8 +72,8 @@ export function decodeOpenRun(json: string, profile: number): OpenRun {
   }
   if (!isObject(value) || value.openRunVersion !== DOCUMENT_VERSION)
     throw new OpenRunDocumentError('the open run has an unknown version');
-  const { runCount, checkpoints } = value;
-  if (value.profile !== profile || !isWhole(runCount))
+  const { runCount, checkpoints, attempt } = value;
+  if (value.profile !== profile || !isWhole(runCount) || !isWhole(attempt) || attempt === 0)
     throw new OpenRunDocumentError('the open run identity is malformed');
   if (
     !Array.isArray(checkpoints) ||
@@ -78,6 +87,7 @@ export function decodeOpenRun(json: string, profile: number): OpenRun {
   return {
     profile,
     runCount,
+    attempt,
     checkpoints: Object.freeze(checkpoints as SaveCheckpoint[]),
   };
 }
@@ -85,8 +95,13 @@ export function decodeOpenRun(json: string, profile: number): OpenRun {
 /** Open runs kept across planner restarts, one document per save profile. */
 export interface OpenRunStore {
   /** Readable open runs, with a problem per document that could not be read and was removed. */
-  restore(): Promise<{ readonly runs: readonly OpenRun[]; readonly problems: readonly string[] }>;
+  restore(): Promise<{
+    readonly runs: readonly OpenRun[];
+    readonly attempts: ReadonlyMap<number, RunAttempt>;
+    readonly problems: readonly string[];
+  }>;
   save(run: OpenRun): Promise<void>;
+  saveAttempt(profile: number, attempt: RunAttempt): Promise<void>;
   remove(profile: number): Promise<void>;
 }
 
@@ -94,8 +109,21 @@ export function createOpenRunStore(host: RecentRunsHost): OpenRunStore {
   return Object.freeze({
     async restore() {
       const runs: OpenRun[] = [];
+      const attempts = new Map<number, RunAttempt>();
       const problems: string[] = [];
       for (const id of await host.list()) {
+        const attemptOf = attemptProfile(id);
+        if (attemptOf !== undefined) {
+          // An unreadable memory only restarts that profile's attempt numbering.
+          try {
+            const value: unknown = JSON.parse(await host.read(id));
+            if (isObject(value) && isWhole(value.runCount) && isWhole(value.attempt))
+              attempts.set(attemptOf, { runCount: value.runCount, attempt: value.attempt });
+          } catch {
+            // Read failures fall through to numbering from 1.
+          }
+          continue;
+        }
         const profile = openRunProfile(id);
         if (profile === undefined) continue;
         try {
@@ -109,9 +137,14 @@ export function createOpenRunStore(host: RecentRunsHost): OpenRunStore {
           await host.delete(id).catch(() => undefined);
         }
       }
-      return { runs, problems };
+      return { runs, attempts, problems };
     },
     save: (run: OpenRun) => host.write(openRunId(run.profile), encodeOpenRun(run)),
     remove: (profile: number) => host.delete(openRunId(profile)),
+    saveAttempt: (profile: number, attempt: RunAttempt) =>
+      host.write(
+        attemptId(profile),
+        JSON.stringify({ runCount: attempt.runCount, attempt: attempt.attempt }),
+      ),
   });
 }

@@ -166,6 +166,7 @@ createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
             ? {}
             : { slotRebuild: application.slotRebuild })}
           projectOperations={application.projectOperations}
+          {...(application.recording === undefined ? {} : { recording: application.recording })}
           selectStructuredWorkspace={application.selectStructuredWorkspace}
           {...(releaseUpdates === undefined ? {} : { releaseUpdates })}
         />

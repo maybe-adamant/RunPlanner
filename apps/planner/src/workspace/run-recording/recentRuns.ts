@@ -26,6 +26,8 @@ export interface RecentRunEntry {
   /** The save profile number the run was played on. */
   readonly profile: number;
   readonly runCount: number;
+  /** The Nth recorded start of this profile and run count. */
+  readonly attempt: number;
   /** Unix seconds of the run-start save. */
   readonly startedAt: number;
   readonly outcome: ClosedRun['outcome'];
@@ -47,10 +49,13 @@ export interface RecentRunSummary {
   readonly id: string;
   readonly profile: number;
   readonly runCount: number;
+  readonly attempt: number;
   readonly startedAt: number;
   readonly outcome: ClosedRun['outcome'];
   readonly route: RecentRunRoute;
   readonly importKind?: 'complete' | 'stopped';
+  /** Weapon and aspect game names, when the record was built. */
+  readonly loadout?: { readonly weapon: string; readonly aspect?: string };
   readonly reportCount: number;
   readonly gap: boolean;
   readonly failure?: string;
@@ -75,6 +80,7 @@ export function recentRunEntry(run: ClosedRun, result: RunImportResult): RecentR
     id: recentRunId(run),
     profile: run.profile,
     runCount: run.runCount,
+    attempt: run.attempt,
     startedAt: run.startedAt,
     outcome: run.outcome,
     route: {
@@ -96,10 +102,21 @@ export function summarizeRecentRun(entry: RecentRunEntry): RecentRunSummary {
     id: entry.id,
     profile: entry.profile,
     runCount: entry.runCount,
+    attempt: entry.attempt,
     startedAt: entry.startedAt,
     outcome: entry.outcome,
     route: entry.route,
     ...(entry.importKind === undefined ? {} : { importKind: entry.importKind }),
+    ...(entry.record === undefined
+      ? {}
+      : {
+          loadout: {
+            weapon: entry.record.loadout.weapon,
+            ...(entry.record.loadout.aspect === undefined
+              ? {}
+              : { aspect: entry.record.loadout.aspect.name }),
+          },
+        }),
     reportCount: entry.report?.entries.length ?? 0,
     gap: entry.gap === true,
     ...(entry.failure === undefined ? {} : { failure: entry.failure }),
@@ -126,12 +143,18 @@ export function decodeRecentRunEntry(json: string): RecentRunEntry {
     throw new RecentRunEntryError(`recent run ${field} is malformed`);
   };
   if (!isObject(value) || value.entryVersion !== ENTRY_VERSION) return fail('entryVersion');
-  const { id, profile, runCount, startedAt, outcome, route } = value;
+  const { id, profile, runCount, attempt, startedAt, outcome, route } = value;
   if (typeof id !== 'string' || idStart(id) === undefined) return fail('id');
   if (!isWhole(profile)) return fail('profile');
   if (!isWhole(runCount)) return fail('runCount');
+  if (!isWhole(attempt) || attempt === 0) return fail('attempt');
   if (!isWhole(startedAt)) return fail('startedAt');
-  if (outcome !== 'victory' && outcome !== 'death' && outcome !== 'abandoned')
+  if (
+    outcome !== 'victory' &&
+    outcome !== 'death' &&
+    outcome !== 'reset' &&
+    outcome !== 'unfinished'
+  )
     return fail('outcome');
   if (
     !isObject(route) ||
@@ -161,6 +184,7 @@ export function decodeRecentRunEntry(json: string): RecentRunEntry {
     id,
     profile,
     runCount,
+    attempt,
     startedAt,
     outcome,
     route: {

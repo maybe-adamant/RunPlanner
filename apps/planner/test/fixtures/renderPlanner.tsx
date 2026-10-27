@@ -60,6 +60,7 @@ export function renderPlannerForInteraction(options: RenderPlannerOptions = {}) 
         {...(application.planCatalog === undefined ? {} : { planCatalog: application.planCatalog })}
         {...(application.slotRebuild === undefined ? {} : { slotRebuild: application.slotRebuild })}
         projectOperations={application.projectOperations}
+        {...(application.recording === undefined ? {} : { recording: application.recording })}
         selectStructuredWorkspace={application.selectStructuredWorkspace}
       />
     </Provider>,

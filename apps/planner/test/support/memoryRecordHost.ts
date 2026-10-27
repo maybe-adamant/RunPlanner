@@ -9,6 +9,8 @@ export interface MemoryRecordHost extends RecordHost {
   /** Delivers a save to the current watch, as the host's poller would. */
   deliver(delivery: SaveFileDelivery): void;
   startFailure: string | null;
+  /** What the folder picker returns. */
+  chosenFolder: string | null;
 }
 
 export function createMemoryRecordHost(discovered = '/saves/Hades II'): MemoryRecordHost {
@@ -18,6 +20,7 @@ export function createMemoryRecordHost(discovered = '/saves/Hades II'): MemoryRe
   const host: MemoryRecordHost = {
     folder,
     startFailure: null,
+    chosenFolder: null,
     watched: () => watch?.folder ?? null,
     deliver: (delivery) => watch?.onSave(delivery),
     discoverFolder: () => Promise.resolve(discovered),
@@ -30,6 +33,7 @@ export function createMemoryRecordHost(discovered = '/saves/Hades II'): MemoryRe
       watch = null;
       return Promise.resolve();
     },
+    chooseFolder: () => Promise.resolve(host.chosenFolder),
     readSave(fileName) {
       const bytes = folder.get(fileName);
       return bytes === undefined

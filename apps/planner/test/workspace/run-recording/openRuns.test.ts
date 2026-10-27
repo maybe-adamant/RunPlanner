@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { sampleSaveBytes } from '@planner-test/support/syntheticSave';
+import { createMemoryRecordHost } from '@planner-test/support/memoryRecordHost';
 import {
+  createOpenRunStore,
   decodeOpenRun,
   encodeOpenRun,
   OpenRunDocumentError,
@@ -19,6 +21,7 @@ describe('open run documents', () => {
   const run: OpenRun = {
     profile: 1,
     runCount: 1002,
+    attempt: 2,
     checkpoints: [checkpoint('002'), checkpoint('004')],
   };
 
@@ -35,8 +38,27 @@ describe('open run documents', () => {
     bad({}, 2);
     bad({ openRunVersion: 2 });
     bad({ runCount: 1003 });
+    bad({ attempt: 0 });
+    bad({ attempt: undefined });
     bad({ checkpoints: [] });
     bad({ checkpoints: [run.checkpoints[1]] });
     bad({ checkpoints: [{ ...run.checkpoints[0], currentRoom: {} }] });
+  });
+
+  it('restore each profile attempt memory beside the open runs', async () => {
+    const host = createMemoryRecordHost().recentRuns;
+    const store = createOpenRunStore(host);
+    await store.save(run);
+    await store.saveAttempt(1, { runCount: 1002, attempt: 2 });
+    await store.saveAttempt(3, { runCount: 40, attempt: 1 });
+    // An unreadable memory only restarts that profile's numbering.
+    host.files.set('attempts-p4', '{');
+    const restored = await store.restore();
+    expect(restored.runs).toEqual([run]);
+    expect([...restored.attempts].sort()).toEqual([
+      [1, { runCount: 1002, attempt: 2 }],
+      [3, { runCount: 40, attempt: 1 }],
+    ]);
+    expect(restored.problems).toEqual([]);
   });
 });

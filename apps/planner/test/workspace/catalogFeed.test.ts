@@ -71,7 +71,7 @@ describe('plan catalog controller', () => {
     });
     const result = await controller.addToLibrary(entry);
     expect(result).toEqual({
-      operation: 'addCatalog',
+      operation: 'addCopy',
       status: 'success',
       message: 'Added “Underworld WR” to the library.',
     });
@@ -79,7 +79,7 @@ describe('plan catalog controller', () => {
     expect(stored).toMatchObject({ name: 'Underworld WR', projectId: 'catalog-copy-1' });
     const listing = await application.projectOperations.listLibrary();
     expect(listing.items.map((item) => item.folder)).toEqual(['']);
-    expect(await application.projectOperations.catalogCopies()).toEqual({
+    expect(await application.projectOperations.libraryCopies()).toEqual({
       [entry.id]: 'catalog-copy-1',
     });
     // Adding does not open the copy.

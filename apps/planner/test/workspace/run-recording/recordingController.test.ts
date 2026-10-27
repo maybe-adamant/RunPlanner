@@ -85,8 +85,12 @@ describe('recording controller', () => {
     });
     await context.deliver('Profile1_Temp.sav', sampleSaveBytes('surface-002', { runCount: 1003 }));
     expect(context.state().recentRuns).toEqual([]);
-    // Only run 1003, now being recorded, is kept on disk.
-    expect([...context.host.recentRuns.files.keys()]).toEqual(['open-p1']);
+    // Only run 1003, now being recorded, and the attempt memory are kept on disk.
+    expect([...context.host.recentRuns.files.keys()].sort()).toEqual(['attempts-p1', 'open-p1']);
+    expect(JSON.parse(context.host.recentRuns.files.get('attempts-p1')!)).toEqual({
+      runCount: 1003,
+      attempt: 1,
+    });
   });
 
   it('imports and stores a kept run with its record, plan and report', async () => {
@@ -100,8 +104,9 @@ describe('recording controller', () => {
       id: 'p1-1793057328-1002',
       profile: 1,
       runCount: 1002,
+      attempt: 1,
       startedAt: 1_793_057_328,
-      outcome: 'abandoned',
+      outcome: 'unfinished',
       route: { biomes: ['N'], dream: false, rooms: 3, endingRoom: 'N_Hub' },
       gap: false,
     });
@@ -115,8 +120,13 @@ describe('recording controller', () => {
     expect(typeof stored.project).toBe('string');
     expect(stored.report?.entries.length).toBe(summary!.reportCount);
     expect(context.state().status).toMatchObject({ kind: 'runOpen', runs: [{ profile: 1 }] });
-    await context.controller.deleteRun(summary!.id);
+    const deleted = await context.controller.deleteRun(summary!.id);
+    expect(deleted).toEqual(stored);
     expect(context.state().recentRuns).toEqual([]);
+    // Undo writes the deleted run back as it was.
+    await context.controller.restoreRun(deleted);
+    expect(context.state().recentRuns).toEqual([summary]);
+    expect(await context.controller.readRun(summary!.id)).toEqual(stored);
   });
 
   it('reads a save again when the first read raced the write', async () => {
@@ -268,7 +278,7 @@ describe('recording controller', () => {
     for (const id of ['002', '004', '006', '009'])
       await first.deliver('Profile1_Temp.sav', sampleSaveBytes(`surface-${id}`));
     first.controller.dispose();
-    expect([...first.host.recentRuns.files.keys()]).toEqual(['open-p1']);
+    expect([...first.host.recentRuns.files.keys()].sort()).toEqual(['attempts-p1', 'open-p1']);
 
     const second = setup({ prebossRooms: kept, host: first.host, enabled: true });
     await second.controller.start();
@@ -285,6 +295,40 @@ describe('recording controller', () => {
       'N_PreHub01',
       'N_Hub',
     ]);
+  });
+
+  it('numbers a reset after a restart from the stored attempt memory', async () => {
+    const first = setup({ prebossRooms: kept });
+    await first.controller.setEnabled(true);
+    await playSurfaceOpening(first);
+    // Turning recording off ends the run unfinished; its attempt still counts.
+    await first.controller.setEnabled(false);
+    expect(first.state().recentRuns).toMatchObject([
+      { runCount: 1002, attempt: 1, outcome: 'unfinished' },
+    ]);
+    first.controller.dispose();
+
+    const second = setup({ prebossRooms: kept, host: first.host, enabled: true });
+    await second.controller.start();
+    // Run 1002 started again: the second attempt, then reset by a third start.
+    await second.deliver(
+      'Profile1_Temp.sav',
+      sampleSaveBytes('surface-002', { timestamp: 1_793_060_000 }),
+    );
+    for (const id of ['004', '006', '009', '011'])
+      await second.deliver('Profile1_Temp.sav', sampleSaveBytes(`surface-${id}`));
+    await second.deliver(
+      'Profile1_Temp.sav',
+      sampleSaveBytes('surface-002', { timestamp: 1_793_061_000 }),
+    );
+    expect(second.state().recentRuns?.map((run) => [run.attempt, run.outcome])).toEqual([
+      [2, 'reset'],
+      [1, 'unfinished'],
+    ]);
+    expect(JSON.parse(second.host.recentRuns.files.get('attempts-p1')!)).toEqual({
+      runCount: 1002,
+      attempt: 3,
+    });
   });
 
   it('closes a run that ended while the planner was closed', async () => {

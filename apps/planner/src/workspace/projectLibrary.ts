@@ -192,9 +192,9 @@ export interface ProjectLibraryOperations {
    */
   recoveredPlanOffer(): Promise<StartupImportOffer | null>;
   settleRecoveredPlanOffer(): Promise<void>;
-  /** The `projectId` of the copy each catalog entry was added as, by entry id. */
-  catalogCopies(): Promise<Readonly<Record<string, string>>>;
-  recordCatalogCopy(entryId: string, projectId: string): Promise<void>;
+  /** The `projectId` of the copy each outside source was added as, by source key. */
+  libraryCopies(): Promise<Readonly<Record<string, string>>>;
+  recordLibraryCopy(sourceKey: string, projectId: string): Promise<void>;
 }
 
 interface CreateProjectLibraryOperationsOptions {
@@ -568,11 +568,11 @@ export function createProjectLibraryOperations(
       clearLegacyAutosave();
       return Promise.resolve();
     },
-    catalogCopies: async () => (await currentSession()).catalogCopies,
-    async recordCatalogCopy(entryId: string, projectId: string): Promise<void> {
+    libraryCopies: async () => (await currentSession()).catalogCopies,
+    async recordLibraryCopy(sourceKey: string, projectId: string): Promise<void> {
       const { catalogCopies } = await currentSession();
       await updateSession({
-        catalogCopies: Object.freeze({ ...catalogCopies, [entryId]: projectId }),
+        catalogCopies: Object.freeze({ ...catalogCopies, [sourceKey]: projectId }),
       });
     },
   });

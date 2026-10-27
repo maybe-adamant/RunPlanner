@@ -225,7 +225,8 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       ? undefined
       : createCatalogFeedController({
           host: options.catalogFeedHost,
-          addCatalogPlan: (entry, json) => projectOperations.addCatalogPlan(entry, json),
+          addCatalogPlan: (entry, json) =>
+            projectOperations.addLibraryCopy({ key: entry.id, title: entry.title }, json),
         });
   const slotRebuild =
     gameModuleHost === undefined

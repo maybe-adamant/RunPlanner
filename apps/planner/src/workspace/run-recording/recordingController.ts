@@ -28,6 +28,7 @@ import {
   type OpenRun,
   type ClosedRun,
   type RecorderState,
+  type RunAttempt,
   type RecorderStep,
   type SaveObservation,
 } from './runRecorder';
@@ -43,8 +44,15 @@ export interface RecordingController {
   setEnabled(enabled: boolean): Promise<void>;
   /** Watches `folder` instead of the discovered save folder; null returns to discovery. */
   setFolder(folder: string | null): Promise<void>;
+  /** The folder recording watches: the chosen one, else the one found on this computer. */
+  saveFolder(): Promise<{ readonly folder: string | null; readonly chosen: boolean }>;
+  /** Asks for a save folder and watches it; nothing changes when the user cancels. */
+  chooseFolder(): Promise<void>;
   readRun(id: string): Promise<RecentRunEntry>;
-  deleteRun(id: string): Promise<void>;
+  /** Deletes a stored run; resolves with it, for Undo. */
+  deleteRun(id: string): Promise<RecentRunEntry>;
+  /** Writes a deleted run back. */
+  restoreRun(entry: RecentRunEntry): Promise<void>;
   /** Settles once every delivered save has been handled. */
   idle(): Promise<void>;
   dispose(): void;
@@ -70,6 +78,8 @@ export function createRecordingController(options: {
   const recentRuns = createRecentRunsStore(host.recentRuns);
   const openRuns = createOpenRunStore(host.recentRuns);
   let recorder: RecorderState = EMPTY_RECORDER;
+  /** Each profile's attempt memory as last written to the store. */
+  const savedAttempts = new Map<number, RunAttempt>();
   let folder: string | null = null;
   /** Bumped whenever the watch starts or stops, so deliveries of an earlier watch are dropped. */
   let generation = 0;
@@ -174,6 +184,16 @@ export function createRecordingController(options: {
         );
       }
     }
+    // A memory whose write failed is written again at the next save.
+    for (const [profile, attempt] of recorder.attempts) {
+      if (savedAttempts.get(profile) === attempt) continue;
+      try {
+        await openRuns.saveAttempt(profile, attempt);
+        savedAttempts.set(profile, attempt);
+      } catch (error) {
+        report(`The attempt count on profile ${profile} could not be kept: ${message(error)}`);
+      }
+    }
   };
 
   const advance = async (step: RecorderStep) => {
@@ -218,7 +238,7 @@ export function createRecordingController(options: {
     // every earlier save has been handled.
     await enqueue(async () => {
       await advance(abandonOpenRuns(recorder));
-      recorder = EMPTY_RECORDER;
+      recorder = { ...EMPTY_RECORDER, attempts: recorder.attempts };
     });
   };
 
@@ -231,7 +251,8 @@ export function createRecordingController(options: {
       if (watch !== generation) return;
       const restored = await openRuns.restore();
       for (const problem of restored.problems) report(problem);
-      recorder = restoreOpenRuns(recorder, restored.runs);
+      recorder = restoreOpenRuns(recorder, restored.runs, restored.attempts);
+      for (const [profile, attempt] of recorder.attempts) savedAttempts.set(profile, attempt);
     });
     if (watch !== generation) return;
     try {
@@ -268,9 +289,28 @@ export function createRecordingController(options: {
       preference.write({ enabled: saved.enabled, folder: chosen });
       if (saved.enabled) await startWatching(chosen);
     },
+    async saveFolder() {
+      const chosen = preference.read().folder;
+      return chosen === null
+        ? { folder: await host.discoverFolder(), chosen: false }
+        : { folder: chosen, chosen: true };
+    },
+    async chooseFolder() {
+      const saved = preference.read();
+      const picked = await host.chooseFolder(saved.folder ?? (await host.discoverFolder()));
+      if (picked === null) return;
+      preference.write({ enabled: saved.enabled, folder: picked });
+      if (saved.enabled) await startWatching(picked);
+    },
     readRun: (id: string) => recentRuns.read(id),
     async deleteRun(id: string) {
+      const entry = await recentRuns.read(id);
       await recentRuns.delete(id);
+      await reloadRuns();
+      return entry;
+    },
+    async restoreRun(entry: RecentRunEntry) {
+      await write(entry);
       await reloadRuns();
     },
     idle: () => queue,

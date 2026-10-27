@@ -79,10 +79,11 @@ describe('worker run importer', () => {
   const run = (end?: SaveCheckpoint): ClosedRun => ({
     profile: 1,
     runCount: 1002,
+    attempt: 1,
     startedAt: 1,
     checkpoints: sampleCheckpoints().slice(0, 1),
     ...(end === undefined ? {} : { end }),
-    outcome: 'abandoned',
+    outcome: 'unfinished',
     gap: false,
   });
 

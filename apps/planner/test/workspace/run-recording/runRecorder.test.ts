@@ -10,6 +10,7 @@ import {
   parseSaveFileName,
   prebossRoomsByBiome,
   reachesFirstPreboss,
+  restoreOpenRuns,
   type ClosedRun,
   type RecorderState,
   type SaveObservation,
@@ -109,7 +110,7 @@ describe('run recorder', () => {
     expect(feed([seen({ depth: 2 })]).state.runs.size).toBe(0);
     const { state, closed } = feed(through(2));
     expect(closed).toEqual([]);
-    expect(state.runs.get(1)).toMatchObject({ profile: 1, runCount: 7 });
+    expect(state.runs.get(1)).toMatchObject({ profile: 1, runCount: 7, attempt: 1 });
     expect(state.runs.get(1)!.checkpoints).toHaveLength(5);
   });
 
@@ -141,10 +142,10 @@ describe('run recorder', () => {
     expect(closed[0]).toMatchObject({ outcome: 'victory', gap: false });
   });
 
-  it('abandons the open run at its last checkpoint when a later run starts', () => {
+  it('ends the open run unfinished at its last checkpoint when a later run starts', () => {
     const { state, closed } = feed([...through(2), ...through(1, 8)]);
     expect(closed).toHaveLength(1);
-    expect(closed[0]).toMatchObject({ runCount: 7, outcome: 'abandoned', gap: false });
+    expect(closed[0]).toMatchObject({ runCount: 7, outcome: 'unfinished', gap: false });
     expect(closed[0]!.end).toBeUndefined();
     expect(depths(closed[0]!)).toEqual([
       ['entry', 0],
@@ -156,9 +157,9 @@ describe('run recorder', () => {
     expect(state.runs.get(1)?.runCount).toBe(8);
   });
 
-  it('abandons the open run when a later run shows without its start', () => {
+  it('ends the open run unfinished when a later run shows without its start', () => {
     const { state, closed } = feed([...through(2), seen({ depth: 1, runCount: 8 })]);
-    expect(closed.map((run) => run.outcome)).toEqual(['abandoned']);
+    expect(closed.map((run) => run.outcome)).toEqual(['unfinished']);
     expect(state.runs.size).toBe(0);
   });
 
@@ -201,7 +202,8 @@ describe('run recorder', () => {
       seen({ kind: 'hub', depth: 4, heroDead: true }),
     ]);
     expect(closed).toHaveLength(1);
-    expect(closed[0]).toMatchObject({ outcome: 'abandoned', gap: true });
+    // The plan ends at the gap, but the run keeps the outcome its end save showed.
+    expect(closed[0]).toMatchObject({ outcome: 'death', gap: true });
     expect(closed[0]!.end).toBeUndefined();
     expect(depths(closed[0]!)).toEqual([
       ['entry', 0],
@@ -211,8 +213,12 @@ describe('run recorder', () => {
   });
 
   it('cuts a run whose last room has no entry save', () => {
-    const { closed } = feed([...through(2), seen({ kind: 'hub', depth: 4, heroDead: true })]);
-    expect(closed[0]).toMatchObject({ outcome: 'abandoned', gap: true });
+    const { closed } = feed([
+      ...through(2),
+      seen({ kind: 'hub', depth: 4, heroDead: true, cleared: true }),
+    ]);
+    expect(closed[0]).toMatchObject({ outcome: 'victory', gap: true });
+    expect(closed[0]!.end).toBeUndefined();
     expect(closed[0]!.checkpoints.at(-1)?.history).toHaveLength(2);
   });
 
@@ -229,13 +235,13 @@ describe('run recorder', () => {
     expect(state.runs.get(2)!.checkpoints).toHaveLength(2);
   });
 
-  it('abandons every open run when recording stops', () => {
+  it('ends every open run unfinished when recording stops', () => {
     const { state } = feed([seen({ depth: 0 }, 1), seen({ depth: 0, runCount: 40 }, 2)]);
     const step = abandonOpenRuns(state);
     expect(step.state.runs.size).toBe(0);
     expect(step.closed.map((run) => [run.profile, run.outcome])).toEqual([
-      [1, 'abandoned'],
-      [2, 'abandoned'],
+      [1, 'unfinished'],
+      [2, 'unfinished'],
     ]);
   });
 
@@ -260,7 +266,7 @@ describe('run recorder', () => {
     expect(halted.state.runs.size).toBe(0);
     // The open run ends where its readable saves stop.
     expect(halted.closed.map((run) => [run.runCount, run.outcome, run.checkpoints.length])).toEqual(
-      [[7, 'abandoned', 3]],
+      [[7, 'unfinished', 3]],
     );
     expect(advanceRecorder(halted.state, seen({ depth: 0, runCount: 8 })).state).toBe(halted.state);
   });
@@ -275,6 +281,62 @@ describe('run recorder', () => {
     expect(closed.map((run) => run.runCount)).toEqual([7]);
     expect(state.runs.get(1)?.runCount).toBe(8);
     expect(state.runs.get(1)!.checkpoints).toHaveLength(3);
+  });
+
+  it('reads a new start of the same run count as a reset of the open run', () => {
+    const { state, closed } = feed([
+      ...through(2),
+      seen({ depth: 0, timestamp: 5_000 }),
+      seen({ kind: 'postReward', depth: 0, timestamp: 5_005 }),
+    ]);
+    expect(closed.map((run) => [run.runCount, run.attempt, run.outcome])).toEqual([
+      [7, 1, 'reset'],
+    ]);
+    expect(closed[0]!.end).toBeUndefined();
+    expect(depths(closed[0]!)).toHaveLength(5);
+    expect(state.runs.get(1)).toMatchObject({ runCount: 7, attempt: 2 });
+    expect(state.runs.get(1)!.checkpoints).toHaveLength(2);
+  });
+
+  it('numbers attempts per profile and run count, counting runs below the keep threshold', () => {
+    const { state, closed } = feed([
+      // Reset in the first room: far below the Preboss, yet still an attempt.
+      seen({ depth: 0 }),
+      seen({ depth: 0, timestamp: 2_000 }),
+      seen({ depth: 0, timestamp: 3_000 }),
+      seen({ depth: 0, runCount: 40 }, 2),
+      seen({ kind: 'hub', depth: 1, heroDead: true, timestamp: 3_100 }),
+      // A death raises the run count, so the next start is a first attempt again.
+      seen({ depth: 0, runCount: 8, timestamp: 4_000 }),
+    ]);
+    expect(closed.map((run) => [run.profile, run.runCount, run.attempt, run.outcome])).toEqual([
+      [1, 7, 1, 'reset'],
+      [1, 7, 2, 'reset'],
+      [1, 7, 3, 'death'],
+    ]);
+    expect(state.attempts.get(1)).toEqual({ runCount: 8, attempt: 1 });
+    expect(state.attempts.get(2)).toEqual({ runCount: 40, attempt: 1 });
+    expect(state.runs.get(1)?.attempt).toBe(1);
+  });
+
+  it('continues attempt numbering from a restored memory', () => {
+    const restored = restoreOpenRuns(
+      EMPTY_RECORDER,
+      [],
+      new Map([[1, { runCount: 7, attempt: 4 }]]),
+    );
+    const { state } = feed([seen({ depth: 0 })], restored);
+    expect(state.runs.get(1)?.attempt).toBe(5);
+    // A memory of an earlier run count starts the new count at 1.
+    const older = restoreOpenRuns(EMPTY_RECORDER, [], new Map([[1, { runCount: 6, attempt: 4 }]]));
+    expect(feed([seen({ depth: 0 })], older).state.runs.get(1)?.attempt).toBe(1);
+  });
+
+  it('keeps the attempt memory as recording stops or meets an unknown format', () => {
+    const { state } = feed([seen({ depth: 0 })]);
+    expect(abandonOpenRuns(state).state.attempts).toBe(state.attempts);
+    const halted = advanceRecorder(state, { kind: 'unsupportedVersion', profile: 1, version: 2 });
+    expect(halted.state.attempts).toBe(state.attempts);
   });
 
   it('ignores the hub save of a run it never saw start', () => {

@@ -41,28 +41,49 @@ export function observeSave(fileName: string, bytes: Uint8Array): SaveObservatio
 export interface OpenRun {
   readonly profile: number;
   readonly runCount: number;
+  /** The Nth recorded start of this profile's run count; a reset repeats the run count. */
+  readonly attempt: number;
   readonly checkpoints: readonly SaveCheckpoint[];
+}
+
+/** A profile's latest recorded run start, which numbers the next attempt. */
+export interface RunAttempt {
+  readonly runCount: number;
+  readonly attempt: number;
 }
 
 export interface RecorderState {
   /** At most one open run per save profile. */
   readonly runs: ReadonlyMap<number, OpenRun>;
+  readonly attempts: ReadonlyMap<number, RunAttempt>;
   /** Set by a save format the recorder does not know; recording stops until it is restarted. */
   readonly error: string | null;
 }
 
-export const EMPTY_RECORDER: RecorderState = Object.freeze({ runs: new Map(), error: null });
+export const EMPTY_RECORDER: RecorderState = Object.freeze({
+  runs: new Map(),
+  attempts: new Map(),
+  error: null,
+});
+
+/**
+ * How a run ended: its end save showed a victory or death; a new start of the same
+ * run count without one is a reset; otherwise the end is unknown.
+ */
+export type ClosedRunOutcome = 'victory' | 'death' | 'reset' | 'unfinished';
 
 /** A finished run's saves, ready to build its record. */
 export interface ClosedRun {
   readonly profile: number;
   readonly runCount: number;
+  readonly attempt: number;
   /** Unix seconds of the run-start save. */
   readonly startedAt: number;
   readonly checkpoints: readonly SaveCheckpoint[];
-  /** The hub save of the dead hero; absent when the run was abandoned or cut. */
+  /** The hub save of the dead hero; absent when it was not seen or the run is cut. */
   readonly end?: SaveCheckpoint;
-  readonly outcome: 'victory' | 'death' | 'abandoned';
+  /** A cut run keeps the outcome its end save showed. */
+  readonly outcome: ClosedRunOutcome;
   /** A room's entry save was missed, so the run is cut before that room. */
   readonly gap: boolean;
 }
@@ -84,7 +105,8 @@ const isRunStart = (checkpoint: SaveCheckpoint) =>
   checkpoint.kind === 'entry' && checkpoint.mapName === 'Hub_PreRun' && depth(checkpoint) === 0;
 
 /** Cuts the run before the first room whose entry save is missing. */
-function close(run: OpenRun, end: SaveCheckpoint | undefined): ClosedRun {
+function close(run: OpenRun, ending: SaveCheckpoint | 'reset' | 'unfinished'): ClosedRun {
+  const end = typeof ending === 'string' ? undefined : ending;
   const entered = new Set(
     run.checkpoints.filter((save) => save.kind === 'entry').map((save) => depth(save)),
   );
@@ -101,10 +123,11 @@ function close(run: OpenRun, end: SaveCheckpoint | undefined): ClosedRun {
   return Object.freeze({
     profile: run.profile,
     runCount: run.runCount,
+    attempt: run.attempt,
     startedAt: run.checkpoints[0]!.timestamp,
     checkpoints: Object.freeze(checkpoints),
     ...(kept === undefined ? {} : { end: kept }),
-    outcome: kept === undefined ? 'abandoned' : kept.run.cleared ? 'victory' : 'death',
+    outcome: typeof ending === 'string' ? ending : ending.run.cleared ? 'victory' : 'death',
     gap: gapAt !== undefined,
   });
 }
@@ -132,61 +155,80 @@ export function advanceRecorder(state: RecorderState, observation: SaveObservati
     return {
       state: {
         runs: new Map(),
+        attempts: state.attempts,
         error: `This save format (version ${observation.version.toString(16)}) is not supported yet.`,
       },
-      closed: [...state.runs.values()].map((run) => close(run, undefined)),
+      closed: [...state.runs.values()].map((run) => close(run, 'unfinished')),
     };
   const { profile, checkpoint } = observation;
   const open = state.runs.get(profile);
   const runs = new Map(state.runs);
+  const attempts = new Map(state.attempts);
   const closed: ClosedRun[] = [];
-  const settle = () => ({ state: { runs, error: null }, closed });
+  const settle = () => ({ state: { runs, attempts, error: null }, closed });
 
   if (checkpoint.kind === 'hub') {
     if (open === undefined || checkpoint.runCount < open.runCount) return { state, closed: [] };
     // The hub save of a later run means the open run ended unseen.
-    if (checkpoint.runCount > open.runCount) closed.push(close(open, undefined));
+    if (checkpoint.runCount > open.runCount) closed.push(close(open, 'unfinished'));
     else if (checkpoint.run.heroDead) closed.push(close(open, checkpoint));
     else return { state, closed: [] };
     runs.delete(profile);
     return settle();
   }
 
-  if (open !== undefined && checkpoint.runCount === open.runCount) {
+  // A new start of the open run's count without its end save: the run was reset.
+  const reset =
+    open !== undefined &&
+    checkpoint.runCount === open.runCount &&
+    isRunStart(checkpoint) &&
+    !open.checkpoints.some((save) => sameSave(save, checkpoint));
+  if (open !== undefined && checkpoint.runCount === open.runCount && !reset) {
     const next = extend(open, checkpoint);
     if (next === undefined) return { state, closed: [] };
     runs.set(profile, next);
     return settle();
   }
   if (open !== undefined && checkpoint.runCount < open.runCount) return { state, closed: [] };
-  // A later run without the open run's end save: the open run was abandoned.
+  // A later run without the open run's end save: the open run ended unseen.
   if (open !== undefined) {
-    closed.push(close(open, undefined));
+    closed.push(close(open, reset ? 'reset' : 'unfinished'));
     runs.delete(profile);
   }
   // A run is recorded only from its start save.
-  if (isRunStart(checkpoint))
+  if (isRunStart(checkpoint)) {
+    const previous = attempts.get(profile);
+    const attempt = previous?.runCount === checkpoint.runCount ? previous.attempt + 1 : 1;
+    attempts.set(profile, { runCount: checkpoint.runCount, attempt });
     runs.set(profile, {
       profile,
       runCount: checkpoint.runCount,
+      attempt,
       checkpoints: Object.freeze([checkpoint]),
     });
+  }
   return closed.length === 0 && !runs.has(profile) ? { state, closed } : settle();
 }
 
 /** Adds open runs kept across a restart; a profile already recording keeps its run. */
-export function restoreOpenRuns(state: RecorderState, runs: readonly OpenRun[]): RecorderState {
-  if (runs.length === 0) return state;
+export function restoreOpenRuns(
+  state: RecorderState,
+  runs: readonly OpenRun[],
+  attempts: ReadonlyMap<number, RunAttempt>,
+): RecorderState {
+  const restoredAttempts = new Map(state.attempts);
+  for (const [profile, attempt] of attempts)
+    if (!restoredAttempts.has(profile)) restoredAttempts.set(profile, attempt);
   const restored = new Map(state.runs);
   for (const run of runs) if (!restored.has(run.profile)) restored.set(run.profile, run);
-  return { runs: restored, error: state.error };
+  return { runs: restored, attempts: restoredAttempts, error: state.error };
 }
 
-/** Ends every open run as abandoned, as recording stops. */
+/** Ends every open run as unfinished, as recording stops. */
 export function abandonOpenRuns(state: RecorderState): RecorderStep {
   return {
-    state: { runs: new Map(), error: state.error },
-    closed: [...state.runs.values()].map((run) => close(run, undefined)),
+    state: { runs: new Map(), attempts: state.attempts, error: state.error },
+    closed: [...state.runs.values()].map((run) => close(run, 'unfinished')),
   };
 }
 

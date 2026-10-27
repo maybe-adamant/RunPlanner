@@ -54,7 +54,10 @@ export type ChosenImportFile =
 export interface LibrarySession {
   /** The file open before the library was offered once, and imported or declined. */
   readonly previousFileOffered: boolean;
-  /** The `projectId` of the copy each catalog entry was added as, by entry id. */
+  /**
+   * The `projectId` of the copy each outside source was added as: a catalog entry by its id,
+   * a recorded run by `recent-run:` and its id. The key keeps its first name for saved sessions.
+   */
   readonly catalogCopies: Readonly<Record<string, string>>;
 }
 

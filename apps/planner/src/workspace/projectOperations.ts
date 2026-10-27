@@ -58,7 +58,7 @@ import {
 } from './projectLibrary';
 
 export type ProjectOperation =
-  | 'addCatalog'
+  | 'addCopy'
   | 'delete'
   | 'deleteFolder'
   | 'folder'
@@ -172,15 +172,16 @@ export interface ProjectOperations {
    */
   openProjectCopy(json: string, title?: string): Promise<ProjectOperationResult>;
   /**
-   * Files a catalog entry's plan at the top of the library as a copy with its own identity,
-   * named after the entry's title, and remembers which entry it came from.
+   * Files a plan from outside the library (a catalog entry or a recorded run) at the top of the
+   * library as a copy with its own identity, named `source.title`, and remembers which source
+   * it came from.
    */
-  addCatalogPlan(
-    entry: { readonly id: string; readonly title: string },
+  addLibraryCopy(
+    source: { readonly key: string; readonly title: string },
     json: string,
   ): Promise<ProjectOperationResult>;
-  /** The `projectId` of the copy each catalog entry was added as, by entry id. */
-  catalogCopies(): Promise<Readonly<Record<string, string>>>;
+  /** The `projectId` of the copy each source was added as, by source key. */
+  libraryCopies(): Promise<Readonly<Record<string, string>>>;
   /** Imports the file open before the library, once offered, and opens it. */
   acceptPreviousFile(): Promise<ProjectOperationResult>;
   declinePreviousFile(): Promise<void>;
@@ -224,7 +225,7 @@ interface CreateProjectOperationsOptions {
 }
 
 const operationLabels: Readonly<Record<ProjectOperation, string>> = Object.freeze({
-  addCatalog: 'Add to library',
+  addCopy: 'Add to library',
   delete: 'Delete',
   deleteFolder: 'Delete folder',
   folder: 'Folder',
@@ -782,24 +783,24 @@ export function createProjectOperations(
         return failure('openCopy', error);
       }
     },
-    async addCatalogPlan(
-      entry: { readonly id: string; readonly title: string },
+    async addLibraryCopy(
+      source: { readonly key: string; readonly title: string },
       json: string,
     ): Promise<ProjectOperationResult> {
       try {
         const plan = await exclusive(() =>
           library().importFile(
-            { fileName: `${entry.id}.runplanner.json`, json },
-            { newIdentity: true, name: entry.title },
+            { fileName: `${source.key.replace(/[^\w-]/g, '-')}.runplanner.json`, json },
+            { newIdentity: true, name: source.title },
           ),
         );
-        await library().recordCatalogCopy(entry.id, plan.project.projectId);
-        return result('addCatalog', 'success', `Added “${plan.project.name}” to the library.`);
+        await library().recordLibraryCopy(source.key, plan.project.projectId);
+        return result('addCopy', 'success', `Added “${plan.project.name}” to the library.`);
       } catch (error) {
-        return failure('addCatalog', error);
+        return failure('addCopy', error);
       }
     },
-    catalogCopies: async () => (options.library === undefined ? {} : library().catalogCopies()),
+    libraryCopies: async () => (options.library === undefined ? {} : library().libraryCopies()),
     async acceptPreviousFile(): Promise<ProjectOperationResult> {
       try {
         const offer = previousFile;

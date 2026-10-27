@@ -93,7 +93,7 @@ export function createCatalogFeedController(options: {
       const support = catalogPlanSupport(entry);
       if (support !== 'supported') {
         return {
-          operation: 'addCatalog',
+          operation: 'addCopy',
           status: 'failure',
           message: support === 'tooNew' ? NEEDS_NEWER_PLANNER : UNSUPPORTED_OLD_PLAN,
         };
@@ -102,7 +102,7 @@ export function createCatalogFeedController(options: {
         return await options.addCatalogPlan(entry, await options.host.downloadPlan(entry.id));
       } catch (error) {
         return {
-          operation: 'addCatalog',
+          operation: 'addCopy',
           status: 'failure',
           message: `Add to library failed: ${error instanceof Error ? error.message : String(error)}`,
         };
