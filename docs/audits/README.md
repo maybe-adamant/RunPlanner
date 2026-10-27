@@ -41,6 +41,7 @@ reader-facing taxonomy, not a package or runtime boundary.
 - [Room action order](rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md) — Source-backed room lifecycle and action ordering contacts.
 - [Route detours](rooms-and-routes/ROUTE_DETOURS_GAME_DATA_AUDIT.md) — Chaos, Oceanus Anomaly, Zagreus Contract, Spark, and other route-level detour, exit, and host-room findings.
 - [Scheduled and automatic Timeline outcomes](rooms-and-routes/SCHEDULED_AND_AUTOMATIC_TIMELINE_OUTCOMES_AUDIT.md) — Encounter-end clocks, fixed automatic effects, scheduled acquisitions, progressive candidates, execution publication, and source-owned invalidation.
+- [Save-file run record](rooms-and-routes/SAVE_FILE_RUN_RECORD_GAME_DATA_AUDIT.md) — Save container, write cadence, run boundaries, and which facts of a vanilla run its saves record exactly, by inference, or not at all.
 
 ### Rewards and acquisition
 
