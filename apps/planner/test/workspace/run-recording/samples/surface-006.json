@@ -1,0 +1,191 @@
+{
+  "header": {
+    "timestamp": 1793057356,
+    "location": "Location_SurfaceMisc_Short",
+    "runs": 1002,
+    "shrine": 62,
+    "mapName": "N_Opening01",
+    "nextMap": "N_PreHub01"
+  },
+  "globals": {
+    "_worldTime": 35.12639076181222,
+    "GameState": {
+      "PrimaryWeaponName": "WeaponStaffSwing",
+      "EquippedFamiliar": "PolecatFamiliar",
+      "ShrineUpgrades": {
+        "BossDifficultyShrineUpgrade": 4,
+        "EnemySpeedShrineUpgrade": 2,
+        "BoonSkipShrineUpgrade": 1,
+        "EnemyEliteShrineUpgrade": 2,
+        "EnemyCountShrineUpgrade": 3,
+        "EnemyRespawnShrineUpgrade": 2,
+        "HealingReductionShrineUpgrade": 3,
+        "BoonManaReserveShrineUpgrade": 2,
+        "ShopPricesShrineUpgrade": 2,
+        "BanUnpickedBoonsShrineUpgrade": 1,
+        "EnemyShieldShrineUpgrade": 2,
+        "NextBiomeEnemyShrineUpgrade": 2,
+        "LimitGraspShrineUpgrade": 0,
+        "BiomeSpeedShrineUpgrade": 3,
+        "MinibossCountShrineUpgrade": 1,
+        "EnemyDamageShrineUpgrade": 3,
+        "EnemyHealthShrineUpgrade": 3
+      },
+      "MetaUpgradeState": {
+        "MaxHealthPerRoom": { "Equipped": true, "Level": 3 },
+        "BonusHealth": { "Equipped": true, "Level": 3 },
+        "StartingGold": { "Equipped": true, "Level": 3 },
+        "HealthRegen": { "Equipped": true, "Level": 3 },
+        "BonusDodge": { "Equipped": true, "Level": 3 },
+        "EpicRarityBoost": { "Equipped": true, "Level": 3 },
+        "LowManaDamageBonus": { "Equipped": true, "Level": 3 },
+        "CastBuff": { "Equipped": true, "Level": 3 },
+        "MetaToRunUpgrade": { "Equipped": true, "Level": 3 },
+        "ChanneledCast": { "Equipped": true, "Level": 3 },
+        "LastStand": { "Equipped": true, "Level": 3 },
+        "SprintShield": { "Equipped": true, "Level": 3 },
+        "ChanneledBlock": { "Equipped": true, "Level": 3 },
+        "StatusVulnerability": { "Equipped": true, "Level": 3 }
+      },
+      "Resources": { "Money": 308 }
+    },
+    "CurrentRun": {
+      "BiomeVisitOrder": ["N"],
+      "BiomeBoonSkipCount": 1,
+      "WellShopPurchases": {},
+      "NPCInteractions": {},
+      "RewardStores": {
+        "RunProgress": [
+          { "Name": "MaxHealthDrop" },
+          { "Name": "MaxHealthDrop" },
+          { "Name": "MaxManaDrop" },
+          { "Name": "MaxManaDrop" },
+          { "Name": "RoomMoneyDrop" },
+          { "Name": "RoomMoneyDrop" },
+          { "Name": "StackUpgrade" },
+          { "Name": "StackUpgrade" },
+          { "Name": "WeaponUpgrade" },
+          { "Name": "WeaponUpgrade" },
+          { "Name": "HermesUpgrade" },
+          { "Name": "Devotion" },
+          { "Name": "SpellDrop" },
+          { "Name": "TalentDrop" },
+          { "Name": "Boon" },
+          { "Name": "Boon" }
+        ],
+        "MetaProgress": [
+          { "Name": "GiftDrop" },
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyBigDrop" },
+          { "Name": "MetaCurrencyBigDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" }
+        ]
+      },
+      "RoomHistory": [
+        {
+          "Name": "N_Opening01",
+          "TimesVisited": 0,
+          "ChosenRewardType": "Boon",
+          "ForceLootName": "PoseidonUpgrade",
+          "RewardStoreName": "RunProgress",
+          "ExitDoorRooms": { "593753": "N_PreHub01" },
+          "OfferedRewards": { "593753": { "ForceLootName": "AphroditeUpgrade", "Type": "Boon" } },
+          "UseRecord": { "N_OpeningDoor": 1, "RespawnEgg": 4, "RoomRewardConsolationPrize": 1 },
+          "Kills": { "ZombieSpawner": 2, "Breakable_N": 3, "Zombie": 5, "Carrion": 2 },
+          "HeroStartPoint": 50065,
+          "WellShopChanceSuccess": false,
+          "SurfaceShopChanceSuccess": false,
+          "SellShopChanceSuccess": false,
+          "Encounter": {
+            "Name": "OpeningGeneratedN",
+            "DifficultyRating": 96,
+            "Blacklist": { "ZombieSpawner_Elite": true, "Carrion_Elite": true },
+            "StartTime": 0.966666717082262,
+            "SpawnWaves": [
+              {
+                "DifficultyRating": 96,
+                "Spawns": [
+                  { "Name": "ZombieSpawner", "TotalCount": 2, "Generated": true },
+                  { "Name": "Carrion", "TotalCount": 2, "Generated": true }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "CurrentRoom": {
+        "Name": "N_PreHub01",
+        "TimesVisited": 1,
+        "ChosenRewardType": "Boon",
+        "ForceLootName": "AphroditeUpgrade",
+        "RewardStoreName": "RunProgress",
+        "ExitDoorRooms": {},
+        "UseRecord": {},
+        "Kills": {},
+        "WellShopChanceSuccess": false,
+        "SurfaceShopChanceSuccess": false,
+        "SellShopChanceSuccess": false,
+        "Encounter": {
+          "Name": "PreHubGeneratedN",
+          "DifficultyRating": 160,
+          "Blacklist": { "Mudman_Elite": true, "Carrion_Elite": true },
+          "SpawnWaves": [
+            {
+              "DifficultyRating": 160,
+              "Spawns": [
+                { "Name": "Carrion", "TotalCount": 10, "Generated": true },
+                { "Name": "Mudman", "TotalCount": 2, "Generated": true }
+              ]
+            }
+          ]
+        }
+      },
+      "Hero": {
+        "SlottedTraits": {
+          "Familiar": "DodgeFamiliar",
+          "Aspect": "StaffClearCastAspect",
+          "Keepsake": "HadesAndPersephoneKeepsake"
+        },
+        "Traits": [
+          {
+            "Name": "HadesAndPersephoneKeepsake",
+            "Id": "0110.1166671942920.88090998283587",
+            "Rarity": "Epic"
+          },
+          { "Name": "HadesChronosDebuffBoon", "Id": "1110.1166671942920.22087305318564" },
+          { "Name": "DodgeFamiliar", "Id": "2110.1166671942920.11951784905978", "StackNum": 4 },
+          {
+            "Name": "FamiliarPolecatResourceBonus",
+            "Id": "3110.1166671942920.77560250484385",
+            "StackNum": 4
+          },
+          {
+            "Name": "FamiliarPolecatDamage",
+            "Id": "4110.1166671942920.38951016473584",
+            "StackNum": 4
+          },
+          {
+            "Name": "StaffClearCastAspect",
+            "Id": "5110.1166671942920.84452022518963",
+            "Rarity": "Legendary"
+          },
+          { "Name": "WaterEssence", "Id": "20134.2430573824090.77560250484385" }
+        ]
+      }
+    }
+  }
+}

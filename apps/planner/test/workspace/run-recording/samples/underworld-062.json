@@ -1,0 +1,350 @@
+{
+  "header": {
+    "timestamp": 1793060785,
+    "location": "Location_BiomeG",
+    "runs": 1003,
+    "shrine": 12,
+    "mapName": "F_PostBoss01",
+    "nextMap": "G_Intro"
+  },
+  "globals": {
+    "_worldTime": 363.1030826038914,
+    "GameState": {
+      "PrimaryWeaponName": "WeaponStaffSwing",
+      "EquippedFamiliar": "PolecatFamiliar",
+      "ShrineUpgrades": {
+        "EnemyDamageShrineUpgrade": 0,
+        "HealingReductionShrineUpgrade": 0,
+        "BoonSkipShrineUpgrade": 0,
+        "EnemyShieldShrineUpgrade": 0,
+        "NextBiomeEnemyShrineUpgrade": 0,
+        "EnemyHealthShrineUpgrade": 0,
+        "EnemyEliteShrineUpgrade": 0,
+        "BanUnpickedBoonsShrineUpgrade": 0,
+        "BossDifficultyShrineUpgrade": 0,
+        "LimitGraspShrineUpgrade": 0,
+        "EnemySpeedShrineUpgrade": 2,
+        "BiomeSpeedShrineUpgrade": 3,
+        "MinibossCountShrineUpgrade": 0,
+        "EnemyRespawnShrineUpgrade": 0,
+        "ShopPricesShrineUpgrade": 0,
+        "EnemyCountShrineUpgrade": 0,
+        "BoonManaReserveShrineUpgrade": 0
+      },
+      "MetaUpgradeState": {
+        "EpicRarityBoost": { "Equipped": true, "Level": 3 },
+        "BonusHealth": { "Equipped": true, "Level": 3 },
+        "SprintShield": { "Equipped": true, "Level": 3 },
+        "StartingGold": { "Equipped": true, "Level": 3 },
+        "HealthRegen": { "Equipped": true, "Level": 3 },
+        "StatusVulnerability": { "Equipped": true, "Level": 3 },
+        "MetaToRunUpgrade": { "Equipped": true, "Level": 3 },
+        "LowHealthBonus": { "Equipped": true, "Level": 3 },
+        "CastBuff": { "Equipped": true, "Level": 3 },
+        "ChanneledCast": { "Equipped": true, "Level": 3 },
+        "LowManaDamageBonus": { "Equipped": true, "Level": 3 },
+        "MaxHealthPerRoom": { "Equipped": true, "Level": 3 },
+        "BonusDodge": { "Equipped": true, "Level": 3 },
+        "ChanneledBlock": { "Equipped": true, "Level": 3 }
+      },
+      "Resources": { "Money": 257 }
+    },
+    "CurrentRun": {
+      "BiomeVisitOrder": ["F"],
+      "MetaConversionUses": 3,
+      "BiomeBoonSkipCount": 0,
+      "TraitsSold": 1,
+      "WellShopPurchases": {
+        "TemporaryForcedSecretDoorTrait": 1,
+        "TemporaryMoveSpeedTrait": 2,
+        "TemporaryEmptySlotDamageTrait": 1
+      },
+      "NPCInteractions": {
+        "NPC_Arachne_01": 1,
+        "NPC_Artemis_Field_01": 1,
+        "Hecate": 1,
+        "TrialUpgrade": 1,
+        "SpellDrop": 1,
+        "AresUpgrade": 1,
+        "NPC_Nyx_Story_01": 1,
+        "HeraUpgrade": 1
+      },
+      "LootChoiceHistory": [
+        {
+          "Depth": 0,
+          "UpgradeChoices": [
+            { "Name": "HeraSpecialBoon", "Rarity": "Common", "Chosen": "true" },
+            { "Name": "HeraCastBoon", "Rarity": "Common", "Chosen": "false" },
+            { "Name": "HeraSprintBoon", "Rarity": "Rare", "Chosen": "false" }
+          ],
+          "UpgradeName": "HeraUpgrade"
+        },
+        {
+          "Depth": 1,
+          "UpgradeChoices": [
+            { "Name": "ChaosExSpeedBlessing", "Rarity": "Epic", "Chosen": "true" },
+            { "Name": "ChaosHarvestBlessing", "Rarity": "Rare", "Chosen": "false" },
+            { "Name": "ChaosDoorHealBlessing", "Rarity": "Common", "Chosen": "false" }
+          ],
+          "UpgradeName": "TrialUpgrade"
+        },
+        {
+          "Depth": 2,
+          "UpgradeChoices": [{ "Name": "HeraSpecialBoon", "Rarity": "Common", "Chosen": "true" }],
+          "UpgradeName": "StackUpgrade"
+        },
+        {
+          "Depth": 3,
+          "UpgradeChoices": [{ "Name": "HeraSpecialBoon", "Rarity": "Common", "Chosen": "true" }],
+          "UpgradeName": "StackUpgrade"
+        },
+        {
+          "Depth": 4,
+          "UpgradeChoices": [
+            { "Name": "HighHealthCritBoon", "Rarity": "Common", "Chosen": "true" },
+            { "Name": "OmegaCastVolleyBoon", "Rarity": "Epic", "Chosen": "false" },
+            { "Name": "DashOmegaBuffBoon", "Rarity": "Epic", "Chosen": "false" }
+          ],
+          "UpgradeName": "NPC_Artemis_Field_01"
+        },
+        {
+          "Depth": 5,
+          "UpgradeChoices": [
+            { "Name": "AgilityCostume", "Rarity": "Common", "Chosen": "false" },
+            { "Name": "ManaCostume", "Rarity": "Common", "Chosen": "false" },
+            { "Name": "CastDamageCostume", "Rarity": "Common", "Chosen": "true" }
+          ],
+          "UpgradeName": "NPC_Arachne_01"
+        },
+        {
+          "Depth": 6,
+          "UpgradeChoices": [
+            { "Name": "HeraSprintBoon", "Rarity": "Epic", "Chosen": "false" },
+            { "Name": "HeraManaBoon", "Rarity": "Common", "Chosen": "false" },
+            { "Name": "BoonDecayBoon", "Rarity": "Common", "Chosen": "true" }
+          ],
+          "UpgradeName": "HeraUpgrade"
+        },
+        {
+          "Depth": 7,
+          "UpgradeChoices": [
+            { "Name": "AresCastBoon", "Rarity": "Epic", "Chosen": "true" },
+            { "Name": "LowHealthLifestealBoon", "Rarity": "Rare", "Chosen": "false" },
+            { "Name": "BloodDropRevengeBoon", "Rarity": "Rare", "Chosen": "false" }
+          ],
+          "UpgradeName": "AresUpgrade"
+        },
+        {
+          "Depth": 8,
+          "UpgradeChoices": [
+            { "Name": "StaffJumpSpecialTrait", "Rarity": "Common", "Chosen": "true" },
+            { "Name": "StaffExHealTrait", "Rarity": "Common", "Chosen": "false" },
+            { "Name": "StaffPowershotTrait", "Rarity": "Common", "Chosen": "false" }
+          ],
+          "UpgradeName": "WeaponUpgrade"
+        },
+        {
+          "Depth": 11,
+          "UpgradeChoices": [
+            { "Name": "AphroditeWeaponBoon", "Rarity": "Epic", "Chosen": "false" },
+            { "Name": "AphroditeManaBoon", "Rarity": "Common", "Chosen": "true" },
+            { "Name": "ManaBurstBoon", "Rarity": "Epic", "Chosen": "false" }
+          ],
+          "UpgradeName": "AphroditeUpgrade"
+        }
+      ],
+      "RewardStores": {
+        "MetaProgress": [
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyBigDrop" },
+          { "Name": "MetaCurrencyBigDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" },
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyBigDrop" },
+          { "Name": "MetaCurrencyBigDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" }
+        ],
+        "RunProgress": [
+          { "Name": "MaxHealthDrop" },
+          { "Name": "WeaponUpgrade" },
+          { "Name": "HermesUpgrade" },
+          { "Name": "Devotion" },
+          { "Name": "TalentDrop" }
+        ]
+      },
+      "RoomHistory": [
+        { "Name": "F_Opening02" },
+        { "Name": "Chaos_03" },
+        { "Name": "F_Combat08" },
+        { "Name": "F_Combat22" },
+        { "Name": "F_Combat21" },
+        { "Name": "F_Story01" },
+        { "Name": "F_Shop01" },
+        { "Name": "F_MiniBoss01" },
+        { "Name": "F_Combat06" },
+        { "Name": "F_Combat18" },
+        { "Name": "F_Combat12" },
+        { "Name": "F_PreBoss01" },
+        { "Name": "F_Boss01" },
+        {
+          "Name": "F_PostBoss01",
+          "TimesVisited": 1,
+          "RewardStoreName": "MetaProgress",
+          "ExitDoorRooms": { "593581": "G_Intro" },
+          "OfferedRewards": {},
+          "UseRecord": {
+            "WellShop": 2,
+            "HealthFountainF": 1,
+            "GiftRack": 1,
+            "PostBossDoor": 1,
+            "SellTraitShop": 1
+          },
+          "Kills": {},
+          "HeroStartPoint": 40009,
+          "WellShopChanceSuccess": true,
+          "SurfaceShopChanceSuccess": false,
+          "SellShopChanceSuccess": true,
+          "SellOptions": {
+            "2": { "Name": "AphroditeManaBoon", "Value": 100, "Rarity": "Common" },
+            "3": { "Name": "AresCastBoon", "Value": 230, "Rarity": "Epic" }
+          },
+          "Encounter": { "Name": "Story_Chronos_01" },
+          "Store": {
+            "StoreOptions": [
+              { "Name": "TemporaryDoorHealTrait", "Type": "Trait" },
+              { "Name": "TemporaryEmptySlotDamageTrait", "Type": "Trait" }
+            ]
+          }
+        }
+      ],
+      "CurrentRoom": {
+        "Name": "G_Intro",
+        "TimesVisited": 1,
+        "RewardStoreName": "RunProgress",
+        "ExitDoorRooms": {},
+        "UseRecord": {},
+        "Kills": {},
+        "WellShopChanceSuccess": true,
+        "SurfaceShopChanceSuccess": false,
+        "SellShopChanceSuccess": false,
+        "Encounter": { "Name": "Empty" }
+      },
+      "Hero": {
+        "SlottedTraits": {
+          "Ranged": "AresCastBoon",
+          "Keepsake": "RandomBlessingKeepsake",
+          "Mana": "AphroditeManaBoon",
+          "Spell": "SpellLeapTrait",
+          "Secondary": "HeraSpecialBoon",
+          "Aspect": "StaffClearCastAspect",
+          "Familiar": "DodgeFamiliar"
+        },
+        "Traits": [
+          {
+            "Name": "HadesAndPersephoneKeepsake",
+            "Id": "015.95000031031670.54963915655389",
+            "Rarity": "Epic"
+          },
+          { "Name": "HadesInvisibilityRetaliateBoon", "Id": "115.95000031031670.40271300263703" },
+          { "Name": "DodgeFamiliar", "Id": "215.95000031031670.34075928339735", "StackNum": 4 },
+          {
+            "Name": "FamiliarPolecatResourceBonus",
+            "Id": "315.95000031031670.26483176229522",
+            "StackNum": 4
+          },
+          {
+            "Name": "FamiliarPolecatDamage",
+            "Id": "415.95000031031670.35070426343009",
+            "StackNum": 4
+          },
+          {
+            "Name": "StaffClearCastAspect",
+            "Id": "515.95000031031670.017533922800794",
+            "Rarity": "Legendary"
+          },
+          { "Name": "EarthEssence", "Id": "22121.417024944210.38893522019498" },
+          { "Name": "FireEssence", "Id": "23249.8670264279940.81846365029924" },
+          { "Name": "TemporaryMoveSpeedTrait", "Id": "26477.5808374371850.93387287203223" },
+          { "Name": "RoomRewardMaxManaTrait", "Id": "27582.5475043628830.83613834832795" },
+          { "Name": "RoomRewardMaxHealthTrait", "Id": "28582.5475043628830.51607614173554" },
+          {
+            "Name": "HighHealthCritBoon",
+            "Id": "295108.609227978160.51607614173554",
+            "Rarity": "Common"
+          },
+          {
+            "Name": "CastDamageCostume",
+            "Id": "306136.959229456730.48783003608696",
+            "Rarity": "Common"
+          },
+          {
+            "Name": "HeraSpecialBoon",
+            "Id": "317154.092563683630.667990348069",
+            "Rarity": "Heroic",
+            "StackNum": 7
+          },
+          {
+            "Name": "ChaosExSpeedBlessing",
+            "Id": "22248.3336930146910.75289838085882",
+            "Rarity": "Epic"
+          },
+          {
+            "Name": "StaffJumpSpecialTrait",
+            "Id": "339198.799867644560.15889174374752",
+            "Rarity": "Common"
+          },
+          { "Name": "RoomRewardMaxManaTrait", "Id": "3410202.633201177810.38018938945606" },
+          { "Name": "RoomRewardMaxHealthTrait", "Id": "3510202.633201177810.57816969207488" },
+          {
+            "Name": "AresCastBoon",
+            "Id": "3510218.382844880340.67478367965668",
+            "Rarity": "Epic",
+            "StackNum": 5
+          },
+          { "Name": "SpellLeapTrait", "Id": "3611238.206060212220.26339321024716" },
+          { "Name": "TemporaryMoveSpeedTrait", "Id": "3711241.889393737660.72424853499979" },
+          {
+            "Name": "AphroditeManaBoon",
+            "Id": "3812255.089394426090.21636281651445",
+            "Rarity": "Common",
+            "StackNum": 4
+          },
+          {
+            "Name": "RandomBlessingKeepsake",
+            "Id": "3714340.653081433030.87058452051133",
+            "Rarity": "Epic"
+          },
+          {
+            "Name": "ChaosManaCostBlessing",
+            "Id": "3814340.653081433030.58511012233794",
+            "Rarity": "Epic"
+          },
+          { "Name": "TemporaryForcedSecretDoorTrait", "Id": "3914347.636415130580.24053581431508" }
+        ]
+      }
+    }
+  }
+}

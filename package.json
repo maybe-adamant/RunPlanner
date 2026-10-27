@@ -36,6 +36,7 @@
     "test:draft-corpus": "vitest run --config vitest.draft-corpus.config.ts",
     "fixtures:execution": "node scripts/regenerate-execution-fixtures.mjs",
     "fixtures:modeled-traits": "node scripts/regenerate-modeled-traits.mjs",
+    "fixtures:run-record": "node scripts/regenerate-run-record-fixture.mjs",
     "fixtures:checkpoints:regenerate": "node scripts/regenerate-authored-checkpoints.mjs",
     "fixtures:checkpoints": "node scripts/repair-reward-store-checkpoints.mjs",
     "test:schema:migrate": "node --test \"schema/*.test.js\"",

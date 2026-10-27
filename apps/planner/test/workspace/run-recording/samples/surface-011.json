@@ -1,0 +1,224 @@
+{
+  "header": {
+    "timestamp": 1793057392,
+    "location": "BiomeN_Short",
+    "runs": 1002,
+    "shrine": 62,
+    "mapName": "N_PreHub01",
+    "nextMap": "N_Hub"
+  },
+  "globals": {
+    "_worldTime": 68.4895433515776,
+    "GameState": {
+      "PrimaryWeaponName": "WeaponStaffSwing",
+      "EquippedFamiliar": "PolecatFamiliar",
+      "ShrineUpgrades": {
+        "BossDifficultyShrineUpgrade": 4,
+        "EnemySpeedShrineUpgrade": 2,
+        "BoonSkipShrineUpgrade": 1,
+        "EnemyEliteShrineUpgrade": 2,
+        "EnemyCountShrineUpgrade": 3,
+        "EnemyRespawnShrineUpgrade": 2,
+        "HealingReductionShrineUpgrade": 3,
+        "BoonManaReserveShrineUpgrade": 2,
+        "ShopPricesShrineUpgrade": 2,
+        "BanUnpickedBoonsShrineUpgrade": 1,
+        "EnemyShieldShrineUpgrade": 2,
+        "NextBiomeEnemyShrineUpgrade": 2,
+        "LimitGraspShrineUpgrade": 0,
+        "BiomeSpeedShrineUpgrade": 3,
+        "MinibossCountShrineUpgrade": 1,
+        "EnemyDamageShrineUpgrade": 3,
+        "EnemyHealthShrineUpgrade": 3
+      },
+      "MetaUpgradeState": {
+        "MaxHealthPerRoom": { "Equipped": true, "Level": 3 },
+        "BonusHealth": { "Equipped": true, "Level": 3 },
+        "StartingGold": { "Equipped": true, "Level": 3 },
+        "HealthRegen": { "Equipped": true, "Level": 3 },
+        "BonusDodge": { "Equipped": true, "Level": 3 },
+        "EpicRarityBoost": { "Equipped": true, "Level": 3 },
+        "LowManaDamageBonus": { "Equipped": true, "Level": 3 },
+        "CastBuff": { "Equipped": true, "Level": 3 },
+        "MetaToRunUpgrade": { "Equipped": true, "Level": 3 },
+        "ChanneledCast": { "Equipped": true, "Level": 3 },
+        "LastStand": { "Equipped": true, "Level": 3 },
+        "SprintShield": { "Equipped": true, "Level": 3 },
+        "ChanneledBlock": { "Equipped": true, "Level": 3 },
+        "StatusVulnerability": { "Equipped": true, "Level": 3 }
+      },
+      "Resources": { "Money": 335 }
+    },
+    "CurrentRun": {
+      "BiomeVisitOrder": ["N"],
+      "BiomeBoonSkipCount": 1,
+      "WellShopPurchases": {},
+      "NPCInteractions": { "AphroditeUpgrade": 1 },
+      "LootChoiceHistory": [
+        {
+          "UpgradeName": "AphroditeUpgrade",
+          "UpgradeChoices": [
+            { "Chosen": "true", "Rarity": "Rare", "Name": "AphroditeSpecialBoon" },
+            { "Chosen": "false", "Rarity": "Common", "Name": "AphroditeSprintBoon" },
+            { "Chosen": "false", "Rarity": "Common", "Name": "AphroditeManaBoon" }
+          ],
+          "Depth": 1
+        }
+      ],
+      "RewardStores": {
+        "RunProgress": [
+          { "Name": "MaxHealthDrop" },
+          { "Name": "MaxHealthDrop" },
+          { "Name": "MaxManaDrop" },
+          { "Name": "MaxManaDrop" },
+          { "Name": "RoomMoneyDrop" },
+          { "Name": "RoomMoneyDrop" },
+          { "Name": "StackUpgrade" },
+          { "Name": "StackUpgrade" },
+          { "Name": "WeaponUpgrade" },
+          { "Name": "WeaponUpgrade" },
+          { "Name": "HermesUpgrade" },
+          { "Name": "Devotion" },
+          { "Name": "SpellDrop" },
+          { "Name": "TalentDrop" },
+          { "Name": "Boon" },
+          { "Name": "Boon" }
+        ],
+        "MetaProgress": [
+          { "Name": "GiftDrop" },
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyDrop" },
+          { "Name": "MetaCurrencyBigDrop" },
+          { "Name": "MetaCurrencyBigDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" },
+          { "Name": "MetaCardPointsCommonBigDrop" }
+        ]
+      },
+      "RoomHistory": [
+        { "Name": "N_Opening01" },
+        {
+          "Name": "N_PreHub01",
+          "TimesVisited": 1,
+          "ChosenRewardType": "Boon",
+          "ForceLootName": "AphroditeUpgrade",
+          "RewardStoreName": "RunProgress",
+          "ExitDoorRooms": { "658853": "N_Hub" },
+          "OfferedRewards": {},
+          "UseRecord": { "EphyraExitDoorReturnNE": 1, "RespawnEgg": 10, "AphroditeUpgrade": 1 },
+          "Kills": { "Scimiterror": 4, "Stickler": 1, "Carrion": 6, "Mudman": 1, "Breakable_N": 9 },
+          "HeroStartPoint": 50065,
+          "WellShopChanceSuccess": false,
+          "SurfaceShopChanceSuccess": false,
+          "SellShopChanceSuccess": false,
+          "Encounter": {
+            "Name": "PreHubGeneratedN",
+            "DifficultyRating": 160,
+            "Blacklist": { "Mudman_Elite": true, "Carrion_Elite": true },
+            "StartTime": 20.52639000036288,
+            "SpawnWaves": [
+              {
+                "DifficultyRating": 160,
+                "Spawns": [
+                  { "Name": "Carrion", "TotalCount": 10, "Generated": true },
+                  { "Name": "Mudman", "TotalCount": 2, "Generated": true }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "CurrentRoom": {
+        "Name": "N_Hub",
+        "TimesVisited": 1,
+        "RewardStoreName": "RunProgress",
+        "ExitDoorRooms": {},
+        "PredeterminedDoorRooms": {
+          "617138": "N_Combat07",
+          "561354": "N_Combat16",
+          "561449": "N_Combat11",
+          "561403": "N_Combat14",
+          "560707": "N_Combat04",
+          "561374": "N_Combat18",
+          "560708": "N_Combat06",
+          "617113": "N_Combat01",
+          "560725": "N_Combat02",
+          "561389": "N_Combat12",
+          "560889": "N_MiniBoss02",
+          "561424": "N_Combat17",
+          "616992": "N_Combat13",
+          "561337": "N_Combat05",
+          "560705": "N_Combat15",
+          "560620": "N_Combat19",
+          "617012": "N_Combat09",
+          "560776": "N_Combat22",
+          "560699": "N_Combat08",
+          "561418": "N_Combat20",
+          "617151": "N_Combat10",
+          "617043": "N_MiniBoss01",
+          "560713": "N_Combat21",
+          "561368": "N_Combat23",
+          "560702": "N_Combat03",
+          "560848": "N_Story01"
+        },
+        "UseRecord": {},
+        "Kills": {},
+        "HeroStartPoint": 50065,
+        "WellShopChanceSuccess": false,
+        "SurfaceShopChanceSuccess": false,
+        "SellShopChanceSuccess": false,
+        "Encounter": { "Name": "Empty" }
+      },
+      "Hero": {
+        "SlottedTraits": {
+          "Familiar": "DodgeFamiliar",
+          "Aspect": "StaffClearCastAspect",
+          "Keepsake": "HadesAndPersephoneKeepsake",
+          "Secondary": "AphroditeSpecialBoon"
+        },
+        "Traits": [
+          {
+            "Name": "HadesAndPersephoneKeepsake",
+            "Id": "0110.1166671942920.88090998283587",
+            "Rarity": "Epic"
+          },
+          { "Name": "HadesChronosDebuffBoon", "Id": "1110.1166671942920.22087305318564" },
+          { "Name": "DodgeFamiliar", "Id": "2110.1166671942920.11951784905978", "StackNum": 4 },
+          {
+            "Name": "FamiliarPolecatResourceBonus",
+            "Id": "3110.1166671942920.77560250484385",
+            "StackNum": 4
+          },
+          {
+            "Name": "FamiliarPolecatDamage",
+            "Id": "4110.1166671942920.38951016473584",
+            "StackNum": 4
+          },
+          {
+            "Name": "StaffClearCastAspect",
+            "Id": "5110.1166671942920.84452022518963",
+            "Rarity": "Legendary"
+          },
+          { "Name": "WaterEssence", "Id": "20134.2430573824090.77560250484385" },
+          {
+            "Name": "AphroditeSpecialBoon",
+            "Id": "21266.1395432290160.028722521616146",
+            "Rarity": "Rare",
+            "StackNum": 4
+          }
+        ]
+      }
+    }
+  }
+}
