@@ -28,6 +28,12 @@ exclusions, acceptance lanes, expected deletions, starting files or symbols and
 the governing document sections. It omits the parent history. Inventory the
 base and worktree before writing it.
 
+Scope the acceptance lanes to the expected change: name the paths the change
+should touch and only the lanes that cover them. Opt-in measurement lanes run
+only when their trigger applies. An agent that needs to touch anything outside
+the named paths stops and asks; the main session judges whether it is sensible
+and grants or redirects, then adjusts the lanes.
+
 - **Read-only work** (audits, inventories, game-fact checks, reviews) goes to
   the [investigator](roles/investigator.md) role. To turn a read-only agent
   into a writer, start a writer instead, or quote the owner's approval in the

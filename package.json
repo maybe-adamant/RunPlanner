@@ -42,6 +42,7 @@
     "test:schema:migrate": "node --test \"schema/*.test.js\"",
     "test:catalog": "vitest run packages/hades2-catalog/test",
     "test:engine": "vitest run packages/planner-engine/test",
+    "test:run-import": "vitest run packages/planner-engine/test/run-record packages/planner-engine/test/simulation/run-import apps/planner/test/workspace/run-recording",
     "test:planner": "vitest run apps/planner/test --exclude \"apps/planner/test/product-loops/**\"",
     "test:ui": "vitest run apps/planner/test/ui",
     "test:contract": "vitest run apps/planner/test/architecture apps/planner/test/support/structured-workspace apps/planner/test/projections/structuredWorkspace.contract.test.ts",

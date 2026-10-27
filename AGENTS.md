@@ -235,6 +235,8 @@ execution policy and the measurement lanes' mechanics.
 - `npm run test:contract`: application/workspace capability changes.
 - `npm run test:product`: cross-layer browser workflows.
 - `npm run test:engine` / `npm run test:catalog`: their owning packages.
+- `npm run test:run-import`: the run record, its import, and the app recorder;
+  Record mode changes that stay inside those.
 - `npm run test:game-module`: the game module's Lua syntax, tests, and Luacheck.
 - `npm run test:equivalence`: before and after engine refactors and any
   chronology or settlement change.
