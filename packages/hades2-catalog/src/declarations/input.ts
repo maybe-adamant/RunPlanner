@@ -39,6 +39,8 @@ export interface RawCatalogInput {
   readonly exitCompatibilityPolicies: readonly ExitCompatibilityPolicy[];
   readonly exitTypes: readonly RawExitTypeDeclaration[];
   readonly rooms: readonly RawRoomDeclaration[];
+  /** Map door ids in native processing order, by room game name. */
+  readonly nativeExitDoorOrders: Readonly<Record<string, readonly number[]>>;
   readonly biomeLayouts: readonly RawBiomeLayoutDeclaration[];
   readonly traitCatalog: RawTraitCatalogInput;
 }

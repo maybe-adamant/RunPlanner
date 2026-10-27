@@ -8,7 +8,12 @@ import type {
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 
 import type { RawAdditionalExitDeclaration, RawRoomDeclaration } from '../../declarations/index';
-import { freezeUniqueStrings, requireNonEmpty, requireNonNegativeInteger } from '../common';
+import {
+  freezeUniqueStrings,
+  requireNonEmpty,
+  requireNonNegativeInteger,
+  requirePositiveInteger,
+} from '../common';
 import { type RoomIdentityFacts } from './core-facts';
 import { type RoomEncounterFacts } from './encounter-facts';
 import { fail } from '../errors';
@@ -18,7 +23,38 @@ import {
   validateRequirementReferences,
 } from '../requirements';
 
-export type RoomExitFacts = Pick<RoomDeclaration, 'exits' | 'additionalExits'>;
+export type RoomExitFacts = Pick<
+  RoomDeclaration,
+  'exits' | 'additionalExits' | 'nativeExitDoorOrder'
+>;
+
+/**
+ * The catalog keeps no map door ids for room exits, so a declared order is
+ * checked for shape, uniqueness and the room's same-type exit count only.
+ */
+function normalizeNativeExitDoorOrder(
+  raw: readonly number[],
+  exits: readonly RoomExit[],
+  path: string,
+): readonly number[] {
+  if (!Array.isArray(raw)) fail(path, 'must be an array of door ids');
+  const sharedTypeCount = Math.max(
+    0,
+    ...exits.map((exit) => exits.filter((other) => other.type === exit.type).length),
+  );
+  if (sharedTypeCount < 2) fail(path, 'requires at least two exits of one type');
+  if (raw.length < 2) fail(path, 'must order at least two doors');
+  if (raw.length > exits.length) fail(path, `orders more doors than the ${exits.length} exits`);
+  const seen = new Set<number>();
+  return Object.freeze(
+    raw.map((value, index) => {
+      const door = requirePositiveInteger(value, `${path}[${index}]`);
+      if (seen.has(door)) fail(`${path}[${index}]`, `duplicates ${door}`);
+      seen.add(door);
+      return door;
+    }),
+  );
+}
 
 function normalizeAdditionalExits(
   rawExits: readonly RawAdditionalExitDeclaration[],
@@ -123,6 +159,7 @@ export function normalizeRoomExitFacts(
   encounter: RoomEncounterFacts,
   exitTypes: CatalogCollection<ExitTypeDeclaration>,
   rewards: RewardKernelCatalog,
+  rawNativeExitDoorOrder: readonly number[] | undefined,
   path: string,
 ): RoomExitFacts {
   if (
@@ -240,5 +277,17 @@ export function normalizeRoomExitFacts(
   ) {
     fail(`${path}.additionalExits`, 'additional Zagreus exits require a Shop room');
   }
-  return Object.freeze({ exits: Object.freeze(exits), additionalExits });
+  return Object.freeze({
+    exits: Object.freeze(exits),
+    additionalExits,
+    ...(rawNativeExitDoorOrder === undefined
+      ? {}
+      : {
+          nativeExitDoorOrder: normalizeNativeExitDoorOrder(
+            rawNativeExitDoorOrder,
+            exits,
+            `nativeExitDoorOrders.${identity.gameName}`,
+          ),
+        }),
+  });
 }

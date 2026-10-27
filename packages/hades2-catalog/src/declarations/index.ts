@@ -16,6 +16,7 @@ import { fRooms } from './rooms/f';
 import { gRooms } from './rooms/g';
 import { hRooms } from './rooms/h';
 import { iRooms } from './rooms/i';
+import { nativeExitDoorOrders } from './rooms/native-exit-door-order';
 import { nRooms } from './rooms/n/index';
 import { oRooms } from './rooms/o';
 import { pRooms } from './rooms/p';
@@ -71,6 +72,7 @@ export const declarations = {
   exitCompatibilityPolicies,
   exitTypes,
   rooms,
+  nativeExitDoorOrders,
   biomeLayouts,
   traitCatalog: traitCatalogInput,
 } as const satisfies RawCatalogInput;

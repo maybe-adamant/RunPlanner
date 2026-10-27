@@ -116,6 +116,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const exitTypes = normalizeExitTypes(input.exitTypes, exitCompatibilityPolicies);
   const rooms = normalizeRooms(
     input.rooms,
+    input.nativeExitDoorOrders,
     rewards,
     encounterEnvelopes,
     encounterDefinitions,

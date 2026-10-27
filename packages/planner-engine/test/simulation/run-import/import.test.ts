@@ -563,29 +563,38 @@ describe('run import of the live Underworld recording', () => {
     });
   });
 
+  it("imports H_Combat07's Hestia cage and Concave Stone's extra pick from it", () => {
+    const cage = occurrence(imported.project, 'H-r27').state;
+    const offer =
+      cage.kind === 'fieldsCombat'
+        ? cage.cages['cage2']?.traitOffersByAcquisitionRole['source']
+        : undefined;
+    expect(offer).toMatchObject({
+      giverKey: 'Hestia',
+      selectedOptionKey: 'option3',
+      concaveStoneResult: { kind: 'proc', optionKey: 'option1' },
+    });
+    expect(offer?.kind === 'traits' && offer.options[0]?.traitKey).toBe('HestiaManaBoon');
+  });
+
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
         conversion: 3,
-        doors: 19,
+        doors: 18,
         encounter: 3,
         traitOffer: 1,
         reward: 1,
         fields: 1,
-        roomActionOrder: 13,
+        roomActionOrder: 12,
       },
-      notInRecord: { traitOffer: 5, fields: 2, shop: 3, route: 1 },
-      refused: { fields: 2, traitOffer: 13, pool: 2 },
+      notInRecord: { traitOffer: 1, fields: 2, shop: 3, route: 1 },
+      refused: { traitOffer: 4, pool: 1 },
     });
     // Fig Leaf, racked at F_PostBoss01, skipped one encounter in each of G, H and I: the record
     // predates the skip mark, so each is inferred from a rolled phase with no kills.
-    // In ascending door id H_Combat07's cages roll before H_Combat05's Mini-Boss door and
-    // find no Boon left; the game generated the Mini-Boss door first, which refilled the store.
-    // That leaves H_Combat07's Hestia screen, and Concave Stone's extra pick from it, unanswered.
+    // H_Combat05 declares its native door order, so its batch carries no door-order assumption.
     // H_PreBoss01's Shop stock was recorded as a Well, so its purchases are unknown.
-    // H_Combat07's guessed Hermes cage leaves Dodge Chance unpicked, so Denial bans it
-    // before the I_PreBoss02 Hermes screen that picked it.
-    // The unattributed Denial lines follow the H_Combat07 cage guess.
     expect(entryLines(imported.report)).toEqual([
       'assumption conversion r1 acquisitionEntry@F-r1 -> ReplaceAcquisitionEntryOffer(F-r1 RoomMoneyDrop)',
       'assumption doors r1 exitDecision@F-r1',
@@ -606,21 +615,16 @@ describe('run import of the live Underworld recording', () => {
       'assumption doors r20 exitDecision@G-r20',
       'assumption reward r20 incomingReward@G-r20-d737226 -> ReplaceIncomingReward(G-r20-d737226 Devotion)',
       'assumption encounter r26 encounterPhase@H-r26:Cage02 -> ReplaceFigLeafSkip(H-r26)',
-      'assumption doors r26 exitDecision@H-r26',
-      'refused fields r27 localReward@H-r27:cage2 -> ReplaceLocalReward(H-r27 HermesUpgrade)',
       'assumption doors r27 exitDecision@H-r27',
       'assumption doors r28 exitDecision@H-r28',
       'assumption fields r28 localReward@H-r28-d564300:cage1',
-      'refused fields r29 localReward@H-r29:cage2 -> ReplaceLocalReward(H-r29 Boon)',
       'refused traitOffer r30 traitOffer@H-r30:hiddenSource -> ReplaceTraitOffer(H-r30 CoverRegenerationBoon|DoubleExManaBoon#option1)',
-      'refused pool r32 roomFeature@H-r30:postboss -> ReplacePurgingPoolSlot(H-r30:postboss)',
       'refused pool r32 roomFeature@H-r30:postboss -> ReplacePurgingPoolSlot(H-r30:postboss)',
       'assumption encounter r34 encounterPhase@I-r34:Encounter -> ReplaceFigLeafSkip(I-r34)',
       'assumption doors r34 exitDecision@I-r34',
       'assumption doors r35 exitDecision@I-r35',
       'assumption doors r36 exitDecision@I-r36',
       'assumption doors r37 exitDecision@I-r37',
-      'refused traitOffer r40 traitOffer@I-r40:hermes -> ReplaceTraitOffer(I-r40 SorcerySpeedBoon|MoneyMultiplierBoon|TimedKillBuffBoon#option1)',
       'assumption roomActionOrder r1 occurrence@F-r1',
       'assumption roomActionOrder r2 occurrence@F-r2',
       'assumption roomActionOrder r8 occurrence@F-r8',
@@ -633,44 +637,25 @@ describe('run import of the live Underworld recording', () => {
       'assumption roomActionOrder r27 occurrence@H-r27',
       'assumption roomActionOrder r29 occurrence@H-r29',
       'assumption roomActionOrder r32 occurrence@H-r30:postboss',
-      'assumption roomActionOrder r40 occurrence@I-r40',
-      'refused traitOffer r27 -',
-      'refused traitOffer r29 -',
       'refused traitOffer r30 -',
       'refused traitOffer r30 -',
-      'refused traitOffer r40 -',
-      'refused traitOffer r40 -',
-      'refused traitOffer r- -',
-      'refused traitOffer r- -',
-      'refused traitOffer r- -',
-      'refused traitOffer r- -',
       'refused traitOffer r- -',
     ]);
   });
 });
 
-describe('run import of Fig Leaf and Concave Stone in the live Underworld recording', () => {
+describe('run import of Fig Leaf skip marks in the live Underworld recording', () => {
   /**
-   * The live run through H, with H_Combat05's two door ids exchanged so ascending
-   * door id generates its Mini-Boss door first, as the game did; `skipped` marks
-   * the named phases as a record written after the skip mark would.
+   * The live run through H; `skipped` marks the named phases as a record written
+   * after the skip mark would.
    */
   function liveThroughH(skipped: readonly number[] = []): RunRecord {
     const record = fixture('underworld-live');
-    const [low, high] = [564448, 621199];
     return {
       ...record,
       route: { ...record.route, biomes: ['F', 'G', 'H'] },
       rooms: record.rooms.slice(0, 33).map((room, index) => ({
         ...room,
-        ...(index !== 26
-          ? {}
-          : {
-              doors: room.doors.map((door) => ({
-                ...door,
-                door: door.door === low ? high : low,
-              })),
-            }),
         ...(!skipped.includes(index)
           ? {}
           : {
@@ -682,22 +667,6 @@ describe('run import of Fig Leaf and Concave Stone in the live Underworld record
       })),
     };
   }
-
-  it("imports Concave Stone's extra pick at the screen whose pick preceded it", () => {
-    const imported = projectFromRunRecord(catalog, liveThroughH());
-    expect(imported.kind).toBe('complete');
-    const cage = occurrence(imported.project, 'H-r27').state;
-    const offer =
-      cage.kind === 'fieldsCombat'
-        ? cage.cages['cage2']?.traitOffersByAcquisitionRole['source']
-        : undefined;
-    expect(offer).toMatchObject({
-      giverKey: 'Hestia',
-      selectedOptionKey: 'option3',
-      concaveStoneResult: { kind: 'proc', optionKey: 'option1' },
-    });
-    expect(offer?.kind === 'traits' && offer.options[0]?.traitKey).toBe('HestiaManaBoon');
-  });
 
   it('imports a marked Fig Leaf skip exactly and infers none beside it', () => {
     const imported = projectFromRunRecord(catalog, liveThroughH([16]));

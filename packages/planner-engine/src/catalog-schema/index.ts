@@ -989,6 +989,12 @@ export interface RoomDeclaration {
   readonly structuralTags: readonly RoomStructuralTag[];
   readonly exits: readonly RoomExit[];
   readonly additionalExits: readonly AdditionalExitDeclaration[];
+  /**
+   * Map door ids in the order native `DoUnlockRoomExits` processes them, for a
+   * room whose exit doors share an obstacle name, where that order falls back
+   * to unsaved table order. Read by save import only.
+   */
+  readonly nativeExitDoorOrder?: readonly number[];
   readonly incomingReward: RewardProducerBinding;
   /** Entry-only contextual encounter differences; reward ownership remains route-start owned. */
   readonly entryContextualEncounterRules?: readonly EntryContextualEncounterRule[];

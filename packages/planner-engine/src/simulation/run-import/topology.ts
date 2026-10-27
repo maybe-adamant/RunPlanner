@@ -78,14 +78,35 @@ function sourceVisit(context: RunImportContext, occurrenceId: string): number | 
   return visits.find((index) => context.record.rooms[index]!.doors.length > 0) ?? visits[0];
 }
 
+/** The source visit's ordinary doors, before any order is applied. */
+const unorderedDoors = (context: RunImportContext, roomIndex: number) =>
+  context.record.rooms[roomIndex]!.doors.filter(
+    (door) => !chaosRoom(context, door.room) && !contractRoom(context, door.room),
+  );
+
+/** The room's declared native door order, when it covers every ordinary door the visit offered. */
+function declaredDoorOrder(
+  context: RunImportContext,
+  roomIndex: number,
+): readonly number[] | undefined {
+  const order =
+    context.catalog.rooms.byKey[context.record.rooms[roomIndex]!.name]?.nativeExitDoorOrder;
+  return order !== undefined &&
+    unorderedDoors(context, roomIndex).every((door) => order.includes(door.door))
+    ? order
+    : undefined;
+}
+
 /**
- * The source visit's ordinary doors in ascending door id. Native door order
- * ties on the obstacle name and falls back to table order, which no save keeps.
+ * The source visit's ordinary doors in native order. Native door order ties on
+ * the obstacle name and falls back to table order, which no save keeps: a room
+ * without a declared order takes ascending door id.
  */
 function ordinaryDoors(context: RunImportContext, roomIndex: number): readonly RunRecordDoor[] {
-  return [...context.record.rooms[roomIndex]!.doors]
-    .filter((door) => !chaosRoom(context, door.room) && !contractRoom(context, door.room))
-    .sort((left, right) => left.door - right.door);
+  const order = declaredDoorOrder(context, roomIndex);
+  const rank = (door: RunRecordDoor) =>
+    order === undefined ? door.door : order.indexOf(door.door);
+  return [...unorderedDoors(context, roomIndex)].sort((left, right) => rank(left) - rank(right));
 }
 
 /** The occurrence a door creates: the entered room for the taken door, else its own offered room. */
@@ -200,7 +221,10 @@ function ensureZagreusContract(context: RunImportContext, biomeKey: string, sour
     });
 }
 
-/** The batch's ascending door order is an assumption, reported once when its first door lands. */
+/**
+ * A batch's ascending door order is an assumption, reported once when its first
+ * door lands; a declared native order is exact.
+ */
 function noteDoorOrder(
   context: RunImportContext,
   decision: ReturnType<typeof createExitDecisionAddress>,
@@ -209,6 +233,7 @@ function noteDoorOrder(
 ): void {
   const used = `doorOrder:${semanticAddressKey(decision)}`;
   if (doorCount < 2 || context.used.has(used)) return;
+  if (declaredDoorOrder(context, sourceIndex) !== undefined) return;
   context.used.add(used);
   context.note({
     area: 'doors',
@@ -244,7 +269,7 @@ function createTarget(context: RunImportContext, target: TargetAddress): boolean
   if (takeoverPrebossGameNames(context.catalog, target.biomeKey).includes(positional.room))
     return createTakeover(context, decision, sourceIndex, exits, doors, positional.room);
   // The positional door goes first; a door the engine refuses at this exit
-  // yields to the next unplaced door in ascending id, reported with its id.
+  // yields to the next unplaced door in door order, reported with its id.
   const existing = exitDecisionForSource(topology, target.source);
   const placed = new Set(
     existing?.normal.kind === 'batch'
@@ -308,7 +333,7 @@ function createTarget(context: RunImportContext, target: TargetAddress): boolean
 /**
  * A Preboss takes over the source's doors: one of them is its Shop, the rest
  * carry counted offers. The record's Shop door becomes the takeover's Shop
- * target; the others follow ascending door id.
+ * target; the others follow door order.
  */
 function createTakeover(
   context: RunImportContext,

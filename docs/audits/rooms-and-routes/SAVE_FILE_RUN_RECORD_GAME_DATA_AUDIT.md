@@ -386,6 +386,11 @@ counters without order.
 - The physical resource point, and the room of a gather that granted no
   element.
 - The Chaos gate spawn point (`ExitDoorRooms` keys are runtime object ids).
+- The order in which a room's exit doors were generated. `DoUnlockRoomExits`
+  walks `CollapseTableOrdered(MapState.OfferedExitDoors)`, whose
+  `CompareGameDataTables` ties on doors sharing an obstacle name and falls
+  back to `next()` table order; `MapState` is not saved. The order decides
+  which door draws from the reward bag first.
 - The Travel Deal refill item's identity.
 - The unpicked ship-wheel boon god.
 - Physical points of collected Fields optional rewards and of Fields Nemesis.
@@ -446,3 +451,10 @@ profile's first attempt is still unrecorded.
   enemies the room never killed, and reports it as an assumption.
 - Concave Stone's extra pick is imported as the result of the screen it
   followed.
+- A batch's doors are ordered by the catalog's declared native door order for
+  the source room, an exact order; a room without one takes ascending door id
+  and reports the order as an assumption. The one declared room is inferred,
+  pending a native door-order probe: `H_Combat05` processes door `621199`
+  before `564448`. In the live Underworld recording's reward-bag replay that
+  generates the Mini-Boss door first, refilling the store, so `H_Combat07`'s
+  recorded Hestia cage finds a Boon; ascending id leaves it none.
