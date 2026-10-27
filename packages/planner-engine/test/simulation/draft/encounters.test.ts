@@ -17,9 +17,9 @@ import {
 import { DEFAULT_DRAFT_BUDGET } from '../../../src/simulation/draft/generator';
 import { createDraftRng } from '../../../src/simulation/draft/rng';
 import {
-  settleDraftCommand,
-  settleDraftCommandWithoutNewFinding,
-} from '../../../src/simulation/draft/settle';
+  settleCommandUnlessRefused,
+  settleCommandWithoutNewFinding,
+} from '../../../src/simulation/edit-settlement';
 import { startDraftWalk } from '../../support/draft-walk';
 import type { ProjectEvaluationAssembly } from '../../../src/simulation/evaluation/evaluation-products';
 import {
@@ -149,10 +149,10 @@ describe('draftEncounters', () => {
       // Five waves is representable but beyond every declared policy.
       value: { kind: 'generated' as const, waveCount: 5 },
     };
-    const settled = settleDraftCommand(catalog, start, command)!;
+    const settled = settleCommandUnlessRefused(catalog, start, command)!;
     expect(settled.evaluation.findings).toHaveLength(start.evaluation.findings.length);
     expect(settled.evaluation.findings).not.toEqual(start.evaluation.findings);
-    expect(settleDraftCommandWithoutNewFinding(catalog, start, command)).toBeUndefined();
+    expect(settleCommandWithoutNewFinding(catalog, start, command)).toBeUndefined();
   });
 
   it('drafts the same encounters for the same seed', () => {

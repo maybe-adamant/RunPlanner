@@ -78,7 +78,7 @@ import {
   type DraftSampleContext,
 } from './samples';
 import { draftProvider, type DraftGodSchedule, type DraftSupply } from './schedule';
-import { settleDraftCommand, settleDraftCommandWithoutNewFinding } from './settle';
+import { settleCommandUnlessRefused, settleCommandWithoutNewFinding } from '../edit-settlement';
 import { routeResourceAuthoring } from '../resources';
 import { draftBasketTraitKeys, draftKeepsakeOptions, type DraftSpec } from './spec';
 import {
@@ -306,7 +306,7 @@ export class DraftWalk {
     };
     const ordered = this.shuffle(families).sort((a, b) => preferred(b) - preferred(a));
     for (const family of ordered) {
-      const settled = settleDraftCommandWithoutNewFinding(this.catalog, this.assembly, {
+      const settled = settleCommandWithoutNewFinding(this.catalog, this.assembly, {
         kind: 'ReplaceResourcePlacement',
         route: createRouteAddress(route.routeKey),
         family,
@@ -328,7 +328,7 @@ export class DraftWalk {
 
   /** Applies a command through edit settlement; false when the command authority refuses it. */
   apply(command: ProjectCommand): boolean {
-    const settled = settleDraftCommand(this.catalog, this.assembly, command);
+    const settled = settleCommandUnlessRefused(this.catalog, this.assembly, command);
     if (settled === undefined) return false;
     this.assembly = settled;
     this.session = undefined;

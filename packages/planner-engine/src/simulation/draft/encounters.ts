@@ -26,7 +26,7 @@ import {
 import type { SemanticFinding } from '../model';
 import type { FigLeafPhaseCandidateSupport, GorgonPhaseCandidateSupport } from '../rewards/model';
 import type { DraftRng } from './rng';
-import { settleDraftCommandWithoutNewFinding } from './settle';
+import { settleCommandWithoutNewFinding } from '../edit-settlement';
 import type { DraftSpec } from './spec';
 import type { DraftSteering } from './steering';
 
@@ -212,7 +212,7 @@ export function draftEncounters(
 ): ProjectEvaluationAssembly {
   let assembly = start;
   const settle = (command: ProjectCommand): boolean => {
-    const settled = settleDraftCommandWithoutNewFinding(catalog, assembly, command);
+    const settled = settleCommandWithoutNewFinding(catalog, assembly, command);
     if (settled !== undefined) assembly = settled;
     return settled !== undefined;
   };
