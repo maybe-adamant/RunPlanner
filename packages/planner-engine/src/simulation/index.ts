@@ -611,6 +611,15 @@ export {
   type DraftWorld,
 } from './draft/spec';
 export { draftRefusals, type DraftRefusal } from './draft/refusals';
+export { projectFromRunRecord, type RunImport } from './run-import/import';
+export type {
+  RunImportArea,
+  RunImportReason,
+  RunImportRecordLocation,
+  RunImportReport,
+  RunImportReportEntry,
+  RunImportStop,
+} from './run-import/report';
 export {
   draftDefaultPerGodCap,
   draftGodBoonBudget,

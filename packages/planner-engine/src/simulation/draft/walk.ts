@@ -133,6 +133,10 @@ export class DraftWalk {
   /** Reward commands this walk applied. */
   private readonly authoredRewards = new Set<string>();
   private stepCount = 0;
+  /** Every command this walk applied, in order. */
+  readonly appliedCommands: ProjectCommand[] = [];
+  /** Names the occurrences this walk creates, so walks over one project never collide. */
+  occurrenceIdPrefix = 'draft';
   private failureReason: string | undefined;
   /** The biome being walked. */
   private biomeIndex = 0;
@@ -332,7 +336,28 @@ export class DraftWalk {
     if (settled === undefined) return false;
     this.assembly = settled;
     this.session = undefined;
+    this.appliedCommands.push(command);
     return true;
+  }
+
+  /**
+   * Continues from an assembly another author may have changed. What this walk
+   * tried is kept only while the assembly is still its own last result; after
+   * an outside edit a value it once tried may be legal again.
+   */
+  resume(assembly: ProjectEvaluationAssembly): void {
+    if (assembly !== this.assembly) {
+      this.hooked.clear();
+      this.authoredRewards.clear();
+    }
+    this.assembly = assembly;
+    this.session = undefined;
+  }
+
+  /** Repairs the route's current issue once, without choosing encounters; false when none applies. */
+  repairIssue(): boolean {
+    const reason = this.assembly.evaluation.issue?.reasons[0];
+    return reason !== undefined && this.repair(reason);
   }
 
   private shuffle<T>(values: readonly T[]): T[] {
@@ -359,7 +384,7 @@ export class DraftWalk {
 
   private occurrenceId(biomeKey: string): OccurrenceId {
     this.nextOccurrence += 1;
-    return createOccurrenceId(`${biomeKey}-draft-${this.nextOccurrence}`);
+    return createOccurrenceId(`${biomeKey}-${this.occurrenceIdPrefix}-${this.nextOccurrence}`);
   }
 
   /** A room as this route declares it, with its route overlay applied. */
