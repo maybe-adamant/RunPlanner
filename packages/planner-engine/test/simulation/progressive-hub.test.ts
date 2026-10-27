@@ -10,7 +10,6 @@ import {
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
-  createLocalVisitOrderAddress,
   createLocalVisitSlotAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -41,6 +40,7 @@ import {
   nOccurrenceId,
   nOccurrenceIds,
   nOpenSlotKeys,
+  withoutNFirstVisitSideRooms,
 } from '@run-planner/test-fixtures/surface';
 
 function progressiveLocalOccurrenceId(slotKey: string, localSlotKey: string) {
@@ -352,21 +352,25 @@ describe('Hub progressive biome evaluation', () => {
   );
 
   it('orders one Hub visit as target lifecycle, side generation, then local lifecycle', () => {
-    const base = loadSurfaceNProject();
-    let sideBlocked = applyProjectCommand(base, catalog, {
-      kind: 'ReplaceLocalVisitOrder',
-      order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-      occurrenceIds: [nLocalOccurrenceId('combat05', 'sideDoor2')],
-    });
-    sideBlocked = applyProjectCommand(sideBlocked, catalog, {
+    const base = withoutNFirstVisitSideRooms(loadSurfaceNProject());
+    const sideBlocked = applyProjectCommand(base, catalog, {
       kind: 'SetLocalVisitGeneration',
       slot: createLocalVisitSlotAddress(
         nBiome,
-        nOccurrenceId('combat05'),
+        nOccurrenceId('combat02'),
         'sideRooms',
-        'sideDoor1',
+        'sideDoor2',
       ),
       generation: 'notGenerated',
+    });
+    const targetBlocked = applyProjectCommand(sideBlocked, catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        nBiome,
+        { kind: 'occurrence', occurrenceId: nOccurrenceId('combat02') },
+        'Encounter',
+      ),
+      encounterKey: 'ArtemisCombatN',
     });
     const evaluation = (project: typeof base, impossibleEncounterKeys: readonly string[]) => {
       const biome = simulateProject(
@@ -382,31 +386,34 @@ describe('Hub progressive biome evaluation', () => {
       }
       return biome;
     };
-    const targetLifecycle = evaluation(sideBlocked, ['GeneratedN', 'GeneratedNSubRoom']);
+    const targetLifecycle = evaluation(targetBlocked, ['ArtemisCombatN', 'GeneratedNSubRoom']);
     const sideGeneration = evaluation(sideBlocked, ['GeneratedNSubRoom']);
     const localRoomLifecycle = evaluation(base, ['GeneratedNSubRoom']);
-    const combat05 = nOccurrenceId('combat05');
+    const combat02 = nOccurrenceId('combat02');
+    const visit = createHubVisitAddress(nBiome, 'hub', 3);
     const localOwner = {
       kind: 'occurrence' as const,
-      occurrenceId: nLocalOccurrenceId('combat05', 'sideDoor2'),
+      occurrenceId: nLocalOccurrenceId('combat02', 'sideDoor1'),
     };
 
     expect(targetLifecycle.coverage).toMatchObject({
       blockedAt: createEncounterPhaseAddress(
         nBiome,
-        { kind: 'occurrence', occurrenceId: combat05 },
+        { kind: 'occurrence', occurrenceId: combat02 },
         'Encounter',
       ),
     });
     expect(targetLifecycle.assessmentPrefix?.frontier).toMatchObject({
       kind: 'hubVisit',
+      origin: visit,
       phase: 'targetLifecycle',
     });
     expect(sideGeneration.coverage).toMatchObject({
-      blockedAt: createLocalVisitSlotAddress(nBiome, combat05, 'sideRooms', 'sideDoor1'),
+      blockedAt: createLocalVisitSlotAddress(nBiome, combat02, 'sideRooms', 'sideDoor2'),
     });
     expect(sideGeneration.assessmentPrefix?.frontier).toMatchObject({
       kind: 'hubVisit',
+      origin: visit,
       phase: 'sideGeneration',
     });
     expect(localRoomLifecycle.coverage).toMatchObject({
@@ -414,10 +421,11 @@ describe('Hub progressive biome evaluation', () => {
     });
     expect(localRoomLifecycle.assessmentPrefix?.frontier).toMatchObject({
       kind: 'hubVisit',
+      origin: visit,
       phase: 'localRoomLifecycle',
       enteredLocalRooms: [
         expect.objectContaining({
-          origin: createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat05', 'sideDoor2')),
+          origin: createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1')),
         }),
       ],
     });
@@ -533,14 +541,14 @@ describe('Hub progressive biome evaluation', () => {
     const project = applyProjectCommand(openHub(9, true), catalog, {
       kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
-      actions: hubVisitActions(['combat05']),
+      actions: hubVisitActions(['combat05', 'combat02']),
     });
     const biome = nEvaluation(project);
 
     expect(biome.coverage, JSON.stringify(biome.findings)).toMatchObject({
       kind: 'prefix',
       through: {
-        owner: createHubVisitAddress(nBiome, 'hub', 1),
+        owner: createHubVisitAddress(nBiome, 'hub', 2),
         checkpoint: 'afterTargetGeneration',
       },
     });
@@ -549,9 +557,9 @@ describe('Hub progressive biome evaluation', () => {
         code: 'sideRoomGenerationUnavailable',
         origin: createLocalVisitSlotAddress(
           nBiome,
-          createOccurrenceId('progressive-n-combat05'),
+          createOccurrenceId('progressive-n-combat02'),
           'sideRooms',
-          'sideDoor1',
+          'sideDoor2',
         ),
       }),
     );
@@ -587,29 +595,27 @@ describe('Hub progressive biome evaluation', () => {
       }),
     );
 
-    let sideProject = loadSurfaceNProject();
-    sideProject = applyProjectCommand(sideProject, catalog, {
-      kind: 'ReplaceLocalVisitOrder',
-      order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-      occurrenceIds: [nLocalOccurrenceId('combat05', 'sideDoor2')],
-    });
-    sideProject = applyProjectCommand(sideProject, catalog, {
-      kind: 'SetLocalVisitGeneration',
-      slot: createLocalVisitSlotAddress(
-        nBiome,
-        nOccurrenceId('combat05'),
-        'sideRooms',
-        'sideDoor1',
-      ),
-      generation: 'notGenerated',
-    });
+    const sideProject = applyProjectCommand(
+      withoutNFirstVisitSideRooms(loadSurfaceNProject()),
+      catalog,
+      {
+        kind: 'SetLocalVisitGeneration',
+        slot: createLocalVisitSlotAddress(
+          nBiome,
+          nOccurrenceId('combat02'),
+          'sideRooms',
+          'sideDoor2',
+        ),
+        generation: 'notGenerated',
+      },
+    );
     const side = progressiveN(sideProject as ReturnType<typeof openHub>);
     const frontier = side.assessmentPrefix?.frontier;
 
     expect(frontier).toMatchObject({
       kind: 'hubVisit',
       phase: 'sideGeneration',
-      target: { hubSlotKey: 'combat05' },
+      target: { hubSlotKey: 'combat02' },
       enteredLocalRooms: [],
       parentRestores: [],
     });
@@ -617,37 +623,36 @@ describe('Hub progressive biome evaluation', () => {
       side.history.rooms.find(
         (room) =>
           room.origin.kind === 'occurrence' &&
-          room.origin.occurrenceId === nOccurrenceId('combat05'),
+          room.origin.occurrenceId === nOccurrenceId('combat02'),
       )?.outgoingGeneration,
     ).toBeDefined();
     expect(
       side.history.rooms.some(
         (room) =>
           room.origin.kind === 'occurrence' &&
-          room.origin.occurrenceId === nLocalOccurrenceId('combat05', 'sideDoor2'),
+          room.origin.occurrenceId === nLocalOccurrenceId('combat02', 'sideDoor1'),
       ),
     ).toBe(false);
-    expect(side.history.events.some((event) => event.kind === 'roomRestored')).toBe(false);
+    // Only the two earlier visits' Hub returns; the blocked visit restores nothing.
+    expect(side.history.ledgers.roomRestores.map((event) => event.restoreKind)).toEqual([
+      'hub',
+      'hub',
+    ]);
   });
 
-  it('blocks at invalid Hub board generation before a simultaneous first-visit failure', () => {
-    let project = loadSurfaceNProject();
+  it('blocks at invalid Hub board generation before a simultaneous visit failure', () => {
+    let project = withoutNFirstVisitSideRooms(loadSurfaceNProject());
     const boardReward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
       reward: boardReward,
       value: { rewardType: 'WeaponUpgrade' },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceLocalVisitOrder',
-      order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-      occurrenceIds: [nLocalOccurrenceId('combat05', 'sideDoor2')],
-    });
     const laterVisitFailure = createLocalVisitSlotAddress(
       nBiome,
-      nOccurrenceId('combat05'),
+      nOccurrenceId('combat02'),
       'sideRooms',
-      'sideDoor1',
+      'sideDoor2',
     );
     project = applyProjectCommand(project, catalog, {
       kind: 'SetLocalVisitGeneration',

@@ -287,8 +287,12 @@ An entered combat target can expose zero to three declaration-fixed side slots.
 Their generation is a parent-local unordered sibling region: all generated
 side offers are prepared together, availability pressure follows the declared
 rank, and the parent-sourced local-visit decision remains the generation/order
-authority across restores. Side visits are not Hub visits and must not become
-a second global topology or a graph-canvas edge set.
+authority across restores. A side door is forced to generate only while the
+run's generated side rooms number fewer than half the Soul Pylons already
+spawned. Door setup precedes the room's own pylon, so only earlier main visits
+count and the first visit has no minimum; otherwise each door generates on a
+30% roll. Side visits are not Hub visits and must not become a second global
+topology or a graph-canvas edge set.
 
 A side slot retains its complete authored offer when its generation state is
 `notGenerated` or its parent target is unvisited; it becomes an active reward

@@ -5,6 +5,7 @@ import {
   createAcquisitionSiteAddress,
   createBiomeAddress,
   createLocalVisitOrderAddress,
+  createLocalVisitSlotAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   createEncounterPhaseAddress,
@@ -158,6 +159,27 @@ export function nLocalOccurrenceIdsBySlot(slotKey: string): Readonly<Record<stri
         : [],
     ),
   );
+}
+
+/**
+ * Leaves the first N visit (combat05) without side rooms, so the third visit's
+ * (combat02) first-ranked side door, sideDoor2, must generate.
+ */
+export function withoutNFirstVisitSideRooms(project: ProjectDocument): ProjectDocument {
+  const source = nOccurrenceId('combat05');
+  let next = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceLocalVisitOrder',
+    order: createLocalVisitOrderAddress(nBiome, source, 'sideRooms'),
+    occurrenceIds: [],
+  });
+  for (const localSlotKey of ['sideDoor1', 'sideDoor2', 'sideDoor3']) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'SetLocalVisitGeneration',
+      slot: createLocalVisitSlotAddress(nBiome, source, 'sideRooms', localSlotKey),
+      generation: 'notGenerated',
+    });
+  }
+  return next;
 }
 
 export function pOccurrenceId(

@@ -163,7 +163,8 @@ function hubBoardChronology(
 
 function requiredGeneratedCount(descriptor: HubDecisionDescriptor, visitIndex: number): number {
   const ratio = descriptor.sideRoomGeneration.minimumPerVisit;
-  return Math.ceil((visitIndex * ratio.numerator) / ratio.denominator);
+  // Door setup precedes the room's own pylon: only earlier visits' pylons count.
+  return Math.ceil(((visitIndex - 1) * ratio.numerator) / ratio.denominator);
 }
 
 function assertBoardIdentity(

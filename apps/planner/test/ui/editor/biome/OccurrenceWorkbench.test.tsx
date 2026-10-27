@@ -42,6 +42,7 @@ import {
   nOccurrenceId,
   nOccurrenceIds,
   oOccurrenceIds,
+  withoutNFirstVisitSideRooms,
 } from '@run-planner/test-fixtures/surface';
 import {
   renderOccurrenceWorkbench,
@@ -593,18 +594,18 @@ describe('OccurrenceWorkbench', () => {
 
   it('allows invalid generation edits, reports checkbox findings, and repairs them without changing visit order', async () => {
     const view = renderOccurrenceWorkbench(
-      loadSurfaceNOPQProject(),
+      withoutNFirstVisitSideRooms(loadSurfaceNOPQProject()),
       'Surface',
       'N',
-      occurrenceById(nOccurrenceId('combat05')),
+      occurrenceById(nOccurrenceId('combat02')),
     );
-    const node = occurrenceById(nOccurrenceId('combat05'))(
+    const node = occurrenceById(nOccurrenceId('combat02'))(
       workspaceBiome(view.application, 'Surface', 'N'),
     );
     const localVisit = node?.localVisit;
     const slot = localVisit?.slots[0];
     if (localVisit === undefined || slot === undefined)
-      throw new Error('Combat 05 side-room slot is missing');
+      throw new Error('Combat 02 side-room slot is missing');
     openRoomTab('Side Rooms');
     act(() =>
       view.application.store.dispatch(
@@ -625,7 +626,7 @@ describe('OccurrenceWorkbench', () => {
     expect(checkbox.getAttribute('data-has-findings')).toBe('true');
     expect(checkbox.getAttribute('aria-description')).toContain('Side room');
     const currentVisit = () =>
-      occurrenceById(nOccurrenceId('combat05'))(workspaceBiome(view.application, 'Surface', 'N'))
+      occurrenceById(nOccurrenceId('combat02'))(workspaceBiome(view.application, 'Surface', 'N'))
         ?.localVisit;
     expect(currentVisit()?.visitOrder).toEqual([]);
     const interaction = workspaceProjection(
@@ -850,18 +851,18 @@ describe('OccurrenceWorkbench', () => {
 
   it('focuses an exact Side Rooms generation finding without inner-tab session state', async () => {
     const view = renderOccurrenceWorkbench(
-      loadSurfaceNOPQProject(),
+      withoutNFirstVisitSideRooms(loadSurfaceNOPQProject()),
       'Surface',
       'N',
-      occurrenceById(nOccurrenceId('combat05')),
+      occurrenceById(nOccurrenceId('combat02')),
     );
-    const node = occurrenceById(nOccurrenceId('combat05'))(
+    const node = occurrenceById(nOccurrenceId('combat02'))(
       workspaceBiome(view.application, 'Surface', 'N'),
     );
     const localVisit = node?.localVisit;
     const slot = localVisit?.slots[0];
     if (localVisit === undefined || slot === undefined)
-      throw new Error('Combat 05 side-room slot is missing');
+      throw new Error('Combat 02 side-room slot is missing');
 
     openRoomTab('Side Rooms');
     act(() =>

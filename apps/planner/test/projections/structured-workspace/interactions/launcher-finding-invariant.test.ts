@@ -51,6 +51,7 @@ import {
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
+  withoutNFirstVisitSideRooms,
 } from '@run-planner/test-fixtures/surface';
 import { createStructuredWorkspaceTestServices } from '@planner-test/fixtures/structuredWorkspace';
 import { presentAssessmentIssue } from '@planner/projections/evaluationProjection';
@@ -459,13 +460,13 @@ describe('a finding never disables the launcher that repairs it', () => {
 
   it('holds for wheel, ship-phase, side-room, Hub-slot and Fields-spatial owners', () => {
     const base = loadSurfaceNOPQProject();
-    const combat05 = workspaceLocalVisit(base, 'surface-n-combat05');
-    let sideRooms = applyProjectCommand(base, catalog, {
+    const combat02 = workspaceLocalVisit(base, 'surface-n-combat02');
+    let sideRooms = applyProjectCommand(withoutNFirstVisitSideRooms(base), catalog, {
       kind: 'ReplaceLocalVisitOrder',
-      order: combat05.order,
+      order: combat02.order,
       occurrenceIds: [],
     });
-    for (const slot of combat05.slots)
+    for (const slot of combat02.slots)
       sideRooms = applyProjectCommand(sideRooms, catalog, {
         kind: 'SetLocalVisitGeneration',
         slot: slot.address,

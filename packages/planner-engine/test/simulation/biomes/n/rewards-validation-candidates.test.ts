@@ -54,6 +54,7 @@ import {
   nOccurrenceIds,
   nOpenSlotKeys,
   nVisitSlotKeys,
+  withoutNFirstVisitSideRooms,
 } from '@run-planner/test-fixtures/surface';
 
 function completeN(project = loadSurfaceNProject()) {
@@ -184,22 +185,20 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('keeps unavailable side generation and its local reward owner precise', () => {
-    let project = loadSurfaceNProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceLocalVisitOrder',
-      order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-      occurrenceIds: [nLocalOccurrenceId('combat05', 'sideDoor2')],
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetLocalVisitGeneration',
-      slot: createLocalVisitSlotAddress(
-        nBiome,
-        nOccurrenceId('combat05'),
-        'sideRooms',
-        'sideDoor1',
-      ),
-      generation: 'notGenerated',
-    });
+    const project = applyProjectCommand(
+      withoutNFirstVisitSideRooms(loadSurfaceNProject()),
+      catalog,
+      {
+        kind: 'SetLocalVisitGeneration',
+        slot: createLocalVisitSlotAddress(
+          nBiome,
+          nOccurrenceId('combat02'),
+          'sideRooms',
+          'sideDoor2',
+        ),
+        generation: 'notGenerated',
+      },
+    );
     const { biome } = completeN(project);
 
     expect(biome.validity).toBe('invalid');
@@ -208,47 +207,45 @@ describe('N Hub rewards, validation, and candidates', () => {
         code: 'sideRoomGenerationUnavailable',
         origin: createLocalVisitSlotAddress(
           nBiome,
-          nOccurrenceId('combat05'),
+          nOccurrenceId('combat02'),
           'sideRooms',
-          'sideDoor1',
+          'sideDoor2',
         ),
       }),
     );
   });
 
   it('keeps the blocked side-generation owner assessable for repair', () => {
-    let project = loadSurfaceNProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceLocalVisitOrder',
-      order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-      occurrenceIds: [nLocalOccurrenceId('combat05', 'sideDoor2')],
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetLocalVisitGeneration',
-      slot: createLocalVisitSlotAddress(
-        nBiome,
-        nOccurrenceId('combat05'),
-        'sideRooms',
-        'sideDoor1',
-      ),
-      generation: 'notGenerated',
-    });
+    const project = applyProjectCommand(
+      withoutNFirstVisitSideRooms(loadSurfaceNProject()),
+      catalog,
+      {
+        kind: 'SetLocalVisitGeneration',
+        slot: createLocalVisitSlotAddress(
+          nBiome,
+          nOccurrenceId('combat02'),
+          'sideRooms',
+          'sideDoor2',
+        ),
+        generation: 'notGenerated',
+      },
+    );
     const blockedSideRoom = createLocalVisitSlotAddress(
       nBiome,
-      nOccurrenceId('combat05'),
+      nOccurrenceId('combat02'),
       'sideRooms',
-      'sideDoor1',
+      'sideDoor2',
     );
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const laterSideRoom = createLocalVisitSlotAddress(
       nBiome,
-      nOccurrenceId('combat02'),
+      nOccurrenceId('combat11'),
       'sideRooms',
       'sideDoor1',
     );
     const withLaterViolation = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1')),
+      reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat11', 'sideDoor1')),
       value: { rewardType: 'AirBoost' },
     });
     const candidates = createPreparedProjectCandidateSession(
@@ -778,9 +775,9 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
       actions: hubVisitActions([
+        'miniBoss01',
         'combat02',
         'combat05',
-        'miniBoss01',
         'combat11',
         'combat23',
         'combat09',
@@ -1275,7 +1272,6 @@ describe('N Hub rewards, validation, and candidates', () => {
       requiredOpenSlot,
       alternateVisit,
       duplicateVisit,
-      forcedSideGeneration,
       blockedEnteredSide,
       optionalSideGeneration,
       sideEntryOrder,
@@ -1307,9 +1303,9 @@ describe('N Hub rewards, validation, and candidates', () => {
         actions: hubVisitActions([
           'combat03',
           'miniBoss01',
-          'combat02',
-          'combat11',
           'combat23',
+          'combat11',
+          'combat02',
           'combat09',
         ]),
       },
@@ -1324,16 +1320,6 @@ describe('N Hub rewards, validation, and candidates', () => {
           'combat23',
           'combat09',
         ]),
-      },
-      {
-        kind: 'sideRoomGeneration',
-        sideRoom: createLocalVisitSlotAddress(
-          nBiome,
-          nOccurrenceId('combat05'),
-          'sideRooms',
-          'sideDoor1',
-        ),
-        generation: 'generated',
       },
       {
         kind: 'sideRoomGeneration',
@@ -1402,6 +1388,20 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'hubActionOrder',
       result: { selectedPossible: false },
     });
+    // Forced generation needs an earlier visit's pylon that no side room yet covers.
+    const forcedSideGeneration = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, withoutNFirstVisitSideRooms(project)),
+    ).evaluate({
+      kind: 'sideRoomGeneration',
+      sideRoom: createLocalVisitSlotAddress(
+        nBiome,
+        nOccurrenceId('combat02'),
+        'sideRooms',
+        'sideDoor2',
+      ),
+      generation: 'generated',
+    });
     expect(forcedSideGeneration).toMatchObject({
       kind: 'sideRoomGeneration',
       result: { selectedPossible: true, supportOutcomes: ['generated'] },
@@ -1461,9 +1461,9 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'hubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
       actions: hubVisitActions([
+        'miniBoss01',
         'combat03',
         'combat05',
-        'miniBoss01',
         'combat02',
         'combat11',
         'combat23',
@@ -1474,9 +1474,9 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'hubActionOrder',
       result: {
         candidateActions: hubVisitActions([
+          'miniBoss01',
           'combat03',
           'combat05',
-          'miniBoss01',
           'combat02',
           'combat11',
           'combat23',

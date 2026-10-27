@@ -310,13 +310,11 @@ describe('run import of the Surface capture', () => {
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { roomActionOrder: 6 },
-      notInRecord: { loadout: 1, reward: 1, traitOffer: 2 },
-      refused: { conversion: 1, hub: 1, reward: 1 },
+      notInRecord: { loadout: 1, reward: 1, traitOffer: 1 },
+      refused: { conversion: 1 },
       unsupportedArea: { shop: 18, wheel: 10 },
     });
     expect(entryLines(imported.report)).toEqual([
-      'refused hub r3 localVisitSlot@N-r3:sideDoor2 -> SetLocalVisitGeneration(N-r3)',
-      'refused reward r4 incomingReward@N-r4 -> ReplaceIncomingReward(N-r4 StackUpgrade)',
       'refused conversion r24 acquisitionRole@O-r24:self',
       'assumption roomActionOrder r19 occurrence@N-r17:postboss',
       'assumption roomActionOrder r21 occurrence@O-r21',
