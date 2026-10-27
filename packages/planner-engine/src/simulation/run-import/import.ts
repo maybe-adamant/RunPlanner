@@ -18,8 +18,8 @@ import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-product
 import { simulateProjectAssembly } from '../evaluation/project';
 import type { SemanticFinding } from '../model';
 import { RunImportGuesser } from './guess';
-import { guessNemesisEvent } from './nemesis';
-import { RecordOccurrences } from './occurrences';
+import { answerNemesis, guessNemesisEvent } from './nemesis';
+import { occurrenceIdOf, RecordOccurrences } from './occurrences';
 import type {
   RunImportArea,
   RunImportReason,
@@ -31,13 +31,14 @@ import { answerHub, importSideRoomVisits } from './hub';
 import { answerTopology } from './topology';
 import { answerReward } from './rewards';
 import { answerLevelResolution, answerTraitOffer } from './trait-offers';
-import {
-  importDispositions,
-  reportRoomActionOrders,
-  reportUnplacedDispositions,
-} from './dispositions';
+import { importDispositions, reportUnplacedDispositions } from './dispositions';
+import { importRoomActionOrders } from './action-order';
 import { importEncounters } from './encounters';
-import { areaOfFinding } from './areas';
+import { answerCommerce, importCommerce } from './commerce';
+import { answerFeatures, importFeatures, reportDenialBans } from './features';
+import { answerFields, importFieldsRooms } from './fields';
+import { answerWheels, importWheelConversions, importWheels } from './wheels';
+import { areaOfFinding, isQuestionFinding } from './areas';
 import { routeKeyForRecord } from './vocabulary';
 
 /**
@@ -58,6 +59,16 @@ export type RunImport =
       readonly stop: RunImportStop;
     };
 
+const findingKey = (finding: SemanticFinding) =>
+  `${finding.code} ${semanticAddressKey(finding.origin)}`;
+
+/** Rooms the assessment has entered; an earlier stop shrinks them. */
+const enteredRoomCount = (assembly: ProjectEvaluationAssembly) =>
+  assembly.evaluation.route.biomes.reduce(
+    (count, biome) => count + ('history' in biome ? biome.history.rooms.length : 0),
+    0,
+  );
+
 /** Guesses one question may take; one it keeps surviving cannot be settled. */
 const MAX_GUESSES_PER_ISSUE = 3;
 
@@ -70,11 +81,28 @@ export interface RunImportContext {
   readonly candidates: () => ProjectCandidateSession;
   /** Applies one command through edit settlement; false when it is refused or changes nothing. */
   readonly apply: (command: ProjectCommand) => boolean;
+  /** Applies one command unless it is refused or adds a finding other than missing input. */
+  readonly applyValid: (command: ProjectCommand) => boolean;
+  /** Runs several applications as one, kept only when they succeed and stay valid as `applyValid`. */
+  readonly transaction: (run: () => boolean) => boolean;
+  /** Whether evaluation has entered the occurrence. */
+  readonly entered: (occurrenceId: string) => boolean;
+  /** Whether an entered occurrence changed, or was entered, since the previous sweep. */
+  readonly pending: (occurrenceId: string) => boolean;
   readonly note: (entry: RunImportReportEntry) => void;
   /** Record facts already authored, so each is used once: screens, encounter phases. */
   readonly used: Set<string>;
   /** Marks that the record answered the current question but the engine refused the value. */
   readonly refuse: () => void;
+  /**
+   * Registers how to withdraw optional authorship whose finding only a later
+   * stop reveals; the withdrawal is reported as refused under `entry`.
+   */
+  readonly retractable: (
+    owners: readonly SemanticAddress[],
+    undo: ProjectCommand,
+    entry: RunImportReportEntry,
+  ) => void;
 }
 
 /**
@@ -132,6 +160,10 @@ class RunImportWalk {
   private session: ProjectCandidateSession | undefined;
   private refusedAnswer = false;
   private guesser: RunImportGuesser | undefined;
+  private readonly retractions = new Map<
+    string,
+    { readonly undo: ProjectCommand; readonly entry: RunImportReportEntry }
+  >();
   readonly occurrences: RecordOccurrences;
   private readonly context: RunImportContext;
 
@@ -149,16 +181,111 @@ class RunImportWalk {
       assembly: () => this.assembly,
       candidates: () => this.candidates(),
       apply: (command) => this.apply(command),
+      applyValid: (command) => this.transaction(() => this.apply(command)),
+      transaction: (run) => this.transaction(run),
+      entered: (occurrenceId) => this.enteredOccurrences().has(occurrenceId),
+      pending: (occurrenceId) =>
+        this.dirty.has(occurrenceId) && this.enteredOccurrences().has(occurrenceId),
       note: (entry) => this.entries.push(entry),
       used: new Set(),
       refuse: () => {
         this.refusedAnswer = true;
+      },
+      retractable: (owners, undo, entry) => {
+        for (const owner of owners)
+          this.retractions.set(semanticAddressKey(owner), { undo, entry });
       },
     };
   }
 
   private candidates(): ProjectCandidateSession {
     return (this.session ??= createPreparedProjectCandidateSession(this.catalog, this.assembly));
+  }
+
+  private dirty = new Set<string>();
+  private readonly seen = new Map<string, unknown>();
+  private seenBindings = -1;
+
+  /** Occurrences whose authored state changed, or that were entered or rebound, since the last sweep. */
+  private markDirty(): void {
+    const entered = this.enteredOccurrences();
+    const rebound = this.occurrences.bindings !== this.seenBindings;
+    this.seenBindings = this.occurrences.bindings;
+    const dirty = new Set<string>();
+    for (const biome of this.assembly.project.route.biomes)
+      for (const occurrence of biome.topology?.occurrences ?? []) {
+        const id = occurrence.occurrenceId;
+        const marker = entered.has(id) ? occurrence : undefined;
+        if (rebound || this.seen.get(id) !== marker) dirty.add(id);
+        this.seen.set(id, marker);
+      }
+    this.dirty = dirty;
+  }
+
+  private enteredCache:
+    { assembly: ProjectEvaluationAssembly; ids: ReadonlySet<string> } | undefined;
+
+  private enteredOccurrences(assembly = this.assembly): ReadonlySet<string> {
+    if (this.enteredCache?.assembly === assembly) return this.enteredCache.ids;
+    const ids = new Set<string>();
+    for (const biome of assembly.evaluation.route.biomes)
+      if ('history' in biome)
+        for (const room of biome.history.rooms)
+          if (room.origin.kind === 'occurrence') ids.add(room.origin.occurrenceId);
+    if (assembly === this.assembly) this.enteredCache = { assembly, ids };
+    return ids;
+  }
+
+  /**
+   * Keeps what `run` applied unless it adds a finding the walk cannot answer
+   * as a question. Settling the current stop may reveal the next one, but only
+   * in a room the walk had not yet entered.
+   */
+  transaction(run: () => boolean): boolean {
+    const before = this.assembly;
+    if (!run()) return this.rollback(before);
+    const ownerKey = (finding: SemanticFinding) => semanticAddressKey(finding.origin);
+    const stop = new Set(before.evaluation.issue?.reasons.map(ownerKey) ?? []);
+    const known = new Set(before.evaluation.findings.map(findingKey));
+    const enteredBefore = this.enteredOccurrences(before);
+    const added = () =>
+      this.assembly.evaluation.findings.filter(
+        (finding) => !known.has(findingKey(finding)) && !isQuestionFinding(finding),
+      );
+    const inEnteredRoom = (finding: SemanticFinding) => {
+      const occurrenceId = occurrenceIdOf(finding.origin);
+      return occurrenceId === undefined || enteredBefore.has(occurrenceId);
+    };
+    // Revealing a stop in an entered room is only acceptable where it withdraws
+    // optional authorship that was registered as retractable.
+    const withdrawn: string[] = [];
+    for (const finding of added().filter(inEnteredRoom)) {
+      const retraction = this.retractions.get(ownerKey(finding));
+      if (retraction === undefined) continue;
+      if (!this.apply(retraction.undo)) return this.rollback(before);
+      withdrawn.push(ownerKey(finding));
+    }
+    const remaining = added();
+    if (
+      remaining.length === 0 ||
+      (stop.size > 0 &&
+        !remaining.some(inEnteredRoom) &&
+        this.assembly.evaluation.findings.every((finding) => !stop.has(ownerKey(finding))) &&
+        enteredRoomCount(this.assembly) >= enteredRoomCount(before))
+    ) {
+      for (const key of withdrawn) {
+        this.entries.push({ ...this.retractions.get(key)!.entry, reason: 'refused' });
+        this.retractions.delete(key);
+      }
+      return true;
+    }
+    return this.rollback(before);
+  }
+
+  private rollback(before: ProjectEvaluationAssembly): false {
+    this.assembly = before;
+    this.session = undefined;
+    return false;
   }
 
   apply(command: ProjectCommand): boolean {
@@ -225,18 +352,44 @@ class RunImportWalk {
     const answered = new Set<string>();
     const refused = new Set<string>();
     const guessCounts = new Map<string, number>();
+    let ordered = false;
     for (;;) {
-      this.occurrences.bindEngineOccurrences(this.assembly.project);
-      importEncounters(this.context);
-      importDispositions(this.context);
-      importSideRoomVisits(this.context);
+      // Optional authorship the route never asks for settles before the next question.
+      for (let before; before !== this.assembly;) {
+        before = this.assembly;
+        this.occurrences.bindEngineOccurrences(this.assembly.project);
+        this.markDirty();
+        importEncounters(this.context);
+        importDispositions(this.context);
+        importSideRoomVisits(this.context);
+        importCommerce(this.context);
+        importFeatures(this.context);
+        importWheels(this.context);
+        importWheelConversions(this.context);
+        importFieldsRooms(this.context);
+      }
       const issue = this.assembly.evaluation.issue;
       if (issue === undefined) {
+        // Ordering by trait times runs once the plan is complete; a question it reveals is answered next.
+        if (!ordered) {
+          ordered = true;
+          const before = this.assembly;
+          importRoomActionOrders(this.context);
+          if (this.assembly !== before) continue;
+        }
         reportUnplacedDispositions(this.context);
-        reportRoomActionOrders(this.context);
+        reportDenialBans(this.context);
         return undefined;
       }
       const reason = issue.reasons[0]!;
+      const retraction = this.retractions.get(semanticAddressKey(reason.origin));
+      if (retraction !== undefined && !isQuestionFinding(reason)) {
+        this.retractions.delete(semanticAddressKey(reason.origin));
+        this.entries.push({ ...retraction.entry, reason: 'refused' });
+        if (this.apply(retraction.undo)) continue;
+        // The withdrawal itself was refused: the invalid authorship stays and is reported again.
+        this.entries.push({ ...retraction.entry, reason: 'refused', applied: retraction.undo });
+      }
       const key = `${reason.code} ${semanticAddressKey(reason.origin)}`;
       if (!answered.has(key)) {
         answered.add(key);
@@ -267,6 +420,11 @@ class RunImportWalk {
   private answer(reason: SemanticFinding): boolean {
     return (
       answerHub(this.context, reason) ||
+      answerCommerce(this.context, reason) ||
+      answerFeatures(this.context, reason) ||
+      answerWheels(this.context, reason) ||
+      answerFields(this.context, reason) ||
+      answerNemesis(this.context, reason) ||
       answerTopology(this.context, reason) ||
       answerReward(this.context, reason) ||
       answerTraitOffer(this.context, reason) ||
@@ -289,7 +447,7 @@ class RunImportWalk {
     const why =
       area === 'roomActionOrder'
         ? 'assumption'
-        : unreadAreas.has(area)
+        : isUnreadQuestion(reason)
           ? 'unsupportedArea'
           : fallback;
     for (const command of commands) this.report(area, why, reason.origin, command);
@@ -297,19 +455,28 @@ class RunImportWalk {
   }
 }
 
-/** Areas the importer does not yet read from the record; their questions are guessed. */
-const unreadAreas: ReadonlySet<RunImportArea> = new Set([
-  'shop',
-  'well',
-  'pool',
-  'anvil',
-  'embryo',
-  'pathOfStars',
-  'chaosGate',
-  'rack',
-  'fountain',
-  'wheel',
-  'fields',
-  'npc',
-  'menace',
-]);
+/**
+ * Questions of areas no capture has exercised: Travel Deal refills, Jeweled
+ * Pom and Experimental Hammer equip results, Steady Growth, Judgment and the
+ * Crystal Figurine.
+ */
+function isUnreadQuestion(reason: SemanticFinding): boolean {
+  const origin = reason.origin;
+  switch (origin.kind) {
+    case 'shopOffer':
+      return origin.offerKey === 'travelDealRefill';
+    case 'roomFeature':
+      return (
+        (origin.target.kind === 'stygianWellOffer' || origin.target.kind === 'hermesShrineOffer') &&
+        origin.target.generationKey === 'travelDealRefill'
+      );
+    case 'keepsakeEquipResult':
+      return origin.resultKind !== 'transcendentEmbryo';
+    case 'steadyGrowthOutcome':
+    case 'judgmentArcana':
+    case 'figurineArcana':
+      return true;
+    default:
+      return false;
+  }
+}

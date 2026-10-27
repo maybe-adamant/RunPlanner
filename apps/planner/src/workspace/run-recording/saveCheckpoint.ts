@@ -40,6 +40,8 @@ export interface SavedRunState {
   /** Entry names per reward store, in store order. */
   readonly rewardStores: Readonly<Record<string, readonly string[]>>;
   readonly lootChoices: readonly SavedLootChoice[];
+  /** `BannedTraits` names, sorted. */
+  readonly bannedTraits: readonly string[];
 }
 
 export interface SavedLootChoice {
@@ -56,11 +58,20 @@ export interface SavedTrait {
   readonly rarity?: string;
   readonly stackNum?: number;
   readonly boonConversionUses?: number;
+  readonly remainingUses?: number;
 }
 
 export interface SavedHero {
   readonly traits: readonly SavedTrait[];
   readonly slotted: Readonly<Record<string, string>>;
+  readonly spell?: SavedSpell;
+}
+
+/** `Hero.SlottedSpell`: the spell, its tree structure and talents by `depth:slot`. */
+export interface SavedSpell {
+  readonly name: string;
+  readonly layout?: string;
+  readonly talents: Readonly<Record<string, { readonly name: string; readonly invested: boolean }>>;
 }
 
 export interface SavedProfile {
@@ -398,6 +409,7 @@ function hero(value: LuaValue | undefined): SavedHero | undefined {
         ...optional('rarity', text(entry.Rarity)),
         ...optional('stackNum', number(entry.StackNum)),
         ...optional('boonConversionUses', number(entry.BoonConversionUses)),
+        ...optional('remainingUses', number(entry.RemainingUses)),
       },
     ];
   });
@@ -405,7 +417,26 @@ function hero(value: LuaValue | undefined): SavedHero | undefined {
   const slotted: Record<string, string> = {};
   for (const [slot, trait] of Object.entries(table(value.SlottedTraits)))
     if (typeof trait === 'string') slotted[slot] = trait;
-  return { traits, slotted };
+  const savedSpell = spell(value.SlottedSpell);
+  return { traits, slotted, ...optional('spell', savedSpell) };
+}
+
+function spell(value: LuaValue | undefined): SavedSpell | undefined {
+  if (!isTable(value)) return undefined;
+  const name = text(value.Name);
+  if (name === undefined) return undefined;
+  const tree = table(value.Talents);
+  const talents: Record<string, { name: string; invested: boolean }> = {};
+  for (const [depth, nodes] of slots(tree))
+    for (const [slot, node] of slots(nodes)) {
+      const talent = isTable(node) ? text(node.Name) : undefined;
+      if (talent !== undefined)
+        talents[`${depth}:${slot}`] = {
+          name: talent,
+          invested: (node as LuaTable).Invested === true,
+        };
+    }
+  return { name, ...optional('layout', text(tree.Name)), talents };
 }
 
 function rewardStores(value: LuaValue | undefined): SavedRunState['rewardStores'] {
@@ -471,6 +502,10 @@ export function extractSaveCheckpoint(save: DecodedSave, temp: boolean): SaveChe
       npcInteractions: counts(run.NPCInteractions),
       rewardStores: rewardStores(run.RewardStores),
       lootChoices: lootChoices(run.LootChoiceHistory),
+      bannedTraits: Object.entries(table(run.BannedTraits))
+        .filter(([, banned]) => banned === true)
+        .map(([name]) => name)
+        .sort(),
     },
     ...optional('hero', savedHero),
     profile: {

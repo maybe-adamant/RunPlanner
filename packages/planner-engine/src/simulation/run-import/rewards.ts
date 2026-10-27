@@ -1,4 +1,4 @@
-import type { SemanticAddress } from '../../authored-project';
+import type { ProjectCommand, SemanticAddress } from '../../authored-project';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { SemanticFinding } from '../model';
 import type { RunImportContext } from './import';
@@ -24,25 +24,70 @@ const supported = (evaluation: { readonly kind: string }): boolean => {
 export function recordedRoomOffer(
   context: RunImportContext,
   occurrenceId: string,
-): ResolvedRewardOffer | undefined {
+):
+  | { readonly offer: ResolvedRewardOffer; readonly roomIndex: number; readonly exact: boolean }
+  | undefined {
   const visits = context.occurrences.visitsOf(occurrenceId);
   if (visits.length > 0) {
     const index = visits[0]!;
-    const own = recordedOffer(context.catalog, context.record.rooms[index]!.reward);
-    if (own !== undefined) return own;
     // A room entered without collecting keeps the offer its door showed.
     const source = context.record.rooms[index - 1];
-    return recordedOffer(
-      context.catalog,
-      source?.doors.find((door) => door.room === context.record.rooms[index]!.name)?.reward,
-    );
+    const offer =
+      recordedOffer(context.catalog, context.record.rooms[index]!.reward) ??
+      recordedOffer(
+        context.catalog,
+        source?.doors.find((door) => door.room === context.record.rooms[index]!.name)?.reward,
+      );
+    return offer === undefined ? undefined : devotionByPick(context, offer, index);
   }
-  const match = /-r(\d+)-d(\d+)$/.exec(occurrenceId);
-  if (match === null) return undefined;
-  const door = context.record.rooms[Number(match[1])]?.doors.find(
-    (candidate) => candidate.door === Number(match[2]),
+  const offered = context.occurrences.offeredDoor(occurrenceId);
+  if (offered === undefined) return undefined;
+  const door = context.record.rooms[offered.roomIndex]?.doors.find(
+    (candidate) => candidate.door === offered.door,
   );
-  return recordedOffer(context.catalog, door?.reward);
+  const offer = recordedOffer(context.catalog, door?.reward);
+  return offer === undefined
+    ? undefined
+    : devotionByPick(context, offer, undefined, offered.roomIndex);
+}
+
+/**
+ * A Trial's door lists its two gods as LootA/LootB, not by choice; the god
+ * whose screen opens first is chosen before the fight, the other spurned
+ * (`StartDevotionTest`, EncounterLogic.lua:1695-1707). A Trial never entered
+ * shows no screen, so its order is not saved.
+ */
+function devotionByPick(
+  context: RunImportContext,
+  offer: ResolvedRewardOffer,
+  enteredIndex: number | undefined,
+  sourceIndex = (enteredIndex ?? 1) - 1,
+): { readonly offer: ResolvedRewardOffer; readonly roomIndex: number; readonly exact: boolean } {
+  const roomIndex = enteredIndex ?? sourceIndex;
+  if (offer.payload?.kind !== 'DevotionPair') return { offer, roomIndex, exact: true };
+  const { chosenSource, spurnedSource } = offer.payload;
+  const first =
+    enteredIndex === undefined
+      ? undefined
+      : context.record.rooms[enteredIndex]!.traitScreens.find(
+          (screen) => screen.giver === chosenSource || screen.giver === spurnedSource,
+        )?.giver;
+  if (first === undefined) return { offer, roomIndex, exact: false };
+  return {
+    offer:
+      first === spurnedSource
+        ? {
+            ...offer,
+            payload: {
+              kind: 'DevotionPair',
+              chosenSource: spurnedSource,
+              spurnedSource: chosenSource,
+            },
+          }
+        : offer,
+    roomIndex,
+    exact: true,
+  };
 }
 
 function rewardOf(context: RunImportContext, biomeKey: string, occurrenceId: string) {
@@ -77,16 +122,25 @@ export function answerReward(context: RunImportContext, reason: SemanticFinding)
     return false;
   }
   if (origin.kind === 'incomingReward') {
-    const value = recordedRoomOffer(context, origin.occurrenceId);
-    if (value === undefined) return false;
+    const recorded = recordedRoomOffer(context, origin.occurrenceId);
+    if (recorded === undefined) return false;
+    const value = recorded.offer;
     const evaluation = context
       .candidates()
       .evaluate({ kind: 'incomingReward', reward: origin, value });
-    if (
-      supported(evaluation) &&
-      context.apply({ kind: 'ReplaceIncomingReward', reward: origin, value })
-    )
+    const command: ProjectCommand = { kind: 'ReplaceIncomingReward', reward: origin, value };
+    if (supported(evaluation) && context.apply(command)) {
+      // Which of a never-entered Trial's gods would be chosen is not saved.
+      if (!recorded.exact)
+        context.note({
+          area: 'reward',
+          reason: 'assumption',
+          address: origin,
+          applied: command,
+          record: { roomIndex: recorded.roomIndex, visit: 0 },
+        });
       return true;
+    }
     context.refuse();
     return false;
   }

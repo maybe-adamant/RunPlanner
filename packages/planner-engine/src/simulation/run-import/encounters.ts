@@ -7,6 +7,8 @@ import {
 } from '../../authored-project';
 import { customizationDecisionOnRoute } from '../../authored-project/room-state/encounter-customization';
 import type { RunRecordEncounter } from '../../run-record/model';
+import type { GeneratedEncounterSelection } from '../../catalog-schema';
+import type { AuthoredGeneratedEncounterCustomization } from '../../authored-project/model';
 import type { EncounterPhaseCandidateSupport } from '../encounters/preparation';
 import { invertGeneratedEncounter, invertInfiniteRoster } from '../encounters/encounter-inverse';
 import {
@@ -17,6 +19,7 @@ import {
   reachedEncounterPhasesForProjectEvaluationAssembly,
 } from '../evaluation/project-evaluation-assembly';
 import type { RunImportContext } from './import';
+import { recordedCageEncounter } from './fields';
 
 /** The record encounter a phase played: the room's encounters in declared slot order. */
 function recordedEncounter(
@@ -33,6 +36,8 @@ function recordedEncounter(
     room?.encounterEnvelopeKey === undefined
       ? undefined
       : context.catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey]?.slots;
+  if (/^Cage\d+$/.test(phase.phaseKey))
+    return recordedCageEncounter(context, phase.owner.occurrenceId, phase.phaseKey);
   const position = slots?.findIndex((slot) => slot.key === phase.phaseKey) ?? -1;
   if (position < 0) return undefined;
   for (const roomIndex of context.occurrences.visitsOf(phase.owner.occurrenceId)) {
@@ -107,12 +112,10 @@ export function importEncounters(context: RunImportContext): void {
     if (recorded === undefined) {
       if (context.occurrences.visitsOf(phase.owner.occurrenceId).length === 0) continue;
       context.used.add(`custom:${key}`);
-      // A Fields cage's encounter is recorded with its cage, which the import does not read yet.
-      const cage = /^Cage/.test(phase.phaseKey);
       const location = context.occurrences.locationOf(phase);
       context.note({
-        area: cage ? 'fields' : 'encounter',
-        reason: cage ? 'unsupportedArea' : 'notInRecord',
+        area: /^Cage/.test(phase.phaseKey) ? 'fields' : 'encounter',
+        reason: 'notInRecord',
         address: phase,
         ...(location === undefined ? {} : { record: location }),
       });
@@ -211,8 +214,11 @@ function customizeEncounter(
         decisionKey: generated.decisionKey,
         value: result.customization,
       })
-    )
+    ) {
       context.note({ area: 'encounter', reason: 'inverseMismatch', address: phase, record });
+      return;
+    }
+    importMenace(context, phase, policy, record, result.customization);
     return;
   }
   const roster = infiniteRosterSupportForProjectEvaluationAssembly(context.assembly(), phase);
@@ -230,4 +236,141 @@ function customizeEncounter(
     )
       context.note({ area: 'encounter', reason: 'inverseMismatch', address: phase, record });
   }
+}
+
+/** Next-biome kills not yet claimed by a Menace conversion, per record room. */
+const unclaimedKills = new WeakMap<RunImportContext, Map<number, Map<string, number>>>();
+
+/**
+ * Vow of Menace swaps spawn requests without rewriting the saved waves, so a
+ * conversion shows as a rolled type killed fewer times than rolled, matched by
+ * kills of its next-biome replacement that no wave rolled. Kills are per room:
+ * a conversion is authored only on the one wave of the room that rolled its
+ * source, its replacement kills are claimed once across the room's phases,
+ * and it is kept only when the replay converts exactly what the kills show.
+ * Every conversion is inferred, so each is reported.
+ */
+function importMenace(
+  context: RunImportContext,
+  phase: EncounterPhaseAddress,
+  policy: GeneratedEncounterSelection,
+  record: { readonly roomIndex: number; readonly visit: number },
+  customization: AuthoredGeneratedEncounterCustomization,
+): void {
+  const generated = generatedEncounterSupportForProjectEvaluationAssembly(
+    context.assembly(),
+    phase,
+  );
+  const room = context.record.rooms[record.roomIndex]!;
+  const kills = room.kills ?? {};
+  const assessed = generated?.assess(customization);
+  if (generated === undefined || assessed === undefined) return;
+  const sources = assessed.waves.flatMap((wave) =>
+    (wave.menaceSources ?? []).map((source) => ({ waveIndex: wave.waveIndex, ...source })),
+  );
+  if (sources.length === 0) return;
+  // Every wave the room saved, across its phases and cages, by native enemy.
+  const roomWaves = [
+    ...room.encounters,
+    ...(room.fields?.cages.map((cage) => cage.encounter) ?? []),
+  ].flatMap((encounter) => encounter.waves ?? []);
+  const rolled = new Map<string, number>();
+  const wavesRolling = new Map<string, number>();
+  for (const wave of roomWaves)
+    for (const spawn of wave.spawns) {
+      rolled.set(spawn.enemy, (rolled.get(spawn.enemy) ?? 0) + (spawn.count ?? 0));
+      wavesRolling.set(spawn.enemy, (wavesRolling.get(spawn.enemy) ?? 0) + 1);
+    }
+  const choices = new Map(
+    [...policy.choices, ...policy.fixedEnemies].map((choice) => [choice.key, choice]),
+  );
+  const byRoom = unclaimedKills.get(context) ?? new Map<number, Map<string, number>>();
+  unclaimedKills.set(context, byRoom);
+  const unclaimed = byRoom.get(record.roomIndex) ?? new Map<string, number>();
+  byRoom.set(record.roomIndex, unclaimed);
+  // Only next-biome kills no wave rolled can be replacements; summons and props never qualify.
+  const surplusOf = (target: string) =>
+    unclaimed.get(target) ?? Math.max(0, (kills[target] ?? 0) - (rolled.get(target) ?? 0));
+  const menace = new Map<number, Record<string, { count: number; targetKey?: string }>>();
+  const expected: { sourceKey: string; count: number; target: string }[] = [];
+  for (const source of sources) {
+    const choice = choices.get(source.sourceKey);
+    if (choice === undefined) continue;
+    const group = choice.unitGroupSize ?? 1;
+    const shortfall = Math.floor(
+      Math.max(0, (rolled.get(choice.nativeId) ?? 0) * group - (kills[choice.nativeId] ?? 0)) /
+        group,
+    );
+    const targets =
+      'targetNativeId' in source && source.targetNativeId !== undefined
+        ? [source.targetNativeId]
+        : ('targetNativeIds' in source ? (source.targetNativeIds ?? []) : []).filter(
+            (target) => surplusOf(target) > 0,
+          );
+    const target = targets[0];
+    if (shortfall === 0 || target === undefined || surplusOf(target) === 0) continue;
+    const inferred = Math.min(shortfall, surplusOf(target));
+    // Kills are per room; a source rolled by several waves cannot be placed.
+    if ((wavesRolling.get(choice.nativeId) ?? 0) !== 1 || targets.length > 1) {
+      context.note({ area: 'menace', reason: 'notInRecord', address: phase, record });
+      continue;
+    }
+    const count = Math.min(inferred, source.maximum);
+    // The kills show more conversions than the wave's requests allow.
+    if (count < inferred)
+      context.note({ area: 'menace', reason: 'refused', address: phase, record });
+    unclaimed.set(target, surplusOf(target) - count);
+    const conversions = menace.get(source.waveIndex) ?? {};
+    conversions[source.sourceKey] = {
+      count,
+      ...('targetNativeIds' in source && source.targetNativeIds !== undefined
+        ? { targetKey: target }
+        : {}),
+    };
+    menace.set(source.waveIndex, conversions);
+    expected.push({ sourceKey: source.sourceKey, count, target });
+  }
+  if (expected.length === 0) return;
+  const value: AuthoredGeneratedEncounterCustomization = {
+    ...customization,
+    menace: [...menace].map(([waveIndex, conversions]) => ({ waveIndex, conversions })),
+  };
+  const replay = generated.assess(value);
+  // The replay must convert exactly the inferred requests, onto the killed replacements.
+  const replayed = replay.operands?.menace.flatMap((wave) => wave.conversions) ?? [];
+  const agrees =
+    replay.supported &&
+    expected.every(({ sourceKey, count, target }) =>
+      replayed.some(
+        (conversion) =>
+          conversion.sourceKey === sourceKey &&
+          conversion.count === count &&
+          conversion.targetNativeId === target,
+      ),
+    ) &&
+    replayed.every((conversion) =>
+      expected.some((entry) => entry.sourceKey === conversion.sourceKey),
+    );
+  const command: ProjectCommand = {
+    kind: 'ReplaceEncounterCustomization',
+    phase,
+    decisionKey: generated.decisionKey,
+    value,
+  };
+  if (!agrees) {
+    context.note({ area: 'menace', reason: 'notInRecord', address: phase, record });
+    return;
+  }
+  if (!context.apply(command)) {
+    context.note({ area: 'menace', reason: 'refused', address: phase, record });
+    return;
+  }
+  for (let count = 0; count < expected.length; count++)
+    context.note({
+      area: 'menace',
+      reason: 'assumption',
+      address: phase,
+      applied: command,
+      record,
+    });
 }

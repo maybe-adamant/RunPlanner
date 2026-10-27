@@ -117,7 +117,7 @@
       ],
       "traits": {
         "acquired": [
-          { "name": "ChaosDashCurse", "worldTime": 48.333693014691 },
+          { "name": "ChaosDashCurse", "worldTime": 48.333693014691, "remainingUses": 5 },
           { "name": "FireEssence", "worldTime": 49.867026427994 },
           { "name": "WetState", "worldTime": 49.867026427994 }
         ],
@@ -206,8 +206,12 @@
       ],
       "traits": {
         "acquired": [
-          { "name": "TemporaryEmptySlotDamageTrait", "worldTime": 76.797504062997 },
-          { "name": "TemporaryMoveSpeedTrait", "worldTime": 77.580837437185 }
+          {
+            "name": "TemporaryEmptySlotDamageTrait",
+            "worldTime": 76.797504062997,
+            "remainingUses": 6
+          },
+          { "name": "TemporaryMoveSpeedTrait", "worldTime": 77.580837437185, "remainingUses": 8 }
         ],
         "removed": [],
         "upgraded": [
@@ -543,7 +547,7 @@
       "traits": {
         "acquired": [
           { "name": "SpellLeapTrait", "worldTime": 238.20606021222 },
-          { "name": "TemporaryMoveSpeedTrait", "worldTime": 241.88939373766 }
+          { "name": "TemporaryMoveSpeedTrait", "worldTime": 241.88939373766, "remainingUses": 8 }
         ],
         "removed": [],
         "upgraded": []
@@ -557,7 +561,31 @@
         ],
         "purchases": [{ "slot": 3 }]
       },
-      "npcInteractions": { "SpellDrop": 1 }
+      "npcInteractions": { "SpellDrop": 1 },
+      "spell": {
+        "name": "Leap",
+        "layout": "Pyramid",
+        "talents": {
+          "1:1": { "name": "LeapDamageTalent", "invested": false },
+          "1:2": { "name": "LeapCooldownSpeedTalent", "invested": false },
+          "1:3": { "name": "LeapArmorDamageTalent", "invested": false },
+          "1:4": { "name": "ChargeRegenTalent", "invested": false },
+          "1:5": { "name": "LeapCooldownSpeedTalent", "invested": false },
+          "2:1": { "name": "LeapArmorDamageTalent", "invested": false },
+          "2:2": { "name": "LeapDamageTalent", "invested": false },
+          "2:3": { "name": "LeapDamageTalent", "invested": false },
+          "2:4": { "name": "LeapCooldownSpeedTalent", "invested": false },
+          "3:2": { "name": "LeapArmorDamageTalent", "invested": false },
+          "3:3": { "name": "LeapLaunchAoETalent", "invested": false },
+          "3:4": { "name": "LeapDamageTalent", "invested": false },
+          "4:2": { "name": "LeapCooldownSpeedTalent", "invested": false },
+          "4:4": { "name": "LeapArmorDamageTalent", "invested": false },
+          "5:1": { "name": "LeapAoETalent", "invested": false },
+          "5:3": { "name": "LeapDamageTalent", "invested": false },
+          "5:5": { "name": "LeapCritTalent", "invested": false },
+          "6:3": { "name": "LeapTwiceTalent", "invested": false }
+        }
+      }
     },
     {
       "name": "F_PreBoss01",
@@ -634,7 +662,11 @@
         "acquired": [
           { "name": "RandomBlessingKeepsake", "rarity": "Epic", "worldTime": 340.65308143303 },
           { "name": "ChaosManaCostBlessing", "rarity": "Epic", "worldTime": 340.65308143303 },
-          { "name": "TemporaryForcedSecretDoorTrait", "worldTime": 347.63641513058 }
+          {
+            "name": "TemporaryForcedSecretDoorTrait",
+            "worldTime": 347.63641513058,
+            "remainingUses": 1
+          }
         ],
         "removed": ["WetState", "BoonDecayBoon"],
         "upgraded": []
@@ -709,7 +741,9 @@
         }
       ],
       "traits": {
-        "acquired": [{ "name": "ChaosDashCurse", "worldTime": 382.91975030408 }],
+        "acquired": [
+          { "name": "ChaosDashCurse", "worldTime": 382.91975030408, "remainingUses": 5 }
+        ],
         "removed": [],
         "upgraded": []
       }
@@ -872,6 +906,30 @@
         ],
         "removed": ["TemporaryMoveSpeedTrait"],
         "upgraded": []
+      },
+      "spell": {
+        "name": "Leap",
+        "layout": "Pyramid",
+        "talents": {
+          "1:1": { "name": "LeapDamageTalent", "invested": false },
+          "1:2": { "name": "LeapCooldownSpeedTalent", "invested": true },
+          "1:3": { "name": "LeapArmorDamageTalent", "invested": false },
+          "1:4": { "name": "ChargeRegenTalent", "invested": false },
+          "1:5": { "name": "LeapCooldownSpeedTalent", "invested": false },
+          "2:1": { "name": "LeapArmorDamageTalent", "invested": true },
+          "2:2": { "name": "LeapDamageTalent", "invested": false },
+          "2:3": { "name": "LeapDamageTalent", "invested": false },
+          "2:4": { "name": "LeapCooldownSpeedTalent", "invested": false },
+          "3:2": { "name": "LeapArmorDamageTalent", "invested": true },
+          "3:3": { "name": "LeapLaunchAoETalent", "invested": false },
+          "3:4": { "name": "LeapDamageTalent", "invested": false },
+          "4:2": { "name": "LeapCooldownSpeedTalent", "invested": true },
+          "4:4": { "name": "LeapArmorDamageTalent", "invested": false },
+          "5:1": { "name": "LeapAoETalent", "invested": false },
+          "5:3": { "name": "LeapDamageTalent", "invested": false },
+          "5:5": { "name": "LeapCritTalent", "invested": false },
+          "6:3": { "name": "LeapTwiceTalent", "invested": false }
+        }
       }
     },
     {
@@ -1046,7 +1104,7 @@
           { "name": "RoomRewardMaxManaTrait", "worldTime": 580.40951595863 },
           { "name": "RoomRewardMaxHealthTrait", "worldTime": 580.40951595863 },
           { "name": "LimitedSwapBonusTrait", "worldTime": 593.45951663924 },
-          { "name": "TemporaryMoveSpeedTrait", "worldTime": 594.20951667835 }
+          { "name": "TemporaryMoveSpeedTrait", "worldTime": 594.20951667835, "remainingUses": 8 }
         ],
         "removed": [],
         "upgraded": []
@@ -1084,7 +1142,11 @@
       "name": "H_Combat15",
       "reward": { "store": "RunProgress" },
       "doors": [
-        { "door": 621199, "room": "H_Combat04" },
+        {
+          "door": 621199,
+          "room": "H_Combat04",
+          "cageRewards": ["MaxHealthDrop", "RoomMoneyDrop", "TalentDrop"]
+        },
         {
           "door": 621470,
           "room": "H_MiniBoss01",
@@ -1228,7 +1290,7 @@
       "reward": { "type": "Boon", "lootName": "HeraUpgrade", "store": "RunProgress" },
       "doors": [
         { "door": 621199, "room": "H_Bridge01", "reward": { "type": "Story" } },
-        { "door": 621470, "room": "H_Combat14" }
+        { "door": 621470, "room": "H_Combat14", "cageRewards": ["RoomMoneyDrop", "StackUpgrade"] }
       ],
       "exit": "H_Bridge01",
       "encounters": [
@@ -1482,6 +1544,30 @@
           }
         ],
         "optionalRewards": []
+      },
+      "spell": {
+        "name": "Leap",
+        "layout": "Pyramid",
+        "talents": {
+          "1:1": { "name": "LeapDamageTalent", "invested": false },
+          "1:2": { "name": "LeapCooldownSpeedTalent", "invested": true },
+          "1:3": { "name": "LeapArmorDamageTalent", "invested": false },
+          "1:4": { "name": "ChargeRegenTalent", "invested": false },
+          "1:5": { "name": "LeapCooldownSpeedTalent", "invested": false },
+          "2:1": { "name": "LeapArmorDamageTalent", "invested": true },
+          "2:2": { "name": "LeapDamageTalent", "invested": false },
+          "2:3": { "name": "LeapDamageTalent", "invested": false },
+          "2:4": { "name": "LeapCooldownSpeedTalent", "invested": false },
+          "3:2": { "name": "LeapArmorDamageTalent", "invested": true },
+          "3:3": { "name": "LeapLaunchAoETalent", "invested": false },
+          "3:4": { "name": "LeapDamageTalent", "invested": false },
+          "4:2": { "name": "LeapCooldownSpeedTalent", "invested": true },
+          "4:4": { "name": "LeapArmorDamageTalent", "invested": false },
+          "5:1": { "name": "LeapAoETalent", "invested": true },
+          "5:3": { "name": "LeapDamageTalent", "invested": false },
+          "5:5": { "name": "LeapCritTalent", "invested": false },
+          "6:3": { "name": "LeapTwiceTalent", "invested": false }
+        }
       }
     },
     {
@@ -1559,8 +1645,8 @@
       "traits": {
         "acquired": [
           { "name": "LowHealthCritKeepsake", "rarity": "Epic", "worldTime": 874.41447587952 },
-          { "name": "TemporaryDiscountTrait", "worldTime": 879.71447615593 },
-          { "name": "TemporaryMoveSpeedTrait", "worldTime": 882.09780961357 }
+          { "name": "TemporaryDiscountTrait", "worldTime": 879.71447615593, "remainingUses": 6 },
+          { "name": "TemporaryMoveSpeedTrait", "worldTime": 882.09780961357, "remainingUses": 8 }
         ],
         "removed": ["RandomBlessingKeepsake"],
         "upgraded": []
@@ -1742,7 +1828,13 @@
       "kills": { "SatyrRatCatcher_Elite": 1, "TimeElemental": 5, "ClockworkHeavyMelee_Elite": 1 },
       "traitScreens": [],
       "traits": {
-        "acquired": [{ "name": "TemporaryForcedSecretDoorTrait", "worldTime": 977.61025910161 }],
+        "acquired": [
+          {
+            "name": "TemporaryForcedSecretDoorTrait",
+            "worldTime": 977.61025910161,
+            "remainingUses": 1
+          }
+        ],
         "removed": [],
         "upgraded": []
       },
@@ -1823,7 +1915,7 @@
         "acquired": [
           { "name": "RoomRewardMaxManaTrait", "worldTime": 1008.3003797682 },
           { "name": "RoomRewardMaxHealthTrait", "worldTime": 1008.3003797682 },
-          { "name": "ChaosDashCurse", "worldTime": 1023.5170472285 }
+          { "name": "ChaosDashCurse", "worldTime": 1023.5170472285, "remainingUses": 3 }
         ],
         "removed": [],
         "upgraded": []

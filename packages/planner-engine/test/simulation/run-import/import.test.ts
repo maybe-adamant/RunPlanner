@@ -131,12 +131,9 @@ describe('run import of the Underworld capture', () => {
     imported = projectFromRunRecord(catalog, record);
   });
 
-  it('completes as a valid plan entering every recorded room but the Ixion Chaos detour', () => {
+  it('completes as a valid plan entering every recorded room, the Ixion Chaos detours included', () => {
     expect(imported.kind).toBe('complete');
-    // I_Combat08's Chaos gate needs Ixion from the Well, which the import does not read yet.
-    expect(enteredRooms(imported.project)).toEqual(
-      record.rooms.map((room) => room.name).filter((_name, index) => index !== 39),
-    );
+    expect(enteredRooms(imported.project)).toEqual(record.rooms.map((room) => room.name));
   });
 
   it('imports the loadout', () => {
@@ -187,20 +184,111 @@ describe('run import of the Underworld capture', () => {
     });
   });
 
-  it('customizes every generated encounter outside the Fields cages from its inverse', () => {
-    // Five of the capture's 22 generated phases are cage encounters, recorded with their cages.
-    expect(generatedCustomizations(imported.project)).toBe(17);
+  it('customizes every generated encounter, Fields cages included, from its inverse', () => {
+    expect(generatedCustomizations(imported.project)).toBe(22);
+  });
+
+  it('imports World Shop, Well and Pool purchases and the Anvil of Fates', () => {
+    const shop = occurrence(imported.project, 'F-r6');
+    expect(shop.roomActions.order).toContainEqual({ kind: 'interactShopOffer', offerKey: 'Boon' });
+    expect(occurrence(imported.project, 'F-r3').stygianWell).toMatchObject({
+      interacted: true,
+      offerKeyBySlot: {
+        healing: 'TemporaryDoorHealTrait',
+        secondLeft: 'TemporaryEmptySlotDamageTrait',
+        secondRight: 'TemporaryMoveSpeedTrait',
+      },
+      purchasedGenerationKeys: ['initial:secondLeft', 'initial:secondRight'],
+    });
+    // Travel Deal restocked the H Postboss Well with the item bought unstocked.
+    expect(occurrence(imported.project, 'H-r30:postboss').stygianWell).toMatchObject({
+      travelDealRefillKey: 'TemporaryMoveSpeedTrait',
+      purchasedGenerationKeys: ['initial:secondRight', 'travelDealRefill'],
+    });
+    const pool = occurrence(imported.project, 'F-r11:postboss');
+    expect(pool.purgingPool).toEqual({
+      interacted: true,
+      traitKeyBySlot: {
+        left: 'BoonDecayBoon',
+        middle: 'AphroditeManaBoon',
+        right: 'AresCastBoon',
+      },
+    });
+    expect(pool.roomActions.order).toContainEqual({
+      kind: 'sellPurgingPoolTrait',
+      slotKey: 'left',
+    });
+    const anvil = occurrence(imported.project, 'I-r40');
+    expect(
+      anvil.state.kind === 'shop' &&
+        anvil.state.shop?.offers['PremiumProgress']?.reward?.anvilResultsByAcquisitionRole?.[
+          'self'
+        ],
+    ).toEqual({
+      kind: 'anvilOfFates',
+      removedTraitKey: 'StaffAttackRecoveryTrait',
+      addedTraitKeys: ['StaffLongAttackTrait', 'StaffOneWayAttackTrait'],
+    });
+  });
+
+  it('imports keepsake racks, the Embryo, the Spell and its Path of Stars', () => {
+    expect(occurrence(imported.project, 'H-r30:postboss').keepsakeRack?.keepsakeKey).toBe(
+      'LowHealthCritKeepsake',
+    );
+    expect(
+      occurrence(imported.project, 'F-r11:postboss').keepsakeRack?.equipResults?.transcendentEmbryo
+        ?.blessingKey,
+    ).toBe('ChaosManaCostBlessing');
+    const spell = reward(imported.project, 'F-r10').traitOffersByAcquisitionRole['self'];
+    // The Spell sat in the middle: its bank point explains the fourth node of the first Path screen.
+    expect(spell).toMatchObject({
+      selectedOptionKey: 'option2',
+      hexTree: { layoutKey: 'Pyramid' },
+    });
+    expect(reward(imported.project, 'G-r19').hexActivationsByAcquisitionRole?.['self']).toEqual({
+      selectedNodeKeys: ['1:2', '2:1', '3:2', '4:2'],
+    });
+  });
+
+  it('imports Chaos pairs, Fields cages and points, and the Nemesis event', () => {
+    expect(reward(imported.project, 'F-r1').traitOffersByAcquisitionRole['self']).toMatchObject({
+      kind: 'chaos',
+      selectedOptionKey: 'option1',
+      blessingKey: 'ChaosExSpeedBlessing',
+      curseOptions: [{ curseKey: 'ChaosDashCurse', requirementCount: 5 }, {}, {}],
+    });
+    const fields = occurrence(imported.project, 'H-r26').state;
+    expect(fields.kind === 'fieldsCombat' && fields.cages['cage1']?.offer).toEqual({
+      rewardType: 'WeaponUpgrade',
+    });
+    expect(fields.kind === 'fieldsCombat' && fields.spatial).toMatchObject({
+      entryStartPointId: 760471,
+      optionalPointIdBySlot: { optional1: 572849, optional2: 737955 },
+    });
+    expect(occurrence(imported.project, 'G-r18').encounters.nemesisRandomEventByPhase).toEqual({
+      Encounter: { kind: 'freeItem' },
+    });
   });
 
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
-      assumption: { conversion: 3, doors: 18, encounter: 1, roomActionOrder: 8 },
-      notInRecord: { loadout: 1, route: 1, traitOffer: 2 },
-      refused: { chaosGate: 1, doors: 1, traitOffer: 5 },
-      unsupportedArea: { fields: 37, npc: 2, pathOfStars: 2, shop: 17 },
+      assumption: {
+        conversion: 3,
+        doors: 18,
+        encounter: 1,
+        fields: 3,
+        npc: 1,
+        roomActionOrder: 9,
+        traitOffer: 3,
+      },
+      notInRecord: { embryo: 3, fields: 4, pathOfStars: 1, route: 1, traitOffer: 5 },
+      refused: { doors: 1, fields: 2, pool: 1, traitOffer: 1 },
+      unsupportedArea: { loadout: 1, shop: 2, well: 1 },
     });
     // G_Combat20's positional first door (G_Combat08) is refused at its exit and moves later.
+    // H_Combat07's first two cages lose their store entries to the guessed cages of its twin door.
     expect(entryLines(imported.report)).toEqual([
+      'assumption traitOffer r1 traitOffer@F-r1:self -> ReplaceTraitOffer(F-r1 chaos)',
       'assumption conversion r2 acquisitionEntry@F-r2 -> ReplaceAcquisitionEntryOffer(F-r2 StackUpgrade)',
       'assumption doors r2 exitDecision@F-r2',
       'assumption doors r3 exitDecision@F-r3',
@@ -212,28 +300,33 @@ describe('run import of the Underworld capture', () => {
       'assumption conversion r8 acquisitionEntry@F-r8 -> ReplaceAcquisitionEntryOffer(F-r8 WeaponUpgrade)',
       'assumption doors r8 exitDecision@F-r8',
       'assumption doors r9 exitDecision@F-r9',
-      'assumption doors r15 exitDecision@G-r15',
+      'assumption traitOffer r15 traitOffer@G:start:chaos:self -> ReplaceTraitOffer(G:start:chaos chaos)',
+      'assumption doors r15 exitDecision@G:start:chaos',
       'assumption doors r16 exitDecision@G-r16',
+      'assumption npc r18 nemesisRandomEvent@G-r18 -> ReplaceNemesisRandomEventInteraction(G-r18 freeItem)',
       'assumption doors r18 exitDecision@G-r18',
       'assumption doors r19 exitDecision@G-r19',
       'refused doors r19d569053 target@G-r19:exit1 -> CreateTarget(G-r20 G_MiniBoss01)',
       'assumption doors r19d776586 target@G-r19:exit2 -> CreateTarget(G-r19-d776586 G_MiniBoss03)',
       'assumption doors r19d569053 target@G-r19:exit3 -> CreateTarget(G-r19-d569053 G_Combat08)',
-      'refused traitOffer r20 traitOffer@G-r20:source -> ReplaceTraitOffer(G-r20 ZeusManaBoon|ZeusWeaponBoon|ZeusSpecialBoon#option2)',
+      'refused traitOffer r20 traitOffer@G-r20:source -> ReplaceTraitOffer(G-r20 ZeusManaBoon|ZeusWeaponBoon|ZeusManaBoltBoon#option2)',
       'assumption doors r20 exitDecision@G-r20',
       'assumption doors r21 exitDecision@G-r21',
       'assumption doors r26 exitDecision@H-r26',
+      'assumption fields r26 localReward@H-r26-d621199:cage1',
+      'assumption fields r27 exitDecision@H-r27 -> InitializeExitDecision(H-r27)',
       'assumption doors r27 exitDecision@H-r27',
-      'refused traitOffer r28 traitOffer@H-r28:selection -> ReplaceTraitOffer(H-r28 DiminishingHealthAndManaBoon|EchoDeathDefianceRefill|EchoLastReward#option2)',
+      'assumption fields r27 localReward@H-r27-d621470:cage1',
       'assumption doors r28 exitDecision@H-r28',
-      'refused traitOffer r29 traitOffer@H-r29:source -> ReplaceTraitOffer(H-r29 BoltRetaliateBoon|ZeusManaBoon|ZeusSpecialBoon#option2)',
-      'refused traitOffer r29 traitOffer@H-r29:self -> ReplaceTraitOffer(H-r29 HermesWeaponBoon|SprintShieldBoon|HermesSpecialBoon#option1)',
-      'refused traitOffer r29 traitOffer@H-r29:self -> ReplaceTraitOffer(H-r29 StaffDoubleAttackTrait|StaffTripleShotTrait|StaffLongAttackTrait#option1)',
-      'refused chaosGate r38 additionalExit@I-r38',
+      'refused fields r29 localReward@H-r29:cage1 -> ReplaceLocalReward(H-r29 StackUpgrade)',
+      'refused fields r29 localReward@H-r29:cage2 -> ReplaceLocalReward(H-r29 MaxManaDrop)',
+      'refused pool r32 roomFeature@H-r30:postboss -> ReplacePurgingPoolSlot(H-r30:postboss)',
+      'assumption traitOffer r39 traitOffer@I-r38:chaos:self -> ReplaceTraitOffer(I-r38:chaos chaos)',
       'assumption roomActionOrder r2 occurrence@F-r2',
       'assumption roomActionOrder r4 occurrence@F-r4',
       'assumption roomActionOrder r8 occurrence@F-r8',
       'assumption roomActionOrder r13 occurrence@F-r11:postboss',
+      'assumption roomActionOrder r22 occurrence@G-r22',
       'assumption roomActionOrder r24 occurrence@G-r22:postboss',
       'assumption roomActionOrder r26 occurrence@H-r26',
       'assumption roomActionOrder r29 occurrence@H-r29',
@@ -287,6 +380,61 @@ describe('run import of the Surface capture', () => {
     ]);
   });
 
+  it('imports Hermes Shrine purchases, rushes and the Reprieve fountain', () => {
+    const reprieve = occurrence(imported.project, 'O-r24');
+    expect(reprieve.hermesShrine).toMatchObject({
+      offerBySlot: {
+        first: { rewardType: 'ArmorBoost' },
+        secondLeft: { rewardType: 'MaxHealthDrop' },
+        secondRight: { rewardType: 'ShopHermesUpgrade' },
+      },
+      purchaseBySlot: { first: { delay: 8 } },
+    });
+    expect(reprieve.roomActions.order).toEqual(
+      expect.arrayContaining([
+        { kind: 'useFountain' },
+        { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondRight', rushed: true },
+      ]),
+    );
+  });
+
+  it('takes the Trial god whose screen opened first as the chosen one', () => {
+    // The door lists Poseidon then Apollo; Apollo's screen opened before the fight.
+    expect(reward(imported.project, 'O-r26').offer).toEqual({
+      rewardType: 'Devotion',
+      payload: {
+        kind: 'DevotionPair',
+        chosenSource: 'ApolloUpgrade',
+        spurnedSource: 'PoseidonUpgrade',
+      },
+    });
+  });
+
+  it('imports ship wheels, their conversions and Menace', () => {
+    const ship = occurrence(imported.project, 'O-r25').state;
+    expect(ship.kind === 'shipCombat' && ship.wheels['wheel1']).toMatchObject({
+      storeKey: 'MetaProgress',
+      offerCount: 2,
+      pickedOfferIndex: 1,
+      offers: {
+        offer1: { offer: { rewardType: 'MetaCardPointsCommonBigDrop' } },
+        offer2: { offer: { rewardType: 'GiftDrop' } },
+      },
+    });
+    expect(ship.kind === 'shipCombat' && ship.wheels['wheel2']?.offers['offer1']).toMatchObject({
+      offer: { rewardType: 'SpellDrop' },
+      dispositionByAcquisitionRole: { self: { kind: 'timePiece' } },
+    });
+    // N_PreHub01: 10 Carrion and 2 Mudmen rolled, 4 and 1 of them replaced.
+    expect(
+      occurrence(imported.project, 'N-r1').encounters.customizationByPhase?.['Encounter']?.[
+        'generatedComposition'
+      ],
+    ).toMatchObject({
+      menace: [{ waveIndex: 1, conversions: { Carrion: { count: 4 }, Mudman: { count: 1 } } }],
+    });
+  });
+
   it('imports the inverse customization and the recorded boon screen', () => {
     expect(
       occurrence(imported.project, 'N-r11').encounters.customizationByPhase?.['Encounter']?.[
@@ -309,19 +457,32 @@ describe('run import of the Surface capture', () => {
 
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
-      assumption: { roomActionOrder: 6 },
-      notInRecord: { loadout: 1, reward: 1, traitOffer: 1 },
-      refused: { conversion: 1 },
-      unsupportedArea: { shop: 18, wheel: 10 },
+      assumption: { conversion: 2, menace: 14, roomActionOrder: 5 },
+      notInRecord: { menace: 17, reward: 1, shop: 10 },
+      unsupportedArea: { loadout: 1 },
     });
     expect(entryLines(imported.report)).toEqual([
-      'refused conversion r24 acquisitionRole@O-r24:self',
+      'assumption menace r1 encounterPhase@N-r1:Encounter -> ReplaceEncounterCustomization(N-r1 generated)',
+      'assumption menace r1 encounterPhase@N-r1:Encounter -> ReplaceEncounterCustomization(N-r1 generated)',
+      'assumption menace r3 encounterPhase@N-r3:Encounter -> ReplaceEncounterCustomization(N-r3 generated)',
+      'assumption menace r3 encounterPhase@N-r3:Encounter -> ReplaceEncounterCustomization(N-r3 generated)',
+      'assumption menace r9 encounterPhase@N-r9:Encounter -> ReplaceEncounterCustomization(N-r9 generated)',
+      'assumption menace r11 encounterPhase@N-r11:Encounter -> ReplaceEncounterCustomization(N-r11 generated)',
+      'assumption menace r11 encounterPhase@N-r11:Encounter -> ReplaceEncounterCustomization(N-r11 generated)',
+      'assumption menace r13 encounterPhase@N-r13:Encounter -> ReplaceEncounterCustomization(N-r13 generated)',
+      'assumption menace r13 encounterPhase@N-r13:Encounter -> ReplaceEncounterCustomization(N-r13 generated)',
+      'assumption menace r21 encounterPhase@O-r21:Combat1 -> ReplaceEncounterCustomization(O-r21 generated)',
+      'assumption conversion r21 acquisitionEntry@O-r21 -> ReplaceAcquisitionEntryOffer(O-r21 StackUpgrade)',
+      'assumption menace r22 encounterPhase@O-r22:Combat1 -> ReplaceEncounterCustomization(O-r22 generated)',
+      'assumption menace r25 encounterPhase@O-r25:Combat1 -> ReplaceEncounterCustomization(O-r25 generated)',
+      'assumption menace r25 encounterPhase@O-r25:Combat2 -> ReplaceEncounterCustomization(O-r25 generated)',
+      'assumption conversion r25 acquisitionEntry@O-r25 -> ReplaceAcquisitionEntryOffer(O-r25 MaxHealthDrop)',
+      'assumption menace r26 encounterPhase@O-r26:Encounter -> ReplaceEncounterCustomization(O-r26 generated)',
       'assumption roomActionOrder r19 occurrence@N-r17:postboss',
       'assumption roomActionOrder r21 occurrence@O-r21',
       'assumption roomActionOrder r22 occurrence@O-r22',
       'assumption roomActionOrder r24 occurrence@O-r24',
       'assumption roomActionOrder r25 occurrence@O-r25',
-      'assumption roomActionOrder r26 occurrence@O-r26',
     ]);
   });
 });
@@ -378,5 +539,118 @@ describe('run import door assignment', () => {
     expect(reward(imported.project, 'F-r10-d560915').offer).toEqual({
       rewardType: 'MaxHealthDrop',
     });
+  });
+});
+
+describe('run import of Chaos under Vow of Denial', () => {
+  /** Erebus's opening and Chaos detour, with Denial banning unpicked curses. */
+  function erebusUnderDenial(bannedTraits: readonly string[]): RunRecord {
+    const record = fixture('underworld');
+    return {
+      ...record,
+      route: { biomes: ['F'], dream: false },
+      loadout: {
+        ...record.loadout,
+        vows: { ...record.loadout.vows, BanUnpickedBoonsShrineUpgrade: 1 },
+      },
+      rooms: record.rooms
+        .slice(0, 2)
+        .map((room, index) => (index === 1 ? { ...room, bannedTraits } : room)),
+    };
+  }
+
+  const chaosLines = (imported: RunImport) => ({
+    curses: (() => {
+      const chaos = reward(imported.project, 'F-r1').traitOffersByAcquisitionRole['self'];
+      return chaos?.kind === 'chaos' ? chaos.curseOptions.map((option) => option.curseKey) : [];
+    })(),
+    reasons: imported.report.entries
+      .filter((entry) => entry.area === 'traitOffer' && entry.record?.roomIndex === 1)
+      .map((entry) => entry.reason),
+  });
+
+  // Denial bans two unpicked options per screen (its only rank), so which banned
+  // curse sat on which unpicked button is never saved.
+  it('places both banned curses in screen order, their pairing an assumption', () => {
+    const imported = projectFromRunRecord(
+      catalog,
+      erebusUnderDenial(['ChaosHealthCurse', 'ChaosNoMoneyCurse']),
+    );
+    expect(chaosLines(imported)).toEqual({
+      curses: ['ChaosDashCurse', 'ChaosHealthCurse', 'ChaosNoMoneyCurse'],
+      reasons: ['notInRecord', 'assumption'],
+    });
+  });
+});
+
+describe('run import of synthetic Erebus variants', () => {
+  /** Erebus through its PostBoss, its Pool sale unexplained by any lost trait. */
+  function erebusWithUnexplainedSale(): RunRecord {
+    const record = fixture('underworld');
+    return {
+      ...record,
+      route: { biomes: ['F'], dream: false },
+      rooms: record.rooms
+        .slice(0, 14)
+        .map((room, index) =>
+          index === 13 ? { ...room, traits: { ...room.traits, removed: ['WetState'] } } : room,
+        ),
+    };
+  }
+
+  it('reports an unexplained Pool sale and keeps the first eligible trait', () => {
+    const imported = projectFromRunRecord(catalog, erebusWithUnexplainedSale());
+    expect(imported.kind).toBe('complete');
+    expect(entryLines(imported.report).filter((line) => line.includes(' pool '))).toEqual([
+      'refused pool r13 roomFeature@F-r11:postboss -> ReplacePurgingPoolSlot(F-r11:postboss)',
+    ]);
+    // The Mystery Boon's hidden god is the god whose screen its Shop opened.
+    const shop = occurrence(imported.project, 'F-r6');
+    expect(shop.acquisitionSites?.['roomExit']?.pickupEntries?.['Boon']?.offer).toEqual({
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'HeraUpgrade' },
+    });
+    expect(
+      imported.report.entries.filter(
+        (entry) =>
+          entry.record?.roomIndex === 6 && (entry.area === 'reward' || entry.area === 'shop'),
+      ),
+    ).toEqual([]);
+  });
+
+  /** F through H with the H_Combat15 Hermes screen picking another boon than Travel Deal. */
+  function withoutTravelDeal(): RunRecord {
+    const record = fixture('underworld');
+    return {
+      ...record,
+      route: { biomes: ['F', 'G', 'H'], dream: false },
+      rooms: record.rooms.slice(0, 33).map((room, index) =>
+        index !== 26
+          ? room
+          : {
+              ...room,
+              traitScreens: room.traitScreens.map((screen) =>
+                screen.giver !== 'HermesUpgrade'
+                  ? screen
+                  : {
+                      ...screen,
+                      options: screen.options.map((option) => ({
+                        ...option,
+                        chosen: option.name === 'SprintShieldBoon',
+                      })),
+                    },
+              ),
+            },
+      ),
+    };
+  }
+
+  it('withdraws or refuses a Well restock the plan cannot trigger, reporting it refused', () => {
+    const imported = projectFromRunRecord(catalog, withoutTravelDeal());
+    expect(imported.kind).toBe('complete');
+    expect(
+      occurrence(imported.project, 'H-r30:postboss').stygianWell?.purchasedGenerationKeys,
+    ).toEqual(['initial:secondRight']);
+    expect(entryLines(imported.report)).toContain('refused well r32 roomFeature@H-r30:postboss');
   });
 });

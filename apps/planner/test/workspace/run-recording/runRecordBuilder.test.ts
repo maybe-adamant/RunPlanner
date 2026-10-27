@@ -9,6 +9,7 @@ import type {
   SavedEncounter,
   SavedRoom,
   SavedRunState,
+  SavedSpell,
   SavedTrait,
 } from '@planner/workspace/run-recording/saveCheckpoint';
 import { traitWorldTime } from '@planner/workspace/run-recording/traitWorldTime';
@@ -47,6 +48,7 @@ const baseRun: SavedRunState = {
   npcInteractions: {},
   rewardStores: {},
   lootChoices: [],
+  bannedTraits: [],
 };
 
 const startTraits: readonly SavedTrait[] = [
@@ -60,6 +62,7 @@ interface Step {
   readonly departure?: SavedRoom;
   readonly run?: Partial<SavedRunState>;
   readonly traits?: readonly SavedTrait[] | null;
+  readonly spell?: SavedSpell;
   readonly worldTime?: number;
 }
 
@@ -82,6 +85,7 @@ function save(step: Step): SaveCheckpoint {
           hero: {
             traits,
             slotted: { Keepsake: 'GoldifyKeepsake', Aspect: 'StaffClearCastAspect' },
+            ...(step.spell === undefined ? {} : { spell: step.spell }),
           },
         }),
     profile: {
@@ -321,6 +325,54 @@ describe('run record builder', () => {
     expect(record.rooms.map((entry) => entry.forfeitSkips)).toEqual([undefined, 1, undefined]);
   });
 
+  it('records the names each room banned and the Spell tree each room changed', () => {
+    const tree = (invested: boolean): SavedSpell => ({
+      name: 'SpellLeapTrait',
+      layout: 'Pyramid',
+      talents: {
+        '1:1': { name: 'LeapArmorDamageTalent', invested },
+        '1:2': { name: 'LeapCooldownSpeedTalent', invested: false },
+      },
+    });
+    const record = buildRunRecord([
+      save({ history: [], current: room('F_Combat01'), run: { bannedTraits: ['ZeusWeaponBoon'] } }),
+      save({
+        history: ['F_Combat01'],
+        current: room('F_Combat02'),
+        departure: room('F_Combat01'),
+        run: { bannedTraits: ['HeraManaBoon', 'ZeusWeaponBoon', 'ZeusSprintBoon'] },
+        spell: tree(false),
+      }),
+      save({
+        history: ['F_Combat01', 'F_Combat02'],
+        current: room('F_Combat03'),
+        departure: room('F_Combat02'),
+        run: { bannedTraits: ['HeraManaBoon', 'ZeusWeaponBoon', 'ZeusSprintBoon'] },
+        spell: tree(true),
+      }),
+      save({
+        history: ['F_Combat01', 'F_Combat02', 'F_Combat03'],
+        current: room('F_Combat04'),
+        departure: room('F_Combat03'),
+        run: { bannedTraits: ['HeraManaBoon', 'ZeusWeaponBoon', 'ZeusSprintBoon'] },
+        spell: tree(true),
+      }),
+    ]);
+    expect(record.rooms.map((entry) => entry.bannedTraits)).toEqual([
+      ['HeraManaBoon', 'ZeusSprintBoon'],
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    expect(record.rooms.map((entry) => entry.spell?.talents['1:1']?.invested)).toEqual([
+      false,
+      true,
+      undefined,
+      undefined,
+    ]);
+    expect(record.rooms[0]?.spell?.layout).toBe('Pyramid');
+  });
+
   it('keeps the last write of a rewritten checkpoint', () => {
     const record = buildRunRecord([
       save({ history: [], current: room('F_Opening01') }),
@@ -539,7 +591,13 @@ describe('run record builder', () => {
   });
 
   it('attributes trait gains, losses, keepsake swaps and Time Piece uses to rooms', () => {
-    const boon = { name: 'ZeusWeaponBoon', id: '1112.250.123', rarity: 'Rare', stackNum: 1 };
+    const boon = {
+      name: 'ZeusWeaponBoon',
+      id: '1112.250.123',
+      rarity: 'Rare',
+      stackNum: 1,
+      remainingUses: 4,
+    };
     const swapped: SavedTrait[] = [
       { name: 'LowHealthCritKeepsake', id: '11120.50.4', rarity: 'Common' },
     ];
@@ -569,7 +627,9 @@ describe('run record builder', () => {
     const record = buildRunRecord([first, second, swappedSave]);
     expect(record.rooms[0]).toMatchObject({
       traits: {
-        acquired: [{ name: 'ZeusWeaponBoon', rarity: 'Rare', level: 1, worldTime: 12.25 }],
+        acquired: [
+          { name: 'ZeusWeaponBoon', rarity: 'Rare', level: 1, worldTime: 12.25, remainingUses: 4 },
+        ],
         removed: [],
       },
       conversions: { timePiece: 1 },
@@ -581,6 +641,62 @@ describe('run record builder', () => {
       },
       keepsakeSwap: { from: 'GoldifyKeepsake', to: 'LowHealthCritKeepsake' },
     });
+  });
+
+  it('attributes the store loss of door creation to the one untaken door without an offer', () => {
+    const source = room('H_Combat15', {
+      exitDoors: [
+        { door: 1, room: 'H_MiniBoss01' },
+        { door: 2, room: 'H_Combat04' },
+      ],
+      offeredRewards: { '1': { type: 'Boon', lootName: 'HeraUpgrade' } },
+    });
+    const stores = (names: readonly string[]) => ({ rewardStores: { RunProgress: names } });
+    const record = buildRunRecord([
+      save({
+        history: [],
+        current: source,
+        run: stores(['Boon', 'MaxHealthDrop', 'TalentDrop', 'StackUpgrade']),
+      }),
+      save({
+        history: ['H_Combat15'],
+        current: room('H_MiniBoss01', { chosenRewardType: 'Boon', rewardStoreName: 'RunProgress' }),
+        departure: source,
+        run: stores(['StackUpgrade']),
+      }),
+    ]);
+    expect(record.rooms[0]?.doors).toEqual([
+      { door: 1, room: 'H_MiniBoss01', reward: { type: 'Boon', lootName: 'HeraUpgrade' } },
+      { door: 2, room: 'H_Combat04', cageRewards: ['MaxHealthDrop', 'TalentDrop'] },
+    ]);
+  });
+
+  it("subtracts the taken door's roll once, leaving an untaken cage's Boon", () => {
+    const source = room('H_Combat15', {
+      exitDoors: [
+        { door: 1, room: 'H_MiniBoss01' },
+        { door: 2, room: 'H_Combat04' },
+      ],
+      offeredRewards: { '1': { type: 'Boon', lootName: 'HeraUpgrade' } },
+    });
+    const stores = (names: readonly string[]) => ({ rewardStores: { RunProgress: names } });
+    const record = buildRunRecord([
+      save({
+        history: [],
+        current: source,
+        run: stores(['Boon', 'Boon', 'MaxHealthDrop', 'TalentDrop', 'StackUpgrade']),
+      }),
+      save({
+        history: ['H_Combat15'],
+        current: room('H_MiniBoss01', { chosenRewardType: 'Boon', rewardStoreName: 'RunProgress' }),
+        departure: source,
+        run: stores(['StackUpgrade']),
+      }),
+    ]);
+    expect(record.rooms[0]?.doors).toEqual([
+      { door: 1, room: 'H_MiniBoss01', reward: { type: 'Boon', lootName: 'HeraUpgrade' } },
+      { door: 2, room: 'H_Combat04', cageRewards: ['Boon', 'MaxHealthDrop', 'TalentDrop'] },
+    ]);
   });
 
   it('records a trait replaced by a higher grade of itself as an upgrade', () => {

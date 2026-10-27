@@ -87,6 +87,12 @@ function doorOccurrence(
     : context.occurrences.offeredOccurrence(roomIndex, door.door);
 }
 
+const topologyOccurrence = (context: RunImportContext, biomeKey: string, occurrenceId: string) =>
+  context
+    .assembly()
+    .project.route.biomes.find((biome) => biome.biomeKey === biomeKey)
+    ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+
 function ensureChaos(context: RunImportContext, biomeKey: string, sourceIndex: number): void {
   const door = context.record.rooms[sourceIndex]!.doors.find((candidate) =>
     chaosRoom(context, candidate.room),
@@ -97,9 +103,26 @@ function ensureChaos(context: RunImportContext, biomeKey: string, sourceIndex: n
   const occurrence = project.route.biomes
     .find((biome) => biome.biomeKey === biomeKey)
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === source);
-  if (occurrence === undefined || occurrence.additionalExits.some((exit) => exit.key === 'chaos'))
-    return;
+  if (occurrence === undefined) return;
   const biome = createBiomeAddress(project.route.routeKey, biomeKey);
+  const existing = occurrence.additionalExits.find((exit) => exit.key === 'chaos');
+  if (existing !== undefined) {
+    // An Ixion gate opens on its own; its map is still the record's.
+    const gate = topologyOccurrence(context, biomeKey, existing.occurrenceId);
+    const map: ProjectCommand = {
+      kind: 'ReplaceChaosMap',
+      occurrence: createOccurrenceAddress(biome, existing.occurrenceId),
+      gameName: door.room,
+    };
+    if (gate !== undefined && gate.gameName !== door.room && !context.apply(map))
+      context.note({
+        area: 'chaosGate',
+        reason: 'refused',
+        address: map.occurrence,
+        record: { roomIndex: sourceIndex, visit: 0, door: door.door },
+      });
+    return;
+  }
   const chaosId =
     context.record.rooms[sourceIndex]!.exit === door.room
       ? context.occurrences.occurrenceOf(sourceIndex + 1)

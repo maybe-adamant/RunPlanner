@@ -3,6 +3,7 @@ import {
   createOccurrenceId,
   type OccurrenceId,
   type ProjectDocument,
+  type RoomOccurrence,
   type SemanticAddress,
 } from '../../authored-project';
 import type { RunRecord } from '../../run-record/model';
@@ -19,12 +20,22 @@ export class RecordOccurrences {
   readonly biomeOfRoom: readonly string[];
   private readonly occurrenceOfRoom: OccurrenceId[];
   private readonly roomsOfOccurrence = new Map<string, number[]>();
+  private readonly offeredDoors = new Map<
+    string,
+    { readonly roomIndex: number; readonly door: number }
+  >();
+  private readonly chaosRooms: ReadonlySet<string>;
 
   constructor(
     catalog: Catalog,
     private readonly record: RunRecord,
   ) {
     this.biomeOfRoom = recordRoomBiomeKeys(catalog, record);
+    this.chaosRooms = new Set(
+      catalog.rooms.values
+        .filter((room) => room.roomSetKey === 'Chaos')
+        .map((room) => room.gameName),
+    );
     const firstVisit = new Map<string, OccurrenceId>();
     this.occurrenceOfRoom = record.rooms.map((room, index) => {
       const biomeKey = this.biomeOfRoom[index]!;
@@ -50,6 +61,16 @@ export class RecordOccurrences {
       if (topology === undefined || topology === null) continue;
       const first = this.biomeOfRoom.indexOf(biome.biomeKey);
       if (first >= 0) this.bind(first, topology.startOccurrenceId);
+      // A Chaos gate Ixion opened is the engine's own occurrence.
+      for (const occurrence of topology.occurrences)
+        for (const exit of occurrence.additionalExits) {
+          if (exit.kind !== 'chaos') continue;
+          for (const index of this.visitsOf(occurrence.occurrenceId)) {
+            const next = this.record.rooms[index + 1];
+            if (next !== undefined && this.chaosRooms.has(next.name))
+              this.bind(index + 1, exit.occurrenceId);
+          }
+        }
       for (const link of topology.fixedRoomLinks) {
         const target = topology.occurrences.find(
           (occurrence) => occurrence.occurrenceId === link.targetOccurrenceId,
@@ -62,9 +83,13 @@ export class RecordOccurrences {
     }
   }
 
+  /** Counts binding changes, so callers can tell when record visits moved. */
+  bindings = 0;
+
   private bind(roomIndex: number, occurrenceId: OccurrenceId): void {
     const previous = this.occurrenceOfRoom[roomIndex]!;
     if (previous === occurrenceId) return;
+    this.bindings += 1;
     this.roomsOfOccurrence.delete(previous);
     this.occurrenceOfRoom[roomIndex] = occurrenceId;
     const visits = this.roomsOfOccurrence.get(occurrenceId) ?? [];
@@ -84,15 +109,24 @@ export class RecordOccurrences {
 
   /** The occurrence of a room a source visit offered but did not enter. */
   offeredOccurrence(sourceIndex: number, doorId: number): OccurrenceId {
-    return createOccurrenceId(`${this.biomeOfRoom[sourceIndex]}-r${sourceIndex}-d${doorId}`);
+    const id = createOccurrenceId(`${this.biomeOfRoom[sourceIndex]}-r${sourceIndex}-d${doorId}`);
+    this.offeredDoors.set(id, { roomIndex: sourceIndex, door: doorId });
+    return id;
+  }
+
+  /** The source visit and door of an offered occurrence this table created. */
+  offeredDoor(
+    occurrenceId: string,
+  ): { readonly roomIndex: number; readonly door: number } | undefined {
+    return this.offeredDoors.get(occurrenceId);
   }
 
   /** The record room an occurrence id names, entered or offered. */
   roomIndexOfOccurrence(occurrenceId: string): number | undefined {
-    const visits = this.roomsOfOccurrence.get(occurrenceId);
-    if (visits !== undefined) return visits[0];
-    const match = /-r(\d+)-d\d+$/.exec(occurrenceId);
-    return match === null ? undefined : Number(match[1]);
+    return (
+      this.roomsOfOccurrence.get(occurrenceId)?.[0] ??
+      this.offeredDoors.get(occurrenceId)?.roomIndex
+    );
   }
 
   /** The record visit an address concerns: its occurrence, or the source of its decision. */
@@ -119,4 +153,15 @@ export function occurrenceIdOf(address: SemanticAddress): string | undefined {
     }
   }
   return undefined;
+}
+
+/** The authored occurrence a biome topology holds. */
+export function authoredOccurrence(
+  project: ProjectDocument,
+  biomeKey: string,
+  occurrenceId: string,
+): RoomOccurrence | undefined {
+  return project.route.biomes
+    .find((biome) => biome.biomeKey === biomeKey)
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
 }

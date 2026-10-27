@@ -1,5 +1,5 @@
 import type { SemanticAddress } from '../../authored-project';
-import type { SemanticFinding } from '../model';
+import { isRequiredMissingInputFinding, type SemanticFinding } from '../model';
 import type { RunImportArea } from './report';
 
 const areaByOriginKind: Readonly<Partial<Record<SemanticAddress['kind'], RunImportArea>>> = {
@@ -59,12 +59,22 @@ export function areaOfFinding(finding: SemanticFinding): RunImportArea {
   )
     return 'fields';
   if (origin.kind === 'roomFeature') {
-    const feature = String((origin as { readonly featureKey?: unknown }).featureKey ?? '');
-    if (/well/i.test(feature)) return 'well';
-    if (/pool|sell/i.test(feature)) return 'pool';
-    if (/anvil/i.test(feature)) return 'anvil';
-    if (/star/i.test(feature)) return 'pathOfStars';
-    return 'shop';
+    const target = origin.target.kind;
+    if (target.startsWith('stygianWell')) return 'well';
+    if (target.startsWith('purgingPool')) return 'pool';
+    if (target.startsWith('hermesShrine')) return 'shop';
+    if (target === 'fieldsOptionalRewardCount') return 'fields';
+    return 'other';
   }
+  if (finding.evidence['pickupEffect'] === 'anvilOfFates') return 'anvil';
   return areaByOriginKind[origin.kind] ?? 'other';
+}
+
+/** Missing input, and a Pom whose level-up its default authoring leaves unresolved. */
+export function isQuestionFinding(finding: SemanticFinding): boolean {
+  return (
+    finding.code === 'missingPomTarget' ||
+    finding.code === 'pomWrongOfferCount' ||
+    isRequiredMissingInputFinding(finding)
+  );
 }

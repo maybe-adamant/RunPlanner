@@ -94,6 +94,23 @@ export interface RunRecordRoom {
   readonly keepsakeSwap?: RunRecordKeepsakeSwap;
   /** `NPCInteractions` counts gained in this room. */
   readonly npcInteractions?: Readonly<Record<string, number>>;
+  /** Names added to `BannedTraits` in this room (Vow of Denial), in no particular order. */
+  readonly bannedTraits?: readonly string[];
+  /** The slotted Spell and its Path of Stars when either changed in this room. */
+  readonly spell?: RunRecordSpell;
+}
+
+export interface RunRecordSpell {
+  readonly name: string;
+  /** The talent tree structure name. */
+  readonly layout?: string;
+  /** Talent nodes by `depth:slot`, 1-based as the game numbers them. */
+  readonly talents: Readonly<Record<string, RunRecordTalent>>;
+}
+
+export interface RunRecordTalent {
+  readonly name: string;
+  readonly invested: boolean;
 }
 
 export interface RunRecordRoomReward {
@@ -109,6 +126,11 @@ export interface RunRecordDoorTarget {
 
 export interface RunRecordDoor extends RunRecordDoorTarget {
   readonly reward?: RunRecordDoorReward;
+  /**
+   * Fields cage reward types rolled for a door never taken, sorted; the roll
+   * order and any boon's god are not saved.
+   */
+  readonly cageRewards?: readonly string[];
 }
 
 export interface RunRecordDoorReward {
@@ -181,6 +203,8 @@ export interface RunRecordTraitAcquisition {
   readonly level?: number;
   /** `_worldTime` of the acquisition, parsed from the trait id. */
   readonly worldTime?: number;
+  /** `RemainingUses` when first saved, such as a Chaos curse's duration. */
+  readonly remainingUses?: number;
 }
 
 export type RunRecordStoreKind = 'worldShop' | 'hermesShrine' | 'well';

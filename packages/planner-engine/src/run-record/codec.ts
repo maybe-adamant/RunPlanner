@@ -17,6 +17,7 @@ import {
   type RunRecordRoom,
   type RunRecordRoomReward,
   type RunRecordSpawn,
+  type RunRecordSpell,
   type RunRecordStockOption,
   type RunRecordStore,
   type RunRecordTraitChanges,
@@ -230,10 +231,15 @@ function doorReward(value: unknown, label: string): RunRecordDoorReward {
 
 function door(value: unknown, label: string): RunRecordDoor {
   const record = object(value, label);
-  exact(record, ['door', 'room'], ['reward'], label);
+  exact(record, ['door', 'room'], ['reward', 'cageRewards'], label);
   return Object.freeze({
     ...doorTarget({ door: record.door, room: record.room }, label),
     ...optional(record, 'reward', label, doorReward),
+    ...optional(record, 'cageRewards', label, (entry, path) => {
+      const types = list(entry, path, text, 8);
+      if (types.length === 0) fail(`${path} must not be empty`);
+      return types;
+    }),
   });
 }
 
@@ -324,12 +330,13 @@ function traitChanges(value: unknown, label: string): RunRecordTraitChanges {
   return Object.freeze({
     acquired: list(record.acquired, `${label}.acquired`, (entry, path) => {
       const row = object(entry, path);
-      exact(row, ['name'], ['rarity', 'level', 'worldTime'], path);
+      exact(row, ['name'], ['rarity', 'level', 'worldTime', 'remainingUses'], path);
       return Object.freeze({
         name: text(row.name, `${path}.name`),
         ...optional(row, 'rarity', path, text),
         ...optional(row, 'level', path, (item, at) => integer(item, at, 1)),
         ...optional(row, 'worldTime', path, worldTime),
+        ...optional(row, 'remainingUses', path, (item, at) => integer(item, at, 0)),
       });
     }),
     removed: list(record.removed, `${label}.removed`, text),
@@ -543,6 +550,34 @@ function keepsakeSwap(value: unknown, label: string): RunRecordKeepsakeSwap {
   }) as RunRecordKeepsakeSwap;
 }
 
+function spell(value: unknown, label: string): RunRecordSpell {
+  const record = object(value, label);
+  exact(record, ['name', 'talents'], ['layout'], label);
+  const talents = object(record.talents, `${label}.talents`);
+  if (Object.keys(talents).length > MAX_ITEMS) fail(`${label}.talents is too large`);
+  return Object.freeze({
+    name: text(record.name, `${label}.name`),
+    ...optional(record, 'layout', label, text),
+    talents: Object.freeze(
+      Object.fromEntries(
+        Object.entries(talents).map(([key, entry]) => {
+          const path = `${label}.talents.${key}`;
+          if (!/^[1-9]\d*:[1-9]\d*$/.test(key)) fail(`${path} must be keyed depth:slot`);
+          const talent = object(entry, path);
+          exact(talent, ['name', 'invested'], [], path);
+          return [
+            key,
+            Object.freeze({
+              name: text(talent.name, `${path}.name`),
+              invested: bool(talent.invested, `${path}.invested`),
+            }),
+          ];
+        }),
+      ),
+    ),
+  }) as RunRecordSpell;
+}
+
 const ROOM_REQUIRED = ['name', 'doors', 'encounters', 'uses', 'traitScreens', 'traits'] as const;
 const ROOM_OPTIONAL = [
   'reward',
@@ -557,6 +592,8 @@ const ROOM_OPTIONAL = [
   'conversions',
   'keepsakeSwap',
   'npcInteractions',
+  'bannedTraits',
+  'spell',
 ] as const;
 
 function room(value: unknown, label: string): RunRecordRoom {
@@ -583,6 +620,12 @@ function room(value: unknown, label: string): RunRecordRoom {
     ...optional(record, 'conversions', label, conversions),
     ...optional(record, 'keepsakeSwap', label, keepsakeSwap),
     ...optional(record, 'npcInteractions', label, (entry, path) => counts(entry, path)),
+    ...optional(record, 'bannedTraits', label, (entry, path) => {
+      const names = list(entry, path, text, MAX_ITEMS);
+      if (names.length === 0) fail(`${path} must not be empty`);
+      return names;
+    }),
+    ...optional(record, 'spell', label, spell),
   }) as RunRecordRoom;
 }
 

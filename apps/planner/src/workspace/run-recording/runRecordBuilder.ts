@@ -12,6 +12,7 @@ import {
   type RunRecordPool,
   type RunRecordPurchase,
   type RunRecordRoom,
+  type RunRecordSpell,
   type RunRecordStore,
   type RunRecordTraitAcquisition,
   type RunRecordTraitGrade,
@@ -23,6 +24,7 @@ import type {
   SaveCheckpoint,
   SavedEncounter,
   SavedRoom,
+  SavedSpell,
   SavedStoreOption,
   SavedTrait,
 } from './saveCheckpoint';
@@ -353,7 +355,12 @@ function traitChanges(saves: readonly RoomSaves[], roomCount: number): readonly 
         });
         continue;
       }
-      target.acquired.push({ name: trait.name, ...to, ...optional('worldTime', time) });
+      target.acquired.push({
+        name: trait.name,
+        ...to,
+        ...optional('worldTime', time),
+        ...optional('remainingUses', whole(trait.remainingUses)),
+      });
     }
     for (const trait of lost) target.removed.push(trait.name);
   }
@@ -411,6 +418,7 @@ function buildRoom(
     [roomReward.type, roomReward.lootName].some((name) => name !== undefined && uses[name]);
   const reward = revisit && !collectedReward ? undefined : roomReward;
 
+  const untakenCages = untakenDoorCageRewards(room, settled);
   const doors = settled.exitDoors.flatMap((door) => {
     if (whole(door.door) === undefined) return [];
     const offer = settled.offeredRewards[String(door.door)];
@@ -418,6 +426,10 @@ function buildRoom(
       {
         door: door.door,
         room: door.room,
+        ...optional(
+          'cageRewards',
+          untakenCages?.door === door.door ? untakenCages.rewards : undefined,
+        ),
         ...optional(
           'reward',
           offer === undefined
@@ -496,7 +508,66 @@ function buildRoom(
     ...optional('conversions', conversions),
     ...optional('keepsakeSwap', keepsakeSwap),
     ...optional('npcInteractions', nonEmpty(gains(before.npcInteractions, after.npcInteractions))),
+    ...optional('bannedTraits', bannedTraits(before.bannedTraits, after.bannedTraits)),
+    ...optional('spell', spellChange(traitsBefore?.spell, traitsAfter?.spell)),
   };
+}
+
+/** Names Vow of Denial banned within the room's bracket. */
+function bannedTraits(before: readonly string[], after: readonly string[]): string[] | undefined {
+  const known = new Set(before);
+  const added = after.filter((name) => !known.has(name));
+  return added.length === 0 ? undefined : added;
+}
+
+/** The Spell and its talents when the room picked it or invested a talent. */
+function spellChange(
+  before: SavedSpell | undefined,
+  after: SavedSpell | undefined,
+): RunRecordSpell | undefined {
+  if (after === undefined || JSON.stringify(before) === JSON.stringify(after)) return undefined;
+  return { name: after.name, ...optional('layout', after.layout), talents: after.talents };
+}
+
+/**
+ * Fields cage rewards are rolled from the reward stores when the doors are
+ * created, between this room's last save and the next room's entry. What the
+ * stores lost there, less the entered room's own rolls and the doors' offers,
+ * belongs to the one door that offers nothing and was not taken. A refilled
+ * store or a second such door leaves them unattributed.
+ */
+function untakenDoorCageRewards(
+  room: RoomSaves,
+  settled: SavedRoom,
+): { readonly door: number; readonly rewards: string[] } | undefined {
+  const start = room.postReward ?? room.entry;
+  const end = room.closing;
+  if (end === undefined || end.kind === 'hub') return undefined;
+  if (storeRemovals(end, start).size > 0) return undefined;
+  const removed = storeRemovals(start, end);
+  const next = end.currentRoom;
+  const taken = settled.exitDoors.filter((door) => door.room === next.name);
+  if (taken.length !== 1) return undefined;
+  // The entered room's own roll once: its cages, else its reward; the other doors' offers.
+  for (const cage of next.cages)
+    for (const bag of removed.values()) if (take(bag, cage.rewardType)) break;
+  if (next.cages.length === 0 && next.chosenRewardType !== undefined)
+    take(removed.get(next.rewardStoreName ?? ''), next.chosenRewardType);
+  for (const door of settled.exitDoors) {
+    const offer = settled.offeredRewards[String(door.door)];
+    if (door === taken[0] || offer === undefined) continue;
+    for (const bag of removed.values()) if (take(bag, offer.type)) break;
+  }
+  const rewards = [...removed.values()]
+    .flatMap((bag) =>
+      [...bag].flatMap(([name, count]) => Array.from({ length: count }, () => name)),
+    )
+    .sort();
+  const untaken = settled.exitDoors.filter(
+    (door) => settled.offeredRewards[String(door.door)] === undefined && door !== taken[0],
+  );
+  if (rewards.length === 0 || untaken.length !== 1) return undefined;
+  return { door: untaken[0]!.door, rewards };
 }
 
 function store(room: RoomSaves, entered: SavedRoom): RunRecordStore | undefined {

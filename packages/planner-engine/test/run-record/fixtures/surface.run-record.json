@@ -133,7 +133,8 @@
         "removed": [],
         "upgraded": []
       },
-      "npcInteractions": { "AphroditeUpgrade": 1 }
+      "npcInteractions": { "AphroditeUpgrade": 1 },
+      "bannedTraits": ["AphroditeManaBoon", "AphroditeSprintBoon"]
     },
     {
       "name": "N_Hub",
@@ -267,7 +268,8 @@
         "removed": [],
         "upgraded": []
       },
-      "npcInteractions": { "ZeusUpgrade": 1 }
+      "npcInteractions": { "ZeusUpgrade": 1 },
+      "bannedTraits": ["ZeusManaBoltBoon", "ZeusSprintBoon"]
     },
     {
       "name": "N_Sub01",
@@ -456,7 +458,8 @@
         "removed": [],
         "upgraded": []
       },
-      "npcInteractions": { "ApolloUpgrade": 1 }
+      "npcInteractions": { "ApolloUpgrade": 1 },
+      "bannedTraits": ["ApolloCastBoon", "ApolloManaBoon"]
     },
     {
       "name": "N_Hub",
@@ -756,7 +759,8 @@
         ],
         "removed": [],
         "upgraded": []
-      }
+      },
+      "bannedTraits": ["AphroditeWeaponBoon", "HealthRewardBonusBoon"]
     },
     {
       "name": "N_Hub",
@@ -1012,7 +1016,8 @@
         ],
         "removed": [],
         "upgraded": []
-      }
+      },
+      "bannedTraits": ["FocusRawDamageBoon", "ManaBurstBoon"]
     },
     {
       "name": "N_Hub",
@@ -1169,7 +1174,8 @@
         "purchases": [{ "slot": 3, "delivery": "rushed" }],
         "purchaseCount": 2
       },
-      "keepsakeSwap": { "from": "HadesAndPersephoneKeepsake", "to": "GoldifyKeepsake" }
+      "keepsakeSwap": { "from": "HadesAndPersephoneKeepsake", "to": "GoldifyKeepsake" },
+      "bannedTraits": ["DoorHealToFullBoon", "WeakVulnerabilityBoon"]
     },
     {
       "name": "O_Intro",
@@ -1381,7 +1387,8 @@
         "removed": [],
         "upgraded": []
       },
-      "npcInteractions": { "PoseidonUpgrade": 1 }
+      "npcInteractions": { "PoseidonUpgrade": 1 },
+      "bannedTraits": ["PoseidonExCastBoon", "PoseidonWeaponBoon"]
     },
     {
       "name": "O_Reprieve01",
@@ -1402,7 +1409,7 @@
       ],
       "traits": {
         "acquired": [
-          { "name": "StorePendingDeliveryItem", "worldTime": 727.08499925211 },
+          { "name": "StorePendingDeliveryItem", "worldTime": 727.08499925211, "remainingUses": 8 },
           { "name": "SlowProjectileBoon", "rarity": "Common", "worldTime": 738.2683331687 }
         ],
         "removed": [],
@@ -1421,7 +1428,8 @@
         ],
         "purchaseCount": 3
       },
-      "conversions": { "timePiece": 1 }
+      "conversions": { "timePiece": 1 },
+      "bannedTraits": ["ElementalUnifiedBoon", "HermesWeaponBoon"]
     },
     {
       "name": "O_Combat05",
@@ -1621,7 +1629,13 @@
         "removed": [],
         "upgraded": []
       },
-      "npcInteractions": { "PoseidonUpgrade": 2 }
+      "npcInteractions": { "PoseidonUpgrade": 2 },
+      "bannedTraits": [
+        "ApolloCastAreaBoon",
+        "ApolloRetaliateBoon",
+        "OmegaPoseidonProjectileBoon",
+        "PoseidonManaBoon"
+      ]
     },
     {
       "name": "O_PreBoss01",

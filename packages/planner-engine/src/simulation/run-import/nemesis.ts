@@ -110,3 +110,109 @@ export function guessNemesisEvent(
   }
   return undefined;
 }
+
+/**
+ * Nemesis's event from the room's record: a free item, a trade or a contest
+ * reward is the use the room gained; a trait trade also lost that trait. A gold
+ * and a damage trade grant the same items, so an accepted trade names its
+ * family only when one of them admits the item; declined trades leave none.
+ */
+export function answerNemesis(context: RunImportContext, reason: SemanticFinding): boolean {
+  if (!reason.code.startsWith('nemesis') && reason.origin.kind !== 'nemesisRandomEvent')
+    return false;
+  const event = nemesisEventOf(context, reason.origin);
+  if (event === undefined) return false;
+  const roomIndex = context.occurrences.visitsOf(event.encounter.owner.occurrenceId)[0];
+  const room = roomIndex === undefined ? undefined : context.record.rooms[roomIndex];
+  if (room === undefined || (room.uses['NPC_Nemesis_01'] ?? 0) === 0) return false;
+  // The room's own reward is the one the event suppresses, not its result.
+  const used = (type: string) => type !== room.reward?.type && (room.uses[type] ?? 0) > 0;
+  const matches: {
+    readonly family: string;
+    readonly commands: readonly ProjectCommand[];
+    readonly traitExact: boolean;
+  }[] = [];
+  for (const family of NEMESIS_RANDOM_EVENT_FAMILIES) {
+    const select: ProjectCommand = { kind: 'SelectNemesisRandomEventFamily', event, family };
+    context.transaction(() => {
+      if (!context.apply(select)) return false;
+      const support = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+        context.assembly(),
+        event,
+      );
+      const branch = support?.branches[0];
+      if (support === undefined || branch === undefined) return false;
+      let value: Interaction | undefined;
+      let traitExact = true;
+      const first = (types: readonly string[]) => types.find(used);
+      switch (family) {
+        case 'freeItem': {
+          const type = first(branch.freeItemRewardTypes);
+          if (type !== undefined) value = { kind: 'freeItem', reward: { rewardType: type } };
+          break;
+        }
+        case 'goldTrade':
+        case 'damageTrade': {
+          const type = first(
+            family === 'goldTrade' ? branch.goldTradeRewardTypes : branch.damageTradeRewardTypes,
+          );
+          if (type !== undefined)
+            value = { kind: family, response: 'accept', reward: { rewardType: type } };
+          break;
+        }
+        case 'traitTrade': {
+          // The traded trait is the eligible one the room lost.
+          const traded = room.traits.removed.filter((name) =>
+            branch.traitTradeTraitKeys.includes(name),
+          );
+          if (traded[0] !== undefined && used(support.traitTradeRewardType)) {
+            traitExact = traded.length === 1;
+            value = {
+              kind: 'traitTrade',
+              traitKey: traded[0],
+              response: 'accept',
+              reward: { rewardType: support.traitTradeRewardType },
+            };
+          }
+          break;
+        }
+        case 'damageContest': {
+          const type = first([
+            support.damageContestFailureRewardType,
+            ...branch.damageContestSuccessRewardTypes,
+          ]);
+          if (type !== undefined)
+            value = {
+              kind: 'damageContest',
+              result: type === support.damageContestFailureRewardType ? 'failure' : 'success',
+              reward: { rewardType: type },
+            };
+          break;
+        }
+      }
+      if (value !== undefined)
+        matches.push({
+          family,
+          commands: [select, { kind: 'ReplaceNemesisRandomEventInteraction', event, value }],
+          traitExact,
+        });
+      // Probing only: the chosen family is applied below.
+      return false;
+    });
+  }
+  for (const match of matches) {
+    if (!context.transaction(() => match.commands.every((command) => context.apply(command))))
+      continue;
+    // The event itself is not saved: a unique match is inferred, several leave the family open.
+    context.note({
+      area: 'npc',
+      reason: matches.length > 1 || !match.traitExact ? 'notInRecord' : 'assumption',
+      address: event,
+      applied: match.commands[1]!,
+      record: { roomIndex: roomIndex!, visit: 0 },
+    });
+    return true;
+  }
+  context.refuse();
+  return false;
+}

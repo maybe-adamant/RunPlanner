@@ -12,18 +12,43 @@ import {
   levelResolutionCandidateForProjectEvaluationAssembly,
 } from '../evaluation/project-evaluation-assembly';
 import { occurrenceIdOf } from './occurrences';
+import { chaosOffer } from './features';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
+
+/**
+ * A promoting pick's target is the trait its room upgraded at the pick's own
+ * acquisition time, else the room's only upgrade.
+ */
+function promotionTarget(
+  context: RunImportContext,
+  roomIndex: number,
+  traitKey: string,
+): string | undefined {
+  if (
+    context.catalog.traits.byKey[traitKey]?.targetedAcquisition?.kind !== 'promoteGodTraitToHeroic'
+  )
+    return undefined;
+  const traits = context.record.rooms[roomIndex]!.traits;
+  const at = traits.acquired.find((trait) => trait.name === traitKey)?.worldTime;
+  const timed = traits.upgraded.filter((upgrade) => at !== undefined && upgrade.worldTime === at);
+  const upgrades = timed.length > 0 ? timed : traits.upgraded;
+  return upgrades.length === 1 ? upgrades[0]!.name : undefined;
+}
 
 function traitsOffer(
   context: RunImportContext,
   screen: RunRecordTraitScreen,
+  roomIndex: number,
 ): AuthoredTraitOffer | undefined {
   const giverKey = screenGiver(context, screen);
   const selected = screen.options.findIndex((option) => option.chosen);
   if (giverKey === undefined || selected < 0 || screen.options.length > 3) return undefined;
   const options = screen.options.map((option): AuthoredTraitOption => ({
     traitKey: option.name,
+    ...(option.chosen && promotionTarget(context, roomIndex, option.name) !== undefined
+      ? { targetTraitKey: promotionTarget(context, roomIndex, option.name)! }
+      : {}),
     // Only a ranked trait carries a planner rarity.
     ...(option.rarity !== undefined &&
     context.catalog.traits.byKey[option.name]?.rarityDomain.kind === 'ranked'
@@ -143,12 +168,19 @@ function ownerGiver(context: RunImportContext, trait: TraitOfferAddress): string
         : undefined;
     return definition?.traitOfferProducer?.giverKey;
   }
-  if (owner.kind !== 'incomingReward') return undefined;
+  if (owner.kind !== 'incomingReward' && owner.kind !== 'localReward') return undefined;
   const state = context
     .assembly()
     .project.route.biomes.find((biome) => biome.biomeKey === owner.biomeKey)
     ?.topology?.occurrences.find((entry) => entry.occurrenceId === owner.occurrenceId)?.state;
-  const offer = state !== undefined && 'reward' in state ? state.reward?.offer : undefined;
+  const offer =
+    owner.kind === 'localReward'
+      ? state?.kind === 'fieldsCombat'
+        ? (owner.groupKey === 'cages' ? state.cages : state.optionalRewards)[owner.slotKey]?.offer
+        : undefined
+      : state !== undefined && 'reward' in state
+        ? state.reward?.offer
+        : undefined;
   if (offer === undefined) return undefined;
   const loot =
     offer.payload?.kind === 'BoonSource'
@@ -186,7 +218,12 @@ export function answerTraitOffer(context: RunImportContext, reason: SemanticFind
     giver === undefined && new Set(screens.map((entry) => entry.screen.giver)).size > 1;
   for (const { screen, key, roomIndex } of screens) {
     const record = { roomIndex, visit: 0 };
-    const value = traitsOffer(context, screen);
+    if (screenGiver(context, screen) === 'Chaos') {
+      if (answerChaosScreen(context, trait, screen, key, roomIndex)) return true;
+      if (giver !== undefined) return false;
+      continue;
+    }
+    const value = traitsOffer(context, screen, roomIndex);
     if (value === undefined) continue;
     const command = { kind: 'ReplaceTraitOffer', trait, value } as const;
     const evaluation = context.candidates().evaluate({ kind: 'traitOffer', trait, value });
@@ -229,5 +266,57 @@ export function answerTraitOffer(context: RunImportContext, reason: SemanticFind
     // A screen tied to its owner is that owner's answer; a later screen is not.
     if (giver !== undefined) return false;
   }
+  return false;
+}
+
+/**
+ * A Chaos screen's pair offer; an unpicked curse the record does not name
+ * takes the next candidate the engine admits.
+ */
+function answerChaosScreen(
+  context: RunImportContext,
+  trait: TraitOfferAddress,
+  screen: RunRecordTraitScreen,
+  key: string,
+  roomIndex: number,
+): boolean {
+  const record = { roomIndex, visit: 0 };
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const built = chaosOffer(context, screen, roomIndex, attempt);
+    if (built === undefined) return false;
+    const evaluation = context
+      .candidates()
+      .evaluate({ kind: 'traitOffer', trait, value: built.value });
+    const command = { kind: 'ReplaceTraitOffer', trait, value: built.value } as const;
+    if (
+      evaluation.kind !== 'traitOffer' ||
+      !evaluation.result.supported ||
+      evaluation.result.findings.length > 0 ||
+      !context.applyValid(command)
+    ) {
+      // Only an assumed curse can change; a refused recorded pair is final.
+      if (built.assumedOptions === 0) break;
+      continue;
+    }
+    context.used.add(key);
+    // Rolled magnitudes and unpicked durations are not read from the save.
+    context.note({
+      area: 'traitOffer',
+      reason: 'notInRecord',
+      address: trait,
+      applied: command,
+      record,
+    });
+    if (built.assumedOptions > 0)
+      context.note({
+        area: 'traitOffer',
+        reason: 'assumption',
+        address: trait,
+        applied: command,
+        record,
+      });
+    return true;
+  }
+  context.refuse();
   return false;
 }

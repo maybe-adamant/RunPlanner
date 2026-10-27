@@ -25,6 +25,8 @@ export {
   type RunRecordRoomReward,
   type RunRecordRoute,
   type RunRecordSpawn,
+  type RunRecordSpell,
+  type RunRecordTalent,
   type RunRecordStockOption,
   type RunRecordStore,
   type RunRecordStoreKind,

@@ -162,6 +162,11 @@ same room, attributing it to that room.
 room) is shared across its `RoomHistory` entries; per-visit uses come from
 diffing successive departure records.
 
+A Trial door's two loot names are its `LootAName` and `LootBName`
+(`RewardLogic.lua:268-273`), not the player's choice; the god whose screen
+opens first in the room is the chosen one (`StartDevotionTest`,
+`EncounterLogic.lua:1682`).
+
 ### Boon and Chaos screens
 
 `LogUpgradeChoice` (`UpgradeChoiceLogic.lua:1160`) appends one
@@ -175,7 +180,14 @@ U: two each in `H_Combat15` and `H_Combat07`).
 
 - Chaos screens log the blessing only; the paired curse is the
   `SecondaryItemName` and is not logged. The chosen curse appears in
-  `Hero.Traits` in the same bracket; the curses of unpicked options are lost.
+  `Hero.Traits` in the same bracket, its `RemainingUses` at that first save
+  being its rolled duration; its rolled magnitudes sit in trait-specific
+  fields. Under Vow of Denial, `HandleUpgradeChoiceSelection` writes each
+  unpicked button's `Data.Name` (on a Chaos screen, its curse) to
+  `CurrentRun.BannedTraits` in button order up to `numBans`
+  (`UpgradeChoiceLogic.lua:974-989`), so the bracket's newly banned names
+  recover those curses; for god boons they name the banned unpicked boons.
+  Without Denial the unpicked curses are lost, but inert.
 - A choice made under a `DoubleBoonChance` keepsake roll is not logged
   (`UpgradeChoiceLogic.lua:990`); only the trait diff shows the extra boon.
   Source-only.
@@ -239,7 +251,7 @@ when its source type occurs in one wave.
 
 | Fact                         | Save source                                                                                                             | Status   |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------- |
-| World Shop and Well stock    | entry-save `CurrentRoom.Store.StoreOptions`                                                                             | exact    |
+| World Shop and Well stock    | entry-save `CurrentRoom.Store.StoreOptions`; a room whose map lacks a `ChallengeSwitchBase` still rolls Well stock      | exact    |
 | Purchases                    | departure record: bought options removed from `StoreOptions` (`StoreLogic.lua:326`), `StoreItemsPurchased`, `UseRecord` | exact    |
 | Final prices of unsold items | departure record `Store.SpawnedStoreItems[*].ResourceCosts`                                                             | exact    |
 | Price paid                   | base cost times the multiplier below                                                                                    | inferred |
@@ -268,9 +280,9 @@ adds a second count to `SurfaceShopPurchases`; capture S totals matched both.
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
 | Stygian Well          | stock in entry `Store`; purchases by bracket diff of cumulative `CurrentRun.WellShopPurchases` (`StoreLogic.lua:1169`), `UseRecord.WellShop`                                                     | exact               |
 | Pool of Purging       | departure record `SellOptions` (offered slots, sold slot removed, `SellTraitLogic.lua:333`); `UseRecord.SellTraitShop` counts opens; `TraitsSold` counts sales; sold trait by `Hero.Traits` diff | exact               |
-| Anvil of Fates        | Well purchase `LimitedSwapTraitDrop`, then the hammer swap as a `Hero.Traits` diff                                                                                                               | inferred            |
+| Anvil of Fates        | World Shop purchase `ChaosWeaponUpgrade`, then the hammer swap as a `Hero.Traits` diff                                                                                                           | inferred            |
 | Path of Stars         | `Hero.SlottedSpell`: spell name and `Talents` layout with `Invested` flags                                                                                                                       | exact               |
-| Spell Drop            | picked spell only (`SlottedSpell.Name`)                                                                                                                                                          | exact; options lost |
+| Spell Drop            | picked spell only (`SlottedSpell.Name`); its position by the bonus points the first Path screen spends (`SpellTalentData.InitialBonuses`)                                                        | exact; options lost |
 | Chaos gate            | source room `ExitDoorRooms` and `OfferedRewards` (`TrialUpgrade`), `ForceSecretDoor`, `SecretDoorHealthCost`, `UseRecord.SecretDoor`; the Chaos room in `RoomHistory`                            | exact               |
 | Artificer conversion  | `CurrentRun.MetaConversionUses` increment (`GiftLogic.lua:20`) in the room's bracket; the replacement in `UseRecord`; its RunProgress roll in the store diff                                     | inferred            |
 | Time Piece conversion | `GoldifyKeepsake.BoonConversionUses` decrement (`GiftLogic.lua:117`) in the room's bracket, with the gold gain; the converted reward never reaches `UseRecord`                                   | exact by bracket    |
@@ -311,6 +323,7 @@ replaced the Meta pickup.
 | Fact                  | Save source                                                                                                                                                                | Status                 |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
 | Cage rewards          | `CurrentRoom.CageRewards[i]` `{RewardType, ForceLootName, Encounter}` from the entry save                                                                                  | exact                  |
+| Untaken door cages    | `RewardStores` loss across the door-creation bracket, less the entered room's rolls and the door offers; one offer-less untaken door, no refill                            | inferred; gods lost    |
 | Cage point            | `CageRewards[i].Encounter.EligibleSpawnPoints`, written on opening (`EncounterLogic.lua:2936`), names a spawn group whose map ids identify the `RewardCageSpawnPoints` key | inferred               |
 | Player entry          | `CurrentRoom.HeroStartPoint` / `HeroEndPoint` from the PostReward save                                                                                                     | exact                  |
 | Uncollected optionals | `Encounter.RewardsToRestore[objectId]` `{RewardOverride, SpawnRewardOnId}` (`RoomLogic.lua:5738`)                                                                          | exact                  |
@@ -347,7 +360,8 @@ counters without order.
 
 - Intra-room action order beyond the entry, PostReward, and departure brackets.
 - Purchase order within a shop.
-- Pre-reroll boon options; Chaos curses of unpicked options.
+- Pre-reroll boon options; Chaos curses of unpicked options without Vow of
+  Denial.
 - Spell Drop unpicked options.
 - The room where a resource point was harvested, mined, dug, exorcised, or
   fished.
