@@ -255,8 +255,8 @@ export function answerSteadyGrowth(context: RunImportContext, reason: SemanticFi
   return false;
 }
 
-/** Pom screens, by the loot every level-up screen shares. */
-const POM_GIVER = 'StackUpgrade';
+/** Pom level-up screens, by their loot: a Pom of Power and a Big Pom. */
+const POM_GIVERS: ReadonlySet<string> = new Set(['StackUpgrade', 'StackUpgradeBig']);
 
 /** Answers a Pom's level-up from the next unconsumed level-up screen of its room. */
 export function answerLevelResolution(context: RunImportContext, reason: SemanticFinding): boolean {
@@ -281,7 +281,7 @@ export function answerLevelResolution(context: RunImportContext, reason: Semanti
     for (const [position, screen] of context.record.rooms[roomIndex]!.traitScreens.entries()) {
       const key = `screen:${roomIndex}:${position}`;
       const chosen = screen.options.find((option) => option.chosen)?.name;
-      if (context.used.has(key) || screen.giver !== POM_GIVER || chosen === undefined) continue;
+      if (context.used.has(key) || !POM_GIVERS.has(screen.giver) || chosen === undefined) continue;
       for (const [branchIndex, branch] of capability.branches.entries()) {
         const value =
           branch.effectKind === 'random'
@@ -425,7 +425,7 @@ export function answerTraitOffer(context: RunImportContext, reason: SemanticFind
     context.record.rooms[roomIndex]!.traitScreens.flatMap((screen, position) => {
       const key = `screen:${roomIndex}:${position}`;
       return context.used.has(key) ||
-        screen.giver === POM_GIVER ||
+        POM_GIVERS.has(screen.giver) ||
         (giver !== undefined && screenGiver(context, screen) !== giver)
         ? []
         : [{ screen, key, roomIndex }];

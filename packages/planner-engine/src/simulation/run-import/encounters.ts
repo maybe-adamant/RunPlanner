@@ -108,7 +108,6 @@ export function importEncounters(context: RunImportContext): void {
         }
       }
     }
-    if (recorded !== undefined) importGorgonAthena(context, phase, recorded.roomIndex);
     const customizable =
       generatedEncounterSupportForProjectEvaluationAssembly(context.assembly(), phase) !==
         undefined ||
@@ -131,10 +130,11 @@ export function importEncounters(context: RunImportContext): void {
   }
   // After selection, so eligibility reads the recorded encounter; a phase without support retries.
   for (const phase of reachedEncounterPhasesForProjectEvaluationAssembly(context.assembly())) {
-    if (context.used.has(`figLeaf:${semanticAddressKey(phase)}`)) continue;
     const recorded = recordedEncounter(context, phase);
-    if (recorded !== undefined)
+    if (recorded === undefined) continue;
+    if (!context.used.has(`figLeaf:${semanticAddressKey(phase)}`))
       importFigLeafSkip(context, phase, recorded.encounter, recorded.roomIndex);
+    importGorgonAthena(context, phase, recorded.roomIndex);
   }
 }
 
@@ -142,30 +142,20 @@ export function importEncounters(context: RunImportContext): void {
  * Gorgon Amulet's Athena: an Athena screen in a room whose own encounter gives
  * no Athena offer. The record does not say which phase she followed, so a
  * room with several Gorgon-eligible phases takes the first that the engine admits.
+ * A phase has no Gorgon capability while its room stops at its Overview, so
+ * each phase is tried on every sweep until its capability is reached.
  */
 function importGorgonAthena(
   context: RunImportContext,
   phase: EncounterPhaseAddress,
   roomIndex: number,
 ): void {
-  const support = encounterPhaseGorgonSupportForProjectEvaluationAssembly(
-    context.assembly(),
-    phase,
-  );
-  if (support?.supported !== true) return;
   const effect = context.catalog.keepsakes.values.find(
     (keepsake) => keepsake.effect?.kind === 'gorgonAmulet',
   )?.effect;
   if (effect?.kind !== 'gorgonAmulet') return;
   const giver = context.catalog.traitGivers.byKey[effect.providerKey];
-  const definition = resolvedDefinition(context, phase);
-  if (
-    giver === undefined ||
-    (definition !== undefined &&
-      context.catalog.encounterDefinitions.byKey[definition]?.traitOfferProducer?.giverKey ===
-        giver.key)
-  )
-    return;
+  if (giver === undefined) return;
   const screens = context.record.rooms[roomIndex]!.traitScreens;
   for (const [position, screen] of screens.entries()) {
     const key = `screen:${roomIndex}:${position}`;
@@ -177,6 +167,20 @@ function importGorgonAthena(
       !screen.options.every((option) => giver.traitKeys.includes(option.name))
     )
       continue;
+    const tried = `gorgon:${semanticAddressKey(phase)}`;
+    if (context.used.has(tried)) return;
+    const support = encounterPhaseGorgonSupportForProjectEvaluationAssembly(
+      context.assembly(),
+      phase,
+    );
+    const definition = resolvedDefinition(context, phase);
+    if (
+      support?.supported !== true ||
+      (definition !== undefined &&
+        context.catalog.encounterDefinitions.byKey[definition]?.traitOfferProducer?.giverKey ===
+          giver.key)
+    )
+      return;
     const applied = context.transaction(
       () =>
         context.apply({ kind: 'ReplaceGorgonDeathDefianceCondition', phase, value: true }) &&
@@ -193,6 +197,7 @@ function importGorgonAthena(
           },
         }),
     );
+    context.used.add(tried);
     if (applied) context.used.add(key);
     return;
   }

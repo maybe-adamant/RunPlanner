@@ -321,7 +321,8 @@ describe('run import of the Underworld capture', () => {
       // The three Chaos screens stay: their unpicked curses' durations are never saved.
       notInRecord: { fields: 4, pathOfStars: 1, traitOffer: 5 },
       refused: { doors: 1, fields: 2, pool: 1, traitOffer: 1 },
-      unsupportedArea: { shop: 2, well: 1 },
+      // G_MiniBoss01's refused Zeus screen and H_Combat07's cage boon screen stay unused.
+      unsupportedArea: { shop: 2, traitOffer: 2, well: 1 },
     });
     // G_Combat20's positional first door (G_Combat08) is refused at its exit and moves later.
     // H_Combat07's first two cages lose their store entries to the guessed cages of its twin door.
@@ -615,6 +616,8 @@ describe('run import of the live Underworld recording', () => {
       },
       notInRecord: { traitOffer: 1, fields: 2, shop: 3, route: 1 },
       refused: { traitOffer: 4, pool: 1 },
+      // G_PreBoss01's Big Pom screen has no known source; H_PreBoss01's purchases are unknown.
+      unsupportedArea: { traitOffer: 3 },
     });
     // Fig Leaf, racked at F_PostBoss01, skipped one encounter in each of G, H and I: the record
     // predates the skip mark, so each is inferred from a rolled phase with no kills.
@@ -718,6 +721,24 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
     ).toHaveLength(5);
   });
 
+  it("imports the racked Gorgon Amulet's Athena at H_Combat07's first cage", () => {
+    // The passive encounter starts late (`DelayedStart`), so it never runs encounter-start effects.
+    expect(occurrence(imported.project, 'H-r26').encounters.gorgonResultByPhase).toMatchObject({
+      Passive: { athenaTriggerConditionMet: false },
+      Cage01: {
+        athenaTriggerConditionMet: true,
+        athenaOffer: {
+          traitKeys: [
+            'InvulnerabilityCastBoon',
+            'FocusLastStandBoon',
+            'RetaliateInvulnerabilityBoon',
+          ],
+          selectedOptionKey: 'option1',
+        },
+      },
+    });
+  });
+
   it("imports Aspect of Selene's rolled tree without its God Sent nodes", () => {
     expect(imported.project.route.loadout.aspectHexTree).toMatchObject({ layoutKey: 'Pyramid' });
     expect(imported.project.route.loadout.aspectHexTree?.nodes['4:3']).toBeUndefined();
@@ -729,7 +750,8 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       // The run was reset in H_Combat04: the rest of Ephyra's Fields is guessed.
       notInRecord: { doors: 1, fields: 6, other: 1, reward: 1, route: 1, traitOffer: 3 },
       refused: { reward: 3 },
-      unsupportedArea: { shop: 1, well: 1 },
+      // G_PreBoss01's Poseidon screen opened the guessed Travel Deal refill.
+      unsupportedArea: { shop: 1, traitOffer: 1, well: 1 },
     });
     // G_Combat20's ascending door ids are not its native order: the game drew the GiftDrop door
     // last, from a refilled MetaProgress store, so its three door offers are refused and guessed.

@@ -159,6 +159,7 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
     for (let count = 0; count < (room.rerolls ?? 0); count += 1)
       entries.push({ area: 'reroll', reason: 'unsupportedArea', record: { roomIndex, visit: 0 } });
   const stop = walk.run();
+  walk.reportUnusedScreens(stop);
   return finish(walk.assembly.project, stop);
 }
 
@@ -316,6 +317,22 @@ class RunImportWalk {
       ...(applied === undefined ? {} : { applied }),
       ...(record === undefined ? {} : { record }),
     });
+  }
+
+  /**
+   * Recorded trait screens no answer consumed, in rooms before any stop: the
+   * plan holds none of their picks.
+   */
+  reportUnusedScreens(stop: RunImportStop | undefined): void {
+    const end = stop === undefined ? this.record.rooms.length : (stop.record?.roomIndex ?? 0);
+    for (const [roomIndex, room] of this.record.rooms.slice(0, end).entries())
+      for (const position of room.traitScreens.keys())
+        if (!this.context.used.has(`screen:${roomIndex}:${position}`))
+          this.entries.push({
+            area: 'traitOffer',
+            reason: 'unsupportedArea',
+            record: { roomIndex, visit: 0 },
+          });
   }
 
   /** Weapon, aspect, familiar, starting keepsake, Arcana and Fear, each validated by its command. */
