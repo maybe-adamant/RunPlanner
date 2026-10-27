@@ -35,3 +35,26 @@ and the door-order probe are done.
 - **Correction:** a Preboss-owned pedestal feature shared by both forms. It
   touches authored state, simulation, the plan wire, the game module, the app
   and the importer.
+
+### Door and ship-wheel rerolls
+
+- **Finding:** a door reroll (the `DoorReroll` arcana sets `AllowDoorReroll`;
+  `InteractLogic.lua:1351-1443`) calls `ChooseRoomReward` again. That removes a
+  second entry from `CurrentRun.RewardStores` (`RewardLogic.lua:178`) and never
+  returns the first. Door order is unchanged. `OfferedRewards` is overwritten
+  with the final roll, and a new roll excludes types already offered. The
+  ship-wheel reroll (`InteractLogic.lua:1468`) follows the same path.
+- **Not a candidate:** a boon screen reroll (`RerollBoonLoot`,
+  `UpgradeChoiceLogic.lua:707-718`) re-rolls only that screen's options. The
+  store, loot history and bans are untouched, and only the final screen is
+  logged. The final screen is enough.
+- **Planner today:** rerolls are not modeled, so the plan keeps the spent
+  entries wrong and later bag draws drift. The store-diff inferences for
+  unentered Fields doors and unpicked wheel offers are also corrupted.
+- **Evidence:** source only. Run 1010 had two screen rerolls (G_MiniBoss02,
+  G_PreBoss01), with `NumRerolls` 10 → 9 → 8 and no store diff. It had no
+  door reroll.
+- **Detection without a model:** `NumRerolls` decreases in a bracket whose
+  store loss exceeds the doors offered.
+- **Correction:** a modeled door and wheel reroll input that spends the extra
+  entry.
