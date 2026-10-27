@@ -616,7 +616,8 @@ export const shops = [
             rewardType: 'ShopHermesUpgrade',
             boonRarityOverride: boostedBoonRarity,
             purchaseInteraction: { kind: 'fixed', gameName: 'HermesUpgrade' },
-            requirement: shopHermesLegal,
+            // StoreData replaces Hermes's own requirements here: only HermesFirstPickUp remains.
+            requirement: notFreshFileRoute,
           }),
           phaseOption(inRunSecondHalf, {
             key: 'ChaosWeaponUpgrade',
@@ -783,7 +784,8 @@ export const shops = [
             rewardType: 'ShopHermesUpgrade',
             boonRarityOverride: boostedBoonRarity,
             purchaseInteraction: { kind: 'fixed', gameName: 'HermesUpgrade' },
-            requirement: shopHermesLegal,
+            // StoreData replaces Hermes's own requirements here: only HermesFirstPickUp remains.
+            requirement: notFreshFileRoute,
           }),
           phaseOption(inRunSecondHalf, {
             key: 'ChaosWeaponUpgrade',

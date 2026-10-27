@@ -72,9 +72,16 @@ groups or authored slots:
 | `I_WorldShop` |      5 |            5 | One offer from every group               |
 | `Q_WorldShop` |      5 |            6 | Two distinct offers from the first group |
 
-Every phase-gated entry retains its other requirements. For example, phase
-eligibility does not waive Hammer history, Hermes history, Spell state, Pom
-targets, Last Stand inventory, or current-Shop exclusion.
+A phase guard is conjunctive with the entry's other requirements. For example,
+phase eligibility does not waive Hammer history, Spell state, Pom targets, Last
+Stand inventory, or current-Shop exclusion. An entry that declares
+`ReplaceRequirements` is checked against that list instead of its item's own
+requirements (`StoreLogic.lua` consults `StoreItemEligible` only when the entry
+has none). The second-half `ShopHermesUpgrade` entry replaces Hermes's own
+requirements with the phase and the lifetime `HermesFirstPickUp` line, so the
+Hermes biome-use and two-Hermes-loot limits do not apply to it; the early
+`WeaponUpgradeDrop` entry replaces its own with the Hammer history, offered-hub
+exclusion and first-half guard.
 
 ## I World Shop
 
@@ -191,7 +198,9 @@ React-side filter.
 5. Positive weights change probability, not possibility. Q's phase-specific
    duplicate `RandomLoot` and `BlindBoxLoot` rows therefore share one semantic
    option identity in the planner.
-6. All non-phase requirements remain conjunctive with the phase guard.
+6. All non-phase requirements remain conjunctive with the phase guard; an
+   entry's `ReplaceRequirements` stands in place of its item's own
+   requirements, as for the late `ShopHermesUpgrade`.
 7. `BoostedRandomLoot` owns its rarity override. I/Q Shop identity alone does
    not boost an ordinary boon.
 8. The I/Q `ShopHermesUpgrade` is second-half-only and always boosted.

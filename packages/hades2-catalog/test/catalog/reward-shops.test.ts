@@ -629,6 +629,45 @@ describe('reward compiler Shop normalizer', () => {
     });
   });
 
+  it('replaces Hermes requirements in the late I/Q World Shop entries only', () => {
+    const notFreshFile = {
+      kind: 'not',
+      requirement: { kind: 'routeKeyEquals', routeKey: 'FreshFile' },
+    };
+    const hermes = (profileKey: string, groupKey: string) =>
+      rewardKernelCatalog.shops.byKey[profileKey]?.groups.byKey[groupKey]?.options.byKey
+        .ShopHermesUpgrade?.requirement;
+    for (const profileKey of ['I_WorldShop', 'Q_WorldShop']) {
+      expect(hermes(profileKey, 'PremiumProgress')).toEqual({
+        kind: 'all',
+        requirements: [
+          { kind: 'counterRange', axis: 'enteredBiomes', range: { min: 3 } },
+          notFreshFile,
+        ],
+      });
+    }
+    const ownHermesRequirement = {
+      kind: 'all',
+      requirements: [
+        notFreshFile,
+        {
+          kind: 'recordCount',
+          record: 'biomeUseRecord',
+          keys: ['HermesUpgrade', 'ShopHermesUpgrade'],
+          range: { max: 0 },
+        },
+        {
+          kind: 'recordCount',
+          record: 'lootTypeHistory',
+          keys: ['HermesUpgrade'],
+          range: { max: 1 },
+        },
+      ],
+    };
+    expect(hermes('WorldShop', 'Boon')).toEqual(ownHermesRequirement);
+    expect(hermes('SurfaceShop', 'Second')).toEqual(ownHermesRequirement);
+  });
+
   it('attaches boosted rarity only to the exact second-half I/Q World Shop items', () => {
     const boosted = { Rare: 0.9, Epic: 0.25, Legendary: 0.1 };
     for (const profileKey of ['I_WorldShop', 'Q_WorldShop'] as const) {

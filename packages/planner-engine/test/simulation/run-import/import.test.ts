@@ -575,7 +575,7 @@ describe('run import of the live Underworld recording', () => {
         roomActionOrder: 13,
       },
       notInRecord: { traitOffer: 5, fields: 2, shop: 3, route: 1 },
-      refused: { fields: 2, traitOffer: 12, pool: 2, shop: 1 },
+      refused: { fields: 2, traitOffer: 13, pool: 2 },
     });
     // Fig Leaf, racked at F_PostBoss01, skipped one encounter in each of G, H and I: the record
     // predates the skip mark, so each is inferred from a rolled phase with no kills.
@@ -583,7 +583,8 @@ describe('run import of the live Underworld recording', () => {
     // find no Boon left; the game generated the Mini-Boss door first, which refilled the store.
     // That leaves H_Combat07's Hestia screen, and Concave Stone's extra pick from it, unanswered.
     // H_PreBoss01's Shop stock was recorded as a Well, so its purchases are unknown.
-    // I_WorldShop replaces ShopHermesUpgrade's own requirements; the catalog keeps them.
+    // H_Combat07's guessed Hermes cage leaves Dodge Chance unpicked, so Denial bans it
+    // before the I_PreBoss02 Hermes screen that picked it.
     // The unattributed Denial lines follow the H_Combat07 cage guess.
     expect(entryLines(imported.report)).toEqual([
       'assumption conversion r1 acquisitionEntry@F-r1 -> ReplaceAcquisitionEntryOffer(F-r1 RoomMoneyDrop)',
@@ -619,7 +620,7 @@ describe('run import of the live Underworld recording', () => {
       'assumption doors r35 exitDecision@I-r35',
       'assumption doors r36 exitDecision@I-r36',
       'assumption doors r37 exitDecision@I-r37',
-      'refused shop r40 shopOffer@I-r40 -> ReplaceShopOfferOption(I-r40)',
+      'refused traitOffer r40 traitOffer@I-r40:hermes -> ReplaceTraitOffer(I-r40 SorcerySpeedBoon|MoneyMultiplierBoon|TimedKillBuffBoon#option1)',
       'assumption roomActionOrder r1 occurrence@F-r1',
       'assumption roomActionOrder r2 occurrence@F-r2',
       'assumption roomActionOrder r8 occurrence@F-r8',
@@ -635,11 +636,11 @@ describe('run import of the live Underworld recording', () => {
       'assumption roomActionOrder r40 occurrence@I-r40',
       'refused traitOffer r27 -',
       'refused traitOffer r29 -',
-      'refused traitOffer r29 -',
       'refused traitOffer r30 -',
       'refused traitOffer r30 -',
       'refused traitOffer r40 -',
       'refused traitOffer r40 -',
+      'refused traitOffer r- -',
       'refused traitOffer r- -',
       'refused traitOffer r- -',
       'refused traitOffer r- -',
