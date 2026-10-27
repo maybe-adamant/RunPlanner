@@ -1,3 +1,5 @@
+import type { RunRecordSavedValuePaths } from '@run-planner/engine/run-record';
+
 import type { LuaTable, LuaValue } from './luabins';
 import type { DecodedSave } from './saveFile';
 
@@ -62,6 +64,8 @@ export interface SavedTrait {
   readonly stackNum?: number;
   readonly boonConversionUses?: number;
   readonly remainingUses?: number;
+  /** The numbers at the paths kept for this trait's name, by dotted path. */
+  readonly savedValues?: Readonly<Record<string, number>>;
 }
 
 export interface SavedHero {
@@ -402,7 +406,34 @@ function lootChoices(value: LuaValue | undefined): readonly SavedLootChoice[] {
   });
 }
 
-function hero(value: LuaValue | undefined): SavedHero | undefined {
+/** The value at a dotted path; a numeric segment is a 1-based Lua array key. */
+function atPath(value: LuaValue | undefined, path: string): LuaValue | undefined {
+  let current = value;
+  for (const segment of path.split('.')) {
+    if (Array.isArray(current) && /^[1-9]\d*$/.test(segment))
+      current = (current as readonly LuaValue[])[Number(segment) - 1];
+    else if (isTable(current)) current = current[segment];
+    else return undefined;
+  }
+  return current;
+}
+
+function savedValues(
+  entry: LuaTable,
+  paths: readonly string[] | undefined,
+): Readonly<Record<string, number>> | undefined {
+  const values: Record<string, number> = {};
+  for (const path of paths ?? []) {
+    const found = number(atPath(entry, path));
+    if (found !== undefined) values[path] = found;
+  }
+  return Object.keys(values).length === 0 ? undefined : values;
+}
+
+function hero(
+  value: LuaValue | undefined,
+  savedValuePaths: RunRecordSavedValuePaths,
+): SavedHero | undefined {
   if (!isTable(value)) return undefined;
   const traits = items(value.Traits).flatMap((entry): SavedTrait[] => {
     if (!isTable(entry)) return [];
@@ -416,6 +447,7 @@ function hero(value: LuaValue | undefined): SavedHero | undefined {
         ...optional('stackNum', number(entry.StackNum)),
         ...optional('boonConversionUses', number(entry.BoonConversionUses)),
         ...optional('remainingUses', number(entry.RemainingUses)),
+        ...optional('savedValues', savedValues(entry, savedValuePaths.get(name))),
       },
     ];
   });
@@ -455,8 +487,12 @@ function rewardStores(value: LuaValue | undefined): SavedRunState['rewardStores'
   return result;
 }
 
-/** Reduces one decoded save to its checkpoint view. */
-export function extractSaveCheckpoint(save: DecodedSave, temp: boolean): SaveCheckpoint {
+/** Reduces one decoded save to its checkpoint view, keeping the given trait paths. */
+export function extractSaveCheckpoint(
+  save: DecodedSave,
+  temp: boolean,
+  savedValuePaths: RunRecordSavedValuePaths,
+): SaveCheckpoint {
   const globals = save.globals;
   const run = table(globals.CurrentRun);
   const gameState = table(globals.GameState);
@@ -480,7 +516,7 @@ export function extractSaveCheckpoint(save: DecodedSave, temp: boolean): SaveChe
   const shrineUpgrades: Record<string, number> = {};
   for (const [vow, rank] of Object.entries(table(gameState.ShrineUpgrades)))
     if (typeof rank === 'number') shrineUpgrades[vow] = rank;
-  const savedHero = hero(heroTable);
+  const savedHero = hero(heroTable, savedValuePaths);
   return Object.freeze({
     kind: !temp ? 'hub' : save.header.nextMap === '' ? 'postReward' : 'entry',
     timestamp: save.header.timestamp,

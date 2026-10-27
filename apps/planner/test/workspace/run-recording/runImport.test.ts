@@ -15,7 +15,11 @@ import type { SaveCheckpoint } from '@planner/workspace/run-recording/saveCheckp
 
 function sampleCheckpoints(): readonly SaveCheckpoint[] {
   return ['002', '004', '006', '009', '011'].map((id) => {
-    const observation = observeSave('Profile1_Temp.sav', sampleSaveBytes(`surface-${id}`));
+    const observation = observeSave(
+      'Profile1_Temp.sav',
+      sampleSaveBytes(`surface-${id}`),
+      new Map(),
+    );
     if (observation?.kind !== 'checkpoint') throw new Error('sample is not a checkpoint');
     return observation.checkpoint;
   });

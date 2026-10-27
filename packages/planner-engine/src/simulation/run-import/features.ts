@@ -12,13 +12,17 @@ import {
 } from '../../authored-project';
 import {
   chaosOperandAuthoringValues,
+  chaosOperandsAtRarity,
   type AuthoredChaosTraitOffer,
 } from '../../authored-project/traits/state';
 import { roomActionDomainForOccurrence } from '../../authored-project/room-actions/defaults';
-import type { HexLayoutKey } from '../../catalog-schema';
-import type { RunRecordSpell, RunRecordTraitScreen } from '../../run-record/model';
+import type { ChaosNumericOperand, HexLayoutKey, InRunTraitRarity } from '../../catalog-schema';
+import type {
+  RunRecordSpell,
+  RunRecordTraitAcquisition,
+  RunRecordTraitScreen,
+} from '../../run-record/model';
 import { acquisitionConversionCandidateForProjectEvaluationAssembly } from '../evaluation/project-evaluation-assembly';
-import { transcendentEmbryoBlessingValues } from '../keepsakes/trait-effects';
 import type { SemanticFinding } from '../model';
 import { insertRoomAction, removeRoomAction } from './actions';
 import type { RunImportContext } from './import';
@@ -243,6 +247,79 @@ function answerHexActivation(
 const isBlessing = (context: RunImportContext, name: string) =>
   context.catalog.chaos.blessings.byKey[name] !== undefined;
 
+/** How a Chaos operand set was read: exact, absent from the record, or off its domain. */
+interface SavedChaosValues {
+  readonly read: 'exact' | 'notInRecord' | 'refused';
+  readonly values: Readonly<Record<string, number>>;
+}
+
+/** A saved number as its operand, on the domain's step and inside it. */
+function savedOperand(
+  relation: NonNullable<ChaosNumericOperand['saveField']>['relation'],
+  domain: ChaosNumericOperand,
+  saved: number,
+): number | undefined {
+  const raw = relation === 'deltaFromOne' ? saved - 1 : relation === 'oneMinus' ? 1 - saved : saved;
+  const steps = (raw - domain.minimum) / domain.step;
+  const index = Math.round(steps);
+  if (Math.abs(steps - index) > 1e-6) return undefined;
+  const value = Number((domain.minimum + index * domain.step).toFixed(10));
+  return value >= domain.minimum && value <= domain.maximum ? value : undefined;
+}
+
+/**
+ * A Chaos operand set at its rarity's domains, read from a recorded trait's
+ * saved values through the catalog's save fields, under `prefix` for a pending
+ * blessing. An unsaved or refused set takes the declaration defaults.
+ */
+function savedChaosValues(
+  operands: readonly ChaosNumericOperand[],
+  rarity: AuthoredChaosTraitOffer['rarity'] | undefined,
+  acquisition: RunRecordTraitAcquisition | undefined,
+  prefix?: string,
+): SavedChaosValues {
+  const domains = rarity === undefined ? operands : chaosOperandsAtRarity(operands, rarity);
+  const values: Record<string, number> = {};
+  for (const [index, operand] of operands.entries()) {
+    const field = operand.saveField;
+    const saved =
+      field === undefined
+        ? undefined
+        : acquisition?.savedValues?.[prefix === undefined ? field.path : `${prefix}.${field.path}`];
+    if (field === undefined || saved === undefined)
+      return { read: 'notInRecord', values: chaosOperandAuthoringValues(operands, rarity) };
+    const value = savedOperand(field.relation, domains[index]!, saved);
+    if (value === undefined)
+      return { read: 'refused', values: chaosOperandAuthoringValues(operands, rarity) };
+    values[operand.key] = value;
+  }
+  return { read: 'exact', values: Object.freeze(values) };
+}
+
+/** An Embryo blessing's values at its rarity, read from the acquisition that granted it. */
+function embryoBlessingValues(
+  context: RunImportContext,
+  blessingKey: string,
+  rarity: InRunTraitRarity,
+  acquisition: RunRecordTraitAcquisition | undefined,
+): SavedChaosValues {
+  const operands = context.catalog.chaos.blessings.byKey[blessingKey]?.operands ?? [];
+  return savedChaosValues(operands, rarity, acquisition);
+}
+
+/** Reports a value read that was not exact against the command that applied it. */
+function noteRead(
+  context: RunImportContext,
+  read: SavedChaosValues['read'],
+  area: 'embryo' | 'traitOffer',
+  address: SemanticAddress,
+  applied: ProjectCommand,
+  roomIndex: number,
+): void {
+  if (read !== 'exact')
+    context.note({ area, reason: read, address, applied, record: record(roomIndex) });
+}
+
 /** The record room where a keepsake selection equipped: its rack, the route start or the biome start. */
 function selectionRoom(
   context: RunImportContext,
@@ -271,7 +348,8 @@ function answerEmbryoEquip(
   const timed = blessings.filter(
     (trait) => keepsakeAt !== undefined && trait.worldTime === keepsakeAt,
   );
-  const blessing = (timed.length === 1 ? timed : blessings)[0]?.name;
+  const granted = (timed.length === 1 ? timed : blessings)[0];
+  const blessing = granted?.name;
   if (blessing === undefined || (timed.length !== 1 && blessings.length !== 1)) return false;
   const evaluation = context.candidates().evaluate({ kind: 'keepsakeEquipResult', result });
   const option =
@@ -283,27 +361,27 @@ function answerEmbryoEquip(
             candidate.value.blessingKey === blessing,
         )
       : undefined;
-  if (option === undefined || !('blessingKey' in option.value) || !option.selectedPossible) {
+  const rarity = option?.transcendentEmbryoSummary?.rarity;
+  if (
+    option === undefined ||
+    rarity === undefined ||
+    !('blessingKey' in option.value) ||
+    !option.selectedPossible
+  ) {
     context.refuse();
     return false;
   }
+  const saved = embryoBlessingValues(context, blessing, rarity, granted);
   const command: ProjectCommand = {
     kind: 'ReplaceTranscendentEmbryoEquipResult',
     result: result as typeof result & { readonly resultKind: 'transcendentEmbryo' },
-    value: option.value,
+    value: { blessingKey: blessing, blessingValues: saved.values },
   };
   if (!context.applyValid(command)) {
     context.refuse();
     return false;
   }
-  // The blessing's rolled values are not saved.
-  context.note({
-    area: 'embryo',
-    reason: 'notInRecord',
-    address: result,
-    applied: command,
-    record: record(roomIndex),
-  });
+  noteRead(context, saved.read, 'embryo', result, command, roomIndex);
   return true;
 }
 
@@ -380,7 +458,9 @@ function answerEmbryoTransformation(
       return [];
     const gained = room.traits.acquired.filter((trait) => isBlessing(context, trait.name));
     const lost = room.traits.removed.filter((name) => isBlessing(context, name));
-    return gained.length === 1 && lost.length === 1 ? [{ index, blessing: gained[0]!.name }] : [];
+    return gained.length === 1 && lost.length === 1
+      ? [{ index, blessing: gained[0]!.name, acquisition: gained[0]! }]
+      : [];
   });
   const swap = swaps[outcome.cycle - 1];
   if (swap === undefined) return false;
@@ -394,44 +474,43 @@ function answerEmbryoTransformation(
     context.refuse();
     return false;
   }
+  const saved = embryoBlessingValues(
+    context,
+    swap.blessing,
+    evaluation.result.rarity,
+    swap.acquisition,
+  );
   const command: ProjectCommand = {
     kind: 'ReplaceTranscendentEmbryoTransformation',
     outcome,
-    value: {
-      blessingKey: swap.blessing,
-      blessingValues: transcendentEmbryoBlessingValues(
-        context.catalog,
-        swap.blessing,
-        evaluation.result.rarity,
-      ),
-    },
+    value: { blessingKey: swap.blessing, blessingValues: saved.values },
   };
   if (!context.applyValid(command)) {
     context.refuse();
     return false;
   }
-  context.note({
-    area: 'embryo',
-    reason: 'notInRecord',
-    address: outcome,
-    applied: command,
-    record: record(swap.index),
-  });
+  noteRead(context, saved.read, 'embryo', outcome, command, swap.index);
   return true;
 }
 
 /**
  * A Chaos screen as its complete pair offer. The picked curse is the one its
  * room gained; under Vow of Denial the unpicked buttons' curses are the names
- * the room banned. The picked curse's duration is its saved remaining uses;
- * other durations and rolled magnitudes are not read.
+ * the room banned. The picked curse's duration is its saved remaining uses and
+ * the pair's rolled values its saved fields; unpicked durations are not saved.
  */
 export function chaosOffer(
   context: RunImportContext,
   screen: RunRecordTraitScreen,
   roomIndex: number,
   attempt: number,
-): { readonly value: AuthoredChaosTraitOffer; readonly assumedOptions: number } | undefined {
+):
+  | {
+      readonly value: AuthoredChaosTraitOffer;
+      readonly assumedOptions: number;
+      readonly read: SavedChaosValues['read'];
+    }
+  | undefined {
   const room = context.record.rooms[roomIndex]!;
   const curses = context.catalog.chaos.curses;
   const selected = screen.options.findIndex((option) => option.chosen);
@@ -483,18 +562,31 @@ export function chaosOffer(
         : chosen!.rarity === 'Rare' || chosen!.rarity === 'Epic'
           ? chosen!.rarity
           : 'Common';
+  const curseValues = savedChaosValues(curse.operands, undefined, picked[0]);
+  const blessingValues = savedChaosValues(
+    blessing.operands,
+    rarity,
+    picked[0],
+    context.catalog.chaos.pendingBlessingSavePath,
+  );
+  const reads = [curseValues.read, blessingValues.read];
   return {
     value: {
       kind: 'chaos',
       giverKey: 'Chaos',
       curseOptions,
       selectedOptionKey: OPTION_KEYS[selected]!,
-      selectedCurseValues: chaosOperandAuthoringValues(curse.operands),
+      selectedCurseValues: curseValues.values,
       blessingKey: blessing.key,
       rarity,
-      blessingValues: chaosOperandAuthoringValues(blessing.operands, rarity),
+      blessingValues: blessingValues.values,
     },
     assumedOptions,
+    read: reads.includes('refused')
+      ? 'refused'
+      : reads.includes('notInRecord')
+        ? 'notInRecord'
+        : 'exact',
   };
 }
 

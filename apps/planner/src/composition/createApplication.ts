@@ -5,6 +5,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { summarizeCatalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectDocument } from '@run-planner/engine/authored-project';
+import { runRecordSavedValuePaths } from '@run-planner/engine/run-record';
 
 import { createCandidateSessionFactory } from '../projections/candidates/candidateProjection';
 import { createContextualOptionResolver } from '../projections/contextual/contextualOptions';
@@ -252,6 +253,7 @@ export function createApplication(options: CreateApplicationOptions = {}) {
           store,
           importer: options.runImporter ?? createInProcessRunImporter(catalog),
           prebossRooms: prebossRoomsByBiome(catalog),
+          savedValuePaths: runRecordSavedValuePaths(catalog),
           // Raw saves are kept for importer work in development builds only.
           ...(devBuild ? { rawSaves: options.recordHost.rawSaves } : {}),
         });

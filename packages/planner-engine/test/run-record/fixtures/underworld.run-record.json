@@ -119,7 +119,16 @@
       ],
       "traits": {
         "acquired": [
-          { "name": "ChaosDashCurse", "worldTime": 48.333693014691, "remainingUses": 5 },
+          {
+            "name": "ChaosDashCurse",
+            "worldTime": 48.333693014691,
+            "remainingUses": 5,
+            "savedValues": {
+              "OnWeaponFiredFunctions.FunctionArgs.Cost": 19,
+              "OnExpire.TraitData.PropertyChanges.1.ChangeValue": 0.77,
+              "OnExpire.TraitData.WeaponSpeedMultiplier.Value": 0.72
+            }
+          },
           { "name": "FireEssence", "worldTime": 49.867026427994 },
           { "name": "WetState", "worldTime": 49.867026427994 }
         ],
@@ -664,7 +673,12 @@
       "traits": {
         "acquired": [
           { "name": "RandomBlessingKeepsake", "rarity": "Epic", "worldTime": 340.65308143303 },
-          { "name": "ChaosManaCostBlessing", "rarity": "Epic", "worldTime": 340.65308143303 },
+          {
+            "name": "ChaosManaCostBlessing",
+            "rarity": "Epic",
+            "worldTime": 340.65308143303,
+            "savedValues": { "ManaCostModifiers.ManaCostMultiplier": 0.5 }
+          },
           {
             "name": "TemporaryForcedSecretDoorTrait",
             "worldTime": 347.63641513058,
@@ -745,7 +759,15 @@
       ],
       "traits": {
         "acquired": [
-          { "name": "ChaosDashCurse", "worldTime": 382.91975030408, "remainingUses": 5 }
+          {
+            "name": "ChaosDashCurse",
+            "worldTime": 382.91975030408,
+            "remainingUses": 5,
+            "savedValues": {
+              "OnWeaponFiredFunctions.FunctionArgs.Cost": 10,
+              "OnExpire.TraitData.AddOutgoingDamageModifiers.ValidWeaponMultiplier": 1.4
+            }
+          }
         ],
         "removed": [],
         "upgraded": []
@@ -1327,7 +1349,12 @@
       ],
       "traits": {
         "acquired": [
-          { "name": "ChaosCastBlessing", "rarity": "Epic", "worldTime": 667.85789357324 },
+          {
+            "name": "ChaosCastBlessing",
+            "rarity": "Epic",
+            "worldTime": 667.85789357324,
+            "savedValues": { "AddOutgoingDamageModifiers.ValidWeaponMultiplier": 1.74 }
+          },
           {
             "name": "DamageSharePotencyBoon",
             "rarity": "Rare",
@@ -1920,7 +1947,12 @@
         "acquired": [
           { "name": "RoomRewardMaxManaTrait", "worldTime": 1008.3003797682 },
           { "name": "RoomRewardMaxHealthTrait", "worldTime": 1008.3003797682 },
-          { "name": "ChaosDashCurse", "worldTime": 1023.5170472285, "remainingUses": 3 }
+          {
+            "name": "ChaosDashCurse",
+            "worldTime": 1023.5170472285,
+            "remainingUses": 3,
+            "savedValues": { "OnWeaponFiredFunctions.FunctionArgs.Cost": 15 }
+          }
         ],
         "removed": [],
         "upgraded": []

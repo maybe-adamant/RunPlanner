@@ -406,6 +406,7 @@ function traitChanges(saves: readonly RoomSaves[], roomCount: number): readonly 
         ...to,
         ...optional('worldTime', time),
         ...optional('remainingUses', whole(trait.remainingUses)),
+        ...optional('savedValues', trait.savedValues),
       });
     }
     for (const trait of lost) target.removed.push(trait.name);

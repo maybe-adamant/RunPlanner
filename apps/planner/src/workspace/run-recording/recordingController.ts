@@ -1,4 +1,8 @@
-import { decodeRunRecord, encodeRunRecord } from '@run-planner/engine/run-record';
+import {
+  decodeRunRecord,
+  encodeRunRecord,
+  type RunRecordSavedValuePaths,
+} from '@run-planner/engine/run-record';
 
 import type {
   RawSavesHost,
@@ -96,11 +100,13 @@ export function createRecordingController(options: {
   readonly store: Pick<PlannerStore, 'dispatch'>;
   readonly importer: RunImporter;
   readonly prebossRooms: ReadonlyMap<string, ReadonlySet<string>>;
+  /** The trait-table values each save keeps for the run record. */
+  readonly savedValuePaths: RunRecordSavedValuePaths;
   /** Keeps every accepted save of a recorded run beside it; development builds only. */
   readonly rawSaves?: RawSavesHost;
   readonly delay?: (ms: number) => Promise<void>;
 }): RecordingController {
-  const { host, preference, store, importer, prebossRooms } = options;
+  const { host, preference, store, importer, prebossRooms, savedValuePaths } = options;
   const delay =
     options.delay ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const capture =
@@ -212,7 +218,7 @@ export function createRecordingController(options: {
     let bytes = delivery.bytes;
     for (let attempt = 1; ; attempt += 1) {
       try {
-        return { observation: observeSave(delivery.fileName, bytes), bytes };
+        return { observation: observeSave(delivery.fileName, bytes, savedValuePaths), bytes };
       } catch (error) {
         if (!(error instanceof SaveFileError) || attempt >= SAVE_READ_ATTEMPTS) throw error;
       }
@@ -274,7 +280,7 @@ export function createRecordingController(options: {
     let state: RecorderState = EMPTY_RECORDER;
     const closed: ClosedRun[] = [];
     for (const save of saves) {
-      const observation = observeSave(save.fileName, save.bytes);
+      const observation = observeSave(save.fileName, save.bytes, savedValuePaths);
       if (observation === undefined) continue;
       const step = advanceRecorder(state, observation);
       state = step.state;

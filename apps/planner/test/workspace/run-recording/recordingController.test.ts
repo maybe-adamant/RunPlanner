@@ -44,6 +44,7 @@ function setup(
     store: { dispatch },
     importer: options.importer ?? createInProcessRunImporter(catalog),
     prebossRooms: options.prebossRooms ?? prebossRoomsByBiome(catalog),
+    savedValuePaths: new Map(),
     delay: () => Promise.resolve(),
   });
   return {

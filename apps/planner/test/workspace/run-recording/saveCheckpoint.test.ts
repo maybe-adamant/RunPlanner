@@ -7,6 +7,8 @@ import { buildRunRecord } from '@planner/workspace/run-recording/runRecordBuilde
 import { extractSaveCheckpoint } from '@planner/workspace/run-recording/saveCheckpoint';
 import type { DecodedSave } from '@planner/workspace/run-recording/saveFile';
 
+const NO_SAVED_VALUES = new Map<string, readonly string[]>();
+
 interface Sample {
   readonly header: {
     timestamp: number;
@@ -42,7 +44,7 @@ function sample(name: string): DecodedSave {
 
 describe('save checkpoint extraction', () => {
   it('reduces an entry save to its departure record, counters and build', () => {
-    const checkpoint = extractSaveCheckpoint(sample('underworld-062'), true);
+    const checkpoint = extractSaveCheckpoint(sample('underworld-062'), true, NO_SAVED_VALUES);
     expect(checkpoint).toMatchObject({
       kind: 'entry',
       runCount: 1003,
@@ -88,7 +90,7 @@ describe('save checkpoint extraction', () => {
   });
 
   it('marks a save without a next map as the PostReward checkpoint', () => {
-    const checkpoint = extractSaveCheckpoint(sample('surface-004'), true);
+    const checkpoint = extractSaveCheckpoint(sample('surface-004'), true, NO_SAVED_VALUES);
     expect(checkpoint.kind).toBe('postReward');
     expect(checkpoint.currentRoom.encounter?.waves[0]?.spawns).toEqual([
       {
@@ -106,12 +108,14 @@ describe('save checkpoint extraction', () => {
         infiniteSpawns: false,
       },
     ]);
-    expect(extractSaveCheckpoint(sample('surface-004'), false).kind).toBe('hub');
+    expect(extractSaveCheckpoint(sample('surface-004'), false, NO_SAVED_VALUES).kind).toBe('hub');
   });
 
   it("reads a Fig Leaf skip from the started encounter's SpawnsSkipped", () => {
     const save = sample('surface-004');
-    expect(extractSaveCheckpoint(save, true).currentRoom.encounter?.spawnsSkipped).toBe(false);
+    expect(
+      extractSaveCheckpoint(save, true, NO_SAVED_VALUES).currentRoom.encounter?.spawnsSkipped,
+    ).toBe(false);
     const run = save.globals.CurrentRun as LuaTable;
     const room = run.CurrentRoom as LuaTable;
     const skipped: DecodedSave = {
@@ -127,12 +131,65 @@ describe('save checkpoint extraction', () => {
         },
       },
     };
-    expect(extractSaveCheckpoint(skipped, true).currentRoom.encounter?.spawnsSkipped).toBe(true);
+    expect(
+      extractSaveCheckpoint(skipped, true, NO_SAVED_VALUES).currentRoom.encounter?.spawnsSkipped,
+    ).toBe(true);
+  });
+
+  it("keeps the numbers at each trait name's given paths, Lua array keys included", () => {
+    const save = sample('underworld-062');
+    const run = save.globals.CurrentRun as LuaTable;
+    const hero = run.Hero as LuaTable;
+    const curse: LuaTable = {
+      Name: 'ChaosDashCurse',
+      Id: '4016382.919750304080.80000641569495',
+      RemainingUses: 5,
+      OnWeaponFiredFunctions: {
+        FunctionArgs: { Cost: 19, ReportValues: { ReportedDrain: 'Cost' } },
+      },
+      OnExpire: {
+        TraitData: {
+          Name: 'ChaosExSpeedBlessing',
+          PropertyChanges: [{ ChangeValue: 0.77 }, { ChangeValue: 0.7 }],
+          WeaponSpeedMultiplier: { Value: 0.72 },
+        },
+      },
+    };
+    const withCurse: DecodedSave = {
+      ...save,
+      globals: {
+        ...save.globals,
+        CurrentRun: { ...run, Hero: { ...hero, Traits: [...(hero.Traits as LuaTable[]), curse] } },
+      },
+    };
+    const paths = new Map([
+      [
+        'ChaosDashCurse',
+        [
+          'OnWeaponFiredFunctions.FunctionArgs.Cost',
+          'OnExpire.TraitData.PropertyChanges.1.ChangeValue',
+          'OnExpire.TraitData.WeaponSpeedMultiplier.Value',
+          'OnExpire.TraitData.MoneyMultiplier',
+          'OnWeaponFiredFunctions.FunctionArgs.ReportValues.ReportedDrain',
+        ],
+      ],
+      ['ChaosManaCostBlessing', ['ManaCostModifiers.ManaCostMultiplier']],
+    ]);
+    const traits = extractSaveCheckpoint(withCurse, true, paths).hero!.traits;
+    expect(traits.find((trait) => trait.name === 'ChaosDashCurse')?.savedValues).toEqual({
+      'OnWeaponFiredFunctions.FunctionArgs.Cost': 19,
+      'OnExpire.TraitData.PropertyChanges.1.ChangeValue': 0.77,
+      'OnExpire.TraitData.WeaponSpeedMultiplier.Value': 0.72,
+    });
+    // The trimmed sample keeps no values; an unnamed trait keeps nothing.
+    expect(traits.some((trait) => 'savedValues' in trait && trait.name !== 'ChaosDashCurse')).toBe(
+      false,
+    );
   });
 
   it('folds the first checkpoints of a run into an abandoned record', () => {
     const checkpoints = ['002', '004', '006', '009', '011'].map((id) =>
-      extractSaveCheckpoint(sample(`surface-${id}`), true),
+      extractSaveCheckpoint(sample(`surface-${id}`), true, NO_SAVED_VALUES),
     );
     const record = buildRunRecord(checkpoints);
     expect(record.run).toEqual({ runCount: 1002, startedAt: 1_793_057_328 });

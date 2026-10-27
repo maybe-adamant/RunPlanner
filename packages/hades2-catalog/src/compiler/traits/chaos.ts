@@ -2,6 +2,7 @@ import type {
   ChaosBlessingDeclaration,
   ChaosCurseDeclaration,
   ChaosMaxStatOperand,
+  ChaosOperandSaveField,
   ChaosTraitCatalog,
   TraitElement,
 } from '@run-planner/engine/catalog-schema';
@@ -15,6 +16,24 @@ const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const CHAOS_CLOCKS = ['encounters', 'locations', 'godBoonScreens'] as const;
 const CHAOS_TAGS = ['Creation', 'Favor', 'Ordinary', 'Rejected', 'Barren'] as const;
 const CHAOS_RARITIES = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
+const SAVE_RELATIONS = ['value', 'deltaFromOne', 'oneMinus'] as const;
+/** Dotted Lua table keys; a numeric segment is a 1-based array key. */
+const SAVE_PATH = /^[A-Za-z][A-Za-z0-9]*(\.([A-Za-z][A-Za-z0-9]*|[1-9][0-9]*))*$/;
+
+function normalizeSavePath(raw: unknown, path: string): string {
+  if (typeof raw !== 'string' || !SAVE_PATH.test(raw))
+    fail(path, 'must be a dotted save-table path of names and 1-based array keys');
+  return raw;
+}
+
+function normalizeSaveField(raw: unknown, path: string): ChaosOperandSaveField {
+  const value = requireObject(raw, path);
+  if (Object.keys(value).length !== 2) fail(path, 'requires only path and relation');
+  return Object.freeze({
+    path: normalizeSavePath(value.path, `${path}.path`),
+    relation: closedValue(value.relation, SAVE_RELATIONS, `${path}.relation`),
+  });
+}
 
 function normalizeMaxStatOperand(
   raw: unknown,
@@ -42,7 +61,11 @@ function closedValue<const Values extends readonly string[]>(
   return value as Values[number];
 }
 
-function normalizeChaosOperand(raw: unknown, path: string) {
+/**
+ * A rolled operand names the saved field holding its processed value; the
+ * duration is the saved `RemainingUses` and declares none.
+ */
+function normalizeChaosOperand(raw: unknown, path: string, saved: 'required' | 'forbidden') {
   const value = requireObject(raw, path);
   const allowed = new Set([
     'key',
@@ -53,8 +76,17 @@ function normalizeChaosOperand(raw: unknown, path: string) {
     'authoringDefault',
     'integer',
     'byRarity',
+    'saveField',
   ]);
   if (Object.keys(value).some((key) => !allowed.has(key))) fail(path, 'has an unknown operand key');
+  if (saved === 'forbidden' && value.saveField !== undefined)
+    fail(`${path}.saveField`, 'is not declared for a duration');
+  if (saved === 'required' && value.saveField === undefined)
+    fail(`${path}.saveField`, 'is required for a rolled operand');
+  const saveField =
+    value.saveField === undefined
+      ? undefined
+      : normalizeSaveField(value.saveField, `${path}.saveField`);
   const key = requireNonEmpty(value.key as string, `${path}.key`);
   const label = requireNonEmpty(value.label as string, `${path}.label`);
   const minimum = value.minimum;
@@ -96,6 +128,7 @@ function normalizeChaosOperand(raw: unknown, path: string) {
       step,
       authoringDefault: value.authoringDefault,
       ...(integer === true ? { integer: true as const } : {}),
+      ...(saveField === undefined ? {} : { saveField }),
     });
   const rawDomains = requireObject(byRarity, `${path}.byRarity`);
   if (
@@ -163,6 +196,7 @@ function normalizeChaosOperand(raw: unknown, path: string) {
     step,
     authoringDefault: value.authoringDefault,
     ...(integer === true ? { integer: true as const } : {}),
+    ...(saveField === undefined ? {} : { saveField }),
     byRarity: Object.freeze(domains),
   });
 }
@@ -283,6 +317,16 @@ function normalizeChaosDerivedOutcome(raw: unknown, path: string) {
   }
 }
 
+function requireDistinctOperands(
+  operands: readonly { readonly key: string; readonly saveField?: ChaosOperandSaveField }[],
+  path: string,
+): void {
+  if (new Set(operands.map((operand) => operand.key)).size !== operands.length)
+    fail(path, 'contains a duplicate operand key');
+  if (new Set(operands.map((operand) => operand.saveField?.path)).size !== operands.length)
+    fail(path, 'reads one saved field for two operands');
+}
+
 function normalizeChaosRarity(raw: unknown): ChaosTraitCatalog['rarity'] {
   const value = requireObject(raw, 'chaos.rarity');
   if (
@@ -316,12 +360,13 @@ function normalizeChaosRarity(raw: unknown): ChaosTraitCatalog['rarity'] {
 
 export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTraitCatalog {
   if (
-    Object.keys(input).length !== 3 ||
+    Object.keys(input).length !== 4 ||
     input.curses === undefined ||
     input.blessings === undefined ||
+    input.pendingBlessingSavePath === undefined ||
     input.rarity === undefined
   )
-    fail('chaos', 'requires exactly curses, blessings, and rarity');
+    fail('chaos', 'requires exactly curses, blessings, pendingBlessingSavePath, and rarity');
   const curses = requireArray(input.curses, 'chaos.curses');
   const blessings = requireArray(input.blessings, 'chaos.blessings');
   if (curses.length !== 17 || blessings.length !== 16)
@@ -347,7 +392,11 @@ export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTrait
     const key = requireNonEmpty(value.key as string, `chaos.curses[${index}].key`);
     const label = requireNonEmpty(value.label as string, `chaos.curses[${index}].label`);
     const clock = closedValue(value.clock, CHAOS_CLOCKS, `chaos.curses[${index}].clock`);
-    const duration = normalizeChaosOperand(value.duration, `chaos.curses[${index}].duration`);
+    const duration = normalizeChaosOperand(
+      value.duration,
+      `chaos.curses[${index}].duration`,
+      'forbidden',
+    );
     if (
       duration.key !== 'duration' ||
       duration.integer !== true ||
@@ -359,10 +408,13 @@ export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTrait
       );
     const operands = requireArray(value.operands, `chaos.curses[${index}].operands`).map(
       (operand, operandIndex) =>
-        normalizeChaosOperand(operand, `chaos.curses[${index}].operands[${operandIndex}]`),
+        normalizeChaosOperand(
+          operand,
+          `chaos.curses[${index}].operands[${operandIndex}]`,
+          'required',
+        ),
     );
-    if (new Set(operands.map((operand) => operand.key)).size !== operands.length)
-      fail(`chaos.curses[${index}].operands`, 'contains a duplicate operand key');
+    requireDistinctOperands(operands, `chaos.curses[${index}].operands`);
     const semanticTag =
       value.semanticTag === undefined
         ? undefined
@@ -415,10 +467,13 @@ export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTrait
     const label = requireNonEmpty(value.label as string, `chaos.blessings[${index}].label`);
     const operands = requireArray(value.operands, `chaos.blessings[${index}].operands`).map(
       (operand, operandIndex) =>
-        normalizeChaosOperand(operand, `chaos.blessings[${index}].operands[${operandIndex}]`),
+        normalizeChaosOperand(
+          operand,
+          `chaos.blessings[${index}].operands[${operandIndex}]`,
+          'required',
+        ),
     );
-    if (new Set(operands.map((operand) => operand.key)).size !== operands.length)
-      fail(`chaos.blessings[${index}].operands`, 'contains a duplicate operand key');
+    requireDistinctOperands(operands, `chaos.blessings[${index}].operands`);
     const semanticTag =
       value.semanticTag === undefined
         ? undefined
@@ -514,6 +569,10 @@ export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTrait
       normalizedBlessings as readonly ChaosBlessingDeclaration[],
       'chaos.blessings',
       (blessing) => blessing.key,
+    ),
+    pendingBlessingSavePath: normalizeSavePath(
+      input.pendingBlessingSavePath,
+      'chaos.pendingBlessingSavePath',
     ),
     rarity: normalizeChaosRarity(input.rarity),
   });

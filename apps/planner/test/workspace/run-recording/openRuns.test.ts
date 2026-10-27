@@ -12,7 +12,7 @@ import { observeSave, type OpenRun } from '@planner/workspace/run-recording/runR
 import type { SaveCheckpoint } from '@planner/workspace/run-recording/saveCheckpoint';
 
 function checkpoint(id: string): SaveCheckpoint {
-  const observation = observeSave('Profile1_Temp.sav', sampleSaveBytes(`surface-${id}`));
+  const observation = observeSave('Profile1_Temp.sav', sampleSaveBytes(`surface-${id}`), new Map());
   if (observation?.kind !== 'checkpoint') throw new Error('sample is not a checkpoint');
   return observation.checkpoint;
 }

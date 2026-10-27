@@ -31,6 +31,7 @@ export type {
   ChaosDerivedOutcome,
   ChaosMaxStatOperand,
   ChaosNumericOperand,
+  ChaosOperandSaveField,
   ChaosOfferRequirement,
   ChaosClockKind,
   ChaosSemanticTag,

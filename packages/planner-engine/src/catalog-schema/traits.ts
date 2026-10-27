@@ -16,6 +16,8 @@ export interface ChaosNumericOperand {
   /** Catalog-owned legal starting value for authoring this operand. */
   readonly authoringDefault: number;
   readonly integer?: true;
+  /** Where the game keeps the rolled value in the hero's saved trait table. */
+  readonly saveField?: ChaosOperandSaveField;
   /** Blessing values are processed against the selected shared rarity. */
   readonly byRarity?: Readonly<
     Partial<
@@ -25,6 +27,14 @@ export interface ChaosNumericOperand {
       >
     >
   >;
+}
+
+/** A rolled operand's processed native field in a saved `Hero.Traits` entry. */
+export interface ChaosOperandSaveField {
+  /** Dotted path from the trait table; a numeric segment is a 1-based Lua array key. */
+  readonly path: string;
+  /** The operand as the saved number: the number itself, its excess over 1, or 1 less it. */
+  readonly relation: 'value' | 'deltaFromOne' | 'oneMinus';
 }
 
 export interface ChaosNumericOperandDomain {
@@ -105,6 +115,8 @@ export type ChaosDerivedOutcome =
 export interface ChaosTraitCatalog {
   readonly curses: CatalogCollection<ChaosCurseDeclaration>;
   readonly blessings: CatalogCollection<ChaosBlessingDeclaration>;
+  /** Path in a picked curse's saved trait table to its pending blessing's table. */
+  readonly pendingBlessingSavePath: string;
   /** TrialUpgrade's sparse source override and exact low-to-high roll checks. */
   readonly rarity: {
     readonly itemOverride: BoonRarityOverride;

@@ -141,6 +141,14 @@ one explicitly uses `DeriveSource`/`DeriveValueFrom`. The processed curse and
 pending blessing therefore already contain the exact gameplay operands before
 the player makes a selection.
 
+Those processed tables persist in the save's `Hero.Traits`: the picked curse
+with its rolled fields and `RemainingUses`, and its pending blessing under
+`OnExpire.TraitData` until it matures under the same trait id. The catalog
+declares, per operand, the native field holding the processed value and how
+the operand relates to it (the number itself, its excess over 1, or 1 less
+it); the duration is the saved `RemainingUses`. The unpicked buttons' curses,
+durations and blessings are never saved.
+
 This produces a closed payload shape rather than a universal pair of numeric
 sliders:
 
@@ -194,6 +202,13 @@ weapon set. Both tables are independently traversed by `GetProcessedTraitData`;
 there is no `DeriveValueFrom` link between them. A faithful game export must
 retain both processed multipliers even if the editor keeps the unreported one
 in an advanced or compact secondary control.
+
+At data load, `RunData.lua` (605–660) appends a copy of that declared entry per
+speed property of each named weapon; the declared entry stays first and names
+no property of its own. `ProcessTraitData` rolls every copy separately, so a
+save holds several distinct `ChangeValue`s (one capture: `0.70`–`0.79` at
+Epic). The property-speed operand is the declared first entry, the one the
+game module writes; the per-weapon copies keep their own rolls.
 
 Chant inherits `UnityTrait` ahead of `ChaosBlessing` (`TraitData_Chaos.lua`),
 so native treats it as an Infusion (`IsElementalTrait`, `CustomRarityName =
@@ -515,7 +530,10 @@ replacement (`TraitLogic.lua:2935-2952`). The separately audited Cherished Heirl
 and Gift Gift Gift paths retain their distinct source behaviors.
 
 Transcendent Embryo calls the same processed Chaos-blessing machinery as an
-ordinary Trial Upgrade. Its route-start equip, later rack equip, Gift Gift Gift
+ordinary Trial Upgrade: `AddRandomChaosBlessing` (`PowersLogic.lua:4878-4891`)
+passes the rarity to `GetProcessedTraitData`, so its rolled operands vary
+within that rarity, and the blessing is saved as its own `Hero.Traits` entry
+marked `FromChaosKeepsake`. Its route-start equip, later rack equip, Gift Gift Gift
 replay, and eight-encounter transformation therefore produce the blessing's
 complete processed numeric payload at the rarity owned by that equip or
 transformation. Blessing identity alone is not an exact outcome. The planner

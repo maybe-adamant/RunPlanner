@@ -224,6 +224,11 @@ export interface RunRecordTraitAcquisition {
   readonly worldTime?: number;
   /** `RemainingUses` when first saved, such as a Chaos curse's duration. */
   readonly remainingUses?: number;
+  /**
+   * Numeric fields of the trait's first saved table that the recorder was asked
+   * to keep, by dotted path (a numeric segment is a 1-based Lua array key).
+   */
+  readonly savedValues?: Readonly<Record<string, number>>;
 }
 
 export type RunRecordStoreKind = 'worldShop' | 'hermesShrine' | 'well';

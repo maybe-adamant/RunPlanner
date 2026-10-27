@@ -121,6 +121,26 @@ describe('run record codec', () => {
     );
   });
 
+  it("keeps an acquired trait's saved values as finite numbers by dotted save path", () => {
+    const acquire = (savedValues: unknown) => (record: Record<string, unknown>) =>
+      ((room(record, 1).traits as Record<string, unknown>).acquired = [
+        { name: 'ChaosDashCurse', remainingUses: 5, savedValues },
+      ]);
+    const saved = minimal();
+    acquire({
+      'OnWeaponFiredFunctions.FunctionArgs.Cost': 19,
+      'OnExpire.TraitData.PropertyChanges.1.ChangeValue': 0.77,
+    })(saved);
+    expect(decodeRunRecord(saved).rooms[1]?.traits.acquired[0]?.savedValues).toEqual({
+      'OnWeaponFiredFunctions.FunctionArgs.Cost': 19,
+      'OnExpire.TraitData.PropertyChanges.1.ChangeValue': 0.77,
+    });
+    rejects(acquire({}), /savedValues must hold 1 to 256 entries/);
+    rejects(acquire({ 'PropertyChanges.0.ChangeValue': 1 }), /must be a dotted save-table path/);
+    rejects(acquire({ 'Cost.': 1 }), /must be a dotted save-table path/);
+    rejects(acquire({ Cost: '19' }), /savedValues.Cost must be finite/);
+  });
+
   it('keeps the visit chain and outcome consistent', () => {
     rejects((record) => (room(record, 0).exit = 'F_Combat02'), /exit must name the next room/);
     rejects((record) => (room(record, 1).exit = 'F_Combat02'), /rooms\[1\].exit must be absent/);

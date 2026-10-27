@@ -764,6 +764,39 @@ describe('run record builder', () => {
     });
   });
 
+  it("carries an acquired trait's kept saved values as first saved", () => {
+    const savedValues = {
+      'OnWeaponFiredFunctions.FunctionArgs.Cost': 19,
+      'OnExpire.TraitData.WeaponSpeedMultiplier.Value': 0.72,
+    };
+    const curse: SavedTrait = {
+      name: 'ChaosDashCurse',
+      id: '1248.330.75',
+      remainingUses: 5,
+      savedValues,
+    };
+    const first = save({ history: [], current: room('F_Opening01'), worldTime: 20 });
+    const second = save({
+      history: ['F_Opening01'],
+      current: room('F_Combat01'),
+      departure: room('F_Opening01'),
+      traits: [...startTraits, curse],
+      worldTime: 50,
+    });
+    const third = save({
+      history: ['F_Opening01', 'F_Combat01'],
+      current: room('F_Combat02'),
+      departure: room('F_Combat01'),
+      traits: [...startTraits, { ...curse, remainingUses: 4, savedValues: { other: 1 } }],
+      worldTime: 60,
+    });
+    const record = buildRunRecord([first, second, third]);
+    expect(record.rooms[0]!.traits.acquired).toEqual([
+      { name: 'ChaosDashCurse', worldTime: 48.33, remainingUses: 5, savedValues },
+    ]);
+    expect(record.rooms[1]!.traits.acquired).toEqual([]);
+  });
+
   it('attributes the store loss of door creation to the one untaken door without an offer', () => {
     const source = room('H_Combat15', {
       exitDoors: [

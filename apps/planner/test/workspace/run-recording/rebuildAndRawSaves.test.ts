@@ -42,6 +42,7 @@ function setup(options: {
     store: { dispatch },
     importer: options.importer ?? createInProcessRunImporter(catalog),
     prebossRooms: new Map([['N', new Set(['N_Hub'])]]),
+    savedValuePaths: new Map(),
     ...(options.rawSaves ? { rawSaves: host.rawSaves } : {}),
     delay: () => Promise.resolve(),
   });

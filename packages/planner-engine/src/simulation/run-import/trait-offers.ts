@@ -489,7 +489,7 @@ function answerChaosScreen(
       continue;
     }
     context.used.add(key);
-    // Rolled magnitudes and unpicked durations are not read from the save.
+    // Unpicked durations are never saved.
     context.note({
       area: 'traitOffer',
       reason: 'notInRecord',
@@ -497,6 +497,14 @@ function answerChaosScreen(
       applied: command,
       record,
     });
+    if (built.read === 'refused')
+      context.note({
+        area: 'traitOffer',
+        reason: 'refused',
+        address: trait,
+        applied: command,
+        record,
+      });
     if (built.assumedOptions > 0)
       context.note({
         area: 'traitOffer',

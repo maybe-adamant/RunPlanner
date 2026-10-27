@@ -1,4 +1,5 @@
 export { decodeRunRecord, encodeRunRecord, RunRecordCodecError } from './codec';
+export { runRecordSavedValuePaths, type RunRecordSavedValuePaths } from './saved-values';
 export {
   RUN_RECORD_VERSION,
   type RunRecord,

@@ -2,6 +2,7 @@ import type { RawTraitDeclaration, RawTraitGiverDeclaration } from './types';
 import type {
   ChaosBlessingDeclaration,
   ChaosCurseDeclaration,
+  ChaosOperandSaveField,
 } from '@run-planner/engine/catalog-schema';
 
 /** TrialUpgrade uses the standard god-boon base with this sparse source override. */
@@ -10,6 +11,9 @@ export const chaosRarity = Object.freeze({
   // The native tests Epic before Rare; the ledger consumes checks low-to-high.
   rollOrder: Object.freeze(['Common', 'Rare', 'Epic'] as const),
 });
+
+/** `UpgradeChoiceLogic` stores the picked pair's processed blessing under its curse. */
+export const chaosPendingBlessingSavePath = 'OnExpire.TraitData';
 
 const duration = (
   minimum: number,
@@ -36,12 +40,18 @@ function authoringDefault(minimum: number, maximum: number, step: number): numbe
   const snapped = minimum + Math.floor((midpoint - minimum) / step + 0.5 + 1e-9) * step;
   return Number(snapped.toFixed(12));
 }
+/** The processed native field `GetProcessedTraitData` leaves in the saved trait table. */
+const saved = (
+  path: string,
+  relation: ChaosOperandSaveField['relation'] = 'value',
+): ChaosOperandSaveField => Object.freeze({ path, relation });
 const operand = (
   key: string,
   label: string,
   minimum: number,
   maximum: number,
   step: number,
+  saveField: ChaosOperandSaveField,
   integer = false,
 ) => ({
   key,
@@ -51,6 +61,7 @@ const operand = (
   step,
   authoringDefault: authoringDefault(minimum, maximum, step),
   ...(integer ? { integer: true as const } : {}),
+  saveField,
 });
 type ChaosRarity = 'Common' | 'Rare' | 'Epic' | 'Heroic';
 type NumericDomain = readonly [minimum: number, maximum: number, step: number, integer?: true];
@@ -58,11 +69,12 @@ type NumericDomain = readonly [minimum: number, maximum: number, step: number, i
 const rarityOperand = (
   key: string,
   label: string,
+  saveField: ChaosOperandSaveField,
   domains: Readonly<Record<ChaosRarity, NumericDomain>>,
 ) => {
   const common = domains.Common;
   return Object.freeze({
-    ...operand(key, label, common[0], common[1], common[2], common[3] === true),
+    ...operand(key, label, common[0], common[1], common[2], saveField, common[3] === true),
     byRarity: Object.freeze(
       Object.fromEntries(
         (Object.entries(domains) as readonly [ChaosRarity, NumericDomain][]).map(
@@ -110,14 +122,31 @@ export const chaosCurses = [
       'encounters',
       3,
       5,
-      [operand('healthPenalty', 'Max Health', -29, -20, 1, true)],
+      [
+        operand(
+          'healthPenalty',
+          'Max Health',
+          -29,
+          -20,
+          1,
+          saved('PropertyChanges.1.ChangeValue'),
+          true,
+        ),
+      ],
       undefined,
       [{ kind: 'notKeepsake', keepsakeKey: 'LowHealthCritKeepsake' }],
     ),
     maxStatOperand: { operandKey: 'healthPenalty', stat: 'maxHealth' },
   },
   curse('ChaosDamageCurse', 'Excruciating', 'encounters', 3, 5, [
-    operand('damageTaken', 'Damage taken', 0.2, 0.5, 0.01),
+    operand(
+      'damageTaken',
+      'Damage taken',
+      0.2,
+      0.5,
+      0.01,
+      saved('AddIncomingDamageModifiers.ValidWeaponMultiplier', 'deltaFromOne'),
+    ),
   ]),
   curse(
     'ChaosPrimaryAttackCurse',
@@ -125,7 +154,7 @@ export const chaosCurses = [
     'encounters',
     3,
     5,
-    [operand('selfDamage', 'Self damage', 3, 6, 1, true)],
+    [operand('selfDamage', 'Self damage', 3, 6, 1, saved('DamageOnFireWeapons.Damage'), true)],
     undefined,
     [{ kind: 'notAspect', aspectKey: 'TorchAutofireAspect' }],
   ),
@@ -135,26 +164,64 @@ export const chaosCurses = [
     'encounters',
     3,
     5,
-    [operand('selfDamage', 'Self damage', 3, 6, 1, true)],
+    [operand('selfDamage', 'Self damage', 3, 6, 1, saved('DamageOnFireWeapons.Damage'), true)],
     undefined,
     [{ kind: 'notAspect', aspectKey: 'TorchAutofireAspect' }],
   ),
   curse('ChaosDeathWeaponCurse', 'Caustic', 'encounters', 3, 5),
   curse('ChaosSpeedCurse', 'Slothful', 'encounters', 3, 5, [
-    operand('speedMultiplier', 'Movement multiplier', 0.4, 0.6, 0.01),
+    operand(
+      'speedMultiplier',
+      'Movement multiplier',
+      0.4,
+      0.6,
+      0.01,
+      saved('PropertyChanges.2.ChangeValue'),
+    ),
   ]),
   curse('ChaosExAttackCurse', 'Gagged', 'encounters', 3, 5, [
-    operand('selfDamage', 'Self damage', 5, 8, 1, true),
+    operand(
+      'selfDamage',
+      'Self damage',
+      5,
+      8,
+      1,
+      saved('OnWeaponFiredFunctions.FunctionArgs.Damage'),
+      true,
+    ),
   ]),
   curse('ChaosCastCurse', 'Addled', 'encounters', 3, 5, [
-    operand('selfDamage', 'Self damage', 3, 6, 1, true),
+    operand(
+      'selfDamage',
+      'Self damage',
+      3,
+      6,
+      1,
+      saved('OnWeaponFiredFunctions.FunctionArgs.Damage'),
+      true,
+    ),
   ]),
   curse('ChaosDashCurse', 'Neurotic', 'encounters', 3, 5, [
-    operand('magickLoss', 'Magick loss', 10, 20, 1, true),
+    operand(
+      'magickLoss',
+      'Magick loss',
+      10,
+      20,
+      1,
+      saved('OnWeaponFiredFunctions.FunctionArgs.Cost'),
+      true,
+    ),
   ]),
   curse('ChaosManaFocusCurse', 'Fixated', 'encounters', 3, 5),
   curse('ChaosStunCurse', 'Paralyzing', 'encounters', 3, 5, [
-    operand('stunDuration', 'Stun duration', 0.5, 1.4, 0.01),
+    operand(
+      'stunDuration',
+      'Stun duration',
+      0.5,
+      1.4,
+      0.01,
+      saved('OnSelfDamagedFunction.FunctionArgs.DataProperties.Duration'),
+    ),
   ]),
   curse('ChaosTimeCurse', 'Expiring', 'encounters', 2, 3),
   curse('ChaosMetaUpgradeCurse', 'Barren', 'encounters', 3, 6, [], 'Barren', [
@@ -203,9 +270,10 @@ const blessing = (
   ...(offerRequirements === undefined ? {} : { offerRequirements }),
   ...(derivedOutcome === undefined ? {} : { derivedOutcome }),
 });
+const outgoingDamage = saved('AddOutgoingDamageModifiers.ValidWeaponMultiplier', 'deltaFromOne');
 export const chaosBlessings = [
   blessing('ChaosWeaponBlessing', 'Strike', [
-    rarityOperand('damageBonus', 'Damage bonus', {
+    rarityOperand('damageBonus', 'Damage bonus', outgoingDamage, {
       Common: [0.2, 0.5, 0.01],
       Rare: [0.3, 0.75, 0.01],
       Epic: [0.4, 1, 0.01],
@@ -213,7 +281,7 @@ export const chaosBlessings = [
     }),
   ]),
   blessing('ChaosSpecialBlessing', 'Flourish', [
-    rarityOperand('damageBonus', 'Damage bonus', {
+    rarityOperand('damageBonus', 'Damage bonus', outgoingDamage, {
       Common: [0.3, 0.6, 0.01],
       Rare: [0.45, 0.9, 0.01],
       Epic: [0.6, 1.2, 0.01],
@@ -221,7 +289,7 @@ export const chaosBlessings = [
     }),
   ]),
   blessing('ChaosCastBlessing', 'Chasm', [
-    rarityOperand('damageBonus', 'Damage bonus', {
+    rarityOperand('damageBonus', 'Damage bonus', outgoingDamage, {
       Common: [0.2, 0.5, 0.01],
       Rare: [0.3, 0.75, 0.01],
       Epic: [0.4, 1, 0.01],
@@ -230,7 +298,7 @@ export const chaosBlessings = [
   ]),
   {
     ...blessing('ChaosHealthBlessing', 'Soul', [
-      rarityOperand('health', 'Max Health', {
+      rarityOperand('health', 'Max Health', saved('PropertyChanges.1.ChangeValue'), {
         Common: [26, 35, 1, true],
         Rare: [52, 70, 1, true],
         Epic: [78, 105, 1, true],
@@ -241,7 +309,7 @@ export const chaosBlessings = [
   },
   {
     ...blessing('ChaosManaBlessing', 'Mind', [
-      rarityOperand('magick', 'Max Magick', {
+      rarityOperand('magick', 'Max Magick', saved('PropertyChanges.1.ChangeValue'), {
         Common: [30, 40, 1, true],
         Rare: [45, 60, 1, true],
         Epic: [60, 80, 1, true],
@@ -251,21 +319,26 @@ export const chaosBlessings = [
     maxStatOperand: { operandKey: 'magick', stat: 'maxMana' },
   },
   blessing('ChaosManaOverTimeBlessing', 'Will', [
-    rarityOperand('magickPerSecond', 'Magick restored', {
-      Common: [4, 6, 1, true],
-      Rare: [8, 12, 1, true],
-      Epic: [12, 18, 1, true],
-      Heroic: [16, 24, 1, true],
-    }),
+    rarityOperand(
+      'magickPerSecond',
+      'Magick restored',
+      saved('SetupFunction.Args.ManaRegenPerSecond'),
+      {
+        Common: [4, 6, 1, true],
+        Rare: [8, 12, 1, true],
+        Epic: [12, 18, 1, true],
+        Heroic: [16, 24, 1, true],
+      },
+    ),
   ]),
   blessing('ChaosExSpeedBlessing', 'Revelation', [
-    rarityOperand('weaponSpeed', 'Weapon speed', {
+    rarityOperand('weaponSpeed', 'Weapon speed', saved('WeaponSpeedMultiplier.Value'), {
       Common: [0.85, 0.9, 0.01],
       Rare: [0.78, 0.85, 0.01],
       Epic: [0.7, 0.8, 0.01],
       Heroic: [0.63, 0.75, 0.01],
     }),
-    rarityOperand('propertySpeed', 'Property speed', {
+    rarityOperand('propertySpeed', 'Property speed', saved('PropertyChanges.1.ChangeValue'), {
       Common: [0.85, 0.9, 0.01],
       Rare: [0.78, 0.85, 0.01],
       Epic: [0.7, 0.8, 0.01],
@@ -276,7 +349,7 @@ export const chaosBlessings = [
     'ChaosRarityBlessing',
     'Favor',
     [
-      rarityOperand('rareBonus', 'Rare chance', {
+      rarityOperand('rareBonus', 'Rare chance', saved('RarityBonus.Rare'), {
         Common: [0.4, 0.5, 0.01],
         Rare: [0.54, 0.67, 0.01],
         Epic: [0.67, 0.84, 0.01],
@@ -286,7 +359,7 @@ export const chaosBlessings = [
     'Favor',
   ),
   blessing('ChaosMoneyBlessing', 'Affluence', [
-    rarityOperand('moneyBonus', 'Money bonus', {
+    rarityOperand('moneyBonus', 'Money bonus', saved('MoneyMultiplier', 'deltaFromOne'), {
       Common: [0.4, 0.6, 0.05],
       Rare: [0.8, 1.2, 0.05],
       Epic: [1.2, 1.8, 0.05],
@@ -298,12 +371,17 @@ export const chaosBlessings = [
     elementsPerElementByRarity: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 },
   }),
   blessing('ChaosManaCostBlessing', 'Talent', [
-    rarityOperand('costReduction', 'Cost reduction', {
-      Common: [0.2, 0.3, 0.05],
-      Rare: [0.3, 0.45, 0.05],
-      Epic: [0.4, 0.6, 0.05],
-      Heroic: [0.5, 0.75, 0.05],
-    }),
+    rarityOperand(
+      'costReduction',
+      'Cost reduction',
+      saved('ManaCostModifiers.ManaCostMultiplier', 'oneMinus'),
+      {
+        Common: [0.2, 0.3, 0.05],
+        Rare: [0.3, 0.45, 0.05],
+        Epic: [0.4, 0.6, 0.05],
+        Heroic: [0.5, 0.75, 0.05],
+      },
+    ),
   ]),
   blessing('ChaosSpeedBlessing', 'Celerity', [], undefined, undefined, undefined, {
     kind: 'celerity',
@@ -312,7 +390,7 @@ export const chaosBlessings = [
     sprintCapByRarity: { Common: 133.5, Rare: 178, Epic: 222.5, Heroic: 267 },
   }),
   blessing('ChaosDoorHealBlessing', 'Revival', [
-    rarityOperand('heal', 'Health restored', {
+    rarityOperand('heal', 'Health restored', saved('DoorHealIgnorePenaltyFixed'), {
       Common: [3, 4, 1, true],
       Rare: [9, 12, 1, true],
       Epic: [15, 20, 1, true],
@@ -323,7 +401,7 @@ export const chaosBlessings = [
     'ChaosHarvestBlessing',
     'Discovery',
     [
-      rarityOperand('doubleChance', 'Double-resource chance', {
+      rarityOperand('doubleChance', 'Double-resource chance', saved('DoubleToolRewardChance'), {
         Common: [0.56, 0.7, 0.01],
         Rare: [0.64, 0.8, 0.01],
         Epic: [0.72, 0.9, 0.01],

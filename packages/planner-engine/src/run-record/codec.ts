@@ -113,6 +113,23 @@ function counts(value: unknown, label: string, minimum = 1): Readonly<Record<str
   return Object.freeze(result);
 }
 
+/** Dotted save-table keys; a numeric segment is a 1-based Lua array key. */
+const FIELD_PATH = /^[A-Za-z][A-Za-z0-9]*(\.([A-Za-z][A-Za-z0-9]*|[1-9][0-9]*))*$/;
+
+function savedValues(value: unknown, label: string): Readonly<Record<string, number>> {
+  const record = object(value, label);
+  const keys = Object.keys(record);
+  if (keys.length === 0 || keys.length > MAX_ITEMS)
+    fail(`${label} must hold 1 to ${MAX_ITEMS} entries`);
+  const result: Record<string, number> = {};
+  for (const key of keys) {
+    if (key.length > MAX_STRING || !FIELD_PATH.test(key))
+      fail(`${label} key ${key} must be a dotted save-table path`);
+    result[key] = finite(record[key], `${label}.${key}`);
+  }
+  return Object.freeze(result);
+}
+
 function optional<T>(
   record: Dict,
   key: string,
@@ -341,13 +358,14 @@ function traitChanges(value: unknown, label: string): RunRecordTraitChanges {
   return Object.freeze({
     acquired: list(record.acquired, `${label}.acquired`, (entry, path) => {
       const row = object(entry, path);
-      exact(row, ['name'], ['rarity', 'level', 'worldTime', 'remainingUses'], path);
+      exact(row, ['name'], ['rarity', 'level', 'worldTime', 'remainingUses', 'savedValues'], path);
       return Object.freeze({
         name: text(row.name, `${path}.name`),
         ...optional(row, 'rarity', path, text),
         ...optional(row, 'level', path, (item, at) => integer(item, at, 1)),
         ...optional(row, 'worldTime', path, worldTime),
         ...optional(row, 'remainingUses', path, (item, at) => integer(item, at, 0)),
+        ...optional(row, 'savedValues', path, savedValues),
       });
     }),
     removed: list(record.removed, `${label}.removed`, text),

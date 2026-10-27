@@ -184,8 +184,10 @@ U: two each in `H_Combat15` and `H_Combat07`).
 - Chaos screens log the blessing only; the paired curse is the
   `SecondaryItemName` and is not logged. The chosen curse appears in
   `Hero.Traits` in the same bracket, its `RemainingUses` at that first save
-  being its rolled duration; its rolled magnitudes sit in trait-specific
-  fields. Under Vow of Denial, `HandleUpgradeChoiceSelection` writes each
+  being its rolled duration; its rolled magnitudes, and its pending
+  blessing's under `OnExpire.TraitData`, sit in the native fields the
+  catalog declares per Chaos operand, which the record keeps. Under Vow of
+  Denial, `HandleUpgradeChoiceSelection` writes each
   unpicked button's `Data.Name` (on a Chaos screen, its curse) to
   `CurrentRun.BannedTraits` in button order up to `numBans`
   (`UpgradeChoiceLogic.lua:974-989`), so the bracket's newly banned names
@@ -218,7 +220,7 @@ U: two each in `H_Combat15` and `H_Combat07`).
 | Aspect and keepsake level | `Rarity` of the aspect and keepsake traits in `Hero.Traits`             | exact             |
 | Familiar level            | `StackNum` of the familiar trait                                        | exact             |
 | Keepsake swaps            | `UseRecord.GiftRack` plus the keepsake change in `Hero.Traits`          | exact             |
-| Embryo blessings          | Chaos blessing traits added in brackets after the Embryo is equipped    | inferred by cycle |
+| Embryo blessings          | Chaos blessings gained after the Embryo equips, rolled fields included  | inferred by cycle |
 
 `GameState.LastAwardTrait` in the end save is the last swapped keepsake, not the
 starting one.
@@ -381,7 +383,7 @@ counters without order.
 - Intra-room action order beyond the entry, PostReward, and departure brackets.
 - Purchase order within a shop.
 - Pre-reroll boon options; Chaos curses of unpicked options without Vow of
-  Denial.
+  Denial, and every unpicked Chaos option's duration.
 - Spell Drop unpicked options.
 - The physical resource point, and the room of a gather that granted no
   element.

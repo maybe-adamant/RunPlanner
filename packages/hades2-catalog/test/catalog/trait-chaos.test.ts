@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import type { ChaosNumericOperand } from '@run-planner/engine/catalog-schema';
+
 import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
 
@@ -230,5 +232,178 @@ describe('Chaos compiler owner', () => {
     expect(() => createCatalog(derivedOperand as never)).toThrow(
       /fixed Chaos outcomes cannot own authored operands/,
     );
+  });
+
+  it('declares where the save keeps every rolled operand', () => {
+    const saved = (
+      entries: readonly {
+        readonly key: string;
+        readonly operands: readonly ChaosNumericOperand[];
+      }[],
+    ) =>
+      Object.fromEntries(
+        entries
+          .filter((entry) => entry.operands.length > 0)
+          .map((entry) => [
+            entry.key,
+            Object.fromEntries(
+              entry.operands.map((operand) => [
+                operand.key,
+                `${operand.saveField?.path} ${operand.saveField?.relation}`,
+              ]),
+            ),
+          ]),
+      );
+    expect(catalog.chaos.pendingBlessingSavePath).toBe('OnExpire.TraitData');
+    expect(saved(catalog.chaos.curses.values)).toEqual({
+      ChaosHealthCurse: { healthPenalty: 'PropertyChanges.1.ChangeValue value' },
+      ChaosDamageCurse: {
+        damageTaken: 'AddIncomingDamageModifiers.ValidWeaponMultiplier deltaFromOne',
+      },
+      ChaosPrimaryAttackCurse: { selfDamage: 'DamageOnFireWeapons.Damage value' },
+      ChaosSecondaryAttackCurse: { selfDamage: 'DamageOnFireWeapons.Damage value' },
+      ChaosSpeedCurse: { speedMultiplier: 'PropertyChanges.2.ChangeValue value' },
+      ChaosExAttackCurse: { selfDamage: 'OnWeaponFiredFunctions.FunctionArgs.Damage value' },
+      ChaosCastCurse: { selfDamage: 'OnWeaponFiredFunctions.FunctionArgs.Damage value' },
+      ChaosDashCurse: { magickLoss: 'OnWeaponFiredFunctions.FunctionArgs.Cost value' },
+      ChaosStunCurse: {
+        stunDuration: 'OnSelfDamagedFunction.FunctionArgs.DataProperties.Duration value',
+      },
+    });
+    expect(saved(catalog.chaos.blessings.values)).toEqual({
+      ChaosWeaponBlessing: {
+        damageBonus: 'AddOutgoingDamageModifiers.ValidWeaponMultiplier deltaFromOne',
+      },
+      ChaosSpecialBlessing: {
+        damageBonus: 'AddOutgoingDamageModifiers.ValidWeaponMultiplier deltaFromOne',
+      },
+      ChaosCastBlessing: {
+        damageBonus: 'AddOutgoingDamageModifiers.ValidWeaponMultiplier deltaFromOne',
+      },
+      ChaosHealthBlessing: { health: 'PropertyChanges.1.ChangeValue value' },
+      ChaosManaBlessing: { magick: 'PropertyChanges.1.ChangeValue value' },
+      ChaosManaOverTimeBlessing: { magickPerSecond: 'SetupFunction.Args.ManaRegenPerSecond value' },
+      ChaosExSpeedBlessing: {
+        weaponSpeed: 'WeaponSpeedMultiplier.Value value',
+        propertySpeed: 'PropertyChanges.1.ChangeValue value',
+      },
+      ChaosRarityBlessing: { rareBonus: 'RarityBonus.Rare value' },
+      ChaosMoneyBlessing: { moneyBonus: 'MoneyMultiplier deltaFromOne' },
+      ChaosManaCostBlessing: { costReduction: 'ManaCostModifiers.ManaCostMultiplier oneMinus' },
+      ChaosDoorHealBlessing: { heal: 'DoorHealIgnorePenaltyFixed value' },
+      ChaosHarvestBlessing: { doubleChance: 'DoubleToolRewardChance value' },
+    });
+    // The duration is the saved RemainingUses the record carries itself.
+    for (const curse of catalog.chaos.curses.values)
+      expect(curse.duration.saveField).toBeUndefined();
+  });
+
+  const withOperand = (
+    curseKey: string,
+    change: (operand: ChaosNumericOperand) => Record<string, unknown>,
+  ) => ({
+    ...declarations,
+    traitCatalog: {
+      ...declarations.traitCatalog,
+      chaos: {
+        ...declarations.traitCatalog.chaos,
+        curses: declarations.traitCatalog.chaos.curses.map((curse) =>
+          curse.key === curseKey
+            ? { ...curse, operands: curse.operands.map((operand) => change(operand)) }
+            : curse,
+        ),
+      },
+    },
+  });
+
+  it.each([
+    [
+      'a rolled operand without a save field',
+      (operand: ChaosNumericOperand) =>
+        Object.fromEntries(Object.entries(operand).filter(([key]) => key !== 'saveField')),
+      /is required for a rolled operand/,
+    ],
+    [
+      'a path with a zero array key',
+      (operand: ChaosNumericOperand) => ({
+        ...operand,
+        saveField: { path: 'PropertyChanges.0.ChangeValue', relation: 'value' },
+      }),
+      /dotted save-table path/,
+    ],
+    [
+      'an unknown relation',
+      (operand: ChaosNumericOperand) => ({
+        ...operand,
+        saveField: { path: 'PropertyChanges.1.ChangeValue', relation: 'scaled' },
+      }),
+      /must be one of value, deltaFromOne, oneMinus/,
+    ],
+    [
+      'an extra save-field member',
+      (operand: ChaosNumericOperand) => ({
+        ...operand,
+        saveField: { ...operand.saveField, rounding: 2 },
+      }),
+      /requires only path and relation/,
+    ],
+  ])('rejects %s', (_label, change, message) => {
+    expect(() => createCatalog(withOperand('ChaosHealthCurse', change) as never)).toThrow(message);
+  });
+
+  it('rejects a duration save field, a shared operand field and a missing pending path', () => {
+    const duration = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        chaos: {
+          ...declarations.traitCatalog.chaos,
+          curses: declarations.traitCatalog.chaos.curses.map((curse) =>
+            curse.key === 'ChaosDashCurse'
+              ? {
+                  ...curse,
+                  duration: {
+                    ...curse.duration,
+                    saveField: { path: 'RemainingUses', relation: 'value' },
+                  },
+                }
+              : curse,
+          ),
+        },
+      },
+    };
+    expect(() => createCatalog(duration as never)).toThrow(/is not declared for a duration/);
+    const shared = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        chaos: {
+          ...declarations.traitCatalog.chaos,
+          blessings: declarations.traitCatalog.chaos.blessings.map((blessing) =>
+            blessing.key === 'ChaosExSpeedBlessing'
+              ? {
+                  ...blessing,
+                  operands: blessing.operands.map((operand) => ({
+                    ...operand,
+                    saveField: { path: 'WeaponSpeedMultiplier.Value', relation: 'value' },
+                  })),
+                }
+              : blessing,
+          ),
+        },
+      },
+    };
+    expect(() => createCatalog(shared as never)).toThrow(/reads one saved field for two operands/);
+    const chaos = Object.fromEntries(
+      Object.entries(declarations.traitCatalog.chaos).filter(
+        ([key]) => key !== 'pendingBlessingSavePath',
+      ),
+    );
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: { ...declarations.traitCatalog, chaos },
+      } as never),
+    ).toThrow(/pendingBlessingSavePath/);
   });
 });

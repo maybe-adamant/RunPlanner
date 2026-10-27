@@ -236,10 +236,16 @@ describe('run import of the Underworld capture', () => {
     expect(occurrence(imported.project, 'H-r30:postboss').keepsakeRack?.keepsakeKey).toBe(
       'LowHealthCritKeepsake',
     );
-    expect(
-      occurrence(imported.project, 'F-r11:postboss').keepsakeRack?.equipResults?.transcendentEmbryo
-        ?.blessingKey,
-    ).toBe('ChaosManaCostBlessing');
+    // Each Embryo blessing keeps its saved roll; Celerity's values follow from its rarity.
+    expect(occurrence(imported.project, 'F-r11:postboss').keepsakeRack?.equipResults).toEqual({
+      transcendentEmbryo: {
+        blessingKey: 'ChaosManaCostBlessing',
+        blessingValues: { costReduction: 0.5 },
+      },
+      transcendentEmbryoTransformations: {
+        '1': { blessingKey: 'ChaosCastBlessing', blessingValues: { damageBonus: 0.74 } },
+      },
+    });
     const spell = reward(imported.project, 'F-r10').traitOffersByAcquisitionRole['self'];
     // The Spell sat in the middle: its bank point explains the fourth node of the first Path screen.
     expect(spell).toMatchObject({
@@ -252,11 +258,29 @@ describe('run import of the Underworld capture', () => {
   });
 
   it('imports Chaos pairs, Fields cages and points, and the Nemesis event', () => {
+    // The picked pair's rolls are its saved curse fields and pending blessing.
     expect(reward(imported.project, 'F-r1').traitOffersByAcquisitionRole['self']).toMatchObject({
       kind: 'chaos',
       selectedOptionKey: 'option1',
       blessingKey: 'ChaosExSpeedBlessing',
       curseOptions: [{ curseKey: 'ChaosDashCurse', requirementCount: 5 }, {}, {}],
+      selectedCurseValues: { magickLoss: 19 },
+      rarity: 'Epic',
+      blessingValues: { weaponSpeed: 0.72, propertySpeed: 0.77 },
+    });
+    expect(
+      reward(imported.project, 'G:start:chaos').traitOffersByAcquisitionRole['self'],
+    ).toMatchObject({
+      blessingKey: 'ChaosWeaponBlessing',
+      selectedCurseValues: { magickLoss: 10 },
+      blessingValues: { damageBonus: 0.4 },
+    });
+    expect(
+      reward(imported.project, 'I-r38:chaos').traitOffersByAcquisitionRole['self'],
+    ).toMatchObject({
+      blessingKey: 'ChaosLastStandBlessing',
+      selectedCurseValues: { magickLoss: 15 },
+      blessingValues: {},
     });
     const fields = occurrence(imported.project, 'H-r26').state;
     expect(fields.kind === 'fieldsCombat' && fields.cages['cage1']?.offer).toEqual({
@@ -294,7 +318,8 @@ describe('run import of the Underworld capture', () => {
         roomActionOrder: 9,
         traitOffer: 3,
       },
-      notInRecord: { embryo: 3, fields: 4, pathOfStars: 1, traitOffer: 5 },
+      // The three Chaos screens stay: their unpicked curses' durations are never saved.
+      notInRecord: { fields: 4, pathOfStars: 1, traitOffer: 5 },
       refused: { doors: 1, fields: 2, pool: 1, traitOffer: 1 },
       unsupportedArea: { shop: 2, well: 1 },
     });
@@ -846,6 +871,63 @@ describe('run import of synthetic Erebus variants', () => {
         ),
     };
   }
+
+  /** Erebus through its PostBoss, with saved Chaos and Embryo values outside their domains. */
+  function erebusWithOffDomainRolls(): RunRecord {
+    const record = fixture('underworld');
+    const withValues = (
+      room: RunRecord['rooms'][number],
+      name: string,
+      savedValues: Readonly<Record<string, number>>,
+    ) => ({
+      ...room,
+      traits: {
+        ...room.traits,
+        acquired: room.traits.acquired.map((trait) =>
+          trait.name === name ? { ...trait, savedValues } : trait,
+        ),
+      },
+    });
+    return {
+      ...record,
+      route: { biomes: ['F'], dream: false },
+      rooms: record.rooms.slice(0, 14).map((room, index) =>
+        index === 1
+          ? withValues(room, 'ChaosDashCurse', {
+              'OnWeaponFiredFunctions.FunctionArgs.Cost': 25,
+              'OnExpire.TraitData.PropertyChanges.1.ChangeValue': 0.77,
+              'OnExpire.TraitData.WeaponSpeedMultiplier.Value': 0.725,
+            })
+          : index === 13
+            ? withValues(room, 'ChaosManaCostBlessing', {
+                'ManaCostModifiers.ManaCostMultiplier': 0.3,
+              })
+            : room,
+      ),
+    };
+  }
+
+  it('refuses saved Chaos and Embryo values outside their domains for the defaults', () => {
+    const imported = projectFromRunRecord(catalog, erebusWithOffDomainRolls());
+    expect(reward(imported.project, 'F-r1').traitOffersByAcquisitionRole['self']).toMatchObject({
+      selectedCurseValues: { magickLoss: 15 },
+      blessingValues: { weaponSpeed: 0.75, propertySpeed: 0.75 },
+    });
+    expect(
+      occurrence(imported.project, 'F-r11:postboss').keepsakeRack?.equipResults?.transcendentEmbryo,
+    ).toEqual({ blessingKey: 'ChaosManaCostBlessing', blessingValues: { costReduction: 0.5 } });
+    expect(
+      imported.report.entries
+        .filter((entry) => entry.area === 'embryo' || entry.record?.roomIndex === 1)
+        .filter((entry) => entry.area === 'embryo' || entry.area === 'traitOffer')
+        .map(describeEntry),
+    ).toEqual([
+      'notInRecord traitOffer r1 traitOffer@F-r1:self -> ReplaceTraitOffer(F-r1 chaos)',
+      'refused traitOffer r1 traitOffer@F-r1:self -> ReplaceTraitOffer(F-r1 chaos)',
+      'assumption traitOffer r1 traitOffer@F-r1:self -> ReplaceTraitOffer(F-r1 chaos)',
+      'refused embryo r13 keepsakeEquipResult@F-r11:postboss -> ReplaceTranscendentEmbryoEquipResult(F-r11:postboss)',
+    ]);
+  });
 
   it('reports an unexplained Pool sale and keeps the first eligible trait', () => {
     const imported = projectFromRunRecord(catalog, erebusWithUnexplainedSale());

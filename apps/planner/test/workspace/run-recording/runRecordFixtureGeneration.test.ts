@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { format, resolveConfig } from 'prettier';
 import { describe, expect, it } from 'vitest';
 
-import { encodeRunRecord } from '@run-planner/engine/run-record';
+import { catalog } from '@run-planner/hades2-catalog';
+import { encodeRunRecord, runRecordSavedValuePaths } from '@run-planner/engine/run-record';
 import { buildRunRecord } from '@planner/workspace/run-recording/runRecordBuilder';
 import { extractSaveCheckpoint } from '@planner/workspace/run-recording/saveCheckpoint';
 import { decodeSaveFile } from '@planner/workspace/run-recording/saveFile';
@@ -25,6 +26,7 @@ describe.skipIf(captureDirectory === undefined || fixtureName === undefined)(
   'run record fixture generation',
   () => {
     it('writes the capture record through the engine codec', async () => {
+      const savedValuePaths = runRecordSavedValuePaths(catalog);
       const files = readdirSync(captureDirectory!)
         .filter((name) => /^\d+-Profile1(_Temp)?\.sav$/.test(name))
         .sort();
@@ -32,6 +34,7 @@ describe.skipIf(captureDirectory === undefined || fixtureName === undefined)(
         extractSaveCheckpoint(
           decodeSaveFile(new Uint8Array(readFileSync(join(captureDirectory!, name)))),
           name.endsWith('_Temp.sav'),
+          savedValuePaths,
         ),
       );
       const start = saves.find((save) => save.kind === 'entry' && save.history.length === 0);

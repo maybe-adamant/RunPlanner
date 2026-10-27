@@ -1,4 +1,5 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { RunRecordSavedValuePaths } from '@run-planner/engine/run-record';
 
 import { extractSaveCheckpoint, type SaveCheckpoint } from './saveCheckpoint';
 import { decodeSaveFile, readSaveContainer } from './saveFile';
@@ -30,7 +31,11 @@ export type SaveObservation =
  * Throws `SaveFileError` for an unreadable file (a read that raced the write),
  * which the caller may read again.
  */
-export function observeSave(fileName: string, bytes: Uint8Array): SaveObservation | undefined {
+export function observeSave(
+  fileName: string,
+  bytes: Uint8Array,
+  savedValuePaths: RunRecordSavedValuePaths,
+): SaveObservation | undefined {
   const name = parseSaveFileName(fileName);
   if (name === undefined) return undefined;
   const { header } = readSaveContainer(bytes);
@@ -44,7 +49,7 @@ export function observeSave(fileName: string, bytes: Uint8Array): SaveObservatio
   return {
     kind: 'checkpoint',
     profile: name.profile,
-    checkpoint: extractSaveCheckpoint(decodeSaveFile(bytes), name.temp),
+    checkpoint: extractSaveCheckpoint(decodeSaveFile(bytes), name.temp, savedValuePaths),
   };
 }
 

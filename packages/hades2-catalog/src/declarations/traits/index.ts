@@ -25,7 +25,14 @@ import { erisTraits } from './eris';
 import { infernalContractTraits } from './infernal-contract';
 import { seleneGiver, seleneTraits } from './selene';
 import { hexes } from './hexes';
-import { chaosBlessings, chaosCurses, chaosGiver, chaosRarity, chaosTraits } from './chaos';
+import {
+  chaosBlessings,
+  chaosCurses,
+  chaosGiver,
+  chaosPendingBlessingSavePath,
+  chaosRarity,
+  chaosTraits,
+} from './chaos';
 
 const weapons = [
   {
@@ -305,5 +312,10 @@ export const traitCatalogInput: RawTraitCatalogInput = {
     'TimeSlowDemeterTalent',
     'TransformAphroditeTalent',
   ],
-  chaos: { curses: chaosCurses, blessings: chaosBlessings, rarity: chaosRarity },
+  chaos: {
+    curses: chaosCurses,
+    blessings: chaosBlessings,
+    pendingBlessingSavePath: chaosPendingBlessingSavePath,
+    rarity: chaosRarity,
+  },
 };
