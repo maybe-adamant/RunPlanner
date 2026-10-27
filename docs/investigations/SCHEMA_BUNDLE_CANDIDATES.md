@@ -61,31 +61,36 @@ and the door-order probe are done.
 
 ### N hidden return-door draws
 
-- **Finding:** every N main and side room has a hidden return door
+- **Finding:** every N room, main or side, has a hidden return door
   (`EphyraExitDoorReturn`, `ObstacleDataN.lua:90-100`: `HideRewardPreview`,
-  `ReturnToPreviousRoomName = "N_Hub"`). When the room's exits unlock on its
-  first visit, `DoUnlockRoomExits` (`RoomLogic.lua:3916-3947`) creates a
-  placeholder next room for that door and takes one reward draw.
-  - Main rooms draw from HubRewards (`ForcedRewardStore`,
+  `ReturnToPreviousRoomName = "N_Hub"`). When the room's doors first unlock,
+  `DoUnlockRoomExits` (`RoomLogic.lua:3916-3947`) creates a placeholder next
+  room for that door and takes one reward draw from the room's own store.
+  - Main combat rooms draw from HubRewards (`ForcedRewardStore`,
     `RoomDataN.lua:2849`), refilling with 10 when the store is empty.
+  - Mini-Boss rooms draw from RunProgress, which visible rewards use
+    everywhere.
   - Side rooms draw from SubRoomRewards or SubRoomRewardsHard
-    (`IndividualRewardStore`, `RoomDataN.lua:3795`).
+    (`IndividualRewardStore`, `RoomDataN.lua:3795`). Later side-door draws
+    use the same store.
   - A placeholder forced to a Shop draws nothing.
   - Restores do not draw again: a revisit returns the stored offer before
-    the store is touched (`RewardLogic.lua:108-114`).
+    the store is touched (`RewardLogic.lua:108-114`). The Hub board itself is
+    drawn once, at the first Hub visit.
 - **Planner today:** the catalog declares the return exit
   (`declarations/rooms/n/hub-main.ts:32`, `side.ts:20`), but nothing draws
-  for it. The plan's N bags are one entry richer after every cleared
-  parent, and later board draws and refill timing drift.
+  for it. Later RunProgress and side-door draws, and HubRewards refill
+  timing, drift from the game.
 - **Evidence:** Surface capture. The extra removals match the return doors'
   `OfferedRewards` one for one: N_Sub01 → RoomMoneyTinyDrop; N_Combat14,
   N_Combat06 and N_Combat10 → Boons; N_Combat01 → HermesUpgrade. Import
   conformance flags the drift at rooms 5, 8, 10, 12 and 14.
-- **Correction:** an authored hidden-draw leaf per first-visit N parent.
-  The drawn entry is random, so it must be authored like a visible door
-  reward. The record already holds it in the return door's
-  `OfferedRewards`.
+- **Correction:** a timeline event at each first visit's doors-unlocked
+  point, authoring the hidden draw from the room's store. The drawn entry is
+  random, so it is authored like a visible door reward. Settlement orders it
+  with the visible side-door draws. The record already holds it in the return
+  door's `OfferedRewards`.
 - **Open:**
-  - Does the draw affect the exclusion set of the parent's own side-door
-    batch?
-  - Which placeholders are forced to a Shop (`ChooseNextRoomData`)?
+  - The order of the hidden draw against the room's own side-door draws
+    within the same unlock (door creation order).
+  - Which placeholders are forced to a Shop (`ChooseNextRoomData`).
