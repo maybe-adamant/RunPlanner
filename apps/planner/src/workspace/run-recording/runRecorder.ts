@@ -3,8 +3,8 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { extractSaveCheckpoint, type SaveCheckpoint } from './saveCheckpoint';
 import { decodeSaveFile, readSaveContainer } from './saveFile';
 
-/** The `SGB1` header version every save of the audited game build carries. */
-export const SUPPORTED_SAVE_VERSION = 0x00010012;
+/** The `SGB1` format version every save of the audited game build carries. */
+export const SUPPORTED_SAVE_VERSION = 0x12;
 
 /** `Profile<N>.sav` is the hub profile; `Profile<N>_Temp.sav` its run checkpoint. */
 export function parseSaveFileName(
@@ -17,7 +17,13 @@ export function parseSaveFileName(
 /** What one delivered save tells the recorder. */
 export type SaveObservation =
   | { readonly kind: 'checkpoint'; readonly profile: number; readonly checkpoint: SaveCheckpoint }
-  | { readonly kind: 'unsupportedVersion'; readonly profile: number; readonly version: number };
+  | {
+      readonly kind: 'unsupportedVersion';
+      readonly profile: number;
+      readonly version: number;
+      /** The header names a run-start entry save, though its payload cannot be read. */
+      readonly runStart: boolean;
+    };
 
 /**
  * Reduces one delivered save to its observation; the raw bytes are dropped here.
@@ -29,7 +35,12 @@ export function observeSave(fileName: string, bytes: Uint8Array): SaveObservatio
   if (name === undefined) return undefined;
   const { header } = readSaveContainer(bytes);
   if (header.version !== SUPPORTED_SAVE_VERSION)
-    return { kind: 'unsupportedVersion', profile: name.profile, version: header.version };
+    return {
+      kind: 'unsupportedVersion',
+      profile: name.profile,
+      version: header.version,
+      runStart: name.temp && header.mapName === 'Hub_PreRun' && header.nextMap !== '',
+    };
   return {
     kind: 'checkpoint',
     profile: name.profile,
@@ -73,14 +84,17 @@ export interface RecorderState {
   /** At most one open run per save profile. */
   readonly runs: ReadonlyMap<number, OpenRun>;
   readonly attempts: ReadonlyMap<number, RunAttempt>;
-  /** Set by a save format the recorder does not know; recording stops until it is restarted. */
-  readonly error: string | null;
+  /**
+   * Profiles whose latest run save has a format version the recorder does not know, by
+   * that version; such a profile records again from its next readable save.
+   */
+  readonly unsupported: ReadonlyMap<number, number>;
 }
 
 export const EMPTY_RECORDER: RecorderState = Object.freeze({
   runs: new Map(),
   attempts: new Map(),
-  error: null,
+  unsupported: new Map(),
 });
 
 /**
@@ -166,23 +180,35 @@ function extend(run: OpenRun, checkpoint: SaveCheckpoint): OpenRun | undefined {
 
 /** Folds one observation into the recorder, in arrival order. */
 export function advanceRecorder(state: RecorderState, observation: SaveObservation): RecorderStep {
-  if (state.error !== null) return { state, closed: [] };
-  // The open runs end where their readable saves stop.
-  if (observation.kind === 'unsupportedVersion')
+  if (observation.kind === 'unsupportedVersion') {
+    const { profile, version } = observation;
+    const open = state.runs.get(profile);
+    // A save outside any run of this profile, such as a stale one, changes nothing.
+    if (open === undefined && (!observation.runStart || state.unsupported.get(profile) === version))
+      return { state, closed: [] };
+    // The profile's open run ends where its readable saves stop.
+    const runs = new Map(state.runs);
+    runs.delete(profile);
     return {
       state: {
-        runs: new Map(),
+        runs,
         attempts: state.attempts,
-        error: `This save format (version ${observation.version.toString(16)}) is not supported yet.`,
+        unsupported: new Map(state.unsupported).set(profile, version),
       },
-      closed: [...state.runs.values()].map((run) => close(run, 'unfinished')),
+      closed: open === undefined ? [] : [close(open, 'unfinished')],
     };
+  }
   const { profile, checkpoint } = observation;
+  if (state.unsupported.has(profile)) {
+    const unsupported = new Map(state.unsupported);
+    unsupported.delete(profile);
+    state = { ...state, unsupported };
+  }
   const open = state.runs.get(profile);
   const runs = new Map(state.runs);
   const attempts = new Map(state.attempts);
   const closed: ClosedRun[] = [];
-  const settle = () => ({ state: { runs, attempts, error: null }, closed });
+  const settle = () => ({ state: { runs, attempts, unsupported: state.unsupported }, closed });
 
   if (checkpoint.kind === 'hub') {
     if (open === undefined || checkpoint.runCount < open.runCount) return { state, closed: [] };
@@ -255,13 +281,13 @@ export function restoreOpenRuns(
   const restored = new Map(state.runs);
   for (const run of [...restored.values(), ...runs]) remember(run.profile, openRunAttempt(run));
   for (const run of runs) if (!restored.has(run.profile)) restored.set(run.profile, run);
-  return { runs: restored, attempts: restoredAttempts, error: state.error };
+  return { runs: restored, attempts: restoredAttempts, unsupported: state.unsupported };
 }
 
 /** Ends every open run as unfinished, as recording stops. */
 export function abandonOpenRuns(state: RecorderState): RecorderStep {
   return {
-    state: { runs: new Map(), attempts: state.attempts, error: state.error },
+    state: { runs: new Map(), attempts: state.attempts, unsupported: state.unsupported },
     closed: [...state.runs.values()].map((run) => close(run, 'unfinished')),
   };
 }

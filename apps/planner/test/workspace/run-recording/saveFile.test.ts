@@ -109,7 +109,8 @@ describe('save file decoding', () => {
   it('decodes a synthetic save into its header and globals', () => {
     const decoded = decodeSaveFile(save('F_Combat01', literalBlock(globalsPayload())));
     expect(decoded.header).toEqual({
-      version: 0x00010012,
+      version: 0x12,
+      flags: 1,
       timestamp: 1_793_057_328,
       location: 'Location_BiomeF',
       runCount: 1003,

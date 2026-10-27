@@ -2,7 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
 import { createMemoryRecordHost } from '@planner-test/support/memoryRecordHost';
-import { encodeSyntheticSave, sampleSaveBytes } from '@planner-test/support/syntheticSave';
+import { sampleSaveBytes } from '@planner-test/support/syntheticSave';
 import type { LuaValue } from '@planner/workspace/run-recording/luabins';
 import type { RecordingPreference } from '@planner/persistence/recordHost';
 import {
@@ -150,32 +150,45 @@ describe('recording controller', () => {
     expect(context.state().status).toMatchObject({ kind: 'watching' });
   });
 
-  it('stops with an error at an unknown save format', async () => {
+  it('keeps recording past a stale save of another profile in an unknown format', async () => {
     const context = setup();
     await context.controller.setEnabled(true);
-    await context.deliver(
-      'Profile1_Temp.sav',
-      encodeSyntheticSave(
-        {
-          version: 0x00020000,
-          timestamp: 1,
-          location: 'Location_Home',
-          runCount: 1,
-          fear: 0,
-          mapName: 'Hub_PreRun',
-          nextMap: 'F_Opening01',
-        },
-        {},
-      ),
-    );
-    expect(context.state().status).toEqual({
-      kind: 'error',
-      message: 'This save format (version 20000) is not supported yet.',
-    });
-    expect(context.host.watched()).toBeNull();
-    // Turning recording on again starts over.
+    // The first poll delivers every save in the folder, an old one of profile 2 among them.
+    await context.deliver('Profile2.sav', sampleSaveBytes('surface-002', { version: 0x00000013 }));
+    expect(context.state().status).toEqual({ kind: 'watching', folder: '/saves/Hades II' });
+    expect(context.state().problem).toBeNull();
+    expect(context.host.watched()).toBe('/saves/Hades II');
+    await playSurfaceOpening(context);
+    expect(context.state().status).toMatchObject({ kind: 'runOpen', runs: [{ profile: 1 }] });
+  });
+
+  it('ends only the run of the profile whose save format is unknown', async () => {
+    const context = setup();
     await context.controller.setEnabled(true);
-    expect(context.state().status).toMatchObject({ kind: 'watching' });
+    await playSurfaceOpening(context);
+    await context.deliver(
+      'Profile3_Temp.sav',
+      sampleSaveBytes('surface-002', { runCount: 40, version: 0x00000012 }),
+    );
+    expect(context.state().status).toMatchObject({
+      kind: 'runOpen',
+      runs: [{ profile: 1 }, { profile: 3 }],
+    });
+    await context.deliver('Profile1_Temp.sav', sampleSaveBytes('surface-011', { version: 0x13 }));
+    expect(context.state().status).toEqual({
+      kind: 'runOpen',
+      folder: '/saves/Hades II',
+      runs: [{ profile: 3, rooms: 1 }],
+    });
+    expect(context.state().problem).toBe(
+      'Profile 1 uses a save format (version 13) that is not supported yet, so its run is not recorded.',
+    );
+    expect(context.host.watched()).toBe('/saves/Hades II');
+    expect([...context.host.recentRuns.files.keys()].sort()).toEqual([
+      'attempts-p1',
+      'attempts-p3',
+      'open-p3',
+    ]);
   });
 
   it('resumes watching at start-up, follows a chosen folder and turns off', async () => {

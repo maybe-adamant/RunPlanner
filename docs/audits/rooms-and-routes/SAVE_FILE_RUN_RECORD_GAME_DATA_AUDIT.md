@@ -4,7 +4,8 @@
 
 Source audit completed on 2026-10-26 against installed Hades II build
 `25481925` (`Content/Scripts`, `Content/Maps`) and two complete save captures
-of unmodded runs, each holding every save write of one run:
+of runs played with no gameplay mod active (a mod loader was installed, so the
+header flag reads `0x0001`), each holding every save write of one run:
 
 - **Capture S**: a Surface run ending on the biome timer at `O_Boss02`, under
   heavy Fear (all sixteen Vows active, including Forfeit, Menace, Fangs,
@@ -24,22 +25,22 @@ The route is the spine of the record: every recovered fact attaches to a
 
 Every `.sav` file is little-endian:
 
-| Offset | Field                   | Notes                                                                                                                                                               |
-| ------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0      | magic `SGB1`            |                                                                                                                                                                     |
-| 4      | `u32` checksum          | Adler-32 of bytes 8 to end of file; holds for all 112 full saves in both captures.                                                                                  |
-| 8      | `u32` version           | `0x00010012` in every save.                                                                                                                                         |
-| 12     | `u64` timestamp         | Unix seconds of the write.                                                                                                                                          |
-| 20     | string location         | `GameState.LocationName` text key, e.g. `Location_BiomeF`, `Location_Home`.                                                                                         |
-| then   | `u32` run count         | Equals `#GameState.RunHistory` in every save.                                                                                                                       |
-| then   | `u32`                   | `0` in every save; meaning unknown.                                                                                                                                 |
-| then   | `u32` Fear              | Equals `GameState.SpentShrinePointsCache` (62 in capture S, 12 in capture U).                                                                                       |
-| then   | `u32`, `u32`, 2 bytes   | `30`, `582358`, `0000` in every save; meaning unknown.                                                                                                              |
-| then   | `u32` count + strings   | Display list of Vow, weapon, and trait names, ending with a `DevSaveName=Run N, Depth D, <room>, <encounter> (<reward> or PostReward)` label; `N` is run count + 1. |
-| then   | string `mapName`        | Map being left or current map.                                                                                                                                      |
-| then   | string `nextMap`        | Map to load next; empty for a PostReward checkpoint.                                                                                                                |
-| then   | `u32` compressed length | Equals the remaining file length.                                                                                                                                   |
-| then   | LZ4 block               | Raw LZ4 block; the decompressed size is not stored (about 3.3 MB observed).                                                                                         |
+| Offset | Field                             | Notes                                                                                                                                                               |
+| ------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0      | magic `SGB1`                      |                                                                                                                                                                     |
+| 4      | `u32` checksum                    | Adler-32 of bytes 8 to end of file; holds for all 112 full saves in both captures.                                                                                  |
+| 8      | `u16` format version, `u16` flags | Format version `0x12` in every save. Flags `0x0001` on some profiles of the capture machine (every capture save) and `0x0000` on others; see Uncertainties.         |
+| 12     | `u64` timestamp                   | Unix seconds of the write.                                                                                                                                          |
+| 20     | string location                   | `GameState.LocationName` text key, e.g. `Location_BiomeF`, `Location_Home`.                                                                                         |
+| then   | `u32` run count                   | Equals `#GameState.RunHistory` in every save.                                                                                                                       |
+| then   | `u32`                             | `0` in every save; meaning unknown.                                                                                                                                 |
+| then   | `u32` Fear                        | Equals `GameState.SpentShrinePointsCache` (62 in capture S, 12 in capture U).                                                                                       |
+| then   | `u32`, `u32`, 2 bytes             | `30`, `582358`, `0000` in every save; meaning unknown.                                                                                                              |
+| then   | `u32` count + strings             | Display list of Vow, weapon, and trait names, ending with a `DevSaveName=Run N, Depth D, <room>, <encounter> (<reward> or PostReward)` label; `N` is run count + 1. |
+| then   | string `mapName`                  | Map being left or current map.                                                                                                                                      |
+| then   | string `nextMap`                  | Map to load next; empty for a PostReward checkpoint.                                                                                                                |
+| then   | `u32` compressed length           | Equals the remaining file length.                                                                                                                                   |
+| then   | LZ4 block                         | Raw LZ4 block; the decompressed size is not stored (about 3.3 MB observed).                                                                                         |
 
 Strings are a `u32` length followed by UTF-8 bytes.
 
@@ -385,6 +386,11 @@ to menu.
 
 - Header fields after the Fear total, and the leading zero field, are
   unidentified.
+- The flag word at offset 10 is `0x0001` on profiles written with a mod loader
+  installed and `0x0000` on profiles that date from before it, so it is likely
+  set by a mod-loader install (correlation reported by the owner), unconfirmed
+  in source. Unmodded installs are therefore expected to write `0x00000012`.
+  The payload format is the same under either value.
 - `UseRecord.FieldsRewardCage` read 4 in capture U `H_Combat07`, which had 3
   cages; `CageRewards` is the reliable count.
 - The spawn-group-to-id membership for cage points comes from the map binaries

@@ -198,7 +198,13 @@ export function createRecordingController(options: {
 
   const advance = async (step: RecorderStep) => {
     const before = recorder.runs;
+    const unsupportedBefore = recorder.unsupported;
     recorder = step.state;
+    for (const [profile, version] of recorder.unsupported)
+      if (unsupportedBefore.get(profile) !== version)
+        report(
+          `Profile ${profile} uses a save format (version ${version.toString(16)}) that is not supported yet, so its run is not recorded.`,
+        );
     await keep(step.closed);
     await persist(before, recorder.runs);
   };
@@ -207,7 +213,7 @@ export function createRecordingController(options: {
 
   const deliver = (watch: number) => (delivery: SaveFileDelivery) => {
     void enqueue(async () => {
-      if (watch !== generation || recorder.error !== null) return;
+      if (watch !== generation) return;
       let observation: SaveObservation | undefined;
       try {
         observation = await observe(delivery);
@@ -219,13 +225,6 @@ export function createRecordingController(options: {
       await advance(advanceRecorder(recorder, observation));
       // A stop or restart while this save was imported owns the status and the watch.
       if (watch !== generation) return;
-      if (recorder.error !== null) {
-        generation += 1;
-        folder = null;
-        publish({ kind: 'error', message: recorder.error });
-        await stopHost();
-        return;
-      }
       publishWatching();
     });
   };

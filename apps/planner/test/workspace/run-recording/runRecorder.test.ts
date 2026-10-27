@@ -255,20 +255,40 @@ describe('run recorder', () => {
     expect(reachesFirstPreboss(preboss, reached)).toBe(true);
   });
 
-  it('stops loudly at a save format it does not know', () => {
-    const open = feed(through(1)).state;
-    const halted = advanceRecorder(open, {
+  it('ends only the open run of a profile whose save format it does not know', () => {
+    const open = feed([
+      ...through(1),
+      ...through(1, 40).map((save) => ({ ...save, profile: 2 })),
+    ]).state;
+    const unknown = (profile: number, runStart = false): SaveObservation => ({
       kind: 'unsupportedVersion',
-      profile: 1,
-      version: 0x00010013,
+      profile,
+      version: 0x13,
+      runStart,
     });
-    expect(halted.state.error).toMatch(/version 10013/);
-    expect(halted.state.runs.size).toBe(0);
+    const halted = advanceRecorder(open, unknown(1));
+    expect(halted.state.unsupported).toEqual(new Map([[1, 0x13]]));
+    expect([...halted.state.runs.keys()]).toEqual([2]);
     // The open run ends where its readable saves stop.
     expect(halted.closed.map((run) => [run.runCount, run.outcome, run.checkpoints.length])).toEqual(
       [[7, 'unfinished', 3]],
     );
-    expect(advanceRecorder(halted.state, seen({ depth: 0, runCount: 8 })).state).toBe(halted.state);
+    // The other profile keeps recording.
+    const other = advanceRecorder(halted.state, seen({ depth: 2, runCount: 40 }, 2));
+    expect(other.state.runs.get(2)!.checkpoints).toHaveLength(4);
+    expect(other.state.unsupported).toBe(halted.state.unsupported);
+    // A readable save of the marked profile records again.
+    const resumed = advanceRecorder(other.state, seen({ depth: 0, runCount: 8 }));
+    expect(resumed.state.unsupported.size).toBe(0);
+    expect(resumed.state.runs.get(1)).toMatchObject({ runCount: 8, attempt: 1 });
+    // An unreadable start without an open run marks its profile; a save outside any run does not.
+    const start = advanceRecorder(EMPTY_RECORDER, unknown(3, true));
+    expect(start).toEqual({
+      state: { ...EMPTY_RECORDER, unsupported: new Map([[3, 0x13]]) },
+      closed: [],
+    });
+    expect(advanceRecorder(start.state, unknown(3, true)).state).toBe(start.state);
+    expect(advanceRecorder(EMPTY_RECORDER, unknown(3)).state).toBe(EMPTY_RECORDER);
   });
 
   it('ignores a hub rewrite of the previous run once the next run started', () => {
@@ -369,7 +389,12 @@ describe('run recorder', () => {
   it('keeps the attempt memory as recording stops or meets an unknown format', () => {
     const { state } = feed([seen({ depth: 0 })]);
     expect(abandonOpenRuns(state).state.attempts).toBe(state.attempts);
-    const halted = advanceRecorder(state, { kind: 'unsupportedVersion', profile: 1, version: 2 });
+    const halted = advanceRecorder(state, {
+      kind: 'unsupportedVersion',
+      profile: 1,
+      version: 2,
+      runStart: false,
+    });
     expect(halted.state.attempts).toBe(state.attempts);
   });
 
@@ -396,24 +421,35 @@ describe('save observation', () => {
     });
   });
 
-  it('reports an unknown header version before reading the payload', () => {
-    const bytes = encodeSyntheticSave(
-      {
-        version: 0x00010013,
-        timestamp: 1,
-        location: 'Location_Home',
-        runCount: 1,
-        fear: 0,
-        mapName: 'Hub_PreRun',
-        nextMap: 'F_Opening01',
-      },
-      {},
-    );
-    expect(observeSave('Profile1_Temp.sav', bytes)).toEqual({
+  it('reads the format version from the low 16 bits of the header word', () => {
+    const save = (version: number, mapName = 'Hub_PreRun') =>
+      encodeSyntheticSave(
+        {
+          version,
+          timestamp: 1,
+          location: 'Location_Home',
+          runCount: 1,
+          fear: 0,
+          mapName,
+          nextMap: 'F_Opening01',
+        },
+        {},
+      );
+    // The high 16 bits differ between profiles of one game build.
+    for (const version of [0x00010012, 0x00000012])
+      expect(
+        observeSave('Profile2_Temp.sav', sampleSaveBytes('surface-002', { version })),
+      ).toMatchObject({ kind: 'checkpoint', profile: 2, checkpoint: { runCount: 1002 } });
+    expect(observeSave('Profile1_Temp.sav', save(0x00010013))).toEqual({
       kind: 'unsupportedVersion',
       profile: 1,
-      version: 0x00010013,
+      version: 0x13,
+      runStart: true,
     });
+    expect(observeSave('Profile1_Temp.sav', save(0x13, 'F_Opening01'))).toMatchObject({
+      runStart: false,
+    });
+    expect(observeSave('Profile1.sav', save(0x13))).toMatchObject({ runStart: false });
   });
 
   it('throws a save file error for a save read while it was written', () => {

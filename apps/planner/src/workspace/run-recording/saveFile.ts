@@ -3,7 +3,10 @@ import { decodeLuabins, type LuaTable, type LuaValue } from './luabins';
 
 /** The plain header of a Hades II `SGB1` save. */
 export interface SaveHeader {
+  /** The format version: the low 16 bits of the header word at offset 8. */
   readonly version: number;
+  /** The high 16 bits of that word; their meaning is unconfirmed and the format ignores them. */
+  readonly flags: number;
   /** Unix seconds of the write. */
   readonly timestamp: number;
   readonly location: string;
@@ -76,7 +79,7 @@ export function readSaveContainer(bytes: Uint8Array): {
     position += size;
     return value;
   };
-  const version = u32();
+  const versionWord = u32();
   const timestamp = u32() + u32() * 2 ** 32;
   const location = text();
   const runCount = u32();
@@ -96,7 +99,8 @@ export function readSaveContainer(bytes: Uint8Array): {
     throw new SaveFileError('save block length does not match the file');
   return {
     header: Object.freeze({
-      version,
+      version: versionWord & 0xffff,
+      flags: versionWord >>> 16,
       timestamp,
       location,
       runCount,
