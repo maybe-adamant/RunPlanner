@@ -1,12 +1,34 @@
-import type { Catalog } from '../../catalog-schema';
+import type { Catalog, ResourceFamily } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { RunRecord, RunRecordDoorReward, RunRecordRoomReward } from '../../run-record/model';
 
-/** The catalog route whose biome order the record walked; a Dream run has none here. */
+/**
+ * The catalog route whose biome order the record walked; a Dream run has none
+ * here. The run count is `#GameState.RunHistory`, which only `EndRun` grows, so
+ * it is zero only on a new profile's first attempt: the fresh-profile route.
+ */
 export function routeKeyForRecord(catalog: Catalog, record: RunRecord): string | undefined {
   if (record.route.dream) return undefined;
   const first = record.route.biomes[0];
-  return catalog.routes.values.find((route) => route.biomeKeys[0] === first)?.key;
+  const fresh = record.run.runCount === 0;
+  const routes = catalog.routes.values.filter((route) => route.biomeKeys[0] === first);
+  return (
+    routes.find((route) => (route.initialProfile.kind === 'freshFile') === fresh) ?? routes[0]
+  )?.key;
+}
+
+/** The planner resource family of a gathering tool (`WeaponShopData` `Tool*` items). */
+export function resourceFamilyOfTool(tool: string): ResourceFamily | undefined {
+  const name = tool.replace(/\d+$/, '');
+  return name === 'ToolPickaxe'
+    ? 'Pickaxe'
+    : name === 'ToolExorcismBook'
+      ? 'Exorcism'
+      : name === 'ToolShovel'
+        ? 'Shovel'
+        : name === 'ToolFishingRod'
+          ? 'Fishing'
+          : undefined;
 }
 
 /** The biome a record room belongs to: its own room set, else the room it was entered from. */

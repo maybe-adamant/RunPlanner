@@ -1,7 +1,7 @@
 {
   "recordVersion": 1,
   "run": { "runCount": 1003, "startedAt": 1793060409 },
-  "route": { "biomes": ["F", "G", "H", "I"], "dream": false },
+  "route": { "biomes": ["F", "G", "H", "I"], "dream": false, "maxClockworkNonGoalRewards": 5 },
   "outcome": { "kind": "victory", "endingRoom": "I_Boss01", "runResult": 1 },
   "loadout": {
     "weapon": "WeaponStaffSwing",
@@ -97,7 +97,8 @@
         "removed": ["WetState"],
         "upgraded": []
       },
-      "npcInteractions": { "HeraUpgrade": 1 }
+      "npcInteractions": { "HeraUpgrade": 1 },
+      "toolElements": ["ToolShovel2"]
     },
     {
       "name": "Chaos_03",
@@ -125,7 +126,8 @@
         "removed": [],
         "upgraded": []
       },
-      "npcInteractions": { "NPC_Nyx_Story_01": 1, "TrialUpgrade": 1 }
+      "npcInteractions": { "NPC_Nyx_Story_01": 1, "TrialUpgrade": 1 },
+      "toolElements": ["ToolPickaxe2"]
     },
     {
       "name": "F_Combat08",
@@ -1284,7 +1286,8 @@
           { "reward": "MetaCardPointsCommonDrop", "point": 737955, "collected": false }
         ]
       },
-      "npcInteractions": { "HermesUpgrade": 1 }
+      "npcInteractions": { "HermesUpgrade": 1 },
+      "toolElements": ["ToolFishingRod2"]
     },
     {
       "name": "H_MiniBoss01",
@@ -1801,7 +1804,8 @@
         "acquired": [{ "name": "AirEssence", "worldTime": 960.40061533044 }],
         "removed": [],
         "upgraded": []
-      }
+      },
+      "toolElements": ["ToolExorcismBook2"]
     },
     {
       "name": "I_Combat07",

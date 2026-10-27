@@ -36,6 +36,7 @@ export type RunImportArea =
   | 'fountain'
   | 'wheel'
   | 'fields'
+  | 'resource'
   | 'npc'
   | 'menace'
   | 'dream'

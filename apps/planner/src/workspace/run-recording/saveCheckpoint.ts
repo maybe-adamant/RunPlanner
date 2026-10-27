@@ -36,6 +36,9 @@ export interface SavedRunState {
   readonly surfaceShopPurchases: number;
   readonly traitsSold: number;
   readonly wellShopPurchases: Readonly<Record<string, number>>;
+  /** `ToolElementsSpawned`: gathering tools whose element the run has granted. */
+  readonly toolElementsSpawned: Readonly<Record<string, number>>;
+  readonly maxClockworkNonGoalRewards?: number;
   readonly npcInteractions: Readonly<Record<string, number>>;
   /** Entry names per reward store, in store order. */
   readonly rewardStores: Readonly<Record<string, readonly string[]>>;
@@ -499,6 +502,8 @@ export function extractSaveCheckpoint(save: DecodedSave, temp: boolean): SaveChe
       surfaceShopPurchases: number(run.SurfaceShopPurchases) ?? 0,
       traitsSold: number(run.TraitsSold) ?? 0,
       wellShopPurchases: counts(run.WellShopPurchases),
+      toolElementsSpawned: counts(run.ToolElementsSpawned),
+      ...optional('maxClockworkNonGoalRewards', number(run.MaxClockworkNonGoalRewards)),
       npcInteractions: counts(run.NPCInteractions),
       rewardStores: rewardStores(run.RewardStores),
       lootChoices: lootChoices(run.LootChoiceHistory),

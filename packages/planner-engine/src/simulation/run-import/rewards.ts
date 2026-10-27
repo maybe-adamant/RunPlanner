@@ -40,7 +40,8 @@ export function recordedRoomOffer(
       );
     return offer === undefined ? undefined : devotionByPick(context, offer, index);
   }
-  const offered = context.occurrences.offeredDoor(occurrenceId);
+  const offered =
+    context.occurrences.offeredDoor(occurrenceId) ?? sideRoomDoor(context, occurrenceId);
   if (offered === undefined) return undefined;
   const door = context.record.rooms[offered.roomIndex]?.doors.find(
     (candidate) => candidate.door === offered.door,
@@ -49,6 +50,34 @@ export function recordedRoomOffer(
   return offer === undefined
     ? undefined
     : devotionByPick(context, offer, undefined, offered.roomIndex);
+}
+
+/** The main room's visit that offered a side room's physical door, never entered. */
+function sideRoomDoor(
+  context: RunImportContext,
+  occurrenceId: string,
+): { readonly roomIndex: number; readonly door: number } | undefined {
+  for (const biome of context.assembly().project.route.biomes) {
+    const topology = biome.topology;
+    for (const decision of topology?.decisions ?? []) {
+      if (decision.kind !== 'localVisit') continue;
+      const slotKey = Object.entries(decision.targetsBySlot).find(
+        ([, target]) => target.occurrenceId === occurrenceId,
+      )?.[0];
+      if (slotKey === undefined) continue;
+      const source = topology!.occurrences.find(
+        (entry) => entry.occurrenceId === decision.sourceOccurrenceId,
+      );
+      const door = context.catalog.rooms.byKey[source?.gameName ?? '']?.localChildren
+        .flatMap((child) => (child.kind === 'fixedRoomSlots' ? child.slots : []))
+        .find((slot) => slot.slotKey === slotKey)?.physicalDoorId;
+      const roomIndex = context.occurrences
+        .visitsOf(decision.sourceOccurrenceId)
+        .find((index) => context.record.rooms[index]!.doors.some((entry) => entry.door === door));
+      return door === undefined || roomIndex === undefined ? undefined : { roomIndex, door };
+    }
+  }
+  return undefined;
 }
 
 /**

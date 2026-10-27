@@ -24,6 +24,8 @@ export interface RunRecordRoute {
   /** Biome letters in visit order (`BiomeVisitOrder`). */
   readonly biomes: readonly string[];
   readonly dream: boolean;
+  /** `CurrentRun.MaxClockworkNonGoalRewards`, rolled on entering Tartarus. */
+  readonly maxClockworkNonGoalRewards?: number;
 }
 
 export type RunRecordOutcomeKind = 'victory' | 'death' | 'abandoned';
@@ -111,6 +113,8 @@ export interface RunRecordRoom {
   readonly bannedTraits?: readonly string[];
   /** The slotted Spell and its Path of Stars when either changed in this room. */
   readonly spell?: RunRecordSpell;
+  /** Gathering tools whose element the hero gained in this room (`ToolElementsSpawned`). */
+  readonly toolElements?: readonly string[];
 }
 
 export interface RunRecordSpell {

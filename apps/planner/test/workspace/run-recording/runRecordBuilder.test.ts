@@ -45,6 +45,7 @@ const baseRun: SavedRunState = {
   surfaceShopPurchases: 0,
   traitsSold: 0,
   wellShopPurchases: {},
+  toolElementsSpawned: {},
   npcInteractions: {},
   rewardStores: {},
   lootChoices: [],
@@ -248,6 +249,46 @@ describe('run record builder', () => {
     const disagreeing = visit([boon(1, 'AphroditeUpgrade')]);
     expect(disagreeing).toMatchObject({ kind: 'worldShop' });
     expect(disagreeing?.purchases).toBeUndefined();
+  });
+
+  it("keeps a Shop room's stock as World Shop stock when a Well also rolled", () => {
+    const stock = [{ slot: 1, name: 'MaxManaDrop', boosted: false, purchased: false }];
+    const record = buildRunRecord([
+      save({
+        history: [],
+        current: room('H_PreBoss01', { wellShop: true, chosenRewardType: 'Shop', store: stock }),
+      }),
+      save({
+        history: ['H_PreBoss01'],
+        current: room('H_Boss01'),
+        departure: room('H_PreBoss01', { store: [] }),
+      }),
+    ]);
+    expect(record.rooms[0]!.store).toMatchObject({ kind: 'worldShop', purchases: [{ slot: 1 }] });
+  });
+
+  it("records each gathering tool's element in its room and Tartarus's non-goal cap", () => {
+    const record = buildRunRecord([
+      save({ history: [], current: room('I_Intro') }),
+      save({
+        history: ['I_Intro'],
+        current: room('I_Combat01'),
+        departure: room('I_Intro'),
+        run: { maxClockworkNonGoalRewards: 4 },
+      }),
+      save({
+        history: ['I_Intro', 'I_Combat01'],
+        current: room('I_Combat02'),
+        departure: room('I_Combat01'),
+        run: { maxClockworkNonGoalRewards: 4, toolElementsSpawned: { ToolPickaxe2: 1 } },
+      }),
+    ]);
+    expect(record.rooms.map((entry) => entry.toolElements)).toEqual([
+      undefined,
+      ['ToolPickaxe2'],
+      undefined,
+    ]);
+    expect(record.route.maxClockworkNonGoalRewards).toBe(4);
   });
 
   it('places Stygian Well purchases only when their names are unambiguous', () => {

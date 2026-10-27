@@ -87,7 +87,8 @@
         "removed": [],
         "upgraded": []
       },
-      "forfeitSkips": 1
+      "forfeitSkips": 1,
+      "toolElements": ["ToolFishingRod2"]
     },
     {
       "name": "N_PreHub01",
@@ -1389,7 +1390,8 @@
         "upgraded": []
       },
       "npcInteractions": { "PoseidonUpgrade": 1 },
-      "bannedTraits": ["PoseidonExCastBoon", "PoseidonWeaponBoon"]
+      "bannedTraits": ["PoseidonExCastBoon", "PoseidonWeaponBoon"],
+      "toolElements": ["ToolPickaxe2"]
     },
     {
       "name": "O_Reprieve01",

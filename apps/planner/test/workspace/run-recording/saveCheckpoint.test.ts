@@ -27,6 +27,7 @@ function sample(name: string): DecodedSave {
   return {
     header: {
       version: 0x00010012,
+      flags: 0,
       timestamp: raw.header.timestamp,
       location: raw.header.location,
       runCount: raw.header.runs,

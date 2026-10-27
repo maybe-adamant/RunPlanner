@@ -106,5 +106,12 @@ describe('run record capture fixtures', () => {
       purchases: [{ slot: 3 }],
       unstockedPurchases: ['TemporaryMoveSpeedTrait'],
     });
+    expect(record.route.maxClockworkNonGoalRewards).toBe(5);
+    // Each gathering tool's element, in the room that granted it.
+    expect(
+      record.rooms.flatMap((entry, index) =>
+        (entry.toolElements ?? []).map((tool) => `${index}:${tool}`),
+      ),
+    ).toEqual(['0:ToolShovel2', '1:ToolPickaxe2', '26:ToolFishingRod2', '36:ToolExorcismBook2']);
   });
 });

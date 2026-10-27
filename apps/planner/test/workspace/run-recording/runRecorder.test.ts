@@ -69,6 +69,7 @@ function checkpoint(spec: SaveSpec): SaveCheckpoint {
       surfaceShopPurchases: 0,
       traitsSold: 0,
       wellShopPurchases: {},
+      toolElementsSpawned: {},
       npcInteractions: {},
       rewardStores: {},
       lootChoices: [],

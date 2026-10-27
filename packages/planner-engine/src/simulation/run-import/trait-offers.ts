@@ -36,6 +36,25 @@ function promotionTarget(
   return upgrades.length === 1 ? upgrades[0]!.name : undefined;
 }
 
+/** Echo's Pom doubles one boon's level at the pick's own acquisition time. */
+function echoPomTarget(
+  context: RunImportContext,
+  roomIndex: number,
+  traitKey: string,
+): string | undefined {
+  const disposition = context.catalog.traits.byKey[traitKey]?.selectedDisposition;
+  if (disposition?.kind !== 'echo' || disposition.effect !== 'doubleLevel') return undefined;
+  const traits = context.record.rooms[roomIndex]!.traits;
+  const at = traits.acquired.find((trait) => trait.name === traitKey)?.worldTime;
+  const doubled = traits.upgraded.filter(
+    (upgrade) =>
+      (at === undefined || upgrade.worldTime === undefined || upgrade.worldTime === at) &&
+      upgrade.from.level !== undefined &&
+      upgrade.to.level === upgrade.from.level * 2,
+  );
+  return doubled.length === 1 ? doubled[0]!.name : undefined;
+}
+
 function traitsOffer(
   context: RunImportContext,
   screen: RunRecordTraitScreen,
@@ -48,6 +67,9 @@ function traitsOffer(
     traitKey: option.name,
     ...(option.chosen && promotionTarget(context, roomIndex, option.name) !== undefined
       ? { targetTraitKey: promotionTarget(context, roomIndex, option.name)! }
+      : {}),
+    ...(option.chosen && echoPomTarget(context, roomIndex, option.name) !== undefined
+      ? { echoPomTarget: echoPomTarget(context, roomIndex, option.name)! }
       : {}),
     // Only a ranked trait carries a planner rarity.
     ...(option.rarity !== undefined &&
@@ -89,6 +111,61 @@ function withoutIllegalRows(
     options: kept as unknown as typeof value.options,
     selectedOptionKey: OPTION_KEYS[kept.indexOf(pick)]!,
   };
+}
+
+/**
+ * The record's rarity changes no screen or acquisition explains, in order: each
+ * changes one trait's rarity alone, at a time no trait was acquired.
+ */
+function unexplainedRarityUpgrades(
+  context: RunImportContext,
+  fromRoom: number,
+): readonly { readonly name: string; readonly roomIndex: number; readonly key: string }[] {
+  return context.record.rooms.slice(fromRoom).flatMap((room, offset) => {
+    const roomIndex = fromRoom + offset;
+    const acquiredAt = new Set(room.traits.acquired.map((trait) => trait.worldTime));
+    return room.traits.upgraded.flatMap((upgrade, position) => {
+      const shared = room.traits.upgraded.filter(
+        (other) => other.worldTime === upgrade.worldTime,
+      ).length;
+      return upgrade.from.rarity === upgrade.to.rarity ||
+        upgrade.worldTime === undefined ||
+        acquiredAt.has(upgrade.worldTime) ||
+        shared > 1
+        ? []
+        : [{ name: upgrade.name, roomIndex, key: `upgrade:${roomIndex}:${position}` }];
+    });
+  });
+}
+
+/**
+ * Answers a Steady Growth cycle with the record's next unexplained rarity
+ * change after the room that installed it.
+ */
+export function answerSteadyGrowth(context: RunImportContext, reason: SemanticFinding): boolean {
+  if (reason.code !== 'steadyGrowthOutcomeMissing' || reason.origin.kind !== 'steadyGrowthOutcome')
+    return false;
+  const outcome = reason.origin;
+  const occurrenceId = occurrenceIdOf(outcome.trait.owner);
+  const installed =
+    occurrenceId === undefined ? undefined : context.occurrences.visitsOf(occurrenceId)[0];
+  if (installed === undefined) return false;
+  for (const upgrade of unexplainedRarityUpgrades(context, installed + 1)) {
+    if (context.used.has(upgrade.key)) continue;
+    if (
+      context.applyValid({
+        kind: 'ReplaceSteadyGrowthTarget',
+        outcome,
+        targetTraitKey: upgrade.name,
+      })
+    ) {
+      context.used.add(upgrade.key);
+      return true;
+    }
+    context.refuse();
+    return false;
+  }
+  return false;
 }
 
 /** Pom screens, by the loot every level-up screen shares. */

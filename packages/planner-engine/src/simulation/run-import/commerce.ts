@@ -4,6 +4,7 @@ import {
   createRoomFeatureAddress,
   createShopOfferAddress,
   hermesShrineDeliveryEntryKey,
+  INFERNAL_CONTRACT_ENTRY_KEY,
   parseHermesShrineDeliveryEntryKey,
   semanticAddressKey,
   shopOfferOptionValues,
@@ -155,6 +156,10 @@ function answerShopOffer(
     offer.occurrenceId,
   );
   const shop = occurrence?.state.kind === 'shop' ? occurrence.state.shop : undefined;
+  if (offer.offerKey === INFERNAL_CONTRACT_ENTRY_KEY)
+    return occurrence !== undefined && shop !== undefined
+      ? answerContractPedestal(context, offer, occurrence, shop.profileKey)
+      : false;
   const profile =
     shop === undefined ? undefined : context.catalog.rewards.shops.byKey[shop.profileKey];
   const position = profile?.slots.values.findIndex((slot) => slot.key === offer.offerKey) ?? -1;
@@ -193,6 +198,55 @@ function answerShopOffer(
         applied: command,
         record: record(visit!.roomIndex),
       });
+    return true;
+  }
+  context.refuse();
+  return false;
+}
+
+/**
+ * The Contract pedestal's item is the one pedestal option its room used beyond
+ * the stock it bought; collecting it is that use. An uncollected pedestal
+ * leaves no trace in the record.
+ */
+function answerContractPedestal(
+  context: RunImportContext,
+  offer: Origin<'shopOffer'>,
+  occurrence: RoomOccurrence,
+  profileKey: string,
+): boolean {
+  const roomIndex = context.occurrences.visitsOf(occurrence.occurrenceId)[0];
+  if (roomIndex === undefined) return false;
+  const room = context.record.rooms[roomIndex]!;
+  const bought = new Map<string, number>();
+  if (room.store?.kind === 'worldShop')
+    for (const purchase of room.store.purchases ?? []) {
+      const stock = room.store.stock.find((option) => option.slot === purchase.slot);
+      if (stock !== undefined) bought.set(stock.name, (bought.get(stock.name) ?? 0) + 1);
+    }
+  const values = shopOfferOptionValues(
+    context.catalog,
+    occurrence.gameName,
+    profileKey,
+    offer.offerKey,
+  );
+  const unexplained = [...new Set(values.map((value) => value.offer.rewardType))].filter(
+    (type) => (room.uses[type] ?? 0) > (bought.get(type) ?? 0),
+  );
+  if (unexplained.length !== 1) return false;
+  for (const value of values) {
+    if (value.offer.rewardType !== unexplained[0]) continue;
+    const command: ProjectCommand = { kind: 'ReplaceShopOfferOption', offer, value };
+    const evaluation = context.candidates().evaluate({ kind: 'shopOfferOption', offer, value });
+    if (
+      evaluation.kind !== 'shopOffer' ||
+      !evaluation.result.supported ||
+      !evaluation.result.findings.every(isQuestionFinding) ||
+      !context.applyValid(command)
+    )
+      continue;
+    if (!context.applyValid({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true }))
+      context.note({ area: 'shop', reason: 'refused', address: offer, record: record(roomIndex) });
     return true;
   }
   context.refuse();

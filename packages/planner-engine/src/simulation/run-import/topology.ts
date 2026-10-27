@@ -23,12 +23,20 @@ type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { read
 const chaosRoom = (context: RunImportContext, gameName: string) =>
   context.catalog.rooms.byKey[gameName]?.roomSetKey === 'Chaos';
 
+/** The Zagreus contract's room: a Midshop's additional door, never an ordinary exit. */
+const contractRoom = (context: RunImportContext, gameName: string) => {
+  const mode = context.catalog.rooms.byKey[gameName]?.mode;
+  return mode?.kind === 'authored' && mode.templateKey === 'ContractBoss';
+};
+
 /** Answers route-start, door and exit questions from the record's rooms and doors. */
 export function answerTopology(context: RunImportContext, reason: SemanticFinding): boolean {
   const origin = reason.origin;
   switch (reason.code) {
     case 'biomeTopologyMissing':
       return origin.kind === 'biome' && createStart(context, origin);
+    case 'biomeFieldMissing':
+      return origin.kind === 'biomeField' && biomeField(context, origin);
     case 'targetMissing':
       return origin.kind === 'target' && createTarget(context, origin);
     case 'pickedTargetMissing':
@@ -39,6 +47,18 @@ export function answerTopology(context: RunImportContext, reason: SemanticFindin
     default:
       return false;
   }
+}
+
+/** Tartarus's cap of non-goal reward doors, rolled on entering it. */
+function biomeField(context: RunImportContext, field: Origin<'biomeField'>): boolean {
+  const value =
+    field.fieldKey === 'maxNonGoalRewards'
+      ? context.record.route.maxClockworkNonGoalRewards
+      : undefined;
+  if (value === undefined) return false;
+  if (context.apply({ kind: 'ReplaceBiomeField', field, value })) return true;
+  context.refuse();
+  return false;
 }
 
 function createStart(context: RunImportContext, biome: Origin<'biome'>): boolean {
@@ -64,7 +84,7 @@ function sourceVisit(context: RunImportContext, occurrenceId: string): number | 
  */
 function ordinaryDoors(context: RunImportContext, roomIndex: number): readonly RunRecordDoor[] {
   return [...context.record.rooms[roomIndex]!.doors]
-    .filter((door) => !chaosRoom(context, door.room))
+    .filter((door) => !chaosRoom(context, door.room) && !contractRoom(context, door.room))
     .sort((left, right) => left.door - right.door);
 }
 
@@ -151,6 +171,35 @@ function ensureChaos(context: RunImportContext, biomeKey: string, sourceIndex: n
     });
 }
 
+/** Adds the source's Zagreus contract door when the record offered one. */
+function ensureZagreusContract(context: RunImportContext, biomeKey: string, sourceIndex: number) {
+  const door = context.record.rooms[sourceIndex]!.doors.find((candidate) =>
+    contractRoom(context, candidate.room),
+  );
+  if (door === undefined) return;
+  const source = context.occurrences.occurrenceOf(sourceIndex);
+  const occurrence = topologyOccurrence(context, biomeKey, source);
+  if (occurrence === undefined) return;
+  if (occurrence.additionalExits.some((exit) => exit.kind === 'zagreusContract')) return;
+  const project = context.assembly().project;
+  const additional = createAdditionalExitAddress(
+    createBiomeAddress(project.route.routeKey, biomeKey),
+    source,
+    'zagreusContract',
+  );
+  const occurrenceId =
+    context.record.rooms[sourceIndex]!.exit === door.room
+      ? context.occurrences.occurrenceOf(sourceIndex + 1)
+      : context.occurrences.offeredOccurrence(sourceIndex, door.door);
+  if (!context.apply({ kind: 'AddZagreusContract', additional, occurrenceId }))
+    context.note({
+      area: 'doors',
+      reason: 'refused',
+      address: additional,
+      record: { roomIndex: sourceIndex, visit: 0, door: door.door },
+    });
+}
+
 /** The batch's ascending door order is an assumption, reported once when its first door lands. */
 function noteDoorOrder(
   context: RunImportContext,
@@ -180,6 +229,7 @@ function createTarget(context: RunImportContext, target: TargetAddress): boolean
   )?.topology;
   if (layout === undefined || topology === undefined || topology === null) return false;
   ensureChaos(context, target.biomeKey, sourceIndex);
+  ensureZagreusContract(context, target.biomeKey, sourceIndex);
   const exits = (
     declaredPhysicalExits(context.catalog, layout, topology, target.source) ?? []
   ).filter((exit) => exit.kind === 'normal');
@@ -354,6 +404,17 @@ function selectExit(context: RunImportContext, selection: Origin<'exitSelection'
       )
         return true;
     }
+    if (contractRoom(context, context.record.rooms[next]!.name)) {
+      ensureZagreusContract(context, selection.biomeKey, roomIndex);
+      if (
+        context.apply({
+          kind: 'SetExitSelection',
+          selection,
+          value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
+        })
+      )
+        return true;
+    }
     const target =
       decision.normal.kind === 'batch'
         ? decision.normal.targets.find((candidate) => candidate.occurrenceId === nextId)
@@ -386,7 +447,9 @@ function batchRewardStore(context: RunImportContext, store: Origin<'batchRewardS
   const supported = evaluation.result.supportStoreKeys;
   const next = context.record.rooms[sourceIndex + 1];
   const entered =
-    next !== undefined && !chaosRoom(context, next.name) ? next.reward?.store : undefined;
+    next !== undefined && !chaosRoom(context, next.name) && !contractRoom(context, next.name)
+      ? next.reward?.store
+      : undefined;
   const stores = context.catalog.rewards.stores;
   const offered = ordinaryDoors(context, sourceIndex).flatMap((door) =>
     door.reward === undefined ||

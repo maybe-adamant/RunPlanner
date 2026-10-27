@@ -25,6 +25,7 @@ import type {
   SaveCheckpoint,
   SavedEncounter,
   SavedRoom,
+  SavedRunState,
   SavedSpell,
   SavedStoreOption,
   SavedTrait,
@@ -239,7 +240,19 @@ export function buildRunRecord(
   return decodeRunRecord({
     recordVersion: RUN_RECORD_VERSION,
     run: { runCount: first.runCount, startedAt: first.timestamp },
-    route: { biomes: last.run.biomeVisitOrder, dream: last.run.dream },
+    route: {
+      biomes: last.run.biomeVisitOrder,
+      dream: last.run.dream,
+      ...optional(
+        'maxClockworkNonGoalRewards',
+        whole(
+          [...checkpoints, ...(end ? [end] : [])].find(
+            (save) => save.run.maxClockworkNonGoalRewards !== undefined,
+          )?.run.maxClockworkNonGoalRewards,
+          1,
+        ),
+      ),
+    },
     outcome: outcome(end, rooms[rooms.length - 1]!.name),
     loadout: loadout(first),
     rooms,
@@ -542,7 +555,14 @@ function buildRoom(
     ...optional('npcInteractions', nonEmpty(gains(before.npcInteractions, after.npcInteractions))),
     ...optional('bannedTraits', bannedTraits(before.bannedTraits, after.bannedTraits)),
     ...optional('spell', spellChange(traitsBefore?.spell, traitsAfter?.spell)),
+    ...optional('toolElements', toolElements(before, after)),
   };
+}
+
+/** Gathering tools whose element first spawned within the room's bracket. */
+function toolElements(before: SavedRunState, after: SavedRunState): string[] | undefined {
+  const tools = Object.keys(gains(before.toolElementsSpawned, after.toolElementsSpawned)).sort();
+  return tools.length === 0 ? undefined : tools;
 }
 
 /** Names Vow of Denial banned within the room's bracket. */
@@ -605,7 +625,12 @@ function untakenDoorCageRewards(
 function store(room: RoomSaves, entered: SavedRoom): RunRecordStore | undefined {
   const stock = entered.store;
   if (stock === undefined || stock.length === 0) return undefined;
-  const kind = entered.surfaceShop ? 'hermesShrine' : entered.wellShop ? 'well' : 'worldShop';
+  // A Shop room keeps its own stock even where a Well also rolled.
+  const kind = entered.surfaceShop
+    ? 'hermesShrine'
+    : entered.wellShop && entered.chosenRewardType !== 'Shop'
+      ? 'well'
+      : 'worldShop';
   const base = { kind, stock: stock.map(stockOption) } as const;
   const closing = room.closing;
   if (kind === 'well') {

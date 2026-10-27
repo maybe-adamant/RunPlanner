@@ -1,0 +1,2158 @@
+{
+  "recordVersion": 1,
+  "run": { "runCount": 1008, "startedAt": 1793120346 },
+  "route": { "biomes": ["F", "G", "H", "I"], "dream": false },
+  "outcome": { "kind": "death", "endingRoom": "I_Boss01", "runResult": 2, "killedBy": "Chronos" },
+  "loadout": {
+    "weapon": "WeaponStaffSwing",
+    "aspect": { "name": "StaffClearCastAspect", "rarity": "Legendary" },
+    "familiar": { "name": "PolecatFamiliar", "trait": "DodgeFamiliar", "level": 4 },
+    "keepsake": { "name": "AthenaEncounterKeepsake", "rarity": "Epic" },
+    "arcana": [
+      { "name": "BonusDodge", "level": 3 },
+      { "name": "BonusHealth", "level": 3 },
+      { "name": "CastBuff", "level": 3 },
+      { "name": "ChanneledBlock", "level": 3 },
+      { "name": "ChanneledCast", "level": 3 },
+      { "name": "EpicRarityBoost", "level": 3 },
+      { "name": "HealthRegen", "level": 3 },
+      { "name": "LowHealthBonus", "level": 3 },
+      { "name": "LowManaDamageBonus", "level": 3 },
+      { "name": "MaxHealthPerRoom", "level": 3 },
+      { "name": "MetaToRunUpgrade", "level": 3 },
+      { "name": "SprintShield", "level": 3 },
+      { "name": "StartingGold", "level": 3 },
+      { "name": "StatusVulnerability", "level": 3 }
+    ],
+    "vows": {
+      "BanUnpickedBoonsShrineUpgrade": 1,
+      "EnemySpeedShrineUpgrade": 2,
+      "ShopPricesShrineUpgrade": 0,
+      "BiomeSpeedShrineUpgrade": 3,
+      "EnemyShieldShrineUpgrade": 0,
+      "LimitGraspShrineUpgrade": 0,
+      "EnemyEliteShrineUpgrade": 0,
+      "HealingReductionShrineUpgrade": 0,
+      "EnemyDamageShrineUpgrade": 0,
+      "NextBiomeEnemyShrineUpgrade": 0,
+      "EnemyHealthShrineUpgrade": 0,
+      "EnemyCountShrineUpgrade": 0,
+      "BoonSkipShrineUpgrade": 0,
+      "BossDifficultyShrineUpgrade": 0,
+      "EnemyRespawnShrineUpgrade": 0,
+      "BoonManaReserveShrineUpgrade": 0,
+      "MinibossCountShrineUpgrade": 0
+    },
+    "startingGold": 300,
+    "startingTraits": [{ "name": "UnusedWeaponBonusTrait2" }]
+  },
+  "rooms": [
+    {
+      "name": "F_Opening01",
+      "reward": { "type": "Boon", "lootName": "HeraUpgrade", "store": "RunProgress" },
+      "doors": [
+        { "door": 560571, "room": "F_Combat21", "reward": { "type": "MetaCardPointsCommonDrop" } }
+      ],
+      "exit": "F_Combat21",
+      "encounters": [
+        {
+          "name": "OpeningGeneratedF",
+          "difficulty": 35,
+          "waves": [
+            {
+              "difficulty": 35,
+              "spawns": [
+                { "enemy": "Guard", "count": 4, "generated": true },
+                { "enemy": "SiegeVine", "count": 1, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Guard_Elite", "SiegeVine_Elite"]
+        }
+      ],
+      "uses": { "ErebusExitDoor": 1, "HeraUpgrade": 1 },
+      "kills": { "SiegeVine": 1, "Breakable_F": 6, "Guard": 4 },
+      "traitScreens": [
+        {
+          "giver": "HeraUpgrade",
+          "options": [
+            { "name": "HeraWeaponBoon", "rarity": "Common", "chosen": false },
+            { "name": "HeraSpecialBoon", "rarity": "Epic", "chosen": true },
+            { "name": "HeraSprintBoon", "rarity": "Common", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "VanillaState", "worldTime": 3046.4746871273 },
+          { "name": "HeraSpecialBoon", "rarity": "Epic", "worldTime": 3054.9580209031 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "npcInteractions": { "HeraUpgrade": 1 },
+      "bannedTraits": ["HeraSprintBoon", "HeraWeaponBoon"]
+    },
+    {
+      "name": "F_Combat21",
+      "reward": { "type": "MetaCardPointsCommonDrop", "store": "MetaProgress" },
+      "doors": [
+        { "door": 561392, "room": "F_Combat06", "reward": { "type": "MaxManaDrop" } },
+        { "door": 699394, "room": "F_Combat13", "reward": { "type": "RoomMoneyDrop" } }
+      ],
+      "exit": "F_Combat13",
+      "encounters": [
+        {
+          "name": "GeneratedF",
+          "difficulty": 70,
+          "waves": [
+            {
+              "difficulty": 70,
+              "spawns": [
+                { "enemy": "Screamer", "count": 3, "generated": true },
+                { "enemy": "Mage", "count": 3, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Mage_Elite", "Screamer_Elite"]
+        }
+      ],
+      "uses": { "ErebusExitDoor": 1, "RoomMoneyDrop": 1 },
+      "kills": { "Mage": 3, "Screamer": 3, "Breakable_F": 8 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "conversions": { "artificer": 1 }
+    },
+    {
+      "name": "F_Combat13",
+      "reward": { "type": "RoomMoneyDrop", "store": "RunProgress" },
+      "doors": [
+        { "door": 561217, "room": "F_Combat02", "reward": { "type": "StackUpgrade" } },
+        { "door": 566353, "room": "F_Combat02", "reward": { "type": "SpellDrop" } }
+      ],
+      "exit": "F_Combat02",
+      "encounters": [
+        {
+          "name": "GeneratedF",
+          "difficulty": 85,
+          "waves": [
+            { "difficulty": 25.5, "spawns": [{ "enemy": "Mage", "count": 3, "generated": true }] },
+            {
+              "difficulty": 12.75,
+              "spawns": [
+                { "enemy": "Mage", "count": 1, "generated": true },
+                { "enemy": "Screamer", "count": 1, "generated": true }
+              ]
+            },
+            {
+              "difficulty": 46.75000000000001,
+              "spawns": [
+                { "enemy": "Mage", "count": 3, "generated": true },
+                { "enemy": "Guard", "count": 3, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Guard_Elite", "Mage", "Screamer_Elite"]
+        }
+      ],
+      "uses": { "ErebusExitDoor": 1, "NPC_Athena_01": 1, "RoomMoneyDrop": 1 },
+      "kills": { "Screamer": 1, "Mage": 7, "Breakable_F": 12, "Guard": 3 },
+      "traitScreens": [
+        {
+          "giver": "NPC_Athena_01",
+          "options": [
+            { "name": "InvulnerabilityCastBoon", "rarity": "Epic", "chosen": true },
+            { "name": "AthenaProjectileBoon", "rarity": "Epic", "chosen": false },
+            { "name": "InvulnerabilityDashBoon", "rarity": "Epic", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "InvulnerabilityCastBoon", "rarity": "Epic", "worldTime": 3102.7483805997 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "npcInteractions": { "NPC_Athena_01": 1 }
+    },
+    {
+      "name": "F_Combat02",
+      "reward": { "type": "StackUpgrade", "store": "RunProgress" },
+      "doors": [
+        { "door": 560571, "room": "F_Combat01", "reward": { "type": "WeaponUpgrade" } },
+        { "door": 560574, "room": "F_Combat03", "reward": { "type": "MaxManaDrop" } }
+      ],
+      "exit": "F_Combat01",
+      "encounters": [
+        {
+          "name": "GeneratedF",
+          "difficulty": 100,
+          "waves": [
+            { "difficulty": 30, "spawns": [{ "enemy": "Guard", "count": 6, "generated": true }] },
+            {
+              "difficulty": 15,
+              "spawns": [
+                { "enemy": "Guard", "count": 2, "generated": true },
+                { "enemy": "Brawler_Elite", "count": 1, "generated": true }
+              ]
+            },
+            {
+              "difficulty": 55.00000000000001,
+              "spawns": [
+                { "enemy": "Guard", "count": 6, "generated": true },
+                { "enemy": "Brawler_Elite", "count": 1, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Brawler", "Guard"]
+        }
+      ],
+      "uses": { "ErebusExitDoor": 1, "StackUpgrade": 1 },
+      "kills": { "Brawler_Elite": 2, "Breakable_F": 19, "Guard": 14 },
+      "traitScreens": [
+        {
+          "giver": "StackUpgrade",
+          "options": [{ "name": "HeraSpecialBoon", "rarity": "Epic", "chosen": true }]
+        }
+      ],
+      "traits": {
+        "acquired": [],
+        "removed": [],
+        "upgraded": [
+          {
+            "name": "HeraSpecialBoon",
+            "from": { "rarity": "Epic" },
+            "to": { "rarity": "Epic", "level": 2 },
+            "worldTime": 3126.1694532788
+          }
+        ]
+      }
+    },
+    {
+      "name": "F_Combat01",
+      "reward": { "type": "WeaponUpgrade", "store": "RunProgress" },
+      "doors": [{ "door": 560570, "room": "F_Story01", "reward": { "type": "Story" } }],
+      "exit": "F_Story01",
+      "encounters": [
+        {
+          "name": "GeneratedF",
+          "difficulty": 115,
+          "waves": [
+            {
+              "difficulty": 115,
+              "spawns": [
+                { "enemy": "Screamer", "count": 4, "generated": true },
+                { "enemy": "Radiator", "count": 9, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Radiator_Elite", "Screamer_Elite"]
+        }
+      ],
+      "uses": { "ErebusExitDoor": 1, "WeaponUpgrade": 1 },
+      "kills": { "Radiator": 9, "Screamer": 4 },
+      "traitScreens": [
+        {
+          "giver": "WeaponUpgrade",
+          "options": [
+            { "name": "StaffAttackRecoveryTrait", "rarity": "Common", "chosen": false },
+            { "name": "StaffFastSpecialTrait", "rarity": "Common", "chosen": false },
+            { "name": "StaffDoubleAttackTrait", "rarity": "Common", "chosen": true }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "RoomRewardMaxManaTrait", "worldTime": 3129.9861201445 },
+          { "name": "RoomRewardMaxHealthTrait", "worldTime": 3129.9861201445 },
+          { "name": "StaffDoubleAttackTrait", "rarity": "Common", "worldTime": 3141.4190969473 }
+        ],
+        "removed": [],
+        "upgraded": []
+      }
+    },
+    {
+      "name": "F_Story01",
+      "reward": { "type": "Story", "store": "MetaProgress" },
+      "doors": [
+        { "door": 560571, "room": "F_Shop01", "reward": { "type": "Shop" } },
+        {
+          "door": 560572,
+          "room": "F_MiniBoss03",
+          "reward": { "type": "Boon", "lootName": "HeraUpgrade" }
+        }
+      ],
+      "exit": "F_Shop01",
+      "encounters": [{ "name": "Story_Arachne_01" }],
+      "uses": { "ErebusExitDoor": 1, "NPC_Arachne_01": 1, "MetaFabricDrop": 1 },
+      "kills": { "Breakable_F": 25 },
+      "traitScreens": [
+        {
+          "giver": "NPC_Arachne_01",
+          "options": [
+            { "name": "IncomeCostume", "rarity": "Common", "chosen": false },
+            { "name": "HighArmorCostume", "rarity": "Common", "chosen": true },
+            { "name": "SpellCostume", "rarity": "Common", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "HighArmorCostume", "rarity": "Common", "worldTime": 3188.652432744 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "store": {
+        "kind": "well",
+        "stock": [
+          { "slot": 1, "name": "HealDropRange", "type": "Consumable" },
+          { "slot": 2, "name": "MemPointsCommonRange", "type": "Consumable" },
+          { "slot": 3, "name": "TemporaryImprovedExTrait", "type": "Trait" }
+        ],
+        "purchases": []
+      },
+      "npcInteractions": { "NPC_Arachne_01": 1 }
+    },
+    {
+      "name": "F_Shop01",
+      "reward": { "type": "Shop", "store": "RunProgress" },
+      "doors": [
+        {
+          "door": 561481,
+          "room": "F_MiniBoss01",
+          "reward": { "type": "Boon", "lootName": "HestiaUpgrade" }
+        },
+        {
+          "door": 561482,
+          "room": "F_MiniBoss02",
+          "reward": { "type": "Boon", "lootName": "PoseidonUpgrade" }
+        }
+      ],
+      "exit": "F_MiniBoss01",
+      "encounters": [{ "name": "Shop" }],
+      "uses": { "ApolloUpgrade": 1, "ErebusExitDoor": 1 },
+      "kills": { "Breakable_F": 4 },
+      "traitScreens": [
+        {
+          "giver": "ApolloUpgrade",
+          "options": [
+            { "name": "ApolloManaBoon", "rarity": "Common", "chosen": false },
+            { "name": "ApolloCastAreaBoon", "rarity": "Common", "chosen": true },
+            { "name": "ApolloRetaliateBoon", "rarity": "Common", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "ApolloCastAreaBoon", "rarity": "Common", "worldTime": 3204.16910022 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "store": {
+        "kind": "worldShop",
+        "stock": [
+          {
+            "slot": 1,
+            "name": "RandomLoot",
+            "type": "Boon",
+            "lootName": "ApolloUpgrade",
+            "baseCost": 150
+          },
+          { "slot": 2, "name": "RoomRewardHealDrop", "type": "Consumable" },
+          { "slot": 3, "name": "StackUpgrade", "type": "Consumable", "baseCost": 100 }
+        ],
+        "purchases": [{ "slot": 1 }]
+      },
+      "bannedTraits": ["ApolloManaBoon", "ApolloRetaliateBoon"]
+    },
+    {
+      "name": "F_MiniBoss01",
+      "reward": { "type": "Boon", "lootName": "HestiaUpgrade", "store": "RunProgress" },
+      "doors": [
+        { "door": 560574, "room": "F_Combat12", "reward": { "type": "MetaCardPointsCommonDrop" } }
+      ],
+      "exit": "F_Combat12",
+      "encounters": [
+        {
+          "name": "MiniBossTreant",
+          "difficulty": 160,
+          "waves": [{ "difficulty": 160, "spawns": [{ "enemy": "Treant", "count": 1 }] }]
+        }
+      ],
+      "uses": { "HestiaUpgrade": 1, "ErebusExitDoor": 1 },
+      "kills": { "Treant": 1, "TreantTail": 2, "Breakable_F": 8 },
+      "traitScreens": [
+        {
+          "giver": "HestiaUpgrade",
+          "options": [
+            { "name": "HestiaWeaponBoon", "rarity": "Rare", "chosen": false },
+            { "name": "HestiaCastBoon", "rarity": "Common", "chosen": true },
+            { "name": "FireballManaSpecialBoon", "rarity": "Common", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "HestiaCastBoon", "rarity": "Common", "worldTime": 3224.3425536795 },
+          { "name": "AirEssence", "worldTime": 3225.6425537473 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "npcInteractions": { "HestiaUpgrade": 1 },
+      "bannedTraits": ["FireballManaSpecialBoon", "HestiaWeaponBoon"]
+    },
+    {
+      "name": "F_Combat12",
+      "reward": { "type": "MetaCardPointsCommonDrop", "store": "MetaProgress" },
+      "doors": [
+        { "door": 560915, "room": "F_Combat07", "reward": { "type": "HermesUpgrade" } },
+        { "door": 561217, "room": "F_Combat06", "reward": { "type": "MaxHealthDrop" } }
+      ],
+      "exit": "F_Combat07",
+      "encounters": [
+        {
+          "name": "GeneratedF",
+          "difficulty": 175,
+          "waves": [
+            {
+              "difficulty": 87.5,
+              "spawns": [{ "enemy": "Guard", "count": 18, "generated": true }]
+            },
+            {
+              "difficulty": 87.5,
+              "spawns": [
+                { "enemy": "Guard", "count": 14, "generated": true },
+                { "enemy": "Radiator", "count": 3, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Guard", "Radiator_Elite"]
+        }
+      ],
+      "uses": { "ErebusExitDoor": 1, "MaxHealthDrop": 1 },
+      "kills": { "Radiator": 3, "Breakable_F": 4, "Guard": 32 },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [{ "name": "RoomRewardMaxHealthTrait", "worldTime": 3247.9292771602 }],
+        "removed": [],
+        "upgraded": []
+      },
+      "conversions": { "artificer": 1 }
+    },
+    {
+      "name": "F_Combat07",
+      "reward": { "type": "HermesUpgrade", "store": "RunProgress" },
+      "doors": [
+        { "door": 560574, "room": "F_Combat20", "reward": { "type": "MetaCurrencyDrop" } },
+        { "door": 560575, "room": "F_Combat06", "reward": { "type": "MetaCardPointsCommonDrop" } }
+      ],
+      "exit": "F_Combat06",
+      "encounters": [
+        {
+          "name": "GeneratedF",
+          "difficulty": 190,
+          "waves": [
+            { "difficulty": 95, "spawns": [{ "enemy": "Mage", "count": 8, "generated": true }] },
+            {
+              "difficulty": 95,
+              "spawns": [
+                { "enemy": "Mage", "count": 4, "generated": true },
+                { "enemy": "Screamer", "count": 4, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Mage", "Screamer_Elite"]
+        }
+      ],
+      "uses": { "ErebusExitDoor": 1, "HermesUpgrade": 1 },
+      "kills": { "Mage": 12, "Screamer": 4, "Breakable_F": 12 },
+      "traitScreens": [
+        {
+          "giver": "HermesUpgrade",
+          "options": [
+            { "name": "HermesCastDiscountBoon", "rarity": "Common", "chosen": true },
+            { "name": "SprintShieldBoon", "rarity": "Common", "chosen": false },
+            { "name": "SlowProjectileBoon", "rarity": "Common", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "RoomRewardMaxManaTrait", "worldTime": 3251.9459440364 },
+          { "name": "RoomRewardMaxHealthTrait", "worldTime": 3251.9459440364 },
+          { "name": "HermesCastDiscountBoon", "rarity": "Common", "worldTime": 3280.104397909 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "npcInteractions": { "HermesUpgrade": 1 },
+      "bannedTraits": ["SlowProjectileBoon", "SprintShieldBoon"]
+    },
+    {
+      "name": "F_Combat06",
+      "reward": { "type": "MetaCardPointsCommonDrop", "store": "MetaProgress" },
+      "doors": [
+        { "door": 560571, "room": "F_PreBoss01", "reward": { "type": "Shop" } },
+        { "door": 560573, "room": "F_PreBoss01", "reward": { "type": "MaxManaDrop" } }
+      ],
+      "exit": "F_PreBoss01",
+      "encounters": [
+        {
+          "name": "GeneratedF",
+          "difficulty": 205,
+          "waves": [
+            {
+              "difficulty": 102.5,
+              "spawns": [{ "enemy": "Brawler", "count": 6, "generated": true }]
+            },
+            {
+              "difficulty": 102.5,
+              "spawns": [
+                { "enemy": "Brawler", "count": 4, "generated": true },
+                { "enemy": "Mage", "count": 3, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["Brawler", "Mage_Elite"]
+        }
+      ],
+      "uses": { "ErebusExitDoor": 1, "StackUpgrade": 1 },
+      "kills": { "Mage": 3, "Brawler": 10, "Breakable_F": 6 },
+      "traitScreens": [
+        {
+          "giver": "StackUpgrade",
+          "options": [
+            { "name": "HeraSpecialBoon", "rarity": "Epic", "chosen": false },
+            { "name": "HestiaCastBoon", "rarity": "Common", "chosen": true },
+            { "name": "ApolloCastAreaBoon", "rarity": "Common", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [],
+        "removed": [],
+        "upgraded": [
+          {
+            "name": "HestiaCastBoon",
+            "from": { "rarity": "Common" },
+            "to": { "rarity": "Common", "level": 2 },
+            "worldTime": 3303.8109467898
+          }
+        ]
+      },
+      "conversions": { "artificer": 1 }
+    },
+    {
+      "name": "F_PreBoss01",
+      "reward": { "type": "Shop", "store": "RunProgress" },
+      "doors": [{ "door": 560574, "room": "F_Boss01", "reward": { "type": "MixerFBossDrop" } }],
+      "exit": "F_Boss01",
+      "encounters": [{ "name": "Shop" }],
+      "uses": { "ErebusExitDoor": 1, "ArmorBoost": 1, "ApolloUpgrade": 1 },
+      "traitScreens": [
+        {
+          "giver": "ApolloUpgrade",
+          "options": [
+            { "name": "ApolloWeaponBoon", "rarity": "Common", "chosen": false },
+            { "name": "ApolloSprintBoon", "rarity": "Epic", "chosen": true },
+            { "name": "ElementalRallyBoon", "rarity": "Epic", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "ApolloSprintBoon", "rarity": "Epic", "worldTime": 3313.4942806282 },
+          { "name": "MinorArmorBoon", "worldTime": 3315.3109473896 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "store": {
+        "kind": "worldShop",
+        "stock": [
+          {
+            "slot": 1,
+            "name": "RandomLoot",
+            "type": "Boon",
+            "lootName": "ApolloUpgrade",
+            "baseCost": 150
+          },
+          { "slot": 2, "name": "ArmorBoost", "type": "Consumable" },
+          { "slot": 3, "name": "MaxManaDrop", "type": "Consumable" }
+        ],
+        "purchases": [{ "slot": 1 }, { "slot": 2 }]
+      },
+      "bannedTraits": ["ApolloWeaponBoon", "ElementalRallyBoon"]
+    },
+    {
+      "name": "F_Boss01",
+      "reward": { "type": "MixerFBossDrop", "store": "RunProgress" },
+      "doors": [{ "door": 560572, "room": "F_PostBoss01" }],
+      "exit": "F_PostBoss01",
+      "encounters": [{ "name": "BossHecate01" }],
+      "uses": { "MixerFBossDrop": 1, "GemPointsDrop": 1, "ErebusExitDoor_FBoss": 1 },
+      "kills": { "HecateCopy": 2, "Hecate": 1, "LightRanged": 12, "Breakable_F": 9 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "npcInteractions": { "Hecate": 1 }
+    },
+    {
+      "name": "F_PostBoss01",
+      "reward": { "store": "RunProgress" },
+      "doors": [{ "door": 593581, "room": "G_Intro" }],
+      "exit": "G_Intro",
+      "encounters": [{ "name": "Story_Chronos_01" }],
+      "uses": {
+        "HealthFountainF": 1,
+        "SellTraitShop": 1,
+        "PostBossDoor": 1,
+        "WellShop": 1,
+        "GiftRack": 2
+      },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [
+          { "name": "SkipEncounterKeepsake", "rarity": "Epic", "worldTime": 3387.8862845179 },
+          {
+            "name": "PersistentDionysusSkipKeepsake",
+            "rarity": "Epic",
+            "worldTime": 3387.8862845179,
+            "remainingUses": 3
+          }
+        ],
+        "removed": ["AthenaEncounterKeepsake", "VanillaState"],
+        "upgraded": []
+      },
+      "store": {
+        "kind": "well",
+        "stock": [
+          { "slot": 1, "name": "HealDropRange", "type": "Consumable" },
+          { "slot": 2, "name": "LimitedManaRegenDrop", "type": "Consumable" },
+          { "slot": 3, "name": "TemporaryImprovedDefenseTrait", "type": "Trait" }
+        ],
+        "purchases": []
+      },
+      "pool": {
+        "slots": [
+          { "slot": 1, "name": "InvulnerabilityCastBoon", "rarity": "Epic", "value": 145 },
+          { "slot": 2, "name": "HestiaCastBoon", "rarity": "Common", "value": 60 },
+          { "slot": 3, "name": "ApolloCastAreaBoon", "rarity": "Common", "value": 30 }
+        ],
+        "soldSlots": [],
+        "sales": 0
+      },
+      "keepsakeSwap": { "from": "AthenaEncounterKeepsake", "to": "SkipEncounterKeepsake" }
+    },
+    {
+      "name": "G_Intro",
+      "reward": { "store": "RunProgress" },
+      "doors": [
+        {
+          "door": 558528,
+          "room": "G_Combat20",
+          "reward": { "type": "MetaCardPointsCommonBigDrop" }
+        },
+        { "door": 2000031, "room": "Chaos_04", "reward": { "type": "TrialUpgrade" } }
+      ],
+      "exit": "Chaos_04",
+      "encounters": [{ "name": "Empty" }],
+      "uses": { "SecretDoor": 1 },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [
+          { "name": "RoomRewardMaxManaTrait", "worldTime": 3402.2529519339 },
+          { "name": "RoomRewardMaxHealthTrait", "worldTime": 3402.2529519339 }
+        ],
+        "removed": [],
+        "upgraded": []
+      }
+    },
+    {
+      "name": "Chaos_04",
+      "reward": { "type": "TrialUpgrade", "store": "Secrets" },
+      "doors": [
+        {
+          "door": 622073,
+          "room": "G_Combat05",
+          "reward": { "type": "MetaCardPointsCommonBigDrop" }
+        },
+        { "door": 622123, "room": "G_Combat01", "reward": { "type": "MetaCurrencyBigDrop" } }
+      ],
+      "exit": "G_Combat05",
+      "encounters": [{ "name": "Empty_Chaos" }],
+      "uses": { "SecretExitDoor": 1, "TrialUpgrade": 1 },
+      "traitScreens": [
+        {
+          "giver": "TrialUpgrade",
+          "options": [
+            { "name": "ChaosExSpeedBlessing", "rarity": "Common", "chosen": false },
+            { "name": "ChaosSpeedBlessing", "rarity": "Common", "chosen": false },
+            { "name": "ChaosWeaponBlessing", "rarity": "Common", "chosen": true }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "ChaosStunCurse", "worldTime": 3422.3029529796, "remainingUses": 4 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "npcInteractions": { "TrialUpgrade": 1 },
+      "bannedTraits": ["ChaosCastCurse", "ChaosCommonCurse"]
+    },
+    {
+      "name": "G_Combat05",
+      "reward": { "type": "MetaCardPointsCommonBigDrop", "store": "MetaProgress" },
+      "doors": [
+        {
+          "door": 558528,
+          "room": "G_Combat01",
+          "reward": { "type": "Boon", "lootName": "DemeterUpgrade" }
+        },
+        { "door": 568653, "room": "G_Shop01", "reward": { "type": "Shop" } },
+        { "door": 568792, "room": "G_Combat04", "reward": { "type": "MaxManaDrop" } }
+      ],
+      "exit": "G_Shop01",
+      "encounters": [
+        {
+          "name": "GeneratedG",
+          "difficulty": 260,
+          "waves": [
+            {
+              "difficulty": 260,
+              "spawns": [{ "enemy": "FishmanMelee_Elite", "count": 3, "generated": true }]
+            }
+          ],
+          "blacklist": ["FishmanMelee"]
+        }
+      ],
+      "uses": { "MetaCardPointsCommonBigDrop": 1, "OceanusExitDoor": 1 },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [{ "name": "RoomRewardMaxHealthTrait", "worldTime": 3430.3621200722 }],
+        "removed": [],
+        "upgraded": []
+      }
+    },
+    {
+      "name": "G_Shop01",
+      "reward": { "type": "Shop", "store": "RunProgress" },
+      "doors": [
+        { "door": 561365, "room": "G_Combat07", "reward": { "type": "SpellDrop" } },
+        {
+          "door": 561374,
+          "room": "G_MiniBoss03",
+          "reward": { "type": "Boon", "lootName": "AphroditeUpgrade" }
+        },
+        { "door": 2000041, "room": "C_Boss01", "reward": { "type": "GemPointsBigDrop" } }
+      ],
+      "exit": "C_Boss01",
+      "encounters": [{ "name": "Shop" }],
+      "uses": { "ZagContract": 1, "HeraUpgrade": 1 },
+      "traitScreens": [
+        {
+          "giver": "HeraUpgrade",
+          "options": [
+            { "name": "HeraManaBoon", "rarity": "Epic", "chosen": false },
+            { "name": "LinkedDeathDamageBoon", "rarity": "Common", "chosen": false },
+            { "name": "BoonDecayBoon", "rarity": "Common", "chosen": true }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [{ "name": "BoonDecayBoon", "rarity": "Common", "worldTime": 3439.2454538689 }],
+        "removed": [],
+        "upgraded": [
+          {
+            "name": "ApolloCastAreaBoon",
+            "from": { "rarity": "Common" },
+            "to": { "rarity": "Heroic", "level": 2 },
+            "worldTime": 3439.2454538689
+          }
+        ]
+      },
+      "store": {
+        "kind": "worldShop",
+        "stock": [
+          {
+            "slot": 1,
+            "name": "RandomLoot",
+            "type": "Boon",
+            "lootName": "HeraUpgrade",
+            "baseCost": 150
+          },
+          { "slot": 2, "name": "MetaCardPointsCommonDrop", "type": "Consumable" },
+          { "slot": 3, "name": "MaxManaDrop", "type": "Consumable" }
+        ],
+        "purchases": [{ "slot": 1 }]
+      },
+      "bannedTraits": ["HeraManaBoon", "LinkedDeathDamageBoon"]
+    },
+    {
+      "name": "C_Boss01",
+      "reward": { "type": "GemPointsBigDrop", "store": "RunProgress" },
+      "doors": [
+        {
+          "door": 554468,
+          "room": "G_MiniBoss01",
+          "reward": { "type": "Boon", "lootName": "ApolloUpgrade" }
+        }
+      ],
+      "exit": "G_MiniBoss01",
+      "encounters": [{ "name": "BossZagreus01" }],
+      "uses": { "GemPointsBigDrop": 1 },
+      "kills": { "Zagreus": 1 },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [{ "name": "InfernalContractBoon", "worldTime": 3554.4985035867 }],
+        "removed": ["HighArmorCostume", "MinorArmorBoon"],
+        "upgraded": []
+      },
+      "npcInteractions": { "Zagreus": 2 }
+    },
+    {
+      "name": "G_MiniBoss01",
+      "reward": { "type": "Boon", "lootName": "ApolloUpgrade", "store": "RunProgress" },
+      "doors": [
+        {
+          "door": 558528,
+          "room": "G_Combat17",
+          "reward": { "type": "MetaCardPointsCommonBigDrop" }
+        },
+        { "door": 568792, "room": "G_Combat06", "reward": { "type": "MetaCurrencyBigDrop" } }
+      ],
+      "exit": "G_Combat17",
+      "encounters": [
+        {
+          "name": "MiniBossWaterUnit",
+          "difficulty": 380,
+          "waves": [
+            {
+              "difficulty": 380,
+              "spawns": [
+                { "enemy": "WaterUnitMiniboss", "count": 1 },
+                { "enemy": "WaterUnitMiniboss_Shadow", "count": 1, "miniBossShrine": true },
+                { "enemy": "Radiator2_Elite", "count": 4 }
+              ]
+            }
+          ]
+        }
+      ],
+      "uses": { "ApolloUpgrade": 1, "OceanusExitDoor": 1 },
+      "kills": { "Radiator2_Elite": 4, "WaterUnitMiniboss": 1, "Breakable_G": 19 },
+      "traitScreens": [
+        {
+          "giver": "ApolloUpgrade",
+          "options": [
+            { "name": "ApolloExCastBoon", "rarity": "Rare", "chosen": false },
+            { "name": "ApolloBlindBoon", "rarity": "Rare", "chosen": false },
+            { "name": "PerfectDamageBonusBoon", "rarity": "Epic", "chosen": true }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "RoomRewardMaxManaTrait", "worldTime": 3560.4285039059 },
+          { "name": "RoomRewardMaxHealthTrait", "worldTime": 3560.4285039059 },
+          { "name": "PerfectDamageBonusBoon", "rarity": "Epic", "worldTime": 3582.9035606579 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "store": {
+        "kind": "well",
+        "stock": [
+          { "slot": 1, "name": "HealDropRange", "type": "Consumable" },
+          { "slot": 2, "name": "TemporaryDiscountTrait", "type": "Trait" },
+          { "slot": 3, "name": "TemporaryEmptySlotDamageTrait", "type": "Trait" }
+        ],
+        "purchases": []
+      },
+      "bannedTraits": ["ApolloBlindBoon", "ApolloExCastBoon"]
+    },
+    {
+      "name": "G_Combat17",
+      "reward": { "type": "MetaCardPointsCommonBigDrop", "store": "MetaProgress" },
+      "doors": [
+        { "door": 569053, "room": "G_Combat09", "reward": { "type": "RoomMoneyDrop" } },
+        { "door": 737225, "room": "G_Combat11", "reward": { "type": "StackUpgrade" } },
+        {
+          "door": 737226,
+          "room": "G_Combat03",
+          "reward": { "type": "Devotion", "lootNames": ["HestiaUpgrade", "HeraUpgrade"] }
+        }
+      ],
+      "exit": "G_Combat11",
+      "encounters": [
+        {
+          "name": "GeneratedG",
+          "difficulty": 420,
+          "waves": [
+            {
+              "difficulty": 126,
+              "spawns": [{ "enemy": "FishmanMelee", "count": 3, "generated": true }]
+            },
+            {
+              "difficulty": 63,
+              "spawns": [
+                { "enemy": "FishmanMelee", "count": 1, "generated": true },
+                { "enemy": "FishSwarmerSquad_Elite", "count": 1, "generated": true }
+              ]
+            },
+            {
+              "difficulty": 231.00000000000003,
+              "spawns": [
+                { "enemy": "FishmanMelee", "count": 3, "generated": true },
+                { "enemy": "FishmanRanged", "count": 3, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["FishSwarmerSquad", "FishmanMelee", "FishmanRanged_Elite"]
+        }
+      ],
+      "uses": { "MetaCardPointsCommonBigDrop": 1, "WellShop": 1, "OceanusExitDoor": 1 },
+      "kills": { "FishmanRanged": 3, "FishmanMelee": 7, "FishSwarmer_Elite": 2, "Breakable_G": 2 },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [{ "name": "RoomRewardMaxHealthTrait", "worldTime": 3609.0732048961 }],
+        "removed": [],
+        "upgraded": []
+      },
+      "store": {
+        "kind": "well",
+        "stock": [
+          { "slot": 1, "name": "EmptyMaxHealthShopItem", "type": "Consumable" },
+          { "slot": 2, "name": "MetaCardPointsCommonRange", "type": "Consumable" },
+          { "slot": 3, "name": "MetaCurrencyRange", "type": "Consumable" }
+        ],
+        "purchases": []
+      }
+    },
+    {
+      "name": "G_Combat11",
+      "reward": { "type": "StackUpgrade", "store": "RunProgress" },
+      "doors": [
+        { "door": 563168, "room": "G_PreBoss01", "reward": { "type": "Shop" } },
+        {
+          "door": 566324,
+          "room": "G_PreBoss01",
+          "reward": { "type": "Boon", "lootName": "DemeterUpgrade" }
+        }
+      ],
+      "exit": "G_PreBoss01",
+      "encounters": [
+        {
+          "name": "GeneratedG",
+          "difficulty": 460,
+          "waves": [
+            {
+              "difficulty": 138,
+              "spawns": [{ "enemy": "FishmanRanged", "count": 4, "generated": true }]
+            },
+            {
+              "difficulty": 69,
+              "spawns": [
+                { "enemy": "FishmanRanged", "count": 2, "generated": true },
+                { "enemy": "WaterUnit", "count": 1, "generated": true }
+              ]
+            },
+            {
+              "difficulty": 253.00000000000003,
+              "spawns": [
+                { "enemy": "FishmanRanged", "count": 4, "generated": true },
+                { "enemy": "Guard2_Elite", "count": 4, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["FishmanRanged", "Guard2", "WaterUnit_Elite"]
+        }
+      ],
+      "uses": { "OceanusExitDoor": 1, "StackUpgrade": 1 },
+      "kills": { "FishmanRanged": 10, "WaterUnit": 1, "Guard2_Elite": 4, "Breakable_G": 1 },
+      "traitScreens": [
+        {
+          "giver": "StackUpgrade",
+          "options": [
+            { "name": "HeraSpecialBoon", "rarity": "Epic", "chosen": false },
+            { "name": "HestiaCastBoon", "rarity": "Common", "chosen": true },
+            { "name": "PerfectDamageBonusBoon", "rarity": "Epic", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [],
+        "removed": [],
+        "upgraded": [
+          {
+            "name": "HestiaCastBoon",
+            "from": { "rarity": "Common", "level": 2 },
+            "to": { "rarity": "Common", "level": 3 },
+            "worldTime": 3641.8404050343
+          }
+        ]
+      }
+    },
+    {
+      "name": "G_PreBoss01",
+      "reward": { "type": "Boon", "lootName": "DemeterUpgrade", "store": "RunProgress" },
+      "doors": [{ "door": 558528, "room": "G_Boss01", "reward": { "type": "MixerGBossDrop" } }],
+      "exit": "G_Boss01",
+      "encounters": [{ "name": "Shop" }],
+      "uses": { "DemeterUpgrade": 1, "StackUpgradeBig": 1, "OceanusExitDoor": 1 },
+      "traitScreens": [
+        {
+          "giver": "DemeterUpgrade",
+          "options": [
+            { "name": "DemeterWeaponBoon", "rarity": "Common", "chosen": false },
+            { "name": "BoonGrowthBoon", "rarity": "Common", "chosen": true },
+            { "name": "CastAttachBoon", "rarity": "Common", "chosen": false }
+          ]
+        },
+        {
+          "giver": "StackUpgradeBig",
+          "options": [
+            { "name": "HestiaCastBoon", "rarity": "Common", "chosen": true },
+            { "name": "PerfectDamageBonusBoon", "rarity": "Epic", "chosen": false },
+            { "name": "ApolloCastAreaBoon", "rarity": "Heroic", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "BoonGrowthBoon", "rarity": "Common", "worldTime": 3656.3404057905 },
+          { "name": "FireEssence", "worldTime": 3662.2237394307 }
+        ],
+        "removed": [],
+        "upgraded": [
+          {
+            "name": "HestiaCastBoon",
+            "from": { "rarity": "Common", "level": 3 },
+            "to": { "rarity": "Common", "level": 5 },
+            "worldTime": 3660.307072664
+          }
+        ]
+      },
+      "npcInteractions": { "DemeterUpgrade": 1 },
+      "bannedTraits": ["CastAttachBoon", "DemeterWeaponBoon"]
+    },
+    {
+      "name": "G_Boss01",
+      "reward": { "type": "MixerGBossDrop", "store": "RunProgress" },
+      "doors": [{ "door": 616877, "room": "G_PostBoss01" }],
+      "exit": "G_PostBoss01",
+      "encounters": [{ "name": "BossScylla01" }],
+      "uses": { "OceanusExitDoor": 1, "GemPointsDrop": 1, "MixerGBossDrop": 1 },
+      "kills": { "SirenKeytarist": 1, "Scylla": 1, "SirenDrummer": 1, "FishSwarmer": 19 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "npcInteractions": { "Scylla": 1 }
+    },
+    {
+      "name": "G_PostBoss01",
+      "reward": { "store": "MetaProgress" },
+      "doors": [{ "door": 609670, "room": "H_Intro" }],
+      "exit": "H_Intro",
+      "encounters": [{ "name": "Empty" }],
+      "uses": {
+        "SellTraitShop": 1,
+        "GiftRack": 1,
+        "WellShop": 2,
+        "HealthFountainG": 1,
+        "OceanusExitDoor": 1
+      },
+      "kills": { "Breakable_G": 3 },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [
+          { "name": "RoomRewardMaxManaTrait", "worldTime": 3715.5460054395 },
+          { "name": "RoomRewardMaxHealthTrait", "worldTime": 3715.5460054395 },
+          { "name": "UnpickedBoonKeepsake", "rarity": "Epic", "worldTime": 3723.7793392022 }
+        ],
+        "removed": ["SkipEncounterKeepsake"],
+        "upgraded": []
+      },
+      "store": {
+        "kind": "well",
+        "stock": [
+          { "slot": 1, "name": "TemporaryDoorHealTrait", "type": "Trait" },
+          { "slot": 2, "name": "LimitedManaRegenDrop", "type": "Consumable" },
+          { "slot": 3, "name": "TemporaryImprovedDefenseTrait", "type": "Trait" }
+        ],
+        "purchases": []
+      },
+      "pool": {
+        "slots": [
+          { "slot": 1, "name": "PerfectDamageBonusBoon", "rarity": "Epic", "value": 140 },
+          { "slot": 2, "name": "InvulnerabilityCastBoon", "rarity": "Epic", "value": 145 },
+          { "slot": 3, "name": "BoonGrowthBoon", "rarity": "Common", "value": 40 }
+        ],
+        "soldSlots": [],
+        "sales": 0
+      },
+      "keepsakeSwap": { "from": "SkipEncounterKeepsake", "to": "UnpickedBoonKeepsake" }
+    },
+    {
+      "name": "H_Intro",
+      "reward": { "store": "RunProgress" },
+      "doors": [{ "door": 564300, "room": "H_Combat05" }],
+      "exit": "H_Combat05",
+      "encounters": [{ "name": "Empty" }],
+      "uses": { "FieldsExitDoor": 1 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+    },
+    {
+      "name": "H_Combat05",
+      "reward": { "store": "RunProgress" },
+      "doors": [
+        { "door": 564448, "room": "H_Combat07" },
+        {
+          "door": 621199,
+          "room": "H_MiniBoss02",
+          "reward": { "type": "Boon", "lootName": "DemeterUpgrade" }
+        }
+      ],
+      "exit": "H_Combat07",
+      "encounters": [
+        {
+          "name": "GeneratedH_Passive",
+          "difficulty": 300,
+          "waves": [
+            {
+              "difficulty": 300,
+              "spawns": [
+                { "enemy": "CorruptedShadeMedium", "count": 8, "generated": true },
+                { "enemy": "CorruptedShadeSmall", "count": 12, "generated": true },
+                { "enemy": "DespairElemental_Elite", "count": 1, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": [
+            "CorruptedShadeMedium_Elite",
+            "CorruptedShadeSmall_Elite",
+            "DespairElemental"
+          ]
+        }
+      ],
+      "uses": {
+        "StackUpgrade": 1,
+        "FieldsRewardFinder": 1,
+        "FieldsExitDoor": 1,
+        "RoomMoneyDrop": 1,
+        "FieldsRewardCage": 2
+      },
+      "kills": {
+        "Mourner": 3,
+        "CorruptedShadeSmall": 1,
+        "BrokenHearted": 4,
+        "CorruptedShadeMedium": 1
+      },
+      "traitScreens": [
+        {
+          "giver": "StackUpgrade",
+          "options": [
+            { "name": "HeraSpecialBoon", "rarity": "Epic", "chosen": true },
+            { "name": "ApolloSprintBoon", "rarity": "Epic", "chosen": false },
+            { "name": "ApolloCastAreaBoon", "rarity": "Heroic", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [],
+        "removed": [],
+        "upgraded": [
+          {
+            "name": "HeraSpecialBoon",
+            "from": { "rarity": "Epic", "level": 2 },
+            "to": { "rarity": "Epic", "level": 3 },
+            "worldTime": 3775.7446355837
+          }
+        ]
+      },
+      "fields": {
+        "entryPoint": 755866,
+        "cageOrder": "opening",
+        "cages": [
+          {
+            "reward": { "type": "StackUpgrade" },
+            "encounter": {
+              "name": "GeneratedH",
+              "difficulty": 372,
+              "waves": [
+                {
+                  "difficulty": 372,
+                  "spawns": [
+                    { "enemy": "Mourner", "count": 3, "generated": true },
+                    { "enemy": "BrokenHearted", "count": 4, "generated": true }
+                  ]
+                }
+              ],
+              "blacklist": ["BrokenHearted_Elite", "Mourner_Elite"]
+            },
+            "openedAt": 366.4252191570122,
+            "spawnPointIds": [
+              702914, 702906, 702895, 702872, 702908, 702935, 702904, 702882, 702939, 702877,
+              702886, 702891, 702943, 702940, 702897, 702937, 702894, 702913, 702919, 702924,
+              702883, 702921, 702941, 702912, 702868, 702885, 702920, 702945, 702922, 702892,
+              702890, 702869, 702876, 702873, 702936, 702925, 702893, 702884, 702909, 702911,
+              702867, 702934, 702871, 702789, 702948, 702875, 702910, 702880, 702923, 702944
+            ]
+          },
+          {
+            "reward": { "type": "RoomMoneyDrop" },
+            "encounter": {
+              "name": "GeneratedH",
+              "difficulty": 372,
+              "waves": [
+                {
+                  "difficulty": 372,
+                  "spawns": [
+                    { "enemy": "BrokenHearted", "count": 5, "generated": true },
+                    { "enemy": "Lovesick", "count": 4, "generated": true }
+                  ]
+                }
+              ],
+              "blacklist": ["BrokenHearted_Elite", "Lovesick_Elite"]
+            },
+            "openedAt": 392.57979990018066,
+            "spawnPointIds": [
+              702754, 702771, 702719, 702785, 702696, 702765, 702748, 702776, 702753, 702695,
+              702731, 702735, 702779, 702768, 702711, 702772, 702733, 702750, 702778, 702724,
+              702725, 702782, 702763, 702717, 702745, 702747, 702702, 623688, 702705, 702701,
+              702758, 702728, 702739, 702784, 702726, 702756, 702707, 702722, 702746, 702729,
+              702709, 702700, 702698, 702703, 702714, 702713, 702742, 702760, 702704, 702699
+            ]
+          }
+        ],
+        "optionalRewards": [
+          { "reward": "MetaCardPointsCommonDrop", "point": 621492, "collected": false }
+        ]
+      }
+    },
+    {
+      "name": "H_Combat07",
+      "reward": { "store": "RunProgress" },
+      "doors": [
+        { "door": 564448, "room": "H_Bridge01", "reward": { "type": "Story" } },
+        {
+          "door": 621199,
+          "room": "H_MiniBoss01",
+          "reward": { "type": "Boon", "lootName": "DemeterUpgrade" }
+        }
+      ],
+      "exit": "H_Bridge01",
+      "encounters": [
+        {
+          "name": "GeneratedH_Passive",
+          "difficulty": 360,
+          "waves": [
+            {
+              "difficulty": 360,
+              "spawns": [
+                { "enemy": "CorruptedShadeMedium_Elite", "count": 5, "generated": true },
+                { "enemy": "CorruptedShadeLarge_Elite", "count": 1, "generated": true },
+                { "enemy": "DespairElemental_Elite", "count": 1, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["CorruptedShadeLarge", "CorruptedShadeMedium", "DespairElemental"]
+        }
+      ],
+      "uses": {
+        "ArmorBoost": 1,
+        "FieldsRewardCage": 3,
+        "HestiaUpgrade": 1,
+        "FieldsRewardFinder": 1,
+        "MaxHealthDrop": 1,
+        "FieldsExitDoor": 2,
+        "PerfectClearChallengeSwitch_MaxHealth": 1,
+        "WeaponUpgrade": 1
+      },
+      "kills": {
+        "CorruptedShadeLarge_Elite": 1,
+        "LovesickHeart": 3,
+        "DespairElemental_Elite": 1,
+        "LovesickHeart_Elite": 2,
+        "BrokenHearted": 7,
+        "Lovesick": 6,
+        "Lamia_Elite": 4,
+        "CorruptedShadeMedium_Elite": 5,
+        "Lovesick_Elite": 2,
+        "Lamia": 4
+      },
+      "traitScreens": [
+        {
+          "giver": "WeaponUpgrade",
+          "options": [
+            { "name": "StaffDashAttackTrait", "rarity": "Common", "chosen": false },
+            { "name": "StaffOneWayAttackTrait", "rarity": "Common", "chosen": true },
+            { "name": "StaffExAoETrait", "rarity": "Common", "chosen": false }
+          ]
+        },
+        {
+          "giver": "HestiaUpgrade",
+          "options": [
+            { "name": "HestiaManaBoon", "rarity": "Common", "chosen": false },
+            { "name": "CastProjectileBoon", "rarity": "Common", "chosen": false },
+            { "name": "BurnStackBoon", "rarity": "Common", "chosen": true }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "StaffOneWayAttackTrait", "worldTime": 3825.2371778752 },
+          { "name": "BurnStackBoon", "rarity": "Common", "worldTime": 3851.2808697323 },
+          { "name": "HestiaManaBoon", "rarity": "Common", "worldTime": 3854.9308699226 },
+          { "name": "RoomRewardMaxHealthTrait", "worldTime": 3871.7781327247 },
+          { "name": "MinorArmorBoon", "worldTime": 3875.5114662527 }
+        ],
+        "removed": [],
+        "upgraded": [
+          {
+            "name": "HermesCastDiscountBoon",
+            "from": { "rarity": "Common" },
+            "to": { "rarity": "Rare", "level": 1 },
+            "worldTime": 3871.228132696
+          }
+        ]
+      },
+      "fields": {
+        "entryPoint": 755826,
+        "cageOrder": "opening",
+        "cages": [
+          {
+            "reward": { "type": "WeaponUpgrade" },
+            "encounter": {
+              "name": "GeneratedH",
+              "difficulty": 536,
+              "waves": [
+                {
+                  "difficulty": 536,
+                  "spawns": [
+                    { "enemy": "Lovesick_Elite", "count": 2, "generated": true },
+                    { "enemy": "Lamia_Elite", "count": 2, "generated": true }
+                  ]
+                }
+              ],
+              "blacklist": ["Lamia", "Lamia_Miniboss", "Lovesick"]
+            },
+            "openedAt": 406.988967324025,
+            "spawnPointIds": [
+              625152, 625119, 625112, 625149, 625138, 625135, 625124, 625109, 625123, 625129,
+              625137, 625127, 625150, 625128, 625107, 625121, 625110, 625146, 736801, 625141,
+              625133, 625142, 625117, 625151, 625148, 625132, 625139, 625140, 625153, 625126,
+              625131, 625130, 625116, 736799, 625156, 736800, 625111, 625113, 625114, 625125,
+              625118, 625136, 625115, 625120, 625108, 625143, 625147, 624900, 625134, 625122
+            ]
+          },
+          {
+            "reward": { "type": "Boon", "lootName": "HestiaUpgrade" },
+            "encounter": {
+              "name": "GeneratedH",
+              "difficulty": 536,
+              "waves": [
+                {
+                  "difficulty": 536,
+                  "spawns": [
+                    { "enemy": "BrokenHearted", "count": 7, "generated": true },
+                    { "enemy": "Lamia", "count": 4, "generated": true }
+                  ]
+                }
+              ],
+              "blacklist": ["BrokenHearted_Elite", "Lamia_Elite", "Lamia_Miniboss"]
+            },
+            "openedAt": 424.9390079648001,
+            "spawnPointIds": [
+              736788, 625074, 625100, 736792, 625085, 625078, 625069, 625067, 625095, 736795,
+              625101, 625084, 625105, 625089, 625088, 625068, 625071, 625106, 625076, 625093,
+              625090, 625099, 736798, 625073, 625075, 625080, 624766, 625079, 736794, 625092,
+              625081, 736789, 736790, 625087, 625097, 736797, 625091, 625070, 736796, 625077,
+              625098, 625083, 736793, 625082, 736791, 625066, 625086, 625072, 625096, 625094
+            ]
+          },
+          {
+            "reward": { "type": "MaxHealthDrop" },
+            "encounter": {
+              "name": "GeneratedH",
+              "difficulty": 536,
+              "waves": [
+                {
+                  "difficulty": 536,
+                  "spawns": [
+                    { "enemy": "Lovesick", "count": 6, "generated": true },
+                    { "enemy": "Lamia_Elite", "count": 2, "generated": true }
+                  ]
+                }
+              ],
+              "blacklist": ["Lamia", "Lamia_Miniboss", "Lovesick_Elite"]
+            },
+            "openedAt": 445.4326995323645,
+            "spawnPointIds": [
+              736773, 625048, 625026, 625032, 625057, 625039, 625023, 625033, 625060, 621713,
+              625063, 625058, 625034, 625019, 736772, 625051, 625049, 625031, 625018, 625047,
+              625059, 625044, 625029, 625037, 625064, 625022, 625035, 625052, 625062, 625021,
+              625024, 625017, 736774, 625065, 625030, 736775, 625020, 625043, 625036, 625045,
+              625053, 736771, 625046, 625050, 625025, 625028, 625016, 625038, 736770
+            ]
+          }
+        ],
+        "optionalRewards": [
+          { "reward": "ArmorBoost", "point": 621565, "collected": true },
+          { "reward": "MaxHealthDropSmall", "point": 621563, "collected": false }
+        ]
+      },
+      "bannedTraits": ["CastProjectileBoon", "HestiaManaBoon"]
+    },
+    {
+      "name": "H_Bridge01",
+      "reward": { "type": "Story", "store": "RunProgress" },
+      "doors": [
+        {
+          "door": 564300,
+          "room": "H_Combat11",
+          "cageRewards": ["MaxHealthDrop", "MaxManaDrop", "RoomMoneyDrop"]
+        },
+        { "door": 565616, "room": "H_Combat12" }
+      ],
+      "exit": "H_Combat12",
+      "encounters": [{ "name": "Story_Echo_01" }],
+      "uses": { "FieldsExitDoor": 1, "NPC_Narcissus_Field_01": 1 },
+      "traitScreens": [
+        {
+          "giver": "NPC_Echo_01",
+          "options": [
+            { "name": "DiminishingDodgeBoon", "rarity": "Epic", "chosen": false },
+            { "name": "EchoDoubleLevelBoon", "rarity": "Epic", "chosen": true },
+            { "name": "DiminishingHealthAndManaBoon", "rarity": "Epic", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "EchoDoubleLevelBoon", "rarity": "Epic", "worldTime": 3906.4374202584 }
+        ],
+        "removed": [],
+        "upgraded": [
+          {
+            "name": "HestiaCastBoon",
+            "from": { "rarity": "Common", "level": 5 },
+            "to": { "rarity": "Common", "level": 10 },
+            "worldTime": 3906.4374202584
+          }
+        ]
+      },
+      "npcInteractions": { "NPC_Echo_01": 1 }
+    },
+    {
+      "name": "H_Combat12",
+      "reward": { "store": "RunProgress" },
+      "doors": [
+        { "door": 627866, "room": "H_PreBoss01", "reward": { "type": "MaxHealthDrop" } },
+        { "door": 627867, "room": "H_PreBoss01", "reward": { "type": "Shop" } }
+      ],
+      "exit": "H_PreBoss01",
+      "encounters": [
+        {
+          "name": "GeneratedH_Passive",
+          "difficulty": 480,
+          "waves": [
+            {
+              "difficulty": 480,
+              "spawns": [
+                { "enemy": "CorruptedShadeLarge", "count": 2, "generated": true },
+                { "enemy": "CorruptedShadeMedium_Elite", "count": 6, "generated": true },
+                { "enemy": "CorruptedShadeSmall", "count": 16, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": [
+            "CorruptedShadeLarge_Elite",
+            "CorruptedShadeMedium",
+            "CorruptedShadeSmall_Elite"
+          ]
+        }
+      ],
+      "uses": {
+        "FieldsRewardCage": 4,
+        "FieldsExitDoor": 1,
+        "FieldsRewardFinder": 1,
+        "MaxManaDropSmall": 1,
+        "HermesUpgrade": 1,
+        "ApolloUpgrade": 1,
+        "StackUpgrade": 1
+      },
+      "kills": {
+        "Mourner": 2,
+        "LovesickHeart": 5,
+        "Lovesick_Elite": 3,
+        "CorruptedShadeLarge": 1,
+        "LovesickHeart_Elite": 3,
+        "BrokenHearted": 15,
+        "CorruptedShadeSmall": 1,
+        "FogEmitter2": 1,
+        "BrokenHearted_Elite": 6,
+        "Mourner_Elite": 2,
+        "Lovesick": 10,
+        "CorruptedShadeMedium_Elite": 4
+      },
+      "traitScreens": [
+        {
+          "giver": "ApolloUpgrade",
+          "options": [
+            { "name": "ApolloSpecialBoon", "rarity": "Heroic", "chosen": true },
+            { "name": "ApolloCastBoon", "rarity": "Rare", "chosen": false }
+          ]
+        },
+        {
+          "giver": "HermesUpgrade",
+          "options": [
+            { "name": "MoneyMultiplierBoon", "rarity": "Common", "chosen": false },
+            { "name": "TimedKillBuffBoon", "rarity": "Common", "chosen": true },
+            { "name": "ElementalUnifiedBoon", "rarity": "Common", "chosen": false }
+          ]
+        },
+        {
+          "giver": "StackUpgrade",
+          "options": [
+            { "name": "ApolloSpecialBoon", "rarity": "Heroic", "chosen": false },
+            { "name": "HestiaManaBoon", "rarity": "Common", "chosen": true },
+            { "name": "BurnStackBoon", "rarity": "Common", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "RoomRewardMaxManaTrait", "worldTime": 3914.1040873249 },
+          { "name": "RoomRewardMaxHealthTrait", "worldTime": 3914.1040873249 },
+          {
+            "name": "ApolloSpecialBoon",
+            "rarity": "Heroic",
+            "level": 3,
+            "worldTime": 3945.1955731018
+          },
+          { "name": "TimedKillBuffBoon", "rarity": "Common", "worldTime": 3965.7654551573 },
+          { "name": "RoomRewardMaxManaTrait", "worldTime": 3995.0000360972 }
+        ],
+        "removed": ["HeraSpecialBoon"],
+        "upgraded": [
+          {
+            "name": "HestiaManaBoon",
+            "from": { "rarity": "Common" },
+            "to": { "rarity": "Common", "level": 2 },
+            "worldTime": 3988.3083690725
+          }
+        ]
+      },
+      "fields": {
+        "entryPoint": 756053,
+        "cageOrder": "opening",
+        "cages": [
+          {
+            "reward": { "type": "Boon", "lootName": "ApolloUpgrade" },
+            "encounter": {
+              "name": "GeneratedH",
+              "difficulty": 782,
+              "waves": [
+                {
+                  "difficulty": 782,
+                  "spawns": [
+                    { "enemy": "BrokenHearted", "count": 8, "generated": true },
+                    { "enemy": "Lovesick", "count": 8, "generated": true },
+                    { "enemy": "FogEmitter2", "count": 1, "generated": true }
+                  ]
+                }
+              ],
+              "blacklist": ["BrokenHearted_Elite", "FogEmitter", "Lovesick_Elite"]
+            },
+            "openedAt": 480.1392489919672,
+            "spawnPointIds": [
+              702028, 702019, 702058, 702021, 702057, 702001, 702043, 702014, 702002, 702054,
+              702050, 702017, 702018, 702024, 701996, 702012, 702025, 701998, 702047, 702044,
+              702013, 702045, 702031, 702000, 702049, 702041, 702056, 702053, 702046, 702055,
+              702037, 702051, 701995, 702048, 702033, 702039, 702020, 702029, 702040, 702032,
+              628297, 702027, 702034, 702016, 701999, 702026, 702038, 702003, 702030, 702052,
+              702023, 702022, 702042, 702015, 701997
+            ]
+          },
+          {
+            "reward": { "type": "HermesUpgrade" },
+            "encounter": {
+              "name": "GeneratedH",
+              "difficulty": 782,
+              "waves": [
+                {
+                  "difficulty": 782,
+                  "spawns": [
+                    { "enemy": "Lovesick_Elite", "count": 3, "generated": true },
+                    { "enemy": "BrokenHearted", "count": 7, "generated": true },
+                    { "enemy": "Mourner", "count": 2, "generated": true }
+                  ]
+                }
+              ],
+              "blacklist": ["BrokenHearted_Elite", "Lovesick", "Mourner_Elite"]
+            },
+            "openedAt": 500.6307342159562,
+            "spawnPointIds": [
+              701965, 701989, 701961, 701949, 701968, 701971, 701988, 701974, 701991, 701941,
+              701975, 701993, 701976, 701982, 701985, 701992, 701986, 701964, 701967, 701939,
+              701972, 701960, 701980, 701990, 701962, 701994, 701944, 628270, 701945, 701984,
+              701958, 701981, 701937, 701957, 701943, 701978, 701955, 701977, 701969, 701940,
+              701966, 701979, 701983, 701973, 701938, 701987, 701970, 701956, 701942
+            ]
+          },
+          {
+            "reward": { "type": "StackUpgrade" },
+            "encounter": {
+              "name": "GeneratedH",
+              "difficulty": 782,
+              "waves": [
+                {
+                  "difficulty": 782,
+                  "spawns": [
+                    { "enemy": "BrokenHearted_Elite", "count": 6, "generated": true },
+                    { "enemy": "Mourner_Elite", "count": 2, "generated": true },
+                    { "enemy": "Lovesick", "count": 2, "generated": true }
+                  ]
+                }
+              ],
+              "blacklist": ["BrokenHearted", "Lovesick_Elite", "Mourner"]
+            },
+            "openedAt": 517.8839494318236,
+            "spawnPointIds": [
+              701897, 701892, 701890, 701881, 701929, 701926, 701904, 701909, 701886, 701898,
+              701921, 701922, 701911, 701880, 701916, 701885, 701878, 701883, 701882, 701879,
+              701924, 701900, 701917, 701901, 701912, 701889, 701884, 701931, 701925, 628299,
+              701920, 701928, 701930, 701910, 701903, 701923, 701906, 701899, 701896, 701893,
+              701894, 701914, 701919, 701895, 701927, 701888, 701891, 701915, 701918, 701887,
+              701913, 701905, 701902
+            ]
+          }
+        ],
+        "optionalRewards": [
+          { "reward": "MaxManaDropSmall", "point": 627093, "collected": true },
+          { "reward": "GiftDrop", "point": 627063, "collected": false }
+        ]
+      },
+      "bannedTraits": ["ApolloCastBoon", "ElementalUnifiedBoon", "MoneyMultiplierBoon"]
+    },
+    {
+      "name": "H_PreBoss01",
+      "reward": { "type": "Shop", "store": "RunProgress" },
+      "doors": [{ "door": 564446, "room": "H_Boss01", "reward": { "type": "MixerHBossDrop" } }],
+      "exit": "H_Boss01",
+      "encounters": [{ "name": "Shop" }],
+      "uses": { "FieldsExitDoor": 1, "DemeterUpgrade": 1, "ApolloUpgrade": 1, "BlindBoxLoot": 1 },
+      "traitScreens": [
+        {
+          "giver": "DemeterUpgrade",
+          "options": [
+            { "name": "PlantHealthBoon", "rarity": "Common", "chosen": false },
+            { "name": "ReserveManaHitShieldBoon", "rarity": "Epic", "chosen": false },
+            { "name": "CastNovaBoon", "rarity": "Common", "chosen": true }
+          ]
+        },
+        {
+          "giver": "ApolloUpgrade",
+          "options": [{ "name": "StormSpawnBoon", "rarity": "Duo", "chosen": true }]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "CastNovaBoon", "rarity": "Common", "worldTime": 4012.9000370308 },
+          { "name": "StormSpawnBoon", "rarity": "Duo", "worldTime": 4031.6500380087 }
+        ],
+        "removed": [],
+        "upgraded": []
+      },
+      "store": {
+        "kind": "well",
+        "stock": [
+          {
+            "slot": 1,
+            "name": "RandomLoot",
+            "type": "Boon",
+            "lootName": "ApolloUpgrade",
+            "baseCost": 150
+          },
+          { "slot": 2, "name": "RoomRewardHealDrop", "type": "Consumable" },
+          { "slot": 3, "name": "MaxManaDrop", "type": "Consumable" }
+        ],
+        "purchases": []
+      },
+      "bannedTraits": ["PlantHealthBoon", "ReserveManaHitShieldBoon"]
+    },
+    {
+      "name": "H_Boss01",
+      "reward": { "type": "MixerHBossDrop", "store": "RunProgress" },
+      "doors": [{ "door": 625989, "room": "H_PostBoss01" }],
+      "exit": "H_PostBoss01",
+      "encounters": [{ "name": "BossInfestedCerberus01" }],
+      "uses": { "FieldsBossExitDoor": 1, "GemPointsDrop": 1, "MixerHBossDrop": 1 },
+      "kills": { "LovesickHeart_Elite": 4, "Lovesick_Elite": 4, "InfestedCerberus": 1 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "npcInteractions": { "InfestedCerberus": 1 }
+    },
+    {
+      "name": "H_PostBoss01",
+      "reward": { "store": "RunProgress" },
+      "doors": [{ "door": 637436, "room": "I_Intro" }],
+      "exit": "I_Intro",
+      "encounters": [{ "name": "Empty" }],
+      "uses": {
+        "SellTraitShop": 1,
+        "H_PostBossDoor": 1,
+        "HealthFountain": 1,
+        "WellShop": 1,
+        "GiftRack": 1
+      },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [
+          { "name": "TempHammerKeepsake", "rarity": "Epic", "worldTime": 4099.9170654692 },
+          { "name": "StaffSecondStageTrait", "worldTime": 4099.9170654692, "remainingUses": 20 },
+          { "name": "FirstHitHealTrait", "worldTime": 4115.1337329295, "remainingUses": 1 },
+          { "name": "TemporaryDiscountTrait", "worldTime": 4115.9170663037, "remainingUses": 6 }
+        ],
+        "removed": ["UnpickedBoonKeepsake"],
+        "upgraded": []
+      },
+      "store": {
+        "kind": "well",
+        "stock": [
+          { "slot": 1, "name": "FirstHitHealTrait", "type": "Trait" },
+          { "slot": 2, "name": "LimitedManaRegenDrop", "type": "Consumable" },
+          { "slot": 3, "name": "TemporaryDiscountTrait", "type": "Trait" }
+        ],
+        "purchases": [{ "slot": 1 }, { "slot": 3 }]
+      },
+      "pool": {
+        "slots": [
+          { "slot": 1, "name": "HermesCastDiscountBoon", "rarity": "Rare", "value": 90 },
+          { "slot": 2, "name": "CastNovaBoon", "rarity": "Common", "value": 30 },
+          { "slot": 3, "name": "TimedKillBuffBoon", "rarity": "Common", "value": 45 }
+        ],
+        "soldSlots": [],
+        "sales": 0
+      },
+      "keepsakeSwap": { "from": "UnpickedBoonKeepsake", "to": "TempHammerKeepsake" }
+    },
+    {
+      "name": "I_Intro",
+      "reward": { "store": "RunProgress" },
+      "doors": [{ "door": 565632, "room": "I_Combat11", "reward": { "type": "ClockworkGoal" } }],
+      "exit": "I_Combat11",
+      "encounters": [{ "name": "Empty" }],
+      "uses": { "CWTartarusExitDoor": 1 },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+    },
+    {
+      "name": "I_Combat11",
+      "reward": { "type": "ClockworkGoal", "store": "TartarusRewards" },
+      "doors": [
+        { "door": 565223, "room": "I_Combat18", "reward": { "type": "ClockworkGoal" } },
+        { "door": 699962, "room": "I_Story01", "reward": { "type": "Story" } }
+      ],
+      "exit": "I_Combat18",
+      "encounters": [
+        {
+          "name": "GeneratedIChronosIntro",
+          "difficulty": 620,
+          "waves": [
+            {
+              "difficulty": 310,
+              "spawns": [{ "enemy": "GoldElemental", "count": 8, "generated": true }]
+            },
+            {
+              "difficulty": 310,
+              "spawns": [
+                { "enemy": "GoldElemental", "count": 2, "generated": true },
+                { "enemy": "TimeElemental", "count": 5, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["GoldElemental", "TimeElemental_Elite"]
+        }
+      ],
+      "uses": { "CWTartarusExitDoor": 1 },
+      "kills": { "Breakable_I": 4 },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [
+          { "name": "RoomRewardMaxManaTrait", "worldTime": 4134.867067292 },
+          { "name": "RoomRewardMaxHealthTrait", "worldTime": 4134.867067292 }
+        ],
+        "removed": ["PersistentDionysusSkipKeepsake"],
+        "upgraded": []
+      }
+    },
+    {
+      "name": "I_Combat18",
+      "reward": { "type": "ClockworkGoal", "store": "TartarusRewards" },
+      "doors": [
+        { "door": 626017, "room": "I_Combat17", "reward": { "type": "ClockworkGoal" } },
+        {
+          "door": 626020,
+          "room": "I_MiniBoss02",
+          "reward": { "type": "Boon", "lootName": "HeraUpgrade" }
+        }
+      ],
+      "exit": "I_MiniBoss02",
+      "encounters": [
+        {
+          "name": "GeneratedI_GoalReward",
+          "difficulty": 565,
+          "waves": [
+            {
+              "difficulty": 282.5,
+              "spawns": [{ "enemy": "ClockworkHeavyMelee", "count": 3, "generated": true }]
+            },
+            {
+              "difficulty": 282.5,
+              "spawns": [
+                { "enemy": "ClockworkHeavyMelee", "count": 2, "generated": true },
+                { "enemy": "SwarmerClockwork_Elite", "count": 1, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["ClockworkHeavyMelee", "SwarmerClockwork"]
+        }
+      ],
+      "uses": { "CWTartarusExitDoor": 1 },
+      "kills": {
+        "CWTartarusRubble02": 6,
+        "Breakable_I": 5,
+        "ClockworkHeavyMelee": 5,
+        "SwarmerClockwork_Elite": 1,
+        "CWTartarusRubble01": 4
+      },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [],
+        "removed": ["FirstHitHealTrait"],
+        "upgraded": [
+          {
+            "name": "ApolloSprintBoon",
+            "from": { "rarity": "Epic" },
+            "to": { "rarity": "Heroic", "level": 1 },
+            "worldTime": 4155.752600152
+          }
+        ]
+      }
+    },
+    {
+      "name": "I_MiniBoss02",
+      "reward": { "type": "Boon", "lootName": "HeraUpgrade", "store": "TartarusRewards" },
+      "doors": [
+        { "door": 625673, "room": "I_Combat09", "reward": { "type": "ClockworkGoal" } },
+        { "door": 625741, "room": "I_Combat09", "reward": { "type": "StackUpgradeTriple" } }
+      ],
+      "exit": "I_Combat09",
+      "encounters": [
+        {
+          "name": "MiniBossGoldElemental",
+          "difficulty": 745,
+          "waves": [
+            {
+              "difficulty": 745,
+              "spawns": [
+                { "enemy": "GoldElemental_MiniBoss", "count": 1 },
+                { "enemy": "GoldElemental_Shadow", "count": 2, "miniBossShrine": true }
+              ]
+            }
+          ]
+        }
+      ],
+      "uses": { "CWTartarusExitDoor": 1, "HeraUpgrade": 1 },
+      "kills": {
+        "CWTartarusRubble01": 11,
+        "GoldElemental_MiniBoss": 1,
+        "CWTartarusRubble02": 12,
+        "Breakable_I": 77
+      },
+      "traitScreens": [
+        {
+          "giver": "HeraUpgrade",
+          "options": [
+            { "name": "OmegaHeraProjectileBoon", "rarity": "Epic", "chosen": false },
+            { "name": "ElementalRarityUpgradeBoon", "rarity": "Epic", "chosen": true },
+            { "name": "SpawnCastDamageBoon", "rarity": "Rare", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [
+          { "name": "ElementalRarityUpgradeBoon", "rarity": "Rare", "worldTime": 4184.3653397877 }
+        ],
+        "removed": [],
+        "upgraded": [
+          {
+            "name": "BurnStackBoon",
+            "from": { "rarity": "Common" },
+            "to": { "rarity": "Rare", "level": 1 },
+            "worldTime": 4184.3653397877
+          },
+          {
+            "name": "HestiaManaBoon",
+            "from": { "rarity": "Common", "level": 2 },
+            "to": { "rarity": "Rare", "level": 2 },
+            "worldTime": 4184.3653397877
+          },
+          {
+            "name": "BoonGrowthBoon",
+            "from": { "rarity": "Common" },
+            "to": { "rarity": "Rare", "level": 1 },
+            "worldTime": 4184.3653397877
+          },
+          {
+            "name": "HestiaCastBoon",
+            "from": { "rarity": "Common", "level": 10 },
+            "to": { "rarity": "Rare", "level": 10 },
+            "worldTime": 4184.3653397877
+          },
+          {
+            "name": "TimedKillBuffBoon",
+            "from": { "rarity": "Common" },
+            "to": { "rarity": "Rare", "level": 1 },
+            "worldTime": 4184.3653397877
+          },
+          {
+            "name": "BoonDecayBoon",
+            "from": { "rarity": "Common" },
+            "to": { "rarity": "Rare", "level": 1 },
+            "worldTime": 4184.3653397877
+          },
+          {
+            "name": "CastNovaBoon",
+            "from": { "rarity": "Common" },
+            "to": { "rarity": "Rare", "level": 1 },
+            "worldTime": 4184.3653397877
+          },
+          {
+            "name": "ApolloCastAreaBoon",
+            "from": { "rarity": "Heroic", "level": 2 },
+            "to": { "rarity": "Heroic", "level": 3 },
+            "worldTime": 4184.8653398138
+          }
+        ]
+      },
+      "store": {
+        "kind": "well",
+        "stock": [
+          { "slot": 1, "name": "HealDropRange", "type": "Consumable" },
+          { "slot": 2, "name": "LimitedManaRegenDrop", "type": "Consumable" },
+          { "slot": 3, "name": "TemporaryForcedSecretDoorTrait", "type": "Trait" }
+        ],
+        "purchases": []
+      },
+      "bannedTraits": ["OmegaHeraProjectileBoon", "SpawnCastDamageBoon"]
+    },
+    {
+      "name": "I_Combat09",
+      "reward": { "type": "ClockworkGoal", "store": "TartarusRewards" },
+      "doors": [
+        { "door": 710744, "room": "I_Combat17", "reward": { "type": "ClockworkGoal" } },
+        { "door": 710745, "room": "I_Combat07", "reward": { "type": "RoomMoneyTripleDrop" } }
+      ],
+      "exit": "I_Combat17",
+      "encounters": [
+        {
+          "name": "GeneratedI_GoalReward",
+          "difficulty": 775,
+          "waves": [
+            {
+              "difficulty": 387.5,
+              "spawns": [{ "enemy": "TimeElemental_Elite", "count": 4, "generated": true }]
+            },
+            {
+              "difficulty": 387.5,
+              "spawns": [
+                { "enemy": "TimeElemental_Elite", "count": 3, "generated": true },
+                { "enemy": "SatyrRatCatcher", "count": 1, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["SatyrRatCatcher_Elite", "TimeElemental_Elite"]
+        }
+      ],
+      "uses": { "CWTartarusExitDoor": 1 },
+      "kills": {
+        "CWTartarusRubble02": 3,
+        "Breakable_I": 1,
+        "TimeElemental_Elite": 7,
+        "SatyrRatCatcher": 1,
+        "CWTartarusRubble01": 5
+      },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+    },
+    {
+      "name": "I_Combat17",
+      "reward": { "type": "ClockworkGoal", "store": "TartarusRewards" },
+      "doors": [{ "door": 625999, "room": "I_Combat20", "reward": { "type": "ClockworkGoal" } }],
+      "exit": "I_Combat20",
+      "encounters": [
+        {
+          "name": "GeneratedI_GoalReward",
+          "difficulty": 880,
+          "waves": [
+            {
+              "difficulty": 264,
+              "spawns": [{ "enemy": "SatyrRatCatcher_Elite", "count": 1, "generated": true }]
+            },
+            {
+              "difficulty": 132,
+              "spawns": [
+                { "enemy": "SatyrRatCatcher_Elite", "count": 1, "generated": true },
+                { "enemy": "SatyrLancer_Elite", "count": 1, "generated": true }
+              ]
+            },
+            {
+              "difficulty": 484.00000000000006,
+              "spawns": [
+                { "enemy": "SatyrRatCatcher_Elite", "count": 1, "generated": true },
+                { "enemy": "GoldElemental", "count": 2, "generated": true },
+                { "enemy": "SatyrLancer_Elite", "count": 1, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["GoldElemental_Elite", "SatyrLancer", "SatyrRatCatcher_Elite"]
+        }
+      ],
+      "uses": { "CWTartarusExitDoor": 1 },
+      "kills": {
+        "CWTartarusRubble02": 1,
+        "Breakable_I": 4,
+        "GoldElemental": 2,
+        "SatyrLancer_Elite": 2,
+        "SatyrRatCatcher_Elite": 3,
+        "CWTartarusRubble01": 2
+      },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] }
+    },
+    {
+      "name": "I_Combat20",
+      "reward": { "type": "ClockworkGoal", "store": "TartarusRewards" },
+      "doors": [{ "door": 626009, "room": "I_PreBoss02", "reward": { "type": "ClockworkGoal" } }],
+      "exit": "I_PreBoss02",
+      "encounters": [
+        {
+          "name": "GeneratedI_Small_GoalReward",
+          "difficulty": 901,
+          "waves": [
+            {
+              "difficulty": 450.5,
+              "spawns": [{ "enemy": "ClockworkHeavyMelee_Elite", "count": 2, "generated": true }]
+            },
+            {
+              "difficulty": 450.5,
+              "spawns": [
+                { "enemy": "ClockworkHeavyMelee_Elite", "count": 1, "generated": true },
+                { "enemy": "SatyrRatCatcher", "count": 2, "generated": true }
+              ]
+            }
+          ],
+          "blacklist": ["ClockworkHeavyMelee_Elite", "SatyrRatCatcher_Elite"]
+        }
+      ],
+      "uses": { "CWTartarusExitDoor": 1 },
+      "kills": {
+        "Crawler": 5,
+        "CWTartarusRubble02": 14,
+        "Breakable_I": 10,
+        "ClockworkHeavyMelee_Elite": 3,
+        "SatyrRatCatcher": 2,
+        "CWTartarusRubble01": 11
+      },
+      "traitScreens": [],
+      "traits": {
+        "acquired": [
+          { "name": "RoomRewardMaxManaTrait", "worldTime": 4229.4876438082 },
+          { "name": "RoomRewardMaxHealthTrait", "worldTime": 4229.4876438082 }
+        ],
+        "removed": ["TemporaryDiscountTrait"],
+        "upgraded": []
+      }
+    },
+    {
+      "name": "I_PreBoss02",
+      "reward": { "type": "ClockworkGoal", "store": "TartarusRewards" },
+      "doors": [{ "door": 609284, "room": "I_Boss01", "reward": { "type": "MixerIBossDrop" } }],
+      "exit": "I_Boss01",
+      "encounters": [{ "name": "Empty" }],
+      "uses": { "HermesUpgrade": 1, "ChronosBossDoor": 1, "StackUpgrade": 1 },
+      "traitScreens": [
+        {
+          "giver": "HermesUpgrade",
+          "options": [
+            { "name": "RestockBoon", "rarity": "Rare", "chosen": false },
+            { "name": "SorcerySpeedBoon", "rarity": "Rare", "chosen": false },
+            { "name": "DodgeChanceBoon", "rarity": "Epic", "chosen": true }
+          ]
+        },
+        {
+          "giver": "StackUpgrade",
+          "options": [
+            { "name": "HestiaCastBoon", "rarity": "Rare", "chosen": true },
+            { "name": "ApolloSprintBoon", "rarity": "Heroic", "chosen": false },
+            { "name": "BurnStackBoon", "rarity": "Rare", "chosen": false }
+          ]
+        }
+      ],
+      "traits": {
+        "acquired": [{ "name": "DodgeChanceBoon", "rarity": "Epic", "worldTime": 4253.7599070066 }],
+        "removed": [],
+        "upgraded": [
+          {
+            "name": "HestiaCastBoon",
+            "from": { "rarity": "Rare", "level": 10 },
+            "to": { "rarity": "Rare", "level": 11 },
+            "worldTime": 4256.4932404825
+          }
+        ]
+      },
+      "store": {
+        "kind": "worldShop",
+        "stock": [
+          { "slot": 1, "name": "StackUpgradeBig", "type": "Consumable", "baseCost": 300 },
+          { "slot": 2, "name": "BlindBoxLoot", "type": "Consumable" },
+          { "slot": 3, "name": "HealBigDrop", "type": "Consumable" },
+          {
+            "slot": 4,
+            "name": "ShopHermesUpgrade",
+            "type": "Consumable",
+            "baseCost": 500,
+            "boosted": true
+          },
+          { "slot": 5, "name": "WeaponPointsRareDrop", "type": "Consumable", "baseCost": 1300 }
+        ],
+        "purchases": [{ "slot": 4 }]
+      },
+      "bannedTraits": ["RestockBoon", "SorcerySpeedBoon"]
+    },
+    {
+      "name": "I_Boss01",
+      "reward": { "type": "MixerIBossDrop", "store": "TartarusRewards" },
+      "doors": [],
+      "encounters": [{ "name": "BossChronos01" }],
+      "uses": {},
+      "kills": {
+        "BattleStandardChronos": 3,
+        "SatyrCultist": 10,
+        "SatyrLancer_Elite": 2,
+        "Default": 1,
+        "TimeElemental2": 2
+      },
+      "traitScreens": [],
+      "traits": { "acquired": [], "removed": [], "upgraded": [] },
+      "npcInteractions": { "Chronos": 1 }
+    }
+  ]
+}

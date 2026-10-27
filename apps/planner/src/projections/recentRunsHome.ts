@@ -227,6 +227,7 @@ const AREA_LABELS: Readonly<Record<RunImportArea, string>> = {
   fountain: 'Fountains',
   wheel: 'Ship wheels',
   fields: 'Fields cages',
+  resource: 'Gathering points',
   npc: 'NPCs',
   menace: 'Menace',
   dream: 'Dream',

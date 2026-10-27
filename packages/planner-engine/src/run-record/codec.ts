@@ -604,6 +604,7 @@ const ROOM_OPTIONAL = [
   'npcInteractions',
   'bannedTraits',
   'spell',
+  'toolElements',
 ] as const;
 
 function room(value: unknown, label: string): RunRecordRoom {
@@ -636,6 +637,11 @@ function room(value: unknown, label: string): RunRecordRoom {
       return names;
     }),
     ...optional(record, 'spell', label, spell),
+    ...optional(record, 'toolElements', label, (entry, path) => {
+      const names = list(entry, path, text, 8);
+      if (names.length === 0) fail(`${path} must not be empty`);
+      return names;
+    }),
   }) as RunRecordRoom;
 }
 
@@ -646,7 +652,7 @@ export function decodeRunRecord(value: unknown): RunRecord {
   const run = object(record.run, 'run record.run');
   exact(run, ['runCount', 'startedAt'], [], 'run record.run');
   const route = object(record.route, 'run record.route');
-  exact(route, ['biomes', 'dream'], [], 'run record.route');
+  exact(route, ['biomes', 'dream'], ['maxClockworkNonGoalRewards'], 'run record.route');
   const rooms = list(record.rooms, 'run record.rooms', room, MAX_ROOMS);
   if (rooms.length === 0) fail('run record.rooms must not be empty');
   rooms.forEach((entry, index) => {
@@ -668,6 +674,9 @@ export function decodeRunRecord(value: unknown): RunRecord {
     route: Object.freeze({
       biomes: list(route.biomes, 'run record.route.biomes', text, 8),
       dream: bool(route.dream, 'run record.route.dream'),
+      ...optional(route, 'maxClockworkNonGoalRewards', 'run record.route', (entry, path) =>
+        integer(entry, path, 1),
+      ),
     }),
     outcome: decodedOutcome,
     loadout: loadout(record.loadout),

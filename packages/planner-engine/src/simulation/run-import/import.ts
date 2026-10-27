@@ -30,7 +30,7 @@ import type {
 import { answerHub, importSideRoomVisits } from './hub';
 import { answerTopology } from './topology';
 import { answerReward } from './rewards';
-import { answerLevelResolution, answerTraitOffer } from './trait-offers';
+import { answerLevelResolution, answerSteadyGrowth, answerTraitOffer } from './trait-offers';
 import { importDispositions, reportUnplacedDispositions } from './dispositions';
 import { importRoomActionOrders } from './action-order';
 import { importEncounters } from './encounters';
@@ -39,6 +39,7 @@ import { answerFeatures, importFeatures, reportDenialBans } from './features';
 import { answerFields, importFieldsRooms } from './fields';
 import { answerWheels, importWheelConversions, importWheels } from './wheels';
 import { areaOfFinding, isQuestionFinding } from './areas';
+import { importResourcePlacements } from './resources';
 import { routeKeyForRecord } from './vocabulary';
 
 /**
@@ -367,6 +368,7 @@ class RunImportWalk {
         importWheels(this.context);
         importWheelConversions(this.context);
         importFieldsRooms(this.context);
+        importResourcePlacements(this.context);
       }
       const issue = this.assembly.evaluation.issue;
       if (issue === undefined) {
@@ -428,7 +430,8 @@ class RunImportWalk {
       answerTopology(this.context, reason) ||
       answerReward(this.context, reason) ||
       answerTraitOffer(this.context, reason) ||
-      answerLevelResolution(this.context, reason)
+      answerLevelResolution(this.context, reason) ||
+      answerSteadyGrowth(this.context, reason)
     );
   }
 
@@ -456,8 +459,8 @@ class RunImportWalk {
 }
 
 /**
- * Questions of areas no capture has exercised: Travel Deal refills, Steady
- * Growth, Judgment and the Crystal Figurine.
+ * Questions of areas no capture has exercised: Travel Deal refills, Judgment
+ * and the Crystal Figurine.
  */
 function isUnreadQuestion(reason: SemanticFinding): boolean {
   const origin = reason.origin;
@@ -469,7 +472,6 @@ function isUnreadQuestion(reason: SemanticFinding): boolean {
         (origin.target.kind === 'stygianWellOffer' || origin.target.kind === 'hermesShrineOffer') &&
         origin.target.generationKey === 'travelDealRefill'
       );
-    case 'steadyGrowthOutcome':
     case 'judgmentArcana':
     case 'figurineArcana':
       return true;

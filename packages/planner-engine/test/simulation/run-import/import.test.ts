@@ -271,6 +271,18 @@ describe('run import of the Underworld capture', () => {
     });
   });
 
+  it("places each gathering tool's element in its room and reads Tartarus's non-goal cap", () => {
+    expect(imported.project.route.resourcePlacements).toEqual({
+      Pickaxe: { biomeKey: 'F', occurrenceId: 'F-r1' },
+      Exorcism: { biomeKey: 'I', occurrenceId: 'I-r36' },
+      Shovel: { biomeKey: 'F', occurrenceId: 'F-r0' },
+      Fishing: { biomeKey: 'H', occurrenceId: 'H-r26' },
+    });
+    expect(imported.project.route.biomes.find((biome) => biome.biomeKey === 'I')?.state).toEqual({
+      maxNonGoalRewards: 5,
+    });
+  });
+
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
@@ -282,7 +294,7 @@ describe('run import of the Underworld capture', () => {
         roomActionOrder: 9,
         traitOffer: 3,
       },
-      notInRecord: { embryo: 3, fields: 4, pathOfStars: 1, route: 1, traitOffer: 5 },
+      notInRecord: { embryo: 3, fields: 4, pathOfStars: 1, traitOffer: 5 },
       refused: { doors: 1, fields: 2, pool: 1, traitOffer: 1 },
       unsupportedArea: { shop: 2, well: 1 },
     });
@@ -399,6 +411,17 @@ describe('run import of the Surface capture', () => {
     );
   });
 
+  it('places gathering points and reads an offered side room reward from its door', () => {
+    expect(imported.project.route.resourcePlacements).toMatchObject({
+      Pickaxe: { biomeKey: 'O', occurrenceId: 'O-r23' },
+      Fishing: { biomeKey: 'N', occurrenceId: 'N:start' },
+    });
+    // N_Combat10 offered its N_Sub09 door (sideDoor2) without entering it; N_Sub05 stayed shut.
+    expect(reward(imported.project, 'N-r11-sideDoor2').offer).toEqual({
+      rewardType: 'RoomMoneyDrop',
+    });
+  });
+
   it('takes the Trial god whose screen opened first as the chosen one', () => {
     // The door lists Poseidon then Apollo; Apollo's screen opened before the fight.
     expect(reward(imported.project, 'O-r26').offer).toEqual({
@@ -459,7 +482,7 @@ describe('run import of the Surface capture', () => {
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { conversion: 2, menace: 14, roomActionOrder: 5 },
-      notInRecord: { menace: 17, reward: 1, shop: 10 },
+      notInRecord: { menace: 17, shop: 10 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption menace r1 encounterPhase@N-r1:Encounter -> ReplaceEncounterCustomization(N-r1 generated)',
@@ -487,6 +510,137 @@ describe('run import of the Surface capture', () => {
   });
 });
 
+describe('run import of the live Underworld recording', () => {
+  const record = fixture('underworld-live');
+  let imported: RunImport;
+  beforeAll(() => {
+    imported = projectFromRunRecord(catalog, record);
+  });
+
+  it('completes as a valid plan entering every recorded room, the Zagreus contract included', () => {
+    expect(imported.kind).toBe('complete');
+    expect(enteredRooms(imported.project)).toEqual(record.rooms.map((room) => room.name));
+  });
+
+  it('takes the Midshop Zagreus contract door as its additional exit, not an ordinary one', () => {
+    expect(occurrence(imported.project, 'G-r17').additionalExits).toEqual([
+      { kind: 'zagreusContract', key: 'zagreusContract', occurrenceId: 'G-r18' },
+    ]);
+    expect(occurrence(imported.project, 'G-r18').gameName).toBe('C_Boss01');
+    // The Shop's two ordinary doors are still offered beside the contract.
+    expect(occurrence(imported.project, 'G-r17-d561374').gameName).toBe('G_MiniBoss03');
+  });
+
+  it("imports Gorgon's Athena, Echo's Pom target, Steady Growth and the Contract pedestal", () => {
+    expect(
+      occurrence(imported.project, 'F-r2').encounters.gorgonResultByPhase?.['Encounter'],
+    ).toEqual({
+      athenaTriggerConditionMet: true,
+      athenaOffer: {
+        traitKeys: ['InvulnerabilityCastBoon', 'AthenaProjectileBoon', 'InvulnerabilityDashBoon'],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const echo = occurrence(imported.project, 'H-r28').encounters.traitOffersByPhase?.[
+      'Encounter'
+    ]?.['Story_Echo_01'];
+    expect(echo?.kind === 'traits' && echo.options[1]).toEqual({
+      traitKey: 'EchoDoubleLevelBoon',
+      echoPomTarget: 'HestiaCastBoon',
+    });
+    expect(reward(imported.project, 'G-r22').traitOffersByAcquisitionRole['source']).toMatchObject({
+      steadyGrowthTargets: { 1: 'HermesCastDiscountBoon', 2: 'ApolloSprintBoon' },
+    });
+    const preboss = occurrence(imported.project, 'I-r40');
+    expect(
+      preboss.state.kind === 'shop' && preboss.state.shop?.offers['infernalContractReward'],
+    ).toMatchObject({
+      optionKey: 'StackUpgrade',
+    });
+    expect(preboss.roomActions.order).toContainEqual({
+      kind: 'interactShopOffer',
+      offerKey: 'infernalContractReward',
+    });
+  });
+
+  it('reports every value the record did not answer exactly', () => {
+    expect(grouped(imported.report)).toEqual({
+      assumption: {
+        conversion: 3,
+        doors: 19,
+        traitOffer: 1,
+        reward: 1,
+        fields: 1,
+        roomActionOrder: 13,
+      },
+      notInRecord: { traitOffer: 5, fields: 2, shop: 3, route: 1 },
+      refused: { fields: 2, traitOffer: 12, pool: 2, shop: 1 },
+    });
+    // In ascending door id H_Combat07's cages roll before H_Combat05's Mini-Boss door and
+    // find no Boon left; the game generated the Mini-Boss door first, which refilled the store.
+    // H_PreBoss01's Shop stock was recorded as a Well, so its purchases are unknown.
+    // I_WorldShop replaces ShopHermesUpgrade's own requirements; the catalog keeps them.
+    // The unattributed Denial lines follow the H_Combat07 cage guess.
+    expect(entryLines(imported.report)).toEqual([
+      'assumption conversion r1 acquisitionEntry@F-r1 -> ReplaceAcquisitionEntryOffer(F-r1 RoomMoneyDrop)',
+      'assumption doors r1 exitDecision@F-r1',
+      'assumption doors r2 exitDecision@F-r2',
+      'assumption doors r3 exitDecision@F-r3',
+      'assumption doors r5 exitDecision@F-r5',
+      'assumption doors r6 exitDecision@F-r6',
+      'assumption conversion r8 acquisitionEntry@F-r8 -> ReplaceAcquisitionEntryOffer(F-r8 MaxHealthDrop)',
+      'assumption doors r8 exitDecision@F-r8',
+      'assumption doors r9 exitDecision@F-r9',
+      'assumption conversion r10 acquisitionEntry@F-r10 -> ReplaceAcquisitionEntryOffer(F-r10 StackUpgrade)',
+      'assumption traitOffer r15 traitOffer@G-r15:self -> ReplaceTraitOffer(G-r15 chaos)',
+      'assumption doors r15 exitDecision@G-r15',
+      'assumption doors r16 exitDecision@G-r16',
+      'assumption doors r17 exitDecision@G-r17',
+      'assumption doors r19 exitDecision@G-r19',
+      'assumption doors r20 exitDecision@G-r20',
+      'assumption reward r20 incomingReward@G-r20-d737226 -> ReplaceIncomingReward(G-r20-d737226 Devotion)',
+      'assumption doors r26 exitDecision@H-r26',
+      'refused fields r27 localReward@H-r27:cage2 -> ReplaceLocalReward(H-r27 HermesUpgrade)',
+      'assumption doors r27 exitDecision@H-r27',
+      'assumption doors r28 exitDecision@H-r28',
+      'assumption fields r28 localReward@H-r28-d564300:cage1',
+      'refused fields r29 localReward@H-r29:cage2 -> ReplaceLocalReward(H-r29 Boon)',
+      'refused traitOffer r30 traitOffer@H-r30:hiddenSource -> ReplaceTraitOffer(H-r30 CoverRegenerationBoon|DoubleExManaBoon#option1)',
+      'refused pool r32 roomFeature@H-r30:postboss -> ReplacePurgingPoolSlot(H-r30:postboss)',
+      'refused pool r32 roomFeature@H-r30:postboss -> ReplacePurgingPoolSlot(H-r30:postboss)',
+      'assumption doors r34 exitDecision@I-r34',
+      'assumption doors r35 exitDecision@I-r35',
+      'assumption doors r36 exitDecision@I-r36',
+      'assumption doors r37 exitDecision@I-r37',
+      'refused shop r40 shopOffer@I-r40 -> ReplaceShopOfferOption(I-r40)',
+      'assumption roomActionOrder r1 occurrence@F-r1',
+      'assumption roomActionOrder r2 occurrence@F-r2',
+      'assumption roomActionOrder r8 occurrence@F-r8',
+      'assumption roomActionOrder r10 occurrence@F-r10',
+      'assumption roomActionOrder r11 occurrence@F-r11',
+      'assumption roomActionOrder r13 occurrence@F-r11:postboss',
+      'assumption roomActionOrder r18 occurrence@G-r18',
+      'assumption roomActionOrder r24 occurrence@G-r22:postboss',
+      'assumption roomActionOrder r26 occurrence@H-r26',
+      'assumption roomActionOrder r27 occurrence@H-r27',
+      'assumption roomActionOrder r29 occurrence@H-r29',
+      'assumption roomActionOrder r32 occurrence@H-r30:postboss',
+      'assumption roomActionOrder r40 occurrence@I-r40',
+      'refused traitOffer r27 -',
+      'refused traitOffer r29 -',
+      'refused traitOffer r29 -',
+      'refused traitOffer r30 -',
+      'refused traitOffer r30 -',
+      'refused traitOffer r40 -',
+      'refused traitOffer r40 -',
+      'refused traitOffer r- -',
+      'refused traitOffer r- -',
+      'refused traitOffer r- -',
+      'refused traitOffer r- -',
+    ]);
+  });
+});
+
 describe('run import route support', () => {
   it('stops a Dream run before authoring anything', () => {
     const record = fixture('surface');
@@ -499,6 +653,17 @@ describe('run import route support', () => {
       code: 'unsupportedRoute',
     });
     expect(result.report.entries).toEqual([{ area: 'dream', reason: 'stopped' }]);
+  });
+
+  it("routes a profile's first attempt, whose run count is zero, to the Fresh File route", () => {
+    const record = fixture('underworld');
+    const result = projectFromRunRecord(catalog, {
+      ...record,
+      run: { ...record.run, runCount: 0 },
+      route: { ...record.route, biomes: ['F'] },
+      rooms: record.rooms.slice(0, 3),
+    });
+    expect(result.project.route.routeKey).toBe('FreshFile');
   });
 
   it('stops a run on a route the catalog does not declare', () => {
