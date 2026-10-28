@@ -591,13 +591,18 @@ describe('run import of the Surface victory', () => {
     imported = projectFromRunRecord(catalog, record);
   });
 
-  it("stops at O_Combat07's Poseidon wheel, which the plan's god cap refuses", () => {
+  it("stops at O_MiniBoss01's All Together, past O_Combat07's Vivid Sea Poseidon as a fifth god", () => {
     expect(imported.kind).toBe('stopped');
     expect(imported.kind === 'stopped' && imported.stop).toMatchObject({
-      area: 'wheel',
-      code: 'rewardMissing',
-      record: { roomIndex: 21, visit: 0 },
+      area: 'other',
+      code: 'allTogetherResultMissing',
+      record: { roomIndex: 24, visit: 0 },
     });
+    expect(
+      imported.report.entries.some(
+        (entry) => entry.reason === 'refused' && entry.record?.roomIndex === 21,
+      ),
+    ).toBe(false);
   });
 
   it("imports Aspect of Selene's Nacelle tree with its slot-0 node", () => {
@@ -643,14 +648,20 @@ describe('run import of the Surface victory', () => {
 
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
-      assumption: { conversion: 1, shop: 1, traitOffer: 1 },
-      mismatch: { stores: 5 },
-      stopped: { wheel: 1 },
+      assumption: { conversion: 2, shop: 1, traitOffer: 2 },
+      mismatch: { stores: 6, traits: 2 },
+      notInRecord: { reward: 1, traitOffer: 1, wheel: 2 },
+      refused: { wheel: 1 },
+      stopped: { other: 1 },
+      unsupportedArea: { traitOffer: 1 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption conversion r14 acquisitionEntry@N-r14 -> ReplaceAcquisitionEntryOffer(N-r14 HermesUpgrade)',
       'assumption traitOffer r17 traitOffer@N-r17:hiddenSource -> ReplaceTraitOffer(N-r17 HeraSpecialBoon|HeraCastBoon|DamageShareRetaliateBoon#option3)',
       'assumption shop r17 shopOffer@N-r17 -> ReplaceShopOfferOption(N-r17)',
+      'assumption conversion r22 acquisitionEntry@O-r22 -> ReplaceAcquisitionEntryOffer(O-r22 StackUpgrade)',
+      'assumption traitOffer r23 traitOffer@O-r23:hiddenSource -> ReplaceTraitOffer(O-r23 ZeusCastBoon|ZeusManaBoon|BoltRetaliateBoon#option1)',
+      'refused wheel r23 rewardWheelOffer@O-r23 -> ReplaceRewardWheelOffer(O-r23 StackUpgrade)',
     ]);
     expect(mismatchLines(imported.report)).toEqual([
       'stores r4 HubRewards: WeaponUpgrade 0 | WeaponUpgrade 1',
@@ -658,6 +669,9 @@ describe('run import of the Surface victory', () => {
       'stores r10 HubRewards: Boon 3, HermesUpgrade 1, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 2 | Boon 0, HermesUpgrade 0, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 1',
       'stores r15 HubRewards: Boon 3, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 2 | Boon 0, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 1',
       'stores r15 SubRoomRewardsHard: MaxHealthDrop 1 | MaxHealthDrop 2',
+      'traits r24 ApolloSprintBoon: Heroic level 1 | Heroic level 2',
+      'traits r24 SuitArmorTrait: held | absent',
+      'stores r24 RunProgress: MaxManaDrop 2, StackUpgrade 3 | MaxManaDrop 3, StackUpgrade 2',
     ]);
   });
 });

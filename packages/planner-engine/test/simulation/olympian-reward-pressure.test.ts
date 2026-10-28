@@ -278,6 +278,72 @@ describe('Olympian reward pressure', () => {
     );
   });
 
+  it('forces its provider past the god cap only while the force use remains', () => {
+    const initial = initializeRewardBranches(
+      undefined,
+      createTestArcanaFearState(),
+      catalog,
+      'ForceZeusBoonKeepsake',
+    )[0]!;
+    const capped = (remainingForceUses: 0 | 1): RewardBranchState =>
+      Object.freeze({
+        ...initial,
+        state: Object.freeze({
+          ...initial.state,
+          rewardPriorities: Object.freeze([]),
+          keepsakes: Object.freeze({
+            ...initial.state.keepsakes,
+            olympianSources: Object.freeze(
+              initial.state.keepsakes.olympianSources.map((source) =>
+                Object.freeze({ ...source, remainingForceUses }),
+              ),
+            ),
+          }),
+          rewardHistory: Object.freeze({
+            ...initial.state.rewardHistory,
+            lootTypeHistory: Object.freeze({
+              ApolloUpgrade: 1,
+              HeraUpgrade: 1,
+              HephaestusUpgrade: 1,
+              PoseidonUpgrade: 1,
+            }),
+          }),
+        }),
+      });
+    const context = {
+      catalog,
+      reward: {
+        origin,
+        offer: {
+          rewardType: 'Boon' as const,
+          payload: { kind: 'BoonSource' as const, source: 'ZeusUpgrade' },
+        },
+        producerLifecycleKey: 'RoomReward',
+        resolvedStoreKey: 'RunProgress',
+      },
+      binding: {
+        kind: 'countedChoice' as const,
+        storeKeys: ['RunProgress'],
+        eligibleRewardTypes: [],
+        ineligibleRewardTypes: [],
+        allowedRewardTypes: [],
+        producerLifecycleKey: 'RoomReward',
+      },
+      historySequence: 1,
+      peers: [],
+      facts: (state: RewardBranchState['state']) => factsFor(state.rewardHistory),
+    };
+
+    expect(processRewardOffer([capped(1)], context, new Map())).toHaveLength(1);
+    const spentFindings = new Map();
+    expect(processRewardOffer([capped(0)], context, spentFindings)).toEqual([]);
+    expect([...spentFindings.values()]).toContainEqual(
+      expect.objectContaining({
+        finding: expect.objectContaining({ code: 'rewardSourceUnavailable' }),
+      }),
+    );
+  });
+
   it('does not steer an uncounted fixed god reward', () => {
     const initial = initializeRewardBranches(
       undefined,

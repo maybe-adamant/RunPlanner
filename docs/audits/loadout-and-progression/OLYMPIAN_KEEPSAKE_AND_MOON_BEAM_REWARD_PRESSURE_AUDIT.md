@@ -45,7 +45,8 @@ Primary evidence:
 - `StoreLogic.lua`: ordinary Shop/Mystery Boon `BoughtFromShop` arguments and
   Blind Box unwrap ordering;
 - `RunLogic.lua`: `CurrentRun.RewardPriorities` initialization,
-  `GetInteractedGodsThisRun`, and loot-history membership;
+  `GetInteractedGodsThisRun`, `ReachedMaxGods`, and loot-history membership;
+- `InteractLogic.lua`: Ship wheel reroll setup;
 - `LootData.lua`: `RunProgress`, `HubRewards`, `TartarusRewards`, and
   `TyphonBossRewards`; and
 - `ConsumableData.lua`: the distinct `TalentDrop`, `TalentBigDrop`, and
@@ -168,7 +169,12 @@ accident as a durable rule.
 After `ChooseRoomReward` selects `Boon`, `SetupRoomReward` resolves its provider.
 It scans `CurrentRun.Hero.Traits` in acquisition order. The first trait with an
 active `ForceBoonName` whose provider is not excluded by an earlier sibling
-Boon supplies the room's `ForceLootName`; the scan then stops.
+Boon supplies the room's `ForceLootName`; the scan then stops. The forced
+provider replaces `ChooseLoot`'s pick, so `ReachedMaxGods` is never consulted:
+a live force offers its provider even as a fifth god past `MaxGodsPerRun`
+(`RewardLogic.lua:228-247`, `RunLogic.lua:1835-1845`). Ship wheels set up their
+Boons through the same scan (`AlwaysSetupForceLootName`, `RoomLogic.lua:1433`,
+`InteractLogic.lua:1483`).
 
 This provider selection does not decrement top-level `Uses`. It only records
 the provider on the generated target. Therefore:

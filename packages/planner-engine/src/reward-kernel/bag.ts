@@ -196,7 +196,12 @@ export function consumeCountedOffer(
       : [];
   }
 
-  if (!isOfferSupportedAtResolutionPoint(catalog, offer, facts, 'offer', options.peers)) {
+  const forced =
+    offer.payload?.kind === 'BoonSource' && offer.payload.source === options.forcedBoonSource;
+  if (
+    !forced &&
+    !isOfferSupportedAtResolutionPoint(catalog, offer, facts, 'offer', options.peers)
+  ) {
     return [];
   }
 

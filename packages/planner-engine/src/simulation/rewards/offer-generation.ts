@@ -302,7 +302,13 @@ function processRewardOfferBranches(
     const effectiveOffer = reward.offer;
     const facts = context.facts(originalBranch.state);
     const peers = { priorOffers: context.peers.map((peer) => peer.offer) };
+    // A forced boon replaces ChooseLoot's pick, so the god cap is never consulted.
+    const forcedBoonSource =
+      requiredProvider !== undefined && effectiveOffer.payload?.kind === 'BoonSource'
+        ? effectiveOffer.payload.source
+        : undefined;
     if (
+      forcedBoonSource === undefined &&
       !isOfferSupportedAtResolutionPoint(catalog.rewards, effectiveOffer, facts, 'offer', peers)
     ) {
       sawSourceFailure = true;
@@ -350,7 +356,9 @@ function processRewardOfferBranches(
       rejected?.push({ branch: originalBranch, gate: 'storeBinding' });
       continue;
     }
-    const { storeKey, store, prepared, options: bagOptions } = counted;
+    const { storeKey, store, prepared } = counted;
+    const bagOptions =
+      forcedBoonSource === undefined ? counted.options : { ...counted.options, forcedBoonSource };
     const requiredPriority = oldestSupportedRewardPriority(
       store,
       prepared.bag,

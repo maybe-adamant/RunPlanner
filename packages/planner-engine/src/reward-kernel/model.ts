@@ -304,6 +304,8 @@ export interface CountedOfferTransitionOptions {
   readonly eligibleRewardTypes?: ReadonlySet<string>;
   readonly ineligibleRewardTypes?: ReadonlySet<string>;
   readonly peers?: RewardPeerContext;
+  /** A keepsake's `ForceBoonName` god: it replaces ChooseLoot, so source support is not consulted. */
+  readonly forcedBoonSource?: string;
 }
 
 export interface RewardHistoryState {

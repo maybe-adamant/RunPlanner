@@ -220,6 +220,10 @@ the cap and exclusion while remaining absent from acquisition history. If peer
 exclusions empty the primary pool, game setup retries with weaker exclusions
 and finally none; the unrestricted retry recomputes support without the peer
 set. Source uniqueness is strict only while the primary pool remains nonempty.
+A live Olympian keepsake's
+[provider force](../audits/loadout-and-progression/OLYMPIAN_KEEPSAKE_AND_MOON_BEAM_REWARD_PRESSURE_AUDIT.md#ordinary-boon-source-selection)
+replaces this resolution for a counted door or wheel Boon: its provider is
+offered without the cap, and every other source is refused.
 
 `ordinaryNoPeer`
 : Resolve one ordinary source at the declared lifecycle point using current
