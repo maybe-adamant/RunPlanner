@@ -88,11 +88,32 @@ local function hubWasVisited(hub, route)
     return false
 end
 
+-- The return door natively fills its hidden room and reward only at a room's first doors
+-- unlock; RestoreUnlockRoomExits reuses ExitDoorRooms and OfferedRewards.
+local function firstUnlock(nativeRoom)
+    return type(nativeRoom) == "table" and nativeRoom.RestoreUnlockRoomExits ~= true
+        and (nativeRoom.TimesVisited == nil or nativeRoom.TimesVisited <= 1)
+end
+
+local RETURN_DOOR_NAMES = {
+    EphyraExitDoorReturn = true, EphyraExitDoorReturnNE = true, N_SubRoomDoorReturn = true,
+}
+
+local function isReturnDoor(door)
+    return type(door) == "table" and (RETURN_DOOR_NAMES[door.Name] == true
+        or door.ReturnToPreviousRoomName ~= nil or door.ReturnToPreviousRoom == true)
+end
+
 function ephyra.scope(plan, occurrence, nativeRoom, game, route)
     local hub = ephyra.hub(plan, nativeRoom)
+    local phantom = hub == nil and occurrence and occurrence.overview and occurrence.overview.phantomExit or nil
+    if phantom ~= nil and (occurrence.gameName ~= roomName(nativeRoom) or not firstUnlock(nativeRoom)) then
+        phantom = nil
+    end
     local slots = hub and hub.slots or occurrence and occurrence.overview
         and occurrence.overview.localSlots or nil
-    if slots == nil then return nil end
+    if slots == nil and phantom == nil then return nil end
+    slots = slots or {}
     local byDoor = {}
     local plannedDoorIds = {}
     for _, slot in ipairs(slots) do
@@ -111,6 +132,22 @@ function ephyra.scope(plan, occurrence, nativeRoom, game, route)
         plannedDoorIds = plannedDoorIds,
         declaredDoorIds = declaredDoorIds,
         initialBoard = hub == nil or not hubWasVisited(hub, route),
+        phantom = phantom,
+        nativeRoom = nativeRoom,
+    }
+end
+
+-- The synthetic slot steering the return door's hidden draw; its room is no occurrence.
+local function phantomSlot(phantom, doorId)
+    local reward = phantom.reward
+    return {
+        phantom = true,
+        physicalDoorId = doorId,
+        room = { gameName = phantom.placeholderRoomGameName },
+        reward = reward and {
+            rewardType = reward.rewardType, resolvedStoreKey = reward.storeKey,
+            source = reward.source, spurnedSource = reward.spurnedSource,
+        } or nil,
     }
 end
 
@@ -128,11 +165,14 @@ end
 
 function ephyra.bindNativeDoors(scope, nativeDoors)
     for _, door in ipairs(nativeDoors or {}) do
+        if scope.phantom ~= nil and scope.byDoor[door.ObjectId] == nil and isReturnDoor(door) then
+            scope.byDoor[door.ObjectId] = phantomSlot(scope.phantom, door.ObjectId)
+        end
         local slot = scope.byDoor[door.ObjectId]
         if slot ~= nil then
             if scope.hub ~= nil then
                 local nativeRoom = door.Room or door.RoomData
-                if type(nativeRoom) == "table" then
+                if type(nativeRoom) == "table" and slot.room.id ~= nil then
                     nativeRoom.__runPlannerExecutionRoomId = slot.room.id
                 end
             else
@@ -148,7 +188,8 @@ function ephyra.stampSlotDoors(scope, nativeDoors)
     for _, door in ipairs(nativeDoors or {}) do
         local slot = scope.byDoor[door.ObjectId]
         local nativeRoom = door.Room or door.RoomData
-        if slot ~= nil and type(nativeRoom) == "table" and roomName(nativeRoom) == slot.room.gameName then
+        if slot ~= nil and slot.room.id ~= nil and type(nativeRoom) == "table"
+            and roomName(nativeRoom) == slot.room.gameName then
             nativeRoom.__runPlannerExecutionRoomId = slot.room.id
         end
     end
@@ -163,6 +204,60 @@ function ephyra.chooseSideRoom(scope, args, game)
     result.GenusName, result.Name = slot.room.gameName, slot.room.gameName
     result.__runPlannerExecutionRoomId = slot.room.id
     return result
+end
+
+-- The return door's hidden room and reward as the room recorded them (AssignRoomToExitDoor),
+-- which outlive the door's own room once the door is used.
+local function provePhantom(scope, nativeDoors)
+    local door
+    for _, candidate in ipairs(nativeDoors or {}) do
+        if door == nil and isReturnDoor(candidate) then door = candidate end
+    end
+    if door == nil then
+        return nil, { kind = "ephyraReturnDoorMissing", expected = true, observed = false }
+    end
+    local nativeRoom = scope.nativeRoom
+    local doorRoom = door.Room or door.RoomData
+    local exitRooms = type(nativeRoom) == "table" and nativeRoom.ExitDoorRooms or nil
+    local observedRoom = type(exitRooms) == "table" and exitRooms[door.ObjectId] or roomName(doorRoom)
+    local phantom = scope.phantom
+    if observedRoom ~= phantom.placeholderRoomGameName then
+        return nil, {
+            kind = "ephyraReturnDoorRoom", doorId = door.ObjectId,
+            expected = phantom.placeholderRoomGameName, observed = observedRoom,
+        }
+    end
+    local reward = phantom.reward
+    if reward == nil then return true end
+    local offeredRewards = type(nativeRoom) == "table" and nativeRoom.OfferedRewards or nil
+    local offered = type(offeredRewards) == "table" and offeredRewards[door.ObjectId] or nil
+    local observedReward, observedSource, observedSpurned
+    if type(offered) == "table" then
+        observedReward, observedSource, observedSpurned = offered.Type, offered.ForceLootName, offered.LootBName
+    elseif type(doorRoom) == "table" then
+        local encounter = type(doorRoom.Encounter) == "table" and doorRoom.Encounter or {}
+        observedReward, observedSource, observedSpurned =
+            rewardName(doorRoom.ChosenRewardType), doorRoom.ForceLootName, encounter.LootBName
+    end
+    if observedReward ~= reward.rewardType then
+        return nil, {
+            kind = "ephyraReturnDoorReward", doorId = door.ObjectId,
+            expected = reward.rewardType, observed = observedReward,
+        }
+    end
+    if reward.source ~= nil and observedSource ~= reward.source then
+        return nil, {
+            kind = "ephyraReturnDoorRewardSource", doorId = door.ObjectId,
+            expected = reward.source, observed = observedSource,
+        }
+    end
+    if reward.spurnedSource ~= nil and observedSpurned ~= reward.spurnedSource then
+        return nil, {
+            kind = "ephyraReturnDoorRewardSource", doorId = door.ObjectId,
+            expected = reward.spurnedSource, observed = observedSpurned,
+        }
+    end
+    return true
 end
 
 function ephyra.prove(scope, nativeDoors)
@@ -216,6 +311,10 @@ function ephyra.prove(scope, nativeDoors)
                 }
             end
         end
+    end
+    if scope.phantom ~= nil then
+        local proved, errorValue = provePhantom(scope, nativeDoors)
+        if not proved then return nil, errorValue end
     end
     if scope.hub ~= nil then
         if #nonBoardDoors ~= 0 then

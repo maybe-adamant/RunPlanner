@@ -127,6 +127,10 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         end
         local occurrence = occurrenceForRoom(state, nativeRoom)
         local reward = occurrence and occurrence.overview.incomingReward
+        if occurrence == nil and ephyraDoorScope ~= nil and type(args) == "table" and type(args.Door) == "table" then
+            local slot = ephyraDoorScope.byDoor[args.Door.ObjectId]
+            if slot ~= nil and slot.phantom then reward = slot.reward end
+        end
         local function setup()
             return base(currentRun, nativeRoom, prior, args)
         end
@@ -189,6 +193,10 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         if transformationChoice and pending == nil then
             return base(run, nativeRoom, rewardStore, chosen, args)
         end
+        -- A placeholder that draws nothing keeps its native forced or absent reward.
+        if ephyraSlot ~= nil and ephyraSlot.phantom and ephyraSlot.reward == nil then
+            return base(run, nativeRoom, rewardStore, chosen, args)
+        end
         local occurrence = occurrenceForRoom(state, nativeRoom)
         if occurrence == nil and pending == nil and ephyraSlot == nil then
             return base(run, nativeRoom, rewardStore, chosen, args)
@@ -221,7 +229,7 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         door, nativeRoom)
         local ephyraTarget = type(door) == "table" and ephyraDoorScope
             and ephyraDoorScope.byDoor[door.ObjectId] or nil
-        if ephyraTarget ~= nil and type(nativeRoom) == "table" then
+        if ephyraTarget ~= nil and ephyraTarget.room.id ~= nil and type(nativeRoom) == "table" then
             nativeRoom.__runPlannerExecutionRoomId = ephyraTarget.room.id
         end
         local result = base(door, nativeRoom)

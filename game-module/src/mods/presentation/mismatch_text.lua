@@ -342,6 +342,13 @@ function text.difference(issue)
         return expected == true and "a planned Ephyra door was missing" or "an Ephyra door was open that the plan kept closed"
     end
     if checkpoint == "ephyraUnexpectedDoor" then return "an Ephyra door was open that the plan didn't use" end
+    if checkpoint == "ephyraReturnDoorMissing" then return "the Ephyra return door was missing" end
+    if checkpoint == "ephyraReturnDoorRoom" then
+        return plannedFound("return-door room ", expected, observed)
+    end
+    if checkpoint == "ephyraReturnDoorReward" or checkpoint == "ephyraReturnDoorRewardSource" then
+        return plannedFound("return-door reward ", expected, observed)
+    end
     if checkpoint == "ephyraHubEntryCount" then
         return plannedFound("", expected, observed) and ("planned " .. scalar(expected) .. " door, found "
             .. scalar(observed)) or nil

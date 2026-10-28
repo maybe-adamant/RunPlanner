@@ -173,6 +173,29 @@ local function infernalContractPedestal(value, label)
     return record
 end
 
+-- The hidden return door's placeholder room and, unless it draws nothing, its reward.
+local function phantomExit(value, label)
+    local record, errorMessage = p.exact(value, { "placeholderRoomGameName" }, { "reward" }, label)
+    if not record then return nil, errorMessage end
+    if not p.str(record.placeholderRoomGameName, label .. ".placeholderRoomGameName") then
+        return p.fail(label .. " has invalid placeholder room")
+    end
+    if record.reward == nil then return record end
+    local reward, rewardError = p.exact(
+        record.reward, { "rewardType", "storeKey" }, { "source", "spurnedSource" }, label .. ".reward"
+    )
+    if not reward then return nil, rewardError end
+    for _, key in ipairs({ "rewardType", "storeKey", "source", "spurnedSource" }) do
+        if reward[key] ~= nil and not p.str(reward[key], label .. ".reward." .. key) then
+            return p.fail(label .. ".reward has invalid " .. key)
+        end
+    end
+    if reward.spurnedSource ~= nil and reward.source == nil then
+        return p.fail(label .. ".reward.spurnedSource requires source")
+    end
+    return record
+end
+
 local function stygianWell(value, label)
     local record, errorMessage = p.exact(value, { "interacted" }, { "offers" }, label)
     if not record then return nil, errorMessage end
@@ -502,7 +525,7 @@ function overview.decode(value, label)
         {
             "incomingReward", "effectNeutralRequiredReward", "unmodeledEncounterKeys",
             "rewardWheels",
-            "shop", "infernalContractPedestal", "hermesShrine", "stygianWell",
+            "shop", "infernalContractPedestal", "phantomExit", "hermesShrine", "stygianWell",
             "purgingPool", "keepsakeRack",
             "fountain", "fields", "additional",
             "hub", "localSlots",
@@ -571,6 +594,10 @@ function overview.decode(value, label)
             record.infernalContractPedestal, label .. ".infernalContractPedestal"
         )
         if pedestalError then return nil, pedestalError end
+    end
+    if record.phantomExit ~= nil then
+        local _, phantomError = phantomExit(record.phantomExit, label .. ".phantomExit")
+        if phantomError then return nil, phantomError end
     end
     if record.hermesShrine ~= nil then
         local _, shrineError = hermesShrine(record.hermesShrine, label .. ".hermesShrine")

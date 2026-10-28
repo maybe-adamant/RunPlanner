@@ -24,6 +24,36 @@ function TestProtocol.testChaosSpawnPointIndexIsStrictAndChaosOnly()
     lu.assertNil(overview.decode(value(',"spawnPointIndex":1', "zagreusContract"), "overview"))
 end
 
+function TestProtocol.testPhantomExitIsStrictAndBounded()
+    local function value(phantom)
+        return assert(json.decode('{"encounterPhases":[],"requiredObjects":[],"phantomExit":' .. phantom .. '}'))
+    end
+    for _, phantom in ipairs({
+        '{"placeholderRoomGameName":"N_Shop01"}',
+        '{"placeholderRoomGameName":"N_Sub02","reward":{"rewardType":"MaxHealthDrop","storeKey":"SubRoomRewards"}}',
+        '{"placeholderRoomGameName":"N_MiniBoss01","reward":{"rewardType":"Boon","storeKey":"RunProgress","source":"ZeusUpgrade"}}',
+        '{"placeholderRoomGameName":"N_Combat01","reward":{"rewardType":"Devotion","storeKey":"HubRewards",'
+            .. '"source":"ZeusUpgrade","spurnedSource":"HeraUpgrade"}}',
+    }) do
+        lu.assertNotNil(overview.decode(value(phantom), "overview"), phantom)
+    end
+    for _, phantom in ipairs({
+        'null', '[]', '{}', '{"placeholderRoomGameName":""}', '{"placeholderRoomGameName":3}',
+        '{"placeholderRoomGameName":"' .. string.rep("N", 513) .. '"}',
+        '{"placeholderRoomGameName":"N_Shop01","room":"N_Shop01"}',
+        '{"placeholderRoomGameName":"N_Shop01","reward":null}',
+        '{"placeholderRoomGameName":"N_Sub02","reward":{"rewardType":"MaxHealthDrop"}}',
+        '{"placeholderRoomGameName":"N_Sub02","reward":{"storeKey":"SubRoomRewards"}}',
+        '{"placeholderRoomGameName":"N_Sub02","reward":{"rewardType":"MaxHealthDrop","storeKey":""}}',
+        '{"placeholderRoomGameName":"N_Sub02","reward":{"rewardType":"MaxHealthDrop","storeKey":"SubRoomRewards",'
+            .. '"resolvedStoreKey":"SubRoomRewards"}}',
+        '{"placeholderRoomGameName":"N_Combat01","reward":{"rewardType":"Devotion","storeKey":"HubRewards",'
+            .. '"spurnedSource":"HeraUpgrade"}}',
+    }) do
+        lu.assertNil(overview.decode(value(phantom), "overview"), phantom)
+    end
+end
+
 function TestProtocol.testMenaceStrictSourceCoverageAndOmittedZero()
     local function value()
         return assert(json.decode([[{"kind":"generated","decisionKey":"generatedComposition","expectedBudget":40,"waveCount":1,"waves":[{"waveIndex":1,"types":[{"choiceKey":"Guard","nativeId":"Guard","source":"addition"}],"counts":{"Guard":4}}]}]]))
