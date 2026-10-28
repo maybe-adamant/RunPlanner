@@ -105,7 +105,7 @@ promoted.
   (drops it), so deletion is always explicit; editing an earlier element that
   invalidates a later one leaves the later one preserved with a finding.
 - **Screen rerolls:** a count only, on the supported screens: the nine core
-  Olympians, Hermes, Athena, Dionysus, Artemis, Chaos, the Wells and the Pool
+  Olympians, Hermes, Athena, Dionysus, Artemis, Chaos, Pom of Power, the Wells and the Pool
   of Purging. Not NPC screens, Hammers, Hermes Shrines, Selene or the World
   Shop. The button appears only when screen rerolls are enabled; k rerolls of
   one screen cost k(k+1)/2. The final rows stay authored as today; screen
