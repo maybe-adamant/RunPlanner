@@ -134,16 +134,17 @@ function OccurrenceOutgoing({
               store={bossDoorRewardStore}
             />
           )}
-          <p className="fixed-room-state">
-            {outgoing.kind === 'blockedOrUnentered' ? outgoing.message : outgoing.label}
-          </p>
           {outgoing.kind === 'topologyOwned' && phantomExit !== undefined ? (
             <PhantomExitDoor
               control={phantomExit}
               idPrefix={idPrefix}
               interactions={interactions}
             />
-          ) : null}
+          ) : (
+            <p className="fixed-room-state">
+              {outgoing.kind === 'blockedOrUnentered' ? outgoing.message : outgoing.label}
+            </p>
+          )}
         </section>
       );
   }

@@ -57,6 +57,11 @@ describe('PhantomExitDoor', () => {
     let door = await openDoors(view, combat05);
     expect(door.textContent).toContain('Preboss · no reward');
     expect(door.textContent).toContain('Automatic');
+    expect(
+      within(screen.getByRole('region', { name: 'Outgoing doors' })).queryByText(
+        /Continuation is owned/,
+      ),
+    ).toBeNull();
     expect(within(door).queryByRole('button', { name: 'Room' })).toBeNull();
     expect(within(door).getByRole('heading', { name: 'Hidden return door' }).dataset.hint).toMatch(
       /^The game also draws a room and reward/,
