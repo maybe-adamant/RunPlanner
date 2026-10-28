@@ -1,7 +1,7 @@
 {
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
-  "schemaVersion": 99,
+  "schemaVersion": 100,
   "schemaRevision": 0,
   "projectId": "surface-4",
   "routeKey": "Surface",
@@ -1332,7 +1332,7 @@
                   { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
                   { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
                   { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 20 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 18 } },
                   {
                     "storeKey": "SubRoomRewardsHard",
                     "remaining": { "kind": "exact", "count": 8 }
@@ -1473,7 +1473,7 @@
                   {
                     "name": "SubRoomRewards",
                     "remainingEntryCounts": [
-                      0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                      0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
                     ]
                   },
                   {
@@ -1554,7 +1554,7 @@
                   { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
                   { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
                   { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 20 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 18 } },
                   {
                     "storeKey": "SubRoomRewardsHard",
                     "remaining": { "kind": "exact", "count": 8 }
@@ -1696,7 +1696,7 @@
                   {
                     "name": "SubRoomRewards",
                     "remainingEntryCounts": [
-                      0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                      0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
                     ]
                   },
                   {
@@ -1777,7 +1777,7 @@
                   { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
                   { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
                   { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 18 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 15 } },
                   {
                     "storeKey": "SubRoomRewardsHard",
                     "remaining": { "kind": "exact", "count": 8 }
@@ -1919,7 +1919,7 @@
                   {
                     "name": "SubRoomRewards",
                     "remainingEntryCounts": [
-                      0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                      0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1
                     ]
                   },
                   {
@@ -2001,7 +2001,7 @@
                   { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
                   { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
                   { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
                   {
                     "storeKey": "SubRoomRewardsHard",
                     "remaining": { "kind": "exact", "count": 8 }
@@ -2144,7 +2144,7 @@
                   {
                     "name": "SubRoomRewards",
                     "remainingEntryCounts": [
-                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                     ]
                   },
                   {
@@ -2227,7 +2227,7 @@
                   { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
                   { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
                   { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
                   {
                     "storeKey": "SubRoomRewardsHard",
                     "remaining": { "kind": "exact", "count": 8 }
@@ -2371,7 +2371,7 @@
                   {
                     "name": "SubRoomRewards",
                     "remainingEntryCounts": [
-                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                     ]
                   },
                   {
@@ -2455,7 +2455,7 @@
                   { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
                   { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
                   { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
                   {
                     "storeKey": "SubRoomRewardsHard",
                     "remaining": { "kind": "exact", "count": 8 }
@@ -2600,7 +2600,7 @@
                   {
                     "name": "SubRoomRewards",
                     "remainingEntryCounts": [
-                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                     ]
                   },
                   {
@@ -2640,7 +2640,7 @@
                       "progress": 0,
                       "markedBlessingKey": "ChaosElementalBlessing",
                       "markedBlessingValues": {},
-                      "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
+                      "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:257"
                     },
                     "gorgon": null
                   },
@@ -2853,6 +2853,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -3162,7 +3163,11 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedNSubRoom", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "phantomExit": {
+          "placeholderRoomGameName": "N_Sub01",
+          "reward": { "rewardType": "MetaCurrencyDrop", "storeKey": "SubRoomRewards" }
+        }
       },
       "timeline": {
         "transactions": [
@@ -3231,7 +3236,46 @@
               "biomeEncounterDepth": 3,
               "routeEncounterDepth": 3,
               "roomHistoryOrdinal": 5
-            }
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 19 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -3251,7 +3295,11 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedNSubRoom", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "phantomExit": {
+          "placeholderRoomGameName": "N_Sub01",
+          "reward": { "rewardType": "MetaCardPointsCommonDrop", "storeKey": "SubRoomRewards" }
+        }
       },
       "timeline": {
         "transactions": [
@@ -3327,7 +3375,46 @@
               "biomeEncounterDepth": 3,
               "routeEncounterDepth": 3,
               "roomHistoryOrdinal": 7
-            }
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -3349,6 +3436,7 @@
           { "slotKey": "Encounter", "encounterKey": "MiniBossSatyrCrossbow", "kind": "miniboss" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": []
       },
       "timeline": {
@@ -3553,6 +3641,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -3667,7 +3756,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 16 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -3704,7 +3793,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -3768,7 +3857,11 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedNSubRoom", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "phantomExit": {
+          "placeholderRoomGameName": "N_Sub02",
+          "reward": { "rewardType": "MaxHealthDrop", "storeKey": "SubRoomRewards" }
+        }
       },
       "timeline": {
         "transactions": [
@@ -3837,7 +3930,46 @@
               "biomeEncounterDepth": 5,
               "routeEncounterDepth": 5,
               "roomHistoryOrdinal": 13
-            }
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -3859,6 +3991,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN_Bigger", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -3981,7 +4114,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -4039,7 +4172,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -4103,7 +4236,11 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedNSubRoom", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "phantomExit": {
+          "placeholderRoomGameName": "N_Sub02",
+          "reward": { "rewardType": "MaxManaDrop", "storeKey": "SubRoomRewards" }
+        }
       },
       "timeline": {
         "transactions": [
@@ -4173,6 +4310,20 @@
               "routeEncounterDepth": 6,
               "roomHistoryOrdinal": 17
             },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
             "traits": {
               "equipped": [
                 { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
@@ -4193,7 +4344,32 @@
               "godRarityCounts": { "Common": 5 },
               "upgradableCount": 4,
               "bannedTraitKeys": []
-            }
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -4215,6 +4391,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           { "slotKey": "sideDoor1", "physicalDoorId": 755971, "generation": "notGenerated" },
           { "slotKey": "sideDoor2", "physicalDoorId": 755184, "generation": "notGenerated" },
@@ -4426,6 +4603,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           { "slotKey": "sideDoor1", "physicalDoorId": 558353, "generation": "notGenerated" }
         ]
@@ -4601,7 +4779,7 @@
                   "progress": 0,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:257"
                 },
                 "gorgon": null
               },
@@ -4779,7 +4957,7 @@
                   "progress": 1,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:257"
                 },
                 "gorgon": null
               },
@@ -4966,7 +5144,7 @@
                   "progress": 1,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:257"
                 },
                 "gorgon": null
               },
@@ -5236,7 +5414,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -5296,7 +5474,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -5326,7 +5504,7 @@
                   "progress": 3,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:257"
                 },
                 "gorgon": null
               },
@@ -5482,7 +5660,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -5519,7 +5697,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -5549,7 +5727,7 @@
                   "progress": 5,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:257"
                 },
                 "gorgon": null
               },
@@ -5757,7 +5935,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -5818,7 +5996,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -5848,7 +6026,7 @@
                   "progress": 7,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:248"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",1]:257"
                 },
                 "gorgon": null
               },
@@ -6128,7 +6306,7 @@
                   "progress": 0,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:392"
                 },
                 "gorgon": null
               },
@@ -6413,7 +6591,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -6477,7 +6655,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -6507,7 +6685,7 @@
                   "progress": 2,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:392"
                 },
                 "gorgon": null
               },
@@ -6729,7 +6907,7 @@
                   "progress": 3,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:392"
                 },
                 "gorgon": null
               },
@@ -6916,7 +7094,7 @@
                   "progress": 3,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:392"
                 },
                 "gorgon": null
               },
@@ -7023,7 +7201,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -7060,7 +7238,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -7090,7 +7268,7 @@
                   "progress": 4,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:392"
                 },
                 "gorgon": null
               },
@@ -7316,7 +7494,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 8 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -7380,7 +7558,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -7410,7 +7588,7 @@
                   "progress": 5,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:392"
                 },
                 "gorgon": null
               },
@@ -7550,7 +7728,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -7587,7 +7765,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -7617,7 +7795,7 @@
                   "progress": 6,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:392"
                 },
                 "gorgon": null
               },
@@ -7778,7 +7956,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 4 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -7842,7 +8020,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -7872,7 +8050,7 @@
                   "progress": 7,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:382"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",2]:392"
                 },
                 "gorgon": null
               },
@@ -8051,7 +8229,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 20 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -8116,7 +8294,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -8146,7 +8324,7 @@
                   "progress": 0,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:581"
                 },
                 "gorgon": null
               },
@@ -8317,7 +8495,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 18 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -8382,7 +8560,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -8412,7 +8590,7 @@
                   "progress": 1,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:581"
                 },
                 "gorgon": null
               },
@@ -8556,7 +8734,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -8593,7 +8771,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -8623,7 +8801,7 @@
                   "progress": 2,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:581"
                 },
                 "gorgon": null
               },
@@ -8757,7 +8935,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -8809,7 +8987,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -8970,7 +9148,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -9036,7 +9214,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -9066,7 +9244,7 @@
                   "progress": 3,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:581"
                 },
                 "gorgon": null
               },
@@ -9241,7 +9419,7 @@
                   "progress": 4,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:581"
                 },
                 "gorgon": null
               },
@@ -9494,7 +9672,7 @@
                   "progress": 5,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:581"
                 },
                 "gorgon": null
               },
@@ -9595,7 +9773,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -9632,7 +9810,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -9662,7 +9840,7 @@
                   "progress": 6,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:581"
                 },
                 "gorgon": null
               },
@@ -9887,7 +10065,7 @@
                   "progress": 7,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:571"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",3]:581"
                 },
                 "gorgon": null
               },
@@ -10010,7 +10188,7 @@
                   "progress": 0,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]:774"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]:784"
                 },
                 "gorgon": null
               },
@@ -10109,7 +10287,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -10146,7 +10324,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -10176,7 +10354,7 @@
                   "progress": 1,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]:774"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]:784"
                 },
                 "gorgon": null
               },
@@ -10368,7 +10546,7 @@
                   "progress": 2,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]:774"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]:784"
                 },
                 "gorgon": null
               },
@@ -10600,7 +10778,7 @@
                   "progress": 3,
                   "markedBlessingKey": "ChaosElementalBlessing",
                   "markedBlessingValues": {},
-                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]:774"
+                  "markedBlessingAcquisitionIdentity": "[\"transcendentEmbryoOutcome\",\"Surface\",\"routeStart\",\"[\\\"keepsakeSelection\\\",\\\"Surface\\\",\\\"routeStart\\\"]\",4]:784"
                 },
                 "gorgon": null
               },
@@ -11015,5 +11193,5 @@
       }
     }
   ],
-  "planFingerprint": "21c6264a"
+  "planFingerprint": "4a8fd739"
 }

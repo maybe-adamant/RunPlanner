@@ -58,6 +58,7 @@ export type {
   CanonicalShopEntryState,
   CanonicalShopOffer,
   CanonicalInfernalContractPedestal,
+  CanonicalPhantomExit,
   CanonicalSelectedBatchContinuation,
   CanonicalTarget,
   CanonicalTargetContinuation,

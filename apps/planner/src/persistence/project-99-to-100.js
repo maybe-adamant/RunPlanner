@@ -14,6 +14,14 @@ export const PEDESTAL_ROOMS = new Set([
   'P_PreBoss01',
   'Q_PreBoss01',
 ]);
+// Every Ephyra combat, Mini-Boss and side room, whose hidden return door fills a placeholder.
+const two = (value) => String(value).padStart(2, '0');
+export const PHANTOM_EXIT_ROOMS = new Set([
+  ...Array.from({ length: 23 }, (_, index) => `N_Combat${two(index + 1)}`),
+  'N_MiniBoss01',
+  'N_MiniBoss02',
+  ...Array.from({ length: 15 }, (_, index) => `N_Sub${two(index + 1)}`),
+]);
 const ENTRY_KEY = 'infernalContractReward';
 const SITE_KEY = 'infernalContractPedestal';
 
@@ -25,7 +33,7 @@ function record(value, label) {
 
 // Moves one Preboss's Shop-owned pedestal item, its collect action and its
 // acquisition-resolved source onto the room's pedestal feature.
-function migrateOccurrence(occurrence) {
+function migratePedestal(occurrence) {
   if (Object.hasOwn(occurrence, 'infernalContractPedestal'))
     throw new Error(`${String(occurrence.occurrenceId)} already has a schema 100 pedestal`);
   if (!PEDESTAL_ROOMS.has(occurrence.gameName)) return;
@@ -47,7 +55,22 @@ function migrateOccurrence(occurrence) {
   }
 }
 
-// Browser-safe transform: the Contract pedestal becomes a Preboss room feature in either form.
+// Every visit's hidden return door is left to the simulation, which settles
+// the first eligible placeholder room and reward.
+function migratePhantomExit(occurrence) {
+  if (Object.hasOwn(occurrence, 'phantomExit'))
+    throw new Error(`${String(occurrence.occurrenceId)} already has a schema 100 phantom exit`);
+  if (PHANTOM_EXIT_ROOMS.has(occurrence.gameName))
+    occurrence.phantomExit = { placeholderRoomGameName: null, rewardType: null };
+}
+
+function migrateOccurrence(occurrence) {
+  migratePedestal(occurrence);
+  migratePhantomExit(occurrence);
+}
+
+// Browser-safe transform: the Contract pedestal becomes a Preboss room feature in either form,
+// and every Ephyra combat, Mini-Boss and side room gains its unpinned phantom exit.
 export function migrateProjectDocument(value) {
   const source = record(value, 'project document');
   if (source.schemaVersion !== SOURCE_SCHEMA_VERSION)

@@ -40,6 +40,7 @@ export type {
   HistoryStateView,
   BiomeHistoryPrefix,
   OfferPointView,
+  PhantomExitCreatedHistoryEvent,
   ProgressiveRoomHistoryViews,
   RoomOverviewHistoryViews,
   RequiredObjectHistoryEntry,

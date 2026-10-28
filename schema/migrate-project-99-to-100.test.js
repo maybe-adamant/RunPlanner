@@ -78,6 +78,34 @@ describe('schema 99 to 100 migration', () => {
     assert.equal('infernalContractPedestal' in combat, false);
   });
 
+  it('gives every Ephyra combat, Mini-Boss and side room an unpinned phantom exit', () => {
+    const occurrences = ['N_Combat01', 'N_MiniBoss02', 'N_Sub15', 'N_Story01', 'N_PreHub01'].map(
+      (gameName) => ({
+        occurrenceId: gameName,
+        gameName,
+        state: { kind: 'freeReward', reward: null },
+      }),
+    );
+    const migrated = migrateProjectDocument(document(occurrences));
+    assert.deepEqual(
+      migrated.route.biomes[0].topology.occurrences.map((occurrence) => occurrence.phantomExit),
+      [
+        { placeholderRoomGameName: null, rewardType: null },
+        { placeholderRoomGameName: null, rewardType: null },
+        { placeholderRoomGameName: null, rewardType: null },
+        undefined,
+        undefined,
+      ],
+    );
+    assert.throws(
+      () =>
+        migrateProjectDocument(
+          document([{ ...occurrences[0], phantomExit: { placeholderRoomGameName: null } }]),
+        ),
+      /already has a schema 100 phantom exit/,
+    );
+  });
+
   it('rejects a document that already carries a schema 100 pedestal', () => {
     assert.throws(
       () =>

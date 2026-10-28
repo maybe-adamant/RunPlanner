@@ -77,6 +77,11 @@ export interface InfernalContractPedestalAddress extends BiomeOwnedAddress {
   readonly kind: 'infernalContractPedestal';
   readonly occurrenceId: OccurrenceId;
 }
+/** The hidden return door one Ephyra occurrence fills when its doors first unlock. */
+export interface PhantomExitAddress extends BiomeOwnedAddress {
+  readonly kind: 'phantomExit';
+  readonly occurrenceId: OccurrenceId;
+}
 /** The exact post-encounter Arcana draw owned by a fixed Boss occurrence. */
 export interface JudgmentArcanaAddress extends BiomeOwnedAddress {
   readonly kind: 'judgmentArcana';
@@ -404,6 +409,7 @@ export type SemanticAddress =
   | RoomFeatureAddress
   | IncomingRewardAddress
   | InfernalContractPedestalAddress
+  | PhantomExitAddress
   | JudgmentArcanaAddress
   | FigurineArcanaAddress
   | KeepsakeSelectionAddress
@@ -720,6 +726,12 @@ export function createInfernalContractPedestalAddress(
   occurrenceId: OccurrenceId,
 ): InfernalContractPedestalAddress {
   return Object.freeze({ kind: 'infernalContractPedestal', ...owner(biome), occurrenceId });
+}
+export function createPhantomExitAddress(
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+): PhantomExitAddress {
+  return Object.freeze({ kind: 'phantomExit', ...owner(biome), occurrenceId });
 }
 export function createLocalRewardAddress(
   biome: BiomeAddress,
@@ -1158,6 +1170,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'occurrence':
     case 'incomingReward':
     case 'infernalContractPedestal':
+    case 'phantomExit':
       return JSON.stringify([...base, address.occurrenceId]);
     case 'fieldsSpatial':
       return JSON.stringify([...base, address.occurrenceId, address.target]);

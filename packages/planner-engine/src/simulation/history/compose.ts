@@ -32,6 +32,7 @@ import {
   type FigLeafLifecycleState,
 } from './composition';
 import { BIOME_ENTRY_ENCOUNTER_DEPTH } from '../encounters/biome-encounter-depth';
+import { settlePhantomPlaceholder } from '../generation/phantom-exit';
 import type { CanonicalLifecycleRoom } from './lifecycleInput';
 import type {
   BiomeHistoryPrefix,
@@ -285,6 +286,30 @@ function appendDeparture(
 }
 
 /**
+ * A first doors unlock fills the room's hidden return door before any side
+ * door: the pinned placeholder room, else the first eligible one.
+ */
+function appendPhantomExit(
+  writer: HistorySegmentWriter,
+  catalog: Catalog,
+  room: CanonicalLifecycleRoom,
+): void {
+  if (room.kind !== 'authored' || room.phantomExit === undefined) return;
+  const declaration = catalog.rooms.byKey[room.gameName];
+  if (declaration === undefined) fail(`unknown canonical room ${room.gameName}`);
+  const pinned = room.phantomExit.placeholderRoomGameName;
+  const placeholder = settlePhantomPlaceholder(catalog, declaration, pinned, writer.current());
+  if (placeholder === undefined) fail(`${room.gameName} has no eligible phantom placeholder`);
+  writer.append({
+    kind: 'phantomExitCreated',
+    origin: room.origin,
+    owner: room.phantomExit.origin,
+    placeholderRoomGameName: placeholder,
+    pinned: pinned !== null,
+  });
+}
+
+/**
  * The main room's first exit leads to its first side room or the Hub; every
  * later door use leaves the restored main room.
  */
@@ -297,6 +322,7 @@ function appendVisit(
   // The main room's first exit leads to its first side room, or back to the Hub.
   appendCanonicalRoomLifecycle(writer, catalog, visit.target.room, fail, {
     outgoing(outgoingWriter) {
+      appendPhantomExit(outgoingWriter, catalog, visit.target.room);
       appendLocalTargets(outgoingWriter, visit.target.room, visit.localSlots);
     },
     departureDestination: visit.enteredLocalRooms.length > 0 ? 'newRoom' : 'restore',
@@ -307,6 +333,10 @@ function appendVisit(
     }
     if (index > 0) appendDeparture(writer, visit.target.room, true, 'newRoom');
     appendCanonicalRoomLifecycle(writer, catalog, local, fail, {
+      // A side room has no other door: its unlock precedes its commit.
+      beforeEvent(eventWriter, event) {
+        if (event.kind === 'roomCommitted') appendPhantomExit(eventWriter, catalog, local);
+      },
       departureDestination: 'restore',
     });
     const restore = visit.parentRestores[index];

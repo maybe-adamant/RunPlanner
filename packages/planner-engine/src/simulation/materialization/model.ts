@@ -17,6 +17,7 @@ import type {
   HubFountainAddress,
   IncomingRewardAddress,
   InfernalContractPedestalAddress,
+  PhantomExitAddress,
   LocalVisitSlotAddress,
   LocalRewardAddress,
   OccurrenceAddress,
@@ -99,6 +100,13 @@ export interface CanonicalInfernalContractPedestal extends Omit<
 > {
   readonly offerKey: 'infernalContractReward';
   readonly offerOrigin: InfernalContractPedestalAddress;
+}
+
+/** An entered room's hidden return door; null fields are settled where its doors unlock. */
+export interface CanonicalPhantomExit {
+  readonly origin: PhantomExitAddress;
+  readonly placeholderRoomGameName: string | null;
+  readonly rewardType: string | null;
 }
 
 export interface CanonicalShopEntryState {
@@ -291,6 +299,8 @@ export interface CanonicalAuthoredRoom {
   readonly entryState?: CanonicalShopEntryState;
   /** An entered pedestal-declaring Preboss's item; null leaves it unauthored. */
   readonly infernalContractPedestal?: CanonicalInfernalContractPedestal | null;
+  /** An entered Ephyra combat, Mini-Boss or side room's hidden return door. */
+  readonly phantomExit?: CanonicalPhantomExit;
   /** Active producer instances feeding the shared acquisition-site pipeline. */
   readonly pickupProducers?: readonly import('../../authored-project/acquisition/pickup-producers').SelectedPickupProducer[];
   /** Every exact persisted acquisition site; chronology addresses site and entry independently. */

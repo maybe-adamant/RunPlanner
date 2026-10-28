@@ -27,7 +27,7 @@ import type {
   RunImportReportEntry,
   RunImportStop,
 } from './report';
-import { answerHub, importSideRoomVisits } from './hub';
+import { answerHub, importPhantomExits, importSideRoomVisits } from './hub';
 import { answerTopology } from './topology';
 import { answerReward } from './rewards';
 import { answerLevelResolution, answerSteadyGrowth, answerTraitOffer } from './trait-offers';
@@ -405,6 +405,7 @@ class RunImportWalk {
         importEncounters(this.context);
         importDispositions(this.context);
         importSideRoomVisits(this.context);
+        importPhantomExits(this.context);
         importCommerce(this.context);
         importFeatures(this.context);
         importWheels(this.context);

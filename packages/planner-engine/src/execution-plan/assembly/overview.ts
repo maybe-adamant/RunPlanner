@@ -25,6 +25,7 @@ import { agreement, executionRoomOwnerKey } from './support';
 import type {
   ExecutionFieldsLayout,
   ExecutionInfernalContract,
+  ExecutionPhantomExit,
   ExecutionKeepsakeEquipResults,
   ExecutionOverview,
   ExecutionReward,
@@ -947,6 +948,40 @@ function executionExcludedEnemies(
   );
 }
 
+/** The settled phantom exit; branches that drew different gods publish only the type. */
+function executionPhantomExit(
+  room: CanonicalAuthoredRoom,
+  biome: CompleteValidBiomeProjectEvaluation,
+): ExecutionPhantomExit | undefined {
+  if (room.phantomExit === undefined) return undefined;
+  const ownerKey = semanticAddressKey(room.phantomExit.origin);
+  const settlement = biome.rewards.phantomExits.find(
+    (candidate) => semanticAddressKey(candidate.owner) === ownerKey,
+  );
+  if (settlement === undefined)
+    throw new CompilerError('executionCoverageMissing', `${room.gameName} lacks its phantom exit`);
+  const [first, ...rest] = settlement.offers;
+  if (first === undefined || settlement.storeKey === undefined)
+    return Object.freeze({ placeholderRoomGameName: settlement.placeholderRoomGameName });
+  if (rest.some((offer) => offer.rewardType !== first.rewardType))
+    throw new CompilerError(
+      'executionCoverageMissing',
+      `${room.gameName} phantom exit drew different rewards across branches`,
+    );
+  const payload = rest.length === 0 ? first.payload : undefined;
+  return Object.freeze({
+    placeholderRoomGameName: settlement.placeholderRoomGameName,
+    reward: Object.freeze({
+      rewardType: first.rewardType,
+      storeKey: settlement.storeKey,
+      ...(payload?.kind === 'BoonSource' ? { source: payload.source } : {}),
+      ...(payload?.kind === 'DevotionPair'
+        ? { source: payload.chosenSource, spurnedSource: payload.spurnedSource }
+        : {}),
+    }),
+  });
+}
+
 /** Assemble the complete room-entry realization facts for one occurrence. */
 export function assembleExecutionOverview(
   catalog: Catalog,
@@ -959,6 +994,7 @@ export function assembleExecutionOverview(
   const incomingReward = executionReward(room);
   const shop = executionShop(room, biome, transactions);
   const infernalContractPedestal = executionInfernalContractPedestal(room, biome, transactions);
+  const phantomExit = executionPhantomExit(room, biome);
   const hermesShrine = executionHermesShrine(room, biome);
   const rewardWheels = executionRewardWheels(room);
   const stygianWell = executionStygianWell(room);
@@ -1084,6 +1120,7 @@ export function assembleExecutionOverview(
     requiredObjects: Object.freeze((room.requiredObjects ?? []).map((object) => object.key)),
     ...(shop === undefined ? {} : { shop }),
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
+    ...(phantomExit === undefined ? {} : { phantomExit }),
     ...(hermesShrine === undefined ? {} : { hermesShrine }),
     ...(stygianWell === undefined ? {} : { stygianWell }),
     ...(purgingPool === undefined ? {} : { purgingPool }),

@@ -1,4 +1,7 @@
-import { createOccurrenceAddress } from '../../../authored-project/addresses';
+import {
+  createOccurrenceAddress,
+  createPhantomExitAddress,
+} from '../../../authored-project/addresses';
 import { routeHasKeepsakeRack } from '../../../authored-project/route-profile';
 import type { StygianWellGenerationKey } from '../../../authored-project/model';
 import type { Catalog, RoomDeclaration } from '../../../catalog-schema';
@@ -127,6 +130,15 @@ export function materializeAuthoredRoom(
     );
   const clockworkReward = leaf.clockworkReward ?? context.clockworkReward;
   const infernalContractPedestal = materializeInfernalContractPedestal(context);
+  const authoredPhantomExit = context.occurrence.phantomExit;
+  const phantomExit =
+    !context.entered || authoredPhantomExit === undefined
+      ? undefined
+      : Object.freeze({
+          origin: createPhantomExitAddress(context.biome, context.occurrence.occurrenceId),
+          placeholderRoomGameName: authoredPhantomExit.placeholderRoomGameName,
+          rewardType: authoredPhantomExit.rewardType,
+        });
   requireLifecycleSelection(context.catalog, context.room, leaf, context.room.encounterEnvelopeKey);
   const pickupProducers = activeSelectedPickupProducers(
     context.catalog,
@@ -316,6 +328,7 @@ export function materializeAuthoredRoom(
     ...(leaf.rewardWheels === undefined ? {} : { rewardWheels: leaf.rewardWheels }),
     ...(leaf.entryState === undefined ? {} : { entryState: leaf.entryState }),
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
+    ...(phantomExit === undefined ? {} : { phantomExit }),
     ...(pickupProducers.length === 0 ? {} : { pickupProducers }),
     ...(clockworkReward === undefined ? {} : { clockworkReward }),
   }) as Omit<CanonicalAuthoredRoom, 'roomActionRoster' | 'roomLifecycleTimeline'>;

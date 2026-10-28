@@ -21,6 +21,7 @@ import {
   createDefaultInfernalContractPedestal,
   roomHasInfernalContractPedestal,
 } from '../infernal-contract-pedestal';
+import { createDefaultPhantomExit, roomHasPhantomExit } from '../phantom-exit';
 
 const RACK_ACTION = Object.freeze({ kind: 'interactKeepsakeRack' as const });
 
@@ -90,6 +91,7 @@ export function defaultOccurrence(
     ...(roomHasInfernalContractPedestal(room)
       ? { infernalContractPedestal: createDefaultInfernalContractPedestal() }
       : {}),
+    ...(roomHasPhantomExit(room) ? { phantomExit: createDefaultPhantomExit() } : {}),
   });
 }
 

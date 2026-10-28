@@ -7,6 +7,7 @@ import {
   type RewardWheelOfferAddress,
   type ShopOfferAddress,
   type InfernalContractPedestalAddress,
+  type PhantomExitAddress,
 } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { RouteLoadout } from '../../authored-project/model';
@@ -87,6 +88,13 @@ export interface InfernalContractPedestalOptionCandidateQuery {
   readonly value: ShopOptionSelection;
 }
 
+/** One offer for a phantom exit's draw, at its room's first doors unlock. */
+export interface PhantomExitRewardCandidateQuery {
+  readonly kind: 'phantomExitReward';
+  readonly exit: PhantomExitAddress;
+  readonly value: ResolvedRewardOffer;
+}
+
 export interface AcquisitionEntryOfferCandidateQuery {
   readonly kind: 'acquisitionEntryOffer';
   readonly entry: AcquisitionEntryAddress;
@@ -102,6 +110,7 @@ export type RewardProducerCandidateQuery =
   | ShopOfferOptionCandidateQuery
   | InfernalContractPedestalCandidateQuery
   | InfernalContractPedestalOptionCandidateQuery
+  | PhantomExitRewardCandidateQuery
   | AcquisitionEntryOfferCandidateQuery;
 
 export interface EvaluatedIncomingRewardCandidate {
@@ -181,6 +190,10 @@ export interface EvaluatedInfernalContractPedestalCandidate {
   readonly kind: 'infernalContractPedestal';
   readonly result: RewardProducerCandidateResult;
 }
+export interface EvaluatedPhantomExitRewardCandidate {
+  readonly kind: 'phantomExitReward';
+  readonly result: RewardProducerCandidateResult;
+}
 export interface EvaluatedAcquisitionEntryOfferCandidate {
   readonly kind: 'acquisitionEntryOffer';
   readonly result: RewardProducerCandidateResult;
@@ -194,6 +207,7 @@ export type RewardProducerCandidateEvaluation =
   | EvaluatedRewardWheelOfferCandidate
   | EvaluatedShopOfferCandidate
   | EvaluatedInfernalContractPedestalCandidate
+  | EvaluatedPhantomExitRewardCandidate
   | EvaluatedAcquisitionEntryOfferCandidate;
 
 interface RewardProducerSource {
@@ -222,7 +236,9 @@ function ownerFor(query: RewardProducerCandidateQuery): RewardProducerOwnerAddre
       ? query.entry
       : query.kind === 'infernalContractPedestal' || query.kind === 'infernalContractPedestalOption'
         ? query.pedestal
-        : query.offer;
+        : query.kind === 'phantomExitReward'
+          ? query.exit
+          : query.offer;
 }
 
 function checkpointFor(query: RewardProducerCandidateQuery) {
@@ -294,6 +310,8 @@ export function evaluateRewardProducerCandidate(
       return Object.freeze({ kind: 'shopOffer', result });
     case 'infernalContractPedestal':
       return Object.freeze({ kind: 'infernalContractPedestal', result });
+    case 'phantomExitReward':
+      return Object.freeze({ kind: 'phantomExitReward', result });
     case 'acquisitionEntryOffer':
       return Object.freeze({ kind: 'acquisitionEntryOffer', result });
   }

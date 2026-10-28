@@ -38,6 +38,8 @@ export type EncounterResolutionFindingCode =
 export type RewardGenerationFindingCode =
   | 'baseRewardStoreUnavailable'
   | 'rewardMissing'
+  | 'phantomExitPlaceholderUnavailable'
+  | 'phantomExitRewardUnavailable'
   | 'rewardAcquisitionUnavailable'
   | 'rewardBagSupportEmpty'
   | 'rewardBagEntryUnavailable'

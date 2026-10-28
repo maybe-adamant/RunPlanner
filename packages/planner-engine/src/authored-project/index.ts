@@ -119,6 +119,7 @@ export {
   createGorgonPhaseAddress,
   createIncomingRewardAddress,
   createInfernalContractPedestalAddress,
+  createPhantomExitAddress,
   createHubSlotAddress,
   createHubOpenSetAddress,
   createHubRoomAddress,
@@ -182,6 +183,7 @@ export {
   type EncounterPhaseOwner,
   type IncomingRewardAddress,
   type InfernalContractPedestalAddress,
+  type PhantomExitAddress,
   type HubSlotAddress,
   type HubOpenSetAddress,
   type HubRoomAddress,
@@ -316,6 +318,13 @@ export {
   roomHasInfernalContractPedestal,
 } from './infernal-contract-pedestal';
 export {
+  phantomExitDomainError,
+  phantomPlaceholderDraw,
+  phantomPlaceholderRewardTypes,
+  phantomPlaceholderSet,
+  roomHasPhantomExit,
+} from './phantom-exit';
+export {
   applyProjectCommand,
   projectCommandAddress,
   projectCommandAuthoringAddresses,
@@ -448,6 +457,7 @@ export {
   type AuthoredGorgonPhaseResult,
   type ShopOfferState,
   type InfernalContractPedestalState,
+  type PhantomExitState,
   type ShopState,
 } from './model';
 export {

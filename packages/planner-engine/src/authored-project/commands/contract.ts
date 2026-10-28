@@ -177,6 +177,8 @@ function commandContractAddress(
     case 'ClearInfernalContractPedestal':
     case 'SetInfernalContractPedestalCollected':
       return command.pedestal;
+    case 'ReplacePhantomExit':
+      return command.exit;
     case 'PlaceEchoGoldPickup':
       return command.site;
     case 'PlaceHermesShrineDelivery':

@@ -18,12 +18,14 @@ import type {
   TargetGenerationView,
   RequiredObjectHistoryEntry,
   RoomAppearanceHistoryEntry,
+  PhantomExitCreatedHistoryEvent,
   RoomCreatedHistoryEvent,
   RoomRestoreHistoryEntry,
 } from './model';
 
 interface MutableLedgers {
   roomCreations: RoomCreatedHistoryEvent[];
+  phantomExitCreations: PhantomExitCreatedHistoryEvent[];
   roomAppearances: RoomAppearanceHistoryEntry[];
   encounterRecords: EncounterHistoryEntry[];
   encounterStarts: EncounterHistoryEntry[];
@@ -85,6 +87,7 @@ function frozenCounters(counters: MutableLedgers['counters']): HistoryCounters {
 function frozenLedgers(ledgers: MutableLedgers): HistoryLedgers {
   return Object.freeze({
     roomCreations: Object.freeze([...ledgers.roomCreations]),
+    phantomExitCreations: Object.freeze([...ledgers.phantomExitCreations]),
     roomAppearances: Object.freeze([...ledgers.roomAppearances]),
     encounterRecords: Object.freeze([...ledgers.encounterRecords]),
     encounterStarts: Object.freeze([...ledgers.encounterStarts]),
@@ -103,6 +106,7 @@ export function createRouteStartHistoryView(): HistoryStateView {
     sequence: 0,
     ledgers: frozenLedgers({
       roomCreations: [],
+      phantomExitCreations: [],
       roomAppearances: [],
       encounterRecords: [],
       encounterStarts: [],
@@ -279,6 +283,7 @@ function foldHistoryEventStream(
   );
   const ledgers: MutableLedgers = {
     roomCreations: [...(seed?.ledgers.roomCreations ?? [])],
+    phantomExitCreations: [...(seed?.ledgers.phantomExitCreations ?? [])],
     roomAppearances: [...(seed?.ledgers.roomAppearances ?? [])],
     encounterRecords: [...(seed?.ledgers.encounterRecords ?? [])],
     encounterStarts: [...(seed?.ledgers.encounterStarts ?? [])],
@@ -456,6 +461,25 @@ function foldHistoryEventStream(
           parentViews.outgoingGeneration = after;
         }
         pendingTargetGeneration = undefined;
+        break;
+      }
+      case 'phantomExitCreated': {
+        const views = requireRoomViews(viewsByOrigin, event);
+        if (views.entry === undefined || views.outgoingGeneration !== undefined) {
+          throw new HistoryFoldContractError(
+            `room ${semanticAddressKey(event.origin)} cannot fill its phantom exit here`,
+          );
+        }
+        if (
+          ledgers.phantomExitCreations.some(
+            (creation) => semanticAddressKey(creation.owner) === semanticAddressKey(event.owner),
+          )
+        ) {
+          throw new HistoryFoldContractError(
+            `phantom exit ${semanticAddressKey(event.owner)} was filled more than once`,
+          );
+        }
+        ledgers.phantomExitCreations.push(event);
         break;
       }
       case 'emptyOutgoingGenerationCompleted': {

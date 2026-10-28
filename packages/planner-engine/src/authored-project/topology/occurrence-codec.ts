@@ -48,6 +48,8 @@ import {
   roomHasInfernalContractPedestal,
 } from '../infernal-contract-pedestal';
 import { decodeInfernalContractPedestal } from '../room-state/decoding/infernal-contract-pedestal-codec';
+import { roomHasPhantomExit } from '../phantom-exit';
+import { decodePhantomExit } from '../room-state/decoding/phantom-exit-codec';
 import { expectExactKeys, expectRecord, failProjectDocument } from '../validation';
 import type { DecodedTopologyStructure } from './decoding/coordinator';
 import { decodeAcquisitionSites } from '../room-state/decoding/acquisition-site-codec';
@@ -477,6 +479,20 @@ export function decodeRoomOccurrence(input: {
         `${rawOccurrence.path}.infernalContractPedestal`,
       )
     : undefined;
+  const phantomExitDeclared = roomHasPhantomExit(room);
+  if (phantomExitDeclared !== (rawOccurrence.hasPhantomExit === true))
+    failProjectDocument(
+      `${rawOccurrence.path}.phantomExit`,
+      phantomExitDeclared ? 'must be an object' : `${room.gameName} declares no phantom exit`,
+    );
+  const phantomExit = phantomExitDeclared
+    ? decodePhantomExit(
+        rawOccurrence.phantomExit,
+        catalog,
+        room,
+        `${rawOccurrence.path}.phantomExit`,
+      )
+    : undefined;
   const roomActions = decodeRoomActionState(
     rawOccurrence.roomActions,
     `${rawOccurrence.path}.roomActions`,
@@ -548,6 +564,7 @@ export function decodeRoomOccurrence(input: {
     ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
     ...(eris === undefined ? {} : { eris }),
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
+    ...(phantomExit === undefined ? {} : { phantomExit }),
     roomActions: Object.freeze({ order: Object.freeze([]) }),
     additionalExits: Object.freeze([]),
   });
@@ -931,6 +948,7 @@ export function decodeRoomOccurrence(input: {
     ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
     ...(eris === undefined ? {} : { eris }),
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
+    ...(phantomExit === undefined ? {} : { phantomExit }),
     ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
     additionalExits,
   });

@@ -6,7 +6,9 @@ import {
   createLocalVisitOrderAddress,
   createLocalVisitSlotAddress,
   createOccurrenceId,
+  createPhantomExitAddress,
   hubTerminalTakeoverForSource,
+  phantomPlaceholderDraw,
   type HubAction,
   type HubDecision,
   type OccurrenceId,
@@ -373,6 +375,64 @@ export function importSideRoomVisits(context: RunImportContext): void {
           reason: 'refused',
           address: order,
           record: { roomIndex: context.occurrences.visitsOf(entered[0]!)[0]!, visit: 0 },
+        });
+    }
+  }
+}
+
+/**
+ * Pins every visited room's phantom exit to what its first visit's return
+ * door held: the door no declared side slot owns, with its placeholder room
+ * and, where that room draws, its offered reward type.
+ */
+export function importPhantomExits(context: RunImportContext): void {
+  const project = context.assembly().project;
+  for (const biome of project.route.biomes) {
+    for (const occurrence of biome.topology?.occurrences ?? []) {
+      const current = occurrence.phantomExit;
+      const firstVisit = context.occurrences.visitsOf(occurrence.occurrenceId)[0];
+      const used = `phantomExit:${occurrence.occurrenceId}`;
+      if (current === undefined || firstVisit === undefined || context.used.has(used)) continue;
+      context.used.add(used);
+      const room = context.catalog.rooms.byKey[occurrence.gameName];
+      const sideDoorIds = new Set(
+        room?.localChildren.flatMap((child) =>
+          child.kind === 'fixedRoomSlots' ? child.slots.map((slot) => slot.physicalDoorId) : [],
+        ) ?? [],
+      );
+      const exit = createPhantomExitAddress(
+        createBiomeAddress(project.route.routeKey, biome.biomeKey),
+        occurrence.occurrenceId,
+      );
+      const doors = context.record.rooms[firstVisit]!.doors.filter(
+        (door) => !sideDoorIds.has(door.door),
+      );
+      const door = doors.length === 1 ? doors[0] : undefined;
+      if (door === undefined) {
+        context.note({
+          area: 'hub',
+          reason: 'notInRecord',
+          address: exit,
+          record: { roomIndex: firstVisit, visit: 0 },
+        });
+        continue;
+      }
+      const draws = phantomPlaceholderDraw(context.catalog, door.room) !== undefined;
+      const value = Object.freeze({
+        placeholderRoomGameName: door.room,
+        rewardType: draws ? (door.reward?.type ?? null) : null,
+      });
+      if (
+        value.placeholderRoomGameName === current.placeholderRoomGameName &&
+        value.rewardType === current.rewardType
+      )
+        continue;
+      if (!context.apply({ kind: 'ReplacePhantomExit', exit, value }))
+        context.note({
+          area: 'hub',
+          reason: 'refused',
+          address: exit,
+          record: { roomIndex: firstVisit, visit: 0, door: door.door },
         });
     }
   }

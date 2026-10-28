@@ -1,7 +1,7 @@
 {
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
-  "schemaVersion": 99,
+  "schemaVersion": 100,
   "schemaRevision": 0,
   "projectId": "execution-dream-q-f-n-h",
   "routeKey": "Dream",
@@ -5382,6 +5382,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -5644,6 +5645,7 @@
           { "slotKey": "Encounter", "encounterKey": "MiniBossSatyrCrossbow", "kind": "miniboss" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": []
       },
       "timeline": {
@@ -5784,6 +5786,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -5952,6 +5955,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN_Bigger", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -6159,6 +6163,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           { "slotKey": "sideDoor1", "physicalDoorId": 755971, "generation": "notGenerated" },
           { "slotKey": "sideDoor2", "physicalDoorId": 755184, "generation": "notGenerated" },
@@ -6314,6 +6319,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN_Bigger", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": []
       },
       "timeline": {
@@ -7051,5 +7057,5 @@
       }
     }
   ],
-  "planFingerprint": "705077e2"
+  "planFingerprint": "f1af71ca"
 }

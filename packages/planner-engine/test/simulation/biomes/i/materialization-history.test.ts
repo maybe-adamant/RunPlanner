@@ -279,6 +279,7 @@ function complete(project: ProjectDocument): CompleteBiomeCompletenessResult {
 function carriedHHistory(): CanonicalBiomeHistory {
   const ledgers: HistoryLedgers = Object.freeze({
     roomCreations: Object.freeze([]),
+    phantomExitCreations: Object.freeze([]),
     roomAppearances: Object.freeze([]),
     encounterRecords: Object.freeze([]),
     encounterStarts: Object.freeze([]),

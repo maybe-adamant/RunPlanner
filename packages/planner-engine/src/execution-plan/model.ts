@@ -215,6 +215,22 @@ export interface ExecutionReward {
   readonly acquisitionEnabled?: boolean;
 }
 
+/**
+ * A phantom exit as the simulation settled it: the placeholder room
+ * `ChooseNextRoomData` must return for the return door, and the reward its
+ * store draw must yield, absent when the placeholder draws nothing.
+ */
+export interface ExecutionPhantomExit {
+  readonly placeholderRoomGameName: string;
+  readonly reward?: {
+    readonly rewardType: string;
+    readonly storeKey: string;
+    /** Present only where every branch drew the same god. */
+    readonly source?: string;
+    readonly spurnedSource?: string;
+  };
+}
+
 /** Exact layout inputs consumed by native Mourning Fields setup. */
 export interface ExecutionFieldsLayout {
   readonly entryPair: {
@@ -722,6 +738,8 @@ export interface ExecutionOverview {
   };
   /** The Preboss Contract pedestal's spawned item, in either reward form. */
   readonly infernalContractPedestal?: ExecutionInfernalContract;
+  /** The hidden return door the room fills at its first doors unlock. */
+  readonly phantomExit?: ExecutionPhantomExit;
   /** Complete native SurfaceShop inventory and authored delivery dispositions. */
   readonly hermesShrine?: {
     readonly offers: readonly {

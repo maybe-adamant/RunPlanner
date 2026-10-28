@@ -51,6 +51,7 @@ import { applyWellPurchaseTransition } from './encounter-acquisition/well-purcha
 import { rewardFindingChronologyForRoom } from './finding-chronology';
 import { flushHubBoard } from './generation/hub-board';
 import { applyOutgoingGenerationTransition } from './generation/outgoing-generation';
+import { applyPhantomExitTransition } from './generation/phantom-exit';
 import { applyRoomCreatedTransition } from './generation/room-created';
 import { applyTargetGenerationCompletedTransition } from './generation/target-generation-completed';
 import { applyEncounterEndEffectsTransition } from './lifecycle-transitions/encounter-end-effects';
@@ -617,6 +618,36 @@ const roomCreated: ChronologySeamHandler<'roomCreated'> = (context, state, event
   };
 };
 
+/**
+ * A main room's phantom draw precedes its side doors in the same unlock, so it
+ * joins their prior offers; a side room has no other door.
+ */
+const phantomExitCreated: ChronologySeamHandler<'phantomExitCreated'> = (context, state, event) => {
+  const room = authoredRoom(context, event.origin);
+  const transition = applyPhantomExitTransition({
+    catalog: context.catalog,
+    event,
+    room,
+    view: context.history.viewsBySequence[event.sequence - 1],
+    branches: state.branches,
+  });
+  const opensSideDoors =
+    room !== undefined &&
+    context.catalog.rooms.byKey[room.gameName]?.phantomExit?.placeholderRoomSetKey === 'N';
+  return {
+    state: Object.freeze({
+      ...state,
+      branches: transition.branches,
+      peers: opensSideDoors ? transition.peers : state.peers,
+    }),
+    emissions: [
+      generationFindings(transition.findings),
+      { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
+      { kind: 'phantomExitSettlement', settlement: transition.settlement },
+    ],
+  };
+};
+
 /** Publishes the complete Hub board generation once every Hub slot has a participant. */
 function flushPendingHubBoard(
   context: ChronologyWalkContext,
@@ -1112,6 +1143,7 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     clockworkNonGoalRewardSpawned: { step: advanceOnly },
     targetGenerationCompleted: { step: targetGenerationCompleted },
     emptyOutgoingGenerationCompleted: { step: advanceOnly },
+    phantomExitCreated: { step: phantomExitCreated },
     roomRestored: { step: advanceOnly },
     roomPrepared: { step: roomPrepared },
     offerPointMaterialized: { step: offerPointMaterialized },

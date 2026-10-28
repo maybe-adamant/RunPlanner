@@ -270,6 +270,7 @@ export function overview(value: unknown, label: string) {
       'rewardWheels',
       'shop',
       'infernalContractPedestal',
+      'phantomExit',
       'hermesShrine',
       'stygianWell',
       'purgingPool',
@@ -432,6 +433,64 @@ export function overview(value: unknown, label: string) {
             contract.rewardType,
             `${label}.infernalContractPedestal.rewardType`,
           ),
+        });
+  const phantom =
+    record.phantomExit === undefined
+      ? undefined
+      : object(record.phantomExit, `${label}.phantomExit`);
+  if (phantom !== undefined)
+    exact(phantom, ['placeholderRoomGameName'], ['reward'], `${label}.phantomExit`);
+  const phantomReward =
+    phantom?.reward === undefined
+      ? undefined
+      : object(phantom.reward, `${label}.phantomExit.reward`);
+  if (phantomReward !== undefined)
+    exact(
+      phantomReward,
+      ['rewardType', 'storeKey'],
+      ['source', 'spurnedSource'],
+      `${label}.phantomExit.reward`,
+    );
+  if (phantomReward?.spurnedSource !== undefined && phantomReward.source === undefined)
+    fail(`${label}.phantomExit.reward.spurnedSource requires source`);
+  const parsedPhantom =
+    phantom === undefined
+      ? undefined
+      : Object.freeze({
+          placeholderRoomGameName: stringValue(
+            phantom.placeholderRoomGameName,
+            `${label}.phantomExit.placeholderRoomGameName`,
+          ),
+          ...(phantomReward === undefined
+            ? {}
+            : {
+                reward: Object.freeze({
+                  rewardType: stringValue(
+                    phantomReward.rewardType,
+                    `${label}.phantomExit.reward.rewardType`,
+                  ),
+                  storeKey: stringValue(
+                    phantomReward.storeKey,
+                    `${label}.phantomExit.reward.storeKey`,
+                  ),
+                  ...(phantomReward.source === undefined
+                    ? {}
+                    : {
+                        source: stringValue(
+                          phantomReward.source,
+                          `${label}.phantomExit.reward.source`,
+                        ),
+                      }),
+                  ...(phantomReward.spurnedSource === undefined
+                    ? {}
+                    : {
+                        spurnedSource: stringValue(
+                          phantomReward.spurnedSource,
+                          `${label}.phantomExit.reward.spurnedSource`,
+                        ),
+                      }),
+                }),
+              }),
         });
   const parsedShop =
     shop === undefined
@@ -873,6 +932,7 @@ export function overview(value: unknown, label: string) {
     requiredObjects: Object.freeze(stringArray(record.requiredObjects, `${label}.requiredObjects`)),
     ...(parsedShop === undefined ? {} : { shop: parsedShop }),
     ...(parsedPedestal === undefined ? {} : { infernalContractPedestal: parsedPedestal }),
+    ...(parsedPhantom === undefined ? {} : { phantomExit: parsedPhantom }),
     ...(parsedShrine === undefined ? {} : { hermesShrine: parsedShrine }),
     ...(parsedWell === undefined ? {} : { stygianWell: parsedWell }),
     ...(parsedPool === undefined ? {} : { purgingPool: parsedPool }),

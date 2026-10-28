@@ -402,6 +402,24 @@ export function reachedEncounterPhasesForProjectEvaluationAssembly(
   return Object.freeze(phases);
 }
 
+/**
+ * The reached phantom exit as the simulation settled it, the effective value
+ * of its unpinned fields; undefined while its room's doors unlock is unreached.
+ */
+export function phantomExitSettlementForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  exit: import('../../authored-project/addresses').PhantomExitAddress,
+): import('../rewards/model').PhantomExitSettlement | undefined {
+  const biome = assembly.evaluation.route.biomes.find(
+    (candidate) => candidate.biomeKey === exit.biomeKey,
+  );
+  if (biome === undefined || !('rewards' in biome)) return undefined;
+  const key = semanticAddressKey(exit);
+  return biome.rewards.phantomExits.find(
+    (settlement) => semanticAddressKey(settlement.owner) === key,
+  );
+}
+
 /** Narrow exact-assembly query for derived entries at one reached acquisition site. */
 export function derivedAcquisitionEntriesForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,

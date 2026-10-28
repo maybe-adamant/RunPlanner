@@ -6,6 +6,7 @@ import {
   type RewardWheelOfferAddress,
   type ShopOfferAddress,
   type InfernalContractPedestalAddress,
+  type PhantomExitAddress,
   type StartingRewardAddress,
 } from '../../authored-project/addresses';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
@@ -58,6 +59,7 @@ export type RewardProducerOwnerAddress =
   | RewardWheelOfferAddress
   | ShopOfferAddress
   | InfernalContractPedestalAddress
+  | PhantomExitAddress
   | AcquisitionEntryAddress
   | StartingRewardAddress;
 

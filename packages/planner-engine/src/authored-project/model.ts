@@ -130,6 +130,21 @@ export interface InfernalContractPedestalState {
   readonly reward: AuthoredRewardState | null;
 }
 
+/**
+ * The hidden return door of an Ephyra combat, Mini-Boss or side room, filled
+ * when the room's doors first unlock: a placeholder room that is never
+ * entered and the reward drawn for it. A null field is not missing: the
+ * simulation settles the room to the first eligible placeholder in the
+ * declared set order (a no-draw room first for main rooms), and the reward to
+ * the eligible type with the most entries left in the placeholder's store at
+ * that moment (ties in declaration order), and publishes that value. A pinned
+ * value never falls back. A pinned reward requires a pinned room that draws one.
+ */
+export interface PhantomExitState {
+  readonly placeholderRoomGameName: string | null;
+  readonly rewardType: string | null;
+}
+
 export interface ShopState {
   readonly profileKey: string;
   readonly offers: Readonly<Record<string, ShopOfferState>>;
@@ -458,6 +473,8 @@ export interface RoomOccurrence {
   readonly stygianWell?: StygianWellState;
   /** Present exactly at Preboss occurrences whose declaration places the Contract pedestal. */
   readonly infernalContractPedestal?: InfernalContractPedestalState;
+  /** Present exactly where the room declares a phantom exit. */
+  readonly phantomExit?: PhantomExitState;
 }
 
 /** A Postboss rack; a null key leaves the held keepsake unchanged. */

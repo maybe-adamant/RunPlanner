@@ -28,6 +28,7 @@ import type {
   StartingRewardAddress,
   ShopOfferAddress,
   InfernalContractPedestalAddress,
+  PhantomExitAddress,
   TraitOfferAddress,
   AcquisitionRoleAddress,
   LevelResolutionAddress,
@@ -43,6 +44,7 @@ import type {
   ExitSelection,
   HubAction,
   OccurrenceId,
+  PhantomExitState,
   RoomActionReference,
   StygianWellGenerationKey,
 } from '../model';
@@ -481,6 +483,12 @@ export type InfernalContractPedestalCommand =
       readonly pedestal: InfernalContractPedestalAddress;
       readonly collected: boolean;
     };
+/** An Ephyra room's hidden return door: null fields are settled by the simulation. */
+export type PhantomExitCommand = {
+  readonly kind: 'ReplacePhantomExit';
+  readonly exit: PhantomExitAddress;
+  readonly value: PhantomExitState;
+};
 export type PurgingPoolCommand =
   | {
       readonly kind: 'SetPurgingPoolInteraction';
@@ -730,6 +738,7 @@ export type OccurrenceLeafCommand =
   | ShipOccurrenceCommand
   | ShopOccurrenceCommand
   | InfernalContractPedestalCommand
+  | PhantomExitCommand
   | PurgingPoolCommand
   | ErisCommand
   | StygianWellCommand

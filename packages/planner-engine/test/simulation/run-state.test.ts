@@ -281,6 +281,7 @@ describe('decision run-state snapshots', () => {
       sequence: 1,
       ledgers: {
         roomCreations: [],
+        phantomExitCreations: [],
         roomAppearances: [],
         encounterRecords: [],
         encounterStarts: [],
@@ -353,6 +354,7 @@ describe('decision run-state snapshots', () => {
       sequence: 1,
       ledgers: {
         roomCreations: [],
+        phantomExitCreations: [],
         roomAppearances: [],
         encounterRecords: [],
         encounterStarts: [],
@@ -523,6 +525,7 @@ describe('decision run-state snapshots', () => {
       sequence,
       ledgers: {
         roomCreations: [],
+        phantomExitCreations: [],
         roomAppearances: [],
         encounterRecords: [],
         encounterStarts: [],
@@ -602,6 +605,7 @@ describe('decision run-state snapshots', () => {
       sequence: 1,
       ledgers: {
         roomCreations: [],
+        phantomExitCreations: [],
         roomAppearances: [],
         encounterRecords: [],
         encounterStarts: [],
@@ -1397,6 +1401,7 @@ describe('decision run-state snapshots', () => {
         sequence: 0,
         ledgers: {
           roomCreations: [],
+          phantomExitCreations: [],
           roomAppearances: [],
           encounterRecords: [],
           encounterStarts: [],
@@ -1454,6 +1459,7 @@ describe('decision run-state snapshots', () => {
           sequence: 0,
           ledgers: {
             roomCreations: [],
+            phantomExitCreations: [],
             roomAppearances: [],
             encounterRecords: [],
             encounterStarts: [],
@@ -1534,6 +1540,7 @@ describe('decision run-state snapshots', () => {
         sequence: traits.events.length,
         ledgers: {
           roomCreations: [],
+          phantomExitCreations: [],
           roomAppearances: [],
           encounterRecords: [],
           encounterStarts: [],

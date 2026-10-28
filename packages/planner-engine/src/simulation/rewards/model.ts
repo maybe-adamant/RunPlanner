@@ -227,6 +227,26 @@ export interface HubDepartureRunState {
   readonly departure: RunStateSnapshot;
 }
 
+/**
+ * One reached phantom exit as the simulation settled it: the placeholder room
+ * (pinned or first eligible) and the offer drawn for it on every reached
+ * branch. Execution publication and the editor's effective value read this
+ * product; neither settles the draw again.
+ */
+export interface PhantomExitSettlement {
+  readonly owner: import('../../authored-project/addresses').PhantomExitAddress;
+  readonly historySequence: number;
+  readonly placeholderRoomGameName: string;
+  readonly placeholderPinned: boolean;
+  /** Every declared placeholder in settlement order, with why one is turned away here. */
+  readonly placeholderCandidates: readonly import('../generation/phantom-exit').PhantomPlaceholderCandidate[];
+  /** The placeholder's own store; absent when its fixed or Shop reward draws nothing. */
+  readonly storeKey?: string;
+  readonly rewardPinned: boolean;
+  /** Distinct drawn offers across reached branches; empty when nothing is drawn. */
+  readonly offers: readonly import('../../reward-kernel').ResolvedRewardOffer[];
+}
+
 export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly generatedPickupPlacements?: readonly import('./acquisition/contracts').GeneratedPickupPlacement[];
   /** Reward transitions publish only exact owner relations; room actions publish structural facts. */
@@ -248,6 +268,8 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly wellRefillRealizations: readonly WellRefillRealization[];
   /** Exact automatic Boss resolutions; empty Figurine keys mean consumption without activation. */
   readonly bossArcanaOutcomes: readonly BossArcanaOutcome[];
+  /** Reached phantom exits in chronological order. */
+  readonly phantomExits: readonly PhantomExitSettlement[];
   readonly storeSupport: readonly RewardStoreSupportEntry[];
   readonly targetHistory: readonly TargetRewardHistoryCheckpoint[];
   readonly runStateSnapshots: readonly RunStateSnapshot[];

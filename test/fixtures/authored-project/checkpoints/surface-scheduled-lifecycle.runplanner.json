@@ -276,6 +276,10 @@
                   }
                 ]
               },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
+              },
               "additionalExits": []
             },
             {
@@ -316,6 +320,10 @@
                     "acquisitionRole": "self"
                   }
                 ]
+              },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
               },
               "additionalExits": []
             },
@@ -364,6 +372,10 @@
                   }
                 ]
               },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
+              },
               "additionalExits": []
             },
             {
@@ -389,6 +401,10 @@
               "roomActions": {
                 "order": []
               },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
+              },
               "additionalExits": []
             },
             {
@@ -411,6 +427,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
               },
               "additionalExits": []
             },
@@ -492,6 +512,10 @@
                   }
                 ]
               },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
+              },
               "additionalExits": []
             },
             {
@@ -514,6 +538,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
               },
               "additionalExits": []
             },
@@ -540,6 +568,10 @@
               "roomActions": {
                 "order": []
               },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
+              },
               "additionalExits": []
             },
             {
@@ -562,6 +594,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
               },
               "additionalExits": []
             },
@@ -625,6 +661,10 @@
                   }
                 ]
               },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
+              },
               "additionalExits": []
             },
             {
@@ -665,6 +705,10 @@
                     "acquisitionRole": "self"
                   }
                 ]
+              },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
               },
               "additionalExits": []
             },
@@ -707,6 +751,10 @@
                   }
                 ]
               },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
+              },
               "additionalExits": []
             },
             {
@@ -747,6 +795,10 @@
                     "acquisitionRole": "self"
                   }
                 ]
+              },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
               },
               "additionalExits": []
             },
@@ -807,6 +859,10 @@
                   }
                 ]
               },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
+              },
               "additionalExits": []
             },
             {
@@ -831,6 +887,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
               },
               "additionalExits": []
             },
@@ -873,6 +933,10 @@
                   }
                 ]
               },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
+              },
               "additionalExits": []
             },
             {
@@ -913,6 +977,10 @@
                     "acquisitionRole": "self"
                   }
                 ]
+              },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
               },
               "additionalExits": []
             },
@@ -955,6 +1023,10 @@
                   }
                 ]
               },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
+              },
               "additionalExits": []
             },
             {
@@ -995,6 +1067,10 @@
                     "acquisitionRole": "self"
                   }
                 ]
+              },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
               },
               "additionalExits": []
             },
@@ -1055,6 +1131,10 @@
                     "acquisitionRole": "source"
                   }
                 ]
+              },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
               },
               "additionalExits": []
             },
@@ -1131,6 +1211,10 @@
                   }
                 ]
               },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
+              },
               "additionalExits": []
             },
             {
@@ -1155,6 +1239,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
               },
               "additionalExits": []
             },
@@ -1181,6 +1269,10 @@
               "roomActions": {
                 "order": []
               },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
+              },
               "additionalExits": []
             },
             {
@@ -1205,6 +1297,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "phantomExit": {
+                "placeholderRoomGameName": null,
+                "rewardType": null
               },
               "additionalExits": []
             },

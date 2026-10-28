@@ -229,6 +229,7 @@ function applyUnchecked(
     case 'ReplaceInfernalContractPedestalOption':
     case 'ClearInfernalContractPedestal':
     case 'SetInfernalContractPedestalCollected':
+    case 'ReplacePhantomExit':
     case 'SetPurgingPoolInteraction':
     case 'ReplacePurgingPoolSlot':
     case 'SetErisSpawned':

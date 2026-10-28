@@ -159,6 +159,12 @@ const findingCopy = {
   rewardMissing: {
     title: 'Choose a reward',
   },
+  phantomExitPlaceholderUnavailable: {
+    title: 'Hidden door room unavailable',
+  },
+  phantomExitRewardUnavailable: {
+    title: 'Hidden door reward unavailable',
+  },
   traitOfferMissing: {
     title: 'Choose a trait offer',
   },

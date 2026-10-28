@@ -42,6 +42,8 @@ export type {
   ShopOfferCandidateQuery,
   ShopOfferOptionCandidateQuery,
   InfernalContractPedestalCandidateQuery,
+  PhantomExitRewardCandidateQuery,
+  EvaluatedPhantomExitRewardCandidate,
   InfernalContractPedestalOptionCandidateQuery,
   EvaluatedInfernalContractPedestalCandidate,
 } from './reward-producer';

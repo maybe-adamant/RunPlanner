@@ -52,6 +52,7 @@ import { addRewardFinding, mergeRewardFindingEmissions } from '../findings';
 import type {
   BiomeRewardSimulation,
   BossArcanaOutcome,
+  PhantomExitSettlement,
   FigLeafPhaseCandidateSupport,
   GorgonPhaseCandidateSupport,
   HubDepartureRunState,
@@ -201,6 +202,7 @@ export type ChronologyEmission =
       readonly candidate: NemesisRandomEventCandidateSupport;
     }
   | { readonly kind: 'bossArcanaOutcomes'; readonly outcomes: readonly BossArcanaOutcome[] }
+  | { readonly kind: 'phantomExitSettlement'; readonly settlement: PhantomExitSettlement }
   | {
       readonly kind: 'steadyGrowthThresholds';
       readonly thresholds: readonly {
@@ -264,6 +266,7 @@ export interface ChronologyAccumulation {
   readonly judgmentArcanaContexts: ReadonlyMap<string, JudgmentArcanaCandidateCapability>;
   readonly figurineArcanaContexts: ReadonlyMap<string, FigurineArcanaCandidateCapability>;
   readonly bossArcanaOutcomes: readonly BossArcanaOutcome[];
+  readonly phantomExits: readonly PhantomExitSettlement[];
   readonly steadyGrowthCandidateContexts: ReadonlyMap<
     string,
     readonly ReachedSteadyGrowthThreshold[]
@@ -422,6 +425,7 @@ export function createChronologyAccumulator(
   const judgmentArcanaContexts = new Map<string, JudgmentArcanaCandidateCapability>();
   const figurineArcanaContexts = new Map<string, FigurineArcanaCandidateCapability>();
   const bossArcanaOutcomes = new Map<string, BossArcanaOutcome>();
+  const phantomExits = new Map<string, PhantomExitSettlement>();
   const steadyGrowthCandidateContexts = new Map<string, ReachedSteadyGrowthThreshold[]>();
   const steadyGrowthOutcomeAddresses = new Map<string, LandedOutcome<SteadyGrowthOutcomeAddress>>();
   const latestSteadyGrowthOutcomes = new Map<string, SteadyGrowthOutcomeAddress>();
@@ -857,6 +861,9 @@ export function createChronologyAccumulator(
         for (const outcome of emission.outcomes)
           bossArcanaOutcomes.set(semanticAddressKey(outcome.owner), outcome);
         return;
+      case 'phantomExitSettlement':
+        phantomExits.set(semanticAddressKey(emission.settlement.owner), emission.settlement);
+        return;
       case 'steadyGrowthThresholds':
         for (const { address, landing, threshold } of emission.thresholds) {
           const key = semanticAddressKey(address);
@@ -947,6 +954,7 @@ export function createChronologyAccumulator(
         judgmentArcanaContexts,
         figurineArcanaContexts,
         bossArcanaOutcomes: Object.freeze([...bossArcanaOutcomes.values()]),
+        phantomExits: Object.freeze([...phantomExits.values()]),
         steadyGrowthCandidateContexts,
         steadyGrowthOutcomeAddresses,
         transcendentEmbryoCandidateContexts,

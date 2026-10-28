@@ -10,6 +10,7 @@ export {
 } from './authoring-domain';
 export type {
   BiomeRewardSimulation,
+  PhantomExitSettlement,
   RewardBranch,
   RewardEvent,
   ResolvedAcquisitionSource,

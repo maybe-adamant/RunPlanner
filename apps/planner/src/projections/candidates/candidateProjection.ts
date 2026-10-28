@@ -438,6 +438,7 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
     case 'rewardWheelOffer':
     case 'shopOffer':
     case 'infernalContractPedestal':
+    case 'phantomExitReward':
     case 'acquisitionEntryOffer':
       return evaluation.result.supported;
     case 'takeoverPrebossBatch':
@@ -514,6 +515,7 @@ function candidateForced(
     case 'rewardWheelOffer':
     case 'shopOffer':
     case 'infernalContractPedestal':
+    case 'phantomExitReward':
     case 'acquisitionEntryOffer':
       return false;
     case 'takeoverPrebossBatch':

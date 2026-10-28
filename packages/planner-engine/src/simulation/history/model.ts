@@ -9,6 +9,7 @@ import type {
   HubSlotAddress,
   HubVisitAddress,
   LocalVisitSlotAddress,
+  PhantomExitAddress,
   TargetAddress,
 } from '../../authored-project/addresses';
 import type { RoomHistoryOrigin, RoomLifecycleEvent } from '../lifecycle';
@@ -166,6 +167,19 @@ export interface RoomDepartedHistoryEvent extends HistoryEventBase {
   readonly leavesRestoredRoom?: true;
 }
 
+/**
+ * A room's hidden return door at its first doors unlock, before its side
+ * doors: `CreateRoom` makes a placeholder that is never entered.
+ */
+export interface PhantomExitCreatedHistoryEvent extends HistoryEventBase {
+  readonly kind: 'phantomExitCreated';
+  readonly origin: RoomHistoryOrigin;
+  readonly owner: PhantomExitAddress;
+  /** The pinned room, else the first eligible one; it always counts as created. */
+  readonly placeholderRoomGameName: string;
+  readonly pinned: boolean;
+}
+
 /** The Hub-owned fountain use, settled in the restored Hub between room visits. */
 export interface HubFountainUsedHistoryEvent extends HistoryEventBase {
   readonly kind: 'fountainUsed';
@@ -183,6 +197,7 @@ export type HistoryEvent =
   | EmptyOutgoingGenerationHistoryEvent
   | FieldsBatchOutcomeHistoryEvent
   | HubFountainUsedHistoryEvent
+  | PhantomExitCreatedHistoryEvent
   | RoomCreatedHistoryEvent
   | RoomDepartedHistoryEvent
   | RoomRestoredHistoryEvent
@@ -249,6 +264,8 @@ export interface HistoryCounters {
 
 export interface HistoryLedgers {
   readonly roomCreations: readonly RoomCreatedHistoryEvent[];
+  /** Placeholder rooms, never entered, that native `RoomCreations` still counts. */
+  readonly phantomExitCreations: readonly PhantomExitCreatedHistoryEvent[];
   readonly roomAppearances: readonly RoomAppearanceHistoryEntry[];
   readonly encounterRecords: readonly EncounterHistoryEntry[];
   readonly encounterStarts: readonly EncounterHistoryEntry[];

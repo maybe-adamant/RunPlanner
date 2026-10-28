@@ -34,6 +34,12 @@ either reward form: every Preboss that declares a pedestal destination owns
 source lives in the `infernalContractPedestal` acquisition site. The Shop no
 longer has an `infernalContractReward` offer.
 
+Every Ephyra combat, Mini-Boss and side room also owns `phantomExit`, its
+hidden return door: `placeholderRoomGameName` and `rewardType`. A null field
+is settled by the simulation (first eligible placeholder; the reward type with
+the most entries left in that placeholder's store); a pinned value is kept and
+assessed. The transition gives every such room both fields null.
+
 The migration moves a Shop-owned pedestal item, its collect action and its
 source entry to the room unchanged, and gives every other pedestal-declaring
 Preboss occurrence an unset item.

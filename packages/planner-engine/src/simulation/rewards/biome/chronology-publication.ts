@@ -118,6 +118,7 @@ export function publishChronology(
     timelineFacts: accumulation.timelineFacts,
     wellRefillRealizations: Object.freeze([...walk.wellRefillRealizations.values()]),
     bossArcanaOutcomes: accumulation.bossArcanaOutcomes,
+    phantomExits: accumulation.phantomExits,
     storeSupport: accumulation.storeSupport,
     targetHistory: accumulation.targetHistory,
     branches: Object.freeze(walk.branches.map(publicRewardBranch)),

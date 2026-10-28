@@ -67,6 +67,8 @@ import {
   type InfernalContractPedestalCandidateQuery,
   type InfernalContractPedestalOptionCandidateQuery,
   type EvaluatedInfernalContractPedestalCandidate,
+  type EvaluatedPhantomExitRewardCandidate,
+  type PhantomExitRewardCandidateQuery,
 } from './reward-producer';
 import {
   rewardWheelContextReached,
@@ -209,6 +211,7 @@ export type ProjectCandidateQuery =
   | ShopOfferCandidateQuery
   | ShopOfferOptionCandidateQuery
   | InfernalContractPedestalCandidateQuery
+  | PhantomExitRewardCandidateQuery
   | InfernalContractPedestalOptionCandidateQuery
   | AcquisitionEntryOfferCandidateQuery
   | SideRoomEntryOrderCandidateQuery
@@ -258,6 +261,7 @@ export type ProjectCandidateEvaluation =
   | EvaluatedShipEncounterCountCandidate
   | EvaluatedShopOfferCandidate
   | EvaluatedInfernalContractPedestalCandidate
+  | EvaluatedPhantomExitRewardCandidate
   | EvaluatedAcquisitionEntryOfferCandidate
   | EvaluatedSideRoomEntryOrderCandidate
   | EvaluatedSideRoomGenerationCandidate
@@ -550,6 +554,16 @@ function evaluateCandidateQuery(
         candidateArtifacts.biomeAt(
           createBiomeAddress(query.pedestal.routeKey, query.pedestal.biomeKey),
         )?.rewardProducers,
+        undefined,
+        query,
+      );
+    case 'phantomExitReward':
+      return evaluateRewardProducerCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(createBiomeAddress(query.exit.routeKey, query.exit.biomeKey))
+          ?.rewardProducers,
         undefined,
         query,
       );

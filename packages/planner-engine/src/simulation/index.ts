@@ -142,6 +142,8 @@ export {
   type ShopOfferCandidateQuery,
   type ShopOfferOptionCandidateQuery,
   type InfernalContractPedestalCandidateQuery,
+  type PhantomExitRewardCandidateQuery,
+  type EvaluatedPhantomExitRewardCandidate,
   type InfernalContractPedestalOptionCandidateQuery,
   type EvaluatedInfernalContractPedestalCandidate,
   type SideRoomEntryOrderCandidateQuery,
@@ -339,6 +341,7 @@ export {
   BiomeRewardSimulationContractError,
   RewardAuthoringDomainContractError,
   type BiomeRewardSimulation,
+  type PhantomExitSettlement,
   type FigLeafPhaseCandidateSupport,
   type GorgonPhaseCandidateSupport,
   type NemesisRandomEventBranchAssessment,
@@ -447,6 +450,7 @@ export {
   countedRewardTypeDomain,
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
+  phantomExitSettlementForProjectEvaluationAssembly,
   clockedTraitPickupPlacementForProjectEvaluationAssembly,
   attestClockedTraitPickupPlacementForProjectEvaluationAssembly,
   blockedOccurrenceRoomForProjectEvaluationAssembly,
@@ -677,3 +681,7 @@ export type {
   RewardOfferExclusionKind,
   RewardOfferExclusionReason,
 } from './rewards/offer-exclusions';
+export type {
+  PhantomPlaceholderCandidate,
+  PhantomPlaceholderExclusion,
+} from './generation/phantom-exit';

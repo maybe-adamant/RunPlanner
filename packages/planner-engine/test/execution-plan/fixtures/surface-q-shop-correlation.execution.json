@@ -1,7 +1,7 @@
 {
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
-  "schemaVersion": 99,
+  "schemaVersion": 100,
   "schemaRevision": 0,
   "projectId": "surface-4",
   "routeKey": "Surface",
@@ -1228,7 +1228,7 @@
                   { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
                   { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
                   { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 20 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 18 } },
                   {
                     "storeKey": "SubRoomRewardsHard",
                     "remaining": { "kind": "exact", "count": 8 }
@@ -1355,7 +1355,7 @@
                   {
                     "name": "SubRoomRewards",
                     "remainingEntryCounts": [
-                      0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                      0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
                     ]
                   },
                   {
@@ -1424,208 +1424,6 @@
                   "biomeEncounterDepth": 4,
                   "routeEncounterDepth": 4,
                   "roomHistoryOrdinal": 11
-                },
-                "bags": [
-                  { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
-                  { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
-                  { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 20 } },
-                  {
-                    "storeKey": "SubRoomRewardsHard",
-                    "remaining": { "kind": "exact", "count": 8 }
-                  },
-                  {
-                    "storeKey": "FieldsOptionalRewards",
-                    "remaining": { "kind": "exact", "count": 19 }
-                  },
-                  { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
-                  { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
-                  { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
-                ],
-                "godPool": {
-                  "acquiredSourceKeys": ["ApolloUpgrade", "AresUpgrade", "HephaestusUpgrade"],
-                  "effectiveSourceKeys": [
-                    "AphroditeUpgrade",
-                    "ApolloUpgrade",
-                    "AresUpgrade",
-                    "DemeterUpgrade",
-                    "HephaestusUpgrade",
-                    "HeraUpgrade",
-                    "HestiaUpgrade",
-                    "PoseidonUpgrade",
-                    "ZeusUpgrade"
-                  ],
-                  "capNarrowed": false
-                },
-                "traits": {
-                  "equipped": [
-                    { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
-                    { "traitKey": "AresSpecialBoon", "rarity": "Common", "level": 1 },
-                    { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
-                    { "traitKey": "HephaestusCastBoon", "rarity": "Common", "level": 1 }
-                  ],
-                  "slots": [
-                    { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
-                    { "slot": "Secondary", "traitKey": "AresSpecialBoon" },
-                    { "slot": "Ranged", "traitKey": "HephaestusCastBoon" },
-                    { "slot": "Rush" },
-                    { "slot": "Mana" },
-                    { "slot": "Spell" }
-                  ],
-                  "elements": { "Aether": 0, "Earth": 3, "Air": 1, "Fire": 0, "Water": 0 },
-                  "godRarityCounts": { "Common": 4 },
-                  "upgradableCount": 3,
-                  "bannedTraitKeys": []
-                },
-                "arcana": { "active": [] },
-                "vows": {
-                  "configuredRanks": {
-                    "HealingReductionShrineUpgrade": 0,
-                    "ShopPricesShrineUpgrade": 0,
-                    "EnemyHealthShrineUpgrade": 0,
-                    "EnemyDamageShrineUpgrade": 0,
-                    "EnemySpeedShrineUpgrade": 0,
-                    "EnemyShieldShrineUpgrade": 0,
-                    "EnemyCountShrineUpgrade": 0,
-                    "EnemyRespawnShrineUpgrade": 0,
-                    "NextBiomeEnemyShrineUpgrade": 0,
-                    "BiomeSpeedShrineUpgrade": 0,
-                    "MinibossCountShrineUpgrade": 0,
-                    "BossDifficultyShrineUpgrade": 0,
-                    "BoonSkipShrineUpgrade": 0,
-                    "BoonManaReserveShrineUpgrade": 0,
-                    "BanUnpickedBoonsShrineUpgrade": 0,
-                    "LimitGraspShrineUpgrade": 0,
-                    "EnemyEliteShrineUpgrade": 0
-                  },
-                  "effectiveRanks": {
-                    "HealingReductionShrineUpgrade": 0,
-                    "ShopPricesShrineUpgrade": 0,
-                    "EnemyHealthShrineUpgrade": 0,
-                    "EnemyDamageShrineUpgrade": 0,
-                    "EnemySpeedShrineUpgrade": 0,
-                    "EnemyShieldShrineUpgrade": 0,
-                    "EnemyCountShrineUpgrade": 0,
-                    "EnemyRespawnShrineUpgrade": 0,
-                    "NextBiomeEnemyShrineUpgrade": 0,
-                    "BiomeSpeedShrineUpgrade": 0,
-                    "MinibossCountShrineUpgrade": 0,
-                    "BossDifficultyShrineUpgrade": 0,
-                    "BoonSkipShrineUpgrade": 0,
-                    "BoonManaReserveShrineUpgrade": 0,
-                    "BanUnpickedBoonsShrineUpgrade": 0,
-                    "LimitGraspShrineUpgrade": 0,
-                    "EnemyEliteShrineUpgrade": 0
-                  },
-                  "disabledKeys": []
-                },
-                "forfeit": "inactive",
-                "chaos": { "active": [], "matured": [] },
-                "keepsakes": {
-                  "currentKey": "ManaOverTimeRefundKeepsake",
-                  "usedKeys": ["ManaOverTimeRefundKeepsake"],
-                  "blockedKeys": [],
-                  "fatedStatus": "Unknown",
-                  "held": [
-                    { "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }
-                  ]
-                },
-                "equipment": {
-                  "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
-                  "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
-                },
-                "rewardPriorities": [],
-                "hexProgress": {
-                  "talentKeys": [],
-                  "closed": false,
-                  "bankedPathPoints": 0,
-                  "investedPathPoints": 0,
-                  "olympianTalentInvested": false
-                },
-                "rewardStores": [
-                  {
-                    "name": "RunProgress",
-                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
-                  },
-                  {
-                    "name": "MetaProgress",
-                    "remainingEntryCounts": [
-                      1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1
-                    ]
-                  },
-                  { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
-                  {
-                    "name": "SubRoomRewards",
-                    "remainingEntryCounts": [
-                      0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-                    ]
-                  },
-                  {
-                    "name": "SubRoomRewardsHard",
-                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1]
-                  },
-                  {
-                    "name": "FieldsOptionalRewards",
-                    "remainingEntryCounts": [
-                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-                    ]
-                  },
-                  {
-                    "name": "TartarusRewards",
-                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1]
-                  },
-                  { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
-                  { "name": "Secrets", "remainingEntryCounts": [1] }
-                ],
-                "hexNodes": { "nodes": {}, "investedNodes": [] },
-                "artificer": null,
-                "retainedEffects": {
-                  "echoShopDuplicateStatus": null,
-                  "keepsakes": {
-                    "olympianSources": [],
-                    "jeweledPom": null,
-                    "experimentalHammers": [],
-                    "callingCard": null,
-                    "timePiece": null,
-                    "figLeaf": null,
-                    "phial": null,
-                    "figurine": null,
-                    "stone": null,
-                    "transcendentEmbryo": null,
-                    "gorgon": null
-                  },
-                  "steadyGrowth": [],
-                  "hermesShrineDeliveries": [],
-                  "stygianWell": {
-                    "sparkUses": 0,
-                    "yarnUses": 0,
-                    "hymnUses": 0,
-                    "discountUses": [],
-                    "emptySlotUses": [],
-                    "extendedUses": 0
-                  }
-                }
-              }
-            },
-            {
-              "precedingVisitCount": 3,
-              "facts": [{ "kind": "traitInventory" }],
-              "traits": {
-                "equipped": [
-                  { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
-                  { "traitKey": "AresSpecialBoon", "rarity": "Common", "level": 1 },
-                  { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
-                  { "traitKey": "HephaestusCastBoon", "rarity": "Common", "level": 1 }
-                ]
-              },
-              "beforeRoomExit": {
-                "owner": "[\"hubDecision\",\"Surface\",\"N\",\"hub\"]",
-                "checkpoint": "beforeRoomExit",
-                "counters": {
-                  "biomeDepthCache": 15,
-                  "biomeEncounterDepth": 5,
-                  "routeEncounterDepth": 5,
-                  "roomHistoryOrdinal": 15
                 },
                 "bags": [
                   { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
@@ -1759,7 +1557,209 @@
                   {
                     "name": "SubRoomRewards",
                     "remainingEntryCounts": [
-                      0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                      0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "SubRoomRewardsHard",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  {
+                    "name": "FieldsOptionalRewards",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  {
+                    "name": "TartarusRewards",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1]
+                  },
+                  { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+                  { "name": "Secrets", "remainingEntryCounts": [1] }
+                ],
+                "hexNodes": { "nodes": {}, "investedNodes": [] },
+                "artificer": null,
+                "retainedEffects": {
+                  "echoShopDuplicateStatus": null,
+                  "keepsakes": {
+                    "olympianSources": [],
+                    "jeweledPom": null,
+                    "experimentalHammers": [],
+                    "callingCard": null,
+                    "timePiece": null,
+                    "figLeaf": null,
+                    "phial": null,
+                    "figurine": null,
+                    "stone": null,
+                    "transcendentEmbryo": null,
+                    "gorgon": null
+                  },
+                  "steadyGrowth": [],
+                  "hermesShrineDeliveries": [],
+                  "stygianWell": {
+                    "sparkUses": 0,
+                    "yarnUses": 0,
+                    "hymnUses": 0,
+                    "discountUses": [],
+                    "emptySlotUses": [],
+                    "extendedUses": 0
+                  }
+                }
+              }
+            },
+            {
+              "precedingVisitCount": 3,
+              "facts": [{ "kind": "traitInventory" }],
+              "traits": {
+                "equipped": [
+                  { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
+                  { "traitKey": "AresSpecialBoon", "rarity": "Common", "level": 1 },
+                  { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                  { "traitKey": "HephaestusCastBoon", "rarity": "Common", "level": 1 }
+                ]
+              },
+              "beforeRoomExit": {
+                "owner": "[\"hubDecision\",\"Surface\",\"N\",\"hub\"]",
+                "checkpoint": "beforeRoomExit",
+                "counters": {
+                  "biomeDepthCache": 15,
+                  "biomeEncounterDepth": 5,
+                  "routeEncounterDepth": 5,
+                  "roomHistoryOrdinal": 15
+                },
+                "bags": [
+                  { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+                  { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+                  { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 15 } },
+                  {
+                    "storeKey": "SubRoomRewardsHard",
+                    "remaining": { "kind": "exact", "count": 8 }
+                  },
+                  {
+                    "storeKey": "FieldsOptionalRewards",
+                    "remaining": { "kind": "exact", "count": 19 }
+                  },
+                  { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+                  { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+                  { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+                ],
+                "godPool": {
+                  "acquiredSourceKeys": ["ApolloUpgrade", "AresUpgrade", "HephaestusUpgrade"],
+                  "effectiveSourceKeys": [
+                    "AphroditeUpgrade",
+                    "ApolloUpgrade",
+                    "AresUpgrade",
+                    "DemeterUpgrade",
+                    "HephaestusUpgrade",
+                    "HeraUpgrade",
+                    "HestiaUpgrade",
+                    "PoseidonUpgrade",
+                    "ZeusUpgrade"
+                  ],
+                  "capNarrowed": false
+                },
+                "traits": {
+                  "equipped": [
+                    { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "AresSpecialBoon", "rarity": "Common", "level": 1 },
+                    { "traitKey": "HermesWeaponBoon", "rarity": "Common" },
+                    { "traitKey": "HephaestusCastBoon", "rarity": "Common", "level": 1 }
+                  ],
+                  "slots": [
+                    { "slot": "Melee", "traitKey": "ApolloWeaponBoon" },
+                    { "slot": "Secondary", "traitKey": "AresSpecialBoon" },
+                    { "slot": "Ranged", "traitKey": "HephaestusCastBoon" },
+                    { "slot": "Rush" },
+                    { "slot": "Mana" },
+                    { "slot": "Spell" }
+                  ],
+                  "elements": { "Aether": 0, "Earth": 3, "Air": 1, "Fire": 0, "Water": 0 },
+                  "godRarityCounts": { "Common": 4 },
+                  "upgradableCount": 3,
+                  "bannedTraitKeys": []
+                },
+                "arcana": { "active": [] },
+                "vows": {
+                  "configuredRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "effectiveRanks": {
+                    "HealingReductionShrineUpgrade": 0,
+                    "ShopPricesShrineUpgrade": 0,
+                    "EnemyHealthShrineUpgrade": 0,
+                    "EnemyDamageShrineUpgrade": 0,
+                    "EnemySpeedShrineUpgrade": 0,
+                    "EnemyShieldShrineUpgrade": 0,
+                    "EnemyCountShrineUpgrade": 0,
+                    "EnemyRespawnShrineUpgrade": 0,
+                    "NextBiomeEnemyShrineUpgrade": 0,
+                    "BiomeSpeedShrineUpgrade": 0,
+                    "MinibossCountShrineUpgrade": 0,
+                    "BossDifficultyShrineUpgrade": 0,
+                    "BoonSkipShrineUpgrade": 0,
+                    "BoonManaReserveShrineUpgrade": 0,
+                    "BanUnpickedBoonsShrineUpgrade": 0,
+                    "LimitGraspShrineUpgrade": 0,
+                    "EnemyEliteShrineUpgrade": 0
+                  },
+                  "disabledKeys": []
+                },
+                "forfeit": "inactive",
+                "chaos": { "active": [], "matured": [] },
+                "keepsakes": {
+                  "currentKey": "ManaOverTimeRefundKeepsake",
+                  "usedKeys": ["ManaOverTimeRefundKeepsake"],
+                  "blockedKeys": [],
+                  "fatedStatus": "Unknown",
+                  "held": [
+                    { "name": "ManaOverTimeRefundKeepsake", "rarity": "Epic", "slotted": true }
+                  ]
+                },
+                "equipment": {
+                  "aspect": { "key": "BaseStaffAspect", "rarity": "Legendary" },
+                  "familiar": { "name": "FrogFamiliar", "stackMultiplier": 1 }
+                },
+                "rewardPriorities": [],
+                "hexProgress": {
+                  "talentKeys": [],
+                  "closed": false,
+                  "bankedPathPoints": 0,
+                  "investedPathPoints": 0,
+                  "olympianTalentInvested": false
+                },
+                "rewardStores": [
+                  {
+                    "name": "RunProgress",
+                    "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+                  },
+                  {
+                    "name": "MetaProgress",
+                    "remainingEntryCounts": [
+                      1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1
+                    ]
+                  },
+                  { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+                  {
+                    "name": "SubRoomRewards",
+                    "remainingEntryCounts": [
+                      0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1
                     ]
                   },
                   {
@@ -1834,7 +1834,7 @@
                   { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
                   { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
                   { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
                   {
                     "storeKey": "SubRoomRewardsHard",
                     "remaining": { "kind": "exact", "count": 8 }
@@ -1963,7 +1963,7 @@
                   {
                     "name": "SubRoomRewards",
                     "remainingEntryCounts": [
-                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                     ]
                   },
                   {
@@ -2039,7 +2039,7 @@
                   { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
                   { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
                   { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
                   {
                     "storeKey": "SubRoomRewardsHard",
                     "remaining": { "kind": "exact", "count": 8 }
@@ -2169,7 +2169,7 @@
                   {
                     "name": "SubRoomRewards",
                     "remainingEntryCounts": [
-                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                     ]
                   },
                   {
@@ -2246,7 +2246,7 @@
                   { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
                   { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
                   { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+                  { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
                   {
                     "storeKey": "SubRoomRewardsHard",
                     "remaining": { "kind": "exact", "count": 8 }
@@ -2379,7 +2379,7 @@
                   {
                     "name": "SubRoomRewards",
                     "remainingEntryCounts": [
-                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                      0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                     ]
                   },
                   {
@@ -2594,6 +2594,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -2852,7 +2853,11 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedNSubRoom", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "phantomExit": {
+          "placeholderRoomGameName": "N_Sub01",
+          "reward": { "rewardType": "MetaCurrencyDrop", "storeKey": "SubRoomRewards" }
+        }
       },
       "timeline": {
         "transactions": [
@@ -2921,7 +2926,46 @@
               "biomeEncounterDepth": 3,
               "routeEncounterDepth": 3,
               "roomHistoryOrdinal": 5
-            }
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 19 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -2941,7 +2985,11 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedNSubRoom", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "phantomExit": {
+          "placeholderRoomGameName": "N_Sub01",
+          "reward": { "rewardType": "MetaCardPointsCommonDrop", "storeKey": "SubRoomRewards" }
+        }
       },
       "timeline": {
         "transactions": [
@@ -3017,7 +3065,46 @@
               "biomeEncounterDepth": 3,
               "routeEncounterDepth": 3,
               "roomHistoryOrdinal": 7
-            }
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -3039,6 +3126,7 @@
           { "slotKey": "Encounter", "encounterKey": "MiniBossSatyrCrossbow", "kind": "miniboss" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": []
       },
       "timeline": {
@@ -3192,6 +3280,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -3304,7 +3393,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 18 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 16 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -3327,7 +3416,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -3358,7 +3447,11 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedNSubRoom", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "phantomExit": {
+          "placeholderRoomGameName": "N_Sub02",
+          "reward": { "rewardType": "MaxHealthDrop", "storeKey": "SubRoomRewards" }
+        }
       },
       "timeline": {
         "transactions": [
@@ -3427,7 +3520,46 @@
               "biomeEncounterDepth": 5,
               "routeEncounterDepth": 5,
               "roomHistoryOrdinal": 13
-            }
+            },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -3449,6 +3581,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN_Bigger", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -3567,7 +3700,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -3611,7 +3744,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -3642,7 +3775,11 @@
         "encounterPhases": [
           { "slotKey": "Encounter", "encounterKey": "GeneratedNSubRoom", "kind": "combat" }
         ],
-        "requiredObjects": []
+        "requiredObjects": [],
+        "phantomExit": {
+          "placeholderRoomGameName": "N_Sub02",
+          "reward": { "rewardType": "MaxManaDrop", "storeKey": "SubRoomRewards" }
+        }
       },
       "timeline": {
         "transactions": [
@@ -3712,6 +3849,20 @@
               "routeEncounterDepth": 6,
               "roomHistoryOrdinal": 17
             },
+            "bags": [
+              { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
+              { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
+              { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
+              {
+                "storeKey": "FieldsOptionalRewards",
+                "remaining": { "kind": "exact", "count": 19 }
+              },
+              { "storeKey": "TartarusRewards", "remaining": { "kind": "exact", "count": 9 } },
+              { "storeKey": "TyphonBossRewards", "remaining": { "kind": "exact", "count": 6 } },
+              { "storeKey": "Secrets", "remaining": { "kind": "exact", "count": 1 } }
+            ],
             "traits": {
               "equipped": [
                 { "traitKey": "ApolloWeaponBoon", "rarity": "Common", "level": 1 },
@@ -3732,7 +3883,32 @@
               "godRarityCounts": { "Common": 5 },
               "upgradableCount": 4,
               "bannedTraitKeys": []
-            }
+            },
+            "rewardStores": [
+              {
+                "name": "RunProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+              },
+              {
+                "name": "MetaProgress",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "HubRewards", "remainingEntryCounts": [0, 0, 0, 0, 0, 1, 1, 0, 0, 0] },
+              {
+                "name": "SubRoomRewards",
+                "remainingEntryCounts": [
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
+                ]
+              },
+              { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
+              {
+                "name": "FieldsOptionalRewards",
+                "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+              },
+              { "name": "TartarusRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1, 1] },
+              { "name": "TyphonBossRewards", "remainingEntryCounts": [1, 1, 1, 1, 1, 1] },
+              { "name": "Secrets", "remainingEntryCounts": [1] }
+            ]
           }
         }
       }
@@ -3754,6 +3930,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           { "slotKey": "sideDoor1", "physicalDoorId": 755971, "generation": "notGenerated" },
           { "slotKey": "sideDoor2", "physicalDoorId": 755184, "generation": "notGenerated" },
@@ -3898,6 +4075,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN_Bigger", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
+        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
         "localSlots": [
           { "slotKey": "sideDoor1", "physicalDoorId": 566392, "generation": "notGenerated" },
           { "slotKey": "sideDoor2", "physicalDoorId": 566536, "generation": "notGenerated" },
@@ -4482,7 +4660,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -4505,7 +4683,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -4652,7 +4830,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -4675,7 +4853,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -4829,7 +5007,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -4852,7 +5030,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -5338,7 +5516,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -5387,7 +5565,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -5694,7 +5872,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 10 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -5717,7 +5895,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -5848,7 +6026,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 8 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -5871,7 +6049,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -6002,7 +6180,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 6 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -6025,7 +6203,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -6164,7 +6342,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 4 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -6213,7 +6391,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -6368,7 +6546,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 20 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -6418,7 +6596,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -6570,7 +6748,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 18 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -6636,7 +6814,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -6771,7 +6949,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 17 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -6794,7 +6972,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -6925,7 +7103,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 15 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -6977,7 +7155,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -7119,7 +7297,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -7171,7 +7349,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -7585,7 +7763,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -7608,7 +7786,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -7896,7 +8074,7 @@
               { "storeKey": "RunProgress", "remaining": { "kind": "exact", "count": 14 } },
               { "storeKey": "MetaProgress", "remaining": { "kind": "exact", "count": 12 } },
               { "storeKey": "HubRewards", "remaining": { "kind": "exact", "count": 2 } },
-              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 17 } },
+              { "storeKey": "SubRoomRewards", "remaining": { "kind": "exact", "count": 13 } },
               { "storeKey": "SubRoomRewardsHard", "remaining": { "kind": "exact", "count": 8 } },
               {
                 "storeKey": "FieldsOptionalRewards",
@@ -7919,7 +8097,7 @@
               {
                 "name": "SubRoomRewards",
                 "remainingEntryCounts": [
-                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                  0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1
                 ]
               },
               { "name": "SubRoomRewardsHard", "remainingEntryCounts": [1, 1, 1, 1, 1, 1, 1, 1] },
@@ -8773,5 +8951,5 @@
       }
     }
   ],
-  "planFingerprint": "fe03fce0"
+  "planFingerprint": "058b0237"
 }

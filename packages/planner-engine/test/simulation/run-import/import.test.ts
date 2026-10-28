@@ -420,6 +420,22 @@ describe('run import of the Surface capture', () => {
     imported = projectFromRunRecord(catalog, record);
   });
 
+  it('pins every Ephyra phantom exit to the return door of its first visit', () => {
+    const exits = imported.project.route.biomes
+      .flatMap((biome) => biome.topology?.occurrences ?? [])
+      .flatMap((occurrence) =>
+        occurrence.phantomExit === undefined
+          ? []
+          : [[occurrence.gameName, occurrence.phantomExit] as const],
+      );
+    expect(Object.fromEntries(exits)).toMatchObject({
+      N_Sub01: { placeholderRoomGameName: 'N_Sub04', rewardType: 'RoomMoneyTinyDrop' },
+      N_Combat02: { placeholderRoomGameName: 'N_PreBoss01', rewardType: null },
+      N_Combat14: { placeholderRoomGameName: 'N_Combat19', rewardType: 'Boon' },
+      N_MiniBoss02: { placeholderRoomGameName: 'N_Shop01', rewardType: null },
+    });
+  });
+
   it('completes as a valid plan entering every recorded room, Hub returns included', () => {
     expect(imported.kind).toBe('complete');
     // The run ended in O_Boss02; the plan completes its biome.
@@ -547,7 +563,6 @@ describe('run import of the Surface capture', () => {
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { conversion: 2, menace: 14, roomActionOrder: 5 },
-      mismatch: { stores: 5 },
       notInRecord: { menace: 17, shop: 10 },
     });
     expect(entryLines(imported.report)).toEqual([
@@ -573,14 +588,8 @@ describe('run import of the Surface capture', () => {
       'assumption roomActionOrder r24 occurrence@O-r24',
       'assumption roomActionOrder r25 occurrence@O-r25',
     ]);
-    // Ephyra's side-room and Hub stores lose entries the plan does not draw.
-    expect(mismatchLines(imported.report)).toEqual([
-      'stores r5 SubRoomRewards: RoomMoneyTinyDrop 0 | RoomMoneyTinyDrop 1',
-      'stores r8 HubRewards: Boon 0 | Boon 1',
-      'stores r10 HubRewards: Boon 4, HermesUpgrade 1, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 1, WeaponUpgrade 1 | Boon 1, HermesUpgrade 0, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 0, WeaponUpgrade 0',
-      'stores r12 HubRewards: Boon 3, HermesUpgrade 1, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 1, WeaponUpgrade 1 | Boon 1, HermesUpgrade 0, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 0, WeaponUpgrade 0',
-      'stores r14 HubRewards: Boon 3, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 1, WeaponUpgrade 1 | Boon 1, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 0, WeaponUpgrade 0',
-    ]);
+    // Each Ephyra room's return door draws what the record shows, so the stores agree.
+    expect(mismatchLines(imported.report)).toEqual([]);
   });
 });
 
@@ -649,7 +658,7 @@ describe('run import of the Surface victory', () => {
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { conversion: 2, shop: 1, traitOffer: 2 },
-      mismatch: { stores: 6, traits: 2 },
+      mismatch: { stores: 1, traits: 2 },
       notInRecord: { reward: 1, traitOffer: 1, wheel: 2 },
       refused: { wheel: 1 },
       stopped: { other: 1 },
@@ -664,11 +673,6 @@ describe('run import of the Surface victory', () => {
       'refused wheel r23 rewardWheelOffer@O-r23 -> ReplaceRewardWheelOffer(O-r23 StackUpgrade)',
     ]);
     expect(mismatchLines(imported.report)).toEqual([
-      'stores r4 HubRewards: WeaponUpgrade 0 | WeaponUpgrade 1',
-      'stores r8 HubRewards: Boon 4, HermesUpgrade 1, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 2 | Boon 0, HermesUpgrade 0, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 1',
-      'stores r10 HubRewards: Boon 3, HermesUpgrade 1, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 2 | Boon 0, HermesUpgrade 0, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 1',
-      'stores r15 HubRewards: Boon 3, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 2 | Boon 0, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 1',
-      'stores r15 SubRoomRewardsHard: MaxHealthDrop 1 | MaxHealthDrop 2',
       'traits r24 ApolloSprintBoon: Heroic level 1 | Heroic level 2',
       'traits r24 SuitArmorTrait: held | absent',
       'stores r24 RunProgress: MaxManaDrop 2, StackUpgrade 3 | MaxManaDrop 3, StackUpgrade 2',
