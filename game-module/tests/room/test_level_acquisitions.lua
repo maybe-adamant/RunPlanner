@@ -24,7 +24,7 @@ local function capture()
     return module, callbacks
 end
 
-local function harness(row, native, isBound, installSeaStar, levelAdapter, seaStarAdapter)
+local function harness(row, native, isBound, installSeaStar, levelAdapter, seaStarAdapter, reservation)
     local module, callbacks = capture()
     local state = { state = "synchronized" }
     local begins, completions, mismatches, releases = 0, {}, {}, 0
@@ -66,7 +66,8 @@ local function harness(row, native, isBound, installSeaStar, levelAdapter, seaSt
     }
     levelAdapter = levelAdapter or levels
     seaStarAdapter = seaStarAdapter or seaStar
-    levelAdapter.attach(module, session, function() return state end, function() end, room, seaStarAdapter)
+    levelAdapter.attach(module, session, function() return state end, function() end, room, seaStarAdapter, nil,
+        reservation)
     if installSeaStar then seaStarAdapter.attach(module) end
     return callbacks, room, state, handle, function() return begins end, completions, mismatches,
         function() return releases end
@@ -206,6 +207,20 @@ function TestLevelAcquisitions.testPlannedRerollsInstallTheRowsAtTheLastPlannedR
     lu.assertEquals(loot.StackNum, 3)
     lu.assertEquals(#completions, 1)
     lu.assertEquals(mismatches, {})
+end
+
+function TestLevelAcquisitions.testTheFirstPomScreenBeforePlannedRerollsReservesThePlannedRows()
+    local row = levelRow("StackUpgrade", 1, "Target")
+    row.detail.levelResolution.offeredTargets = { "Target", "Other" }
+    row.detail.levelResolution.rerollCount = 1
+    local loot = { Name = "StackUpgrade", UpgradeOptions = { { ItemName = "NativeFirst" } } }
+    local reserved = {}
+    local reservation = { initial = function(native, plan) reserved[#reserved + 1] = { native, plan } end }
+    local callbacks = harness(row, loot, nil, nil, nil, nil, reservation)
+    callbacks.HandleLootPickup(nil, {}, function() end, {}, loot, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() end, {}, loot, false, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() end, {}, loot, true, {})
+    lu.assertEquals(reserved, { { loot, { planned = 1, names = { "Target", "Other" }, picked = "Target" } } })
 end
 
 function TestLevelAcquisitions.testChoiceBeforeThePlannedRerollsLeavesThePlan()

@@ -110,7 +110,7 @@ function levels.visibleRole(transaction, contact)
     return nil
 end
 
-function levels.attach(module, session, getState, report, room, seaStar, highlights)
+function levels.attach(module, session, getState, report, room, seaStar, highlights, reservation)
     assert(type(seaStar) == "table", "level acquisition Sea Star instance is required")
     local roomCoordinator = room
     local suppressFatedPomBonus = 0
@@ -213,7 +213,14 @@ function levels.attach(module, session, getState, report, room, seaStar, highlig
             report(runtime)
             return base(screen, loot, reroll, args)
         end
-        if not installing then return base(screen, loot, reroll, args) end
+        if not installing then
+            local effect = resolution(payload)
+            if initial and reservation then
+                reservation.initial(loot, { planned = planned, names = effect.offeredTargets or {},
+                    picked = effect.selectedTarget })
+            end
+            return base(screen, loot, reroll, args)
+        end
         if not levels.prepareVisible(payload, loot) then
             session.diagnostic(state, "level-offer-install", {
                 expected = "published level rows", observed = "not installed",

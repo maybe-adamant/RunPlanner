@@ -393,7 +393,8 @@ function TestRuntimeComposition.testAcquisitionCompositionSharesOneSeaStarAcross
     }
     local function freshImport(path)
         if path == "mods/run_modifiers/hooks.lua" then return { attach = function() return { verifyNative = function() end } end } end
-        if path == "mods/room/timeline/acquisitions/sea_star.lua" then
+        if path == "mods/room/timeline/acquisitions/sea_star.lua"
+            or path == "mods/room/timeline/acquisitions/screen_reservation.lua" then
             return assert(loadfile("src/" .. path))()
         end
         if carrierPaths[path] then

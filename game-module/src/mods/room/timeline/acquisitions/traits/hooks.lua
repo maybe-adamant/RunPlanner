@@ -33,7 +33,15 @@ local function boundNormal(room, state, current, native)
     return handle, room.begin(state, handle)
 end
 
-function hooks.attach(module, session, getState, report, room, seaStar, highlights, rowOptions)
+-- The planned final rows the native screens before the final one keep free.
+local function reservedRows(payload, offer)
+    if offer == nil or offer.kind ~= "traits" then return nil end
+    local names = {}
+    for index in ipairs(offer.options or {}) do names[#names + 1] = ordinary.optionKey(payload, index) end
+    return { planned = offer.rerollCount or 0, names = names, picked = ordinary.selectedKey(payload) }
+end
+
+function hooks.attach(module, session, getState, report, room, seaStar, highlights, rowOptions, reservation)
     assert(type(seaStar) == "table", "trait acquisition Sea Star instance is required")
     assert(type(rowOptions) == "table", "trait row options are required")
     chaosOffer.attach(module, session, getState, report, room, highlights)
@@ -462,6 +470,9 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
                 report(runtime)
                 return base(screen, loot, reroll, args)
             end
+        end
+        if carrier and reroll ~= true and not installing and reservation then
+            reservation.initial(loot, reservedRows(payload, offer))
         end
         if installing then
             local conflict, nativeError = ordinary.blockedRowConflict(payload, loot)

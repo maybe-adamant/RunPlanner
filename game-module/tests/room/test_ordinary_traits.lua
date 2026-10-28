@@ -987,6 +987,29 @@ function TestOrdinaryTraits.testLastPlannedRerollInstallsThePlannedRows()
     lu.assertEquals(completed, 1)
 end
 
+function TestOrdinaryTraits.testTheFirstScreenBeforePlannedRerollsReservesThePlannedRows()
+    local offer = threeRows(nil)
+    offer.rerollCount = 1
+    local reserved = {}
+    local reservation = { initial = function(loot, plan) reserved[#reserved + 1] = { loot = loot, plan = plan } end }
+    local priorChoices = _G.CalcNumLootChoices
+    _G.CalcNumLootChoices = function() return 3 end
+    local callbacks = attached(offer, nil, "ApolloUpgrade", { reservation = reservation })
+    local loot = { GodLoot = true, Name = "ApolloUpgrade", UpgradeOptions = { { ItemName = "Native" } } }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, false, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, true, {})
+    _G.CalcNumLootChoices = priorChoices
+    lu.assertEquals(#reserved, 1)
+    lu.assertIs(reserved[1].loot, loot)
+    lu.assertEquals(reserved[1].plan, {
+        planned = 1, names = { "ApolloAttack", "ApolloCast", "ApolloSpecial" }, picked = "ApolloAttack",
+    })
+    lu.assertEquals(loot.UpgradeOptions[1].ItemName, "ApolloAttack")
+end
+
 function TestOrdinaryTraits.testChoiceCountFailureIsANativeFaultNotAMismatch()
     local loot, completed, mismatches = openCursedScreen(threeRows(nil), function() error("native failure") end)
     lu.assertEquals(#mismatches, 1)
