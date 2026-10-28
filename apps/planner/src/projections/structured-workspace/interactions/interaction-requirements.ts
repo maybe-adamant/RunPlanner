@@ -49,7 +49,7 @@ export type WorkspaceRerollRewardTypes =
 
 export interface WorkspaceRerollTargetRequirement {
   readonly key: string;
-  readonly target: import('@run-planner/engine/authored-project').RerollTarget;
+  readonly target: import('@run-planner/engine/authored-project').RerollPressTarget;
   readonly rewardOwner: import('@run-planner/engine/authored-project').RerolledRewardOwner;
   readonly label: string;
   readonly unavailable?: 'notRerollable' | 'slotEntered';
@@ -169,16 +169,22 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly rewardTypes: readonly { readonly rewardType: string; readonly label: string }[];
     }
   | {
-      /** One room's door and cage rerolls: authored presses and the targets a new one may name. */
+      /**
+       * One surface's rerolls (a room's doors, a wheel or a Hub stay): authored
+       * presses and the targets a new one may name.
+       */
       readonly kind: 'roomRerolls';
-      readonly owner: OccurrenceAddress;
+      readonly owner:
+        OccurrenceAddress | import('@run-planner/engine/authored-project').HubDecisionAddress;
       readonly interactionKey: string;
       readonly surface: import('@run-planner/engine/authored-project').RerollSurface;
       /** Empty while the surface is unreached. */
       readonly targets: readonly WorkspaceRerollTargetRequirement[];
       readonly rows: readonly {
         readonly key: string;
-        readonly address: import('@run-planner/engine/authored-project').RoomActionAddress;
+        readonly address:
+          | import('@run-planner/engine/authored-project').RoomActionAddress
+          | import('@run-planner/engine/authored-project').HubRerollAddress;
         readonly reward: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
         readonly rewardTypes: WorkspaceRerollRewardTypes;
       }[];

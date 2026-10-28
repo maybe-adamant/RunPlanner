@@ -19,6 +19,7 @@ import {
   type BiomeAddress,
   type BiomeTopology,
   type ExitDecision,
+  type HubAction,
   type HubDecision,
   type HubDecisionAddress,
   type LocalVisitDecision,
@@ -31,7 +32,9 @@ import type {
   CanonicalAuthoredRoom,
   CanonicalHubDecision,
   CanonicalLocalVisitRoom,
+  RerollSurfaceSettlement,
 } from '@run-planner/engine/simulation';
+import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
 
 import { requireWorkspaceRoom } from './catalog-room';
 import {
@@ -62,10 +65,12 @@ import {
 import type { WorkspaceBiomeSource } from '../source-index';
 import { presentRunState } from '../presentation/run-state';
 import { projectWorkspaceDoorContract } from './door-contract';
+import { assembleHubStayRerolls, workspaceRerolledDoor } from './reroll-assembly';
 import type {
   WorkspaceDoorContract,
   WorkspaceHubDecisionNode,
   WorkspaceHubFountain,
+  WorkspaceHubStay,
   WorkspaceOccurrenceWorkbenchNode,
 } from '../contracts/structure';
 import type { WorkspaceMarker } from '../contracts/navigation';
@@ -180,6 +185,44 @@ function redirectHubMainRewardFocus(
   markerDestinations.redirectTo(mainReward, hub, `hub:${hub.focusKey}`, mainReward);
 }
 
+/** The order that uses the fountain at the end of one stay, before its next visit. */
+function fountainInStay(actions: readonly HubAction[], precedingVisitCount: number) {
+  const others = actions.filter((action) => action.kind !== 'useFountain');
+  let visits = 0;
+  let index = others.length;
+  for (const [position, action] of others.entries()) {
+    if (action.kind !== 'roomVisit') continue;
+    if (visits === precedingVisitCount) {
+      index = position;
+      break;
+    }
+    visits += 1;
+  }
+  return Object.freeze([
+    ...others.slice(0, index),
+    Object.freeze({ kind: 'useFountain' as const }),
+    ...others.slice(index),
+  ]);
+}
+
+/** The last reached stay before a board door's room was entered: what it offered onward. */
+function finalStayOf(
+  stays: readonly (RerollSurfaceSettlement | undefined)[],
+  hubSlotKey: string,
+): RerollSurfaceSettlement | undefined {
+  let final: RerollSurfaceSettlement | undefined;
+  for (const stay of stays) {
+    const target = stay?.targets.find(
+      (candidate) =>
+        candidate.target.kind === 'hubSlot' && candidate.target.hubSlotKey === hubSlotKey,
+    );
+    if (target === undefined) continue;
+    if (target.unavailable === 'slotEntered') break;
+    final = stay;
+  }
+  return final;
+}
+
 function projectHubNode(
   input: WorkspaceHubAssemblyInput,
   owner: HubDecisionAddress,
@@ -198,6 +241,10 @@ function projectHubNode(
   const rewardControls: WorkspaceRewardControl[] = [];
   const workbenches: WorkspaceOccurrenceWorkbenchNode[] = [];
   const doorsBySlot = new Map<string, WorkspaceDoorContract>();
+  const source = input.source;
+  const staySettlements = Array.from({ length: descriptor.requiredVisits + 1 }, (_, count) =>
+    source?.rerollSurface({ kind: 'hubStay', hub: owner, precedingVisitCount: count }),
+  );
   const roomsBySlot = new Map<string, WorkspaceRoomSummary>();
   const projectLocalVisit = (
     sourceOccurrence: RoomOccurrence,
@@ -392,10 +439,19 @@ function projectHubNode(
       occurrence === undefined || target === undefined
         ? undefined
         : projectLocalVisit(occurrence, target, detailsActive, occurrenceNode!.key);
+    // A board door reads its first draw and what its rerolls left for its visit.
     const door =
       occurrenceNode === undefined
         ? undefined
-        : projectWorkspaceDoorContract(occurrenceNode.room, 'visible');
+        : source === undefined
+          ? projectWorkspaceDoorContract(occurrenceNode.room, 'visible')
+          : workspaceRerolledDoor(
+              catalog,
+              source,
+              finalStayOf(staySettlements, slot.slotKey),
+              projectWorkspaceDoorContract(occurrenceNode.room, 'visible'),
+              staySettlements[0],
+            );
     if (occurrenceNode !== undefined) {
       occurrenceInteractionRequirements.push(
         ...occurrenceAssembly!.occurrenceInteractionRequirements,
@@ -475,7 +531,9 @@ function projectHubNode(
       visited: detailsActive,
     });
   });
-  const visitActionPositions = hub.actions.flatMap((action, index) =>
+  // Positions count the visits and the fountain use the map shows, not rerolls.
+  const mapActions = hub.actions.filter((action) => action.kind !== 'reroll');
+  const visitActionPositions = mapActions.flatMap((action, index) =>
     action.kind === 'roomVisit' ? [index + 1] : [],
   );
   const visits = Array.from({ length: descriptor.requiredVisits }, (_, index) => {
@@ -534,7 +592,7 @@ function projectHubNode(
   });
   const fountainAddress = createHubFountainAddress(biome, descriptor.hubKey);
   const fountainOutcome = createFountainRarityOutcomeAddress(fountainAddress);
-  const fountainIndex = hub.actions.findIndex((action) => action.kind === 'useFountain');
+  const fountainIndex = mapActions.findIndex((action) => action.kind === 'useFountain');
   const fountainPrecedingVisits = hubFountainPrecedingVisitCount(hub);
   // The preceding occurrence always exists, including before the first visit.
   const hostOccurrenceId =
@@ -590,11 +648,86 @@ function projectHubNode(
           }),
         }),
   });
+  const nodeKey = `hub:${semanticAddressKey(owner)}`;
+  const openSlots = new Map(
+    slots.flatMap((slot) =>
+      slot.open
+        ? [
+            [
+              slot.hubSlotKey,
+              Object.freeze({
+                label: slot.label,
+                ...(slot.door === undefined ? {} : { door: slot.door }),
+              }),
+            ] as const,
+          ]
+        : [],
+    ),
+  );
+  const firstStay = staySettlements[0];
+  const stays = staySettlements.map((settled, precedingVisitCount): WorkspaceHubStay => {
+    const list =
+      source === undefined
+        ? {}
+        : assembleHubStayRerolls({
+            hub,
+            markerDestinations,
+            nodeKey,
+            owner,
+            precedingVisitCount,
+            settled,
+            slots: openSlots,
+            source,
+          });
+    if (list.requirement !== undefined) occurrenceInteractionRequirements.push(list.requirement);
+    let visitsBefore = 0;
+    let rerollBeforeFountain = false;
+    for (const action of hub.actions) {
+      if (action.kind === 'useFountain') break;
+      if (action.kind === 'roomVisit') visitsBefore += 1;
+      else if (visitsBefore === precedingVisitCount) rerollBeforeFountain = true;
+    }
+    const board =
+      precedingVisitCount === 0 || settled === undefined
+        ? undefined
+        : settled.targets.flatMap((target) => {
+            if (target.target.kind !== 'hubSlot') return [];
+            const hubSlotKey = target.target.hubSlotKey;
+            const first =
+              firstStay?.targets.find(
+                (candidate) =>
+                  candidate.target.kind === 'hubSlot' && candidate.target.hubSlotKey === hubSlotKey,
+              )?.assigned ?? target.assigned;
+            return [
+              Object.freeze({
+                hubSlotKey,
+                label: openSlots.get(hubSlotKey)?.label ?? hubSlotKey,
+                summary: summarizeRewardOffer(catalog, first),
+                ...(JSON.stringify(first) === JSON.stringify(target.current)
+                  ? {}
+                  : { rerolledSummary: summarizeRewardOffer(catalog, target.current) }),
+                entered: target.unavailable === 'slotEntered',
+              }),
+            ];
+          });
+    return Object.freeze({
+      precedingVisitCount,
+      ...(fountainPrecedingVisits === precedingVisitCount
+        ? { fountain: Object.freeze({ afterRerolls: rerollBeforeFountain }) }
+        : {}),
+      ...(fountainPrecedingVisits === precedingVisitCount || precedingVisitCount > visitOrder.length
+        ? {}
+        : { fountainActions: fountainInStay(hub.actions, precedingVisitCount) }),
+      ...(list.rerolls === undefined ? {} : { rerolls: list.rerolls }),
+      ...(board === undefined ? {} : { board: Object.freeze(board) }),
+    });
+  });
   const node = Object.freeze({
     authoring: 'authored' as const,
     kind: 'hubDecision' as const,
     fountain,
-    key: `hub:${semanticAddressKey(owner)}`,
+    stays: Object.freeze(stays),
+    key: nodeKey,
     hubKey: descriptor.hubKey,
     gameName: descriptor.terminal.roomGameName,
     marker: hubMarker,

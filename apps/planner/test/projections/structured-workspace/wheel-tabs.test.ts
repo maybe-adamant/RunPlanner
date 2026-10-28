@@ -134,7 +134,8 @@ describe('ship wheel tabs', () => {
     });
     // The Timeline row names the offer and links to the wheel.
     const row = shipRoom(projected).roomActions?.rows.find(
-      (candidate) => candidate.key === press.address.actionKey,
+      (candidate) =>
+        press.address.kind === 'roomAction' && candidate.key === press.address.actionKey,
     );
     expect(row?.label).toMatch(/^Reroll Offer 1 → \S/);
   });

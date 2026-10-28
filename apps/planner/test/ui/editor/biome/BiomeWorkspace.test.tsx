@@ -24,6 +24,7 @@ import {
   createStartingRewardAddress,
   decodeProjectDocument,
   createTargetAddress,
+  rerollAppendIndex,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -534,6 +535,54 @@ describe('BiomeWorkspace', () => {
           .getState()
           .projectWorkspace.assembly!.evaluation.findings.some(
             (candidate) => candidate.code === 'hubVisitOrderIncomplete',
+          ),
+      ).toBe(false),
+    );
+  });
+
+  it('routes a Hub board reroll finding to its stay in the Timeline details', async () => {
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    // Without the card, the press after the first visit is refused.
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'InsertHubReroll',
+      hub,
+      hubSlotKey: 'combat03',
+      reward: { rewardType: 'MaxHealthDropBig' },
+      index: rerollAppendIndex(loadSurfaceNProject(), {
+        kind: 'hubStay',
+        hub,
+        precedingVisitCount: 1,
+      })!,
+    });
+    const view = renderWorkspace(project, 'Surface', 'N');
+    const finding = view.application.store
+      .getState()
+      .projectWorkspace.assembly!.evaluation.findings.find(
+        (candidate) => candidate.origin.kind === 'hubReroll',
+      );
+    if (finding === undefined) throw new Error('Hub reroll finding is missing');
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const details = screen.getByRole('region', { name: 'Ephyra Hub timeline' });
+    // Without the card only the stay holding the press shows its list.
+    const afterFirstVisit = within(details).getByRole('region', { name: 'Rerolls' });
+    const reward = within(afterFirstVisit).getByRole('button', { name: /^Reroll 1 reward/ });
+    expect(reward.closest('[data-selected-finding="true"]')).not.toBeNull();
+    const remove = within(afterFirstVisit).getByRole('button', { name: 'Remove reroll 1' });
+    expect(remove).not.toHaveProperty('disabled', true);
+    await view.user.click(remove);
+    await waitFor(() =>
+      expect(
+        view.application.store
+          .getState()
+          .projectWorkspace.assembly!.evaluation.findings.some(
+            (candidate) => candidate.origin.kind === 'hubReroll',
           ),
       ).toBe(false),
     );

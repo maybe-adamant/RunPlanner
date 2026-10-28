@@ -42,6 +42,7 @@ import { hubMapReward } from './hubMapReward';
 import { hintProps } from '@planner/ui/controls/hint';
 
 interface HubMapTimelineProps {
+  readonly detailsControl: ReactNode;
   readonly hubIdentity: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly locked: boolean;
@@ -323,6 +324,7 @@ function TimelineFountainMarker({
 
 /** The Timeline map appends unvisited open rooms and the fountain use to the Hub action order. */
 export function HubMapTimeline({
+  detailsControl,
   hubIdentity,
   interactions,
   locked,
@@ -418,7 +420,10 @@ export function HubMapTimeline({
           <>
             {requirement}
             <div className="hub-map-corner-actions">
-              {resetVisitsControl}
+              <div className="hub-map-board-actions">
+                {resetVisitsControl}
+                {detailsControl}
+              </div>
               <HubMapQualityLegend />
             </div>
           </>

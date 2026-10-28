@@ -112,6 +112,13 @@ describe('structured workspace interaction binding', () => {
       command: { hub, actions: hubVisitActions(selectedVisits, 2), kind: 'ReplaceHubActionOrder' },
       focus: { owner: createHubFountainAddress(nBiome, 'hub'), timing: 'after' },
     });
+    // A board-door reroll reads as a reroll of its door, never as the fountain.
+    expect(
+      visitOrder.proposalFor([
+        { kind: 'roomVisit', hubSlotKey: selectedVisits[0]! },
+        { kind: 'reroll', rerollId: 'r1', hubSlotKey: 'combat03', reward: { rewardType: 'Boon' } },
+      ]).choices[0]?.label,
+    ).toBe(`${selectedVisits[0]} → Reroll combat03`);
     // Room-only edits keep the fountain where it is and carry no focus.
     expect(visitOrder.proposalFor(hubVisitActions(reordered)).intent()).not.toHaveProperty('focus');
     const shortened = visitOrder.proposalFor(

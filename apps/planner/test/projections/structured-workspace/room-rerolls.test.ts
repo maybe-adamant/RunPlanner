@@ -8,7 +8,9 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   semanticAddressKey,
+  type HubRerollAddress,
   type ProjectDocument,
+  type RoomActionAddress,
 } from '@run-planner/engine/authored-project';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadNemesisFieldsCheckpoint } from '@run-planner/test-fixtures/underworld';
@@ -95,6 +97,12 @@ async function append(project: ProjectDocument, targetKey: string, skip = 0) {
   );
   const reward = rewards[skip] as ResolvedRewardOffer;
   return applyProjectCommand(project, catalog, interaction.appendIntent(targetKey, reward).command);
+}
+
+/** A room press's action address. */
+function roomAction(address: RoomActionAddress | HubRerollAddress): RoomActionAddress {
+  if (address.kind !== 'roomAction') throw new Error('a room press has a room action address');
+  return address;
 }
 
 const doorKey = (occurrenceId: typeof doorTo) =>
@@ -210,7 +218,7 @@ describe('Room Doors Rerolls list', () => {
     const [press] = rerollsOf(projectStructuredWorkspaceFixture(project)).rerolls.rows;
     const moved = applyProjectCommand(project, catalog, {
       kind: 'MoveRoomAction',
-      action: press!.address,
+      action: roomAction(press!.address),
       toIndex: 0,
     });
     const projected = projectStructuredWorkspaceFixture(moved);
@@ -276,7 +284,7 @@ describe('Room Doors Rerolls list', () => {
     const [press] = rerollsOf(projectStructuredWorkspaceFixture(resolved)).rerolls.rows;
     const changed = applyProjectCommand(resolved, catalog, {
       kind: 'ReplaceRerollReward',
-      action: press!.address,
+      action: roomAction(press!.address),
       reward: { rewardType: 'RoomMoneyDrop' },
     });
     const projected = projectStructuredWorkspaceFixture(changed);
@@ -290,7 +298,10 @@ describe('Room Doors Rerolls list', () => {
     ).toBe(true);
     // Without its reroll the kept reward is dropped instead.
     const removed = projectStructuredWorkspaceFixture(
-      applyProjectCommand(resolved, catalog, { kind: 'RemoveRoomAction', action: press!.address }),
+      applyProjectCommand(resolved, catalog, {
+        kind: 'RemoveRoomAction',
+        action: roomAction(press!.address),
+      }),
     );
     expect(
       batchOf(removed, 'F', source).targets[0]?.door.offerRewardSurface.rewards[0]

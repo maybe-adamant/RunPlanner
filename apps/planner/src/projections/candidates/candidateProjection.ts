@@ -30,6 +30,7 @@ import {
   type EncounterPhaseAddress,
   type HubAction,
   type HubDecisionAddress,
+  type HubRerollAddress,
   type HubSlotAddress,
   type IncomingRewardAddress,
   type LocalVisitSlotAddress,
@@ -100,7 +101,7 @@ export type RewardDomainCandidateOwner =
   | RewardCandidateOwner
   | { readonly kind: 'phantomExit'; readonly address: PhantomExitAddress }
   /** An authored reroll press, redrawing its target. */
-  | { readonly kind: 'reroll'; readonly address: RoomActionAddress }
+  | { readonly kind: 'reroll'; readonly address: RoomActionAddress | HubRerollAddress }
   /** A press not yet authored, appended to a surface; `address` is its target's reward owner. */
   | {
       readonly kind: 'pendingReroll';

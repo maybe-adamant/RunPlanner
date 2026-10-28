@@ -28,6 +28,7 @@ import {
 import { OpenHubRoomCard } from './HubRoomCards';
 import { HubMapOverview } from './hub-map/HubMapOverview';
 import { HubMapTimeline } from './hub-map/HubMapTimeline';
+import { HubTimelineDetails } from './HubTimelineDetails';
 import { RunStateLauncher } from './RunStateSheet';
 import { hintProps } from '@planner/ui/controls/hint';
 
@@ -109,6 +110,12 @@ export function HubDecisionWorkbench({
   const requestedTab = initialTab ?? 'overview';
   const initialOverviewView =
     findingNavigationRevision !== undefined && requestedTab === 'overview' ? 'list' : 'map';
+  // Board-door rerolls are repaired in Details; visits and the fountain on the map.
+  const findingTimelineView = focusedOwner?.kind === 'hubReroll' ? 'details' : 'map';
+  const initialTimelineView =
+    findingNavigationRevision !== undefined && requestedTab === 'timeline'
+      ? findingTimelineView
+      : 'map';
   const hubIdentity = semanticAddressKey(node.owner);
   const [tabState, setTabState] = useState({
     active: requestedTab,
@@ -121,16 +128,19 @@ export function HubDecisionWorkbench({
     readonly handledFindingNavigationRevision: number | undefined;
     readonly hubIdentity: string;
     readonly overview: 'list' | 'map';
+    readonly timeline: 'details' | 'map';
   }>({
     handledFindingNavigationRevision: findingNavigationRevision,
     hubIdentity,
     overview: initialOverviewView,
+    timeline: initialTimelineView,
   });
   if (viewState.hubIdentity !== hubIdentity) {
     setViewState({
       handledFindingNavigationRevision: findingNavigationRevision,
       hubIdentity,
       overview: initialOverviewView,
+      timeline: initialTimelineView,
     });
   } else if (
     findingNavigationRevision !== undefined &&
@@ -140,23 +150,34 @@ export function HubDecisionWorkbench({
       ...viewState,
       handledFindingNavigationRevision: findingNavigationRevision,
       ...(requestedTab === 'overview' ? { overview: 'list' as const } : {}),
+      ...(requestedTab === 'timeline' ? { timeline: findingTimelineView } : {}),
     });
   }
-  // Overview findings are canonical in List. Ordinary publication preserves
-  // its chosen Map view; Timeline is always its map surface.
+  // Overview findings are canonical in List; Timeline findings in the view
+  // that repairs them. Ordinary publication preserves the chosen view.
   const overviewView =
     viewState.hubIdentity === hubIdentity ? viewState.overview : initialOverviewView;
+  const timelineView =
+    viewState.hubIdentity === hubIdentity ? viewState.timeline : initialTimelineView;
   const overviewNavigation = useRef<HTMLButtonElement>(null);
-  const pendingOverviewFocus = useRef(false);
+  const timelineNavigation = useRef<HTMLButtonElement>(null);
+  const pendingViewFocus = useRef<'overview' | 'timeline' | undefined>(undefined);
   const setOverviewView = (overview: 'list' | 'map'): void => {
-    pendingOverviewFocus.current = true;
+    pendingViewFocus.current = 'overview';
     setViewState({ ...viewState, overview });
   };
+  const setTimelineView = (timeline: 'details' | 'map'): void => {
+    pendingViewFocus.current = 'timeline';
+    setViewState({ ...viewState, timeline });
+  };
   useLayoutEffect(() => {
-    if (!pendingOverviewFocus.current) return;
-    pendingOverviewFocus.current = false;
-    overviewNavigation.current?.focus({ preventScroll: true });
-  }, [overviewView]);
+    const pending = pendingViewFocus.current;
+    if (pending === undefined) return;
+    pendingViewFocus.current = undefined;
+    (pending === 'overview' ? overviewNavigation : timelineNavigation).current?.focus({
+      preventScroll: true,
+    });
+  }, [overviewView, timelineView]);
   const findingCleared =
     tabState.findingNavigationRevision !== undefined &&
     findingNavigationRevision === undefined &&
@@ -247,6 +268,16 @@ export function HubDecisionWorkbench({
       type="button"
     >
       {overviewView === 'map' ? 'Details →' : 'Back to Map'}
+    </button>
+  );
+  const timelineNavigationControl = (
+    <button
+      className="quiet-action action-compact"
+      onClick={() => setTimelineView(timelineView === 'map' ? 'details' : 'map')}
+      ref={timelineNavigation}
+      type="button"
+    >
+      {timelineView === 'map' ? 'Details →' : 'Back to Map'}
     </button>
   );
   const resetVisitsControl = (
@@ -399,14 +430,26 @@ export function HubDecisionWorkbench({
               </section>
             ) : (
               <>
-                <HubMapTimeline
-                  hubIdentity={hubIdentity}
-                  interactions={interactions}
-                  locked={hubTarget.inert}
-                  node={node}
-                  requirement={visitsRequirement}
-                  resetVisitsControl={resetVisitsControl}
-                />
+                {timelineView === 'map' ? (
+                  <HubMapTimeline
+                    detailsControl={timelineNavigationControl}
+                    hubIdentity={hubIdentity}
+                    interactions={interactions}
+                    locked={hubTarget.inert}
+                    node={node}
+                    requirement={visitsRequirement}
+                    resetVisitsControl={resetVisitsControl}
+                  />
+                ) : (
+                  <HubTimelineDetails
+                    interactions={interactions}
+                    locked={hubTarget.inert}
+                    mapControl={timelineNavigationControl}
+                    node={node}
+                    requirement={visitsRequirement}
+                    resetVisitsControl={resetVisitsControl}
+                  />
+                )}
               </>
             )}
           </div>

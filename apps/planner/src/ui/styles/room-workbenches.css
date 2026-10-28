@@ -2383,3 +2383,99 @@
   align-items: center;
   gap: 0.4rem;
 }
+
+/* Hub Timeline details: visits in order with each stay between them. */
+.hub-timeline-details .hub-board-heading {
+  padding-bottom: 12px;
+}
+
+.hub-timeline-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0 0 8px;
+  list-style: none;
+}
+
+.hub-timeline-row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 2.5rem;
+  padding: 6px 14px;
+  border-top: 1px solid #2c2d35;
+}
+
+.hub-timeline-visit[data-authoring='authored'] {
+  background: rgb(255 255 255 / 3%);
+}
+
+.hub-timeline-step {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.hub-timeline-room {
+  color: #f2ede5;
+  font-size: 0.92rem;
+}
+
+.hub-timeline-reward,
+.hub-timeline-board-reward {
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.hub-timeline-muted {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.hub-timeline-fountain .room-action-placement-picker {
+  grid-column: 4;
+}
+
+.hub-timeline-details > .hub-timeline-fountain {
+  border-top: 1px solid #34353e;
+}
+
+.hub-timeline-rerolls .room-rerolls {
+  padding-left: calc(4.5rem + 14px);
+  border-top-color: #2c2d35;
+}
+
+.hub-timeline-board {
+  display: grid;
+  gap: 4px;
+  padding: 8px 14px 10px calc(4.5rem + 24px);
+  border-top: 1px solid #2c2d35;
+}
+
+.hub-timeline-board h5 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.hub-timeline-board ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  gap: 2px 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hub-timeline-board li {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 8.5rem) minmax(0, 1fr) auto;
+  gap: 10px;
+  font-size: 0.88rem;
+}
+
+.hub-timeline-board li[data-entered='true'] .hub-timeline-board-room,
+.hub-timeline-board li[data-entered='true'] .hub-timeline-board-reward {
+  color: var(--muted);
+}

@@ -192,9 +192,16 @@ export function bindHubInteractions(
                   value.length === 0
                     ? 'No Hub actions'
                     : value
-                        .map((action) =>
-                          action.kind === 'roomVisit' ? action.hubSlotKey : 'Fountain',
-                        )
+                        .map((action) => {
+                          switch (action.kind) {
+                            case 'roomVisit':
+                              return action.hubSlotKey;
+                            case 'useFountain':
+                              return 'Fountain';
+                            case 'reroll':
+                              return `Reroll ${action.hubSlotKey}`;
+                          }
+                        })
                         .join(' → '),
                 value,
               }),

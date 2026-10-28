@@ -3,7 +3,17 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { loadSurfaceNCompleteHubFrontierProject } from '@run-planner/test-fixtures/surface';
+import { catalog } from '@run-planner/hades2-catalog';
+import {
+  applyProjectCommand,
+  createHubDecisionAddress,
+  rerollAppendIndex,
+} from '@run-planner/engine/authored-project';
+import {
+  loadSurfaceNCompleteHubFrontierProject,
+  loadSurfaceNProject,
+  nBiome,
+} from '@run-planner/test-fixtures/surface';
 import { withRetainedHubBehindMissingLink } from '@planner-test/support/hub-workbench';
 import { renderStaticHubDecisionWorkbench } from '@planner-test/support/biome-workbench';
 
@@ -66,7 +76,7 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(screen.getByRole('button', { name: 'Map controls' })).toBeTruthy();
   });
 
-  it('resets only the finding-requested Overview view to List and keeps Timeline map-only', () => {
+  it('resets only the finding-requested Overview view to List and keeps Timeline on its map', () => {
     const view = renderStaticHubDecisionWorkbench(
       loadSurfaceNCompleteHubFrontierProject(),
       'Surface',
@@ -83,6 +93,8 @@ describe('HubDecisionWorkbench interaction', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     expect(screen.getByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
 
+    // A visit or fountain finding is repaired on the map, even from Details.
+    fireEvent.click(screen.getByRole('button', { name: 'Details →' }));
     view.rerenderHub({ findingNavigationRevision: 2, initialTab: 'timeline' });
     expect(screen.getByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
 
@@ -186,5 +198,56 @@ describe('HubDecisionWorkbench interaction', () => {
     fireEvent.keyDown(exit, { key: 'Home' });
     expect(overview.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('region', { name: 'Ephyra Hub map' })).toBeTruthy();
+  });
+
+  it('opens the visits in order with each stay between them from the Timeline map', () => {
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const held = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: { kind: 'route', routeKey: 'Surface' },
+      arcanaKeys: ['DoorReroll'],
+    });
+    const project = applyProjectCommand(held, catalog, {
+      kind: 'InsertHubReroll',
+      hub,
+      hubSlotKey: 'combat03',
+      reward: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' } },
+      index: rerollAppendIndex(held, { kind: 'hubStay', hub, precedingVisitCount: 1 })!,
+    });
+    renderStaticHubDecisionWorkbench(project, 'Surface', 'N', { initialTab: 'timeline' });
+    fireEvent.click(screen.getByRole('button', { name: 'Details →' }));
+    const details = screen.getByRole('region', { name: 'Ephyra Hub timeline' });
+    const rows = [...details.querySelectorAll('.hub-timeline-list > li')].map((row) =>
+      row.classList.contains('hub-timeline-visit')
+        ? (row.querySelector('.hub-timeline-step')?.textContent ?? '')
+        : row.classList.contains('hub-timeline-rerolls')
+          ? 'Rerolls'
+          : row.classList.contains('hub-timeline-board')
+            ? 'Board'
+            : 'Fountain',
+    );
+    // Every stay offers rerolls with the card; each after a visit recaps its board.
+    expect(rows.filter((row) => row.startsWith('Visit'))).toEqual(
+      ['1', '2', '3', '4', '5', '6'].map((index) => `Visit ${index}`),
+    );
+    expect(rows.slice(rows.indexOf('Visit 1'), rows.indexOf('Visit 2'))).toEqual(
+      expect.arrayContaining(['Visit 1', 'Rerolls', 'Board']),
+    );
+    expect(rows.filter((row) => row === 'Fountain')).toHaveLength(1);
+    // The press sits in its stay, after the first visit, with its own Remove.
+    const lists = within(details).getAllByRole('region', { name: 'Rerolls' });
+    expect(lists).toHaveLength(7);
+    expect(within(lists[1]!).getByRole('button', { name: 'Remove reroll 1' })).not.toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(within(lists[1]!).getByText('2 left')).toBeTruthy();
+    const board = within(details).getByRole('list', { name: 'Board After Visit 1' });
+    expect(within(board).getByText('Visited')).toBeTruthy();
+    expect(within(board).getByText(/ → /)).toBeTruthy();
+    expect(within(details).getByRole('button', { name: 'Move Fountain' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Map' }));
+    expect(screen.getByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
   });
 });

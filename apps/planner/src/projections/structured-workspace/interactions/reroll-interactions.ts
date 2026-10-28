@@ -121,32 +121,56 @@ function bindRoomRerolls(
       pendingResolvers.set(targetKey, bound);
       return bound;
     },
-    replaceRewardIntent: (rowKey: string, reward: ResolvedRewardOffer) =>
-      Object.freeze({
-        command: Object.freeze({
-          kind: 'ReplaceRerollReward' as const,
-          action: requireRow(rowKey).address,
-          reward,
-        }),
-      }),
-    removeIntent: (rowKey: string) =>
-      Object.freeze({
-        command: Object.freeze({
-          kind: 'RemoveRoomAction' as const,
-          action: requireRow(rowKey).address,
-        }),
-      }),
+    replaceRewardIntent: (rowKey: string, reward: ResolvedRewardOffer) => {
+      const address = requireRow(rowKey).address;
+      return Object.freeze({
+        command:
+          address.kind === 'hubReroll'
+            ? Object.freeze({ kind: 'ReplaceHubRerollReward' as const, reroll: address, reward })
+            : Object.freeze({ kind: 'ReplaceRerollReward' as const, action: address, reward }),
+      });
+    },
+    removeIntent: (rowKey: string) => {
+      const address = requireRow(rowKey).address;
+      return Object.freeze({
+        command:
+          address.kind === 'hubReroll'
+            ? Object.freeze({ kind: 'RemoveHubReroll' as const, reroll: address })
+            : Object.freeze({ kind: 'RemoveRoomAction' as const, action: address }),
+      });
+    },
     appendIntent: (targetKey: string, reward: ResolvedRewardOffer) => {
       const index = rerollAppendIndex(input.project, requirement.surface);
       if (index === undefined)
         throw new StructuredWorkspaceProjectionContractError(
           `${requirement.interactionKey} has no authored room to append to`,
         );
+      const owner = requirement.owner;
+      const target = requireTarget(targetKey).target;
+      if (owner.kind === 'hubDecision') {
+        if (target.kind !== 'hubSlot')
+          throw new StructuredWorkspaceProjectionContractError(
+            `${requirement.interactionKey} names a Hub press by its board slot`,
+          );
+        return Object.freeze({
+          command: Object.freeze({
+            kind: 'InsertHubReroll' as const,
+            hub: owner,
+            hubSlotKey: target.hubSlotKey,
+            reward,
+            index,
+          }),
+        });
+      }
+      if (target.kind === 'hubSlot')
+        throw new StructuredWorkspaceProjectionContractError(
+          `${requirement.interactionKey} names a room press by its door`,
+        );
       return Object.freeze({
         command: Object.freeze({
           kind: 'InsertReroll' as const,
-          occurrence: requirement.owner,
-          target: requireTarget(targetKey).target,
+          occurrence: owner,
+          target,
           reward,
           index,
         }),
@@ -155,7 +179,7 @@ function bindRoomRerolls(
   });
 }
 
-/** Binds each room's Rerolls list over engine candidates. */
+/** Binds each room's and Hub stay's Rerolls list over engine candidates. */
 export function bindRoomRerollInteractions(input: {
   readonly candidates: CandidateProjectionSession;
   readonly project: ProjectDocument;

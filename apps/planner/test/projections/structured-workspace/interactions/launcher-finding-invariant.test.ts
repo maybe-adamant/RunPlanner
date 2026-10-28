@@ -10,6 +10,7 @@ import {
   createEncounterPhaseAddress,
   createExitSelectionAddress,
   createFieldsSpatialAddress,
+  createHubDecisionAddress,
   createOccurrenceAddress,
   createNemesisRandomEventAddress,
   createOccurrenceId,
@@ -50,6 +51,7 @@ import {
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceNOPQProject,
+  loadSurfaceNProject,
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
@@ -85,6 +87,7 @@ const checked = {
   fieldsSpatial: 0,
   collapsed: 0,
   reroll: 0,
+  hubReroll: 0,
 };
 /** The trait offer whose dialog repairs a finding at this owner, if any. */
 function repairingTraitOffer(owner: SemanticAddress): SemanticAddress | undefined {
@@ -254,16 +257,37 @@ function blockedNativeSettings(
   return result;
 }
 
-/** A door press's Remove and reward picker are always enabled; its row must be bound. */
+/** A press's Remove and reward picker are always enabled; its row must be bound. */
 function unboundRerollRows(
   interactions: WorkspaceInteractions,
   owner: SemanticAddress,
 ): readonly string[] {
+  if (owner.kind === 'hubReroll') {
+    checked.hubReroll += 1;
+    // Each Hub stay holds its own list; the stay of the press binds it.
+    const list = [...interactions.roomRerolls.values()].find((candidate) => {
+      if (
+        candidate.owner.kind !== 'hubDecision' ||
+        candidate.owner.biomeKey !== owner.biomeKey ||
+        candidate.owner.hubKey !== owner.hubKey
+      )
+        return false;
+      try {
+        candidate.removeIntent(owner.rerollId);
+        candidate.rowReward(owner.rerollId);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    return list === undefined ? [`hubReroll ${semanticAddressKey(owner)}`] : [];
+  }
   if (owner.kind !== 'roomAction' || JSON.parse(owner.actionKey)[0] !== 'reroll') return [];
   checked.reroll += 1;
   // A room holds a list for its doors and one per wheel; one of them binds the press.
   const list = [...interactions.roomRerolls.values()].find((candidate) => {
     if (
+      candidate.owner.kind !== 'occurrence' ||
       candidate.owner.biomeKey !== owner.biomeKey ||
       candidate.owner.occurrenceId !== owner.occurrenceId
     )
@@ -597,5 +621,20 @@ describe('a finding never disables the launcher that repairs it', () => {
     expect(check(wheelPress)).toEqual([]);
     expect(checked.reroll).toBeGreaterThan(before);
     expect(checked.reroll).toBeGreaterThan(1);
+    // A Hub board press the game refuses is bound in its stay's list.
+    const hub = createHubDecisionAddress(createBiomeAddress('Surface', 'N'), 'hub');
+    const hubPress = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'InsertHubReroll',
+      hub,
+      hubSlotKey: 'combat03',
+      reward: { rewardType: 'MaxHealthDropBig' },
+      index: rerollAppendIndex(loadSurfaceNProject(), {
+        kind: 'hubStay',
+        hub,
+        precedingVisitCount: 1,
+      })!,
+    });
+    expect(check(hubPress)).toEqual([]);
+    expect(checked.hubReroll).toBeGreaterThan(0);
   });
 });

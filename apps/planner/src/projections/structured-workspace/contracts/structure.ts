@@ -12,6 +12,7 @@ import type {
   HubDecisionAddress,
   HubFountainAddress,
   HubOpenSetAddress,
+  HubRerollAddress,
   HubVisitAddress,
   HubSlotAddress,
   KeepsakeEquipResultAddress,
@@ -20,7 +21,7 @@ import type {
   PhantomExitAddress,
   ProjectCommand,
   RerolledRewardOwner,
-  RerollTarget,
+  RerollPressTarget,
   RoomActionAddress,
   SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -196,18 +197,18 @@ interface WorkspaceBatchNodeBase {
   readonly rerolls?: WorkspaceRoomRerolls;
 }
 
-/** One door or Fields cage a press may name. */
+/** One door, Fields cage or Hub board door a press may name. */
 export interface WorkspaceRerollTarget {
   readonly key: string;
-  readonly target: RerollTarget;
+  readonly target: RerollPressTarget;
   readonly label: string;
   /** Why the game refuses a press of it; absent when it can be rerolled or is unreached. */
   readonly unavailable?: 'notRerollable' | 'slotEntered';
 }
 
-/** One authored press in the room's action order. */
+/** One authored press in its room's or Hub's action order. */
 export interface WorkspaceRerollRow {
-  readonly address: RoomActionAddress;
+  readonly address: RoomActionAddress | HubRerollAddress;
   readonly key: string;
   readonly marker: WorkspaceMarker;
   readonly targetLabel: string;
@@ -216,7 +217,7 @@ export interface WorkspaceRerollRow {
 
 /** One surface's presses in action order, with a press appended at the end. */
 export interface WorkspaceRoomRerolls {
-  readonly owner: OccurrenceAddress;
+  readonly owner: OccurrenceAddress | HubDecisionAddress;
   readonly interactionKey: string;
   /** What a press names: a door (or its cage) or a wheel offer. */
   readonly targetNoun: 'door' | 'offer';
@@ -227,10 +228,10 @@ export interface WorkspaceRoomRerolls {
   readonly appendLocked?: 'unreached' | 'notEnabled' | 'poolEmpty';
 }
 
-/** Engine-backed pickers and edits of one room's rerolls. */
+/** Engine-backed pickers and edits of one room's or Hub stay's rerolls. */
 export interface WorkspaceRoomRerollsInteraction {
   readonly key: string;
-  readonly owner: OccurrenceAddress;
+  readonly owner: OccurrenceAddress | HubDecisionAddress;
   /** The targets a new press may name, by key; a refused one is listed with its reason. */
   readonly targets: (selectedKey: string | undefined) => ContextualPickerModel<string>;
   /** The reward picker of one authored press. */
@@ -240,14 +241,20 @@ export interface WorkspaceRoomRerollsInteraction {
   readonly replaceRewardIntent: (
     rowKey: string,
     reward: ResolvedRewardOffer,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceRerollReward' }>>;
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceRerollReward' | 'ReplaceHubRerollReward' }>
+  >;
   readonly removeIntent: (
     rowKey: string,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'RemoveRoomAction' }>>;
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'RemoveRoomAction' | 'RemoveHubReroll' }>
+  >;
   readonly appendIntent: (
     targetKey: string,
     reward: ResolvedRewardOffer,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'InsertReroll' }>>;
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'InsertReroll' | 'InsertHubReroll' }>
+  >;
 }
 
 export type WorkspaceAuthoringFrontier =
@@ -321,7 +328,7 @@ export interface WorkspaceHubVisit {
   readonly room?: WorkspaceRoomSummary;
   readonly hubSlotKey?: string;
   readonly visitIndex: number;
-  /** One-based position in the combined Hub action order, including the fountain use. */
+  /** One-based position among the Hub's visits and fountain use. */
   readonly actionPosition?: number;
 }
 
@@ -333,7 +340,7 @@ export interface WorkspaceHubFountain {
   readonly address: HubFountainAddress;
   readonly hub: HubDecisionAddress;
   readonly marker: WorkspaceMarker;
-  /** One-based position in the combined Hub action order, absent while unused. */
+  /** One-based position among the Hub's visits and fountain use, absent while unused. */
   readonly actionPosition?: number;
   /** The complete appended order, offered only while the fountain is unused. */
   readonly appendActions?: readonly HubAction[];
@@ -363,6 +370,30 @@ export interface WorkspaceHubRequirements {
   };
 }
 
+/** One Hub board door as a stay leaves it. */
+export interface WorkspaceHubBoardDoor {
+  readonly hubSlotKey: string;
+  readonly label: string;
+  /** The door's first draw. */
+  readonly summary: string;
+  /** Its reward after the rerolls so far, where it differs from the first draw. */
+  readonly rerolledSummary?: string;
+  /** Closed for the run because its room was entered. */
+  readonly entered: boolean;
+}
+
+/** The Hub between two required visits; 0 precedes the first visit. */
+export interface WorkspaceHubStay {
+  readonly precedingVisitCount: number;
+  /** Present when the fountain is used in this stay, after any of its rerolls or before them all. */
+  readonly fountain?: { readonly afterRerolls: boolean };
+  /** The complete order that uses the fountain at the end of this stay instead. */
+  readonly fountainActions?: readonly HubAction[];
+  readonly rerolls?: WorkspaceRoomRerolls;
+  /** The board as the stay leaves it, after a visit; absent while unreached. */
+  readonly board?: readonly WorkspaceHubBoardDoor[];
+}
+
 export interface WorkspaceHubDecisionNode {
   readonly authoring: 'authored';
   readonly kind: 'hubDecision';
@@ -383,6 +414,8 @@ export interface WorkspaceHubDecisionNode {
   };
   readonly slots: readonly WorkspaceHubSlot[];
   readonly visits: readonly WorkspaceHubVisit[];
+  /** Each stay before and between the required visits, in order. */
+  readonly stays: readonly WorkspaceHubStay[];
   readonly fountain: WorkspaceHubFountain;
   readonly runState?: WorkspaceRunStateLauncher;
 }
