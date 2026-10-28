@@ -17,6 +17,13 @@ import {
   creditMaxStatGain,
 } from '../../../../reward-kernel';
 import {
+  INITIAL_ROLL_KEY,
+  parseStygianWellGenerationKey,
+  stygianWellGenerationItemKey,
+  stygianWellGenerationTwistResultKey,
+} from '../../../../authored-project/feature-rolls';
+import type { StygianWellSlotKey } from '../../../../authored-project/model';
+import {
   applyStygianWellPurchase,
   assessStygianWellPurchase,
   extendedWellItemKeys,
@@ -46,21 +53,25 @@ export function applyWellPurchaseTransition(inputs: {
   readonly room: CanonicalAuthoredRoom | CanonicalHubRoom | undefined;
   readonly branches: readonly RewardBranchState[];
   readonly refillGenerationSupported: boolean;
+  /** Where the purchase stands against the Well's rolls at its point. */
+  readonly roll: {
+    /** Why the bought slot is not on show; the purchase then has no effect. */
+    readonly refused?: 'missing' | 'replaced' | 'notReached' | 'slotNotOffered';
+    /** Present for the room's first purchase from a roll slot. */
+    readonly firstPurchase?: {
+      readonly slotKey: StygianWellSlotKey;
+      /** The items the roll shows when it is bought. */
+      readonly rollItemKeys: readonly string[];
+    };
+  };
 }): WellPurchaseTransition {
   const { catalog, snapshot, event, room } = inputs;
   const authoredRoom = room?.kind === 'authored' ? room : undefined;
   const well = authoredRoom?.stygianWell;
-  const slot = event.generationKey.startsWith('initial:')
-    ? (event.generationKey.slice(
-        'initial:'.length,
-      ) as import('../../../../authored-project/model').StygianWellSlotKey)
-    : undefined;
   const itemKey =
-    event.generationKey === 'travelDealRefill'
-      ? well?.travelDealRefillKey
-      : slot === undefined
-        ? undefined
-        : well?.offerKeyBySlot[slot];
+    authoredRoom === undefined
+      ? undefined
+      : stygianWellGenerationItemKey(wellOccurrenceView(authoredRoom), event.generationKey);
   const row =
     room?.kind === 'authored'
       ? room.roomActionRoster.rows.find(
@@ -83,16 +94,7 @@ export function applyWellPurchaseTransition(inputs: {
               candidate.reference.kind === 'purchaseStygianWellOffer',
           )
           .sort((left, right) => left.rank! - right.rank!);
-  const sourceRow = activeWellRows.find(
-    (candidate) =>
-      candidate.reference.kind === 'purchaseStygianWellOffer' &&
-      candidate.reference.generationKey.startsWith('initial:'),
-  );
   const refillItemKey = well?.travelDealRefillKey;
-  const firstPurchaseGenerationKey =
-    sourceRow?.reference.kind === 'purchaseStygianWellOffer'
-      ? sourceRow.reference.generationKey
-      : undefined;
   const pendingExtendedOwners: SemanticAddress[] = [];
   let extendedSourceOwner: SemanticAddress | undefined;
   for (const candidate of activeWellRows) {
@@ -102,15 +104,10 @@ export function applyWellPurchaseTransition(inputs: {
     if (candidateEffect === 'extended') {
       pendingExtendedOwners.push(candidate.owner);
     } else {
-      const candidateSlot = candidateGeneration.startsWith('initial:')
-        ? (candidateGeneration.slice('initial:'.length) as 'healing' | 'secondLeft' | 'secondRight')
-        : undefined;
       const candidateItem =
-        candidateGeneration === 'travelDealRefill'
-          ? authoredRoom?.stygianWell?.travelDealRefillKey
-          : candidateSlot === undefined
-            ? undefined
-            : authoredRoom?.stygianWell?.offerKeyBySlot[candidateSlot];
+        authoredRoom === undefined
+          ? undefined
+          : stygianWellGenerationItemKey(wellOccurrenceView(authoredRoom), candidateGeneration);
       if (
         candidateItem !== undefined &&
         candidateItem !== null &&
@@ -123,10 +120,9 @@ export function applyWellPurchaseTransition(inputs: {
     }
     if (candidate === row) break;
   }
-  const twistChildKey = event.generationKey === 'travelDealRefill' ? 'travelDealRefill' : slot;
   const twistResultKey =
-    itemKey === 'RandomStoreItem' && twistChildKey !== undefined
-      ? well?.twistResultKeyBySlot?.[twistChildKey]
+    itemKey === 'RandomStoreItem' && authoredRoom !== undefined
+      ? stygianWellGenerationTwistResultKey(wellOccurrenceView(authoredRoom), event.generationKey)
       : undefined;
   const extendedDirectPurchase =
     itemKey !== undefined && itemKey !== null && extendedWellItemKeys(catalog).includes(itemKey);
@@ -147,7 +143,7 @@ export function applyWellPurchaseTransition(inputs: {
         ? Object.freeze([])
         : Object.freeze([Object.freeze({ owner: row.owner, afterOwner: extendedSourceOwner })]),
   });
-  const sourceOwner = sourceRow?.owner;
+  const sourceOwner = inputs.roll.firstPurchase === undefined ? undefined : row?.owner;
   const refillSupported = inputs.branches.every(
     (branch) => branch.state.traitHistory.equippedTraits.RestockBoon !== undefined,
   );
@@ -155,7 +151,6 @@ export function applyWellPurchaseTransition(inputs: {
     if (
       row === undefined ||
       sourceOwner === undefined ||
-      !candidateOwnerEquals(row.owner, sourceOwner) ||
       !refillSupported ||
       refillItemKey === undefined ||
       refillItemKey === null ||
@@ -207,6 +202,26 @@ export function applyWellPurchaseTransition(inputs: {
             }),
           ]),
         });
+  if (inputs.roll.refused !== undefined && row !== undefined && authoredRoom !== undefined) {
+    return Object.freeze({
+      branches: inputs.branches,
+      findings: Object.freeze([
+        findingRegion(
+          rewardFinding('rollOfferUnavailable', row.owner, { reason: inputs.roll.refused }),
+          undefined,
+          rewardFindingChronologyForRoom(
+            snapshot,
+            authoredRoom.origin,
+            event.sequence,
+            'localRoomLifecycle',
+          ),
+          'reward',
+        ),
+      ]),
+      timelineFacts: factsWithRefill,
+      candidateContexts: Object.freeze([]),
+    });
+  }
   if (
     authoredRoom === undefined ||
     well === undefined ||
@@ -214,13 +229,27 @@ export function applyWellPurchaseTransition(inputs: {
     itemKey === undefined ||
     itemKey === null
   ) {
+    const unpinned =
+      itemKey === null &&
+      authoredRoom !== undefined &&
+      parseStygianWellGenerationKey(event.generationKey)?.rollKey !== INITIAL_ROLL_KEY &&
+      event.generationKey !== 'travelDealRefill';
     return Object.freeze({
       branches: inputs.branches,
       findings: Object.freeze([
         findingRegion(
-          rewardFinding('rewardSourceUnavailable', event.origin, {
-            generationKey: event.generationKey,
-          }),
+          unpinned
+            ? rewardFinding(
+                'stygianWellMissing',
+                createRoomFeatureAddress(authoredRoom.origin, {
+                  kind: 'stygianWellOffer',
+                  generationKey: event.generationKey,
+                }),
+                { reason: 'missing' },
+              )
+            : rewardFinding('rewardSourceUnavailable', event.origin, {
+                generationKey: event.generationKey,
+              }),
           undefined,
           rewardFindingChronologyForRoom(
             snapshot,
@@ -268,12 +297,22 @@ export function applyWellPurchaseTransition(inputs: {
     Object.freeze({
       purchase: assessStygianWellPurchase(
         catalog,
-        authoredRoom?.origin.routeKey ?? event.origin.routeKey,
-        well,
-        event.generationKey,
+        authoredRoom.origin.routeKey,
+        {
+          generationKey: event.generationKey,
+          itemKey,
+          twistResultKey,
+          ...(inputs.roll.firstPurchase === undefined
+            ? {}
+            : {
+                firstPurchase: {
+                  ...inputs.roll.firstPurchase,
+                  travelDealRefillKey: well.travelDealRefillKey,
+                },
+              }),
+        },
         branch.state.stygianWell,
         branch.state.traitHistory,
-        firstPurchaseGenerationKey,
       ),
     }),
   );
@@ -359,6 +398,12 @@ export function applyWellPurchaseTransition(inputs: {
   });
 }
 
-function candidateOwnerEquals(left: SemanticAddress, right: SemanticAddress | undefined): boolean {
-  return right !== undefined && semanticAddressKey(left) === semanticAddressKey(right);
+/** The Well's authored state with its rerolls, as one roll lookup reads it. */
+export function wellOccurrenceView(room: CanonicalAuthoredRoom) {
+  return Object.freeze({
+    stygianWell: room.stygianWell,
+    roomActions: Object.freeze({
+      order: Object.freeze(room.roomActionRoster.rows.map((row) => row.reference)),
+    }),
+  });
 }

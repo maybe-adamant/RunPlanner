@@ -1,4 +1,12 @@
 import {
+  INITIAL_ROLL_KEY,
+  STYGIAN_WELL_SLOT_KEYS,
+  stygianWellGenerationItemKey,
+  stygianWellGenerationKey,
+  stygianWellGenerationTwistResultKey,
+  stygianWellRerolls,
+} from '../../../authored-project/feature-rolls';
+import {
   createOccurrenceAddress,
   createPhantomExitAddress,
 } from '../../../authored-project/addresses';
@@ -201,23 +209,24 @@ export function materializeAuthoredRoom(
       ? undefined
       : (() => {
           const effects: Partial<Record<StygianWellGenerationKey, StygianWellEffect>> = {};
-          const generations: readonly [StygianWellGenerationKey, string | null | undefined][] = [
-            ['initial:healing', context.occurrence.stygianWell!.offerKeyBySlot.healing],
-            ['initial:secondLeft', context.occurrence.stygianWell!.offerKeyBySlot.secondLeft],
-            ['initial:secondRight', context.occurrence.stygianWell!.offerKeyBySlot.secondRight],
-            ['travelDealRefill', context.occurrence.stygianWell!.travelDealRefillKey],
+          const occurrence = context.occurrence;
+          const generations: readonly StygianWellGenerationKey[] = [
+            ...STYGIAN_WELL_SLOT_KEYS.map((slotKey) =>
+              stygianWellGenerationKey(INITIAL_ROLL_KEY, slotKey),
+            ),
+            ...stygianWellRerolls(occurrence.roomActions.order).flatMap((reroll) =>
+              STYGIAN_WELL_SLOT_KEYS.map((slotKey) =>
+                stygianWellGenerationKey(reroll.rerollId, slotKey),
+              ),
+            ),
+            'travelDealRefill',
           ];
-          for (const [generationKey, offerKey] of generations) {
+          for (const generationKey of generations) {
+            const offerKey = stygianWellGenerationItemKey(occurrence, generationKey);
             if (offerKey === undefined || offerKey === null) continue;
             const grant = stygianWellGrant(context.catalog, offerKey);
             const effect = grant === undefined ? undefined : stygianWellOfferEffect(grant);
-            const twistResultKey =
-              generationKey === 'travelDealRefill'
-                ? context.occurrence.stygianWell?.twistResultKeyBySlot?.travelDealRefill
-                : context.occurrence.stygianWell?.twistResultKeyBySlot?.[
-                    generationKey.slice('initial:'.length) as
-                      'healing' | 'secondLeft' | 'secondRight'
-                  ];
+            const twistResultKey = stygianWellGenerationTwistResultKey(occurrence, generationKey);
             const twistResultGrant =
               effect === 'twist' && twistResultKey !== undefined && twistResultKey !== null
                 ? stygianWellGrant(context.catalog, twistResultKey)

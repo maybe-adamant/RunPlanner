@@ -810,7 +810,7 @@ describe('screen rerolls', () => {
     expect(rerollFindings(project)).toEqual([]);
   });
 
-  it('spend Stygian Well and Purging Pool counts when they are opened', () => {
+  it('spend Stygian Well and Purging Pool rerolls, each costing one more than the last', () => {
     const postboss = 'golden-f-preboss-shop:postboss';
     const room = createOccurrenceAddress(f, postboss as never);
     // The F Judgment grants the screen card at the Boss, before the Well and the Pool.
@@ -822,7 +822,12 @@ describe('screen rerolls', () => {
     );
     const entered = snapshotAt(project, postboss, 'roomEntered');
     expect(entered.rerolls.screensEnabled).toBe(true);
-    project = settle(project, { kind: 'SetStygianWellRerollCount', occurrence: room, count: 2 });
+    for (let press = 0; press < 2; press += 1)
+      project = settle(project, {
+        kind: 'InsertStygianWellReroll',
+        occurrence: room,
+        index: occurrence(project, postboss).roomActions.order.length,
+      });
     expect(snapshotAt(project, postboss, 'beforeRoomExit').rerolls.remaining).toBe(
       entered.rerolls.remaining - 3,
     );
@@ -831,7 +836,11 @@ describe('screen rerolls', () => {
       occurrence: room,
       interacted: true,
     });
-    project = settle(project, { kind: 'SetPurgingPoolRerollCount', occurrence: room, count: 1 });
+    project = settle(project, {
+      kind: 'InsertPurgingPoolReroll',
+      occurrence: room,
+      index: occurrence(project, postboss).roomActions.order.length,
+    });
     expect(snapshotAt(project, postboss, 'beforeRoomExit').rerolls.remaining).toBe(
       entered.rerolls.remaining - 4,
     );

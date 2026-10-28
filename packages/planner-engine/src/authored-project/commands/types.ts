@@ -537,15 +537,22 @@ export type PurgingPoolCommand =
       readonly interacted: boolean;
     }
   | {
-      /** Native rerolls of the sell screen before its final list; 0 is none. */
-      readonly kind: 'SetPurgingPoolRerollCount';
-      readonly occurrence: OccurrenceAddress;
-      readonly count: number;
-    }
-  | {
       readonly kind: 'ReplacePurgingPoolSlot';
       readonly occurrence: OccurrenceAddress;
       readonly slotKey: 'left' | 'middle' | 'right';
+      readonly traitKey: string | null;
+    }
+  | {
+      /** Inserts an unpinned Pool reroll; the engine allocates its id. */
+      readonly kind: 'InsertPurgingPoolReroll';
+      readonly occurrence: OccurrenceAddress;
+      readonly index: number;
+    }
+  | {
+      /** Pins or, with null, unpins one slot of a Pool reroll's list. */
+      readonly kind: 'ReplacePurgingPoolRollSlot';
+      readonly action: RoomActionSemanticAddress;
+      readonly slotKey: import('../model').PurgingPoolSlotKey;
       readonly traitKey: string | null;
     };
 
@@ -595,10 +602,17 @@ export type StygianWellCommand =
       readonly interacted: boolean;
     }
   | {
-      /** Native rerolls of the Well screen before its inventory; 0 is none. */
-      readonly kind: 'SetStygianWellRerollCount';
+      /** Inserts an unpinned Well reroll; the engine allocates its id. */
+      readonly kind: 'InsertStygianWellReroll';
       readonly occurrence: OccurrenceAddress;
-      readonly count: number;
+      readonly index: number;
+    }
+  | {
+      /** Pins or, with null, unpins one restocked slot of a Well reroll. */
+      readonly kind: 'ReplaceStygianWellRollOffer';
+      readonly action: RoomActionSemanticAddress;
+      readonly slotKey: import('../model').StygianWellSlotKey;
+      readonly itemKey: string | null;
     }
   | {
       readonly kind: 'ReplaceStygianWellOffer';

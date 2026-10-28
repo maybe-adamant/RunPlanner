@@ -7,8 +7,6 @@ import { replaceSimulationTraitHistory } from '../../../state/transitions';
 import type { Catalog, RoomDeclaration } from '../../../../catalog-schema';
 import {
   createAcquisitionEntryAddress,
-  createBiomeAddress,
-  createRoomActionAddress,
   semanticAddressKey,
 } from '../../../../authored-project/addresses';
 import {
@@ -27,10 +25,6 @@ import { createUnresolvedPickupRewardState } from '../../../../authored-project/
 import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
-import {
-  isPurgingPoolEligibleTrait,
-  type PurgingPoolAssessment,
-} from '../../../commerce/purging-pool';
 import { pendingHermesShrineDelivery } from './hermes-shrine-purchase';
 import { foldTraitHistoryEvents } from '../../../traits';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
@@ -87,8 +81,11 @@ export interface AcquisitionPointReachedInputs {
   readonly roomView: ProgressiveRoomHistoryViews | undefined;
   readonly sourceBranches: readonly RewardBranchState[];
   readonly authoredSeaStarDuplicateSiteKeys: readonly string[];
-  readonly purgingPoolAssessment:
-    { readonly assessments: readonly PurgingPoolAssessment[] } | undefined;
+  /** A Pool sale's settled trait; absent when the sale has no effect. */
+  readonly purgingPoolSale?: {
+    readonly traitKey: string;
+    readonly owner: import('../../../../authored-project/addresses').RoomActionAddress;
+  };
   readonly derivedAcquisitionEntryFrontiers?: readonly DerivedAcquisitionEntryFrontier[];
   readonly derivedAcquisitionEntryCapability?: import('../../acquisition/artifacts').DerivedAcquisitionEntryCandidateCapability;
 }
@@ -304,37 +301,10 @@ export function applyAcquisitionPointReachedTransition(
       }),
     });
   }
-  const poolSlot = event.point.startsWith('purgingPool:')
-    ? event.point.slice('purgingPool:'.length)
-    : undefined;
-  if (poolSlot === 'left' || poolSlot === 'middle' || poolSlot === 'right') {
-    const traitKey = room.purgingPool?.traitKeyBySlot[poolSlot];
-    const row = room.roomActionRoster.rows.find(
-      (candidate) =>
-        candidate.rank !== null &&
-        candidate.reference.kind === 'sellPurgingPoolTrait' &&
-        candidate.reference.slotKey === poolSlot,
-    );
-    if (row === undefined)
-      throw new BiomeRewardSimulationContractError(
-        `${room.gameName} has no ranked Pool sale row for ${poolSlot}`,
-      );
-    const owner = createRoomActionAddress(
-      createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
-      room.occurrenceId,
-      row.key,
-    );
-    const available =
-      inputs.purgingPoolAssessment?.assessments.every((assessment) => assessment.complete) ===
-        true &&
-      traitKey !== null &&
-      traitKey !== undefined &&
-      inputs.sourceBranches.every((branch) => {
-        const equipped = branch.state.traitHistory.equippedTraits[traitKey];
-        return equipped !== undefined && isPurgingPoolEligibleTrait(catalog, equipped);
-      });
-    // An incomplete Pool or empty slot is its Overview finding; the sale has no effect.
-    if (!available) return publish({ branches: inputs.sourceBranches, findings });
+  if (event.point.startsWith('purgingPool:')) {
+    const sale = inputs.purgingPoolSale;
+    // A refused or invalid sale is its own finding; the sale has no effect.
+    if (sale === undefined) return publish({ branches: inputs.sourceBranches, findings });
     return publish({
       branches: inputs.sourceBranches.map((branch) => {
         const before = branch.state.traitHistory;
@@ -342,11 +312,11 @@ export function applyAcquisitionPointReachedTransition(
           ...before.events,
           Object.freeze({
             kind: 'traitRemoval' as const,
-            owner,
+            owner: sale.owner,
             acquisitionRole: 'purgingPoolSale',
             sequence: event.sequence,
             acquisitionPoint: event.point,
-            traitKey,
+            traitKey: sale.traitKey,
             match: 'currentTraitKey' as const,
           }),
         ]);

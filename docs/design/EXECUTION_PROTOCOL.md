@@ -87,7 +87,11 @@ uninteracted Stygian Well or Pool of Purging is emitted with
 `interacted: false` and no fabricated inventory. A present interacted feature
 is emitted with `interacted: true` and its exact engine-owned inventory. The
 native adapter must realize the object in both cases, pass through vanilla
-inventory generation only in the former, and constrain the latter.
+inventory generation only in the former, and constrain the latter. An
+interacted Well or Pool also lists its rerolls in action order with only their
+pinned slots: the k-th native reroll installs the k-th entry, an unpinned slot
+stays native, and a Well slot bought earlier in the room stays blank. Each
+purchase and sale names its roll.
 
 Door destinations carry explicit `zagreusContractPresent` for both batch and
 fixed navigation. This is the same canonical additional-exit presence published

@@ -13,6 +13,7 @@ import type {
 } from '../../commerce/hermes-shrine';
 import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
 import type { StygianWellCandidateContext } from '../../commerce/stygian-well';
+import type { FeatureRollWalk } from '../../commerce/feature-rolls';
 import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from '../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../materialization';
 import type { SemanticFinding } from '../../model';
@@ -67,7 +68,18 @@ export interface HermesShrineRoomAssessment {
 
 export interface PurgingPoolRoomAssessment {
   readonly origin: OccurrenceAddress;
+  /** The initial list, assessed after the fountain. */
   readonly assessments: readonly PurgingPoolAssessment[];
+  /** Each reached reroll's list, assessed at the reroll, by its id. */
+  readonly rolls?: Readonly<
+    Record<
+      string,
+      {
+        readonly offeredSlotKeys: readonly import('../../../authored-project/model').PurgingPoolSlotKey[];
+        readonly assessments: readonly PurgingPoolAssessment[];
+      }
+    >
+  >;
 }
 
 export interface StygianWellRoomAssessment {
@@ -83,6 +95,16 @@ export interface ChronologyWalkState {
   readonly stygianWellAssessments: ReadonlyMap<string, StygianWellRoomAssessment>;
   readonly wellRefillRealizations: ReadonlyMap<string, WellRefillRealization>;
   readonly purgingPoolAssessments: ReadonlyMap<string, PurgingPoolRoomAssessment>;
+  /** Each Well's and Pool's roll state as its room's actions settle, by room and feature. */
+  readonly featureRolls: ReadonlyMap<string, FeatureRollWalk>;
+  /**
+   * The last reached point of each Well or Pool room's actions, where a new
+   * action is appended, with the branches there; by room.
+   */
+  readonly featureRollEnds: ReadonlyMap<
+    string,
+    { readonly historySequence: number; readonly branches: readonly RewardBranchState[] }
+  >;
   /** Shrine-keyed Travel Deal refill domain, captured at the first rush made with the trait. */
   readonly hermesShrineTravelDealRefills: ReadonlyMap<
     string,
@@ -150,6 +172,8 @@ export function createChronologyWalkState(
     stygianWellAssessments: new Map(),
     wellRefillRealizations: new Map(),
     purgingPoolAssessments: new Map(),
+    featureRolls: new Map(),
+    featureRollEnds: new Map(),
     hermesShrineTravelDealRefills: new Map(),
     eligibleGorgonPhases: new Set<string>(),
     blockedGorgonPhases: new Set<string>(),

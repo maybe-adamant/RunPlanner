@@ -99,7 +99,9 @@ describe('Purging Pool generation assessment', () => {
       createOccurrenceId('pool-divergent'),
     );
     const capability = createPurgingPoolCandidateArtifacts(
-      new Map([[semanticAddressKey(poolOwner), Object.freeze([branchZero, otherBranch])]]),
+      new Map([
+        [semanticAddressKey(poolOwner), { assessments: Object.freeze([branchZero, otherBranch]) }],
+      ]),
     ).at(poolOwner);
     expect(capability?.assessments).toEqual([branchZero, otherBranch]);
     expect(capability?.candidateTraitKeysBySlot.left).toEqual(['HermesWeaponBoon']);

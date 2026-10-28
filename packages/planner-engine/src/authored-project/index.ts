@@ -343,6 +343,22 @@ export {
 } from './rerolls';
 export { screenRerollCost, screenRerollSupported, type RerollableScreen } from './screen-rerolls';
 export {
+  INITIAL_ROLL_KEY,
+  PURGING_POOL_SLOT_KEYS,
+  STYGIAN_WELL_SLOT_KEYS,
+  featureRerolls,
+  parseStygianWellGenerationKey,
+  purgingPoolRerolls,
+  purgingPoolRollTraitKey,
+  purgingPoolSaleRollKey,
+  stygianWellGenerationItemKey,
+  stygianWellGenerationKey,
+  stygianWellGenerationTwistResultKey,
+  stygianWellRerolls,
+  type FeatureRerollAction,
+  type RollFeature,
+} from './feature-rolls';
+export {
   applyProjectCommand,
   projectCommandAddress,
   projectCommandAuthoringAddresses,
@@ -478,6 +494,9 @@ export {
   type PhantomExitState,
   type HubRerollAction,
   type RerollRoomAction,
+  type StygianWellRerollAction,
+  type PurgingPoolRerollAction,
+  type PurgingPoolSlotKey,
   type RerollTarget,
   type ShopState,
 } from './model';

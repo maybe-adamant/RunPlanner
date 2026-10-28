@@ -1,3 +1,4 @@
+import { purgingPoolInteractions, stygianWellInteractions } from './feature-roll-seams';
 import { semanticAddressKey } from '../../../authored-project/addresses';
 import type { BiomeRewardSimulation } from '../model';
 import { createAcquisitionConversionCandidateArtifacts } from '../acquisition/artifacts';
@@ -264,14 +265,18 @@ export function publishChronology(
     fountainRarityArtifacts: createFountainRarityCandidateArtifacts(
       accumulation.fountainRarityCandidateContexts,
     ),
-    purgingPoolArtifacts: createPurgingPoolCandidateArtifacts(
-      new Map(
-        [...walk.purgingPoolAssessments.values()].map(({ origin, assessments }) => [
-          semanticAddressKey(origin),
-          assessments,
-        ]),
-      ),
-    ),
+    purgingPoolArtifacts: (() => {
+      const interactions = purgingPoolInteractions(context, walk);
+      return createPurgingPoolCandidateArtifacts(
+        new Map(
+          [...walk.purgingPoolAssessments.values()].map((room) => {
+            const key = semanticAddressKey(room.origin);
+            const interaction = interactions.get(key);
+            return [key, interaction === undefined ? room : { ...room, interaction }];
+          }),
+        ),
+      );
+    })(),
     hermesShrineArtifacts: createHermesShrineCandidateArtifacts(
       new Map(
         publishedHermesShrineAssessments.map(({ origin, assessments }) => [
@@ -290,6 +295,7 @@ export function publishChronology(
           assessments,
         ]),
       ),
+      stygianWellInteractions(context, walk),
     ),
     findingRegions: Object.freeze(immutableFindingRegions),
     encounterEntryVowRanks: walk.encounterEntryVowRanks,

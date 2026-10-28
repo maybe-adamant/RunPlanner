@@ -113,6 +113,37 @@ export function applyScreenRerolls(
     context.note({ area: 'reroll', reason: 'assumption', address, applied, record });
 }
 
+/**
+ * Authors a room's recorded Well or Pool rerolls as unpinned rerolls, each
+ * appended by `insert`; returns how many were authored. The record keeps no
+ * roll content or order, so only their count is known.
+ */
+export function applyFeatureRerolls(
+  context: RunImportContext,
+  roomIndex: number,
+  screen: 'well' | 'pool',
+  address: SemanticAddress,
+  insert: () => ProjectCommand,
+): number {
+  const count = roomScreenRerolls(context, roomIndex).counts.get(screen);
+  if (count === undefined) return 0;
+  context.used.add(`screenRerolls:${roomIndex}:${screen}`);
+  for (let inserted = 0; inserted < count; inserted += 1) {
+    const applied = insert();
+    if (!context.applyValid(applied)) {
+      context.note({
+        area: 'reroll',
+        reason: 'refused',
+        address,
+        applied,
+        record: { roomIndex, visit: 0 },
+      });
+      return inserted;
+    }
+  }
+  return count;
+}
+
 /** Screen rerolls on screens the plan cannot reroll, such as the World Shop. */
 export function unsupportedScreenRerolls(
   catalog: Catalog,

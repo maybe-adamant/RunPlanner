@@ -1224,6 +1224,42 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     ]);
   });
 
+  it('authors recorded Well and Pool rerolls unpinned, placing purchases and sales on the last', () => {
+    const record = fixture('underworld');
+    const rooms = record.rooms.slice(0, 14);
+    const { exit: _exit, ...last } = rooms[13]!;
+    void _exit;
+    const imported = projectFromRunRecord(catalog, {
+      ...record,
+      route: { biomes: ['F'], dream: false },
+      outcome: { kind: 'abandoned', endingRoom: last.name },
+      rooms: [...rooms.slice(0, 13), { ...last, spentRerolls: { WellShop: 1, SellTraits: 1 } }],
+    });
+    const postboss = occurrence(imported.project, 'F-r11:postboss');
+    // The opening stock stays the initial roll; the record keeps no later roll's content.
+    expect(postboss.stygianWell?.offerKeyBySlot.secondRight).toBe('TemporaryForcedSecretDoorTrait');
+    expect(postboss.roomActions.order.slice(2)).toEqual([
+      {
+        kind: 'rerollStygianWell',
+        rerollId: 'r1',
+        offerKeyBySlot: { secondRight: 'TemporaryForcedSecretDoorTrait' },
+      },
+      { kind: 'rerollPurgingPool', rerollId: 'r1', traitKeyBySlot: { left: 'BoonDecayBoon' } },
+      { kind: 'purchaseStygianWellOffer', generationKey: 'r1:secondRight' },
+      { kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'r1' },
+    ]);
+    expect(
+      imported.report.entries
+        .filter((entry) => entry.reason === 'assumption' && entry.record?.roomIndex === 13)
+        .map(describeEntry),
+    ).toEqual(
+      expect.arrayContaining([
+        'assumption well r13 roomFeature@F-r11:postboss',
+        'assumption pool r13 roomFeature@F-r11:postboss',
+      ]),
+    );
+  });
+
   it('reports a Well reroll in a room whose plan holds no Well', () => {
     const record = oceanus();
     const imported = projectFromRunRecord(catalog, {

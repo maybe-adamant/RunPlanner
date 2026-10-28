@@ -3,6 +3,7 @@ import type { SemanticAddress } from '../../authored-project/addresses';
 import { screenRerollCost } from '../../authored-project/screen-rerolls';
 import { rerollKindEnabled, rerollPoolRemaining, spendRerolls } from '../arcana-fear';
 import { ownerRegion, type FindingChronology, type FindingRegionEntry } from '../finding-regions';
+import type { FindingEvidence } from '../model';
 import type { RewardBranchState } from './branch-primitives';
 import { addRewardFinding, historyChronology, rewardFinding } from './findings';
 
@@ -49,6 +50,59 @@ export function settleScreenRerolls(
         arcanaFear: spendRerolls(branch.state.arcanaFear, cost),
       }),
     }),
+    findings: Object.freeze([...findings.values()]),
+  });
+}
+
+/**
+ * Settles one Well or Pool reroll press of the given cost: it needs screen
+ * rerolls enabled and something left to reroll, and spends from the run's
+ * pool. A refused press spends nothing; an over-spend is spent and reported.
+ */
+export function settleFeatureReroll(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  input: {
+    readonly cost: number;
+    readonly somethingLeft: boolean;
+    readonly owner: SemanticAddress;
+    readonly chronology: FindingChronology;
+  },
+): {
+  readonly branches: readonly RewardBranchState[];
+  readonly findings: readonly FindingRegionEntry[];
+} {
+  const findings = new Map<string, FindingRegionEntry>();
+  const region = ownerRegion(input.owner);
+  const report = (
+    code: 'screenRerollUnavailable' | 'rerollPoolExceeded',
+    evidence: FindingEvidence,
+  ) =>
+    addRewardFinding(
+      findings,
+      rewardFinding(code, input.owner, evidence),
+      region,
+      input.chronology,
+    );
+  if (!input.somethingLeft) {
+    report('screenRerollUnavailable', { reason: 'nothingLeft' });
+    return Object.freeze({ branches, findings: Object.freeze([...findings.values()]) });
+  }
+  const next = branches.map((branch) => {
+    if (!rerollKindEnabled(catalog, branch.state.arcanaFear, 'screens'))
+      report('screenRerollUnavailable', { reason: 'disabled' });
+    const remaining = rerollPoolRemaining(branch.state);
+    if (remaining < input.cost) report('rerollPoolExceeded', { cost: input.cost, remaining });
+    return Object.freeze({
+      ...branch,
+      state: Object.freeze({
+        ...branch.state,
+        arcanaFear: spendRerolls(branch.state.arcanaFear, input.cost),
+      }),
+    });
+  });
+  return Object.freeze({
+    branches: Object.freeze(next),
     findings: Object.freeze([...findings.values()]),
   });
 }

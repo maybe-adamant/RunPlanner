@@ -333,12 +333,13 @@ function authoredRerollCount(value: unknown): boolean {
   return Object.entries(value).some(
     ([key, entry]) =>
       (key === 'rerollCount' && typeof entry === 'number') ||
-      (key === 'kind' && entry === 'reroll') ||
+      (key === 'kind' &&
+        (entry === 'reroll' || entry === 'rerollStygianWell' || entry === 'rerollPurgingPool')) ||
       authoredRerollCount(entry),
   );
 }
 
-/** Whether the plan authors any reroll press or screen reroll count. */
+/** Whether the plan authors any reroll press, Well or Pool reroll, or screen reroll count. */
 export function projectAuthorsRerolls(document: import('./model').ProjectDocument): boolean {
   return authoredRerollCount(document.route.biomes);
 }

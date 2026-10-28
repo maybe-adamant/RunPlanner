@@ -223,17 +223,24 @@ player may sell any displayed entry or none. Selling one displayed name calls
 name are removed. Gold amount, permanent-upgrade requirements, and pricing are
 sim-neutral.
 
-The Pool participates in the shared Store reroll system. A reroll excludes one
-random previous option while other previous options can return. Rerolls and
-currency are global Store behavior, not a Pool-owned modeled rule.
+The Pool participates in the shared Store reroll system. Sales are unlimited
+per visit; each removes its entry without refilling it. A reroll
+(`SellTraitScreenReroll`, `SellTraitLogic.lua:379-387`) redraws the whole list
+from the current traits, so sold traits are gone and up to three slots fill
+again. It excludes one random remaining option only while the previous
+generation left unshown values; other previous options can return. The k-th
+reroll of the Pool in a room costs k from the shared reroll pool, on a counter
+(`SpentRerolls["SellTraits"]`) separate from the Well's.
 
 ### Current schema-71 planner disposition
 
 Schema 59 represents forced physical Pools on the F/G/H Postboss occurrences.
 An uninteracted Pool keeps dormant runtime-random inventory and contributes no
-candidate, action, or simulation effect. Interaction activates an exact final
-list of up to three distinct eligible names; the authored list is the outcome
-after unmodeled rerolls. Its left/middle/right slots are planner presentation of
+candidate, action, or simulation effect. Interaction activates an exact initial
+list of up to three distinct eligible names; each reroll is a room action whose
+list is pinned slot by slot (an unpinned slot stays native) and assessed
+against the traits held at that reroll, and each sale names its list. Its
+left/middle/right slots are planner presentation of
 that unordered set, and a missing fill is attributed to the first empty slots
 in that order. Each selected sale is an ordinary ranked Cleanup action,
 validates against the shop-aware God-trait predicate at Pool entry, requires
@@ -545,7 +552,15 @@ The three direct run-consequential identities are:
 
 Forced F/G/H Postboss Wells are always present. An uninteracted Well retains
 dormant inventory detail but contributes no exact purchases or effects;
-interaction requires all three visible identities. Each purchase is a paid,
+interaction requires all three initial identities. A reroll
+(`RerollStore`, `StoreLogic.lua:261-277`) regenerates every slot and then
+blanks each slot bought earlier in the room (`IndexesPurchased`), except the
+room's first purchase under Travel Deal, whose slot was restocked in place and
+is not recorded (`StoreLogic.lua:1179-1201`). Each reroll is a room action whose
+restocked slots are pinned optionally (an unpinned slot stays native), assessed
+against the state at that reroll; each purchase names its roll and slot, and a
+bought slot must be pinned. The k-th Well reroll in a room costs k
+(`SpentRerolls["WellShop"]`); the random one-name exclusion is not modelled. Each purchase is a paid,
 atomic Cleanup action and never enters the free-pickup alternative-interaction
 lifecycle. Travel Deal owns one same-group refill from the first ranked
 qualifying purchase, assessed before its item effect. Initial inventory,
@@ -578,7 +593,7 @@ The following remain explicit and outside this audit's modeled contract:
   resource points;
 - physical point probabilities and failed resource rolls;
 - exact affordability, health, damage, Magick, gold, and meta-resource amounts;
-- Store reroll chronology and currency;
+- Store reroll currency and the random one-name reroll exclusion;
 - the combat, health and economy effects of timed Well traits, whose existence
   and remaining uses are modeled;
 - changes to the installed Ixion SecretPoint host matrix, whose current

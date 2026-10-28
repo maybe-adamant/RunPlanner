@@ -1,3 +1,4 @@
+import { stygianWellGenerationItemKey } from '../../authored-project/feature-rolls';
 import {
   createBiomeAddress,
   createOccurrenceAddress,
@@ -71,11 +72,7 @@ function actionTraits(
       return rewardTraits(wheel?.offers[`offer${wheel.pickedOfferIndex}`]);
     }
     case 'purchaseStygianWellOffer': {
-      const well = occurrence.stygianWell;
-      const slot = reference.generationKey.startsWith('initial:')
-        ? (reference.generationKey.slice('initial:'.length) as 'healing')
-        : undefined;
-      const item = slot === undefined ? well?.travelDealRefillKey : well?.offerKeyBySlot[slot];
+      const item = stygianWellGenerationItemKey(occurrence, reference.generationKey);
       return { gained: item === undefined || item === null ? [] : [item], upgraded: [] };
     }
     case 'interactKeepsakeRack': {

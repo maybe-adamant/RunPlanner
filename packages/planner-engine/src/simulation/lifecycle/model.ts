@@ -55,6 +55,13 @@ export type RoomLifecycleEvent =
       readonly target: import('../../authored-project/model').RerollTarget;
     })
   | (RoomLifecycleEventBase & {
+      /** One Well or Pool reroll at its authored rank. */
+      readonly kind: 'featureRerolled';
+      readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
+      readonly feature: import('../../authored-project/feature-rolls').RollFeature;
+      readonly rerollId: string;
+    })
+  | (RoomLifecycleEventBase & {
       readonly kind: 'erisInteracted';
       readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
     })

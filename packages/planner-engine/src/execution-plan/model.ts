@@ -20,10 +20,18 @@ export type ExecutionRunStateCount =
 
 export type ExecutionTraitSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 'Mana' | 'Spell';
 export type ExecutionTraitOptionKey = 'option1' | 'option2' | 'option3';
+/** A Well roll's slot, the roll named `initial` or by its reroll id, or the Travel Deal refill. */
 export type ExecutionWellGenerationKey =
-  'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
+  `${string}:${'healing' | 'secondLeft' | 'secondRight'}` | 'travelDealRefill';
 export type ExecutionHermesShrineGenerationKey =
   'initial:first' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
+/** One authored Well item at its generation. */
+export interface ExecutionWellOffer {
+  readonly generationKey: Exclude<ExecutionWellGenerationKey, 'travelDealRefill'>;
+  readonly offerKey: string;
+  /** A bought Fateful Twist's result. */
+  readonly twistResultKey?: string;
+}
 /** Closed normalized effects that can be resolved from one Well offer. */
 export type ExecutionWellEffect =
   | 'neutral'
@@ -789,21 +797,35 @@ export interface ExecutionOverview {
   };
   readonly stygianWell?: {
     readonly interacted: boolean;
-    /** Native screen rerolls before the authored inventory; absent is none. */
-    readonly rerollCount?: number;
-    readonly offers?: readonly {
-      readonly generationKey: 'initial:healing' | 'initial:secondLeft' | 'initial:secondRight';
-      readonly offerKey: string;
-      readonly twistResultKey?: string;
+    /** The initial roll. */
+    readonly offers?: readonly ExecutionWellOffer[];
+    /**
+     * Each Well reroll in action order: the k-th native reroll installs the
+     * k-th entry. Only pinned slots are listed; the others stay native, and
+     * slots bought earlier stay blank.
+     */
+    readonly rerolls?: readonly {
+      readonly rollKey: string;
+      readonly offers: readonly ExecutionWellOffer[];
     }[];
   };
   readonly purgingPool?: {
     readonly interacted: boolean;
-    /** Native screen rerolls before the final list; absent is none. */
-    readonly rerollCount?: number;
+    /** The initial list. */
     readonly traits?: readonly {
       readonly slotKey: 'left' | 'middle' | 'right';
       readonly traitKey: string | null;
+    }[];
+    /**
+     * Each Pool reroll in action order: the k-th native reroll installs the
+     * k-th entry. Only pinned slots are listed; the others stay native.
+     */
+    readonly rerolls?: readonly {
+      readonly rollKey: string;
+      readonly traits: readonly {
+        readonly slotKey: 'left' | 'middle' | 'right';
+        readonly traitKey: string;
+      }[];
     }[];
   };
   readonly keepsakeRack?: { readonly keepsakeKey?: string };
@@ -1036,8 +1058,12 @@ export type ExecutionRoomGuideDescription =
   | {
       readonly kind: 'sellPurgingPoolTrait';
       readonly slotKey: 'left' | 'middle' | 'right';
+      /** The sold list's reroll id; absent is the initial list. */
+      readonly rollKey?: string;
       readonly traitKey: string;
     }
+  | { readonly kind: 'rerollStygianWell'; readonly rollKey: string }
+  | { readonly kind: 'rerollPurgingPool'; readonly rollKey: string }
   | {
       readonly kind: 'interactEncounter';
       readonly phaseKey: string;

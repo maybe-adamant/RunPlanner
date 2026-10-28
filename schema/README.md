@@ -45,8 +45,13 @@ a door, a door's cage slot or a wheel offer, and the new `reward`) and a Hub
 `reroll` action (`rerollId`, `hubSlotKey`, `reward`) each record one press;
 the target keeps its first draw. A rerolled owner holds the reward it is
 entered with in `rerolledIncomingReward`, `rerolledCages` or
-`rerolledOffers`. Trait, Pom, Well and Pool screens hold an optional
-`rerollCount`. The transition writes none of them.
+`rerolledOffers`. Trait, Chaos and Pom screens hold an optional
+`rerollCount`. A Stygian Well or Pool of Purging reroll is a room action
+(`rerollStygianWell` with `offerKeyBySlot`, `rerollPurgingPool` with
+`traitKeyBySlot`, each with its `rerollId` and only its pinned slots); a Well
+purchase names its roll in `generationKey` (`r1:healing`), and a Pool sale
+names a reroll's list in `rollKey` (absent for the initial list). The feature
+state holds the initial stock. The transition writes none of them.
 
 The migration moves a Shop-owned pedestal item, its collect action and its
 source entry to the room unchanged, and gives every other pedestal-declaring

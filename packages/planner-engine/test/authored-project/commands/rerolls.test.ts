@@ -278,56 +278,69 @@ describe('Hub rerolls', () => {
   });
 });
 
-describe('screen reroll counts', () => {
-  const well = createOccurrenceAddress(f, 'golden-f-preboss-shop:postboss' as never);
+describe('Well and Pool rerolls', () => {
+  const room = createOccurrenceAddress(f, 'golden-f-preboss-shop:postboss' as never);
+  const insert = (
+    project: ReturnType<typeof loadUnderworldFStygianWellCheckpoint>,
+    kind: 'InsertStygianWellReroll' | 'InsertPurgingPoolReroll',
+  ) =>
+    applyProjectCommand(project, catalog, {
+      kind,
+      occurrence: room,
+      index: occurrence(project, room.occurrenceId).roomActions.order.length,
+    });
 
-  it('set a Stygian Well count, absent at zero', () => {
+  it('allocate separate smallest-free ids per feature and need an interacted feature', () => {
     const project = loadUnderworldFStygianWellCheckpoint();
-    const set = (count: number, document = project) =>
-      applyProjectCommand(document, catalog, {
-        kind: 'SetStygianWellRerollCount',
-        occurrence: well,
-        count,
-      });
-    const twice = set(2);
-    expect(occurrence(twice, well.occurrenceId).stygianWell?.rerollCount).toBe(2);
-    const cleared = set(0, twice);
-    expect(occurrence(cleared, well.occurrenceId).stygianWell).not.toHaveProperty('rerollCount');
-    expect(set(0)).toBe(project);
-    expect(() => set(-1)).toThrow('screen reroll count must be a non-negative integer');
-    expect(() => set(1.5)).toThrow('screen reroll count must be a non-negative integer');
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'SetStygianWellRerollCount',
-        occurrence: createOccurrenceAddress(f, source as never),
-        count: 1,
-      }),
-    ).toThrow('occurrence has no present Stygian Well');
-  });
-
-  it('set a Purging Pool count, absent at zero', () => {
-    const project = loadUnderworldFGCheckpoint();
-    const set = (count: number, document = project) =>
-      applyProjectCommand(document, catalog, {
-        kind: 'SetPurgingPoolRerollCount',
-        occurrence: well,
-        count,
-      });
-    const once = set(1);
-    expect(occurrence(once, well.occurrenceId).purgingPool?.rerollCount).toBe(1);
-    expect(occurrence(set(0, once), well.occurrenceId).purgingPool).not.toHaveProperty(
-      'rerollCount',
+    const twice = insert(insert(project, 'InsertStygianWellReroll'), 'InsertStygianWellReroll');
+    expect(
+      occurrence(twice, room.occurrenceId)
+        .roomActions.order.filter((action) => action.kind === 'rerollStygianWell')
+        .map((action) => (action.kind === 'rerollStygianWell' ? action.rerollId : '')),
+    ).toEqual(['r1', 'r2']);
+    expect(() => insert(project, 'InsertPurgingPoolReroll')).toThrow(
+      'Purging Pool is not being interacted with',
     );
-    expect(() => set(-2)).toThrow('screen reroll count must be a non-negative integer');
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'SetPurgingPoolRerollCount',
-        occurrence: createOccurrenceAddress(f, source as never),
-        count: 1,
+    const pool = insert(
+      applyProjectCommand(twice, catalog, {
+        kind: 'SetPurgingPoolInteraction',
+        occurrence: room,
+        interacted: true,
       }),
-    ).toThrow('occurrence has no Purging Pool');
+      'InsertPurgingPoolReroll',
+    );
+    expect(occurrence(pool, room.occurrenceId).roomActions.order.at(-1)).toEqual({
+      kind: 'rerollPurgingPool',
+      rerollId: 'r1',
+      traitKeyBySlot: {},
+    });
+    // Turning the Pool off drops its rerolls with its sales.
+    const off = applyProjectCommand(pool, catalog, {
+      kind: 'SetPurgingPoolInteraction',
+      occurrence: room,
+      interacted: false,
+    });
+    expect(
+      occurrence(off, room.occurrenceId).roomActions.order.some(
+        (action) => action.kind === 'rerollPurgingPool',
+      ),
+    ).toBe(false);
+    expect(() =>
+      applyProjectCommand(twice, catalog, {
+        kind: 'ReplaceStygianWellRollOffer',
+        action: createRoomActionAddress(
+          f,
+          room.occurrenceId,
+          JSON.stringify(['rerollStygianWell', 'r3']),
+        ),
+        slotKey: 'healing',
+        itemKey: 'ArmorBoostStore',
+      }),
+    ).toThrow('room action is not an ordered Well reroll');
   });
+});
 
+describe('screen reroll counts', () => {
   it('keep a Pom count through a later choice edit', () => {
     const pom = createLevelResolutionAddress(
       createIncomingRewardAddress(f, 'golden-f-b4-e1' as never),

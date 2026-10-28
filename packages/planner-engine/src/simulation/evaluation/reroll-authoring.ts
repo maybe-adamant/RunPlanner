@@ -10,6 +10,11 @@ import {
 } from '../../authored-project/rerolls';
 import type { RerollSurfaceSettlement } from '../rewards/model';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
+import type { RollFeature } from '../../authored-project/feature-rolls';
+import {
+  purgingPoolCandidateForProjectEvaluationAssembly,
+  stygianWellCandidateForProjectEvaluationAssembly,
+} from './project-evaluation-assembly';
 
 function rewardsOf(assembly: ProjectEvaluationAssembly, biomeKey: string) {
   const biome = assembly.evaluation.route.biomes.find(
@@ -62,13 +67,19 @@ export type RerollSpend =
   /** One press appended to a surface (`rerollAppendIndex`). */
   | { readonly kind: 'press'; readonly surface: RerollSurface }
   /** One more reroll of a screen in this room, from its current count. */
-  | { readonly kind: 'screen'; readonly occurrence: OccurrenceAddress; readonly fromCount: number };
+  | { readonly kind: 'screen'; readonly occurrence: OccurrenceAddress; readonly fromCount: number }
+  /** One Well or Pool reroll appended at the end of its room's actions. */
+  | {
+      readonly kind: 'featureReroll';
+      readonly occurrence: OccurrenceAddress;
+      readonly feature: RollFeature;
+    };
 
 export type RerollSpendAllowance =
   | { readonly kind: 'unreached' }
   | {
       readonly kind: 'reached';
-      /** What the spend adds: 1 for a press, the next count for a screen. */
+      /** What the spend adds: 1 for a press, the next count for a screen or Well or Pool. */
       readonly cost: number;
       /** The run's lowest pool from the spend to the end of the reached run, before it. */
       readonly lowestRemaining: number;
@@ -122,6 +133,15 @@ export function rerollSpendAllowanceForProjectEvaluationAssembly(
     biomeKey = rerollSurfaceOwner(spend.surface).biomeKey;
     historySequence = surface?.historySequence;
     cost = 1;
+  } else if (spend.kind === 'featureReroll') {
+    const interaction = (
+      spend.feature === 'stygianWell'
+        ? stygianWellCandidateForProjectEvaluationAssembly(assembly, spend.occurrence)
+        : purgingPoolCandidateForProjectEvaluationAssembly(assembly, spend.occurrence)
+    )?.interaction;
+    biomeKey = spend.occurrence.biomeKey;
+    historySequence = interaction?.historySequence;
+    cost = interaction?.reroll.cost ?? 1;
   } else {
     biomeKey = spend.occurrence.biomeKey;
     const key = semanticAddressKey(spend.occurrence);

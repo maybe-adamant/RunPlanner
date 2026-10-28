@@ -926,6 +926,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'rerollTargetUnavailable':
     case 'rerollPoolExceeded':
     case 'screenRerollUnavailable':
+    case 'rollOfferUnavailable':
       return presented('reward', finding);
     case 'traitOfferMissing':
       return { kind: 'trait', message: 'Choose the generated trait offer.' };

@@ -1,10 +1,15 @@
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
 import { routeRoomShop } from '../../authored-project/route-profile';
-import type { StygianWellState } from '../../authored-project/model';
+import type {
+  StygianWellGenerationKey,
+  StygianWellSlotKey,
+  StygianWellState,
+} from '../../authored-project/model';
+import { STYGIAN_WELL_SLOT_KEYS } from '../../authored-project/feature-rolls';
+import type { FeatureRerollOption } from './feature-rolls';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { StygianWellClock, StygianWellGrant } from '../../reward-kernel';
 
-export const STYGIAN_WELL_SLOT_KEYS = ['healing', 'secondLeft', 'secondRight'] as const;
 /** Closed planner-modeled effect a Well offer publishes; derived from its declared grant. */
 export type StygianWellEffect =
   | 'neutral'
@@ -120,7 +125,22 @@ export interface StygianWellEntryCandidateContext {
 }
 
 export type StygianWellCandidateContext =
-  StygianWellEntryCandidateContext | { readonly purchase: StygianWellPurchaseAssessment };
+  | StygianWellEntryCandidateContext
+  | { readonly purchase: StygianWellPurchaseAssessment }
+  | { readonly roll: StygianWellRollAssessment };
+
+/** One Well reroll's restock, assessed against the branch state at the reroll. */
+export interface StygianWellRollAssessment {
+  readonly rollKey: string;
+  /** Every slot not bought earlier in the room; bought slots stay blank. */
+  readonly offeredSlotKeys: readonly StygianWellSlotKey[];
+  readonly candidateItemKeysBySlot: Readonly<Record<StygianWellSlotKey, readonly string[]>>;
+  /** Pinned slots only; an unpinned slot stays native. */
+  readonly issues: readonly {
+    readonly kind: 'wrongGroup' | 'duplicate' | 'notOffered';
+    readonly slotKey: StygianWellSlotKey;
+  }[];
+}
 
 export interface StygianWellPurchaseAssessment {
   readonly generationKey: import('../../authored-project/model').StygianWellGenerationKey;
@@ -269,42 +289,97 @@ export function assessStygianWell(
   });
 }
 
+/** Assesses one Well reroll's pinned restock against the branch state at the reroll. */
+export function assessStygianWellRoll(
+  catalog: Catalog,
+  routeKey: string,
+  rollKey: string,
+  offerKeyBySlot: Readonly<Partial<Record<StygianWellSlotKey, string>>>,
+  offeredSlotKeys: readonly StygianWellSlotKey[],
+  state: Pick<StygianWellRunState, 'timedInstances'>,
+  traitHistory: import('../traits').TraitHistoryState | undefined,
+): StygianWellRollAssessment {
+  const candidateItemKeysBySlot = Object.freeze(
+    Object.fromEntries(
+      STYGIAN_WELL_SLOT_KEYS.map((slotKey) => [
+        slotKey,
+        wellCandidateItemKeys(catalog, routeKey, state, traitHistory, slotKey),
+      ]),
+    ) as Record<StygianWellSlotKey, readonly string[]>,
+  );
+  const issues: StygianWellRollAssessment['issues'][number][] = [];
+  STYGIAN_WELL_SLOT_KEYS.forEach((slotKey, index) => {
+    const itemKey = offerKeyBySlot[slotKey];
+    if (itemKey === undefined) return;
+    if (!offeredSlotKeys.includes(slotKey)) issues.push({ kind: 'notOffered', slotKey });
+    else if (!candidateItemKeysBySlot[slotKey].includes(itemKey))
+      issues.push({ kind: 'wrongGroup', slotKey });
+    else if (
+      STYGIAN_WELL_SLOT_KEYS.slice(0, index).some(
+        (earlier) => offeredSlotKeys.includes(earlier) && offerKeyBySlot[earlier] === itemKey,
+      )
+    )
+      issues.push({ kind: 'duplicate', slotKey });
+  });
+  return Object.freeze({
+    rollKey,
+    offeredSlotKeys: Object.freeze([...offeredSlotKeys]),
+    candidateItemKeysBySlot,
+    issues: Object.freeze(issues),
+  });
+}
+
+/** The pending restock a new Well reroll would offer, from the branch state at its point. */
+export function stygianWellRestockCandidates(
+  catalog: Catalog,
+  routeKey: string,
+  state: Pick<StygianWellRunState, 'timedInstances'>,
+  traitHistory: import('../traits').TraitHistoryState | undefined,
+): Readonly<Record<StygianWellSlotKey, readonly string[]>> {
+  return assessStygianWellRoll(catalog, routeKey, '', {}, [], state, traitHistory)
+    .candidateItemKeysBySlot;
+}
+
+/** One purchase's item and, when it is the room's first, the slot Travel Deal restocks. */
+export interface StygianWellPurchaseInput {
+  readonly generationKey: StygianWellGenerationKey;
+  readonly itemKey: string;
+  readonly twistResultKey: string | null | undefined;
+  /** Present for the room's first purchase from a roll slot. */
+  readonly firstPurchase?: {
+    readonly slotKey: StygianWellSlotKey;
+    /** The items the roll shows when it is bought; the restock excludes them. */
+    readonly rollItemKeys: readonly string[];
+    readonly travelDealRefillKey: string | null | undefined;
+  };
+}
+
 /** Assesses one reached Well purchase against its exact pre-effect branch state. */
 export function assessStygianWellPurchase(
   catalog: Catalog,
   routeKey: string,
-  well: StygianWellState,
-  generationKey: import('../../authored-project/model').StygianWellGenerationKey,
+  purchase: StygianWellPurchaseInput,
   state: Pick<StygianWellRunState, 'timedInstances'>,
   traitHistory: import('../traits').TraitHistoryState | undefined,
-  firstPurchaseGenerationKey:
-    import('../../authored-project/model').StygianWellGenerationKey | undefined,
 ): StygianWellPurchaseAssessment {
-  const slot = generationKey.startsWith('initial:')
-    ? (generationKey.slice(
-        'initial:'.length,
-      ) as import('../../authored-project/model').StygianWellSlotKey)
-    : undefined;
-  const itemKey =
-    generationKey === 'travelDealRefill'
-      ? well.travelDealRefillKey
-      : slot === undefined
-        ? undefined
-        : well.offerKeyBySlot[slot];
+  const { generationKey, itemKey } = purchase;
   const issues: StygianWellPurchaseAssessment['issues'][number][] = [];
-  const isFirstInitialPurchase = firstPurchaseGenerationKey === generationKey && slot !== undefined;
+  const first = purchase.firstPurchase;
   const travelDealRefill =
-    !isFirstInitialPurchase || traitHistory?.equippedTraits.RestockBoon === undefined
+    first === undefined || traitHistory?.equippedTraits.RestockBoon === undefined
       ? undefined
       : (() => {
-          const selected = Object.values(well.offerKeyBySlot).filter(
-            (key): key is string => key !== null,
+          const sourceDomain = wellCandidateItemKeys(
+            catalog,
+            routeKey,
+            state,
+            traitHistory,
+            first.slotKey,
           );
-          const sourceDomain = wellCandidateItemKeys(catalog, routeKey, state, traitHistory, slot);
           const candidateItemKeys = Object.freeze(
-            sourceDomain.filter((key) => !selected.includes(key)),
+            sourceDomain.filter((key) => !first.rollItemKeys.includes(key)),
           );
-          const refill = well.travelDealRefillKey;
+          const refill = first.travelDealRefillKey;
           if (refill === undefined || refill === null)
             issues.push({ kind: 'refillMissing', generationKey: 'travelDealRefill' });
           else if (!candidateItemKeys.includes(refill))
@@ -314,7 +389,7 @@ export function assessStygianWellPurchase(
             });
           return Object.freeze({
             sourceGenerationKey: generationKey as Exclude<
-              import('../../authored-project/model').StygianWellGenerationKey,
+              StygianWellGenerationKey,
               'travelDealRefill'
             >,
             candidateItemKeys,
@@ -329,8 +404,7 @@ export function assessStygianWellPurchase(
           ),
         );
   if (twistCandidateItemKeys !== undefined) {
-    const childKey = generationKey === 'travelDealRefill' ? 'travelDealRefill' : slot!;
-    const result = well.twistResultKeyBySlot?.[childKey];
+    const result = purchase.twistResultKey;
     if (result === undefined || result === null)
       issues.push({ kind: 'twistMissing', generationKey });
     else if (!twistCandidateItemKeys.includes(result))
@@ -498,53 +572,107 @@ export function applyStygianWellPurchase(
   }
 }
 
+/** What can be done at the end of a Well's authored sequence, where a new action is appended. */
+export interface StygianWellInteraction {
+  readonly historySequence: number;
+  /** The roll on show there: `initial` or a Well reroll's id. */
+  readonly rollKey: string;
+  /** Each slot that can be bought there, then the live Travel Deal refill. */
+  readonly offers: readonly {
+    readonly generationKey: StygianWellGenerationKey;
+    readonly slotKey: StygianWellSlotKey;
+    /** Null while the slot is unpinned. */
+    readonly itemKey: string | null;
+  }[];
+  readonly reroll: FeatureRerollOption;
+  /** The slots a reroll appended there restocks, with each one's candidates. */
+  readonly pendingRoll: {
+    readonly offeredSlotKeys: readonly StygianWellSlotKey[];
+    readonly candidateItemKeysBySlot: Readonly<Record<StygianWellSlotKey, readonly string[]>>;
+  };
+}
+
+export interface StygianWellRollCapability {
+  readonly offeredSlotKeys: readonly StygianWellSlotKey[];
+  readonly candidateItemKeysBySlot: Readonly<Record<StygianWellSlotKey, readonly string[]>>;
+}
+
 export interface StygianWellCandidateCapability {
   readonly assessments: readonly StygianWellCandidateContext[];
   readonly placementEligible: boolean;
   readonly required: boolean;
   readonly present: boolean;
   readonly interacted: boolean;
-  readonly candidateItemKeysBySlot: Readonly<
-    Record<import('../../authored-project/model').StygianWellSlotKey, readonly string[]>
-  >;
+  /** The initial roll's candidates. */
+  readonly candidateItemKeysBySlot: Readonly<Record<StygianWellSlotKey, readonly string[]>>;
+  /** Each reached Well reroll's restock, by its reroll id. */
+  readonly rolls: Readonly<Record<string, StygianWellRollCapability>>;
   readonly travelDealRefill?: {
-    readonly sourceGenerationKey: import('../../authored-project/model').StygianWellGenerationKey;
+    readonly sourceGenerationKey: StygianWellGenerationKey;
     readonly candidateItemKeys: readonly string[];
   };
   readonly twistCandidateItemKeysByGeneration: Readonly<
-    Partial<
-      Record<import('../../authored-project/model').StygianWellGenerationKey, readonly string[]>
-    >
+    Partial<Record<StygianWellGenerationKey, readonly string[]>>
   >;
+  /** Undefined while the Well's sequence is unreached. */
+  readonly interaction?: StygianWellInteraction;
 }
 
 export interface StygianWellCandidateArtifacts {
   readonly at: (occurrence: OccurrenceAddress) => StygianWellCandidateCapability | undefined;
 }
 
+/** The values every branch agrees on, in the first branch's order. */
+function agreed(lists: readonly (readonly string[])[]): readonly string[] {
+  const [first, ...rest] = lists;
+  return Object.freeze((first ?? []).filter((key) => rest.every((list) => list.includes(key))));
+}
+
+function agreedBySlot(
+  records: readonly Readonly<Record<StygianWellSlotKey, readonly string[]>>[],
+): Readonly<Record<StygianWellSlotKey, readonly string[]>> {
+  return Object.freeze(
+    Object.fromEntries(
+      STYGIAN_WELL_SLOT_KEYS.map((slotKey) => [
+        slotKey,
+        agreed(records.map((record) => record[slotKey])),
+      ]),
+    ) as Record<StygianWellSlotKey, readonly string[]>,
+  );
+}
+
 export function createStygianWellCandidateArtifacts(
   contexts: ReadonlyMap<string, readonly StygianWellCandidateContext[]>,
+  interactions: ReadonlyMap<string, StygianWellInteraction> = new Map(),
 ): StygianWellCandidateArtifacts {
   const privateContexts = new Map(contexts);
+  const privateInteractions = new Map(interactions);
   return Object.freeze({
     at: (occurrence: OccurrenceAddress) => {
-      const assessments = privateContexts.get(semanticAddressKey(occurrence));
+      const key = semanticAddressKey(occurrence);
+      const assessments = privateContexts.get(key);
       if (assessments === undefined || assessments.length === 0) return undefined;
       const entryAssessments = assessments.filter(
         (assessment): assessment is StygianWellEntryCandidateContext => 'placement' in assessment,
       );
-      const firstEntry = entryAssessments[0];
-      const purchaseContexts = (
-        generationKey: import('../../authored-project/model').StygianWellGenerationKey,
-      ) =>
-        assessments.filter(
-          (assessment): assessment is { readonly purchase: StygianWellPurchaseAssessment } =>
-            'purchase' in assessment && assessment.purchase.generationKey === generationKey,
-        );
-      const refillContexts = purchaseContexts('initial:healing')
-        .concat(purchaseContexts('initial:secondLeft'), purchaseContexts('initial:secondRight'))
-        .filter((assessment) => assessment.purchase.travelDealRefill !== undefined);
-      const travelDealRefill = refillContexts[0]?.purchase.travelDealRefill;
+      const purchases = assessments.flatMap((assessment) =>
+        'purchase' in assessment ? [assessment.purchase] : [],
+      );
+      const rolls = assessments.flatMap((assessment) =>
+        'roll' in assessment ? [assessment.roll] : [],
+      );
+      const refills = purchases.flatMap((purchase) =>
+        purchase.travelDealRefill === undefined ? [] : [purchase.travelDealRefill],
+      );
+      const travelDealRefill = refills[0];
+      const twistGenerations = [
+        ...new Set(
+          purchases.flatMap((purchase) =>
+            purchase.twistCandidateItemKeys === undefined ? [] : [purchase.generationKey],
+          ),
+        ),
+      ];
+      const interaction = privateInteractions.get(key);
       return Object.freeze({
         assessments,
         placementEligible: entryAssessments.every((assessment) => assessment.placement.eligible),
@@ -555,70 +683,60 @@ export function createStygianWellCandidateArtifacts(
         interacted: entryAssessments.every(
           (assessment) => assessment.inventory?.interacted === true,
         ),
-        candidateItemKeysBySlot: Object.freeze(
+        candidateItemKeysBySlot: agreedBySlot(
+          entryAssessments.flatMap((assessment) =>
+            assessment.inventory === undefined
+              ? []
+              : [assessment.inventory.candidateItemKeysBySlot],
+          ),
+        ),
+        rolls: Object.freeze(
           Object.fromEntries(
-            (['healing', 'secondLeft', 'secondRight'] as const).map((slotKey) => [
-              slotKey,
-              Object.freeze(
-                (firstEntry?.inventory?.candidateItemKeysBySlot[slotKey] ?? []).filter((itemKey) =>
-                  entryAssessments.every(
-                    (assessment) =>
-                      assessment.inventory?.candidateItemKeysBySlot[slotKey].includes(itemKey) ===
-                      true,
+            [...new Set(rolls.map((roll) => roll.rollKey))].map((rollKey) => {
+              const same = rolls.filter((roll) => roll.rollKey === rollKey);
+              return [
+                rollKey,
+                Object.freeze({
+                  offeredSlotKeys: same[0]!.offeredSlotKeys,
+                  candidateItemKeysBySlot: agreedBySlot(
+                    same.map((roll) => roll.candidateItemKeysBySlot),
                   ),
-                ),
-              ),
-            ]),
-          ) as Record<import('../../authored-project/model').StygianWellSlotKey, readonly string[]>,
+                }),
+              ];
+            }),
+          ),
         ),
         ...(travelDealRefill === undefined
           ? {}
           : {
               travelDealRefill: Object.freeze({
                 sourceGenerationKey: travelDealRefill.sourceGenerationKey,
-                candidateItemKeys: Object.freeze(
-                  travelDealRefill.candidateItemKeys.filter((itemKey) =>
-                    refillContexts.every(
-                      (assessment) =>
-                        assessment.purchase.travelDealRefill?.sourceGenerationKey ===
-                          travelDealRefill.sourceGenerationKey &&
-                        assessment.purchase.travelDealRefill.candidateItemKeys.includes(itemKey),
-                    ),
+                candidateItemKeys: agreed(
+                  refills.map((refill) =>
+                    refill.sourceGenerationKey === travelDealRefill.sourceGenerationKey
+                      ? refill.candidateItemKeys
+                      : [],
                   ),
                 ),
               }),
             }),
         twistCandidateItemKeysByGeneration: Object.freeze(
           Object.fromEntries(
-            (
-              [
-                'initial:healing',
-                'initial:secondLeft',
-                'initial:secondRight',
-                'travelDealRefill',
-              ] as const
-            ).flatMap((generationKey) => {
-              const generationContexts = purchaseContexts(generationKey).filter(
-                (assessment) => assessment.purchase.twistCandidateItemKeys !== undefined,
-              );
-              const itemKeys = generationContexts[0]?.purchase.twistCandidateItemKeys;
-              if (itemKeys === undefined) return [];
-              return [
-                [
-                  generationKey,
-                  Object.freeze(
-                    itemKeys.filter((itemKey) =>
-                      generationContexts.every(
-                        (assessment) =>
-                          assessment.purchase.twistCandidateItemKeys?.includes(itemKey) === true,
-                      ),
-                    ),
-                  ),
-                ] as const,
-              ];
-            }),
+            twistGenerations.map((generationKey) => [
+              generationKey,
+              agreed(
+                purchases
+                  .filter(
+                    (purchase) =>
+                      purchase.generationKey === generationKey &&
+                      purchase.twistCandidateItemKeys !== undefined,
+                  )
+                  .map((purchase) => purchase.twistCandidateItemKeys!),
+              ),
+            ]),
           ),
         ),
+        ...(interaction === undefined ? {} : { interaction }),
       });
     },
   });

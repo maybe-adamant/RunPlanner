@@ -172,6 +172,12 @@ export function applyRoomActionCommand(
       if (command.reference.kind === 'reroll') {
         failCommand(command, 'rerolls use InsertReroll');
       }
+      if (command.reference.kind === 'rerollStygianWell') {
+        failCommand(command, 'Well rerolls use InsertStygianWellReroll');
+      }
+      if (command.reference.kind === 'rerollPurgingPool') {
+        failCommand(command, 'Pool rerolls use InsertPurgingPoolReroll');
+      }
       const key = roomActionKey(command.reference);
       if (key !== command.action.actionKey) {
         failCommand(command, 'reference does not match the addressed room action');

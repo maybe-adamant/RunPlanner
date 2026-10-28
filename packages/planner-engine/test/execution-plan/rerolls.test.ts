@@ -20,7 +20,10 @@ import {
   encodeExecutionPlan,
   type ExecutionPlan,
 } from '@run-planner/engine/execution-plan';
-import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldFGCheckpoint,
+  loadUnderworldFStygianWellCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 import {
   firstSupportedReroll,
@@ -205,5 +208,79 @@ describe('reroll publication', () => {
         delete press(room).reward;
       }),
     ).toThrow('reward');
+  });
+});
+
+describe('Well and Pool roll publication', () => {
+  const f = createBiomeAddress('Underworld', 'F');
+  const postboss = 'golden-f-preboss-shop:postboss';
+  const room = createOccurrenceAddress(f, postboss as never);
+  const action = (key: unknown[]) =>
+    createRoomActionAddress(f, postboss as never, JSON.stringify(key));
+
+  function rolledProject(): ProjectDocument {
+    let project = withJudgment(
+      withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
+      'F',
+      'golden-f-preboss-shop:boss',
+      ['ScreenReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
+    );
+    const end = () => occurrence(project, postboss, 0).roomActions.order.length;
+    const apply = (command: Parameters<typeof applyProjectCommand>[2]) => {
+      project = applyProjectCommand(project, catalog, command);
+    };
+    apply({ kind: 'InsertStygianWellReroll', occurrence: room, index: end() });
+    apply({
+      kind: 'ReplaceStygianWellRollOffer',
+      action: action(['rerollStygianWell', 'r1']),
+      slotKey: 'healing',
+      itemKey: 'ArmorBoostStore',
+    });
+    apply({
+      kind: 'SetStygianWellPurchase',
+      occurrence: room,
+      generationKey: 'r1:healing',
+      purchased: true,
+    });
+    apply({ kind: 'SetPurgingPoolInteraction', occurrence: room, interacted: true });
+    apply({ kind: 'InsertPurgingPoolReroll', occurrence: room, index: end() });
+    apply({
+      kind: 'ReplacePurgingPoolRollSlot',
+      action: action(['rerollPurgingPool', 'r1']),
+      slotKey: 'middle',
+      traitKey: 'HeraCastBoon',
+    });
+    const sale = { kind: 'sellPurgingPoolTrait', slotKey: 'middle', rollKey: 'r1' } as const;
+    apply({
+      kind: 'InsertRoomAction',
+      action: action(['sellPurgingPoolTrait', 'middle', 'r1']),
+      reference: sale,
+      index: end(),
+    });
+    return project;
+  }
+
+  it('publishes each roll in action order and the purchases and sales naming them', () => {
+    const plan = planOf(rolledProject());
+    const roomPlan = plan.occurrences.find((candidate) => candidate.id === postboss)!;
+    expect(roomPlan.overview.stygianWell?.rerolls).toEqual([
+      { rollKey: 'r1', offers: [{ generationKey: 'r1:healing', offerKey: 'ArmorBoostStore' }] },
+    ]);
+    expect(roomPlan.overview.purgingPool?.rerolls).toEqual([
+      { rollKey: 'r1', traits: [{ slotKey: 'middle', traitKey: 'HeraCastBoon' }] },
+    ]);
+    const guide = roomPlan.roomGuide.map((row) => row.description);
+    expect(guide).toContainEqual({ kind: 'rerollStygianWell', rollKey: 'r1' });
+    expect(guide).toContainEqual({ kind: 'rerollPurgingPool', rollKey: 'r1' });
+    expect(guide).toContainEqual(
+      expect.objectContaining({ kind: 'purchaseStygianWellOffer', generationKey: 'r1:healing' }),
+    );
+    expect(guide).toContainEqual({
+      kind: 'sellPurgingPoolTrait',
+      slotKey: 'middle',
+      rollKey: 'r1',
+      traitKey: 'HeraCastBoon',
+    });
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
   });
 });

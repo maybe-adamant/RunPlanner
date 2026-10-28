@@ -1,3 +1,4 @@
+import { stygianWellGenerationItemKey } from './feature-rolls';
 import type { Catalog } from '../catalog-schema';
 import { isRouteCompletionRoom } from './completion-boss';
 import type { ResolvedRoutePosition } from './route-context';
@@ -169,15 +170,7 @@ function purchasedIxionUses(reached: ReachedOccurrence): readonly IxionPurchase[
   const purchases: IxionPurchase[] = [];
   for (const action of reached.occurrence.roomActions.order) {
     if (action.kind !== 'purchaseStygianWellOffer') continue;
-    const slot = action.generationKey.startsWith('initial:')
-      ? (action.generationKey.slice('initial:'.length) as keyof typeof well.offerKeyBySlot)
-      : undefined;
-    const itemKey =
-      action.generationKey === 'travelDealRefill'
-        ? well.travelDealRefillKey
-        : slot === undefined
-          ? undefined
-          : well.offerKeyBySlot[slot];
+    const itemKey = stygianWellGenerationItemKey(reached.occurrence, action.generationKey);
     if (itemKey === 'TemporaryForcedSecretDoorTrait')
       purchases.push(
         Object.freeze({

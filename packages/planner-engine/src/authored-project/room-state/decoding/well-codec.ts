@@ -1,6 +1,6 @@
-import { decodeScreenRerollCount, screenRerollCountField } from '../../screen-rerolls';
 import type { Catalog } from '../../../catalog-schema';
-import type { RoomActionState, StygianWellState } from '../../model';
+import { INITIAL_ROLL_KEY, parseStygianWellGenerationKey } from '../../feature-rolls';
+import type { RoomActionState, StygianWellGenerationKey, StygianWellState } from '../../model';
 import {
   expectArray,
   expectExactKeys,
@@ -26,13 +26,7 @@ export function decodeStygianWellState(
       ...(hasTwist ? ['twistResultKeyBySlot'] : []),
       ...(hasPurchased ? ['purchasedGenerationKeys'] : []),
       ...(hasRefill ? ['travelDealRefillKey'] : []),
-      ...(Object.hasOwn(raw, 'rerollCount') ? ['rerollCount'] : []),
     ],
-    path,
-  );
-  const rerollCount = decodeScreenRerollCount(
-    raw,
-    catalog.rewards.shops.byKey.RoomShop?.screenReroll === true,
     path,
   );
   if (typeof raw.interacted !== 'boolean')
@@ -50,12 +44,6 @@ export function decodeStygianWellState(
       failProjectDocument(entryPath, `unknown RoomShop item ${itemKey}`);
     return itemKey;
   };
-  const allowed = [
-    'initial:healing',
-    'initial:secondLeft',
-    'initial:secondRight',
-    'travelDealRefill',
-  ];
   const twistResultKeyBySlot = !hasTwist
     ? undefined
     : (() => {
@@ -79,15 +67,7 @@ export function decodeStygianWellState(
     ? undefined
     : expectArray(raw.purchasedGenerationKeys, `${path}.purchasedGenerationKeys`).map(
         (entry, index) => {
-          const key = expectNonBlankString(entry, `${path}.purchasedGenerationKeys[${index}]`);
-          if (!allowed.includes(key))
-            failProjectDocument(
-              `${path}.purchasedGenerationKeys[${index}]`,
-              'contains unknown Well generation',
-            );
-          return key as StygianWellState['purchasedGenerationKeys'] extends readonly (infer K)[]
-            ? K
-            : never;
+          return decodeStygianWellGenerationKey(entry, `${path}.purchasedGenerationKeys[${index}]`);
         },
       );
   if (
@@ -109,8 +89,23 @@ export function decodeStygianWellState(
     ...(purchasedGenerationKeys === undefined
       ? {}
       : { purchasedGenerationKeys: Object.freeze(purchasedGenerationKeys) }),
-    ...screenRerollCountField(rerollCount),
   });
+}
+
+/** The initial roll's slots, a Well reroll's slots by its id, or the Travel Deal refill. */
+export function decodeStygianWellGenerationKey(
+  value: unknown,
+  path: string,
+): StygianWellGenerationKey {
+  const key = expectNonBlankString(value, path);
+  if (key === 'travelDealRefill') return key;
+  const parsed = parseStygianWellGenerationKey(key);
+  if (
+    parsed === undefined ||
+    (parsed.rollKey !== INITIAL_ROLL_KEY && !/^r[1-9][0-9]*$/.test(parsed.rollKey))
+  )
+    failProjectDocument(path, 'must be a Well generation key');
+  return key as StygianWellGenerationKey;
 }
 
 export function assertStygianWellPurchaseActionClosure(

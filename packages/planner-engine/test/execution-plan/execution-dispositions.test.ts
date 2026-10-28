@@ -21,9 +21,13 @@ type ResourcePolicyField = Exclude<
   'occurrenceId'
 >;
 type DoorsKind = ExecutionDoors['kind'];
-/** Occurrence and Hub rerolls, screen counts, and the planned pool at each room's entry. */
+/** Occurrence and Hub rerolls, screen counts, Well and Pool rolls, and the planned pool at entry. */
 type RerollWireField =
-  'occurrenceRerolls' | 'hubRerolls' | 'screenRerollCounts' | 'rerollPoolAtEntry';
+  | 'occurrenceRerolls'
+  | 'hubRerolls'
+  | 'screenRerollCounts'
+  | 'wellAndPoolRolls'
+  | 'rerollPoolAtEntry';
 
 /**
  * Test-owned census of the planner semantics that can reach execution.  These
@@ -50,11 +54,15 @@ const executionDispositions = {
     interactKeepsakeRack: 'covered',
     interactEris: 'deferred-route',
     reroll: 'covered',
+    // The game module installs each authored roll on its native reroll in a later gate.
+    rerollStygianWell: 'deferred-route',
+    rerollPurgingPool: 'deferred-route',
   } satisfies Record<RoomActionKind, ExecutionDisposition>,
   rerolls: {
     occurrenceRerolls: 'covered',
     hubRerolls: 'covered',
     screenRerollCounts: 'covered',
+    wellAndPoolRolls: 'deferred-route',
     rerollPoolAtEntry: 'covered',
   } satisfies Record<RerollWireField, ExecutionDisposition>,
   timelineTransactions: {

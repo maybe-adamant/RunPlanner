@@ -34,6 +34,15 @@ import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import { routeErisHost } from '../route-profile';
 export { roomActionKey } from './key';
 import { roomActionKey } from './key';
+import type { PurgingPoolSlotKey } from '../model';
+import {
+  INITIAL_ROLL_KEY,
+  PURGING_POOL_SLOT_KEYS,
+  STYGIAN_WELL_SLOT_KEYS,
+  purgingPoolRerolls,
+  stygianWellGenerationKey,
+  stygianWellRerolls,
+} from '../feature-rolls';
 
 export function createEmptyRoomActionState(): RoomActionState {
   return Object.freeze({ order: Object.freeze([]) });
@@ -212,30 +221,50 @@ export function activeRoomActionReferences(
   )
     references.push(Object.freeze({ kind: 'interactInfernalContractPedestal' }));
   if (occurrence.purgingPool?.interacted === true) {
+    const sales: RoomActionReference[] = [];
     for (const [slotKey, traitKey] of Object.entries(occurrence.purgingPool.traitKeyBySlot)) {
       if (traitKey !== null)
-        references.push(
-          Object.freeze({
-            kind: 'sellPurgingPoolTrait',
-            slotKey: slotKey as 'left' | 'middle' | 'right',
-          }),
+        sales.push(
+          Object.freeze({ kind: 'sellPurgingPoolTrait', slotKey: slotKey as PurgingPoolSlotKey }),
         );
     }
+    for (const reroll of purgingPoolRerolls(occurrence.roomActions.order)) {
+      references.push(reroll);
+      for (const slotKey of PURGING_POOL_SLOT_KEYS)
+        if (reroll.traitKeyBySlot[slotKey] !== undefined)
+          sales.push(
+            Object.freeze({ kind: 'sellPurgingPoolTrait', slotKey, rollKey: reroll.rerollId }),
+          );
+    }
+    // A sale from a reroll's list participates by its presence, so one whose
+    // roll or pin is gone keeps its finding; the initial list's empty slots
+    // are its Overview finding.
+    const saleKeys = new Set(sales.map(roomActionKey));
+    for (const reference of occurrence.roomActions.order)
+      if (
+        reference.kind === 'sellPurgingPoolTrait' &&
+        reference.rollKey !== undefined &&
+        !saleKeys.has(roomActionKey(reference))
+      )
+        sales.push(reference);
+    references.push(...sales);
   }
   if (occurrence.stygianWell?.interacted === true) {
-    const purchased = new Set(occurrence.stygianWell.purchasedGenerationKeys ?? []);
-    for (const slotKey of ['healing', 'secondLeft', 'secondRight'] as const) {
-      const generationKey = `initial:${slotKey}` as import('../model').StygianWellGenerationKey;
-      // Purchase participation and rank survive an invalidating source edit.
-      // The active action then reaches the missing source finding and remains
-      // directly repairable by restoring this generation's offer.
-      if (purchased.has(generationKey))
-        references.push(Object.freeze({ kind: 'purchaseStygianWellOffer', generationKey }));
-    }
-    if (purchased.has('travelDealRefill'))
-      references.push(
-        Object.freeze({ kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' }),
-      );
+    references.push(...stygianWellRerolls(occurrence.roomActions.order));
+    const purchased = occurrence.stygianWell.purchasedGenerationKeys ?? [];
+    // Purchase participation and rank survive an invalidating source edit.
+    // The active action then reaches the missing source finding and remains
+    // directly repairable by restoring this generation's offer.
+    for (const generationKey of [
+      ...STYGIAN_WELL_SLOT_KEYS.map((slotKey) =>
+        stygianWellGenerationKey(INITIAL_ROLL_KEY, slotKey),
+      ).filter((key) => purchased.includes(key)),
+      ...purchased.filter(
+        (key) => key !== 'travelDealRefill' && !key.startsWith(`${INITIAL_ROLL_KEY}:`),
+      ),
+      ...purchased.filter((key) => key === 'travelDealRefill'),
+    ])
+      references.push(Object.freeze({ kind: 'purchaseStygianWellOffer', generationKey }));
   }
   if (occurrence.hermesShrine !== undefined) {
     // Each purchased generation has one purchase action; a new one starts unrushed.

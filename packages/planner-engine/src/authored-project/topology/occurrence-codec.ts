@@ -1,8 +1,4 @@
-import {
-  decodeScreenRerollCount,
-  screenRerollCountField,
-  screenRerollSupported,
-} from '../screen-rerolls';
+import { screenRerollSupported } from '../screen-rerolls';
 import type { BiomeLayout, Catalog } from '../../catalog-schema';
 import { routeErisHost, routeHasKeepsakeRack, routeRoomShop } from '../route-profile';
 import type {
@@ -125,16 +121,7 @@ function decodePurgingPoolState(
   if (room.purgingPool === undefined)
     failProjectDocument(path, 'requires a room declaration with a Purging Pool');
   const raw = expectRecord(value, path);
-  expectExactKeys(
-    raw,
-    ['interacted', 'traitKeyBySlot', ...(Object.hasOwn(raw, 'rerollCount') ? ['rerollCount'] : [])],
-    path,
-  );
-  const rerollCount = decodeScreenRerollCount(
-    raw,
-    screenRerollSupported(catalog, { kind: 'purgingPool', room }),
-    path,
-  );
+  expectExactKeys(raw, ['interacted', 'traitKeyBySlot'], path);
   const traits = expectRecord(raw.traitKeyBySlot, `${path}.traitKeyBySlot`);
   expectExactKeys(traits, [...room.purgingPool.slotKeys], `${path}.traitKeyBySlot`);
   const traitKeyBySlot = Object.fromEntries(
@@ -150,7 +137,6 @@ function decodePurgingPoolState(
   return Object.freeze({
     interacted: expectBoolean(raw.interacted, `${path}.interacted`),
     traitKeyBySlot: Object.freeze(traitKeyBySlot),
-    ...screenRerollCountField(rerollCount),
   });
 }
 
@@ -572,6 +558,35 @@ export function decodeRoomOccurrence(input: {
     roomActions,
     `${rawOccurrence.path}.roomActions.order`,
   );
+  for (const [index, reference] of roomActions.order.entries()) {
+    const feature =
+      reference.kind === 'rerollStygianWell'
+        ? stygianWell
+        : reference.kind === 'rerollPurgingPool' || reference.kind === 'sellPurgingPoolTrait'
+          ? purgingPool
+          : undefined;
+    if (
+      reference.kind !== 'rerollStygianWell' &&
+      reference.kind !== 'rerollPurgingPool' &&
+      reference.kind !== 'sellPurgingPoolTrait'
+    )
+      continue;
+    if (feature?.interacted !== true)
+      failProjectDocument(
+        `${rawOccurrence.path}.roomActions.order[${index}]`,
+        'requires an interacted Well or Pool of this room',
+      );
+    if (
+      (reference.kind === 'rerollStygianWell' &&
+        !screenRerollSupported(catalog, { kind: 'stygianWell', room })) ||
+      (reference.kind === 'rerollPurgingPool' &&
+        !screenRerollSupported(catalog, { kind: 'purgingPool', room }))
+    )
+      failProjectDocument(
+        `${rawOccurrence.path}.roomActions.order[${index}]`,
+        'this screen cannot be rerolled',
+      );
+  }
   if (
     hermesShrine !== undefined &&
     (room.surfaceShop === undefined ||

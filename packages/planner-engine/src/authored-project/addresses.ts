@@ -60,7 +60,12 @@ export type RoomFeatureTarget =
       readonly generationKey: import('./model').HermesShrineGenerationKey;
     }
   | { readonly kind: 'hermesShrineInventory' }
-  | { readonly kind: 'purgingPoolOffer'; readonly slotKey: 'left' | 'middle' | 'right' }
+  | {
+      readonly kind: 'purgingPoolOffer';
+      readonly slotKey: 'left' | 'middle' | 'right';
+      /** A Pool reroll's list by its id; absent is the initial list. */
+      readonly rollKey?: string;
+    }
   | { readonly kind: 'purgingPoolInventory' }
   | { readonly kind: 'erisSpawn' };
 export interface RoomFeatureAddress extends BiomeOwnedAddress {
@@ -585,6 +590,7 @@ export function createRoomFeatureAddress(
         return Object.freeze({
           kind: target.kind,
           slotKey: nonBlank(target.slotKey, 'slotKey') as 'left' | 'middle' | 'right',
+          ...(target.rollKey === undefined ? {} : { rollKey: nonBlank(target.rollKey, 'rollKey') }),
         });
       default:
         return Object.freeze({ kind: target.kind });

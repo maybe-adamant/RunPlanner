@@ -44,7 +44,14 @@ import type { RunImportContext } from './import';
 import type { RunImportArea } from './report';
 import { isQuestionFinding } from './areas';
 import { authoredOccurrence, occurrenceIdOf } from './occurrences';
-import { applyScreenRerolls } from './rerolls';
+import { applyFeatureRerolls } from './rerolls';
+import {
+  INITIAL_ROLL_KEY,
+  parseStygianWellGenerationKey,
+  purgingPoolRerolls,
+  stygianWellGenerationKey,
+  stygianWellRerolls,
+} from '../../authored-project/feature-rolls';
 import { pickupUseCount } from './vocabulary';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
@@ -934,10 +941,10 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
     )
       noteOnce(context, `${presence}:refused`, 'well', 'refused', feature, visit.roomIndex);
     else
-      applyScreenRerolls(context, visit.roomIndex, 'well', feature, (count) => ({
-        kind: 'SetStygianWellRerollCount',
+      applyFeatureRerolls(context, visit.roomIndex, 'well', feature, () => ({
+        kind: 'InsertStygianWellReroll',
         occurrence: address,
-        count,
+        index: actionCount(context, biomeKey, occurrence.occurrenceId),
       }));
     return;
   }
@@ -958,15 +965,25 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
     context.note({ area: 'well', reason: 'notInRecord', address, record: record(visit.roomIndex) });
     return;
   }
-  for (const purchase of visit.store.purchases) {
-    const slotKey: StygianWellSlotKey | undefined = wellSlots(context)[purchase.slot - 1];
-    if (slotKey === undefined) {
-      context.note({ area: 'well', reason: 'refused', address, record: record(visit.roomIndex) });
-      continue;
-    }
-    const generationKey = `initial:${slotKey}` as const;
+  // The record keeps no roll order: with rerolls, every purchase is placed on the last roll.
+  const lastRoll = stygianWellRerolls(
+    authoredOccurrence(context.assembly().project, biomeKey, occurrence.occurrenceId)?.roomActions
+      .order ?? [],
+  ).at(-1);
+  const rollKey = lastRoll?.rerollId ?? INITIAL_ROLL_KEY;
+  const pin = (slotKey: StygianWellSlotKey, itemKey: string) =>
+    lastRoll === undefined ||
+    context.applyValid({
+      kind: 'ReplaceStygianWellRollOffer',
+      action: roomActionAddress(context, biomeKey, occurrence.occurrenceId, lastRoll),
+      slotKey,
+      itemKey,
+    });
+  const purchase = (slotKey: StygianWellSlotKey, itemKey: string) => {
+    const generationKey = stygianWellGenerationKey(rollKey, slotKey);
     const feature = createRoomFeatureAddress(address, { kind: 'stygianWellOffer', generationKey });
     if (
+      !pin(slotKey, itemKey) ||
       !context.applyValid({
         kind: 'SetStygianWellPurchase',
         occurrence: address,
@@ -980,10 +997,29 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
         address: feature,
         record: record(visit.roomIndex),
       });
-      continue;
+      return false;
     }
     retractWellPurchase(context, biomeKey, address, generationKey, visit.roomIndex);
-    importTwist(context, address, visit, generationKey, well.offerKeyBySlot[slotKey]);
+    importTwist(context, address, visit, generationKey, itemKey);
+    if (lastRoll !== undefined)
+      noteOnce(
+        context,
+        `wellRolls:${occurrence.occurrenceId}`,
+        'well',
+        'assumption',
+        createRoomFeatureAddress(address, { kind: 'stygianWellInventory' }),
+        visit.roomIndex,
+      );
+    return true;
+  };
+  for (const recorded of visit.store.purchases) {
+    const slotKey: StygianWellSlotKey | undefined = wellSlots(context)[recorded.slot - 1];
+    const itemKey = slotKey === undefined ? undefined : (well.offerKeyBySlot[slotKey] ?? undefined);
+    if (slotKey === undefined || itemKey === undefined) {
+      context.note({ area: 'well', reason: 'refused', address, record: record(visit.roomIndex) });
+      continue;
+    }
+    purchase(slotKey, itemKey);
   }
   // Travel Deal restocks one slot after the first purchase; its item is the one bought unstocked.
   const [refill, ...extra] = visit.store.unstockedPurchases ?? [];
@@ -1015,14 +1051,55 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
     retractWellPurchase(context, biomeKey, address, 'travelDealRefill', visit.roomIndex);
     importTwist(context, address, visit, 'travelDealRefill', refill);
   }
-  // One restock per Well: a second unstocked purchase has no generation to own it.
-  for (let count = 0; count < extra.length; count++)
-    context.note({
-      area: 'well',
-      reason: 'refused',
-      address: feature,
-      record: record(visit.roomIndex),
-    });
+  // One restock per Well: another unstocked purchase came from a reroll, so it
+  // takes a free slot of its group on the last roll; without one it is unowned.
+  for (const itemKey of extra) {
+    const taken = new Set(
+      (
+        authoredOccurrence(context.assembly().project, biomeKey, occurrence.occurrenceId)
+          ?.stygianWell?.purchasedGenerationKeys ?? []
+      ).flatMap((key) => {
+        const parsed = parseStygianWellGenerationKey(key);
+        return parsed?.rollKey === rollKey ? [parsed.slotKey] : [];
+      }),
+    );
+    const slotKey =
+      lastRoll === undefined
+        ? undefined
+        : wellSlots(context).find(
+            (candidate) => !taken.has(candidate) && wellSlotHolds(context, candidate, itemKey),
+          );
+    if (slotKey === undefined || !purchase(slotKey, itemKey))
+      context.note({
+        area: 'well',
+        reason: 'refused',
+        address: feature,
+        record: record(visit.roomIndex),
+      });
+  }
+}
+
+/** Whether the item belongs to the RoomShop group a slot draws from. */
+function wellSlotHolds(
+  context: RunImportContext,
+  slotKey: StygianWellSlotKey,
+  itemKey: string,
+): boolean {
+  const profile = context.catalog.rewards.shops.byKey['RoomShop'];
+  const groupKey = profile?.slots.values.find((slot) => slot.key === slotKey)?.groupKey;
+  return (
+    groupKey !== undefined &&
+    profile?.groups.byKey[groupKey]?.options.values.some((option) => option.key === itemKey) ===
+      true
+  );
+}
+
+/** The number of actions an occurrence orders, where an appended action goes. */
+function actionCount(context: RunImportContext, biomeKey: string, occurrenceId: string): number {
+  return (
+    authoredOccurrence(context.assembly().project, biomeKey, occurrenceId)?.roomActions.order
+      .length ?? 0
+  );
 }
 
 function retractWellPurchase(
@@ -1051,8 +1128,7 @@ function importTwist(
   context: RunImportContext,
   address: ReturnType<typeof createOccurrenceAddress>,
   visit: StoreVisit,
-  generationKey:
-    'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill',
+  generationKey: StygianWellGenerationKey,
   itemKey: string | null,
 ): void {
   if (itemKey !== 'RandomStoreItem') return;
@@ -1120,12 +1196,16 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
         record: record(roomIndex),
       });
     } else
-      applyScreenRerolls(
+      applyFeatureRerolls(
         context,
         roomIndex,
         'pool',
         createRoomFeatureAddress(address, { kind: 'purgingPoolInventory' }),
-        (count) => ({ kind: 'SetPurgingPoolRerollCount', occurrence: address, count }),
+        () => ({
+          kind: 'InsertPurgingPoolReroll',
+          occurrence: address,
+          index: actionCount(context, biomeKey, occurrence.occurrenceId),
+        }),
       );
     return;
   }
@@ -1135,6 +1215,51 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
   context.used.add(`${used}:slots`);
   // Every listed trait and each sold slot's pick are claimed once across the list.
   const claimed = new Set(pool.slots.map((entry) => entry.name));
+  // The record keeps only the list left on leaving: with rerolls it is assumed
+  // to be both the initial list and the last roll's, which every sale names.
+  const lastRoll = purgingPoolRerolls(occurrence.roomActions.order).at(-1);
+  const sell = (slotKey: (typeof POOL_SLOTS)[number]): boolean => {
+    if (lastRoll === undefined)
+      return insertRoomAction(context, biomeKey, occurrence.occurrenceId, {
+        kind: 'sellPurgingPoolTrait',
+        slotKey,
+      });
+    const traitKey = authoredOccurrence(
+      context.assembly().project,
+      biomeKey,
+      occurrence.occurrenceId,
+    )?.purgingPool?.traitKeyBySlot[slotKey];
+    const sale = Object.freeze({
+      kind: 'sellPurgingPoolTrait' as const,
+      slotKey,
+      rollKey: lastRoll.rerollId,
+    });
+    const sold =
+      traitKey !== null &&
+      traitKey !== undefined &&
+      context.applyValid({
+        kind: 'ReplacePurgingPoolRollSlot',
+        action: roomActionAddress(context, biomeKey, occurrence.occurrenceId, lastRoll),
+        slotKey,
+        traitKey,
+      }) &&
+      context.applyValid({
+        kind: 'InsertRoomAction',
+        action: roomActionAddress(context, biomeKey, occurrence.occurrenceId, sale),
+        reference: sale,
+        index: actionCount(context, biomeKey, occurrence.occurrenceId),
+      });
+    if (sold)
+      noteOnce(
+        context,
+        `poolRolls:${occurrence.occurrenceId}`,
+        'pool',
+        'assumption',
+        createRoomFeatureAddress(address, { kind: 'purgingPoolInventory' }),
+        roomIndex,
+      );
+    return sold;
+  };
   for (const [index, slotKey] of POOL_SLOTS.entries()) {
     const slot = index + 1;
     const feature = createRoomFeatureAddress(address, { kind: 'purgingPoolOffer', slotKey });
@@ -1163,13 +1288,7 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
           ...(applied ? { applied: command } : {}),
           record: record(roomIndex),
         });
-        if (
-          applied &&
-          !insertRoomAction(context, biomeKey, occurrence.occurrenceId, {
-            kind: 'sellPurgingPoolTrait',
-            slotKey,
-          })
-        )
+        if (applied && !sell(slotKey))
           context.note({
             area: 'pool',
             reason: 'refused',
@@ -1224,13 +1343,7 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
         applied: command,
         record: record(roomIndex),
       });
-    if (
-      pool.soldSlots.includes(slot) &&
-      !insertRoomAction(context, biomeKey, occurrence.occurrenceId, {
-        kind: 'sellPurgingPoolTrait',
-        slotKey,
-      })
-    )
+    if (pool.soldSlots.includes(slot) && !sell(slotKey))
       context.note({
         area: 'pool',
         reason: 'refused',

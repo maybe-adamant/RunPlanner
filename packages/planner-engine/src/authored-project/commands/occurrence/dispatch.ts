@@ -1,4 +1,3 @@
-import { screenRerollCountField, screenRerollSupported } from '../../screen-rerolls';
 import type { Catalog } from '../../../catalog-schema';
 import { routeErisHost, routeRoomShop } from '../../route-profile';
 import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
@@ -13,6 +12,12 @@ import { applyShopOccurrenceCommand } from './shop';
 import { applyInfernalContractPedestalCommand } from './infernal-contract-pedestal';
 import { applyPhantomExitCommand } from './phantom-exit';
 import { applyFieldsOccurrenceCommand } from './fields';
+import { applyFeatureRollCommand } from './feature-rolls';
+import {
+  INITIAL_ROLL_KEY,
+  parseStygianWellGenerationKey,
+  stygianWellGenerationItemKey,
+} from '../../feature-rolls';
 import type { OccurrenceLeafCommand } from '../types';
 import { requireOccurrence, failCommand } from '../contract';
 import { updateOccurrence } from './mutation';
@@ -469,7 +474,9 @@ export function applyOccurrenceCommand(
             ...occurrence.roomActions,
             order: Object.freeze(
               occurrence.roomActions.order.filter(
-                (reference) => reference.kind !== 'sellPurgingPoolTrait',
+                (reference) =>
+                  reference.kind !== 'sellPurgingPoolTrait' &&
+                  reference.kind !== 'rerollPurgingPool',
               ),
             ),
           });
@@ -480,28 +487,6 @@ export function applyOccurrenceCommand(
           ...occurrence,
           roomActions,
           purgingPool: Object.freeze({ ...occurrence.purgingPool, interacted: command.interacted }),
-        }),
-      );
-    }
-    case 'SetPurgingPoolRerollCount': {
-      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
-      if (occurrence.purgingPool === undefined)
-        failCommand(command, 'occurrence has no Purging Pool');
-      const room = catalog.rooms.byKey[occurrence.gameName];
-      requireScreenRerollCount(
-        command,
-        command.count,
-        room !== undefined && screenRerollSupported(catalog, { kind: 'purgingPool', room }),
-      );
-      if ((occurrence.purgingPool.rerollCount ?? 0) === command.count) return document;
-      const { rerollCount: _previous, ...pool } = occurrence.purgingPool;
-      void _previous;
-      return updateOccurrence(
-        document,
-        located,
-        Object.freeze({
-          ...occurrence,
-          purgingPool: Object.freeze({ ...pool, ...screenRerollCountField(command.count) }),
         }),
       );
     }
@@ -606,7 +591,9 @@ export function applyOccurrenceCommand(
           roomActions: Object.freeze({
             ...occurrence.roomActions,
             order: Object.freeze(
-              occurrence.roomActions.order.filter((r) => r.kind !== 'purchaseStygianWellOffer'),
+              occurrence.roomActions.order.filter(
+                (r) => r.kind !== 'purchaseStygianWellOffer' && r.kind !== 'rerollStygianWell',
+              ),
             ),
           }),
         }),
@@ -635,7 +622,9 @@ export function applyOccurrenceCommand(
             roomActions: Object.freeze({
               ...occurrence.roomActions,
               order: Object.freeze(
-                occurrence.roomActions.order.filter((r) => r.kind !== 'purchaseStygianWellOffer'),
+                occurrence.roomActions.order.filter(
+                  (r) => r.kind !== 'purchaseStygianWellOffer' && r.kind !== 'rerollStygianWell',
+                ),
               ),
             }),
           }),
@@ -650,28 +639,11 @@ export function applyOccurrenceCommand(
         }),
       );
     }
-    case 'SetStygianWellRerollCount': {
-      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
-      const room = catalog.rooms.byKey[occurrence.gameName];
-      if (occurrence.stygianWell === undefined || room === undefined)
-        failCommand(command, 'occurrence has no present Stygian Well');
-      requireScreenRerollCount(
-        command,
-        command.count,
-        screenRerollSupported(catalog, { kind: 'stygianWell', room }),
-      );
-      if ((occurrence.stygianWell.rerollCount ?? 0) === command.count) return document;
-      const { rerollCount: _previous, ...well } = occurrence.stygianWell;
-      void _previous;
-      return updateOccurrence(
-        document,
-        located,
-        Object.freeze({
-          ...occurrence,
-          stygianWell: Object.freeze({ ...well, ...screenRerollCountField(command.count) }),
-        }),
-      );
-    }
+    case 'InsertStygianWellReroll':
+    case 'ReplaceStygianWellRollOffer':
+    case 'InsertPurgingPoolReroll':
+    case 'ReplacePurgingPoolRollSlot':
+      return applyFeatureRollCommand(document, catalog, located, command);
     case 'ReplaceStygianWellOffer': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
       const well = occurrence.stygianWell;
@@ -759,17 +731,12 @@ export function applyOccurrenceCommand(
       if (well === undefined || !well.interacted)
         failCommand(command, 'Stygian Well is not being interacted with');
       const generation = command.generationKey;
-      const slot = generation.startsWith('initial:')
-        ? (generation.slice(8) as import('../../model').StygianWellSlotKey)
-        : undefined;
-      const item =
-        generation === 'travelDealRefill'
-          ? well.travelDealRefillKey
-          : slot === undefined
-            ? undefined
-            : well.offerKeyBySlot[slot];
-      if (item === null || item === undefined)
-        failCommand(command, 'Stygian Well offer is unresolved');
+      // A purchase needs its item; one whose roll or item is gone can still be removed.
+      if (command.purchased) {
+        const item = stygianWellGenerationItemKey(occurrence, generation);
+        if (item === null || item === undefined)
+          failCommand(command, 'Stygian Well offer is unresolved');
+      }
       const purchased = new Set(well.purchasedGenerationKeys ?? []);
       if (command.purchased) purchased.add(generation);
       else purchased.delete(generation);
@@ -788,11 +755,11 @@ export function applyOccurrenceCommand(
                 (r) =>
                   r.kind === 'purchaseStygianWellOffer' && r.generationKey === 'travelDealRefill',
               );
-              const hasInitialPurchase = nextOrder.some(
+              const hasFirstPurchase = nextOrder.some(
                 (r) =>
-                  r.kind === 'purchaseStygianWellOffer' && r.generationKey.startsWith('initial:'),
+                  r.kind === 'purchaseStygianWellOffer' && r.generationKey !== 'travelDealRefill',
               );
-              if (generation.startsWith('initial:') && !hasInitialPurchase && refillIndex >= 0)
+              if (generation !== 'travelDealRefill' && !hasFirstPurchase && refillIndex >= 0)
                 nextOrder.splice(refillIndex, 0, reference);
               else nextOrder.push(reference);
               return nextOrder;
@@ -818,26 +785,10 @@ export function applyOccurrenceCommand(
       const well = occurrence.stygianWell;
       if (well === undefined || !well.interacted)
         failCommand(command, 'Stygian Well is not being interacted with');
-      if (
-        ![
-          'initial:healing',
-          'initial:secondLeft',
-          'initial:secondRight',
-          'travelDealRefill',
-        ].includes(command.generationKey)
-      )
+      const parsed = parseStygianWellGenerationKey(command.generationKey);
+      if (command.generationKey !== 'travelDealRefill' && parsed === undefined)
         failCommand(command, 'unknown Stygian Well generation');
-      const slotKey = command.generationKey.startsWith('initial:')
-        ? (command.generationKey.slice(
-            'initial:'.length,
-          ) as import('../../model').StygianWellSlotKey)
-        : undefined;
-      const parentItemKey =
-        command.generationKey === 'travelDealRefill'
-          ? well.travelDealRefillKey
-          : slotKey === undefined
-            ? undefined
-            : well.offerKeyBySlot[slotKey];
+      const parentItemKey = stygianWellGenerationItemKey(occurrence, command.generationKey);
       if (
         command.itemKey !== null &&
         (parentItemKey !== 'RandomStoreItem' ||
@@ -850,7 +801,36 @@ export function applyOccurrenceCommand(
       const twistResultItemKeys = new Set(twistGrant?.kind === 'twist' ? twistGrant.pool : []);
       if (command.itemKey !== null && !twistResultItemKeys.has(command.itemKey))
         failCommand(command, 'item is not in the closed Twist result pool');
-      const childKey = command.generationKey === 'travelDealRefill' ? 'travelDealRefill' : slotKey!;
+      if (parsed !== undefined && parsed.rollKey !== INITIAL_ROLL_KEY) {
+        const order = occurrence.roomActions.order;
+        const index = order.findIndex(
+          (reference) =>
+            reference.kind === 'rerollStygianWell' && reference.rerollId === parsed.rollKey,
+        );
+        const reroll = order[index];
+        if (reroll?.kind !== 'rerollStygianWell')
+          failCommand(command, 'unknown Stygian Well generation');
+        const nextOrder = [...order];
+        nextOrder[index] = Object.freeze({
+          ...reroll,
+          twistResultKeyBySlot: Object.freeze({
+            ...reroll.twistResultKeyBySlot,
+            [parsed.slotKey]: command.itemKey,
+          }),
+        });
+        return updateOccurrence(
+          document,
+          located,
+          Object.freeze({
+            ...occurrence,
+            roomActions: Object.freeze({
+              ...occurrence.roomActions,
+              order: Object.freeze(nextOrder),
+            }),
+          }),
+        );
+      }
+      const childKey = parsed === undefined ? 'travelDealRefill' : parsed.slotKey;
       return updateOccurrence(
         document,
         located,
@@ -899,14 +879,4 @@ export function applyOccurrenceCommand(
     case 'ReplaceGorgonDeathDefianceCondition':
       return applyEncounterOccurrenceCommand(document, catalog, located, command);
   }
-}
-
-function requireScreenRerollCount(
-  command: Parameters<typeof failCommand>[0],
-  count: number,
-  supported: boolean,
-): void {
-  if (!Number.isInteger(count) || count < 0)
-    failCommand(command, 'screen reroll count must be a non-negative integer');
-  if (count > 0 && !supported) failCommand(command, 'this screen cannot be rerolled');
 }

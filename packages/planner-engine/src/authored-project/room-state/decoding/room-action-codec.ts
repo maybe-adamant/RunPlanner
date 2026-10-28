@@ -7,6 +7,8 @@ import type {
   RoomActionState,
 } from '../../model';
 import { decodeResolvedRewardOffer } from './reward-acquisition-codec';
+import { decodeStygianWellGenerationKey } from './well-codec';
+import { PURGING_POOL_SLOT_KEYS, STYGIAN_WELL_SLOT_KEYS } from '../../feature-rolls';
 import { roomActionKey } from '../../room-actions/state';
 import {
   expectArray,
@@ -117,16 +119,13 @@ function decodeRoomActionReference(
   }
   if (kind === 'purchaseStygianWellOffer') {
     expectExactKeys(reference, ['kind', 'generationKey'], path);
-    const generationKey = expectNonBlankString(reference.generationKey, `${path}.generationKey`);
-    const allowed = [
-      'initial:healing',
-      'initial:secondLeft',
-      'initial:secondRight',
-      'travelDealRefill',
-    ];
-    if (!allowed.includes(generationKey))
-      failProjectDocument(`${path}.generationKey`, 'must be a declared Well generation key');
-    return Object.freeze({ kind, generationKey } as RoomActionReference);
+    return Object.freeze({
+      kind,
+      generationKey: decodeStygianWellGenerationKey(
+        reference.generationKey,
+        `${path}.generationKey`,
+      ),
+    });
   }
   if (kind === 'purchaseHermesShrineOffer') {
     expectExactKeys(reference, ['kind', 'generationKey', 'rushed'], path);
@@ -144,11 +143,17 @@ function decodeRoomActionReference(
     });
   }
   if (kind === 'sellPurgingPoolTrait') {
-    expectExactKeys(reference, ['kind', 'slotKey'], path);
+    const hasRollKey = Object.hasOwn(reference, 'rollKey');
+    expectExactKeys(reference, ['kind', 'slotKey', ...(hasRollKey ? ['rollKey'] : [])], path);
     const slotKey = expectNonBlankString(reference.slotKey, `${path}.slotKey`);
     if (slotKey !== 'left' && slotKey !== 'middle' && slotKey !== 'right')
       failProjectDocument(`${path}.slotKey`, 'must be a declared Pool slot key');
-    return Object.freeze({ kind, slotKey });
+    // The initial list is the absent roll key, never an explicit one.
+    return Object.freeze({
+      kind,
+      slotKey,
+      ...(hasRollKey ? { rollKey: decodeRerollId(reference.rollKey, `${path}.rollKey`) } : {}),
+    });
   }
   if (kind === 'interactAcquisitionEntry') {
     const hasEncounterPhaseKey = Object.hasOwn(reference, 'encounterPhaseKey');
@@ -178,6 +183,71 @@ function decodeRoomActionReference(
       rerollId: decodeRerollId(reference.rerollId, `${path}.rerollId`),
       target: decodeRerollTarget(reference.target, `${path}.target`),
       reward: decodeResolvedRewardOffer(reference.reward, catalog, `${path}.reward`),
+    });
+  }
+  if (kind === 'rerollStygianWell') {
+    const hasTwist = Object.hasOwn(reference, 'twistResultKeyBySlot');
+    expectExactKeys(
+      reference,
+      ['kind', 'rerollId', 'offerKeyBySlot', ...(hasTwist ? ['twistResultKeyBySlot'] : [])],
+      path,
+    );
+    const known = new Set(
+      catalog.rewards.shops.byKey.RoomShop?.groups.values.flatMap((group) =>
+        group.options.values.map((option) => option.key),
+      ) ?? [],
+    );
+    const item = (entry: unknown, entryPath: string): string => {
+      const itemKey = expectNonBlankString(entry, entryPath);
+      if (!known.has(itemKey)) failProjectDocument(entryPath, `unknown RoomShop item ${itemKey}`);
+      return itemKey;
+    };
+    const slots = (field: string, decode: (entry: unknown, entryPath: string) => unknown) => {
+      const record = expectRecord(reference[field], `${path}.${field}`);
+      for (const key of Object.keys(record))
+        if (!(STYGIAN_WELL_SLOT_KEYS as readonly string[]).includes(key))
+          failProjectDocument(`${path}.${field}`, `contains unknown Well slot ${key}`);
+      return Object.freeze(
+        Object.fromEntries(
+          Object.entries(record).map(([key, entry]) => [
+            key,
+            decode(entry, `${path}.${field}.${key}`),
+          ]),
+        ),
+      );
+    };
+    return Object.freeze({
+      kind,
+      rerollId: decodeRerollId(reference.rerollId, `${path}.rerollId`),
+      offerKeyBySlot: slots('offerKeyBySlot', item) as Record<string, string>,
+      ...(hasTwist
+        ? {
+            twistResultKeyBySlot: slots('twistResultKeyBySlot', (entry, entryPath) =>
+              entry === null ? null : item(entry, entryPath),
+            ) as Record<string, string | null>,
+          }
+        : {}),
+    });
+  }
+  if (kind === 'rerollPurgingPool') {
+    expectExactKeys(reference, ['kind', 'rerollId', 'traitKeyBySlot'], path);
+    const traits = expectRecord(reference.traitKeyBySlot, `${path}.traitKeyBySlot`);
+    for (const key of Object.keys(traits))
+      if (!(PURGING_POOL_SLOT_KEYS as readonly string[]).includes(key))
+        failProjectDocument(`${path}.traitKeyBySlot`, `contains unknown Pool slot ${key}`);
+    return Object.freeze({
+      kind,
+      rerollId: decodeRerollId(reference.rerollId, `${path}.rerollId`),
+      traitKeyBySlot: Object.freeze(
+        Object.fromEntries(
+          Object.entries(traits).map(([key, entry]) => {
+            const traitKey = expectNonBlankString(entry, `${path}.traitKeyBySlot.${key}`);
+            if (catalog.traits.byKey[traitKey] === undefined)
+              failProjectDocument(`${path}.traitKeyBySlot.${key}`, 'unknown trait');
+            return [key, traitKey];
+          }),
+        ),
+      ),
     });
   }
   failProjectDocument(`${path}.kind`, `unknown room action ${kind}`);

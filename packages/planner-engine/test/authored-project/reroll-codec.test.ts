@@ -5,7 +5,10 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldFGCheckpoint,
+  loadUnderworldFStygianWellCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 
 type Encoded = {
@@ -93,5 +96,79 @@ describe('reroll codec', () => {
         actions[0]!.extra = true;
       }),
     ).toThrow();
+  });
+
+  it('decodes Well and Pool rolls strictly and round-trips them', () => {
+    const encoded = JSON.parse(
+      encodeProjectDocument(loadUnderworldFStygianWellCheckpoint()),
+    ) as Encoded;
+    const decodeWith = (edit: (room: Record<string, unknown>) => void) => {
+      const copy = structuredClone(encoded);
+      edit(
+        copy.route.biomes[0]!.topology.occurrences.find(
+          (room) => room.occurrenceId === 'golden-f-preboss-shop:postboss',
+        )!,
+      );
+      return () => decodeProjectDocument(copy as never, catalog);
+    };
+    const withOrder =
+      (...actions: unknown[]) =>
+      (room: Record<string, unknown>) => {
+        (room.roomActions as { order: unknown[] }).order.push(...actions);
+      };
+    const wellRoll = {
+      kind: 'rerollStygianWell',
+      rerollId: 'r1',
+      offerKeyBySlot: { healing: 'ArmorBoostStore' },
+    };
+    const decoded = decodeWith(withOrder(wellRoll))();
+    expect(
+      decoded.route.biomes[0]!.topology!.occurrences.find(
+        (room) => room.occurrenceId === 'golden-f-preboss-shop:postboss',
+      )!.roomActions.order.at(-1),
+    ).toEqual(wellRoll);
+    expect(JSON.parse(encodeProjectDocument(decoded))).toEqual(
+      JSON.parse(encodeProjectDocument(decodeWith(withOrder(wellRoll))())),
+    );
+    expect(
+      decodeWith(withOrder({ ...wellRoll, offerKeyBySlot: { first: 'ArmorBoostStore' } })),
+    ).toThrow('contains unknown Well slot first');
+    expect(decodeWith(withOrder({ ...wellRoll, offerKeyBySlot: { healing: 'Nope' } }))).toThrow(
+      'unknown RoomShop item Nope',
+    );
+    expect(
+      decodeWith((room) => {
+        (room.stygianWell as Record<string, unknown>).rerollCount = 1;
+      }),
+    ).toThrow();
+    expect(
+      decodeWith(withOrder({ kind: 'purchaseStygianWellOffer', generationKey: 'later:healing' })),
+    ).toThrow('must be a Well generation key');
+    // A Pool roll needs an interacted Pool; the initial list is an absent roll key.
+    expect(
+      decodeWith(withOrder({ kind: 'rerollPurgingPool', rerollId: 'r1', traitKeyBySlot: {} })),
+    ).toThrow('requires an interacted Well or Pool of this room');
+    const interactedPool = (room: Record<string, unknown>) => {
+      (room.purgingPool as Record<string, unknown>).interacted = true;
+    };
+    expect(
+      decodeWith((room) => {
+        interactedPool(room);
+        withOrder(
+          {
+            kind: 'rerollPurgingPool',
+            rerollId: 'r1',
+            traitKeyBySlot: { left: 'ApolloWeaponBoon' },
+          },
+          { kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'r1' },
+        )(room);
+      }),
+    ).not.toThrow();
+    expect(
+      decodeWith((room) => {
+        interactedPool(room);
+        withOrder({ kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'initial' })(room);
+      }),
+    ).toThrow('must be a reroll id');
   });
 });

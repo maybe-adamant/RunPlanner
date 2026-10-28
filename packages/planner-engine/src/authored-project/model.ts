@@ -153,13 +153,16 @@ export interface ShopState {
   readonly travelDealRefill?: ShopOfferState;
 }
 
-/** The final realized Pool list; null is unresolved authoring, never a reroll request. */
+export type PurgingPoolSlotKey = 'left' | 'middle' | 'right';
+
+/**
+ * The Pool's initial sell list; null is unresolved authoring. Each later list
+ * is a `rerollPurgingPool` room action.
+ */
 export interface PurgingPoolState {
   /** Whether the player opens this physical Pool and authors its realized inventory. */
   readonly interacted: boolean;
-  readonly traitKeyBySlot: Readonly<Record<'left' | 'middle' | 'right', string | null>>;
-  /** Native screen rerolls before the realized list; absent is none. */
-  readonly rerollCount?: number;
+  readonly traitKeyBySlot: Readonly<Record<PurgingPoolSlotKey, string | null>>;
 }
 
 export type HermesShrineSlotKey = 'first' | 'secondLeft' | 'secondRight';
@@ -208,8 +211,12 @@ export interface HermesShrineState {
 
 /** A RoomShop is runtime-random until the player elects to model this visit. */
 export type StygianWellSlotKey = 'healing' | 'secondLeft' | 'secondRight';
-export type StygianWellGenerationKey =
-  'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
+/**
+ * One Well item position: a roll's slot, the roll named `initial` or by its
+ * `rerollStygianWell` action's id, or the Travel Deal refill.
+ */
+export type StygianWellGenerationKey = `${string}:${StygianWellSlotKey}` | 'travelDealRefill';
+/** The Well's initial stock; each later roll is a `rerollStygianWell` room action. */
 export interface StygianWellState {
   readonly interacted: boolean;
   readonly offerKeyBySlot: Readonly<Record<StygianWellSlotKey, string | null>>;
@@ -218,8 +225,6 @@ export interface StygianWellState {
   >;
   readonly purchasedGenerationKeys?: readonly StygianWellGenerationKey[];
   readonly travelDealRefillKey?: string | null;
-  /** Native screen rerolls before the authored inventory; absent is none. */
-  readonly rerollCount?: number;
 }
 
 /** Occurrence-owned payloads for one exact acquisition point. */
@@ -274,7 +279,12 @@ export type RoomActionReference =
       readonly generationKey: HermesShrineGenerationKey;
       readonly rushed: boolean;
     }
-  | { readonly kind: 'sellPurgingPoolTrait'; readonly slotKey: 'left' | 'middle' | 'right' }
+  | {
+      readonly kind: 'sellPurgingPoolTrait';
+      readonly slotKey: PurgingPoolSlotKey;
+      /** The sold list's reroll id; absent is the initial list. */
+      readonly rollKey?: string;
+    }
   | { readonly kind: 'interactEncounter'; readonly phaseKey: string }
   | { readonly kind: 'interactGorgon'; readonly phaseKey: string }
   | {
@@ -287,7 +297,33 @@ export type RoomActionReference =
   | { readonly kind: 'useFountain' }
   | { readonly kind: 'interactKeepsakeRack' }
   | { readonly kind: 'interactEris' }
-  | RerollRoomAction;
+  | RerollRoomAction
+  | StygianWellRerollAction
+  | PurgingPoolRerollAction;
+
+/**
+ * One Well reroll, identified by its persisted `rerollId`. It restocks every
+ * slot not bought earlier in the room; a pinned slot names the restocked
+ * item, and an unpinned one stays native.
+ */
+export interface StygianWellRerollAction {
+  readonly kind: 'rerollStygianWell';
+  readonly rerollId: string;
+  readonly offerKeyBySlot: Readonly<Partial<Record<StygianWellSlotKey, string>>>;
+  /** A bought Fateful Twist's result, by its slot. */
+  readonly twistResultKeyBySlot?: Readonly<Partial<Record<StygianWellSlotKey, string | null>>>;
+}
+
+/**
+ * One Pool reroll, identified by its persisted `rerollId`. It redraws the
+ * whole list from the current traits; a pinned slot names its trait, and an
+ * unpinned one stays native.
+ */
+export interface PurgingPoolRerollAction {
+  readonly kind: 'rerollPurgingPool';
+  readonly rerollId: string;
+  readonly traitKeyBySlot: Readonly<Partial<Record<PurgingPoolSlotKey, string>>>;
+}
 
 /**
  * What one door, wheel or cage reroll redraws. A door and a cage name the

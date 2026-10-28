@@ -43,7 +43,6 @@ import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { LifecycleFinding } from './types';
 import { dueHermesShrineDeliveryFrontier } from './hermes-shrine-delivery';
 import { erisSpawnFindings } from './eris-interacted';
-import { settleScreenRerolls } from '../../screen-rerolls';
 import { isDeliveryFlushHost } from '../../../../authored-project/hermes-shrine-delivery';
 import type {
   DerivedAcquisitionEntryFrontier,
@@ -312,33 +311,7 @@ export function applyRoomEnteredTransition(
     routePosition,
   );
   const findings: LifecycleFinding[] = [...effects.findings];
-  // The Well's inventory is fixed on entry; its screen rerolls are spent when it is opened.
-  const wellRerollCount =
-    room?.stygianWell?.interacted === true ? room.stygianWell.rerollCount : undefined;
-  const next =
-    room === undefined || wellRerollCount === undefined
-      ? effects.branches
-      : Object.freeze(
-          effects.branches.map((branch) => {
-            const rerolled = settleScreenRerolls(
-              catalog,
-              branch,
-              wellRerollCount,
-              createRoomFeatureAddress(room.origin, { kind: 'stygianWellInventory' }),
-              event.sequence,
-              findingChronology,
-            );
-            for (const entry of rerolled.findings)
-              findings.push(
-                Object.freeze({
-                  finding: entry.finding,
-                  region: entry.atomicRegion,
-                  chronology: entry.chronology ?? findingChronology,
-                }),
-              );
-            return rerolled.branch;
-          }),
-        );
+  const next = effects.branches;
   const fixedAcquisitionRealizations = effects.fixedAcquisitionRealizations;
   const flushHost = effects.flushHost;
   const dueDeliveries =

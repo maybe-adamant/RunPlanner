@@ -45,6 +45,7 @@ export type RewardGenerationFindingCode =
   | 'rerollTargetUnavailable'
   | 'rerollPoolExceeded'
   | 'screenRerollUnavailable'
+  | 'rollOfferUnavailable'
   | 'rewardAcquisitionUnavailable'
   | 'rewardBagSupportEmpty'
   | 'rewardBagEntryUnavailable'

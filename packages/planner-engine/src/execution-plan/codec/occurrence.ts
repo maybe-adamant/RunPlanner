@@ -316,12 +316,8 @@ function roomGuideDescription(value: unknown, label: string) {
       exact(record, ['kind', 'generationKey'], ['itemKey', 'effect', 'twistResultKey'], label);
       const generationKey = stringValue(record.generationKey, `${label}.generationKey`);
       if (
-        ![
-          'initial:healing',
-          'initial:secondLeft',
-          'initial:secondRight',
-          'travelDealRefill',
-        ].includes(generationKey)
+        generationKey !== 'travelDealRefill' &&
+        !/^(initial|r[1-9][0-9]*):(healing|secondLeft|secondRight)$/.test(generationKey)
       )
         fail(`${label}.generationKey is unsupported`);
       const effect =
@@ -375,16 +371,21 @@ function roomGuideDescription(value: unknown, label: string) {
       });
     }
     case 'sellPurgingPoolTrait': {
-      exact(record, ['kind', 'slotKey', 'traitKey'], [], label);
+      exact(record, ['kind', 'slotKey', 'traitKey'], ['rollKey'], label);
       const slotKey = stringValue(record.slotKey, `${label}.slotKey`);
       if (slotKey !== 'left' && slotKey !== 'middle' && slotKey !== 'right')
         fail(`${label}.slotKey is unsupported`);
       return Object.freeze({
         kind,
         slotKey,
+        ...(record.rollKey === undefined ? {} : { rollKey: rollKey(record.rollKey, label) }),
         traitKey: stringValue(record.traitKey, `${label}.traitKey`),
       });
     }
+    case 'rerollStygianWell':
+    case 'rerollPurgingPool':
+      exact(record, ['kind', 'rollKey'], [], label);
+      return Object.freeze({ kind, rollKey: rollKey(record.rollKey, label) });
     case 'interactEncounter':
     case 'interactGorgon':
       exact(record, ['kind', 'phaseKey'], ['encounterKey'], label);
@@ -655,4 +656,11 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   validateShopTransactionOwners(parsed, label);
   validateRewardWheelProduct(parsed, label);
   return parsed;
+}
+
+/** A Well or Pool reroll's id. */
+function rollKey(value: unknown, label: string): string {
+  const key = stringValue(value, `${label}.rollKey`);
+  if (!/^r[1-9][0-9]*$/.test(key)) fail(`${label}.rollKey must be a reroll id`);
+  return key;
 }

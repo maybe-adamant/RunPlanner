@@ -180,6 +180,9 @@ const findingCopy = {
   screenRerollUnavailable: {
     title: 'Screen rerolls are not available',
   },
+  rollOfferUnavailable: {
+    title: 'Not on offer at this point',
+  },
   traitOfferMissing: {
     title: 'Choose a trait offer',
   },

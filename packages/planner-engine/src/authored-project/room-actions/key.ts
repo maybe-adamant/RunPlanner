@@ -20,11 +20,16 @@ export function roomActionKey(reference: RoomActionReference): string {
     case 'purchaseHermesShrineOffer':
       return JSON.stringify([reference.kind, reference.generationKey]);
     case 'sellPurgingPoolTrait':
-      return JSON.stringify([reference.kind, reference.slotKey]);
+      return reference.rollKey === undefined
+        ? JSON.stringify([reference.kind, reference.slotKey])
+        : JSON.stringify([reference.kind, reference.slotKey, reference.rollKey]);
     case 'interactAcquisitionEntry':
       return JSON.stringify([reference.kind, reference.siteKey, reference.entryKey]);
     case 'reroll':
       return rerollActionKey(reference.rerollId);
+    case 'rerollStygianWell':
+    case 'rerollPurgingPool':
+      return JSON.stringify([reference.kind, reference.rerollId]);
     case 'collectRequiredReward':
     case 'useFountain':
     case 'interactKeepsakeRack':

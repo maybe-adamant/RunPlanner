@@ -12,6 +12,15 @@ import {
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { locateBiome } from '../../src/authored-project/commands/contract';
+import {
+  stygianWellGenerationItemKey,
+  stygianWellGenerationTwistResultKey,
+} from '../../src/authored-project/feature-rolls';
+import type {
+  StygianWellGenerationKey,
+  StygianWellSlotKey,
+  StygianWellState,
+} from '../../src/authored-project/model';
 import { applyRouteDetourCommand } from '../../src/authored-project/commands/route-detours';
 import { reconcileChaosTopology } from '../../src/authored-project/chaos-gate-reconciliation';
 import {
@@ -41,6 +50,44 @@ import {
   projectStygianWellLegality,
   type StygianWellRunState,
 } from '../../src/simulation/commerce/stygian-well';
+
+/** Assesses one purchase of the authored Well; the first purchase restocks under Travel Deal. */
+function assessPurchase(
+  catalogValue: typeof catalog,
+  routeKey: string,
+  well: StygianWellState,
+  generationKey: StygianWellGenerationKey,
+  state: Parameters<typeof assessStygianWellPurchase>[3],
+  traitHistory: Parameters<typeof assessStygianWellPurchase>[4],
+  firstGenerationKey: StygianWellGenerationKey | undefined,
+) {
+  const view = { stygianWell: well, roomActions: { order: [] } };
+  const slotKey = generationKey.startsWith('initial:')
+    ? (generationKey.slice('initial:'.length) as StygianWellSlotKey)
+    : undefined;
+  return assessStygianWellPurchase(
+    catalogValue,
+    routeKey,
+    {
+      generationKey,
+      itemKey: stygianWellGenerationItemKey(view, generationKey)!,
+      twistResultKey: stygianWellGenerationTwistResultKey(view, generationKey),
+      ...(firstGenerationKey !== generationKey || slotKey === undefined
+        ? {}
+        : {
+            firstPurchase: {
+              slotKey,
+              rollItemKeys: Object.values(well.offerKeyBySlot).filter(
+                (key): key is string => key !== null,
+              ),
+              travelDealRefillKey: well.travelDealRefillKey,
+            },
+          }),
+    },
+    state,
+    traitHistory,
+  );
+}
 
 const empty = (): StygianWellRunState => ({
   sparkUses: 0,
@@ -94,7 +141,7 @@ describe('Stygian Well consequential purchase state', () => {
       expect(inventory.candidateItemKeysBySlot.secondLeft).toContain(itemKey);
       expect(inventory.issues).toEqual([]);
       expect(
-        assessStygianWellPurchase(
+        assessPurchase(
           catalog,
           'Underworld',
           well,
@@ -165,7 +212,7 @@ describe('Stygian Well consequential purchase state', () => {
       expect(initial.issues.some((issue) => issue.kind === 'wrongGroup')).toBe(
         routeKey === 'Dream',
       );
-      const refill = assessStygianWellPurchase(
+      const refill = assessPurchase(
         catalog,
         routeKey,
         {
@@ -907,7 +954,7 @@ describe('Stygian Well consequential purchase state', () => {
       travelDealRefillKey: 'TemporaryImprovedCastTrait',
       twistResultKeyBySlot: { secondLeft: 'TemporaryDiscountTrait' },
     } as const;
-    const assessment = assessStygianWellPurchase(
+    const assessment = assessPurchase(
       catalog,
       'Underworld',
       well,
@@ -924,7 +971,7 @@ describe('Stygian Well consequential purchase state', () => {
     expect(assessment.travelDealRefill?.candidateItemKeys).not.toContain('LimitedSwapTraitDrop');
     expect(assessment.twistCandidateItemKeys).toEqual(twistResultItemKeys(catalog));
 
-    const activeDiscount = assessStygianWellPurchase(
+    const activeDiscount = assessPurchase(
       catalog,
       'Underworld',
       well,
@@ -1094,7 +1141,7 @@ describe('Stygian Well consequential purchase state', () => {
       },
       purchasedGenerationKeys: ['initial:healing'],
     } as const;
-    const missing = assessStygianWellPurchase(
+    const missing = assessPurchase(
       catalog,
       'Underworld',
       base,
@@ -1107,7 +1154,7 @@ describe('Stygian Well consequential purchase state', () => {
       expect.objectContaining({ kind: 'refillMissing', generationKey: 'travelDealRefill' }),
     );
     expect(missing.travelDealRefill?.candidateItemKeys).toContain('ArmorBoostStore');
-    const withoutTravel = assessStygianWellPurchase(
+    const withoutTravel = assessPurchase(
       catalog,
       'Underworld',
       base,

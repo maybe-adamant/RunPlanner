@@ -1,4 +1,9 @@
 import {
+  stygianWellGenerationItemKey,
+  stygianWellGenerationTwistResultKey,
+} from '../../authored-project/feature-rolls';
+import { wellOccurrenceView } from '../../simulation/rewards/biome/encounter-acquisition/well-purchase';
+import {
   createBiomeAddress,
   createEchoKeepsakeReplayAddress,
   createEncounterPhaseAddress,
@@ -724,7 +729,10 @@ export function executionTimelineTransactions(
       // itself has no separate executable callback or transaction.
       timeline.action.reference.kind === 'completeFieldsCage' ||
       // Rerolls publish in order on the occurrence; the press is native.
-      timeline.action.reference.kind === 'reroll'
+      timeline.action.reference.kind === 'reroll' ||
+      // Well and Pool rolls publish on the Overview; the press is native.
+      timeline.action.reference.kind === 'rerollStygianWell' ||
+      timeline.action.reference.kind === 'rerollPurgingPool'
     )
       continue;
     if (
@@ -771,15 +779,7 @@ export function executionTimelineTransactions(
     }
     if (timeline.action.reference.kind === 'purchaseStygianWellOffer') {
       const generationKey = timeline.action.reference.generationKey;
-      const slot = generationKey.startsWith('initial:')
-        ? (generationKey.slice('initial:'.length) as 'healing' | 'secondLeft' | 'secondRight')
-        : undefined;
-      const offerKey =
-        generationKey === 'travelDealRefill'
-          ? room.stygianWell?.travelDealRefillKey
-          : slot === undefined
-            ? undefined
-            : room.stygianWell?.offerKeyBySlot[slot];
+      const offerKey = stygianWellGenerationItemKey(wellOccurrenceView(room), generationKey);
       if (offerKey === undefined || offerKey === null)
         throw new CompilerError(
           'executionCoverageMissing',
@@ -793,12 +793,10 @@ export function executionTimelineTransactions(
         );
       const extendedDirectPurchase =
         room.stygianWellExtendedDirectPurchaseItemKeys?.includes(offerKey) === true;
-      const twistResultKey =
-        generationKey === 'travelDealRefill'
-          ? room.stygianWell?.twistResultKeyBySlot?.travelDealRefill
-          : slot === undefined
-            ? undefined
-            : room.stygianWell?.twistResultKeyBySlot?.[slot];
+      const twistResultKey = stygianWellGenerationTwistResultKey(
+        wellOccurrenceView(room),
+        generationKey,
+      );
       const wellOwner = semanticAddressKey(timeline.action.owner);
       if (
         offerKey === 'RandomStoreItem' &&
@@ -1032,7 +1030,7 @@ export function executionTimelineTransactions(
     );
     if (
       sourceRow?.reference.kind !== 'purchaseStygianWellOffer' ||
-      !sourceRow.reference.generationKey.startsWith('initial:')
+      sourceRow.reference.generationKey === 'travelDealRefill'
     )
       throw new CompilerError(
         'executionCoverageMissing',
@@ -1045,8 +1043,7 @@ export function executionTimelineTransactions(
         carrier: 'stygianWell',
         source: Object.freeze({
           owner: semanticAddressKey(refill.sourceOwner),
-          generationKey: sourceRow.reference.generationKey as
-            'initial:healing' | 'initial:secondLeft' | 'initial:secondRight',
+          generationKey: sourceRow.reference.generationKey,
         }),
         replacement: Object.freeze({
           generationKey: 'travelDealRefill',

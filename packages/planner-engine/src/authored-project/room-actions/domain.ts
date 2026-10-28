@@ -235,10 +235,11 @@ function travelDealSourceAction(
     reference.kind === 'purchaseStygianWellOffer' &&
     reference.generationKey === 'travelDealRefill'
   ) {
+    // The room's first purchase, from any roll, is the one Travel Deal restocks.
     return occurrence.roomActions.order.find(
       (candidate) =>
         candidate.kind === 'purchaseStygianWellOffer' &&
-        candidate.generationKey.startsWith('initial:'),
+        candidate.generationKey !== 'travelDealRefill',
     );
   }
   if (
@@ -532,6 +533,8 @@ function baseContribution(
       );
     }
     case 'sellPurgingPoolTrait':
+    case 'rerollStygianWell':
+    case 'rerollPurgingPool':
       return contribution(
         biome,
         occurrence,

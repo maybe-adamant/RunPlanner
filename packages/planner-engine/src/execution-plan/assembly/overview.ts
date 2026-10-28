@@ -1,4 +1,15 @@
 import {
+  INITIAL_ROLL_KEY,
+  PURGING_POOL_SLOT_KEYS,
+  STYGIAN_WELL_SLOT_KEYS,
+  stygianWellGenerationItemKey,
+  stygianWellGenerationKey,
+  stygianWellGenerationTwistResultKey,
+  type FeatureRerollAction,
+} from '../../authored-project/feature-rolls';
+import { wellOccurrenceView } from '../../simulation/rewards/biome/encounter-acquisition/well-purchase';
+import type { ExecutionWellOffer } from '../model';
+import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createTravelDealRefillRealizationAddress,
@@ -611,56 +622,58 @@ function executionHermesShrine(
   return Object.freeze({ offers });
 }
 
+function executionWellOffers(
+  room: CanonicalAuthoredRoom,
+  rollKey: string,
+): readonly ExecutionWellOffer[] {
+  const view = wellOccurrenceView(room);
+  const purchased = room.stygianWell?.purchasedGenerationKeys ?? [];
+  return Object.freeze(
+    STYGIAN_WELL_SLOT_KEYS.flatMap((slotKey) => {
+      const generationKey = stygianWellGenerationKey(rollKey, slotKey);
+      const offerKey = stygianWellGenerationItemKey(view, generationKey);
+      if (offerKey === null || offerKey === undefined) return [];
+      const twistResultKey = stygianWellGenerationTwistResultKey(view, generationKey);
+      return [
+        Object.freeze({
+          generationKey,
+          offerKey,
+          ...(!purchased.includes(generationKey) ||
+          offerKey !== 'RandomStoreItem' ||
+          twistResultKey === undefined ||
+          twistResultKey === null
+            ? {}
+            : { twistResultKey }),
+        }),
+      ];
+    }),
+  );
+}
+
+/** The room's Well or Pool rerolls in action order. */
+function rankedFeatureRerolls(room: CanonicalAuthoredRoom, kind: FeatureRerollAction['kind']) {
+  return room.roomActionRoster.rows
+    .filter((row) => !row.stale && row.rank !== null && row.reference.kind === kind)
+    .sort((left, right) => left.rank! - right.rank!)
+    .map((row) => row.reference as FeatureRerollAction);
+}
+
 function executionStygianWell(
   room: CanonicalAuthoredRoom,
 ): ExecutionOverview['stygianWell'] | undefined {
   if (room.stygianWell === undefined) return undefined;
+  const rerolls = room.stygianWell.interacted
+    ? rankedFeatureRerolls(room, 'rerollStygianWell').map((reroll) =>
+        Object.freeze({
+          rollKey: reroll.rerollId,
+          offers: executionWellOffers(room, reroll.rerollId),
+        }),
+      )
+    : [];
   return Object.freeze({
     interacted: room.stygianWell.interacted,
-    ...(room.stygianWell.interacted && room.stygianWell.rerollCount !== undefined
-      ? { rerollCount: room.stygianWell.rerollCount }
-      : {}),
-    ...(room.stygianWell.interacted
-      ? {
-          offers: Object.freeze(
-            (
-              [
-                [
-                  'initial:healing',
-                  room.stygianWell.offerKeyBySlot.healing,
-                  room.stygianWell.twistResultKeyBySlot?.healing,
-                ],
-                [
-                  'initial:secondLeft',
-                  room.stygianWell.offerKeyBySlot.secondLeft,
-                  room.stygianWell.twistResultKeyBySlot?.secondLeft,
-                ],
-                [
-                  'initial:secondRight',
-                  room.stygianWell.offerKeyBySlot.secondRight,
-                  room.stygianWell.twistResultKeyBySlot?.secondRight,
-                ],
-              ] as const
-            ).flatMap(([generationKey, offerKey, twistResultKey]) => {
-              if (offerKey === null || offerKey === undefined) return [];
-              const purchased =
-                room.stygianWell?.purchasedGenerationKeys?.includes(generationKey) === true;
-              return [
-                Object.freeze({
-                  generationKey,
-                  offerKey,
-                  ...(!purchased ||
-                  offerKey !== 'RandomStoreItem' ||
-                  twistResultKey === undefined ||
-                  twistResultKey === null
-                    ? {}
-                    : { twistResultKey }),
-                }),
-              ];
-            }),
-          ),
-        }
-      : {}),
+    ...(room.stygianWell.interacted ? { offers: executionWellOffers(room, INITIAL_ROLL_KEY) } : {}),
+    ...(rerolls.length === 0 ? {} : { rerolls: Object.freeze(rerolls) }),
   });
 }
 
@@ -668,15 +681,26 @@ function executionPurgingPool(
   room: CanonicalAuthoredRoom,
 ): ExecutionOverview['purgingPool'] | undefined {
   if (room.purgingPool === undefined) return undefined;
+  const rerolls = room.purgingPool.interacted
+    ? rankedFeatureRerolls(room, 'rerollPurgingPool').map((reroll) =>
+        Object.freeze({
+          rollKey: reroll.rerollId,
+          traits: Object.freeze(
+            PURGING_POOL_SLOT_KEYS.flatMap((slotKey) => {
+              const traitKey =
+                reroll.kind === 'rerollPurgingPool' ? reroll.traitKeyBySlot[slotKey] : undefined;
+              return traitKey === undefined ? [] : [Object.freeze({ slotKey, traitKey })];
+            }),
+          ),
+        }),
+      )
+    : [];
   return Object.freeze({
     interacted: room.purgingPool.interacted,
-    ...(room.purgingPool.interacted && room.purgingPool.rerollCount !== undefined
-      ? { rerollCount: room.purgingPool.rerollCount }
-      : {}),
     ...(room.purgingPool.interacted
       ? {
           traits: Object.freeze(
-            (['left', 'middle', 'right'] as const).map((slotKey) =>
+            PURGING_POOL_SLOT_KEYS.map((slotKey) =>
               Object.freeze({
                 slotKey,
                 traitKey: room.purgingPool!.traitKeyBySlot[slotKey],
@@ -685,6 +709,7 @@ function executionPurgingPool(
           ),
         }
       : {}),
+    ...(rerolls.length === 0 ? {} : { rerolls: Object.freeze(rerolls) }),
   });
 }
 

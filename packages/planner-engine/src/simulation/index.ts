@@ -9,7 +9,12 @@ export {
   type PurgingPoolAssessmentFinding,
   type PurgingPoolSlotKey,
 } from './commerce/purging-pool';
-export { type PurgingPoolCandidateCapability } from './commerce/purging-pool';
+export {
+  type PurgingPoolCandidateCapability,
+  type PurgingPoolInteraction,
+  type PurgingPoolRollCapability,
+} from './commerce/purging-pool';
+export { type FeatureRerollOption } from './commerce/feature-rolls';
 export {
   assessStygianWell,
   assessStygianWellPurchase,
@@ -445,7 +450,11 @@ export {
   type HexActivationViolation,
 } from './hex-activation';
 export { type HermesShrineCandidateCapability } from './commerce/hermes-shrine';
-export { type StygianWellCandidateCapability } from './commerce/stygian-well';
+export {
+  type StygianWellCandidateCapability,
+  type StygianWellInteraction,
+  type StygianWellRollCapability,
+} from './commerce/stygian-well';
 export {
   type ChaosCandidateCapability,
   type ZagreusContractCandidateCapability,

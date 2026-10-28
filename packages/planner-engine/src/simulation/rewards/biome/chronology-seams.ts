@@ -10,6 +10,7 @@ import {
 import { resolveCompletionBoss } from '../../../authored-project/completion-boss';
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import { attestEncounterEntryVowRanks } from '../../arcana-fear';
+import { roomActionKey } from '../../../authored-project/room-actions/key';
 import type { HistoryEvent } from '../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '../../materialization';
 import { forGeneration } from '../../materialization';
@@ -72,6 +73,13 @@ import {
   roomTargetContext,
 } from './lifecycle-transitions/reward-rerolled';
 import { captureRerollSurfaces } from './reroll-surfaces';
+import {
+  captureFeatureRollEnd,
+  featureRerolled,
+  purgingPoolSale,
+  wellPurchaseRoll,
+} from './feature-roll-seams';
+import { parsePurgingPoolSalePoint } from '../../commerce/feature-rolls';
 import { historyFindingChronology } from './finding-chronology';
 import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
 import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
@@ -369,7 +377,9 @@ const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsAppl
 const wellPurchase: ChronologySeamHandler<'wellPurchase'> = (context, state, event) => {
   const wellRoom = context.rooms.get(semanticAddressKey(event.origin));
   const wellOrigin = wellRoom?.kind === 'authored' ? wellRoom.origin : undefined;
+  const rolled = wellPurchaseRoll(context, state, event);
   const transition = applyWellPurchaseTransition({
+    roll: rolled.roll,
     catalog: context.catalog,
     snapshot: context.snapshot,
     event,
@@ -415,6 +425,7 @@ const wellPurchase: ChronologySeamHandler<'wellPurchase'> = (context, state, eve
       branches: transition.branches,
       stygianWellAssessments,
       wellRefillRealizations,
+      featureRolls: rolled.featureRolls,
     }),
     emissions: [
       settledFindings(transition.findings),
@@ -465,7 +476,6 @@ const hermesShrineDeliveriesScheduled: ChronologySeamHandler<'hermesShrineDelive
     roomView: context.views.get(semanticAddressKey(event.origin)),
     sourceBranches: state.branches,
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
-    purgingPoolAssessment: undefined,
   });
   return {
     state: withBranches(state, transition.branches),
@@ -518,20 +528,40 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
 ) => {
   const room = authoredRoom(context, event.origin);
   const emissions: ChronologyEmission[] = [];
-  if (room !== undefined && event.point.startsWith('purgingPool:')) {
-    const poolSlot = event.point.slice('purgingPool:'.length);
+  const sale = room === undefined ? undefined : parsePurgingPoolSalePoint(event.point);
+  if (room !== undefined && sale !== undefined) {
     const poolRow = room.roomActionRoster.rows.find(
-      (row) =>
-        !row.stale &&
-        row.rank !== null &&
-        row.reference.kind === 'sellPurgingPoolTrait' &&
-        row.reference.slotKey === poolSlot,
+      (row) => !row.stale && row.rank !== null && row.key === roomActionKey(sale),
     );
     if (poolRow !== undefined)
       emissions.push({
         kind: 'timelineFacts',
         facts: { nodes: [{ owner: poolRow.owner, included: true }] },
       });
+    const settled = purgingPoolSale(context, state, event, sale);
+    emissions.push(settledFindings(settled.findings));
+    const transition = applyAcquisitionPointReachedTransition({
+      catalog: context.catalog,
+      snapshot: context.snapshot,
+      event,
+      room,
+      declaration: roomDeclaration(context, room),
+      roomView: context.views.get(semanticAddressKey(event.origin)),
+      sourceBranches: state.branches,
+      authoredSeaStarDuplicateSiteKeys: Object.freeze([
+        ...context.authoredSeaStarDuplicateSiteKeys,
+      ]),
+      ...(settled.sold === undefined ? {} : { purgingPoolSale: settled.sold }),
+    });
+    emissions.push(...acquisitionEmissions(transition, room));
+    return {
+      state: Object.freeze({
+        ...state,
+        branches: transition.branches,
+        featureRolls: settled.featureRolls,
+      }),
+      emissions,
+    };
   }
   const derivedSite =
     event.siteKey === undefined || room === undefined
@@ -556,7 +586,6 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
     roomView: context.views.get(semanticAddressKey(event.origin)),
     sourceBranches: state.branches,
     authoredSeaStarDuplicateSiteKeys: Object.freeze([...context.authoredSeaStarDuplicateSiteKeys]),
-    purgingPoolAssessment: state.purgingPoolAssessments.get(semanticAddressKey(event.origin)),
     derivedAcquisitionEntryFrontiers: derivedFrontiers,
     ...(derivedCapability === undefined
       ? {}
@@ -1370,6 +1399,7 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     hermesShrinePurchaseReached: { step: hermesShrinePurchaseReached },
     acquisitionPointReached: { step: acquisitionPointReached },
     wellPurchase: { step: wellPurchase },
+    featureRerolled: { step: featureRerolled },
     roomCommitted: { step: advanceOnly },
     roomCountersAdvanced: { step: advanceOnly },
     enteredRewardStoreRecorded: { step: advanceOnly },
@@ -1431,7 +1461,11 @@ export function walkHistoryEvent(
   // The table pairs each kind with its own handler; the union call is sound.
   const entry = chronologySeamTable[event.kind] as ChronologySeam<HistoryEvent['kind']>;
   const next = applySeamStep(context, accumulator, state, entry.step(context, state, event));
-  const reached = reachHistorySequence(context, next, event.sequence);
+  const reached = captureFeatureRollEnd(
+    context,
+    reachHistorySequence(context, next, event.sequence),
+    event,
+  );
   if (reached.branches.length > 0)
     accumulator.mergeEmissions([
       {

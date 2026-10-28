@@ -13,6 +13,7 @@ import type { RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import { roomLifecycleWindowOrdinal } from '../../authored-project/room-actions/lifecycle-structure';
 import type { RoomActionRow } from '../room-actions';
+import { purgingPoolSalePoint } from '../commerce/feature-rolls';
 
 type RoomLifecycleOperationKind = RoomLifecycleOperation['kind'];
 
@@ -748,7 +749,15 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       case 'sellPurgingPoolTrait':
         return appendEvent(state, operationContext, {
           kind: 'acquisitionPointReached',
-          point: `purgingPool:${row.reference.slotKey}`,
+          point: purgingPoolSalePoint(row.reference),
+        });
+      case 'rerollStygianWell':
+      case 'rerollPurgingPool':
+        return appendEvent(state, operationContext, {
+          kind: 'featureRerolled',
+          owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
+          feature: row.reference.kind === 'rerollStygianWell' ? 'stygianWell' : 'purgingPool',
+          rerollId: row.reference.rerollId,
         });
       case 'interactEncounter':
         return appendEvent(state, operationContext, {

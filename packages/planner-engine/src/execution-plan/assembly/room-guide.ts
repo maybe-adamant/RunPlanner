@@ -1,3 +1,7 @@
+import {
+  purgingPoolRollTraitKey,
+  purgingPoolSaleRollKey,
+} from '../../authored-project/feature-rolls';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import { hermesShrineInitialSlotKey, type RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions/key';
@@ -114,15 +118,27 @@ function descriptionFor(
       return Object.freeze({ kind: reference.kind, generationKey: reference.generationKey });
     }
     case 'sellPurgingPoolTrait': {
-      const traitKey = room.purgingPool?.traitKeyBySlot[reference.slotKey];
+      const rollKey = purgingPoolSaleRollKey(reference);
+      const traitKey = purgingPoolRollTraitKey(
+        {
+          purgingPool: room.purgingPool,
+          roomActions: { order: room.roomActionRoster.rows.map((row) => row.reference) },
+        },
+        rollKey,
+        reference.slotKey,
+      );
       if (traitKey === undefined || traitKey === null)
         throw new Error(`missing active Pool trait ${reference.slotKey}`);
       return Object.freeze({
         kind: reference.kind,
         slotKey: reference.slotKey,
+        ...(reference.rollKey === undefined ? {} : { rollKey: reference.rollKey }),
         traitKey,
       });
     }
+    case 'rerollStygianWell':
+    case 'rerollPurgingPool':
+      return Object.freeze({ kind: reference.kind, rollKey: reference.rerollId });
     case 'interactEncounter':
     case 'interactGorgon':
       return Object.freeze({

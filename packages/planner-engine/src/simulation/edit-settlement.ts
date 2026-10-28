@@ -415,7 +415,7 @@ export function settleCommandWithoutNewFinding(
     : undefined;
 }
 
-/** Every screen reroll count authored anywhere in a project: trait, Pom, Well and Pool screens. */
+/** Every screen reroll count authored anywhere in a project: trait, Chaos and Pom screens. */
 function screenRerollTotal(value: unknown): number {
   if (Array.isArray(value))
     return value.reduce((sum: number, entry) => sum + screenRerollTotal(entry), 0);
@@ -433,13 +433,14 @@ function addsRerollSpend(
   after: ProjectDocument,
   command: ProjectCommand,
 ): boolean {
-  if (command.kind === 'InsertReroll' || command.kind === 'InsertHubReroll') return true;
   if (
-    command.kind !== 'SetStygianWellRerollCount' &&
-    command.kind !== 'SetPurgingPoolRerollCount' &&
-    command.kind !== 'ReplaceTraitOffer' &&
-    command.kind !== 'ReplaceLevelResolution'
+    command.kind === 'InsertReroll' ||
+    command.kind === 'InsertHubReroll' ||
+    command.kind === 'InsertStygianWellReroll' ||
+    command.kind === 'InsertPurgingPoolReroll'
   )
+    return true;
+  if (command.kind !== 'ReplaceTraitOffer' && command.kind !== 'ReplaceLevelResolution')
     return false;
   return screenRerollTotal(after.route) > screenRerollTotal(before.route);
 }

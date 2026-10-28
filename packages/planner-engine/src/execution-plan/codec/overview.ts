@@ -1,6 +1,5 @@
 import {
   MAX_OWNER_STRING,
-  screenRerollCount,
   array,
   booleanValue,
   exact,
@@ -669,78 +668,58 @@ export function overview(value: unknown, label: string) {
       ? undefined
       : object(record.stygianWell, `${label}.stygianWell`);
   if (well !== undefined)
-    exact(well, ['interacted'], ['offers', 'rerollCount'], `${label}.stygianWell`);
+    exact(well, ['interacted'], ['offers', 'rerolls'], `${label}.stygianWell`);
   if (well !== undefined) {
     const interacted = booleanValue(well.interacted, `${label}.stygianWell.interacted`);
     if (interacted !== (well.offers !== undefined))
       fail(`${label}.stygianWell.offers must be present iff interacted`);
+    if (!interacted && well.rerolls !== undefined)
+      fail(`${label}.stygianWell.rerolls requires an interacted Well`);
   }
   const parsedWell =
     well === undefined
       ? undefined
       : Object.freeze({
           interacted: booleanValue(well.interacted, `${label}.stygianWell.interacted`),
-          ...screenRerollCount(well, `${label}.stygianWell`),
           ...(well.offers === undefined
             ? {}
             : {
-                offers: Object.freeze(
-                  array(well.offers, `${label}.stygianWell.offers`).map((entry, index) => {
-                    const row = object(entry, `${label}.stygianWell.offers[${index}]`);
-                    exact(
-                      row,
-                      ['generationKey', 'offerKey'],
-                      ['twistResultKey'],
-                      `${label}.stygianWell.offers[${index}]`,
-                    );
-                    if (
-                      !['initial:healing', 'initial:secondLeft', 'initial:secondRight'].includes(
-                        row.generationKey as string,
-                      )
-                    )
-                      fail(`${label}.stygianWell.offers[${index}].generationKey is unsupported`);
+                offers: wellOffers(well.offers, 'initial', `${label}.stygianWell.offers`),
+              }),
+          ...(well.rerolls === undefined
+            ? {}
+            : {
+                rerolls: rolls(
+                  well.rerolls,
+                  `${label}.stygianWell.rerolls`,
+                  (row, rollKey, path) => {
+                    exact(row, ['rollKey', 'offers'], [], path);
                     return Object.freeze({
-                      generationKey: row.generationKey as
-                        'initial:healing' | 'initial:secondLeft' | 'initial:secondRight',
-                      offerKey: stringValue(
-                        row.offerKey,
-                        `${label}.stygianWell.offers[${index}].offerKey`,
-                      ),
-                      ...(row.twistResultKey === undefined
-                        ? {}
-                        : {
-                            twistResultKey: stringValue(
-                              row.twistResultKey,
-                              `${label}.stygianWell.offers[${index}].twistResultKey`,
-                            ),
-                          }),
+                      rollKey,
+                      offers: wellOffers(row.offers, rollKey, `${path}.offers`),
                     });
-                  }),
+                  },
                 ),
               }),
         });
-  if (parsedWell?.offers !== undefined) {
-    const keys = parsedWell.offers.map((offer) => offer.generationKey);
-    if (new Set(keys).size !== keys.length)
-      fail(`${label}.stygianWell.offers has duplicate generation keys`);
-  }
   const pool =
     record.purgingPool === undefined
       ? undefined
       : object(record.purgingPool, `${label}.purgingPool`);
   if (pool !== undefined)
-    exact(pool, ['interacted'], ['traits', 'rerollCount'], `${label}.purgingPool`);
+    exact(pool, ['interacted'], ['traits', 'rerolls'], `${label}.purgingPool`);
   if (pool !== undefined) {
     const interacted = booleanValue(pool.interacted, `${label}.purgingPool.interacted`);
     if (interacted !== (pool.traits !== undefined))
       fail(`${label}.purgingPool.traits must be present iff interacted`);
+    if (!interacted && pool.rerolls !== undefined)
+      fail(`${label}.purgingPool.rerolls requires an interacted Pool`);
   }
   const parsedPool =
     pool === undefined
       ? undefined
       : Object.freeze({
           interacted: booleanValue(pool.interacted, `${label}.purgingPool.interacted`),
-          ...screenRerollCount(pool, `${label}.purgingPool`),
           ...(pool.traits === undefined
             ? {}
             : {
@@ -766,6 +745,35 @@ export function overview(value: unknown, label: string) {
                             ),
                     });
                   }),
+                ),
+              }),
+          ...(pool.rerolls === undefined
+            ? {}
+            : {
+                rerolls: rolls(
+                  pool.rerolls,
+                  `${label}.purgingPool.rerolls`,
+                  (row, rollKey, path) => {
+                    exact(row, ['rollKey', 'traits'], [], path);
+                    const traits = Object.freeze(
+                      array(row.traits, `${path}.traits`, 3).map((entry, index) => {
+                        const trait = object(entry, `${path}.traits[${index}]`);
+                        exact(trait, ['slotKey', 'traitKey'], [], `${path}.traits[${index}]`);
+                        if (!['left', 'middle', 'right'].includes(trait.slotKey as string))
+                          fail(`${path}.traits[${index}].slotKey is unsupported`);
+                        return Object.freeze({
+                          slotKey: trait.slotKey as 'left' | 'middle' | 'right',
+                          traitKey: stringValue(
+                            trait.traitKey,
+                            `${path}.traits[${index}].traitKey`,
+                          ),
+                        });
+                      }),
+                    );
+                    if (new Set(traits.map((trait) => trait.slotKey)).size !== traits.length)
+                      fail(`${path}.traits has duplicate slot keys`);
+                    return Object.freeze({ rollKey, traits });
+                  },
                 ),
               }),
         });
@@ -995,4 +1003,57 @@ export function overview(value: unknown, label: string) {
     ...(parsedHub === undefined ? {} : { hub: parsedHub }),
     ...(localSlots === undefined ? {} : { localSlots }),
   });
+}
+
+const WELL_SLOT_KEYS = ['healing', 'secondLeft', 'secondRight'];
+
+/** One Well roll's authored offers, each at a slot of that roll. */
+function wellOffers(
+  value: unknown,
+  rollKey: string,
+  label: string,
+): readonly import('../model').ExecutionWellOffer[] {
+  const offers = Object.freeze(
+    array(value, label).map((entry, index) => {
+      const row = object(entry, `${label}[${index}]`);
+      exact(row, ['generationKey', 'offerKey'], ['twistResultKey'], `${label}[${index}]`);
+      const generationKey = stringValue(row.generationKey, `${label}[${index}].generationKey`);
+      if (!WELL_SLOT_KEYS.some((slotKey) => generationKey === `${rollKey}:${slotKey}`))
+        fail(`${label}[${index}].generationKey is unsupported`);
+      return Object.freeze({
+        generationKey: generationKey as `${string}:${'healing' | 'secondLeft' | 'secondRight'}`,
+        offerKey: stringValue(row.offerKey, `${label}[${index}].offerKey`),
+        ...(row.twistResultKey === undefined
+          ? {}
+          : {
+              twistResultKey: stringValue(row.twistResultKey, `${label}[${index}].twistResultKey`),
+            }),
+      });
+    }),
+  );
+  if (new Set(offers.map((offer) => offer.generationKey)).size !== offers.length)
+    fail(`${label} has duplicate generation keys`);
+  return offers;
+}
+
+/** A Well's or Pool's rerolls in action order, each named by a distinct reroll id. */
+function rolls<T>(
+  value: unknown,
+  label: string,
+  decode: (row: Readonly<Record<string, unknown>>, rollKey: string, path: string) => T,
+): readonly T[] {
+  const entries = array(value, label);
+  if (entries.length === 0) fail(`${label} must not be empty`);
+  const seen = new Set<string>();
+  return Object.freeze(
+    entries.map((entry, index) => {
+      const path = `${label}[${index}]`;
+      const row = object(entry, path);
+      const rollKey = stringValue(row.rollKey, `${path}.rollKey`);
+      if (!/^r[1-9][0-9]*$/.test(rollKey)) fail(`${path}.rollKey must be a reroll id`);
+      if (seen.has(rollKey)) fail(`${label} has duplicate roll keys`);
+      seen.add(rollKey);
+      return decode(row, rollKey, path);
+    }),
+  );
 }
