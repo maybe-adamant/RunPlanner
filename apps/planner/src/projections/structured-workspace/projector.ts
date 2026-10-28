@@ -36,7 +36,7 @@ import {
   zagreusContractCandidateForProjectEvaluationAssembly,
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
-  isShopOfferActiveForProjectEvaluationAssembly,
+  isInventoryOfferActiveForProjectEvaluationAssembly,
   shopOfferAssessmentForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
@@ -347,7 +347,7 @@ export function createStructuredWorkspaceProjection(
             throw error;
           }
         },
-        (offer) => isShopOfferActiveForProjectEvaluationAssembly(assembly, offer),
+        (offer) => isInventoryOfferActiveForProjectEvaluationAssembly(assembly, offer),
         (offer) => shopOfferAssessmentForProjectEvaluationAssembly(assembly, offer),
       );
       const routeSource = sources.route;

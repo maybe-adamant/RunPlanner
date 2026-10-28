@@ -161,11 +161,11 @@ vi.mock('@run-planner/engine/simulation', async (importOriginal) => {
         typeof actual.encounterPhaseFigLeafSupportForProjectEvaluationAssembly
       >
     ) => actual.encounterPhaseFigLeafSupportForProjectEvaluationAssembly(source(assembly), ...args),
-    isShopOfferActiveForProjectEvaluationAssembly: (
+    isInventoryOfferActiveForProjectEvaluationAssembly: (
       ...[assembly, ...args]: Parameters<
-        typeof actual.isShopOfferActiveForProjectEvaluationAssembly
+        typeof actual.isInventoryOfferActiveForProjectEvaluationAssembly
       >
-    ) => actual.isShopOfferActiveForProjectEvaluationAssembly(source(assembly), ...args),
+    ) => actual.isInventoryOfferActiveForProjectEvaluationAssembly(source(assembly), ...args),
     shopOfferAssessmentForProjectEvaluationAssembly: (
       ...[assembly, ...args]: Parameters<
         typeof actual.shopOfferAssessmentForProjectEvaluationAssembly

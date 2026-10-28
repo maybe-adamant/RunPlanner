@@ -453,7 +453,7 @@ export {
   keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
-  isShopOfferActiveForProjectEvaluationAssembly,
+  isInventoryOfferActiveForProjectEvaluationAssembly,
   shopOfferAssessmentForProjectEvaluationAssembly,
   purgingPoolCandidateForProjectEvaluationAssembly,
   hermesShrineCandidateForProjectEvaluationAssembly,

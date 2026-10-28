@@ -13,6 +13,7 @@ import {
   type NemesisRandomEventAddress,
   type TraitOfferAddress,
   type ShopOfferAddress,
+  type InfernalContractPedestalAddress,
 } from '../../authored-project/addresses';
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import type { CountedRewardBinding, ShopSlotAssessment } from '../../reward-kernel';
@@ -213,10 +214,10 @@ export function traitOfferCandidateForProjectEvaluationAssembly(
     ?.traitOffers.at(address);
 }
 
-/** Whether this inventory owner has a reached, active generation frontier. */
-export function isShopOfferActiveForProjectEvaluationAssembly(
+/** Whether this Shop or Contract pedestal item has a reached, active generation frontier. */
+export function isInventoryOfferActiveForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
-  offer: ShopOfferAddress,
+  offer: ShopOfferAddress | InfernalContractPedestalAddress,
 ): boolean {
   return (
     candidateArtifactsForProjectEvaluationAssembly(assembly)

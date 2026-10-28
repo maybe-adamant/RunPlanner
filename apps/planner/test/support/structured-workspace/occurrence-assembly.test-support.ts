@@ -37,7 +37,7 @@ import {
   chaosCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
-  isShopOfferActiveForProjectEvaluationAssembly,
+  isInventoryOfferActiveForProjectEvaluationAssembly,
   shopOfferAssessmentForProjectEvaluationAssembly,
   zagreusContractCandidateForProjectEvaluationAssembly,
   type GorgonPhaseCandidateSupport,
@@ -103,7 +103,7 @@ function biomeSource(
     (address) => acquisitionConversionCandidateForProjectEvaluationAssembly(assembly, address),
     (address) => chaosCandidateForProjectEvaluationAssembly(assembly, address),
     (address) => zagreusContractCandidateForProjectEvaluationAssembly(assembly, address),
-    (address) => isShopOfferActiveForProjectEvaluationAssembly(assembly, address),
+    (address) => isInventoryOfferActiveForProjectEvaluationAssembly(assembly, address),
     (address) => shopOfferAssessmentForProjectEvaluationAssembly(assembly, address),
   ).route?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
   if (source === undefined) throw new Error(`${routeKey}/${biomeKey} source is missing`);
