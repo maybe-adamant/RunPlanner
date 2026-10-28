@@ -320,8 +320,8 @@ local function guideDescription(value, label)
         if not row then return nil, rowError end
         local effects = { neutral = true, spark = true, yarn = true, hymn = true, discount = true, emptySlot = true,
             extended = true, twist = true, lastStand = true }
-        if not p.one(row.generationKey, { ["initial:healing"] = true, ["initial:secondLeft"] = true,
-            ["initial:secondRight"] = true, travelDealRefill = true }, label .. ".generationKey")
+        if (row.generationKey ~= "travelDealRefill"
+                and not p.wellGenerationKey(row.generationKey, label .. ".generationKey"))
             or (row.itemKey ~= nil and not p.str(row.itemKey, label .. ".itemKey"))
             or (row.effect ~= nil and not p.one(row.effect, effects, label .. ".effect"))
             or (row.twistResultKey ~= nil and not p.str(row.twistResultKey, label .. ".twistResultKey")) then
@@ -341,12 +341,19 @@ local function guideDescription(value, label)
         return row
     end
     if kind == "sellPurgingPoolTrait" then
-        local row, rowError = p.exact(record, { "kind", "slotKey", "traitKey" }, {}, label)
+        local row, rowError = p.exact(record, { "kind", "slotKey", "traitKey" }, { "rollKey" }, label)
         if not row then return nil, rowError end
         if not p.one(row.slotKey, { left = true, middle = true, right = true }, label .. ".slotKey")
+            or (row.rollKey ~= nil and not p.rollKey(row.rollKey, label .. ".rollKey"))
             or not p.str(row.traitKey, label .. ".traitKey") then
             return p.fail(label .. " has invalid Pool guide operands")
         end
+        return row
+    end
+    if kind == "rerollStygianWell" or kind == "rerollPurgingPool" then
+        local row, rowError = p.exact(record, { "kind", "rollKey" }, {}, label)
+        if not row then return nil, rowError end
+        if not p.rollKey(row.rollKey, label .. ".rollKey") then return p.fail(label .. " has invalid roll key") end
         return row
     end
     if kind == "interactEncounter" or kind == "interactGorgon" then

@@ -4,12 +4,6 @@ local rewards = type(import) == "function" and import("mods/protocol/rewards.lua
     or require("mods.protocol.rewards")
 
 local timeline = {}
-local generationKeys = {
-    ["initial:healing"] = true,
-    ["initial:secondLeft"] = true,
-    ["initial:secondRight"] = true,
-    travelDealRefill = true,
-}
 local wellEffects = {
     neutral = true,
     spark = true,
@@ -307,8 +301,8 @@ local function travelDealRefill(value, label)
             { "generationKey", "offerKey", "effect" }, { "twistResultKey" }, label .. ".refill.replacement")
         if not source then return nil, sourceError end
         if not replacement then return nil, replacementError end
-        if source.generationKey == "travelDealRefill" or not p.one(source.generationKey, generationKeys,
-            label .. ".refill.source.generationKey") or not p.str(source.owner, label .. ".refill.source.owner", p.MAX_OWNER_STRING)
+        if not p.wellGenerationKey(source.generationKey, label .. ".refill.source.generationKey")
+            or not p.str(source.owner, label .. ".refill.source.owner", p.MAX_OWNER_STRING)
             or replacement.generationKey ~= "travelDealRefill" or not p.str(replacement.offerKey,
                 label .. ".refill.replacement.offerKey") or not p.one(replacement.effect, wellEffects,
                 label .. ".refill.replacement.effect") or (replacement.twistResultKey ~= nil

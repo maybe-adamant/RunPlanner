@@ -2471,18 +2471,65 @@ function TestProtocol.testHubRerollsNameTheirSlot()
     lu.assertNil(withHub("[" .. row:gsub('"owner":"h1",', "") .. "]"))
 end
 
-function TestProtocol.testScreenRerollCountsArePositiveIntegers()
-    local well = assert(json.decode('{"encounterPhases":[],"requiredObjects":[],"stygianWell":{"interacted":true,'
-        .. '"rerollCount":2,"offers":[]}}'))
-    lu.assertNotNil(overview.decode(well, "overview"))
-    local pool = assert(json.decode('{"encounterPhases":[],"requiredObjects":[],"purgingPool":{"interacted":true,'
-        .. '"rerollCount":1,"traits":[]}}'))
-    lu.assertNotNil(overview.decode(pool, "overview"))
-    for _, count in ipairs({ 0, 1.5, "1", true }) do
-        well.stygianWell.rerollCount, pool.purgingPool.rerollCount = count, count
-        lu.assertNil(overview.decode(well, "overview"))
-        lu.assertNil(overview.decode(pool, "overview"))
+function TestProtocol.testWellAndPoolRerollsNameTheirRollsAndPinnedSlots()
+    local function decoded(text)
+        return overview.decode(assert(json.decode('{"encounterPhases":[],"requiredObjects":[],' .. text .. '}')),
+            "overview")
     end
+    local initial = '"offers":[{"generationKey":"initial:healing","offerKey":"HealDropRange"}]'
+    lu.assertNotNil(decoded('"stygianWell":{"interacted":true,' .. initial .. ',"rerolls":['
+        .. '{"rollKey":"r1","offers":[{"generationKey":"r1:secondRight","offerKey":"LastStandShopItem"}]},'
+        .. '{"rollKey":"r2","offers":[]}]}'))
+    lu.assertNotNil(decoded('"purgingPool":{"interacted":true,"traits":[],"rerolls":['
+        .. '{"rollKey":"r1","traits":[{"slotKey":"middle","traitKey":"A"}]},{"rollKey":"r3","traits":[]}]}'))
+    for _, text in ipairs({
+        '"stygianWell":{"interacted":true,"rerollCount":2,"offers":[]}',
+        '"stygianWell":{"interacted":false,"rerolls":[{"rollKey":"r1","offers":[]}]}',
+        '"stygianWell":{"interacted":true,"offers":[],"rerolls":[]}',
+        '"stygianWell":{"interacted":true,"offers":[],"rerolls":[{"rollKey":"initial","offers":[]}]}',
+        '"stygianWell":{"interacted":true,"offers":[],"rerolls":[{"rollKey":"r1","offers":[]},'
+            .. '{"rollKey":"r1","offers":[]}]}',
+        '"stygianWell":{"interacted":true,"offers":[],"rerolls":[{"rollKey":"r1","offers":['
+            .. '{"generationKey":"r2:healing","offerKey":"HealDropRange"}]}]}',
+        '"stygianWell":{"interacted":true,"offers":[{"generationKey":"r1:healing","offerKey":"HealDropRange"}]}',
+        '"purgingPool":{"interacted":true,"rerollCount":1,"traits":[]}',
+        '"purgingPool":{"interacted":true,"traits":[],"rerolls":[{"rollKey":"r1","traits":['
+            .. '{"slotKey":"left","traitKey":null}]}]}',
+        '"purgingPool":{"interacted":true,"traits":[],"rerolls":[{"rollKey":"r1","traits":['
+            .. '{"slotKey":"left","traitKey":"A"},{"slotKey":"left","traitKey":"B"}]}]}',
+    }) do
+        lu.assertNil(decoded(text), text)
+    end
+end
+
+function TestProtocol.testWellAndPoolGuideRowsNameTheirRoll()
+    local function withGuide(description)
+        return decodeEdited("fg", function(plan)
+            local room = occurrenceOf(plan, "golden-f-b1-e1")
+            room.roomGuide[#room.roomGuide + 1] = assert(json.decode('{"key":"roll","description":'
+                .. description .. '}'))
+        end)
+    end
+    for _, description in ipairs({
+        '{"kind":"rerollStygianWell","rollKey":"r1"}',
+        '{"kind":"rerollPurgingPool","rollKey":"r12"}',
+        '{"kind":"sellPurgingPoolTrait","slotKey":"left","rollKey":"r1","traitKey":"A"}',
+        '{"kind":"purchaseStygianWellOffer","generationKey":"r2:secondLeft"}',
+    }) do
+        local decodedPlan, errorMessage = withGuide(description)
+        lu.assertNotNil(decodedPlan, errorMessage)
+    end
+    for _, description in ipairs({
+        '{"kind":"rerollStygianWell","rollKey":"initial"}',
+        '{"kind":"rerollPurgingPool"}',
+        '{"kind":"sellPurgingPoolTrait","slotKey":"left","rollKey":"r0","traitKey":"A"}',
+        '{"kind":"purchaseStygianWellOffer","generationKey":"r1:first"}',
+    }) do
+        lu.assertNil(withGuide(description), description)
+    end
+end
+
+function TestProtocol.testScreenRerollCountsArePositiveIntegers()
     local offer = tagged(traitOffer())
     offer.rerollCount = 3
     lu.assertNotNil(rewards.traitOffer(offer, "offer"))

@@ -397,6 +397,16 @@ function TestRoomGuide.testEquipmentPoolAndPhialCopyUsesDisplayNamesWithoutInter
     })
 end
 
+function TestRoomGuide.testWellAndPoolRerollsAreInformationalRows()
+    lu.assertEquals(guide.project(room({
+        row("rerollStygianWell", nil, { rollKey = "r1" }),
+        row("rerollPurgingPool", nil, { rollKey = "r2" }),
+    })).rows, {
+        { instruction = "Reroll Well" },
+        { instruction = "Reroll Pool" },
+    })
+end
+
 function TestRoomGuide.testConciseRoomAndRewardLabelsKeepMeaningfulDistinctions()
     local snapshot = room({
         row("interactIncomingReward", nil, { reward = { rewardType = "Boon", source = "HeraUpgrade" } }),

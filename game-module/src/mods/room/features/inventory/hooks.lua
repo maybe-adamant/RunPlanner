@@ -136,6 +136,11 @@ function hooks.attach(module, session, getState, report, room, route, scope)
         if not baseOk then error(result, 0) end
         result = primitives.placeRefill(prepared, result)
         result = primitives.order(prepared, result)
+        if prepared.fillArgs ~= nil then
+            local fillOk, fill = callNative(scope, base, prepared.fillArgs)
+            if not fillOk then error(fill, 0) end
+            result = wellInventory.merge(prepared, result, fill)
+        end
         local ok, verifyError = primitives.verify(prepared, result)
         if ok then
             probeOmittedGroups(session, state, scope, base, args, prepared, active and active.occurrence)
@@ -155,8 +160,8 @@ function hooks.attach(module, session, getState, report, room, route, scope)
         return result
     end)
 
-    -- Native Well rerolls regenerate the store; the planned inventory replaces the
-    -- one after the planned rerolls, and a further reroll leaves the plan.
+    -- Each native Well reroll regenerates the store and installs its own authored roll;
+    -- a reroll beyond the plan's rerolls leaves the plan.
     local storeRerolls = setmetatable({}, { __mode = "k" })
     module.hooks.wrap("RerollStore", "run-planner-well-reroll", function(_, runtime, base, ...)
         local state = getState(runtime)
@@ -166,17 +171,17 @@ function hooks.attach(module, session, getState, report, room, route, scope)
             return base(...)
         end
         local well = active.occurrence.overview.stygianWell
-        local planned = well and well.interacted and well.rerollCount or 0
+        local planned = well and well.interacted and well.rerolls and #well.rerolls or 0
         local rerolls = (storeRerolls[nativeRoom] or 0) + 1
         storeRerolls[nativeRoom] = rerolls
         if rerolls > planned then
             session.mismatch(state, "screen-reroll", planned, rerolls)
             report(runtime)
-            return base(...)
         end
+        local prior = scope.storeReroll
         scope.storeReroll = rerolls
         local results = table.pack(pcall(base, ...))
-        scope.storeReroll = nil
+        scope.storeReroll = prior
         if not results[1] then error(results[2], 0) end
         return table.unpack(results, 2, results.n)
     end)

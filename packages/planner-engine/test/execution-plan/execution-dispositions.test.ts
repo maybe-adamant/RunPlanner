@@ -54,15 +54,14 @@ const executionDispositions = {
     interactKeepsakeRack: 'covered',
     interactEris: 'deferred-route',
     reroll: 'covered',
-    // The game module installs each authored roll on its native reroll in a later gate.
-    rerollStygianWell: 'deferred-route',
-    rerollPurgingPool: 'deferred-route',
+    rerollStygianWell: 'covered',
+    rerollPurgingPool: 'covered',
   } satisfies Record<RoomActionKind, ExecutionDisposition>,
   rerolls: {
     occurrenceRerolls: 'covered',
     hubRerolls: 'covered',
     screenRerollCounts: 'covered',
-    wellAndPoolRolls: 'deferred-route',
+    wellAndPoolRolls: 'covered',
     rerollPoolAtEntry: 'covered',
   } satisfies Record<RerollWireField, ExecutionDisposition>,
   timelineTransactions: {

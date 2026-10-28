@@ -352,7 +352,7 @@ function TestFeatureInteractionHooks.testInteractedPoolSteersOnlyTheNativeSaleMe
     lu.assertNil(nativeRoom.SellValues.TraitA)
     lu.assertNil(nativeRoom.SellValues.TraitB)
     lu.assertNotNil(nativeRoom.SellValues.TraitC)
-    lu.assertTrue(nativeRoom.__runPlannerPoolInventoryHandled)
+    lu.assertEquals(nativeRoom.__runPlannerPoolRollsHandled, { [0] = true })
     lu.assertNil(callbacks.GenerateSellTraitShop)
     lu.assertNil(callbacks.HandleSellChoiceSelection)
 end
@@ -417,7 +417,7 @@ function TestFeatureInteractionHooks.testPoolInstallationFailureIsAtomicAndUnbou
     lu.assertEquals(diagnostics, { "purging-pool-inventory" })
     lu.assertEquals(nativeRoom.SellOptions[1].Name, "B")
     lu.assertNotNil(nativeRoom.SellValues.A)
-    lu.assertTrue(nativeRoom.__runPlannerPoolInventoryHandled)
+    lu.assertEquals(nativeRoom.__runPlannerPoolRollsHandled, { [0] = true })
     openPool(callbacks, nativeRoom)
     for _, runState in ipairs({ "synchronized", "desynchronized" }) do
         state.state = runState
@@ -492,11 +492,11 @@ function TestFeatureInteractionHooks.testPoolScopeIsThreadLocalAndConsumedBefore
         local resumed, err = coroutine.resume(opening)
         lu.assertTrue(resumed, tostring(err))
         lu.assertEquals(coroutine.status(opening), "dead")
-        native.__runPlannerPoolInventoryHandled = nil
+        native.__runPlannerPoolRollsHandled = nil
         lu.assertFalse(pcall(callbacks.OpenSellTraitMenu, nil, {}, function() error("native failure") end, {}))
         callbacks.CreateSellButtons(nil, {}, function() end, {})
         lu.assertEquals(native.SellOptions[1].Name, "B")
-        lu.assertNil(native.__runPlannerPoolInventoryHandled)
+        lu.assertNil(native.__runPlannerPoolRollsHandled)
     end)
     _G.CurrentRun, _G.GenerateSellTraitValues = priorRun, priorValues
     if not ok then error(failure, 0) end
@@ -791,15 +791,18 @@ end
 
 
 
-function TestFeatureInteractionHooks.testWellFillsItsPlannedInventoryOnlyAfterItsPlannedRerolls()
+function TestFeatureInteractionHooks.testWellInstallsEachAuthoredRollAtItsOwnReroll()
     local module, _, callbacks = capture()
-    local expected = {
+    local initial = {
         { generationKey = "initial:healing", offerKey = "ArmorBoostStore" },
         { generationKey = "initial:secondLeft", offerKey = "TemporaryDiscountTrait" },
         { generationKey = "initial:secondRight", offerKey = "RandomStoreItem" },
     }
+    -- Roll r1 pins only its right slot; roll r2 pins nothing.
+    local r1 = { { generationKey = "r1:secondRight", offerKey = "LastStandShopItem" } }
     local active = opaque({ occurrence = { overview = {
-        stygianWell = { interacted = true, rerollCount = 1, offers = expected },
+        stygianWell = { interacted = true, offers = initial,
+            rerolls = { { rollKey = "r1", offers = r1 }, { rollKey = "r2", offers = {} } } },
     } } }, function() return nil end)
     local session = stub()
     session.current = function() return active end
@@ -811,44 +814,74 @@ function TestFeatureInteractionHooks.testWellFillsItsPlannedInventoryOnlyAfterIt
     attachFeatureHooks(module, session, function() return state end, function() end, session)
     local function storeData()
         return { StoreData = {
+            MaxOffers = 3,
             HealingOffers = { WeightedList = { { Name = "HealDropRange" }, { Name = "ArmorBoostStore" } } },
             Traits = { { Name = "TemporaryDiscountTrait" }, { Name = "TemporaryMoveSpeedTrait" } },
             Consumables = { { Name = "RandomStoreItem" }, { Name = "LastStandShopItem" } },
         } }
     end
+    local fills = {}
+    -- Native: the healing row first, then the first eligible others up to MaxOffers.
     local function nativeFill(args)
-        local healing = args.StoreData.HealingOffers
-        return { StoreOptions = {
-            (healing.Options or healing.WeightedList)[1], args.StoreData.Traits[1], args.StoreData.Consumables[1],
-        }, exclusions = args.ExclusionNames }
+        local data, excluded = args.StoreData, {}
+        for _, name in ipairs(args.ExclusionNames or {}) do excluded[name] = true end
+        fills[#fills + 1] = { maxOffers = data.MaxOffers, exclusions = args.ExclusionNames }
+        local options = {}
+        local healing = data.HealingOffers
+        if healing.Amount ~= 0 then
+            for _, row in ipairs(healing.Options or healing.WeightedList) do
+                if not excluded[row.Name] then options[1] = row; break end
+            end
+        end
+        local limit = data.MaxOffers or 3
+        for _, list in ipairs({ data.Traits, data.Consumables }) do
+            for _, row in ipairs(list) do
+                if #options < limit and not excluded[row.Name] then options[#options + 1] = row end
+            end
+        end
+        return { StoreOptions = options }
     end
-    local nativeRoom = { Name = "F_Reprieve01" }
+    local nativeRoom = { Name = "F_PostBoss01" }
     local priorRun = _G.CurrentRun
     _G.CurrentRun = { CurrentRoom = nativeRoom }
-    local initial, rerolled, further
+    local first, second, third, extra
     local ok, failure = pcall(function()
-        initial = callbacks.FillInShopOptions(nil, {}, nativeFill, storeData())
+        first = callbacks.FillInShopOptions(nil, {}, nativeFill, storeData())
         callbacks.RerollStore(nil, {}, function()
             local args = storeData()
-            args.ExclusionNames = { "TemporaryDiscountTrait" }
-            rerolled = callbacks.FillInShopOptions(nil, {}, nativeFill, args)
+            args.ExclusionNames = { "LastStandShopItem", "TemporaryMoveSpeedTrait" }
+            second = callbacks.FillInShopOptions(nil, {}, nativeFill, args)
         end, {}, {})
         callbacks.RerollStore(nil, {}, function()
-            further = callbacks.FillInShopOptions(nil, {}, nativeFill, storeData())
+            third = callbacks.FillInShopOptions(nil, {}, nativeFill, storeData())
+        end, {}, {})
+        callbacks.RerollStore(nil, {}, function()
+            extra = callbacks.FillInShopOptions(nil, {}, nativeFill, storeData())
         end, {}, {})
     end)
     _G.CurrentRun = priorRun
     if not ok then error(failure, 0) end
-    lu.assertEquals(initial.StoreOptions[1].Name, "HealDropRange")
-    lu.assertNil(initial.StoreOptions[1].__runPlannerGenerationKey)
-    for index, offer in ipairs(expected) do
-        lu.assertEquals(rerolled.StoreOptions[index].Name, offer.offerKey)
-        lu.assertEquals(rerolled.StoreOptions[index].__runPlannerGenerationKey, offer.generationKey)
+    for index, offer in ipairs(initial) do
+        lu.assertEquals(first.StoreOptions[index].Name, offer.offerKey)
+        lu.assertEquals(first.StoreOptions[index].__runPlannerGenerationKey, offer.generationKey)
     end
-    -- The reroll's random exclusion is steered away from the planned rows.
-    lu.assertEquals(rerolled.exclusions, {})
-    lu.assertEquals(mismatches, { { "screen-reroll", 1, 2 } })
-    lu.assertNotNil(further)
+    -- The pinned right slot keeps its position; the other slots are native rows, also
+    -- for a slot bought earlier, which native blanks after the fill.
+    lu.assertEquals(#second.StoreOptions, 3)
+    lu.assertEquals(second.StoreOptions[1].Name, "HealDropRange")
+    lu.assertNil(second.StoreOptions[1].__runPlannerGenerationKey)
+    lu.assertEquals(second.StoreOptions[2].Name, "TemporaryDiscountTrait")
+    lu.assertEquals(second.StoreOptions[3].Name, "LastStandShopItem")
+    lu.assertEquals(second.StoreOptions[3].__runPlannerGenerationKey, "r1:secondRight")
+    -- The pinned fill drops the planned name from the native exclusion; the filler excludes it.
+    lu.assertEquals(fills[2], { maxOffers = 1, exclusions = { "TemporaryMoveSpeedTrait" } })
+    lu.assertEquals(fills[3], { maxOffers = 2,
+        exclusions = { "TemporaryMoveSpeedTrait", "LastStandShopItem" } })
+    -- An unpinned roll and a reroll beyond the plan stay native.
+    lu.assertEquals(#fills, 5)
+    lu.assertNil(third.StoreOptions[3].__runPlannerGenerationKey)
+    lu.assertNil(extra.StoreOptions[3].__runPlannerGenerationKey)
+    lu.assertEquals(mismatches, { { "screen-reroll", 2, 3 } })
 end
 
 -- Drives the generated empty-Survival fixture through FillInShopOptions; `probeResult`
@@ -1223,12 +1256,16 @@ function TestFeatureInteractionHooks.testInfernalContractUsesThePublishedFreePed
     end
 end
 
-function TestFeatureInteractionHooks.testPoolInstallsAtItsLastPlannedRerollAndAFurtherRerollLeavesThePlan()
+function TestFeatureInteractionHooks.testPoolInstallsEachRerollsPinsAndAFurtherRerollLeavesThePlan()
     local module, _, callbacks = capture()
     local state = { state = "synchronized" }
     local mismatches = {}
-    local occurrence = { overview = { purgingPool = { interacted = true, rerollCount = 2,
-        traits = { { slotKey = "left", traitKey = "A" } } } } }
+    local occurrence = { overview = { purgingPool = { interacted = true,
+        traits = { { slotKey = "left", traitKey = "B" } },
+        rerolls = {
+            { rollKey = "r1", traits = { { slotKey = "middle", traitKey = "A" } } },
+            { rollKey = "r2", traits = {} },
+        } } } }
     require("mods.room.features.inventory.purging_pool_hooks").attach(module, {
         diagnostic = function() error("unexpected diagnostic") end,
         mismatch = function(_, checkpoint, expected, observed)
@@ -1238,30 +1275,40 @@ function TestFeatureInteractionHooks.testPoolInstallsAtItsLastPlannedRerollAndAF
     local native = { __runPlannerExecutionRoomId = "pool", SellTraitShop = {} }
     local priorRun, priorValues = _G.CurrentRun, _G.GenerateSellTraitValues
     _G.CurrentRun = { CurrentRoom = native }
-    -- Native values; each reroll excludes the earlier row it drew at random.
+    local values = { A = 10, B = 20, C = 30 }
     _G.GenerateSellTraitValues = function(target)
-        target.SellValues = { A = { Name = "A", Value = 10 }, B = { Name = "B", Value = 20 } }
+        target.SellValues = {}
+        for name, value in pairs(values) do target.SellValues[name] = { Name = name, Value = value } end
     end
-    local function nativeReroll(row)
+    -- A native redraw of the current traits; it may exclude one earlier row.
+    local function nativeReroll(rows)
         return function()
-            native.SellValues, native.SellOptions = { A = { Name = "A", Value = 10 } }, { { Name = row, Value = 20 } }
+            native.SellValues, native.SellOptions = {}, {}
+            for _, name in ipairs(rows) do
+                native.SellOptions[#native.SellOptions + 1] = { Name = name, Value = values[name] }
+            end
             callbacks.CreateSellButtons(nil, {}, function() end, {})
         end
     end
     local ok, failure = pcall(function()
         openPool(callbacks, native, function()
-            native.SellValues, native.SellOptions = {}, { { Name = "B", Value = 20 } }
+            native.SellValues, native.SellOptions = {}, { { Name = "C", Value = 30 } }
         end)
         lu.assertEquals(native.SellOptions, { { Name = "B", Value = 20 } })
-        callbacks.SellTraitScreenReroll(nil, {}, nativeReroll("B"), {})
-        lu.assertEquals(native.SellOptions, { { Name = "B", Value = 20 } })
-        lu.assertNil(native.__runPlannerPoolInventoryHandled)
-        callbacks.SellTraitScreenReroll(nil, {}, nativeReroll("B"), {})
-        lu.assertEquals(native.SellOptions, { { Name = "A", Value = 10 } })
-        lu.assertTrue(native.__runPlannerPoolInventoryHandled)
+        -- After selling B, the pinned middle slot displaces a native row.
+        values.B = nil
+        callbacks.SellTraitScreenReroll(nil, {}, nativeReroll({ "A", "C" }), {})
+        lu.assertEquals(native.SellOptions, { { Name = "C", Value = 30 }, { Name = "A", Value = 10 } })
+        lu.assertEquals(native.__runPlannerPoolRollsHandled, { [0] = true, [1] = true })
+        -- An unpinned roll stays native.
+        callbacks.SellTraitScreenReroll(nil, {}, nativeReroll({ "C" }), {})
+        lu.assertEquals(native.SellOptions, { { Name = "C", Value = 30 } })
         lu.assertEquals(mismatches, {})
-        callbacks.SellTraitScreenReroll(nil, {}, nativeReroll("B"), {})
-        lu.assertEquals(native.SellOptions, { { Name = "B", Value = 20 } })
+        -- Reopening keeps the shown list.
+        openPool(callbacks, native)
+        lu.assertEquals(native.SellOptions, { { Name = "C", Value = 30 } })
+        callbacks.SellTraitScreenReroll(nil, {}, nativeReroll({ "A" }), {})
+        lu.assertEquals(native.SellOptions, { { Name = "A", Value = 10 } })
         lu.assertEquals(mismatches, { { "screen-reroll", 2, 3 } })
     end)
     _G.CurrentRun, _G.GenerateSellTraitValues = priorRun, priorValues

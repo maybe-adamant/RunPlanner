@@ -194,6 +194,8 @@ local function instruction(description, occurrence, transaction)
         local trait = shortName(traitNames, description.traitKey)
         return trait and ("Sell: " .. trait) or "Sell trait"
     end
+    if kind == "rerollStygianWell" then return "Reroll Well" end
+    if kind == "rerollPurgingPool" then return "Reroll Pool" end
     if kind == "interactGorgon" then return "Talk to Athena" end
     if kind == "interactEris" then return "Talk to Eris" end
     if kind == "interactEncounter" then

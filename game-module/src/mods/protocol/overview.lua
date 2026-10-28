@@ -105,11 +105,6 @@ local function customization(value, label)
     end
     return decisions
 end
-local generationKeys = {
-    ["initial:healing"] = true,
-    ["initial:secondLeft"] = true,
-    ["initial:secondRight"] = true,
-}
 local shrineGenerationKeys = {
     ["initial:first"] = true,
     ["initial:secondLeft"] = true,
@@ -196,34 +191,64 @@ local function phantomExit(value, label)
     return record
 end
 
-local function stygianWell(value, label)
-    local record, errorMessage = p.exact(value, { "interacted" }, { "offers", "rerollCount" }, label)
-    if not record then return nil, errorMessage end
-    local countOk, countError = p.screenRerollCount(record, label)
-    if not countOk then return nil, countError end
-    if not p.bool(record.interacted, label .. ".interacted")
-        or record.interacted ~= (record.offers ~= nil) then
-        return p.fail(label .. " has invalid interaction state")
-    end
-    if record.offers == nil then return record end
-    local offers, offersError = p.arr(record.offers, label .. ".offers")
+-- One Well roll's authored offers, each at a distinct slot of that roll.
+local function wellOffers(value, rollKey, label)
+    local offers, offersError = p.arr(value, label, 3)
     if not offers then return nil, offersError end
     local seen = {}
     for index, valueRow in ipairs(offers) do
-        local row, rowError = p.exact(
-            valueRow,
-            { "generationKey", "offerKey" },
-            { "twistResultKey" },
-            label .. ".offers[" .. index .. "]"
-        )
+        local rowLabel = label .. "[" .. index .. "]"
+        local row, rowError = p.exact(valueRow, { "generationKey", "offerKey" }, { "twistResultKey" }, rowLabel)
         if not row then return nil, rowError end
-        if not p.one(row.generationKey, generationKeys, label .. ".generationKey")
+        if not p.wellGenerationKey(row.generationKey, rowLabel .. ".generationKey", rollKey)
             or seen[row.generationKey]
-            or not p.str(row.offerKey, label .. ".offerKey")
-            or (row.twistResultKey ~= nil and not p.str(row.twistResultKey, label .. ".twistResultKey")) then
-            return p.fail(label .. " has invalid Well offer")
+            or not p.str(row.offerKey, rowLabel .. ".offerKey")
+            or (row.twistResultKey ~= nil and not p.str(row.twistResultKey, rowLabel .. ".twistResultKey")) then
+            return p.fail(rowLabel .. " has invalid Well offer")
         end
         seen[row.generationKey] = true
+    end
+    return offers
+end
+
+-- A Well's or Pool's rerolls in action order, each named by a distinct reroll id.
+local function featureRerolls(value, label, decodeRoll)
+    local rows, rowsError = p.arr(value, label)
+    if not rows then return nil, rowsError end
+    if #rows == 0 then return p.fail(label .. " must not be empty") end
+    local seen = {}
+    for index, row in ipairs(rows) do
+        local rowLabel = label .. "[" .. index .. "]"
+        local record, recordError = p.obj(row, rowLabel)
+        if not record then return nil, recordError end
+        if not p.rollKey(record.rollKey, rowLabel .. ".rollKey") or seen[record.rollKey] then
+            return p.fail(rowLabel .. " has invalid or duplicate roll key")
+        end
+        seen[record.rollKey] = true
+        local _, rollError = decodeRoll(record, rowLabel)
+        if rollError then return nil, rollError end
+    end
+    return rows
+end
+
+local function stygianWell(value, label)
+    local record, errorMessage = p.exact(value, { "interacted" }, { "offers", "rerolls" }, label)
+    if not record then return nil, errorMessage end
+    if not p.bool(record.interacted, label .. ".interacted")
+        or record.interacted ~= (record.offers ~= nil)
+        or (not record.interacted and record.rerolls ~= nil) then
+        return p.fail(label .. " has invalid interaction state")
+    end
+    if record.offers == nil then return record end
+    local _, offersError = wellOffers(record.offers, "initial", label .. ".offers")
+    if offersError then return nil, offersError end
+    if record.rerolls ~= nil then
+        local _, rerollsError = featureRerolls(record.rerolls, label .. ".rerolls", function(row, rowLabel)
+            local roll, rollError = p.exact(row, { "rollKey", "offers" }, {}, rowLabel)
+            if not roll then return nil, rollError end
+            return wellOffers(roll.offers, roll.rollKey, rowLabel .. ".offers")
+        end)
+        if rerollsError then return nil, rerollsError end
     end
     return record
 end
@@ -326,13 +351,34 @@ local function rewardWheels(value, label)
     return rows
 end
 
+local POOL_SLOTS = { left = true, middle = true, right = true }
+
+-- A Pool reroll's pinned slots; the others stay native.
+local function poolRoll(row, label)
+    local roll, rollError = p.exact(row, { "rollKey", "traits" }, {}, label)
+    if not roll then return nil, rollError end
+    local traits, traitsError = p.arr(roll.traits, label .. ".traits", 3)
+    if not traits then return nil, traitsError end
+    local seen = {}
+    for index, valueRow in ipairs(traits) do
+        local rowLabel = label .. ".traits[" .. index .. "]"
+        local trait, traitError = p.exact(valueRow, { "slotKey", "traitKey" }, {}, rowLabel)
+        if not trait then return nil, traitError end
+        if not p.one(trait.slotKey, POOL_SLOTS, rowLabel .. ".slotKey") or seen[trait.slotKey]
+            or not p.str(trait.traitKey, rowLabel .. ".traitKey") then
+            return p.fail(rowLabel .. " has invalid trait row")
+        end
+        seen[trait.slotKey] = true
+    end
+    return roll
+end
+
 local function purgingPool(value, label)
-    local record, errorMessage = p.exact(value, { "interacted" }, { "traits", "rerollCount" }, label)
+    local record, errorMessage = p.exact(value, { "interacted" }, { "traits", "rerolls" }, label)
     if not record then return nil, errorMessage end
-    local countOk, countError = p.screenRerollCount(record, label)
-    if not countOk then return nil, countError end
     if not p.bool(record.interacted, label .. ".interacted")
-        or record.interacted ~= (record.traits ~= nil) then
+        or record.interacted ~= (record.traits ~= nil)
+        or (not record.interacted and record.rerolls ~= nil) then
         return p.fail(label .. " has invalid interaction state")
     end
     if record.traits == nil then return record end
@@ -347,12 +393,16 @@ local function purgingPool(value, label)
             label .. ".traits[" .. index .. "]"
         )
         if not row then return nil, rowError end
-        if not p.one(row.slotKey, { left = true, middle = true, right = true }, label .. ".slotKey")
+        if not p.one(row.slotKey, POOL_SLOTS, label .. ".slotKey")
             or seen[row.slotKey]
             or (not p.json.isNull(row.traitKey) and not p.str(row.traitKey, label .. ".traitKey")) then
             return p.fail(label .. " has invalid trait row")
         end
         seen[row.slotKey] = true
+    end
+    if record.rerolls ~= nil then
+        local _, rerollsError = featureRerolls(record.rerolls, label .. ".rerolls", poolRoll)
+        if rerollsError then return nil, rerollsError end
     end
     return record
 end

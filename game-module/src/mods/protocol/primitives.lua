@@ -101,12 +101,31 @@ function primitives.hexTree(value, label, required)
     end
     return tree
 end
--- Native screen rerolls before a screen's final rows; absent is none.
+-- Native single-pick screen rerolls before a screen's final rows; absent is none.
 function primitives.screenRerollCount(record, label)
     if record.rerollCount ~= nil and not primitives.int(record.rerollCount, label .. ".rerollCount", 1) then
         return primitives.fail(label .. ".rerollCount must be a positive integer")
     end
     return true
+end
+-- A Stygian Well or Pool of Purging reroll's id.
+function primitives.rollKey(value, label)
+    if not primitives.str(value, label) or not value:match("^r[1-9]%d*$") then
+        return primitives.fail(label .. " must be a reroll id")
+    end
+    return value
+end
+local WELL_SLOTS = { healing = true, secondLeft = true, secondRight = true }
+-- A Well slot of the roll named `initial` or by its reroll id; `rollKey` admits only that roll.
+function primitives.wellGenerationKey(value, label, rollKey)
+    local roll, slot
+    if type(value) == "string" then roll, slot = value:match("^([^:]+):([^:]+)$") end
+    if roll == nil or not WELL_SLOTS[slot]
+        or (rollKey ~= nil and roll ~= rollKey)
+        or (roll ~= "initial" and not primitives.rollKey(roll, label)) then
+        return primitives.fail(label .. " is unsupported")
+    end
+    return value, slot
 end
 function primitives.roomRef(value, label)
     local record = primitives.exact(value, { "id", "biomeKey", "gameName" }, {}, label)

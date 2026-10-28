@@ -180,7 +180,7 @@ function primitives.verify(prepared, store)
     if prepared.kind == "travelDealStygianWell" then offset = prepared.expected[1].slotIndex - 1 end
     if prepared.kind == "travelDealHermesShrine" then offset = prepared.expected[1].slotIndex - 1 end
     for index, offer in ipairs(prepared.expected) do
-        local option = store.StoreOptions[index + offset]
+        local option = store.StoreOptions[offer.storeIndex or (index + offset)]
         local expectedKey = offer.optionKey or offer.offerKey
         local observedKey = type(option) == "table" and (option.Name or option.ItemName) or nil
         if not primitives.generatedMatches(option, offer) then
