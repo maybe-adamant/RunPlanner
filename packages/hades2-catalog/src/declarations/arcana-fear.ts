@@ -155,7 +155,7 @@ export const arcanaCards = [
     ),
     randomDrawRequiredCardKeys: ['ScreenReroll', 'DoorReroll'],
     // RerollCount BaseValue 2 x rarity 1, 1.5, 2, 2.5; its stat penalty is commented out in source.
-    rerolls: { countByRarity: { Common: 2, Rare: 3, Epic: 4, Heroic: 5 }, enables: 'none' },
+    rerolls: { countByRarity: { Common: 2, Rare: 3, Epic: 4, Heroic: 5 }, enables: 'poolOnly' },
   },
   {
     ...card(

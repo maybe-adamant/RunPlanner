@@ -198,10 +198,10 @@ export interface ArcanaCardDeclaration {
 
 /**
  * `doors`: `AllowDoorReroll` (exit doors, Hub board doors, ship wheels and
- * Fields cages); `screens`: the offer-screen reroll button; `none`: pool only.
+ * Fields cages); `screens`: the offer-screen reroll button; `poolOnly`: neither.
  * Barren's Arcana suspension removes the enabling card, not its pool grant.
  */
-export type ArcanaRerollKind = 'doors' | 'screens' | 'none';
+export type ArcanaRerollKind = 'doors' | 'screens' | 'poolOnly';
 
 export interface ArcanaRerollGrant {
   readonly countByRarity: Readonly<Record<InRunTraitRarity, number>>;

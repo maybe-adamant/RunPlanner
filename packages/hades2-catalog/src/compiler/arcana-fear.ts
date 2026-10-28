@@ -282,7 +282,7 @@ export function normalizeArcanaCards(
   });
   return createCollection(values, 'arcanaCards', (card) => card.key);
 }
-const REROLL_KINDS = new Set<ArcanaRerollKind>(['doors', 'screens', 'none']);
+const REROLL_KINDS = new Set<ArcanaRerollKind>(['doors', 'screens', 'poolOnly']);
 const RARITIES = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
 
 function normalizeRerolls(
