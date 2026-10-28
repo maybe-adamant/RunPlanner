@@ -1369,6 +1369,39 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
       rewardType: 'MaxManaDropBig',
     });
   });
+  it('reports a door pressed twice in one restored Hub stay', () => {
+    // The visit saves one door change, but the stores lose two draws: the first press's is lost.
+    const base = withReroll(
+      withReroll(surfaceWithEnchantress(10), 8, 'HubRewards', { WeaponUpgrade: -1 }),
+      8,
+      'HubRewards',
+      { MaxHealthDropBig: -1 },
+    );
+    const record: RunRecord = {
+      ...base,
+      rooms: base.rooms.map((room, index) =>
+        index < 8 || room.name !== 'N_Hub'
+          ? room
+          : {
+              ...room,
+              doors: room.doors.map((door) =>
+                door.door === 560620 ? { ...door, reward: { type: 'WeaponUpgrade' } } : door,
+              ),
+            },
+      ),
+    };
+    const imported = projectFromRunRecord(catalog, record);
+    expect(rerollLines(imported, 8)).toEqual([
+      'unsupportedArea reroll r8 -',
+      'unsupportedArea reroll r8 -',
+    ]);
+    const hub = imported.project.route.biomes[0]!.topology!.decisions.find(
+      (decision) => decision.kind === 'hub',
+    );
+    expect(hub?.kind === 'hub' && hub.actions.some((action) => action.kind === 'reroll')).toBe(
+      false,
+    );
+  });
 });
 
 describe('run import of Fig Leaf skip marks in the live Underworld recording', () => {

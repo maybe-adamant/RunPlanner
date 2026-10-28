@@ -670,19 +670,24 @@ export function importRerolls(context: RunImportContext): void {
       .project.route.biomes.find((entry) => entry.biomeKey === biomeKey)?.topology;
     // A Hub visit is no occurrence: its board is the decision of the room that first led to it.
     const hubVisits = context.occurrences.visitsOf(sourceId);
-    const hub = topology?.occurrences.some((entry) => entry.occurrenceId === sourceId)
-      ? undefined
-      : topology?.decisions.find(
-          (decision): decision is HubDecision =>
-            decision.kind === 'hub' &&
-            hubVisits[0]! > 0 &&
-            decision.source.occurrenceId === context.occurrences.occurrenceOf(hubVisits[0]! - 1),
-        );
     // Each return to the Hub follows one completed room visit.
+    const stay = hubVisits.indexOf(roomIndex);
+    const firstVisit = hubVisits[0];
+    const hub =
+      topology?.occurrences.some((entry) => entry.occurrenceId === sourceId) ||
+      stay < 0 ||
+      firstVisit === undefined ||
+      firstVisit === 0
+        ? undefined
+        : topology?.decisions.find(
+            (decision): decision is HubDecision =>
+              decision.kind === 'hub' &&
+              decision.source.occurrenceId === context.occurrences.occurrenceOf(firstVisit - 1),
+          );
     const targets =
       hub === undefined
         ? roomPressTargets(context, biome, sourceId)
-        : hubPressTargets(context, biome, hub, hubVisits.indexOf(roomIndex));
+        : hubPressTargets(context, biome, hub, stay);
     // The bracket's draws, a Fields door's cages included, are authored before its stores compare.
     if (!bracketDrawsAuthored(context, biomeKey, sourceId, targets)) continue;
     context.used.add(used);
@@ -727,7 +732,6 @@ export function importRerolls(context: RunImportContext): void {
     const earlier = new Set(
       sourceActions().flatMap((action) => (action.kind === 'reroll' ? [action.rerollId] : [])),
     );
-    const stay = hubVisits.indexOf(roomIndex);
     const placed = context.transaction(() =>
       solution.replaced.every((entry) =>
         hub !== undefined && stay > 0
