@@ -137,11 +137,8 @@ function travelDealRefill(value: unknown, label: string): ExecutionTravelDealRef
     const source = object(record.source, `${label}.source`);
     exact(source, ['owner', 'generationKey'], [], `${label}.source`);
     const generationKey = stringValue(source.generationKey, `${label}.source.generationKey`);
-    if (
-      generationKey !== 'initial:healing' &&
-      generationKey !== 'initial:secondLeft' &&
-      generationKey !== 'initial:secondRight'
-    )
+    // The room's first purchase may come from any roll.
+    if (!/^(initial|r[1-9][0-9]*):(healing|secondLeft|secondRight)$/.test(generationKey))
       fail(`${label}.source.generationKey is unsupported`);
     const replacement = object(record.replacement, `${label}.replacement`);
     exact(
@@ -156,8 +153,7 @@ function travelDealRefill(value: unknown, label: string): ExecutionTravelDealRef
       carrier: 'stygianWell',
       source: Object.freeze({
         owner: stringValue(source.owner, `${label}.source.owner`, MAX_OWNER_STRING),
-        generationKey: generationKey as
-          'initial:healing' | 'initial:secondLeft' | 'initial:secondRight',
+        generationKey: generationKey as `${string}:${'healing' | 'secondLeft' | 'secondRight'}`,
       }),
       replacement: Object.freeze({
         generationKey: 'travelDealRefill' as const,

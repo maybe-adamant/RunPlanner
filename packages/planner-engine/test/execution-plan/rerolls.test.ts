@@ -260,6 +260,50 @@ describe('Well and Pool roll publication', () => {
     return project;
   }
 
+  it("names a reroll's slot as the Travel Deal source when the first purchase follows a reroll", () => {
+    let project = withJudgment(
+      withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
+      'F',
+      'golden-f-preboss-shop:boss',
+      ['ScreenReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
+    );
+    const apply = (command: Parameters<typeof applyProjectCommand>[2]) => {
+      project = applyProjectCommand(project, catalog, command);
+    };
+    for (const generationKey of [
+      'travelDealRefill',
+      'initial:secondRight',
+      'initial:secondLeft',
+    ] as const)
+      apply({ kind: 'SetStygianWellPurchase', occurrence: room, generationKey, purchased: false });
+    apply({
+      kind: 'InsertStygianWellReroll',
+      occurrence: room,
+      index: occurrence(project, postboss, 0).roomActions.order.length,
+    });
+    apply({
+      kind: 'SetStygianWellPurchase',
+      occurrence: room,
+      generationKey: 'r1:secondLeft',
+      purchased: true,
+      itemKey: 'TemporaryBoonRarityTrait',
+    });
+    apply({
+      kind: 'SetStygianWellPurchase',
+      occurrence: room,
+      generationKey: 'travelDealRefill',
+      purchased: true,
+    });
+    const plan = planOf(project);
+    const refill = plan.occurrences
+      .find((candidate) => candidate.id === postboss)!
+      .timeline.transactions.find((transaction) => transaction.kind === 'travelDealRefill');
+    expect(refill).toMatchObject({
+      refill: { carrier: 'stygianWell', source: { generationKey: 'r1:secondLeft' } },
+    });
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
   it('publishes each roll in action order and the purchases and sales naming them', () => {
     const plan = planOf(rolledProject());
     const roomPlan = plan.occurrences.find((candidate) => candidate.id === postboss)!;
