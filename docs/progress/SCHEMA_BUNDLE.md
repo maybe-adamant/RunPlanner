@@ -131,7 +131,9 @@ promoted.
 - **Stygian Well and Pool of Purging rolls:** these allow several purchases
   or sales per visit, interleaved with rerolls, so a count cannot represent
   them. The authored feature state is the **initial** stock (Well items or
-  Pool sell options); each Well or Pool reroll is a repeatable room action
+  Pool sell options), with no "interacted" flag: use follows from the room
+  actions, and a slot is required only once an action uses it (blank =
+  native); each Well or Pool reroll is a repeatable room action
   with its own persisted id holding the new roll's slots (optional pickers:
   an unpinned slot stays native); each purchase or sale names its roll and
   slot. The engine derives what is offered at each point: a Well reroll

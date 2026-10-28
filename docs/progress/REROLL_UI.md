@@ -33,12 +33,14 @@ owner can exercise them by hand before both plans close.
    row in any gap, a board recap after each visit (each door's current reward
    and whether it is entered), and a Rerolls list in each gap (unentered board
    doors only). Fountain edits from the map remain; both send the same command.
-6. **Stygian Well and Pool of Purging:** the panel shows the initial stock
-   only (no Purchased/Sold markers); an **Interact** picker lists what can be
-   done at the end of the current sequence (buy or sell each offered slot,
-   Reroll with its cost, disabled when the pool cannot pay) and appends one
-   action per pick; reroll rows carry optional pickers for the restocked
-   slots. The actions show as movable timeline rows like door rerolls.
+6. **Stygian Well and Pool of Purging:** the Overview shows presence and the
+   initial stock only; its slots are always editable and optional (no
+   "Interact" gate). Interaction starts in the timeline: each present object
+   has an entry at the top of the optional action section (e.g. "Stygian Well
+   ▸") listing what can be done at the end of the current sequence (buy or
+   sell each offered slot, Reroll with its cost, disabled when the pool cannot
+   pay); one pick appends one action at the end of that window, which Move
+   repositions. Reroll rows carry optional pickers for the restocked slots.
 7. **Screen rerolls:** a count control on single-pick screens (trait, Chaos,
    Pom).
 8. **Visibility:** reroll lists, counts and the Reroll entry are hidden
