@@ -507,7 +507,7 @@ describe('project operations', () => {
     expect(application.store.getState()).toBe(state);
     for (const json of [
       JSON.stringify({ ...current, schemaVersion: 8 }),
-      JSON.stringify({ ...current, schemaVersion: 100 }),
+      JSON.stringify({ ...current, schemaVersion: 101 }),
       JSON.stringify({ ...current, catalogVersion: 'stale-catalog-version' }),
     ]) {
       library.choose({ fileName: 'bad.runplanner.json', json });
@@ -725,14 +725,14 @@ describe('project operations', () => {
       operation: 'importPlan',
       status: 'success',
       message:
-        'Migrated the plan to schema 99; retained encounter choices may need missing fields repaired.',
+        'Migrated the plan to schema 100; retained encounter choices may need missing fields repaired.',
     });
     legacy.schemaVersion = 87;
     library.choose({ fileName: 'legacy.runplanner.json', json: JSON.stringify(legacy) });
     await expect(application.projectOperations.importPlan()).resolves.toEqual({
       operation: 'importPlan',
       status: 'success',
-      message: 'Migrated the plan to schema 99.',
+      message: 'Migrated the plan to schema 100.',
     });
     const hubLegacy = legacyRareEpicHexTrees(
       JSON.parse(encodeProjectDocument(loadSurfaceNProject())),
@@ -754,7 +754,7 @@ describe('project operations', () => {
       operation: 'importPlan',
       status: 'success',
       message:
-        'Migrated the plan to schema 99; the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair.',
+        'Migrated the plan to schema 100; the Hub fountain use is placed before the first visit, so an Aromatic Phial target may need repair.',
     });
 
     // A schema-88 Hub already has its authored fountain placement, so no repair is named.
@@ -766,7 +766,7 @@ describe('project operations', () => {
     await expect(application.projectOperations.importPlan()).resolves.toEqual({
       operation: 'importPlan',
       status: 'success',
-      message: 'Migrated the plan to schema 99.',
+      message: 'Migrated the plan to schema 100.',
     });
   });
 

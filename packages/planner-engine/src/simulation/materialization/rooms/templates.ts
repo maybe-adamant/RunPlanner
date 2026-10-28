@@ -4,6 +4,7 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
+  createInfernalContractPedestalAddress,
   createStartingRewardAddress,
   type BiomeAddress,
 } from '../../../authored-project/addresses';
@@ -26,12 +27,14 @@ import type {
   CanonicalResolvedIncomingReward,
   CanonicalRewardWheel,
   CanonicalShopEntryState,
+  CanonicalInfernalContractPedestal,
   BiomeMaterializationLoadout,
 } from '../model';
 import { firstRunOfferSource, type TraitOfferSourceContext } from '../../traits/offer-domain';
 import type { ResolvedRewardOffer } from '../../../reward-kernel/model';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
 import { composeStartingReward } from '../../../authored-project/room-state/starting-reward';
+import { INFERNAL_CONTRACT_ENTRY_KEY } from '../../../authored-project/infernal-contract-pedestal';
 import type { ResolvedEntryRoom } from '../../../authored-project/room-state/entry-resolution';
 
 function fail(detail: string): never {
@@ -677,18 +680,6 @@ function materializeShopEntry(
   if (profile === undefined) {
     fail(`${context.room.gameName} references unknown shop profile ${shop.profileKey}`);
   }
-  const contractState = shop.offers.infernalContractReward;
-  const contractProfileKey = context.room.infernalContractReward?.generationProfileKey;
-  const contractProfile =
-    contractProfileKey === undefined
-      ? undefined
-      : context.catalog.rewards.shops.byKey[contractProfileKey];
-  if (
-    contractProfileKey !== undefined &&
-    (contractProfile === undefined || contractProfile.slotCount !== 1)
-  )
-    fail(`${context.room.gameName} has no single-slot Infernal Contract profile`);
-  const contractSlot = contractProfile?.slots.values[0];
   const travelState = shop.travelDealRefill;
   const materializedTravel =
     travelState === undefined || travelState.reward === null
@@ -714,37 +705,6 @@ function materializeShopEntry(
                 hexActivationsByAcquisitionRole: travelState.reward.hexActivationsByAcquisitionRole,
               }),
           traitContext: traitContextForOffer(context, travelState.reward.offer),
-        });
-  const materializedContract =
-    contractSlot === undefined ||
-    contractState === undefined ||
-    contractState === null ||
-    contractState.reward === null
-      ? null
-      : Object.freeze({
-          offerKey: 'infernalContractReward',
-          offerOrigin: createShopOfferAddress(
-            context.biome,
-            context.occurrence.occurrenceId,
-            'infernalContractReward',
-          ),
-          optionKey: contractState.optionKey,
-          offer: contractState.reward.offer,
-          traitOffersByAcquisitionRole: contractState.reward.traitOffersByAcquisitionRole,
-          levelResolutionsByAcquisitionRole: contractState.reward.levelResolutionsByAcquisitionRole,
-          ...(contractState.reward.anvilResultsByAcquisitionRole === undefined
-            ? {}
-            : {
-                anvilResultsByAcquisitionRole: contractState.reward.anvilResultsByAcquisitionRole,
-              }),
-          ...(contractState.reward.hexActivationsByAcquisitionRole === undefined
-            ? {}
-            : {
-                hexActivationsByAcquisitionRole:
-                  contractState.reward.hexActivationsByAcquisitionRole,
-              }),
-          dispositionByAcquisitionRole: contractState.reward.dispositionByAcquisitionRole,
-          traitContext: traitContextForOffer(context, contractState.reward.offer),
         });
   return Object.freeze({
     kind: 'shop',
@@ -808,7 +768,40 @@ function materializeShopEntry(
           : [];
       }),
     ),
-    ...(contractProfileKey === undefined ? {} : { infernalContractOffer: materializedContract }),
+  });
+}
+
+/** An entered pedestal-declaring Preboss's item, whatever its reward form. */
+export function materializeInfernalContractPedestal(
+  context: AuthoredRoomMaterializationContext,
+): CanonicalInfernalContractPedestal | null | undefined {
+  const authored = context.occurrence.infernalContractPedestal;
+  if (!context.entered || authored === undefined) return undefined;
+  const profileKey = context.room.infernalContractReward?.generationProfileKey;
+  const profile =
+    profileKey === undefined ? undefined : context.catalog.rewards.shops.byKey[profileKey];
+  if (profile === undefined || profile.slotCount !== 1)
+    fail(`${context.room.gameName} has no single-slot Infernal Contract profile`);
+  const reward = authored.reward;
+  if (reward === null) return null;
+  return Object.freeze({
+    offerKey: INFERNAL_CONTRACT_ENTRY_KEY,
+    offerOrigin: createInfernalContractPedestalAddress(
+      context.biome,
+      context.occurrence.occurrenceId,
+    ),
+    optionKey: authored.optionKey,
+    offer: reward.offer,
+    traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+    levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+    ...(reward.anvilResultsByAcquisitionRole === undefined
+      ? {}
+      : { anvilResultsByAcquisitionRole: reward.anvilResultsByAcquisitionRole }),
+    ...(reward.hexActivationsByAcquisitionRole === undefined
+      ? {}
+      : { hexActivationsByAcquisitionRole: reward.hexActivationsByAcquisitionRole }),
+    dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
+    traitContext: traitContextForOffer(context, reward.offer),
   });
 }
 

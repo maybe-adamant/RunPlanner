@@ -15,7 +15,6 @@ import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOfferMatches,
   echoShopDuplicateRequiresPickup,
-  INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../../../authored-project/shop';
 import {
@@ -142,7 +141,6 @@ export function settleShopAcquisitionSite(
     firstNormalPurchaseSeen: boolean;
     travelRefill?: TravelRefill;
     goldMaterialization?: GoldMaterialization;
-    contractOffer?: import('../../materialization').CanonicalShopOffer;
   };
   type GoldMaterialization = PendingShopGoldMaterialization;
   const executions: ShopExecution[] = [];
@@ -191,9 +189,6 @@ export function settleShopAcquisitionSite(
       ...(pending.goldMaterialization === undefined
         ? {}
         : { goldMaterialization: pending.goldMaterialization }),
-      ...(pending.infernalContractOffer === undefined
-        ? {}
-        : { contractOffer: pending.infernalContractOffer }),
     });
   }
   const branchCohortSize = executions.length;
@@ -317,41 +312,6 @@ export function settleShopAcquisitionSite(
     const agreementBranches = Object.freeze(executions.map(({ candidate }) => candidate));
     const survivors: ShopExecution[] = [];
     for (const execution of executions) {
-      if (entryKey === INFERNAL_CONTRACT_ENTRY_KEY) {
-        const descriptor = declaration.infernalContractReward;
-        if (descriptor === undefined || execution.contractOffer === undefined) {
-          entryPurchaseFailureRecorded = true;
-          addRewardFinding(
-            findings,
-            rewardFinding(
-              'shopPurchaseUnavailable',
-              createAcquisitionEntryAddress(site, entryKey),
-              { kind: 'infernalContractUnavailable' },
-            ),
-            ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
-            context.findingChronology ?? historyChronology(historySequence),
-          );
-          continue;
-        }
-        const bindings =
-          catalog.rewards.producerLifecycles.byKey[descriptor.producerLifecycleKey]?.rewardTypes
-            .byKey[execution.contractOffer.offer.rewardType]?.acquisitionLifecycle;
-        if (bindings === undefined)
-          return fail(`${room.gameName} Contract item lacks its declared acquisition lifecycle`);
-        if (
-          settleOffer(
-            execution,
-            execution.contractOffer,
-            descriptor.generationProfileKey,
-            'free',
-            bindings,
-            agreementBranches,
-          )
-        )
-          survivors.push(execution);
-        continue;
-      }
-
       if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) {
         const refill = execution.travelRefill;
         const inventory = entry.travelDealRefill;
@@ -869,9 +829,6 @@ export function settleShopAcquisitionSite(
               ...(execution.goldMaterialization === undefined
                 ? {}
                 : { goldMaterialization: execution.goldMaterialization }),
-              ...(execution.contractOffer === undefined
-                ? {}
-                : { infernalContractOffer: execution.contractOffer }),
             }),
           }),
         }),
@@ -898,19 +855,6 @@ export function settleShopAcquisitionSite(
       (context.order ?? []).map((offerKey) => {
         const offer = entry.offers.find((candidate) => candidate.offerKey === offerKey);
         if (offer === undefined) {
-          const contract =
-            offerKey === INFERNAL_CONTRACT_ENTRY_KEY ? entry.infernalContractOffer : undefined;
-          if (contract !== undefined && contract !== null) {
-            const acquisitionResolved = rewardSourceResolvesAtAcquisition(catalog, contract.offer);
-            return Object.freeze({
-              address: createAcquisitionEntryAddress(site, offerKey),
-              source: acquisitionResolved
-                ? createAcquisitionEntryAddress(site, offerKey)
-                : contract.offerOrigin,
-              acquisitionRoles: rolesByOfferKey.get(offerKey) ?? Object.freeze([]),
-              participation: 'optional' as const,
-            });
-          }
           const supplemental = room.acquisitionSites.roomExit?.entries[offerKey];
           const artificerReplacement = parseArtificerReplacementEntryKey(offerKey);
           if (

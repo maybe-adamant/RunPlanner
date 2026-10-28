@@ -17,7 +17,8 @@ function decodeRoomActionReference(value: unknown, path: string): RoomActionRefe
     kind === 'collectRequiredReward' ||
     kind === 'useFountain' ||
     kind === 'interactKeepsakeRack' ||
-    kind === 'interactEris'
+    kind === 'interactEris' ||
+    kind === 'interactInfernalContractPedestal'
   ) {
     expectExactKeys(reference, ['kind'], path);
     return Object.freeze({ kind });

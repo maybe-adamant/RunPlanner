@@ -9,6 +9,7 @@ import { applyIncomingRewardCommand } from './incoming-reward';
 import { applyLocalRewardCommand } from './local-reward';
 import { applyShipOccurrenceCommand } from './ship';
 import { applyShopOccurrenceCommand } from './shop';
+import { applyInfernalContractPedestalCommand } from './infernal-contract-pedestal';
 import { applyFieldsOccurrenceCommand } from './fields';
 import type { OccurrenceLeafCommand } from '../types';
 import { requireOccurrence, failCommand } from '../contract';
@@ -835,6 +836,11 @@ export function applyOccurrenceCommand(
     case 'ClearShopOffer':
     case 'ReplaceShopOfferOption':
       return applyShopOccurrenceCommand(document, catalog, located, command);
+    case 'ReplaceInfernalContractPedestalOffer':
+    case 'ReplaceInfernalContractPedestalOption':
+    case 'ClearInfernalContractPedestal':
+    case 'SetInfernalContractPedestalCollected':
+      return applyInfernalContractPedestalCommand(document, catalog, located, command);
     case 'SelectEncounter':
     case 'ResetEncounter':
     case 'SelectNemesisRandomEventFamily':

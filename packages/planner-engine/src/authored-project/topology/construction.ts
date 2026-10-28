@@ -17,6 +17,10 @@ import type { ResolvedRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import { startingRewardAcquisitionFrom } from '../room-state/starting-reward';
 import { createUnresolvedAcquisitionRewardState } from '../traits/state';
+import {
+  createDefaultInfernalContractPedestal,
+  roomHasInfernalContractPedestal,
+} from '../infernal-contract-pedestal';
 
 const RACK_ACTION = Object.freeze({ kind: 'interactKeepsakeRack' as const });
 
@@ -82,6 +86,9 @@ export function defaultOccurrence(
             offerKeyBySlot: Object.freeze({ healing: null, secondLeft: null, secondRight: null }),
           }),
         }
+      : {}),
+    ...(roomHasInfernalContractPedestal(room)
+      ? { infernalContractPedestal: createDefaultInfernalContractPedestal() }
       : {}),
   });
 }

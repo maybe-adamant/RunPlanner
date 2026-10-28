@@ -1,3 +1,4 @@
+import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../infernal-contract-pedestal';
 import {
   resolveTraitAcquisitionOrdinalEffect,
   type Catalog,
@@ -455,16 +456,20 @@ function traitPickupOffers(
                   entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
                 }
               : { kind: 'interactShopOffer' as const, offerKey: owner.offerKey };
+          case 'infernalContractPedestal':
+            return { kind: 'interactInfernalContractPedestal' as const };
           case 'encounterPhase':
             return { kind: 'interactEncounter' as const, phaseKey: owner.phaseKey };
           case 'gorgonPhase':
             return { kind: 'interactGorgon' as const, phaseKey: owner.encounter.phaseKey };
           case 'acquisitionEntry':
-            return {
-              kind: 'interactAcquisitionEntry' as const,
-              siteKey: owner.site.pointKey,
-              entryKey: owner.entryKey,
-            };
+            return owner.site.pointKey === INFERNAL_CONTRACT_PEDESTAL_SITE_KEY
+              ? { kind: 'interactInfernalContractPedestal' as const }
+              : {
+                  kind: 'interactAcquisitionEntry' as const,
+                  siteKey: owner.site.pointKey,
+                  entryKey: owner.entryKey,
+                };
         }
       })();
       const participates = actionKeys.has(roomActionKey(sourceAction));

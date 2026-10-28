@@ -39,7 +39,7 @@ const document = (schemaVersion) => ({
 describe('project schema migration runner', () => {
   it('chains every supported transition from the floor to the current schema', () => {
     assert.equal(OLDEST_SCHEMA_VERSION, 86);
-    assert.equal(CURRENT_SCHEMA_VERSION, 99);
+    assert.equal(CURRENT_SCHEMA_VERSION, 100);
     assert.equal(TRANSITIONS.length, CURRENT_SCHEMA_VERSION - OLDEST_SCHEMA_VERSION);
     TRANSITIONS.forEach((transition, index) => {
       assert.equal(transition.source, OLDEST_SCHEMA_VERSION + index);
@@ -50,7 +50,7 @@ describe('project schema migration runner', () => {
   it('migrates a document from its own schema to the current one', () => {
     const source = document(98);
     const migrated = migrateProjectDocumentTo(source);
-    assert.equal(migrated.schemaVersion, 99);
+    assert.equal(migrated.schemaVersion, 100);
     assert.equal(migrated.schemaRevision, undefined);
     assert.equal(
       migrated.route.biomes[0].topology.occurrences[0].encounters.steadyGrowthTargetByPhase,
@@ -72,7 +72,7 @@ describe('project schema migration runner', () => {
   });
 
   it('leaves a current document unchanged', () => {
-    const source = document(99);
+    const source = document(100);
     assert.equal(migrateProjectDocumentTo(source), source);
   });
 
@@ -81,10 +81,10 @@ describe('project schema migration runner', () => {
       () => migrateProjectDocumentTo(document(85)),
       /older than the supported floor 86/,
     );
-    assert.throws(() => migrateProjectDocumentTo(document(100)), /already newer than 99/);
+    assert.throws(() => migrateProjectDocumentTo(document(101)), /already newer than 100/);
     assert.throws(
-      () => migrateProjectDocumentTo(document(98), { target: 100 }),
-      /newer than the current schema 99/,
+      () => migrateProjectDocumentTo(document(98), { target: 101 }),
+      /newer than the current schema 100/,
     );
     assert.throws(
       () => migrateProjectDocumentTo(document(98), { target: 97 }),
@@ -98,7 +98,7 @@ describe('project schema migration runner', () => {
   });
 
   it('names the sibling output after the target schema and the plan after the file stem', () => {
-    assert.equal(outputPath('/plans/run.runplanner.json'), '/plans/run.runplanner-schema99.json');
+    assert.equal(outputPath('/plans/run.runplanner.json'), '/plans/run.runplanner-schema100.json');
     assert.equal(
       outputPath('/plans/run.runplanner.json', 90),
       '/plans/run.runplanner-schema90.json',

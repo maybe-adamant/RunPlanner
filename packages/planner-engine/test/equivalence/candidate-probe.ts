@@ -13,6 +13,7 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
+  createInfernalContractPedestalAddress,
   createStartingRewardAddress,
   createTargetAddress,
   discoverAuthoredTraitCarrierChildren,
@@ -222,6 +223,24 @@ export function probeCandidates(
               offer.reward,
             );
         }
+      const pedestal = occurrence.infernalContractPedestal;
+      if (pedestal !== undefined) {
+        const address = createInfernalContractPedestalAddress(biome, occurrenceId);
+        reward(
+          (value) => ({ kind: 'infernalContractPedestal', pedestal: address, value }),
+          pedestal.reward,
+        );
+        const { optionKey } = pedestal;
+        if (optionKey !== null)
+          reward(
+            (value) => ({
+              kind: 'infernalContractPedestalOption',
+              pedestal: address,
+              value: { optionKey, offer: value },
+            }),
+            pedestal.reward,
+          );
+      }
     }
     for (const decision of topology.decisions) {
       switch (decision.kind) {

@@ -79,13 +79,12 @@ function sourceAnvilResults(
   const shopOffer = (offerKey: string) =>
     offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
       ? (shop?.travelDealRefill ?? undefined)
-      : (shop?.offers.find((candidate) => candidate.offerKey === offerKey) ??
-        (shop?.infernalContractOffer?.offerKey === offerKey
-          ? shop.infernalContractOffer
-          : undefined));
+      : shop?.offers.find((candidate) => candidate.offerKey === offerKey);
   switch (source.kind) {
     case 'shopOffer':
       return shopOffer(source.offerKey)?.anvilResultsByAcquisitionRole;
+    case 'infernalContractPedestal':
+      return room.infernalContractPedestal?.anvilResultsByAcquisitionRole;
     case 'acquisitionEntry':
       return (
         room.acquisitionSites[acquisitionSiteStorageKey(source.site)]?.entries[source.entryKey] ??
@@ -722,6 +721,7 @@ export function executionTimelineTransactions(
       timeline.action.reference.kind !== 'interactLocalReward' &&
       timeline.action.reference.kind !== 'interactAcquisitionEntry' &&
       timeline.action.reference.kind !== 'interactShopOffer' &&
+      timeline.action.reference.kind !== 'interactInfernalContractPedestal' &&
       timeline.action.reference.kind !== 'interactWheelReward' &&
       timeline.action.reference.kind !== 'purchaseStygianWellOffer'
     ) {
@@ -818,12 +818,9 @@ export function executionTimelineTransactions(
     }
     const shopOffer =
       actionReference.kind === 'interactShopOffer'
-        ? (room.entryState?.offers.find(
+        ? room.entryState?.offers.find(
             (candidate) => candidate.offerKey === actionReference.offerKey,
-          ) ??
-          (room.entryState?.infernalContractOffer?.offerKey === actionReference.offerKey
-            ? room.entryState.infernalContractOffer
-            : undefined))
+          )
         : undefined;
     if (actionReference.kind === 'interactShopOffer' && shopOffer === undefined)
       throw new CompilerError(
@@ -836,6 +833,7 @@ export function executionTimelineTransactions(
       source.kind !== 'localReward' &&
       source.kind !== 'rewardWheelOffer' &&
       source.kind !== 'shopOffer' &&
+      source.kind !== 'infernalContractPedestal' &&
       source.kind !== 'encounterPhase' &&
       source.kind !== 'gorgonPhase' &&
       source.kind !== 'acquisitionEntry'

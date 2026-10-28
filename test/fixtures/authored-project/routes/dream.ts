@@ -19,6 +19,7 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createShopOfferAddress,
+  createInfernalContractPedestalAddress,
   createStartingRewardAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -729,7 +730,6 @@ export function dreamOSkippedShipProject(): ProjectDocument {
         Boon: boon,
         MajorNonBoon: { rewardType: 'MaxHealthDrop' },
         Minor: { rewardType: 'MaxManaDrop' },
-        infernalContractReward: { rewardType: 'StackUpgrade' },
       },
     ],
   ] as const)
@@ -739,5 +739,10 @@ export function dreamOSkippedShipProject(): ProjectDocument {
         offer: createShopOfferAddress(oBiome, occurrenceId, offerKey),
         value,
       });
+  apply({
+    kind: 'ReplaceInfernalContractPedestalOffer',
+    pedestal: createInfernalContractPedestalAddress(oBiome, preboss),
+    value: { rewardType: 'StackUpgrade' },
+  });
   return authorLegalTraitOffers(project);
 }

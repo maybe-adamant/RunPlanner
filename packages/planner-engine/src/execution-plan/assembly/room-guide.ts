@@ -83,6 +83,14 @@ function descriptionFor(
             : {}),
       });
     }
+    case 'interactInfernalContractPedestal': {
+      const rewardType = (rewardFor(transaction) ?? convertedReward)?.rewardType;
+      return Object.freeze({
+        kind: reference.kind,
+        ...(rewardType === undefined ? {} : { rewardType }),
+        ...(timePieced ? { conversion: 'timePiece' as const } : {}),
+      });
+    }
     case 'purchaseStygianWellOffer': {
       if (transaction?.kind === 'itemEffect')
         return Object.freeze({

@@ -27,6 +27,17 @@ npm run test:schema:migrate
 
 ## History
 
+Schema 100 makes the Zagreus Contract pedestal a Preboss room feature in
+either reward form: every Preboss that declares a pedestal destination owns
+`infernalContractPedestal` (its item), collected by an
+`interactInfernalContractPedestal` action, and a collected Mystery item's
+source lives in the `infernalContractPedestal` acquisition site. The Shop no
+longer has an `infernalContractReward` offer.
+
+The migration moves a Shop-owned pedestal item, its collect action and its
+source entry to the room unchanged, and gives every other pedestal-declaring
+Preboss occurrence an unset item.
+
 Schema 99 keys Steady Growth targets and Transcendent Embryo blessings by their
 source and cycle: a trait offer that gives Steady Growth owns
 `steadyGrowthTargets`, and the keepsake selection that installs the Embryo owns

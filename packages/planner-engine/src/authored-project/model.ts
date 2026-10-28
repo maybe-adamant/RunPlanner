@@ -9,7 +9,7 @@ import type {
 import type { RunModifiersRecord } from './run-modifiers';
 import type { RunStartPoint } from './practice-start';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 99 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 100 as const;
 /** The minor version within the current major; a saved document omits it at 0. */
 export const PROJECT_DOCUMENT_SCHEMA_REVISION: number = 0;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
@@ -116,6 +116,19 @@ export interface AuthoredFountainRarityResult {
 
 export type AuthoredExperimentalHammerEquipResult =
   { readonly kind: 'selected'; readonly traitKey: string } | { readonly kind: 'exhausted' };
+
+/**
+ * The Zagreus Contract pedestal's one free item, a ZagPedestalOptions option.
+ * It is a Preboss room feature: present at every pedestal-declaring Preboss
+ * occurrence whatever its reward form, spawned only while the hero holds
+ * InfernalContractBoon. Membership of `interactInfernalContractPedestal` in
+ * the room's order is the collected fact.
+ */
+export interface InfernalContractPedestalState {
+  /** Exact declaration-owned option; null retains an ambiguous migrated selection for repair. */
+  readonly optionKey: string | null;
+  readonly reward: AuthoredRewardState | null;
+}
 
 export interface ShopState {
   readonly profileKey: string;
@@ -231,6 +244,7 @@ export type RoomActionReference =
   | { readonly kind: 'chooseRewardWheel'; readonly wheelKey: string }
   | { readonly kind: 'interactWheelReward'; readonly wheelKey: string }
   | { readonly kind: 'interactShopOffer'; readonly offerKey: string }
+  | { readonly kind: 'interactInfernalContractPedestal' }
   | { readonly kind: 'purchaseStygianWellOffer'; readonly generationKey: StygianWellGenerationKey }
   | {
       readonly kind: 'purchaseHermesShrineOffer';
@@ -442,6 +456,8 @@ export interface RoomOccurrence {
   /** Present at declaration-owned Shrine hosts; never guarded by a global interaction flag. */
   readonly hermesShrine?: HermesShrineState;
   readonly stygianWell?: StygianWellState;
+  /** Present exactly at Preboss occurrences whose declaration places the Contract pedestal. */
+  readonly infernalContractPedestal?: InfernalContractPedestalState;
 }
 
 /** A Postboss rack; a null key leaves the held keepsake unchanged. */

@@ -1297,6 +1297,7 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
     case 'localReward':
     case 'rewardWheelOffer':
     case 'shopOffer':
+    case 'infernalContractPedestal':
       return origin;
     case 'encounterPhase':
     case 'gorgonPhase':

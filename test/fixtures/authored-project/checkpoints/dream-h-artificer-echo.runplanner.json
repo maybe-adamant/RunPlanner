@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 99,
+  "schemaVersion": 100,
   "projectId": "run-plan",
   "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
@@ -984,10 +984,6 @@
                           }
                         }
                       }
-                    },
-                    "infernalContractReward": {
-                      "optionKey": null,
-                      "reward": null
                     }
                   }
                 }
@@ -1001,6 +997,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
               },
               "acquisitionSites": {
                 "roomExit": {}
@@ -1040,6 +1040,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
               },
               "additionalExits": []
             },

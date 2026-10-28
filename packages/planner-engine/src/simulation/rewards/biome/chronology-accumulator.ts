@@ -355,6 +355,7 @@ function traitMutationTimelineOwner(
     owner.kind === 'localReward' ||
     owner.kind === 'rewardWheelOffer' ||
     owner.kind === 'shopOffer' ||
+    owner.kind === 'infernalContractPedestal' ||
     owner.kind === 'encounterPhase' ||
     owner.kind === 'gorgonPhase' ||
     owner.kind === 'acquisitionEntry'

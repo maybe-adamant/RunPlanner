@@ -7,6 +7,7 @@ import type {
 import type { ProducerRewardLifecycleDeclaration } from '../../reward-kernel/model';
 import type { ResolvedEncounterPhase } from '../encounters';
 import type { RoomHistoryFragment, RoomLifecycleEvent, RoomLifecycleExecutionInput } from './model';
+import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../../authored-project/infernal-contract-pedestal';
 import { createBiomeAddress, createRoomActionAddress } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions/state';
@@ -720,6 +721,11 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
         return appendEvent(state, operationContext, {
           kind: 'acquisitionPointReached',
           point: `shopOffer:${row.reference.offerKey}`,
+        });
+      case 'interactInfernalContractPedestal':
+        return appendEvent(state, operationContext, {
+          kind: 'acquisitionPointReached',
+          point: INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
         });
       case 'sellPurgingPoolTrait':
         return appendEvent(state, operationContext, {

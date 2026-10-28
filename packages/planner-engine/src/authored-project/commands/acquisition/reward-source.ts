@@ -16,9 +16,12 @@ import {
   replaceAuthoredAcquisitionEntry,
   replaceAuthoredAcquisitionEntryAtSite,
   replaceAuthoredShopOffer,
-  shopSlotProfile,
 } from '../../shop';
 import { parseArtificerReplacementEntryKey } from '../../acquisition/artificer';
+import {
+  INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
+  infernalContractPedestalProfile,
+} from '../../infernal-contract-pedestal';
 import { parseHermesShrineDeliveryEntryKey } from '../../hermes-shrine-delivery';
 import { requireShipCombatWheels } from '../../room-state/declaration';
 import { incomingLevelEffectSource } from '../../room-state/level-effects';
@@ -80,12 +83,15 @@ function pickupEntrySource(
       reward: entry,
       levelEffectSource: {
         kind: 'shopProfile' as const,
-        key: shopSlotProfile(
-          catalog,
-          occurrence.gameName,
-          occurrence.state.shop.profileKey,
-          owner.entryKey,
-        )!.key,
+        key: occurrence.state.shop.profileKey,
+      },
+    });
+  if (owner.site.pointKey === INFERNAL_CONTRACT_PEDESTAL_SITE_KEY)
+    return Object.freeze({
+      reward: entry,
+      levelEffectSource: {
+        kind: 'shopProfile' as const,
+        key: infernalContractPedestalProfile(catalog, occurrence.gameName)?.key ?? '',
       },
     });
   if (parseArtificerReplacementEntryKey(owner.entryKey) !== undefined)
@@ -279,6 +285,22 @@ export function locateReward(
           } as const,
         });
       }
+    case 'infernalContractPedestal': {
+      const pedestal = occurrence.infernalContractPedestal;
+      if (pedestal === undefined)
+        failCommand(command, `${occurrence.gameName} has no Contract pedestal`);
+      return Object.freeze({
+        reward: requireAuthoredReward(
+          pedestal.reward,
+          command,
+          'cannot edit acquisition outcome before reward authorship',
+        ),
+        levelEffectSource: {
+          kind: 'shopProfile' as const,
+          key: infernalContractPedestalProfile(catalog, occurrence.gameName)?.key ?? '',
+        },
+      });
+    }
     case 'shopOffer':
       if (state.kind !== 'shop' || state.shop === undefined) {
         failCommand(command, `${occurrence.gameName} has no materialized Shop offers`);
@@ -294,12 +316,7 @@ export function locateReward(
           ),
           levelEffectSource: {
             kind: 'shopProfile',
-            key: shopSlotProfile(
-              catalog,
-              occurrence.gameName,
-              state.shop.profileKey,
-              owner.offerKey,
-            )!.key,
+            key: state.shop.profileKey,
           } as const,
         });
       }
@@ -450,6 +467,8 @@ export function updateRewardState(
           }),
         ).state;
       }
+    case 'infernalContractPedestal':
+      return failCommand(command, 'the Contract pedestal is updated on its occurrence overlay');
     case 'encounterPhase':
       return failCommand(command, 'encounter trait offers are updated by the encounter owner path');
   }
@@ -487,6 +506,22 @@ export function replaceOwnedReward(
               nextReward,
             )
           : replaceAuthoredAcquisitionEntry(occurrence, owner.entryKey, nextReward),
+      ),
+    );
+  }
+  if (owner.kind === 'infernalContractPedestal') {
+    const pedestal = occurrence.infernalContractPedestal;
+    if (pedestal === undefined)
+      failCommand(command, `${occurrence.gameName} has no Contract pedestal`);
+    return updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(
+        topology,
+        Object.freeze({
+          ...occurrence,
+          infernalContractPedestal: Object.freeze({ ...pedestal, reward: nextReward }),
+        }),
       ),
     );
   }

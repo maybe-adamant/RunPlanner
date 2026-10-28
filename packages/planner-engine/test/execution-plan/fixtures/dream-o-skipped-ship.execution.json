@@ -1,7 +1,7 @@
 {
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
-  "schemaVersion": 99,
+  "schemaVersion": 100,
   "schemaRevision": 0,
   "projectId": "dream-o-skipped-ship",
   "routeKey": "Dream",
@@ -1408,11 +1408,11 @@
               "optionKey": "MaxManaDrop",
               "rewardType": "MaxManaDrop"
             }
-          ],
-          "infernalContract": {
-            "sourceOwner": "[\"shopOffer\",\"Dream\",\"O\",\"dream-o-preboss\",\"infernalContractReward\"]",
-            "rewardType": "StackUpgrade"
-          }
+          ]
+        },
+        "infernalContractPedestal": {
+          "sourceOwner": "[\"infernalContractPedestal\",\"Dream\",\"O\",\"dream-o-preboss\"]",
+          "rewardType": "StackUpgrade"
         }
       },
       "timeline": { "transactions": [], "dependencies": [], "obligations": [] },
@@ -1491,5 +1491,5 @@
       }
     }
   ],
-  "planFingerprint": "7e65b588"
+  "planFingerprint": "16a016ee"
 }

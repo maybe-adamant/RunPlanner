@@ -1125,6 +1125,8 @@ function unexplainedImpossibility(
       return { kind: 'reward', message: 'No wheel roll here produces this reward.' };
     case 'shopOffer':
       return { kind: 'shop', message: 'No Shop roll here stocks this item.' };
+    case 'infernalContractPedestal':
+      return { kind: 'reward', message: 'No reward roll here produces this reward.' };
     case 'acquisitionEntryOffer':
       return { kind: 'reward', message: 'This source cannot produce this reward here.' };
     case 'traitOffer':
@@ -1237,6 +1239,7 @@ function rewardOfferExclusions(
     case 'localReward':
     case 'rewardWheelOffer':
     case 'shopOffer':
+    case 'infernalContractPedestal':
     case 'acquisitionEntryOffer':
       return evaluation.result.exclusions ?? [];
     default:

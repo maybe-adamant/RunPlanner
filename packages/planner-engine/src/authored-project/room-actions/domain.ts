@@ -10,6 +10,7 @@ import {
   createEncounterPhaseAddress,
   createGorgonPhaseAddress,
   createIncomingRewardAddress,
+  createInfernalContractPedestalAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
   createRewardWheelAddress,
@@ -39,6 +40,10 @@ import {
   seaStarDuplicateUsesFreshObject,
 } from '../acquisition/sea-star';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
+import {
+  INFERNAL_CONTRACT_ENTRY_KEY,
+  INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
+} from '../infernal-contract-pedestal';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
 import type { AuthoredRewardState, RoomActionReference, RoomOccurrence } from '../model';
 import {
@@ -475,6 +480,31 @@ function baseContribution(
         owner,
       );
     }
+    case 'interactInfernalContractPedestal': {
+      const reward = occurrence.infernalContractPedestal?.reward;
+      const owner =
+        reward !== null &&
+        reward !== undefined &&
+        rewardSourceResolvesAtAcquisition(catalog, reward.offer)
+          ? createAcquisitionEntryAddress(
+              createAcquisitionSiteAddress(
+                createOccurrenceAddress(biome, occurrence.occurrenceId),
+                INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
+              ),
+              INFERNAL_CONTRACT_ENTRY_KEY,
+            )
+          : createInfernalContractPedestalAddress(biome, occurrence.occurrenceId);
+      // The pedestal stands from room start, like a Shop item.
+      return contribution(
+        biome,
+        occurrence,
+        reference,
+        'optional',
+        shopPurchaseWindow(catalog, lifecycleProfileKey),
+        [],
+        owner,
+      );
+    }
     case 'sellPurgingPoolTrait':
       return contribution(
         biome,
@@ -721,6 +751,7 @@ export function assembleRoomActionDomain(options: {
   /** `undefined` means occurrence ownership; `null` is an unset route-start reward. */
   readonly incomingRewardState?: AuthoredRewardState | null;
   readonly shopInventoryActive?: boolean;
+  readonly entryActive?: boolean;
 }): RoomActionDomain {
   const rawDeclaration = options.catalog.rooms.byKey[options.occurrence.gameName];
   if (rawDeclaration === undefined) throw new Error(`unknown room ${options.occurrence.gameName}`);
@@ -787,6 +818,7 @@ export function assembleRoomActionDomain(options: {
       ...(options.shopInventoryActive === undefined
         ? {}
         : { shopInventoryActive: options.shopInventoryActive }),
+      ...(options.entryActive === undefined ? {} : { entryActive: options.entryActive }),
     },
   );
   let actions = structuralReferences.map((reference) =>

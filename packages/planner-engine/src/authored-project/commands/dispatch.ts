@@ -225,6 +225,10 @@ function applyUnchecked(
     case 'ReplaceShopOffer':
     case 'ClearShopOffer':
     case 'ReplaceShopOfferOption':
+    case 'ReplaceInfernalContractPedestalOffer':
+    case 'ReplaceInfernalContractPedestalOption':
+    case 'ClearInfernalContractPedestal':
+    case 'SetInfernalContractPedestalCollected':
     case 'SetPurgingPoolInteraction':
     case 'ReplacePurgingPoolSlot':
     case 'SetErisSpawned':

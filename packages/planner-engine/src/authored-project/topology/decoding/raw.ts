@@ -33,6 +33,8 @@ export interface RawOccurrence {
   readonly hasKeepsakeRack?: boolean;
   readonly eris?: unknown;
   readonly hasEris?: boolean;
+  readonly infernalContractPedestal?: unknown;
+  readonly hasInfernalContractPedestal?: boolean;
   readonly figurineArcanaKeysByPhase?: unknown;
   readonly hasFigurineArcanaKeysByPhase?: boolean;
   readonly path: string;

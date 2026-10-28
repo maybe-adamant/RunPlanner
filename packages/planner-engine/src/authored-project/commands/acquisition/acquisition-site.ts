@@ -1,5 +1,9 @@
 import type { Catalog } from '../../../catalog-schema';
 import type { ProjectDocument } from '../../model';
+import {
+  INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
+  infernalContractPedestalProfile,
+} from '../../infernal-contract-pedestal';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from '../contract';
 import { replaceOccurrence, updateOccurrenceTopology } from '../occurrence/mutation';
 import { sameOccurrenceValue } from '../occurrence/leaf-value';
@@ -19,7 +23,6 @@ import {
   echoShopDuplicateOffer,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   replaceAuthoredAcquisitionEntryAtSite,
-  shopSlotProfile,
 } from '../../shop';
 import { parseArtificerReplacementEntryKey } from '../../acquisition/artificer';
 import {
@@ -418,6 +421,35 @@ export function applyAcquisitionSiteCommand(
         candidate.siteKey === site.pointKey &&
         candidate.pickups.some((pickup) => pickup.key === command.entry.entryKey),
     );
+    if (site.pointKey === INFERNAL_CONTRACT_PEDESTAL_SITE_KEY) {
+      // A collected acquisition-resolved pedestal item's source, under its pedestal's type.
+      const carrier = occurrence.infernalContractPedestal?.reward;
+      const entry = authoredAcquisitionEntryAtSite(occurrence, site, command.entry.entryKey);
+      const profile = infernalContractPedestalProfile(catalog, occurrence.gameName);
+      if (carrier == null || entry === undefined || profile === undefined)
+        failCommand(command, 'does not own a materialized pickup entry');
+      if (command.value.rewardType !== carrier.offer.rewardType)
+        failCommand(command, `must retain pedestal reward type ${carrier.offer.rewardType}`);
+      if (entry !== null && sameOccurrenceValue(entry.offer, command.value)) return document;
+      return updateOccurrenceTopology(
+        document,
+        located,
+        replaceOccurrence(
+          topology,
+          replaceAuthoredAcquisitionEntryAtSite(
+            occurrence,
+            site,
+            command.entry.entryKey,
+            createUnresolvedAcquisitionRewardState(
+              catalog,
+              command.value,
+              { kind: 'shopProfile', key: profile.key },
+              located.routePosition.routeKey,
+            ),
+          ),
+        ),
+      );
+    }
     if (site.pointKey !== 'roomExit') {
       const shrineSource =
         site.pointKey === 'hermesShrineDelivery'
@@ -580,13 +612,7 @@ export function applyAcquisitionSiteCommand(
         );
       const effectSource = {
         kind: 'shopProfile',
-        key:
-          shopSlotProfile(
-            catalog,
-            occurrence.gameName,
-            occurrence.state.shop.profileKey,
-            command.entry.entryKey,
-          )?.key ?? '',
+        key: occurrence.state.shop.profileKey,
       } as const;
       return updateOccurrenceTopology(
         document,

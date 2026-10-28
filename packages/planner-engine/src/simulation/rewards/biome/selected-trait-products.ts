@@ -43,6 +43,7 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
     case 'localReward':
     case 'rewardWheelOffer':
     case 'shopOffer':
+    case 'infernalContractPedestal':
     case 'encounterPhase':
     case 'gorgonPhase':
     case 'acquisitionEntry':

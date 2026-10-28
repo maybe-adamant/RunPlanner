@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { locallyValidRewardOffers } from '../../src/reward-kernel';
 import { shopOfferOptionValues } from '../../src/authored-project/shop';
+import { infernalContractPedestalOptionValues } from '../../src/authored-project/infernal-contract-pedestal';
 
 describe('Shop offer option values', () => {
   it("lists each option of the slot's group with its locally valid offers", () => {
-    const values = shopOfferOptionValues(catalog, 'F_Shop01', 'WorldShop', 'Boon');
+    const values = shopOfferOptionValues(catalog, 'WorldShop', 'Boon');
     expect([...new Set(values.map((value) => value.optionKey))]).toEqual([
       'RandomLoot',
       'BlindBoxLoot',
@@ -16,17 +17,19 @@ describe('Shop offer option values', () => {
     );
   });
 
-  it('resolves the Infernal Contract entry through its own profile', () => {
-    const values = shopOfferOptionValues(
-      catalog,
-      'F_PreBoss01',
-      'RoomShop',
-      'infernalContractReward',
-    );
-    expect(values.map((value) => value.optionKey)).toContain('TalentDrop');
+  it('resolves the Contract pedestal through its own profile, apart from the Shop', () => {
+    const values = infernalContractPedestalOptionValues(catalog, 'G_PreBoss01');
+    expect([...new Set(values.map((value) => value.optionKey))]).toEqual([
+      'BlindBoxLoot',
+      'StackUpgradeBig',
+      'StackUpgrade',
+      'TalentBigDrop',
+      'TalentDrop',
+    ]);
+    expect(shopOfferOptionValues(catalog, 'WorldShop', 'infernalContractReward')).toEqual([]);
   });
 
   it('has nothing for an undeclared slot', () => {
-    expect(shopOfferOptionValues(catalog, 'F_Shop01', 'WorldShop', 'missing')).toEqual([]);
+    expect(shopOfferOptionValues(catalog, 'WorldShop', 'missing')).toEqual([]);
   });
 });

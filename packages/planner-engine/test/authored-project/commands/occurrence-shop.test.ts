@@ -376,29 +376,6 @@ describe('authored-project Shop occurrence commands', () => {
     expect(replaceTestShopOfferActions(project, catalog, shop, ['MajorNonBoon'])).toBe(project);
   });
 
-  it.each(['StackUpgrade', 'BlindBoxLoot'] as const)(
-    'replaces and round-trips uncollected Contract %s inventory',
-    (rewardType) => {
-      const shopId = createOccurrenceId('round-trip-n-preboss');
-      const project = applyProjectCommand(createCompleteNProject(), catalog, {
-        kind: 'ReplaceShopOffer',
-        offer: createShopOfferAddress(nBiome, shopId, 'infernalContractReward'),
-        value: { rewardType },
-      });
-      const occurrence = project.route.biomes
-        .find((biome) => biome.biomeKey === 'N')
-        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
-      expect(
-        occurrence?.state.kind === 'shop'
-          ? occurrence.state.shop?.offers.infernalContractReward?.reward?.offer
-          : undefined,
-      ).toEqual({ rewardType });
-      expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
-        project,
-      );
-    },
-  );
-
   it('reconciles a Travel Mystery child with its sole purchase participant and item identity', () => {
     const shopId = createOccurrenceId('round-trip-n-preboss');
     const offer = createShopOfferAddress(nBiome, shopId, 'travelDealRefill');
@@ -537,12 +514,12 @@ describe('authored-project Shop occurrence commands', () => {
       applyProjectCommand(createCompleteNProject(), catalog, {
         kind: 'ReplaceShopOffer',
         offer: createShopOfferAddress(nBiome, shopId, 'infernalContractReward'),
-        value: { rewardType: 'MaxHealthDrop' },
+        value: { rewardType: 'StackUpgrade' },
       }),
     ).toThrowError(
       expect.objectContaining({
         commandKind: 'ReplaceShopOffer',
-        detail: expect.stringContaining('not available'),
+        detail: 'unknown shop offer infernalContractReward',
       }),
     );
     expect(() =>

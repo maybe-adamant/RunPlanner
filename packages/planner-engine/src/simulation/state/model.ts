@@ -61,7 +61,6 @@ export interface PendingShopState {
   readonly firstNormalPurchaseSeen?: boolean;
   readonly travelRefill?: PendingShopTravelRefillState;
   readonly goldMaterialization?: PendingShopGoldMaterialization;
-  readonly infernalContractOffer?: CanonicalShopOffer;
 }
 
 export type { HermesDeliveryObligation, HermesDeliveryDueContact };

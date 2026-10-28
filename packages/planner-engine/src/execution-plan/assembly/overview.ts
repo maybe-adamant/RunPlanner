@@ -24,6 +24,7 @@ import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { agreement, executionRoomOwnerKey } from './support';
 import type {
   ExecutionFieldsLayout,
+  ExecutionInfernalContract,
   ExecutionKeepsakeEquipResults,
   ExecutionOverview,
   ExecutionReward,
@@ -333,35 +334,42 @@ function executionShop(
       })(),
     ),
   );
-  const contractEntry = room.entryState.infernalContractOffer;
-  const contractActive =
-    contractEntry != null &&
-    biome.rewards.branches.every((branch) =>
-      branch.events.some(
-        (event) =>
-          event.kind === 'rewardOffered' &&
-          semanticAddressKey(event.origin) === semanticAddressKey(contractEntry.offerOrigin),
-      ),
-    );
-  const contract =
-    !contractActive || contractEntry === undefined || contractEntry === null
-      ? undefined
-      : (() => {
-          const actionOwner = transactionOwnerByOffer.get(contractEntry.offerKey);
-          const transaction =
-            actionOwner === undefined ? undefined : transactionByOwner.get(actionOwner);
-          return Object.freeze({
-            sourceOwner:
-              transaction?.kind === 'acquisition'
-                ? transaction.sourceOwner
-                : semanticAddressKey(contractEntry.offerOrigin),
-            rewardType: contractEntry.offer.rewardType,
-          });
-        })();
   return Object.freeze({
     profileKey: room.entryState.profileKey,
     offers,
-    ...(contract === undefined ? {} : { infernalContract: contract }),
+  });
+}
+
+/** The entered Preboss's pedestal item, published only where every branch spawned it. */
+function executionInfernalContractPedestal(
+  room: CanonicalAuthoredRoom,
+  biome: CompleteValidBiomeProjectEvaluation,
+  transactions: readonly ExecutionTimelineTransaction[],
+): ExecutionInfernalContract | undefined {
+  const pedestal = room.infernalContractPedestal;
+  if (pedestal === undefined || pedestal === null) return undefined;
+  const ownerKey = semanticAddressKey(pedestal.offerOrigin);
+  if (
+    !biome.rewards.branches.every((branch) =>
+      branch.events.some(
+        (event) => event.kind === 'rewardOffered' && semanticAddressKey(event.origin) === ownerKey,
+      ),
+    )
+  )
+    return undefined;
+  const actionOwner = room.roomLifecycleTimeline.entries.find(
+    (entry) =>
+      entry.kind === 'action' && entry.action.reference.kind === 'interactInfernalContractPedestal',
+  );
+  const transaction =
+    actionOwner?.kind !== 'action'
+      ? undefined
+      : transactions.find(
+          (candidate) => candidate.owner === semanticAddressKey(actionOwner.action.owner),
+        );
+  return Object.freeze({
+    sourceOwner: transaction?.kind === 'acquisition' ? transaction.sourceOwner : ownerKey,
+    rewardType: pedestal.offer.rewardType,
   });
 }
 
@@ -950,6 +958,7 @@ export function assembleExecutionOverview(
 ): ExecutionOverview {
   const incomingReward = executionReward(room);
   const shop = executionShop(room, biome, transactions);
+  const infernalContractPedestal = executionInfernalContractPedestal(room, biome, transactions);
   const hermesShrine = executionHermesShrine(room, biome);
   const rewardWheels = executionRewardWheels(room);
   const stygianWell = executionStygianWell(room);
@@ -1074,6 +1083,7 @@ export function assembleExecutionOverview(
     ...(rewardWheels === undefined ? {} : { rewardWheels }),
     requiredObjects: Object.freeze((room.requiredObjects ?? []).map((object) => object.key)),
     ...(shop === undefined ? {} : { shop }),
+    ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(hermesShrine === undefined ? {} : { hermesShrine }),
     ...(stygianWell === undefined ? {} : { stygianWell }),
     ...(purgingPool === undefined ? {} : { purgingPool }),

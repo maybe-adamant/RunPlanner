@@ -9,6 +9,7 @@ import {
   createProjectHistory,
   createAcquisitionRoleAddress,
   createShopOfferAddress,
+  createInfernalContractPedestalAddress,
   createTraitOfferAddress,
   hermesShrineDeliveryEntryKey,
   semanticAddressKey,
@@ -268,7 +269,7 @@ it('exports the selected Zagreus Contract return and acquired Preboss Contract i
   const contract = createOccurrenceId('zagreus-contract-showcase');
   const returned = createOccurrenceId('zagreus-contract-return');
   const prebossShop = createOccurrenceId('zagreus-contract-preboss-shop');
-  const item = createShopOfferAddress(goldenGBiome, prebossShop, 'infernalContractReward');
+  const item = createInfernalContractPedestalAddress(goldenGBiome, prebossShop);
   const published = compileEligibleProject(saved);
   expect(published.occurrences.find((room) => room.id === contract)).toMatchObject({
     gameName: 'C_Boss01',
@@ -304,11 +305,12 @@ it('exports the selected Zagreus Contract return and acquired Preboss Contract i
     }),
   );
   expect(
-    published.occurrences.find((room) => room.id === prebossShop)?.overview.shop?.infernalContract,
+    published.occurrences.find((room) => room.id === prebossShop)?.overview
+      .infernalContractPedestal,
   ).toEqual({ sourceOwner: semanticAddressKey(item), rewardType: 'StackUpgrade' });
   const edited = applyProjectHistoryCommand(createProjectHistory(saved), catalog, {
-    kind: 'ReplaceShopOffer',
-    offer: item,
+    kind: 'ReplaceInfernalContractPedestalOffer',
+    pedestal: item,
     value: { rewardType: 'StackUpgradeBig' },
   });
   const reloaded = reloadProject(edited.present);

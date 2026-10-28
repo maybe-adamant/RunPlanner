@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 99,
+  "schemaVersion": 100,
   "projectId": "execution-dream-q-f-n-h",
   "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
@@ -548,10 +548,6 @@
                           }
                         }
                       }
-                    },
-                    "infernalContractReward": {
-                      "optionKey": null,
-                      "reward": null
                     }
                   }
                 }
@@ -565,6 +561,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
               },
               "acquisitionSites": {
                 "roomExit": {}
@@ -1617,6 +1617,10 @@
               "roomActions": {
                 "order": []
               },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
+              },
               "additionalExits": []
             },
             {
@@ -1651,6 +1655,10 @@
                     "acquisitionRole": "self"
                   }
                 ]
+              },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
               },
               "additionalExits": []
             },
@@ -2172,10 +2180,6 @@
                           }
                         }
                       }
-                    },
-                    "infernalContractReward": {
-                      "optionKey": null,
-                      "reward": null
                     }
                   }
                 }
@@ -2189,6 +2193,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
               },
               "acquisitionSites": {
                 "roomExit": {}

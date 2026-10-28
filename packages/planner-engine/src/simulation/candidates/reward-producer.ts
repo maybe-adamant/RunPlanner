@@ -6,6 +6,7 @@ import {
   type StartingRewardAddress,
   type RewardWheelOfferAddress,
   type ShopOfferAddress,
+  type InfernalContractPedestalAddress,
 } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { RouteLoadout } from '../../authored-project/model';
@@ -74,6 +75,18 @@ export interface ShopOfferOptionCandidateQuery {
   readonly value: ShopOptionSelection;
 }
 
+export interface InfernalContractPedestalCandidateQuery {
+  readonly kind: 'infernalContractPedestal';
+  readonly pedestal: InfernalContractPedestalAddress;
+  readonly value: ResolvedRewardOffer;
+}
+
+export interface InfernalContractPedestalOptionCandidateQuery {
+  readonly kind: 'infernalContractPedestalOption';
+  readonly pedestal: InfernalContractPedestalAddress;
+  readonly value: ShopOptionSelection;
+}
+
 export interface AcquisitionEntryOfferCandidateQuery {
   readonly kind: 'acquisitionEntryOffer';
   readonly entry: AcquisitionEntryAddress;
@@ -87,6 +100,8 @@ export type RewardProducerCandidateQuery =
   | RewardWheelOfferCandidateQuery
   | ShopOfferCandidateQuery
   | ShopOfferOptionCandidateQuery
+  | InfernalContractPedestalCandidateQuery
+  | InfernalContractPedestalOptionCandidateQuery
   | AcquisitionEntryOfferCandidateQuery;
 
 export interface EvaluatedIncomingRewardCandidate {
@@ -162,6 +177,10 @@ export interface EvaluatedShopOfferCandidate {
   readonly kind: 'shopOffer';
   readonly result: RewardProducerCandidateResult;
 }
+export interface EvaluatedInfernalContractPedestalCandidate {
+  readonly kind: 'infernalContractPedestal';
+  readonly result: RewardProducerCandidateResult;
+}
 export interface EvaluatedAcquisitionEntryOfferCandidate {
   readonly kind: 'acquisitionEntryOffer';
   readonly result: RewardProducerCandidateResult;
@@ -174,6 +193,7 @@ export type RewardProducerCandidateEvaluation =
   | EvaluatedLocalRewardCandidate
   | EvaluatedRewardWheelOfferCandidate
   | EvaluatedShopOfferCandidate
+  | EvaluatedInfernalContractPedestalCandidate
   | EvaluatedAcquisitionEntryOfferCandidate;
 
 interface RewardProducerSource {
@@ -200,7 +220,9 @@ function ownerFor(query: RewardProducerCandidateQuery): RewardProducerOwnerAddre
     ? query.reward
     : query.kind === 'acquisitionEntryOffer'
       ? query.entry
-      : query.offer;
+      : query.kind === 'infernalContractPedestal' || query.kind === 'infernalContractPedestalOption'
+        ? query.pedestal
+        : query.offer;
 }
 
 function checkpointFor(query: RewardProducerCandidateQuery) {
@@ -252,6 +274,14 @@ export function evaluateRewardProducerCandidate(
     if (evaluate === undefined) return producerUnavailable(owner);
     return Object.freeze({ kind: 'shopOffer', result: evaluate(query.offer, query.value) });
   }
+  if (query.kind === 'infernalContractPedestalOption') {
+    const evaluate = capability.evaluateShopOption;
+    if (evaluate === undefined) return producerUnavailable(owner);
+    return Object.freeze({
+      kind: 'infernalContractPedestal',
+      result: evaluate(query.pedestal, query.value),
+    });
+  }
   const result = capability.evaluateOffer(owner, query.value);
   switch (query.kind) {
     case 'incomingReward':
@@ -262,6 +292,8 @@ export function evaluateRewardProducerCandidate(
       return Object.freeze({ kind: 'rewardWheelOffer', result });
     case 'shopOffer':
       return Object.freeze({ kind: 'shopOffer', result });
+    case 'infernalContractPedestal':
+      return Object.freeze({ kind: 'infernalContractPedestal', result });
     case 'acquisitionEntryOffer':
       return Object.freeze({ kind: 'acquisitionEntryOffer', result });
   }

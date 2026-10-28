@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 99,
+  "schemaVersion": 100,
   "projectId": "run-plan-ec587f07-f732-4933-8d19-af97e6588dab",
   "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
@@ -1380,16 +1380,6 @@
                           }
                         }
                       }
-                    },
-                    "infernalContractReward": {
-                      "optionKey": "BlindBoxLoot",
-                      "reward": {
-                        "offer": {
-                          "rewardType": "BlindBoxLoot"
-                        },
-                        "traitOffersByAcquisitionRole": {},
-                        "dispositionByAcquisitionRole": {}
-                      }
                     }
                   },
                   "travelDealRefill": {
@@ -1443,8 +1433,7 @@
               "roomActions": {
                 "order": [
                   {
-                    "kind": "interactShopOffer",
-                    "offerKey": "infernalContractReward"
+                    "kind": "interactInfernalContractPedestal"
                   },
                   {
                     "kind": "interactShopOffer",
@@ -1457,8 +1446,21 @@
                   }
                 ]
               },
+              "infernalContractPedestal": {
+                "optionKey": "BlindBoxLoot",
+                "reward": {
+                  "offer": {
+                    "rewardType": "BlindBoxLoot"
+                  },
+                  "traitOffersByAcquisitionRole": {},
+                  "dispositionByAcquisitionRole": {}
+                }
+              },
               "acquisitionSites": {
                 "roomExit": {
+                  "pickupEntries": {}
+                },
+                "infernalContractPedestal": {
                   "pickupEntries": {
                     "infernalContractReward": {
                       "offer": {
@@ -1530,6 +1532,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
               },
               "additionalExits": []
             },

@@ -172,6 +172,11 @@ function commandContractAddress(
     case 'ClearShopOffer':
     case 'ReplaceShopOfferOption':
       return command.offer;
+    case 'ReplaceInfernalContractPedestalOffer':
+    case 'ReplaceInfernalContractPedestalOption':
+    case 'ClearInfernalContractPedestal':
+    case 'SetInfernalContractPedestalCollected':
+      return command.pedestal;
     case 'PlaceEchoGoldPickup':
       return command.site;
     case 'PlaceHermesShrineDelivery':

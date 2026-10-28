@@ -3,6 +3,7 @@ import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { BiomeTopology, ExitDecision } from '../model';
 import type { RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
+import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../infernal-contract-pedestal';
 import { failCommand, type LocatedBiome } from './contract';
 import type { ProjectCommand, RouteDetourCommand } from './types';
 
@@ -67,16 +68,20 @@ export function reconcileNormalTargetEntryStates(
     }
     const withoutAcquisitionSites = { ...occurrence };
     delete withoutAcquisitionSites.acquisitionSites;
+    // The pedestal is a room feature, not Shop inventory; its source entry survives.
+    const pedestalSite = occurrence.acquisitionSites?.[INFERNAL_CONTRACT_PEDESTAL_SITE_KEY];
+    const sites = {
+      ...(defaultState.kind === 'shop' && defaultState.shop !== undefined
+        ? { roomExit: Object.freeze({}) }
+        : {}),
+      ...(pedestalSite === undefined
+        ? {}
+        : { [INFERNAL_CONTRACT_PEDESTAL_SITE_KEY]: pedestalSite }),
+    };
     return Object.freeze({
       ...withoutAcquisitionSites,
       state: defaultState,
-      ...(defaultState.kind === 'shop' && defaultState.shop !== undefined
-        ? {
-            acquisitionSites: Object.freeze({
-              roomExit: Object.freeze({}),
-            }),
-          }
-        : {}),
+      ...(Object.keys(sites).length === 0 ? {} : { acquisitionSites: Object.freeze(sites) }),
     });
   });
   return Object.freeze({ ...topology, occurrences: Object.freeze(occurrences) });

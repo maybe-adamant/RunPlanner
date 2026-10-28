@@ -65,6 +65,8 @@ function actionTraits(
       return state.kind === 'shop'
         ? rewardTraits(state.shop?.offers[reference.offerKey]?.reward)
         : rewardTraits(undefined);
+    case 'interactInfernalContractPedestal':
+      return rewardTraits(occurrence.infernalContractPedestal?.reward);
     case 'interactWheelReward': {
       const wheel = state.kind === 'shipCombat' ? state.wheels[reference.wheelKey] : undefined;
       return rewardTraits(wheel?.offers[`offer${wheel.pickedOfferIndex}`]);

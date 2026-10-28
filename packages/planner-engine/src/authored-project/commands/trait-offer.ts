@@ -656,17 +656,25 @@ export function applyTraitOfferCommand(
         ...occurrence,
         startingRewardAcquisition: startingRewardAcquisitionFrom(nextReward),
       })
-    : Object.freeze({
-        ...occurrence,
-        state: updateRewardState(
-          catalog,
-          occurrence,
-          occurrence.state,
-          owner,
-          command,
-          () => nextReward,
-        ),
-      });
+    : owner.kind === 'infernalContractPedestal'
+      ? Object.freeze({
+          ...occurrence,
+          infernalContractPedestal: Object.freeze({
+            ...occurrence.infernalContractPedestal!,
+            reward: nextReward,
+          }),
+        })
+      : Object.freeze({
+          ...occurrence,
+          state: updateRewardState(
+            catalog,
+            occurrence,
+            occurrence.state,
+            owner,
+            command,
+            () => nextReward,
+          ),
+        });
   return updateOccurrenceTopology(
     document,
     located,

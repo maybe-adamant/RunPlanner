@@ -378,6 +378,18 @@ function roomGuideDescription(value: unknown, label: string) {
     case 'interactEris':
       exact(record, ['kind'], [], label);
       return Object.freeze({ kind });
+    case 'interactInfernalContractPedestal': {
+      exact(record, ['kind'], ['rewardType', 'conversion'], label);
+      if (record.conversion !== undefined && record.conversion !== 'timePiece')
+        fail(`${label}.conversion is unsupported`);
+      return Object.freeze({
+        kind,
+        ...(record.rewardType === undefined
+          ? {}
+          : { rewardType: stringValue(record.rewardType, `${label}.rewardType`) }),
+        ...(record.conversion === undefined ? {} : { conversion: 'timePiece' as const }),
+      });
+    }
     default:
       fail(`${label}.kind is unsupported`);
   }

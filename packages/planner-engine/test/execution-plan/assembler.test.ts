@@ -69,6 +69,7 @@ import {
   createRewardWheelOfferAddress,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
+  createInfernalContractPedestalAddress,
   createTraitOfferAddress,
   createTranscendentEmbryoOutcomeAddress,
   createRoomActionAddress,
@@ -1583,16 +1584,16 @@ describe('engine-owned F/G execution semantic product', () => {
 
   it('omits a retained unpicked Contract reward without an active Contract capability', () => {
     const shop = createOccurrenceAddress(goldenFBiome, createOccurrenceId('golden-f-preboss-shop'));
-    const entry = createShopOfferAddress(goldenFBiome, shop.occurrenceId, 'infernalContractReward');
+    const entry = createInfernalContractPedestalAddress(goldenFBiome, shop.occurrenceId);
     const project = applyProjectCommand(fOnlyProject(), catalog, {
-      kind: 'ReplaceShopOffer',
-      offer: entry,
+      kind: 'ReplaceInfernalContractPedestalOffer',
+      pedestal: entry,
       value: { rewardType: 'StackUpgrade' },
     });
     const product = productFor(project);
     const published = product.occurrences.find((room) => room.id === shop.occurrenceId);
     expect(published?.overview.shop).toBeDefined();
-    expect(published?.overview.shop?.infernalContract).toBeUndefined();
+    expect(published?.overview.infernalContractPedestal).toBeUndefined();
     expect(published?.timeline.transactions).not.toContainEqual(
       expect.objectContaining({ sourceOwner: semanticAddressKey(entry) }),
     );

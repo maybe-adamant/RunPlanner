@@ -6,6 +6,7 @@ import type {
 } from '../addresses';
 import { createAcquisitionSiteAddress, semanticAddressKey } from '../addresses';
 import { ERIS_GIFT_SITE_KEY } from './eris-gift';
+import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../infernal-contract-pedestal';
 
 /** Collision-safe source-owned identity for the separately acquired replacement. */
 export function artificerReplacementEntryKey(
@@ -53,6 +54,7 @@ export function acquisitionSiteStorageKey(site: AcquisitionSiteAddress): string 
     site.pointKey.startsWith('nemesisGenerated:') ||
     site.pointKey === ERIS_GIFT_SITE_KEY ||
     site.pointKey === 'hermesShrineDelivery' ||
+    site.pointKey === INFERNAL_CONTRACT_PEDESTAL_SITE_KEY ||
     site.pointKey.startsWith('seaStarDuplicate:')
     ? site.pointKey
     : semanticAddressKey(site);
@@ -70,7 +72,7 @@ export function acquisitionSiteFromStorageKey(
     return createAcquisitionSiteAddress(occurrence, storageKey);
   if (storageKey.startsWith('nemesisGenerated:') || storageKey === ERIS_GIFT_SITE_KEY)
     return createAcquisitionSiteAddress(occurrence, storageKey);
-  if (storageKey === 'hermesShrineDelivery')
+  if (storageKey === 'hermesShrineDelivery' || storageKey === INFERNAL_CONTRACT_PEDESTAL_SITE_KEY)
     return createAcquisitionSiteAddress(occurrence, storageKey);
   if (storageKey.startsWith('seaStarDuplicate:'))
     return createAcquisitionSiteAddress(occurrence, storageKey);

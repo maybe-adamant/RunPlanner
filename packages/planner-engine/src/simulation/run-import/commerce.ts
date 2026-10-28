@@ -4,7 +4,7 @@ import {
   createRoomFeatureAddress,
   createShopOfferAddress,
   hermesShrineDeliveryEntryKey,
-  INFERNAL_CONTRACT_ENTRY_KEY,
+  infernalContractPedestalOptionValues,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
   parseHermesShrineDeliveryEntryKey,
   semanticAddressKey,
@@ -97,6 +97,8 @@ const record = (roomIndex: number) => ({ roomIndex, visit: 0 });
 export function answerCommerce(context: RunImportContext, reason: SemanticFinding): boolean {
   const origin = reason.origin;
   if (origin.kind === 'shopOffer') return answerShopOffer(context, origin, reason);
+  if (origin.kind === 'infernalContractPedestal' && shopOfferCodes.has(reason.code))
+    return answerContractPedestal(context, origin);
   if (origin.kind === 'roomFeature') {
     if (reason.code === 'hermesShrineInventoryMissing') return answerShrineOffers(context, origin);
     if (reason.code === 'hermesShrineTravelDealRefillMissing')
@@ -170,10 +172,6 @@ function answerShopOffer(
     offer.occurrenceId,
   );
   const shop = occurrence?.state.kind === 'shop' ? occurrence.state.shop : undefined;
-  if (offer.offerKey === INFERNAL_CONTRACT_ENTRY_KEY)
-    return occurrence !== undefined && shop !== undefined
-      ? answerContractPedestal(context, offer, occurrence, shop.profileKey)
-      : false;
   if (offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)
     return occurrence !== undefined && shop !== undefined
       ? answerTravelDealRefill(context, offer, occurrence, shop)
@@ -184,12 +182,9 @@ function answerShopOffer(
   const visit = storeVisit(context, offer.occurrenceId, 'worldShop');
   const stock = visit?.store.stock.find((option) => option.slot === position + 1);
   if (occurrence === undefined || shop === undefined || stock === undefined) return false;
-  const values = shopOfferOptionValues(
-    context.catalog,
-    occurrence.gameName,
-    shop.profileKey,
-    offer.offerKey,
-  ).filter((value) => stockMatches(context, shop.profileKey, offer.offerKey, stock, value));
+  const values = shopOfferOptionValues(context.catalog, shop.profileKey, offer.offerKey).filter(
+    (value) => stockMatches(context, shop.profileKey, offer.offerKey, stock, value),
+  );
   for (const value of values) {
     const evaluation = context.candidates().evaluate({ kind: 'shopOfferOption', offer, value });
     if (
@@ -265,15 +260,13 @@ function answerTravelDealRefill(
   }
   const seen = new Set<string>();
   const values = profile.slots.values.flatMap((slot) =>
-    shopOfferOptionValues(context.catalog, occurrence.gameName, shop.profileKey, slot.key).filter(
-      (value) => {
-        const name = purchaseInteractionName(optionOf(slot.key, value.optionKey)!, value.offer);
-        const key = JSON.stringify(value);
-        if (name === undefined || (unexplained.get(name) ?? 0) <= 0 || seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      },
-    ),
+    shopOfferOptionValues(context.catalog, shop.profileKey, slot.key).filter((value) => {
+      const name = purchaseInteractionName(optionOf(slot.key, value.optionKey)!, value.offer);
+      const key = JSON.stringify(value);
+      if (name === undefined || (unexplained.get(name) ?? 0) <= 0 || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }),
   );
   for (const value of values) {
     const evaluation = context.candidates().evaluate({ kind: 'shopOfferOption', offer, value });
@@ -311,17 +304,20 @@ function answerTravelDealRefill(
 
 /**
  * The Contract pedestal's item is the one pedestal option its room used beyond
- * the stock it bought; collecting it is that use. An uncollected pedestal
- * leaves no trace in the record.
+ * the stock it bought, in either Preboss form; collecting it is that use. An
+ * uncollected pedestal leaves no trace in the record.
  */
 function answerContractPedestal(
   context: RunImportContext,
-  offer: Origin<'shopOffer'>,
-  occurrence: RoomOccurrence,
-  profileKey: string,
+  pedestal: Origin<'infernalContractPedestal'>,
 ): boolean {
-  const roomIndex = context.occurrences.visitsOf(occurrence.occurrenceId)[0];
-  if (roomIndex === undefined) return false;
+  const occurrence = authoredOccurrence(
+    context.assembly().project,
+    pedestal.biomeKey,
+    pedestal.occurrenceId,
+  );
+  const roomIndex = context.occurrences.visitsOf(pedestal.occurrenceId)[0];
+  if (occurrence === undefined || roomIndex === undefined) return false;
   const room = context.record.rooms[roomIndex]!;
   const bought = new Map<string, number>();
   if (room.store?.kind === 'worldShop')
@@ -329,29 +325,41 @@ function answerContractPedestal(
       const stock = room.store.stock.find((option) => option.slot === purchase.slot);
       if (stock !== undefined) bought.set(stock.name, (bought.get(stock.name) ?? 0) + 1);
     }
-  const values = shopOfferOptionValues(
-    context.catalog,
-    occurrence.gameName,
-    profileKey,
-    offer.offerKey,
-  );
+  const values = infernalContractPedestalOptionValues(context.catalog, occurrence.gameName);
   const unexplained = [...new Set(values.map((value) => value.offer.rewardType))].filter(
     (type) => (room.uses[type] ?? 0) > (bought.get(type) ?? 0),
   );
   if (unexplained.length !== 1) return false;
   for (const value of values) {
     if (value.offer.rewardType !== unexplained[0]) continue;
-    const command: ProjectCommand = { kind: 'ReplaceShopOfferOption', offer, value };
-    const evaluation = context.candidates().evaluate({ kind: 'shopOfferOption', offer, value });
+    const command: ProjectCommand = {
+      kind: 'ReplaceInfernalContractPedestalOption',
+      pedestal,
+      value,
+    };
+    const evaluation = context
+      .candidates()
+      .evaluate({ kind: 'infernalContractPedestalOption', pedestal, value });
     if (
-      evaluation.kind !== 'shopOffer' ||
+      evaluation.kind !== 'infernalContractPedestal' ||
       !evaluation.result.supported ||
       !evaluation.result.findings.every(isQuestionFinding) ||
       !context.applyValid(command)
     )
       continue;
-    if (!context.applyValid({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true }))
-      context.note({ area: 'shop', reason: 'refused', address: offer, record: record(roomIndex) });
+    if (
+      !context.applyValid({
+        kind: 'SetInfernalContractPedestalCollected',
+        pedestal,
+        collected: true,
+      })
+    )
+      context.note({
+        area: 'shop',
+        reason: 'refused',
+        address: pedestal,
+        record: record(roomIndex),
+      });
     return true;
   }
   context.refuse();

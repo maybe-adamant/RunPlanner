@@ -32,6 +32,7 @@ import {
   deriveRouteLoadout,
   createStartingRewardAddress,
   createShopOfferAddress,
+  createInfernalContractPedestalAddress,
   createTargetAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
@@ -880,19 +881,23 @@ export function underworldZagreusContractProject(): ProjectDocument {
     },
     MajorNonBoon: { rewardType: 'MaxHealthDrop' as const },
     Minor: { rewardType: 'MaxManaDrop' as const },
-    infernalContractReward: { rewardType: 'StackUpgrade' as const },
   }))
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceShopOffer',
       offer: createShopOfferAddress(goldenGBiome, prebossShop, offerKey),
       value,
     });
-  project = replaceTestShopOfferActions(
-    project,
-    catalog,
-    createOccurrenceAddress(goldenGBiome, prebossShop),
-    ['infernalContractReward'],
-  );
+  const pedestal = createInfernalContractPedestalAddress(goldenGBiome, prebossShop);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceInfernalContractPedestalOffer',
+    pedestal,
+    value: { rewardType: 'StackUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetInfernalContractPedestalCollected',
+    pedestal,
+    collected: true,
+  });
   return authorLegalTraitOffers(project);
 }
 

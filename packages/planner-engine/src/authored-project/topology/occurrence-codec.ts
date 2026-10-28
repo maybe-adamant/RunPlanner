@@ -42,6 +42,12 @@ import {
 } from '../hermes-shrine-delivery';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
 import { ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
+import {
+  INFERNAL_CONTRACT_ENTRY_KEY,
+  INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
+  roomHasInfernalContractPedestal,
+} from '../infernal-contract-pedestal';
+import { decodeInfernalContractPedestal } from '../room-state/decoding/infernal-contract-pedestal-codec';
 import { expectExactKeys, expectRecord, failProjectDocument } from '../validation';
 import type { DecodedTopologyStructure } from './decoding/coordinator';
 import { decodeAcquisitionSites } from '../room-state/decoding/acquisition-site-codec';
@@ -456,10 +462,33 @@ export function decodeRoomOccurrence(input: {
         `${rawOccurrence.path}.eris`,
       )
     : undefined;
+  const pedestalDeclared = roomHasInfernalContractPedestal(contextualRoom);
+  if (pedestalDeclared !== (rawOccurrence.hasInfernalContractPedestal === true))
+    failProjectDocument(
+      `${rawOccurrence.path}.infernalContractPedestal`,
+      pedestalDeclared ? 'must be an object' : `${room.gameName} declares no Contract pedestal`,
+    );
+  const infernalContractPedestal = pedestalDeclared
+    ? decodeInfernalContractPedestal(
+        rawOccurrence.infernalContractPedestal,
+        catalog,
+        routeKey,
+        room.gameName,
+        `${rawOccurrence.path}.infernalContractPedestal`,
+      )
+    : undefined;
   const roomActions = decodeRoomActionState(
     rawOccurrence.roomActions,
     `${rawOccurrence.path}.roomActions`,
   );
+  if (
+    roomActions.order.filter((reference) => reference.kind === 'interactInfernalContractPedestal')
+      .length > (infernalContractPedestal === undefined ? 0 : 1)
+  )
+    failProjectDocument(
+      `${rawOccurrence.path}.roomActions.order`,
+      'a Contract pedestal owns at most one interactInfernalContractPedestal action',
+    );
   if (
     eris === undefined &&
     roomActions.order.some((reference) => reference.kind === 'interactEris')
@@ -518,6 +547,7 @@ export function decodeRoomOccurrence(input: {
     ...(purgingPool === undefined ? {} : { purgingPool }),
     ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
     ...(eris === undefined ? {} : { eris }),
+    ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     roomActions: Object.freeze({ order: Object.freeze([]) }),
     additionalExits: Object.freeze([]),
   });
@@ -686,6 +716,7 @@ export function decodeRoomOccurrence(input: {
       parseSeaStarDuplicateSiteKey(siteKey) === undefined &&
       siteKey !== ERIS_GIFT_SITE_KEY &&
       siteKey !== 'hermesShrineDelivery' &&
+      siteKey !== INFERNAL_CONTRACT_PEDESTAL_SITE_KEY &&
       Object.keys(site.pickupEntries ?? {}).some(
         (entryKey) => parseArtificerReplacementEntryKey(entryKey) === undefined,
       ),
@@ -695,6 +726,36 @@ export function decodeRoomOccurrence(input: {
       `${rawOccurrence.path}.acquisitionSites`,
       'source-local sites may contain only Artificer replacement entries',
     );
+  }
+  {
+    // A collected acquisition-resolved pedestal item owns exactly its one source entry.
+    const pedestalReward = infernalContractPedestal?.reward;
+    const ownsPedestalEntry =
+      pedestalReward !== null &&
+      pedestalReward !== undefined &&
+      rewardSourceResolvesAtAcquisition(catalog, pedestalReward.offer) &&
+      roomActions.order.some((action) => action.kind === 'interactInfernalContractPedestal');
+    const pedestalSite = acquisitionSites?.[INFERNAL_CONTRACT_PEDESTAL_SITE_KEY];
+    const pedestalSitePath = `${rawOccurrence.path}.acquisitionSites.${INFERNAL_CONTRACT_PEDESTAL_SITE_KEY}`;
+    if (ownsPedestalEntry) {
+      const entries = pedestalSite?.pickupEntries ?? {};
+      if (Object.keys(entries).length !== 1 || !Object.hasOwn(entries, INFERNAL_CONTRACT_ENTRY_KEY))
+        failProjectDocument(
+          pedestalSitePath,
+          'a collected acquisition-resolved pedestal item requires exactly its acquisition entry',
+        );
+      const entry = entries[INFERNAL_CONTRACT_ENTRY_KEY];
+      if (
+        entry !== null &&
+        entry !== undefined &&
+        entry.offer.rewardType !== pedestalReward.offer.rewardType
+      )
+        failProjectDocument(pedestalSitePath, 'must retain the pedestal item reward type');
+    } else if (pedestalSite !== undefined)
+      failProjectDocument(
+        pedestalSitePath,
+        'requires a collected acquisition-resolved pedestal item',
+      );
   }
   if (state.kind === 'shop' && state.shop !== undefined) {
     if (acquisitionSites === undefined || acquisitionSites.roomExit === undefined) {
@@ -869,6 +930,7 @@ export function decodeRoomOccurrence(input: {
     ...(purgingPool === undefined ? {} : { purgingPool }),
     ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
     ...(eris === undefined ? {} : { eris }),
+    ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
     additionalExits,
   });

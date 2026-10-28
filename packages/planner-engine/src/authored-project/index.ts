@@ -118,6 +118,7 @@ export {
   createAetosPhaseAddress,
   createGorgonPhaseAddress,
   createIncomingRewardAddress,
+  createInfernalContractPedestalAddress,
   createHubSlotAddress,
   createHubOpenSetAddress,
   createHubRoomAddress,
@@ -180,6 +181,7 @@ export {
   type GorgonPhaseAddress,
   type EncounterPhaseOwner,
   type IncomingRewardAddress,
+  type InfernalContractPedestalAddress,
   type HubSlotAddress,
   type HubOpenSetAddress,
   type HubRoomAddress,
@@ -302,11 +304,17 @@ export {
 } from './acquisition/pickup-producers';
 export {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-  INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
   authoredShopOffer,
   shopOfferOptionValues,
 } from './shop';
+export {
+  INFERNAL_CONTRACT_ENTRY_KEY,
+  INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
+  infernalContractPedestalOptionValues,
+  infernalContractPedestalProfile,
+  roomHasInfernalContractPedestal,
+} from './infernal-contract-pedestal';
 export {
   applyProjectCommand,
   projectCommandAddress,
@@ -439,6 +447,7 @@ export {
   type RoomEncounterState,
   type AuthoredGorgonPhaseResult,
   type ShopOfferState,
+  type InfernalContractPedestalState,
   type ShopState,
 } from './model';
 export {

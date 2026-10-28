@@ -57,6 +57,7 @@ export type {
   CanonicalRoomRestore,
   CanonicalShopEntryState,
   CanonicalShopOffer,
+  CanonicalInfernalContractPedestal,
   CanonicalSelectedBatchContinuation,
   CanonicalTarget,
   CanonicalTargetContinuation,

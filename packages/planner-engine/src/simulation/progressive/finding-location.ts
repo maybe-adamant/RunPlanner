@@ -79,6 +79,7 @@ function rewardOwnerAddress(address: SemanticAddress): RewardProducerOwnerAddres
     case 'localReward':
     case 'rewardWheelOffer':
     case 'shopOffer':
+    case 'infernalContractPedestal':
     case 'acquisitionEntry':
       return address;
     case 'levelResolution':

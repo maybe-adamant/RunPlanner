@@ -617,6 +617,7 @@ export function decodeTopologyStructure(
     const hasPurgingPool = Object.hasOwn(occurrence, 'purgingPool');
     const hasKeepsakeRack = Object.hasOwn(occurrence, 'keepsakeRack');
     const hasEris = Object.hasOwn(occurrence, 'eris');
+    const hasInfernalContractPedestal = Object.hasOwn(occurrence, 'infernalContractPedestal');
     const hasFigurineArcanaKeysByPhase = Object.hasOwn(occurrence, 'figurineArcanaKeysByPhase');
     expectExactKeys(
       occurrence,
@@ -636,6 +637,7 @@ export function decodeTopologyStructure(
         ...(hasPurgingPool ? ['purgingPool'] : []),
         ...(hasKeepsakeRack ? ['keepsakeRack'] : []),
         ...(hasEris ? ['eris'] : []),
+        ...(hasInfernalContractPedestal ? ['infernalContractPedestal'] : []),
         ...(hasFigurineArcanaKeysByPhase ? ['figurineArcanaKeysByPhase'] : []),
       ],
       occurrencePath,
@@ -672,6 +674,8 @@ export function decodeTopologyStructure(
         hasKeepsakeRack,
         eris: occurrence.eris,
         hasEris,
+        infernalContractPedestal: occurrence.infernalContractPedestal,
+        hasInfernalContractPedestal,
         figurineArcanaKeysByPhase: occurrence.figurineArcanaKeysByPhase,
         hasFigurineArcanaKeysByPhase,
         path: occurrencePath,

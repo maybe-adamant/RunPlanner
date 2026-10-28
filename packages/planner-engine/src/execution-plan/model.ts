@@ -719,8 +719,9 @@ export interface ExecutionOverview {
       readonly source?: string;
       readonly spurnedSource?: string;
     }[];
-    readonly infernalContract?: ExecutionInfernalContract;
   };
+  /** The Preboss Contract pedestal's spawned item, in either reward form. */
+  readonly infernalContractPedestal?: ExecutionInfernalContract;
   /** Complete native SurfaceShop inventory and authored delivery dispositions. */
   readonly hermesShrine?: {
     readonly offers: readonly {
@@ -960,6 +961,11 @@ export type ExecutionRoomGuideDescription =
       readonly offerKey: string;
       readonly rewardType?: string;
       readonly conversion?: 'timePiece' | 'anvilOfFates';
+    }
+  | {
+      readonly kind: 'interactInfernalContractPedestal';
+      readonly rewardType?: string;
+      readonly conversion?: 'timePiece';
     }
   | {
       readonly kind: 'purchaseStygianWellOffer';

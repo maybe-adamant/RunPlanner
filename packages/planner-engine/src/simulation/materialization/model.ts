@@ -16,6 +16,7 @@ import type {
   HubVisitAddress,
   HubFountainAddress,
   IncomingRewardAddress,
+  InfernalContractPedestalAddress,
   LocalVisitSlotAddress,
   LocalRewardAddress,
   OccurrenceAddress,
@@ -91,6 +92,15 @@ export interface CanonicalShopOffer {
   readonly traitContext?: TraitOfferSourceContext;
 }
 
+/** The entered Preboss's Contract pedestal item, drawn from its own one-slot store profile. */
+export interface CanonicalInfernalContractPedestal extends Omit<
+  CanonicalShopOffer,
+  'offerKey' | 'offerOrigin'
+> {
+  readonly offerKey: 'infernalContractReward';
+  readonly offerOrigin: InfernalContractPedestalAddress;
+}
+
 export interface CanonicalShopEntryState {
   readonly kind: 'shop';
   readonly profileKey: string;
@@ -99,8 +109,6 @@ export interface CanonicalShopEntryState {
     readonly offerKey: string;
     readonly offerOrigin: ShopOfferAddress;
   }[];
-  /** Separate native one-slot Contract cohort; undefined means no room descriptor. */
-  readonly infernalContractOffer?: CanonicalShopOffer | null;
   /** Dynamic Travel inventory is not a profile slot but uses the ordinary Shop offer owner. */
   readonly travelDealRefill?: CanonicalShopOffer | null;
 }
@@ -281,6 +289,8 @@ export interface CanonicalAuthoredRoom {
   >[];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
+  /** An entered pedestal-declaring Preboss's item; null leaves it unauthored. */
+  readonly infernalContractPedestal?: CanonicalInfernalContractPedestal | null;
   /** Active producer instances feeding the shared acquisition-site pipeline. */
   readonly pickupProducers?: readonly import('../../authored-project/acquisition/pickup-producers').SelectedPickupProducer[];
   /** Every exact persisted acquisition site; chronology addresses site and entry independently. */

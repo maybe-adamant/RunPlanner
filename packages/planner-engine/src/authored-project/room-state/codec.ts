@@ -357,7 +357,6 @@ function decodeShopRoomState(
       catalog,
       routeKey,
       requireShopBinding(room, path),
-      room,
       `${path}.shop`,
     ),
   });

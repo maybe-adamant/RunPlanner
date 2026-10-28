@@ -165,6 +165,9 @@ export function applyRoomActionCommand(
       if (command.reference.kind === 'interactKeepsakeRack') {
         failCommand(command, 'the keepsake rack uses ReplacePostbossKeepsake');
       }
+      if (command.reference.kind === 'interactInfernalContractPedestal') {
+        failCommand(command, 'the Contract pedestal uses SetInfernalContractPedestalCollected');
+      }
       const key = roomActionKey(command.reference);
       if (key !== command.action.actionKey) {
         failCommand(command, 'reference does not match the addressed room action');
@@ -230,6 +233,9 @@ export function applyRoomActionCommand(
       }
       if (order[existingIndex]?.kind === 'purchaseStygianWellOffer') {
         failCommand(command, 'Well purchases use SetStygianWellPurchase');
+      }
+      if (order[existingIndex]?.kind === 'interactInfernalContractPedestal') {
+        failCommand(command, 'the Contract pedestal uses SetInfernalContractPedestalCollected');
       }
       if (order[existingIndex]?.kind === 'interactKeepsakeRack') {
         failCommand(command, 'the keepsake rack is permanent; ReplacePostbossKeepsake clears it');

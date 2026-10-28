@@ -1,13 +1,9 @@
-import type { Catalog, RoomDeclaration } from '../../../catalog-schema';
+import type { Catalog } from '../../../catalog-schema';
 import type { ShopRewardBinding } from '../../../reward-kernel/bindings';
 import type { ShopProfileDeclaration } from '../../../reward-kernel/model';
 import type { AuthoredRewardState, ShopOfferState, ShopState } from '../../model';
 import { expectExactKeys, expectRecord, expectString, failProjectDocument } from '../../validation';
-import {
-  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-  shopSlotProfile,
-  TRAVEL_DEAL_REFILL_ENTRY_KEY,
-} from '../../shop';
+import { ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../shop';
 import { decodeNullableRewardState } from './reward-acquisition-codec';
 
 function decodeShopInventoryReward(
@@ -58,7 +54,6 @@ export function decodeShopState(
   catalog: Catalog,
   routeKey: string,
   binding: ShopRewardBinding,
-  room: RoomDeclaration,
   path: string,
 ): ShopState {
   const shop = expectRecord(value, path);
@@ -71,7 +66,7 @@ export function decodeShopState(
   if (profileKey !== binding.shopProfileKey) {
     failProjectDocument(`${path}.profileKey`, `expected ${binding.shopProfileKey}`);
   }
-  const decoded = decodeShopOffers(shop.offers, catalog, routeKey, profile, path, room);
+  const decoded = decodeShopOffers(shop.offers, catalog, routeKey, profile, path);
   if (shop.travelDealRefill === undefined) return decoded;
   const travelDealRefill = decodeShopOffer(
     shop.travelDealRefill,
@@ -85,7 +80,7 @@ export function decodeShopState(
 }
 
 /** Shared inventory payload policy; the caller supplies the declaration-owned option domain. */
-function decodeShopOffer(
+export function decodeShopOffer(
   value: unknown,
   catalog: Catalog,
   routeKey: string,
@@ -131,24 +126,15 @@ function decodeShopOffers(
   routeKey: string,
   profile: ShopProfileDeclaration,
   path: string,
-  room: RoomDeclaration,
 ): ShopState {
   const rawOffers = expectRecord(value, `${path}.offers`);
   expectExactKeys(
     rawOffers,
-    [
-      ...profile.slots.values.map((slot) => slot.key),
-      ...(room.infernalContractReward === undefined ? [] : ['infernalContractReward']),
-    ],
+    profile.slots.values.map((slot) => slot.key),
     `${path}.offers`,
   );
   const offers: Record<string, ShopOfferState> = {};
-  for (const slot of [
-    ...profile.slots.values,
-    ...(room.infernalContractReward === undefined
-      ? []
-      : [{ key: 'infernalContractReward', groupKey: 'Reward' }]),
-  ]) {
+  for (const slot of profile.slots.values) {
     if (
       slot.key === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
       slot.key === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
@@ -159,16 +145,13 @@ function decodeShopOffers(
       );
     }
     const offerPath = `${path}.offers.${slot.key}`;
-    const offerProfile = shopSlotProfile(catalog, room.gameName, profile.key, slot.key);
-    if (offerProfile === undefined)
-      failProjectDocument(offerPath, 'shop offer has no declaration-owned profile');
-    const group = offerProfile.groups.byKey[slot.groupKey];
+    const group = profile.groups.byKey[slot.groupKey];
     if (group === undefined) failProjectDocument(offerPath, `unknown shop group ${slot.groupKey}`);
     offers[slot.key] = decodeShopOffer(
       rawOffers[slot.key],
       catalog,
       routeKey,
-      offerProfile,
+      profile,
       group.options.values,
       offerPath,
     );

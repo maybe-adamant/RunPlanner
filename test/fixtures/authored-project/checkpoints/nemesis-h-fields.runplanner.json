@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 99,
+  "schemaVersion": 100,
   "projectId": "golden-fg",
   "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
@@ -1030,10 +1030,6 @@
                           }
                         }
                       }
-                    },
-                    "infernalContractReward": {
-                      "optionKey": null,
-                      "reward": null
                     }
                   }
                 }
@@ -1047,6 +1043,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
               },
               "acquisitionSites": {
                 "roomExit": {
@@ -1094,6 +1094,10 @@
                     "acquisitionRole": "self"
                   }
                 ]
+              },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
               },
               "additionalExits": []
             },
@@ -2219,10 +2223,6 @@
                           }
                         }
                       }
-                    },
-                    "infernalContractReward": {
-                      "optionKey": null,
-                      "reward": null
                     }
                   }
                 }
@@ -2236,6 +2236,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
               },
               "acquisitionSites": {
                 "roomExit": {
@@ -2283,6 +2287,10 @@
                     "acquisitionRole": "self"
                   }
                 ]
+              },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
               },
               "additionalExits": []
             },
@@ -3607,10 +3615,6 @@
                           }
                         }
                       }
-                    },
-                    "infernalContractReward": {
-                      "optionKey": null,
-                      "reward": null
                     }
                   }
                 }
@@ -3624,6 +3628,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
               },
               "acquisitionSites": {
                 "roomExit": {
@@ -3671,6 +3679,10 @@
                     "acquisitionRole": "self"
                   }
                 ]
+              },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
               },
               "additionalExits": []
             },

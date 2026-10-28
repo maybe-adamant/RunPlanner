@@ -13,7 +13,6 @@ import {
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
   authoredShopOffer,
   replaceAuthoredShopOffer,
-  shopSlotProfile,
 } from '../../shop';
 
 export function applyShopOccurrenceCommand(
@@ -65,12 +64,7 @@ export function applyShopOccurrenceCommand(
     );
     return updateOccurrenceTopology(document, located, replaceOccurrence(current, nextOccurrence));
   }
-  const profile = shopSlotProfile(
-    catalog,
-    occurrence.gameName,
-    occurrence.state.shop.profileKey,
-    command.offer.offerKey,
-  );
+  const profile = catalog.rewards.shops.byKey[occurrence.state.shop.profileKey];
   const slot = profile?.slots.byKey[command.offer.offerKey];
   const group = slot === undefined ? undefined : profile?.groups.byKey[slot.groupKey];
   const optionDomain =

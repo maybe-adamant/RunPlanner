@@ -9,7 +9,10 @@ import {
   parseNemesisGeneratedPickupSiteKey,
   type SelectedPickupProducer,
 } from '../../acquisition/pickup-producers';
-import { shopSlotProfile } from '../../shop';
+import {
+  INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
+  infernalContractPedestalProfile,
+} from '../../infernal-contract-pedestal';
 import { decodeNullableRewardState } from './reward-acquisition-codec';
 import { expectExactKeys, expectRecord, failProjectDocument } from '../../validation';
 import { ERIS_GIFT_SITE_KEY } from '../../acquisition/eris-gift';
@@ -67,8 +70,10 @@ export function decodeAcquisitionSites(
       hermesShrineDeliverySite && parseHermesShrineDeliveryEntryKey(entryKey) !== undefined;
     const hermesArtificerEntry = (entryKey: string) =>
       hermesShrineDeliverySite && parseArtificerReplacementEntryKey(entryKey) !== undefined;
+    const pedestalSite = pointKey === INFERNAL_CONTRACT_PEDESTAL_SITE_KEY;
     const artificerSite =
       pointKey !== 'roomExit' &&
+      !pedestalSite &&
       pointKey !== ERIS_GIFT_SITE_KEY &&
       !generatedTraitSite &&
       !generatedNemesisSite &&
@@ -108,7 +113,8 @@ export function decodeAcquisitionSites(
       !generatedTraitSite &&
       !generatedNemesisSite &&
       !seaStarDuplicateSite &&
-      !hermesShrineDeliverySite
+      !hermesShrineDeliverySite &&
+      !pedestalSite
     )
       failProjectDocument(
         `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries`,
@@ -132,23 +138,28 @@ export function decodeAcquisitionSites(
                   ? { kind: 'producerLifecycle', key: 'RoomReward' }
                   : hermesDeliveryEntry(key)
                     ? { kind: 'producerLifecycle', key: 'HermesShrineDelivery' }
-                    : pointKey === 'roomExit' &&
-                        parseClockedTraitGeneratedPickupEntryKey(key) !== undefined
-                      ? { kind: 'producerLifecycle', key: 'GeneratedTraitPickup' }
-                      : shopProfileKey === undefined
-                        ? {
-                            kind: 'producerLifecycle',
-                            key: echoLastRewardEntryKeys.has(key)
-                              ? 'EchoLastReward'
-                              : (producerByEntry.get(`${pointKey}\u0000${key}`)
-                                  ?.producerLifecycleKey ?? ''),
-                          }
-                        : {
-                            kind: 'shopProfile',
-                            key:
-                              shopSlotProfile(catalog, occurrence.gameName, shopProfileKey, key)
-                                ?.key ?? '',
-                          },
+                    : pedestalSite
+                      ? {
+                          kind: 'shopProfile',
+                          key:
+                            infernalContractPedestalProfile(catalog, occurrence.gameName)?.key ??
+                            '',
+                        }
+                      : pointKey === 'roomExit' &&
+                          parseClockedTraitGeneratedPickupEntryKey(key) !== undefined
+                        ? { kind: 'producerLifecycle', key: 'GeneratedTraitPickup' }
+                        : shopProfileKey === undefined
+                          ? {
+                              kind: 'producerLifecycle',
+                              key: echoLastRewardEntryKeys.has(key)
+                                ? 'EchoLastReward'
+                                : (producerByEntry.get(`${pointKey}\u0000${key}`)
+                                    ?.producerLifecycleKey ?? ''),
+                            }
+                          : {
+                              kind: 'shopProfile',
+                              key: shopProfileKey,
+                            },
                 occurrence.routeKey,
                 artificerSite ||
                   seaStarDuplicateSite ||

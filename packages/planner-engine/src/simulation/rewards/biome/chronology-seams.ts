@@ -64,6 +64,8 @@ import { applyRoomExitedTransition } from './lifecycle-transitions/room-exited';
 import { applyRoomPreparedTransition } from './lifecycle-transitions/room-prepared';
 import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
 import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
+import { spawnInfernalContractPedestal } from './offer-lifecycle/infernal-contract-pedestal';
+import { createBiomeRewardFacts } from '../facts';
 
 function authoredRoom(
   context: ChronologyWalkContext,
@@ -796,20 +798,57 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
 /** Room entry captures its Run State after its own features; a pending Shrine delivery halts here. */
 const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event) => {
   const room = authoredRoom(context, event.origin);
+  const roomView = context.views.get(semanticAddressKey(event.origin));
+  const findingChronology = rewardFindingChronologyForRoom(
+    context.snapshot,
+    event.origin as CanonicalAuthoredRoom['origin'],
+    event.sequence,
+    'localRoomLifecycle',
+  );
+  // The room's start events spawn the pedestal before entry clears the map's offers.
+  const pedestalDeclaration =
+    room === undefined ? undefined : context.catalog.rooms.byKey[room.gameName];
+  const pedestal = spawnInfernalContractPedestal({
+    catalog: context.catalog,
+    historySequence: event.sequence,
+    room,
+    declaration: pedestalDeclaration,
+    branches: state.branches,
+    facts: (branchState, shopNames) => {
+      if (room === undefined || pedestalDeclaration === undefined || roomView === undefined)
+        throw new BiomeRewardSimulationContractError('pedestal spawn has no authored room');
+      return createBiomeRewardFacts({
+        catalog: context.catalog,
+        state: branchState,
+        source: room,
+        currentRoom: room,
+        sourceDeclaration: pedestalDeclaration,
+        view: roomView.preparation,
+        currentRoomShopOptionNames: shopNames ?? new Set(),
+        hubBoardLookups: 'consulted',
+      });
+    },
+    findingChronology,
+  });
+  // An unauthored or impossible pedestal item blocks the Overview before entry.
+  if (pedestal.branches.length === 0 && state.branches.length > 0)
+    return {
+      leadingEmissions: [
+        generationFindings(pedestal.findings),
+        { kind: 'producerFrontiers', frontiers: pedestal.producerFrontiers },
+      ],
+      state: withBranches(state, pedestal.branches),
+      emissions: [],
+    };
   const entered = applyRoomEnteredTransition(
     context.catalog,
     event,
     room,
-    context.views.get(semanticAddressKey(event.origin)),
+    roomView,
     context.chaosGateSourceOccurrenceIds,
     context.ixionGeneratedChaosSourceOccurrenceIds,
-    state.branches,
-    rewardFindingChronologyForRoom(
-      context.snapshot,
-      event.origin as CanonicalAuthoredRoom['origin'],
-      event.sequence,
-      'localRoomLifecycle',
-    ),
+    pedestal.branches,
+    findingChronology,
     context.routePosition,
     Object.freeze({
       hermesShrine:
@@ -828,6 +867,8 @@ const roomEntered: ChronologySeamHandler<'roomEntered'> = (context, state, event
   return {
     leadingEmissions: [
       mergedFindings(resourcePlacementFindingRegions(event, context.resourceFindings)),
+      generationFindings(pedestal.findings),
+      { kind: 'producerFrontiers', frontiers: pedestal.producerFrontiers },
       lifecycleFindings(entered.findings),
       { kind: 'generatedPickupPlacements', placements: entered.generatedPickupPlacements },
       {

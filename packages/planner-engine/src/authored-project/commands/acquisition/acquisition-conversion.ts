@@ -289,6 +289,31 @@ export function applyAcquisitionDispositionCommand(
       ).state;
       break;
     }
+    case 'infernalContractPedestal': {
+      const pedestal = occurrence.infernalContractPedestal;
+      if (pedestal === undefined)
+        return failCommand(command, `${occurrence.gameName} has no Contract pedestal`);
+      if (pedestal.reward === null)
+        failCommand(command, 'cannot edit acquisition disposition before reward authorship');
+      const replacedOccurrence = retainArtificerReplacementEntry(
+        Object.freeze({
+          ...occurrence,
+          infernalContractPedestal: Object.freeze({
+            ...pedestal,
+            reward: replace(pedestal.reward),
+          }),
+        }),
+        located,
+        owner,
+        role,
+        command.value.kind === 'artificer',
+      );
+      return updateOccurrenceTopology(
+        document,
+        located,
+        replaceOccurrence(topology, replacedOccurrence),
+      );
+    }
     case 'encounterPhase':
       return failCommand(command, 'encounter trait offers are not reward acquisition roles');
   }

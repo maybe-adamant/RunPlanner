@@ -72,6 +72,11 @@ export interface IncomingRewardAddress extends BiomeOwnedAddress {
   readonly kind: 'incomingReward';
   readonly occurrenceId: OccurrenceId;
 }
+/** The Contract pedestal's free item at one Preboss occurrence. */
+export interface InfernalContractPedestalAddress extends BiomeOwnedAddress {
+  readonly kind: 'infernalContractPedestal';
+  readonly occurrenceId: OccurrenceId;
+}
 /** The exact post-encounter Arcana draw owned by a fixed Boss occurrence. */
 export interface JudgmentArcanaAddress extends BiomeOwnedAddress {
   readonly kind: 'judgmentArcana';
@@ -296,6 +301,7 @@ export type TraitOfferOwnerAddress =
   | LocalRewardAddress
   | RewardWheelOfferAddress
   | ShopOfferAddress
+  | InfernalContractPedestalAddress
   | EncounterPhaseAddress
   | GorgonPhaseAddress
   | GorgonPhaseAddress
@@ -397,6 +403,7 @@ export type SemanticAddress =
   | FieldsSpatialAddress
   | RoomFeatureAddress
   | IncomingRewardAddress
+  | InfernalContractPedestalAddress
   | JudgmentArcanaAddress
   | FigurineArcanaAddress
   | KeepsakeSelectionAddress
@@ -707,6 +714,12 @@ export function createIncomingRewardAddress(
   occurrenceId: OccurrenceId,
 ): IncomingRewardAddress {
   return Object.freeze({ kind: 'incomingReward', ...owner(biome), occurrenceId });
+}
+export function createInfernalContractPedestalAddress(
+  biome: BiomeAddress,
+  occurrenceId: OccurrenceId,
+): InfernalContractPedestalAddress {
+  return Object.freeze({ kind: 'infernalContractPedestal', ...owner(biome), occurrenceId });
 }
 export function createLocalRewardAddress(
   biome: BiomeAddress,
@@ -1144,6 +1157,7 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, semanticAddressKey(address.action)]);
     case 'occurrence':
     case 'incomingReward':
+    case 'infernalContractPedestal':
       return JSON.stringify([...base, address.occurrenceId]);
     case 'fieldsSpatial':
       return JSON.stringify([...base, address.occurrenceId, address.target]);

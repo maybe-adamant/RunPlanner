@@ -269,6 +269,7 @@ export function overview(value: unknown, label: string) {
       'unmodeledEncounterKeys',
       'rewardWheels',
       'shop',
+      'infernalContractPedestal',
       'hermesShrine',
       'stygianWell',
       'purgingPool',
@@ -411,14 +412,27 @@ export function overview(value: unknown, label: string) {
       true
   )
     fail(`${label}.effectNeutralRequiredReward must be true when present`);
-  if (shop !== undefined)
-    exact(shop, ['profileKey', 'offers'], ['infernalContract'], `${label}.shop`);
+  if (shop !== undefined) exact(shop, ['profileKey', 'offers'], [], `${label}.shop`);
   const contract =
-    shop?.infernalContract === undefined
+    record.infernalContractPedestal === undefined
       ? undefined
-      : object(shop.infernalContract, `${label}.shop.infernalContract`);
+      : object(record.infernalContractPedestal, `${label}.infernalContractPedestal`);
   if (contract !== undefined)
-    exact(contract, ['sourceOwner', 'rewardType'], [], `${label}.shop.infernalContract`);
+    exact(contract, ['sourceOwner', 'rewardType'], [], `${label}.infernalContractPedestal`);
+  const parsedPedestal =
+    contract === undefined
+      ? undefined
+      : Object.freeze({
+          sourceOwner: stringValue(
+            contract.sourceOwner,
+            `${label}.infernalContractPedestal.sourceOwner`,
+            MAX_OWNER_STRING,
+          ),
+          rewardType: stringValue(
+            contract.rewardType,
+            `${label}.infernalContractPedestal.rewardType`,
+          ),
+        });
   const parsedShop =
     shop === undefined
       ? undefined
@@ -467,20 +481,6 @@ export function overview(value: unknown, label: string) {
               });
             }),
           ),
-          ...(contract === undefined
-            ? {}
-            : {
-                infernalContract: Object.freeze({
-                  sourceOwner: stringValue(
-                    contract.sourceOwner,
-                    `${label}.shop.infernalContract.sourceOwner`,
-                  ),
-                  rewardType: stringValue(
-                    contract.rewardType,
-                    `${label}.shop.infernalContract.rewardType`,
-                  ),
-                }),
-              }),
         });
   if (
     parsedShop !== undefined &&
@@ -872,6 +872,7 @@ export function overview(value: unknown, label: string) {
     encounterPhases: Object.freeze(encounterPhases),
     requiredObjects: Object.freeze(stringArray(record.requiredObjects, `${label}.requiredObjects`)),
     ...(parsedShop === undefined ? {} : { shop: parsedShop }),
+    ...(parsedPedestal === undefined ? {} : { infernalContractPedestal: parsedPedestal }),
     ...(parsedShrine === undefined ? {} : { hermesShrine: parsedShrine }),
     ...(parsedWell === undefined ? {} : { stygianWell: parsedWell }),
     ...(parsedPool === undefined ? {} : { purgingPool: parsedPool }),

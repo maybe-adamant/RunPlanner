@@ -1,12 +1,11 @@
 import type { Catalog } from '../catalog-schema';
-import type { ShopOptionSelection, ShopProfileDeclaration } from '../reward-kernel/model';
+import type { ShopOptionSelection } from '../reward-kernel/model';
 import { locallyValidRewardOffers } from '../reward-kernel';
 import type { ResolvedRewardOffer } from '../reward-kernel';
 import type { AuthoredRewardState, RoomOccurrence, ShopOfferState, ShopState } from './model';
 import type { AcquisitionSiteAddress } from './addresses';
 import { acquisitionSiteStorageKey } from './acquisition/artificer';
 
-export const INFERNAL_CONTRACT_ENTRY_KEY = 'infernalContractReward' as const;
 export const TRAVEL_DEAL_REFILL_ENTRY_KEY = 'travelDealRefill' as const;
 export const ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY = 'echoDoubleShopReward' as const;
 
@@ -48,28 +47,13 @@ export function replaceAuthoredShopOffer(
   });
 }
 
-/** Resolves a persisted Shop slot to its declaration-owned generation cohort. */
-export function shopSlotProfile(
-  catalog: Catalog,
-  roomGameName: string,
-  hostProfileKey: string,
-  offerKey: string,
-): ShopProfileDeclaration | undefined {
-  const profileKey =
-    offerKey === INFERNAL_CONTRACT_ENTRY_KEY
-      ? catalog.rooms.byKey[roomGameName]?.infernalContractReward?.generationProfileKey
-      : hostProfileKey;
-  return profileKey === undefined ? undefined : catalog.rewards.shops.byKey[profileKey];
-}
-
 /** Every declared option and locally valid offer one Shop slot can author. */
 export function shopOfferOptionValues(
   catalog: Catalog,
-  roomGameName: string,
   hostProfileKey: string,
   offerKey: string,
 ): readonly ShopOptionSelection[] {
-  const profile = shopSlotProfile(catalog, roomGameName, hostProfileKey, offerKey);
+  const profile = catalog.rewards.shops.byKey[hostProfileKey];
   const slot = profile?.slots.byKey[offerKey];
   const group = slot === undefined ? undefined : profile?.groups.byKey[slot.groupKey];
   if (group === undefined) return Object.freeze([]);
@@ -162,9 +146,7 @@ export function replaceAuthoredAcquisitionEntryAtSite(
 
 export function isShopSupplementalEntryKey(entryKey: string): boolean {
   return (
-    entryKey === INFERNAL_CONTRACT_ENTRY_KEY ||
-    entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
-    entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
+    entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY || entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
   );
 }
 

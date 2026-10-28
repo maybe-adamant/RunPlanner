@@ -28,6 +28,7 @@ import {
 import { seaStarDuplicateSourceIsActive } from '../acquisition/sea-star';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
 import { authoredShopOffer } from '../shop';
+import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../infernal-contract-pedestal';
 import type { ResolvedRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import { routeErisHost } from '../route-profile';
@@ -66,6 +67,8 @@ export function activeRoomActionReferences(
     /** `undefined` means occurrence ownership; `null` is an unset route-start reward. */
     readonly incomingRewardState?: AuthoredRewardState | null;
     readonly shopInventoryActive?: boolean;
+    /** Whether the occurrence is entered; entry-time features act only then. */
+    readonly entryActive?: boolean;
   },
 ): readonly RoomActionReference[] {
   const rawRoom = catalog.rooms.byKey[occurrence.gameName];
@@ -189,6 +192,15 @@ export function activeRoomActionReferences(
         );
     }
   }
+  // The pedestal is entry-time like Shop inventory; a collected item participates.
+  if (
+    occurrence.infernalContractPedestal !== undefined &&
+    (scope?.entryActive === undefined || scope.entryActive) &&
+    occurrence.roomActions.order.some(
+      (reference) => reference.kind === 'interactInfernalContractPedestal',
+    )
+  )
+    references.push(Object.freeze({ kind: 'interactInfernalContractPedestal' }));
   if (occurrence.purgingPool?.interacted === true) {
     for (const [slotKey, traitKey] of Object.entries(occurrence.purgingPool.traitKeyBySlot)) {
       if (traitKey !== null)
@@ -276,6 +288,8 @@ export function activeRoomActionReferences(
         entryKey === 'travelDealRefill'
       )
         continue;
+      // The pedestal's acquisition-resolved source belongs to its one collect action.
+      if (siteKey === INFERNAL_CONTRACT_PEDESTAL_SITE_KEY) continue;
       const shopInventoryReward =
         occurrence.state.kind === 'shop' && siteKey === 'roomExit'
           ? authoredShopOffer(occurrence, entryKey)?.reward

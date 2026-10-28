@@ -29,6 +29,7 @@ import { assembleRoomActionRoster, assembleRoomLifecycleTimeline } from '../../r
 import type { CanonicalAuthoredRoom } from '../model';
 import {
   authoredMaterializer,
+  materializeInfernalContractPedestal,
   materializeRouteStartEntry,
   enteredRewardStore,
   type AuthoredRoomMaterializationContext,
@@ -125,6 +126,7 @@ export function materializeAuthoredRoom(
           },
     );
   const clockworkReward = leaf.clockworkReward ?? context.clockworkReward;
+  const infernalContractPedestal = materializeInfernalContractPedestal(context);
   requireLifecycleSelection(context.catalog, context.room, leaf, context.room.encounterEnvelopeKey);
   const pickupProducers = activeSelectedPickupProducers(
     context.catalog,
@@ -313,6 +315,7 @@ export function materializeAuthoredRoom(
       : { unresolvedFieldsOptionalRewards: leaf.unresolvedFieldsOptionalRewards }),
     ...(leaf.rewardWheels === undefined ? {} : { rewardWheels: leaf.rewardWheels }),
     ...(leaf.entryState === undefined ? {} : { entryState: leaf.entryState }),
+    ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(pickupProducers.length === 0 ? {} : { pickupProducers }),
     ...(clockworkReward === undefined ? {} : { clockworkReward }),
   }) as Omit<CanonicalAuthoredRoom, 'roomActionRoster' | 'roomLifecycleTimeline'>;
@@ -356,6 +359,7 @@ export function materializeAuthoredRoom(
       : {}),
     activeEncounterSlotKeys: base.encounterPhases.map((phase) => phase.slotKey),
     shopInventoryActive: base.entryState?.kind === 'shop',
+    entryActive: base.entered,
     ...(base.rewardWheels === undefined
       ? {}
       : { activeRewardWheelKeys: base.rewardWheels.map((wheel) => wheel.wheelKey) }),

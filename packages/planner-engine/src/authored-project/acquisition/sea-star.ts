@@ -123,7 +123,12 @@ export function seaStarDuplicateSourceIsActive(
   // StoreLogic clears CanDuplicate for the purchased Shop offer itself. A
   // free acquisition-entry pickup generated within that room is independent
   // of the purchase and retains its own producer lifecycle.
-  if (matched.acquisition.owner.kind === 'shopOffer') return false;
+  // The Contract pedestal's item is a store item too.
+  if (
+    matched.acquisition.owner.kind === 'shopOffer' ||
+    matched.acquisition.owner.kind === 'infernalContractPedestal'
+  )
+    return false;
   return (
     matched.reward.dispositionByAcquisitionRole[parsed.acquisitionRole]?.kind === 'normal' &&
     catalog.rewards.rewardTypes.byKey[matched.reward.offer.rewardType]?.acquisitionRoles.byKey[

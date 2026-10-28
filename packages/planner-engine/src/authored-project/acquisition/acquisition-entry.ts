@@ -13,13 +13,14 @@ export function reconcileAcquisitionResolvedRewardEntry(
   entryKey: string,
   participating: boolean,
   carrierReward: AuthoredRewardState | null | undefined,
+  siteKey: string = 'roomExit',
 ): RoomOccurrence {
   const ownsEntry =
     participating &&
     carrierReward !== null &&
     carrierReward !== undefined &&
     rewardSourceResolvesAtAcquisition(catalog, carrierReward.offer);
-  const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries ?? {};
+  const pickupEntries = occurrence.acquisitionSites?.[siteKey]?.pickupEntries ?? {};
   const current = pickupEntries[entryKey];
   const hasCurrent = Object.hasOwn(pickupEntries, entryKey);
   if (!ownsEntry && !hasCurrent) return occurrence;
@@ -32,12 +33,24 @@ export function reconcileAcquisitionResolvedRewardEntry(
 
   const { [entryKey]: removed, ...remaining } = pickupEntries;
   void removed;
+  // Only the Shop's roomExit site outlives its last entry.
+  if (!ownsEntry && siteKey !== 'roomExit' && Object.keys(remaining).length === 0) {
+    const { [siteKey]: emptied, ...sites } = occurrence.acquisitionSites ?? {};
+    void emptied;
+    const { acquisitionSites: _sites, ...withoutSites } = occurrence;
+    void _sites;
+    return Object.freeze(
+      Object.keys(sites).length === 0
+        ? withoutSites
+        : { ...withoutSites, acquisitionSites: Object.freeze(sites) },
+    );
+  }
   return Object.freeze({
     ...occurrence,
     acquisitionSites: Object.freeze({
       ...(occurrence.acquisitionSites ?? {}),
-      roomExit: Object.freeze({
-        ...(occurrence.acquisitionSites?.roomExit ?? {}),
+      [siteKey]: Object.freeze({
+        ...(occurrence.acquisitionSites?.[siteKey] ?? {}),
         pickupEntries: Object.freeze({
           ...remaining,
           ...(ownsEntry ? { [entryKey]: null } : {}),

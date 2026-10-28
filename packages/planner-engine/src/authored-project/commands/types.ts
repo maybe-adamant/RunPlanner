@@ -27,6 +27,7 @@ import type {
   RouteAddress,
   StartingRewardAddress,
   ShopOfferAddress,
+  InfernalContractPedestalAddress,
   TraitOfferAddress,
   AcquisitionRoleAddress,
   LevelResolutionAddress,
@@ -457,6 +458,29 @@ export type ShopOccurrenceCommand =
       readonly offer: ShopOfferAddress;
       readonly value: ShopOptionSelection;
     };
+/** The Preboss Contract pedestal's one item and whether it is collected. */
+export type InfernalContractPedestalCommand =
+  | {
+      readonly kind: 'ReplaceInfernalContractPedestalOffer';
+      readonly pedestal: InfernalContractPedestalAddress;
+      readonly value: ResolvedRewardOffer;
+    }
+  | {
+      readonly kind: 'ReplaceInfernalContractPedestalOption';
+      readonly pedestal: InfernalContractPedestalAddress;
+      readonly value: ShopOptionSelection;
+    }
+  | {
+      /** Empties the item, dropping its collect action and acquisition entry. */
+      readonly kind: 'ClearInfernalContractPedestal';
+      readonly pedestal: InfernalContractPedestalAddress;
+    }
+  | {
+      /** Inserts or removes the one optional collect action. */
+      readonly kind: 'SetInfernalContractPedestalCollected';
+      readonly pedestal: InfernalContractPedestalAddress;
+      readonly collected: boolean;
+    };
 export type PurgingPoolCommand =
   | {
       readonly kind: 'SetPurgingPoolInteraction';
@@ -705,6 +729,7 @@ export type OccurrenceLeafCommand =
   | FieldsOccurrenceCommand
   | ShipOccurrenceCommand
   | ShopOccurrenceCommand
+  | InfernalContractPedestalCommand
   | PurgingPoolCommand
   | ErisCommand
   | StygianWellCommand

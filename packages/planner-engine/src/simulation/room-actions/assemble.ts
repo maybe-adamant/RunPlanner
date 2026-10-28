@@ -537,6 +537,7 @@ export function assessRoomActionPlacements(
 function participationOwnedByFeature(reference: RoomActionReference): boolean {
   return (
     reference.kind === 'interactShopOffer' ||
+    reference.kind === 'interactInfernalContractPedestal' ||
     reference.kind === 'purchaseHermesShrineOffer' ||
     reference.kind === 'purchaseStygianWellOffer' ||
     reference.kind === 'interactKeepsakeRack'

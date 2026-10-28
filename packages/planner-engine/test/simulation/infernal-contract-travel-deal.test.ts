@@ -25,8 +25,13 @@ import { createUnresolvedAcquisitionRewardState } from '../../src/authored-proje
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOffer,
-  INFERNAL_CONTRACT_ENTRY_KEY,
 } from '../../src/authored-project/shop';
+import {
+  INFERNAL_CONTRACT_ENTRY_KEY,
+  INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
+} from '../../src/authored-project/infernal-contract-pedestal';
+import { spawnInfernalContractPedestal } from '../../src/simulation/rewards/biome/offer-lifecycle/infernal-contract-pedestal';
+import { settleInfernalContractPedestalPickup } from '../../src/simulation/rewards/biome/encounter-acquisition/infernal-contract-pedestal-pickup';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms/assemble';
 import { processShopInventory } from '../../src/simulation/rewards/shop/inventory';
 import {
@@ -390,50 +395,44 @@ function settle(options: {
             Object.freeze({
               optionKey: null,
               reward:
-                key === 'infernalContractReward'
-                  ? options.missingContract === true
-                    ? null
-                    : options.unresolvedContract === true
-                      ? createUnresolvedAcquisitionRewardState(
-                          catalog,
-                          { rewardType: contractRewardType },
-                          { kind: 'shopProfile', key: 'ZagPedestalOptions' },
-                          'Underworld',
-                        )
-                      : contractRewardType === 'BlindBoxLoot'
-                        ? authoredShopReward(
-                            { rewardType: contractRewardType },
-                            'ZagPedestalOptions',
-                          )
-                        : selectedContract
-                  : (options.shopOfferOverrides?.[key] ??
-                    authoredShopReward(
-                      explicitShopOffers[key] ??
-                        (() => {
-                          throw new Error(`missing explicit Shop fixture offer for ${key}`);
-                        })(),
-                      state.shop!.profileKey as 'WorldShop' | 'I_WorldShop' | 'Q_WorldShop',
-                    )),
+                options.shopOfferOverrides?.[key] ??
+                authoredShopReward(
+                  explicitShopOffers[key] ??
+                    (() => {
+                      throw new Error(`missing explicit Shop fixture offer for ${key}`);
+                    })(),
+                  state.shop!.profileKey as 'WorldShop' | 'I_WorldShop' | 'Q_WorldShop',
+                ),
             }),
           ]),
         ),
       ),
     }),
   });
+  const pedestalReward =
+    options.missingContract === true
+      ? null
+      : options.unresolvedContract === true
+        ? createUnresolvedAcquisitionRewardState(
+            catalog,
+            { rewardType: contractRewardType },
+            { kind: 'shopProfile', key: 'ZagPedestalOptions' },
+            'Underworld',
+          )
+        : contractRewardType === 'BlindBoxLoot'
+          ? authoredShopReward({ rewardType: contractRewardType }, 'ZagPedestalOptions')
+          : selectedContract;
   const occurrence = Object.freeze({
     occurrenceId: createOccurrenceId('gate-b-f-preboss'),
     gameName: declaration.gameName,
     state: shopState,
+    infernalContractPedestal: Object.freeze({ optionKey: null, reward: pedestalReward }),
     acquisitionSites: Object.freeze({
       roomExit: Object.freeze({
         pickupEntries: Object.freeze({
           ...(options.travelChild?.offer.rewardType === 'BlindBoxLoot' &&
           options.order.includes('travelDealRefill')
             ? { travelDealRefill: options.travelChild }
-            : {}),
-          ...(contractRewardType === 'BlindBoxLoot' &&
-          options.order.includes('infernalContractReward')
-            ? { infernalContractReward: selectedContract }
             : {}),
           ...(options.echoDuplicateSourceKey === undefined ||
           options.echoDuplicateChild === undefined
@@ -443,19 +442,29 @@ function settle(options: {
               }),
         }),
       }),
+      ...(contractRewardType === 'BlindBoxLoot' &&
+      options.order.includes(INFERNAL_CONTRACT_ENTRY_KEY)
+        ? {
+            [INFERNAL_CONTRACT_PEDESTAL_SITE_KEY]: Object.freeze({
+              pickupEntries: Object.freeze({ [INFERNAL_CONTRACT_ENTRY_KEY]: selectedContract }),
+            }),
+          }
+        : {}),
     }),
     encounters: createDefaultRoomEncounterState(catalog, declaration, 'gate-b.encounters'),
     additionalExits: Object.freeze([]),
     roomActions: Object.freeze({
       order: Object.freeze(
         options.order.map((entryKey) =>
-          shopState.shop?.offers[entryKey] !== undefined
-            ? Object.freeze({ kind: 'interactShopOffer' as const, offerKey: entryKey })
-            : Object.freeze({
-                kind: 'interactAcquisitionEntry' as const,
-                siteKey: 'roomExit',
-                entryKey,
-              }),
+          entryKey === INFERNAL_CONTRACT_ENTRY_KEY
+            ? Object.freeze({ kind: 'interactInfernalContractPedestal' as const })
+            : shopState.shop?.offers[entryKey] !== undefined
+              ? Object.freeze({ kind: 'interactShopOffer' as const, offerKey: entryKey })
+              : Object.freeze({
+                  kind: 'interactAcquisitionEntry' as const,
+                  siteKey: 'roomExit',
+                  entryKey,
+                }),
         ),
       ),
     }),
@@ -500,7 +509,7 @@ function settle(options: {
         ])
       : seededBranches(options);
   const findings = new Map();
-  const inventory = processShopInventory(sourceBranches, {
+  const shopInventory = processShopInventory(sourceBranches, {
     catalog,
     room: canonical,
     declaration,
@@ -510,23 +519,100 @@ function settle(options: {
       throw new Error(detail);
     },
   });
-  mergeRewardFindingEmissions(findings, inventory.findingEmissions);
-  const settlement = settleShopAcquisitionSite(inventory.branches, {
+  // The pedestal spawns with the room's start events, after the Shop is stocked.
+  const pedestal = spawnInfernalContractPedestal({
     catalog,
+    historySequence: 3,
     room: canonical,
     declaration,
-    historySequence: 4,
-    ...(options.partial === true ? { order: options.order, completeAfterOrder: false } : {}),
+    branches: shopInventory.branches,
     facts,
-    fail: (detail) => {
-      throw new Error(detail);
-    },
   });
+  const inventory = Object.freeze({
+    ...shopInventory,
+    branches: pedestal.branches,
+    findingEmissions: Object.freeze([...shopInventory.findingEmissions, ...pedestal.findings]),
+  });
+  mergeRewardFindingEmissions(findings, inventory.findingEmissions);
+  const settlement = settleOrder(canonical, declaration, inventory.branches, facts, options);
   mergeRewardFindingEmissions(findings, settlement.findingEmissions);
   return { canonical, findings, settlement, inventory };
 }
 
-describe('Infernal Contract and Travel Deal chronology', () => {
+/**
+ * Settles the authored order as the chronology does: Shop rows through the
+ * pending Shop, the pedestal item through its own collect action.
+ */
+function settleOrder(
+  room: ReturnType<typeof materializeAuthoredRoom>,
+  declaration: NonNullable<(typeof catalog.rooms.byKey)[string]>,
+  branches: readonly RewardBranchState[],
+  facts: (state: RewardBranchState['state']) => ReturnType<typeof factsWithHistory>,
+  options: { readonly order: readonly string[]; readonly partial?: boolean },
+) {
+  const fail = (detail: string): never => {
+    throw new Error(detail);
+  };
+  const shop = (
+    current: readonly RewardBranchState[],
+    order: readonly string[] | undefined,
+    completeAfterOrder: boolean,
+  ) =>
+    settleShopAcquisitionSite(current, {
+      catalog,
+      room,
+      declaration,
+      historySequence: 4,
+      ...(order === undefined ? {} : { order, completeAfterOrder }),
+      facts,
+      fail,
+    });
+  if (!options.order.includes(INFERNAL_CONTRACT_ENTRY_KEY))
+    return options.partial === true
+      ? shop(branches, options.order, false)
+      : shop(branches, undefined, true);
+  const at = options.order.indexOf(INFERNAL_CONTRACT_ENTRY_KEY);
+  const before = options.order.slice(0, at);
+  const after = options.order.slice(at + 1);
+  const parts: {
+    readonly findingEmissions: readonly import('../../src/simulation/finding-regions').FindingRegionEntry[];
+    readonly roleFrontiers?: readonly unknown[];
+    readonly derivedEntryFrontiers?: readonly unknown[];
+    readonly traitChildSettlements?: readonly unknown[];
+  }[] = [];
+  let current = branches;
+  if (before.length > 0) {
+    const first = shop(current, before, false);
+    parts.push(first);
+    current = first.branches;
+  }
+  const pickup = settleInfernalContractPedestalPickup({
+    catalog,
+    room,
+    declaration,
+    sourceBranches: current,
+    historySequence: 4,
+    facts,
+  });
+  parts.push({
+    findingEmissions: pickup.emissions.findings,
+    roleFrontiers: pickup.emissions.acquisitionRoleFrontiers,
+    derivedEntryFrontiers: pickup.emissions.derivedEntryFrontiers,
+    traitChildSettlements: pickup.emissions.traitChildSettlements,
+  });
+  current = pickup.branches;
+  const last = shop(current, after, options.partial !== true);
+  parts.push(last);
+  return Object.freeze({
+    ...last,
+    findingEmissions: Object.freeze(parts.flatMap((part) => part.findingEmissions)),
+    roleFrontiers: Object.freeze(parts.flatMap((part) => part.roleFrontiers ?? [])),
+    derivedEntryFrontiers: Object.freeze(parts.flatMap((part) => part.derivedEntryFrontiers ?? [])),
+    traitChildSettlements: Object.freeze(parts.flatMap((part) => part.traitChildSettlements ?? [])),
+  }) as typeof last;
+}
+
+describe('Infernal Contract pedestal and Travel Deal chronology', () => {
   it('keeps repeated missing shop child settlement emissions local and deduplicated on merge', () => {
     const missingBoon = Object.freeze({
       ...authoredShopReward(
@@ -633,18 +719,18 @@ describe('Infernal Contract and Travel Deal chronology', () => {
 
     const facts = (state: RewardBranchState['state']) =>
       factsWithHistory(baseFacts(), state.rewardHistory, new Set());
-    const interleaved = settleShopAcquisitionSite(first.settlement.branches, {
+    const pickup = settleInfernalContractPedestalPickup({
       catalog,
       room: first.canonical,
       declaration,
+      sourceBranches: first.settlement.branches,
       historySequence: 5,
-      order: Object.freeze([INFERNAL_CONTRACT_ENTRY_KEY]),
-      completeAfterOrder: false,
       facts,
-      fail: (detail) => {
-        throw new Error(detail);
-      },
     });
+    const interleaved = {
+      branches: pickup.branches,
+      roleFrontiers: pickup.emissions.acquisitionRoleFrontiers,
+    };
     const interleavedPending = interleaved.branches[0]?.state.pendingShops[shopKey];
     expect(interleavedPending?.goldMaterialization).toBe(goldMaterialization);
     expect(interleavedPending?.travelRefill?.generationFacts).toBe(travelGenerationFacts);
@@ -688,10 +774,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     expect(missing.inventory.findingEmissions.map((entry) => entry.finding)).toEqual([
       expect.objectContaining({
         code: 'rewardMissing',
-        origin: expect.objectContaining({
-          kind: 'shopOffer',
-          offerKey: INFERNAL_CONTRACT_ENTRY_KEY,
-        }),
+        origin: expect.objectContaining({ kind: 'infernalContractPedestal' }),
       }),
     ]);
     for (const contractRewardType of ['BlindBoxLoot', 'StackUpgrade', 'StackUpgradeBig'] as const) {

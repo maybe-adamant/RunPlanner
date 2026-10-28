@@ -766,16 +766,18 @@ describe('run import of the live Underworld recording', () => {
     expect(reward(imported.project, 'G-r22').traitOffersByAcquisitionRole['source']).toMatchObject({
       steadyGrowthTargets: { 1: 'HermesCastDiscountBoon', 2: 'ApolloSprintBoon' },
     });
-    const preboss = occurrence(imported.project, 'I-r40');
-    expect(
-      preboss.state.kind === 'shop' && preboss.state.shop?.offers['infernalContractReward'],
-    ).toMatchObject({
-      optionKey: 'StackUpgrade',
-    });
-    expect(preboss.roomActions.order).toContainEqual({
-      kind: 'interactShopOffer',
-      offerKey: 'infernalContractReward',
-    });
+    // The pedestal stands in the Shop form and in the boon form alike.
+    for (const [occurrenceId, optionKey] of [
+      ['I-r40', 'StackUpgrade'],
+      ['G-r22', 'StackUpgradeBig'],
+    ] as const) {
+      const preboss = occurrence(imported.project, occurrenceId);
+      expect(preboss.infernalContractPedestal, occurrenceId).toMatchObject({ optionKey });
+      expect(preboss.roomActions.order, occurrenceId).toContainEqual({
+        kind: 'interactInfernalContractPedestal',
+      });
+    }
+    expect(occurrence(imported.project, 'G-r22').state.kind).toBe('freeReward');
   });
 
   it("imports H_Combat07's Hestia cage and Concave Stone's extra pick from it", () => {
@@ -805,8 +807,8 @@ describe('run import of the live Underworld recording', () => {
       },
       notInRecord: { traitOffer: 1, fields: 2, shop: 3, route: 1 },
       refused: { traitOffer: 4, pool: 1 },
-      // G_PreBoss01's Big Pom screen has no known source; H_PreBoss01's purchases are unknown.
-      unsupportedArea: { traitOffer: 3 },
+      // H_PreBoss01's purchases are unknown.
+      unsupportedArea: { traitOffer: 2 },
     });
     // Fig Leaf, racked at F_PostBoss01, skipped one encounter in each of G, H and I: the record
     // predates the skip mark, so each is inferred from a rolled phase with no kills.

@@ -5,6 +5,7 @@ import {
   type LocalRewardAddress,
   type RewardWheelOfferAddress,
   type ShopOfferAddress,
+  type InfernalContractPedestalAddress,
   type StartingRewardAddress,
 } from '../../authored-project/addresses';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
@@ -56,6 +57,7 @@ export type RewardProducerOwnerAddress =
   | LocalRewardAddress
   | RewardWheelOfferAddress
   | ShopOfferAddress
+  | InfernalContractPedestalAddress
   | AcquisitionEntryAddress
   | StartingRewardAddress;
 
@@ -69,8 +71,9 @@ export interface RewardProducerCandidateCapability {
     owner: RewardProducerOwnerAddress,
     offer: ResolvedRewardOffer,
   ) => RewardProducerCandidateResult;
+  /** A store option of a Shop slot or the Contract pedestal, which draws from a store profile. */
   readonly evaluateShopOption?: (
-    owner: ShopOfferAddress,
+    owner: ShopOfferAddress | InfernalContractPedestalAddress,
     selection: ShopOptionSelection,
   ) => RewardProducerCandidateResult;
   /** Reached inventory standing of one declared Shop slot. */

@@ -189,6 +189,8 @@ export function occurrenceActionLabel(
         offer?.rewardControl,
       );
     }
+    case 'interactInfernalContractPedestal':
+      return actionLabel('Contract Item', 'Collect', false);
     case 'purchaseStygianWellOffer':
       return `Buy ${wellPurchaseLabel(catalog, occurrence, reference.generationKey)}`;
     case 'purchaseHermesShrineOffer': {

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 99,
+  "schemaVersion": 100,
   "projectId": "surface-1",
   "name": "New plan",
   "catalogVersion": "0.55.0-anvil-of-fates",
@@ -1235,10 +1235,6 @@
                           }
                         }
                       }
-                    },
-                    "infernalContractReward": {
-                      "optionKey": null,
-                      "reward": null
                     }
                   }
                 }
@@ -1252,6 +1248,10 @@
               },
               "roomActions": {
                 "order": []
+              },
+              "infernalContractPedestal": {
+                "optionKey": null,
+                "reward": null
               },
               "acquisitionSites": {
                 "roomExit": {

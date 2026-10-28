@@ -899,8 +899,16 @@ export class DraftSteering {
       if (biomeKey !== undefined && biome.biomeKey !== biomeKey) continue;
       for (const occurrence of biome.topology?.occurrences ?? [])
         for (const action of occurrence.roomActions?.order ?? []) {
-          if (action.kind !== 'interactShopOffer') continue;
-          const reward = authoredShopOffer(occurrence, action.offerKey)?.reward?.offer;
+          // The Contract pedestal's free item spends a pick like a bought item.
+          if (
+            action.kind !== 'interactShopOffer' &&
+            action.kind !== 'interactInfernalContractPedestal'
+          )
+            continue;
+          const reward =
+            action.kind === 'interactShopOffer'
+              ? authoredShopOffer(occurrence, action.offerKey)?.reward?.offer
+              : occurrence.infernalContractPedestal?.reward?.offer;
           if (
             reward === undefined ||
             draftBoostElements(this.catalog, reward.rewardType).length === 0

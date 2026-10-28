@@ -54,6 +54,8 @@ import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
 import type { AuthoredSiteSettlementResult } from '../generation/authored-site-settlement';
 import { settleAuthoredAcquisitionSite } from '../generation/authored-site-settlement';
+import { settleInfernalContractPedestalPickup } from './infernal-contract-pedestal-pickup';
+import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../../../../authored-project/infernal-contract-pedestal';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement/coordinator';
 import {
   staticallyExcludedCandidateResult,
@@ -280,6 +282,28 @@ export function applyAcquisitionPointReachedTransition(
     });
   };
 
+  if (event.point === INFERNAL_CONTRACT_PEDESTAL_SITE_KEY) {
+    const pickup = settleInfernalContractPedestalPickup({
+      catalog,
+      room,
+      declaration,
+      sourceBranches: inputs.sourceBranches,
+      historySequence: event.sequence,
+      facts: (state) =>
+        factsAt(roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry!, state),
+      findingChronology: chronology,
+      authoredSeaStarDuplicateSiteKeys,
+    });
+    return publish({
+      branches: pickup.branches,
+      findings,
+      authoredSiteSettlement: Object.freeze({
+        branches: pickup.branches,
+        producerFrontiers: Object.freeze([]),
+        emissions: pickup.emissions,
+      }),
+    });
+  }
   const poolSlot = event.point.startsWith('purgingPool:')
     ? event.point.slice('purgingPool:'.length)
     : undefined;

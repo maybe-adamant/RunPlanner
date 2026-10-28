@@ -3,6 +3,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createIncomingRewardAddress,
+  createInfernalContractPedestalAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
   createRewardWheelOfferAddress,
@@ -13,6 +14,7 @@ import { acquisitionSiteFromStorageKey } from './artificer';
 import { roomActionKey } from '../room-actions/key';
 import type { AuthoredRewardState, RoomActionReference, RoomOccurrence } from '../model';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
+import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../infernal-contract-pedestal';
 
 /** One concrete authored acquisition and the exact action which can settle it. */
 export interface AuthoredAcquisitionSource {
@@ -48,6 +50,8 @@ function sourceAction(
               reference.siteKey === 'roomExit' &&
               reference.entryKey === owner.offerKey
           : reference.kind === 'interactShopOffer' && reference.offerKey === owner.offerKey;
+      case 'infernalContractPedestal':
+        return reference.kind === 'interactInfernalContractPedestal';
       case 'acquisitionEntry':
         return (
           (reference.kind === 'interactAcquisitionEntry' &&
@@ -55,7 +59,9 @@ function sourceAction(
             reference.entryKey === owner.entryKey) ||
           (owner.site.pointKey === 'roomExit' &&
             reference.kind === 'interactShopOffer' &&
-            reference.offerKey === owner.entryKey)
+            reference.offerKey === owner.entryKey) ||
+          (owner.site.pointKey === INFERNAL_CONTRACT_PEDESTAL_SITE_KEY &&
+            reference.kind === 'interactInfernalContractPedestal')
         );
       case 'encounterPhase':
       case 'gorgonPhase':
@@ -130,6 +136,11 @@ export function authoredAcquisitionSources(
     case 'none':
       break;
   }
+  if (occurrence.infernalContractPedestal !== undefined)
+    add(
+      createInfernalContractPedestalAddress(biome, occurrence.occurrenceId),
+      occurrence.infernalContractPedestal.reward,
+    );
   if (routeStartIncoming !== undefined)
     add(createIncomingRewardAddress(biome, occurrence.occurrenceId), routeStartIncoming);
   const occurrenceAddress = createOccurrenceAddress(biome, occurrence.occurrenceId);

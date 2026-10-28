@@ -28,6 +28,7 @@ const areaByOriginKind: Readonly<Partial<Record<SemanticAddress['kind'], RunImpo
   levelResolution: 'traitOffer',
   encounterPhase: 'encounter',
   shopOffer: 'shop',
+  infernalContractPedestal: 'shop',
   rewardWheel: 'wheel',
   rewardWheelOffer: 'wheel',
   fieldsSpatial: 'fields',

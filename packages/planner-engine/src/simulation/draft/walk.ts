@@ -19,6 +19,7 @@ import {
   semanticAddressKey,
   authoredShopOffer,
   shopOfferOptionValues,
+  infernalContractPedestalOptionValues,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
   takeoverPrebossGameNames,
   type BiomeAddress,
@@ -421,7 +422,7 @@ export class DraftWalk {
    * waiting trait needs. A purchase that invalidates the route is undone.
    */
   private buyWanted(
-    offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' }>,
+    offer: Extract<SemanticAddress, { readonly kind: 'shopOffer' | 'infernalContractPedestal' }>,
     value: ResolvedRewardOffer,
   ): void {
     const progress = this.steering.progress();
@@ -437,9 +438,12 @@ export class DraftWalk {
             this.rng() < this.purchaseChance()
           : elements.some((element) => this.steering.wantedElements(progress).includes(element));
     if (!wanted) return;
-    if (!this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: true })) return;
-    if (this.assembly.evaluation.issue?.kind === 'invalid')
-      this.apply({ kind: 'ReplaceShopPurchaseParticipation', offer, purchased: false });
+    const participation = (taken: boolean): ProjectCommand =>
+      offer.kind === 'infernalContractPedestal'
+        ? { kind: 'SetInfernalContractPedestalCollected', pedestal: offer, collected: taken }
+        : { kind: 'ReplaceShopPurchaseParticipation', offer, purchased: taken };
+    if (!this.apply(participation(true))) return;
+    if (this.assembly.evaluation.issue?.kind === 'invalid') this.apply(participation(false));
   }
 
   /**
@@ -1154,26 +1158,50 @@ export class DraftWalk {
           ? this.refilledSlotKey(origin.biomeKey, origin.occurrenceId, shop.profileKey)
           : origin.offerKey;
       if (slotKey === undefined) return false;
-      const values = shopOfferOptionValues(
-        this.catalog,
-        occurrence.gameName,
-        shop.profileKey,
-        slotKey,
-      ).filter((value) => {
-        const evaluation = this.evaluate({ kind: 'shopOfferOption', offer: origin, value });
-        return (
-          'result' in evaluation &&
-          'supported' in evaluation.result &&
-          evaluation.result.supported &&
-          evaluation.result.findings.length === 0
-        );
-      });
+      const values = shopOfferOptionValues(this.catalog, shop.profileKey, slotKey).filter(
+        (value) => {
+          const evaluation = this.evaluate({ kind: 'shopOfferOption', offer: origin, value });
+          return (
+            'result' in evaluation &&
+            'supported' in evaluation.result &&
+            evaluation.result.supported &&
+            evaluation.result.findings.length === 0
+          );
+        },
+      );
       this.noteSupply(values.map((value) => value.offer));
       const ordered = this.weighted(values, (v) => this.steering.shopWeight(v.offer));
       for (const value of this.inPoolOrder(ordered, values, (v) => v.offer))
         if (apply({ kind: 'ReplaceShopOfferOption', offer: origin, value })) {
           this.buyWanted(origin, value.offer);
           this.buyFiller(origin);
+          return true;
+        }
+      return false;
+    }
+    if (origin.kind === 'infernalContractPedestal') {
+      const occurrence = this.occurrence(origin.biomeKey, origin.occurrenceId);
+      if (occurrence === undefined) return false;
+      const values = infernalContractPedestalOptionValues(this.catalog, occurrence.gameName).filter(
+        (value) => {
+          const evaluation = this.evaluate({
+            kind: 'infernalContractPedestalOption',
+            pedestal: origin,
+            value,
+          });
+          return (
+            'result' in evaluation &&
+            'supported' in evaluation.result &&
+            evaluation.result.supported &&
+            evaluation.result.findings.length === 0
+          );
+        },
+      );
+      this.noteSupply(values.map((value) => value.offer));
+      const ordered = this.weighted(values, (v) => this.steering.shopWeight(v.offer));
+      for (const value of this.inPoolOrder(ordered, values, (v) => v.offer))
+        if (apply({ kind: 'ReplaceInfernalContractPedestalOption', pedestal: origin, value })) {
+          this.buyWanted(origin, value.offer);
           return true;
         }
       return false;

@@ -13,6 +13,7 @@ import * as step95To96 from './project-95-to-96.js';
 import * as step96To97 from './project-96-to-97.js';
 import * as step97To98 from './project-97-to-98.js';
 import * as step98To99 from './project-98-to-99.js';
+import * as step99To100 from './project-99-to-100.js';
 
 export const PROJECT_TRANSITION_STEPS = Object.freeze([
   step86To87,
@@ -28,4 +29,5 @@ export const PROJECT_TRANSITION_STEPS = Object.freeze([
   step96To97,
   step97To98,
   step98To99,
+  step99To100,
 ]);
