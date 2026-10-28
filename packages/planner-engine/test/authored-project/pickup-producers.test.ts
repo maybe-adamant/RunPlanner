@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import { loadSurfaceNQuickBuckCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { nBiome, nOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 import {
@@ -75,6 +76,43 @@ describe('authored pickup producers', () => {
     );
     expect(reconciled.acquisitionSites).toBeUndefined();
     expect(reconciled.roomActions.order).toEqual([]);
+  });
+
+  it('discovers a producer on the rerolled reward, not on the first draw', () => {
+    const underworldF = createBiomeAddress('Underworld', 'F');
+    const room = loadUnderworldFGCheckpoint().route.biomes[0]!.topology!.occurrences.find(
+      (candidate) => candidate.occurrenceId === 'golden-f-b3-e2',
+    )!;
+    const rerolled = {
+      ...room,
+      rerolledIncomingReward: {
+        offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+        traitOffersByAcquisitionRole: {
+          source: {
+            kind: 'traits',
+            giverKey: 'Poseidon',
+            options: [
+              { traitKey: 'RoomRewardBonusBoon', rarity: 'Common' },
+              { traitKey: 'PoseidonWeaponBoon', rarity: 'Common' },
+              { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
+            ],
+            selectedOptionKey: 'option1',
+            rarificationActions: [],
+          },
+        },
+        dispositionByAcquisitionRole: { source: { kind: 'normal' } },
+      },
+    } as unknown as RoomOccurrence;
+    const producers = (occurrence: RoomOccurrence) =>
+      selectedPickupProducers(
+        catalog,
+        underworldF,
+        occurrence,
+        catalog.rooms.byKey[occurrence.gameName]!,
+        1,
+      ).map((producer) => producer.traitKey);
+    expect(producers(room)).toEqual([]);
+    expect(producers(rerolled)).toEqual(['RoomRewardBonusBoon']);
   });
 
   it('discovers and preserves Quick Buck’s selected producer site, entry, and source action', () => {

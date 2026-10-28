@@ -489,16 +489,18 @@ function traitPickupOffers(
     case 'anomaly':
     case 'ephyraCombat':
     case 'freeReward':
-      addReward(
-        createIncomingRewardAddress(biome, occurrence.occurrenceId),
-        occurrence.state.reward,
-      );
+      // A rerolled owner acquires its rerolled reward; an explicit incoming acquisition replaces it.
+      if (routeStartIncoming === undefined)
+        addReward(
+          createIncomingRewardAddress(biome, occurrence.occurrenceId),
+          occurrence.rerolledIncomingReward ?? occurrence.state.reward,
+        );
       break;
     case 'fieldsCombat':
       for (const [slotKey, reward] of Object.entries(occurrence.state.cages))
         addReward(
           createLocalRewardAddress(biome, occurrence.occurrenceId, 'cages', slotKey),
-          reward,
+          occurrence.state.rerolledCages?.[slotKey] ?? reward,
         );
       for (const [slotKey, reward] of Object.entries(occurrence.state.optionalRewards))
         addReward(
@@ -511,7 +513,7 @@ function traitPickupOffers(
         for (const [offerKey, reward] of Object.entries(wheel.offers))
           addReward(
             createRewardWheelOfferAddress(biome, occurrence.occurrenceId, wheelKey, offerKey),
-            reward,
+            wheel.rerolledOffers?.[offerKey] ?? reward,
           );
       break;
     case 'shop':
