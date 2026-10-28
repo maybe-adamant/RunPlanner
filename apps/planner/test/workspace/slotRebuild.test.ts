@@ -10,6 +10,7 @@ import { decodeExecutionPlan } from '@run-planner/engine/execution-plan';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 
 import { decodeSlotSource, encodeSlotSource } from '@planner/persistence/slotSource';
+import { legacySchema99Body } from '@run-planner/test-fixtures/shared';
 import type { GamePlanSlotNumber } from '@planner/persistence/gameModuleHost';
 import { createSlotRebuildController } from '@planner/workspace/slotRebuild';
 import { compileProjectFile } from '@planner/workspace/projectFileCompilation';
@@ -48,7 +49,9 @@ function sourceJson(
   project: ProjectDocument,
   schemaVersion: number = PROJECT_DOCUMENT_SCHEMA_VERSION,
 ) {
-  const document = JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
+  const encoded = JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
+  const document =
+    schemaVersion < PROJECT_DOCUMENT_SCHEMA_VERSION ? legacySchema99Body(encoded) : encoded;
   document.schemaVersion = schemaVersion;
   const legacy = schemaVersion < 98;
   if (legacy) delete document.name;

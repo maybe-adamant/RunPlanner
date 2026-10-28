@@ -78,6 +78,23 @@ describe('schema 99 to 100 migration', () => {
     assert.equal('infernalContractPedestal' in combat, false);
   });
 
+  it('rejects a document that already carries a schema 100 pedestal', () => {
+    assert.throws(
+      () =>
+        migrateProjectDocument(
+          document([
+            {
+              occurrenceId: 'peer',
+              gameName: 'G_PreBoss01',
+              state: { kind: 'freeReward', reward: null },
+              infernalContractPedestal: { optionKey: null, reward: null },
+            },
+          ]),
+        ),
+      /already has a schema 100 pedestal/,
+    );
+  });
+
   it('leaves its source unchanged and rejects another source schema or catalog', () => {
     const source = document([shopPreboss({ optionKey: null, reward: null }, [], {})]);
     migrateProjectDocument(source);

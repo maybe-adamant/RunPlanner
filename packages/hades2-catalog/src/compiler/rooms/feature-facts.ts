@@ -11,7 +11,6 @@ import type { RawRoomDeclaration } from '../../declarations/index';
 import { freezeUniqueStrings, requireBoolean } from '../common';
 import { fail } from '../errors';
 import { type RoomIdentityFacts } from './core-facts';
-import { type RoomRewardFacts } from './reward-facts';
 
 export type RoomFeatureFacts = Pick<
   RoomDeclaration,
@@ -127,11 +126,10 @@ export function normalizeRoomRequiredObjectFacts(
   });
 }
 
-/** Normalizes the Preboss-owned Infernal Contract reward surface. */
+/** Normalizes the Contract pedestal, a feature of either Preboss form (Shop or boon). */
 export function normalizeRoomInfernalContractFacts(
   room: RawRoomDeclaration,
   identity: RoomIdentityFacts,
-  rewards: RoomRewardFacts,
   rewardCatalog: RewardKernelCatalog,
   path: string,
 ): RoomInfernalContractFacts {
@@ -141,10 +139,9 @@ export function normalizeRoomInfernalContractFacts(
     if (
       identity.kind !== 'Preboss' ||
       identity.mode.kind !== 'authored' ||
-      identity.mode.templateKey !== 'Preboss' ||
-      rewards.incomingReward.kind !== 'shop'
+      identity.mode.templateKey !== 'Preboss'
     ) {
-      fail(`${path}.infernalContractReward`, 'requires an authored Preboss Shop');
+      fail(`${path}.infernalContractReward`, 'requires an authored Preboss');
     }
     if (raw.entryKey !== 'infernalContractReward')
       fail(`${path}.infernalContractReward.entryKey`, 'must be infernalContractReward');

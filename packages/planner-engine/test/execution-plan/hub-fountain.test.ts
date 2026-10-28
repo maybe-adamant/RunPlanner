@@ -23,7 +23,11 @@ import {
   type ExecutionRunStateDiagnostic,
 } from '@run-planner/engine/execution-plan';
 import { fingerprint } from '../../src/execution-plan/fingerprint';
-import { hubVisitActions, legacyRareEpicHexTrees } from '@run-planner/test-fixtures/shared';
+import {
+  hubVisitActions,
+  legacyRareEpicHexTrees,
+  legacySchema99Body,
+} from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNProject,
   nBiome,
@@ -52,7 +56,9 @@ function migratedPhialProject(): ProjectDocument {
     selection: createRouteStartKeepsakeSelectionAddress('Surface'),
     keepsakeKey: 'FountainRarityKeepsake',
   });
-  const legacy = legacyRareEpicHexTrees(JSON.parse(encodeProjectDocument(current))) as {
+  const legacy = legacyRareEpicHexTrees(
+    legacySchema99Body(JSON.parse(encodeProjectDocument(current))),
+  ) as {
     schemaVersion: number;
     name?: string;
     route: { biomes: { topology: { decisions: Record<string, unknown>[] } | null }[] };

@@ -69,13 +69,7 @@ export function normalizeRoom(
   const reward = normalizeRoomRewardFacts(room, rewards, path);
   const requiredObjects = normalizeRoomRequiredObjectFacts(room, path);
   const rewardStores = normalizeRoomRewardStoreFacts(room, reward, rewards, path);
-  const infernalContract = normalizeRoomInfernalContractFacts(
-    room,
-    identity,
-    reward,
-    rewards,
-    path,
-  );
+  const infernalContract = normalizeRoomInfernalContractFacts(room, identity, rewards, path);
   const fields = normalizeRoomFieldsFacts(room, identity, reward.localChildren, rewards, path);
   const features = normalizeRoomFeatureFacts(room, path);
   const entryContextualEncounterRules = normalizeEntryContextualEncounterRules(

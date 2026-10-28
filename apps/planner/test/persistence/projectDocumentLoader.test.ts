@@ -23,7 +23,11 @@ import {
   goldenFOccurrenceId,
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
-import { hubVisitActions, legacyRareEpicHexTrees } from '@run-planner/test-fixtures/shared';
+import {
+  hubVisitActions,
+  legacyRareEpicHexTrees,
+  legacySchema99Body,
+} from '@run-planner/test-fixtures/shared';
 import { loadSurfaceNProject, nBiome, nVisitSlotKeys } from '@run-planner/test-fixtures/surface';
 import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
 
@@ -78,7 +82,10 @@ describe('project document loader', () => {
   });
 
   it('runs transitions across majors without carrying an older major revision forward', () => {
-    const legacy = JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
+    const legacy = legacySchema99Body(JSON.parse(encodeProjectDocument(project))) as Record<
+      string,
+      unknown
+    >;
     legacy.schemaVersion = 96;
     legacy.schemaRevision = PROJECT_DOCUMENT_SCHEMA_REVISION + 3;
 
@@ -89,7 +96,9 @@ describe('project document loader', () => {
 
   it('migrates a schema-87 Hub to fountain use before its retained visits', () => {
     const current = loadSurfaceNProject();
-    const legacy = legacyRareEpicHexTrees(JSON.parse(encodeProjectDocument(current))) as {
+    const legacy = legacyRareEpicHexTrees(
+      legacySchema99Body(JSON.parse(encodeProjectDocument(current))),
+    ) as {
       schemaVersion: number;
       route: { biomes: { topology: { decisions: Record<string, unknown>[] } | null }[] };
     };
@@ -116,7 +125,10 @@ describe('project document loader', () => {
   });
 
   it('chains a schema-87 document without a Hub through 88 to 100', () => {
-    const legacy = JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
+    const legacy = legacySchema99Body(JSON.parse(encodeProjectDocument(project))) as Record<
+      string,
+      unknown
+    >;
     legacy.schemaVersion = 87;
 
     expect(loadProjectDocument(JSON.stringify(legacy), catalog)).toEqual({
@@ -212,11 +224,13 @@ describe('project document loader', () => {
     const { familiarKey, ...loadout } = checkpoint.route.loadout;
     expect(familiarKey).toBe(catalog.defaultFamiliarKey);
     const legacy = JSON.stringify(
-      legacyRareEpicHexTrees({
-        ...checkpoint,
-        schemaVersion: 92,
-        route: { ...checkpoint.route, loadout },
-      }),
+      legacyRareEpicHexTrees(
+        legacySchema99Body({
+          ...checkpoint,
+          schemaVersion: 92,
+          route: { ...checkpoint.route, loadout },
+        }),
+      ),
       null,
       2,
     );
@@ -235,7 +249,9 @@ describe('project document loader', () => {
     const unresolved = JSON.parse(current, (key, value: unknown) =>
       key === 'hexActivationsByAcquisitionRole' ? undefined : value,
     ) as object;
-    const legacy = JSON.stringify(legacyRareEpicHexTrees({ ...unresolved, schemaVersion: 93 }));
+    const legacy = JSON.stringify(
+      legacyRareEpicHexTrees({ ...legacySchema99Body(unresolved), schemaVersion: 93 }),
+    );
     expect(legacy).toContain(
       '"hexTree":{"layoutKey":"Lung","rareTalentKeys":["DamageBuffTalent","ShieldTalent"],"epicTalentKeys":["ClearCastTalent"]}',
     );
@@ -255,7 +271,7 @@ describe('project document loader', () => {
       key === 'hexActivationsByAcquisitionRole' ? undefined : value,
     ) as Record<string, unknown>;
     legacy.schemaVersion = 94;
-    const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
+    const loaded = loadProjectDocument(JSON.stringify(legacySchema99Body(legacy)), catalog);
 
     expect(loaded.migrationProvenance.map((step) => step.targetSchemaVersion)).toEqual([
       95, 96, 97, 98, 99, 100,
@@ -267,7 +283,7 @@ describe('project document loader', () => {
 
   it('loads a schema-95 incomplete Hub with its completed-Hub chain added', () => {
     const checkpoint = surfaceCheckpointArtifacts['surface-n-partial-hub'];
-    const legacy = JSON.parse(JSON.stringify(checkpoint.raw)) as {
+    const legacy = legacySchema99Body(JSON.parse(JSON.stringify(checkpoint.raw))) as {
       schemaVersion: number;
       route: {
         biomes: {
@@ -315,7 +331,7 @@ describe('project document loader', () => {
         }[];
       };
     };
-    const legacy = JSON.parse(encodeProjectDocument(current)) as Raw;
+    const legacy = legacySchema99Body(JSON.parse(encodeProjectDocument(current))) as Raw;
     legacy.schemaVersion = 96;
     legacy.route.loadout.runModifiers = { startPoint: legacy.route.practiceStart };
     delete legacy.route.practiceStart;
@@ -340,7 +356,7 @@ describe('project document loader', () => {
 
   it('heals a malformed or null schema-96 start point to a full run on load', () => {
     for (const startPoint of [null, { biomeKey: 'G', point: 'hub' }, 'G']) {
-      const legacy = JSON.parse(encodeProjectDocument(project)) as {
+      const legacy = legacySchema99Body(JSON.parse(encodeProjectDocument(project))) as {
         schemaVersion: number;
         route: { draft?: unknown; loadout: Record<string, unknown> };
       };
@@ -360,10 +376,9 @@ describe('project document loader', () => {
       routeKey: 'Underworld',
       configuredBiomeCount: 1,
     });
-    const { name: _name, ...rest } = JSON.parse(encodeProjectDocument(named)) as Record<
-      string,
-      unknown
-    >;
+    const { name: _name, ...rest } = legacySchema99Body(
+      JSON.parse(encodeProjectDocument(named)),
+    ) as Record<string, unknown>;
     void _name;
     const legacy = JSON.stringify({ ...rest, schemaVersion: 97, schemaRevision: 3 });
     const loaded = loadProjectDocument(legacy, catalog, { legacyName: 'Staff practice' });
@@ -380,7 +395,10 @@ describe('project document loader', () => {
   });
 
   it('gives a schema-88 document with the shared default identity a unique one', () => {
-    const legacy = JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
+    const legacy = legacySchema99Body(JSON.parse(encodeProjectDocument(project))) as Record<
+      string,
+      unknown
+    >;
     legacy.schemaVersion = 88;
     legacy.projectId = 'run-plan';
     const first = loadProjectDocument(JSON.stringify(legacy), catalog);
@@ -413,7 +431,7 @@ describe('project document loader', () => {
     (_route, current) => {
       const expected = current();
       const legacy = legacyRareEpicHexTrees({
-        ...JSON.parse(encodeProjectDocument(expected)),
+        ...legacySchema99Body(JSON.parse(encodeProjectDocument(expected))),
         schemaVersion: 89,
       });
       const loaded = loadProjectDocument(JSON.stringify(legacy), catalog);
@@ -508,42 +526,44 @@ describe('project document loader', () => {
       decisionKey: 'generatedComposition',
       value,
     });
-    const legacy = legacyRareEpicHexTrees({
-      ...expected,
-      schemaVersion: 86,
-      route: {
-        ...expected.route,
-        biomes: expected.route.biomes.map((biome) => ({
-          ...biome,
-          topology:
-            biome.topology === null
-              ? null
-              : {
-                  ...biome.topology,
-                  occurrences: biome.topology.occurrences.map((occurrence) =>
-                    occurrence.occurrenceId !== occurrenceId
-                      ? occurrence
-                      : {
-                          ...occurrence,
-                          encounters: {
-                            ...occurrence.encounters,
-                            customizationByPhase: {
-                              Encounter: {
-                                generatedComposition: {
-                                  ...value,
-                                  waves: [
-                                    { ...value.waves[0], weights: { Brawler: 10, SiegeVine: 1 } },
-                                  ],
+    const legacy = legacyRareEpicHexTrees(
+      legacySchema99Body({
+        ...expected,
+        schemaVersion: 86,
+        route: {
+          ...expected.route,
+          biomes: expected.route.biomes.map((biome) => ({
+            ...biome,
+            topology:
+              biome.topology === null
+                ? null
+                : {
+                    ...biome.topology,
+                    occurrences: biome.topology.occurrences.map((occurrence) =>
+                      occurrence.occurrenceId !== occurrenceId
+                        ? occurrence
+                        : {
+                            ...occurrence,
+                            encounters: {
+                              ...occurrence.encounters,
+                              customizationByPhase: {
+                                Encounter: {
+                                  generatedComposition: {
+                                    ...value,
+                                    waves: [
+                                      { ...value.waves[0], weights: { Brawler: 10, SiegeVine: 1 } },
+                                    ],
+                                  },
                                 },
                               },
                             },
                           },
-                        },
-                  ),
-                },
-        })),
-      },
-    }) as Record<string, unknown>;
+                    ),
+                  },
+          })),
+        },
+      }),
+    ) as Record<string, unknown>;
     expect(() =>
       parseProjectDocument(JSON.stringify({ ...legacy, schemaVersion: 100 }), catalog),
     ).toThrow(/weights/);

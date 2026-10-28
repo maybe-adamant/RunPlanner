@@ -21,7 +21,7 @@ import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoin
 import { describe, expect, it } from 'vitest';
 import { dreamMixedPrefixProject } from '@run-planner/test-fixtures/dream';
 import { createFreshFileRouteProject } from '@run-planner/test-fixtures/fresh-file';
-import { legacyRareEpicHexTrees } from '@run-planner/test-fixtures/shared';
+import { legacyRareEpicHexTrees, legacySchema99Body } from '@run-planner/test-fixtures/shared';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { viewChanged } from '@planner/state/librarySessionSlice';
@@ -735,7 +735,7 @@ describe('project operations', () => {
       message: 'Migrated the plan to schema 100.',
     });
     const hubLegacy = legacyRareEpicHexTrees(
-      JSON.parse(encodeProjectDocument(loadSurfaceNProject())),
+      legacySchema99Body(JSON.parse(encodeProjectDocument(loadSurfaceNProject()))),
     ) as {
       schemaVersion: number;
       route: { biomes: { topology: { decisions: Record<string, unknown>[] } | null }[] };
@@ -759,7 +759,7 @@ describe('project operations', () => {
 
     // A schema-88 Hub already has its authored fountain placement, so no repair is named.
     const hub88 = legacyRareEpicHexTrees(
-      JSON.parse(encodeProjectDocument(loadSurfaceNProject())),
+      legacySchema99Body(JSON.parse(encodeProjectDocument(loadSurfaceNProject()))),
     ) as Record<string, unknown>;
     hub88.schemaVersion = 88;
     library.choose({ fileName: 'legacy.runplanner.json', json: JSON.stringify(hub88) });

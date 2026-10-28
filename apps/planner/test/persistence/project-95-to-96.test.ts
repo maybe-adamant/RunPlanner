@@ -11,6 +11,7 @@ import {
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 import { dreamMixedHandoffProject } from '@run-planner/test-fixtures/dream';
+import { legacySchema99Body } from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNEntryFrontierProject,
   loadSurfaceNProject,
@@ -43,7 +44,7 @@ type Encoded = {
 
 /** The schema-95 shape of a project: every Hub without its completed-Hub chain. */
 function withoutChain(project: ProjectDocument): Encoded {
-  const encoded = JSON.parse(encodeProjectDocument(project)) as Encoded;
+  const encoded = legacySchema99Body(JSON.parse(encodeProjectDocument(project)) as Encoded);
   encoded.schemaVersion = 95;
   for (const biome of encoded.route.biomes) {
     const topology = biome.topology;
@@ -187,7 +188,7 @@ describe('schema 95 to 96 completed-Hub chain migration', () => {
 
   it('keeps a Hub that owns its chain and every imported identity unchanged', () => {
     const project = loadSurfaceNProject();
-    const source = JSON.parse(encodeProjectDocument(project)) as Encoded;
+    const source = legacySchema99Body(JSON.parse(encodeProjectDocument(project)) as Encoded);
     source.schemaVersion = 95;
     const result = migrateProjectDocument(source) as Encoded;
     expect(result).toEqual({ ...source, schemaVersion: OUTPUT_SCHEMA_VERSION });

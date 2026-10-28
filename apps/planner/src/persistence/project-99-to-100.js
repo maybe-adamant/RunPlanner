@@ -3,7 +3,7 @@ export const OUTPUT_SCHEMA_VERSION = 100;
 export const CATALOG_VERSION = '0.55.0-anvil-of-fates';
 
 // Every Preboss that declares a Contract pedestal destination in this catalog.
-const PEDESTAL_ROOMS = new Set([
+export const PEDESTAL_ROOMS = new Set([
   'F_PreBoss01',
   'G_PreBoss01',
   'H_PreBoss01',
@@ -26,12 +26,13 @@ function record(value, label) {
 // Moves one Preboss's Shop-owned pedestal item, its collect action and its
 // acquisition-resolved source onto the room's pedestal feature.
 function migrateOccurrence(occurrence) {
+  if (Object.hasOwn(occurrence, 'infernalContractPedestal'))
+    throw new Error(`${String(occurrence.occurrenceId)} already has a schema 100 pedestal`);
   if (!PEDESTAL_ROOMS.has(occurrence.gameName)) return;
   const offers = occurrence.state?.kind === 'shop' ? occurrence.state.shop?.offers : undefined;
   const item = offers?.[ENTRY_KEY];
   if (offers !== undefined) delete offers[ENTRY_KEY];
-  occurrence.infernalContractPedestal = item ??
-    occurrence.infernalContractPedestal ?? { optionKey: null, reward: null };
+  occurrence.infernalContractPedestal = item ?? { optionKey: null, reward: null };
   const order = occurrence.roomActions?.order;
   if (Array.isArray(order))
     occurrence.roomActions.order = order.map((action) =>
