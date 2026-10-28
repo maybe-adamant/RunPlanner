@@ -104,15 +104,15 @@ promoted.
   game module sets the slot before the native reroll runs.
 - **Reroll editor:** rerolls stay contained so the door layouts, the Hub board
   above all, are unchanged. The Reward line of a rerollable door, wheel offer
-  or cage door keeps showing and editing the first draw and gains a small
-  reroll button (only when door rerolls are enabled), which shows the final
-  reward once rerolls exist. It opens a dialog listing the first draw and each
-  reroll, one picker per element over that step's candidates (plus a
-  cage-slot picker for cages), with the remaining pool. Only the last reroll
-  has **Reroll** (appends the next draw; disabled when the pool is spent) and
-  **Remove** (drops it), so deletion is always explicit; editing an earlier
-  element that invalidates a later one leaves the later one preserved with a
-  finding.
+  or cage door keeps its picker for the first draw; once rerolled, the
+  picker's label reads first draw → final reward (intermediate draws only in
+  the dialog). A small reroll button beside it (only when door rerolls are
+  enabled) opens a dialog listing the first draw and each reroll, one picker
+  per element over that step's candidates (plus a cage-slot picker for
+  cages), with the remaining pool. Only the last reroll has **Reroll**
+  (appends the next draw; disabled when the pool is spent) and **Remove**
+  (drops it), so deletion is always explicit; editing an earlier element that
+  invalidates a later one leaves the later one preserved with a finding.
 - **Screen rerolls:** a count only, on the supported screens: the nine core
   Olympians, Hermes, Athena, Dionysus, Artemis, Chaos, Pom of Power, the Wells and the Pool
   of Purging. Not NPC screens, Hammers, Hermes Shrines, Selene or the World
