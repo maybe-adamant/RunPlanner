@@ -305,6 +305,25 @@ describe('run import of the Underworld capture', () => {
     });
   });
 
+  it("collects Narcissus's gifts and aims G_PreBoss01's random Pom at the boon it raised", () => {
+    // Heavenly Splendor drops two Elemental Essences; the room's uses picked up both.
+    expect(
+      occurrence(imported.project, 'G-r17')
+        .roomActions.order.filter(
+          (action) =>
+            action.kind === 'interactAcquisitionEntry' &&
+            action.siteKey.startsWith('traitGenerated:'),
+        )
+        .map((action) => action.kind === 'interactAcquisitionEntry' && action.entryKey),
+    ).toEqual(['elementalBoost1', 'elementalBoost2']);
+    // The Aphrodite boon bought there is the only trait whose level rose before G_Boss01.
+    const preboss = occurrence(imported.project, 'G-r22').state;
+    expect(
+      preboss.kind === 'shop' &&
+        preboss.shop?.offers['Minor']?.reward?.levelResolutionsByAcquisitionRole?.['self'],
+    ).toEqual({ kind: 'random', targetTraitKey: 'HighHealthOffenseBoon' });
+  });
+
   it("places each gathering tool's element in its room and reads Tartarus's non-goal cap", () => {
     expect(imported.project.route.resourcePlacements).toEqual({
       Pickaxe: { biomeKey: 'F', occurrenceId: 'F-r1' },
@@ -325,16 +344,17 @@ describe('run import of the Underworld capture', () => {
         encounter: 1,
         fields: 3,
         npc: 1,
-        roomActionOrder: 9,
+        roomActionOrder: 10,
         traitOffer: 3,
       },
       // The three Chaos screens stay: their unpicked curses' durations are never saved.
       // The entry saves' run state where the plan's simulation holds another.
-      mismatch: { elements: 2, pathOfStars: 1, stores: 3, traits: 6 },
-      notInRecord: { fields: 4, pathOfStars: 1, traitOffer: 5 },
-      refused: { doors: 1, fields: 2, pool: 1, traitOffer: 1 },
-      // G_MiniBoss01's refused Zeus screen and H_Combat07's cage boon screen stay unused.
-      unsupportedArea: { shop: 2, traitOffer: 2, well: 1 },
+      mismatch: { elements: 1, pathOfStars: 1, stores: 2, traits: 3 },
+      // The H and I Preboss Travel Deal refills and I_Combat07's Well refill were never bought.
+      notInRecord: { fields: 4, pathOfStars: 1, shop: 2, traitOffer: 4, well: 1 },
+      refused: { doors: 1, fields: 2, pool: 1 },
+      // H_Combat07's cage boon screen stays unused.
+      unsupportedArea: { traitOffer: 1 },
     });
     // G_Combat20's positional first door (G_Combat08) is refused at its exit and moves later.
     // H_Combat07's first two cages lose their store entries to the guessed cages of its twin door.
@@ -360,7 +380,6 @@ describe('run import of the Underworld capture', () => {
       'refused doors r19d569053 target@G-r19:exit1 -> CreateTarget(G-r20 G_MiniBoss01)',
       'assumption doors r19d776586 target@G-r19:exit2 -> CreateTarget(G-r19-d776586 G_MiniBoss03)',
       'assumption doors r19d569053 target@G-r19:exit3 -> CreateTarget(G-r19-d569053 G_Combat08)',
-      'refused traitOffer r20 traitOffer@G-r20:source -> ReplaceTraitOffer(G-r20 ZeusManaBoon|ZeusWeaponBoon|ZeusManaBoltBoon#option2)',
       'assumption doors r20 exitDecision@G-r20',
       'assumption doors r21 exitDecision@G-r21',
       'assumption doors r26 exitDecision@H-r26',
@@ -377,6 +396,7 @@ describe('run import of the Underworld capture', () => {
       'assumption roomActionOrder r4 occurrence@F-r4',
       'assumption roomActionOrder r8 occurrence@F-r8',
       'assumption roomActionOrder r13 occurrence@F-r11:postboss',
+      'assumption roomActionOrder r17 occurrence@G-r17',
       'assumption roomActionOrder r22 occurrence@G-r22',
       'assumption roomActionOrder r24 occurrence@G-r22:postboss',
       'assumption roomActionOrder r26 occurrence@H-r26',
@@ -384,23 +404,14 @@ describe('run import of the Underworld capture', () => {
       'assumption roomActionOrder r32 occurrence@H-r30:postboss',
     ]);
     expect(mismatchLines(imported.report)).toEqual([
-      // The game rolls each Chaos gate's Trial reward from Secrets; the plan does not draw it.
-      'stores r1 Secrets: TrialUpgrade 0 | TrialUpgrade 1',
-      // Narcissus's two Elemental Essences are not collected in the plan.
-      'elements r18 Elements: Air 3, Earth 6, Fire 3, Water 2 | Air 1, Earth 4, Fire 1, Water 0',
-      // The refused Zeus screen keeps the guessed Common rarity.
-      'traits r21 ZeusWeaponBoon: Rare level 4 | Common level 4',
-      // G_PreBoss01's random Pom targets Hera's boon; the game raised the Aphrodite boon it sold.
-      'traits r23 HeraSpecialBoon: Heroic level 7 | Heroic level 8',
-      'traits r23 HighHealthOffenseBoon: Common level 5 | Common level 4',
       // H_Combat07's guessed cages of its twin door take other store entries.
       'stores r29 RunProgress: Boon 2, RoomMoneyDrop 2 | Boon 3, RoomMoneyDrop 1',
       // H_Combat07's unused cage screen, its Talent and its optional rewards.
-      'traits r30 HeraSpecialBoon: Heroic level 7 | Heroic level 9',
+      'traits r30 HeraSpecialBoon: Heroic level 7 | Heroic level 8',
       'traits r30 DoubleBoltBoon: Epic level 4 | absent',
       'stores r30 FieldsOptionalRewards: MinorTalentDrop 1, RoomMoneyTinyDrop 2 | MinorTalentDrop 2, RoomMoneyTinyDrop 3',
       'pathOfStars r30 Invested: 5:1 | none other',
-      'elements r30 Elements: Air 6, Earth 6, Fire 5, Water 4 | Air 3, Earth 4, Fire 3, Water 2',
+      'elements r30 Elements: Air 6 | Air 5',
       // The plan's armor is never damaged, so Arachne's costume never breaks.
       'traits r32 CastDamageCostume: absent | held',
     ]);
@@ -781,6 +792,27 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
     });
   });
 
+  it("buys G_PreBoss01's Travel Deal refill as the Poseidon boon its room used", () => {
+    const preboss = occurrence(imported.project, 'G-r22');
+    expect(preboss.state.kind === 'shop' && preboss.state.shop?.travelDealRefill).toMatchObject({
+      optionKey: 'RandomLoot',
+      reward: {
+        offer: {
+          rewardType: 'RandomLoot',
+          payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' },
+        },
+        traitOffersByAcquisitionRole: {
+          source: { giverKey: 'Poseidon', selectedOptionKey: 'option3' },
+        },
+      },
+    });
+    expect(preboss.roomActions.order).toContainEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'roomExit',
+      entryKey: 'travelDealRefill',
+    });
+  });
+
   it("imports Aspect of Selene's rolled tree without its God Sent nodes", () => {
     expect(imported.project.route.loadout.aspectHexTree).toMatchObject({ layoutKey: 'Pyramid' });
     expect(imported.project.route.loadout.aspectHexTree?.nodes['4:3']).toBeUndefined();
@@ -788,13 +820,28 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
 
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
-      assumption: { conversion: 3, doors: 15, fields: 3, roomActionOrder: 9, traitOffer: 1 },
-      mismatch: { elements: 1, stores: 1, traits: 2 },
+      // G_PreBoss01's Travel Deal refill is the Poseidon boon its room used beyond its stock.
+      assumption: {
+        conversion: 3,
+        doors: 15,
+        fields: 3,
+        roomActionOrder: 10,
+        shop: 1,
+        traitOffer: 1,
+      },
+      mismatch: { stores: 1, traits: 1 },
       // The run was reset in H_Combat04: the rest of Ephyra's Fields is guessed.
-      notInRecord: { doors: 1, fields: 6, other: 1, reward: 1, route: 1, traitOffer: 3 },
+      // G_PostBoss01's Well refill was never bought.
+      notInRecord: {
+        doors: 1,
+        fields: 6,
+        other: 1,
+        reward: 1,
+        route: 1,
+        traitOffer: 3,
+        well: 1,
+      },
       refused: { reward: 3 },
-      // G_PreBoss01's Poseidon screen opened the guessed Travel Deal refill.
-      unsupportedArea: { shop: 1, traitOffer: 1, well: 1 },
     });
     // G_Combat20's ascending door ids are not its native order: the game drew the GiftDrop door
     // last, from a refilled MetaProgress store, so its three door offers are refused and guessed.
@@ -818,6 +865,7 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       'assumption doors r19 exitDecision@G-r19',
       'assumption doors r20 exitDecision@G-r20',
       'assumption traitOffer r22 traitOffer@G-r22:source -> ReplaceTraitOffer(G-r22 ZeusManaBoon|CastAnywhereBoon|ElementalDamageFloorBoon#option3)',
+      'assumption shop r22 shopOffer@G-r22 -> ReplaceShopOfferOption(G-r22)',
       'assumption doors r26 exitDecision@H-r26',
       'assumption fields r26 localReward@H-r26-d564448:cage1',
       'assumption doors r27 exitDecision@H-r27',
@@ -830,16 +878,14 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       'assumption roomActionOrder r8 occurrence@F-r8',
       'assumption roomActionOrder r13 occurrence@F-r11:postboss',
       'assumption roomActionOrder r17 occurrence@G-r17',
+      'assumption roomActionOrder r22 occurrence@G-r22',
       'assumption roomActionOrder r24 occurrence@G-r22:postboss',
       'assumption roomActionOrder r26 occurrence@H-r26',
       'assumption roomActionOrder r29 occurrence@H-r29',
     ]);
     expect(mismatchLines(imported.report)).toEqual([
-      // G_Combat05 raised the Zeus boon's level with no screen the importer reads.
+      // G_Combat05, replayed after a relaunch, raised the Zeus boon's level from no known source.
       'traits r17 ZeusCastBoon: Rare level 2 | Rare level 1',
-      // G_PreBoss01's Poseidon boon came from the unread Travel Deal refill; it and its Water are missing.
-      'traits r23 EncounterStartOffenseBuffBoon: Rare | absent',
-      'elements r23 Elements: Water 4 | Water 3',
       // H_Combat07's optional rewards are guessed: one was collected during combat, without a point.
       'stores r27 FieldsOptionalRewards: MaxHealthDropSmall 1 | MaxHealthDropSmall 2',
     ]);

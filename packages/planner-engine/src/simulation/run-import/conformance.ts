@@ -245,6 +245,8 @@ function compareEntry(
 
   const stores = storeCounts(catalog, routeKey, snapshot);
   for (const [store, { counts, offRoute }] of stores) {
+    // Every Chaos gate offered draws Secrets' TrialUpgrade, which refills itself and nothing reads.
+    if (store === 'Secrets') continue;
     const recorded = saved.rewardStores.get(store);
     if (recorded !== undefined)
       differ(

@@ -440,6 +440,11 @@ screen rerolls and a relaunch mid-run.
   and was not re-derived for this audit.
 - Engine-side behavior: which file "continue" loads, `.bak` rotation policy,
   quit to menu.
+- Run 1010 `G_Combat05`, replayed after a relaunch mid-room: `ZeusCastBoon`
+  rose from level 1 to 2 at the encounter's end with no screen, loot, Pom,
+  Well purchase or `LootTypeHistory` change; the save shows only the re-added
+  trait (`LastRemovedTraitName`, `CurrentRoom.AcquiredSlot`). Its source is
+  unidentified, so the import keeps level 1 and reports the mismatch.
 
 ## Discrepancies
 
@@ -470,6 +475,18 @@ screen rerolls and a relaunch mid-run.
 - Judgment's and the Crystal Figurine's cards are imported exactly from the
   boss room's draw order. Aspect of Selene's tree is the run's first Spell
   snapshot without its God Sent nodes.
+- A bought World Shop Travel Deal refill is inferred from the use its room
+  recorded beyond the bought stock (`RestockWorldItem`, `StoreLogic.lua:412`,
+  rerolls the first purchase's slot): for a boon, the god whose screen follows.
+  It is reported as an assumption; an unbought refill leaves no use and takes
+  the first eligible item, reported as not in the record.
+- A random Pom with no screen (`AddStackToTraits`, `TraitLogic.lua:2482`)
+  targets the trait the record shows upgraded in its room or, when the trait
+  was acquired there too, the trait whose level rose between the room's entry
+  saves; several risen candidates make the target an assumption.
+- A selected trait's optional pickups, such as Narcissus's gifts
+  (`TraitData_Narcissus.lua`), are collected as often per reward type as the
+  room's `UseRecord` counts.
 - Door and ship-wheel rerolls are not modelled: each inferred one is reported
   as an unsupported area, since the plan's stores keep the rewards they
   replaced.
@@ -493,5 +510,7 @@ screen rerolls and a relaunch mid-run.
   (`EndBiomeRecords`, `RunLogic.lua:1912`, after its entry save),
   and each store fill or refill (`RewardLogic.lua:157`) keeps every entry
   declared for another route, so store names with such an entry are not
-  compared. The first room and rooms left from a revisited occurrence are not
+  compared. `Secrets` is not compared: every Chaos gate a room creates draws
+  its `TrialUpgrade` (`RoomLogic.lua:4858`), taken or not, and the store
+  refills itself when empty (`RewardLogic.lua:140`). The first room and rooms left from a revisited occurrence are not
   checked.

@@ -490,29 +490,8 @@ class RunImportWalk {
     if (commands === undefined) return false;
     const area = areaOfFinding(reason);
     // Required actions take their native schedule when no trait timestamp orders them.
-    const why =
-      area === 'roomActionOrder'
-        ? 'assumption'
-        : isUnreadQuestion(reason)
-          ? 'unsupportedArea'
-          : fallback;
+    const why = area === 'roomActionOrder' ? 'assumption' : fallback;
     for (const command of commands) this.report(area, why, reason.origin, command);
     return true;
-  }
-}
-
-/** Questions of areas no capture has exercised: Travel Deal refills. */
-function isUnreadQuestion(reason: SemanticFinding): boolean {
-  const origin = reason.origin;
-  switch (origin.kind) {
-    case 'shopOffer':
-      return origin.offerKey === 'travelDealRefill';
-    case 'roomFeature':
-      return (
-        (origin.target.kind === 'stygianWellOffer' || origin.target.kind === 'hermesShrineOffer') &&
-        origin.target.generationKey === 'travelDealRefill'
-      );
-    default:
-      return false;
   }
 }

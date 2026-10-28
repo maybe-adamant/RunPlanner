@@ -13,6 +13,7 @@ import {
   levelResolutionCandidateForProjectEvaluationAssembly,
 } from '../evaluation/project-evaluation-assembly';
 import { occurrenceIdOf } from './occurrences';
+import { recordedEntryStates } from './conformance';
 import { chaosOffer } from './features';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
@@ -311,6 +312,48 @@ export function answerLevelResolution(context: RunImportContext, reason: Semanti
         return true;
       }
     }
+  // A trait acquired and raised in one room shows only as a level rise between entry saves.
+  const branchIndex = capability.branches.findIndex((branch) => branch.effectKind === 'random');
+  if (branchIndex < 0) return false;
+  const states = recordedEntryStates(context.record);
+  for (const roomIndex of context.occurrences.visitsOf(occurrenceId)) {
+    const before = states[roomIndex];
+    const after = states[roomIndex + 1];
+    if (before === undefined || after === undefined) continue;
+    const supported = [...after.traits]
+      .filter(([name, row]) => {
+        const held = before.traits.get(name);
+        return (
+          !context.used.has(`rise:${roomIndex}:${name}`) &&
+          (row.level ?? 1) > (held === undefined ? 0 : (held.level ?? 1))
+        );
+      })
+      .map(([name]) => name)
+      .filter(
+        (name) =>
+          capability.evaluate({ kind: 'random', targetTraitKey: name })[branchIndex]?.supported ===
+          true,
+      );
+    const target = supported[0];
+    if (target === undefined) continue;
+    const command = {
+      kind: 'ReplaceLevelResolution',
+      levelResolution,
+      value: { kind: 'random', targetTraitKey: target },
+    } as const;
+    if (!context.apply(command)) continue;
+    context.used.add(`rise:${roomIndex}:${target}`);
+    // Every other trait held its level, so a sole risen trait is the target.
+    if (supported.length > 1)
+      context.note({
+        area: 'traitOffer',
+        reason: 'assumption',
+        address: levelResolution,
+        applied: command,
+        record: { roomIndex, visit: 0 },
+      });
+    return true;
+  }
   return false;
 }
 

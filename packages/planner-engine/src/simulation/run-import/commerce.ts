@@ -5,6 +5,7 @@ import {
   createShopOfferAddress,
   hermesShrineDeliveryEntryKey,
   INFERNAL_CONTRACT_ENTRY_KEY,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
   parseHermesShrineDeliveryEntryKey,
   semanticAddressKey,
   shopOfferOptionValues,
@@ -15,12 +16,14 @@ import {
   type RoomActionReference,
   type RoomOccurrence,
   type SemanticAddress,
+  type ShopState,
   type StygianWellGenerationKey,
   type StygianWellSlotKey,
 } from '../../authored-project';
 import { hermesShrineInitialSlotKey } from '../../authored-project/model';
 import {
   locallyValidRewardOffers,
+  purchaseInteractionName,
   type ResolvedRewardOffer,
   type ShopOptionSelection,
 } from '../../reward-kernel';
@@ -41,6 +44,7 @@ import type { RunImportContext } from './import';
 import type { RunImportArea } from './report';
 import { isQuestionFinding } from './areas';
 import { authoredOccurrence, occurrenceIdOf } from './occurrences';
+import { pickupUseCount } from './vocabulary';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
 
@@ -160,6 +164,10 @@ function answerShopOffer(
     return occurrence !== undefined && shop !== undefined
       ? answerContractPedestal(context, offer, occurrence, shop.profileKey)
       : false;
+  if (offer.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)
+    return occurrence !== undefined && shop !== undefined
+      ? answerTravelDealRefill(context, offer, occurrence, shop)
+      : false;
   const profile =
     shop === undefined ? undefined : context.catalog.rewards.shops.byKey[shop.profileKey];
   const position = profile?.slots.values.findIndex((slot) => slot.key === offer.offerKey) ?? -1;
@@ -201,6 +209,83 @@ function answerShopOffer(
     return true;
   }
   context.refuse();
+  return false;
+}
+
+/**
+ * The Travel Deal refill's item is never saved; a bought one is the stock
+ * option whose interaction the room used beyond its bought stock (a boon's
+ * god, whose screen follows). Its name is inferred, so it is an assumption.
+ * An unbought refill leaves no use and stays unanswered.
+ */
+function answerTravelDealRefill(
+  context: RunImportContext,
+  offer: Origin<'shopOffer'>,
+  occurrence: RoomOccurrence,
+  shop: ShopState,
+): boolean {
+  const visit = storeVisit(context, occurrence.occurrenceId, 'worldShop');
+  const profile = context.catalog.rewards.shops.byKey[shop.profileKey];
+  if (visit === undefined || profile === undefined) return false;
+  const optionOf = (slotKey: string, optionKey: string) =>
+    profile.groups.byKey[profile.slots.byKey[slotKey]?.groupKey ?? '']?.options.byKey[optionKey];
+  const unexplained = new Map(Object.entries(visit.room.uses));
+  for (const purchase of visit.store.purchases ?? []) {
+    const slotKey = profile.slots.values[purchase.slot - 1]?.key;
+    const bought = slotKey === undefined ? undefined : shop.offers[slotKey];
+    const option =
+      slotKey === undefined || bought?.optionKey == null
+        ? undefined
+        : optionOf(slotKey, bought.optionKey);
+    const name =
+      option === undefined || bought?.reward == null
+        ? undefined
+        : purchaseInteractionName(option, bought.reward.offer);
+    if (name !== undefined) unexplained.set(name, (unexplained.get(name) ?? 0) - 1);
+  }
+  const seen = new Set<string>();
+  const values = profile.slots.values.flatMap((slot) =>
+    shopOfferOptionValues(context.catalog, occurrence.gameName, shop.profileKey, slot.key).filter(
+      (value) => {
+        const name = purchaseInteractionName(optionOf(slot.key, value.optionKey)!, value.offer);
+        const key = JSON.stringify(value);
+        if (name === undefined || (unexplained.get(name) ?? 0) <= 0 || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      },
+    ),
+  );
+  for (const value of values) {
+    const evaluation = context.candidates().evaluate({ kind: 'shopOfferOption', offer, value });
+    if (
+      evaluation.kind !== 'shopOffer' ||
+      !evaluation.result.supported ||
+      !evaluation.result.findings.every(isQuestionFinding)
+    )
+      continue;
+    const command: ProjectCommand = { kind: 'ReplaceShopOfferOption', offer, value };
+    const biomeKey = offer.biomeKey;
+    if (
+      !context.transaction(
+        () =>
+          context.apply(command) &&
+          insertRoomAction(context, biomeKey, occurrence.occurrenceId, {
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'roomExit',
+            entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+          }),
+      )
+    )
+      continue;
+    context.note({
+      area: 'shop',
+      reason: 'assumption',
+      address: offer,
+      applied: command,
+      record: record(visit.roomIndex),
+    });
+    return true;
+  }
   return false;
 }
 
@@ -421,7 +506,7 @@ function answerPurchaseEffects(context: RunImportContext, offer: Origin<'shopOff
 
 /**
  * A Travel Deal restock nobody bought leaves no name in the save; it takes the
- * first item the engine admits, reported as the unread refill area.
+ * first item the engine admits, reported as not in the record.
  */
 function answerUnboughtWellRefill(
   context: RunImportContext,
@@ -445,7 +530,7 @@ function answerUnboughtWellRefill(
     if (!context.applyValid(command)) continue;
     context.note({
       area: 'well',
-      reason: 'unsupportedArea',
+      reason: 'notInRecord',
       address: feature,
       applied: command,
       record: record(visit.roomIndex),
@@ -582,14 +667,7 @@ function importShopPurchases(
 
 /** The pickup a purchased item spawns, by its record use name. */
 function collected(context: RunImportContext, room: RunRecordRoom, rewardType: string): boolean {
-  const roles = context.catalog.rewards.rewardTypes.byKey[rewardType]?.acquisitionRoles.values;
-  const names = [
-    rewardType,
-    ...(roles ?? []).flatMap((role) =>
-      role.resolution.kind === 'fixed' ? [role.resolution.acquisition.gameName] : [],
-    ),
-  ];
-  return names.some((name) => (room.uses[name] ?? 0) > 0);
+  return pickupUseCount(context.catalog, room, rewardType) > 0;
 }
 
 function importShrine(context: RunImportContext, biomeKey: string, occurrence: RoomOccurrence) {

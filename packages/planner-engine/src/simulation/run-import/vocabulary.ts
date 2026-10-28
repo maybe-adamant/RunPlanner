@@ -1,6 +1,11 @@
 import type { Catalog, ResourceFamily } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
-import type { RunRecord, RunRecordDoorReward, RunRecordRoomReward } from '../../run-record/model';
+import type {
+  RunRecord,
+  RunRecordDoorReward,
+  RunRecordRoom,
+  RunRecordRoomReward,
+} from '../../run-record/model';
 
 /**
  * The catalog route whose biome order the record walked; a Dream run has none
@@ -69,4 +74,16 @@ export function recordedOffer(
         };
   }
   return { rewardType: type };
+}
+
+/** How many pickups of a reward type the room's uses record, by the type's and its acquisitions' names. */
+export function pickupUseCount(catalog: Catalog, room: RunRecordRoom, rewardType: string): number {
+  const roles = catalog.rewards.rewardTypes.byKey[rewardType]?.acquisitionRoles.values;
+  const names = new Set([
+    rewardType,
+    ...(roles ?? []).flatMap((role) =>
+      role.resolution.kind === 'fixed' ? [role.resolution.acquisition.gameName] : [],
+    ),
+  ]);
+  return [...names].reduce((count, name) => count + (room.uses[name] ?? 0), 0);
 }

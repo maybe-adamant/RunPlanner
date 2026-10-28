@@ -160,8 +160,8 @@ describe('import conformance field groups', () => {
 
   const saved = () => recordedEntryStates(erebus.record)[ROOM]!;
 
-  it('agrees with the imported Erebus but for the Chaos gate Secrets draw', () => {
-    expect(base).toEqual(['stores r1 Secrets: TrialUpgrade 0 | TrialUpgrade 1']);
+  it('agrees with the imported Erebus', () => {
+    expect(base).toEqual([]);
   });
 
   it('compares held traits the trait ledger models, levels as the game reads them', () => {

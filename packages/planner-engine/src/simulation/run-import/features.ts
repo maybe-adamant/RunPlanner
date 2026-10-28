@@ -32,6 +32,7 @@ import type { SemanticFinding } from '../model';
 import { insertRoomAction, removeRoomAction } from './actions';
 import type { RunImportContext } from './import';
 import { occurrenceIdOf } from './occurrences';
+import { pickupUseCount } from './vocabulary';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
 
@@ -626,7 +627,57 @@ export function importFeatures(context: RunImportContext): void {
       if (roomIndex === undefined) continue;
       importRack(context, biome.biomeKey, occurrence, roomIndex);
       importFountain(context, biome.biomeKey, occurrence, roomIndex);
+      importTraitPickups(context, biome.biomeKey, occurrence, roomIndex);
     }
+}
+
+/**
+ * Collects the optional pickups a selected trait drops (Narcissus's gifts), as
+ * many of each reward type as the room's uses record picked up.
+ */
+function importTraitPickups(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrence: RoomOccurrence,
+  roomIndex: number,
+): void {
+  const project = context.assembly().project;
+  const host = roomActionDomainForOccurrence(
+    project,
+    context.catalog,
+    createBiomeAddress(project.route.routeKey, biomeKey),
+    occurrence.occurrenceId,
+  );
+  if (host === undefined) return;
+  const room = context.record.rooms[roomIndex]!;
+  for (const contribution of host.domain.contributions) {
+    if (
+      contribution.kind !== 'action' ||
+      contribution.participation !== 'optional' ||
+      contribution.reference.kind !== 'interactAcquisitionEntry' ||
+      !contribution.reference.siteKey.startsWith('traitGenerated:')
+    )
+      continue;
+    const reference = contribution.reference;
+    const used = `traitPickup:${occurrence.occurrenceId}:${reference.siteKey}:${reference.entryKey}`;
+    if (context.used.has(used)) continue;
+    const rewardType =
+      occurrence.acquisitionSites?.[reference.siteKey]?.pickupEntries?.[reference.entryKey]?.offer
+        ?.rewardType;
+    if (rewardType === undefined) continue;
+    context.used.add(used);
+    const budget = `traitPickupUses:${occurrence.occurrenceId}:${rewardType}`;
+    const spent = [...context.used].filter((key) => key.startsWith(`${budget}#`)).length;
+    if (spent >= pickupUseCount(context.catalog, room, rewardType)) continue;
+    context.used.add(`${budget}#${spent}`);
+    if (!insertRoomAction(context, biomeKey, occurrence.occurrenceId, reference))
+      context.note({
+        area: 'reward',
+        reason: 'refused',
+        address: contribution.owner,
+        record: record(roomIndex),
+      });
+  }
 }
 
 function importRack(
