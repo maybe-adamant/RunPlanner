@@ -64,9 +64,37 @@ function migratePhantomExit(occurrence) {
     occurrence.phantomExit = { placeholderRoomGameName: null, rewardType: null };
 }
 
+// The Well and Pool hold no interaction flag: use follows from the room's
+// actions, and a blank slot stays native. An uninteracted feature had no
+// actions and left the game to roll, so its retained slots are cleared.
+const FEATURE_SLOTS = [
+  ['stygianWell', 'offerKeyBySlot'],
+  ['purgingPool', 'traitKeyBySlot'],
+];
+
+function dropFeatureInteraction(occurrence) {
+  let changed = false;
+  for (const [field, slots] of FEATURE_SLOTS) {
+    const feature = occurrence?.[field];
+    if (feature === null || typeof feature !== 'object' || !Object.hasOwn(feature, 'interacted'))
+      continue;
+    changed = true;
+    if (feature.interacted === true) {
+      delete feature.interacted;
+      continue;
+    }
+    const cleared = Object.fromEntries(
+      Object.keys(feature[slots] ?? {}).map((slotKey) => [slotKey, null]),
+    );
+    occurrence[field] = { [slots]: cleared };
+  }
+  return changed;
+}
+
 function migrateOccurrence(occurrence) {
   migratePedestal(occurrence);
   migratePhantomExit(occurrence);
+  dropFeatureInteraction(occurrence);
 }
 
 // Schema 100 is unpushed: a local plan saved while a Well or Pool held a reroll
@@ -100,16 +128,21 @@ function normalizeOccurrenceRerollCounts(occurrence) {
 }
 
 /**
- * Reshapes a schema 100 document saved with Well or Pool reroll counts;
- * returns the input itself when it holds none.
+ * Reshapes a schema 100 document saved with Well or Pool reroll counts or
+ * interaction flags; returns the input itself when it holds none.
  */
-export function normalizeSchema100RerollCounts(value) {
+export function normalizeUnpushedSchema100(value) {
   const source = record(value, 'project document');
   const copy = JSON.parse(JSON.stringify(source));
   let changed = false;
   for (const biome of copy.route?.biomes ?? [])
     for (const occurrence of biome?.topology?.occurrences ?? [])
-      if (normalizeOccurrenceRerollCounts(occurrence)) changed = true;
+      if (
+        [normalizeOccurrenceRerollCounts(occurrence), dropFeatureInteraction(occurrence)].some(
+          Boolean,
+        )
+      )
+        changed = true;
   return changed ? copy : source;
 }
 

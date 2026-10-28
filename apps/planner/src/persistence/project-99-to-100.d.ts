@@ -4,4 +4,4 @@ export const CATALOG_VERSION: string;
 export function migrateProjectDocument(value: unknown): unknown;
 export const PEDESTAL_ROOMS: ReadonlySet<string>;
 export const PHANTOM_EXIT_ROOMS: ReadonlySet<string>;
-export function normalizeSchema100RerollCounts(value: unknown): unknown;
+export function normalizeUnpushedSchema100(value: unknown): unknown;

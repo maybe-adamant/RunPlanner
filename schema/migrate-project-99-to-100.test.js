@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   migrateProjectDocument,
-  normalizeSchema100RerollCounts,
+  normalizeUnpushedSchema100,
 } from '../apps/planner/src/persistence/project-99-to-100.js';
 
 const offer = (rewardType) => ({ optionKey: null, reward: { offer: { rewardType } } });
@@ -143,20 +143,59 @@ describe('schema 99 to 100 migration', () => {
   });
 });
 
+describe('schema 99 Well and Pool interaction', () => {
+  it('drops the flag, keeping an interacted stock and clearing an uninteracted one', () => {
+    const migrated = migrateProjectDocument(
+      document([
+        {
+          occurrenceId: 'postboss',
+          gameName: 'G_PostBoss01',
+          stygianWell: {
+            interacted: false,
+            offerKeyBySlot: { healing: 'HealDropRange', secondLeft: null, secondRight: null },
+            travelDealRefillKey: null,
+          },
+          purgingPool: {
+            interacted: true,
+            traitKeyBySlot: { left: 'ApolloWeaponBoon', middle: null, right: null },
+          },
+          roomActions: { order: [] },
+        },
+      ]),
+    );
+    const [room] = migrated.route.biomes[0].topology.occurrences;
+    assert.deepEqual(room.stygianWell, {
+      offerKeyBySlot: { healing: null, secondLeft: null, secondRight: null },
+    });
+    assert.deepEqual(room.purgingPool, {
+      traitKeyBySlot: { left: 'ApolloWeaponBoon', middle: null, right: null },
+    });
+  });
+});
+
 describe('unpushed schema 100 reroll counts', () => {
   it('turns Well and Pool counts into unpinned rerolls at the end of the room', () => {
     const room = {
       occurrenceId: 'postboss',
       gameName: 'F_PostBoss01',
-      stygianWell: { interacted: true, offerKeyBySlot: {}, rerollCount: 2 },
-      purgingPool: { interacted: false, traitKeyBySlot: {}, rerollCount: 1 },
+      stygianWell: {
+        interacted: true,
+        offerKeyBySlot: { healing: 'HealDropRange' },
+        rerollCount: 2,
+      },
+      purgingPool: {
+        interacted: false,
+        traitKeyBySlot: { left: 'ApolloWeaponBoon', middle: null },
+        rerollCount: 1,
+      },
       roomActions: { order: [{ kind: 'useFountain' }] },
     };
     const source = { ...document([room]), schemaVersion: 100 };
-    const normalized = normalizeSchema100RerollCounts(source);
+    const normalized = normalizeUnpushedSchema100(source);
     const [migrated] = normalized.route.biomes[0].topology.occurrences;
-    assert.equal('rerollCount' in migrated.stygianWell, false);
-    assert.equal('rerollCount' in migrated.purgingPool, false);
+    // An interacted Well keeps its stock; an uninteracted Pool's slots go native.
+    assert.deepEqual(migrated.stygianWell, { offerKeyBySlot: { healing: 'HealDropRange' } });
+    assert.deepEqual(migrated.purgingPool, { traitKeyBySlot: { left: null, middle: null } });
     assert.deepEqual(migrated.roomActions.order, [
       { kind: 'useFountain' },
       { kind: 'rerollStygianWell', rerollId: 'r1', offerKeyBySlot: {} },
@@ -164,6 +203,6 @@ describe('unpushed schema 100 reroll counts', () => {
     ]);
     assert.equal(room.stygianWell.rerollCount, 2);
     const plain = { ...document([]), schemaVersion: 100 };
-    assert.equal(normalizeSchema100RerollCounts(plain), plain);
+    assert.equal(normalizeUnpushedSchema100(plain), plain);
   });
 });

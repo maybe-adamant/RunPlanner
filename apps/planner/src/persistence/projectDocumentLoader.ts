@@ -6,7 +6,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { PROJECT_TRANSITION_STEPS } from './project-transitions.js';
-import { normalizeSchema100RerollCounts } from './project-99-to-100.js';
+import { normalizeUnpushedSchema100 } from './project-99-to-100.js';
 
 export const PROJECT_DOCUMENT_SCHEMA_SUPPORT_FLOOR = 86 as const;
 
@@ -87,7 +87,7 @@ export function loadProjectDocument(
         `Project schema ${envelope.schemaVersion}.${revision} is newer than supported schema ${PROJECT_DOCUMENT_SCHEMA_VERSION}.${PROJECT_DOCUMENT_SCHEMA_REVISION}.`,
       );
     }
-    const normalized = normalizeSchema100RerollCounts(parsed);
+    const normalized = normalizeUnpushedSchema100(parsed);
     return currentProject(normalized === parsed ? json : JSON.stringify(normalized), catalog);
   }
 
