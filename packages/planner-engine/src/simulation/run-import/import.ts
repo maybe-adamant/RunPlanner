@@ -43,7 +43,12 @@ import { areaOfFinding, isQuestionFinding } from './areas';
 import { importResourcePlacements } from './resources';
 import { routeKeyForRecord } from './vocabulary';
 import { compareImportToRecord } from './conformance';
-import { importRerolls, unreachedRerolls, unsupportedScreenRerolls } from './rerolls';
+import {
+  importRerolls,
+  unplacedStoreScreenRerolls,
+  unreachedRerolls,
+  unsupportedScreenRerolls,
+} from './rerolls';
 
 /**
  * A complete import settles every question; a stopped one ends its plan before
@@ -344,9 +349,12 @@ class RunImportWalk {
           });
   }
 
-  /** Door rerolls in rooms whose bracket the walk never closed. */
+  /** Door rerolls in rooms whose bracket the walk never closed, and Well or Pool rerolls no screen took. */
   reportUnreachedRerolls(): void {
-    this.entries.push(...unreachedRerolls(this.context));
+    this.entries.push(
+      ...unreachedRerolls(this.context),
+      ...unplacedStoreScreenRerolls(this.context),
+    );
   }
 
   /** Weapon, aspect, familiar, starting keepsake, Arcana and Fear, each validated by its command. */

@@ -5,6 +5,7 @@ import {
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
+  createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createRoomActionAddress,
   roomActionKey,
@@ -101,6 +102,7 @@ export function applyScreenRerolls(
   const rerolls = roomScreenRerolls(context, roomIndex);
   const count = rerolls.counts.get(screen);
   if (count === undefined) return;
+  context.used.add(`screenRerolls:${roomIndex}:${screen}`);
   const record = { roomIndex, visit: 0 };
   const applied = command(count);
   if (!context.applyValid(applied)) {
@@ -128,7 +130,7 @@ export function unsupportedScreenRerolls(
   );
 }
 
-type Counts = Readonly<Record<string, number>>;
+export type Counts = Readonly<Record<string, number>>;
 
 /** The plan's store contents less the saved ones at a record room's entry save, by store. */
 function storeOffsets(
@@ -183,27 +185,35 @@ function bracketStoresMatch(context: RunImportContext, roomIndex: number): boole
 }
 
 /** One replaced reward a press drew past: its store and type. */
-interface Replaced {
+export interface Replaced {
   readonly storeKey: string;
   readonly rewardType: string;
 }
 
+/** What the stores say a bracket's rerolls replaced. */
+export type ReplacedRewardsSolution =
+  | { readonly kind: 'solved'; readonly replaced: readonly Replaced[] }
+  /** No refill choice gives exactly the expected count; `smallest` is the least loss any explains. */
+  | { readonly kind: 'unsolved'; readonly smallest?: number };
+
 /**
  * The rewards a bracket's door, wheel, cage or Hub rerolls replaced, as a
- * multiset: what the stores lost beyond the plan's draws, `pre + kF - post`
- * per store, with each store's refill count fixed by the reroll count. Undefined
- * when no single refill count gives exactly the recorded rerolls.
+ * multiset: per store, what the game's stores lost beyond the plan's draws
+ * across the bracket, `pre + kF - post`, where the refill difference k between
+ * game and plan is the one choice that leaves no negative count and makes the
+ * total exactly the expected reroll count. Stores in key order, rewards in
+ * declaration order.
  */
-function replacedRewards(
-  context: RunImportContext,
-  roomIndex: number,
-  rerolls: number,
-): readonly Replaced[] | undefined {
-  const before = storeOffsets(context, roomIndex);
-  const after = storeOffsets(context, roomIndex + 1);
-  if (before === undefined || after === undefined) return undefined;
-  const routeKey = context.assembly().project.route.routeKey;
-  // Per store, each refill difference between game and plan that leaves no negative count.
+export function solveReplacedRewards(input: {
+  /** Plan less saved store counts at the bracket's first and last entry saves. */
+  readonly before: ReadonlyMap<string, Counts>;
+  readonly after: ReadonlyMap<string, Counts>;
+  /** One complete fill of a store, and its declared reward order. */
+  readonly fill: (storeKey: string) => Counts;
+  readonly order: (storeKey: string) => readonly string[];
+  readonly rerolls: number;
+}): ReplacedRewardsSolution {
+  const { before, after, rerolls } = input;
   const options: {
     readonly storeKey: string;
     readonly replaced: Counts;
@@ -211,7 +221,7 @@ function replacedRewards(
   }[][] = [];
   for (const [storeKey, offset] of after) {
     const previous = before.get(storeKey) ?? {};
-    const full = fill(context.catalog, routeKey, storeKey);
+    const full = input.fill(storeKey);
     const names = new Set([...Object.keys(offset), ...Object.keys(previous), ...Object.keys(full)]);
     const choices = [];
     for (const refills of [0, 1, -1]) {
@@ -224,11 +234,15 @@ function replacedRewards(
         if (count > 0) replaced[name] = count;
         size += Math.max(0, count);
       }
-      if (valid && size <= rerolls) choices.push({ storeKey, replaced, size });
+      if (valid) choices.push({ storeKey, replaced, size });
     }
-    if (choices.length === 0) return undefined;
+    if (choices.length === 0) return { kind: 'unsolved' };
     options.push(choices);
   }
+  const smallest = options.reduce(
+    (total, choices) => total + Math.min(...choices.map((choice) => choice.size)),
+    0,
+  );
   const solutions: (typeof options)[number][number][][] = [];
   const search = (index: number, chosen: (typeof options)[number][number][], size: number) => {
     if (size > rerolls || solutions.length > 1) return;
@@ -240,24 +254,61 @@ function replacedRewards(
       search(index + 1, [...chosen, choice], size + choice.size);
   };
   search(0, [], 0);
-  if (solutions.length !== 1) return undefined;
-  const result: Replaced[] = [];
-  for (const { storeKey, replaced } of [...solutions[0]!].sort((left, right) =>
+  if (solutions.length !== 1) return { kind: 'unsolved', smallest };
+  const replaced: Replaced[] = [];
+  for (const choice of [...solutions[0]!].sort((left, right) =>
     left.storeKey.localeCompare(right.storeKey),
   )) {
-    // Declaration order within a store.
-    const order = [
+    const order = input.order(choice.storeKey);
+    for (const rewardType of Object.keys(choice.replaced).sort(
+      (left, right) => order.indexOf(left) - order.indexOf(right),
+    ))
+      for (let count = 0; count < choice.replaced[rewardType]!; count += 1)
+        replaced.push({ storeKey: choice.storeKey, rewardType });
+  }
+  return { kind: 'solved', replaced };
+}
+
+function replacedRewards(
+  context: RunImportContext,
+  roomIndex: number,
+  rerolls: number,
+): ReplacedRewardsSolution {
+  const before = storeOffsets(context, roomIndex);
+  const after = storeOffsets(context, roomIndex + 1);
+  if (before === undefined || after === undefined) return { kind: 'unsolved' };
+  const routeKey = context.assembly().project.route.routeKey;
+  return solveReplacedRewards({
+    before,
+    after,
+    fill: (storeKey) => fill(context.catalog, routeKey, storeKey),
+    order: (storeKey) => [
       ...new Set(
         context.catalog.rewards.stores.byKey[storeKey]?.entries.map((entry) => entry.rewardType),
       ),
-    ];
-    for (const rewardType of Object.keys(replaced).sort(
-      (left, right) => order.indexOf(left) - order.indexOf(right),
-    ))
-      for (let count = 0; count < replaced[rewardType]!; count += 1)
-        result.push({ storeKey, rewardType });
-  }
-  return result;
+    ],
+    rerolls,
+  });
+}
+
+/**
+ * The rerolls the plan has yet to spend across a bracket: how much further its
+ * pool now runs ahead of the saved `NumRerolls`. The plan models every grant,
+ * so a gain inside the bracket hides no spend here. Undefined when either entry
+ * save has no plan state to compare; an empty saved pool is absent.
+ */
+function poolSpends(context: RunImportContext, roomIndex: number): number | undefined {
+  const saved = recordedEntryStates(context.record);
+  const offset = (index: number) => {
+    const snapshot = entrySnapshot(context.assembly(), context.occurrences, index);
+    const state = saved[index];
+    return snapshot === undefined || state === undefined
+      ? undefined
+      : snapshot.rerolls.remaining - state.numRerolls;
+  };
+  const before = offset(roomIndex);
+  const after = offset(roomIndex + 1);
+  return before === undefined || after === undefined ? undefined : after - before;
 }
 
 /** A reward owner one press may redraw, with how to rewrite its draws. */
@@ -507,9 +558,8 @@ function prependReplaced(
  */
 export function importRerolls(context: RunImportContext): void {
   for (const [roomIndex, room] of context.record.rooms.entries()) {
-    const rerolls = room.rerolls ?? 0;
     const used = `rerolls:${roomIndex}`;
-    if (rerolls === 0 || context.used.has(used)) continue;
+    if (context.used.has(used)) continue;
     // The bracket closes at the next entry save, once the plan has entered its room.
     if (
       roomIndex + 1 >= context.record.rooms.length ||
@@ -517,6 +567,13 @@ export function importRerolls(context: RunImportContext): void {
       entrySnapshot(context.assembly(), context.occurrences, roomIndex + 1) === undefined
     )
       continue;
+    const recorded = room.rerolls ?? 0;
+    // The pool counts the room's spends through any grant; the recorder's count is a floor.
+    const rerolls = poolSpends(context, roomIndex) ?? recorded;
+    if (rerolls <= 0 && recorded === 0) {
+      context.used.add(used);
+      continue;
+    }
     const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
     const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
     const sourceId = context.occurrences.occurrenceOf(roomIndex);
@@ -540,30 +597,90 @@ export function importRerolls(context: RunImportContext): void {
     if (!bracketDrawsAuthored(context, biomeKey, sourceId, targets)) continue;
     context.used.add(used);
     const record = { roomIndex, visit: 0 };
-    const unsupported = () => {
-      for (let count = 0; count < rerolls; count += 1)
+    const unsupported = (count: number) => {
+      for (let index = 0; index < count; index += 1)
         context.note({ area: 'reroll', reason: 'unsupportedArea', record });
     };
-    const replaced = replacedRewards(context, roomIndex, rerolls);
-    // A restored Hub never offers its board for rerolls again.
-    if (
-      replaced === undefined ||
-      (hub !== undefined && context.occurrences.visitsOf(sourceId)[0] !== roomIndex)
-    ) {
-      unsupported();
+    // The recorder saw a spend the plan's pool does not miss.
+    if (rerolls <= 0) {
+      context.note({
+        area: 'reroll',
+        reason: 'mismatch',
+        record,
+        mismatch: { field: 'rerolls', expected: String(recorded), actual: String(rerolls) },
+      });
+      unsupported(recorded);
       continue;
     }
+    const solution = replacedRewards(context, roomIndex, rerolls);
+    if (solution.kind === 'unsolved') {
+      // The stores lose another count of rewards than the pool spent.
+      if (solution.smallest !== undefined)
+        context.note({
+          area: 'reroll',
+          reason: 'mismatch',
+          record,
+          mismatch: {
+            field: 'rerolls',
+            expected: String(rerolls),
+            actual: String(solution.smallest),
+          },
+        });
+      unsupported(Math.max(rerolls, recorded));
+      continue;
+    }
+    // A restored Hub never offers its board for rerolls again.
+    if (hub !== undefined && context.occurrences.visitsOf(sourceId)[0] !== roomIndex) {
+      unsupported(rerolls);
+      continue;
+    }
+    const sourceActions = () =>
+      hub === undefined ? (occurrenceOf(context, biomeKey, sourceId)?.roomActions.order ?? []) : [];
     const before = new Set(
       pressAddresses(context, biome, sourceId, hub).map((address) => JSON.stringify(address)),
     );
+    const earlier = new Set(
+      sourceActions().flatMap((action) => (action.kind === 'reroll' ? [action.rerollId] : [])),
+    );
     const placed = context.transaction(() =>
-      replaced.every((entry) => prependReplaced(context, targets, entry)),
+      solution.replaced.every((entry) => prependReplaced(context, targets, entry)),
     );
     if (!placed) {
-      unsupported();
+      unsupported(rerolls);
       continue;
     }
-    if (bracketStoresMatch(context, roomIndex)) {
+    if (!bracketStoresMatch(context, roomIndex)) {
+      for (const address of pressAddresses(context, biome, sourceId, hub))
+        if (!before.has(JSON.stringify(address)))
+          context.note({ area: 'reroll', reason: 'notInRecord', address, record });
+      continue;
+    }
+    // A wheel press may as well have redrawn the picked offer, which this plan cannot hold yet.
+    const wheels = new Set(
+      sourceActions().flatMap((action) =>
+        action.kind === 'reroll' &&
+        !earlier.has(action.rerollId) &&
+        action.target.kind === 'wheelOffer'
+          ? [action.target.wheelKey]
+          : [],
+      ),
+    );
+    for (const wheelKey of wheels)
+      context.note({
+        area: 'wheel',
+        reason: 'assumption',
+        address: createRewardWheelAddress(biome, sourceId, wheelKey),
+        record,
+      });
+    const otherPresses =
+      hub !== undefined ||
+      sourceActions().some(
+        (action) =>
+          action.kind === 'reroll' &&
+          !earlier.has(action.rerollId) &&
+          action.target.kind !== 'wheelOffer',
+      );
+    if (otherPresses)
       context.note({
         area: 'reroll',
         reason: 'assumption',
@@ -573,12 +690,21 @@ export function importRerolls(context: RunImportContext): void {
             : createHubDecisionAddress(biome, hub.hubKey),
         record,
       });
-      continue;
-    }
-    for (const address of pressAddresses(context, biome, sourceId, hub))
-      if (!before.has(JSON.stringify(address)))
-        context.note({ area: 'reroll', reason: 'notInRecord', address, record });
   }
+}
+
+/** Well and Pool rerolls of rooms whose plan holds no such screen to carry them. */
+export function unplacedStoreScreenRerolls(
+  context: RunImportContext,
+): readonly RunImportReportEntry[] {
+  return context.record.rooms.flatMap((_room, roomIndex) =>
+    (['well', 'pool'] as const).flatMap((screen): RunImportReportEntry[] =>
+      roomScreenRerolls(context, roomIndex).counts.has(screen) &&
+      !context.used.has(`screenRerolls:${roomIndex}:${screen}`)
+        ? [{ area: 'reroll', reason: 'unsupportedArea', record: { roomIndex, visit: 0 } }]
+        : [],
+    ),
+  );
 }
 
 /**

@@ -198,7 +198,6 @@ function compareEntry(
   saved: RecordedEntryState,
   snapshot: RunStateSnapshot,
   entered: RunStateSnapshot | undefined,
-  rerollsRecorded: boolean,
 ): readonly Difference[] {
   const found: Difference[] = [];
   const differ = (area: RunImportArea, field: string, values: Values | undefined) => {
@@ -316,12 +315,12 @@ function compareEntry(
     setDiff(saved.investedTalents, snapshot.hexProgress.investedNodeKeys),
   );
 
-  // The planner's reroll pool against the game's: a gain or spend the plan misses persists.
-  if (rerollsRecorded)
-    differ('reroll', 'NumRerolls', {
-      expected: show(saved.numRerolls),
-      actual: show(snapshot.rerolls.remaining),
-    });
+  // The planner's reroll pool against the game's; an empty saved pool is absent.
+  differ('reroll', 'NumRerolls', {
+    expected: show(saved.numRerolls),
+    actual: show(snapshot.rerolls.remaining),
+    persists: String(saved.numRerolls - snapshot.rerolls.remaining),
+  });
 
   // The game derives Forfeit from the biome's skip count against the Vow's rank.
   const rank = record.loadout.vows[FORFEIT_VOW] ?? 0;
@@ -414,8 +413,6 @@ export function compareImportToRecord(
   const routeKey = assembly.project.route.routeKey;
   const snapshot = (occurrence: RecordOccurrence, kind: 'roomEntered' | 'beforeRoomExit') =>
     occurrenceSnapshot(assembly, occurrence, kind);
-  // A record whose saves never held a reroll writes no pool to compare.
-  const rerollsRecorded = record.rooms.some((room) => room.entry?.numRerolls !== undefined);
   const entries: RunImportReportEntry[] = [];
   // A difference that persists is reported where it begins and again where it changes.
   const previous = new Map<string, string>();
@@ -433,7 +430,6 @@ export function compareImportToRecord(
       states[roomIndex]!,
       exit,
       entered === undefined ? undefined : snapshot(entered, 'roomEntered'),
-      rerollsRecorded,
     );
     const current = new Map(
       found.map((entry) => [

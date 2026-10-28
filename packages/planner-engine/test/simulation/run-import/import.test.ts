@@ -1050,14 +1050,20 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
     });
     expect(
       rerolled.report.entries.filter((entry) => entry.area === 'reroll').map(describeEntry),
-    ).toEqual(['unsupportedArea reroll r5 -', 'unsupportedArea reroll r5 -']);
+    ).toEqual([
+      // The recorded count against the plan's pool, which no saved spend moved.
+      'mismatch reroll r5 -',
+      'unsupportedArea reroll r5 -',
+      'unsupportedArea reroll r5 -',
+    ]);
   });
 });
 
 describe('run import of door, wheel, cage and Hub rerolls', () => {
   /**
    * The record as if room `roomIndex` had pressed one more door, wheel or cage
-   * reroll: its count rises, the pool falls by one in every later entry save,
+   * reroll: its count rises unless a gain hid it from the recorder, the pool
+   * falls by one in every later entry save,
    * and `store` changes by `delta` from the next entry save on wherever a save
    * holds it.
    */
@@ -1066,12 +1072,14 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     roomIndex: number,
     store: string,
     delta: Readonly<Record<string, number>>,
+    counted = true,
   ): RunRecord {
     const states = recordedEntryStates(record);
     return {
       ...record,
       rooms: record.rooms.map((room, index) => {
-        if (index === roomIndex) return { ...room, rerolls: (room.rerolls ?? 0) + 1 };
+        if (index === roomIndex)
+          return counted ? { ...room, rerolls: (room.rerolls ?? 0) + 1 } : room;
         if (index < roomIndex || room.entry === undefined) return room;
         const entry = {
           ...room.entry,
@@ -1115,9 +1123,19 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     };
   }
 
-  /** The Surface victory with The Enchantress held from the start in The Lovers' place. */
+  /**
+   * The Surface victory with The Enchantress held from the start in The Lovers'
+   * place, its Epic rank's three rerolls kept in every entry save.
+   */
   function surfaceWithEnchantress(roomCount?: number): RunRecord {
-    const record = fixture('surface-victory');
+    const fixtureRecord = fixture('surface-victory');
+    const record: RunRecord = {
+      ...fixtureRecord,
+      rooms: fixtureRecord.rooms.map((room) => ({
+        ...room,
+        entry: { ...room.entry, numRerolls: 3 },
+      })),
+    };
     const loadout = {
       ...record.loadout,
       arcana: record.loadout.arcana.map((card) =>
@@ -1144,7 +1162,12 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
           entry.record?.roomIndex === roomIndex ||
           (entry.reason === 'mismatch' && entry.record?.roomIndex === roomIndex + 1),
       )
-      .filter((entry) => entry.area === 'reroll' || entry.reason === 'mismatch')
+      .filter(
+        (entry) =>
+          entry.area === 'reroll' ||
+          entry.reason === 'mismatch' ||
+          (entry.area === 'wheel' && entry.address?.kind === 'rewardWheel'),
+      )
       .map(describeEntry);
 
   const pressesOf = (project: ProjectDocument, occurrenceId: string) =>
@@ -1169,6 +1192,47 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     expect(reward(imported.project, 'G-r20-d609579').offer).toEqual({
       rewardType: 'MaxHealthDrop',
     });
+  });
+
+  it('finds a press a gain hid from the recorded count by the pool the plan runs ahead', () => {
+    const imported = projectFromRunRecord(
+      catalog,
+      withReroll(oceanus(), 20, 'RunProgress', { MaxHealthDrop: -1 }, false),
+    );
+    expect(rerollLines(imported, 20)).toEqual(['assumption reroll r20 occurrence@G-r20']);
+    expect(pressesOf(imported.project, 'G-r20')).toHaveLength(1);
+  });
+
+  it('reports a pool spend the stores do not show, and the pool it leaves ahead', () => {
+    const record = oceanus();
+    const imported = projectFromRunRecord(catalog, {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index > 20 && room.entry?.numRerolls !== undefined
+          ? { ...room, entry: { ...room.entry, numRerolls: room.entry.numRerolls - 1 } }
+          : room,
+      ),
+    });
+    expect(rerollLines(imported, 20)).toEqual([
+      'mismatch reroll r20 -',
+      'unsupportedArea reroll r20 -',
+      'mismatch reroll r21 -',
+    ]);
+    expect(mismatchLines(imported.report)).toEqual([
+      'reroll r20 rerolls: 1 | 0',
+      'reroll r21 NumRerolls: 8 | 9',
+    ]);
+  });
+
+  it('reports a Well reroll in a room whose plan holds no Well', () => {
+    const record = oceanus();
+    const imported = projectFromRunRecord(catalog, {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index === 20 ? { ...room, spentRerolls: { WellShop: 1 } } : room,
+      ),
+    });
+    expect(rerollLines(imported, 20)).toEqual(['unsupportedArea reroll r20 -']);
   });
 
   it("solves a bracket whose stores refilled, and keeps the taken door's screen", () => {
@@ -1231,7 +1295,8 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
       catalog,
       withReroll(surfaceWithEnchantress(), 22, 'MetaProgress', { MetaCurrencyBigDrop: -1 }),
     );
-    expect(rerollLines(imported, 22)).toEqual(['assumption reroll r22 occurrence@O-r22']);
+    // The press may as well have redrawn the picked offer, which the plan cannot hold yet.
+    expect(rerollLines(imported, 22)).toEqual(['assumption wheel r22 rewardWheel@O-r22']);
     const ship = occurrence(imported.project, 'O-r22');
     expect(ship.roomActions.order.slice(0, 2)).toEqual([
       {
