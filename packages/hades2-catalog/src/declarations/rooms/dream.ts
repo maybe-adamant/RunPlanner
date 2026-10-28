@@ -7,6 +7,7 @@ const dreamPostboss = (gameName: string) => ({
   label: 'Postboss',
   // NextRoomSet = {} resets the biome depth cache.
   nextRoomSet: true,
+  noReroll: true,
   hasKeepsakeRack: true,
   hasRequiredFountain: true,
   challengeSwitchAnchorCount: 1,

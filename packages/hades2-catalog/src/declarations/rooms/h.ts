@@ -70,6 +70,7 @@ function fieldsSpatial(gameName: keyof typeof hFieldsSpatial) {
 export const hRooms = [
   {
     gameName: 'H_Intro',
+    noReroll: true,
     ...chaosHost(2),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
@@ -911,6 +912,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Bridge01',
+    noReroll: true,
     ...chaosHost(3),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Echo',
@@ -1058,6 +1060,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Boss01',
+    noReroll: true,
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Cerberus',
     roomSetKey: 'H',
@@ -1085,6 +1088,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Boss02',
+    noReroll: true,
     resourcePointSupport: hResourcePointSupport([]),
     label: 'Cerberus',
     roomSetKey: 'H',
@@ -1106,6 +1110,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_PostBoss01',
+    noReroll: true,
     nextRoomSet: true,
     resourcePointSupport: hResourcePointSupport([]),
     label: 'Postboss',
@@ -1126,7 +1131,8 @@ export const hRooms = [
     kind: 'PostBoss',
     mode: { kind: 'authored', templateKey: 'PostBoss' },
     structuralTags: [],
-    exits: [{ index: 1, type: 'FieldsExitDoor' }],
+    // H_PostBossDoor (AllowReroll = false) leaves the Fields.
+    exits: [{ index: 1, type: 'FieldsExitDoor', allowReroll: false }],
     incomingReward: { kind: 'none' },
     enteredRewardStoreHistory: { kind: 'none' },
     encounterEnvelopeKey: 'SingleEncounter',

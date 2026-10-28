@@ -192,6 +192,20 @@ export interface ArcanaCardDeclaration {
     readonly maxHealthByRarity: Readonly<Record<InRunTraitRarity, number>>;
     readonly maxManaByRarity: Readonly<Record<InRunTraitRarity, number>>;
   };
+  /** Source `RerollCount`, added to the run's reroll pool, and the reroll kind holding the card enables. */
+  readonly rerolls?: ArcanaRerollGrant;
+}
+
+/**
+ * `doors`: `AllowDoorReroll` (exit doors, Hub board doors, ship wheels and
+ * Fields cages); `screens`: the offer-screen reroll button; `none`: pool only.
+ * Barren's Arcana suspension removes the enabling card, not its pool grant.
+ */
+export type ArcanaRerollKind = 'doors' | 'screens' | 'none';
+
+export interface ArcanaRerollGrant {
+  readonly countByRarity: Readonly<Record<InRunTraitRarity, number>>;
+  readonly enables: ArcanaRerollKind;
 }
 
 export interface FearVowDeclaration {
@@ -820,6 +834,8 @@ export interface ExitTypeDeclaration {
   readonly key: string;
   readonly compatibilityPolicyKey: string;
   readonly behavior: ExitBehavior;
+  /** Native door `AllowReroll`; the destination's `ForceDoorAllowReroll` can still grant it. */
+  readonly allowReroll: boolean;
 }
 
 export type ExitBehavior =
@@ -837,6 +853,8 @@ export interface RoomExit {
   readonly type: string;
   readonly compatibilityPolicyKey: string;
   readonly behavior: ExitBehavior;
+  /** The physical door's native `AllowReroll`: its type's, unless the room's door differs. */
+  readonly allowReroll: boolean;
 }
 
 export interface ZagreusContractAdditionalExitDeclaration {
@@ -873,6 +891,17 @@ export interface RoomCounterEffects {
    * has NextRoomSet, so leaving it leaves the cache at 1 whatever it was.
    */
   readonly resetsBiomeDepthCache?: true;
+}
+
+/**
+ * A room whose return door `ChooseNextRoomData` still fills: the placeholder
+ * room and its reward are drawn but never entered.
+ */
+export interface PhantomExitDeclaration {
+  /** The current room's native room set, which the placeholder is drawn from. */
+  readonly placeholderRoomSetKey: 'N' | 'N_SubRooms';
+  /** Position in the unlock's name-sorted door order; the return door sorts before side doors. */
+  readonly unlockOrderPosition: 'first';
 }
 
 export interface RoomCaps {
@@ -1011,6 +1040,12 @@ export interface RoomDeclaration {
   readonly blocksGorgon: boolean;
   /** Native RoomData `NextRoomSet`, declared or inherited; native biome depth counts from it. */
   readonly nextRoomSet: boolean;
+  /** Native RoomData `NoReroll`, declared or inherited: no door into this room is rerollable. */
+  readonly noReroll: boolean;
+  /** Native RoomData `ForceDoorAllowReroll`: every door into this room allows a reroll. */
+  readonly forceDoorAllowReroll: boolean;
+  /** The hidden return door this room unlocks with its other exits, drawing a placeholder room. */
+  readonly phantomExit?: PhantomExitDeclaration;
   /** Exact physical Postboss rack presence, independent of route position. */
   readonly hasKeepsakeRack: boolean;
   /** Routes whose save profile lacks the rack. */

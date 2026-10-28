@@ -26,6 +26,7 @@ const chaosExit = {
 export const pRooms = [
   {
     gameName: 'P_Intro',
+    noReroll: true,
     secretPointAnchorCount: 1,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
@@ -737,6 +738,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Story01',
+    noReroll: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Dionysus',
     roomSetKey: 'P',
@@ -805,6 +807,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Shop01',
+    noReroll: true,
     secretPointAnchorCount: 1,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Midshop',
@@ -986,6 +989,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Boss01',
+    noReroll: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Prometheus',
     roomSetKey: 'P',
@@ -1011,6 +1015,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_PostBoss01',
+    noReroll: true,
     nextRoomSet: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Postboss',

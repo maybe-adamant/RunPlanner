@@ -111,6 +111,7 @@ function normalizeAdditionalExits(
             type: exitType.key,
             compatibilityPolicyKey: exitType.compatibilityPolicyKey,
             behavior: exitType.behavior,
+            allowReroll: exitType.allowReroll,
           }),
           ...(requirement === undefined ? {} : { requirement }),
         });
@@ -140,6 +141,7 @@ function normalizeAdditionalExits(
           type: exitType.key,
           compatibilityPolicyKey: exitType.compatibilityPolicyKey,
           behavior: exitType.behavior,
+          allowReroll: exitType.allowReroll,
         }),
         targetRoomGameName: requireNonEmpty(
           raw.targetRoomGameName,
@@ -177,11 +179,16 @@ export function normalizeRoomExitFacts(
     const type = requireNonEmpty(exit.type, `${exitPath}.type`);
     const exitType = exitTypes.byKey[type];
     if (exitType === undefined) fail(`${exitPath}.type`, `unknown physical exit type ${type}`);
+    if (exit.allowReroll !== undefined && (exit.allowReroll as unknown) !== false)
+      fail(`${exitPath}.allowReroll`, 'may only deny a reroll its exit type allows');
+    if (exit.allowReroll === false && !exitType.allowReroll)
+      fail(`${exitPath}.allowReroll`, `repeats ${type}'s denial`);
     return Object.freeze({
       index: exit.index,
       type,
       compatibilityPolicyKey: exitType.compatibilityPolicyKey,
       behavior: exitType.behavior,
+      allowReroll: exit.allowReroll ?? exitType.allowReroll,
     });
   });
   const automaticExits = exits.filter((exit) => exit.behavior.kind === 'automaticHostContinuation');

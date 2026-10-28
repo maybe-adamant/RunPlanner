@@ -682,6 +682,11 @@ export interface TraitDeclaration {
     readonly maxManaByAcquisitionOrdinal: TraitAcquisitionOrdinalValues;
   };
   /**
+   * Source `RerollDrop` `AddRerolls`: rerolls the dropped pickup adds to the
+   * pool when collected. Dream menus grant the entered-biome rarity.
+   */
+  readonly rerollPickupByAcquisitionOrdinal?: TraitAcquisitionOrdinalValues;
+  /**
    * Source `GrantRandomMaxHealth`: an integer max-health roll from the acquired
    * rarity's minimum through that minimum plus `width`, equal at every rarity.
    */

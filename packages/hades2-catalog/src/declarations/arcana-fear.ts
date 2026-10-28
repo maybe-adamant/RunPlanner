@@ -77,17 +77,21 @@ export const arcanaCards = [
   },
   card('StatusVulnerability', 'Origination', 'EffectVulnerabilityMetaUpgrade', 3, 4, 5),
   card('ChanneledBlock', 'The Lovers', 'BossShieldMetaUpgrade', 3, 5, 3),
-  card(
-    'DoorReroll',
-    'The Enchantress',
-    'DoorRerollMetaUpgrade',
-    4,
-    1,
-    3,
-    { kind: 'manual' },
-    undefined,
-    true,
-  ),
+  {
+    ...card(
+      'DoorReroll',
+      'The Enchantress',
+      'DoorRerollMetaUpgrade',
+      4,
+      1,
+      3,
+      { kind: 'manual' },
+      undefined,
+      true,
+    ),
+    // RerollCount BaseValue 1 x rarity 1, 2, 3, 4; AllowDoorReroll.
+    rerolls: { countByRarity: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 }, enables: 'doors' },
+  },
   card('StartingGold', 'The Boatman', 'StartingGoldMetaUpgrade', 4, 2, 5),
   card(
     'MetaToRunUpgrade',
@@ -150,18 +154,24 @@ export const arcanaCards = [
       true,
     ),
     randomDrawRequiredCardKeys: ['ScreenReroll', 'DoorReroll'],
+    // RerollCount BaseValue 2 x rarity 1, 1.5, 2, 2.5; its stat penalty is commented out in source.
+    rerolls: { countByRarity: { Common: 2, Rare: 3, Epic: 4, Heroic: 5 }, enables: 'none' },
   },
-  card(
-    'ScreenReroll',
-    'The Champions',
-    'PanelRerollMetaUpgrade',
-    5,
-    2,
-    4,
-    { kind: 'manual' },
-    undefined,
-    true,
-  ),
+  {
+    ...card(
+      'ScreenReroll',
+      'The Champions',
+      'PanelRerollMetaUpgrade',
+      5,
+      2,
+      4,
+      { kind: 'manual' },
+      undefined,
+      true,
+    ),
+    // RerollCount BaseValue 1 x rarity 1, 2, 3, 4; the screen reroll button reads this trait.
+    rerolls: { countByRarity: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 }, enables: 'screens' },
+  },
   card('LowHealthBonus', 'Strength', 'LowHealthBuffMetaUpgrade', 5, 3, 4),
   card(
     'EpicRarityBoost',

@@ -27,6 +27,7 @@ const wellHost = (challengeSwitchAnchorCount: number) => ({
 export const iRooms = [
   {
     gameName: 'I_Intro',
+    noReroll: true,
     resourcePointSupport: underworldResourcePointSupport([
       'Pickaxe',
       'Exorcism',
@@ -57,6 +58,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Story01',
+    noReroll: true,
     resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Hades',
     roomSetKey: 'I',
@@ -1014,7 +1016,8 @@ export const iRooms = [
     kind: 'Preboss',
     mode: { kind: 'authored', templateKey: 'Preboss' },
     structuralTags: [],
-    exits: [{ index: 1, type: 'TartarusExitDoor' }],
+    // ChronosBossDoor (AllowReroll = false) leads to the boss.
+    exits: [{ index: 1, type: 'TartarusExitDoor', allowReroll: false }],
     incomingReward: {
       kind: 'shop',
       rewardType: 'Shop',
@@ -1056,7 +1059,8 @@ export const iRooms = [
     kind: 'Preboss',
     mode: { kind: 'authored', templateKey: 'Preboss' },
     structuralTags: [],
-    exits: [{ index: 1, type: 'TartarusExitDoor' }],
+    // ChronosBossDoor (AllowReroll = false) leads to the boss.
+    exits: [{ index: 1, type: 'TartarusExitDoor', allowReroll: false }],
     incomingReward: {
       kind: 'shop',
       rewardType: 'Shop',

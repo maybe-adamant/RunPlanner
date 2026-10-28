@@ -13,6 +13,7 @@ const surfaceShopHost = (spawnChance: number, forced = false, challengeSwitchAnc
 export const qRooms = [
   {
     gameName: 'Q_Intro',
+    noReroll: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
     roomSetKey: 'Q',
@@ -438,6 +439,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_MiniBoss02',
+    forceDoorAllowReroll: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     label: 'Brute',
@@ -469,6 +471,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_MiniBoss05',
+    forceDoorAllowReroll: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     label: 'Stalker',
@@ -500,6 +503,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_MiniBoss03',
+    forceDoorAllowReroll: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     label: 'Tail',
@@ -531,6 +535,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_MiniBoss04',
+    forceDoorAllowReroll: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     label: 'Eye',
@@ -604,6 +609,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Boss01',
+    noReroll: true,
     resourcePointSupport: normalResourcePointSupport([]),
     label: 'Typhon',
     roomSetKey: 'Q',
@@ -630,6 +636,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Boss02',
+    noReroll: true,
     resourcePointSupport: normalResourcePointSupport([]),
     label: 'Typhon',
     roomSetKey: 'Q',

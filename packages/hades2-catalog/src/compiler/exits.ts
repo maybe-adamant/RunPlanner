@@ -7,7 +7,7 @@ import type {
 } from '@run-planner/engine/catalog-schema';
 import type { RawExitTypeDeclaration } from '../declarations';
 
-import { createCollection, requireNonEmpty } from './common';
+import { createCollection, requireBoolean, requireNonEmpty } from './common';
 import { fail } from './errors';
 
 const structuralTags = new Set<RoomStructuralTag>(['Indoor', 'Outdoor']);
@@ -37,7 +37,8 @@ export function normalizeExitTypes(
       );
     }
     const behavior = normalizeExitBehavior(exitType.behavior, `${path}.behavior`);
-    return Object.freeze({ key, compatibilityPolicyKey, behavior });
+    const allowReroll = requireBoolean(exitType.allowReroll, `${path}.allowReroll`);
+    return Object.freeze({ key, compatibilityPolicyKey, behavior, allowReroll });
   });
   return createCollection(exitTypes, 'exitTypes', (exitType) => exitType.key, 'key');
 }

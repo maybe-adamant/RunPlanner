@@ -1,4 +1,9 @@
-import type { ArcanaCardDeclaration, FearVowDeclaration } from '@run-planner/engine/catalog-schema';
+import type {
+  ArcanaCardDeclaration,
+  ArcanaRerollGrant,
+  ArcanaRerollKind,
+  FearVowDeclaration,
+} from '@run-planner/engine/catalog-schema';
 import type { CatalogCollection, TraitDeclaration } from '@run-planner/engine/catalog-schema';
 import type { RawArcanaCardDeclaration, RawFearVowDeclaration } from '../declarations';
 import {
@@ -149,6 +154,7 @@ export function normalizeArcanaCards(
             `${path}.maxStatBonus.${stat}.${rarity}`,
           );
       }
+    const rerolls = card.rerolls === undefined ? undefined : normalizeRerolls(card.rerolls, path);
     if (traits.byKey[card.traitKey] === undefined) {
       fail(`${path}.traitKey`, `unknown trait ${card.traitKey}`);
     }
@@ -198,11 +204,13 @@ export function normalizeArcanaCards(
       boonRarityContributions: _rawBoonRarityContributions,
       roomEntryStatGrowth: _rawRoomEntryStatGrowth,
       maxStatBonus: _rawMaxStatBonus,
+      rerolls: _rawRerolls,
       ...normalizedCard
     } = card;
     void _rawBoonRarityContributions;
     void _rawRoomEntryStatGrowth;
     void _rawMaxStatBonus;
+    void _rawRerolls;
     return Object.freeze({
       ...normalizedCard,
       fatedIncompatible: card.fatedIncompatible === true,
@@ -222,6 +230,7 @@ export function normalizeArcanaCards(
               maxManaByRarity: Object.freeze({ ...maxStatBonus.maxManaByRarity }),
             }),
           }),
+      ...(rerolls === undefined ? {} : { rerolls }),
       ...(roomEntryStatGrowth === undefined
         ? {}
         : {
@@ -257,6 +266,10 @@ export function normalizeArcanaCards(
     });
   });
   if (values.length !== 25) fail('arcanaCards', 'must declare all 25 cards');
+  for (const kind of ['doors', 'screens'] as const) {
+    if (values.filter((card) => card.rerolls?.enables === kind).length !== 1)
+      fail('arcanaCards', `exactly one card must enable ${kind} rerolls`);
+  }
   const cardKeys = new Set(values.map((card) => card.key));
   values.forEach((card, index) => {
     card.randomDrawRequiredCardKeys.forEach((requiredKey, requiredIndex) => {
@@ -269,6 +282,30 @@ export function normalizeArcanaCards(
   });
   return createCollection(values, 'arcanaCards', (card) => card.key);
 }
+const REROLL_KINDS = new Set<ArcanaRerollKind>(['doors', 'screens', 'none']);
+const RARITIES = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
+
+function normalizeRerolls(
+  raw: NonNullable<RawArcanaCardDeclaration['rerolls']>,
+  path: string,
+): ArcanaRerollGrant {
+  const counts = requireObject(raw.countByRarity, `${path}.rerolls.countByRarity`);
+  if (Object.keys(counts).length !== RARITIES.length)
+    fail(`${path}.rerolls.countByRarity`, 'must declare all four rarities');
+  RARITIES.forEach((rarity, index) => {
+    requirePositiveInteger(counts[rarity] as number, `${path}.rerolls.countByRarity.${rarity}`);
+    const previous = RARITIES[index - 1];
+    if (previous !== undefined && raw.countByRarity[rarity] < raw.countByRarity[previous])
+      fail(`${path}.rerolls.countByRarity.${rarity}`, `must not be lower than ${previous}`);
+  });
+  if (!REROLL_KINDS.has(raw.enables))
+    fail(`${path}.rerolls.enables`, `unknown reroll kind ${String(raw.enables)}`);
+  return Object.freeze({
+    countByRarity: Object.freeze({ ...raw.countByRarity }),
+    enables: raw.enables,
+  });
+}
+
 export function normalizeFearVows(
   raw: readonly RawFearVowDeclaration[],
 ): CatalogCollection<FearVowDeclaration> {

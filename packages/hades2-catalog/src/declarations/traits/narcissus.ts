@@ -99,6 +99,8 @@ export const narcissusTraits = [
       },
     ],
     selectedDisposition: { kind: 'equip' },
+    // RerollDrop AddRerolls BaseValue 2 x rarity 1, 1, 1.5, 2.5.
+    rerollPickupByAcquisitionOrdinal: [2, 2, 3, 5],
   },
   {
     ...raritylessNpcTrait,

@@ -25,6 +25,7 @@ const chaosExit = {
 export const gRooms = [
   {
     gameName: 'G_Intro',
+    noReroll: true,
     secretPointAnchorCount: 1,
     resourcePointSupport: underworldResourcePointSupport([
       'Pickaxe',
@@ -1096,6 +1097,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Story01',
+    noReroll: true,
     secretPointAnchorCount: 1,
     resourcePointSupport: underworldResourcePointSupport(
       ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'],
@@ -1179,6 +1181,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Shop01',
+    noReroll: true,
     secretPointAnchorCount: 1,
     resourcePointSupport: underworldResourcePointSupport([
       'Pickaxe',
@@ -1290,6 +1293,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Boss01',
+    noReroll: true,
     resourcePointSupport: underworldResourcePointSupport([]),
     label: 'Scylla and the Sirens',
     roomSetKey: 'G',
@@ -1310,6 +1314,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Boss02',
+    noReroll: true,
     resourcePointSupport: underworldResourcePointSupport([]),
     label: 'Scylla and the Sirens',
     roomSetKey: 'G',
@@ -1330,6 +1335,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_PostBoss01',
+    noReroll: true,
     nextRoomSet: true,
     resourcePointSupport: underworldResourcePointSupport([
       'Pickaxe',

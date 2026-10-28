@@ -166,6 +166,8 @@ export interface RewardTypeDeclaration {
   readonly sourceResolution?: SourceResolutionPoint;
   readonly offerProjection: OfferProjectionKey;
   readonly acquisitionRoles: CatalogCollection<AcquisitionRoleDeclaration>;
+  /** A door offering this reward is never rerollable, whatever its door or destination. */
+  readonly blocksDoorReroll?: true;
 }
 
 export interface RewardStoreEntry {

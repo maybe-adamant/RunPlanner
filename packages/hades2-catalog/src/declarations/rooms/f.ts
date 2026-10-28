@@ -1242,6 +1242,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Story01',
+    noReroll: true,
     secretPointAnchorCount: 3,
     resourcePointSupport: underworldResourcePointSupport(
       ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'],
@@ -1327,6 +1328,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Shop01',
+    noReroll: true,
     secretPointAnchorCount: 1,
     resourcePointSupport: underworldResourcePointSupport([
       'Pickaxe',
@@ -1438,6 +1440,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Boss01',
+    noReroll: true,
     resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Hecate',
     roomSetKey: 'F',
@@ -1458,6 +1461,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Boss02',
+    noReroll: true,
     resourcePointSupport: underworldResourcePointSupport([
       'Pickaxe',
       'Exorcism',
@@ -1483,6 +1487,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_PostBoss01',
+    noReroll: true,
     nextRoomSet: true,
     resourcePointSupport: underworldResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Postboss',

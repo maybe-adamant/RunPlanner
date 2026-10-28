@@ -1,4 +1,5 @@
 import type {
+  PhantomExitDeclaration,
   RoomCaps,
   RoomDeclaration,
   RoomForce,
@@ -32,6 +33,9 @@ export type RoomIdentityFacts = Pick<
   | 'blockGiftBoons'
   | 'blocksGorgon'
   | 'nextRoomSet'
+  | 'noReroll'
+  | 'forceDoorAllowReroll'
+  | 'phantomExit'
   | 'advancesExperimentalHammerUses'
   | 'ignoreEncounterUses'
   | 'advancesHermesShrineDeliveryUses'
@@ -153,6 +157,40 @@ function validateMode(room: RawRoomDeclaration, path: string): RoomMode {
   return Object.freeze({ kind: 'authored', templateKey });
 }
 
+/**
+ * Only Ephyra combat, Mini-Boss and side rooms fill their return door: main
+ * rooms from the `N` set, side rooms from `N_SubRooms`.
+ */
+function normalizePhantomExit(
+  raw: PhantomExitDeclaration,
+  roomSetKey: string,
+  mode: RoomMode,
+  kind: RoomDeclaration['kind'],
+  path: string,
+): PhantomExitDeclaration {
+  const templateKey = mode.kind === 'authored' ? mode.templateKey : undefined;
+  const expected =
+    roomSetKey !== 'N'
+      ? undefined
+      : templateKey === 'EphyraSideRoom'
+        ? 'N_SubRooms'
+        : templateKey === 'EphyraCombat' || (templateKey === 'Miniboss' && kind === 'Miniboss')
+          ? 'N'
+          : undefined;
+  if (expected === undefined)
+    fail(path, 'is declared only for Ephyra combat, Mini-Boss and side rooms');
+  if (raw.placeholderRoomSetKey !== expected)
+    fail(`${path}.placeholderRoomSetKey`, `must be ${expected}`);
+  if (raw.unlockOrderPosition !== 'first')
+    fail(`${path}.unlockOrderPosition`, 'the return door sorts first in its unlock');
+  if (Object.keys(raw).length !== 2)
+    fail(path, 'requires only placeholderRoomSetKey and unlockOrderPosition');
+  return Object.freeze({
+    placeholderRoomSetKey: raw.placeholderRoomSetKey,
+    unlockOrderPosition: raw.unlockOrderPosition,
+  });
+}
+
 /** Normalizes the room-local identity and mode facts before related products validate. */
 export function normalizeRoomIdentity(room: RawRoomDeclaration, path: string): RoomIdentityFacts {
   const gameName = requireNonEmpty(room.gameName, `${path}.gameName`);
@@ -170,6 +208,17 @@ export function normalizeRoomIdentity(room: RawRoomDeclaration, path: string): R
   if (room.nextRoomSet !== undefined && typeof room.nextRoomSet !== 'boolean') {
     fail(`${path}.nextRoomSet`, 'must be a boolean when declared');
   }
+  if (room.noReroll !== undefined && typeof room.noReroll !== 'boolean') {
+    fail(`${path}.noReroll`, 'must be a boolean when declared');
+  }
+  if (room.forceDoorAllowReroll !== undefined && typeof room.forceDoorAllowReroll !== 'boolean') {
+    fail(`${path}.forceDoorAllowReroll`, 'must be a boolean when declared');
+  }
+  const mode = validateMode(room, path);
+  const phantomExit =
+    room.phantomExit === undefined
+      ? undefined
+      : normalizePhantomExit(room.phantomExit, roomSetKey, mode, room.kind, `${path}.phantomExit`);
   if (typeof room.advancesExperimentalHammerUses !== 'boolean') {
     fail(`${path}.advancesExperimentalHammerUses`, 'must be a boolean');
   }
@@ -202,10 +251,13 @@ export function normalizeRoomIdentity(room: RawRoomDeclaration, path: string): R
     label,
     roomSetKey,
     kind: room.kind,
-    mode: validateMode(room, path),
+    mode,
     blockGiftBoons: room.blockGiftBoons ?? false,
     blocksGorgon: room.blocksGorgon ?? false,
     nextRoomSet: room.nextRoomSet ?? false,
+    noReroll: room.noReroll ?? false,
+    forceDoorAllowReroll: room.forceDoorAllowReroll ?? false,
+    ...(phantomExit === undefined ? {} : { phantomExit }),
     advancesExperimentalHammerUses: room.advancesExperimentalHammerUses,
     ignoreEncounterUses: room.ignoreEncounterUses ?? false,
     advancesHermesShrineDeliveryUses: room.advancesHermesShrineDeliveryUses ?? true,

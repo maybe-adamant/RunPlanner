@@ -167,6 +167,13 @@ export const rewardTypes = [
     ],
   },
   { gameName: 'Story', label: 'Story', acquisitionRoles: [] },
-  { gameName: 'Shop', label: 'Shop', acquisitionRoles: [] },
-  { gameName: 'ClockworkGoal', label: 'Clockwork Goal', acquisitionRoles: [] },
+  // AssignRoomToExitDoor never makes a Shop door rerollable.
+  { gameName: 'Shop', label: 'Shop', acquisitionRoles: [], blocksDoorReroll: true },
+  // SetupClockworkGoalReward marks the destination NoReroll.
+  {
+    gameName: 'ClockworkGoal',
+    label: 'Clockwork Goal',
+    acquisitionRoles: [],
+    blocksDoorReroll: true,
+  },
 ] satisfies readonly RawRewardTypeDeclaration[];

@@ -25,6 +25,50 @@ describe('Arcana and Fear catalog', () => {
     });
   });
 
+  it('declares the reroll grant and enabled reroll kind of the three reroll cards', () => {
+    expect(
+      catalog.arcanaCards.values
+        .filter((card) => card.rerolls !== undefined)
+        .map((card) => [card.key, card.rerolls]),
+    ).toEqual([
+      [
+        'DoorReroll',
+        { countByRarity: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 }, enables: 'doors' },
+      ],
+      ['TradeOff', { countByRarity: { Common: 2, Rare: 3, Epic: 4, Heroic: 5 }, enables: 'none' }],
+      [
+        'ScreenReroll',
+        { countByRarity: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 }, enables: 'screens' },
+      ],
+    ]);
+    const withRerolls = (key: string, rerolls: unknown) =>
+      createCatalog({
+        ...declarations,
+        arcanaCards: declarations.arcanaCards.map((card) =>
+          card.key === key ? ({ ...card, rerolls } as typeof card) : card,
+        ),
+      });
+    const counts = { Common: 1, Rare: 2, Epic: 3, Heroic: 4 };
+    expect(() => withRerolls('ScreenReroll', { countByRarity: counts, enables: 'doors' })).toThrow(
+      'exactly one card must enable doors rerolls',
+    );
+    expect(() => withRerolls('DoorReroll', { countByRarity: counts, enables: 'pool' })).toThrow(
+      'unknown reroll kind pool',
+    );
+    expect(() =>
+      withRerolls('DoorReroll', {
+        countByRarity: { Common: 1, Rare: 2, Epic: 3 },
+        enables: 'doors',
+      }),
+    ).toThrow('must declare all four rarities');
+    expect(() =>
+      withRerolls('DoorReroll', {
+        countByRarity: { ...counts, Epic: 1 },
+        enables: 'doors',
+      }),
+    ).toThrow('must not be lower than Rare');
+  });
+
   it("declares only The Centaur's room-entry stat cycle", () => {
     expect(catalog.arcanaCards.byKey.MaxHealthPerRoom?.roomEntryStatGrowth).toEqual({
       interval: 5,

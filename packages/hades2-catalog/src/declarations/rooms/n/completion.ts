@@ -40,6 +40,7 @@ export const nCompletionRooms = [
   },
   {
     gameName: 'N_Boss01',
+    noReroll: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Polyphemus',
     roomSetKey: 'N',
@@ -60,6 +61,7 @@ export const nCompletionRooms = [
   },
   {
     gameName: 'N_Boss02',
+    noReroll: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Polyphemus',
     roomSetKey: 'N',
@@ -80,6 +82,7 @@ export const nCompletionRooms = [
   },
   {
     gameName: 'N_PostBoss01',
+    noReroll: true,
     nextRoomSet: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Postboss',

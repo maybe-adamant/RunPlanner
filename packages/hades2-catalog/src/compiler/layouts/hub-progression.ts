@@ -51,6 +51,7 @@ function normalizeCompletedHubExit(
       type: exitType.key,
       compatibilityPolicyKey: exitType.compatibilityPolicyKey,
       behavior: exitType.behavior,
+      allowReroll: exitType.allowReroll,
     }),
   });
 }

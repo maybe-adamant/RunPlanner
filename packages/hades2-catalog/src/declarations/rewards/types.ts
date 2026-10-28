@@ -99,6 +99,7 @@ export interface RawRewardTypeDeclaration {
   readonly sourceResolution?: SourceResolutionPoint;
   readonly offerProjection?: OfferProjectionKey;
   readonly acquisitionRoles: readonly RawAcquisitionRoleDeclaration[];
+  readonly blocksDoorReroll?: true;
 }
 
 export interface RawRewardStoreEntryDeclaration {

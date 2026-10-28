@@ -10,6 +10,7 @@ export interface RawExitTypeDeclaration {
   readonly key: string;
   readonly compatibilityPolicyKey: string;
   readonly behavior?: ExitBehavior;
+  readonly allowReroll: boolean;
 }
 
 export interface RawZagreusContractAdditionalExitDeclaration {

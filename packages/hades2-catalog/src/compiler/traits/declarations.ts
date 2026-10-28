@@ -809,6 +809,27 @@ export function normalizeTraits(
       );
     if (roomsPerUpgradeGrowth !== undefined && trait.rarityDomain !== 'none')
       fail(`${path}.roomsPerUpgradeGrowth`, 'is declared only for rarityless traits');
+    const rerollPickupByAcquisitionOrdinal =
+      trait.rerollPickupByAcquisitionOrdinal === undefined
+        ? undefined
+        : (Object.freeze(
+            requireArray(
+              trait.rerollPickupByAcquisitionOrdinal,
+              `${path}.rerollPickupByAcquisitionOrdinal`,
+            ).map((amount, index) =>
+              requirePositiveInteger(
+                amount as number,
+                `${path}.rerollPickupByAcquisitionOrdinal[${index}]`,
+              ),
+            ),
+          ) as unknown as readonly [number, number, number, number]);
+    if (
+      rerollPickupByAcquisitionOrdinal !== undefined &&
+      rerollPickupByAcquisitionOrdinal.length !== 4
+    )
+      fail(`${path}.rerollPickupByAcquisitionOrdinal`, 'must declare four acquisition ordinals');
+    if (rerollPickupByAcquisitionOrdinal !== undefined && trait.rarityDomain !== 'none')
+      fail(`${path}.rerollPickupByAcquisitionOrdinal`, 'is declared only for rarityless traits');
     return Object.freeze({
       key: requireNonEmpty(trait.key, `${path}.key`),
       label: requireNonEmpty(trait.label, `${path}.label`),
@@ -869,6 +890,9 @@ export function normalizeTraits(
       ...(hammerCompatibility === undefined ? {} : { hammerCompatibility }),
       ...(resourceRewardBonus === undefined ? {} : { resourceRewardBonus }),
       ...(roomsPerUpgradeGrowth === undefined ? {} : { roomsPerUpgradeGrowth }),
+      ...(rerollPickupByAcquisitionOrdinal === undefined
+        ? {}
+        : { rerollPickupByAcquisitionOrdinal }),
       ...(trait.acquisitionMaxHealthRoll === undefined
         ? {}
         : {

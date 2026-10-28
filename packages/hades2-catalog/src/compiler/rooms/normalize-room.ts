@@ -136,6 +136,9 @@ export function normalizeRoom(
       : { secretPointAnchorCount: features.secretPointAnchorCount }),
     blocksGorgon: identity.blocksGorgon,
     nextRoomSet: identity.nextRoomSet,
+    noReroll: identity.noReroll,
+    forceDoorAllowReroll: identity.forceDoorAllowReroll,
+    ...(identity.phantomExit === undefined ? {} : { phantomExit: identity.phantomExit }),
     ...(features.boonRarityOverride === undefined
       ? {}
       : { boonRarityOverride: features.boonRarityOverride }),

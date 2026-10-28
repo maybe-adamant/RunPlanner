@@ -64,6 +64,8 @@ export type RawLocalChildDescriptor =
 export interface RawRoomExitDeclaration {
   readonly index: number;
   readonly type: string;
+  /** This room's physical door denies the reroll its exit type allows. */
+  readonly allowReroll?: false;
 }
 
 export interface RawExitTypeDeclaration {
@@ -127,6 +129,11 @@ export interface RawRoomDeclaration {
   readonly blocksGorgon?: boolean;
   /** Native RoomData `NextRoomSet`, declared or inherited; native biome depth counts from it. */
   readonly nextRoomSet?: boolean;
+  /** Native RoomData `NoReroll`, declared or inherited. */
+  readonly noReroll?: boolean;
+  /** Native RoomData `ForceDoorAllowReroll`, declared or inherited. */
+  readonly forceDoorAllowReroll?: boolean;
+  readonly phantomExit?: import('@run-planner/engine/catalog-schema').PhantomExitDeclaration;
   readonly hasKeepsakeRack?: boolean;
   readonly keepsakeRackExcludedRouteKeys?: readonly string[];
   readonly hasRequiredFountain?: boolean;

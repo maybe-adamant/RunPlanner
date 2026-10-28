@@ -545,6 +545,11 @@ export function normalizeRewardTypes(
         `${path}.offerProjection`,
       ),
       acquisitionRoles: roles,
+      ...(rewardType.blocksDoorReroll === undefined
+        ? {}
+        : (rewardType.blocksDoorReroll as unknown) === true
+          ? { blocksDoorReroll: true as const }
+          : fail(`${path}.blocksDoorReroll`, 'must be true when declared')),
     });
   });
   const collection = createCollection(

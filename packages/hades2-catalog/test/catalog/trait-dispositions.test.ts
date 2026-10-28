@@ -127,6 +127,35 @@ describe('trait dispositions and requirements compiler owner', () => {
     ).toThrow('must declare four acquisition ordinals');
   });
 
+  it("declares the reroll pickup only on Fates' Trimmings", () => {
+    expect(
+      catalog.traits.values
+        .filter((trait) => trait.rerollPickupByAcquisitionOrdinal !== undefined)
+        .map((trait) => [trait.key, trait.rerollPickupByAcquisitionOrdinal]),
+    ).toEqual([['NarcissusF', [2, 2, 3, 5]]]);
+    const withPickup = (key: string, amounts: unknown) =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === key
+              ? ({ ...trait, rerollPickupByAcquisitionOrdinal: amounts } as RawTraitDeclaration)
+              : trait,
+          ),
+        },
+      });
+    expect(() => withPickup('ZeusWeaponBoon', [2, 2, 3, 5])).toThrow(
+      'is declared only for rarityless traits',
+    );
+    expect(() => withPickup('NarcissusF', [2, 2, 3])).toThrow(
+      'must declare four acquisition ordinals',
+    );
+    expect(() => withPickup('NarcissusF', [2, 0, 3, 5])).toThrow(
+      'rerollPickupByAcquisitionOrdinal[1]',
+    );
+  });
+
   it('declares lasting trait armor by rarity, Pom level and Dream acquisition ordinal', () => {
     const byOrdinal = (amounts: readonly number[]) => ({
       kind: 'byAcquisitionOrdinal',

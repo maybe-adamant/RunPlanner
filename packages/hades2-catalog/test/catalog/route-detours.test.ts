@@ -299,6 +299,7 @@ describe('route detour catalog declarations', () => {
           type: 'ZagContract',
           compatibilityPolicyKey: 'Unconstrained',
           behavior: { kind: 'playerSelected', rewardPreview: 'hidden' },
+          allowReroll: false,
         },
         targetRoomGameName: 'C_Boss01',
         maxEnteredThisRoute: 0,
@@ -416,6 +417,7 @@ describe('route detour catalog declarations', () => {
           type: 'ChaosExitDoor',
           compatibilityPolicyKey: 'Unconstrained',
           behavior: { kind: 'playerSelected', rewardPreview: 'hidden' },
+          allowReroll: false,
         },
       });
     }
@@ -481,6 +483,7 @@ describe('route detour catalog declarations', () => {
           type: 'ChaosExitDoor',
           compatibilityPolicyKey: 'Unconstrained',
           behavior: { kind: 'playerSelected', rewardPreview: 'hidden' },
+          allowReroll: false,
         },
       });
     }

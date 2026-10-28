@@ -13,6 +13,7 @@ const surfaceShopHost = (spawnChance: number, forced = false, challengeSwitchAnc
 export const oRooms = [
   {
     gameName: 'O_Intro',
+    noReroll: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
     roomSetKey: 'O',
@@ -433,6 +434,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_MiniBoss01',
+    forceDoorAllowReroll: true,
     ...surfaceShopHost(0.125, false, 0),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
@@ -472,6 +474,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_MiniBoss02',
+    forceDoorAllowReroll: true,
     ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
@@ -511,6 +514,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Shop01',
+    noReroll: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Midshop',
     roomSetKey: 'O',
@@ -565,6 +569,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Reprieve01',
+    forceDoorAllowReroll: true,
     ...surfaceShopHost(1, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
       ignoresBiomeLimit: true,
@@ -598,6 +603,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Story01',
+    noReroll: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
       ignoresBiomeLimit: true,
     }),
@@ -730,6 +736,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Boss01',
+    noReroll: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Eris',
     roomSetKey: 'O',
@@ -750,6 +757,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Boss02',
+    noReroll: true,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Eris',
     roomSetKey: 'O',
@@ -770,6 +778,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_PostBoss01',
+    noReroll: true,
     nextRoomSet: true,
     resourcePointSupport: normalResourcePointSupport([]),
     label: 'Postboss',
