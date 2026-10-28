@@ -54,8 +54,13 @@ promoted.
   a legal placeholder.
 - The reward's store is the placeholder's (HubRewards for a combat room,
   RunProgress `Boon` for a Mini-Boss, its own side-room store for a side
-  room). A forced placeholder (`N_Shop01`, `N_Story01`, `N_PreBoss01`, the
-  bosses) draws nothing and has no reward choice.
+  room). A no-draw placeholder (`N_Shop01`, `N_Story01`, `N_PreBoss01`) draws
+  nothing and has no reward choice; bosses and `N_PostBoss01` are never
+  placeholders (`RequiresLinked`). An unpinned exit settles to `N_PreBoss01`
+  in main rooms (no draw, no profile predicate) and the native set order in
+  side rooms; its reward is the type every branch can draw with the most
+  entries left on the scarcest branch. Creation caps count only rooms the
+  plan creates (board doors left unopened are not modelled).
 - A Boon reward takes the first eligible god; the god is not authored (an
   offered, unentered boon leaves no state beyond its store entry).
 - The game module steers it through its existing N door path, identifying the
