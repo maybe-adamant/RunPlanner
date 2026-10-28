@@ -74,6 +74,10 @@ and the door-order probe are done.
     (`IndividualRewardStore`, `RoomDataN.lua:3795`). Later side-door draws
     use the same store.
   - A placeholder forced to a Shop draws nothing.
+  - N_PreHub01 does not take one. Its only exit uses the same obstacle
+    (`RoomDataN.lua:884`), but it is the real door into `N_Hub`, which carries
+    no reward. Surface capture: no store change between N_PreHub01 and the
+    Hub.
   - Restores do not draw again: a revisit returns the stored offer before
     the store is touched (`RewardLogic.lua:108-114`). The Hub board itself is
     drawn once, at the first Hub visit.
