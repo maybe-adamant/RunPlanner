@@ -118,9 +118,17 @@ promoted.
   reroll; O and Q exits into `O_MiniBoss01`, `O_MiniBoss02`, `O_Reprieve01` and
   `Q_BaseMiniBoss` do. First visit only.
 - **Editor (later):** this bundle lands the model and keeps today's editor
-  working; the reroll action's timeline editor, doors moving into the
-  timeline, and the screen-reroll count controls are a later projection and UI
-  plan with no schema change.
+  working; a later projection and UI plan, with no schema change, adds one
+  style for every reward-offering surface: a door-like section with the first
+  draws followed by an ordered **Rerolls** list (row = target + new reward;
+  append and remove at the end only; door lines read first draw → final).
+  Normal rooms keep Room Doors and gain the list below the doors. O rooms move
+  each wheel encounter into its own tab (e.g. Overview · Intro Timeline ·
+  Intro Wheels · Combat 1 Timeline · Room Doors) holding offers, rerolls and
+  the pick, keeping a read-only marker in the timeline if anything authored
+  can follow the wheel in its phase. The Hub becomes one timeline with the
+  required visits and fountain pinned, a board recap after each visit, and a
+  Rerolls list in each gap. Screen-reroll counts get their controls there too.
 - **Screen rerolls:** authored as a count only, on the supported screens: the nine core
   Olympians, Hermes, Athena, Dionysus, Artemis, Hades, Chaos, Pom of Power, the Wells and the Pool
   of Purging. Not NPC screens, Hammers, Hermes Shrines, Selene or the World
