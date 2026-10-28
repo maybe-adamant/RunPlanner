@@ -16,6 +16,9 @@ import {
   createFigLeafPhaseAddress,
   createGorgonPhaseAddress,
   createIncomingRewardAddress,
+  createInfernalContractPedestalAddress,
+  infernalContractPedestalProfile,
+  INFERNAL_CONTRACT_ENTRY_KEY,
   createLevelResolutionAddress,
   createLocalRewardAddress,
   createNemesisRandomEventAddress,
@@ -90,7 +93,7 @@ type OccurrenceRewardCandidateOwner = Exclude<
 export interface WorkspaceOccurrenceProjectionFacts {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
-  readonly contractOfferActive?: boolean;
+  readonly infernalContractPedestalActive?: boolean;
   readonly validlyEmptyShopOfferKeys?: readonly string[];
   readonly chaosPlacement?: ChaosCandidateCapability;
   readonly chaosGateForced: boolean;
@@ -367,7 +370,7 @@ export function rewardControl(
   suppressOfferPicker = false,
 ): WorkspaceRewardControl {
   const payloadDeferred =
-    owner.kind === 'shopOffer' &&
+    (owner.kind === 'shopOffer' || owner.kind === 'infernalContractPedestal') &&
     offer !== null &&
     input.catalog.rewards.rewardTypes.byKey[offer.rewardType]?.sourceResolution?.kind ===
       'acquisitionRole';
@@ -635,22 +638,8 @@ export function controlsForOccurrence(
       for (const [offerKey, shopOffer] of Object.entries(occurrence.state.shop.offers)) {
         // A validly empty slot emits no item and has nothing to author.
         if (input.facts.validlyEmptyShopOfferKeys?.includes(offerKey) === true) continue;
-        if (
-          offerKey === 'infernalContractReward' &&
-          input.facts.contractOfferActive !== true &&
-          !occurrence.roomActions.order.some(
-            (action) => action.kind === 'interactShopOffer' && action.offerKey === offerKey,
-          )
-        )
-          continue;
-        const offerProfile =
-          offerKey === 'infernalContractReward'
-            ? input.catalog.rewards.shops.byKey[
-                room.infernalContractReward?.generationProfileKey ?? ''
-              ]
-            : profile;
-        const slot = offerProfile?.slots.byKey[offerKey];
-        const group = slot === undefined ? undefined : offerProfile?.groups.byKey[slot.groupKey];
+        const slot = profile.slots.byKey[offerKey];
+        const group = slot === undefined ? undefined : profile.groups.byKey[slot.groupKey];
         if (group === undefined) {
           throw new StructuredWorkspaceProjectionContractError(
             `${room.gameName} shop offer ${offerKey} has no declared reward domain`,
@@ -721,7 +710,56 @@ export function controlsForOccurrence(
     case 'none':
       break;
   }
+  const pedestal = infernalContractPedestalControl(input, room);
+  if (pedestal !== undefined) controls.push(pedestal);
   return Object.freeze(controls);
+}
+
+/**
+ * The Contract pedestal's item, shown while the engine reaches its draw or a
+ * retained collect still needs repair; a dormant pedestal has nothing to author.
+ */
+function infernalContractPedestalControl(
+  input: WorkspaceOccurrenceRewardAssemblyInput,
+  room: RoomDeclaration,
+): WorkspaceRewardControl | undefined {
+  const { occurrence } = input;
+  const pedestal = occurrence.infernalContractPedestal;
+  if (pedestal === undefined || !input.facts.detailsActive) return undefined;
+  const collected = occurrence.roomActions.order.some(
+    (reference) => reference.kind === 'interactInfernalContractPedestal',
+  );
+  if (input.facts.infernalContractPedestalActive !== true && !collected) return undefined;
+  const profile = infernalContractPedestalProfile(input.catalog, room.gameName);
+  const slot = profile?.slots.byKey[INFERNAL_CONTRACT_ENTRY_KEY];
+  const group = slot === undefined ? undefined : profile?.groups.byKey[slot.groupKey];
+  if (group === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${room.gameName} Contract pedestal has no declared reward domain`,
+    );
+  }
+  const control = rewardControl(
+    input,
+    {
+      kind: 'infernalContractPedestal',
+      address: createInfernalContractPedestalAddress(input.biome, occurrence.occurrenceId),
+    },
+    undefined,
+    pedestal.reward?.offer ?? null,
+    pedestal.reward,
+    group.rewardTypes,
+  );
+  return Object.freeze({
+    ...control,
+    shopOption: Object.freeze({
+      selectedOptionKey: pedestal.optionKey,
+      options: Object.freeze(
+        group.options.values.map((option) =>
+          Object.freeze({ key: option.key, label: option.label, rewardType: option.rewardType }),
+        ),
+      ),
+    }),
+  });
 }
 
 export function requireProjectedRewardControl<TKind extends WorkspaceRewardControl['kind']>(

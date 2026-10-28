@@ -112,6 +112,7 @@ import type {
   WorkspaceHermesShrineOfferInteraction,
   WorkspaceHermesShrinePresenceInteraction,
   WorkspaceHermesShrinePurchaseInteraction,
+  WorkspaceInfernalContractPedestalCollectInteraction,
   WorkspacePurgingPoolInteraction,
   WorkspacePurgingPoolSlotInteraction,
   WorkspaceShopOfferInteraction,
@@ -191,6 +192,7 @@ export type {
   WorkspaceHermesShrineOfferInteraction,
   WorkspaceHermesShrinePresenceInteraction,
   WorkspaceHermesShrinePurchaseInteraction,
+  WorkspaceInfernalContractPedestalCollectInteraction,
   WorkspacePurgingPoolInteraction,
   WorkspacePurgingPoolSlotInteraction,
   WorkspaceShopOfferInteraction,
@@ -383,6 +385,10 @@ export interface WorkspaceInteractionCatalog {
     WorkspaceShopPurchaseParticipationInteraction
   >;
   readonly shopOffers: ReadonlyMap<string, WorkspaceShopOfferInteraction>;
+  readonly infernalContractPedestalCollects: ReadonlyMap<
+    string,
+    WorkspaceInfernalContractPedestalCollectInteraction
+  >;
   readonly purgingPoolInteractions: ReadonlyMap<string, WorkspacePurgingPoolInteraction>;
   /** One declaration-keyed Pool slot, with engine-derived contextual candidates. */
   readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;

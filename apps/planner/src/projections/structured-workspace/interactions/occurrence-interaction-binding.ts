@@ -56,6 +56,7 @@ import type {
 } from '../contracts/locals';
 import type { WorkspaceRoomActionInteraction } from '../contracts/timeline';
 import type {
+  WorkspaceInfernalContractPedestalCollectInteraction,
   WorkspaceShopPurchaseParticipationInteraction,
   WorkspacePurgingPoolInteraction,
   WorkspacePurgingPoolSlotInteraction,
@@ -115,6 +116,10 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly shopPurchaseParticipations: ReadonlyMap<
     string,
     WorkspaceShopPurchaseParticipationInteraction
+  >;
+  readonly infernalContractPedestalCollects: ReadonlyMap<
+    string,
+    WorkspaceInfernalContractPedestalCollectInteraction
   >;
   readonly purgingPoolInteractions: ReadonlyMap<string, WorkspacePurgingPoolInteraction>;
   readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;
@@ -281,6 +286,10 @@ export function bindOccurrenceLocalInteractions(
   const shopPurchaseParticipations = new Map<
     string,
     WorkspaceShopPurchaseParticipationInteraction
+  >();
+  const infernalContractPedestalCollects = new Map<
+    string,
+    WorkspaceInfernalContractPedestalCollectInteraction
   >();
   const purgingPoolInteractions = new Map<string, WorkspacePurgingPoolInteraction>();
   const erisObservations = new Map<
@@ -1063,6 +1072,30 @@ export function bindOccurrenceLocalInteractions(
         );
         break;
       }
+      case 'infernalContractPedestalCollect': {
+        if (infernalContractPedestalCollects.has(requirement.interactionKey)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${requirement.interactionKey} has multiple bound Contract pedestal collect interactions`,
+          );
+        }
+        infernalContractPedestalCollects.set(
+          requirement.interactionKey,
+          Object.freeze({
+            intentFor: (collected: boolean) =>
+              Object.freeze({
+                command: Object.freeze({
+                  kind: 'SetInfernalContractPedestalCollected' as const,
+                  pedestal: requirement.owner,
+                  collected,
+                }),
+              }),
+            key: requirement.interactionKey,
+            owner: requirement.owner,
+            collected: requirement.collected,
+          }),
+        );
+        break;
+      }
       case 'purgingPoolInteraction': {
         if (purgingPoolInteractions.has(requirement.interactionKey)) {
           throw new StructuredWorkspaceProjectionContractError(
@@ -1534,6 +1567,7 @@ export function bindOccurrenceLocalInteractions(
     rewardWheelStores,
     shipCombatPhaseCounts,
     shopPurchaseParticipations,
+    infernalContractPedestalCollects,
     purgingPoolInteractions,
     purgingPoolSlots,
     erisObservations,

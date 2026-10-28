@@ -5,6 +5,7 @@ import type {
   WorkspaceInteractionChoice,
 } from '@planner/projections/structured-workspace/contract';
 import type {
+  AcquisitionEntryAddress,
   AdditionalExitAddress,
   OccurrenceAddress,
   ProjectCommand,
@@ -12,6 +13,7 @@ import type {
 } from '@run-planner/engine/authored-project';
 import type { WorkspaceMarker } from './navigation';
 import type { WorkspaceDoorContract } from './structure';
+import type { WorkspaceExplicitRewardControl } from './rewards';
 
 export type WorkspaceRoomFeature =
   | {
@@ -116,6 +118,18 @@ export type WorkspaceRoomFeature =
           import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
         /** The rushed purchase that triggers the refill; absent while Travel Deal does not apply. */
         readonly sourceGenerationKey?: import('@run-planner/engine/authored-project').HermesShrineGenerationKey;
+      };
+    }
+  | {
+      /** The Preboss Contract pedestal's one free item and whether it is collected. */
+      readonly kind: 'infernalContractPedestal';
+      readonly rewardControl: WorkspaceExplicitRewardControl;
+      readonly collect: {
+        /** The collected item's acquisition, which owns its availability findings. */
+        readonly address: AcquisitionEntryAddress;
+        readonly marker: WorkspaceMarker;
+        readonly interactionKey: string;
+        readonly collected: boolean;
       };
     }
   | {

@@ -26,7 +26,10 @@ type RewardPayloadCommand = Extract<
   }
 >;
 
-type RewardPayloadOwner = Exclude<WorkspaceRewardControl['owner'], { readonly kind: 'shopOffer' }>;
+type RewardPayloadOwner = Exclude<
+  WorkspaceRewardControl['owner'],
+  { readonly kind: 'shopOffer' | 'infernalContractPedestal' }
+>;
 
 function rewardCommandFor(
   owner: RewardPayloadOwner,

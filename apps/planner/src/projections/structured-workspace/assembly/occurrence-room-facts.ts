@@ -13,6 +13,7 @@ import {
   echoLastRewardPickupEntryKeys,
   defaultHermesShrineDeliveryReward,
   hermesShrineDeliveryEntryKey,
+  INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
   parseHermesShrineDeliveryEntryKey,
   semanticAddressKey,
   createFieldsSpatialAddress,
@@ -155,6 +156,19 @@ export function assembleOccurrenceRewardLocal(
                   input.occurrence.state.kind === 'shop' && siteKey === 'roomExit'
                     ? authoredShopOffer(input.occurrence, key)?.reward
                     : undefined;
+                const pedestalReward =
+                  siteKey === INFERNAL_CONTRACT_PEDESTAL_SITE_KEY
+                    ? input.occurrence.infernalContractPedestal?.reward
+                    : undefined;
+                // A pedestal source resolves only while its acquisition-resolved item is authored.
+                if (
+                  siteKey === INFERNAL_CONTRACT_PEDESTAL_SITE_KEY &&
+                  (pedestalReward === null ||
+                    pedestalReward === undefined ||
+                    input.catalog.rewards.rewardTypes.byKey[pedestalReward.offer.rewardType]
+                      ?.sourceResolution?.kind !== 'acquisitionRole')
+                )
+                  return [];
                 if (input.occurrence.state.kind === 'shop' && siteKey === 'roomExit') {
                   if (
                     shopInventoryReward === null ||
@@ -206,6 +220,9 @@ export function assembleOccurrenceRewardLocal(
                   (shopInventoryReward === null || shopInventoryReward === undefined
                     ? undefined
                     : Object.freeze([shopInventoryReward.offer.rewardType])) ??
+                  (pedestalReward === null || pedestalReward === undefined
+                    ? undefined
+                    : Object.freeze([pedestalReward.offer.rewardType])) ??
                   (pickup?.rewardType === undefined
                     ? Object.freeze([])
                     : Object.freeze([pickup.rewardType]));
@@ -692,18 +709,9 @@ function roomLocalForOccurrence(
         (entry) =>
           entry.kind === 'echoDoubleShopReward' || entry.kind === 'echoDoubleShopPlaceholder',
       );
-      const slots = [
-        ...profile.slots.values.filter(
-          (slot) => input.facts.validlyEmptyShopOfferKeys?.includes(slot.key) !== true,
-        ),
-        ...(controls.some(
-          (control) =>
-            control.owner.address.kind === 'shopOffer' &&
-            control.owner.address.offerKey === 'infernalContractReward',
-        )
-          ? [{ key: 'infernalContractReward', label: 'Contract' }]
-          : []),
-      ];
+      const slots = profile.slots.values.filter(
+        (slot) => input.facts.validlyEmptyShopOfferKeys?.includes(slot.key) !== true,
+      );
       const offers = slots.map((slot) => {
         if (shop.offers[slot.key] === undefined) {
           throw new StructuredWorkspaceProjectionContractError(

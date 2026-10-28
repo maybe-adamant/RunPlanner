@@ -1,4 +1,5 @@
 import {
+  createInfernalContractPedestalAddress,
   createOccurrenceAddress,
   createShopOfferAddress,
   hubVisitSlotKeys,
@@ -19,7 +20,8 @@ import type { WorkspaceBiomeSource } from '../source-index';
 export interface WorkspaceOccurrenceAssemblyFact {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
-  readonly contractOfferActive?: boolean;
+  /** The engine reached a Contract pedestal draw at this Preboss. */
+  readonly infernalContractPedestalActive?: boolean;
   /** Declared Shop slots whose group had zero eligible options at the reached entry. */
   readonly validlyEmptyShopOfferKeys?: readonly string[];
   readonly chaosPlacement?: ChaosCandidateCapability;
@@ -97,10 +99,10 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
           (occurrence.additionalExits ?? []).map((additional) => additional.key),
         ),
         detailsActive: active.has(occurrence.occurrenceId),
-        contractOfferActive:
-          occurrence.state.kind === 'shop' &&
-          source.isActiveShopOffer(
-            createShopOfferAddress(source.biome, occurrence.occurrenceId, 'infernalContractReward'),
+        infernalContractPedestalActive:
+          occurrence.infernalContractPedestal !== undefined &&
+          source.isActiveInventoryOffer(
+            createInfernalContractPedestalAddress(source.biome, occurrence.occurrenceId),
           ),
         validlyEmptyShopOfferKeys: Object.freeze(
           occurrence.state.kind === 'shop'

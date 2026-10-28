@@ -60,6 +60,12 @@ function rewardQueries(
       return offers.map((value) => ({ kind: 'rewardWheelOffer', offer: owner.address, value }));
     case 'shopOffer':
       return offers.map((value) => ({ kind: 'shopOffer', offer: owner.address, value }));
+    case 'infernalContractPedestal':
+      return offers.map((value) => ({
+        kind: 'infernalContractPedestal',
+        pedestal: owner.address,
+        value,
+      }));
     case 'acquisitionEntry':
       return offers.map((value) => ({
         kind: 'acquisitionEntryOffer',
@@ -265,7 +271,11 @@ export function createRewardRoomCandidateAdapters(
       core.projectOptionsCooperatively(
         `shop-options:${semanticAddressKey(owner)}:${domainKey(values.map(offerKey))}`,
         values,
-        values.map((value) => ({ kind: 'shopOfferOption', offer: owner, value })),
+        values.map((value) =>
+          owner.kind === 'shopOffer'
+            ? { kind: 'shopOfferOption', offer: owner, value }
+            : { kind: 'infernalContractPedestalOption', pedestal: owner, value },
+        ),
       ),
     startRooms: (owner, rooms) => startRoomsFor(core, owner, rooms),
     roomTargets: (target, rooms) => roomTargetsFor(core, target, rooms),

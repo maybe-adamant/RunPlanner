@@ -1,5 +1,9 @@
 import {
   chaosGateSpawnPointIndices,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
+  INFERNAL_CONTRACT_ENTRY_KEY,
+  INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
   createAdditionalExitAddress,
   createOccurrenceAddress,
   createRoomFeatureAddress,
@@ -23,6 +27,7 @@ import {
 } from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRoomFeature } from '../contracts/features';
+import type { WorkspaceExplicitRewardControl, WorkspaceRewardControl } from '../contracts/rewards';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 
 export interface WorkspaceOccurrenceFeaturesInput {
@@ -40,6 +45,8 @@ export interface WorkspaceOccurrenceFeaturesInput {
   ) => HermesShrineCandidateCapability | undefined;
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly occurrence: RoomOccurrence;
+  /** The occurrence's projected reward leaves; the Contract pedestal's item is one of them. */
+  readonly rewardControls: readonly WorkspaceRewardControl[];
   readonly purgingPoolAssessment?: (
     owner: import('@run-planner/engine/authored-project').OccurrenceAddress,
   ) => PurgingPoolCandidateCapability | undefined;
@@ -571,5 +578,38 @@ function roomFeatures(
             }),
           ]
         : []),
+    ...infernalContractPedestalFeature(input),
+  ]);
+}
+
+/** The pedestal appears with its projected item control; collecting it is a room action. */
+function infernalContractPedestalFeature(
+  input: WorkspaceOccurrenceFeaturesInput,
+): readonly WorkspaceRoomFeature[] {
+  const rewardControl = input.rewardControls.find(
+    (control): control is WorkspaceExplicitRewardControl =>
+      control.kind === 'explicitReward' && control.owner.kind === 'infernalContractPedestal',
+  );
+  if (rewardControl === undefined) return Object.freeze([]);
+  const entry = createAcquisitionEntryAddress(
+    createAcquisitionSiteAddress(
+      createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
+      INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
+    ),
+    INFERNAL_CONTRACT_ENTRY_KEY,
+  );
+  return Object.freeze([
+    Object.freeze({
+      kind: 'infernalContractPedestal' as const,
+      rewardControl,
+      collect: Object.freeze({
+        address: entry,
+        marker: input.markerDestinations.marker(entry),
+        interactionKey: semanticAddressKey(rewardControl.owner.address),
+        collected: input.occurrence.roomActions.order.some(
+          (reference) => reference.kind === 'interactInfernalContractPedestal',
+        ),
+      }),
+    }),
   ]);
 }

@@ -208,7 +208,7 @@ describe('timeline action labels', () => {
     expect(labels).toEqual(['Collect Chosen boon · Zeus', 'Collect Spurned boon · Hera']);
   });
 
-  it('distinguishes paid, boosted, Contract, refill, and Echo actions in the same Shop', () => {
+  it('distinguishes paid, boosted, refill, and Echo actions in the same Shop', () => {
     const control = labelRewardControl({
       rewardType: 'RandomLoot',
       payload: { kind: 'BoonSource', source: 'DemeterUpgrade' },
@@ -234,7 +234,6 @@ describe('timeline action labels', () => {
               },
             },
           ],
-          ['infernalContractReward', labelRewardControl({ rewardType: 'StackUpgradeBig' })],
         ] as const
       ).map(([key, rewardControl]) => ({
         key,
@@ -296,11 +295,7 @@ describe('timeline action labels', () => {
           {},
         ),
       ),
-    ).toEqual([
-      'Buy Demeter boon · Slot 1',
-      'Buy Demeter boosted boon · Slot 2',
-      'Collect Double Pom · Contract Item',
-    ]);
+    ).toEqual(['Buy Demeter boon · Slot 1', 'Buy Demeter boosted boon · Slot 2']);
     expect(
       roomLocal.supplementalOffers.map(({ key }) =>
         occurrenceActionLabel(
@@ -316,6 +311,33 @@ describe('timeline action labels', () => {
       'Buy Demeter boon · Travel Deal Offer',
       'Collect Demeter boon · Gold Gold Gold duplicate of Offer 1',
     ]);
+  });
+
+  it('names the Contract pedestal collect by its item', () => {
+    const label = (offer?: { readonly rewardType: string }) =>
+      occurrenceActionLabel(
+        catalog,
+        { kind: 'interactInfernalContractPedestal' },
+        { kind: 'none' },
+        [],
+        undefined,
+        {
+          infernalContractPedestal: {
+            optionKey: offer?.rewardType ?? null,
+            reward:
+              offer === undefined
+                ? null
+                : {
+                    offer,
+                    traitOffersByAcquisitionRole: {},
+                    dispositionByAcquisitionRole: {},
+                  },
+          },
+        },
+      );
+    expect(label({ rewardType: 'StackUpgradeBig' })).toBe('Collect Double Pom · Contract Item');
+    expect(label({ rewardType: 'BlindBoxLoot' })).toBe('Collect Mystery Boon · Contract Item');
+    expect(label()).toBe('Collect Contract Item');
   });
 
   it.each([

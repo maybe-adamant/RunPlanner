@@ -19,6 +19,7 @@ import {
   type ProjectCommand,
   type RewardWheelAddress,
   type ShopOfferAddress,
+  type InfernalContractPedestalAddress,
   type SideRoomGeneration,
   type FieldsSpatialAddress,
   type FieldsSpatialTarget,
@@ -129,6 +130,12 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly kind: 'shopPurchaseParticipation';
       readonly owner: ShopOfferAddress;
       readonly purchased: boolean;
+    }
+  | {
+      readonly kind: 'infernalContractPedestalCollect';
+      readonly owner: InfernalContractPedestalAddress;
+      readonly interactionKey: string;
+      readonly collected: boolean;
     }
   | {
       readonly kind: 'purgingPoolInteraction';

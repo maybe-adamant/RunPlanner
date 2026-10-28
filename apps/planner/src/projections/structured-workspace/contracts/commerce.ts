@@ -2,6 +2,7 @@ import type { ContextualPickerModel } from '@planner/projections/contextual/cont
 import type { WorkspaceCommandIntent } from '@planner/projections/structured-workspace/contract';
 import type {
   AcquisitionEntryAddress,
+  InfernalContractPedestalAddress,
   OccurrenceAddress,
   ProjectCommand,
   RoomActionReference,
@@ -76,9 +77,10 @@ export interface WorkspaceShopPurchaseParticipationInteraction {
   >;
 }
 
+/** An exact item picker over a declared Shop-option pool: a Shop slot or the Contract pedestal. */
 export interface WorkspaceShopOfferInteraction {
   readonly key: string;
-  readonly owner: ShopOfferAddress;
+  readonly owner: ShopOfferAddress | InfernalContractPedestalAddress;
   readonly selected: import('@run-planner/engine/reward-kernel').ShopOptionSelection | null;
   /** A null value clears a slot whose current item is no longer possible. */
   readonly load: () => Promise<
@@ -88,7 +90,28 @@ export interface WorkspaceShopOfferInteraction {
   readonly intentFor: (
     value: import('@run-planner/engine/reward-kernel').ShopOptionSelection | null,
   ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceShopOfferOption' | 'ClearShopOffer' }>
+    Extract<
+      ProjectCommand,
+      {
+        readonly kind:
+          | 'ReplaceShopOfferOption'
+          | 'ClearShopOffer'
+          | 'ReplaceInfernalContractPedestalOption'
+          | 'ClearInfernalContractPedestal';
+      }
+    >
+  >;
+}
+
+/** Whether the Preboss Contract pedestal's item is collected. */
+export interface WorkspaceInfernalContractPedestalCollectInteraction {
+  readonly key: string;
+  readonly owner: InfernalContractPedestalAddress;
+  readonly collected: boolean;
+  readonly intentFor: (
+    collected: boolean,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'SetInfernalContractPedestalCollected' }>
   >;
 }
 

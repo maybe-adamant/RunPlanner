@@ -36,7 +36,7 @@ export function ShopOfferEditor({
   return (
     <ContextualPicker<ShopOptionSelection | null>
       cancelLabel="Cancel"
-      choiceLabel="Shop item"
+      choiceLabel={control.owner.kind === 'shopOffer' ? 'Shop item' : 'Item'}
       closeOnSelect={true}
       findingTarget={findingTarget(control.owner.address)}
       id={semanticOwnerControlElementId(control.owner.address)}

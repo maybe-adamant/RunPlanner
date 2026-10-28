@@ -427,6 +427,7 @@ function roomActionsForOccurrence(
             : rewardControl;
       const participationOwnedByOverview =
         row.reference.kind === 'interactShopOffer' ||
+        row.reference.kind === 'interactInfernalContractPedestal' ||
         row.reference.kind === 'purchaseStygianWellOffer' ||
         row.reference.kind === 'purchaseHermesShrineOffer' ||
         row.reference.kind === 'sellPurgingPoolTrait' ||
@@ -565,7 +566,8 @@ function roomActionsForOccurrence(
                 showOffer:
                   !isArtificerReplacement &&
                   ((row.reference.kind === 'interactLocalReward' && roomLocal.kind !== 'fields') ||
-                    (row.reference.kind === 'interactShopOffer' &&
+                    ((row.reference.kind === 'interactShopOffer' ||
+                      row.reference.kind === 'interactInfernalContractPedestal') &&
                       resolvedRewardControl.owner.kind === 'acquisitionEntry' &&
                       resolvedRewardControl.offerEditVisibility === 'visible') ||
                     (row.reference.kind === 'interactAcquisitionEntry' &&

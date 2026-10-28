@@ -41,6 +41,7 @@ import {
   type RewardWheelAddress,
   type RewardWheelOfferAddress,
   type ShopOfferAddress,
+  type InfernalContractPedestalAddress,
   type StartingRewardAddress,
   type SideRoomGeneration,
   type TraitOfferAddress,
@@ -83,11 +84,20 @@ export type RewardCandidateOwner =
   | { readonly kind: 'localReward'; readonly address: LocalRewardAddress }
   | { readonly kind: 'rewardWheelOffer'; readonly address: RewardWheelOfferAddress }
   | { readonly kind: 'shopOffer'; readonly address: ShopOfferAddress }
+  | {
+      readonly kind: 'infernalContractPedestal';
+      readonly address: InfernalContractPedestalAddress;
+    }
   | { readonly kind: 'acquisitionEntry'; readonly address: AcquisitionEntryAddress };
+
+/** An item drawn from a declared Shop-option pool: a Shop slot or the Contract pedestal. */
+export type ShopOptionCandidateOwner = ShopOfferAddress | InfernalContractPedestalAddress;
 
 export type CountedRewardCandidateOwner = Exclude<
   RewardCandidateOwner,
-  { readonly kind: 'shopOffer' | 'acquisitionEntry' | 'startingReward' }
+  {
+    readonly kind: 'shopOffer' | 'infernalContractPedestal' | 'acquisitionEntry' | 'startingReward';
+  }
 >;
 
 /**
@@ -166,7 +176,7 @@ export interface CandidateProjectionSession {
     selected?: ResolvedRewardOffer,
   ) => Promise<ProjectedRewardDomain>;
   readonly shopOfferOptions: (
-    owner: ShopOfferAddress,
+    owner: ShopOptionCandidateOwner,
     values: readonly ShopOptionSelection[],
   ) => Promise<readonly CandidateOptionProjection<ShopOptionSelection>[]>;
   readonly startRooms: (

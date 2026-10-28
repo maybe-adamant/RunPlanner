@@ -81,7 +81,11 @@ export function bindShopOfferInteractions(input: {
 }): ReadonlyMap<string, WorkspaceShopOfferInteraction> {
   const interactions = new Map<string, WorkspaceShopOfferInteraction>();
   for (const [key, control] of input.rewardControls) {
-    if (control.owner.kind !== 'shopOffer' || control.shopOption === undefined) continue;
+    if (
+      (control.owner.kind !== 'shopOffer' && control.owner.kind !== 'infernalContractPedestal') ||
+      control.shopOption === undefined
+    )
+      continue;
     const owner = control.owner.address;
     const selected =
       control.shopOption.selectedOptionKey === null || control.offer === null
@@ -130,13 +134,24 @@ export function bindShopOfferInteractions(input: {
         intentFor: (value: ShopOptionSelection | null) =>
           Object.freeze({
             command:
-              value === null
-                ? Object.freeze({ kind: 'ClearShopOffer' as const, offer: owner })
-                : Object.freeze({
-                    kind: 'ReplaceShopOfferOption' as const,
-                    offer: owner,
-                    value,
-                  }),
+              owner.kind === 'shopOffer'
+                ? value === null
+                  ? Object.freeze({ kind: 'ClearShopOffer' as const, offer: owner })
+                  : Object.freeze({
+                      kind: 'ReplaceShopOfferOption' as const,
+                      offer: owner,
+                      value,
+                    })
+                : value === null
+                  ? Object.freeze({
+                      kind: 'ClearInfernalContractPedestal' as const,
+                      pedestal: owner,
+                    })
+                  : Object.freeze({
+                      kind: 'ReplaceInfernalContractPedestalOption' as const,
+                      pedestal: owner,
+                      value,
+                    }),
           }),
         load: async () => {
           const candidates = await input.candidates.shopOfferOptions(owner, values);
@@ -147,7 +162,11 @@ export function bindShopOfferInteractions(input: {
                 optionLabelByKey.get(candidate.value.optionKey) ?? candidate.value.optionKey;
               return Object.freeze({
                 category:
-                  candidate.value.offer.payload?.kind === 'BoonSource' ? optionLabel : 'Shop Items',
+                  candidate.value.offer.payload?.kind === 'BoonSource'
+                    ? optionLabel
+                    : owner.kind === 'shopOffer'
+                      ? 'Shop Items'
+                      : 'Items',
                 label: pickerItemLabel(input.catalog, optionLabel, candidate.value),
                 selected: selected !== null && sameSelection(candidate.value, selected),
               });

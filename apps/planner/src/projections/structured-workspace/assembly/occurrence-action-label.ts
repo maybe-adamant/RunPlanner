@@ -93,7 +93,7 @@ export function occurrenceActionLabel(
   rewardControl: WorkspaceRewardControl | undefined,
   occurrence: Pick<
     import('@run-planner/engine/authored-project').RoomOccurrence,
-    'hermesShrine' | 'stygianWell' | 'acquisitionSites'
+    'hermesShrine' | 'stygianWell' | 'acquisitionSites' | 'infernalContractPedestal'
   >,
   purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
   pickupProducers: NonNullable<CanonicalAuthoredRoom['pickupProducers']> = [],
@@ -181,16 +181,24 @@ export function occurrenceActionLabel(
           ? roomLocal.offers.findIndex((candidate) => candidate.key === reference.offerKey)
           : -1;
       const offer = roomLocal.kind === 'shop' ? roomLocal.offers[slotIndex] : undefined;
-      const contract = reference.offerKey === 'infernalContractReward';
       return actionLabel(
-        contract ? 'Contract Item' : slotIndex < 0 ? 'Shop Offer' : `Slot ${slotIndex + 1}`,
-        contract ? 'Collect' : 'Buy',
+        slotIndex < 0 ? 'Shop Offer' : `Slot ${slotIndex + 1}`,
+        'Buy',
         true,
         offer?.rewardControl,
       );
     }
-    case 'interactInfernalContractPedestal':
-      return actionLabel('Contract Item', 'Collect', false);
+    case 'interactInfernalContractPedestal': {
+      // The item names the action; its Mystery source is edited on the row.
+      const item = occurrence.infernalContractPedestal?.reward?.offer;
+      return actionLabel(
+        'Contract Item',
+        'Collect',
+        false,
+        rewardControl,
+        item === undefined ? undefined : timelineRewardLabel(catalog, item),
+      );
+    }
     case 'purchaseStygianWellOffer':
       return `Buy ${wellPurchaseLabel(catalog, occurrence, reference.generationKey)}`;
     case 'purchaseHermesShrineOffer': {

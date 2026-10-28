@@ -409,6 +409,7 @@ export function assembleWorkspaceOccurrence(
         : { hermesShrineAssessment: input.hermesShrineAssessment }),
       markerDestinations: input.markerDestinations,
       occurrence: input.occurrence,
+      rewardControls: allRewardControls,
       ...(input.purgingPoolAssessment === undefined
         ? {}
         : { purgingPoolAssessment: input.purgingPoolAssessment }),

@@ -61,11 +61,14 @@ export function roomFeatureSections({
       feature,
     ): feature is Extract<
       RoomFeaturePresence,
-      { readonly kind: 'hermesShrine' | 'purgingPool' | 'stygianWell' }
+      {
+        readonly kind: 'hermesShrine' | 'purgingPool' | 'stygianWell' | 'infernalContractPedestal';
+      }
     > =>
       feature.kind === 'hermesShrine' ||
       feature.kind === 'purgingPool' ||
-      feature.kind === 'stygianWell',
+      feature.kind === 'stygianWell' ||
+      feature.kind === 'infernalContractPedestal',
   );
   const section = (group: RoomFeatureGroup | undefined): ReactNode =>
     group === undefined ? undefined : (

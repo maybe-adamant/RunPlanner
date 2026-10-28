@@ -7,6 +7,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { RoomInventoryPanel } from '../commerce/RoomInventoryPanel';
 import { ChaosSpawnWorkbench, ZagreusSpawnWorkbench } from './AdditionalExitControls';
+import { InfernalContractPedestalPanel } from './InfernalContractPedestalPanel';
 
 export type RoomFeaturePresence = Exclude<WorkspaceRoomFeature, { readonly kind: 'nemesisEvent' }>;
 
@@ -77,6 +78,14 @@ export function RoomFeatureSection({
                       : (feature.inventoryAddress ?? feature.presenceAddress),
                   )}
                   {...(roomActions === undefined ? {} : { roomActions })}
+                />
+              );
+            case 'infernalContractPedestal':
+              return (
+                <InfernalContractPedestalPanel
+                  feature={feature}
+                  interactions={interactions}
+                  key={feature.collect.interactionKey}
                 />
               );
             default:

@@ -17,7 +17,8 @@ export function bindRewardPayloadInteractions(input: {
 }): ReadonlyMap<string, WorkspaceRewardInteraction> {
   const rewards = new Map<string, WorkspaceRewardInteraction>();
   for (const [key, control] of input.rewardControls) {
-    if (control.owner.kind === 'shopOffer') continue;
+    if (control.owner.kind === 'shopOffer' || control.owner.kind === 'infernalContractPedestal')
+      continue;
     const owner = control.owner;
     const artificerOptions = input.artificerOptionsByReplacement.get(
       input.semanticAddressKey(control.owner.address),

@@ -233,6 +233,7 @@ function selectCandidate(
       case 'localReward':
       case 'rewardWheelOffer':
       case 'shopOffer':
+      case 'infernalContractPedestal':
       case 'acquisitionEntryOffer':
       case 'startingReward':
         return candidate.evaluation.result.supported;

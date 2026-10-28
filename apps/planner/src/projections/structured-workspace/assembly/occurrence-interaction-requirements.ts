@@ -284,6 +284,18 @@ export function occurrenceInteractionRequirements(
       );
       continue;
     }
+    if (feature.kind === 'infernalContractPedestal') {
+      if (feature.rewardControl.owner.kind !== 'infernalContractPedestal') continue;
+      requirements.push(
+        Object.freeze({
+          kind: 'infernalContractPedestalCollect' as const,
+          owner: feature.rewardControl.owner.address,
+          interactionKey: feature.collect.interactionKey,
+          collected: feature.collect.collected,
+        }),
+      );
+      continue;
+    }
     if (feature.kind !== 'purgingPool') continue;
     requirements.push(
       Object.freeze({

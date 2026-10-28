@@ -83,6 +83,8 @@ export function workspaceRoomFeatureMarkers(
           ];
         case 'purgingPool':
           return [feature.inventoryMarker, ...feature.slots.map((slot) => slot.marker)];
+        case 'infernalContractPedestal':
+          return [...rewardControlMarkers(feature.rewardControl), feature.collect.marker];
         case 'chaos':
           return feature.action === 'remove' ? [feature.marker] : [];
         case 'zagreusContract':
