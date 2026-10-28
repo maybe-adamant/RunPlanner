@@ -568,8 +568,15 @@ function overviewSections(
       subject: { kind: 'keepsake', key: keepsake.keepsakeKey },
     }),
   );
+  // The pool shows where a held card enables rerolls, or rerolls are left.
+  const { rerolls } = snapshot;
+  const rerollRows =
+    rerolls.doorsEnabled || rerolls.screensEnabled || rerolls.remaining > 0
+      ? [row('rerolls', `${rerolls.remaining} left`)]
+      : [];
   return sections(
     section('keepsake', 'Keepsake', keepsakeRows),
+    section('rerolls', 'Rerolls', rerollRows),
     section(
       'elements',
       'Elements',

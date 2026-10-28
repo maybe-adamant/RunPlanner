@@ -168,6 +168,20 @@ describe('Run State presentation', () => {
     ]);
   });
 
+  it('shows the reroll pool where a held card enables rerolls or rerolls are left', () => {
+    expect(lines(present().overview)).not.toHaveProperty('Rerolls');
+    expect(
+      lines(
+        present({ rerolls: { remaining: 0, doorsEnabled: false, screensEnabled: true } }).overview,
+      ),
+    ).toMatchObject({ Rerolls: ['0 left'] });
+    expect(
+      lines(
+        present({ rerolls: { remaining: 3, doorsEnabled: false, screensEnabled: false } }).overview,
+      ),
+    ).toMatchObject({ Rerolls: ['3 left'] });
+  });
+
   it('opens the Overview with the loadout and orders keepsake, elements, traits and Hex', () => {
     const state = present({
       traits: {

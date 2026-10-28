@@ -136,6 +136,8 @@ export type WorkspaceDerivedAcquisitionEntry = {
 };
 
 export interface WorkspaceOccurrenceRewardAssemblyInput {
+  /** The room's screen reroll counts, where a screen can be or was rerolled. */
+  readonly screenRerolls?: import('./screen-reroll-assembly').WorkspaceScreenRerollSource;
   readonly preparedEncounterDefinitionKeysBySlot?: Readonly<Record<string, string>>;
   readonly configuredRivalsRank: number;
   readonly routePosition: ResolvedRoutePosition;
@@ -231,6 +233,10 @@ function traitOfferControls(
       );
     }
     const marker = input.markerDestinations.marker(address);
+    const screenRerolls =
+      offer.kind === 'fallbackGold'
+        ? undefined
+        : input.screenRerolls?.({ kind: 'traitOffer', giverKey }, offer.rerollCount);
     controls.push(
       Object.freeze({
         acquisitionRoleLabel: workspaceAcquisitionRoleLabel(acquisitionRole),
@@ -241,6 +247,7 @@ function traitOfferControls(
         children: traitCarrierChildren(input.catalog, address, offer, input.markerDestinations),
         contextReached: input.isActiveTraitOffer(address),
         rewardOwner: owner.address,
+        ...(screenRerolls === undefined ? {} : { screenRerolls }),
       }),
     );
   }
@@ -274,6 +281,13 @@ function levelResolutionControls(
             branch.eligibleTargetCount === 0 &&
             branch.findings.length === 0,
         );
+      const screenRerolls =
+        value.kind === 'choice'
+          ? input.screenRerolls?.(
+              { kind: 'levelChoice', rewardType: reward.offer.rewardType },
+              value.rerollCount,
+            )
+          : undefined;
       return [
         Object.freeze({
           acquisitionRoleLabel: workspaceAcquisitionRoleLabel(acquisitionRole),
@@ -283,6 +297,7 @@ function levelResolutionControls(
           marker,
           rewardOwner: owner.address,
           value,
+          ...(screenRerolls === undefined ? {} : { screenRerolls }),
         }),
       ];
     }),
@@ -1184,8 +1199,16 @@ export function activeEncounterPhasesForOwner(
               });
             }
             const marker = input.markerDestinations.marker(traitAddress);
+            const screenRerolls =
+              authoredTraitOffer.kind === 'fallbackGold'
+                ? undefined
+                : input.screenRerolls?.(
+                    { kind: 'traitOffer', giverKey: producer.giverKey },
+                    authoredTraitOffer.rerollCount,
+                  );
             return Object.freeze({
               acquisitionRoleLabel: 'Selection',
+              ...(screenRerolls === undefined ? {} : { screenRerolls }),
               address: traitAddress,
               giver,
               marker,

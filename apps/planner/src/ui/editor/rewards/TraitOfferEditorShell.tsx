@@ -22,6 +22,7 @@ import { TraitOfferForm, TraitOfferShapeActions, useOutcomeFeedback } from './Tr
 import { TraitOfferStateInspector } from './TraitOfferStateInspector';
 import { selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
+import { ScreenRerollCount } from './ScreenRerollCount';
 import { hintProps } from '@planner/ui/controls/hint';
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
@@ -222,6 +223,14 @@ export function TraitOfferEditorShell({
         Reset to unresolved
       </button>
     );
+  const screenRerolls =
+    interaction.screenRerolls === undefined || value.kind === 'fallbackGold' ? undefined : (
+      <ScreenRerollCount
+        count={value.rerollCount ?? 0}
+        onChange={(count) => updateValue(Object.freeze({ ...value, rerollCount: count }))}
+        rerolls={interaction.screenRerolls}
+      />
+    );
   const save = {
     disabled: support === 'impossible' || !selectedOutcomeComplete,
     label: value.kind === 'chaos' ? 'Save Chaos outcome' : 'Save trait offer',
@@ -344,6 +353,7 @@ export function TraitOfferEditorShell({
         recovery={recoveryAction}
         reset={resetAction}
         save={save}
+        screenRerolls={screenRerolls}
         {...(onCancel === undefined ? {} : { cancel: onCancel })}
       />
     );
@@ -365,6 +375,7 @@ export function TraitOfferEditorShell({
       }
       feedback={feedbackSection}
       options={null}
+      screenRerolls={screenRerolls}
       recovery={recoveryAction}
       reset={resetAction}
       save={save}

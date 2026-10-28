@@ -66,6 +66,7 @@ export function bindTraitOfferInteractions(input: {
       key,
       Object.freeze({
         acquisitionRoleLabel: control.acquisitionRoleLabel,
+        ...(control.screenRerolls === undefined ? {} : { screenRerolls: control.screenRerolls }),
         launcher: traitOfferLauncherPresentation(catalog, control.giver, control.offer),
         choices: control.giver.providerKind === 'chaos' ? Object.freeze([]) : traitChoices,
         ...(chaosInteraction === undefined ? {} : { chaos: chaosInteraction }),

@@ -217,6 +217,7 @@ export function bindResolutionInteractions(input: {
       key,
       Object.freeze({
         acquisitionRoleLabel: control.acquisitionRoleLabel,
+        ...(control.screenRerolls === undefined ? {} : { screenRerolls: control.screenRerolls }),
         launcher: levelResolutionLauncherPresentation(
           catalog,
           control.value,

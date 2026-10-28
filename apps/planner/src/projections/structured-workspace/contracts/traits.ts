@@ -96,6 +96,20 @@ export interface WorkspaceLauncherPresentation {
   readonly traitKey?: string;
 }
 
+/** Why one more native reroll of a screen cannot be authored. */
+export type WorkspaceScreenRerollLock =
+  'unreached' | 'notEnabled' | 'poolEmpty' | 'poolShort' | 'poolReserved';
+
+/** The native rerolls of one single-pick screen before its final rows. */
+export interface WorkspaceScreenRerolls {
+  /** The plan's count. */
+  readonly count: number;
+  /** The most rerolls the pool allows here; a draft stops there. */
+  readonly maxCount: number;
+  /** Why the count stops at `maxCount`. */
+  readonly lockAtMax?: WorkspaceScreenRerollLock;
+}
+
 export interface WorkspaceTraitOfferControl {
   /** Player-facing acquisition role (for example, Chosen God or Spurned God). */
   readonly acquisitionRoleLabel: string;
@@ -110,6 +124,8 @@ export interface WorkspaceTraitOfferControl {
   readonly rewardOwner: SemanticAddress;
   /** Structurally discovered selected-outcome children. */
   readonly children: readonly WorkspaceTraitCarrierChildControl[];
+  /** Present where the screen can be or was rerolled. */
+  readonly screenRerolls?: WorkspaceScreenRerolls;
 }
 
 /** One exact Time Piece choice, independent of whether this role has a trait child. */
@@ -146,6 +162,8 @@ export interface WorkspaceLevelResolutionControl {
   readonly marker: WorkspaceMarker;
   readonly rewardOwner: SemanticAddress;
   readonly value: AuthoredLevelResolution;
+  /** Present where the screen can be or was rerolled. */
+  readonly screenRerolls?: WorkspaceScreenRerolls;
 }
 
 /** One lazy focused-option domain bound to a complete local trait-offer draft. */
@@ -556,6 +574,8 @@ export interface WorkspaceEchoLastRunBoonInteraction {
 
 export interface WorkspaceTraitOfferInteraction {
   readonly acquisitionRoleLabel: string;
+  /** Present where the screen can be or was rerolled. */
+  readonly screenRerolls?: WorkspaceScreenRerolls;
   readonly launcher: WorkspaceLauncherPresentation;
   readonly choices: readonly WorkspaceInteractionChoice<string>[];
   /** Dedicated Chaos envelope interaction; ordinary trait choices remain above. */
@@ -706,6 +726,8 @@ export interface WorkspaceChaosOfferInteraction {
 
 export interface WorkspaceLevelResolutionInteraction {
   readonly acquisitionRoleLabel: string;
+  /** Present where the screen can be or was rerolled. */
+  readonly screenRerolls?: WorkspaceScreenRerolls;
   readonly launcher: WorkspaceLauncherPresentation;
   /** Whether the Pom's candidate context is reached; only then can its editor open. */
   readonly contextReached: boolean;

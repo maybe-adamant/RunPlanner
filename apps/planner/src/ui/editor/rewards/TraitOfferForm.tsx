@@ -90,6 +90,7 @@ export function TraitOfferForm({
   recovery,
   reset,
   save,
+  screenRerolls,
   selectedOutcome,
   shapeActions,
   state,
@@ -108,11 +109,14 @@ export function TraitOfferForm({
     readonly onClick: () => void;
   };
   readonly selectedOutcome?: ReactNode;
+  /** The screen's native rerolls, before its final rows. */
+  readonly screenRerolls?: ReactNode;
   readonly shapeActions?: ReactNode;
   readonly state?: ReactNode;
 }) {
   return (
     <div className="trait-offer-editor">
+      {screenRerolls}
       {content === undefined ? (
         <>
           {state}

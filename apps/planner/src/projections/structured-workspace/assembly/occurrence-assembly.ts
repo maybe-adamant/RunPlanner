@@ -95,6 +95,7 @@ import {
 } from './occurrence-actions-assembly';
 import { assembleOccurrenceFeatures } from './occurrence-features-assembly';
 import { assembleFeatureRollActions } from './feature-roll-assembly';
+import { workspaceScreenRerollSource } from './screen-reroll-assembly';
 import { assemblePhantomExit } from './phantom-exit-assembly';
 import { assembleWheelRerolls, rerollMovedOnTimeline } from './reroll-assembly';
 import { occurrenceInteractionRequirements } from './occurrence-interaction-requirements';
@@ -387,8 +388,18 @@ export function assembleWorkspaceOccurrence(
   const entered = input.evaluatedRoom?.entered ?? false;
   const roomControls =
     input.roomPicker === undefined ? Object.freeze([]) : Object.freeze([input.roomPicker]);
+  const rerollSpendAllowance = input.rerollSpendAllowance;
   const rewardLocal = assembleOccurrenceRewardLocal(
     {
+      ...(rerollSpendAllowance === undefined
+        ? {}
+        : {
+            screenRerolls: workspaceScreenRerollSource({
+              catalog: input.catalog,
+              occurrence: address,
+              source: { rerollSpendAllowance, runState: input.runState },
+            }),
+          }),
       configuredRivalsRank: input.configuredRivalsRank,
       routePosition: input.routePosition,
       biome: input.biome,

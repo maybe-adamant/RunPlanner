@@ -157,6 +157,8 @@ export type {
 } from './contract';
 export type {
   WorkspaceTraitOfferControl,
+  WorkspaceScreenRerollLock,
+  WorkspaceScreenRerolls,
   WorkspaceLauncherPresentation,
   WorkspaceAspectHexTreeControl,
   WorkspaceTraitCarrierChildControl,

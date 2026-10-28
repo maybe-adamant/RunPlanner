@@ -756,3 +756,25 @@ button.hex-tree-node[data-has-findings='true'] {
   align-items: center;
   gap: 0.4rem;
 }
+
+/* A single-pick screen's native rerolls before its final rows. */
+.screen-reroll-count {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-self: start;
+}
+
+.screen-reroll-count-label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.screen-reroll-count-value {
+  min-width: 1.5rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
