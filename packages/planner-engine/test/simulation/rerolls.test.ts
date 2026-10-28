@@ -11,6 +11,7 @@ import {
   createRoomActionAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  rerollAppendIndex,
   semanticAddressKey,
   type BiomeAddress,
   type ProjectCommand,
@@ -19,11 +20,15 @@ import {
   type RerollTarget,
 } from '@run-planner/engine/authored-project';
 import {
+  createPreparedProjectCandidateSession,
   rerollSettlementForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import {
+  locallyValidRewardOffers,
+  type ResolvedRewardOffer,
+} from '@run-planner/engine/reward-kernel';
 import {
   loadNemesisFieldsCheckpoint,
   loadUnderworldFGCheckpoint,
@@ -557,6 +562,111 @@ describe('Hub board rerolls', () => {
     expect(occurrence(later.project, 'surface-n-combat09').rerolledIncomingReward?.offer).toEqual(
       later.reward,
     );
+  });
+
+  /** Appends a press of one slot to a stay with the first reward the session accepts there. */
+  function pressInStay(project: ProjectDocument, hubSlotKey: string, precedingVisitCount: number) {
+    const surface = { kind: 'hubStay', hub, precedingVisitCount } as const;
+    const session = createPreparedProjectCandidateSession(catalog, evaluate(project));
+    const reward = ['MaxHealthDropBig', 'MaxManaDropBig', 'Boon']
+      .flatMap((type) => locallyValidRewardOffers(catalog.rewards, type))
+      .find((value) => {
+        const result = session.evaluate({
+          kind: 'pendingRerollReward',
+          surface,
+          target: { kind: 'hubSlot', hubSlotKey },
+          value,
+        });
+        return result.kind === 'rerollReward' && result.result.supported;
+      });
+    if (reward === undefined) throw new Error(`no reward is supported for ${hubSlotKey}`);
+    return {
+      reward,
+      project: applyProjectCommand(project, catalog, {
+        kind: 'InsertHubReroll',
+        hub,
+        hubSlotKey,
+        reward,
+        index: rerollAppendIndex(project, surface)!,
+      }),
+    };
+  }
+  const lookupOf = (project: ProjectDocument) => {
+    const biome = evaluate(project).evaluation.route.biomes[0]!;
+    if (!('rewards' in biome)) throw new Error('Surface N was not evaluated');
+    return biome.rewards.branches[0]!.state.rewardLookups.hubRewardLookup;
+  };
+
+  it('chain presses of one door across stays from the reward each stay assigned', () => {
+    // combat03 is never entered; it first offers WeaponUpgrade.
+    const first = pressInStay(base(), 'combat03', 0);
+    const second = pressInStay(first.project, 'combat03', 3);
+    const assembly = evaluate(second.project);
+    expect(
+      rerollSettlementForProjectEvaluationAssembly(
+        assembly,
+        createHubRerollAddress(n, 'hub', 'r2'),
+      ),
+    ).toMatchObject({ reward: second.reward, poolRemainingBefore: 2, poolRemainingAfter: 1 });
+    // The later stay assigned the first press's reward, which its press excludes.
+    const supported = supportedRerollRewards(
+      second.project,
+      createHubRerollAddress(n, 'hub', 'r2'),
+      ['MaxHealthDropBig', 'MaxManaDropBig', 'Boon'],
+    ).map((offer) => JSON.stringify(offer));
+    expect(supported).not.toContain(JSON.stringify(first.reward));
+    expect(occurrence(second.project, 'surface-n-combat03').rerolledIncomingReward?.offer).toEqual(
+      second.reward,
+    );
+    expect(rerollFindings(second.project)).toEqual([]);
+  });
+
+  it('replace the board lookup only before the first departure', () => {
+    // combat03 is the board's only WeaponUpgrade; leaving the Hub never removes an offer.
+    expect(lookupOf(base())).toContain('WeaponUpgrade');
+    expect(lookupOf(pressInStay(base(), 'combat03', 0).project)).not.toContain('WeaponUpgrade');
+    expect(lookupOf(pressInStay(base(), 'combat03', 3).project)).toContain('WeaponUpgrade');
+  });
+
+  it('press around the fountain in the order the stay authors them', () => {
+    // Move the fountain into the stay after the second visit, between two presses.
+    const withFountain = (() => {
+      const actions = hubActions(base()).filter((action) => action.kind !== 'useFountain');
+      return applyProjectCommand(base(), catalog, {
+        kind: 'ReplaceHubActionOrder',
+        hub,
+        actions: [...actions.slice(0, 2), { kind: 'useFountain' }, ...actions.slice(2)],
+      });
+    })();
+    const before = applyProjectCommand(withFountain, catalog, {
+      kind: 'InsertHubReroll',
+      hub,
+      hubSlotKey: 'combat03',
+      reward: pressInStay(withFountain, 'combat03', 2).reward,
+      index: 2,
+    });
+    const project = pressInStay(before, 'combat10', 2).project;
+    expect(
+      hubActions(project)
+        .slice(2, 5)
+        .map((action) => action.kind),
+    ).toEqual(['reroll', 'useFountain', 'reroll']);
+    const biome = evaluate(project).evaluation.route.biomes[0]!;
+    if (!('history' in biome)) throw new Error('Surface N was not evaluated');
+    const restore = biome.history.events.filter(
+      (event) => event.kind === 'roomRestored' && event.restoreKind === 'hub',
+    )[1]!;
+    const stayEvents = biome.history.events.filter(
+      (event) => event.sequence > restore.sequence && event.origin.kind === 'hubRoom',
+    );
+    expect(
+      stayEvents
+        .slice(0, 4)
+        .map((event) =>
+          event.kind === 'hubRewardRerolled' ? `reroll ${event.owner.rerollId}` : event.kind,
+        ),
+    ).toEqual(['reroll r1', 'fountainUsed', 'reroll r2', 'roomDeparted']);
+    expect(rerollFindings(project)).toEqual([]);
   });
 
   it('need a door-reroll card held when a restored board is assigned', () => {

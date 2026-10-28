@@ -3,6 +3,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createHubRerollAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
   semanticAddressKey,
@@ -20,7 +21,14 @@ import {
   type ExecutionPlan,
 } from '@run-planner/engine/execution-plan';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { withArcana, withGoldenUnderworldJudgments } from '../support/rerolls';
+import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
+import {
+  firstSupportedReroll,
+  withArcana,
+  withGoldenUnderworldJudgments,
+  withJudgment,
+} from '../support/rerolls';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
 const g = createBiomeAddress('Underworld', 'G');
 const gSource = 'golden-g-b1-e1';
@@ -80,6 +88,63 @@ describe('reroll publication', () => {
       reroll,
     );
     expect(sourcePlan.rerollPoolAtEntry).toBe(settled!.poolRemainingAfter! + 1);
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it('publishes Hub board presses of every stay in authored order', () => {
+    const n = createBiomeAddress('Surface', 'N');
+    const hub = { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' } as const;
+    // combat03 is never entered; one press in the first stay, one after the third visit.
+    const rewards: ResolvedRewardOffer[] = [];
+    const project = [1, 5].reduce(
+      (current, index) => {
+        const inserted = applyProjectCommand(current, catalog, {
+          kind: 'InsertHubReroll',
+          hub,
+          hubSlotKey: 'combat03',
+          reward: { rewardType: 'MaxHealthDropBig' },
+          index,
+        });
+        const reroll = createHubRerollAddress(n, 'hub', `r${rewards.length + 1}`);
+        const reward = firstSupportedReroll(inserted, reroll, 'HubRewards');
+        rewards.push(reward);
+        return applyProjectCommand(inserted, catalog, {
+          kind: 'ReplaceHubRerollReward',
+          reroll,
+          reward,
+        });
+      },
+      withJudgment(
+        withArcana(loadSurfaceNProject(), ['DoorReroll']),
+        'N',
+        'surface-n-preboss:boss',
+        ['ScreenReroll', 'TradeOff', 'StartingGold', 'HealthRegen', 'BonusDodge'],
+      ),
+    );
+    const assembly = simulateProjectAssembly(catalog, project);
+    const later = createHubRerollAddress(n, 'hub', 'r2');
+    expect(rerollSettlementForProjectEvaluationAssembly(assembly, later)).toMatchObject({
+      poolRemainingAfter: 1,
+    });
+    const plan = compileExecutionPlan({
+      product: assembleExecutionProduct({ assembly, catalog }),
+    });
+    const published = plan.occurrences.flatMap((entry) =>
+      entry.overview.hub === undefined ? [] : [entry.overview.hub],
+    );
+    expect(published).toHaveLength(1);
+    expect(published[0]!.rerolls).toEqual([
+      {
+        owner: semanticAddressKey(createHubRerollAddress(n, 'hub', 'r1')),
+        slotKey: 'combat03',
+        reward: expect.objectContaining({ rewardType: rewards[0]!.rewardType }),
+      },
+      {
+        owner: semanticAddressKey(later),
+        slotKey: 'combat03',
+        reward: expect.objectContaining({ rewardType: rewards[1]!.rewardType }),
+      },
+    ]);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
   });
 

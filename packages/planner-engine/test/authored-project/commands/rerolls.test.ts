@@ -226,6 +226,56 @@ describe('Hub rerolls', () => {
       }),
     ).toThrow('Hub action order must keep its rerolls');
   });
+
+  it("follow the slot's last press before its visit when the order changes", () => {
+    const n = createBiomeAddress('Surface', 'N');
+    const hub = { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' } as const;
+    const hubActions = (project: ProjectDocument) => {
+      const decision = project.route.biomes[0]!.topology!.decisions.find(
+        (candidate) => candidate.kind === 'hub',
+      );
+      if (decision?.kind !== 'hub') throw new Error('Surface N has no Hub');
+      return decision.actions;
+    };
+    // combat09 is the sixth visit; one press in the first stay and one in the fourth.
+    const pressed = [
+      { index: 0, reward: { rewardType: 'MaxHealthDropBig' } },
+      { index: 5, reward: { rewardType: 'MaxManaDropBig' } },
+    ].reduce(
+      (project, { index, reward }) =>
+        applyProjectCommand(project, catalog, {
+          kind: 'InsertHubReroll',
+          hub,
+          hubSlotKey: 'combat09',
+          reward,
+          index,
+        }),
+      withArcana(loadSurfaceNProject(), ['DoorReroll']),
+    );
+    const combat09 = createIncomingRewardAddress(n, 'surface-n-combat09' as never);
+    const rerolled = (project: ProjectDocument) =>
+      project.route.biomes[0]!.topology!.occurrences.find(
+        (room) => room.occurrenceId === combat09.occurrenceId,
+      )!.rerolledIncomingReward?.offer;
+    expect(rerolled(pressed)).toEqual({ rewardType: 'MaxManaDropBig' });
+    // Moving the later press after the visit leaves the earlier one effective.
+    const actions = hubActions(pressed);
+    const later = actions.findIndex(
+      (action) => action.kind === 'reroll' && action.rerollId === 'r2',
+    );
+    const moved = applyProjectCommand(pressed, catalog, {
+      kind: 'ReplaceHubActionOrder',
+      hub,
+      actions: [...actions.slice(0, later), ...actions.slice(later + 1), actions[later]!],
+    });
+    expect(rerolled(moved)).toEqual({ rewardType: 'MaxHealthDropBig' });
+    // And back before it, the later press is effective again.
+    expect(
+      rerolled(
+        applyProjectCommand(moved, catalog, { kind: 'ReplaceHubActionOrder', hub, actions }),
+      ),
+    ).toEqual({ rewardType: 'MaxManaDropBig' });
+  });
 });
 
 describe('screen reroll counts', () => {
