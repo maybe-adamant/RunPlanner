@@ -82,43 +82,41 @@ promoted.
 - **Pool:** the simulation derives the run's reroll pool from those sources
   and every spend. Adding a reroll beyond the remaining pool is blocked (fixed
   budget rule); a preserved over-spend is a finding.
-- **Door and wheel rerolls:** the authored door reward (normal door, Hub
-  board door, ship-wheel offer) stays the first native draw, with its
-  existing picker, candidates and meaning. Rerolls are an ordered list beside
-  it; each element is a further real draw: it leaves its store and its side
-  effects apply. The simulation settles the first draw at doors-unlock as
-  today and the rerolls when the walk leaves the room; the last element (the
-  first draw when there are none) is what the door offers onward: the next
-  room's incoming reward, the entered reward, the picked and unpicked wheel
-  offers. Each reroll's candidates use the normal door legality, excluding the
-  door's original reward and every door's (or wheel's) current reward, and
-  cost 1. Only with `AllowDoorReroll`, and only where the native rule allows
-  it: (the door's `AllowReroll` or the destination's `ForceDoorAllowReroll`)
-  and not the destination's `NoReroll` and not a Shop reward. So N side and
-  return doors, Story, Shop and Boss destinations never reroll, while O and Q
-  exits into `O_MiniBoss01`, `O_MiniBoss02`, `O_Reprieve01` and
-  `Q_BaseMiniBoss` do. First visit only: a restored door is never rerollable.
-- **Fields cage doors:** one reroll replaces one cage's reward, the cage chosen
-  natively at random (`RerollIndex`). Each cage reroll authors the cage slot
-  and its new reward; candidates exclude every cage's current reward. The
-  game module sets the slot before the native reroll runs.
-- **Reroll editor:** rerolls stay contained so the door layouts, the Hub board
-  above all, are unchanged. The Reward line of a rerollable door, wheel offer
-  or cage door keeps its picker for the first draw; once rerolled, the
-  picker's label reads first draw → final reward (intermediate draws only in
-  the dialog). The Hub board moves from four columns to three, always,
-  so the wider label fits without reflowing when a reroll is added. A small reroll button beside it (only when door rerolls are
-  enabled) opens a dialog listing the first draw and each reroll, one picker
-  per element over that step's candidates (plus a cage-slot picker for
-  cages), with the remaining pool. Only the last reroll has **Reroll**
-  (appends the next draw; disabled when the pool is spent) and **Remove**
-  (drops it), so deletion is always explicit; editing an earlier element that
-  invalidates a later one leaves the later one preserved with a finding.
-- **Screen rerolls:** a count only, on the supported screens: the nine core
+- **Door, wheel and cage rerolls are a timeline action.** Rerolls of
+  different doors interleave freely, and each reroll's candidates depend on
+  every door's current reward at that moment, so per-door lists cannot
+  represent them. A repeatable **reroll** room action, ordered in the room's
+  action order after doors unlock (`outgoingGeneration`), names its target (an
+  exit door, a ship-wheel offer, or a Fields cage door with its cage slot,
+  which the game picks at random) and the new reward. Each instance has its
+  own persisted identity, so findings stay attached when another reroll is
+  removed. The authored door reward stays the first native draw with its
+  existing picker and meaning; the simulation applies rerolls in action order,
+  each a real draw (store removal, refill, priorities, side effects), and the
+  target's current reward after the last reroll is what it offers onward: the
+  next room's incoming reward, the entered reward, the wheel offers, the cage
+  rewards.
+- **Hub board rerolls** are reroll actions in the Hub's ordered actions,
+  legal only before the first room visit: a restored Hub never re-flags its
+  doors (`RestoreUnlockRoomExits`; inferred, in-game check), and the board's
+  rewards persist across visits. Hub visits do not become occurrences.
+- **Legality:** candidates use the normal door legality, excluding the
+  target's original reward and every door's (wheel's, cage's) current reward;
+  each costs 1 from the pool and needs `AllowDoorReroll`. A door is
+  rerollable when (its `AllowReroll` or the destination's
+  `ForceDoorAllowReroll`) and not the destination's `NoReroll` and not a Shop
+  reward: N side and return doors, Story, Shop and Boss destinations never
+  reroll; O and Q exits into `O_MiniBoss01`, `O_MiniBoss02`, `O_Reprieve01` and
+  `Q_BaseMiniBoss` do. First visit only.
+- **Editor (later):** this bundle lands the model and keeps today's editor
+  working; the reroll action's timeline editor, doors moving into the
+  timeline, and the screen-reroll count controls are a later projection and UI
+  plan with no schema change.
+- **Screen rerolls:** authored as a count only, on the supported screens: the nine core
   Olympians, Hermes, Athena, Dionysus, Artemis, Chaos, Pom of Power, the Wells and the Pool
   of Purging. Not NPC screens, Hammers, Hermes Shrines, Selene or the World
-  Shop. The button appears only when screen rerolls are enabled; k rerolls of
-  one screen cost k(k+1)/2. The final rows stay authored as today; screen
+  Shop. Legal only when screen rerolls are enabled; k rerolls of one screen
+  cost k(k+1)/2. The final rows stay authored as today; screen
   rerolls touch no store.
 - Migration: no rerolls anywhere.
 
@@ -128,19 +126,22 @@ promoted.
   screens and doors; the hidden door's unlock position; the pedestal
   destination per Preboss (existing data moved where needed).
 - **Planner engine:** authored shapes, codecs, defaults and commands for the
-  pedestal feature, phantom exit and reroll chains and counts; the 99 → 100
-  migration; simulation settlement of the pedestal, the phantom draw, the
-  reroll pool and chain draws; candidates and findings; execution-plan wire
-  revision; Record mode import of all three (phantom exits from
-  `ExitDoorRooms`/`OfferedRewards`, the reroll count, chain contents solved
-  from store diffs as for wheels).
-- **Planner application:** Preboss pedestal UI, the Doors-tab phantom exit,
-  reroll buttons and counts, projections; migration surfaced through the
-  existing project-open path.
+  pedestal feature, the phantom exit, the reroll room and Hub action and
+  screen reroll counts; the pool; settlement of the pedestal, the phantom
+  draw and rerolls in action order; candidates and findings; execution-plan
+  wire revision; Record mode import of all three (phantom exits from
+  `ExitDoorRooms`/`OfferedRewards`; rerolls in a canonical order from the
+  count and store diffs, reported when orders are not outcome-equivalent).
+  Migration transitions stay app-side (`apps/planner/src/persistence/`).
+- **Planner application:** Preboss pedestal UI and the Doors-tab phantom
+  exit; the 99 → 100 transition; keeping current projections working over
+  the new action kind (no reroll editor yet).
 - **Game module:** decode the new wire; pedestal from the Preboss room (World
-  Shop code); phantom exit steering; reroll steering: force the next chain
-  element on a door or wheel reroll, and keep screen steering through native
-  screen rerolls so the final screen shows the authored rows.
+  Shop code); phantom exit steering; reroll steering: wrap
+  `AttemptRerollDoor`, `AttemptRerollFieldsDoor` (set `RerollIndex`) and
+  `AttemptRerollShipWheel` to force the next authored reroll for that target,
+  and keep screen steering through native screen rerolls so the final screen
+  shows the authored rows. Conformance checks outcome state, not press order.
 
 ## Gates
 
@@ -159,11 +160,13 @@ promoted.
    migration land here; later slices extend the same version and migration
    while unpushed.
 3. **Phantom exit** (engine, app, game module).
-4. **Rerolls** (engine, app, game module): pool, chains, screen counts.
+4. **Rerolls** (engine, game module, app kept working): pool, reroll room and
+   Hub actions, screen counts.
 5. **Import** (engine): Record mode maps all three; fixtures re-pinned.
 6. **Closure:** fresh independent review (schema and protocol change), full
    `npm run check`, design and audit updates, candidates investigation
-   deleted, live checklist in `docs/testing/` (door reroll, wheel reroll,
+   deleted, live checklist in `docs/testing/` (door reroll, wheel reroll, Hub reroll
+   only on the first visit,
    screen reroll, phantom exit, pedestal in a boon-form Preboss), plan
    deleted. Nothing is pushed before closure.
 
@@ -171,11 +174,12 @@ promoted.
 
 - Catalog: declaration and normalization for reroll sources, gates and flags.
 - Engine: codec and migration (99 fixtures → 100), commands, settlement of the
-  phantom draw and chains (store state, refill, priorities, Devotion depth),
-  pool accounting and the budget block, candidates for placeholders and chain
+  phantom draw and reroll actions (store state, refill, priorities, Devotion depth),
+  pool accounting and the budget block, candidates for placeholders and reroll
   steps; execution-plan fixtures regenerated under their discipline. Existing
   tests are corrected rather than duplicated.
-- App: the three controls at the UI adapter boundary.
+- App: the pedestal and phantom-exit controls at the UI adapter boundary;
+  existing projections over the new action kind.
 - Game module: Lua suite for decoding and steering.
 - Lanes per slice from the diff: `test:catalog`, `test:engine`,
   `test:planner`, `test:game-module`, `test:run-import`; equivalence and draft
@@ -187,4 +191,6 @@ promoted.
 - Modelling RNG, intermediate screen-reroll rows, or reroll order across
   different screens.
 - Rerolls on NPC screens, Hammers, Hermes Shrines, Selene or the World Shop.
+- The reroll timeline editor, doors in the timeline and screen-reroll
+  controls (a later projection and UI plan, no schema change).
 - The O-room wheel solver and the special-trait import pass (next plans).
