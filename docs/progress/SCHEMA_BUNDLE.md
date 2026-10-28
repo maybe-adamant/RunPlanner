@@ -80,8 +80,16 @@ promoted.
   the normal door legality, excluding the reward being replaced and the other
   doors' current rewards, and cost 1. Only with `AllowDoorReroll`, and only on
   natively rerollable doors (not O exits, not hidden doors, not Shop rewards).
-  The editor shows a reroll button under the choice; pressing it keeps the
-  current reward in the chain and opens the picker for the next.
+  The editor isolates rerolls so the door layouts, the Hub board above all,
+  stay as they are. The Reward line of a Hub board door, ship-wheel offer or
+  normal door gains a small reroll button (shown only when door rerolls are
+  enabled and the door is rerollable, with the reroll count once there is
+  one); the line itself keeps showing and editing the final reward. The button
+  opens a dialog listing the chain, one picker per element over that step's
+  candidates, with the remaining pool. Only the last element has **Reroll**
+  (appends the next draw; disabled when the pool is spent) and **Remove**
+  (drops it), so deletion is always explicit; editing an earlier element that
+  invalidates a later one leaves the later one preserved with a finding.
 - **Screen rerolls:** a count only, on the supported screens: the nine core
   Olympians, Hermes, Athena, Dionysus, Artemis, Chaos, the Wells and the Pool
   of Purging. Not NPC screens, Hammers, Hermes Shrines, Selene or the World
