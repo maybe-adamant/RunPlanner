@@ -354,8 +354,7 @@ export function createStructuredWorkspaceProjection(
         (offer) => shopOfferAssessmentForProjectEvaluationAssembly(assembly, offer),
         (exit) => phantomExitSettlementForProjectEvaluationAssembly(assembly, exit),
         (surface) => rerollSurfaceForProjectEvaluationAssembly(assembly, surface),
-        (surface) =>
-          rerollSpendAllowanceForProjectEvaluationAssembly(assembly, { kind: 'press', surface }),
+        (spend) => rerollSpendAllowanceForProjectEvaluationAssembly(assembly, spend),
       );
       const routeSource = sources.route;
       const authoredRoute =

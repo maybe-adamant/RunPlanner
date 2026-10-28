@@ -125,6 +125,11 @@ export interface WorkspaceRoomActionRow {
     readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
     readonly interactionKey: string;
   };
+  /** The restocked slots of this Well or Pool reroll. */
+  readonly featureRoll?: {
+    readonly feature: import('@run-planner/engine/authored-project').RollFeature;
+    readonly slots: readonly import('./features').WorkspaceFeatureRollSlot[];
+  };
   /** Rush authored on this Shrine purchase action. */
   readonly hermesShrinePurchase?: {
     readonly purchaseInteractionKey: string;
@@ -132,8 +137,8 @@ export interface WorkspaceRoomActionRow {
   };
   /** Refill authoring under the purchase that triggers Travel Deal. */
   readonly travelDealLine?: WorkspaceTravelDealLine;
-  /** Removes a purchased refill that no Travel Deal line currently hosts. */
-  readonly refillPurchaseRemoval?: WorkspaceCommandIntent<
+  /** Removes this purchase with its own command where the generic removal does not apply. */
+  readonly purchaseRemoval?: WorkspaceCommandIntent<
     Extract<
       ProjectCommand,
       {

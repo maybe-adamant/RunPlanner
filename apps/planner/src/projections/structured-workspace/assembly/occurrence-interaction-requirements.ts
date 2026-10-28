@@ -326,6 +326,32 @@ export function occurrenceInteractionRequirements(
     );
   }
 
+  // Each Well or Pool reroll pins its restocked slots on its Timeline row.
+  for (const row of room.roomActions?.rows ?? []) {
+    if (row.featureRoll === undefined) continue;
+    requirements.push(
+      Object.freeze({
+        kind: 'featureRollSlots' as const,
+        owner: room.address,
+        interactionKey: `featureRollSlots:${row.marker.focusKey}`,
+        feature: row.featureRoll.feature,
+        action: row.address,
+        slots: Object.freeze(
+          row.featureRoll.slots.map((slot) =>
+            Object.freeze({
+              interactionKey: slot.interactionKey,
+              slotKey: slot.slotKey,
+              value: slot.value,
+              ...(slot.valueLabel === undefined ? {} : { valueLabel: slot.valueLabel }),
+              candidates: slot.candidates,
+              assessed: slot.assessed,
+            }),
+          ),
+        ),
+      }),
+    );
+  }
+
   switch (room.roomLocal.kind) {
     case 'none':
     case 'fixed':

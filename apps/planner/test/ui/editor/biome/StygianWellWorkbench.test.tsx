@@ -9,7 +9,7 @@ import {
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -183,11 +183,11 @@ describe('Stygian Well workbench', () => {
       within(line).getByRole('checkbox', { name: 'Purchased Stygian Well Travel Deal' }),
     ).toHaveProperty('checked', false);
 
-    openOverview();
-    const purchase = screen.getByRole('checkbox', { name: 'Purchased Stygian Well Offer 2' });
-    await view.user.click(purchase);
-    openTimeline();
-    expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
+    // The purchase is removed on its row, and bought again from Interact.
+    await view.user.click(
+      screen.getByRole('button', { name: /^Remove Buy .* · Slot 2 from timeline$/ }),
+    );
+    await waitFor(() => expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull());
     expect(
       view.application.store
         .getState()
@@ -196,10 +196,12 @@ describe('Stygian Well workbench', () => {
         )?.stygianWell?.travelDealRefillKey,
     ).toBe('ExtendedShopTrait');
     openOverview();
-    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Stygian Well Offer 2' }));
+    await view.user.click(screen.getByRole('button', { name: 'Interact with Well' }));
+    const listbox = await screen.findByRole('listbox');
+    await view.user.click(within(listbox).getAllByRole('option')[1]!);
     openTimeline();
     expect(
-      within(screen.getByRole('listitem', { name: 'Travel Deal' })).getByRole('button', {
+      within(await screen.findByRole('listitem', { name: 'Travel Deal' })).getByRole('button', {
         name: 'Stygian Well Travel Deal Item',
       }).textContent,
     ).toBe(refillLabel);
@@ -282,11 +284,7 @@ describe('Stygian Well workbench', () => {
 
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrence);
     openOverview();
-    const purchase = screen.getByRole('checkbox', {
-      name: 'Purchased Stygian Well Offer 2',
-    });
     const offer = screen.getByRole('button', { name: 'Stygian Well Offer 2 Item' });
-    expect((purchase as HTMLInputElement).checked).toBe(true);
     expect(offer.textContent).toContain('Unresolved');
     expect(screen.queryByRole('button', { name: /Twist result$/ })).toBeNull();
 

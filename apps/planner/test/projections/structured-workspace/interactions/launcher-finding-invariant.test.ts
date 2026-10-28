@@ -12,12 +12,14 @@ import {
   createFieldsSpatialAddress,
   createHubDecisionAddress,
   createOccurrenceAddress,
+  createRoomActionAddress,
   createNemesisRandomEventAddress,
   createOccurrenceId,
   createShopOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   rerollAppendIndex,
+  roomActionKey,
   semanticAddressKey,
   type ProjectDocument,
   type SemanticAddress,
@@ -48,7 +50,10 @@ import {
   goldenIBiome,
   loadNemesisFieldsCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
-import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldFGCheckpoint,
+  loadUnderworldFStygianWellCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceNOPQProject,
   loadSurfaceNProject,
@@ -88,6 +93,7 @@ const checked = {
   collapsed: 0,
   reroll: 0,
   hubReroll: 0,
+  featureRollSlot: 0,
 };
 /** The trait offer whose dialog repairs a finding at this owner, if any. */
 function repairingTraitOffer(owner: SemanticAddress): SemanticAddress | undefined {
@@ -159,6 +165,7 @@ function disabledRepairLaunchers(assembly: ProjectEvaluationAssembly): readonly 
   for (const finding of owners)
     disabled.push(...blockedNativeSettings(interactions, finding.origin));
   for (const finding of owners) disabled.push(...unboundRerollRows(interactions, finding.origin));
+  for (const finding of owners) disabled.push(...unboundRollSlots(interactions, finding.origin));
   disabled.push(...disabledCollapsedLauncher(interactions, assembly));
   return disabled;
 }
@@ -255,6 +262,25 @@ function blockedNativeSettings(
         if (!slot.contextReached) result.push(`hubSlot ${semanticAddressKey(slot.owner)}`);
       }
   return result;
+}
+
+/** A Well or Pool reroll's slot pin repairs its findings; it is always enabled once bound. */
+function unboundRollSlots(
+  interactions: WorkspaceInteractions,
+  owner: SemanticAddress,
+): readonly string[] {
+  if (owner.kind !== 'roomFeature') return [];
+  const target = owner.target;
+  const rerollSlot =
+    (target.kind === 'stygianWellOffer' &&
+      target.generationKey !== 'travelDealRefill' &&
+      !target.generationKey.startsWith('initial:')) ||
+    (target.kind === 'purgingPoolOffer' && target.rollKey !== undefined);
+  if (!rerollSlot) return [];
+  checked.featureRollSlot += 1;
+  return interactions.featureRollSlots.has(`featureRollSlot:${semanticAddressKey(owner)}`)
+    ? []
+    : [`rollSlot ${semanticAddressKey(owner)}`];
 }
 
 /** A press's Remove and reward picker are always enabled; its row must be bound. */
@@ -636,5 +662,46 @@ describe('a finding never disables the launcher that repairs it', () => {
     });
     expect(check(hubPress)).toEqual([]);
     expect(checked.hubReroll).toBeGreaterThan(0);
+  });
+  it('holds for a Well reroll pin its roll does not restock', () => {
+    const postboss = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    const held = applyProjectCommand(
+      withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
+      catalog,
+      {
+        kind: 'ReplaceJudgmentArcana',
+        judgment: {
+          kind: 'judgmentArcana',
+          routeKey: 'Underworld',
+          biomeKey: 'F',
+          occurrenceId: createOccurrenceId('golden-f-preboss-shop:boss'),
+          phaseKey: 'Encounter',
+        },
+        arcanaKeys: ['ScreenReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
+      },
+    );
+    const order = held.route.biomes[0]!.topology!.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === postboss.occurrenceId,
+    )!.roomActions.order;
+    const rerolled = applyProjectCommand(held, catalog, {
+      kind: 'InsertStygianWellReroll',
+      occurrence: postboss,
+      index: order.length,
+    });
+    const pinned = applyProjectCommand(rerolled, catalog, {
+      kind: 'ReplaceStygianWellRollOffer',
+      action: createRoomActionAddress(
+        createBiomeAddress('Underworld', 'F'),
+        postboss.occurrenceId,
+        roomActionKey({ kind: 'rerollStygianWell', rerollId: 'r1', offerKeyBySlot: {} }),
+      ),
+      slotKey: 'secondRight',
+      itemKey: 'TemporaryBoonRarityTrait',
+    });
+    expect(check(pinned)).toEqual([]);
+    expect(checked.featureRollSlot).toBeGreaterThan(0);
   });
 });

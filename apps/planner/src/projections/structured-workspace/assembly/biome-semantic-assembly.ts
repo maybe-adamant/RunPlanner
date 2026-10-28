@@ -603,6 +603,7 @@ export function assembleWorkspaceBiomeSemantics(
       purgingPoolAssessment: source.purgingPoolAssessment,
       hermesShrineAssessment: source.hermesShrineAssessment,
       stygianWellAssessment: source.stygianWellAssessment,
+      rerollSpendAllowance: source.rerollSpendAllowance,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,
       transcendentEmbryoOutcomes: source.transcendentEmbryoOutcomes,
       ...(fountainRarityAssessment === undefined ? {} : { fountainRarityAssessment }),

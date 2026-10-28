@@ -151,9 +151,9 @@ export interface WorkspaceBiomeSource {
   readonly rerollSurface: (
     surface: import('@run-planner/engine/authored-project').RerollSurface,
   ) => import('@run-planner/engine/simulation').RerollSurfaceSettlement | undefined;
-  /** Whether one more press appended to a surface fits the run's reroll pool. */
-  readonly rerollPressAllowance: (
-    surface: import('@run-planner/engine/authored-project').RerollSurface,
+  /** Whether a new spend (a press, a Well or Pool reroll, a screen reroll) fits the run's reroll pool. */
+  readonly rerollSpendAllowance: (
+    spend: import('@run-planner/engine/simulation').RerollSpend,
   ) => import('@run-planner/engine/simulation').RerollSpendAllowance;
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
@@ -703,7 +703,7 @@ function createWorkspaceBiomeSource(
   shopOfferAssessment: WorkspaceBiomeSource['shopOfferAssessment'],
   phantomExitSettlement: WorkspaceBiomeSource['phantomExitSettlement'],
   rerollSurface: WorkspaceBiomeSource['rerollSurface'],
-  rerollPressAllowance: WorkspaceBiomeSource['rerollPressAllowance'],
+  rerollSpendAllowance: WorkspaceBiomeSource['rerollSpendAllowance'],
   assessmentIssue: AssessmentIssue | undefined,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
@@ -929,7 +929,7 @@ function createWorkspaceBiomeSource(
     shopOfferAssessment,
     phantomExitSettlement,
     rerollSurface,
-    rerollPressAllowance,
+    rerollSpendAllowance,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     acquisitionConversionCandidate,
@@ -1010,7 +1010,7 @@ export function createWorkspaceProjectSourceIndex(
   shopOfferAssessment: WorkspaceBiomeSource['shopOfferAssessment'] = () => undefined,
   phantomExitSettlement: WorkspaceBiomeSource['phantomExitSettlement'] = () => undefined,
   rerollSurface: WorkspaceBiomeSource['rerollSurface'] = () => undefined,
-  rerollPressAllowance: WorkspaceBiomeSource['rerollPressAllowance'] = () =>
+  rerollSpendAllowance: WorkspaceBiomeSource['rerollSpendAllowance'] = () =>
     Object.freeze({ kind: 'unreached' as const }),
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
@@ -1048,7 +1048,7 @@ export function createWorkspaceProjectSourceIndex(
             shopOfferAssessment,
             phantomExitSettlement,
             rerollSurface,
-            rerollPressAllowance,
+            rerollSpendAllowance,
             routeEvaluation?.issue,
           ),
         ),

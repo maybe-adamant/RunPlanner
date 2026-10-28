@@ -99,7 +99,7 @@ export function RoomActionRemovalControl({
   const removalEnabled =
     owned &&
     (removable?.structurallyAuthorable === true ||
-      row.refillPurchaseRemoval !== undefined ||
+      row.purchaseRemoval !== undefined ||
       row.shopParticipation !== undefined);
   // A mandatory or unplaced row's disabled delete needs no hint.
   const explanation = removalEnabled

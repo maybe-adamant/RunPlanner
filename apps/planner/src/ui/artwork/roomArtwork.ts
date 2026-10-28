@@ -46,10 +46,12 @@ export function roomActionIcon(
 ): string | undefined {
   switch (reference.kind) {
     case 'purchaseStygianWellOffer':
+    case 'rerollStygianWell':
       return roomObjectIcon('stygianWell');
     case 'purchaseHermesShrineOffer':
       return roomObjectIcon('hermesShrine');
     case 'sellPurgingPoolTrait':
+    case 'rerollPurgingPool':
       return roomObjectIcon('purgingPool');
     case 'interactKeepsakeRack':
       return roomObjectIcon('keepsakeRack');

@@ -1,3 +1,4 @@
+import { FeatureRollSlots } from './commerce/FeatureRollInteract';
 import { ArcanaActivationEditor } from './ArcanaActivationEditor';
 /* The inspector-node adapter deliberately exports these projected render products. */
 /* eslint-disable react-refresh/only-export-components */
@@ -176,6 +177,15 @@ export function inspectorRoomActionContent(
       />
     );
   }
+  if (row.featureRoll !== undefined)
+    return (
+      <FeatureRollSlots
+        feature={row.featureRoll.feature}
+        interactions={interactions}
+        label={row.label}
+        slots={row.featureRoll.slots}
+      />
+    );
   if (row.reference.kind === 'reroll') return <RerollTimelineLink row={row} />;
   return row.reference.kind !== 'interactKeepsakeRack' ||
     room.keepsakeSelection === undefined ? null : (

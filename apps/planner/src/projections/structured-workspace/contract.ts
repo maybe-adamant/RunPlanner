@@ -7,6 +7,12 @@ export type {
 export type {
   WorkspaceChaosExitControl,
   WorkspaceChaosSpawnControl,
+  WorkspaceFeatureRollActions,
+  WorkspaceFeatureRollActionsInteraction,
+  WorkspaceFeatureRollLock,
+  WorkspaceFeatureRollOption,
+  WorkspaceFeatureRollSlot,
+  WorkspaceFeatureRollSlotInteraction,
   WorkspaceRoomFeature,
   WorkspaceZagreusContractControl,
   WorkspaceZagreusSpawnControl,
@@ -391,6 +397,16 @@ export interface WorkspaceInteractionCatalog {
   readonly shopOffers: ReadonlyMap<string, WorkspaceShopOfferInteraction>;
   readonly phantomExits: ReadonlyMap<string, WorkspacePhantomExitInteraction>;
   readonly roomRerolls: ReadonlyMap<string, WorkspaceRoomRerollsInteraction>;
+  /** Each Well and Pool's Interact picker. */
+  readonly featureRollActions: ReadonlyMap<
+    string,
+    import('./contracts/features').WorkspaceFeatureRollActionsInteraction
+  >;
+  /** Each Well or Pool reroll's slot pins. */
+  readonly featureRollSlots: ReadonlyMap<
+    string,
+    import('./contracts/features').WorkspaceFeatureRollSlotInteraction
+  >;
   readonly infernalContractPedestalCollects: ReadonlyMap<
     string,
     WorkspaceInfernalContractPedestalCollectInteraction

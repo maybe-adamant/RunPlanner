@@ -11,6 +11,7 @@ import type {
   ProjectCommand,
   RoomFeatureAddress,
 } from '@run-planner/engine/authored-project';
+import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import type { WorkspaceMarker } from './navigation';
 import type { WorkspaceDoorContract } from './structure';
 import type { WorkspaceExplicitRewardControl } from './rewards';
@@ -61,6 +62,8 @@ export type WorkspaceRoomFeature =
       readonly inventoryMarker: WorkspaceMarker;
       readonly interactionKey: string;
       readonly interacted: boolean;
+      /** The next sale or reroll, appended at the end of the room's actions. */
+      readonly rollActions?: WorkspaceFeatureRollActions;
       readonly slots: readonly {
         readonly candidateTraitKeys: readonly string[];
         readonly candidateTraits: readonly { readonly key: string; readonly label: string }[];
@@ -69,7 +72,6 @@ export type WorkspaceRoomFeature =
         readonly label: string;
         readonly address: RoomFeatureAddress;
         readonly marker: WorkspaceMarker;
-        readonly sale: { readonly sold: boolean };
         readonly traitLabel?: string;
         readonly traitKey: string | null;
       }[];
@@ -143,7 +145,10 @@ export type WorkspaceRoomFeature =
       readonly presenceInteractionKey?: string;
       readonly interactionKey?: string;
       readonly interacted: boolean;
+      /** The initial stock. */
       readonly slots: readonly WorkspaceStygianWellSlot[];
+      /** The next purchase or reroll, appended at the end of the room's actions. */
+      readonly rollActions?: WorkspaceFeatureRollActions;
       /** Refill inventory, authored on the timeline under the purchase that triggers it. */
       readonly travelDealRefill?: Omit<WorkspaceStygianWellSlot, 'key'> & {
         readonly key: 'travelDealRefill';
@@ -165,6 +170,92 @@ export interface WorkspaceStygianWellSlot {
   readonly offerInteractionKey: string;
   readonly purchaseInteractionKey: string;
   readonly purchased: boolean;
+}
+
+/** Why a Well or Pool option cannot be picked where it would be appended. */
+export type WorkspaceFeatureRollLock =
+  | 'unreached'
+  | 'notEnabled'
+  | 'nothingLeft'
+  | 'poolEmpty'
+  | 'poolShort'
+  | 'poolReserved'
+  | 'itemFirst'
+  | 'traitFirst';
+
+/** One thing a Well or Pool visit can do next: buy or sell an offered slot, or reroll. */
+export interface WorkspaceFeatureRollOption {
+  readonly key: string;
+  readonly kind: 'offer' | 'reroll';
+  readonly label: string;
+  /** An unpinned reroll slot: picking it first chooses its item or trait. */
+  readonly needsChoice?: true;
+  readonly locked?: WorkspaceFeatureRollLock;
+}
+
+/** The Interact picker of one Well or Pool. */
+export interface WorkspaceFeatureRollActions {
+  readonly interactionKey: string;
+  readonly feature: import('@run-planner/engine/authored-project').RollFeature;
+  /** Empty while the end of the room's actions is unreached. */
+  readonly options: readonly WorkspaceFeatureRollOption[];
+  readonly locked?: 'unreached';
+}
+
+/** One restocked slot of a Well or Pool reroll, optionally pinned on its Timeline row. */
+export interface WorkspaceFeatureRollSlot {
+  readonly slotKey: string;
+  readonly label: string;
+  readonly address: RoomFeatureAddress;
+  readonly marker: WorkspaceMarker;
+  readonly interactionKey: string;
+  readonly value: string | null;
+  readonly valueLabel?: string;
+  /** The items or traits the roll can restock here; empty while it is unreached. */
+  readonly candidates: readonly { readonly key: string; readonly label: string }[];
+  readonly assessed: boolean;
+}
+
+type FeatureRollCommand = Extract<
+  ProjectCommand,
+  {
+    readonly kind:
+      | 'SetStygianWellPurchase'
+      | 'InsertStygianWellReroll'
+      | 'InsertRoomAction'
+      | 'SellPurgingPoolRollSlot'
+      | 'InsertPurgingPoolReroll';
+  }
+>;
+
+/** Engine-backed options of one Well or Pool's Interact picker. */
+export interface WorkspaceFeatureRollActionsInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  /** The action an option appends when it needs no choice. */
+  readonly intentFor: (optionKey: string) => WorkspaceCommandIntent<FeatureRollCommand>;
+  /** The item or trait an unpinned reroll slot is bought or sold as. */
+  readonly choices: (optionKey: string) => ContextualPickerModel<string>;
+  readonly choiceIntentFor: (
+    optionKey: string,
+    value: string,
+  ) => WorkspaceCommandIntent<FeatureRollCommand>;
+}
+
+/** One restocked slot's pin on a Well or Pool reroll. */
+export interface WorkspaceFeatureRollSlotInteraction {
+  readonly key: string;
+  /** The reroll whose slot this pins. */
+  readonly owner: import('@run-planner/engine/authored-project').RoomActionAddress;
+  readonly load: () => ContextualPickerModel<string | null>;
+  readonly intentFor: (
+    value: string | null,
+  ) => WorkspaceCommandIntent<
+    Extract<
+      ProjectCommand,
+      { readonly kind: 'ReplaceStygianWellRollOffer' | 'ReplacePurgingPoolRollSlot' }
+    >
+  >;
 }
 
 export type WorkspaceHermesShrineTravelDealRefill = NonNullable<

@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import type {
   WorkspaceInteractionCatalog,
-  WorkspaceRoomActions,
   WorkspaceRoomFeature,
   WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
@@ -42,12 +41,10 @@ function contentGroup(key: string, label: ReactNode, content: ReactNode): RoomFe
 export function roomFeatureSections({
   features,
   interactions,
-  roomActions,
   room,
 }: {
   readonly features: readonly WorkspaceRoomFeature[];
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly roomActions?: WorkspaceRoomActions;
   readonly room: WorkspaceRoomSummary;
 }): Pick<RoomOverviewSectionContent, 'additionalExits' | 'objects' | 'resources' | 'npcs'> {
   const additionalExits = features.filter(
@@ -72,11 +69,7 @@ export function roomFeatureSections({
   );
   const section = (group: RoomFeatureGroup | undefined): ReactNode =>
     group === undefined ? undefined : (
-      <RoomFeatureSection
-        group={group}
-        interactions={interactions}
-        {...(roomActions === undefined ? {} : { roomActions })}
-      />
+      <RoomFeatureSection group={group} interactions={interactions} />
     );
   return {
     additionalExits: section(featureGroup('Additional Exits', additionalExits)),

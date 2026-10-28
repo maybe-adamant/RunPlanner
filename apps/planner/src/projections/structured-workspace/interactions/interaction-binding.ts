@@ -1,3 +1,4 @@
+import { bindFeatureRollInteractions } from './feature-roll-interactions';
 import { bindRoomRerollInteractions } from './reroll-interactions';
 import type {
   WorkspaceLevelResolutionControl,
@@ -184,11 +185,14 @@ export function bindWorkspaceInteractions(
     rewardPicker: services.rewardPicker,
   });
 
+  const featureRolls = bindFeatureRollInteractions(occurrenceInteractionRequirements.values());
+
   return Object.freeze({
     ...batch,
     ...child,
     ...occurrence,
     roomRerolls,
+    ...featureRolls,
     ...hub,
     ...topology,
   });

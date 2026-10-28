@@ -174,7 +174,6 @@ export function DirectRoomWorkbench({
           features: workbench.features,
           interactions,
           room,
-          ...(workbench.roomActions === undefined ? {} : { roomActions: workbench.roomActions }),
         }),
       }}
     />

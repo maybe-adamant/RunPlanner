@@ -94,6 +94,7 @@ import {
   traitOfferMarkers,
 } from './occurrence-actions-assembly';
 import { assembleOccurrenceFeatures } from './occurrence-features-assembly';
+import { assembleFeatureRollActions } from './feature-roll-assembly';
 import { assemblePhantomExit } from './phantom-exit-assembly';
 import { assembleWheelRerolls, rerollMovedOnTimeline } from './reroll-assembly';
 import { occurrenceInteractionRequirements } from './occurrence-interaction-requirements';
@@ -303,6 +304,10 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly stygianWellAssessment?: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
+  /** Whether a new Well or Pool reroll fits the run's reroll pool. */
+  readonly rerollSpendAllowance?: (
+    spend: import('@run-planner/engine/simulation').RerollSpend,
+  ) => import('@run-planner/engine/simulation').RerollSpendAllowance;
   readonly isActiveTraitOffer: (owner: TraitOfferAddress) => boolean;
   /** Engine-published Timeline rows of the product this room's assessment stops at. */
   readonly blockingRowKeys?: ReadonlySet<string>;
@@ -435,7 +440,31 @@ export function assembleWorkspaceOccurrence(
     encounterPhases,
     roomLocal,
   );
-  const { features, chaosSpawn, zagreusSpawn } = featureAssembly;
+  const { chaosSpawn, zagreusSpawn } = featureAssembly;
+  // A visited Well or Pool appends its next purchase, sale or reroll from its Interact picker.
+  const featureRollRequirements: Extract<
+    import('../interactions/interaction-requirements').WorkspaceOccurrenceInteractionRequirement,
+    { readonly kind: 'featureRollActions' }
+  >[] = [];
+  const features = featureAssembly.features.map((feature) => {
+    if ((feature.kind !== 'stygianWell' && feature.kind !== 'purgingPool') || !feature.interacted)
+      return feature;
+    const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
+    const rolls = assembleFeatureRollActions({
+      catalog: input.catalog,
+      feature: feature.kind,
+      owner,
+      occurrence: input.occurrence,
+      capability:
+        feature.kind === 'stygianWell'
+          ? input.stygianWellAssessment?.(owner)
+          : input.purgingPoolAssessment?.(owner),
+      allowance:
+        input.rerollSpendAllowance ?? (() => Object.freeze({ kind: 'unreached' as const })),
+    });
+    featureRollRequirements.push(rolls.requirement);
+    return Object.freeze({ ...feature, rollActions: rolls.actions });
+  });
   const actionAssembly = assembleOccurrenceActions({
     roomActionPlacementRoster: input.roomActionPlacementRoster,
     biome: input.biome,
@@ -460,6 +489,9 @@ export function assembleWorkspaceOccurrence(
     ...(input.stygianWellAssessment === undefined
       ? {}
       : { stygianWellAssessment: input.stygianWellAssessment }),
+    ...(input.purgingPoolAssessment === undefined
+      ? {}
+      : { purgingPoolAssessment: input.purgingPoolAssessment }),
     ...(input.blockingRowKeys === undefined ? {} : { blockingRowKeys: input.blockingRowKeys }),
     ...(input.rerollTargetLabel === undefined
       ? {}
@@ -1000,6 +1032,7 @@ export function assembleWorkspaceOccurrence(
       const acquisitionMarkers = Object.freeze([
         ...(placementEntry === undefined ? [] : [placementEntry]),
         ...(row.stygianWellTwist === undefined ? [] : [row.stygianWellTwist.marker]),
+        ...(row.featureRoll?.slots.map((slot) => slot.marker) ?? []),
         ...(invalidPlacementEntry === undefined ? [] : [invalidPlacementEntry]),
         ...supplementalPurchaseMarkers,
         ...(row.traitOffer === undefined ? [] : traitOfferMarkers(row.traitOffer)),
@@ -1039,6 +1072,8 @@ export function assembleWorkspaceOccurrence(
         rowControlMarks.set(row.stygianWellTwist.marker.focusKey, {
           mark: row.stygianWellTwist.marker,
         });
+      for (const slot of row.featureRoll?.slots ?? [])
+        rowControlMarks.set(slot.marker.focusKey, { mark: slot.marker });
       for (const conversion of row.rewardPayload?.control.conversions ?? [])
         rowControlMarks.set(conversion.marker.focusKey, {
           mark: conversion.marker,
@@ -1155,6 +1190,7 @@ export function assembleWorkspaceOccurrence(
     ...occurrenceInteractionRequirements(input.catalog, roomSummary),
     ...(phantomExit === undefined ? [] : [phantomExit.requirement]),
     ...wheelRerollRequirements,
+    ...featureRollRequirements,
   ]);
   input.markerDestinations.redirect(workspaceOccurrenceOwnedMarkers(node.room), node.key);
   return Object.freeze({

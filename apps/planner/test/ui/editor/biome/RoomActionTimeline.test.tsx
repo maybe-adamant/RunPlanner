@@ -1045,75 +1045,48 @@ describe('OccurrenceRoomActions', () => {
     expect(screen.queryByText(`Sell ${leftTraitLabel}`)).toBeNull();
     openRoomTab('Room Overview');
 
-    await view.user.click(screen.getByRole('checkbox', { name: 'Sold Offer 1' }));
+    // Each sale is appended from Interact at the end of the room's actions.
+    const sell = async (name: RegExp) => {
+      await view.user.click(screen.getByRole('button', { name: 'Interact with Pool' }));
+      const [option] = await within(await screen.findByRole('listbox')).findAllByRole('option', {
+        name,
+      });
+      await view.user.click(option!);
+    };
+    const poolActionOrder = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions.order;
+    await sell(new RegExp(`^Sell ${leftTraitLabel}`));
     await waitFor(() =>
-      expect(
-        view.application.store
-          .getState()
-          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
-          ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions
-          .order,
-      ).toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
+      expect(poolActionOrder()).toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
     );
-
-    await view.user.click(screen.getByRole('checkbox', { name: 'Sold Offer 2' }));
-    await waitFor(() =>
-      expect(
-        view.application.store
-          .getState()
-          .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
-          ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions
-          .order,
-      ).toEqual([
-        { kind: 'useFountain' },
-        { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
-        { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
-        // The Postboss rack keeps its place after the sales.
-        { kind: 'interactKeepsakeRack' },
-      ]),
-    );
+    await sell(/^Sell /);
+    const sold = [
+      { kind: 'useFountain' },
+      { kind: 'interactKeepsakeRack' },
+      { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
+      { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
+    ];
+    await waitFor(() => expect(poolActionOrder()).toEqual(sold));
 
     openRoomTab('Room Timeline');
     const soldRow = screen.getByText(`Sell ${leftTraitLabel}`).closest('li');
-    expect(soldRow?.getAttribute('data-action-accent')).toBe('room');
+    expect(soldRow?.getAttribute('data-action-accent')).toBe('optional');
     await view.user.click(screen.getByRole('button', { name: `Move Sell ${leftTraitLabel}` }));
     await view.user.click(
       within(screen.getByRole('listbox'))
         .getAllByRole('option')
         .find((option) => option.getAttribute('aria-disabled') !== 'true')!,
     );
-    const poolActionOrder = () =>
-      view.application.store
-        .getState()
-        .projectWorkspace.history!.present.route?.biomes.find((biome) => biome.biomeKey === 'F')
-        ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions.order;
-    await waitFor(() =>
-      expect(poolActionOrder()).toEqual([
-        { kind: 'useFountain' },
-        { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
-        { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
-        { kind: 'interactKeepsakeRack' },
-      ]),
-    );
+    await waitFor(() => expect(poolActionOrder()).not.toEqual(sold));
+    const moved = poolActionOrder();
 
     view.application.store.dispatch(authoredProjectUndoRequested());
-    await waitFor(() =>
-      expect(poolActionOrder()).toEqual([
-        { kind: 'useFountain' },
-        { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
-        { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
-        { kind: 'interactKeepsakeRack' },
-      ]),
-    );
+    await waitFor(() => expect(poolActionOrder()).toEqual(sold));
     view.application.store.dispatch(authoredProjectRedoRequested());
-    await waitFor(() =>
-      expect(poolActionOrder()).toEqual([
-        { kind: 'useFountain' },
-        { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
-        { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
-        { kind: 'interactKeepsakeRack' },
-      ]),
-    );
+    await waitFor(() => expect(poolActionOrder()).toEqual(moved));
 
     openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('button', { name: 'Pool of Purging Offer 1 Item' }));

@@ -103,7 +103,7 @@ function sameOffer(left: ResolvedRewardOffer, right: ResolvedRewardOffer): boole
 /** What one surface's list reads from the biome: the engine's surface, pool and findings. */
 export type WorkspaceRerollSource = Pick<
   WorkspaceBiomeSource,
-  'biome' | 'findingsFor' | 'plan' | 'rerollPressAllowance' | 'rerollSurface'
+  'biome' | 'findingsFor' | 'plan' | 'rerollSpendAllowance' | 'rerollSurface'
 >;
 
 /** A rerolled owner's final draw beside its first, and the repair of a kept mismatch. */
@@ -205,7 +205,7 @@ function assembleRerollList(input: {
             }),
           ],
   );
-  const allowance = source.rerollPressAllowance(surface);
+  const allowance = source.rerollSpendAllowance({ kind: 'press', surface });
   const appendLocked =
     settled === undefined || allowance.kind === 'unreached'
       ? ('unreached' as const)

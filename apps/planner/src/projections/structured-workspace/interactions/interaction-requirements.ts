@@ -56,7 +56,57 @@ export interface WorkspaceRerollTargetRequirement {
   readonly rewardTypes: WorkspaceRerollRewardTypes;
 }
 
+/** How one Interact option of a Well or Pool becomes its command. */
+export type WorkspaceFeatureRollActionRequirement =
+  | { readonly key: string; readonly kind: 'reroll' }
+  | {
+      readonly key: string;
+      readonly kind: 'wellPurchase';
+      readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
+      /** An unpinned reroll slot: its item is chosen with the purchase. */
+      readonly choices?: readonly { readonly key: string; readonly label: string }[];
+    }
+  | {
+      readonly key: string;
+      readonly kind: 'poolSale';
+      readonly sale: Extract<
+        import('@run-planner/engine/authored-project').RoomActionReference,
+        { readonly kind: 'sellPurgingPoolTrait' }
+      >;
+      readonly action: import('@run-planner/engine/authored-project').RoomActionAddress;
+      /** An unpinned reroll slot: its trait is chosen with the sale, pinned on this reroll. */
+      readonly reroll?: import('@run-planner/engine/authored-project').RoomActionAddress;
+      readonly slotKey?: import('@run-planner/engine/authored-project').PurgingPoolSlotKey;
+      readonly choices?: readonly { readonly key: string; readonly label: string }[];
+    };
+
 export type WorkspaceOccurrenceInteractionRequirement =
+  | {
+      /** A Well or Pool's Interact picker: options appended at `appendIndex`. */
+      readonly kind: 'featureRollActions';
+      readonly owner: OccurrenceAddress;
+      readonly interactionKey: string;
+      readonly feature: import('@run-planner/engine/authored-project').RollFeature;
+      readonly appendIndex: number;
+      readonly options: readonly WorkspaceFeatureRollActionRequirement[];
+    }
+  | {
+      /** The restocked slots of one Well or Pool reroll, each pinned or native. */
+      readonly kind: 'featureRollSlots';
+      readonly owner: OccurrenceAddress;
+      readonly interactionKey: string;
+      readonly feature: import('@run-planner/engine/authored-project').RollFeature;
+      readonly action: import('@run-planner/engine/authored-project').RoomActionAddress;
+      readonly slots: readonly {
+        readonly interactionKey: string;
+        readonly slotKey: string;
+        readonly value: string | null;
+        readonly valueLabel?: string;
+        readonly candidates: readonly { readonly key: string; readonly label: string }[];
+        /** False while the roll is unreached: its candidates are unknown. */
+        readonly assessed: boolean;
+      }[];
+    }
   | {
       readonly kind: 'fieldsSpatialPoints';
       readonly owner: OccurrenceAddress;
@@ -398,7 +448,11 @@ function occurrenceInteractionRequirementKey(
   requirement: WorkspaceOccurrenceInteractionRequirement,
 ): string {
   // One room holds a list for its doors and one for each wheel.
-  if (requirement.kind === 'roomRerolls')
+  if (
+    requirement.kind === 'roomRerolls' ||
+    requirement.kind === 'featureRollSlots' ||
+    requirement.kind === 'featureRollActions'
+  )
     return `${requirement.kind}:${requirement.interactionKey}`;
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }

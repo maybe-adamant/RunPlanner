@@ -12,6 +12,8 @@ import {
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
   roomActionKey,
   semanticAddressKey,
+  stygianWellGenerationItemKey,
+  stygianWellGenerationTwistResultKey,
   type RoomOccurrence,
   type RoomActionReference,
   type RoomActionSemanticAddress,
@@ -37,6 +39,7 @@ import type {
 import type { WorkspaceRoomFeature } from '../contracts/features';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import { occurrenceActionLabel } from './occurrence-action-label';
+import { assembleFeatureRerollSlots } from './feature-roll-assembly';
 import { projectRoomLifecycleTimeline } from './occurrence-action-timeline-projection';
 import type { WorkspaceRoomTab } from '../contracts/navigation';
 import type { WorkspaceRunStateLauncher } from '../contracts/run-state';
@@ -80,6 +83,9 @@ export interface WorkspaceOccurrenceActionsInput {
   readonly stygianWellAssessment?: (
     owner: import('@run-planner/engine/authored-project').OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
+  readonly purgingPoolAssessment?: (
+    owner: import('@run-planner/engine/authored-project').OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').PurgingPoolCandidateCapability | undefined;
   /** Engine-published Timeline rows of the product this room's assessment stops at. */
   readonly blockingRowKeys?: ReadonlySet<string>;
   readonly rerollTargetLabel?: import('./occurrence-action-label').WorkspaceDoorRerollTargetLabel;
@@ -427,12 +433,11 @@ function roomActionsForOccurrence(
           : row.reference.kind === 'interactIncomingReward'
             ? controlForRole(rewardControl, row.reference.acquisitionRole)
             : rewardControl;
+      // Well purchases and Pool sales are added from Interact and removed on their rows.
       const participationOwnedByOverview =
         row.reference.kind === 'interactShopOffer' ||
         row.reference.kind === 'interactInfernalContractPedestal' ||
-        row.reference.kind === 'purchaseStygianWellOffer' ||
         row.reference.kind === 'purchaseHermesShrineOffer' ||
-        row.reference.kind === 'sellPurgingPoolTrait' ||
         row.reference.kind === 'interactKeepsakeRack' ||
         (roomLocal.kind === 'shop' &&
           row.reference.kind === 'interactAcquisitionEntry' &&
@@ -487,15 +492,7 @@ function roomActionsForOccurrence(
       const stygianWellTwist = (() => {
         if (row.reference.kind !== 'purchaseStygianWellOffer') return undefined;
         const generationKey = row.reference.generationKey;
-        const slot = generationKey.startsWith('initial:')
-          ? (generationKey.slice('initial:'.length) as 'healing' | 'secondLeft' | 'secondRight')
-          : undefined;
-        const offerKey =
-          generationKey === 'travelDealRefill'
-            ? input.occurrence.stygianWell?.travelDealRefillKey
-            : slot === undefined
-              ? undefined
-              : input.occurrence.stygianWell?.offerKeyBySlot[slot];
+        const offerKey = stygianWellGenerationItemKey(input.occurrence, generationKey);
         const candidateItemKeys =
           input.stygianWellAssessment?.(owner)?.twistCandidateItemKeysByGeneration[generationKey];
         if (offerKey !== 'RandomStoreItem' || candidateItemKeys === undefined) return undefined;
@@ -505,12 +502,12 @@ function roomActionsForOccurrence(
         });
         const marker = input.markerDestinations.marker(featureAddress);
         input.markerDestinations.setRoomTab([marker], 'actions');
-        const childKey = generationKey === 'travelDealRefill' ? 'travelDealRefill' : slot!;
         const itemLabelFor = (itemKey: string): string =>
           input.catalog.rewards.shops.byKey.RoomShop?.groups.values
             .flatMap((group) => group.options.values)
             .find((option) => option.key === itemKey)?.label ?? itemKey;
-        const itemKey = input.occurrence.stygianWell?.twistResultKeyBySlot?.[childKey] ?? null;
+        const itemKey =
+          stygianWellGenerationTwistResultKey(input.occurrence, generationKey) ?? null;
         return Object.freeze({
           address: featureAddress,
           generationKey,
@@ -603,6 +600,19 @@ function roomActionsForOccurrence(
         ...(row.stale || traitOffer === undefined ? {} : { traitOffer }),
         ...(fountainRarity === undefined ? {} : { fountainRarity }),
         ...(stygianWellTwist === undefined ? {} : { stygianWellTwist }),
+        ...(row.reference.kind === 'rerollStygianWell' || row.reference.kind === 'rerollPurgingPool'
+          ? {
+              featureRoll: assembleFeatureRerollSlots({
+                catalog: input.catalog,
+                markerDestinations: input.markerDestinations,
+                owner,
+                occurrence: input.occurrence,
+                reroll: row.reference,
+                wellCapability: input.stygianWellAssessment?.(owner),
+                poolCapability: input.purgingPoolAssessment?.(owner),
+              }),
+            }
+          : {}),
         ...purchaseRowProducts(row.reference, address),
         executable: row.executable,
       });
@@ -841,7 +851,8 @@ function roomActionsForOccurrence(
         row.rank === null &&
         !row.stale &&
         row.participation === 'optional' &&
-        !row.participationOwnedByOverview,
+        !row.participationOwnedByOverview &&
+        !addedFromInteract(row.reference),
     ),
     ...clockedTraitPickupRows,
     ...goldPickupRows.filter((row) => row.participation === 'optional'),
@@ -849,7 +860,11 @@ function roomActionsForOccurrence(
   const optionalKeys = new Set(optionalRows.map((row) => row.key));
   const repairRows = Object.freeze([
     ...unrankedOrStaleRows.filter(
-      (row) => !optionalKeys.has(row.key) && (!row.participationOwnedByOverview || row.stale),
+      (row) =>
+        !optionalKeys.has(row.key) &&
+        (row.stale ||
+          (!row.participationOwnedByOverview &&
+            !(row.rank === null && addedFromInteract(row.reference)))),
     ),
     ...dueShrineRows,
     ...goldPickupRows.filter((row) => row.participation === 'required'),
@@ -965,13 +980,23 @@ function roomActionsForOccurrence(
 
 type PurchaseRowProducts = Pick<
   WorkspaceRoomActionRow,
-  'hermesShrinePurchase' | 'travelDealLine' | 'refillPurchaseRemoval'
+  'hermesShrinePurchase' | 'travelDealLine' | 'purchaseRemoval'
 >;
 
 /**
  * Shop-like purchase rows: Shrine Rush, the Travel Deal line under the purchase
  * the engine names as its trigger, and removal of a refill no line hosts.
  */
+/** A Well purchase, Pool sale or their reroll: added from the feature's Interact picker. */
+function addedFromInteract(reference: RoomActionReference): boolean {
+  return (
+    reference.kind === 'purchaseStygianWellOffer' ||
+    reference.kind === 'sellPurgingPoolTrait' ||
+    reference.kind === 'rerollStygianWell' ||
+    reference.kind === 'rerollPurgingPool'
+  );
+}
+
 function shopPurchaseRowProducts(
   input: WorkspaceOccurrenceActionsInput,
   roomLocal: WorkspaceRoomLocal,
@@ -1004,29 +1029,36 @@ function shopPurchaseRowProducts(
           reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY &&
           shopTravel?.kind === 'travelDealInvalid'
           ? {
-              refillPurchaseRemoval: Object.freeze({
+              purchaseRemoval: Object.freeze({
                 command: Object.freeze({ kind: 'RemoveRoomAction' as const, action: address }),
               }),
             }
           : {};
-      case 'purchaseStygianWellOffer':
-        if (wellRefill?.sourceGenerationKey === reference.generationKey)
-          return {
-            travelDealLine: Object.freeze({ kind: 'stygianWell' as const, refill: wellRefill }),
-          };
-        return reference.generationKey === 'travelDealRefill' &&
-          wellRefill?.sourceGenerationKey === undefined
-          ? {
-              refillPurchaseRemoval: Object.freeze({
-                command: Object.freeze({
-                  kind: 'SetStygianWellPurchase' as const,
-                  occurrence: owner,
-                  generationKey: 'travelDealRefill' as const,
-                  purchased: false,
+      case 'purchaseStygianWellOffer': {
+        // A refill hosted by its Travel Deal line is removed there.
+        const hostedRefill =
+          reference.generationKey === 'travelDealRefill' &&
+          wellRefill?.sourceGenerationKey !== undefined;
+        return {
+          ...(wellRefill?.sourceGenerationKey === reference.generationKey
+            ? {
+                travelDealLine: Object.freeze({ kind: 'stygianWell' as const, refill: wellRefill }),
+              }
+            : {}),
+          ...(hostedRefill
+            ? {}
+            : {
+                purchaseRemoval: Object.freeze({
+                  command: Object.freeze({
+                    kind: 'SetStygianWellPurchase' as const,
+                    occurrence: owner,
+                    generationKey: reference.generationKey,
+                    purchased: false,
+                  }),
                 }),
               }),
-            }
-          : {};
+        };
+      }
       case 'purchaseHermesShrineOffer': {
         const refill = shrine?.travelDealRefill;
         const purchaseInteractionKey =
@@ -1049,7 +1081,7 @@ function shopPurchaseRowProducts(
           ...(reference.generationKey === 'travelDealRefill' &&
           refill?.sourceGenerationKey === undefined
             ? {
-                refillPurchaseRemoval: Object.freeze({
+                purchaseRemoval: Object.freeze({
                   command: Object.freeze({
                     kind: 'SetHermesShrinePurchase' as const,
                     occurrence: owner,

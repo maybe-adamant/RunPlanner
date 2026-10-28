@@ -472,8 +472,8 @@ export function RoomActionsWorkbench({
       const removable = proposals.find(
         (proposal) => proposal.kind === 'remove' || proposal.kind === 'unplace',
       );
-      if (row.refillPurchaseRemoval !== undefined) {
-        executeIntent(row.refillPurchaseRemoval);
+      if (row.purchaseRemoval !== undefined) {
+        executeIntent(row.purchaseRemoval);
         return;
       }
       if (removable?.structurallyAuthorable === true) {
@@ -619,7 +619,7 @@ export function RoomActionsWorkbench({
                 row.reference.kind !== 'interactEris' &&
                 (!row.participationOwnedByOverview ||
                   row.stale ||
-                  row.refillPurchaseRemoval !== undefined)
+                  row.purchaseRemoval !== undefined)
               }
             />
           }

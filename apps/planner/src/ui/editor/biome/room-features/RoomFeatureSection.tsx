@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import {
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
-  type WorkspaceRoomActions,
   type WorkspaceRoomFeature,
 } from '@planner/projections/structured-workspace';
 import { RoomInventoryPanel } from '../commerce/RoomInventoryPanel';
@@ -25,11 +24,9 @@ export type RoomFeatureGroup = {
 export function RoomFeatureSection({
   group,
   interactions,
-  roomActions,
 }: {
   readonly group: RoomFeatureGroup;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly roomActions?: WorkspaceRoomActions;
 }) {
   return (
     <section className="room-overview-section">
@@ -77,7 +74,6 @@ export function RoomFeatureSection({
                       ? feature.inventoryAddress
                       : (feature.inventoryAddress ?? feature.presenceAddress),
                   )}
-                  {...(roomActions === undefined ? {} : { roomActions })}
                 />
               );
             case 'infernalContractPedestal':

@@ -1474,7 +1474,7 @@ describe('shop-like purchase rows', () => {
     );
     expect(refill).toMatchObject({
       hermesShrinePurchase: { rushed: false },
-      refillPurchaseRemoval: {
+      purchaseRemoval: {
         command: {
           kind: 'SetHermesShrinePurchase',
           occurrence: shrineOwner,
@@ -1501,9 +1501,20 @@ describe('shop-like purchase rows', () => {
         sourceGenerationKey: source.kind === 'purchaseStygianWellOffer' && source.generationKey,
       },
     });
+    // Each purchase is removed on its own row; a refill hosted by its line is removed there.
     expect(
-      wellRows(checkpoint).find((row) => row.refillPurchaseRemoval !== undefined),
-    ).toBeUndefined();
+      wellRows(checkpoint).map((row) =>
+        row.reference.kind === 'purchaseStygianWellOffer'
+          ? [row.reference.generationKey, row.purchaseRemoval !== undefined]
+          : [],
+      ),
+    ).toEqual(
+      wellRows(checkpoint).map((row) =>
+        row.reference.kind === 'purchaseStygianWellOffer'
+          ? [row.reference.generationKey, row.reference.generationKey !== 'travelDealRefill']
+          : [],
+      ),
+    );
 
     let stranded = checkpoint;
     for (const generationKey of [
@@ -1521,7 +1532,7 @@ describe('shop-like purchase rows', () => {
     expect(rows.map((row) => row.travelDealLine)).toEqual([undefined]);
     expect(rows[0]).toMatchObject({
       reference: { generationKey: 'travelDealRefill' },
-      refillPurchaseRemoval: {
+      purchaseRemoval: {
         command: {
           kind: 'SetStygianWellPurchase',
           occurrence: wellOwner,
@@ -1649,7 +1660,7 @@ describe('shop-like purchase rows', () => {
     const stranded = assemble(withOrder([travel]), 'Underworld', 'F', shopId).assembly.node.room
       .roomActions?.rows;
     const refill = stranded?.find((row) => row.key === roomActionKey(travel));
-    expect(refill?.refillPurchaseRemoval).toEqual({
+    expect(refill?.purchaseRemoval).toEqual({
       command: { kind: 'RemoveRoomAction', action: refill?.address },
     });
     expect(stranded?.some((row) => row.travelDealLine !== undefined)).toBe(false);

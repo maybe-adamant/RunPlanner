@@ -11,6 +11,7 @@ import {
   type Catalog,
 } from '@run-planner/engine/catalog-schema';
 import {
+  INITIAL_ROLL_KEY,
   parseStygianWellGenerationKey,
   purgingPoolRerolls,
   stygianWellGenerationItemKey,
@@ -18,6 +19,7 @@ import {
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { CanonicalAuthoredRoom } from '@run-planner/engine/simulation';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
+import { featureRollCatalog, featureRollNumber } from './feature-roll-assembly';
 import { workspaceAcquisitionRoleLabel } from './occurrence-reward-assembly';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
@@ -72,7 +74,12 @@ function wellPurchaseLabel(
     Partial<Pick<import('@run-planner/engine/authored-project').RoomOccurrence, 'roomActions'>>,
   generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey,
 ): string {
-  const slotKey = parseStygianWellGenerationKey(generationKey)?.slotKey;
+  const roll = parseStygianWellGenerationKey(generationKey);
+  const slotKey = roll?.slotKey;
+  const rollNumber =
+    roll === undefined || roll.rollKey === INITIAL_ROLL_KEY
+      ? undefined
+      : featureRollNumber(occurrence.roomActions?.order ?? [], 'stygianWell', roll.rollKey);
   const profile = catalog.rewards.shops.byKey.RoomShop;
   const slotIndex = profile?.slots.values.findIndex((slot) => slot.key === slotKey) ?? -1;
   const subject =
@@ -94,6 +101,8 @@ function wellPurchaseLabel(
       : profile?.groups.values
           .flatMap((group) => group.options.values)
           .find((option) => option.key === itemKey)?.label;
+  // A later roll's purchase names its roll rather than its slot.
+  if (rollNumber !== undefined) return `${itemLabel ?? subject} · roll ${rollNumber}`;
   return itemLabel === undefined ? subject : `${itemLabel} · ${subject}`;
 }
 
@@ -242,9 +251,16 @@ export function occurrenceActionLabel(
       }`;
     }
     case 'rerollStygianWell':
-      return 'Reroll Well';
-    case 'rerollPurgingPool':
-      return 'Reroll Pool';
+    case 'rerollPurgingPool': {
+      const feature = reference.kind === 'rerollStygianWell' ? 'stygianWell' : 'purgingPool';
+      const rollNumber = featureRollNumber(
+        occurrence.roomActions?.order ?? [],
+        feature,
+        reference.rerollId,
+      );
+      const subject = feature === 'stygianWell' ? 'Reroll Well' : 'Reroll Pool';
+      return rollNumber === undefined ? subject : `${subject} · roll ${rollNumber}`;
+    }
     case 'sellPurgingPoolTrait': {
       // A rerolled list's trait is the one pinned on its reroll.
       const traitKey =
@@ -253,7 +269,18 @@ export function occurrenceActionLabel(
           : purgingPoolRerolls(occurrence.roomActions?.order ?? []).find(
               (action) => action.rerollId === reference.rollKey,
             )?.traitKeyBySlot[reference.slotKey];
-      return `Sell ${traitKey === null || traitKey === undefined ? `${reference.slotKey} Pool trait` : (catalog.traits.byKey[traitKey]?.label ?? traitKey)}`;
+      const traitLabel =
+        traitKey === null || traitKey === undefined
+          ? undefined
+          : (catalog.traits.byKey[traitKey]?.label ?? traitKey);
+      if (reference.rollKey === undefined)
+        return `Sell ${traitLabel ?? `${reference.slotKey} Pool trait`}`;
+      const rollNumber = featureRollNumber(
+        occurrence.roomActions?.order ?? [],
+        'purgingPool',
+        reference.rollKey,
+      );
+      return `Sell ${traitLabel ?? featureRollCatalog(catalog, 'purgingPool').slotLabel(reference.slotKey)}${rollNumber === undefined ? '' : ` · roll ${rollNumber}`}`;
     }
     case 'interactEncounter': {
       const key =

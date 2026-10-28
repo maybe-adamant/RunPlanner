@@ -24,7 +24,6 @@ import {
   occurrenceById,
   openRoomTab,
 } from '@planner-test/support/occurrence-workbench';
-import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -73,19 +72,19 @@ it('marks the first empty Pool slot picker for a missing fill, not the Pool', ()
   expect(pool.hasAttribute('data-has-findings')).toBe(false);
 });
 
-it('keeps Sold mounted: disabled on an empty unsold slot, removable on a stale sale', async () => {
+it('sells only a filled slot from Interact, and removes a stale sale on its row', async () => {
   const { view, pool } = renderPostboss(
     withPoolSlot(withPoolSlot(createUnderworldFPoolCheckpoint(), 'left', null), 'middle', null),
   );
-  const emptySold = within(pool).getByRole('checkbox', { name: 'Sold Offer 2' });
-  expect(emptySold).toHaveProperty('disabled', true);
-  expect(emptySold).toHaveProperty('checked', false);
-  expect(hintOf(emptySold.closest('label'))).toBeNull();
+  expect(within(pool).queryByRole('checkbox', { name: /^Sold/ })).toBeNull();
+  // Interact offers only the filled slot still on the list.
+  await view.user.click(within(pool).getByRole('button', { name: 'Interact with Pool' }));
+  const options = within(await screen.findByRole('listbox')).getAllByRole('option');
+  expect(options.map((option) => option.textContent?.startsWith('Sell '))).toEqual([true]);
+  await view.user.keyboard('{Escape}');
 
-  const staleSold = within(pool).getByRole('checkbox', { name: 'Sold Offer 1' });
-  expect(staleSold).toHaveProperty('disabled', false);
-  expect(staleSold).toHaveProperty('checked', true);
-  await view.user.click(staleSold);
+  openRoomTab('Room Timeline');
+  await view.user.click(screen.getByRole('button', { name: /^Remove Sell .* from timeline$/ }));
   await waitFor(() => expect(saleOrder(view.application)).toEqual([]));
 });
 

@@ -485,10 +485,6 @@ function roomFeatures(
                     const candidateTraitKeys =
                       poolAssessment?.candidateTraitKeysBySlot[slotKey] ?? declaredPoolTraitKeys;
                     const traitKey = pool.traitKeyBySlot[slotKey];
-                    const sold = input.occurrence.roomActions.order.some(
-                      (reference) =>
-                        reference.kind === 'sellPurgingPoolTrait' && reference.slotKey === slotKey,
-                    );
                     const address = featureAddress({ kind: 'purgingPoolOffer', slotKey });
                     return Object.freeze({
                       address,
@@ -505,7 +501,6 @@ function roomFeatures(
                       interactionKey: `purgingPool:${semanticAddressKey(poolOwner)}:${slotKey}`,
                       key: slotKey,
                       label: poolSlotLabel(slotKey),
-                      sale: Object.freeze({ sold }),
                       traitKey,
                       ...(traitKey === null
                         ? {}

@@ -41,7 +41,11 @@ describe('Fresh File retained Postboss state', () => {
     if (pool?.kind !== 'purgingPool') throw new Error('retained Pool is missing');
     expect(pool.interacted).toBe(true);
     expect(pool.interactionKey).toBeDefined();
-    expect(pool.slots[0]).toMatchObject({ traitKey: 'ApolloWeaponBoon', sale: { sold: true } });
+    expect(pool.slots[0]).toMatchObject({ traitKey: 'ApolloWeaponBoon' });
+    // The sale is removed on its Timeline row.
+    expect(
+      room.roomActions?.rows.find((row) => row.reference.kind === 'sellPurgingPoolTrait'),
+    ).toMatchObject({ participationOwnedByOverview: false, rank: expect.any(Number) });
 
     const clean = postbossRoom(createFreshFileFProject()).workbench.features.map(
       (feature) => feature.kind,

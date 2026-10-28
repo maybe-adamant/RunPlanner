@@ -1,7 +1,6 @@
 import {
   requireWorkspaceInteraction,
   type WorkspaceInteractionCatalog,
-  type WorkspaceRoomActions,
   type WorkspaceRoomFeature,
 } from '@planner/projections/structured-workspace';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
@@ -11,14 +10,11 @@ import type { ContextualPickerModel } from '@planner/projections/contextual/cont
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
+import { FeatureRollInteract } from './FeatureRollInteract';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import {
-  useFindingAnchor,
-  useFindingMark,
-  useFindingTarget,
-} from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 
 const wellIcon = (itemKey: string | null): string | undefined =>
   itemKey === null ? undefined : (wellArtwork[itemKey] ?? undefined);
@@ -40,15 +36,12 @@ type InventoryFeature = Extract<
 export function RoomInventoryPanel({
   feature,
   interactions,
-  roomActions,
 }: {
   readonly feature: InventoryFeature;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly roomActions?: WorkspaceRoomActions;
 }) {
   const findingTarget = useFindingTarget();
   const findingAnchor = useFindingAnchor();
-  const findingMark = useFindingMark();
   const executeIntent = useCommandIntent();
   switch (feature.kind) {
     case 'stygianWell':
@@ -114,9 +107,13 @@ export function RoomInventoryPanel({
                     key={slot.generationKey}
                     slot={slot}
                     interactions={interactions}
+                    withPurchased={false}
                   />
                 ))
               : null}
+            {feature.rollActions === undefined ? null : (
+              <FeatureRollInteract actions={feature.rollActions} interactions={interactions} />
+            )}
           </fieldset>
         );
       })();
@@ -158,7 +155,7 @@ export function RoomInventoryPanel({
                     slot.interactionKey,
                   );
                   return (
-                    <div className="shop-family-offer-row" key={slot.key}>
+                    <div className="shop-family-offer-row room-purging-pool-slot" key={slot.key}>
                       <PurgingPoolTraitPicker
                         address={slot.address}
                         interaction={interaction}
@@ -169,61 +166,13 @@ export function RoomInventoryPanel({
                           : { selectedLabel: slot.traitLabel })}
                         onSelect={(traitKey) => executeIntent(interaction.intentFor(traitKey))}
                       />
-                      {(() => {
-                        const reference = {
-                          kind: 'sellPurgingPoolTrait' as const,
-                          slotKey: slot.key,
-                        };
-                        const proposals =
-                          roomActions?.proposals.filter(
-                            (candidate) =>
-                              candidate.reference.kind === reference.kind &&
-                              candidate.reference.slotKey === reference.slotKey &&
-                              candidate.kind === (slot.sale.sold ? 'remove' : 'insert'),
-                          ) ?? [];
-                        // A sale is inserted at its earliest legal position.
-                        const proposal =
-                          proposals.find((candidate) => candidate.structurallyAuthorable) ??
-                          proposals[0];
-                        const saleRow = roomActions?.rows.find(
-                          (row) =>
-                            row.reference.kind === reference.kind &&
-                            row.reference.slotKey === reference.slotKey,
-                        );
-                        const actionInteraction =
-                          roomActions === undefined
-                            ? undefined
-                            : requireWorkspaceInteraction(
-                                interactions.roomActions,
-                                roomActions.interactionKey,
-                              );
-                        // A stale sale stays removable; its own finding never disables it.
-                        const disabled =
-                          proposal === undefined ||
-                          actionInteraction === undefined ||
-                          (proposal.structurallyAuthorable !== true && !slot.sale.sold);
-                        return (
-                          <label className="shop-family-participation">
-                            <input
-                              {...(saleRow === undefined ? {} : findingMark(saleRow.address))}
-                              aria-label={`Sold ${slot.label}`}
-                              checked={slot.sale.sold}
-                              disabled={disabled}
-                              onChange={() =>
-                                proposal === undefined || actionInteraction === undefined
-                                  ? undefined
-                                  : executeIntent(actionInteraction.intentFor(proposal.key))
-                              }
-                              type="checkbox"
-                            />
-                            Sold
-                          </label>
-                        );
-                      })()}
                     </div>
                   );
                 })
               : null}
+            {feature.rollActions === undefined ? null : (
+              <FeatureRollInteract actions={feature.rollActions} interactions={interactions} />
+            )}
           </fieldset>
         );
       })();
