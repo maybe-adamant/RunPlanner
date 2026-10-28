@@ -27,6 +27,8 @@ interface WorkspaceRewardControlBase {
   readonly authoringSeed?: ResolvedRewardOffer;
   readonly marker: WorkspaceMarker;
   readonly offer: ResolvedRewardOffer | null;
+  /** The reward a rerolled owner offers onward; `offer` stays its first draw. */
+  readonly rerolledOffer?: ResolvedRewardOffer;
   /** Application-owned picker entry point for this exact visible edit surface. */
   readonly offerEditStartStep?: RewardPickerStep;
   /** Application-owned presentation fact; React does not infer identity authoring from offer shape. */
@@ -79,6 +81,12 @@ export interface WorkspaceRewardInteraction {
   readonly selected: ResolvedRewardOffer | null;
   readonly summary: (offer: ResolvedRewardOffer) => string;
 }
+
+/** The read side of a reward picker: its candidate domain and presentation. */
+export type WorkspaceRewardOfferResolver = Pick<
+  WorkspaceRewardInteraction,
+  'choiceLabel' | 'load' | 'model' | 'resolvesAtAcquisition' | 'summary'
+> & { readonly key: string };
 
 type WorkspaceRewardCommandIntent = WorkspaceCommandIntent<
   Extract<

@@ -26,6 +26,11 @@ function roomActionControl(finding: SemanticFinding): WorkspaceFindingControl | 
     case 'roomActionOrderUnavailable':
       // An action ordered after a checkpoint that no longer exists should not exist.
       return finding.evidence.checkpointUnavailable === true ? 'delete' : 'move';
+    // A press the game refuses or the pool cannot pay for is removed.
+    case 'rerollUnavailable':
+    case 'rerollTargetUnavailable':
+    case 'rerollPoolExceeded':
+      return 'delete';
     case 'nemesisOutcomeMissing':
     case 'nemesisOutcomeUnavailable':
       return finding.evidence.kind === 'traitTrade' ? 'nemesisTrait' : 'nemesisReward';
@@ -82,6 +87,11 @@ function codeControl(finding: SemanticFinding): WorkspaceFindingControl | undefi
     (finding.code === 'hexActivationMissing' || finding.code === 'hexActivationUnavailable')
   )
     return 'hexActivation';
+  if (
+    finding.code === 'rerolledRewardMismatch' &&
+    (finding.origin.kind === 'incomingReward' || finding.origin.kind === 'localReward')
+  )
+    return 'rerolledReward';
   // Stone findings arise only for a chosen proc or a required Stone, whose checkbox is fixed.
   if (
     finding.origin.kind === 'traitOffer' &&

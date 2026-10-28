@@ -176,9 +176,30 @@ export function inspectorRoomActionContent(
       />
     );
   }
+  if (row.reference.kind === 'reroll' && row.reference.target.kind !== 'wheelOffer')
+    return <RerollTimelineLink row={row} />;
   return row.reference.kind !== 'interactKeepsakeRack' ||
     room.keepsakeSelection === undefined ? null : (
     <KeepsakeRackTimelineContent interactions={interactions} selection={room.keepsakeSelection} />
+  );
+}
+
+/** A door reroll is edited in the Rerolls list beside the doors. */
+function RerollTimelineLink({
+  row,
+}: {
+  readonly row: NonNullable<WorkspaceRoomSummary['roomActions']>['rows'][number];
+}) {
+  const dispatch = useAppDispatch();
+  return (
+    <button
+      className="semantic-focus-link"
+      data-workspace-node={row.marker.focusKey}
+      onClick={() => dispatch(semanticOwnerFocused(row.address))}
+      type="button"
+    >
+      Room Doors
+    </button>
   );
 }
 

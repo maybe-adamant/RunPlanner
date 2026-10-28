@@ -38,6 +38,24 @@ import { StructuredWorkspaceProjectionContractError } from '../contract';
  * authored-leaf audit below: Ephyra remains published while dormant during
  * the A2 transition, while a dormant Shop produces no requirement at all.
  */
+/** Where a press's reward types come from: its target's counted binding, when it has one. */
+export type WorkspaceRerollRewardTypes =
+  | {
+      readonly kind: 'counted';
+      readonly owner: import('@planner/projections/candidates/candidateProjection').CountedRewardCandidateOwner;
+      readonly binding: import('@run-planner/engine/reward-kernel').CountedRewardBinding;
+    }
+  | { readonly kind: 'none' };
+
+export interface WorkspaceRerollTargetRequirement {
+  readonly key: string;
+  readonly target: import('@run-planner/engine/authored-project').RerollTarget;
+  readonly rewardOwner: import('@run-planner/engine/authored-project').RerolledRewardOwner;
+  readonly label: string;
+  readonly unavailable?: 'notRerollable' | 'slotEntered';
+  readonly rewardTypes: WorkspaceRerollRewardTypes;
+}
+
 export type WorkspaceOccurrenceInteractionRequirement =
   | {
       readonly kind: 'fieldsSpatialPoints';
@@ -149,6 +167,21 @@ export type WorkspaceOccurrenceInteractionRequirement =
         readonly exclusion?: import('@run-planner/engine/simulation').PhantomPlaceholderExclusion;
       }[];
       readonly rewardTypes: readonly { readonly rewardType: string; readonly label: string }[];
+    }
+  | {
+      /** One room's door and cage rerolls: authored presses and the targets a new one may name. */
+      readonly kind: 'roomRerolls';
+      readonly owner: OccurrenceAddress;
+      readonly interactionKey: string;
+      readonly surface: import('@run-planner/engine/authored-project').RerollSurface;
+      /** Empty while the surface is unreached. */
+      readonly targets: readonly WorkspaceRerollTargetRequirement[];
+      readonly rows: readonly {
+        readonly key: string;
+        readonly address: import('@run-planner/engine/authored-project').RoomActionAddress;
+        readonly reward: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+        readonly rewardTypes: WorkspaceRerollRewardTypes;
+      }[];
     }
   | {
       readonly kind: 'infernalContractPedestalCollect';

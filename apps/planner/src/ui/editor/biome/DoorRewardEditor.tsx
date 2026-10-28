@@ -8,7 +8,8 @@ import {
 import { useAppSelector } from '@planner/state/store';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { clockworkCountdownArtwork } from '@planner/ui/artwork/clockwork/clockworkCountdownArtwork';
-import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindingTarget';
+import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { useEffect } from 'react';
@@ -100,11 +101,48 @@ export function RewardSurfaceEditor({
               label={showRewardLabels ? reward.label : 'Reward'}
             />
           )}
+          <RerolledRewardLine reward={reward} />
         </section>
       ))}
       {visibility === 'hidden' ? (
         <p className="door-information-note">Reward hidden on this door.</p>
       ) : null}
+    </div>
+  );
+}
+
+/** A rerolled door reward's final draw, and the repair of a kept reward that no longer matches. */
+function RerolledRewardLine({ reward }: { readonly reward: WorkspaceDoorReward }) {
+  const executeIntent = useCommandIntent();
+  const findingMark = useFindingMark();
+  const repair = reward.rerolledRewardRepair;
+  if (reward.rerolledSummary === undefined && repair === undefined) return null;
+  return (
+    <div className="door-rerolled-line">
+      {reward.rerolledSummary === undefined ? null : (
+        <span className="door-rerolled-reward">
+          <span aria-hidden="true">→ </span>
+          <span className="visually-hidden">Rerolled to </span>
+          {reward.rerolledSummary}
+        </span>
+      )}
+      {repair === undefined ? null : (
+        <button
+          {...findingMark(repair.owner, 'rerolledReward')}
+          className="secondary-action action-compact"
+          onClick={() =>
+            executeIntent({
+              command:
+                repair.repair === 'adopt'
+                  ? { kind: 'AdoptRerolledReward', owner: repair.owner }
+                  : { kind: 'DropRerolledReward', owner: repair.owner },
+            })
+          }
+          type="button"
+        >
+          {repair.repair === 'adopt' ? 'Use last reroll' : 'Drop rerolled reward'}
+        </button>
+      )}
     </div>
   );
 }

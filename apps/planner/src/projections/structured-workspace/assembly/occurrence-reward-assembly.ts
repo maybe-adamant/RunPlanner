@@ -358,6 +358,19 @@ function realizedAcquisitionForReward(
   });
 }
 
+/**
+ * A rerolled owner keeps its first draw as the edited offer; the acquisition
+ * children and what is collected follow the reward its rerolls left.
+ */
+function withRerolledReward(
+  control: WorkspaceRewardControl,
+  rerolled: AuthoredRewardState | undefined,
+): WorkspaceRewardControl {
+  return rerolled === undefined
+    ? control
+    : Object.freeze({ ...control, rerolledOffer: rerolled.offer });
+}
+
 export function rewardControl(
   input: WorkspaceOccurrenceRewardAssemblyInput,
   owner: OccurrenceRewardCandidateOwner,
@@ -516,12 +529,15 @@ export function controlsForOccurrence(
     >,
   ) => {
     controls.push(
-      rewardControl(
-        input,
-        { kind: 'incomingReward', address: incoming },
-        incomingRewardBinding(room, state),
-        state.reward?.offer ?? null,
-        state.reward,
+      withRerolledReward(
+        rewardControl(
+          input,
+          { kind: 'incomingReward', address: incoming },
+          incomingRewardBinding(room, state),
+          state.reward?.offer ?? null,
+          occurrence.rerolledIncomingReward ?? state.reward,
+        ),
+        occurrence.rerolledIncomingReward,
       ),
     );
   };
@@ -549,13 +565,17 @@ export function controlsForOccurrence(
           group.key,
           slotKey,
         );
+        const rerolled = occurrence.state.rerolledCages?.[slotKey];
         controls.push(
-          rewardControl(
-            input,
-            { kind: 'localReward', address },
-            group.reward,
-            offer?.offer ?? null,
-            offer,
+          withRerolledReward(
+            rewardControl(
+              input,
+              { kind: 'localReward', address },
+              group.reward,
+              offer?.offer ?? null,
+              rerolled ?? offer,
+            ),
+            rerolled,
           ),
         );
       }

@@ -68,6 +68,15 @@ function rewardQueries(
       }));
     case 'phantomExit':
       return offers.map((value) => ({ kind: 'phantomExitReward', exit: owner.address, value }));
+    case 'reroll':
+      return offers.map((value) => ({ kind: 'rerollReward', reroll: owner.address, value }));
+    case 'pendingReroll':
+      return offers.map((value) => ({
+        kind: 'pendingRerollReward',
+        surface: owner.surface,
+        target: owner.target,
+        value,
+      }));
     case 'acquisitionEntry':
       return offers.map((value) => ({
         kind: 'acquisitionEntryOffer',
@@ -127,7 +136,8 @@ function rewardDomainFor(
 ): Promise<ProjectedRewardDomain> {
   const prepared = prepareCachedRewardDomain(core, cache, rewardTypes, selected);
   const offers = rewardDomainOffers(prepared);
-  const candidateKey = `reward-domain:${semanticAddressKey(owner.address)}:${domainKey(offers.map(offerKey))}`;
+  // A pending press shares its target's address, so the owner kind keeps their domains apart.
+  const candidateKey = `reward-domain:${owner.kind}:${semanticAddressKey(owner.address)}:${domainKey(offers.map(offerKey))}`;
   const pendingKey = `${candidateKey}:selected:${selected === undefined ? '__unresolved__' : offerKey(selected)}`;
   let projectPending = cache.pendingRewardDomains.get(core.assembly);
   if (projectPending === undefined) {

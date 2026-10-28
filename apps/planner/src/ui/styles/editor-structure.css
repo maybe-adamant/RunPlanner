@@ -1211,3 +1211,67 @@ select {
 .hidden-door-line > button {
   margin-left: auto;
 }
+
+/* A room's rerolls follow its doors: one numbered press per line, the next press last. */
+.room-rerolls {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid #34353e;
+}
+
+.room-rerolls-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.room-rerolls-heading h4 {
+  margin: 0;
+  color: #f2ede5;
+  font-size: 0.92rem;
+}
+
+.room-rerolls-pool {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.room-rerolls-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.room-reroll-row {
+  display: grid;
+  grid-template-columns: 1.4rem minmax(0, 1fr) 2rem;
+  align-items: center;
+  gap: 10px;
+  max-width: 640px;
+}
+
+.room-reroll-append {
+  grid-template-columns: 1.4rem minmax(0, 1fr) minmax(0, 1fr);
+  max-width: none;
+}
+
+.room-reroll-index {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+/* The final draw sits under the first, in the picker's column. */
+.door-rerolled-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 4px;
+  padding-left: calc(7.5rem + 10px);
+  color: var(--text);
+  font-size: 0.88rem;
+}

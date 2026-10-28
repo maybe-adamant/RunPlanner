@@ -54,6 +54,7 @@ import {
 } from './decision-assembly';
 import { assembleWorkspaceHub } from './hub-assembly';
 import { workspaceRewardStoreLabel } from './reward-labels';
+import { workspaceDoorRerollTargetLabel } from './reroll-assembly';
 import { biomeFieldLabel } from './biome-field-labels';
 import {
   appendUniqueBatchInteractionRequirements,
@@ -570,6 +571,12 @@ export function assembleWorkspaceBiomeSemantics(
       routePosition: source.routePosition,
       ...(bossDoorRewardStore === undefined ? {} : { bossDoorRewardStore }),
       phantomExitSettlement: source.phantomExitSettlement,
+      rerollTargetLabel: (target) =>
+        workspaceDoorRerollTargetLabel(
+          { biome, catalog, layout: source.layout, plan: source.plan },
+          request.occurrence.occurrenceId,
+          target,
+        ),
       ...(anomalyReplacementRoomGameNames === undefined ? {} : { anomalyReplacementRoomGameNames }),
       biome,
       catalog,

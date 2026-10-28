@@ -59,6 +59,7 @@ import { presentRunState } from '../presentation/run-state';
 import type { WorkspaceBiomeSource, WorkspaceEvaluatedBatchOverlay } from '../source-index';
 import { workspaceDeclaredPhysicalExits } from './topology-presentation';
 import { projectWorkspaceDoorContract } from './door-contract';
+import { assembleRoomRerolls } from './reroll-assembly';
 import type {
   WorkspaceBatchRepairIntent,
   WorkspaceBatchRewardPool,
@@ -871,7 +872,18 @@ function assembleBatchDecision(
       `${semanticAddressKey(owner)} has evaluated targets with no authored target`,
     );
   }
-  const targets = projectedTargets.map((value) => value.target);
+  const rerollSource =
+    input.persistence === 'authored' && decision.source.kind === 'occurrence'
+      ? source.occurrence(decision.source.occurrenceId)
+      : undefined;
+  const rerolls = assembleRoomRerolls({
+    catalog: input.catalog,
+    markerDestinations: input.markerDestinations,
+    source,
+    ...(rerollSource === undefined ? {} : { sourceOccurrence: rerollSource }),
+    targets: projectedTargets.map((value) => value.target),
+  });
+  const targets = rerolls.targets;
   const missingTargets = missingTargetsForPhysicalExits(
     input,
     decision.source,
@@ -1078,6 +1090,7 @@ function assembleBatchDecision(
     owner,
     persistence: input.persistence,
     ...(repairIntent === undefined ? {} : { repairIntent }),
+    ...(rerolls.rerolls === undefined ? {} : { rerolls: rerolls.rerolls }),
     ...(rewardPool === undefined ? {} : { rewardPool }),
     ...(hasEditableAuthoredRewardStore
       ? {
@@ -1170,6 +1183,7 @@ function assembleBatchDecision(
         ? []
         : zagreusContract.assembly.occurrenceInteractionRequirements),
       ...(chaos === undefined ? [] : chaos.assembly.occurrenceInteractionRequirements),
+      ...(rerolls.requirement === undefined ? [] : [rerolls.requirement]),
     ]),
     roomControls: Object.freeze([
       ...projectedTargets.flatMap((target) => target.roomControls),

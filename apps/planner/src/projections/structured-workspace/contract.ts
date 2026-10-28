@@ -45,6 +45,7 @@ export type {
   WorkspaceCountedRewardControl,
   WorkspaceExplicitRewardControl,
   WorkspaceRewardControl,
+  WorkspaceRewardOfferResolver,
 } from './contracts/rewards';
 export type {
   WorkspaceBatchRewardStoreInteraction,
@@ -188,6 +189,7 @@ import type {
   WorkspaceMissingTargetAuthoring,
   WorkspacePhantomExitControl,
   WorkspacePhantomExitInteraction,
+  WorkspaceRoomRerollsInteraction,
 } from './contracts/structure';
 
 export type {
@@ -388,6 +390,7 @@ export interface WorkspaceInteractionCatalog {
   >;
   readonly shopOffers: ReadonlyMap<string, WorkspaceShopOfferInteraction>;
   readonly phantomExits: ReadonlyMap<string, WorkspacePhantomExitInteraction>;
+  readonly roomRerolls: ReadonlyMap<string, WorkspaceRoomRerollsInteraction>;
   readonly infernalContractPedestalCollects: ReadonlyMap<
     string,
     WorkspaceInfernalContractPedestalCollectInteraction

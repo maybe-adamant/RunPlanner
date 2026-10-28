@@ -255,6 +255,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
    */
   readonly bossDoorRewardStore?: WorkspaceBossDoorRewardStoreInput;
   readonly catalog: Catalog;
+  /** Names this room's door and cage reroll targets in its Timeline rows. */
+  readonly rerollTargetLabel?: import('./occurrence-action-label').WorkspaceDoorRerollTargetLabel;
   /** The engine settlement of this room's hidden door, when it declares one. */
   readonly phantomExitSettlement?: (
     owner: import('@run-planner/engine/authored-project').PhantomExitAddress,
@@ -452,6 +454,9 @@ export function assembleWorkspaceOccurrence(
       ? {}
       : { stygianWellAssessment: input.stygianWellAssessment }),
     ...(input.blockingRowKeys === undefined ? {} : { blockingRowKeys: input.blockingRowKeys }),
+    ...(input.rerollTargetLabel === undefined
+      ? {}
+      : { rerollTargetLabel: input.rerollTargetLabel }),
     controls: allRewardControls,
     encounterPhases,
     features,
@@ -1026,14 +1031,17 @@ export function assembleWorkspaceOccurrence(
           mark?.control,
         );
       }
+      // Door and cage rerolls are edited in the Rerolls list beside the doors.
       const tab =
-        roomLocal.kind === 'ship'
-          ? (shipActionTabs.get(row.key) ??
-            (workbench.kind === 'ship' &&
-            workbench.repairRows.some((repair) => repair.key === row.key)
-              ? 'shipInactiveRepair'
-              : undefined))
-          : 'actions';
+        row.reference.kind === 'reroll' && row.reference.target.kind !== 'wheelOffer'
+          ? ('doors' as const)
+          : roomLocal.kind === 'ship'
+            ? (shipActionTabs.get(row.key) ??
+              (workbench.kind === 'ship' &&
+              workbench.repairRows.some((repair) => repair.key === row.key)
+                ? 'shipInactiveRepair'
+                : undefined))
+            : 'actions';
       if (tab === undefined) {
         throw new StructuredWorkspaceProjectionContractError(
           `Ship action ${row.key} has no rendered timeline destination`,

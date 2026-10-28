@@ -11,12 +11,13 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
+  type WorkspaceRewardOfferResolver,
 } from '@planner/projections/structured-workspace';
 import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import type { ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 
 interface RewardValueEditorProps {
@@ -84,11 +85,62 @@ export function RewardValueEditor({
   unresolvedSeed,
 }: RewardValueEditorProps) {
   const findingTarget = useFindingTarget();
-  const authoredOfferKey = offer === null ? '__unresolved__' : offerKey(offer);
   const resolver = requireWorkspaceInteraction(
     interactions.rewards,
     workspaceInteractionKey(candidateOwner.address),
   );
+  return (
+    <RewardOfferPicker
+      findingTarget={findingTarget(candidateOwner.address)}
+      id={semanticOwnerControlElementId(candidateOwner.address)}
+      initialStep={initialStep}
+      label={label}
+      offer={offer}
+      onReplace={onReplace}
+      {...(realizedLabel === undefined ? {} : { realizedLabel })}
+      resolver={resolver}
+      resolvesShopItem={candidateOwner.address.kind === 'shopOffer'}
+      summaryMode={summaryMode}
+      {...(unresolvedSeed === undefined ? {} : { unresolvedSeed })}
+    />
+  );
+}
+
+/** A staged reward picker over one resolver: type first, then a Boon or Trial god. */
+export function RewardOfferPicker({
+  ariaLabel,
+  disabledHint,
+  findingTarget,
+  id,
+  label,
+  offer,
+  onReplace,
+  initialStep = 'type',
+  placeholder = 'Choose reward',
+  realizedLabel,
+  resolver,
+  resolvesShopItem = false,
+  summaryMode = 'offer',
+  unresolvedSeed,
+}: {
+  readonly ariaLabel?: string;
+  /** The picker cannot be opened now; the hint says why. */
+  readonly disabledHint?: string;
+  readonly findingTarget?: FindingTargetProps;
+  readonly id: string;
+  readonly label: string;
+  readonly offer: ResolvedRewardOffer | null;
+  readonly onReplace: (offer: ResolvedRewardOffer) => void;
+  readonly initialStep?: RewardPickerStep;
+  readonly placeholder?: string;
+  readonly realizedLabel?: string;
+  readonly resolver: WorkspaceRewardOfferResolver;
+  /** A Shop slot's type step commits an item resolved at acquisition. */
+  readonly resolvesShopItem?: boolean;
+  readonly summaryMode?: 'offer' | 'source';
+  readonly unresolvedSeed?: ResolvedRewardOffer;
+}) {
+  const authoredOfferKey = offer === null ? '__unresolved__' : offerKey(offer);
   const domain = useWorkspaceInteraction(resolver);
   const context = useMemo(
     () => Object.freeze({ authoredOfferKey, resolver }),
@@ -132,7 +184,7 @@ export function RewardValueEditor({
     }
     switch (active.step) {
       case 'type':
-        if (candidateOwner.address.kind === 'shopOffer' && resolver.resolvesAtAcquisition(value)) {
+        if (resolvesShopItem && resolver.resolvesAtAcquisition(value)) {
           commit(Object.freeze({ rewardType: value.rewardType }));
         } else if (value.payload === undefined) {
           commit(value);
@@ -163,18 +215,20 @@ export function RewardValueEditor({
         ? resolver.summary({ rewardType: activeOffer.payload.source })
         : 'Choose God'
       : activeOffer === undefined
-        ? 'Choose reward'
+        ? placeholder
         : resolver.summary(activeOffer);
   const triggerLabel = realizedLabel === undefined ? summary : `${summary} (${realizedLabel})`;
 
   return (
     <div className="reward-value-editor">
       <ContextualPicker
-        findingTarget={findingTarget(candidateOwner.address)}
+        {...(findingTarget === undefined ? {} : { findingTarget })}
+        {...(ariaLabel === undefined ? {} : { ariaLabel })}
         cancelLabel="Cancel"
         choiceLabel={resolver.choiceLabel(active?.step ?? 'type', activeOffer)}
         closeOnSelect={false}
-        id={semanticOwnerControlElementId(candidateOwner.address)}
+        {...(disabledHint === undefined ? {} : { disabledHint })}
+        id={id}
         label={label}
         layout="inline"
         loading={active !== undefined && domain.result === undefined}

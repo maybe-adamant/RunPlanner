@@ -39,6 +39,7 @@ import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/Anomaly
 import { RoomSelector } from './RoomSelector';
 import { RunStateLauncher } from './RunStateSheet';
 import { DoorRewardEditor } from './DoorRewardEditor';
+import { RoomRerolls } from './RoomRerolls';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
 import { hintProps } from '@planner/ui/controls/hint';
@@ -729,6 +730,9 @@ export function BatchWorkbench({
           ),
         )}
       </div>
+      {node.rerolls === undefined ? null : (
+        <RoomRerolls interactions={interactions} rerolls={node.rerolls} />
+      )}
       <div className="workbench-action-row">
         <ExactRepairAction intent={node.repairIntent} />
         <SelectedContinuationAction

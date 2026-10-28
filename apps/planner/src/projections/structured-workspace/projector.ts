@@ -39,6 +39,8 @@ import {
   isInventoryOfferActiveForProjectEvaluationAssembly,
   shopOfferAssessmentForProjectEvaluationAssembly,
   phantomExitSettlementForProjectEvaluationAssembly,
+  rerollSpendAllowanceForProjectEvaluationAssembly,
+  rerollSurfaceForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -351,6 +353,9 @@ export function createStructuredWorkspaceProjection(
         (offer) => isInventoryOfferActiveForProjectEvaluationAssembly(assembly, offer),
         (offer) => shopOfferAssessmentForProjectEvaluationAssembly(assembly, offer),
         (exit) => phantomExitSettlementForProjectEvaluationAssembly(assembly, exit),
+        (surface) => rerollSurfaceForProjectEvaluationAssembly(assembly, surface),
+        (surface) =>
+          rerollSpendAllowanceForProjectEvaluationAssembly(assembly, { kind: 'press', surface }),
       );
       const routeSource = sources.route;
       const authoredRoute =

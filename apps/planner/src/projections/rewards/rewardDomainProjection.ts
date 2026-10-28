@@ -235,6 +235,7 @@ function selectCandidate(
       case 'shopOffer':
       case 'infernalContractPedestal':
       case 'phantomExitReward':
+      case 'rerollReward':
       case 'acquisitionEntryOffer':
       case 'startingReward':
         return candidate.evaluation.result.supported;

@@ -82,6 +82,7 @@ export interface WorkspaceOccurrenceActionsInput {
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
   /** Engine-published Timeline rows of the product this room's assessment stops at. */
   readonly blockingRowKeys?: ReadonlySet<string>;
+  readonly rerollTargetLabel?: import('./occurrence-action-label').WorkspaceDoorRerollTargetLabel;
 }
 
 /** The Phial target control for one fountain use; pending until the engine requires a target. */
@@ -181,6 +182,7 @@ function roomActionsForOccurrence(
       input.occurrence,
       input.occurrence.purgingPool?.traitKeyBySlot,
       input.evaluatedRoom?.pickupProducers,
+      input.rerollTargetLabel,
     );
   const phaseLabel = (key: string) =>
     (roomLocal.kind === 'ship'
@@ -536,6 +538,7 @@ function roomActionsForOccurrence(
           input.occurrence,
           input.occurrence.purgingPool?.traitKeyBySlot,
           input.evaluatedRoom?.pickupProducers,
+          input.rerollTargetLabel,
         ),
         marker: input.markerDestinations.marker(address),
         ...(row.requiredScope === undefined ? {} : { requiredScope: row.requiredScope }),

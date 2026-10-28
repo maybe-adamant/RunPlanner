@@ -53,6 +53,8 @@ export type WorkspaceFindingControl =
   | 'hexActivation'
   | 'concaveStoneTarget'
   | 'revertAnomaly'
+  /** The repair of a rerolled reward kept for a different offer, beside its door reward. */
+  | 'rerolledReward'
   /** The first row of a grouped trait outcome, which names the next edit. */
   | 'outcomeFirstRow'
   /** The selected Boon Boon Boon row's acquisition target. */

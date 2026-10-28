@@ -1,3 +1,4 @@
+import { bindRoomRerollInteractions } from './reroll-interactions';
 import type {
   WorkspaceLevelResolutionControl,
   WorkspaceTraitOfferControl,
@@ -176,10 +177,18 @@ export function bindWorkspaceInteractions(
     ...(keepsakeEquipResultControls === undefined ? {} : { keepsakeEquipResultControls }),
   });
 
+  const roomRerolls = bindRoomRerollInteractions({
+    candidates,
+    project: assembly.project,
+    requirements: occurrenceInteractionRequirements.values(),
+    rewardPicker: services.rewardPicker,
+  });
+
   return Object.freeze({
     ...batch,
     ...child,
     ...occurrence,
+    roomRerolls,
     ...hub,
     ...topology,
   });

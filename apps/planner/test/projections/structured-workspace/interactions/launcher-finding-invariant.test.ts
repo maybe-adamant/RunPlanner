@@ -16,6 +16,7 @@ import {
   createShopOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  rerollAppendIndex,
   semanticAddressKey,
   type ProjectDocument,
   type SemanticAddress,
@@ -46,6 +47,7 @@ import {
   goldenIBiome,
   loadNemesisFieldsCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
+import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   loadSurfaceNOPQProject,
   pBiome,
@@ -82,6 +84,7 @@ const checked = {
   hubSlot: 0,
   fieldsSpatial: 0,
   collapsed: 0,
+  reroll: 0,
 };
 /** The trait offer whose dialog repairs a finding at this owner, if any. */
 function repairingTraitOffer(owner: SemanticAddress): SemanticAddress | undefined {
@@ -152,6 +155,7 @@ function disabledRepairLaunchers(assembly: ProjectEvaluationAssembly): readonly 
   }
   for (const finding of owners)
     disabled.push(...blockedNativeSettings(interactions, finding.origin));
+  for (const finding of owners) disabled.push(...unboundRerollRows(interactions, finding.origin));
   disabled.push(...disabledCollapsedLauncher(interactions, assembly));
   return disabled;
 }
@@ -250,6 +254,27 @@ function blockedNativeSettings(
   return result;
 }
 
+/** A door press's Remove and reward picker are always enabled; its row must be bound. */
+function unboundRerollRows(
+  interactions: WorkspaceInteractions,
+  owner: SemanticAddress,
+): readonly string[] {
+  if (owner.kind !== 'roomAction' || JSON.parse(owner.actionKey)[0] !== 'reroll') return [];
+  checked.reroll += 1;
+  const list = [...interactions.roomRerolls.values()].find(
+    (candidate) =>
+      candidate.owner.biomeKey === owner.biomeKey &&
+      candidate.owner.occurrenceId === owner.occurrenceId,
+  );
+  try {
+    list?.removeIntent(owner.actionKey);
+    list?.rowReward(owner.actionKey);
+  } catch {
+    return [`reroll ${semanticAddressKey(owner)}`];
+  }
+  return list === undefined ? [`reroll ${semanticAddressKey(owner)}`] : [];
+}
+
 function check(project: ProjectDocument): readonly string[] {
   return disabledRepairLaunchers(simulateProjectAssembly(catalog, project));
 }
@@ -276,6 +301,15 @@ function withClearedTraitOffer(
   if (target === undefined) throw new Error(`${biomeKey} has no trait offer ${index}`);
   for (const role of Object.keys(target)) target[role] = null;
   return decodeProjectDocument(raw, catalog);
+}
+
+/** Replaces the route's manual Arcana selection. */
+function withArcana(project: ProjectDocument, arcanaKeys: readonly string[]): ProjectDocument {
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceManualArcanaSelection',
+    route: { kind: 'route', routeKey: project.route.routeKey },
+    arcanaKeys,
+  });
 }
 
 describe('a finding never disables the launcher that repairs it', () => {
@@ -509,5 +543,33 @@ describe('a finding never disables the launcher that repairs it', () => {
     expect(checked.fieldsSpatial).toBeGreaterThan(0);
     expect(checked.wheel).toBeGreaterThan(0);
     expect(checked.hubSlot).toBeGreaterThan(0);
+  });
+  it('holds for door presses the game refuses', () => {
+    const f = createBiomeAddress('Underworld', 'F');
+    const press = (
+      project: ProjectDocument,
+      from: string,
+      exitKey: string,
+      occurrenceId: string,
+    ): ProjectDocument =>
+      applyProjectCommand(project, catalog, {
+        kind: 'InsertReroll',
+        occurrence: createOccurrenceAddress(f, createOccurrenceId(from)),
+        target: { kind: 'door', exitKey, occurrenceId: createOccurrenceId(occurrenceId) },
+        reward: { rewardType: 'RoomMoneyDrop' },
+        index: rerollAppendIndex(project, {
+          kind: 'doors',
+          occurrence: createOccurrenceAddress(f, createOccurrenceId(from)),
+        })!,
+      });
+    const held = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+    for (const project of [
+      // The card is gone: the press is not available.
+      withArcana(press(held, 'golden-f-b2-e1', 'exit2', 'golden-f-b3-e2'), []),
+      // A Shop door never rerolls.
+      press(held, 'golden-f-b10-e1', 'exit1', 'golden-f-preboss-shop'),
+    ])
+      expect(check(project)).toEqual([]);
+    expect(checked.reroll).toBeGreaterThan(1);
   });
 });

@@ -1112,6 +1112,9 @@ export function bindOccurrenceLocalInteractions(
         );
         break;
       }
+      case 'roomRerolls':
+        // Bound with the reward picker by the Rerolls binder.
+        break;
       case 'purgingPoolInteraction': {
         if (purgingPoolInteractions.has(requirement.interactionKey)) {
           throw new StructuredWorkspaceProjectionContractError(

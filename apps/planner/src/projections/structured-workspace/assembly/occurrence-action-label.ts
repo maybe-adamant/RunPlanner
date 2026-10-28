@@ -17,6 +17,14 @@ import { workspaceAcquisitionRoleLabel } from './occurrence-reward-assembly';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 
+/** Names a door or cage reroll target as the room's doors do. */
+export type WorkspaceDoorRerollTargetLabel = (
+  target: Exclude<
+    import('@run-planner/engine/authored-project').RerollTarget,
+    { readonly kind: 'wheelOffer' }
+  >,
+) => string;
+
 function timelineRewardName(catalog: Catalog, rewardType: string): string {
   switch (rewardType) {
     case 'StackUpgrade':
@@ -97,6 +105,7 @@ export function occurrenceActionLabel(
   >,
   purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
   pickupProducers: NonNullable<CanonicalAuthoredRoom['pickupProducers']> = [],
+  rerollTargetLabel?: WorkspaceDoorRerollTargetLabel,
 ): string {
   const actionLabel = (
     subject: string | undefined,
@@ -105,12 +114,14 @@ export function occurrenceActionLabel(
     control = rewardControl,
     fallbackSummary?: string,
   ): string => {
-    // A forfeited reward is collected as its realized consolation, not as the authored offer.
+    // A forfeited reward is collected as its realized consolation, not as the authored offer;
+    // a rerolled one as the reward its rerolls left.
+    const collected = control?.rerolledOffer ?? control?.offer;
     const summary =
-      !includeOfferSummary || control?.offer === null || control?.offer === undefined
+      !includeOfferSummary || collected === null || collected === undefined
         ? fallbackSummary
-        : control.realizedAcquisition === undefined
-          ? timelineRewardLabel(catalog, control.offer, control)
+        : control?.realizedAcquisition === undefined
+          ? timelineRewardLabel(catalog, collected, control)
           : timelineRewardName(catalog, control.realizedAcquisition.rewardType);
     const conversion = control?.conversions?.find((entry) => entry.value.kind !== 'normal');
     const action =
@@ -311,8 +322,19 @@ export function occurrenceActionLabel(
       return 'Keepsake Rack';
     case 'interactEris':
       return 'Talk to Eris';
-    case 'reroll':
-      return 'Reroll';
+    case 'reroll': {
+      const target = reference.target;
+      const subject =
+        target.kind === 'wheelOffer'
+          ? roomLocal.kind === 'ship'
+            ? roomLocal.wheels
+                .find((wheel) => wheel.key === target.wheelKey)
+                ?.offers.find((offer) => offer.key === target.offerKey)?.label
+            : undefined
+          : rerollTargetLabel?.(target);
+      const reward = timelineRewardLabel(catalog, reference.reward);
+      return subject === undefined ? `Reroll → ${reward}` : `Reroll ${subject} → ${reward}`;
+    }
   }
 }
 

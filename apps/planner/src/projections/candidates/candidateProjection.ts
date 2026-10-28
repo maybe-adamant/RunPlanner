@@ -43,6 +43,10 @@ import {
   type ShopOfferAddress,
   type InfernalContractPedestalAddress,
   type PhantomExitAddress,
+  type RerolledRewardOwner,
+  type RerollPressTarget,
+  type RerollSurface,
+  type RoomActionAddress,
   type StartingRewardAddress,
   type SideRoomGeneration,
   type TraitOfferAddress,
@@ -93,7 +97,17 @@ export type RewardCandidateOwner =
 
 /** Owners whose reward-type domain is evaluated; a hidden door draws a type but owns no reward leaf. */
 export type RewardDomainCandidateOwner =
-  RewardCandidateOwner | { readonly kind: 'phantomExit'; readonly address: PhantomExitAddress };
+  | RewardCandidateOwner
+  | { readonly kind: 'phantomExit'; readonly address: PhantomExitAddress }
+  /** An authored reroll press, redrawing its target. */
+  | { readonly kind: 'reroll'; readonly address: RoomActionAddress }
+  /** A press not yet authored, appended to a surface; `address` is its target's reward owner. */
+  | {
+      readonly kind: 'pendingReroll';
+      readonly address: RerolledRewardOwner;
+      readonly surface: RerollSurface;
+      readonly target: RerollPressTarget;
+    };
 
 /** An item drawn from a declared Shop-option pool: a Shop slot or the Contract pedestal. */
 export type ShopOptionCandidateOwner = ShopOfferAddress | InfernalContractPedestalAddress;

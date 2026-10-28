@@ -1,7 +1,7 @@
 import type { WorkspaceAspectHexTreeControl } from './traits';
 import type { WorkspaceChaosExitControl, WorkspaceZagreusContractControl } from './features';
 import type { WorkspaceLocalVisitDecision } from './locals';
-import type { WorkspaceRewardControl } from './rewards';
+import type { WorkspaceRewardControl, WorkspaceRewardOfferResolver } from './rewards';
 import type {
   AuthoredBatchState,
   BiomeAddress,
@@ -16,8 +16,12 @@ import type {
   HubSlotAddress,
   KeepsakeEquipResultAddress,
   OccurrenceId,
+  OccurrenceAddress,
   PhantomExitAddress,
   ProjectCommand,
+  RerolledRewardOwner,
+  RerollTarget,
+  RoomActionAddress,
   SemanticAddress,
 } from '@run-planner/engine/authored-project';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
@@ -52,6 +56,16 @@ export interface WorkspaceAnomalyControl {
 export interface WorkspaceDoorReward {
   /** Goals remaining shown on a Clockwork Goal door's countdown. */
   readonly clockworkGoalsRemaining?: number;
+  /** The reward the door offers after its rerolls, where it differs from the first draw. */
+  readonly rerolledSummary?: string;
+  /**
+   * A kept rerolled reward that no longer matches: adopt the last reroll's
+   * reward, or drop it where no reroll remains.
+   */
+  readonly rerolledRewardRepair?: {
+    readonly owner: RerolledRewardOwner;
+    readonly repair: 'adopt' | 'drop';
+  };
   readonly control?: WorkspaceRewardControl;
   readonly key: string;
   readonly label: string;
@@ -177,6 +191,60 @@ interface WorkspaceBatchNodeBase {
   readonly targets: readonly WorkspacePhysicalTarget[];
   readonly topologyState: 'complete' | 'partial' | 'retained';
   readonly runState?: WorkspaceRunStateLauncher;
+  /** The source room's ordered door and cage rerolls, where it can or did reroll. */
+  readonly rerolls?: WorkspaceRoomRerolls;
+}
+
+/** One door or Fields cage a press may name. */
+export interface WorkspaceRerollTarget {
+  readonly key: string;
+  readonly target: RerollTarget;
+  readonly label: string;
+  /** Why the game refuses a press of it; absent when it can be rerolled or is unreached. */
+  readonly unavailable?: 'notRerollable' | 'slotEntered';
+}
+
+/** One authored press in the room's action order. */
+export interface WorkspaceRerollRow {
+  readonly address: RoomActionAddress;
+  readonly key: string;
+  readonly marker: WorkspaceMarker;
+  readonly targetLabel: string;
+  readonly reward: ResolvedRewardOffer;
+}
+
+/** A room's door and cage rerolls in action order, with a press appended at the end. */
+export interface WorkspaceRoomRerolls {
+  readonly owner: OccurrenceAddress;
+  readonly interactionKey: string;
+  /** The run's pool at the append point; absent while unreached. */
+  readonly poolRemaining?: number;
+  readonly rows: readonly WorkspaceRerollRow[];
+  /** Why a press cannot be appended: unreached, no held card, or no pool left. */
+  readonly appendLocked?: 'unreached' | 'notEnabled' | 'poolEmpty';
+}
+
+/** Engine-backed pickers and edits of one room's rerolls. */
+export interface WorkspaceRoomRerollsInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  /** The targets a new press may name, by key; a refused one is listed with its reason. */
+  readonly targets: (selectedKey: string | undefined) => ContextualPickerModel<string>;
+  /** The reward picker of one authored press. */
+  readonly rowReward: (rowKey: string) => WorkspaceRewardOfferResolver;
+  /** The reward picker of a press not yet authored, on one target. */
+  readonly pendingReward: (targetKey: string) => WorkspaceRewardOfferResolver;
+  readonly replaceRewardIntent: (
+    rowKey: string,
+    reward: ResolvedRewardOffer,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceRerollReward' }>>;
+  readonly removeIntent: (
+    rowKey: string,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'RemoveRoomAction' }>>;
+  readonly appendIntent: (
+    targetKey: string,
+    reward: ResolvedRewardOffer,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'InsertReroll' }>>;
 }
 
 export type WorkspaceAuthoringFrontier =
