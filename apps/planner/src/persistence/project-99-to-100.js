@@ -69,6 +69,50 @@ function migrateOccurrence(occurrence) {
   migratePhantomExit(occurrence);
 }
 
+// Schema 100 is unpushed: a local plan saved while a Well or Pool held a reroll
+// count gains that many unpinned reroll actions at the end of its room's actions.
+const FEATURE_REROLLS = [
+  ['stygianWell', 'rerollStygianWell', 'offerKeyBySlot'],
+  ['purgingPool', 'rerollPurgingPool', 'traitKeyBySlot'],
+];
+
+function normalizeOccurrenceRerollCounts(occurrence) {
+  let changed = false;
+  for (const [field, kind, slots] of FEATURE_REROLLS) {
+    const feature = occurrence?.[field];
+    if (feature === null || typeof feature !== 'object' || !Object.hasOwn(feature, 'rerollCount'))
+      continue;
+    const count = feature.rerollCount;
+    delete feature.rerollCount;
+    changed = true;
+    const order = occurrence.roomActions?.order;
+    if (!Array.isArray(order) || !Number.isInteger(count) || feature.interacted !== true) continue;
+    const used = new Set(
+      order.flatMap((action) => (action?.kind === kind ? [action.rerollId] : [])),
+    );
+    for (let index = 1, added = 0; added < count; index += 1) {
+      if (used.has(`r${index}`)) continue;
+      order.push({ kind, rerollId: `r${index}`, [slots]: {} });
+      added += 1;
+    }
+  }
+  return changed;
+}
+
+/**
+ * Reshapes a schema 100 document saved with Well or Pool reroll counts;
+ * returns the input itself when it holds none.
+ */
+export function normalizeSchema100RerollCounts(value) {
+  const source = record(value, 'project document');
+  const copy = JSON.parse(JSON.stringify(source));
+  let changed = false;
+  for (const biome of copy.route?.biomes ?? [])
+    for (const occurrence of biome?.topology?.occurrences ?? [])
+      if (normalizeOccurrenceRerollCounts(occurrence)) changed = true;
+  return changed ? copy : source;
+}
+
 // Browser-safe transform: the Contract pedestal becomes a Preboss room feature in either form,
 // and every Ephyra combat, Mini-Boss and side room gains its unpinned phantom exit.
 export function migrateProjectDocument(value) {
