@@ -32,8 +32,12 @@ promoted.
 
 ### 2. N phantom exit
 
-- Every N main and side room visit, except `N_PreHub01`, authors its hidden
-  return door: the **placeholder room** and the **reward type**. The draw is
+- Every visit to an `N_Combat*` or `N_MiniBoss*` main room or an `N_Sub*`
+  side room authors its hidden return door: the **placeholder room** and the
+  **reward type**. Rooms whose exit is linked (`N_Opening01`, `N_PreHub01`,
+  `N_Story01`, `N_PreBoss01`, the bosses, `N_PostBoss01`, `N_Hub`) have none.
+  Main-room placeholders come from the `N` room set, side-room placeholders
+  from `N_SubRooms`. The draw is
   invisible in its own room (main-room side doors draw from the side-room
   stores in the same unlock; a side room's draw follows its parent's side
   doors), so it lives in the visit's Doors tab and has no timeline row. The
@@ -66,10 +70,15 @@ promoted.
 - **Catalog:** every reroll source with its amount by rank and what it
   enables: `DoorRerollMetaUpgrade` (door and ship-wheel rerolls),
   `PanelRerollMetaUpgrade` (screen rerolls), `RerollTradeOffMetaUpgrade`
-  (pool only), Narcissus F's reroll pickup (+2 when collected). Mid-run grants
-  (Judgment, Figurine, Circe) add the card's value; a Circe rarity upgrade
-  adds the difference. Each offer screen and door declares whether it is
-  natively rerollable.
+  (pool only), Narcissus F's reroll pickup when collected (2, 2, 3, 5 by
+  rarity; Common outside Dream). Card amounts by rank: Door and Screen 1, 2,
+  3, 4; TradeOff 2, 3, 4, 5. Card upgrades stop at Epic; Heroic comes only
+  from a Circe rarity upgrade or grant. Mid-run grants (Judgment, Figurine,
+  Circe) add the card's value; a Circe rarity upgrade adds the difference.
+  While the Barren curse removes the arcana, no reroll kind is enabled; the
+  pool is unchanged. Each offer screen declares whether it is natively
+  rerollable; each destination room declares `ForceDoorAllowReroll` and
+  `NoReroll` (`ClockworkGoal` rooms count as `NoReroll`).
 - **Pool:** the simulation derives the run's reroll pool from those sources
   and every spend. Adding a reroll beyond the remaining pool is blocked (fixed
   budget rule); a preserved over-spend is a finding.
@@ -78,8 +87,13 @@ promoted.
   result; the last element is the offer. Every element is a real draw: it
   leaves its store, and its side effects apply. Each reroll's candidates use
   the normal door legality, excluding the reward being replaced and the other
-  doors' current rewards, and cost 1. Only with `AllowDoorReroll`, and only on
-  natively rerollable doors (not O exits, not hidden doors, not Shop rewards).
+  doors' current rewards, and cost 1. Only with `AllowDoorReroll`, and only
+  where the native rule allows it: (the door's `AllowReroll` or the
+  destination's `ForceDoorAllowReroll`) and not the destination's `NoReroll`
+  and not a Shop reward. So N side and return doors, Story, Shop and Boss
+  destinations never reroll, while O and Q exits into `O_MiniBoss01`,
+  `O_MiniBoss02`, `O_Reprieve01` and `Q_BaseMiniBoss` do. First visit only:
+  a restored door is never rerollable.
   The editor isolates rerolls so the door layouts, the Hub board above all,
   stay as they are. The Reward line of a Hub board door, ship-wheel offer or
   normal door gains a small reroll button (shown only when door rerolls are
@@ -120,16 +134,14 @@ promoted.
 
 ## Gates
 
-0. **Research** (investigator, read-only; results go into the audit or this
-   plan):
-   - side-room placeholders always come from `N_SubRooms` (Surface capture);
-   - each screen's native reroll flag (confirm Chaos yes, Selene and World
-     Shop no) and each door kind's `AllowReroll`;
-   - a rerolled Hub board door's store;
-   - Heroic rank reachability, Barren's effect on the starting pool, Narcissus
-     F amounts above Common;
-   - the game module's reroll entry points (door, wheel, screen) and how
-     steering survives a native screen reroll.
+0. **Research** (done; folded into the decisions above). A rerolled Hub
+   board door draws from its room's own store with the generic door
+   exclusions. Game module entry points: `AttemptRerollDoor`,
+   `AttemptRerollShipWheel` and `RerollBoonLoot`, wrapped like the existing
+   ship-wheel hook; the door-id map must outlive `DoUnlockRoomExits`;
+   conformance checks the final reward, store state and `NumRerolls`, not
+   press order. Screens install authored rows at the k-th native reroll and
+   keep the Chaos scope alive across rerolls.
 1. **Reroll catalog** (catalog only, no authored change): sources, amounts,
    gates, rerollable flags, hidden-door position. Equivalence and draft corpus
    run (catalog change).
