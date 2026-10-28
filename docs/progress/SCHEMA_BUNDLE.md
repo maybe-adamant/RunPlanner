@@ -77,8 +77,12 @@ promoted.
   Circe) add the card's value; a Circe rarity upgrade adds the difference.
   While the Barren curse removes the arcana, no reroll kind is enabled; the
   pool is unchanged. Each offer screen declares whether it is natively
-  rerollable; each destination room declares `ForceDoorAllowReroll` and
-  `NoReroll` (`ClockworkGoal` rooms count as `NoReroll`).
+  rerollable (givers, the `StackUpgrade*` reward types for Pom of Power, shop
+  profiles, the Pool of Purging feature); rooms declare
+  `ForceDoorAllowReroll` and `NoReroll`, exits `AllowReroll`, and the `Shop`
+  and `ClockworkGoal` reward types block door rerolls. The engine owns one
+  query over these per-screen flags; a flag means the button exists, not that
+  it is always usable (a screen with no options left blocks natively).
 - **Pool:** the simulation derives the run's reroll pool from those sources
   and every spend. Adding a reroll beyond the remaining pool is blocked (fixed
   budget rule); a preserved over-spend is a finding.
@@ -113,7 +117,7 @@ promoted.
   timeline, and the screen-reroll count controls are a later projection and UI
   plan with no schema change.
 - **Screen rerolls:** authored as a count only, on the supported screens: the nine core
-  Olympians, Hermes, Athena, Dionysus, Artemis, Chaos, Pom of Power, the Wells and the Pool
+  Olympians, Hermes, Athena, Dionysus, Artemis, Hades, Chaos, Pom of Power, the Wells and the Pool
   of Purging. Not NPC screens, Hammers, Hermes Shrines, Selene or the World
   Shop. Legal only when screen rerolls are enabled; k rerolls of one screen
   cost k(k+1)/2. The final rows stay authored as today; screen
