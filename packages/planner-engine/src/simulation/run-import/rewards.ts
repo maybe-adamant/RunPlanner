@@ -1,4 +1,11 @@
-import type { ProjectCommand, SemanticAddress } from '../../authored-project';
+import {
+  createBiomeAddress,
+  createIncomingRewardAddress,
+  type IncomingRewardAddress,
+  type OccurrenceId,
+  type ProjectCommand,
+  type SemanticAddress,
+} from '../../authored-project';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { SemanticFinding } from '../model';
 import type { RunImportContext } from './import';
@@ -127,6 +134,64 @@ function rewardOf(context: RunImportContext, biomeKey: string, occurrenceId: str
   return state !== undefined && 'reward' in state ? state.reward : undefined;
 }
 
+/** The other targets generated in the same door batch as an occurrence, Hub board included. */
+function batchPeers(
+  context: RunImportContext,
+  origin: IncomingRewardAddress,
+): readonly OccurrenceId[] {
+  const topology = context
+    .assembly()
+    .project.route.biomes.find((entry) => entry.biomeKey === origin.biomeKey)?.topology;
+  for (const decision of topology?.decisions ?? []) {
+    const targets =
+      decision.kind === 'exit'
+        ? decision.normal.targets
+        : decision.kind === 'hub'
+          ? decision.openTargets
+          : [];
+    const ids = targets.map((target) => target.occurrenceId);
+    if (ids.includes(origin.occurrenceId)) return ids.filter((id) => id !== origin.occurrenceId);
+  }
+  return [];
+}
+
+/**
+ * A batch's doors share one god exclusion set: a god repeats only once the
+ * batch's distinct gods are offered (`ordinaryPeerSupport`; RewardLogic.lua:188-262).
+ * Before a door repeating a god, every peer bringing a god no authored peer
+ * offers is authored first, one door per god.
+ */
+function authorNewGodsFirst(
+  context: RunImportContext,
+  origin: IncomingRewardAddress,
+  value: ResolvedRewardOffer,
+): void {
+  if (value.payload?.kind !== 'BoonSource') return;
+  const biome = createBiomeAddress(origin.routeKey, origin.biomeKey);
+  const peers = batchPeers(context, origin);
+  const gods = new Set<string>();
+  for (const peer of peers) {
+    const reward = rewardOf(context, origin.biomeKey, peer);
+    if (reward?.offer.payload?.kind === 'BoonSource') gods.add(reward.offer.payload.source);
+  }
+  if (!gods.has(value.payload.source)) return;
+  for (const peer of peers) {
+    if (rewardOf(context, origin.biomeKey, peer) !== null) continue;
+    const recorded = recordedRoomOffer(context, peer);
+    const payload = recorded?.offer.payload;
+    if (!recorded?.exact || payload?.kind !== 'BoonSource' || gods.has(payload.source)) continue;
+    const reward = createIncomingRewardAddress(biome, peer);
+    const evaluation = context
+      .candidates()
+      .evaluate({ kind: 'incomingReward', reward, value: recorded.offer });
+    if (
+      supported(evaluation) &&
+      context.apply({ kind: 'ReplaceIncomingReward', reward, value: recorded.offer })
+    )
+      gods.add(payload.source);
+  }
+}
+
 /** Answers a room's incoming reward and the run's starting reward from the record. */
 export function answerReward(context: RunImportContext, reason: SemanticFinding): boolean {
   const origin: SemanticAddress = reason.origin;
@@ -154,6 +219,7 @@ export function answerReward(context: RunImportContext, reason: SemanticFinding)
     const recorded = recordedRoomOffer(context, origin.occurrenceId);
     if (recorded === undefined) return false;
     const value = recorded.offer;
+    authorNewGodsFirst(context, origin, value);
     const evaluation = context
       .candidates()
       .evaluate({ kind: 'incomingReward', reward: origin, value });

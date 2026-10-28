@@ -99,6 +99,8 @@ export function answerCommerce(context: RunImportContext, reason: SemanticFindin
   if (origin.kind === 'shopOffer') return answerShopOffer(context, origin, reason);
   if (origin.kind === 'roomFeature') {
     if (reason.code === 'hermesShrineInventoryMissing') return answerShrineOffers(context, origin);
+    if (reason.code === 'hermesShrineTravelDealRefillMissing')
+      return answerShrineRefill(context, origin);
     if (reason.code === 'stygianWellMissing') return answerWellOffers(context, origin);
     if (
       reason.code === 'stygianWellTravelDealRefillUnavailable' &&
@@ -148,6 +150,14 @@ function stockMatches(
   return true;
 }
 
+/** Whether the offer's god is named by its acquisition, as a blind box's is, not by the offer. */
+function resolvesByAcquisition(context: RunImportContext, offer: { readonly rewardType: string }) {
+  return (
+    context.catalog.rewards.rewardTypes.byKey[offer.rewardType]?.sourceResolution?.kind ===
+    'acquisitionRole'
+  );
+}
+
 function answerShopOffer(
   context: RunImportContext,
   offer: Origin<'shopOffer'>,
@@ -180,9 +190,6 @@ function answerShopOffer(
     shop.profileKey,
     offer.offerKey,
   ).filter((value) => stockMatches(context, shop.profileKey, offer.offerKey, stock, value));
-  const resolvedByAcquisition = (value: ShopOptionSelection) =>
-    context.catalog.rewards.rewardTypes.byKey[value.offer.rewardType]?.sourceResolution?.kind ===
-    'acquisitionRole';
   for (const value of values) {
     const evaluation = context.candidates().evaluate({ kind: 'shopOfferOption', offer, value });
     if (
@@ -197,7 +204,7 @@ function answerShopOffer(
     if (
       stock.lootName === undefined &&
       value.offer.payload !== undefined &&
-      !resolvedByAcquisition(value)
+      !resolvesByAcquisition(context, value.offer)
     )
       context.note({
         area: 'shop',
@@ -214,8 +221,9 @@ function answerShopOffer(
 
 /**
  * The Travel Deal refill's item is never saved; a bought one is the stock
- * option whose interaction the room used beyond its bought stock (a boon's
- * god, whose screen follows). Its name is inferred, so it is an assumption.
+ * option whose interaction the room used beyond its bought stock and its
+ * blind boxes' screens (a boon's god, whose screen follows). Its name is
+ * inferred, so it is an assumption.
  * An unbought refill leaves no use and stays unanswered.
  */
 function answerTravelDealRefill(
@@ -230,6 +238,7 @@ function answerTravelDealRefill(
   const optionOf = (slotKey: string, optionKey: string) =>
     profile.groups.byKey[profile.slots.byKey[slotKey]?.groupKey ?? '']?.options.byKey[optionKey];
   const unexplained = new Map(Object.entries(visit.room.uses));
+  let hiddenGods = 0;
   for (const purchase of visit.store.purchases ?? []) {
     const slotKey = profile.slots.values[purchase.slot - 1]?.key;
     const bought = slotKey === undefined ? undefined : shop.offers[slotKey];
@@ -242,6 +251,17 @@ function answerTravelDealRefill(
         ? undefined
         : purchaseInteractionName(option, bought.reward.offer);
     if (name !== undefined) unexplained.set(name, (unexplained.get(name) ?? 0) - 1);
+    if (bought?.reward != null && resolvesByAcquisition(context, bought.reward.offer))
+      hiddenGods += 1;
+  }
+  // A bought blind box's god is not saved: it opens the room's first boon
+  // screen, ahead of the refill its purchase made room for.
+  for (const screen of visit.room.traitScreens) {
+    if (hiddenGods === 0) break;
+    const left = unexplained.get(screen.giver) ?? 0;
+    if (left <= 0) continue;
+    unexplained.set(screen.giver, left - 1);
+    hiddenGods -= 1;
   }
   const seen = new Set<string>();
   const values = profile.slots.values.flatMap((slot) =>
@@ -372,6 +392,47 @@ function answerShrineOffers(context: RunImportContext, feature: Origin<'roomFeat
   }
   if (!answered) context.refuse();
   return answered;
+}
+
+/**
+ * The Shrine's Travel Deal refill is the option its first rush left in the
+ * rushed slot, with that option's delayed purchase.
+ */
+function answerShrineRefill(context: RunImportContext, feature: Origin<'roomFeature'>): boolean {
+  const visit = storeVisit(context, feature.occurrenceId, 'hermesShrine');
+  const refill = visit?.store.refill;
+  if (visit === undefined || refill === undefined) return false;
+  const option = context.catalog.rewards.shops.byKey['SurfaceShop']?.groups.values
+    .flatMap((group) => group.options.values)
+    .find(
+      (candidate) =>
+        candidate.key === refill.option.name || candidate.rewardType === refill.option.name,
+    );
+  const address = createOccurrenceAddress(
+    createBiomeAddress(feature.routeKey, feature.biomeKey),
+    feature.occurrenceId,
+  );
+  if (
+    option === undefined ||
+    !context.applyValid({
+      kind: 'ReplaceHermesShrineTravelDealRefill',
+      occurrence: address,
+      value: { rewardType: option.rewardType },
+    })
+  ) {
+    context.refuse();
+    return false;
+  }
+  if (refill.purchase !== undefined)
+    importShrinePurchase(
+      context,
+      feature.biomeKey,
+      feature.occurrenceId,
+      visit,
+      refill.purchase,
+      'travelDealRefill',
+    );
+  return true;
 }
 
 /** The Well's recorded stock, each authored into its slot in stock order. */
@@ -714,8 +775,9 @@ function importShrine(context: RunImportContext, biomeKey: string, occurrence: R
 }
 
 /**
- * One Shrine purchase: its delay, then its rush. A rushed item's delay only
- * prices it and is not saved; a delayed one's delay names its delivery room.
+ * One Shrine purchase, of a stock slot or of the Travel Deal refill: its delay,
+ * then its rush. A rushed item's delay only prices it and is not saved; a
+ * delayed one's delay names its delivery room.
  */
 function importShrinePurchase(
   context: RunImportContext,
@@ -723,15 +785,17 @@ function importShrinePurchase(
   occurrenceId: string,
   visit: StoreVisit,
   purchase: NonNullable<RunRecordStore['purchases']>[number],
+  refill?: 'travelDealRefill',
 ): void {
   const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
   const address = createOccurrenceAddress(biome, occurrenceId as OccurrenceId);
   const slotKey: HermesShrineSlotKey | undefined = shrineSlots(context)[purchase.slot - 1];
-  if (slotKey === undefined) {
+  const generationKey: HermesShrineGenerationKey | undefined =
+    refill ?? (slotKey === undefined ? undefined : `initial:${slotKey}`);
+  if (generationKey === undefined) {
     context.note({ area: 'shop', reason: 'refused', address, record: record(visit.roomIndex) });
     return;
   }
-  const generationKey: HermesShrineGenerationKey = `initial:${slotKey}`;
   const feature = createRoomFeatureAddress(address, { kind: 'hermesShrineOffer', generationKey });
   const delays = purchase.delay === undefined ? [2, 3, 4, 5, 6, 7, 8] : [purchase.delay];
   let applied: ProjectCommand | undefined;

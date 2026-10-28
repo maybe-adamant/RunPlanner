@@ -125,6 +125,16 @@ export interface RunRecordRoom {
    * screen rerolls, each matched by a reward-store draw no offer explains.
    */
   readonly rerolls?: number;
+  /**
+   * `PoseidonDoubleRewardCount` gained here: pickups Sea Star duplicated. The
+   * duplicated pickups are not saved.
+   */
+  readonly doubleRewards?: number;
+  /**
+   * `OlympusEagleSpawn`: Aetos appeared in this room. The game sets it on the
+   * room, so the encounter and wave it joined are not saved.
+   */
+  readonly olympusEagleSpawn?: true;
   /** Run state of the room's entry save, which leaving the previous room writes. */
   readonly entry?: RunRecordRoomEntry;
 }
@@ -176,7 +186,7 @@ export interface RunRecordSpell {
   readonly name: string;
   /** The talent tree structure name. */
   readonly layout?: string;
-  /** Talent nodes by `depth:slot`, 1-based as the game numbers them. */
+  /** Talent nodes by `depth:slot` as the game numbers them: depths from 1, slots from 0. */
   readonly talents: Readonly<Record<string, RunRecordTalent>>;
 }
 
@@ -297,6 +307,18 @@ export interface RunRecordStore {
   readonly unstockedPurchases?: readonly string[];
   /** Hermes Shrine purchase counter gained here; a rush counts twice. */
   readonly purchaseCount?: number;
+  /**
+   * Hermes Shrine: the Travel Deal option the room's first rush restocked into
+   * the rushed slot, as left on leaving. Absent when nothing was left there.
+   */
+  readonly refill?: RunRecordStoreRefill;
+}
+
+export interface RunRecordStoreRefill {
+  /** The restocked option, at the rushed slot it took. */
+  readonly option: RunRecordStockOption;
+  /** Its delayed purchase; absent when it was left unbought. */
+  readonly purchase?: RunRecordPurchase;
 }
 
 export interface RunRecordStockOption {

@@ -27,6 +27,7 @@ function room(name: string, values: Partial<SavedRoom> = {}): SavedRoom {
     wellShop: false,
     surfaceShop: false,
     sellShop: false,
+    olympusEagleSpawn: false,
     ...values,
   };
 }
@@ -51,6 +52,7 @@ const baseRun: SavedRunState = {
   metaConversionUses: 0,
   biomeBoonSkipCount: 0,
   surfaceShopPurchases: 0,
+  poseidonDoubleRewardCount: 0,
   traitsSold: 0,
   wellShopPurchases: {},
   toolElementsSpawned: {},
@@ -356,6 +358,66 @@ describe('run record builder', () => {
     expect(visit(0)).toEqual([{ slot: 1, delivery: 'delayed' }]);
     expect(visit(2.5)).toEqual([{ slot: 1, delivery: 'delayed' }]);
     expect(visit(4)).toEqual([{ slot: 1, delivery: 'delayed', delay: 4 }]);
+  });
+
+  it('reads a Travel Deal refill from the rushed slot that holds another option', () => {
+    const stock = [
+      { slot: 1, name: 'ArmorBoost', boosted: false, purchased: false },
+      { slot: 2, name: 'BlindBoxLoot', boosted: false, purchased: false },
+      { slot: 3, name: 'TalentDrop', boosted: false, purchased: false },
+    ];
+    // P_PostBoss01, run 1011: slot 2 rushed and restocked, slot 3 rushed, slots 1 and 2 delayed.
+    const departed = room('P_PostBoss01', {
+      surfaceShop: true,
+      store: [
+        { slot: 1, name: 'ArmorBoost', boosted: false, purchased: true, roomDelay: 3 },
+        { slot: 2, name: 'MaxManaDrop', boosted: false, purchased: true, roomDelay: 3 },
+      ],
+    });
+    const record = buildRunRecord([
+      save({ history: [], current: room('P_PostBoss01', { surfaceShop: true, store: stock }) }),
+      save({
+        history: ['P_PostBoss01'],
+        current: room('Q_Intro'),
+        departure: departed,
+        run: { surfaceShopPurchases: 6 },
+      }),
+    ]);
+    expect(record.rooms[0]?.store).toMatchObject({
+      purchases: [
+        { slot: 1, delivery: 'delayed', delay: 3 },
+        { slot: 2, delivery: 'rushed' },
+        { slot: 3, delivery: 'rushed' },
+      ],
+      purchaseCount: 6,
+      refill: {
+        option: { slot: 2, name: 'MaxManaDrop' },
+        purchase: { slot: 2, delivery: 'delayed', delay: 3 },
+      },
+    });
+  });
+
+  it('records Sea Star duplicates and an Aetos appearance in their rooms', () => {
+    const record = buildRunRecord([
+      save({ history: [], current: room('P_Combat14') }),
+      save({
+        history: ['P_Combat14'],
+        current: room('P_PreBoss01'),
+        departure: room('P_Combat14', { olympusEagleSpawn: true }),
+        run: { poseidonDoubleRewardCount: 2 },
+      }),
+      save({
+        history: ['P_Combat14', 'P_PreBoss01'],
+        current: room('P_Boss01'),
+        departure: room('P_PreBoss01'),
+        run: { poseidonDoubleRewardCount: 2 },
+      }),
+    ]);
+    expect(record.rooms.map((entry) => [entry.doubleRewards, entry.olympusEagleSpawn])).toEqual([
+      [2, true],
+      [undefined, undefined],
+      [undefined, undefined],
+    ]);
   });
 
   it('counts Forfeit skips across the biome reset of their counter', () => {

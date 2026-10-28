@@ -135,6 +135,47 @@ export function importEncounters(context: RunImportContext): void {
     if (!context.used.has(`figLeaf:${semanticAddressKey(phase)}`))
       importFigLeafSkip(context, phase, recorded.encounter, recorded.roomIndex);
     importGorgonAthena(context, phase, recorded.roomIndex);
+    importAetos(context, phase, recorded.encounter, recorded.roomIndex);
+  }
+}
+
+/**
+ * Aetos appeared in the room (`OlympusEagleSpawn`). The game saves neither the
+ * phase nor the wave: the room's first phase that admits one takes the first
+ * wave its encounter declares, then any other recorded wave; a choice among
+ * several is an assumption.
+ */
+function importAetos(
+  context: RunImportContext,
+  phase: EncounterPhaseAddress,
+  encounter: RunRecordEncounter,
+  roomIndex: number,
+): void {
+  const key = `aetos:${roomIndex}`;
+  if (context.record.rooms[roomIndex]!.olympusEagleSpawn !== true || context.used.has(key)) return;
+  const definition = resolvedDefinition(context, phase);
+  const declared =
+    definition === undefined
+      ? undefined
+      : context.catalog.encounterDefinitions.byKey[definition]?.aetosWaves;
+  if (declared === undefined || declared.length === 0) return;
+  const waves = [
+    ...new Set([...declared, ...(encounter.waves ?? []).map((_wave, index) => index + 1)]),
+  ];
+  const record = { roomIndex, visit: 0 };
+  for (const wave of waves) {
+    const command: ProjectCommand = { kind: 'ReplaceAetosWave', phase, value: wave };
+    if (!context.applyValid(command)) continue;
+    context.used.add(key);
+    if (waves.length > 1)
+      context.note({
+        area: 'encounter',
+        reason: 'assumption',
+        address: phase,
+        applied: command,
+        record,
+      });
+    return;
   }
 }
 

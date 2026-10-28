@@ -584,6 +584,133 @@ describe('run import of the Surface capture', () => {
   });
 });
 
+describe('run import of the Surface victory', () => {
+  const record = fixture('surface-victory');
+  let imported: RunImport;
+  beforeAll(() => {
+    imported = projectFromRunRecord(catalog, record);
+  });
+
+  it("stops at O_Combat07's Poseidon wheel, which the plan's god cap refuses", () => {
+    expect(imported.kind).toBe('stopped');
+    expect(imported.kind === 'stopped' && imported.stop).toMatchObject({
+      area: 'wheel',
+      code: 'rewardMissing',
+      record: { roomIndex: 21, visit: 0 },
+    });
+  });
+
+  it("imports Aspect of Selene's Nacelle tree with its slot-0 node", () => {
+    expect(imported.project.route.loadout.aspectHexTree).toMatchObject({
+      layoutKey: 'Nacelle',
+      nodes: { '3:0': 'MoonBeamDamageTalent', '3:1': 'MoonBeamVulnerabilityTalent' },
+    });
+  });
+
+  it("authors the Hub board's new gods before N_Combat15's repeated Hera", () => {
+    expect(reward(imported.project, 'N-r13').offer).toEqual({
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'HeraUpgrade' },
+    });
+    expect(reward(imported.project, 'N-r9').offer).toEqual({
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'HephaestusUpgrade' },
+    });
+  });
+
+  it("aims the Phial's fountain at the boon whose rarity rose there", () => {
+    const hub = imported.project.route.biomes
+      .find((biome) => biome.biomeKey === 'N')
+      ?.topology?.decisions.find((decision) => decision.kind === 'hub');
+    expect(hub?.kind === 'hub' && hub.fountainRarityResult).toEqual({
+      targetTraitKey: 'ApolloSprintBoon',
+    });
+  });
+
+  it("buys N_PreBoss01's Travel Deal refill as the second boon screen's god", () => {
+    // The blind box opens the room's first screen, Hera; the refill is the Zeus boon after it.
+    const preboss = occurrence(imported.project, 'N-r17');
+    expect(preboss.state.kind === 'shop' && preboss.state.shop?.travelDealRefill).toMatchObject({
+      optionKey: 'RandomLoot',
+      reward: {
+        offer: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+        traitOffersByAcquisitionRole: {
+          source: { giverKey: 'Zeus', selectedOptionKey: 'option2' },
+        },
+      },
+    });
+  });
+
+  it('reports every value the record did not answer exactly', () => {
+    expect(grouped(imported.report)).toEqual({
+      assumption: { conversion: 1, shop: 1, traitOffer: 1 },
+      mismatch: { stores: 5 },
+      stopped: { wheel: 1 },
+    });
+    expect(entryLines(imported.report)).toEqual([
+      'assumption conversion r14 acquisitionEntry@N-r14 -> ReplaceAcquisitionEntryOffer(N-r14 HermesUpgrade)',
+      'assumption traitOffer r17 traitOffer@N-r17:hiddenSource -> ReplaceTraitOffer(N-r17 HeraSpecialBoon|HeraCastBoon|DamageShareRetaliateBoon#option3)',
+      'assumption shop r17 shopOffer@N-r17 -> ReplaceShopOfferOption(N-r17)',
+    ]);
+    expect(mismatchLines(imported.report)).toEqual([
+      'stores r4 HubRewards: WeaponUpgrade 0 | WeaponUpgrade 1',
+      'stores r8 HubRewards: Boon 4, HermesUpgrade 1, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 2 | Boon 0, HermesUpgrade 0, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 1',
+      'stores r10 HubRewards: Boon 3, HermesUpgrade 1, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 2 | Boon 0, HermesUpgrade 0, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 1',
+      'stores r15 HubRewards: Boon 3, MaxHealthDropBig 1, MaxManaDropBig 1, SpellDrop 2 | Boon 0, MaxHealthDropBig 0, MaxManaDropBig 0, SpellDrop 1',
+      'stores r15 SubRoomRewardsHard: MaxHealthDrop 1 | MaxHealthDrop 2',
+    ]);
+  });
+});
+
+describe('run import of Sea Star duplicates', () => {
+  /** The Surface capture with Sea Star picked at O_MiniBoss01 and duplicates counted after it. */
+  function surfaceWithSeaStar(): RunRecord {
+    const record = fixture('surface');
+    const rename = (name: string) =>
+      name === 'EncounterStartOffenseBuffBoon' ? 'DoubleRewardBoon' : name;
+    return {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index === 23
+          ? {
+              ...room,
+              traitScreens: room.traitScreens.map((screen) => ({
+                ...screen,
+                options: screen.options.map((option) => ({ ...option, name: rename(option.name) })),
+              })),
+              traits: {
+                ...room.traits,
+                acquired: room.traits.acquired.map((trait) => ({
+                  ...trait,
+                  name: rename(trait.name),
+                })),
+              },
+            }
+          : index === 24 || index === 25
+            ? { ...room, doubleRewards: 1 }
+            : room,
+      ),
+    };
+  }
+
+  it("duplicates the room's own reward and leaves a duplicate without one unplaced", () => {
+    const imported = projectFromRunRecord(catalog, surfaceWithSeaStar());
+    expect(imported.kind).toBe('complete');
+    const reprieve = occurrence(imported.project, 'O-r24');
+    expect(reprieve.roomActions.order).toContainEqual(
+      expect.objectContaining({ kind: 'interactAcquisitionEntry', entryKey: 'seaStarDuplicate' }),
+    );
+    expect(
+      imported.report.entries
+        .filter((entry) => entry.area === 'reward' && (entry.record?.roomIndex ?? 0) >= 24)
+        .map(describeEntry),
+    ).toEqual([
+      'assumption reward r24 acquisitionRole@O-r24:self -> ReplaceSeaStarResult(O-r24)',
+      'notInRecord reward r25 incomingReward@O-r25',
+    ]);
+  });
+});
+
 describe('run import of the live Underworld recording', () => {
   const record = fixture('underworld-live');
   let imported: RunImport;
@@ -984,6 +1111,46 @@ describe('run import door assignment', () => {
       ),
     };
   }
+
+  it("takes the twin door whose god the next room's reward names", () => {
+    // F_Combat13's two doors both lead to F_Combat02; the Zeus door, listed second, was taken.
+    const record = fixture('underworld-live');
+    const rooms = record.rooms.slice(0, 14).map((room, index) =>
+      index === 2
+        ? {
+            ...room,
+            doors: [
+              {
+                door: 561217,
+                room: 'F_Combat02',
+                reward: { type: 'Boon', lootName: 'AresUpgrade' },
+              },
+              {
+                door: 566353,
+                room: 'F_Combat02',
+                reward: { type: 'Boon', lootName: 'ZeusUpgrade' },
+              },
+            ],
+          }
+        : index === 3
+          ? { ...room, reward: { type: 'Boon', lootName: 'ZeusUpgrade', store: 'RunProgress' } }
+          : room,
+    );
+    const { exit: _exit, ...last } = rooms[13]!;
+    void _exit;
+    const imported = projectFromRunRecord(catalog, {
+      ...record,
+      route: { biomes: ['F'], dream: false },
+      outcome: { kind: 'abandoned', endingRoom: last.name },
+      rooms: [...rooms.slice(0, 13), last],
+    });
+    expect(reward(imported.project, 'F-r3').offer).toMatchObject({
+      payload: { source: 'ZeusUpgrade' },
+    });
+    expect(reward(imported.project, 'F-r2-d561217').offer).toMatchObject({
+      payload: { source: 'AresUpgrade' },
+    });
+  });
 
   it('maps the recorded Shop door to the takeover Shop target whatever its id', () => {
     const imported = projectFromRunRecord(catalog, erebusWithLowShopDoor());

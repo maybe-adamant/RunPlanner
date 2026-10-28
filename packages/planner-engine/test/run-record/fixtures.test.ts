@@ -12,7 +12,7 @@ function fixture(name: string): RunRecord {
   );
 }
 
-/** Spot facts of the two unmodded capture records, checked against the save audit. */
+/** Spot facts of the unmodded capture records, checked against the save audit. */
 describe('run record capture fixtures', () => {
   it('records the Surface run', () => {
     const record = fixture('surface');
@@ -154,5 +154,49 @@ describe('run record capture fixtures', () => {
     ]);
     // G_MiniBoss02 and G_PreBoss01 rerolled a boon screen; no door was rerolled.
     expect(record.rooms.filter((entry) => entry.rerolls !== undefined)).toEqual([]);
+  });
+
+  it('records the Surface victory', () => {
+    const record = fixture('surface-victory');
+    expect(record.rooms).toHaveLength(51);
+    expect(record.outcome).toEqual({ kind: 'victory', endingRoom: 'Q_Boss01', runResult: 3 });
+    const room = (index: number) => record.rooms[index]!;
+    // Aspect of Selene's Nacelle tree numbers its third row's first slot 0.
+    expect(record.rooms.find((entry) => entry.spell !== undefined)?.spell).toMatchObject({
+      layout: 'Nacelle',
+      talents: { '3:0': { name: 'MoonBeamDamageTalent', invested: false } },
+    });
+    // The Phial's fountain raised Apollo's sprint boon in the Hub.
+    expect(room(6)).toMatchObject({
+      name: 'N_Hub',
+      uses: { HealthFountainN: 1 },
+      traits: {
+        upgraded: [
+          { name: 'ApolloSprintBoon', from: { rarity: 'Common' }, to: { rarity: 'Heroic' } },
+        ],
+      },
+    });
+    // P_PostBoss01: the first rush restocked its slot under Travel Deal; that refill was delayed.
+    expect(room(41).store).toMatchObject({
+      kind: 'hermesShrine',
+      purchases: [
+        { slot: 1, delivery: 'delayed', delay: 3 },
+        { slot: 2, delivery: 'rushed' },
+        { slot: 3, delivery: 'rushed' },
+      ],
+      purchaseCount: 6,
+      refill: {
+        option: { slot: 2, name: 'MaxManaDrop' },
+        purchase: { slot: 2, delivery: 'delayed', delay: 3 },
+      },
+    });
+    expect(
+      record.rooms.flatMap((entry, index) =>
+        entry.doubleRewards === undefined ? [] : [`${index}:${entry.doubleRewards}`],
+      ),
+    ).toEqual(['23:1', '31:1', '37:1', '38:1', '49:2']);
+    expect(
+      record.rooms.flatMap((entry, index) => (entry.olympusEagleSpawn ? [index] : [])),
+    ).toEqual([38]);
   });
 });

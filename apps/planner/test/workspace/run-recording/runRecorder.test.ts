@@ -31,6 +31,7 @@ function room(name: string): SavedRoom {
     wellShop: false,
     surfaceShop: false,
     sellShop: false,
+    olympusEagleSpawn: false,
   };
 }
 
@@ -67,6 +68,7 @@ function checkpoint(spec: SaveSpec): SaveCheckpoint {
       metaConversionUses: 0,
       biomeBoonSkipCount: 0,
       surfaceShopPurchases: 0,
+      poseidonDoubleRewardCount: 0,
       traitsSold: 0,
       wellShopPurchases: {},
       toolElementsSpawned: {},

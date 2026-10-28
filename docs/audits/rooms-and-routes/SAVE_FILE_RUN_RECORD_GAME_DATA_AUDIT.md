@@ -280,18 +280,20 @@ when its source type occurs in one wave.
 
 ### Shops and the Hermes Shrine
 
-| Fact                         | Save source                                                                                                             | Status   |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------- |
-| World Shop and Well stock    | entry-save `CurrentRoom.Store.StoreOptions`; a room whose map lacks a `ChallengeSwitchBase` still rolls Well stock      | exact    |
-| Purchases                    | departure record: bought options removed from `StoreOptions` (`StoreLogic.lua:326`), `StoreItemsPurchased`, `UseRecord` | exact    |
-| Final prices of unsold items | departure record `Store.SpawnedStoreItems[*].ResourceCosts`                                                             | exact    |
-| Price paid                   | base cost times the multiplier below                                                                                    | inferred |
-| Purchase order               | none                                                                                                                    | lost     |
-| Hermes Shrine stock          | entry-save `Store.StoreOptions` with `SurfaceShopChanceSuccess`                                                         | exact    |
-| Hermes Shrine purchases      | `CurrentRun.SurfaceShopPurchases` and `UseRecord.SurfaceShop` counts, `UseRecord` item names                            | exact    |
-| Hermes delivery delay        | pending `StorePendingDeliveryItem` trait (`RoomDelay`, costs) while undelivered                                         | exact    |
-| Hermes delivery room         | the room whose `UseRecord` gains the pending item                                                                       | inferred |
-| Travel Deal refill           | departure record `SpawnedStoreItems` holds the refill's kit id and cost but no name                                     | lost     |
+| Fact                          | Save source                                                                                                             | Status   |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------- |
+| World Shop and Well stock     | entry-save `CurrentRoom.Store.StoreOptions`; a room whose map lacks a `ChallengeSwitchBase` still rolls Well stock      | exact    |
+| Purchases                     | departure record: bought options removed from `StoreOptions` (`StoreLogic.lua:326`), `StoreItemsPurchased`, `UseRecord` | exact    |
+| Final prices of unsold items  | departure record `Store.SpawnedStoreItems[*].ResourceCosts`                                                             | exact    |
+| Price paid                    | base cost times the multiplier below                                                                                    | inferred |
+| Purchase order                | none                                                                                                                    | lost     |
+| Hermes Shrine stock           | entry-save `Store.StoreOptions` with `SurfaceShopChanceSuccess`                                                         | exact    |
+| Hermes Shrine purchases       | `CurrentRun.SurfaceShopPurchases` and `UseRecord.SurfaceShop` counts, `UseRecord` item names                            | exact    |
+| Hermes Shrine rush or delay   | departure record: a rushed option leaves `StoreOptions`, a delayed one stays `Purchased` (`SurfaceShopLogic.lua:317`)   | exact    |
+| Shrine Travel Deal refill     | departure record: the first rush restocks its slot (`SurfaceShopLogic.lua:450-474`); lost when the refill is rushed     | exact    |
+| Hermes delivery delay         | pending `StorePendingDeliveryItem` trait (`RoomDelay`, costs) while undelivered                                         | exact    |
+| Hermes delivery room          | the room whose `UseRecord` gains the pending item                                                                       | inferred |
+| World Shop Travel Deal refill | departure record `SpawnedStoreItems` holds the refill's kit id and cost but no name                                     | lost     |
 
 Base costs: Boon options carry `Args.ResourceCosts`, some consumables carry
 `CostOverride`, the rest come from `ConsumableData.lua`. The multiplier
@@ -312,13 +314,16 @@ adds a second count to `SurfaceShopPurchases`; capture S totals matched both.
 | Stygian Well                  | stock in entry `Store`; purchases by bracket diff of cumulative `CurrentRun.WellShopPurchases` (`StoreLogic.lua:1169`), `UseRecord.WellShop`                                                                                                                                                                                | exact                          |
 | Pool of Purging               | departure record `SellOptions` (offered slots, sold slot removed, `SellTraitLogic.lua:333`); `UseRecord.SellTraitShop` counts opens; `TraitsSold` counts sales; sold trait by `Hero.Traits` diff                                                                                                                            | exact                          |
 | Anvil of Fates                | World Shop purchase `ChaosWeaponUpgrade`, then the hammer swap as a `Hero.Traits` diff                                                                                                                                                                                                                                      | inferred                       |
-| Path of Stars                 | `Hero.SlottedSpell`: spell name and `Talents` layout with `Invested` flags                                                                                                                                                                                                                                                  | exact                          |
+| Path of Stars                 | `Hero.SlottedSpell`: spell name and `Talents` layout with `Invested` flags, keyed by depth from 1 and slot from 0 (Nacelle's third row has slot 0)                                                                                                                                                                          | exact                          |
 | Spell Drop                    | picked spell only (`SlottedSpell.Name`); its position by the bonus points the first Path screen spends (`SpellTalentData.InitialBonuses`)                                                                                                                                                                                   | exact; options lost            |
 | Chaos gate                    | source room `ExitDoorRooms` and `OfferedRewards` (`TrialUpgrade`), `ForceSecretDoor`, `SecretDoorHealthCost`, `UseRecord.SecretDoor`; the Chaos room in `RoomHistory`                                                                                                                                                       | exact                          |
 | Artificer conversion          | `CurrentRun.MetaConversionUses` increment (`GiftLogic.lua:20`) in the room's bracket; the replacement in `UseRecord`; its RunProgress roll in the store diff                                                                                                                                                                | inferred                       |
 | Time Piece conversion         | `GoldifyKeepsake.BoonConversionUses` decrement (`GiftLogic.lua:117`) in the room's bracket, with the gold gain; the converted reward never reaches `UseRecord`                                                                                                                                                              | exact by bracket               |
 | Judgment and Crystal Figurine | Arcana cards gained in `CurrentRun.TemporaryMetaUpgrades` in the boss room's bracket; their traits join `Hero.Traits` in draw order with the card as `SourceName`, Judgment's call before the Figurine's (`CombatLogic.lua:3969-3980`, `EncounterLogic.lua:1640-1654`, `AddRandomMetaUpgrades`, `MetaUpgradeLogic.lua:499`) | exact                          |
 | Fountains                     | `UseRecord.HealthFountain*`                                                                                                                                                                                                                                                                                                 | exact                          |
+| Phial fountain target         | the trait whose rarity rose in the fountain room's `Hero.Traits` diff (`AddRarityToTraits`, `InteractLogic.lua:769-773`)                                                                                                                                                                                                    | inferred                       |
+| Sea Star duplicates           | `CurrentRun.PoseidonDoubleRewardCount` bracket diff (`DoubleRewardPresentation`, `EventPresentation.lua:3198`); which pickups were duplicated is not saved                                                                                                                                                                  | count exact; pickups lost      |
+| Aetos                         | `CurrentRoom.OlympusEagleSpawn`, a room flag set on spawn (`OlympusEagleSpawn`, `EventLogic.lua:1807`); its phase and wave are not saved                                                                                                                                                                                    | presence exact; wave lost      |
 | Resource points               | `Num*Points` per room records presence; the room whose point granted a tool's element by `CurrentRun.ToolElementsSpawned` bracket diff (`GrantElementFromTool`, `HarvestLogic.lua:266`, once per tool per run); `FishCaught` names carry the biome letter                                                                   | element room exact; point lost |
 
 Artificer converts a dropped MetaProgress pickup into a fresh RunProgress roll
@@ -406,24 +411,29 @@ counters without order.
   `CompareGameDataTables` ties on doors sharing an obstacle name and falls
   back to `next()` table order; `MapState` is not saved. The order decides
   which door draws from the reward bag first.
-- The Travel Deal refill item's identity.
+- The World Shop Travel Deal refill item's identity, and the Hermes Shrine
+  refill's when it was itself rushed.
+- Which pickups Sea Star duplicated, and the phase and wave Aetos joined.
 - The unpicked ship-wheel boon god.
 - Physical points of collected Fields optional rewards and of Fields Nemesis.
 
 ## Not exercised by either capture
 
 Duo and Legendary offers, trait replacement screens, door and ship-wheel
-rerolls, Jeweled Pom and Experimental Hammer equip results, Sea Star, Echo
-replay, Cocoons, Aetos, Phial, Eris, Oceanus Anomaly, Gold Gold Gold, Travel
-Deal refills at the Hermes Shrine or Well, the Fields Nemesis event, Dream
-runs, Surface victory, I-biome ending saves, and quit to menu. A later
+rerolls, Jeweled Pom and Experimental Hammer equip results, Echo replay,
+Cocoons, Eris, Oceanus Anomaly, Gold Gold Gold, Travel Deal refills at the
+Well, the Fields Nemesis event, Dream runs, I-biome ending saves, and quit to
+menu. A later
 Underworld recording without raw saves exercised Steady Growth, Gorgon and
 Athena, Echo's Pom, the Zagreus contract, Infernal Contract pedestals, Fig
 Leaf skips and Concave Stone's extra pick; a fresh profile's first attempt is
 still unrecorded. Run 1010, an Underworld attempt
 reset in `H_Combat04` with every save kept, exercised Judgment and the
 Crystal Figurine, Aspect of Selene with God Sent nodes, Artificer boons,
-screen rerolls and a relaunch mid-run.
+screen rerolls and a relaunch mid-run. Run 1011, a Surface victory with every
+save kept, exercised Sea Star, Aetos, the Phial, a Hermes Shrine Travel Deal
+refill, a Nacelle tree, a blind box beside a World Shop refill, and two doors
+to one room (`Q_Combat14` to `Q_MiniBoss03`).
 
 ## Uncertainties
 
@@ -473,8 +483,26 @@ screen rerolls and a relaunch mid-run.
 - A bought World Shop Travel Deal refill is inferred from the use its room
   recorded beyond the bought stock (`RestockWorldItem`, `StoreLogic.lua:412`,
   rerolls the first purchase's slot): for a boon, the god whose screen follows.
-  It is reported as an assumption; an unbought refill leaves no use and takes
-  the first eligible item, reported as not in the record.
+  A bought blind box's god is not saved either; it takes the room's first boon
+  screen its purchases leave unexplained, so the refill is the god after it
+  (run 1011 `N_PreBoss01`: the box opened Hera, the refill Zeus). The refill
+  is reported as an assumption; an unbought refill leaves no use and takes the
+  first eligible item, reported as not in the record.
+- A Hermes Shrine Travel Deal refill is imported exactly from its rushed slot,
+  with its delayed purchase.
+- A batch's boon doors, the Hub board included, are authored one door per
+  distinct god first and repeated gods after, so each door is checked against
+  the god exclusions the game applied when it rolled.
+- Two doors to one room are told apart by the reward collected there, its god
+  included.
+- The Phial's fountain targets the trait whose rarity rose in the fountain
+  room.
+- Each Sea Star duplicate a room counted is placed on the room's own reward,
+  an assumption; a further duplicate, or one in a room without a duplicable
+  reward, is reported as not in the record.
+- Aetos is placed on the room's first phase whose encounter declares Aetos
+  waves, at the first wave the plan admits; a choice among several waves is an
+  assumption.
 - A random Pom with no screen (`AddStackToTraits`, `TraitLogic.lua:2482`)
   targets the trait the record shows upgraded in its room or, when the trait
   was acquired there too, the trait whose level rose between the room's entry

@@ -119,10 +119,13 @@ function doorOccurrence(
   const room = context.record.rooms[roomIndex]!;
   const next = context.record.rooms[roomIndex + 1];
   const sameRoom = doors.filter((candidate) => candidate.room === room.exit);
+  // Twin doors can lead to one room: the taken one offered the collected reward, god included.
+  const sameType = sameRoom.filter((candidate) => candidate.reward?.type === next?.reward?.type);
   const taken =
     sameRoom.length === 1
       ? sameRoom[0]
-      : sameRoom.find((candidate) => candidate.reward?.type === next?.reward?.type);
+      : (sameType.find((candidate) => candidate.reward?.lootName === next?.reward?.lootName) ??
+        sameType[0]);
   return taken === door && next !== undefined
     ? context.occurrences.occurrenceOf(roomIndex + 1)
     : context.occurrences.offeredOccurrence(roomIndex, door.door);

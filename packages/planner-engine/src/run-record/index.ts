@@ -32,6 +32,7 @@ export {
   type RunRecordTalent,
   type RunRecordStockOption,
   type RunRecordStore,
+  type RunRecordStoreRefill,
   type RunRecordStoreKind,
   type RunRecordStartingTrait,
   type RunRecordTraitAcquisition,

@@ -22,6 +22,7 @@ import {
   type RunRecordSpell,
   type RunRecordStockOption,
   type RunRecordStore,
+  type RunRecordStoreRefill,
   type RunRecordTraitChanges,
   type RunRecordTraitGrade,
   type RunRecordTraitScreen,
@@ -117,6 +118,8 @@ function counts(value: unknown, label: string, minimum = 1): Readonly<Record<str
 
 /** Dotted save-table keys; a numeric segment is a 1-based Lua array key. */
 const FIELD_PATH = /^[A-Za-z][A-Za-z0-9]*(\.([A-Za-z][A-Za-z0-9]*|[1-9][0-9]*))*$/;
+/** A Hex tree node: depths count from 1, slots from 0 (Nacelle's third row). */
+const TALENT_NODE = /^[1-9]\d*:(?:0|[1-9]\d*)$/;
 
 function savedValues(value: unknown, label: string): Readonly<Record<string, number>> {
   const record = object(value, label);
@@ -417,7 +420,12 @@ function purchase(value: unknown, label: string): RunRecordPurchase {
 
 function store(value: unknown, label: string): RunRecordStore {
   const record = object(value, label);
-  exact(record, ['kind', 'stock'], ['purchases', 'unstockedPurchases', 'purchaseCount'], label);
+  exact(
+    record,
+    ['kind', 'stock'],
+    ['purchases', 'unstockedPurchases', 'purchaseCount', 'refill'],
+    label,
+  );
   if (record.unstockedPurchases !== undefined && record.kind !== 'well')
     fail(`${label}.unstockedPurchases belongs to the Stygian Well`);
   if (record.kind !== 'worldShop' && record.kind !== 'hermesShrine' && record.kind !== 'well')
@@ -440,13 +448,36 @@ function store(value: unknown, label: string): RunRecordStore {
       fail(`${label} delivery facts belong to the Hermes Shrine`);
   } else if (purchases?.some((entry) => entry.delivery === undefined))
     fail(`${label}.purchases needs a delivery at the Hermes Shrine`);
+  if (record.refill !== undefined) {
+    if (record.kind !== 'hermesShrine') fail(`${label}.refill belongs to the Hermes Shrine`);
+    if (record.purchases === undefined) fail(`${label}.refill needs the room's purchases`);
+  }
+  const refill =
+    record.refill === undefined ? undefined : storeRefill(record.refill, `${label}.refill`);
+  if (
+    refill !== undefined &&
+    !purchases?.some((entry) => entry.slot === refill.option.slot && entry.delivery === 'rushed')
+  )
+    fail(`${label}.refill must take a rushed slot`);
   return Object.freeze({
     kind: record.kind,
     stock,
     ...(purchases === undefined ? {} : { purchases }),
     ...optional(record, 'unstockedPurchases', label, (entry, path) => list(entry, path, text, 16)),
     ...optional(record, 'purchaseCount', label, (entry, path) => integer(entry, path)),
+    ...(refill === undefined ? {} : { refill }),
   });
+}
+
+function storeRefill(value: unknown, label: string): RunRecordStoreRefill {
+  const record = object(value, label);
+  exact(record, ['option'], ['purchase'], label);
+  const option = stockOption(record.option, `${label}.option`);
+  const bought =
+    record.purchase === undefined ? undefined : purchase(record.purchase, `${label}.purchase`);
+  if (bought !== undefined && (bought.slot !== option.slot || bought.delivery !== 'delayed'))
+    fail(`${label}.purchase must be the option's delayed purchase`);
+  return Object.freeze({ option, ...(bought === undefined ? {} : { purchase: bought }) });
 }
 
 function pool(value: unknown, label: string): RunRecordPool {
@@ -593,7 +624,7 @@ function spell(value: unknown, label: string): RunRecordSpell {
       Object.fromEntries(
         Object.entries(talents).map(([key, entry]) => {
           const path = `${label}.talents.${key}`;
-          if (!/^[1-9]\d*:[1-9]\d*$/.test(key)) fail(`${path} must be keyed depth:slot`);
+          if (!TALENT_NODE.test(key)) fail(`${path} must be keyed depth:slot`);
           const talent = object(entry, path);
           exact(talent, ['name', 'invested'], [], path);
           return [
@@ -697,7 +728,7 @@ function roomEntry(value: unknown, label: string): RunRecordRoomEntry {
     ...optional(record, 'investedTalents', label, (entry, path) =>
       sortedNames(entry, path, (item, at) => {
         const node = text(item, at);
-        if (!/^[1-9]\d*:[1-9]\d*$/.test(node)) fail(`${at} must be depth:slot`);
+        if (!TALENT_NODE.test(node)) fail(`${at} must be depth:slot`);
         return node;
       }),
     ),
@@ -723,6 +754,8 @@ const ROOM_OPTIONAL = [
   'toolElements',
   'grantedArcana',
   'rerolls',
+  'doubleRewards',
+  'olympusEagleSpawn',
   'entry',
 ] as const;
 
@@ -768,6 +801,8 @@ function room(value: unknown, label: string): RunRecordRoom {
       return names;
     }),
     ...optional(record, 'rerolls', label, (entry, path) => integer(entry, path, 1)),
+    ...optional(record, 'doubleRewards', label, (entry, path) => integer(entry, path, 1)),
+    ...optional(record, 'olympusEagleSpawn', label, flag),
     ...optional(record, 'entry', label, roomEntry),
   }) as RunRecordRoom;
 }

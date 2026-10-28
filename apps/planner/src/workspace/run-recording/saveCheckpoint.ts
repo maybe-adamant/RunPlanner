@@ -51,6 +51,8 @@ export interface SavedRunState {
   readonly temporaryMetaUpgrades: readonly string[];
   /** `NumRerolls`: rerolls left. */
   readonly numRerolls?: number;
+  /** `PoseidonDoubleRewardCount`: Sea Star duplicates this run. */
+  readonly poseidonDoubleRewardCount: number;
 }
 
 export interface SavedLootChoice {
@@ -168,6 +170,8 @@ export interface SavedRoom {
   readonly sellShop: boolean;
   /** `SpentRerolls`: screen rerolls by the rerolled screen's id. */
   readonly spentRerolls?: Readonly<Record<string, number>>;
+  /** `OlympusEagleSpawn`: Aetos appeared in the room. */
+  readonly olympusEagleSpawn: boolean;
 }
 
 export class SaveCheckpointError extends Error {
@@ -191,6 +195,16 @@ function slots(value: LuaValue | undefined): readonly [number, LuaValue][] {
   if (!isTable(value)) return [];
   return Object.entries(value)
     .filter(([key]) => /^[1-9]\d*$/.test(key))
+    .map(([key, entry]): [number, LuaValue] => [Number(key), entry])
+    .sort(([left], [right]) => left - right);
+}
+
+/** Entries of a Lua table by numeric key, 0 included, in key order: Hex tree slots start at 0. */
+function numbered(value: LuaValue | undefined): readonly [number, LuaValue][] {
+  if (Array.isArray(value)) return value.map((entry, index) => [index + 1, entry]);
+  if (!isTable(value)) return [];
+  return Object.entries(value)
+    .filter(([key]) => /^(?:0|[1-9]\d*)$/.test(key))
     .map(([key, entry]): [number, LuaValue] => [Number(key), entry])
     .sort(([left], [right]) => left - right);
 }
@@ -382,6 +396,7 @@ function room(value: LuaValue | undefined): SavedRoom | undefined {
     wellShop: value.WellShopChanceSuccess === true,
     surfaceShop: value.SurfaceShopChanceSuccess === true,
     sellShop: value.SellShopChanceSuccess === true,
+    olympusEagleSpawn: value.OlympusEagleSpawn === true,
     ...optional(
       'spentRerolls',
       Object.keys(counts(value.SpentRerolls)).length > 0 ? counts(value.SpentRerolls) : undefined,
@@ -481,7 +496,7 @@ function spell(value: LuaValue | undefined): SavedSpell | undefined {
   const tree = table(value.Talents);
   const talents: Record<string, { name: string; invested: boolean }> = {};
   for (const [depth, nodes] of slots(tree))
-    for (const [slot, node] of slots(nodes)) {
+    for (const [slot, node] of numbered(nodes)) {
       const talent = isTable(node) ? text(node.Name) : undefined;
       if (talent !== undefined)
         talents[`${depth}:${slot}`] = {
@@ -570,6 +585,7 @@ export function extractSaveCheckpoint(
         .map(([name]) => name)
         .sort(),
       ...optional('numRerolls', number(run.NumRerolls)),
+      poseidonDoubleRewardCount: number(run.PoseidonDoubleRewardCount) ?? 0,
     },
     ...optional('hero', savedHero),
     profile: {

@@ -938,9 +938,11 @@ The incompatible Arcana are:
 - The Fates (`TradeOff`).
 
 The nine Olympian source keepsakes and Gorgon Amulet form the opposing keepsake
-set. Selecting one while Fated invalidates the state. The rack cleanup then
-expires Calling Card and Time Piece uses and removes the Hades blessing granted
-by Jeweled Pom. Neutral keepsakes do not themselves invalidate an already
+set (`FatedDisableKeepsakes`, `MetaUpgradeData.lua:2147`). Selecting one makes
+the run `Unfated` whether it was `Unknown` or `Fated`, including as the
+starting keepsake (`UpdateFateStatus`, `KeepsakeLogic.lua:1371-1390`). When
+the run was `Fated`, the rack cleanup then expires Calling Card and Time Piece
+uses and removes the Hades blessing granted by Jeweled Pom. Neutral keepsakes do not themselves invalidate an already
 established Fated state, so retained permanent effects can continue after a
 neutral swap.
 

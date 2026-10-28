@@ -9,7 +9,7 @@ import {
   RunRecordCodecError,
 } from '@run-planner/engine/run-record';
 
-const fixtures = ['surface', 'underworld', 'underworld-1010'].map((name) => {
+const fixtures = ['surface', 'underworld', 'underworld-1010', 'surface-victory'].map((name) => {
   const url = new URL(`./fixtures/${name}.run-record.json`, import.meta.url);
   return { name, path: url.pathname, bytes: readFileSync(url, 'utf8') };
 });
@@ -193,6 +193,17 @@ describe('run record codec', () => {
     );
   });
 
+  it('keys Hex tree nodes by depth from 1 and slot from 0', () => {
+    const spell = (key: string) => ({
+      name: 'MoonBeam',
+      talents: { [key]: { name: 'MoonBeamDamageTalent', invested: true } },
+    });
+    const record = minimal();
+    room(record, 1).spell = spell('3:0');
+    expect(decodeRunRecord(record).rooms[1]?.spell?.talents['3:0']).toBeDefined();
+    rejects((next) => (room(next, 1).spell = spell('0:2')), /must be keyed depth:slot/);
+  });
+
   it('keeps store, wheel and delivery facts coherent', () => {
     const stock = [{ slot: 1, name: 'ArmorBoost' }];
     rejects(
@@ -236,6 +247,39 @@ describe('run record codec', () => {
         (room(record, 1).store = { kind: 'worldShop', stock, unstockedPurchases: ['HealDrop'] }),
       /unstockedPurchases belongs to the Stygian Well/,
     );
+    const refill = (purchases: unknown[], purchase?: unknown) => ({
+      kind: 'hermesShrine',
+      stock,
+      purchases,
+      refill: {
+        option: { slot: 1, name: 'MaxManaDrop' },
+        ...(purchase === undefined ? {} : { purchase }),
+      },
+    });
+    rejects(
+      (record) => (room(record, 1).store = refill([{ slot: 1, delivery: 'delayed' }])),
+      /refill must take a rushed slot/,
+    );
+    rejects(
+      (record) => (room(record, 1).store = refill([{ slot: 1, delivery: 'rushed' }], { slot: 1 })),
+      /purchase must be the option's delayed purchase/,
+    );
+    expect(() =>
+      decodeRunRecord({
+        ...minimal(),
+        rooms: [
+          room(minimal(), 0),
+          {
+            ...room(minimal(), 1),
+            store: refill([{ slot: 1, delivery: 'rushed' }], {
+              slot: 1,
+              delivery: 'delayed',
+              delay: 3,
+            }),
+          },
+        ],
+      }),
+    ).not.toThrow();
     const slots = [{ slot: 2, name: 'AresCastBoon' }];
     rejects(
       (record) => (room(record, 1).pool = { slots, soldSlots: [2], sales: 1 }),

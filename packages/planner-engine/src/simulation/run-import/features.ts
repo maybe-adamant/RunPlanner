@@ -1,5 +1,7 @@
 import {
+  createAcquisitionRoleAddress,
   createBiomeAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createPostbossKeepsakeSelectionAddress,
   type AuthoredExperimentalHammerEquipResult,
@@ -40,8 +42,9 @@ const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 const record = (roomIndex: number) => ({ roomIndex, visit: 0 });
 
 /**
- * Answers the Spell pick, Path of Stars screens, Transcendent Embryo blessings
- * and Jeweled Pom and Experimental Hammer grants from the record.
+ * Answers the Spell pick, Path of Stars screens, Transcendent Embryo blessings,
+ * Jeweled Pom and Experimental Hammer grants and fountain rarity targets from
+ * the record.
  */
 export function answerFeatures(context: RunImportContext, reason: SemanticFinding): boolean {
   const origin = reason.origin;
@@ -62,6 +65,64 @@ export function answerFeatures(context: RunImportContext, reason: SemanticFindin
     origin.kind === 'transcendentEmbryoOutcome'
   )
     return answerEmbryoTransformation(context, origin);
+  if (
+    (reason.code === 'fountainRarityResultMissing' ||
+      reason.code === 'fountainRarityResultUnavailable') &&
+    origin.kind === 'fountainRarityOutcome'
+  )
+    return answerFountainRarity(context, origin);
+  return false;
+}
+
+/** The record rooms whose fountain an outcome's fountain action used. */
+function fountainRooms(
+  context: RunImportContext,
+  outcome: Origin<'fountainRarityOutcome'>,
+): readonly number[] {
+  const usedFountain = (index: number) =>
+    Object.keys(context.record.rooms[index]!.uses).some((name) => /Fountain/.test(name));
+  const action = outcome.action;
+  if (action.kind !== 'hubFountain')
+    return context.occurrences.visitsOf(action.occurrenceId).filter(usedFountain);
+  const progression = context.catalog.biomeLayouts.byKey[outcome.biomeKey]?.progression;
+  if (progression?.kind !== 'hub') return [];
+  return context.occurrences.biomeOfRoom.flatMap((biomeKey, index) =>
+    biomeKey === outcome.biomeKey &&
+    context.record.rooms[index]!.name === progression.restoreRoomGameName &&
+    usedFountain(index)
+      ? [index]
+      : [],
+  );
+}
+
+/**
+ * The Phial's fountain raises one boon's rarity: the trait whose rarity rose
+ * in the fountain's room.
+ */
+function answerFountainRarity(
+  context: RunImportContext,
+  outcome: Origin<'fountainRarityOutcome'>,
+): boolean {
+  const roomIndex = fountainRooms(context, outcome)[0];
+  if (roomIndex === undefined) return false;
+  const raised = context.record.rooms[roomIndex]!.traits.upgraded.filter(
+    (upgrade) =>
+      upgrade.from.rarity !== undefined &&
+      upgrade.to.rarity !== undefined &&
+      upgrade.from.rarity !== upgrade.to.rarity,
+  );
+  if (raised.length !== 1) return false;
+  const targetTraitKey = raised[0]!.name;
+  const evaluation = context
+    .candidates()
+    .evaluate({ kind: 'fountainRarityOutcome', outcome, targetTraitKey });
+  if (
+    evaluation.kind === 'fountainRarityOutcome' &&
+    evaluation.result.selectedPossible &&
+    context.applyValid({ kind: 'ReplaceFountainRarityTarget', outcome, targetTraitKey })
+  )
+    return true;
+  context.refuse();
   return false;
 }
 
@@ -628,7 +689,65 @@ export function importFeatures(context: RunImportContext): void {
       importRack(context, biome.biomeKey, occurrence, roomIndex);
       importFountain(context, biome.biomeKey, occurrence, roomIndex);
       importTraitPickups(context, biome.biomeKey, occurrence, roomIndex);
+      importSeaStar(context, biome.biomeKey, occurrence, roomIndex);
     }
+}
+
+/**
+ * Sea Star duplicates counted in a room (`PoseidonDoubleRewardCount`). Which
+ * pickups were duplicated is not saved: the room's own reward takes the first,
+ * an assumption; any further duplicate is not placed.
+ */
+function importSeaStar(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrence: RoomOccurrence,
+  roomIndex: number,
+): void {
+  const count = context.record.rooms[roomIndex]!.doubleRewards ?? 0;
+  const used = `seaStar:${roomIndex}`;
+  if (count === 0 || context.used.has(used)) return;
+  const reward = 'reward' in occurrence.state ? occurrence.state.reward : undefined;
+  // An unauthored reward is answered later; the duplicate waits for it.
+  if (reward === null) return;
+  context.used.add(used);
+  const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
+  const owner = createIncomingRewardAddress(biome, occurrence.occurrenceId);
+  let placed = 0;
+  for (const role of Object.keys(reward?.dispositionByAcquisitionRole ?? {})) {
+    const command: ProjectCommand = {
+      kind: 'ReplaceSeaStarResult',
+      acquisition: createAcquisitionRoleAddress(owner, role),
+      procced: true,
+    };
+    if (!context.applyValid(command)) continue;
+    placed = 1;
+    context.note({
+      area: 'reward',
+      reason: 'assumption',
+      address: command.acquisition,
+      applied: command,
+      record: record(roomIndex),
+    });
+    context.retractable(
+      [command.acquisition],
+      { ...command, procced: false },
+      {
+        area: 'reward',
+        reason: 'refused',
+        address: command.acquisition,
+        record: record(roomIndex),
+      },
+    );
+    break;
+  }
+  for (let index = placed; index < count; index += 1)
+    context.note({
+      area: 'reward',
+      reason: 'notInRecord',
+      address: owner,
+      record: record(roomIndex),
+    });
 }
 
 /**

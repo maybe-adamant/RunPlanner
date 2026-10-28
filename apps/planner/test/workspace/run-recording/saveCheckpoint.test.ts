@@ -206,6 +206,37 @@ describe('save checkpoint extraction', () => {
     });
   });
 
+  it("keeps a Hex tree's slot 0, which Nacelle's third row holds", () => {
+    const save = sample('underworld-062');
+    const run = save.globals.CurrentRun as LuaTable;
+    const talent = (name: string) => ({ Name: name, Invested: true });
+    const withTree: DecodedSave = {
+      ...save,
+      globals: {
+        ...save.globals,
+        CurrentRun: {
+          ...run,
+          Hero: {
+            ...(run.Hero as LuaTable),
+            SlottedSpell: {
+              Name: 'MoonBeam',
+              Talents: {
+                Name: 'Nacelle',
+                1: { 2: talent('MoonBeamDamageTalent') },
+                3: { 0: talent('MoonBeamDamageTalent'), 1: talent('MoonBeamVulnerabilityTalent') },
+              },
+            },
+          },
+        },
+      },
+    };
+    expect(
+      Object.keys(
+        extractSaveCheckpoint(withTree, true, NO_SAVED_VALUES).hero?.spell?.talents ?? {},
+      ),
+    ).toEqual(['1:2', '3:0', '3:1']);
+  });
+
   it('folds the first checkpoints of a run into an abandoned record', () => {
     const checkpoints = ['002', '004', '006', '009', '011'].map((id) =>
       extractSaveCheckpoint(sample(`surface-${id}`), true, NO_SAVED_VALUES),

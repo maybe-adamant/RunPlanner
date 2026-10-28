@@ -563,6 +563,14 @@ function buildRoom(
     ...optional('toolElements', toolElements(before, after)),
     ...optional('grantedArcana', grantedArcana(room)),
     ...optional('rerolls', doorRerolls(room, settled)),
+    ...optional(
+      'doubleRewards',
+      gain(before.poseidonDoubleRewardCount, after.poseidonDoubleRewardCount),
+    ),
+    ...optional(
+      'olympusEagleSpawn',
+      combatThisVisit && settled.olympusEagleSpawn ? (true as const) : undefined,
+    ),
     entry: roomEntry(room.entry, saves[room.index - 1]?.entry),
   };
 }
@@ -812,7 +820,22 @@ function store(room: RoomSaves, entered: SavedRoom): RunRecordStore | undefined 
     };
   }
   const departed = room.departure?.store;
-  const remaining = departed === undefined ? undefined : remainingSlots(stock, departed);
+  // The first rush under Travel Deal restocks its slot (`HandleSurfaceShopAction`,
+  // SurfaceShopLogic.lua:450-474): a slot left holding another option was rushed.
+  const restocked =
+    kind === 'hermesShrine'
+      ? departed?.find((left) => {
+          const stocked = stock.find((option) => option.slot === left.slot);
+          return stocked !== undefined && !sameOption(stocked, left);
+        })
+      : undefined;
+  const remaining =
+    departed === undefined
+      ? undefined
+      : remainingSlots(
+          stock,
+          departed.filter((left) => left !== restocked),
+        );
   if (remaining === undefined) return base;
   if (kind === 'worldShop')
     return {
@@ -842,6 +865,24 @@ function store(room: RoomSaves, entered: SavedRoom): RunRecordStore | undefined 
       closing === undefined
         ? undefined
         : whole(closing.run.surfaceShopPurchases - room.entry.run.surfaceShopPurchases),
+    ),
+    ...optional(
+      'refill',
+      restocked === undefined
+        ? undefined
+        : {
+            option: stockOption(restocked),
+            ...optional(
+              'purchase',
+              restocked.purchased
+                ? ({
+                    slot: restocked.slot,
+                    delivery: 'delayed',
+                    ...optional('delay', whole(restocked.roomDelay, 1)),
+                  } as RunRecordPurchase)
+                : undefined,
+            ),
+          },
     ),
   };
 }
