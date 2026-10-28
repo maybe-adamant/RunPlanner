@@ -45,14 +45,7 @@ describe('Fresh File retained Postboss controls', () => {
     await view.user.click(presence);
     expect(postbossOccurrence(view.application)?.stygianWell).toBeUndefined();
 
-    const pool = screen.getByRole('checkbox', { name: 'Interact with Pool of Purging' });
-    expect(pool).toHaveProperty('checked', true);
-    await view.user.click(pool);
-    expect(postbossOccurrence(view.application)?.purgingPool?.interacted).toBe(false);
-    expect(
-      postbossOccurrence(view.application)?.roomActions.order.some(
-        (reference) => reference.kind === 'sellPurgingPoolTrait',
-      ),
-    ).toBe(false);
+    // The Pool has no Interact gate: its slots stay editable.
+    expect(screen.queryByRole('checkbox', { name: 'Interact with Pool of Purging' })).toBeNull();
   });
 });

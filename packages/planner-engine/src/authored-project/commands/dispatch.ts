@@ -244,7 +244,6 @@ function applyUnchecked(
     case 'ClearInfernalContractPedestal':
     case 'SetInfernalContractPedestalCollected':
     case 'ReplacePhantomExit':
-    case 'SetPurgingPoolInteraction':
     case 'InsertPurgingPoolReroll':
     case 'ReplacePurgingPoolRollSlot':
     case 'SellPurgingPoolRollSlot':
@@ -252,7 +251,6 @@ function applyUnchecked(
     case 'SetErisSpawned':
     case 'AddStygianWell':
     case 'RemoveStygianWell':
-    case 'SetStygianWellInteraction':
     case 'InsertStygianWellReroll':
     case 'ReplaceStygianWellRollOffer':
     case 'ReplaceStygianWellOffer':

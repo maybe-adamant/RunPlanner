@@ -51,7 +51,8 @@ entered with in `rerolledIncomingReward`, `rerolledCages` or
 `traitKeyBySlot`, each with its `rerollId` and only its pinned slots); a Well
 purchase names its roll in `generationKey` (`r1:healing`), and a Pool sale
 names a reroll's list in `rollKey` (absent for the initial list). The feature
-state holds the initial stock. The transition writes none of them.
+state holds the initial stock and no `interacted` flag; the transition drops it,
+keeping an interacted feature's slots and clearing an uninteracted one's. The transition writes none of them.
 
 The migration moves a Shop-owned pedestal item, its collect action and its
 source entry to the room unchanged, and gives every other pedestal-declaring

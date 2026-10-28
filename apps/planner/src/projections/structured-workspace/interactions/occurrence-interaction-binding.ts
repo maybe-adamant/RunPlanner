@@ -60,13 +60,11 @@ import { bindPhantomExitInteraction } from './phantom-exit-interactions';
 import type {
   WorkspaceInfernalContractPedestalCollectInteraction,
   WorkspaceShopPurchaseParticipationInteraction,
-  WorkspacePurgingPoolInteraction,
   WorkspacePurgingPoolSlotInteraction,
   WorkspaceHermesShrineOfferInteraction,
   WorkspaceHermesShrinePurchaseInteraction,
   WorkspaceHermesShrinePresenceInteraction,
   WorkspaceStygianWellPresenceInteraction,
-  WorkspaceStygianWellInteraction,
   WorkspaceStygianWellOfferInteraction,
   WorkspaceStygianWellPurchaseInteraction,
   WorkspaceStygianWellTwistResultInteraction,
@@ -124,7 +122,6 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
     WorkspaceInfernalContractPedestalCollectInteraction
   >;
   readonly phantomExits: ReadonlyMap<string, WorkspacePhantomExitInteraction>;
-  readonly purgingPoolInteractions: ReadonlyMap<string, WorkspacePurgingPoolInteraction>;
   readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;
   readonly erisObservations: ReadonlyMap<
     string,
@@ -134,7 +131,6 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly hermesShrinePurchases: ReadonlyMap<string, WorkspaceHermesShrinePurchaseInteraction>;
   readonly hermesShrinePresences: ReadonlyMap<string, WorkspaceHermesShrinePresenceInteraction>;
   readonly stygianWellPresences: ReadonlyMap<string, WorkspaceStygianWellPresenceInteraction>;
-  readonly stygianWellInteractions: ReadonlyMap<string, WorkspaceStygianWellInteraction>;
   readonly stygianWellOffers: ReadonlyMap<string, WorkspaceStygianWellOfferInteraction>;
   readonly stygianWellPurchases: ReadonlyMap<string, WorkspaceStygianWellPurchaseInteraction>;
   readonly stygianWellTwistResults: ReadonlyMap<string, WorkspaceStygianWellTwistResultInteraction>;
@@ -295,7 +291,6 @@ export function bindOccurrenceLocalInteractions(
     WorkspaceInfernalContractPedestalCollectInteraction
   >();
   const phantomExits = new Map<string, WorkspacePhantomExitInteraction>();
-  const purgingPoolInteractions = new Map<string, WorkspacePurgingPoolInteraction>();
   const erisObservations = new Map<
     string,
     import('../contract').WorkspaceErisObservationInteraction
@@ -305,7 +300,6 @@ export function bindOccurrenceLocalInteractions(
   const hermesShrinePurchases = new Map<string, WorkspaceHermesShrinePurchaseInteraction>();
   const hermesShrinePresences = new Map<string, WorkspaceHermesShrinePresenceInteraction>();
   const stygianWellPresences = new Map<string, WorkspaceStygianWellPresenceInteraction>();
-  const stygianWellInteractions = new Map<string, WorkspaceStygianWellInteraction>();
   const stygianWellOffers = new Map<string, WorkspaceStygianWellOfferInteraction>();
   const stygianWellPurchases = new Map<string, WorkspaceStygianWellPurchaseInteraction>();
   const stygianWellTwistResults = new Map<string, WorkspaceStygianWellTwistResultInteraction>();
@@ -1115,30 +1109,6 @@ export function bindOccurrenceLocalInteractions(
       case 'roomRerolls':
         // Bound with the reward picker by the Rerolls binder.
         break;
-      case 'purgingPoolInteraction': {
-        if (purgingPoolInteractions.has(requirement.interactionKey)) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${requirement.interactionKey} has multiple bound Purging Pool interactions`,
-          );
-        }
-        purgingPoolInteractions.set(
-          requirement.interactionKey,
-          Object.freeze({
-            intentFor: (interacted: boolean) =>
-              Object.freeze({
-                command: Object.freeze({
-                  kind: 'SetPurgingPoolInteraction' as const,
-                  occurrence: requirement.owner,
-                  interacted,
-                }),
-              }),
-            key: requirement.interactionKey,
-            owner: requirement.owner,
-            interacted: requirement.interacted,
-          }),
-        );
-        break;
-      }
       case 'hermesShrine': {
         if (requirement.presenceInteractionKey !== undefined) {
           if (hermesShrinePresences.has(requirement.presenceInteractionKey)) {
@@ -1272,24 +1242,6 @@ export function bindOccurrenceLocalInteractions(
                         kind: 'RemoveStygianWell' as const,
                         occurrence: requirement.owner,
                       }),
-                }),
-            }),
-          );
-        }
-        if (requirement.interactionKey !== undefined) {
-          stygianWellInteractions.set(
-            requirement.interactionKey,
-            Object.freeze({
-              key: requirement.interactionKey,
-              owner: requirement.owner,
-              interacted: requirement.interacted,
-              intentFor: (interacted: boolean) =>
-                Object.freeze({
-                  command: Object.freeze({
-                    kind: 'SetStygianWellInteraction' as const,
-                    occurrence: requirement.owner,
-                    interacted,
-                  }),
                 }),
             }),
           );
@@ -1588,14 +1540,12 @@ export function bindOccurrenceLocalInteractions(
     shopPurchaseParticipations,
     infernalContractPedestalCollects,
     phantomExits,
-    purgingPoolInteractions,
     purgingPoolSlots,
     erisObservations,
     hermesShrineOffers,
     hermesShrinePurchases,
     hermesShrinePresences,
     stygianWellPresences,
-    stygianWellInteractions,
     stygianWellOffers,
     stygianWellPurchases,
     stygianWellTwistResults,

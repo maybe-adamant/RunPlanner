@@ -57,11 +57,6 @@ describe('Chaos physical position authoring', () => {
     });
     for (const occurrence of wells) {
       project = applyProjectCommand(project, catalog, {
-        kind: 'SetStygianWellInteraction',
-        occurrence,
-        interacted: true,
-      });
-      project = applyProjectCommand(project, catalog, {
         kind: 'ReplaceStygianWellOffer',
         occurrence,
         slotKey: 'secondLeft',

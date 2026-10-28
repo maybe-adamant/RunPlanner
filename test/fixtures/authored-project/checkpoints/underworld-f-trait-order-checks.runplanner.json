@@ -388,7 +388,6 @@
                 ]
               },
               "stygianWell": {
-                "interacted": true,
                 "offerKeyBySlot": {
                   "healing": "DamageSelfDrop",
                   "secondLeft": "TemporaryBoonRarityTrait",
@@ -1301,7 +1300,6 @@
                 ]
               },
               "stygianWell": {
-                "interacted": true,
                 "offerKeyBySlot": {
                   "healing": "FirstHitHealTrait",
                   "secondLeft": "TemporaryBoonRarityTrait",
@@ -1605,7 +1603,6 @@
                 ]
               },
               "stygianWell": {
-                "interacted": false,
                 "offerKeyBySlot": {
                   "healing": null,
                   "secondLeft": null,
@@ -1613,7 +1610,6 @@
                 }
               },
               "purgingPool": {
-                "interacted": false,
                 "traitKeyBySlot": {
                   "left": null,
                   "middle": null,

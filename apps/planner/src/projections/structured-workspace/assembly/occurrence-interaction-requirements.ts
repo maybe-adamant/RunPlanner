@@ -199,10 +199,6 @@ export function occurrenceInteractionRequirements(
           ...(feature.presenceInteractionKey === undefined
             ? {}
             : { presenceInteractionKey: feature.presenceInteractionKey }),
-          interacted: feature.interacted,
-          ...(feature.interactionKey === undefined
-            ? {}
-            : { interactionKey: feature.interactionKey }),
           slots: Object.freeze(
             [
               ...feature.slots,
@@ -297,15 +293,6 @@ export function occurrenceInteractionRequirements(
       continue;
     }
     if (feature.kind !== 'purgingPool') continue;
-    requirements.push(
-      Object.freeze({
-        kind: 'purgingPoolInteraction' as const,
-        owner: room.address,
-        interactionKey: feature.interactionKey,
-        interacted: feature.interacted,
-      }),
-    );
-    if (!feature.interacted) continue;
     requirements.push(
       Object.freeze({
         assessment: feature.assessment,

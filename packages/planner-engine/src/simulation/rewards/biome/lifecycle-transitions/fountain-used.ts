@@ -59,8 +59,9 @@ export function applyFountainUsedTransition(
   const used = resolveFountainUse(catalog, event, result, branches);
   // The fountain unlocks Postboss facilities. Capture the pool only after
   // its rarity effects settle, never from entry or an unresolved Phial.
-  // A retained Pool on a route without one is never assessed, so its sales stay unavailable.
-  if (room?.purgingPool?.interacted !== true) return used;
+  // A Pool on a route without one is never assessed, so its sales stay unavailable;
+  // only its use, an action, is a finding.
+  if (room?.purgingPool === undefined) return used;
   const findings = [...used.findings];
   const chronology = () =>
     Object.freeze({
@@ -69,6 +70,13 @@ export function applyFountainUsedTransition(
       boundary: 'after' as const,
     });
   if (routePurgingPool(catalog.rooms.byKey[room.gameName], room.origin.routeKey) === undefined) {
+    const inUse = room.roomActionRoster.rows.some(
+      (row) =>
+        row.rank !== null &&
+        (row.reference.kind === 'sellPurgingPoolTrait' ||
+          row.reference.kind === 'rerollPurgingPool'),
+    );
+    if (!inUse) return used;
     findings.push(
       Object.freeze({
         finding: rewardFinding(

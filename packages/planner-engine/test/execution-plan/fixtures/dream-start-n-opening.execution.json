@@ -1595,7 +1595,7 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "interacted": false },
+        "stygianWell": { "offers": [] },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -3645,7 +3645,7 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "interacted": false },
+        "stygianWell": { "offers": [] },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -6648,7 +6648,7 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "interacted": false },
+        "stygianWell": { "offers": [] },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -7168,5 +7168,5 @@
       }
     }
   ],
-  "planFingerprint": "fd49fbf8"
+  "planFingerprint": "f7f9b81f"
 }

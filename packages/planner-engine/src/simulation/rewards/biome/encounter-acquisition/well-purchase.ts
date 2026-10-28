@@ -17,8 +17,6 @@ import {
   creditMaxStatGain,
 } from '../../../../reward-kernel';
 import {
-  INITIAL_ROLL_KEY,
-  parseStygianWellGenerationKey,
   stygianWellGenerationItemKey,
   stygianWellGenerationTwistResultKey,
 } from '../../../../authored-project/feature-rolls';
@@ -225,15 +223,14 @@ export function applyWellPurchaseTransition(inputs: {
   if (
     authoredRoom === undefined ||
     well === undefined ||
-    !well.interacted ||
     itemKey === undefined ||
     itemKey === null
   ) {
+    // A bought slot must be pinned; a blank one is otherwise native.
     const unpinned =
-      itemKey === null &&
       authoredRoom !== undefined &&
-      parseStygianWellGenerationKey(event.generationKey)?.rollKey !== INITIAL_ROLL_KEY &&
-      event.generationKey !== 'travelDealRefill';
+      well !== undefined &&
+      (itemKey === null || event.generationKey === 'travelDealRefill');
     return Object.freeze({
       branches: inputs.branches,
       findings: Object.freeze([

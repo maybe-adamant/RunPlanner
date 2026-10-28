@@ -907,11 +907,6 @@ describe('route-detour simulation', () => {
       occurrenceId: createOccurrenceId('natural-overlaid-by-spark'),
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'SetStygianWellInteraction',
-      occurrence: well,
-      interacted: true,
-    });
-    project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: well,
       slotKey: 'secondLeft',

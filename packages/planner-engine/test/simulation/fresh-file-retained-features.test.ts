@@ -8,6 +8,8 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
+  createRoomActionAddress,
+  roomActionKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
@@ -119,20 +121,29 @@ describe('Fresh File retained content', () => {
     });
     expect(codesOf(withoutWell)).not.toContainEqual(['stygianWellPlacementUnavailable', null]);
     const poolClosed = applyProjectCommand(withoutWell, catalog, {
-      kind: 'SetPurgingPoolInteraction',
-      occurrence: owner,
-      interacted: false,
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(
+        biome,
+        postboss,
+        roomActionKey({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
+      ),
     });
     expect(simulateProject(catalog, poolClosed).findings).toEqual([]);
   });
 
-  it('reports an interacted Pool on Fresh File even without a sale', () => {
+  it('reports a retained Pool on Fresh File only once it is used', () => {
     const owner = createOccurrenceAddress(biome, postboss);
+    expect(
+      simulateProject(
+        catalog,
+        withRetainedFreshFilePostboss(freshFProject(), { poolSaleTraitKey: null }),
+      ).findings,
+    ).toEqual([]);
     const findings = simulateProject(
       catalog,
-      withRetainedFreshFilePostboss(freshFProject(), { poolSaleTraitKey: null }),
-    ).findings;
-    expect(findings.map((finding) => finding.code)).toEqual(['purgingPoolUnavailable']);
+      withRetainedFreshFilePostboss(freshFProject(), { poolSaleTraitKey: 'ApolloWeaponBoon' }),
+    ).findings.filter((finding) => finding.code === 'purgingPoolUnavailable');
+    expect(findings).toHaveLength(1);
     expect(JSON.stringify(findings[0]!.origin)).toContain('purgingPoolInventory');
     expect(JSON.stringify(findings[0]!.origin)).toContain(owner.occurrenceId);
   });

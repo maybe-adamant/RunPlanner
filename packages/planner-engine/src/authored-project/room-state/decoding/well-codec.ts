@@ -21,7 +21,6 @@ export function decodeStygianWellState(
   expectExactKeys(
     raw,
     [
-      'interacted',
       'offerKeyBySlot',
       ...(hasTwist ? ['twistResultKeyBySlot'] : []),
       ...(hasPurchased ? ['purchasedGenerationKeys'] : []),
@@ -29,8 +28,6 @@ export function decodeStygianWellState(
     ],
     path,
   );
-  if (typeof raw.interacted !== 'boolean')
-    failProjectDocument(`${path}.interacted`, 'must be boolean');
   const offers = expectRecord(raw.offerKeyBySlot, `${path}.offerKeyBySlot`);
   expectExactKeys(offers, ['healing', 'secondLeft', 'secondRight'], `${path}.offerKeyBySlot`);
   const knownItemKeys = new Set(
@@ -76,7 +73,6 @@ export function decodeStygianWellState(
   )
     failProjectDocument(`${path}.purchasedGenerationKeys`, 'must not contain duplicates');
   return Object.freeze({
-    interacted: raw.interacted,
     offerKeyBySlot: Object.freeze({
       healing: itemOrNull(offers.healing, `${path}.offerKeyBySlot.healing`),
       secondLeft: itemOrNull(offers.secondLeft, `${path}.offerKeyBySlot.secondLeft`),
@@ -126,9 +122,6 @@ export function assertStygianWellPurchaseActionClosure(
       path,
       'Well purchase generations must exactly match purchaseStygianWellOffer actions',
     );
-  if (well?.interacted !== true && purchases.size > 0)
-    failProjectDocument(
-      path,
-      'an uninteracted Well must not retain purchase intent or purchase actions',
-    );
+  if (well === undefined && purchases.size > 0)
+    failProjectDocument(path, 'Well purchases require a present Well');
 }

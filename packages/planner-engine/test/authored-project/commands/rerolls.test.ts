@@ -298,33 +298,12 @@ describe('Well and Pool rerolls', () => {
         .roomActions.order.filter((action) => action.kind === 'rerollStygianWell')
         .map((action) => (action.kind === 'rerollStygianWell' ? action.rerollId : '')),
     ).toEqual(['r1', 'r2']);
-    expect(() => insert(project, 'InsertPurgingPoolReroll')).toThrow(
-      'Purging Pool is not being interacted with',
-    );
-    const pool = insert(
-      applyProjectCommand(twice, catalog, {
-        kind: 'SetPurgingPoolInteraction',
-        occurrence: room,
-        interacted: true,
-      }),
-      'InsertPurgingPoolReroll',
-    );
+    const pool = insert(twice, 'InsertPurgingPoolReroll');
     expect(occurrence(pool, room.occurrenceId).roomActions.order.at(-1)).toEqual({
       kind: 'rerollPurgingPool',
       rerollId: 'r1',
       traitKeyBySlot: {},
     });
-    // Turning the Pool off drops its rerolls with its sales.
-    const off = applyProjectCommand(pool, catalog, {
-      kind: 'SetPurgingPoolInteraction',
-      occurrence: room,
-      interacted: false,
-    });
-    expect(
-      occurrence(off, room.occurrenceId).roomActions.order.some(
-        (action) => action.kind === 'rerollPurgingPool',
-      ),
-    ).toBe(false);
     expect(() =>
       applyProjectCommand(twice, catalog, {
         kind: 'ReplaceStygianWellRollOffer',

@@ -1,7 +1,7 @@
 {
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
-  "schemaVersion": 99,
+  "schemaVersion": 100,
   "schemaRevision": 0,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
@@ -2707,8 +2707,8 @@
           { "slotKey": "Encounter", "encounterKey": "Story_Chronos_01", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "interacted": false },
-        "purgingPool": { "interacted": false },
+        "stygianWell": { "offers": [] },
+        "purgingPool": { "traits": [] },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -4330,8 +4330,8 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "interacted": false },
-        "purgingPool": { "interacted": false },
+        "stygianWell": { "offers": [] },
+        "purgingPool": { "traits": [] },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -4394,5 +4394,5 @@
       }
     }
   ],
-  "planFingerprint": "1e7bc675"
+  "planFingerprint": "20200c17"
 }

@@ -662,53 +662,43 @@ function executionStygianWell(
   room: CanonicalAuthoredRoom,
 ): ExecutionOverview['stygianWell'] | undefined {
   if (room.stygianWell === undefined) return undefined;
-  const rerolls = room.stygianWell.interacted
-    ? rankedFeatureRerolls(room, 'rerollStygianWell').map((reroll) =>
-        Object.freeze({
-          rollKey: reroll.rerollId,
-          offers: executionWellOffers(room, reroll.rerollId),
-        }),
-      )
-    : [];
+  const rerolls = rankedFeatureRerolls(room, 'rerollStygianWell').map((reroll) =>
+    Object.freeze({
+      rollKey: reroll.rerollId,
+      offers: executionWellOffers(room, reroll.rerollId),
+    }),
+  );
   return Object.freeze({
-    interacted: room.stygianWell.interacted,
-    ...(room.stygianWell.interacted ? { offers: executionWellOffers(room, INITIAL_ROLL_KEY) } : {}),
+    offers: executionWellOffers(room, INITIAL_ROLL_KEY),
     ...(rerolls.length === 0 ? {} : { rerolls: Object.freeze(rerolls) }),
   });
+}
+
+function executionPoolTraits(
+  traitKeyBySlot: Readonly<Partial<Record<(typeof PURGING_POOL_SLOT_KEYS)[number], string | null>>>,
+) {
+  return Object.freeze(
+    PURGING_POOL_SLOT_KEYS.flatMap((slotKey) => {
+      const traitKey = traitKeyBySlot[slotKey];
+      return traitKey === undefined || traitKey === null
+        ? []
+        : [Object.freeze({ slotKey, traitKey })];
+    }),
+  );
 }
 
 function executionPurgingPool(
   room: CanonicalAuthoredRoom,
 ): ExecutionOverview['purgingPool'] | undefined {
   if (room.purgingPool === undefined) return undefined;
-  const rerolls = room.purgingPool.interacted
-    ? rankedFeatureRerolls(room, 'rerollPurgingPool').map((reroll) =>
-        Object.freeze({
-          rollKey: reroll.rerollId,
-          traits: Object.freeze(
-            PURGING_POOL_SLOT_KEYS.flatMap((slotKey) => {
-              const traitKey =
-                reroll.kind === 'rerollPurgingPool' ? reroll.traitKeyBySlot[slotKey] : undefined;
-              return traitKey === undefined ? [] : [Object.freeze({ slotKey, traitKey })];
-            }),
-          ),
-        }),
-      )
-    : [];
+  const rerolls = rankedFeatureRerolls(room, 'rerollPurgingPool').map((reroll) =>
+    Object.freeze({
+      rollKey: reroll.rerollId,
+      traits: executionPoolTraits(reroll.kind === 'rerollPurgingPool' ? reroll.traitKeyBySlot : {}),
+    }),
+  );
   return Object.freeze({
-    interacted: room.purgingPool.interacted,
-    ...(room.purgingPool.interacted
-      ? {
-          traits: Object.freeze(
-            PURGING_POOL_SLOT_KEYS.map((slotKey) =>
-              Object.freeze({
-                slotKey,
-                traitKey: room.purgingPool!.traitKeyBySlot[slotKey],
-              }),
-            ),
-          ),
-        }
-      : {}),
+    traits: executionPoolTraits(room.purgingPool.traitKeyBySlot),
     ...(rerolls.length === 0 ? {} : { rerolls: Object.freeze(rerolls) }),
   });
 }

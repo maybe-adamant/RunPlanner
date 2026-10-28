@@ -166,7 +166,7 @@ function reachedRoute(route: AuthoredRoutePlan, catalog: Catalog): readonly Reac
 
 function purchasedIxionUses(reached: ReachedOccurrence): readonly IxionPurchase[] {
   const well = reached.occurrence.stygianWell;
-  if (well === undefined || !well.interacted) return Object.freeze([]);
+  if (well === undefined) return Object.freeze([]);
   const purchases: IxionPurchase[] = [];
   for (const action of reached.occurrence.roomActions.order) {
     if (action.kind !== 'purchaseStygianWellOffer') continue;

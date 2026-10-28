@@ -796,9 +796,8 @@ export interface ExecutionOverview {
     }[];
   };
   readonly stygianWell?: {
-    readonly interacted: boolean;
-    /** The initial roll. */
-    readonly offers?: readonly ExecutionWellOffer[];
+    /** The initial roll's pinned slots; the others stay native. */
+    readonly offers: readonly ExecutionWellOffer[];
     /**
      * Each Well reroll in action order: the k-th native reroll installs the
      * k-th entry. Only pinned slots are listed; the others stay native, and
@@ -810,11 +809,10 @@ export interface ExecutionOverview {
     }[];
   };
   readonly purgingPool?: {
-    readonly interacted: boolean;
-    /** The initial list. */
-    readonly traits?: readonly {
+    /** The initial list's pinned slots; the others stay native. */
+    readonly traits: readonly {
       readonly slotKey: 'left' | 'middle' | 'right';
-      readonly traitKey: string | null;
+      readonly traitKey: string;
     }[];
     /**
      * Each Pool reroll in action order: the k-th native reroll installs the

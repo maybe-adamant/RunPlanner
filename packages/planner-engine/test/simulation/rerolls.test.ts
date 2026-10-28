@@ -831,11 +831,6 @@ describe('screen rerolls', () => {
     expect(snapshotAt(project, postboss, 'beforeRoomExit').rerolls.remaining).toBe(
       entered.rerolls.remaining - 3,
     );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetPurgingPoolInteraction',
-      occurrence: room,
-      interacted: true,
-    });
     project = settle(project, {
       kind: 'InsertPurgingPoolReroll',
       occurrence: room,

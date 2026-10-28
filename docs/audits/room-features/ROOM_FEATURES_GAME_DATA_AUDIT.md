@@ -235,14 +235,12 @@ reroll of the Pool in a room costs k from the shared reroll pool, on a counter
 ### Current schema-71 planner disposition
 
 Schema 59 represents forced physical Pools on the F/G/H Postboss occurrences.
-An uninteracted Pool keeps dormant runtime-random inventory and contributes no
-candidate, action, or simulation effect. Interaction activates an exact initial
-list of up to three distinct eligible names; each reroll is a room action whose
+Its initial list pins up to three distinct eligible names; a blank slot stays
+native, and a slot is required only once a sale uses it. Each reroll is a room action whose
 list is pinned slot by slot (an unpinned slot stays native) and assessed
 against the traits held at that reroll, and each sale names its list. Its
 left/middle/right slots are planner presentation of
-that unordered set, and a missing fill is attributed to the first empty slots
-in that order. Each selected sale is an ordinary ranked Cleanup action,
+that unordered set, and the native fill takes the blank slots in that order. Each selected sale is an ordinary ranked Cleanup action,
 validates against the shop-aware God-trait predicate at Pool entry, requires
 the selected name to remain equipped at its action prefix, removes every
 current stack, and retains previously-picked history for
@@ -550,9 +548,9 @@ The three direct run-consequential identities are:
 
 ### Current planner disposition
 
-Forced F/G/H Postboss Wells are always present. An uninteracted Well retains
-dormant inventory detail but contributes no exact purchases or effects;
-interaction requires all three initial identities. A reroll
+Forced F/G/H Postboss Wells are always present. The initial stock pins any of
+its three slots; a blank slot stays native, and a slot is required only once a
+purchase uses it. A reroll
 (`RerollStore`, `StoreLogic.lua:261-277`) regenerates every slot and then
 blanks each slot bought earlier in the room (`IndexesPurchased`), except the
 room's first purchase under Travel Deal, whose slot was restocked in place and

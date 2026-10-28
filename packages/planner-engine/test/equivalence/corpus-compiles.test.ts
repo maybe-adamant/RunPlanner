@@ -50,7 +50,6 @@ const notCompiling: Readonly<Record<string, 'incomplete' | 'invalid'>> = {
   'fresh-file/withNewHFieldsRoom(min)': 'incomplete',
   'fresh-file/withNewHFieldsRoom(max)': 'incomplete',
   'fresh-file/withRetainedFreshFilePostboss(all)': 'invalid',
-  'fresh-file/withRetainedFreshFilePostboss(emptyPool)': 'invalid',
   'fresh-file/withRetainedFreshFileIntroCustomization': 'invalid',
   'fresh-file/hFieldsIssues/00': 'incomplete',
   'fresh-file/hFieldsIssues/01': 'incomplete',

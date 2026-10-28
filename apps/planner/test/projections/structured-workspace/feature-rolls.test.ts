@@ -231,10 +231,8 @@ describe('Stygian Well Interact', () => {
 });
 
 describe('Pool of Purging Interact', () => {
-  const base = applyProjectCommand(
-    withScreenRerolls(withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll'])),
-    catalog,
-    { kind: 'SetPurgingPoolInteraction', occurrence: room, interacted: true },
+  const base = withScreenRerolls(
+    withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
   );
 
   function poolOf(projected: Projected) {

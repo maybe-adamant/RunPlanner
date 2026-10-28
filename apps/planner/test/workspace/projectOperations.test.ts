@@ -641,7 +641,6 @@ describe('project operations', () => {
     if (gPostboss === undefined) throw new Error('expected fixed G Postboss');
     const well = createOccurrenceAddress(goldenGBiome, gPostboss.occurrenceId);
     for (const command of [
-      { kind: 'SetStygianWellInteraction' as const, occurrence: well, interacted: true },
       {
         kind: 'ReplaceStygianWellOffer' as const,
         occurrence: well,

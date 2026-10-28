@@ -416,16 +416,11 @@ describe('completion Boss variants', () => {
       keepsakeRack: { keepsakeKey: 'HadesAndPersephoneKeepsake' },
       roomActions: { order: [{ kind: 'useFountain' }, { kind: 'interactKeepsakeRack' }] },
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetStygianWellInteraction',
-      occurrence: createOccurrenceAddress(dreamBiome, postboss.occurrenceId),
-      interacted: true,
-    });
     expect(
       project.route!.biomes[0]!.topology!.occurrences.find(
         (room) => room.occurrenceId === postboss.occurrenceId,
       )?.stygianWell,
-    ).toMatchObject({ interacted: true });
+    ).toBeDefined();
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
     );

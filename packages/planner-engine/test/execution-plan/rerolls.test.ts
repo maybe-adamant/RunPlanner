@@ -242,7 +242,6 @@ describe('Well and Pool roll publication', () => {
       generationKey: 'r1:healing',
       purchased: true,
     });
-    apply({ kind: 'SetPurgingPoolInteraction', occurrence: room, interacted: true });
     apply({ kind: 'InsertPurgingPoolReroll', occurrence: room, index: end() });
     apply({
       kind: 'ReplacePurgingPoolRollSlot',

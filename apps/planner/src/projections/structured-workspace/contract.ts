@@ -120,11 +120,9 @@ import type {
   WorkspaceHermesShrinePresenceInteraction,
   WorkspaceHermesShrinePurchaseInteraction,
   WorkspaceInfernalContractPedestalCollectInteraction,
-  WorkspacePurgingPoolInteraction,
   WorkspacePurgingPoolSlotInteraction,
   WorkspaceShopOfferInteraction,
   WorkspaceShopPurchaseParticipationInteraction,
-  WorkspaceStygianWellInteraction,
   WorkspaceStygianWellOfferInteraction,
   WorkspaceStygianWellPresenceInteraction,
   WorkspaceStygianWellPurchaseInteraction,
@@ -203,11 +201,9 @@ export type {
   WorkspaceHermesShrinePresenceInteraction,
   WorkspaceHermesShrinePurchaseInteraction,
   WorkspaceInfernalContractPedestalCollectInteraction,
-  WorkspacePurgingPoolInteraction,
   WorkspacePurgingPoolSlotInteraction,
   WorkspaceShopOfferInteraction,
   WorkspaceShopPurchaseParticipationInteraction,
-  WorkspaceStygianWellInteraction,
   WorkspaceStygianWellOfferInteraction,
   WorkspaceStygianWellPresenceInteraction,
   WorkspaceStygianWellPurchaseInteraction,
@@ -411,14 +407,12 @@ export interface WorkspaceInteractionCatalog {
     string,
     WorkspaceInfernalContractPedestalCollectInteraction
   >;
-  readonly purgingPoolInteractions: ReadonlyMap<string, WorkspacePurgingPoolInteraction>;
   /** One declaration-keyed Pool slot, with engine-derived contextual candidates. */
   readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;
   readonly hermesShrineOffers: ReadonlyMap<string, WorkspaceHermesShrineOfferInteraction>;
   readonly hermesShrinePurchases: ReadonlyMap<string, WorkspaceHermesShrinePurchaseInteraction>;
   readonly hermesShrinePresences: ReadonlyMap<string, WorkspaceHermesShrinePresenceInteraction>;
   readonly stygianWellPresences: ReadonlyMap<string, WorkspaceStygianWellPresenceInteraction>;
-  readonly stygianWellInteractions: ReadonlyMap<string, WorkspaceStygianWellInteraction>;
   readonly stygianWellOffers: ReadonlyMap<string, WorkspaceStygianWellOfferInteraction>;
   readonly stygianWellPurchases: ReadonlyMap<string, WorkspaceStygianWellPurchaseInteraction>;
   readonly stygianWellTwistResults: ReadonlyMap<string, WorkspaceStygianWellTwistResultInteraction>;

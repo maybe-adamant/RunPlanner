@@ -75,7 +75,7 @@ export function initialStygianWellRollWalk(): Extract<
   });
 }
 
-/** The initial list offers its authored slots. */
+/** The initial list fills as many slots as there are eligible traits, pinned slots first. */
 export function initialPurgingPoolRollWalk(
   pool: PurgingPoolState,
   eligibleCount: number,
@@ -84,8 +84,14 @@ export function initialPurgingPoolRollWalk(
     feature: 'purgingPool',
     rollKey: INITIAL_ROLL_KEY,
     eligibleCount,
-    offeredSlotKeys: Object.freeze(
-      PURGING_POOL_SLOT_KEYS.filter((slotKey) => pool.traitKeyBySlot[slotKey] !== null),
+    offeredSlotKeys: purgingPoolRerollSlots(
+      Object.fromEntries(
+        PURGING_POOL_SLOT_KEYS.flatMap((slotKey) => {
+          const traitKey = pool.traitKeyBySlot[slotKey];
+          return traitKey === null ? [] : [[slotKey, traitKey]];
+        }),
+      ),
+      eligibleCount,
     ),
     sold: Object.freeze([]),
     rerollCount: 0,

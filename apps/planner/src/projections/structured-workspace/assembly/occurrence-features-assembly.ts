@@ -315,10 +315,6 @@ function roomFeatures(
                 : {
                     presenceInteractionKey: `stygianWellPresence:${semanticAddressKey(poolOwner)}`,
                   }),
-              ...(well === undefined
-                ? {}
-                : { interactionKey: `stygianWellInteract:${semanticAddressKey(poolOwner)}` }),
-              interacted: well?.interacted === true,
               slots: Object.freeze(initialSlots),
               ...(refill === undefined ? {} : { travelDealRefill: refill }),
             });
@@ -477,8 +473,6 @@ function roomFeatures(
               kind: 'purgingPool' as const,
               inventoryAddress,
               inventoryMarker: input.markerDestinations.marker(inventoryAddress),
-              interactionKey: `purgingPool:${semanticAddressKey(poolOwner)}`,
-              interacted: pool.interacted,
               slots: Object.freeze(
                 (['left', 'middle', 'right'] as const).map((slotKey) =>
                   (() => {

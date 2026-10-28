@@ -280,7 +280,6 @@ describe('keepsake selection candidates', () => {
     const completion = postbossOccurrence(createBiomeAddress('Underworld', 'F'));
     let project = createGoldenFGHProject();
     for (const command of [
-      { kind: 'SetStygianWellInteraction', occurrence: completion, interacted: true },
       ...(
         [
           ['healing', 'ArmorBoostStore'],

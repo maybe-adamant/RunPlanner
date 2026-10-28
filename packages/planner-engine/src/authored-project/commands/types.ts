@@ -532,11 +532,6 @@ export type PhantomExitCommand = {
 };
 export type PurgingPoolCommand =
   | {
-      readonly kind: 'SetPurgingPoolInteraction';
-      readonly occurrence: OccurrenceAddress;
-      readonly interacted: boolean;
-    }
-  | {
       readonly kind: 'ReplacePurgingPoolSlot';
       readonly occurrence: OccurrenceAddress;
       readonly slotKey: 'left' | 'middle' | 'right';
@@ -605,11 +600,6 @@ export type StygianWellCommand =
   | { readonly kind: 'AddStygianWell'; readonly occurrence: OccurrenceAddress }
   | { readonly kind: 'RemoveStygianWell'; readonly occurrence: OccurrenceAddress }
   | {
-      readonly kind: 'SetStygianWellInteraction';
-      readonly occurrence: OccurrenceAddress;
-      readonly interacted: boolean;
-    }
-  | {
       /** Inserts an unpinned Well reroll; the engine allocates its id. */
       readonly kind: 'InsertStygianWellReroll';
       readonly occurrence: OccurrenceAddress;
@@ -633,7 +623,7 @@ export type StygianWellCommand =
       readonly occurrence: OccurrenceAddress;
       readonly generationKey: import('../model').StygianWellGenerationKey;
       readonly purchased: boolean;
-      /** A reroll slot's item, pinned in the same edit as its purchase. */
+      /** The bought slot's item, pinned in the same edit as its purchase. */
       readonly itemKey?: string;
     }
   | {

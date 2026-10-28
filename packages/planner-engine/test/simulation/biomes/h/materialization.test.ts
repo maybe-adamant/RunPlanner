@@ -552,11 +552,6 @@ describe('H Fields materialization', () => {
       createBiomeAddress('Underworld', 'G'),
       gPostboss.occurrenceId,
     );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetStygianWellInteraction',
-      occurrence: well,
-      interacted: true,
-    });
     for (const [slotKey, itemKey] of [
       ['healing', 'HealDropRange'],
       ['secondLeft', 'TemporaryForcedSecretDoorTrait'],

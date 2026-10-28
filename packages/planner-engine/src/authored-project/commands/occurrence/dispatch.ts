@@ -12,7 +12,7 @@ import { applyShopOccurrenceCommand } from './shop';
 import { applyInfernalContractPedestalCommand } from './infernal-contract-pedestal';
 import { applyPhantomExitCommand } from './phantom-exit';
 import { applyFieldsOccurrenceCommand } from './fields';
-import { applyFeatureRollCommand, pinRollSlot } from './feature-rolls';
+import { applyFeatureRollCommand, pinRollSlot, roomShopItemKeys } from './feature-rolls';
 import {
   INITIAL_ROLL_KEY,
   parseStygianWellGenerationKey,
@@ -464,32 +464,6 @@ export function applyOccurrenceCommand(
         }),
       );
     }
-    case 'SetPurgingPoolInteraction': {
-      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
-      if (occurrence.purgingPool === undefined)
-        failCommand(command, 'occurrence has no Purging Pool');
-      const roomActions = command.interacted
-        ? occurrence.roomActions
-        : Object.freeze({
-            ...occurrence.roomActions,
-            order: Object.freeze(
-              occurrence.roomActions.order.filter(
-                (reference) =>
-                  reference.kind !== 'sellPurgingPoolTrait' &&
-                  reference.kind !== 'rerollPurgingPool',
-              ),
-            ),
-          });
-      return updateOccurrence(
-        document,
-        located,
-        Object.freeze({
-          ...occurrence,
-          roomActions,
-          purgingPool: Object.freeze({ ...occurrence.purgingPool, interacted: command.interacted }),
-        }),
-      );
-    }
     case 'SetErisSpawned': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
       if (!command.spawned) {
@@ -530,8 +504,6 @@ export function applyOccurrenceCommand(
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
       if (occurrence.purgingPool === undefined)
         failCommand(command, 'occurrence has no Purging Pool');
-      if (!occurrence.purgingPool.interacted)
-        failCommand(command, 'Purging Pool is not being interacted with');
       if (command.slotKey !== 'left' && command.slotKey !== 'middle' && command.slotKey !== 'right')
         failCommand(command, `unknown Purging Pool slot ${String(command.slotKey)}`);
       if (command.traitKey !== null && catalog.traits.byKey[command.traitKey] === undefined)
@@ -569,7 +541,6 @@ export function applyOccurrenceCommand(
         Object.freeze({
           ...occurrence,
           stygianWell: Object.freeze({
-            interacted: false,
             offerKeyBySlot: Object.freeze({ healing: null, secondLeft: null, secondRight: null }),
           }),
         }),
@@ -599,46 +570,6 @@ export function applyOccurrenceCommand(
         }),
       );
     }
-    case 'SetStygianWellInteraction': {
-      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
-      const room = catalog.rooms.byKey[occurrence.gameName];
-      if (room?.roomShop === undefined) failCommand(command, 'occurrence has no Stygian Well host');
-      if (occurrence.stygianWell === undefined)
-        failCommand(command, 'occurrence has no present Stygian Well');
-      if (!command.interacted) {
-        const { stygianWell: prior, ...withoutWell } = occurrence;
-        if (prior === undefined) return document;
-        return updateOccurrence(
-          document,
-          located,
-          Object.freeze({
-            ...withoutWell,
-            // Retain dormant authored detail; only participation and chronology turn off.
-            stygianWell: Object.freeze({
-              ...prior,
-              interacted: false,
-              purchasedGenerationKeys: Object.freeze([]),
-            }),
-            roomActions: Object.freeze({
-              ...occurrence.roomActions,
-              order: Object.freeze(
-                occurrence.roomActions.order.filter(
-                  (r) => r.kind !== 'purchaseStygianWellOffer' && r.kind !== 'rerollStygianWell',
-                ),
-              ),
-            }),
-          }),
-        );
-      }
-      return updateOccurrence(
-        document,
-        located,
-        Object.freeze({
-          ...occurrence,
-          stygianWell: Object.freeze({ ...occurrence.stygianWell, interacted: true }),
-        }),
-      );
-    }
     case 'InsertStygianWellReroll':
     case 'ReplaceStygianWellRollOffer':
     case 'InsertPurgingPoolReroll':
@@ -648,8 +579,7 @@ export function applyOccurrenceCommand(
     case 'ReplaceStygianWellOffer': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
       const well = occurrence.stygianWell;
-      if (well === undefined || !well.interacted)
-        failCommand(command, 'Stygian Well is not being interacted with');
+      if (well === undefined) failCommand(command, 'occurrence has no present Stygian Well');
       if (!['healing', 'secondLeft', 'secondRight'].includes(command.slotKey))
         failCommand(command, 'unknown Stygian Well slot');
       const known = new Set(
@@ -691,8 +621,7 @@ export function applyOccurrenceCommand(
     case 'ReplaceStygianWellTravelDealRefill': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
       const well = occurrence.stygianWell;
-      if (well === undefined || !well.interacted)
-        failCommand(command, 'Stygian Well is not being interacted with');
+      if (well === undefined) failCommand(command, 'occurrence has no present Stygian Well');
       const known = new Set(
         catalog.rewards.shops.byKey.RoomShop?.groups.values.flatMap((g) =>
           [...g.options.values].map((o) => o.key),
@@ -728,29 +657,31 @@ export function applyOccurrenceCommand(
     }
     case 'SetStygianWellPurchase': {
       const authored = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
-      if (authored.stygianWell === undefined || !authored.stygianWell.interacted)
-        failCommand(command, 'Stygian Well is not being interacted with');
+      if (authored.stygianWell === undefined)
+        failCommand(command, 'occurrence has no present Stygian Well');
       const roll = parseStygianWellGenerationKey(command.generationKey);
-      if (
-        command.itemKey !== undefined &&
-        (!command.purchased || roll === undefined || roll.rollKey === INITIAL_ROLL_KEY)
-      )
-        failCommand(command, 'only a reroll slot is pinned with its purchase');
+      if (command.itemKey !== undefined && !command.purchased)
+        failCommand(command, 'a slot is pinned only with its purchase');
+      if (command.itemKey !== undefined && !roomShopItemKeys(catalog).has(command.itemKey))
+        failCommand(command, 'unknown RoomShop item');
       const occurrence =
-        command.itemKey === undefined || roll === undefined
+        command.itemKey === undefined
           ? authored
-          : pinRollSlot(
-              catalog,
-              command,
-              authored,
-              'stygianWell',
-              roll.rollKey,
-              roll.slotKey,
-              command.itemKey,
-            );
+          : roll === undefined
+            ? withStygianWellInitialItem(authored, 'travelDealRefill', command.itemKey)
+            : roll.rollKey === INITIAL_ROLL_KEY
+              ? withStygianWellInitialItem(authored, roll.slotKey, command.itemKey)
+              : pinRollSlot(
+                  catalog,
+                  command,
+                  authored,
+                  'stygianWell',
+                  roll.rollKey,
+                  roll.slotKey,
+                  command.itemKey,
+                );
       const well = occurrence.stygianWell;
-      if (well === undefined || !well.interacted)
-        failCommand(command, 'Stygian Well is not being interacted with');
+      if (well === undefined) failCommand(command, 'occurrence has no present Stygian Well');
       const generation = command.generationKey;
       // A purchase needs its item; one whose roll or item is gone can still be removed.
       if (command.purchased) {
@@ -804,8 +735,7 @@ export function applyOccurrenceCommand(
     case 'ReplaceStygianWellTwistResult': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
       const well = occurrence.stygianWell;
-      if (well === undefined || !well.interacted)
-        failCommand(command, 'Stygian Well is not being interacted with');
+      if (well === undefined) failCommand(command, 'occurrence has no present Stygian Well');
       const parsed = parseStygianWellGenerationKey(command.generationKey);
       if (command.generationKey !== 'travelDealRefill' && parsed === undefined)
         failCommand(command, 'unknown Stygian Well generation');
@@ -900,4 +830,34 @@ export function applyOccurrenceCommand(
     case 'ReplaceGorgonDeathDefianceCondition':
       return applyEncounterOccurrenceCommand(document, catalog, located, command);
   }
+}
+
+/**
+ * Pins an initial slot's or the Travel Deal restock's item; a changed item
+ * drops the Twist result it resolved.
+ */
+function withStygianWellInitialItem(
+  occurrence: import('../../model').RoomOccurrence,
+  slotKey: import('../../model').StygianWellSlotKey | 'travelDealRefill',
+  itemKey: string,
+): import('../../model').RoomOccurrence {
+  const well = occurrence.stygianWell!;
+  const previous =
+    slotKey === 'travelDealRefill' ? well.travelDealRefillKey : well.offerKeyBySlot[slotKey];
+  if (previous === itemKey) return occurrence;
+  const twists = Object.fromEntries(
+    Object.entries(well.twistResultKeyBySlot ?? {}).filter(([key]) => key !== slotKey),
+  );
+  const { twistResultKeyBySlot: _previousTwists, ...rest } = well;
+  void _previousTwists;
+  return Object.freeze({
+    ...occurrence,
+    stygianWell: Object.freeze({
+      ...rest,
+      ...(slotKey === 'travelDealRefill'
+        ? { travelDealRefillKey: itemKey }
+        : { offerKeyBySlot: Object.freeze({ ...well.offerKeyBySlot, [slotKey]: itemKey }) }),
+      ...(Object.keys(twists).length === 0 ? {} : { twistResultKeyBySlot: Object.freeze(twists) }),
+    }),
+  });
 }

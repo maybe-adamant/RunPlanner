@@ -458,8 +458,7 @@ export function assembleWorkspaceOccurrence(
     { readonly kind: 'featureRollActions' }
   >[] = [];
   const features = featureAssembly.features.map((feature) => {
-    if ((feature.kind !== 'stygianWell' && feature.kind !== 'purgingPool') || !feature.interacted)
-      return feature;
+    if (feature.kind !== 'stygianWell' && feature.kind !== 'purgingPool') return feature;
     const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
     const rolls = assembleFeatureRollActions({
       catalog: input.catalog,

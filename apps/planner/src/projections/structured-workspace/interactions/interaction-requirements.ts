@@ -246,12 +246,6 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly collected: boolean;
     }
   | {
-      readonly kind: 'purgingPoolInteraction';
-      readonly owner: OccurrenceAddress;
-      readonly interactionKey: string;
-      readonly interacted: boolean;
-    }
-  | {
       readonly kind: 'erisObservation';
       readonly owner: OccurrenceAddress;
       readonly interactionKey: string;
@@ -297,8 +291,6 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly owner: OccurrenceAddress;
       readonly present: boolean;
       readonly presenceInteractionKey?: string;
-      readonly interacted: boolean;
-      readonly interactionKey?: string;
       readonly slots: readonly {
         readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
         readonly slotKey:

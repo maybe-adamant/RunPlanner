@@ -152,8 +152,8 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
   const reached =
     room !== undefined &&
     (event.feature === 'stygianWell'
-      ? room.stygianWell?.interacted === true && state.stygianWellAssessments.has(roomKey)
-      : room.purgingPool?.interacted === true && state.purgingPoolAssessments.has(roomKey));
+      ? room.stygianWell !== undefined && state.stygianWellAssessments.has(roomKey)
+      : room.purgingPool !== undefined && state.purgingPoolAssessments.has(roomKey));
   if (!reached || state.branches.length === 0) return { state, emissions: [timeline] };
   const chronology = rewardFindingChronologyForRoom(
     context.snapshot,
@@ -272,7 +272,7 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
   }
   const assessments = Object.freeze(
     settled.branches.map((branch) =>
-      assessPurgingPoolList(context.catalog, pins, branch.state.traitHistory.equippedTraits, false),
+      assessPurgingPoolList(context.catalog, pins, branch.state.traitHistory.equippedTraits),
     ),
   );
   for (const assessment of assessments)
@@ -494,11 +494,11 @@ export function purgingPoolSale(
   }
   // An incomplete list or invalid pin is its own finding; the sale has no effect.
   const listed =
-    rollKey === INITIAL_ROLL_KEY
-      ? assessment.assessments.every((entry) => entry.complete)
-      : (assessment.rolls?.[rollKey]?.assessments.every(
-          (entry) => !entry.findings.some((finding) => finding.slotKey === sale.slotKey),
-        ) ?? false);
+    (rollKey === INITIAL_ROLL_KEY
+      ? assessment.assessments
+      : assessment.rolls?.[rollKey]?.assessments
+    )?.every((entry) => !entry.findings.some((finding) => finding.slotKey === sale.slotKey)) ??
+    false;
   const equipped = state.branches.every((branch) => {
     const trait = branch.state.traitHistory.equippedTraits[traitKey];
     return trait !== undefined && isPurgingPoolEligibleTrait(context.catalog, trait);
@@ -528,8 +528,7 @@ export function captureFeatureRollEnd(
     return state;
   const roomKey = semanticAddressKey(event.origin);
   const room = authoredRoom(context, roomKey);
-  if (room?.stygianWell?.interacted !== true && room?.purgingPool?.interacted !== true)
-    return state;
+  if (room?.stygianWell === undefined && room?.purgingPool === undefined) return state;
   return Object.freeze({
     ...state,
     featureRollEnds: new Map(state.featureRollEnds).set(
@@ -563,8 +562,7 @@ export function stygianWellInteractions(
   const interactions = new Map<string, StygianWellInteraction>();
   for (const [roomKey, end] of state.featureRollEnds) {
     const room = authoredRoom(context, roomKey);
-    if (room?.stygianWell?.interacted !== true || !state.stygianWellAssessments.has(roomKey))
-      continue;
+    if (room?.stygianWell === undefined || !state.stygianWellAssessments.has(roomKey)) continue;
     const walk = stygianWellWalk(state, roomKey);
     const view = wellOccurrenceView(room);
     const refillSlot = stygianWellLiveRefillSlot(walk);
@@ -638,12 +636,11 @@ export function purgingPoolInteractions(
   const interactions = new Map<string, PurgingPoolInteraction>();
   for (const [roomKey, end] of state.featureRollEnds) {
     const room = authoredRoom(context, roomKey);
-    if (room?.purgingPool?.interacted !== true || !state.purgingPoolAssessments.has(roomKey))
-      continue;
+    if (room?.purgingPool === undefined || !state.purgingPoolAssessments.has(roomKey)) continue;
     const walk = purgingPoolWalk(state, roomKey, room)!;
     const view = { purgingPool: room.purgingPool, roomActions: { order: rankedReferences(room) } };
     const pending = end.branches.map((branch) =>
-      assessPurgingPoolList(context.catalog, {}, branch.state.traitHistory.equippedTraits, false),
+      assessPurgingPoolList(context.catalog, {}, branch.state.traitHistory.equippedTraits),
     );
     interactions.set(
       roomKey,

@@ -120,7 +120,6 @@ describe('Stygian Well consequential purchase state', () => {
   it('allows buying Ixion while holding pending Ixion uses and adds one use', () => {
     const itemKey = 'TemporaryForcedSecretDoorTrait';
     const well = {
-      interacted: true,
       offerKeyBySlot: {
         healing: 'ArmorBoostStore',
         secondLeft: itemKey,
@@ -192,7 +191,6 @@ describe('Stygian Well consequential purchase state', () => {
     'uses %s availability for initial Ixion and Travel refill',
     (routeKey) => {
       const well = {
-        interacted: true,
         offerKeyBySlot: {
           healing: 'ArmorBoostStore',
           secondLeft: 'TemporaryForcedSecretDoorTrait',
@@ -352,11 +350,6 @@ describe('Stygian Well consequential purchase state', () => {
       ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'G_PostBoss01');
     if (gPostboss === undefined) throw new Error('expected fixed G Postboss');
     const well = createOccurrenceAddress(goldenGBiome, gPostboss.occurrenceId);
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetStygianWellInteraction',
-      occurrence: well,
-      interacted: true,
-    });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: well,
@@ -529,7 +522,6 @@ describe('Stygian Well consequential purchase state', () => {
     const postbossWell = createOccurrenceAddress(goldenGBiome, gPostboss.occurrenceId);
     for (const command of [
       { kind: 'AddStygianWell' as const, occurrence: finalCombatWell },
-      { kind: 'SetStygianWellInteraction' as const, occurrence: finalCombatWell, interacted: true },
       {
         kind: 'ReplaceStygianWellOffer' as const,
         occurrence: finalCombatWell,
@@ -542,7 +534,6 @@ describe('Stygian Well consequential purchase state', () => {
         generationKey: 'initial:secondLeft' as const,
         purchased: true,
       },
-      { kind: 'SetStygianWellInteraction' as const, occurrence: postbossWell, interacted: true },
       {
         kind: 'ReplaceStygianWellOffer' as const,
         occurrence: postbossWell,
@@ -779,7 +770,6 @@ describe('Stygian Well consequential purchase state', () => {
     if (hPostboss === undefined) throw new Error('expected fixed H Postboss');
     const well = createOccurrenceAddress(goldenHBiome, hPostboss.occurrenceId);
     for (const command of [
-      { kind: 'SetStygianWellInteraction' as const, occurrence: well, interacted: true },
       {
         kind: 'ReplaceStygianWellOffer' as const,
         occurrence: well,
@@ -944,7 +934,6 @@ describe('Stygian Well consequential purchase state', () => {
       equippedTraits: { RestockBoon: {} as never },
     };
     const well = {
-      interacted: true,
       offerKeyBySlot: {
         healing: 'ArmorBoostStore',
         secondLeft: 'RandomStoreItem',
@@ -1131,9 +1120,8 @@ describe('Stygian Well consequential purchase state', () => {
     ).not.toContain('TemporaryDiscountTrait');
   });
 
-  it('requires a same-group refill only when its actual trigger has Travel Deal', () => {
+  it('assesses a pinned refill only when its actual trigger has Travel Deal', () => {
     const base = {
-      interacted: true,
       offerKeyBySlot: {
         healing: 'LastStandShopItem',
         secondLeft: 'TemporaryImprovedCastTrait',
@@ -1141,6 +1129,7 @@ describe('Stygian Well consequential purchase state', () => {
       },
       purchasedGenerationKeys: ['initial:healing'],
     } as const;
+    // An unpinned restock stays native.
     const missing = assessPurchase(
       catalog,
       'Underworld',
@@ -1150,9 +1139,7 @@ describe('Stygian Well consequential purchase state', () => {
       { ...createTraitHistoryState(), equippedTraits: { RestockBoon: {} as never } },
       'initial:healing',
     );
-    expect(missing.issues).toContainEqual(
-      expect.objectContaining({ kind: 'refillMissing', generationKey: 'travelDealRefill' }),
-    );
+    expect(missing.issues).toEqual([]);
     expect(missing.travelDealRefill?.candidateItemKeys).toContain('ArmorBoostStore');
     const withoutTravel = assessPurchase(
       catalog,
@@ -1164,19 +1151,16 @@ describe('Stygian Well consequential purchase state', () => {
       'initial:healing',
     );
     expect(withoutTravel.travelDealRefill).toBeUndefined();
-    expect(withoutTravel.issues).not.toContainEqual(
-      expect.objectContaining({ kind: 'refillMissing' }),
-    );
+    expect(withoutTravel.issues).toEqual([]);
   });
 
-  it('keeps initial inventory repair separate from dormant purchase-owned children', () => {
+  it('leaves a blank initial slot native, separate from dormant purchase-owned children', () => {
     const assessment = assessStygianWell(
       catalog,
       'Underworld',
       catalog.rooms.byKey.F_Combat01,
       3,
       {
-        interacted: true,
         offerKeyBySlot: {
           healing: 'ArmorBoostStore',
           secondLeft: null,
@@ -1190,17 +1174,12 @@ describe('Stygian Well consequential purchase state', () => {
       undefined,
     );
     expect(assessment.candidateItemKeysBySlot.secondLeft).toContain('RandomStoreItem');
-    expect(assessment.issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ kind: 'missing', generationKey: 'initial:secondLeft' }),
-      ]),
-    );
-    expect(assessment.complete).toBe(false);
+    expect(assessment.issues).toEqual([]);
+    expect(assessment.complete).toBe(true);
   });
 
   it('ignores dormant refill and Twist detail at initial inventory assessment', () => {
     const well = {
-      interacted: true,
       offerKeyBySlot: {
         healing: 'ArmorBoostStore',
         secondLeft: 'TemporaryImprovedCastTrait',
@@ -1287,7 +1266,6 @@ describe('Stygian Well timed holdings', () => {
 
   it('withholds a self-gated offer while an instance of its trait is active', () => {
     const well = {
-      interacted: true,
       offerKeyBySlot: { healing: null, secondLeft: null, secondRight: null },
     } as const;
     const domain = (state: StygianWellRunState) =>

@@ -36,7 +36,6 @@ import type {
 import {
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   purgingPoolCandidateForProjectEvaluationAssembly,
-  stygianWellCandidateForProjectEvaluationAssembly,
 } from '../evaluation/project-evaluation-assembly';
 import type { SemanticFinding } from '../model';
 import { insertRoomAction, removeRoomAction, roomActionAddress } from './actions';
@@ -112,11 +111,6 @@ export function answerCommerce(context: RunImportContext, reason: SemanticFindin
     if (reason.code === 'hermesShrineTravelDealRefillMissing')
       return answerShrineRefill(context, origin);
     if (reason.code === 'stygianWellMissing') return answerWellOffers(context, origin);
-    if (
-      reason.code === 'stygianWellTravelDealRefillUnavailable' &&
-      reason.evidence['reason'] === 'refillMissing'
-    )
-      return answerUnboughtWellRefill(context, origin);
     return false;
   }
   if (origin.kind === 'acquisitionEntry' && reason.code === 'rewardMissing')
@@ -451,6 +445,14 @@ function answerShrineRefill(context: RunImportContext, feature: Origin<'roomFeat
   return true;
 }
 
+function roomShopItems(context: RunImportContext): ReadonlySet<string> {
+  return new Set(
+    context.catalog.rewards.shops.byKey['RoomShop']?.groups.values.flatMap((group) =>
+      group.options.values.map((option) => option.key),
+    ) ?? [],
+  );
+}
+
 /** The Well's recorded stock, each authored into its slot in stock order. */
 function answerWellOffers(context: RunImportContext, feature: Origin<'roomFeature'>): boolean {
   const visit = storeVisit(context, feature.occurrenceId, 'well');
@@ -579,42 +581,6 @@ function answerPurchaseEffects(context: RunImportContext, offer: Origin<'shopOff
     )
       return answerAnvil(context, finding.origin);
   return true;
-}
-
-/**
- * A Travel Deal restock nobody bought leaves no name in the save; it takes the
- * first item the engine admits, reported as not in the record.
- */
-function answerUnboughtWellRefill(
-  context: RunImportContext,
-  feature: Origin<'roomFeature'>,
-): boolean {
-  const address = createOccurrenceAddress(
-    createBiomeAddress(feature.routeKey, feature.biomeKey),
-    feature.occurrenceId,
-  );
-  const visit = storeVisit(context, feature.occurrenceId, 'well');
-  if (visit === undefined || (visit.store.unstockedPurchases?.length ?? 0) > 0) return false;
-  const candidates =
-    stygianWellCandidateForProjectEvaluationAssembly(context.assembly(), address)?.travelDealRefill
-      ?.candidateItemKeys ?? [];
-  for (const itemKey of candidates) {
-    const command: ProjectCommand = {
-      kind: 'ReplaceStygianWellTravelDealRefill',
-      occurrence: address,
-      itemKey,
-    };
-    if (!context.applyValid(command)) continue;
-    context.note({
-      area: 'well',
-      reason: 'notInRecord',
-      address: feature,
-      applied: command,
-      record: record(visit.roomIndex),
-    });
-    return true;
-  }
-  return false;
 }
 
 const isHammer = (context: RunImportContext, traitKey: string) =>
@@ -932,20 +898,35 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
         record: record(visit.roomIndex),
       });
     if (!opened) return;
-    if (
-      !context.applyValid({
-        kind: 'SetStygianWellInteraction',
-        occurrence: address,
-        interacted: true,
-      })
-    )
-      noteOnce(context, `${presence}:refused`, 'well', 'refused', feature, visit.roomIndex);
-    else
-      applyFeatureRerolls(context, visit.roomIndex, 'well', feature, () => ({
-        kind: 'InsertStygianWellReroll',
-        occurrence: address,
-        index: actionCount(context, biomeKey, occurrence.occurrenceId),
-      }));
+    // An opened Well's recorded opening stock is its initial roll.
+    context.used.add(`wellOpened:${occurrence.occurrenceId}`);
+    const known = roomShopItems(context);
+    for (const [index, slotKey] of wellSlots(context).entries()) {
+      const stock = visit.store.stock.find((option) => option.slot === index + 1);
+      if (stock === undefined || !known.has(stock.name)) continue;
+      if (
+        !context.applyValid({
+          kind: 'ReplaceStygianWellOffer',
+          occurrence: address,
+          slotKey,
+          itemKey: stock.name,
+        })
+      )
+        context.note({
+          area: 'well',
+          reason: 'refused',
+          address: createRoomFeatureAddress(address, {
+            kind: 'stygianWellOffer',
+            generationKey: stygianWellGenerationKey(INITIAL_ROLL_KEY, slotKey),
+          }),
+          record: record(visit.roomIndex),
+        });
+    }
+    applyFeatureRerolls(context, visit.roomIndex, 'well', feature, () => ({
+      kind: 'InsertStygianWellReroll',
+      occurrence: address,
+      index: actionCount(context, biomeKey, occurrence.occurrenceId),
+    }));
     return;
   }
   const well = authoredOccurrence(
@@ -955,7 +936,8 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
   )?.stygianWell;
   const used = `wellPurchases:${occurrence.occurrenceId}`;
   if (
-    well?.interacted !== true ||
+    well === undefined ||
+    !context.used.has(`wellOpened:${occurrence.occurrenceId}`) ||
     context.used.has(used) ||
     wellSlots(context).some((slotKey) => well.offerKeyBySlot[slotKey] === null)
   )
@@ -1181,32 +1163,17 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
       context.used.add(`${used}:slots`);
       return;
     }
-    if (
-      !context.applyValid({
-        kind: 'SetPurgingPoolInteraction',
+    applyFeatureRerolls(
+      context,
+      roomIndex,
+      'pool',
+      createRoomFeatureAddress(address, { kind: 'purgingPoolInventory' }),
+      () => ({
+        kind: 'InsertPurgingPoolReroll',
         occurrence: address,
-        interacted: true,
-      })
-    ) {
-      context.used.add(`${used}:slots`);
-      context.note({
-        area: 'pool',
-        reason: 'refused',
-        address: createRoomFeatureAddress(address, { kind: 'purgingPoolInventory' }),
-        record: record(roomIndex),
-      });
-    } else
-      applyFeatureRerolls(
-        context,
-        roomIndex,
-        'pool',
-        createRoomFeatureAddress(address, { kind: 'purgingPoolInventory' }),
-        () => ({
-          kind: 'InsertPurgingPoolReroll',
-          occurrence: address,
-          index: actionCount(context, biomeKey, occurrence.occurrenceId),
-        }),
-      );
+        index: actionCount(context, biomeKey, occurrence.occurrenceId),
+      }),
+    );
     return;
   }
   // The list is authored once the Pool's own frontier is reached.

@@ -80,16 +80,12 @@ Reward wheels follow the same selection boundary: a selected Ship occurrence
 publishes one wheel per active combat phase, and an unselected Ship door
 target, which is never entered, publishes none.
 
-Feature presence and feature interaction remain distinct facts on the wire. A
-native room field locked by `BlockedByRequirements`, such as the H Postboss
+A native room field locked by `BlockedByRequirements`, such as the H Postboss
 Pool on a fresh profile, is unusable natively and counts as absent. A present
-uninteracted Stygian Well or Pool of Purging is emitted with
-`interacted: false` and no fabricated inventory. A present interacted feature
-is emitted with `interacted: true` and its exact engine-owned inventory. The
-native adapter must realize the object in both cases, pass through vanilla
-inventory generation only in the former, and constrain the latter. An
-interacted Well or Pool also lists its rerolls in action order with only their
-pinned slots: the k-th native reroll installs the k-th entry, an unpinned slot
+Stygian Well or Pool of Purging is emitted with its initial roll's pinned
+slots only; the native adapter realizes the object, installs each pinned slot
+and leaves the others to vanilla generation. It also lists its rerolls in
+action order with only their pinned slots: the k-th native reroll installs the k-th entry, an unpinned slot
 stays native, and a Well slot bought earlier in the room stays blank. Each
 purchase and sale names its roll.
 

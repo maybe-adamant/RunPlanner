@@ -1478,14 +1478,6 @@ describe('engine-owned F/G execution semantic product', () => {
     );
 
     let neutralProject = createCompleteFGProject();
-    neutralProject = applyProjectCommand(neutralProject, catalog, {
-      kind: 'SetStygianWellInteraction',
-      occurrence: createOccurrenceAddress(
-        goldenFBiome,
-        createOccurrenceId('golden-f-preboss-shop:postboss'),
-      ),
-      interacted: true,
-    });
     const well = createOccurrenceAddress(
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
@@ -1523,7 +1515,7 @@ describe('engine-owned F/G execution semantic product', () => {
     ).toHaveLength(1);
     expect(
       neutral.occurrences.some(
-        (occurrence) => occurrence.overview.stygianWell?.interacted === true,
+        (occurrence) => (occurrence.overview.stygianWell?.offers.length ?? 0) > 0,
       ),
     ).toBe(true);
   });
@@ -2444,7 +2436,7 @@ describe('engine-owned F/G execution semantic product', () => {
       ),
     ).not.toContain('poolSale');
     const poolOccurrence = pool.occurrences.find(
-      (occurrence) => occurrence.overview.purgingPool?.interacted === true,
+      (occurrence) => (occurrence.overview.purgingPool?.traits.length ?? 0) > 0,
     );
     expect(poolOccurrence?.roomExitConformance?.facts).toContainEqual({
       kind: 'traitInventory',

@@ -15,7 +15,7 @@ import { loadUnderworldFGProject } from '@run-planner/test-fixtures/underworld';
 import { loadUnderworldIxionChaosCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 
 describe('route-owned selected resource placement command', () => {
-  it.each(['clearIxionOffer', 'disableWell', 'unpurchaseIxion'] as const)(
+  it.each(['clearIxionOffer', 'unpurchaseIxion'] as const)(
     'retracts resources deleted by indirect Ixion topology cleanup: %s',
     (edit) => {
       let project = loadUnderworldIxionChaosCheckpoint();
@@ -52,14 +52,12 @@ describe('route-owned selected resource placement command', () => {
               slotKey: 'secondLeft' as const,
               itemKey: null,
             }
-          : edit === 'disableWell'
-            ? { kind: 'SetStygianWellInteraction' as const, occurrence, interacted: false }
-            : {
-                kind: 'SetStygianWellPurchase' as const,
-                occurrence,
-                generationKey: gate.origin.generationKey,
-                purchased: false,
-              };
+          : {
+              kind: 'SetStygianWellPurchase' as const,
+              occurrence,
+              generationKey: gate.origin.generationKey,
+              purchased: false,
+            };
       const history = applyProjectHistoryCommand(createProjectHistory(project), catalog, command);
       expect(history.present.route.resourcePlacements).toMatchObject({
         Fishing: null,

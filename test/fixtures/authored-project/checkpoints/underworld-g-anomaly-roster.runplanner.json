@@ -1147,7 +1147,6 @@
                 ]
               },
               "stygianWell": {
-                "interacted": false,
                 "offerKeyBySlot": {
                   "healing": null,
                   "secondLeft": null,
@@ -1155,11 +1154,10 @@
                 }
               },
               "purgingPool": {
-                "interacted": false,
                 "traitKeyBySlot": {
-                  "left": "ApolloWeaponBoon",
-                  "middle": "HeraCastBoon",
-                  "right": "ZeusSpecialBoon"
+                  "left": null,
+                  "middle": null,
+                  "right": null
                 }
               },
               "keepsakeRack": {
@@ -2350,7 +2348,6 @@
                 ]
               },
               "stygianWell": {
-                "interacted": false,
                 "offerKeyBySlot": {
                   "healing": null,
                   "secondLeft": null,
@@ -2358,11 +2355,10 @@
                 }
               },
               "purgingPool": {
-                "interacted": false,
                 "traitKeyBySlot": {
-                  "left": "ApolloWeaponBoon",
-                  "middle": "CastProjectileBoon",
-                  "right": "HeraCastBoon"
+                  "left": null,
+                  "middle": null,
+                  "right": null
                 }
               },
               "keepsakeRack": {

@@ -220,7 +220,7 @@ export function activeRoomActionReferences(
     )
   )
     references.push(Object.freeze({ kind: 'interactInfernalContractPedestal' }));
-  if (occurrence.purgingPool?.interacted === true) {
+  if (occurrence.purgingPool !== undefined) {
     const sales: RoomActionReference[] = [];
     for (const [slotKey, traitKey] of Object.entries(occurrence.purgingPool.traitKeyBySlot)) {
       if (traitKey !== null)
@@ -236,20 +236,15 @@ export function activeRoomActionReferences(
             Object.freeze({ kind: 'sellPurgingPoolTrait', slotKey, rollKey: reroll.rerollId }),
           );
     }
-    // A sale from a reroll's list participates by its presence, so one whose
-    // roll or pin is gone keeps its finding; the initial list's empty slots
-    // are its Overview finding.
+    // An ordered sale participates by its presence, so one whose roll or
+    // pin is gone keeps its finding.
     const saleKeys = new Set(sales.map(roomActionKey));
     for (const reference of occurrence.roomActions.order)
-      if (
-        reference.kind === 'sellPurgingPoolTrait' &&
-        reference.rollKey !== undefined &&
-        !saleKeys.has(roomActionKey(reference))
-      )
+      if (reference.kind === 'sellPurgingPoolTrait' && !saleKeys.has(roomActionKey(reference)))
         sales.push(reference);
     references.push(...sales);
   }
-  if (occurrence.stygianWell?.interacted === true) {
+  if (occurrence.stygianWell !== undefined) {
     references.push(...stygianWellRerolls(occurrence.roomActions.order));
     const purchased = occurrence.stygianWell.purchasedGenerationKeys ?? [];
     // Purchase participation and rank survive an invalidating source edit.

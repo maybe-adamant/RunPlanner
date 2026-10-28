@@ -3129,19 +3129,19 @@ describe('execution-plan compiler and codec', () => {
     if (wellOccurrence?.overview.stygianWell === undefined)
       throw new Error('fixture lacks a Well overview');
     const well = wellOccurrence.overview.stygianWell;
-    well.interacted = true;
     delete well.offers;
-    expect(() => decodeExecutionPlan(wellMalformed)).toThrow(
-      /offers must be present iff interacted/,
-    );
+    expect(() => decodeExecutionPlan(wellMalformed)).toThrow(/offers/);
+    well.offers = [];
+    well.interacted = true;
+    expect(() => decodeExecutionPlan(wellMalformed)).toThrow(/unknown field interacted/);
 
     const duplicateWell = JSON.parse(JSON.stringify(fgIxionChaosFixture)) as {
       occurrences: Array<{
-        overview: { stygianWell?: { interacted: boolean; offers?: unknown[] } };
+        overview: { stygianWell?: { offers?: unknown[] } };
       }>;
     };
     const duplicateWellOccurrence = duplicateWell.occurrences.find(
-      (entry) => entry.overview.stygianWell?.offers !== undefined,
+      (entry) => (entry.overview.stygianWell?.offers?.length ?? 0) > 0,
     );
     if (duplicateWellOccurrence?.overview.stygianWell?.offers === undefined)
       throw new Error('fixture lacks interacted Well inventory');
@@ -3159,25 +3159,18 @@ describe('execution-plan compiler and codec', () => {
     if (poolOccurrence?.overview.purgingPool === undefined)
       throw new Error('fixture lacks a Pool overview');
     const pool = poolOccurrence.overview.purgingPool;
-    pool.interacted = false;
     delete pool.traits;
-    refreshWireFingerprint(poolMalformed as unknown as Record<string, unknown>);
-    expect(() => decodeExecutionPlan(poolMalformed)).not.toThrow();
-    pool.interacted = true;
-    delete pool.traits;
-    expect(() => decodeExecutionPlan(poolMalformed)).toThrow(
-      /traits must be present iff interacted/,
-    );
+    expect(() => decodeExecutionPlan(poolMalformed)).toThrow(/traits/);
 
     const duplicatePool = JSON.parse(
       JSON.stringify(planFor(authorLegalTraitOffers(loadUnderworldFPoolCheckpoint())).plan),
     ) as {
       occurrences: Array<{
-        overview: { purgingPool?: { interacted: boolean; traits?: unknown[] } };
+        overview: { purgingPool?: { traits?: unknown[] } };
       }>;
     };
     const duplicatePoolOccurrence = duplicatePool.occurrences.find(
-      (entry) => entry.overview.purgingPool?.traits !== undefined,
+      (entry) => (entry.overview.purgingPool?.traits?.length ?? 0) > 1,
     );
     if (duplicatePoolOccurrence?.overview.purgingPool?.traits === undefined)
       throw new Error('fixture lacks interacted Pool inventory');

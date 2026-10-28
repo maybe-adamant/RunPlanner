@@ -296,12 +296,10 @@ export function withRetainedFreshFilePostboss(
   const order = [...raw.roomActions.order];
   if (retained.well === true)
     raw.stygianWell = {
-      interacted: false,
       offerKeyBySlot: { healing: null, secondLeft: null, secondRight: null },
     };
   if (retained.poolSaleTraitKey !== undefined) {
     raw.purgingPool = {
-      interacted: true,
       traitKeyBySlot: { left: retained.poolSaleTraitKey, middle: null, right: null },
     };
     if (retained.poolSaleTraitKey !== null)

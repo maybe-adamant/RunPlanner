@@ -39,8 +39,6 @@ describe('Fresh File retained Postboss state', () => {
     expect(well).toHaveProperty('presenceInteractionKey');
     const pool = room.workbench.features.find((feature) => feature.kind === 'purgingPool');
     if (pool?.kind !== 'purgingPool') throw new Error('retained Pool is missing');
-    expect(pool.interacted).toBe(true);
-    expect(pool.interactionKey).toBeDefined();
     expect(pool.slots[0]).toMatchObject({ traitKey: 'ApolloWeaponBoon' });
     // The sale is removed on its Timeline row.
     expect(

@@ -97,7 +97,6 @@ function inactiveGateBlocked(
 
 export interface StygianWellAssessment {
   readonly placement: StygianWellPlacementAssessment;
-  readonly interacted: boolean;
   readonly forced: boolean;
   readonly eligible: boolean;
   readonly complete: boolean;
@@ -109,7 +108,7 @@ export interface StygianWellAssessment {
 
 /** A duplicate names the slot that repeats an earlier slot. */
 export interface StygianWellInventoryAssessmentIssue {
-  readonly kind: 'missing' | 'wrongGroup' | 'duplicate';
+  readonly kind: 'wrongGroup' | 'duplicate';
   readonly generationKey: import('../../authored-project/model').StygianWellGenerationKey;
 }
 
@@ -154,7 +153,7 @@ export interface StygianWellPurchaseAssessment {
   readonly twistCandidateItemKeys?: readonly string[];
   readonly issues: readonly (
     | {
-        readonly kind: 'refillMissing' | 'refillWrongGroup' | 'refillDuplicate';
+        readonly kind: 'refillWrongGroup' | 'refillDuplicate';
         readonly generationKey: 'travelDealRefill';
       }
     | {
@@ -249,24 +248,12 @@ export function assessStygianWell(
     secondLeft: wellCandidateItemKeys(catalog, routeKey, state, traitHistory, 'secondLeft'),
     secondRight: wellCandidateItemKeys(catalog, routeKey, state, traitHistory, 'secondRight'),
   });
-  if (!well.interacted)
-    return Object.freeze({
-      placement,
-      interacted: false,
-      forced: declaration?.forced === true,
-      eligible: placement.eligible,
-      complete: false,
-      candidateItemKeysBySlot: domains,
-      issues: Object.freeze([]),
-    });
+  // A blank slot stays native; only a pinned one is assessed.
   const issues: StygianWellInventoryAssessmentIssue[] = [];
   for (const key of STYGIAN_WELL_SLOT_KEYS) {
-    const generationKey = `initial:${key}` as const;
-    if (well.offerKeyBySlot[key] === null) {
-      issues.push({ kind: 'missing', generationKey });
-    } else if (!domains[key].includes(well.offerKeyBySlot[key]!)) {
-      issues.push({ kind: 'wrongGroup', generationKey });
-    }
+    const itemKey = well.offerKeyBySlot[key];
+    if (itemKey !== null && !domains[key].includes(itemKey))
+      issues.push({ kind: 'wrongGroup', generationKey: `initial:${key}` });
   }
   STYGIAN_WELL_SLOT_KEYS.forEach((key, index) => {
     const value = well.offerKeyBySlot[key];
@@ -280,7 +267,6 @@ export function assessStygianWell(
   });
   return Object.freeze({
     placement,
-    interacted: true,
     forced: declaration?.forced === true,
     eligible: placement.eligible,
     complete: issues.length === 0,
@@ -379,10 +365,9 @@ export function assessStygianWellPurchase(
           const candidateItemKeys = Object.freeze(
             sourceDomain.filter((key) => !first.rollItemKeys.includes(key)),
           );
+          // An unpinned restock stays native until its purchase needs it.
           const refill = first.travelDealRefillKey;
-          if (refill === undefined || refill === null)
-            issues.push({ kind: 'refillMissing', generationKey: 'travelDealRefill' });
-          else if (!candidateItemKeys.includes(refill))
+          if (refill !== undefined && refill !== null && !candidateItemKeys.includes(refill))
             issues.push({
               kind: sourceDomain.includes(refill) ? 'refillDuplicate' : 'refillWrongGroup',
               generationKey: 'travelDealRefill',
@@ -602,7 +587,6 @@ export interface StygianWellCandidateCapability {
   readonly placementEligible: boolean;
   readonly required: boolean;
   readonly present: boolean;
-  readonly interacted: boolean;
   /** The initial roll's candidates. */
   readonly candidateItemKeysBySlot: Readonly<Record<StygianWellSlotKey, readonly string[]>>;
   /** Each reached Well reroll's restock, by its reroll id. */
@@ -680,9 +664,6 @@ export function createStygianWellCandidateArtifacts(
         present:
           entryAssessments.length > 0 &&
           entryAssessments.every((assessment) => assessment.inventory !== undefined),
-        interacted: entryAssessments.every(
-          (assessment) => assessment.inventory?.interacted === true,
-        ),
         candidateItemKeysBySlot: agreedBySlot(
           entryAssessments.flatMap((assessment) =>
             assessment.inventory === undefined

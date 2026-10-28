@@ -127,18 +127,6 @@ export interface WorkspacePurgingPoolSlotInteraction {
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplacePurgingPoolSlot' }>>;
 }
 
-/** Controls whether a fixed physical Pool has an authored exact inventory. */
-export interface WorkspacePurgingPoolInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly interacted: boolean;
-  readonly intentFor: (
-    interacted: boolean,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetPurgingPoolInteraction' }>
-  >;
-}
-
 export interface WorkspaceHermesShrinePurchaseInteraction {
   readonly key: string;
   readonly owner: OccurrenceAddress;
@@ -192,17 +180,6 @@ export interface WorkspaceStygianWellPresenceInteraction {
   ) => WorkspaceCommandIntent<
     | Extract<ProjectCommand, { readonly kind: 'AddStygianWell' }>
     | Extract<ProjectCommand, { readonly kind: 'RemoveStygianWell' }>
-  >;
-}
-
-export interface WorkspaceStygianWellInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly interacted: boolean;
-  readonly intentFor: (
-    interacted: boolean,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetStygianWellInteraction' }>
   >;
 }
 

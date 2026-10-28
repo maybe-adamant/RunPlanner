@@ -184,11 +184,6 @@ export function createUnderworldFWellCheckpoint(configuredTail = true): ProjectD
     goldenFBiome,
     createOccurrenceId('golden-f-preboss-shop:postboss'),
   );
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetStygianWellInteraction',
-    occurrence,
-    interacted: true,
-  });
   for (const [slotKey, itemKey] of [
     ['healing', 'ArmorBoostStore'],
     ['secondLeft', 'TemporaryBoonRarityTrait'],
@@ -1053,19 +1048,18 @@ export function underworldPersephoneCallingCardProject(): ProjectDocument {
 export function createUnderworldFPoolCheckpoint(): ProjectDocument {
   let project = createCompleteFGProject();
   const occurrenceId = createOccurrenceId('golden-f-preboss-shop:postboss');
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SetPurgingPoolInteraction',
-    occurrence: createOccurrenceAddress(goldenFBiome, occurrenceId),
-    interacted: true,
-  });
-  const pool = project.route.biomes
-    .find((biome) => biome.biomeKey === 'F')
-    ?.topology?.occurrences.find(
-      (occurrence) => occurrence.occurrenceId === occurrenceId,
-    )?.purgingPool;
-  const traitKey = pool?.traitKeyBySlot.left;
-  if (traitKey === null || traitKey === undefined)
-    throw new Error('complete F Pool fixture requires a resolved left slot');
+  const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
+  for (const [slotKey, traitKey] of [
+    ['left', 'ApolloWeaponBoon'],
+    ['middle', 'HeraCastBoon'],
+    ['right', 'ZeusSpecialBoon'],
+  ] as const)
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplacePurgingPoolSlot',
+      occurrence,
+      slotKey,
+      traitKey,
+    });
   const reference = Object.freeze({
     kind: 'sellPurgingPoolTrait' as const,
     slotKey: 'left' as const,

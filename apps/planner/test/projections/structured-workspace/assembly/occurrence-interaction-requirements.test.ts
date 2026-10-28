@@ -63,7 +63,7 @@ describe('occurrence interaction requirements', () => {
       (requirement) => requirement.kind,
     );
 
-    expect(featureKinds).toEqual(expect.arrayContaining(['stygianWell', 'purgingPoolInteraction']));
+    expect(featureKinds).toEqual(expect.arrayContaining(['stygianWell', 'purgingPoolSlots']));
 
     const withShrineAndResource = {
       ...postboss,

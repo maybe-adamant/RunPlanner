@@ -579,11 +579,6 @@ describe('OccurrenceRoomFeatures', () => {
       occurrence: owner,
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'SetStygianWellInteraction',
-      occurrence: owner,
-      interacted: true,
-    });
-    project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: owner,
       slotKey: 'healing',

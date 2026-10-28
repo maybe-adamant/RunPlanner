@@ -1007,13 +1007,12 @@ describe('OccurrenceRoomActions', () => {
       completionOccurrenceById(postbossId),
     );
     openRoomTab('Room Overview');
-    expect(screen.queryByRole('button', { name: 'Pool of Purging Offer 1 Item' })).toBeNull();
-    await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Pool of Purging' }));
     const left = screen.getByRole('button', { name: 'Pool of Purging Offer 1 Item' });
     await view.user.click(left);
+    // Blank slots are native: the selected option is Unresolved.
     const firstTrait = within(screen.getByRole('listbox'))
       .getAllByRole('option')
-      .find((option) => option.textContent?.trim() !== 'Unresolved');
+      .find((option) => option.getAttribute('aria-selected') !== 'true');
     if (firstTrait === undefined) throw new Error('F Pool has no eligible trait candidate');
     const leftTraitLabel =
       firstTrait.querySelector('.contextual-picker-item-label')?.textContent ??
@@ -1027,7 +1026,7 @@ describe('OccurrenceRoomActions', () => {
       await view.user.click(slot);
       const trait = within(screen.getByRole('listbox'))
         .getAllByRole('option')
-        .find((option) => option.textContent?.trim() !== 'Unresolved');
+        .find((option) => option.getAttribute('aria-selected') !== 'true');
       if (trait === undefined) throw new Error(`F Pool ${label} has no eligible trait candidate`);
       await view.user.click(trait);
     }
@@ -1102,8 +1101,8 @@ describe('OccurrenceRoomActions', () => {
     );
     act(() => view.application.store.dispatch(semanticOwnerNavigated(leftSale)));
     openRoomTab('Room Timeline');
-    const repairs = await screen.findByRole('region', { name: 'Timeline repairs' });
-    const stale = within(repairs).getByText('Sell left Pool trait').closest('li');
+    // A sale whose slot lost its pin stays on the timeline with its finding.
+    const stale = (await screen.findByText('Sell left Pool trait')).closest('li');
     if (stale === null) throw new Error('Retained Pool sale is missing');
     expect(document.getElementById(semanticOwnerControlElementId(leftSale))).toBe(stale);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(leftSale);
@@ -1115,11 +1114,6 @@ describe('OccurrenceRoomActions', () => {
         kind: 'sellPurgingPoolTrait',
         slotKey: 'left',
       }),
-    );
-    openRoomTab('Room Overview');
-    await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Pool of Purging' }));
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Pool of Purging Offer 2 Item' })).toBeNull(),
     );
     expect(
       view.application.store

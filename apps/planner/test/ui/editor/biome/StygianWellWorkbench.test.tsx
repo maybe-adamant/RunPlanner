@@ -47,11 +47,7 @@ function occurrence(biome: WorkspaceBiome): WorkspaceOccurrenceWorkbenchNode | u
 
 function authoredWell(): ProjectDocument {
   const owner = createOccurrenceAddress(goldenFBiome, postbossId);
-  let project = applyProjectCommand(loadUnderworldFGProject(), catalog, {
-    kind: 'SetStygianWellInteraction',
-    occurrence: owner,
-    interacted: true,
-  });
+  let project = loadUnderworldFGProject();
   for (const [slotKey, itemKey] of [
     ['healing', 'ArmorBoostStore'],
     ['secondLeft', 'RandomStoreItem'],
@@ -76,7 +72,7 @@ function openTimeline(): void {
 }
 
 describe('Stygian Well workbench', () => {
-  it('authors ordinary presence separately from interaction', async () => {
+  it('authors ordinary presence, with its slots editable once present', async () => {
     const project = loadUnderworldFGProject();
     const occurrenceId = goldenFOccurrenceId(3, 1);
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', (biome) =>
@@ -90,26 +86,19 @@ describe('Stygian Well workbench', () => {
     expect((presence as HTMLInputElement).checked).toBe(false);
     expect((presence as HTMLInputElement).disabled).toBe(false);
 
-    await view.user.click(presence);
-    expect(screen.getByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeTruthy();
     expect(screen.queryAllByRole('button', { name: /^Stygian Well / })).toHaveLength(0);
+    await view.user.click(presence);
+    expect(screen.queryByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeNull();
+    expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);
   });
 
-  it('keeps forced presence fixed and gates exact inventory behind Interact', async () => {
-    const view = renderOccurrenceWorkbench(
-      loadUnderworldFGProject(),
-      'Underworld',
-      'F',
-      occurrence,
-    );
+  it('keeps forced presence fixed with its slots always editable', () => {
+    renderOccurrenceWorkbench(loadUnderworldFGProject(), 'Underworld', 'F', occurrence);
     openOverview();
     const presence = screen.getByRole('checkbox', { name: 'Stygian Well present' });
     expect(presence).toHaveProperty('checked', true);
     expect(presence).toHaveProperty('disabled', true);
-    expect(screen.getByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeTruthy();
-    expect(screen.queryAllByRole('button', { name: /^Stygian Well / })).toHaveLength(0);
-
-    await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Stygian Well' }));
+    expect(screen.queryByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeNull();
     expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);
   });
 

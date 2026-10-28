@@ -667,25 +667,12 @@ export function overview(value: unknown, label: string) {
     record.stygianWell === undefined
       ? undefined
       : object(record.stygianWell, `${label}.stygianWell`);
-  if (well !== undefined)
-    exact(well, ['interacted'], ['offers', 'rerolls'], `${label}.stygianWell`);
-  if (well !== undefined) {
-    const interacted = booleanValue(well.interacted, `${label}.stygianWell.interacted`);
-    if (interacted !== (well.offers !== undefined))
-      fail(`${label}.stygianWell.offers must be present iff interacted`);
-    if (!interacted && well.rerolls !== undefined)
-      fail(`${label}.stygianWell.rerolls requires an interacted Well`);
-  }
+  if (well !== undefined) exact(well, ['offers'], ['rerolls'], `${label}.stygianWell`);
   const parsedWell =
     well === undefined
       ? undefined
       : Object.freeze({
-          interacted: booleanValue(well.interacted, `${label}.stygianWell.interacted`),
-          ...(well.offers === undefined
-            ? {}
-            : {
-                offers: wellOffers(well.offers, 'initial', `${label}.stygianWell.offers`),
-              }),
+          offers: wellOffers(well.offers, 'initial', `${label}.stygianWell.offers`),
           ...(well.rerolls === undefined
             ? {}
             : {
@@ -706,47 +693,12 @@ export function overview(value: unknown, label: string) {
     record.purgingPool === undefined
       ? undefined
       : object(record.purgingPool, `${label}.purgingPool`);
-  if (pool !== undefined)
-    exact(pool, ['interacted'], ['traits', 'rerolls'], `${label}.purgingPool`);
-  if (pool !== undefined) {
-    const interacted = booleanValue(pool.interacted, `${label}.purgingPool.interacted`);
-    if (interacted !== (pool.traits !== undefined))
-      fail(`${label}.purgingPool.traits must be present iff interacted`);
-    if (!interacted && pool.rerolls !== undefined)
-      fail(`${label}.purgingPool.rerolls requires an interacted Pool`);
-  }
+  if (pool !== undefined) exact(pool, ['traits'], ['rerolls'], `${label}.purgingPool`);
   const parsedPool =
     pool === undefined
       ? undefined
       : Object.freeze({
-          interacted: booleanValue(pool.interacted, `${label}.purgingPool.interacted`),
-          ...(pool.traits === undefined
-            ? {}
-            : {
-                traits: Object.freeze(
-                  array(pool.traits, `${label}.purgingPool.traits`, 3).map((entry, index) => {
-                    const row = object(entry, `${label}.purgingPool.traits[${index}]`);
-                    exact(
-                      row,
-                      ['slotKey', 'traitKey'],
-                      [],
-                      `${label}.purgingPool.traits[${index}]`,
-                    );
-                    if (!['left', 'middle', 'right'].includes(row.slotKey as string))
-                      fail(`${label}.purgingPool.traits[${index}].slotKey is unsupported`);
-                    return Object.freeze({
-                      slotKey: row.slotKey as 'left' | 'middle' | 'right',
-                      traitKey:
-                        row.traitKey === null
-                          ? null
-                          : stringValue(
-                              row.traitKey,
-                              `${label}.purgingPool.traits[${index}].traitKey`,
-                            ),
-                    });
-                  }),
-                ),
-              }),
+          traits: poolTraits(pool.traits, `${label}.purgingPool.traits`),
           ...(pool.rerolls === undefined
             ? {}
             : {
@@ -755,33 +707,14 @@ export function overview(value: unknown, label: string) {
                   `${label}.purgingPool.rerolls`,
                   (row, rollKey, path) => {
                     exact(row, ['rollKey', 'traits'], [], path);
-                    const traits = Object.freeze(
-                      array(row.traits, `${path}.traits`, 3).map((entry, index) => {
-                        const trait = object(entry, `${path}.traits[${index}]`);
-                        exact(trait, ['slotKey', 'traitKey'], [], `${path}.traits[${index}]`);
-                        if (!['left', 'middle', 'right'].includes(trait.slotKey as string))
-                          fail(`${path}.traits[${index}].slotKey is unsupported`);
-                        return Object.freeze({
-                          slotKey: trait.slotKey as 'left' | 'middle' | 'right',
-                          traitKey: stringValue(
-                            trait.traitKey,
-                            `${path}.traits[${index}].traitKey`,
-                          ),
-                        });
-                      }),
-                    );
-                    if (new Set(traits.map((trait) => trait.slotKey)).size !== traits.length)
-                      fail(`${path}.traits has duplicate slot keys`);
-                    return Object.freeze({ rollKey, traits });
+                    return Object.freeze({
+                      rollKey,
+                      traits: poolTraits(row.traits, `${path}.traits`),
+                    });
                   },
                 ),
               }),
         });
-  if (parsedPool?.traits !== undefined) {
-    const keys = parsedPool.traits.map((trait) => trait.slotKey);
-    if (new Set(keys).size !== keys.length)
-      fail(`${label}.purgingPool.traits has duplicate slot keys`);
-  }
   const rack =
     record.keepsakeRack === undefined
       ? undefined
@@ -1056,4 +989,23 @@ function rolls<T>(
       return decode(row, rollKey, path);
     }),
   );
+}
+
+/** One Pool list's pinned slots, each named once. */
+function poolTraits(value: unknown, label: string) {
+  const traits = Object.freeze(
+    array(value, label, 3).map((entry, index) => {
+      const trait = object(entry, `${label}[${index}]`);
+      exact(trait, ['slotKey', 'traitKey'], [], `${label}[${index}]`);
+      if (!['left', 'middle', 'right'].includes(trait.slotKey as string))
+        fail(`${label}[${index}].slotKey is unsupported`);
+      return Object.freeze({
+        slotKey: trait.slotKey as 'left' | 'middle' | 'right',
+        traitKey: stringValue(trait.traitKey, `${label}[${index}].traitKey`),
+      });
+    }),
+  );
+  if (new Set(traits.map((trait) => trait.slotKey)).size !== traits.length)
+    fail(`${label} has duplicate slot keys`);
+  return traits;
 }

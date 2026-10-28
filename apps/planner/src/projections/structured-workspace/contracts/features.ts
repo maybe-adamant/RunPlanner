@@ -60,8 +60,6 @@ export type WorkspaceRoomFeature =
       readonly assessment: WorkspaceFeatureAssessment;
       readonly inventoryAddress: RoomFeatureAddress;
       readonly inventoryMarker: WorkspaceMarker;
-      readonly interactionKey: string;
-      readonly interacted: boolean;
       /** The next sale or reroll, appended at the end of the room's actions. */
       readonly rollActions?: WorkspaceFeatureRollActions;
       readonly slots: readonly {
@@ -143,8 +141,6 @@ export type WorkspaceRoomFeature =
       readonly inventoryAddress?: RoomFeatureAddress;
       readonly inventoryMarker?: WorkspaceMarker;
       readonly presenceInteractionKey?: string;
-      readonly interactionKey?: string;
-      readonly interacted: boolean;
       /** The initial stock. */
       readonly slots: readonly WorkspaceStygianWellSlot[];
       /** The next purchase or reroll, appended at the end of the room's actions. */

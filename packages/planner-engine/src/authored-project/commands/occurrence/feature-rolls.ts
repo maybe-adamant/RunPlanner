@@ -34,18 +34,18 @@ export function roomShopItemKeys(catalog: Catalog): ReadonlySet<string> {
   );
 }
 
-function requireInteractedFeature(
+function requirePresentFeature(
   command: FeatureRollCommand,
   occurrence: RoomOccurrence,
   feature: RollFeature,
 ): void {
   const state = feature === 'stygianWell' ? occurrence.stygianWell : occurrence.purgingPool;
-  if (state?.interacted !== true)
+  if (state === undefined)
     failCommand(
       command,
       feature === 'stygianWell'
-        ? 'Stygian Well is not being interacted with'
-        : 'Purging Pool is not being interacted with',
+        ? 'occurrence has no present Stygian Well'
+        : 'occurrence has no Purging Pool',
     );
 }
 
@@ -72,7 +72,7 @@ export function applyFeatureRollCommand(
       const feature: RollFeature =
         command.kind === 'InsertStygianWellReroll' ? 'stygianWell' : 'purgingPool';
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
-      requireInteractedFeature(command, occurrence, feature);
+      requirePresentFeature(command, occurrence, feature);
       const room = catalog.rooms.byKey[occurrence.gameName];
       if (room === undefined || !screenRerollSupported(catalog, { kind: feature, room }))
         failCommand(command, 'this screen cannot be rerolled');

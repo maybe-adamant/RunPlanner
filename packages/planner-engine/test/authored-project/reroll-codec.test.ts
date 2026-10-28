@@ -144,12 +144,14 @@ describe('reroll codec', () => {
     expect(
       decodeWith(withOrder({ kind: 'purchaseStygianWellOffer', generationKey: 'later:healing' })),
     ).toThrow('must be a Well generation key');
-    // A Pool roll needs an interacted Pool; the initial list is an absent roll key.
+    // The feature holds no interaction flag; the initial list is an absent roll key.
     expect(
-      decodeWith(withOrder({ kind: 'rerollPurgingPool', rerollId: 'r1', traitKeyBySlot: {} })),
-    ).toThrow('requires an interacted Well or Pool of this room');
+      decodeWith((room) => {
+        (room.purgingPool as Record<string, unknown>).interacted = true;
+      }),
+    ).toThrow('is not a project document field');
     const interactedPool = (room: Record<string, unknown>) => {
-      (room.purgingPool as Record<string, unknown>).interacted = true;
+      void room;
     };
     expect(
       decodeWith((room) => {

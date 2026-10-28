@@ -69,7 +69,6 @@ export function defaultOccurrence(
       ? {}
       : {
           purgingPool: Object.freeze({
-            interacted: false,
             traitKeyBySlot: Object.freeze({ left: null, middle: null, right: null }),
           }),
         }),
@@ -83,7 +82,6 @@ export function defaultOccurrence(
     ...(routeRoomShop(room, routeKey)?.forced === true
       ? {
           stygianWell: Object.freeze({
-            interacted: false,
             offerKeyBySlot: Object.freeze({ healing: null, secondLeft: null, secondRight: null }),
           }),
         }

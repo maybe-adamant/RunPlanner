@@ -20,7 +20,7 @@ export function RouteWellsPanel({ rows }: { readonly rows: readonly RouteStygian
               <strong>{room.label}</strong>
               <span className="route-trait-meta">
                 {biomeKey} ·{' '}
-                {well.interacted
+                {well.presence.kind !== 'optionalAbsent'
                   ? [
                       ...well.slots,
                       ...(well.travelDealRefill === undefined ? [] : [well.travelDealRefill]),

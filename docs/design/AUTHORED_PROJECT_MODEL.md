@@ -640,8 +640,10 @@ reference in `roomActions.order`, which owns its rush and its position among the
 Shrine's purchases; the codec rejects a missing, duplicate or unpurchased
 purchase action, and a same-room Shrine pickup without a rushed purchase
 action. Its rushed or delayed delivery owns concrete acquisition payload. A
-Stygian Well uses its `interacted` flag as the boundary between native-random
-inventory and three authored initial generations. Travel Deal refill state is
+Stygian Well or Pool of Purging holds its initial stock with no interaction
+flag: a blank slot stays native, a pinned one is assessed, and a slot becomes
+required only once a purchase or sale uses it; use follows from the room's
+actions. Travel Deal refill state is
 occurrence-local to its Shop, Shrine, or Well carrier. Pending deliveries,
 temporary effects, Spell reservations, and expiry remain derived simulation
 state.

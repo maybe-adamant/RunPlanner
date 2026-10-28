@@ -156,12 +156,11 @@ export interface ShopState {
 export type PurgingPoolSlotKey = 'left' | 'middle' | 'right';
 
 /**
- * The Pool's initial sell list; null is unresolved authoring. Each later list
- * is a `rerollPurgingPool` room action.
+ * The Pool's initial sell list; a null slot stays native until a sale needs
+ * it. Use follows from the room's actions; each later list is a
+ * `rerollPurgingPool` room action.
  */
 export interface PurgingPoolState {
-  /** Whether the player opens this physical Pool and authors its realized inventory. */
-  readonly interacted: boolean;
   readonly traitKeyBySlot: Readonly<Record<PurgingPoolSlotKey, string | null>>;
 }
 
@@ -216,9 +215,12 @@ export type StygianWellSlotKey = 'healing' | 'secondLeft' | 'secondRight';
  * `rerollStygianWell` action's id, or the Travel Deal refill.
  */
 export type StygianWellGenerationKey = `${string}:${StygianWellSlotKey}` | 'travelDealRefill';
-/** The Well's initial stock; each later roll is a `rerollStygianWell` room action. */
+/**
+ * The Well's initial stock; a null slot stays native until a purchase needs
+ * it. Use follows from the room's actions; each later roll is a
+ * `rerollStygianWell` room action.
+ */
 export interface StygianWellState {
-  readonly interacted: boolean;
   readonly offerKeyBySlot: Readonly<Record<StygianWellSlotKey, string | null>>;
   readonly twistResultKeyBySlot?: Readonly<
     Partial<Record<StygianWellSlotKey | 'travelDealRefill', string | null>>

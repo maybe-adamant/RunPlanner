@@ -617,7 +617,6 @@
                 ]
               },
               "stygianWell": {
-                "interacted": false,
                 "offerKeyBySlot": {
                   "healing": null,
                   "secondLeft": null,
@@ -1708,7 +1707,6 @@
                 ]
               },
               "stygianWell": {
-                "interacted": false,
                 "offerKeyBySlot": {
                   "healing": null,
                   "secondLeft": null,
@@ -2249,7 +2247,6 @@
                 ]
               },
               "stygianWell": {
-                "interacted": false,
                 "offerKeyBySlot": {
                   "healing": null,
                   "secondLeft": null,

@@ -35,11 +35,6 @@ describe('offered-exit requirements', () => {
       kind: 'AddStygianWell',
       occurrence: well,
     });
-    withIxion = applyProjectCommand(withIxion, catalog, {
-      kind: 'SetStygianWellInteraction',
-      occurrence: well,
-      interacted: true,
-    });
     for (const [slotKey, itemKey] of [
       ['healing', 'ArmorBoostStore'],
       ['secondLeft', 'TemporaryForcedSecretDoorTrait'],

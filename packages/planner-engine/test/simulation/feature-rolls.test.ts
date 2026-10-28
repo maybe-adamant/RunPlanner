@@ -199,11 +199,47 @@ describe('Stygian Well rolls', () => {
       applyProjectCommand(project, catalog, {
         kind: 'SetStygianWellPurchase',
         occurrence: room,
-        generationKey: 'initial:healing',
-        purchased: true,
+        generationKey: 'r1:healing',
+        purchased: false,
         itemKey: 'HealDropRange',
       }),
-    ).toThrow('only a reroll slot is pinned with its purchase');
+    ).toThrow('a slot is pinned only with its purchase');
+  });
+
+  it('need a pin only on a bought slot, initial ones included', () => {
+    let project = base();
+    // A blank initial slot is native: no finding until it is bought.
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: room,
+      slotKey: 'healing',
+      itemKey: null,
+    });
+    expect(findings(project)).toEqual([]);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: room,
+      generationKey: 'initial:healing',
+      purchased: true,
+      itemKey: 'HealDropRange',
+    });
+    expect(findings(project)).toEqual([]);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: room,
+      slotKey: 'healing',
+      itemKey: null,
+    });
+    expect(findings(project)).toContainEqual({
+      code: 'stygianWellMissing',
+      origin: semanticAddressKey(
+        createRoomFeatureAddress(room, {
+          kind: 'stygianWellOffer',
+          generationKey: 'initial:healing',
+        }),
+      ),
+      evidence: { reason: 'missing' },
+    });
   });
 
   it('refuse a reroll whose pins repeat every item still on show', () => {
@@ -311,12 +347,21 @@ describe('Stygian Well rolls', () => {
 });
 
 describe('Pool of Purging rolls', () => {
+  /** The Pool with its initial list pinned: four eligible traits, three shown. */
   function interacted(): ProjectDocument {
-    return applyProjectCommand(base(), catalog, {
-      kind: 'SetPurgingPoolInteraction',
-      occurrence: room,
-      interacted: true,
-    });
+    let project = base();
+    for (const [slotKey, traitKey] of [
+      ['left', 'ApolloWeaponBoon'],
+      ['middle', 'HeraCastBoon'],
+      ['right', 'ZeusSpecialBoon'],
+    ] as const)
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplacePurgingPoolSlot',
+        occurrence: room,
+        slotKey,
+        traitKey,
+      });
+    return project;
   }
 
   it('redraw the list from current traits and sell from the roll on show', () => {

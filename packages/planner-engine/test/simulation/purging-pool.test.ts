@@ -1,6 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  applyProjectCommand,
   createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -24,7 +23,6 @@ function pool(
   right: string | null = null,
 ): PurgingPoolState {
   return Object.freeze({
-    interacted: true,
     traitKeyBySlot: Object.freeze({ left, middle, right }),
   });
 }
@@ -62,11 +60,7 @@ function asConfiguredTailF(project: ProjectDocument): ProjectDocument {
 }
 
 function withFPoolInteraction(project: ProjectDocument): ProjectDocument {
-  return applyProjectCommand(project, catalog, {
-    kind: 'SetPurgingPoolInteraction',
-    occurrence: fPostboss,
-    interacted: true,
-  });
+  return project;
 }
 
 describe('Purging Pool generation assessment', () => {
@@ -127,55 +121,24 @@ describe('Purging Pool generation assessment', () => {
       ],
       3,
     ],
-  ] as const)('requires min(3, eligible) at cardinality %s', (entries, expected) => {
-    const assessment = assessPurgingPool(catalog, pool(), equipped(...entries));
-    expect(assessment.requiredTraitCount).toBe(expected);
-    expect(assessment.findings.map((finding) => [finding.code, finding.slotKey])).toEqual(
-      (['left', 'middle', 'right'] as const)
-        .slice(0, expected)
-        .map((slotKey) => ['purgingPoolTraitMissing', slotKey]),
-    );
-  });
-
-  it.each([
-    ['left filled', pool('ApolloWeaponBoon'), ['middle']],
-    ['right filled', pool(null, null, 'ApolloWeaponBoon'), ['left']],
-    ['middle filled', pool(null, 'HermesWeaponBoon'), ['left']],
-    ['both filled', pool('ApolloWeaponBoon', null, 'HermesWeaponBoon'), []],
   ] as const)(
-    'marks only the first empty slot still needed with two eligible traits (%s)',
-    (_case, state, expected) => {
-      const assessment = assessPurgingPool(
-        catalog,
-        state,
-        equipped(['ApolloWeaponBoon', 'Common'], ['HermesWeaponBoon', 'Rare']),
-      );
-      expect(
-        assessment.findings
-          .filter((finding) => finding.code === 'purgingPoolTraitMissing')
-          .map((finding) => finding.slotKey),
-      ).toEqual(expected);
+    'draws min(3, eligible) and leaves blank slots native at cardinality %s',
+    (entries, expected) => {
+      const assessment = assessPurgingPool(catalog, pool(), equipped(...entries));
+      expect(assessment.requiredTraitCount).toBe(expected);
+      expect(assessment.findings).toEqual([]);
+      expect(assessment.complete).toBe(true);
     },
   );
 
-  it('marks every empty slot still needed when three or more traits are eligible', () => {
+  it('assesses only pinned slots', () => {
     const assessment = assessPurgingPool(
       catalog,
-      pool(null, 'HermesWeaponBoon'),
-      equipped(
-        ['ApolloWeaponBoon', 'Common'],
-        ['HermesWeaponBoon', 'Rare'],
-        ['AthenaProjectileBoon', 'Epic'],
-        ['GoodStuffBoon', 'Duo'],
-      ),
+      pool(null, 'HermesWeaponBoon', 'ZeusSpecialBoon'),
+      equipped(['ApolloWeaponBoon', 'Common'], ['HermesWeaponBoon', 'Rare']),
     );
     expect(assessment.findings).toEqual([
-      expect.objectContaining({
-        code: 'purgingPoolTraitMissing',
-        slotKey: 'left',
-        evidence: { requiredTraitCount: 3, resolvedCount: 1 },
-      }),
-      expect.objectContaining({ code: 'purgingPoolTraitMissing', slotKey: 'right' }),
+      expect.objectContaining({ code: 'purgingPoolTraitUnavailable', slotKey: 'right' }),
     ]);
   });
 

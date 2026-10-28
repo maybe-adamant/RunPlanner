@@ -41,11 +41,7 @@ function fRewards(project: ProjectDocument) {
 }
 
 function withPoolSlots(project: ProjectDocument, traitKeys: readonly string[]) {
-  const interacted = applyProjectCommand(project, catalog, {
-    kind: 'SetPurgingPoolInteraction',
-    occurrence,
-    interacted: true,
-  });
+  const interacted = project;
   return traitKeys.reduce(
     (current, traitKey, index) =>
       applyProjectCommand(current, catalog, {
@@ -90,11 +86,6 @@ describe('Purging Pool sales', () => {
       },
       keepsakeKey: 'FountainRarityKeepsake',
     });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SetPurgingPoolInteraction',
-      occurrence,
-      interacted: true,
-    });
     for (const slotKey of ['left', 'middle', 'right'] as const)
       project = applyProjectCommand(project, catalog, {
         kind: 'ReplacePurgingPoolSlot',
@@ -125,11 +116,9 @@ describe('Purging Pool sales', () => {
     const ready = simulateProjectAssembly(catalog, project);
     const capability = purgingPoolCandidateForProjectEvaluationAssembly(ready, occurrence);
     expect(capability?.candidateTraitKeysBySlot.left).toContain('ApolloWeaponBoon');
-    expect(ready.evaluation.route.biomes[0]?.findings).toContainEqual(
-      expect.objectContaining({
-        code: 'purgingPoolTraitMissing',
-        origin: createRoomFeatureAddress(occurrence, { kind: 'purgingPoolOffer', slotKey: 'left' }),
-      }),
+    // Blank slots stay native.
+    expect(ready.evaluation.route.biomes[0]?.findings).not.toContainEqual(
+      expect.objectContaining({ code: 'purgingPoolTraitMissing' }),
     );
     const selected = withPoolSlots(project, [
       'ApolloWeaponBoon',
@@ -153,11 +142,7 @@ describe('Purging Pool sales', () => {
   });
 
   it('rejects an unknown Pool slot before mutating authored state', () => {
-    const interacted = applyProjectCommand(createGoldenFGHProject(), catalog, {
-      kind: 'SetPurgingPoolInteraction',
-      occurrence,
-      interacted: true,
-    });
+    const interacted = createGoldenFGHProject();
 
     expect(() =>
       applyProjectCommand(interacted, catalog, {
@@ -169,14 +154,14 @@ describe('Purging Pool sales', () => {
     ).toThrow(/unknown Purging Pool slot upper/);
   });
 
-  it('keeps an uninteracted forced Pool runtime-random and disabling it removes sales but retains detail', () => {
+  it('keeps an unsold Pool native, and removing a sale retains its list', () => {
     const initial = createGoldenFGHProject();
+    // Blank slots are native: the unused Pool asks for nothing.
     expect(
-      purgingPoolCandidateForProjectEvaluationAssembly(
-        simulateProjectAssembly(catalog, initial),
-        occurrence,
+      simulateProjectAssembly(catalog, initial).evaluation.findings.filter((finding) =>
+        finding.code.startsWith('purgingPool'),
       ),
-    ).toBeUndefined();
+    ).toEqual([]);
 
     const equipped = Object.keys(
       fRewards(initial).branches[0]?.state.traitHistory?.equippedTraits ?? {},
@@ -184,32 +169,24 @@ describe('Purging Pool sales', () => {
     if (equipped.length < 3) throw new Error('fixture has too few Pool candidates');
     const resolved = withPoolSlots(initial, [equipped[0]!, equipped[1]!, equipped[2]!]);
     const sold = sell(resolved, 'left');
-    const disabled = applyProjectCommand(sold, catalog, {
-      kind: 'SetPurgingPoolInteraction',
-      occurrence,
-      interacted: false,
-    });
-    const pool = disabled.route.biomes
-      .find((plan) => plan.biomeKey === 'F')
-      ?.topology?.occurrences.find(
-        (entry) => entry.occurrenceId === occurrence.occurrenceId,
-      )?.purgingPool;
-    expect(pool?.interacted).toBe(false);
-    expect(pool?.traitKeyBySlot.left).toBe(equipped[0]);
-    expect(
-      disabled.route.biomes
-        .find((plan) => plan.biomeKey === 'F')
-        ?.topology?.occurrences.find((entry) => entry.occurrenceId === occurrence.occurrenceId)
-        ?.roomActions.order,
-    ).not.toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' });
-    expect(
-      purgingPoolCandidateForProjectEvaluationAssembly(
-        simulateProjectAssembly(catalog, disabled),
-        occurrence,
+    const unsold = applyProjectCommand(sold, catalog, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(
+        biome,
+        occurrence.occurrenceId,
+        roomActionKey({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
       ),
-    ).toBeUndefined();
+    });
+    const room = unsold.route.biomes
+      .find((plan) => plan.biomeKey === 'F')
+      ?.topology?.occurrences.find((entry) => entry.occurrenceId === occurrence.occurrenceId);
+    expect(room?.purgingPool?.traitKeyBySlot.left).toBe(equipped[0]);
+    expect(room?.roomActions.order).not.toContainEqual({
+      kind: 'sellPurgingPoolTrait',
+      slotKey: 'left',
+    });
     expect(
-      fRewards(disabled).branches.every(
+      fRewards(unsold).branches.every(
         (branch) => branch.state.traitHistory?.equippedTraits[equipped[0]!] !== undefined,
       ),
     ).toBe(true);

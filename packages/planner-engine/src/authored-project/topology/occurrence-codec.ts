@@ -56,7 +56,7 @@ import type { DecodedTopologyStructure } from './decoding/coordinator';
 import { decodeAcquisitionSites } from '../room-state/decoding/acquisition-site-codec';
 import { decodeFountainRarityResult } from '../fountain-rarity-codec';
 import { decodeKeepsakeEquipResults } from '../keepsake-equip-codec';
-import { expectBoolean, expectString } from '../validation';
+import { expectString } from '../validation';
 import type { ResolvedRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
 import {
@@ -121,7 +121,7 @@ function decodePurgingPoolState(
   if (room.purgingPool === undefined)
     failProjectDocument(path, 'requires a room declaration with a Purging Pool');
   const raw = expectRecord(value, path);
-  expectExactKeys(raw, ['interacted', 'traitKeyBySlot'], path);
+  expectExactKeys(raw, ['traitKeyBySlot'], path);
   const traits = expectRecord(raw.traitKeyBySlot, `${path}.traitKeyBySlot`);
   expectExactKeys(traits, [...room.purgingPool.slotKeys], `${path}.traitKeyBySlot`);
   const traitKeyBySlot = Object.fromEntries(
@@ -135,7 +135,6 @@ function decodePurgingPoolState(
     }),
   ) as Readonly<Record<'left' | 'middle' | 'right', string | null>>;
   return Object.freeze({
-    interacted: expectBoolean(raw.interacted, `${path}.interacted`),
     traitKeyBySlot: Object.freeze(traitKeyBySlot),
   });
 }
@@ -571,10 +570,10 @@ export function decodeRoomOccurrence(input: {
       reference.kind !== 'sellPurgingPoolTrait'
     )
       continue;
-    if (feature?.interacted !== true)
+    if (feature === undefined)
       failProjectDocument(
         `${rawOccurrence.path}.roomActions.order[${index}]`,
-        'requires an interacted Well or Pool of this room',
+        'requires a present Well or Pool of this room',
       );
     if (
       (reference.kind === 'rerollStygianWell' &&

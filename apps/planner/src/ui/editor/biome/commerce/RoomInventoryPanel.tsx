@@ -76,41 +76,17 @@ export function RoomInventoryPanel({
                 />
                 <span>Stygian Well</span>
               </label>
-              {feature.interactionKey === undefined
-                ? null
-                : (() => {
-                    const interaction = requireWorkspaceInteraction(
-                      interactions.stygianWellInteractions,
-                      feature.interactionKey,
-                    );
-                    return (
-                      <label className="room-feature-interact-toggle">
-                        <input
-                          {...(feature.inventoryAddress === undefined
-                            ? {}
-                            : findingTarget(feature.inventoryAddress))}
-                          aria-label="Interact with Stygian Well"
-                          checked={feature.interacted}
-                          onChange={(event) =>
-                            executeIntent(interaction.intentFor(event.target.checked))
-                          }
-                          type="checkbox"
-                        />
-                        Interact
-                      </label>
-                    );
-                  })()}
             </div>
-            {feature.interacted
-              ? feature.slots.map((slot) => (
+            {feature.presence.kind === 'optionalAbsent'
+              ? null
+              : feature.slots.map((slot) => (
                   <StygianWellSlotEditor
                     key={slot.generationKey}
                     slot={slot}
                     interactions={interactions}
                     withPurchased={false}
                   />
-                ))
-              : null}
+                ))}
             {feature.rollActions === undefined ? null : (
               <FeatureRollInteract actions={feature.rollActions} interactions={interactions} />
             )}
@@ -119,10 +95,6 @@ export function RoomInventoryPanel({
       })();
     case 'purgingPool':
       return (() => {
-        const poolInteraction = requireWorkspaceInteraction(
-          interactions.purgingPoolInteractions,
-          feature.interactionKey,
-        );
         return (
           <fieldset className="room-purging-pool" key="purging-pool">
             <legend className="visually-hidden">Pool of Purging configuration</legend>
@@ -135,41 +107,25 @@ export function RoomInventoryPanel({
                 />
                 <span>Pool of Purging</span>
               </label>
-              <label className="room-feature-interact-toggle">
-                <input
-                  {...findingTarget(feature.inventoryAddress)}
-                  aria-label="Interact with Pool of Purging"
-                  checked={feature.interacted}
-                  onChange={(event) =>
-                    executeIntent(poolInteraction.intentFor(event.target.checked))
-                  }
-                  type="checkbox"
-                />
-                Interact
-              </label>
             </div>
-            {feature.interacted
-              ? feature.slots.map((slot) => {
-                  const interaction = requireWorkspaceInteraction(
-                    interactions.purgingPoolSlots,
-                    slot.interactionKey,
-                  );
-                  return (
-                    <div className="shop-family-offer-row room-purging-pool-slot" key={slot.key}>
-                      <PurgingPoolTraitPicker
-                        address={slot.address}
-                        interaction={interaction}
-                        label={slot.label}
-                        traitKey={slot.traitKey}
-                        {...(slot.traitLabel === undefined
-                          ? {}
-                          : { selectedLabel: slot.traitLabel })}
-                        onSelect={(traitKey) => executeIntent(interaction.intentFor(traitKey))}
-                      />
-                    </div>
-                  );
-                })
-              : null}
+            {feature.slots.map((slot) => {
+              const interaction = requireWorkspaceInteraction(
+                interactions.purgingPoolSlots,
+                slot.interactionKey,
+              );
+              return (
+                <div className="shop-family-offer-row room-purging-pool-slot" key={slot.key}>
+                  <PurgingPoolTraitPicker
+                    address={slot.address}
+                    interaction={interaction}
+                    label={slot.label}
+                    traitKey={slot.traitKey}
+                    {...(slot.traitLabel === undefined ? {} : { selectedLabel: slot.traitLabel })}
+                    onSelect={(traitKey) => executeIntent(interaction.intentFor(traitKey))}
+                  />
+                </div>
+              );
+            })}
             {feature.rollActions === undefined ? null : (
               <FeatureRollInteract actions={feature.rollActions} interactions={interactions} />
             )}

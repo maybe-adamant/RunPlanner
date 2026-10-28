@@ -204,7 +204,6 @@ describe('run import of the Underworld capture', () => {
     const shop = occurrence(imported.project, 'F-r6');
     expect(shop.roomActions.order).toContainEqual({ kind: 'interactShopOffer', offerKey: 'Boon' });
     expect(occurrence(imported.project, 'F-r3').stygianWell).toMatchObject({
-      interacted: true,
       offerKeyBySlot: {
         healing: 'TemporaryDoorHealTrait',
         secondLeft: 'TemporaryEmptySlotDamageTrait',
@@ -219,7 +218,6 @@ describe('run import of the Underworld capture', () => {
     });
     const pool = occurrence(imported.project, 'F-r11:postboss');
     expect(pool.purgingPool).toEqual({
-      interacted: true,
       traitKeyBySlot: {
         left: 'BoonDecayBoon',
         middle: 'AphroditeManaBoon',
@@ -351,8 +349,8 @@ describe('run import of the Underworld capture', () => {
       // The three Chaos screens stay: their unpicked curses' durations are never saved.
       // The entry saves' run state where the plan's simulation holds another.
       mismatch: { elements: 1, pathOfStars: 1, stores: 2, traits: 3 },
-      // The H and I Preboss Travel Deal refills and I_Combat07's Well refill were never bought.
-      notInRecord: { fields: 4, pathOfStars: 1, shop: 2, traitOffer: 4, well: 1 },
+      // The H and I Preboss Travel Deal refills were never bought.
+      notInRecord: { fields: 4, pathOfStars: 1, shop: 2, traitOffer: 4 },
       refused: { fields: 2, pool: 1 },
       // H_Combat07's cage boon screen stays unused.
       unsupportedArea: { traitOffer: 1 },
@@ -975,7 +973,6 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       },
       mismatch: { stores: 1 },
       // The run was reset in H_Combat04: the rest of Ephyra's Fields is guessed.
-      // G_PostBoss01's Well refill was never bought.
       notInRecord: {
         doors: 1,
         fields: 6,
@@ -983,7 +980,6 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
         reward: 1,
         route: 1,
         traitOffer: 3,
-        well: 1,
       },
     });
     expect(entryLines(imported.report)).toEqual([

@@ -355,7 +355,6 @@ describe('timeline action labels', () => {
         undefined,
         {
           stygianWell: {
-            interacted: true,
             offerKeyBySlot: {
               healing: 'ArmorBoostStore',
               secondLeft: 'RandomStoreItem',

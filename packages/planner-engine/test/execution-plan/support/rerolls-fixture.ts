@@ -84,7 +84,6 @@ export function underworldFRerollsProject(): ProjectDocument {
     purchased: true,
     itemKey: 'HealDropRange',
   });
-  apply({ kind: 'SetPurgingPoolInteraction', occurrence: room, interacted: true });
   apply({
     kind: 'InsertPurgingPoolReroll',
     occurrence: room,

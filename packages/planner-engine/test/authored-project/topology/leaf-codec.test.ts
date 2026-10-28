@@ -72,26 +72,23 @@ describe('topology leaf codecs', () => {
       detail: 'unknown RoomShop item UnknownWellItem',
     });
 
-    const uninteractedPurchase = encodedProject(document);
-    const uninteractedF = uninteractedPurchase.route!.biomes[0]! as unknown as {
+    const unlistedPurchase = encodedProject(document);
+    const unlistedF = unlistedPurchase.route!.biomes[0]! as unknown as {
       topology: EncodedTopology;
     };
-    const uninteractedHost = uninteractedF.topology.occurrences.find(
+    const unlistedHost = unlistedF.topology.occurrences.find(
       (room) => room.occurrenceId === 'well-codec-host',
     )!;
-    const rawWell = uninteractedHost.stygianWell as {
-      offerKeyBySlot: { healing: string | null };
-      purchasedGenerationKeys?: string[];
-    };
-    rawWell.offerKeyBySlot.healing = 'ArmorBoostStore';
-    rawWell.purchasedGenerationKeys = ['initial:healing'];
-    (uninteractedHost.roomActions as { order: Array<Record<string, unknown>> }).order.push({
+    (
+      unlistedHost.stygianWell as { offerKeyBySlot: { healing: string | null } }
+    ).offerKeyBySlot.healing = 'ArmorBoostStore';
+    (unlistedHost.roomActions as { order: Array<Record<string, unknown>> }).order.push({
       kind: 'purchaseStygianWellOffer',
       generationKey: 'initial:healing',
     });
-    expectDocumentError(uninteractedPurchase, {
+    expectDocumentError(unlistedPurchase, {
       path: `$.route.biomes[0].topology.occurrences[${hostIndex}].roomActions.order`,
-      detail: 'an uninteracted Well must not retain purchase intent or purchase actions',
+      detail: 'Well purchase generations must exactly match purchaseStygianWellOffer actions',
     });
 
     const missingForced = encodedProject(createCompleteFGProject());
@@ -128,7 +125,6 @@ describe('topology leaf codecs', () => {
     const occurrence = createOccurrenceAddress(fBiome, createOccurrenceId('retained-well-host'));
     for (const command of [
       { kind: 'AddStygianWell' as const, occurrence },
-      { kind: 'SetStygianWellInteraction' as const, occurrence, interacted: true },
       {
         kind: 'ReplaceStygianWellOffer' as const,
         occurrence,

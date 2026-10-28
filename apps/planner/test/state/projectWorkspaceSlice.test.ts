@@ -364,21 +364,13 @@ describe('project workspace application state', () => {
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
-    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'SetStygianWellInteraction',
-      occurrence: well,
-      interacted: true,
-    });
-    project = applyProjectCommand(project, catalog, {
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: well,
       slotKey: 'healing',
       itemKey: 'ArmorBoostStore',
     });
     store.dispatch(authoredProjectReplaced(project));
-    expect(store.getState().projectWorkspace.assembly?.evaluation.authoringHorizon.kind).toBe(
-      'incomplete',
-    );
     const shop = createShopOfferAddress(
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop'),

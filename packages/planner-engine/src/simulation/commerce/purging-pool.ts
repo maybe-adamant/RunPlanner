@@ -12,8 +12,7 @@ import { semanticAddressKey, type OccurrenceAddress } from '../../authored-proje
 export type PurgingPoolSlotKey = AuthoredPurgingPoolSlotKey;
 
 export interface PurgingPoolAssessmentFinding {
-  readonly code:
-    'purgingPoolTraitMissing' | 'purgingPoolTraitUnavailable' | 'purgingPoolTraitDuplicate';
+  readonly code: 'purgingPoolTraitUnavailable' | 'purgingPoolTraitDuplicate';
   readonly slotKey: PurgingPoolSlotKey;
   readonly evidence: FindingEvidence;
 }
@@ -154,18 +153,17 @@ export function assessPurgingPool(
   state: PurgingPoolState,
   equippedTraits: Readonly<Record<string, EquippedTrait>>,
 ): PurgingPoolAssessment {
-  return assessPurgingPoolList(catalog, state.traitKeyBySlot, equippedTraits, true);
+  return assessPurgingPoolList(catalog, state.traitKeyBySlot, equippedTraits);
 }
 
 /**
- * Assesses one list against the current traits. The initial list must fill
- * every eligible slot; a reroll's list is pinned slot by slot.
+ * Assesses one list against the current traits, pinned slot by slot; a blank
+ * slot stays native until a sale needs it.
  */
 export function assessPurgingPoolList(
   catalog: Catalog,
   traitKeyBySlot: Readonly<Partial<Record<PurgingPoolSlotKey, string | null>>>,
   equippedTraits: Readonly<Record<string, EquippedTrait>>,
-  requireFill: boolean,
 ): PurgingPoolAssessment {
   const eligibleTraitKeys = Object.freeze(
     [
@@ -195,12 +193,9 @@ export function assessPurgingPoolList(
   );
   const findings: PurgingPoolAssessmentFinding[] = [];
   const seen = new Set<string>();
-  let resolvedCount = 0;
-  let validSelectedCount = 0;
   for (const slotKey of SLOT_KEYS) {
     const traitKey = selectedBySlot[slotKey];
     if (traitKey === null) continue;
-    resolvedCount += 1;
     if (seen.has(traitKey)) {
       findings.push(
         Object.freeze({
@@ -222,19 +217,6 @@ export function assessPurgingPoolList(
       );
       continue;
     }
-    validSelectedCount += 1;
-  }
-  // The game's list is unordered; each missing fill marks the next empty slot by planner convention.
-  const emptySlotKeys = SLOT_KEYS.filter((slotKey) => selectedBySlot[slotKey] === null);
-  const missingCount = requireFill ? Math.max(0, requiredTraitCount - resolvedCount) : 0;
-  for (const slotKey of emptySlotKeys.slice(0, missingCount)) {
-    findings.push(
-      Object.freeze({
-        code: 'purgingPoolTraitMissing',
-        slotKey,
-        evidence: Object.freeze({ requiredTraitCount, resolvedCount }),
-      }),
-    );
   }
   // Overfilling needs more distinct eligible names than exist, so a slot is already
   // reported as duplicate or unavailable.
@@ -242,10 +224,7 @@ export function assessPurgingPoolList(
     eligibleTraitKeys,
     requiredTraitCount,
     candidateTraitKeysBySlot,
-    complete:
-      (!requireFill || resolvedCount === requiredTraitCount) &&
-      validSelectedCount === resolvedCount &&
-      findings.length === 0,
+    complete: findings.length === 0,
     findings: Object.freeze(findings),
   });
 }

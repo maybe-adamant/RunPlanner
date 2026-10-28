@@ -62,25 +62,25 @@ function saleOrder(application: PlannerApplication) {
     ?.roomActions.order.filter((reference) => reference.kind === 'sellPurgingPoolTrait');
 }
 
-it('marks the first empty Pool slot picker for a missing fill, not the Pool', () => {
+it('leaves a blank Pool slot native, with no finding', () => {
   const { pool } = renderPostboss(withPoolSlot(createUnderworldFPoolCheckpoint(), 'middle', null));
   const middle = within(pool).getByRole('button', { name: 'Pool of Purging Offer 2 Item' });
-  expect(middle.dataset.hasFindings).toBe('true');
+  expect(middle.dataset.hasFindings).toBe('false');
   expect(
     within(pool).getByRole('button', { name: 'Pool of Purging Offer 3 Item' }).dataset.hasFindings,
   ).toBe('false');
   expect(pool.hasAttribute('data-has-findings')).toBe(false);
 });
 
-it('sells only a filled slot from Interact, and removes a stale sale on its row', async () => {
+it('sells each slot still on the list from Interact, and removes a stale sale on its row', async () => {
   const { view, pool } = renderPostboss(
     withPoolSlot(withPoolSlot(createUnderworldFPoolCheckpoint(), 'left', null), 'middle', null),
   );
   expect(within(pool).queryByRole('checkbox', { name: /^Sold/ })).toBeNull();
-  // Interact offers only the filled slot still on the list.
+  // Interact offers every slot still on the list, blank ones included.
   await view.user.click(within(pool).getByRole('button', { name: 'Interact with Pool' }));
   const options = within(await screen.findByRole('listbox')).getAllByRole('option');
-  expect(options.map((option) => option.textContent?.startsWith('Sell '))).toEqual([true]);
+  expect(options.map((option) => option.textContent?.startsWith('Sell '))).toEqual([true, true]);
   await view.user.keyboard('{Escape}');
 
   openRoomTab('Room Timeline');
@@ -88,7 +88,7 @@ it('sells only a filled slot from Interact, and removes a stale sale on its row'
   await waitFor(() => expect(saleOrder(view.application)).toEqual([]));
 });
 
-it('marks Interact when the route has no usable Pool', () => {
+it('reports an unusable Pool only once it is used', () => {
   renderOccurrenceWorkbench(
     withRetainedFreshFilePostboss(createFreshFileFProject(), { poolSaleTraitKey: null }),
     'FreshFile',
@@ -98,8 +98,7 @@ it('marks Interact when the route has no usable Pool', () => {
   openRoomTab('Room Overview');
   const pool = screen.getByRole('group', { name: 'Pool of Purging configuration' });
   expect(
-    within(pool).getByRole('checkbox', { name: 'Interact with Pool of Purging' }).dataset
-      .hasFindings,
-  ).toBe('true');
+    within(pool).queryByRole('checkbox', { name: 'Interact with Pool of Purging' }),
+  ).toBeNull();
   expect(pool.hasAttribute('data-has-findings')).toBe(false);
 });

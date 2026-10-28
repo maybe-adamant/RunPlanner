@@ -503,11 +503,6 @@ describe('room-action commands', () => {
       occurrence: host,
     });
     authored = applyProjectCommand(authored, catalog, {
-      kind: 'SetStygianWellInteraction',
-      occurrence: host,
-      interacted: true,
-    });
-    authored = applyProjectCommand(authored, catalog, {
       kind: 'ReplaceStygianWellOffer',
       occurrence: host,
       slotKey: 'healing',
@@ -1505,7 +1500,6 @@ describe('room-action commands', () => {
     };
     let document = createGoldenFGHProject();
     const commands: readonly ProjectCommand[] = [
-      { kind: 'SetStygianWellInteraction' as const, occurrence: completion, interacted: true },
       {
         kind: 'ReplaceStygianWellOffer' as const,
         occurrence: completion,

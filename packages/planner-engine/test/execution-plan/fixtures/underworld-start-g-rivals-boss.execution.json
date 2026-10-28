@@ -1,7 +1,7 @@
 {
   "format": "run-planner-execution",
   "catalogVersion": "0.55.0-anvil-of-fates",
-  "schemaVersion": 99,
+  "schemaVersion": 100,
   "schemaRevision": 0,
   "projectId": "golden-fg",
   "routeKey": "Underworld",
@@ -2847,7 +2847,6 @@
         ],
         "requiredObjects": [],
         "stygianWell": {
-          "interacted": true,
           "offers": [
             { "generationKey": "initial:healing", "offerKey": "ArmorBoostStore" },
             { "generationKey": "initial:secondLeft", "offerKey": "TemporaryForcedSecretDoorTrait" },
@@ -2858,7 +2857,7 @@
             }
           ]
         },
-        "purgingPool": { "interacted": false },
+        "purgingPool": { "traits": [] },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -4748,8 +4747,8 @@
           { "slotKey": "Encounter", "encounterKey": "Empty", "kind": "nonCombat" }
         ],
         "requiredObjects": [],
-        "stygianWell": { "interacted": false },
-        "purgingPool": { "interacted": false },
+        "stygianWell": { "offers": [] },
+        "purgingPool": { "traits": [] },
         "keepsakeRack": {},
         "fountain": {}
       },
@@ -4812,5 +4811,5 @@
       }
     }
   ],
-  "planFingerprint": "bf51a5c2"
+  "planFingerprint": "2f46ee0e"
 }
