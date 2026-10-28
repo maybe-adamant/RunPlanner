@@ -68,8 +68,9 @@ and the door-order probe are done.
   room for that door and takes one reward draw from the room's own store.
   - Main combat rooms draw from HubRewards (`ForcedRewardStore`,
     `RoomDataN.lua:2849`), refilling with 10 when the store is empty.
-  - Mini-Boss rooms draw from RunProgress, which visible rewards use
-    everywhere.
+  - The store comes from the placeholder room, not the parent. A Mini-Boss
+    whose placeholder is an N combat room draws from HubRewards (Surface
+    run 2: N_MiniBoss01 → placeholder N_Combat13, HubRewards).
   - Side rooms draw from SubRoomRewards or SubRoomRewardsHard
     (`IndividualRewardStore`, `RoomDataN.lua:3795`). Later side-door draws
     use the same store.
