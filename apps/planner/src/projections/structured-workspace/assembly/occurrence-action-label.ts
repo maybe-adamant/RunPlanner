@@ -192,7 +192,7 @@ export function occurrenceActionLabel(
       // The item names the action; its Mystery source is edited on the row.
       const item = occurrence.infernalContractPedestal?.reward?.offer;
       return actionLabel(
-        'Contract Item',
+        'Champion Item',
         'Collect',
         false,
         rewardControl,

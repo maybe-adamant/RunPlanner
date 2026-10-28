@@ -68,7 +68,7 @@ describe('Champion Item panel', () => {
     ).toHaveProperty('checked', true);
 
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    expect(screen.getAllByText('Collect Double Pom · Contract Item').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Collect Double Pom · Champion Item').length).toBeGreaterThan(0);
   });
 
   it('shows the Shop-form pedestal as a room object outside the Shop inventory', async () => {
@@ -100,11 +100,11 @@ describe('Champion Item panel', () => {
     await view.user.click(within(pedestal()).getByRole('button', { name: /^Champion Item/ }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const row = screen.getByText('Collect Mystery Boon · Contract Item').closest('li');
+    const row = screen.getByText('Collect Mystery Boon · Champion Item').closest('li');
     if (row === null) throw new Error('Mystery collect row missing');
     await view.user.click(within(row).getByRole('button', { name: 'Reward' }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Zeus'));
-    const resolved = screen.getByText('Collect Mystery Boon · Contract Item').closest('li');
+    const resolved = screen.getByText('Collect Mystery Boon · Champion Item').closest('li');
     expect(within(resolved!).getByText(/Zeus/)).toBeTruthy();
   });
 });

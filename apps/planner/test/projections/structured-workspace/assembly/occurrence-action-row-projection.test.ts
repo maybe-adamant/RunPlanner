@@ -313,7 +313,7 @@ describe('timeline action labels', () => {
     ]);
   });
 
-  it('names the Contract pedestal collect by its item', () => {
+  it('names the Champion item collect by its item', () => {
     const label = (offer?: { readonly rewardType: string }) =>
       occurrenceActionLabel(
         catalog,
@@ -335,9 +335,9 @@ describe('timeline action labels', () => {
           },
         },
       );
-    expect(label({ rewardType: 'StackUpgradeBig' })).toBe('Collect Double Pom · Contract Item');
-    expect(label({ rewardType: 'BlindBoxLoot' })).toBe('Collect Mystery Boon · Contract Item');
-    expect(label()).toBe('Collect Contract Item');
+    expect(label({ rewardType: 'StackUpgradeBig' })).toBe('Collect Double Pom · Champion Item');
+    expect(label({ rewardType: 'BlindBoxLoot' })).toBe('Collect Mystery Boon · Champion Item');
+    expect(label()).toBe('Collect Champion Item');
   });
 
   it.each([
