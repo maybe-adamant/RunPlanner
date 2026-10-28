@@ -94,6 +94,11 @@ promoted.
   destinations never reroll, while O and Q exits into `O_MiniBoss01`,
   `O_MiniBoss02`, `O_Reprieve01` and `Q_BaseMiniBoss` do. First visit only:
   a restored door is never rerollable.
+- **Fields cage doors:** one reroll replaces one cage's reward, the cage chosen
+  natively at random (`RerollIndex`). Each step of a cage door's chain authors
+  the cage slot and its new reward; candidates exclude every cage's current
+  reward. The game module sets the slot before the native reroll runs. The
+  dialog adds a cage-slot picker per row.
   The editor isolates rerolls so the door layouts, the Hub board above all,
   stay as they are. The Reward line of a Hub board door, ship-wheel offer or
   normal door gains a small reroll button (shown only when door rerolls are
