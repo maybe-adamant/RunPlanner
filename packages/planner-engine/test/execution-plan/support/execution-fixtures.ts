@@ -62,6 +62,8 @@ import { simulateProjectAssembly } from '../../../src/simulation';
 import { surfaceQShopCorrelationProject } from './surface-q-shop-correlation-fixture';
 import { npcShoppingProtectionProject } from './npc-shopping-fixture';
 import { emptyShopGroupCatalog, emptyShopGroupProject } from './empty-shop-group-fixture';
+import { underworldFRerollsProject } from './rerolls-fixture';
+import underworldFRerollsFixture from '../fixtures/underworld-f-rerolls.execution.json';
 import automaticBossFixture from '../fixtures/automatic-boss.execution.json';
 import dreamMixedPrefixFixture from '../fixtures/dream-mixed-prefix.execution.json';
 import dreamOSkippedShipFixture from '../fixtures/dream-o-skipped-ship.execution.json';
@@ -280,6 +282,11 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     name: 'surface-travel-deal-refill-anvil',
     project: surfaceTravelDealRefillAnvilProject,
     wire: surfaceTravelDealRefillAnvilFixture,
+  },
+  {
+    name: 'underworld-f-rerolls',
+    project: underworldFRerollsProject,
+    wire: underworldFRerollsFixture,
   },
   {
     name: 'surface-trait-fences',
