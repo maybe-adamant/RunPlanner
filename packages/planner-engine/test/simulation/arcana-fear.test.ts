@@ -8,7 +8,8 @@ import {
   beginBiomeArcanaFearState,
   consumeRoomRewardForfeit,
 } from '@run-planner/engine/simulation';
-import { createBiomeAddress } from '@run-planner/engine/authored-project';
+import { createBiomeAddress, createOccurrenceAddress } from '@run-planner/engine/authored-project';
+import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { describe, expect, it } from 'vitest';
 
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
@@ -21,6 +22,8 @@ import {
   circeResolutionDomain,
   judgmentRequiredCount,
   reconcileBarrenArcana,
+  rerollKindEnabled,
+  rerollPoolRemaining,
 } from '../../src/simulation/arcana-fear';
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
 import { mergeEquivalentRewardBranches } from '../../src/simulation/rewards/branch-primitives';
@@ -460,5 +463,40 @@ describe('Barren on equipped Arcana', () => {
     });
     expect(expired.arcana.active.some((entry) => entry.unequipped === true)).toBe(false);
     expect(artificerStatus(catalog, expired)!.capacity).toBeLessThan(heroicCapacity);
+  });
+});
+
+describe('reroll pool', () => {
+  it('counts held cards, mid-run grants and upgrades, and keeps Barren to enablement', () => {
+    const loadout = {
+      manualArcanaKeys: ['DoorReroll'],
+      fearRanks: loadUnderworldFGCheckpoint().route.loadout.fearRanks,
+    };
+    const state = (arcanaFear: ReturnType<typeof createArcanaFearState>) => ({
+      arcanaFear,
+      traitHistory: {},
+    });
+    const start = createArcanaFearState(catalog, loadout);
+    expect(rerollPoolRemaining(state(start))).toBe(3);
+    const evidence = {
+      owner: createOccurrenceAddress(createBiomeAddress('Underworld', 'F'), 'pool-grant' as never),
+      sequence: 1,
+    };
+    const granted = activateTemporaryArcana(catalog, start, ['ScreenReroll'], evidence);
+    if (!granted.legal) throw new Error('grant refused');
+    expect(rerollPoolRemaining(state(granted.state))).toBe(6);
+    const promoted = promoteArcana(catalog, granted.state, ['DoorReroll'], {
+      ...evidence,
+      sequence: 2,
+    });
+    if (!promoted.legal) throw new Error('promotion refused');
+    // Epic to Heroic adds only the difference.
+    expect(rerollPoolRemaining(state(promoted.state))).toBe(7);
+    const barren = reconcileBarrenArcana(promoted.state, false, true);
+    expect(rerollKindEnabled(catalog, barren, 'doors')).toBe(false);
+    expect(rerollPoolRemaining(state(barren))).toBe(7);
+    expect(rerollKindEnabled(catalog, reconcileBarrenArcana(barren, true, false), 'doors')).toBe(
+      true,
+    );
   });
 });

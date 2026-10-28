@@ -45,7 +45,6 @@ function sameOffer(left: ResolvedRewardOffer, right: ResolvedRewardOffer): boole
   return canonicalJson(left) === canonicalJson(right);
 }
 
-/** The producer lifecycle whose acquisition an owner's rerolled reward follows. */
 /** The counted binding whose acquisition an owner's rerolled reward follows. */
 function rerolledRewardBinding(
   catalog: Catalog,

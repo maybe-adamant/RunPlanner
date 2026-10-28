@@ -209,14 +209,18 @@ function settleProjectEditRepairs(options: ProjectEditSettlementOptions): Projec
   // The reroll pool is a fixed budget: a new spend past it is refused, while
   // an upstream edit that shrinks the pool keeps its spends with a finding.
   if (addsRerollSpend(before.project, project, command)) {
+    // Each over-spending owner and how far past the pool it goes.
     const overspent = (evaluated: ProjectEvaluationAssembly) =>
-      new Set(
+      new Map(
         evaluated.evaluation.findings
           .filter((finding) => finding.code === 'rerollPoolExceeded')
-          .map((finding) => semanticAddressKey(finding.origin)),
+          .map((finding) => [
+            semanticAddressKey(finding.origin),
+            Number(finding.evidence.cost) - Number(finding.evidence.remaining),
+          ]),
       );
     const prior = overspent(before);
-    if ([...overspent(assembly)].some((owner) => !prior.has(owner)))
+    if ([...overspent(assembly)].some(([owner, excess]) => excess > (prior.get(owner) ?? 0)))
       throw new ProjectCommandContractError(
         command.kind,
         projectCommandAddress(command),

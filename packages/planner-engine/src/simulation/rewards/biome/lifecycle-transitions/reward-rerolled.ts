@@ -12,7 +12,7 @@ import { rerollTargetOwner } from '../../../../authored-project/rerolls';
 import type { RerollRoomAction } from '../../../../authored-project/model';
 import type { CountedRewardBinding } from '../../../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../../../reward-kernel';
-import { rerollKindEnabled, rerollPoolRemaining, spendRerolls } from '../../../arcana-fear';
+import { rerollPoolRemaining, spendRerolls } from '../../../arcana-fear';
 import type { HistoryStateView, RoomCreationSource } from '../../../history';
 import type { CanonicalLifecycleRoom } from '../../../history/lifecycleInput';
 import type {
@@ -257,6 +257,8 @@ export function applyRewardRerolledTransition(inputs: {
   readonly target: RerollTargetContext | undefined;
   /** Why a Hub reroll cannot act: after the first room visit the board is restored. */
   readonly refused?: 'afterHubVisit';
+  /** A held card enabled door rerolls when the target was assigned (AssignRoomToExitDoor). */
+  readonly flagged: boolean;
   readonly historySequence: number;
   readonly view: HistoryStateView | undefined;
   readonly chronology?: FindingChronology;
@@ -289,18 +291,22 @@ export function applyRewardRerolledTransition(inputs: {
     );
   if (inputs.refused === 'afterHubVisit')
     return blocked('rerollTargetUnavailable', { reason: 'afterHubVisit' });
-  if (
-    !inputs.branches.every((branch) => rerollKindEnabled(catalog, branch.state.arcanaFear, 'doors'))
-  )
-    return blocked('rerollUnavailable', { kind: 'doors' });
+  if (!inputs.flagged) return blocked('rerollUnavailable', { kind: 'doors' });
   if (target === undefined) return blocked('rerollTargetUnavailable', { reason: 'missing' });
   if (!target.rerollable) return blocked('rerollTargetUnavailable', { reason: 'notRerollable' });
   if (view === undefined)
     throw new BiomeRewardSimulationContractError(
       `${semanticAddressKey(owner)} has no history view`,
     );
+  // An over-spend is spent and reported, like a screen's; the timeline continues.
   const remaining = Math.min(...inputs.branches.map((branch) => rerollPoolRemaining(branch.state)));
-  if (remaining < 1) return blocked('rerollPoolExceeded', { cost: 1, remaining });
+  if (remaining < 1)
+    addRewardFinding(
+      findings,
+      rewardFinding('rerollPoolExceeded', owner, { cost: 1, remaining }),
+      region,
+      chronology,
+    );
   const peers = Object.freeze([
     ...(target.excludesOriginal
       ? [Object.freeze({ origin: target.owner as SemanticAddress, offer: target.generated })]

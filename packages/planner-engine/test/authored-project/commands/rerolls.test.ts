@@ -1,0 +1,330 @@
+import { describe, expect, it } from 'vitest';
+import { catalog } from '@run-planner/hades2-catalog';
+import {
+  applyProjectCommand,
+  createBiomeAddress,
+  createIncomingRewardAddress,
+  createLevelResolutionAddress,
+  createOccurrenceAddress,
+  createRoomActionAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
+  type ProjectCommand,
+  type ProjectDocument,
+  type RerollRoomAction,
+} from '@run-planner/engine/authored-project';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import {
+  loadUnderworldFGCheckpoint,
+  loadUnderworldFStygianWellCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
+import { withArcana } from '../../support/rerolls';
+
+const f = createBiomeAddress('Underworld', 'F');
+const source = 'golden-f-b2-e1';
+const target = 'golden-f-b3-e2';
+const owner = createIncomingRewardAddress(f, target as never);
+
+function occurrence(project: ProjectDocument, id: string) {
+  return project.route.biomes[0]!.topology!.occurrences.find((room) => room.occurrenceId === id)!;
+}
+
+function rerollIds(project: ProjectDocument): readonly string[] {
+  return occurrence(project, source).roomActions.order.flatMap((reference) =>
+    reference.kind === 'reroll' ? [(reference as RerollRoomAction).rerollId] : [],
+  );
+}
+
+function insertReroll(project: ProjectDocument, reward: ResolvedRewardOffer): ProjectCommand {
+  return {
+    kind: 'InsertReroll',
+    occurrence: createOccurrenceAddress(f, source as never),
+    target: { kind: 'door', exitKey: 'exit2', occurrenceId: target as never },
+    reward,
+    index: occurrence(project, source).roomActions.order.length,
+  };
+}
+
+const removeReroll = (rerollId: string): ProjectCommand => ({
+  kind: 'RemoveRoomAction',
+  action: createRoomActionAddress(f, source as never, JSON.stringify(['reroll', rerollId])),
+});
+
+const zeus: ResolvedRewardOffer = {
+  rewardType: 'Boon',
+  payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+};
+
+describe('reroll room actions', () => {
+  it('give each press the lowest free identity and keep the others', () => {
+    let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+    project = applyProjectCommand(
+      project,
+      catalog,
+      insertReroll(project, { rewardType: 'RoomMoneyDrop' }),
+    );
+    project = applyProjectCommand(
+      project,
+      catalog,
+      insertReroll(project, { rewardType: 'RoomMoneyDrop' }),
+    );
+    project = applyProjectCommand(project, catalog, removeReroll('r1'));
+    expect(rerollIds(project)).toEqual(['r2']);
+    project = applyProjectCommand(
+      project,
+      catalog,
+      insertReroll(project, { rewardType: 'RoomMoneyDrop' }),
+    );
+    expect(rerollIds(project)).toEqual(['r2', 'r1']);
+  });
+
+  it('refuse a target that is not a door, cage or wheel offer of the room', () => {
+    const project = loadUnderworldFGCheckpoint();
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        ...insertReroll(project, { rewardType: 'RoomMoneyDrop' }),
+        target: { kind: 'door', exitKey: 'exit9', occurrenceId: target as never },
+      } as ProjectCommand),
+    ).toThrow('names no door of this room');
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        ...insertReroll(project, { rewardType: 'RoomMoneyDrop' }),
+        target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
+      } as ProjectCommand),
+    ).toThrow('names no wheel offer of this room');
+  });
+});
+
+describe('rerolled rewards', () => {
+  it('follow the effective offer while unauthored and leave with the last reroll', () => {
+    let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+    project = applyProjectCommand(
+      project,
+      catalog,
+      insertReroll(project, { rewardType: 'StackUpgrade' }),
+    );
+    expect(occurrence(project, target).rerolledIncomingReward?.offer).toEqual({
+      rewardType: 'StackUpgrade',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRerollReward',
+      action: createRoomActionAddress(f, source as never, JSON.stringify(['reroll', 'r1'])),
+      reward: { rewardType: 'RoomMoneyDrop' },
+    });
+    expect(occurrence(project, target).rerolledIncomingReward?.offer).toEqual({
+      rewardType: 'RoomMoneyDrop',
+    });
+    project = applyProjectCommand(project, catalog, removeReroll('r1'));
+    expect(occurrence(project, target).rerolledIncomingReward).toBeUndefined();
+  });
+
+  it('keep an authored acquisition when its reroll leaves, until it is dropped', () => {
+    let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+    project = applyProjectCommand(project, catalog, insertReroll(project, zeus));
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: {
+        kind: 'traitOffer',
+        routeKey: 'Underworld',
+        biomeKey: 'F',
+        owner,
+        acquisitionRole: 'source',
+      },
+      value: {
+        kind: 'traits',
+        giverKey: 'Zeus',
+        options: [
+          { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+          { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    const authored = occurrence(project, target).rerolledIncomingReward;
+    expect(authored?.traitOffersByAcquisitionRole.source).toMatchObject({ giverKey: 'Zeus' });
+    // The first draw keeps its own payload while rerolled.
+    expect(occurrence(project, target).state).toEqual(
+      occurrence(loadUnderworldFGCheckpoint(), target).state,
+    );
+
+    const dormant = applyProjectCommand(project, catalog, removeReroll('r1'));
+    expect(occurrence(dormant, target).rerolledIncomingReward).toEqual(authored);
+    expect(() =>
+      applyProjectCommand(dormant, catalog, { kind: 'AdoptRerolledReward', owner }),
+    ).toThrow('owner has no reroll');
+    const dropped = applyProjectCommand(dormant, catalog, { kind: 'DropRerolledReward', owner });
+    expect(occurrence(dropped, target).rerolledIncomingReward).toBeUndefined();
+    expect(applyProjectCommand(dropped, catalog, { kind: 'DropRerolledReward', owner })).toBe(
+      dropped,
+    );
+  });
+
+  it('adopt the effective offer explicitly', () => {
+    let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+    project = applyProjectCommand(
+      project,
+      catalog,
+      insertReroll(project, { rewardType: 'RoomMoneyDrop' }),
+    );
+    const encoded = JSON.parse(encodeProjectDocument(project)) as {
+      route: { biomes: { topology: { occurrences: Record<string, unknown>[] } }[] };
+    };
+    const room = encoded.route.biomes[0]!.topology.occurrences.find(
+      (entry) => entry.occurrenceId === target,
+    )!;
+    (room.rerolledIncomingReward as { offer: unknown }).offer = { rewardType: 'MaxManaDrop' };
+    const mismatched = decodeProjectDocument(encoded as never, catalog);
+    expect(occurrence(mismatched, target).rerolledIncomingReward?.offer).toEqual({
+      rewardType: 'MaxManaDrop',
+    });
+    const adopted = applyProjectCommand(mismatched, catalog, {
+      kind: 'AdoptRerolledReward',
+      owner,
+    });
+    expect(occurrence(adopted, target).rerolledIncomingReward).toEqual(
+      occurrence(project, target).rerolledIncomingReward,
+    );
+    expect(applyProjectCommand(adopted, catalog, { kind: 'AdoptRerolledReward', owner })).toBe(
+      adopted,
+    );
+  });
+});
+
+describe('Hub rerolls', () => {
+  it('stay in the Hub order when it is replaced', () => {
+    const project = applyProjectCommand(
+      withArcana(loadSurfaceNProject(), ['DoorReroll']),
+      catalog,
+      {
+        kind: 'InsertHubReroll',
+        hub: { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' },
+        hubSlotKey: 'combat05',
+        reward: { rewardType: 'MaxHealthDrop' },
+        index: 0,
+      },
+    );
+    const hub = project.route.biomes[0]!.topology!.decisions.find(
+      (decision) => decision.kind === 'hub',
+    );
+    if (hub?.kind !== 'hub') throw new Error('Surface N has no Hub');
+    expect(hub.actions[0]).toMatchObject({ kind: 'reroll', rerollId: 'r1' });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHubActionOrder',
+        hub: { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' },
+        actions: hub.actions.slice(1),
+      }),
+    ).toThrow('Hub action order must keep its rerolls');
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHubActionOrder',
+        hub: { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' },
+        actions: [{ ...hub.actions[0]!, rerollId: 'r2' } as never, ...hub.actions.slice(1)],
+      }),
+    ).toThrow('Hub action order must keep its rerolls');
+  });
+});
+
+describe('screen reroll counts', () => {
+  const well = createOccurrenceAddress(f, 'golden-f-preboss-shop:postboss' as never);
+
+  it('set a Stygian Well count, absent at zero', () => {
+    const project = loadUnderworldFStygianWellCheckpoint();
+    const set = (count: number, document = project) =>
+      applyProjectCommand(document, catalog, {
+        kind: 'SetStygianWellRerollCount',
+        occurrence: well,
+        count,
+      });
+    const twice = set(2);
+    expect(occurrence(twice, well.occurrenceId).stygianWell?.rerollCount).toBe(2);
+    const cleared = set(0, twice);
+    expect(occurrence(cleared, well.occurrenceId).stygianWell).not.toHaveProperty('rerollCount');
+    expect(set(0)).toBe(project);
+    expect(() => set(-1)).toThrow('screen reroll count must be a non-negative integer');
+    expect(() => set(1.5)).toThrow('screen reroll count must be a non-negative integer');
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'SetStygianWellRerollCount',
+        occurrence: createOccurrenceAddress(f, source as never),
+        count: 1,
+      }),
+    ).toThrow('occurrence has no present Stygian Well');
+  });
+
+  it('set a Purging Pool count, absent at zero', () => {
+    const project = loadUnderworldFGCheckpoint();
+    const set = (count: number, document = project) =>
+      applyProjectCommand(document, catalog, {
+        kind: 'SetPurgingPoolRerollCount',
+        occurrence: well,
+        count,
+      });
+    const once = set(1);
+    expect(occurrence(once, well.occurrenceId).purgingPool?.rerollCount).toBe(1);
+    expect(occurrence(set(0, once), well.occurrenceId).purgingPool).not.toHaveProperty(
+      'rerollCount',
+    );
+    expect(() => set(-2)).toThrow('screen reroll count must be a non-negative integer');
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'SetPurgingPoolRerollCount',
+        occurrence: createOccurrenceAddress(f, source as never),
+        count: 1,
+      }),
+    ).toThrow('occurrence has no Purging Pool');
+  });
+
+  it('keep a Pom count through a later choice edit', () => {
+    const pom = createLevelResolutionAddress(
+      createIncomingRewardAddress(f, 'golden-f-b4-e1' as never),
+      'self',
+    );
+    const project = loadUnderworldFGCheckpoint();
+    const counted = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: pom,
+      value: {
+        kind: 'choice',
+        offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'],
+        selectedTraitKey: 'ApolloWeaponBoon',
+        rerollCount: 2,
+      },
+    });
+    const resolution = (document: ProjectDocument) => {
+      const state = occurrence(document, 'golden-f-b4-e1').state;
+      return state.kind === 'counted'
+        ? state.reward?.levelResolutionsByAcquisitionRole?.self
+        : undefined;
+    };
+    expect(resolution(counted)).toMatchObject({ rerollCount: 2 });
+    const reselected = applyProjectCommand(counted, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: pom,
+      value: {
+        kind: 'choice',
+        offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'],
+        selectedTraitKey: 'ZeusSpecialBoon',
+      },
+    });
+    expect(resolution(reselected)).toMatchObject({
+      selectedTraitKey: 'ZeusSpecialBoon',
+      rerollCount: 2,
+    });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceLevelResolution',
+        levelResolution: pom,
+        value: {
+          kind: 'choice',
+          offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'],
+          selectedTraitKey: 'ApolloWeaponBoon',
+          rerollCount: -1,
+        },
+      }),
+    ).toThrow('screen reroll count must be a non-negative integer');
+  });
+});

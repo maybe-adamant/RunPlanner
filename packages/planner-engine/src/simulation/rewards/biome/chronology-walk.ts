@@ -100,6 +100,11 @@ export interface ChronologyWalkState {
     import('../../../reward-kernel').ResolvedRewardOffer
   >;
   /**
+   * Whether a held card enabled door rerolls when each room's doors, a ship
+   * wheel's offers or the Hub board were assigned; the game flags them then.
+   */
+  readonly rerollsFlagged: ReadonlyMap<string, boolean>;
+  /**
    * One persistent Ephyra board-generation region. It starts from the
    * post-Hub-entry reward branches and contains every open physical door,
    * independently from the later six-room visit chronology.
@@ -137,6 +142,7 @@ export function createChronologyWalkState(
     gorgonEvaluationBlocked: false,
     peers: Object.freeze([]),
     rerolledOffers: new Map(),
+    rerollsFlagged: new Map(),
     pendingHubBoard: undefined,
     batchTargetGeneration: undefined,
     expectedStores: new Map(),
@@ -216,3 +222,8 @@ export type ChronologySeamHandler<K extends HistoryEvent['kind']> = (
   state: ChronologyWalkState,
   event: SeamEvent<K>,
 ) => ChronologySeamStep;
+
+/** The key a reroll's flagging is recorded under: the doors' room, a wheel, or the Hub. */
+export function rerollFlagKey(ownerKey: string, wheelKey?: string): string {
+  return wheelKey === undefined ? ownerKey : `${ownerKey}::${wheelKey}`;
+}

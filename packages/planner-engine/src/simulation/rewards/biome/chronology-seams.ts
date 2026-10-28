@@ -34,6 +34,7 @@ import {
 } from './chronology-accumulator';
 import { captureRunState, hubDepartureEmissions, targetSlotHistory } from './chronology-run-state';
 import {
+  rerollFlagKey,
   withBranches,
   withKeyed,
   withMember,
@@ -73,6 +74,21 @@ import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-p
 import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
 import { spawnInfernalContractPedestal } from './offer-lifecycle/infernal-contract-pedestal';
 import { createBiomeRewardFacts } from '../facts';
+import { rerollKindEnabled } from '../../arcana-fear';
+
+/** Records whether the cohort holds a door-reroll card as doors, wheels or the board are flagged. */
+function flagRerolls(
+  context: ChronologyWalkContext,
+  state: ChronologyWalkState,
+  key: string,
+): ChronologyWalkState['rerollsFlagged'] {
+  const enabled =
+    state.branches.length > 0 &&
+    state.branches.every((branch) =>
+      rerollKindEnabled(context.catalog, branch.state.arcanaFear, 'doors'),
+    );
+  return withKeyed(state.rerollsFlagged, key, enabled);
+}
 
 function authoredRoom(
   context: ChronologyWalkContext,
@@ -112,6 +128,13 @@ const rewardRerolled: ChronologySeamHandler<'rewardRerolled'> = (context, state,
       reroll,
       state.peers,
     ),
+    flagged:
+      state.rerollsFlagged.get(
+        rerollFlagKey(
+          semanticAddressKey(source.origin),
+          reroll.target.kind === 'wheelOffer' ? reroll.target.wheelKey : undefined,
+        ),
+      ) === true,
     historySequence: event.sequence,
     view: context.history.viewsBySequence[event.sequence - 1],
     branches: state.branches,
@@ -151,6 +174,7 @@ const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, 
     reward: reroll.reward,
     target: hubTargetContext(context.catalog, hub, reroll.hubSlotKey, state.peers),
     ...(reroll.afterFirstVisit ? { refused: 'afterHubVisit' as const } : {}),
+    flagged: state.rerollsFlagged.get(rerollFlagKey(semanticAddressKey(hub.origin))) === true,
     historySequence: event.sequence,
     view: context.history.viewsBySequence[event.sequence - 1],
     chronology: Object.freeze({
@@ -781,8 +805,18 @@ function flushPendingHubBoard(
           ),
         )
       : flushed.branches;
+  const hub = context.snapshot.decisions.find((decision) => decision.kind === 'hub');
   return {
-    state: Object.freeze({ ...state, branches, peers: flushed.peers, pendingHubBoard: undefined }),
+    state: Object.freeze({
+      ...state,
+      branches,
+      peers: flushed.peers,
+      pendingHubBoard: undefined,
+      rerollsFlagged:
+        hub === undefined
+          ? state.rerollsFlagged
+          : flagRerolls(context, state, rerollFlagKey(semanticAddressKey(hub.origin))),
+    }),
     emissions: [
       generationFindings(flushed.findings),
       { kind: 'producerFrontiers', frontiers: flushed.producerFrontiers },
@@ -920,6 +954,8 @@ const outgoingGenerationCheckpoint: ChronologySeamHandler<'outgoingGenerationChe
       ...state,
       branches: transition.branches,
       peers: transition.peers,
+      // AssignRoomToExitDoor flags each door as the doors unlock.
+      rerollsFlagged: flagRerolls(context, state, ownerKey),
       batchTargetGeneration: generation,
       expectedStores: new Map(
         transition.expectedStores.map((entry) => [entry.targetKey, entry.storeKey] as const),
@@ -1175,6 +1211,8 @@ const offerPointMaterialized: ChronologySeamHandler<'offerPointMaterialized'> = 
     state: Object.freeze({
       ...state,
       branches: transition.branches,
+      // A ship wheel's offers are flagged rerollable as they spawn.
+      rerollsFlagged: flagRerolls(context, state, rerollFlagKey(roomKey, event.offerPoint)),
       shipLifecycleContexts:
         transition.shipLifecycleCandidate === undefined
           ? state.shipLifecycleContexts

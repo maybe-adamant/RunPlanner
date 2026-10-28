@@ -5,43 +5,39 @@ import {
   createBiomeAddress,
   createHubRerollAddress,
   createIncomingRewardAddress,
+  createLevelResolutionAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
   decodeProjectDocument,
   encodeProjectDocument,
-  roomActionKey,
   semanticAddressKey,
+  type BiomeAddress,
   type ProjectCommand,
   type ProjectDocument,
   type RerollRoomAction,
+  type RerollTarget,
 } from '@run-planner/engine/authored-project';
 import {
-  activateTemporaryArcana,
-  createArcanaFearState,
-  createPreparedProjectCandidateSession,
-  promoteArcana,
   rerollSettlementForProjectEvaluationAssembly,
   settleProjectEdit,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
-  locallyValidRewardOffers,
-  type ResolvedRewardOffer,
-} from '@run-planner/engine/reward-kernel';
-import {
-  assembleExecutionProduct,
-  compileExecutionPlan,
-  decodeExecutionPlan,
-  encodeExecutionPlan,
-} from '@run-planner/engine/execution-plan';
-import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+  loadNemesisFieldsCheckpoint,
+  loadUnderworldFGCheckpoint,
+  loadUnderworldFStygianWellCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 import {
-  reconcileBarrenArcana,
-  rerollKindEnabled,
-  rerollPoolRemaining,
-} from '../../src/simulation/arcana-fear';
+  firstSupportedReroll,
+  supportedRerollRewards,
+  withArcana,
+  withGoldenUnderworldJudgments,
+  withJudgment,
+} from '../support/rerolls';
 
 const f = createBiomeAddress('Underworld', 'F');
 const source = 'golden-f-b2-e1';
@@ -52,99 +48,159 @@ const evaluate = (project: ProjectDocument) => simulateProjectAssembly(catalog, 
 const settle = (project: ProjectDocument, command: ProjectCommand) =>
   settleProjectEdit({ catalog, before: evaluate(project), command, evaluate }).assembly.project;
 
-function withArcana(project: ProjectDocument, arcanaKeys: readonly string[]): ProjectDocument {
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceManualArcanaSelection',
-    route: { kind: 'route', routeKey: 'Underworld' },
-    arcanaKeys,
-  });
-}
-
 function occurrence(project: ProjectDocument, id: string, biomeIndex = 0) {
   return project.route.biomes[biomeIndex]!.topology!.occurrences.find(
     (room) => room.occurrenceId === id,
   )!;
 }
 
-function rerolls(project: ProjectDocument): readonly RerollRoomAction[] {
-  return occurrence(project, source).roomActions.order.flatMap((reference) =>
+function rerolls(project: ProjectDocument, from = source): readonly RerollRoomAction[] {
+  return occurrence(project, from).roomActions.order.flatMap((reference) =>
     reference.kind === 'reroll' ? [reference] : [],
   );
 }
 
+/** Appends a press to a room's action order, after its doors unlock. */
 function insertReroll(
   project: ProjectDocument,
-  exitKey: string,
-  targetId: string,
-  reward: ResolvedRewardOffer,
+  target: RerollTarget,
+  reward: ResolvedRewardOffer = { rewardType: 'RoomMoneyDrop' },
+  from = source,
+  biome: BiomeAddress = f,
+  biomeIndex = 0,
 ): ProjectCommand {
   return {
     kind: 'InsertReroll',
-    occurrence: createOccurrenceAddress(f, source as never),
-    target: { kind: 'door', exitKey, occurrenceId: targetId as never },
+    occurrence: createOccurrenceAddress(biome, from as never),
+    target,
     reward,
-    index: occurrence(project, source).roomActions.order.length,
+    index: occurrence(project, from, biomeIndex).roomActions.order.length,
   };
 }
 
-function rerollAddress(rerollId: string) {
-  return createRoomActionAddress(
-    f,
-    source as never,
-    roomActionKey({
-      kind: 'reroll',
-      rerollId,
-      target: { kind: 'door', exitKey: 'exit1', occurrenceId: pickedTarget as never },
-      reward: { rewardType: 'MaxHealthDrop' },
-    }),
+const door = (exitKey: string, occurrenceId: string): RerollTarget => ({
+  kind: 'door',
+  exitKey,
+  occurrenceId: occurrenceId as never,
+});
+
+/** The door of a room's exit decision into its authored target. */
+function doorOf(project: ProjectDocument, from: string, exitKey: string): RerollTarget {
+  const decision = project.route.biomes[0]!.topology!.decisions.find(
+    (candidate) =>
+      candidate.kind === 'exit' &&
+      candidate.source.kind === 'occurrence' &&
+      candidate.source.occurrenceId === from,
+  );
+  const target =
+    decision?.kind === 'exit'
+      ? decision.normal.targets.find((candidate) => candidate.exitKey === exitKey)
+      : undefined;
+  if (target === undefined) throw new Error(`${from} has no ${exitKey}`);
+  return door(exitKey, target.occurrenceId);
+}
+
+const pressAt = (rerollId: string, from = source, biome: BiomeAddress = f) =>
+  createRoomActionAddress(biome, from as never, JSON.stringify(['reroll', rerollId]));
+
+/** Findings on reroll presses or on the owners they redraw. */
+function rerollFindings(project: ProjectDocument) {
+  return evaluate(project).evaluation.findings.filter(
+    (finding) =>
+      finding.origin.kind === 'roomAction' ||
+      finding.origin.kind === 'hubReroll' ||
+      finding.code.startsWith('reroll') ||
+      finding.code === 'rerolledRewardMismatch',
   );
 }
 
-/** The first reward the exact candidate session accepts for a press. */
-function supportedReroll(project: ProjectDocument, rerollId: string): ResolvedRewardOffer {
-  const session = createPreparedProjectCandidateSession(catalog, evaluate(project));
-  const types = [
-    ...new Set(catalog.rewards.stores.byKey.RunProgress!.entries.map((e) => e.rewardType)),
-  ];
-  for (const value of types.flatMap((type) => locallyValidRewardOffers(catalog.rewards, type))) {
-    const result = session.evaluate({
-      kind: 'rerollReward',
-      reroll: rerollAddress(rerollId),
-      value,
-    });
-    if (result.kind === 'rerollReward' && result.result.supported) return value;
+const ROOM_REWARDS = [
+  'RoomMoneyDrop',
+  'MaxManaDrop',
+  'MaxHealthDrop',
+  'StackUpgrade',
+  'WeaponUpgrade',
+  'HermesUpgrade',
+  'SpellDrop',
+  'Devotion',
+  'Boon',
+] as const;
+
+function supportedTypes(
+  project: ProjectDocument,
+  reroll: ReturnType<typeof pressAt>,
+): ReadonlySet<string> {
+  return new Set(
+    supportedRerollRewards(project, reroll, ROOM_REWARDS).map((offer) => offer.rewardType),
+  );
+}
+
+/** Applies a press and gives it the first reward the candidate session accepts. */
+function press(
+  project: ProjectDocument,
+  target: RerollTarget,
+  from = source,
+  biome: BiomeAddress = f,
+  biomeIndex = 0,
+): ProjectDocument {
+  const inserted = applyProjectCommand(
+    project,
+    catalog,
+    insertReroll(project, target, undefined, from, biome, biomeIndex),
+  );
+  const pressed = rerolls(inserted, from).at(-1)!;
+  if (biomeIndex !== 0) {
+    // Only the first biome's rooms are read by `rerolls`; a later one names its own press.
   }
-  throw new Error('no reroll reward is supported');
+  return applyProjectCommand(inserted, catalog, {
+    kind: 'ReplaceRerollReward',
+    action: pressAt(pressed.rerollId, from, biome),
+    reward: firstSupportedReroll(inserted, pressAt(pressed.rerollId, from, biome), 'RunProgress'),
+  });
+}
+
+/** The Run State snapshot at one room checkpoint. */
+function snapshotAt(
+  project: ProjectDocument,
+  occurrenceId: string,
+  checkpoint: 'roomEntered' | 'beforeRoomExit',
+  biomeIndex = 0,
+) {
+  const biome = evaluate(project).evaluation.route.biomes[biomeIndex]!;
+  if (!('rewards' in biome)) throw new Error('biome was not evaluated');
+  const snapshot = biome.rewards.runStateSnapshots.find(
+    (candidate) =>
+      candidate.owner.kind === 'roomRunStateCheckpoint' &&
+      candidate.owner.occurrenceId === occurrenceId &&
+      candidate.owner.checkpoint.kind === checkpoint,
+  );
+  if (snapshot === undefined) throw new Error(`${occurrenceId} ${checkpoint} was not reached`);
+  return snapshot;
+}
+
+function runProgress(snapshot: ReturnType<typeof snapshotAt>): readonly number[] {
+  return snapshot.rewardStores.find((store) => store.storeKey === 'RunProgress')!
+    .remainingEntryCounts;
 }
 
 describe('door rerolls', () => {
-  it('keeps the first draw and enters the reward of the last reroll', () => {
+  it('keep the first draw and enter the reward of the last reroll', () => {
     // Holding the card auto-activates Judgment, whose Boss draw must then be authored.
-    const base = applyProjectCommand(
+    const base = withJudgment(
       withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']),
-      catalog,
-      {
-        kind: 'ReplaceJudgmentArcana',
-        judgment: {
-          kind: 'judgmentArcana',
-          routeKey: 'Underworld',
-          biomeKey: 'F',
-          occurrenceId: 'golden-f-preboss-shop:boss' as never,
-          phaseKey: 'Encounter',
-        },
-        arcanaKeys: ['ScreenReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
-      },
+      'F',
+      'golden-f-preboss-shop:boss',
+      ['ScreenReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
     );
     const first = settle(
       base,
-      insertReroll(base, 'exit1', pickedTarget, { rewardType: 'RoomMoneyDrop' }),
+      insertReroll(base, door('exit1', pickedTarget), { rewardType: 'RoomMoneyDrop' }),
     );
-    const pressed = rerolls(first);
-    expect(pressed.map((reroll) => reroll.rerollId)).toEqual(['r1']);
-    const reward = supportedReroll(first, 'r1');
+    expect(rerolls(first).map((reroll) => reroll.rerollId)).toEqual(['r1']);
+    const reward = firstSupportedReroll(first, pressAt('r1'), 'RunProgress');
     const project = settle(first, {
       kind: 'ReplaceRerollReward',
-      action: rerollAddress('r1'),
+      action: pressAt('r1'),
       reward,
     });
     const target = occurrence(project, pickedTarget);
@@ -152,49 +208,49 @@ describe('door rerolls', () => {
       rewardType: 'MaxHealthDrop',
     });
     expect(target.rerolledIncomingReward?.offer).toEqual(reward);
-    const assembly = evaluate(project);
     expect(rerollFindings(project)).toEqual([]);
     expect(
-      rerollSettlementForProjectEvaluationAssembly(assembly, rerollAddress('r1')),
+      rerollSettlementForProjectEvaluationAssembly(evaluate(project), pressAt('r1')),
     ).toMatchObject({
       reward,
       poolRemainingAfter: 2,
       target: createIncomingRewardAddress(f, pickedTarget as never),
     });
-    const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
-    expect(decoded).toEqual(project);
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
   });
 
-  it('needs a held door-reroll card and refuses presses past the pool', () => {
+  it('need a door-reroll card held when the doors unlock', () => {
     const plain = loadUnderworldFGCheckpoint();
     const unequipped = applyProjectCommand(
       plain,
       catalog,
-      insertReroll(plain, 'exit2', otherTarget, { rewardType: 'RoomMoneyDrop' }),
+      insertReroll(plain, door('exit2', otherTarget)),
     );
-    expect(evaluate(unequipped).evaluation.findings.map((finding) => finding.code)).toContain(
-      'rerollUnavailable',
+    expect(
+      rerollFindings(unequipped).map((finding) => [finding.code, finding.evidence]),
+    ).toContainEqual(['rerollUnavailable', { kind: 'doors' }]);
+  });
+
+  it('spend and report a press past the pool', () => {
+    let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+    for (let count = 0; count < 3; count += 1) project = press(project, door('exit2', otherTarget));
+    expect(rerollFindings(project)).toEqual([]);
+    expect(() => settle(project, insertReroll(project, door('exit2', otherTarget)))).toThrow(
+      'the reroll pool has nothing left for this spend',
     );
 
-    let project = withArcana(plain, ['DoorReroll']);
-    for (let press = 1; press <= 3; press += 1) {
-      project = applyProjectCommand(
-        project,
-        catalog,
-        insertReroll(project, 'exit2', otherTarget, { rewardType: 'RoomMoneyDrop' }),
-      );
-      const rerollId = `r${press}`;
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceRerollReward',
-        action: createRoomActionAddress(f, source as never, JSON.stringify(['reroll', rerollId])),
-        reward: supportedRerollAt(project, rerollId),
-      });
-    }
-    expect(rerollFindings(project)).toEqual([]);
-    expect(() =>
-      settle(project, insertReroll(project, 'exit2', otherTarget, { rewardType: 'RoomMoneyDrop' })),
-    ).toThrow('the reroll pool has nothing left for this spend');
-    // An upstream edit that shrinks the pool keeps the presses with a finding.
+    // A preserved over-spend still draws, so the timeline continues past it.
+    const over = press(project, door('exit2', otherTarget));
+    expect(rerollFindings(over).map((finding) => [finding.code, finding.evidence])).toEqual([
+      ['rerollPoolExceeded', { cost: 1, remaining: 0 }],
+    ]);
+    const settled = rerollSettlementForProjectEvaluationAssembly(evaluate(over), pressAt('r4'));
+    expect(settled?.poolRemainingAfter).toBe(-1);
+    expect(occurrence(over, otherTarget).rerolledIncomingReward?.offer).toEqual(settled?.reward);
+
+    // An upstream edit that empties the pool keeps the presses.
     const shrunk = settle(project, {
       kind: 'ReplaceManualArcanaSelection',
       route: { kind: 'route', routeKey: 'Underworld' },
@@ -202,196 +258,224 @@ describe('door rerolls', () => {
     });
     expect(rerolls(shrunk)).toHaveLength(3);
   });
+});
 
-  it('keeps a removed reroll target addressable by its identity', () => {
-    let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
-    project = applyProjectCommand(
-      project,
+describe('reroll settlement', () => {
+  const base = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
+
+  function rerolledTo(from: string, target: RerollTarget, rewardType: string): ProjectDocument {
+    const inserted = applyProjectCommand(
+      base,
       catalog,
-      insertReroll(project, 'exit2', otherTarget, { rewardType: 'RoomMoneyDrop' }),
+      insertReroll(base, target, undefined, from),
     );
-    project = applyProjectCommand(
-      project,
-      catalog,
-      insertReroll(project, 'exit2', otherTarget, { rewardType: 'RoomMoneyDrop' }),
-    );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveRoomAction',
-      action: createRoomActionAddress(f, source as never, JSON.stringify(['reroll', 'r1'])),
+    const reward = supportedRerollRewards(inserted, pressAt('r1', from), [rewardType])[0];
+    if (reward === undefined) throw new Error(`${rewardType} is not supported`);
+    return applyProjectCommand(inserted, catalog, {
+      kind: 'ReplaceRerollReward',
+      action: pressAt('r1', from),
+      reward,
     });
-    expect(rerolls(project).map((reroll) => reroll.rerollId)).toEqual(['r2']);
-    project = applyProjectCommand(
-      project,
-      catalog,
-      insertReroll(project, 'exit2', otherTarget, { rewardType: 'RoomMoneyDrop' }),
+  }
+
+  it('removes the redrawn reward from its store', () => {
+    const from = 'golden-f-b6-e1';
+    const before = runProgress(snapshotAt(base, from, 'beforeRoomExit'));
+    const after = runProgress(
+      snapshotAt(
+        rerolledTo(from, doorOf(base, from, 'exit1'), 'RoomMoneyDrop'),
+        from,
+        'beforeRoomExit',
+      ),
     );
-    expect(rerolls(project).map((reroll) => reroll.rerollId)).toEqual(['r2', 'r1']);
+    const store = catalog.rewards.stores.byKey.RunProgress!;
+    const removed = after.flatMap((count, index) =>
+      count === before[index]! - 1 ? [store.entries[index]!.rewardType] : [],
+    );
+    expect(removed).toEqual(['RoomMoneyDrop']);
+    expect(after.reduce((sum, count) => sum + count, 0)).toBe(
+      before.reduce((sum, count) => sum + count, 0) - 1,
+    );
   });
 
-  it('preserves an authored rerolled acquisition that no longer matches', () => {
-    let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
-    project = applyProjectCommand(
-      project,
-      catalog,
-      insertReroll(project, 'exit1', pickedTarget, { rewardType: 'StackUpgrade' }),
+  it('refills an exhausted store before the redraw', () => {
+    const from = 'golden-f-b10-e1';
+    const before = runProgress(snapshotAt(base, from, 'beforeRoomExit'));
+    const after = runProgress(
+      snapshotAt(
+        rerolledTo(from, doorOf(base, from, 'exit2'), 'MaxHealthDrop'),
+        from,
+        'beforeRoomExit',
+      ),
     );
-    const owner = createIncomingRewardAddress(f, pickedTarget as never);
-    const authored = occurrence(project, pickedTarget).rerolledIncomingReward;
-    expect(authored?.offer).toEqual({ rewardType: 'StackUpgrade' });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveRoomAction',
-      action: createRoomActionAddress(f, source as never, JSON.stringify(['reroll', 'r1'])),
-    });
-    // The unauthored default leaves with its last reroll.
-    expect(occurrence(project, pickedTarget).rerolledIncomingReward).toBeUndefined();
-    expect(semanticAddressKey(owner)).toContain(pickedTarget);
+    const store = catalog.rewards.stores.byKey.RunProgress!;
+    expect(after.reduce((sum, count) => sum + count, 0)).toBe(
+      before.reduce((sum, count) => sum + count, 0) + store.entries.length - 1,
+    );
+  });
+
+  it('records the Devotion depth of a redrawn Devotion', () => {
+    const from = 'golden-f-b7-e1';
+    expect(snapshotAt(base, from, 'beforeRoomExit').counters.lastDevotionDepth).toBeUndefined();
+    const project = rerolledTo(from, doorOf(base, from, 'exit1'), 'Devotion');
+    expect(snapshotAt(project, from, 'beforeRoomExit').counters.lastDevotionDepth).toBe(
+      snapshotAt(project, from, 'roomEntered').counters.runDepthCache,
+    );
+  });
+
+  it("excludes the target's original and every door's current reward", () => {
+    // exit1 first drew MaxHealthDrop and exit2 MaxManaDrop; one MaxManaDrop entry remains.
+    const exit1 = door('exit1', pickedTarget);
+    const exit2 = door('exit2', otherTarget);
+    const plain = applyProjectCommand(base, catalog, insertReroll(base, exit1));
+    const before = supportedTypes(plain, pressAt('r1'));
+    expect(before.has('MaxHealthDrop')).toBe(false);
+    expect(before.has('MaxManaDrop')).toBe(false);
+    expect(before.has('RoomMoneyDrop')).toBe(true);
+
+    const redrawn = rerolledTo(source, exit2, 'RoomMoneyDrop');
+    const after = applyProjectCommand(redrawn, catalog, insertReroll(redrawn, exit1));
+    const current = supportedTypes(after, pressAt('r2'));
+    expect(current.has('MaxManaDrop')).toBe(true);
+    expect(current.has('RoomMoneyDrop')).toBe(false);
+    expect(current.has('MaxHealthDrop')).toBe(false);
   });
 });
 
-/** Findings on reroll presses or on the owners they redraw. */
-function rerollFindings(project: ProjectDocument) {
-  return evaluate(project).evaluation.findings.filter(
-    (finding) =>
-      finding.origin.kind === 'roomAction' ||
-      finding.code.startsWith('reroll') ||
-      finding.code === 'rerolledRewardMismatch',
-  );
-}
+describe('rerolled reward repair', () => {
+  const owner = createIncomingRewardAddress(f, otherTarget as never);
 
-function supportedRerollAt(project: ProjectDocument, rerollId: string): ResolvedRewardOffer {
-  const assembly = evaluate(project);
-  const session = createPreparedProjectCandidateSession(catalog, assembly);
-  const reroll = createRoomActionAddress(f, source as never, JSON.stringify(['reroll', rerollId]));
-  for (const rewardType of [
-    'RoomMoneyDrop',
-    'MaxManaDrop',
-    'MaxHealthDrop',
-    'StackUpgrade',
-    'MetaCurrencyDrop',
-    'MetaCardPointsCommonDrop',
-    'MemPointsCommonDrop',
-  ]) {
-    const value = { rewardType };
-    const result = session.evaluate({ kind: 'rerollReward', reroll, value });
-    if (result.kind === 'rerollReward' && result.result.supported) return value;
+  function mismatched(project: ProjectDocument): ProjectDocument {
+    const encoded = JSON.parse(encodeProjectDocument(project)) as {
+      route: { biomes: { topology: { occurrences: Record<string, unknown>[] } }[] };
+    };
+    const room = encoded.route.biomes[0]!.topology.occurrences.find(
+      (entry) => entry.occurrenceId === otherTarget,
+    )!;
+    (room.rerolledIncomingReward as { offer: unknown }).offer = { rewardType: 'MaxManaDrop' };
+    return decodeProjectDocument(encoded as never, catalog);
   }
-  throw new Error(`no reward is supported for ${rerollId}`);
-}
 
-const surface = { kind: 'route', routeKey: 'Surface' } as const;
-const n = createBiomeAddress('Surface', 'N');
-const o = createBiomeAddress('Surface', 'O');
-
-function surfaceWithArcana(project: ProjectDocument, arcanaKeys: readonly string[]) {
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceManualArcanaSelection',
-    route: surface,
-    arcanaKeys,
-  });
-}
-
-/** The first offer of the target's store the exact candidate session accepts for a press. */
-function firstSupported(
-  project: ProjectDocument,
-  reroll: Parameters<typeof rerollSettlementForProjectEvaluationAssembly>[1],
-  storeKey: string,
-): ResolvedRewardOffer {
-  const session = createPreparedProjectCandidateSession(catalog, evaluate(project));
-  const types = [
-    ...new Set(catalog.rewards.stores.byKey[storeKey]!.entries.map((e) => e.rewardType)),
-  ];
-  for (const value of types.flatMap((type) => locallyValidRewardOffers(catalog.rewards, type))) {
-    const result = session.evaluate({ kind: 'rerollReward', reroll, value });
-    if (result.kind === 'rerollReward' && result.result.supported) return value;
-  }
-  throw new Error(`no reward is supported for ${semanticAddressKey(reroll)}`);
-}
-
-describe('reroll publication', () => {
-  it('keeps the first draw on the door and publishes the press in order', () => {
-    const g = createBiomeAddress('Underworld', 'G');
-    const judgment = (biomeKey: string, occurrenceId: string, arcanaKeys: readonly string[]) =>
-      ({
-        kind: 'ReplaceJudgmentArcana',
-        judgment: {
-          kind: 'judgmentArcana',
-          routeKey: 'Underworld',
-          biomeKey,
-          occurrenceId: occurrenceId as never,
-          phaseKey: 'Encounter',
-        },
-        arcanaKeys,
-      }) as const;
-    // Holding the card auto-activates Judgment, whose Boss draws must then be authored.
+  it('reports a rerolled reward that does not match until it is adopted', () => {
     let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
     project = applyProjectCommand(
       project,
       catalog,
-      judgment('F', 'golden-f-preboss-shop:boss', [
-        'ScreenReroll',
-        'StartingGold',
-        'HealthRegen',
-        'BonusDodge',
-        'TradeOff',
-      ]),
+      insertReroll(project, door('exit2', otherTarget)),
     );
+    expect(rerollFindings(project)).toEqual([]);
+    const broken = mismatched(project);
+    expect(
+      rerollFindings(broken).map((finding) => [finding.code, semanticAddressKey(finding.origin)]),
+    ).toEqual([['rerolledRewardMismatch', semanticAddressKey(owner)]]);
+    expect(
+      rerollFindings(applyProjectCommand(broken, catalog, { kind: 'AdoptRerolledReward', owner })),
+    ).toEqual([]);
+  });
+
+  it('reports a rerolled reward that outlived its rerolls until it is dropped', () => {
+    let project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll']);
     project = applyProjectCommand(
       project,
       catalog,
-      judgment('G', 'golden-g-preboss-shop:boss', [
-        'LowManaDamageBonus',
-        'CastCount',
-        'SorceryRegenUpgrade',
-        'CastBuff',
-        'BonusHealth',
-      ]),
+      insertReroll(project, door('exit2', otherTarget), {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      }),
     );
-    const gSource = 'golden-g-b1-e1';
+    // An authored screen makes the rerolled reward more than its unresolved default.
     project = applyProjectCommand(project, catalog, {
-      kind: 'InsertReroll',
-      occurrence: createOccurrenceAddress(g, gSource as never),
-      target: { kind: 'door', exitKey: 'exit2', occurrenceId: 'golden-g-b2-e2' as never },
-      reward: { rewardType: 'GiftDrop' },
-      index: occurrence(project, gSource, 1).roomActions.order.length,
-    });
-    const assembly = evaluate(project);
-    expect(assembly.evaluation.status).toBe('valid');
-    const plan = compileExecutionPlan({
-      product: assembleExecutionProduct({ assembly, catalog }),
-    });
-    const sourcePlan = plan.occurrences.find((candidate) => candidate.id === gSource)!;
-    expect(sourcePlan.rerolls).toEqual([
-      {
-        owner: semanticAddressKey(
-          createRoomActionAddress(g, gSource as never, JSON.stringify(['reroll', 'r1'])),
-        ),
-        target: { kind: 'door', exitKey: 'exit2' },
-        reward: expect.objectContaining({ rewardType: 'GiftDrop' }),
+      kind: 'ReplaceTraitOffer',
+      trait: {
+        kind: 'traitOffer',
+        routeKey: 'Underworld',
+        biomeKey: 'F',
+        owner,
+        acquisitionRole: 'source',
       },
+      value: {
+        kind: 'traits',
+        giverKey: 'Zeus',
+        options: [
+          { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+          { traitKey: 'ZeusSprintBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    const dormant = applyProjectCommand(project, catalog, {
+      kind: 'RemoveRoomAction',
+      action: pressAt('r1'),
+    });
+    expect(rerolls(dormant)).toEqual([]);
+    expect(rerollFindings(dormant).map((finding) => finding.code)).toEqual([
+      'rerolledRewardMismatch',
     ]);
     expect(
-      sourcePlan.roomGuide.find((row) => row.key === JSON.stringify(['reroll', 'r1']))?.description
-        .kind,
-    ).toBe('reroll');
-    const firstDraw = occurrence(project, 'golden-g-b2-e2', 1).state;
-    expect(
-      sourcePlan.doors.kind === 'batch'
-        ? sourcePlan.doors.targets.find((door) => door.exitKey === 'exit2')?.reward?.rewardType
-        : undefined,
-    ).toBe(firstDraw.kind === 'counted' ? firstDraw.reward?.offer.rewardType : undefined);
-    // The planned pool at the room's entry pays for the press.
-    const settled = rerollSettlementForProjectEvaluationAssembly(
-      assembly,
-      createRoomActionAddress(g, gSource as never, JSON.stringify(['reroll', 'r1'])),
+      rerollFindings(applyProjectCommand(dormant, catalog, { kind: 'DropRerolledReward', owner })),
+    ).toEqual([]);
+  });
+});
+
+describe('Fields cage rerolls', () => {
+  const h = createBiomeAddress('Underworld', 'H');
+  const base = withGoldenUnderworldJudgments(
+    withArcana(loadNemesisFieldsCheckpoint(), ['DoorReroll']),
+  );
+  const cage = (exitKey: string, occurrenceId: string, slotKey: string): RerollTarget => ({
+    kind: 'cage',
+    exitKey,
+    occurrenceId: occurrenceId as never,
+    slotKey,
+  });
+
+  it('redraw one cage of a door into a Fields room', () => {
+    const from = 'golden-h-miniboss01';
+    const target = 'golden-h-combat05';
+    const inserted = applyProjectCommand(
+      base,
+      catalog,
+      insertReroll(base, cage('exit1', target, 'cage1'), undefined, from, h, 2),
     );
-    expect(sourcePlan.rerollPoolAtEntry).toBe(settled!.poolRemainingAfter! + 1);
-    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+    const reroll = pressAt('r1', from, h);
+    const reward = firstSupportedReroll(inserted, reroll, 'RunProgress');
+    const project = applyProjectCommand(inserted, catalog, {
+      kind: 'ReplaceRerollReward',
+      action: reroll,
+      reward,
+    });
+    const room = occurrence(project, target, 2);
+    expect(room.state.kind === 'fieldsCombat' && room.state.rerolledCages?.cage1?.offer).toEqual(
+      reward,
+    );
+    expect(rerollSettlementForProjectEvaluationAssembly(evaluate(project), reroll)).toMatchObject({
+      reward,
+      target: createLocalRewardAddress(h, target as never, 'cages', 'cage1'),
+    });
+    expect(rerollFindings(project)).toEqual([]);
+  });
+
+  it("exclude the cage's original and its sibling cages' current rewards", () => {
+    const from = 'golden-h-intro';
+    // combat02's cage1 first drew MaxHealthDrop and cage2 MaxManaDrop.
+    const inserted = applyProjectCommand(
+      base,
+      catalog,
+      insertReroll(base, cage('exit1', 'golden-h-combat02', 'cage1'), undefined, from, h, 2),
+    );
+    const types = supportedTypes(inserted, pressAt('r1', from, h));
+    expect(types.has('MaxHealthDrop')).toBe(false);
+    expect(types.has('MaxManaDrop')).toBe(false);
+    expect(types.has('RoomMoneyDrop')).toBe(true);
   });
 });
 
 describe('Hub board rerolls', () => {
-  it('redraws a board door before the first visit and refuses one after it', () => {
-    const base = surfaceWithArcana(loadSurfaceNProject(), ['DoorReroll']);
+  it('redraw a board door before the first visit and refuse one after it', () => {
+    const n = createBiomeAddress('Surface', 'N');
+    const base = withArcana(loadSurfaceNProject(), ['DoorReroll']);
     const hub = { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' } as const;
     const inserted = applyProjectCommand(base, catalog, {
       kind: 'InsertHubReroll',
@@ -401,20 +485,17 @@ describe('Hub board rerolls', () => {
       index: 0,
     });
     const reroll = createHubRerollAddress(n, 'hub', 'r1');
-    const reward = firstSupported(inserted, reroll, 'HubRewards');
+    const reward = firstSupportedReroll(inserted, reroll, 'HubRewards');
     const project = applyProjectCommand(inserted, catalog, {
       kind: 'ReplaceHubRerollReward',
       reroll,
       reward,
     });
-    const assembly = evaluate(project);
-    expect(rerollSettlementForProjectEvaluationAssembly(assembly, reroll)).toMatchObject({
+    expect(rerollSettlementForProjectEvaluationAssembly(evaluate(project), reroll)).toMatchObject({
       reward,
       poolRemainingAfter: 2,
     });
-    expect(
-      assembly.evaluation.findings.filter((finding) => finding.origin.kind === 'hubReroll'),
-    ).toEqual([]);
+    expect(rerollFindings(project)).toEqual([]);
 
     const hubDecision = project.route.biomes[0]!.topology!.decisions.find(
       (decision) => decision.kind === 'hub',
@@ -436,56 +517,38 @@ describe('Hub board rerolls', () => {
 });
 
 describe('ship wheel rerolls', () => {
-  it('redraws an offer before the wheel is used', () => {
+  it('redraw an offer before the wheel is used', () => {
+    const o = createBiomeAddress('Surface', 'O');
     // N's Judgment grants two more cards mid-run, each adding its full count to the pool.
-    const base = applyProjectCommand(
-      surfaceWithArcana(loadSurfaceNOCheckpoint(), ['DoorReroll']),
-      catalog,
-      {
-        kind: 'ReplaceJudgmentArcana',
-        judgment: {
-          kind: 'judgmentArcana',
-          routeKey: 'Surface',
-          biomeKey: 'N',
-          occurrenceId: 'surface-n-preboss:boss' as never,
-          phaseKey: 'Encounter',
-        },
-        arcanaKeys: ['ScreenReroll', 'TradeOff', 'StartingGold', 'HealthRegen', 'BonusDodge'],
-      },
+    const base = withJudgment(
+      withArcana(loadSurfaceNOCheckpoint(), ['DoorReroll']),
+      'N',
+      'surface-n-preboss:boss',
+      ['ScreenReroll', 'TradeOff', 'StartingGold', 'HealthRegen', 'BonusDodge'],
     );
-    const ship = base.route.biomes[1]!.topology!.occurrences.find(
-      (room) => room.occurrenceId === 'surface-o-combat04',
-    )!;
-    const useIndex = ship.roomActions.order.findIndex(
-      (reference) => reference.kind === 'chooseRewardWheel',
-    );
+    const ship = occurrence(base, 'surface-o-combat04', 1);
     const inserted = applyProjectCommand(base, catalog, {
       kind: 'InsertReroll',
       occurrence: createOccurrenceAddress(o, ship.occurrenceId),
       target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
       reward: { rewardType: 'MaxManaDrop' },
-      index: useIndex,
+      index: ship.roomActions.order.findIndex(
+        (reference) => reference.kind === 'chooseRewardWheel',
+      ),
     });
-    const reroll = createRoomActionAddress(o, ship.occurrenceId, JSON.stringify(['reroll', 'r1']));
-    const reward = firstSupported(inserted, reroll, 'RunProgress');
+    const reroll = pressAt('r1', ship.occurrenceId, o);
+    const reward = firstSupportedReroll(inserted, reroll, 'RunProgress');
     const project = applyProjectCommand(inserted, catalog, {
       kind: 'ReplaceRerollReward',
       action: reroll,
       reward,
     });
-    const assembly = evaluate(project);
-    expect(rerollSettlementForProjectEvaluationAssembly(assembly, reroll)).toMatchObject({
+    expect(rerollSettlementForProjectEvaluationAssembly(evaluate(project), reroll)).toMatchObject({
       reward,
       // Door 3, Screen 3 and the Fates 4 at Epic, less this press.
       poolRemainingAfter: 9,
     });
-    expect(
-      assembly.evaluation.findings.filter(
-        (finding) =>
-          semanticAddressKey(finding.origin) === semanticAddressKey(reroll) ||
-          finding.code === 'rerolledRewardMismatch',
-      ),
-    ).toEqual([]);
+    expect(rerollFindings(project)).toEqual([]);
   });
 });
 
@@ -527,83 +590,91 @@ describe('screen rerolls', () => {
       expect.arrayContaining(['screenRerollUnavailable', 'rerollPoolExceeded']),
     );
   });
-});
 
-describe('reroll pool', () => {
-  it('counts held cards, mid-run grants and upgrades, and keeps Barren to enablement', () => {
-    const loadout = {
-      manualArcanaKeys: ['DoorReroll'],
-      fearRanks: loadUnderworldFGCheckpoint().route.loadout.fearRanks,
-    };
-    const state = (arcanaFear: ReturnType<typeof createArcanaFearState>) => ({
-      arcanaFear,
-      traitHistory: {},
+  it('refuse raising a count that already over-spends the pool', () => {
+    const project = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll', 'ScreenReroll']);
+    const zeus = occurrence(project, source);
+    const trait =
+      zeus.state.kind === 'counted' ? zeus.state.reward?.traitOffersByAcquisitionRole : undefined;
+    const [role, offer] = Object.entries(trait ?? {})[0]!;
+    if (offer === null || offer === undefined || offer.kind === 'fallbackGold')
+      throw new Error('fixture lacks an authored Zeus screen');
+    const count = (rerollCount: number): ProjectCommand => ({
+      kind: 'ReplaceTraitOffer',
+      trait: {
+        kind: 'traitOffer',
+        routeKey: 'Underworld',
+        biomeKey: 'F',
+        owner: createIncomingRewardAddress(f, source as never),
+        acquisitionRole: role,
+      },
+      value: { ...offer, rerollCount },
     });
-    const start = createArcanaFearState(catalog, loadout);
-    expect(rerollPoolRemaining(state(start))).toBe(3);
-    const evidence = { owner: createOccurrenceAddress(f, source as never), sequence: 1 };
-    const granted = activateTemporaryArcana(catalog, start, ['ScreenReroll'], evidence);
-    if (!granted.legal) throw new Error('grant refused');
-    expect(rerollPoolRemaining(state(granted.state))).toBe(6);
-    const promoted = promoteArcana(catalog, granted.state, ['DoorReroll'], {
-      ...evidence,
-      sequence: 2,
+    // Three rerolls cost 6, the whole pool of both cards.
+    const thrice = settle(project, count(3));
+    const shrunk = settle(thrice, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      arcanaKeys: ['ScreenReroll'],
     });
-    if (!promoted.legal) throw new Error('promotion refused');
-    // Epic to Heroic adds only the difference.
-    expect(rerollPoolRemaining(state(promoted.state))).toBe(7);
-    const barren = reconcileBarrenArcana(promoted.state, false, true);
-    expect(rerollKindEnabled(catalog, barren, 'doors')).toBe(false);
-    expect(rerollPoolRemaining(state(barren))).toBe(7);
-    expect(rerollKindEnabled(catalog, reconcileBarrenArcana(barren, true, false), 'doors')).toBe(
-      true,
+    expect(rerollFindings(shrunk).map((finding) => [finding.code, finding.evidence])).toEqual([
+      ['rerollPoolExceeded', { cost: 6, remaining: 3 }],
+    ]);
+    expect(() => settle(shrunk, count(4))).toThrow(
+      'the reroll pool has nothing left for this spend',
     );
+    expect(rerollFindings(settle(shrunk, count(2)))).toEqual([]);
   });
-});
 
-describe('reroll codec', () => {
-  it('decodes rerolls and screen counts strictly', () => {
-    const encoded = JSON.parse(encodeProjectDocument(loadUnderworldFGCheckpoint())) as {
-      route: { biomes: { topology: { occurrences: Record<string, unknown>[] } }[] };
-    };
-    const decodeWith = (edit: (room: Record<string, unknown>) => void) => {
-      const copy = structuredClone(encoded);
-      edit(
-        copy.route.biomes[0]!.topology.occurrences.find((room) => room.occurrenceId === source)!,
-      );
-      return () => decodeProjectDocument(copy as never, catalog);
-    };
-    const reroll = (rerollId: string) => ({
-      kind: 'reroll',
-      rerollId,
-      target: { kind: 'door', exitKey: 'exit2', occurrenceId: otherTarget },
-      reward: { rewardType: 'RoomMoneyDrop' },
+  it('spend a Pom of Power screen count when it is acquired', () => {
+    const pom = 'golden-f-b4-e1';
+    const project = applyProjectCommand(
+      withArcana(loadUnderworldFGCheckpoint(), ['ScreenReroll']),
+      catalog,
+      {
+        kind: 'ReplaceLevelResolution',
+        levelResolution: createLevelResolutionAddress(
+          createIncomingRewardAddress(f, pom as never),
+          'self',
+        ),
+        value: {
+          kind: 'choice',
+          offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'],
+          selectedTraitKey: 'ApolloWeaponBoon',
+          rerollCount: 2,
+        },
+      },
+    );
+    expect(snapshotAt(project, pom, 'roomEntered').rerolls.remaining).toBe(3);
+    expect(snapshotAt(project, pom, 'beforeRoomExit').rerolls.remaining).toBe(0);
+    expect(rerollFindings(project)).toEqual([]);
+  });
+
+  it('spend Stygian Well and Purging Pool counts when they are opened', () => {
+    const postboss = 'golden-f-preboss-shop:postboss';
+    const room = createOccurrenceAddress(f, postboss as never);
+    // The F Judgment grants the screen card at the Boss, before the Well and the Pool.
+    let project = withJudgment(
+      withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
+      'F',
+      'golden-f-preboss-shop:boss',
+      ['ScreenReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
+    );
+    const entered = snapshotAt(project, postboss, 'roomEntered');
+    expect(entered.rerolls.screensEnabled).toBe(true);
+    project = settle(project, { kind: 'SetStygianWellRerollCount', occurrence: room, count: 2 });
+    expect(snapshotAt(project, postboss, 'beforeRoomExit').rerolls.remaining).toBe(
+      entered.rerolls.remaining - 3,
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetPurgingPoolInteraction',
+      occurrence: room,
+      interacted: true,
     });
-    const withOrder =
-      (...actions: unknown[]) =>
-      (room: Record<string, unknown>) => {
-        const order = (room.roomActions as { order: unknown[] }).order;
-        order.push(...actions);
-      };
-    expect(decodeWith(withOrder(reroll('r1'), reroll('r2')))).not.toThrow();
-    expect(decodeWith(withOrder(reroll('first')))).toThrow('must be a reroll id');
-    expect(decodeWith(withOrder(reroll('r1'), reroll('r1')))).toThrow('duplicates room action');
-    expect(
-      decodeWith(
-        withOrder({
-          kind: 'reroll',
-          rerollId: 'r1',
-          target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
-          reward: { rewardType: 'RoomMoneyDrop' },
-        }),
-      ),
-    ).toThrow('names no wheel offer of this room');
-    const withCount = (count: number) => (room: Record<string, unknown>) => {
-      const reward = (room.state as { reward: { traitOffersByAcquisitionRole: object } }).reward;
-      for (const offer of Object.values(reward.traitOffersByAcquisitionRole))
-        (offer as Record<string, unknown>).rerollCount = count;
-    };
-    expect(decodeWith(withCount(2))).not.toThrow();
-    expect(decodeWith(withCount(0))).toThrow('rerollCount');
+    project = settle(project, { kind: 'SetPurgingPoolRerollCount', occurrence: room, count: 1 });
+    expect(snapshotAt(project, postboss, 'beforeRoomExit').rerolls.remaining).toBe(
+      entered.rerolls.remaining - 4,
+    );
+    expect(rerollFindings(project)).toEqual([]);
   });
 });
