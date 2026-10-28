@@ -34,6 +34,25 @@ import type { PhantomExitSettlement } from '../../model';
 import type { SimulationState } from '../../../state/model';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 
+/**
+ * The one reward type an unpinned phantom exit settles on every reached
+ * branch: among the types each branch can draw, the one with the most entries
+ * left on its scarcest branch (ties in declaration order), so it least often
+ * exhausts a type a later door draws. Undefined when no type is common.
+ */
+export function settlePhantomRewardType(
+  declaredTypes: readonly string[],
+  remainingByBranch: readonly ReadonlyMap<string, number>[],
+): string | undefined {
+  let best: { readonly rewardType: string; readonly remaining: number } | undefined;
+  for (const rewardType of declaredTypes) {
+    if (!remainingByBranch.every((remaining) => remaining.has(rewardType))) continue;
+    const remaining = Math.min(...remainingByBranch.map((byType) => byType.get(rewardType) ?? 0));
+    if (best === undefined || remaining > best.remaining) best = { rewardType, remaining };
+  }
+  return best?.rewardType;
+}
+
 export interface PhantomExitTransition {
   readonly branches: readonly RewardBranchState[];
   /** The drawn offer, a prior door of the same unlock for the side doors that follow. */
@@ -150,44 +169,66 @@ export function applyPhantomExitTransition(inputs: {
     });
   const declaredTypes = phantomPlaceholderRewardTypes(catalog, placeholder);
   const store = catalog.rewards.stores.byKey[draw.storeKey];
-  // An unpinned draw takes the type with the most entries left in the bag as it
-  // stands (ties in declaration order), so it least often exhausts a type a
-  // later door draws; each type's payloads follow their declared order.
-  const rewardTypesFor = (branch: RewardBranchState): readonly string[] => {
-    if (phantom.rewardType !== null) return [phantom.rewardType];
+  /** Each type's first surviving offer on one branch, with the entries it has left. */
+  const branchOptions = (branch: RewardBranchState) => {
     const bag = withBag(catalog, branch, draw.storeKey)?.bag;
-    const remaining = new Map<string, number>();
-    store?.entries.forEach((entry, index) =>
-      remaining.set(
-        entry.rewardType,
-        (remaining.get(entry.rewardType) ?? 0) + (bag?.remainingEntryCounts[index] ?? 0),
-      ),
-    );
-    return [...declaredTypes].sort(
-      (left, right) => (remaining.get(right) ?? 0) - (remaining.get(left) ?? 0),
+    const types = phantom.rewardType === null ? declaredTypes : [phantom.rewardType];
+    return new Map(
+      types.flatMap((rewardType) => {
+        for (const offer of locallyValidRewardOffers(catalog.rewards, rewardType)) {
+          const survivors = processRewardOffer([branch], contextFor(offer), new Map());
+          if (survivors.length === 0) continue;
+          const remaining =
+            store?.entries.reduce(
+              (sum, entry, index) =>
+                entry.rewardType === rewardType
+                  ? sum + (bag?.remainingEntryCounts[index] ?? 0)
+                  : sum,
+              0,
+            ) ?? 0;
+          return [[rewardType, { offer, survivors, remaining }] as const];
+        }
+        return [];
+      }),
     );
   };
+  const perBranch = inputs.branches.map(branchOptions);
   const next: RewardBranchState[] = [];
   const offers: ResolvedRewardOffer[] = [];
-  for (const branch of inputs.branches) {
-    let drawn = false;
-    const orderedOffers = rewardTypesFor(branch).flatMap((rewardType) =>
-      locallyValidRewardOffers(catalog.rewards, rewardType),
-    );
-    for (const offer of orderedOffers) {
-      const survivors = processRewardOffer([branch], contextFor(offer), new Map());
-      if (survivors.length === 0) continue;
-      next.push(...survivors);
-      if (!offers.some((known) => sameOffer(known, offer))) offers.push(offer);
-      drawn = true;
-      break;
+  const settle = (rewardType: string) => {
+    for (const options of perBranch) {
+      const option = options.get(rewardType);
+      if (option === undefined) continue;
+      next.push(...option.survivors);
+      if (!offers.some((known) => sameOffer(known, option.offer))) offers.push(option.offer);
     }
-    if (!drawn)
+  };
+  if (phantom.rewardType !== null) {
+    // Like any authored reward, a pinned type drops the branches that cannot draw it.
+    if (perBranch.some((options) => options.has(phantom.rewardType!))) settle(phantom.rewardType);
+    else
       addRewardFinding(
         findings,
         rewardFinding('phantomExitRewardUnavailable', owner, {
           placeholderRoomGameName: placeholder,
-          ...(phantom.rewardType === null ? {} : { rewardType: phantom.rewardType }),
+          rewardType: phantom.rewardType,
+        }),
+        region,
+        chronology,
+      );
+  } else {
+    const settled = settlePhantomRewardType(
+      declaredTypes,
+      perBranch.map(
+        (options) => new Map([...options].map(([type, option]) => [type, option.remaining])),
+      ),
+    );
+    if (settled !== undefined) settle(settled);
+    else
+      addRewardFinding(
+        findings,
+        rewardFinding('phantomExitRewardUnavailable', owner, {
+          placeholderRoomGameName: placeholder,
         }),
         region,
         chronology,

@@ -17,6 +17,7 @@ import {
   type PhantomExitSettlement,
 } from '@run-planner/engine/simulation';
 import { assembleExecutionProduct, compileExecutionPlan } from '@run-planner/engine/execution-plan';
+import { settlePhantomRewardType } from '../../src/simulation/rewards/biome/generation/phantom-exit';
 import {
   loadSurfaceNProject,
   nBiome,
@@ -124,7 +125,7 @@ describe('phantom exits', () => {
     const { at } = settlements(project);
     for (const exit of [combat05, combat02, miniBoss01])
       expect(at(exit)).toMatchObject({
-        placeholderRoomGameName: 'N_Shop01',
+        placeholderRoomGameName: 'N_PreBoss01',
         placeholderPinned: false,
         rewardPinned: false,
         offers: [],
@@ -280,5 +281,31 @@ describe('phantom exits', () => {
     );
     expect(combat05Phantom).toBeGreaterThan(-1);
     expect(firstSideDoor).toBeGreaterThan(combat05Phantom);
+  });
+
+  it('settles one reward type on every branch, the one least scarce on its scarcest branch', () => {
+    const branch = (entries: Record<string, number>) => new Map(Object.entries(entries));
+    const declared = ['MaxManaDrop', 'RoomMoneyDrop', 'MaxHealthDrop'];
+    // Branches disagree on their richest type, so each would settle differently alone.
+    expect(
+      settlePhantomRewardType(declared, [
+        branch({ MaxManaDrop: 3, RoomMoneyDrop: 2, MaxHealthDrop: 1 }),
+        branch({ MaxManaDrop: 1, RoomMoneyDrop: 2, MaxHealthDrop: 3 }),
+      ]),
+    ).toBe('RoomMoneyDrop');
+    // A type one branch cannot draw is never settled, however plentiful elsewhere.
+    expect(
+      settlePhantomRewardType(declared, [
+        branch({ MaxManaDrop: 9, MaxHealthDrop: 1 }),
+        branch({ RoomMoneyDrop: 2, MaxHealthDrop: 1 }),
+      ]),
+    ).toBe('MaxHealthDrop');
+    // Ties keep declaration order; no common type leaves the exit unsettled.
+    expect(settlePhantomRewardType(declared, [branch({ MaxHealthDrop: 2, MaxManaDrop: 2 })])).toBe(
+      'MaxManaDrop',
+    );
+    expect(
+      settlePhantomRewardType(declared, [branch({ MaxManaDrop: 1 }), branch({ RoomMoneyDrop: 1 })]),
+    ).toBeUndefined();
   });
 });

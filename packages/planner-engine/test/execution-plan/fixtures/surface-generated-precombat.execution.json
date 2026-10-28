@@ -2505,7 +2505,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
-        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
+        "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -3037,7 +3037,7 @@
           { "slotKey": "Encounter", "encounterKey": "MiniBossSatyrCrossbow", "kind": "miniboss" }
         ],
         "requiredObjects": ["SoulPylon"],
-        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
+        "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
         "localSlots": []
       },
       "timeline": {
@@ -3191,7 +3191,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
-        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
+        "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -3492,7 +3492,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN_Bigger", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
-        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
+        "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
         "localSlots": [
           {
             "slotKey": "sideDoor1",
@@ -3841,7 +3841,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
-        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
+        "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
         "localSlots": [
           { "slotKey": "sideDoor1", "physicalDoorId": 755971, "generation": "notGenerated" },
           { "slotKey": "sideDoor2", "physicalDoorId": 755184, "generation": "notGenerated" },
@@ -3986,7 +3986,7 @@
           { "slotKey": "Encounter", "encounterKey": "GeneratedN_Bigger", "kind": "combat" }
         ],
         "requiredObjects": ["SoulPylon"],
-        "phantomExit": { "placeholderRoomGameName": "N_Shop01" },
+        "phantomExit": { "placeholderRoomGameName": "N_PreBoss01" },
         "localSlots": [
           { "slotKey": "sideDoor1", "physicalDoorId": 566392, "generation": "notGenerated" },
           { "slotKey": "sideDoor2", "physicalDoorId": 566536, "generation": "notGenerated" },
@@ -7863,5 +7863,5 @@
       }
     }
   ],
-  "planFingerprint": "79f3105b"
+  "planFingerprint": "4fa64f4f"
 }

@@ -71,10 +71,10 @@ export const nBiomeLayout = {
       placeholderSets: [
         {
           key: 'N',
-          // A no-draw placeholder settles first, so an unpinned exit leaves every store unchanged.
+          // The Preboss draws nothing and has no save-profile predicate, so it settles first.
           roomGameNames: [
-            'N_Shop01',
             'N_PreBoss01',
+            'N_Shop01',
             'N_PreHub01',
             'N_Story01',
             'N_MiniBoss01',

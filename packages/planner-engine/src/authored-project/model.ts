@@ -135,10 +135,11 @@ export interface InfernalContractPedestalState {
  * when the room's doors first unlock: a placeholder room that is never
  * entered and the reward drawn for it. A null field is not missing: the
  * simulation settles the room to the first eligible placeholder in the
- * declared set order (a no-draw room first for main rooms), and the reward to
- * the eligible type with the most entries left in the placeholder's store at
- * that moment (ties in declaration order), and publishes that value. A pinned
- * value never falls back. A pinned reward requires a pinned room that draws one.
+ * declared set order (the no-draw Preboss first for main rooms), and the
+ * reward to the type every branch can draw with the most entries left in the
+ * placeholder's store on its scarcest branch (ties in declaration order), and
+ * publishes that value. A pinned value never falls back. A pinned reward
+ * requires a pinned room that draws one.
  */
 export interface PhantomExitState {
   readonly placeholderRoomGameName: string | null;

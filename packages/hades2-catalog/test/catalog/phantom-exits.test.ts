@@ -55,8 +55,8 @@ describe('phantom exit declarations', () => {
     const sets = phantomExits().placeholderSets;
     // Opening and Hub are entered once already; Bosses and Postboss require a link.
     expect(sets.byKey.N?.roomGameNames).toEqual([
-      'N_Shop01',
       'N_PreBoss01',
+      'N_Shop01',
       'N_PreHub01',
       'N_Story01',
       'N_MiniBoss01',

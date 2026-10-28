@@ -78,8 +78,7 @@ const executionDispositions = {
     requiredObjects: 'covered',
     shop: 'covered',
     infernalContractPedestal: 'covered',
-    // The game module's Ephyra door steering consumes it in its own packet.
-    phantomExit: 'deferred-route',
+    phantomExit: 'covered',
     hermesShrine: 'deferred-route',
     stygianWell: 'covered',
     purgingPool: 'covered',
