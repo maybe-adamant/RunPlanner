@@ -21,10 +21,11 @@ function worldShop.prepareRefill(storeData, args, scope)
     return { kind = "travelDealWorldShop", expected = { refill }, args = primitives.withStoreData(args, storeData) }
 end
 
-function worldShop.prepareContract(shop, storeData, args)
-    if shop == nil or shop.infernalContract == nil then return nil end
+-- The pedestal belongs to the Preboss room, so it needs no Shop in either reward form.
+function worldShop.prepareContract(pedestal, storeData, args)
+    if pedestal == nil then return nil end
     if type(storeData.GroupsOf) ~= "table" then return nil end
-    local contract = primitives.copy(shop.infernalContract)
+    local contract = primitives.copy(pedestal)
     local wanted = { [contract.rewardType] = true }
     local matchedCount = 0
     for _, group in ipairs(storeData.GroupsOf) do

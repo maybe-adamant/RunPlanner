@@ -118,7 +118,7 @@ local shrineGenerationKeys = {
 
 local function shop(value, label)
     local record, errorMessage = p.exact(
-        value, { "profileKey", "offers" }, { "infernalContract" }, label
+        value, { "profileKey", "offers" }, {}, label
     )
     if not record then return nil, errorMessage end
     if not p.str(record.profileKey, label .. ".profileKey") then
@@ -159,15 +159,16 @@ local function shop(value, label)
             end
         end
     end
-    if record.infernalContract ~= nil then
-        local contract, contractError = p.exact(
-            record.infernalContract, { "sourceOwner", "rewardType" }, {}, label .. ".infernalContract"
-        )
-        if not contract then return nil, contractError end
-        if not p.str(contract.sourceOwner, label .. ".infernalContract.sourceOwner", p.MAX_OWNER_STRING)
-            or not p.str(contract.rewardType, label .. ".infernalContract.rewardType") then
-            return p.fail(label .. " has invalid Infernal Contract pedestal")
-        end
+    return record
+end
+
+-- The Preboss Contract pedestal's item, published in either reward form.
+local function infernalContractPedestal(value, label)
+    local record, errorMessage = p.exact(value, { "sourceOwner", "rewardType" }, {}, label)
+    if not record then return nil, errorMessage end
+    if not p.str(record.sourceOwner, label .. ".sourceOwner", p.MAX_OWNER_STRING)
+        or not p.str(record.rewardType, label .. ".rewardType") then
+        return p.fail(label .. " has invalid Infernal Contract pedestal")
     end
     return record
 end
@@ -501,7 +502,7 @@ function overview.decode(value, label)
         {
             "incomingReward", "effectNeutralRequiredReward", "unmodeledEncounterKeys",
             "rewardWheels",
-            "shop", "hermesShrine", "stygianWell",
+            "shop", "infernalContractPedestal", "hermesShrine", "stygianWell",
             "purgingPool", "keepsakeRack",
             "fountain", "fields", "additional",
             "hub", "localSlots",
@@ -564,6 +565,12 @@ function overview.decode(value, label)
     if record.shop ~= nil then
         local _, shopError = shop(record.shop, label .. ".shop")
         if shopError then return nil, shopError end
+    end
+    if record.infernalContractPedestal ~= nil then
+        local _, pedestalError = infernalContractPedestal(
+            record.infernalContractPedestal, label .. ".infernalContractPedestal"
+        )
+        if pedestalError then return nil, pedestalError end
     end
     if record.hermesShrine ~= nil then
         local _, shrineError = hermesShrine(record.hermesShrine, label .. ".hermesShrine")

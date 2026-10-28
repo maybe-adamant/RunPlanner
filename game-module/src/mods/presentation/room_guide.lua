@@ -179,6 +179,11 @@ local function instruction(description, occurrence, transaction)
         if god and boosted then return "Shop: Boosted " .. god end
         return "Shop: " .. rewardName(target, boosted)
     end
+    if kind == "interactInfernalContractPedestal" then
+        local target = reward or { rewardType = description.rewardType }
+        if description.conversion == "timePiece" then return "Time Piece: " .. rewardName(target) end
+        return "Contract: " .. rewardName(target)
+    end
     if kind == "purchaseStygianWellOffer" then
         if description.itemKey == nil then return "Stygian Well" end
         return "Well: " .. displayName(description.itemKey, "planned item")

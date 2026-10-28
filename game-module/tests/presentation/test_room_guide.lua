@@ -83,6 +83,20 @@ function TestRoomGuide.testShopLabelsUseResolvedGodWithoutDuplicatingCarrierName
     lu.assertEquals(guide.project(snapshot).rows[1].instruction, "Time Piece: Pom")
 end
 
+function TestRoomGuide.testContractPedestalRowsNeedNoShop()
+    local snapshot = room({ row("interactInfernalContractPedestal", "pedestal", { rewardType = "StackUpgrade" }) })
+    snapshot.occurrence.overview = {}
+    snapshot.occurrence.transactionsByOwner = { pedestal = {
+        kind = "acquisition", reward = { rewardType = "MaxManaDropBig" }, roles = {},
+    } }
+    lu.assertEquals(guide.project(snapshot).rows[1].instruction, "Contract: Big Max Magick")
+    snapshot = room({ row("interactInfernalContractPedestal", nil, { rewardType = "StackUpgrade" }) })
+    lu.assertEquals(guide.project(snapshot).rows[1].instruction, "Contract: Pom")
+    snapshot = room({ row("interactInfernalContractPedestal", nil,
+        { rewardType = "StackUpgrade", conversion = "timePiece" }) })
+    lu.assertEquals(guide.project(snapshot).rows[1].instruction, "Time Piece: Pom")
+end
+
 local function mysteryTransaction(god, disposition)
     return { kind = "acquisition", reward = { rewardType = "BlindBoxLoot", source = god }, roles = {
         { role = "box", lifecyclePoint = "purchase", gameName = "BlindBoxLoot",

@@ -85,7 +85,7 @@ local function prepareInventory(occurrence, args, refillScope, contractOnly)
         prepared, errorValue = shrineInventory.prepareRefill(storeData, args, refillScope)
     end
     if prepared ~= nil or errorValue ~= nil then return prepared, errorValue end
-    if contractOnly then return worldShop.prepareContract(expected.shop, storeData, args) end
+    if contractOnly then return worldShop.prepareContract(expected.infernalContractPedestal, storeData, args) end
     if expected.shop ~= nil then return worldShop.prepare(expected.shop, storeData, args) end
     if expected.hermesShrine ~= nil then
         return shrineInventory.prepare(expected.hermesShrine, storeData, args)

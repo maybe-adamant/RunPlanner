@@ -220,6 +220,15 @@ local function guideDescription(value, label)
         end
         return row
     end
+    if kind == "interactInfernalContractPedestal" then
+        local row, rowError = p.exact(record, { "kind" }, { "rewardType", "conversion" }, label)
+        if not row then return nil, rowError end
+        if (row.rewardType ~= nil and not p.str(row.rewardType, label .. ".rewardType"))
+            or (row.conversion ~= nil and row.conversion ~= "timePiece") then
+            return p.fail(label .. " has invalid Contract pedestal guide operands")
+        end
+        return row
+    end
     if kind == "purchaseStygianWellOffer" then
         local row, rowError = p.exact(record, { "kind", "generationKey" }, { "itemKey", "effect", "twistResultKey" }, label)
         if not row then return nil, rowError end

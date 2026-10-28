@@ -1130,30 +1130,35 @@ end
 
 
 
+-- The pedestal is a Preboss feature: the boon form has no Shop, the Shop form keeps its own offers.
 function TestFeatureInteractionHooks.testInfernalContractUsesThePublishedFreePedestalInventory()
-    local module, _, callbacks = capture()
     local sourceOwner = "acquisition-owner"
-    local active = opaque({ occurrence = { overview = { shop = {
-        offers = {}, infernalContract = { sourceOwner = sourceOwner, rewardType = "BlindBoxLoot" },
-    } } } }, function(_contact)
-        return nil
-    end)
-    local session = stub()
-    session.current = function() return active end
-    attachFeatureHooks(module, session, function() return {} end, function() end, session)
+    local pedestal = { sourceOwner = sourceOwner, rewardType = "BlindBoxLoot" }
+    for _, overview in ipairs({
+        { infernalContractPedestal = pedestal },
+        { shop = { profileKey = "PreBossShop", offers = {} }, infernalContractPedestal = pedestal },
+    }) do
+        local module, _, callbacks = capture()
+        local active = opaque({ occurrence = { overview = overview } }, function(_contact)
+            return nil
+        end)
+        local session = stub()
+        session.current = function() return active end
+        attachFeatureHooks(module, session, function() return {} end, function() end, session)
 
-    local priorRun = _G.CurrentRun
-    _G.CurrentRun = { CurrentRoom = {} }
-    callbacks.SpawnZagContractRewards(nil, {}, function()
-        local generated = callbacks.FillInShopOptions(nil, {}, function(args)
-            return { StoreOptions = { args.StoreData.GroupsOf[1].OptionsData[1] } }
-        end, { StoreData = { GroupsOf = { { OptionsData = {
-            { Name = "MetaCurrencyDrop" }, { Name = "BlindBoxLoot" },
-        } } } } })
-        lu.assertEquals(generated.StoreOptions[1].Name, "BlindBoxLoot")
-        lu.assertEquals(generated.StoreOptions[1].__runPlannerContractSourceOwner, sourceOwner)
-        callbacks.SpawnStoreItemInWorld(nil, {}, function() return { ObjectId = 15 } end,
-            generated.StoreOptions[1], nil)
-    end, {}, {})
-    _G.CurrentRun = priorRun
+        local priorRun = _G.CurrentRun
+        _G.CurrentRun = { CurrentRoom = {} }
+        callbacks.SpawnZagContractRewards(nil, {}, function()
+            local generated = callbacks.FillInShopOptions(nil, {}, function(args)
+                return { StoreOptions = { args.StoreData.GroupsOf[1].OptionsData[1] } }
+            end, { StoreData = { GroupsOf = { { OptionsData = {
+                { Name = "MetaCurrencyDrop" }, { Name = "BlindBoxLoot" },
+            } } } } })
+            lu.assertEquals(generated.StoreOptions[1].Name, "BlindBoxLoot")
+            lu.assertEquals(generated.StoreOptions[1].__runPlannerContractSourceOwner, sourceOwner)
+            callbacks.SpawnStoreItemInWorld(nil, {}, function() return { ObjectId = 15 } end,
+                generated.StoreOptions[1], nil)
+        end, {}, {})
+        _G.CurrentRun = priorRun
+    end
 end

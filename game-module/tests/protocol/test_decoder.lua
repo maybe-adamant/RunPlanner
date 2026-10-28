@@ -1392,6 +1392,52 @@ function TestProtocol.testWorldShopOffersAllowUnownedRowsAndRequireUniquePublish
     lu.assertNil(protocol.decode(plan))
 end
 
+function TestProtocol.testContractPedestalIsAStrictPrebossFeatureOutsideTheShop()
+    local pedestalOwner = '["infernalContractPedestal","Dream","O","dream-o-preboss"]'
+    local function pedestalPlan(pedestal, shop, description)
+        local plan = minimalPlan({ {
+            kind = "acquisition", owner = "pedestal", sourceOwner = pedestalOwner, reward = reward(),
+            producerLifecycleKey = "pickup", roles = { role() }, window = window(),
+        } })
+        plan.occurrences[1].overview.infernalContractPedestal = tagged(pedestal)
+        plan.occurrences[1].overview.shop = tagged(shop)
+        plan.occurrences[1].roomGuide = tagged({ {
+            key = "pedestal", transactionOwner = "pedestal",
+            description = description or { kind = "interactInfernalContractPedestal", rewardType = "StackUpgrade" },
+        } }, "roomGuide", true)
+        refreshFingerprint(plan)
+        return plan
+    end
+    local function pedestal(extra)
+        local value = { sourceOwner = pedestalOwner, rewardType = "StackUpgrade" }
+        for key, field in pairs(extra or {}) do value[key] = field end
+        return value
+    end
+    local function shop(extra)
+        local value = { profileKey = "PreBossShop", offers = { {
+            offerKey = "mana", profileSlotIndex = 0, optionKey = "MaxManaDrop", rewardType = "MaxManaDrop",
+        } } }
+        for key, field in pairs(extra or {}) do value[key] = field end
+        return value
+    end
+    local decoded, errorMessage = protocol.decode(pedestalPlan(pedestal()))
+    lu.assertNotNil(decoded, errorMessage)
+    lu.assertEquals(decoded.occurrences[1].overview.infernalContractPedestal.sourceOwner, pedestalOwner)
+    decoded, errorMessage = protocol.decode(pedestalPlan(pedestal(), shop(),
+        { kind = "interactInfernalContractPedestal", conversion = "timePiece" }))
+    lu.assertNotNil(decoded, errorMessage)
+    for _, invalid in ipairs({
+        pedestalPlan(pedestal({ unexpected = true })),
+        pedestalPlan(pedestal({ rewardType = 7 })),
+        pedestalPlan(pedestal({ sourceOwner = string.rep("x", 4097) })),
+        pedestalPlan(nil, shop({ infernalContract = pedestal() })),
+        pedestalPlan(pedestal(), nil, { kind = "interactInfernalContractPedestal", conversion = "anvilOfFates" }),
+        pedestalPlan(pedestal(), nil, { kind = "interactInfernalContractPedestal", offerKey = "contract" }),
+    }) do
+        lu.assertNil(protocol.decode(invalid))
+    end
+end
+
 function TestProtocol.testSelectedNormalAndBoostedWorldShopFixtureDecodesExactTransactionOwners()
     local plan, errorMessage = protocol.decode(decode("surface-q-shop-correlation"))
     lu.assertNotNil(plan, errorMessage)
