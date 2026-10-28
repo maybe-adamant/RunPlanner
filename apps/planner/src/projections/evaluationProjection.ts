@@ -694,6 +694,12 @@ export function presentFinding(finding: SemanticFinding): FindingPresentation {
     );
   if (finding.code === 'hexActivationMissing' && typeof finding.evidence.count === 'number')
     return Object.freeze({ title: hexActivationCountTitle(finding.evidence.count) });
+  if (finding.code === 'rewardBagEntryUnavailable' && 'phantomExitDraws' in finding.evidence) {
+    return Object.freeze({
+      ...findingCopy.rewardBagEntryUnavailable,
+      description: 'Or choose a different reward for an earlier hidden return door.',
+    });
+  }
   if (finding.origin.kind === 'keepsakeEquipResult') {
     if (finding.origin.resultKind === 'experimentalHammer') {
       if (finding.code === 'keepsakeEquipResultMissing') {

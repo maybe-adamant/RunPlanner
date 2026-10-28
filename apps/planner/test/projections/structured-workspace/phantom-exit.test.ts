@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createIncomingRewardAddress,
   createPhantomExitAddress,
   semanticAddressKey,
   type OccurrenceId,
@@ -178,6 +179,37 @@ describe('hidden return door', () => {
     expect(items.find((item) => item.value === 'N_MiniBoss01')).toMatchObject({
       selected: true,
       disabled: true,
+    });
+  });
+
+  it('offers an earlier hidden door as the repair for a reward it drew from the pool', () => {
+    const unavailableAt = (project: ProjectDocument, occurrenceId: OccurrenceId) => {
+      const finding = projectStructuredWorkspaceFixture(project).evaluation.findings.find(
+        (candidate) =>
+          candidate.code === 'rewardBagEntryUnavailable' &&
+          semanticAddressKey(candidate.origin) ===
+            semanticAddressKey(createIncomingRewardAddress(nBiome, occurrenceId)),
+      );
+      if (finding === undefined) throw new Error(`missing pool finding at ${occurrenceId}`);
+      return presentFinding(finding);
+    };
+    // combat05's side exit takes the side-room pool's only AirBoost before combat02's side door.
+    const drawn = pin(loadSurfaceNOPQProject(), nLocalOccurrenceId('combat05', 'sideDoor2'), {
+      placeholderRoomGameName: 'N_Sub01',
+      rewardType: 'AirBoost',
+    });
+    expect(unavailableAt(drawn, nLocalOccurrenceId('combat02', 'sideDoor2'))).toEqual({
+      title: 'Reward unavailable from pool',
+      description: 'Or choose a different reward for an earlier hidden return door.',
+    });
+
+    const authored = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat05', 'sideDoor2')),
+      value: { rewardType: 'MaxManaDropSmall' },
+    });
+    expect(unavailableAt(authored, nLocalOccurrenceId('combat05', 'sideDoor2'))).toEqual({
+      title: 'Reward unavailable from pool',
     });
   });
 });
