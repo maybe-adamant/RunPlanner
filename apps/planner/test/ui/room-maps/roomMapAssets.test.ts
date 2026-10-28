@@ -15,7 +15,7 @@ describe('room map assets', () => {
   it('supplies captured references for every declared room', () => {
     expect(
       roomMapAssets.filter((asset) => asset.isPlaceholder).map((asset) => asset.gameName),
-    ).toEqual(['N_Shop01']);
+    ).toEqual([]);
   });
 
   it('groups captured maps by biome with shared special rooms and G anomalies', () => {
