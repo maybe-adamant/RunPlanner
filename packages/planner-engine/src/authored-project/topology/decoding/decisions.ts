@@ -1,6 +1,8 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../../catalog-schema';
 import { decodeBatchState } from '../../batchState';
 import { decodeFountainRarityResult } from '../../fountain-rarity-codec';
+import { decodeRerollId } from '../../room-state/decoding/room-action-codec';
+import { decodeResolvedRewardOffer } from '../../room-state/decoding/reward-acquisition-codec';
 import type {
   AuthoredBatchState,
   BatchRewardStoreState,
@@ -492,6 +494,15 @@ export function decodeHubDecision(
         expectExactKeys(action, ['kind'], actionPath);
         return Object.freeze({ kind: 'useFountain' });
       }
+      if (kind === 'reroll') {
+        expectExactKeys(action, ['kind', 'rerollId', 'hubSlotKey', 'reward'], actionPath);
+        return Object.freeze({
+          kind: 'reroll',
+          rerollId: decodeRerollId(action.rerollId, `${actionPath}.rerollId`),
+          hubSlotKey: expectNonBlankString(action.hubSlotKey, `${actionPath}.hubSlotKey`),
+          reward: decodeResolvedRewardOffer(action.reward, catalog, `${actionPath}.reward`),
+        });
+      }
       if (kind !== 'roomVisit')
         failProjectDocument(`${actionPath}.kind`, `unknown Hub action ${kind}`);
       expectExactKeys(action, ['kind', 'hubSlotKey'], actionPath);
@@ -502,9 +513,17 @@ export function decodeHubDecision(
     },
   );
   const visited = new Set<string>();
+  const rerollIds = new Set<string>();
   let fountainUsed = false;
   for (const [index, action] of actions.entries()) {
     const actionPath = `${raw.path}.actions[${index}]`;
+    if (action.kind === 'reroll') {
+      if (rerollIds.has(action.rerollId))
+        failProjectDocument(`${actionPath}.rerollId`, `duplicates reroll ${action.rerollId}`);
+      rerollIds.add(action.rerollId);
+      // A reroll of a closed slot is kept for repair; the simulation reports it.
+      continue;
+    }
     if (action.kind === 'useFountain') {
       if (fountainUsed) failProjectDocument(actionPath, 'duplicates the Hub fountain use');
       fountainUsed = true;

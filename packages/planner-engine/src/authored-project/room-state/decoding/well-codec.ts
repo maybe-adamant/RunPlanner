@@ -1,3 +1,4 @@
+import { decodeScreenRerollCount, screenRerollCountField } from '../../screen-rerolls';
 import type { Catalog } from '../../../catalog-schema';
 import type { RoomActionState, StygianWellState } from '../../model';
 import {
@@ -25,7 +26,13 @@ export function decodeStygianWellState(
       ...(hasTwist ? ['twistResultKeyBySlot'] : []),
       ...(hasPurchased ? ['purchasedGenerationKeys'] : []),
       ...(hasRefill ? ['travelDealRefillKey'] : []),
+      ...(Object.hasOwn(raw, 'rerollCount') ? ['rerollCount'] : []),
     ],
+    path,
+  );
+  const rerollCount = decodeScreenRerollCount(
+    raw,
+    catalog.rewards.shops.byKey.RoomShop?.screenReroll === true,
     path,
   );
   if (typeof raw.interacted !== 'boolean')
@@ -102,6 +109,7 @@ export function decodeStygianWellState(
     ...(purchasedGenerationKeys === undefined
       ? {}
       : { purchasedGenerationKeys: Object.freeze(purchasedGenerationKeys) }),
+    ...screenRerollCountField(rerollCount),
   });
 }
 

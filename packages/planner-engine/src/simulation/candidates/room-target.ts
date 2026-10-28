@@ -100,6 +100,7 @@ function physicalExitsForTarget(
               type: exit.type,
               compatibilityPolicyKey: exit.compatibilityPolicyKey,
               behavior: exit.behavior,
+              allowReroll: exit.allowReroll,
             }),
           ]
         : [],

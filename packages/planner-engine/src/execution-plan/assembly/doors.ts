@@ -1,5 +1,9 @@
 import { semanticAddressKey } from '../../authored-project/addresses';
-import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
+import {
+  forGeneration,
+  type CanonicalAuthoredRoom,
+  type CanonicalBatch,
+} from '../../simulation/materialization';
 import type { ExecutionDoorTarget, ExecutionDoors, ExecutionReward } from '../model';
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { executionRewardFromOffer, zagreusContractPresent } from './overview';
@@ -17,7 +21,12 @@ function executionCageRewards(room: CanonicalAuthoredRoom): readonly ExecutionRe
   const rewards = room.localRewards
     ?.filter((reward) => reward.groupKey === 'cages')
     .map((reward) =>
-      executionRewardFromOffer(reward.offer, reward.producerLifecycleKey, reward.resolvedStoreKey),
+      // A door shows its cages' first draws; their rerolls are its source room's.
+      executionRewardFromOffer(
+        forGeneration(reward).offer,
+        reward.producerLifecycleKey,
+        reward.resolvedStoreKey,
+      ),
     );
   return rewards === undefined || rewards.length === 0 ? undefined : Object.freeze(rewards);
 }

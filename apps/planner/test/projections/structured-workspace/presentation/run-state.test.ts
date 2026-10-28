@@ -56,7 +56,7 @@ const base: RunStateSnapshot = {
     upgradableTraitCount: 0,
   },
   arcanaFear: {
-    arcana: { active: [], artificerUses: [] },
+    arcana: { active: [], rerollPool: { granted: 0, spent: 0 }, artificerUses: [] },
     fear: {
       configuredRanks: {},
       configuredTotal: 0,
@@ -66,6 +66,7 @@ const base: RunStateSnapshot = {
     },
     events: [],
   } as unknown as RunStateSnapshot['arcanaFear'],
+  rerolls: { remaining: 0, doorsEnabled: false, screensEnabled: false },
   keepsakes: {
     currentKey: null,
     history: [],

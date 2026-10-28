@@ -1,3 +1,4 @@
+import { sourceRerolledOwners } from '../../authored-project/rerolls';
 import type {
   BiomeLayout,
   Catalog,
@@ -116,6 +117,7 @@ export function canonicalPhysicalExits(
         type: exit.type,
         compatibilityPolicyKey: exit.compatibilityPolicyKey,
         behavior: exit.behavior,
+        allowReroll: exit.allowReroll,
       }),
     ]),
   );
@@ -297,6 +299,8 @@ function materializeTarget(
   loadout?: RouteWeaponAspectLoadout,
 ): CanonicalTarget {
   const occurrence = requireOccurrence(occurrences, target.occurrenceId);
+  const sourceOccurrence =
+    source.kind === 'occurrence' ? occurrences.get(source.occurrenceId) : undefined;
   const room = requireRoom(catalog, layout, topology, occurrence);
   const picked = target.exitKey === selectedExitKey;
   return Object.freeze({
@@ -316,6 +320,9 @@ function materializeTarget(
       ...(batchState.kind === 'fields' ? { activeCageCount: batchState.doorCageRewardCount } : {}),
       ...(clockworkRewardValue === undefined ? {} : { clockworkReward: clockworkRewardValue }),
       ...(loadout === undefined ? {} : { loadout }),
+      ...(sourceOccurrence === undefined
+        ? {}
+        : { rerolledOwners: sourceRerolledOwners(biome, sourceOccurrence) }),
     }),
   });
 }

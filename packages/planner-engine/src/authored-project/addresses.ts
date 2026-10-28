@@ -276,6 +276,12 @@ export interface HubFountainAddress extends BiomeOwnedAddress {
   readonly kind: 'hubFountain';
   readonly hubKey: string;
 }
+/** One Hub board reroll by its persisted identity, independent of its position. */
+export interface HubRerollAddress extends BiomeOwnedAddress {
+  readonly kind: 'hubReroll';
+  readonly hubKey: string;
+  readonly rerollId: string;
+}
 export interface ShopOfferAddress extends BiomeOwnedAddress {
   readonly kind: 'shopOffer';
   readonly occurrenceId: OccurrenceId;
@@ -441,6 +447,7 @@ export type SemanticAddress =
   | HubRoomAddress
   | HubVisitAddress
   | HubFountainAddress
+  | HubRerollAddress
   | ShopOfferAddress
   | AcquisitionSiteAddress
   | AcquisitionEntryAddress
@@ -946,6 +953,18 @@ export function createHubFountainAddress(biome: BiomeAddress, hubKey: string): H
     hubKey: nonBlank(hubKey, 'hubKey'),
   });
 }
+export function createHubRerollAddress(
+  biome: BiomeAddress,
+  hubKey: string,
+  rerollId: string,
+): HubRerollAddress {
+  return Object.freeze({
+    kind: 'hubReroll',
+    ...owner(biome),
+    hubKey: nonBlank(hubKey, 'hubKey'),
+    rerollId: nonBlank(rerollId, 'rerollId'),
+  });
+}
 export function createShopOfferAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -1205,6 +1224,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, address.hubKey, address.visitIndex]);
     case 'hubFountain':
       return JSON.stringify([...base, address.hubKey]);
+    case 'hubReroll':
+      return JSON.stringify([...base, address.hubKey, address.rerollId]);
     case 'localReward':
       return JSON.stringify([...base, address.occurrenceId, address.groupKey, address.slotKey]);
     case 'roomAction':

@@ -1,3 +1,8 @@
+import {
+  decodeScreenRerollCount,
+  screenRerollCountField,
+  screenRerollSupported,
+} from '../../screen-rerolls';
 import type { Catalog, EncounterSlotBinding } from '../../../catalog-schema';
 import {
   traitOfferSupportsExhaustion,
@@ -57,7 +62,13 @@ export function decodeEncounterTraitOffer(
       ...('rejectedOptionKey' in record ? ['rejectedOptionKey'] : []),
       ...('concaveStoneResult' in record ? ['concaveStoneResult'] : []),
       ...('steadyGrowthTargets' in record ? ['steadyGrowthTargets'] : []),
+      ...(Object.hasOwn(record, 'rerollCount') ? ['rerollCount'] : []),
     ],
+    path,
+  );
+  const rerollCount = decodeScreenRerollCount(
+    record,
+    screenRerollSupported(catalog, { kind: 'traitOffer', giverKey }),
     path,
   );
   const rawOptions = expectArray(record.options, `${path}.options`);
@@ -452,6 +463,7 @@ export function decodeEncounterTraitOffer(
       ? {}
       : { rejectedOptionKey: rejectedOptionKey as TraitOptionKey }),
     ...(concaveStoneResult === undefined ? {} : { concaveStoneResult }),
+    ...screenRerollCountField(rerollCount),
   });
   const steadyGrowthTargets = decodeSteadyGrowthTargets(
     record.steadyGrowthTargets,

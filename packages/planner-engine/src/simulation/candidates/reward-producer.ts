@@ -95,6 +95,15 @@ export interface PhantomExitRewardCandidateQuery {
   readonly value: ResolvedRewardOffer;
 }
 
+/** One new reward for a door, cage, wheel or Hub board reroll, at its press. */
+export interface RerollRewardCandidateQuery {
+  readonly kind: 'rerollReward';
+  readonly reroll:
+    | import('../../authored-project/addresses').RoomActionAddress
+    | import('../../authored-project/addresses').HubRerollAddress;
+  readonly value: ResolvedRewardOffer;
+}
+
 export interface AcquisitionEntryOfferCandidateQuery {
   readonly kind: 'acquisitionEntryOffer';
   readonly entry: AcquisitionEntryAddress;
@@ -111,6 +120,7 @@ export type RewardProducerCandidateQuery =
   | InfernalContractPedestalCandidateQuery
   | InfernalContractPedestalOptionCandidateQuery
   | PhantomExitRewardCandidateQuery
+  | RerollRewardCandidateQuery
   | AcquisitionEntryOfferCandidateQuery;
 
 export interface EvaluatedIncomingRewardCandidate {
@@ -194,6 +204,11 @@ export interface EvaluatedPhantomExitRewardCandidate {
   readonly kind: 'phantomExitReward';
   readonly result: RewardProducerCandidateResult;
 }
+export interface EvaluatedRerollRewardCandidate {
+  readonly kind: 'rerollReward';
+  readonly result: RewardProducerCandidateResult;
+}
+
 export interface EvaluatedAcquisitionEntryOfferCandidate {
   readonly kind: 'acquisitionEntryOffer';
   readonly result: RewardProducerCandidateResult;
@@ -208,6 +223,7 @@ export type RewardProducerCandidateEvaluation =
   | EvaluatedShopOfferCandidate
   | EvaluatedInfernalContractPedestalCandidate
   | EvaluatedPhantomExitRewardCandidate
+  | EvaluatedRerollRewardCandidate
   | EvaluatedAcquisitionEntryOfferCandidate;
 
 interface RewardProducerSource {
@@ -238,7 +254,9 @@ function ownerFor(query: RewardProducerCandidateQuery): RewardProducerOwnerAddre
         ? query.pedestal
         : query.kind === 'phantomExitReward'
           ? query.exit
-          : query.offer;
+          : query.kind === 'rerollReward'
+            ? query.reroll
+            : query.offer;
 }
 
 function checkpointFor(query: RewardProducerCandidateQuery) {
@@ -312,6 +330,8 @@ export function evaluateRewardProducerCandidate(
       return Object.freeze({ kind: 'infernalContractPedestal', result });
     case 'phantomExitReward':
       return Object.freeze({ kind: 'phantomExitReward', result });
+    case 'rerollReward':
+      return Object.freeze({ kind: 'rerollReward', result });
     case 'acquisitionEntryOffer':
       return Object.freeze({ kind: 'acquisitionEntryOffer', result });
   }

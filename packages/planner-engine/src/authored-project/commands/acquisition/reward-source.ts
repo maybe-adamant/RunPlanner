@@ -33,6 +33,7 @@ import {
 } from '../../room-state/starting-reward';
 import type { LevelResolutionEffectSource } from '../../../reward-kernel/level-effects';
 import { failCommand, type LocatedBiome } from '../contract';
+import { rerolledRewardOf, withRerolledReward } from '../../rerolls';
 import { replaceOccurrence, updateOccurrenceTopology } from '../occurrence/mutation';
 import type {
   AnvilResultCommand,
@@ -135,7 +136,35 @@ function pickupEntrySource(
   });
 }
 
+/**
+ * The reward whose acquisition an outcome edit changes: a rerolled owner's
+ * effective reward, else its own.
+ */
 export function locateReward(
+  document: ProjectDocument,
+  catalog: Catalog,
+  routePosition: import('../../route-context').ResolvedRoutePosition,
+  occurrence: RoomOccurrence,
+  state: RoomOccurrence['state'],
+  owner: TraitOfferOwnerAddress,
+  command: RewardCommand,
+): LocatedReward | undefined {
+  const rerolled = rerolledRewardOf({ ...occurrence, state }, owner);
+  const located = locateOwnReward(
+    document,
+    catalog,
+    routePosition,
+    occurrence,
+    state,
+    owner,
+    command,
+  );
+  return rerolled === undefined || located === undefined
+    ? located
+    : Object.freeze({ ...located, reward: rerolled });
+}
+
+function locateOwnReward(
   document: ProjectDocument,
   catalog: Catalog,
   routePosition: import('../../route-context').ResolvedRoutePosition,
@@ -530,16 +559,34 @@ export function replaceOwnedReward(
         ...occurrence,
         startingRewardAcquisition: startingRewardAcquisitionFrom(nextReward),
       })
-    : Object.freeze({
-        ...occurrence,
-        state: updateRewardState(
-          catalog,
-          occurrence,
-          occurrence.state,
-          owner,
-          command,
-          () => nextReward,
-        ),
-      });
+    : replaceOccurrenceReward(catalog, occurrence, owner, command, nextReward);
   return updateOccurrenceTopology(document, located, replaceOccurrence(topology, nextOccurrence));
+}
+
+/** Writes an outcome edit to the reward `locateReward` returned: rerolled first. */
+export function replaceOccurrenceReward(
+  catalog: Catalog,
+  occurrence: RoomOccurrence,
+  owner: TraitOfferOwnerAddress,
+  command: RewardCommand,
+  nextReward: AuthoredRewardState,
+): RoomOccurrence {
+  if (
+    (owner.kind === 'incomingReward' ||
+      owner.kind === 'localReward' ||
+      owner.kind === 'rewardWheelOffer') &&
+    rerolledRewardOf(occurrence, owner) !== undefined
+  )
+    return withRerolledReward(occurrence, owner, nextReward);
+  return Object.freeze({
+    ...occurrence,
+    state: updateRewardState(
+      catalog,
+      occurrence,
+      occurrence.state,
+      owner,
+      command,
+      () => nextReward,
+    ),
+  });
 }

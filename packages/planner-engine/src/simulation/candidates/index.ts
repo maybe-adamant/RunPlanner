@@ -44,6 +44,8 @@ export type {
   InfernalContractPedestalCandidateQuery,
   PhantomExitRewardCandidateQuery,
   EvaluatedPhantomExitRewardCandidate,
+  RerollRewardCandidateQuery,
+  EvaluatedRerollRewardCandidate,
   InfernalContractPedestalOptionCandidateQuery,
   EvaluatedInfernalContractPedestalCandidate,
 } from './reward-producer';

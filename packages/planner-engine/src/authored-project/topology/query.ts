@@ -78,6 +78,8 @@ export interface DeclaredPhysicalExit {
   readonly index: number;
   readonly kind: 'normal' | 'completedHub';
   readonly type: string;
+  /** Native door `AllowReroll`. */
+  readonly allowReroll: boolean;
 }
 
 /**
@@ -191,6 +193,7 @@ function physicalExit(
     index: exit.index,
     kind,
     type: exit.type,
+    allowReroll: exit.allowReroll,
   });
 }
 
@@ -796,9 +799,16 @@ export function isHubAction(value: unknown): value is HubAction {
   if (value === null || typeof value !== 'object') return false;
   const action = value as Readonly<Record<string, unknown>>;
   const keys = Object.keys(action);
-  return action.kind === 'useFountain'
-    ? keys.length === 1
-    : action.kind === 'roomVisit' && typeof action.hubSlotKey === 'string' && keys.length === 2;
+  if (action.kind === 'useFountain') return keys.length === 1;
+  if (action.kind === 'reroll')
+    return (
+      typeof action.rerollId === 'string' &&
+      typeof action.hubSlotKey === 'string' &&
+      typeof action.reward === 'object' &&
+      action.reward !== null &&
+      keys.length === 4
+    );
+  return action.kind === 'roomVisit' && typeof action.hubSlotKey === 'string' && keys.length === 2;
 }
 
 /** Room visits completed before the Hub fountain use, or undefined while it is unplaced. */

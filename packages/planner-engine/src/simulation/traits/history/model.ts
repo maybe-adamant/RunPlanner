@@ -404,4 +404,6 @@ export interface TraitHistoryState {
    * Absent until the first grant.
    */
   readonly maxStatGrants?: Readonly<Record<string, MaxStatAmounts>>;
+  /** Rerolls added to the run's pool by acquired reroll-drop gifts; absent until one. */
+  readonly rerollPickupGrant?: number;
 }

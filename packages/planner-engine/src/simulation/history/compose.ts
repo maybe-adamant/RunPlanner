@@ -389,6 +389,13 @@ function appendHubDecision(
       owner: decision.fountain.origin,
     });
   };
+  // A restored board is never re-flagged rerollable, so every reroll is pressed here.
+  for (const reroll of decision.rerolls)
+    writer.append({
+      kind: 'hubRewardRerolled',
+      origin: decision.room.origin,
+      owner: reroll.origin,
+    });
   appendFountainAfter(0);
   // Every visit ends by restoring the Hub; the first departure follows its commit.
   for (const [index, visit] of decision.visits.entries()) {

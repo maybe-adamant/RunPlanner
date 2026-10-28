@@ -94,6 +94,11 @@ export interface ChronologyWalkState {
   readonly gorgonEvaluationBlocked: boolean;
   /** Offers the current batch generated, until the next batch replaces them. */
   readonly peers: readonly OfferProcessingPeer[];
+  /** Each rerolled door's, cage's or wheel offer's current reward, by its generation peer origin. */
+  readonly rerolledOffers: ReadonlyMap<
+    string,
+    import('../../../reward-kernel').ResolvedRewardOffer
+  >;
   /**
    * One persistent Ephyra board-generation region. It starts from the
    * post-Hub-entry reward branches and contains every open physical door,
@@ -131,6 +136,7 @@ export function createChronologyWalkState(
     blockedGorgonPhases: new Set<string>(),
     gorgonEvaluationBlocked: false,
     peers: Object.freeze([]),
+    rerolledOffers: new Map(),
     pendingHubBoard: undefined,
     batchTargetGeneration: undefined,
     expectedStores: new Map(),

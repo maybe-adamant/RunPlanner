@@ -4,7 +4,7 @@ import { createUnresolvedAcquisitionRewardState } from '../../../../authored-pro
 import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
-import type { CanonicalLocalReward } from '../../../materialization';
+import { forGeneration, type CanonicalLocalReward } from '../../../materialization';
 import { settleOwnedAcquisitionSite } from '../../acquisition/site-settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { createBiomeRewardFacts } from '../../facts';
@@ -95,7 +95,16 @@ export function generateLocalRewards(
   let peers = inputs.peers;
   const findings = new Map<string, FindingRegionEntry>();
   const producerFrontiers: RewardProducerFrontier[] = [];
-  for (const localReward of context.localRewards) {
+  for (const ownedReward of context.localRewards) {
+    // A rerolled cage still offers its first draw; its acquisition is the effective reward's.
+    const localReward = forGeneration(ownedReward);
+    if (ownedReward.rerolledRewardMismatch === true)
+      addRewardFinding(
+        findings,
+        rewardFinding('rerolledRewardMismatch', ownedReward.origin, {}),
+        ownerRegion(ownedReward.origin),
+        historyFindingChronology(event.sequence),
+      );
     const frontierBranches = branches;
     const chronology =
       event.source === 'localVisit'
@@ -106,13 +115,16 @@ export function generateLocalRewards(
             'localRoomLifecycle',
           )
         : undefined;
-    const acquisition = localAcquisition(
-      context,
-      inputs.views,
-      inputs.lifecycle,
-      localReward.slotKey,
-      localReward.encounterPhaseKey,
-    );
+    const acquisition =
+      ownedReward.reroll === undefined
+        ? localAcquisition(
+            context,
+            inputs.views,
+            inputs.lifecycle,
+            localReward.slotKey,
+            localReward.encounterPhaseKey,
+          )
+        : Object.freeze({ event: undefined, view: undefined });
     const ownerKey = semanticAddressKey(localReward.origin);
     const offerContext = Object.freeze({
       catalog,

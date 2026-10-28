@@ -17,6 +17,7 @@ import type {
 } from '../../simulation/materialization';
 import { hubOverview, localSlotsOverview } from './hub';
 import { assembleExecutionRoomGuide } from './room-guide';
+import { executionRoomRerolls } from './rerolls';
 
 export function executionOccurrence(
   catalog: Catalog,
@@ -42,6 +43,7 @@ export function executionOccurrence(
   const publishedLocalSlots = localSlots === undefined ? undefined : localSlotsOverview(localSlots);
   const diagnostics = assembleOccurrenceDiagnostics(catalog, room, snapshots);
   const anomaly = assembleGAnomalyReplacement(room);
+  const rerolls = selected ? executionRoomRerolls(room, batch) : undefined;
   return Object.freeze({
     id: room.occurrenceId,
     owner: executionRoomOwnerKey(room),
@@ -55,14 +57,15 @@ export function executionOccurrence(
       ...(publishedLocalSlots === undefined ? {} : { localSlots: publishedLocalSlots }),
     }),
     timeline: assembleTimelineRelations(transactions, room, timelineFacts),
-    roomGuide: assembleExecutionRoomGuide(room, biome, transactions, selected),
+    roomGuide: assembleExecutionRoomGuide(room, batch, biome, transactions, selected),
+    ...(rerolls === undefined ? {} : { rerolls }),
     doors: assembleExecutionDoors({
       room,
       batches,
       fixedTargets,
       crossBiomeTarget,
       crossBiomeSourceId,
-      rewardForRoom: executionReward,
+      rewardForRoom: (target) => executionReward(target, 'generated'),
     }),
     ...(roomExitConformance === undefined
       ? {}

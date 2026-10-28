@@ -21,6 +21,8 @@ type ResourcePolicyField = Exclude<
   'occurrenceId'
 >;
 type DoorsKind = ExecutionDoors['kind'];
+/** Occurrence rerolls, Hub board rerolls, and screen counts on trait, Pom, Well and Pool screens. */
+type RerollWireField = 'occurrenceRerolls' | 'hubRerolls' | 'screenRerollCounts';
 
 /**
  * Test-owned census of the planner semantics that can reach execution.  These
@@ -46,7 +48,13 @@ const executionDispositions = {
     useFountain: 'covered',
     interactKeepsakeRack: 'covered',
     interactEris: 'deferred-route',
+    reroll: 'deferred-route',
   } satisfies Record<RoomActionKind, ExecutionDisposition>,
+  rerolls: {
+    occurrenceRerolls: 'deferred-route',
+    hubRerolls: 'deferred-route',
+    screenRerollCounts: 'deferred-route',
+  } satisfies Record<RerollWireField, ExecutionDisposition>,
   timelineTransactions: {
     chooseRewardWheel: 'covered',
     acquisition: 'covered',

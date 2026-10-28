@@ -115,3 +115,13 @@ export function stableJson(value: unknown): string {
     .map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`)
     .join(',')}}`;
 }
+
+/** A published screen reroll count: absent is none, so a present count is positive. */
+export function screenRerollCount(
+  record: Readonly<Record<string, unknown>>,
+  label: string,
+): { readonly rerollCount?: number } {
+  return record.rerollCount === undefined
+    ? {}
+    : { rerollCount: integer(record.rerollCount, `${label}.rerollCount`, 1) };
+}

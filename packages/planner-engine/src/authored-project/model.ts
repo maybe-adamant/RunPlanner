@@ -158,6 +158,8 @@ export interface PurgingPoolState {
   /** Whether the player opens this physical Pool and authors its realized inventory. */
   readonly interacted: boolean;
   readonly traitKeyBySlot: Readonly<Record<'left' | 'middle' | 'right', string | null>>;
+  /** Native screen rerolls before the realized list; absent is none. */
+  readonly rerollCount?: number;
 }
 
 export type HermesShrineSlotKey = 'first' | 'secondLeft' | 'secondRight';
@@ -216,6 +218,8 @@ export interface StygianWellState {
   >;
   readonly purchasedGenerationKeys?: readonly StygianWellGenerationKey[];
   readonly travelDealRefillKey?: string | null;
+  /** Native screen rerolls before the authored inventory; absent is none. */
+  readonly rerollCount?: number;
 }
 
 /** Occurrence-owned payloads for one exact acquisition point. */
@@ -233,7 +237,10 @@ export interface FieldsSpatialState {
 
 export interface FieldsCombatState {
   readonly kind: 'fieldsCombat';
+  /** Each cage's first native draw, the reward its door showed when the doors unlocked. */
   readonly cages: Readonly<Record<string, AuthoredRewardState | null>>;
+  /** A rerolled cage's effective reward and its acquisition; see `rerolledIncomingReward`. */
+  readonly rerolledCages?: Readonly<Record<string, AuthoredRewardState>>;
   readonly optionalRewardCount: number;
   readonly optionalRewards: Readonly<Record<string, AuthoredRewardState | null>>;
   readonly spatial: FieldsSpatialState;
@@ -279,7 +286,35 @@ export type RoomActionReference =
     }
   | { readonly kind: 'useFountain' }
   | { readonly kind: 'interactKeepsakeRack' }
-  | { readonly kind: 'interactEris' };
+  | { readonly kind: 'interactEris' }
+  | RerollRoomAction;
+
+/**
+ * What one door, wheel or cage reroll redraws. A door and a cage name the
+ * source room's exit and its target occurrence; a cage also names the cage
+ * slot, which the game picks at random. A wheel offer is this room's own.
+ */
+export type RerollTarget =
+  | { readonly kind: 'door'; readonly exitKey: string; readonly occurrenceId: OccurrenceId }
+  | {
+      readonly kind: 'cage';
+      readonly exitKey: string;
+      readonly occurrenceId: OccurrenceId;
+      readonly slotKey: string;
+    }
+  | { readonly kind: 'wheelOffer'; readonly wheelKey: string; readonly offerKey: string };
+
+/**
+ * One reroll press, a repeatable action identified by its persisted
+ * `rerollId`, never by its position. It carries its target and the reward the
+ * redraw produced; the target owner keeps its first native draw.
+ */
+export interface RerollRoomAction {
+  readonly kind: 'reroll';
+  readonly rerollId: string;
+  readonly target: RerollTarget;
+  readonly reward: ResolvedRewardOffer;
+}
 
 export interface RoomActionState {
   readonly order: readonly RoomActionReference[];
@@ -288,7 +323,10 @@ export interface RoomActionState {
 export interface RewardWheelState {
   readonly storeKey: string;
   readonly offerCount: number;
+  /** Each offer's first native draw. */
   readonly offers: Readonly<Record<string, AuthoredRewardState | null>>;
+  /** A rerolled offer's effective reward and its acquisition; see `rerolledIncomingReward`. */
+  readonly rerolledOffers?: Readonly<Record<string, AuthoredRewardState>>;
   readonly pickedOfferIndex: number;
 }
 
@@ -476,6 +514,13 @@ export interface RoomOccurrence {
   readonly infernalContractPedestal?: InfernalContractPedestalState;
   /** Present exactly where the room declares a phantom exit. */
   readonly phantomExit?: PhantomExitState;
+  /**
+   * The reward entered after its door's rerolls, with its acquisition. The
+   * state's own reward stays the door's first native draw, inert while this is
+   * present. Its offer should equal the last reroll's; a mismatch is kept for
+   * repair, never rewritten.
+   */
+  readonly rerolledIncomingReward?: AuthoredRewardState;
 }
 
 /** A Postboss rack; a null key leaves the held keepsake unchanged. */
@@ -556,9 +601,22 @@ export interface HubTargetReference {
   readonly occurrenceId: OccurrenceId;
 }
 
-/** One ordered Hub action: a main-room visit through an open slot, or the fountain use. */
+/**
+ * One ordered Hub action: a main-room visit through an open slot, the fountain
+ * use, or a board-door reroll, which only the first entry allows.
+ */
 export type HubAction =
-  { readonly kind: 'roomVisit'; readonly hubSlotKey: string } | { readonly kind: 'useFountain' };
+  | { readonly kind: 'roomVisit'; readonly hubSlotKey: string }
+  | { readonly kind: 'useFountain' }
+  | HubRerollAction;
+
+/** One board-door reroll press; its slot's target keeps its first native draw. */
+export interface HubRerollAction {
+  readonly kind: 'reroll';
+  readonly rerollId: string;
+  readonly hubSlotKey: string;
+  readonly reward: ResolvedRewardOffer;
+}
 
 export interface HubDecision {
   readonly kind: 'hub';

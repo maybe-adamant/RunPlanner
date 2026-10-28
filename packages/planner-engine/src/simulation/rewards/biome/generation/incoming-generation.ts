@@ -3,7 +3,7 @@ import { semanticAddressKey, type SemanticAddress } from '../../../../authored-p
 import { createUnresolvedAcquisitionRewardState } from '../../../../authored-project/traits/state';
 import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from '../../../history';
-import type { CanonicalResolvedIncomingReward } from '../../../materialization';
+import { forGeneration, type CanonicalResolvedIncomingReward } from '../../../materialization';
 import { preparedAcquisitionSiteOwner, type RewardLifecycleReferences } from '../prepared-inputs';
 import { createBiomeRewardFacts } from '../../facts';
 import { addRewardFinding, mergeRewardFindingEmissions, rewardFinding } from '../../findings';
@@ -186,7 +186,7 @@ export function generateIncomingReward(
   const roomKey = semanticAddressKey(context.room.origin);
   const producerPoints = inputs.lifecycle.producerPointsByOwner.get(roomKey) ?? Object.freeze([]);
   const acquisitionView =
-    context.incoming?.acquisitionEnabled === false
+    context.incoming?.acquisitionEnabled === false || context.incoming?.reroll !== undefined
       ? undefined
       : (inputs.roomViews?.preOutgoing ?? inputs.roomViews?.entry);
 
@@ -344,7 +344,15 @@ export function generateIncomingReward(
     return createGenerationEmissions(Object.freeze([]), inputs.peers, findings, frontiers);
   }
 
-  const incoming = context.incoming;
+  // A rerolled door still offers its first draw; its acquisition is the effective reward's.
+  const incoming = context.incoming === undefined ? undefined : forGeneration(context.incoming);
+  if (context.incoming?.rerolledRewardMismatch === true)
+    addRewardFinding(
+      findings,
+      rewardFinding('rerolledRewardMismatch', context.incoming.origin, {}),
+      ownerRegion(context.incoming.origin),
+      offerChronology ?? historyFindingChronology(event.sequence),
+    );
   if (incoming === undefined)
     return createGenerationEmissions(
       inputs.branches,

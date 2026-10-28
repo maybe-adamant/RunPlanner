@@ -6,8 +6,11 @@ import {
   createShopOfferAddress,
   createInfernalContractPedestalAddress,
   createStartingRewardAddress,
+  semanticAddressKey,
   type BiomeAddress,
 } from '../../../authored-project/addresses';
+import { sourceRerolledOwners, type OwnerRerolls } from '../../../authored-project/rerolls';
+import { createUnresolvedAcquisitionRewardState } from '../../../authored-project/traits/state';
 import type {
   AuthoredRoomState,
   AuthoredRewardState,
@@ -24,6 +27,7 @@ import type {
   CanonicalFieldsOptionalReward,
   CanonicalFieldsEntryPair,
   CanonicalLocalReward,
+  CanonicalRerollableReward,
   CanonicalResolvedIncomingReward,
   CanonicalRewardWheel,
   CanonicalShopEntryState,
@@ -81,6 +85,51 @@ export interface AuthoredRoomMaterializationContext {
   readonly loadout?: RouteWeaponAspectLoadout | BiomeMaterializationLoadout;
   readonly configuredRivalsRank?: number;
   readonly entry?: boolean;
+  /** The rerolls of the doors and cages leading here, by owner, from the source's chronology. */
+  readonly rerolledOwners?: ReadonlyMap<string, OwnerRerolls>;
+}
+
+/**
+ * The reward an owner's acquisition settles and its reroll products. A
+ * rerolled owner acquires its authored rerolled reward when that matches the
+ * effective offer, else the effective offer unresolved; a rerolled reward that
+ * does not match, or outlived its rerolls, is reported for repair.
+ */
+function acquiredReward(
+  catalog: Catalog,
+  routeKey: string,
+  producerLifecycleKey: string,
+  firstDraw: AuthoredRewardState,
+  rerolled: AuthoredRewardState | undefined,
+  rerolls: OwnerRerolls | undefined,
+): {
+  readonly reward: AuthoredRewardState;
+  readonly products: CanonicalRerollableReward;
+} {
+  if (rerolls === undefined)
+    return Object.freeze({
+      reward: firstDraw,
+      products: Object.freeze(
+        rerolled === undefined ? {} : { rerolledRewardMismatch: true as const },
+      ),
+    });
+  const effective = rerolls.effectiveOffer;
+  const matches =
+    rerolled !== undefined && JSON.stringify(rerolled.offer) === JSON.stringify(effective);
+  return Object.freeze({
+    reward: matches
+      ? rerolled
+      : createUnresolvedAcquisitionRewardState(
+          catalog,
+          effective,
+          { kind: 'producerLifecycle', key: producerLifecycleKey },
+          routeKey,
+        ),
+    products: Object.freeze({
+      reroll: Object.freeze({ generatedOffer: firstDraw.offer }),
+      ...(rerolled !== undefined && !matches ? { rerolledRewardMismatch: true as const } : {}),
+    }),
+  });
 }
 
 export interface MaterializedRoomLeaf {
@@ -98,6 +147,8 @@ export interface MaterializedRoomLeaf {
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
   readonly clockworkReward?: 'goal' | 'nonGoal';
+  /** A rerolled door's acquired reward, which the room's actions and pickups follow. */
+  readonly rerolledIncomingAcquisition?: AuthoredRewardState;
 }
 
 export interface MaterializedShipCombatState {
@@ -170,9 +221,12 @@ function materializedIncomingReward(
   context: AuthoredRoomMaterializationContext,
   producerKind: CanonicalResolvedIncomingReward['producerKind'],
   producerLifecycleKey: string,
-  reward: AuthoredRewardState | null,
+  authoredReward: AuthoredRewardState | null,
   offerOrigin?: import('../../../authored-project/addresses').StartingRewardAddress,
-): Pick<MaterializedRoomLeaf, 'incomingReward' | 'unresolvedIncomingReward'> {
+): Pick<
+  MaterializedRoomLeaf,
+  'incomingReward' | 'unresolvedIncomingReward' | 'rerolledIncomingAcquisition'
+> {
   const storeKey = resolvedStoreKey(context.room, context.batchStoreKey);
   const base = Object.freeze({
     origin: createIncomingRewardAddress(context.biome, context.occurrence.occurrenceId),
@@ -182,10 +236,24 @@ function materializedIncomingReward(
     producerLifecycleKey,
     ...(storeKey === undefined ? {} : { resolvedStoreKey: storeKey }),
   });
-  if (reward === null) return Object.freeze({ unresolvedIncomingReward: base });
+  if (authoredReward === null) return Object.freeze({ unresolvedIncomingReward: base });
+  const acquired: ReturnType<typeof acquiredReward> =
+    offerOrigin === undefined
+      ? acquiredReward(
+          context.catalog,
+          context.biome.routeKey,
+          producerLifecycleKey,
+          authoredReward,
+          context.occurrence.rerolledIncomingReward,
+          context.rerolledOwners?.get(semanticAddressKey(base.origin)),
+        )
+      : Object.freeze({ reward: authoredReward, products: Object.freeze({}) });
+  const { reward, products } = acquired;
   return Object.freeze({
+    ...(products.reroll === undefined ? {} : { rerolledIncomingAcquisition: reward }),
     incomingReward: Object.freeze({
       ...base,
+      ...products,
       kind: 'resolved' as const,
       offer: reward.offer,
       traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
@@ -479,23 +547,32 @@ function materializeFieldsCombat(
       });
       return Object.freeze({ base, reward });
     });
-  const localRewards = cageLeaves.flatMap(({ base, reward }) =>
-    reward === null
-      ? []
-      : [
-          Object.freeze({
-            ...base,
-            offer: reward.offer,
-            traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
-            levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
-            ...(reward.hexActivationsByAcquisitionRole === undefined
-              ? {}
-              : { hexActivationsByAcquisitionRole: reward.hexActivationsByAcquisitionRole }),
-            dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
-            traitContext: traitContextForOffer(context, reward.offer),
-          }),
-        ],
-  );
+  const cageRerolls = context.rerolledOwners;
+  const localRewards = cageLeaves.flatMap(({ base, reward: firstDraw }) => {
+    if (firstDraw === null) return [];
+    const { reward, products } = acquiredReward(
+      context.catalog,
+      context.biome.routeKey,
+      base.producerLifecycleKey,
+      firstDraw,
+      state.rerolledCages?.[base.slotKey],
+      cageRerolls?.get(semanticAddressKey(base.origin)),
+    );
+    return [
+      Object.freeze({
+        ...base,
+        ...products,
+        offer: reward.offer,
+        traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+        levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+        ...(reward.hexActivationsByAcquisitionRole === undefined
+          ? {}
+          : { hexActivationsByAcquisitionRole: reward.hexActivationsByAcquisitionRole }),
+        dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
+        traitContext: traitContextForOffer(context, reward.offer),
+      }),
+    ];
+  });
   const fieldsOptionalRewards = optionalLeaves.flatMap(({ base, reward }) =>
     reward === null
       ? []
@@ -580,6 +657,7 @@ export function materializeShipCombatState(
   ) {
     fail(`${room.gameName} cannot materialize ${state.encounterCount} encounters`);
   }
+  const wheelRerolls = sourceRerolledOwners(biome, occurrence);
   const rewardWheels: CanonicalRewardWheel[] = encounterPhases.flatMap((phase) => {
     const descriptor = phase.rewardAttachment;
     if (descriptor?.kind !== 'rewardWheel') {
@@ -609,29 +687,37 @@ export function materializeShipCombatState(
     if (leaves.filter(({ base }) => base.picked).length !== 1) {
       fail(`${room.gameName}.${descriptor.key} has no unique active pick`);
     }
-    const offers = leaves.flatMap(({ base, reward }) =>
-      reward === null
-        ? []
-        : [
-            Object.freeze({
-              ...base,
-              offer: reward.offer,
-              traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
-              levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
-              ...(reward.hexActivationsByAcquisitionRole === undefined
-                ? {}
-                : { hexActivationsByAcquisitionRole: reward.hexActivationsByAcquisitionRole }),
-              dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
-              traitContext: Object.freeze({
-                blockGiftBoons: room.blockGiftBoons,
-                ...(room.boonRarityOverride === undefined
-                  ? {}
-                  : { boonRarityRoomOverride: room.boonRarityOverride }),
-                devotionNoDuo: reward.offer.rewardType === 'Devotion',
-              }),
-            }),
-          ],
-    );
+    const offers = leaves.flatMap(({ base, reward: firstDraw }) => {
+      if (firstDraw === null) return [];
+      const { reward, products } = acquiredReward(
+        catalog,
+        biome.routeKey,
+        descriptor.reward.producerLifecycleKey,
+        firstDraw,
+        wheel.rerolledOffers?.[base.offerKey],
+        wheelRerolls.get(semanticAddressKey(base.origin)),
+      );
+      return [
+        Object.freeze({
+          ...base,
+          ...products,
+          offer: reward.offer,
+          traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
+          levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole,
+          ...(reward.hexActivationsByAcquisitionRole === undefined
+            ? {}
+            : { hexActivationsByAcquisitionRole: reward.hexActivationsByAcquisitionRole }),
+          dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
+          traitContext: Object.freeze({
+            blockGiftBoons: room.blockGiftBoons,
+            ...(room.boonRarityOverride === undefined
+              ? {}
+              : { boonRarityRoomOverride: room.boonRarityOverride }),
+            devotionNoDuo: reward.offer.rewardType === 'Devotion',
+          }),
+        }),
+      ];
+    });
     return [
       Object.freeze({
         origin: createRewardWheelAddress(biome, occurrence.occurrenceId, descriptor.key),

@@ -1,4 +1,12 @@
-import type { HermesShrineGenerationKey, RoomActionReference, RoomActionState } from '../../model';
+import type { Catalog } from '../../../catalog-schema';
+import type {
+  HermesShrineGenerationKey,
+  OccurrenceId,
+  RerollTarget,
+  RoomActionReference,
+  RoomActionState,
+} from '../../model';
+import { decodeResolvedRewardOffer } from './reward-acquisition-codec';
 import { roomActionKey } from '../../room-actions/state';
 import {
   expectArray,
@@ -10,7 +18,52 @@ import {
   failProjectDocument,
 } from '../../validation';
 
-function decodeRoomActionReference(value: unknown, path: string): RoomActionReference {
+/** A persisted reroll instance identity: `r` and a positive integer. */
+export function decodeRerollId(value: unknown, path: string): string {
+  const rerollId = expectNonBlankString(value, path);
+  if (!/^r[1-9][0-9]*$/.test(rerollId)) failProjectDocument(path, 'must be a reroll id');
+  return rerollId;
+}
+
+function decodeRerollTarget(value: unknown, path: string): RerollTarget {
+  const target = expectRecord(value, path);
+  const kind = expectString(target.kind, `${path}.kind`);
+  if (kind === 'door' || kind === 'cage') {
+    expectExactKeys(
+      target,
+      ['kind', 'exitKey', 'occurrenceId', ...(kind === 'cage' ? ['slotKey'] : [])],
+      path,
+    );
+    const exitKey = expectNonBlankString(target.exitKey, `${path}.exitKey`);
+    const occurrenceId = expectNonBlankString(
+      target.occurrenceId,
+      `${path}.occurrenceId`,
+    ) as OccurrenceId;
+    return kind === 'door'
+      ? Object.freeze({ kind, exitKey, occurrenceId })
+      : Object.freeze({
+          kind,
+          exitKey,
+          occurrenceId,
+          slotKey: expectNonBlankString(target.slotKey, `${path}.slotKey`),
+        });
+  }
+  if (kind === 'wheelOffer') {
+    expectExactKeys(target, ['kind', 'wheelKey', 'offerKey'], path);
+    return Object.freeze({
+      kind,
+      wheelKey: expectNonBlankString(target.wheelKey, `${path}.wheelKey`),
+      offerKey: expectNonBlankString(target.offerKey, `${path}.offerKey`),
+    });
+  }
+  failProjectDocument(`${path}.kind`, `unknown reroll target ${kind}`);
+}
+
+function decodeRoomActionReference(
+  value: unknown,
+  catalog: Catalog,
+  path: string,
+): RoomActionReference {
   const reference = expectRecord(value, path);
   const kind = expectString(reference.kind, `${path}.kind`);
   if (
@@ -118,16 +171,29 @@ function decodeRoomActionReference(value: unknown, path: string): RoomActionRefe
         : {}),
     });
   }
+  if (kind === 'reroll') {
+    expectExactKeys(reference, ['kind', 'rerollId', 'target', 'reward'], path);
+    return Object.freeze({
+      kind,
+      rerollId: decodeRerollId(reference.rerollId, `${path}.rerollId`),
+      target: decodeRerollTarget(reference.target, `${path}.target`),
+      reward: decodeResolvedRewardOffer(reference.reward, catalog, `${path}.reward`),
+    });
+  }
   failProjectDocument(`${path}.kind`, `unknown room action ${kind}`);
 }
 
-export function decodeRoomActionState(value: unknown, path: string): RoomActionState {
+export function decodeRoomActionState(
+  value: unknown,
+  catalog: Catalog,
+  path: string,
+): RoomActionState {
   const state = expectRecord(value, path);
   expectExactKeys(state, ['order'], path);
   const seen = new Set<string>();
   const order = expectArray(state.order, `${path}.order`).map((rawReference, index) => {
     const referencePath = `${path}.order[${index}]`;
-    const reference = decodeRoomActionReference(rawReference, referencePath);
+    const reference = decodeRoomActionReference(rawReference, catalog, referencePath);
     const key = roomActionKey(reference);
     if (seen.has(key)) failProjectDocument(referencePath, `duplicates room action ${key}`);
     seen.add(key);

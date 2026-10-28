@@ -16,6 +16,7 @@ import {
 } from '../traits';
 import type { RewardBranchState } from './branch-primitives';
 import { addRewardFinding } from './findings';
+import { settleScreenRerolls } from './screen-rerolls';
 
 export interface LevelResolutionSettlementInput {
   readonly catalog: Catalog;
@@ -149,6 +150,15 @@ export function settleReachedLevelResolution(
       );
     }
   }
+  // The Pom screen's rerolls happen before its final rows are chosen.
+  const rerolled = settleScreenRerolls(
+    catalog,
+    branch,
+    levelResolution.kind === 'choice' ? levelResolution.rerollCount : undefined,
+    address,
+    sequence,
+    input.findingChronology,
+  );
   return Object.freeze({
     branch: Object.freeze({
       ...branch,
@@ -156,8 +166,8 @@ export function settleReachedLevelResolution(
         ...(branch.levelResolutionEvaluations ?? []),
         evaluation,
       ]),
-      state: replaceSimulationTraitHistory(branch.state, appliedHistory),
+      state: replaceSimulationTraitHistory(rerolled.branch.state, appliedHistory),
     }),
-    findingEntries: Object.freeze([...localFindings.values()]),
+    findingEntries: Object.freeze([...localFindings.values(), ...rerolled.findings]),
   });
 }

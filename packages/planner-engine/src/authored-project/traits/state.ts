@@ -123,6 +123,8 @@ export interface AuthoredTraitOfferTraits {
   readonly rejectedOptionKey?: TraitOptionKey;
   /** Concave Stone's post-primary frozen residual choice. */
   readonly concaveStoneResult?: AuthoredConcaveStoneResult;
+  /** Native screen rerolls before these final rows; absent is none. */
+  readonly rerollCount?: number;
 }
 
 export type AuthoredConcaveStoneResult =
@@ -168,6 +170,8 @@ export interface AuthoredChaosTraitOffer {
   readonly blessingKey: string;
   readonly rarity: Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary'>;
   readonly blessingValues: Readonly<Record<string, number>>;
+  /** Native screen rerolls before these final rows; absent is none. */
+  readonly rerollCount?: number;
 }
 
 export type AuthoredTraitOffer =
@@ -254,6 +258,8 @@ export type AuthoredLevelResolution =
       readonly kind: 'choice';
       readonly offeredTraitKeys: readonly string[];
       readonly selectedTraitKey: string | null;
+      /** Native screen rerolls before these final rows; absent is none. */
+      readonly rerollCount?: number;
     }
   | { readonly kind: 'random'; readonly targetTraitKey: string | null };
 

@@ -483,6 +483,47 @@ export type InfernalContractPedestalCommand =
       readonly pedestal: InfernalContractPedestalAddress;
       readonly collected: boolean;
     };
+/**
+ * Door, cage, wheel and Hub board rerolls. The engine allocates each new
+ * reroll's identity; room rerolls are removed and moved as room actions.
+ * Rerolled-reward repairs are explicit: drop the effective reward, or adopt
+ * an unresolved one for the current effective offer.
+ */
+export type RerollCommand =
+  | {
+      readonly kind: 'InsertReroll';
+      readonly occurrence: OccurrenceAddress;
+      readonly target: import('../model').RerollTarget;
+      readonly reward: ResolvedRewardOffer;
+      readonly index: number;
+    }
+  | {
+      readonly kind: 'ReplaceRerollReward';
+      readonly action: RoomActionSemanticAddress;
+      readonly reward: ResolvedRewardOffer;
+    }
+  | {
+      readonly kind: 'InsertHubReroll';
+      readonly hub: HubDecisionAddress;
+      readonly hubSlotKey: string;
+      readonly reward: ResolvedRewardOffer;
+      readonly index: number;
+    }
+  | {
+      readonly kind: 'ReplaceHubRerollReward';
+      readonly reroll: import('../addresses').HubRerollAddress;
+      readonly reward: ResolvedRewardOffer;
+    }
+  | { readonly kind: 'RemoveHubReroll'; readonly reroll: import('../addresses').HubRerollAddress }
+  | {
+      readonly kind: 'DropRerolledReward';
+      readonly owner: import('../rerolls').RerolledRewardOwner;
+    }
+  | {
+      readonly kind: 'AdoptRerolledReward';
+      readonly owner: import('../rerolls').RerolledRewardOwner;
+    };
+
 /** An Ephyra room's hidden return door: null fields are settled by the simulation. */
 export type PhantomExitCommand = {
   readonly kind: 'ReplacePhantomExit';
@@ -494,6 +535,12 @@ export type PurgingPoolCommand =
       readonly kind: 'SetPurgingPoolInteraction';
       readonly occurrence: OccurrenceAddress;
       readonly interacted: boolean;
+    }
+  | {
+      /** Native rerolls of the sell screen before its final list; 0 is none. */
+      readonly kind: 'SetPurgingPoolRerollCount';
+      readonly occurrence: OccurrenceAddress;
+      readonly count: number;
     }
   | {
       readonly kind: 'ReplacePurgingPoolSlot';
@@ -546,6 +593,12 @@ export type StygianWellCommand =
       readonly kind: 'SetStygianWellInteraction';
       readonly occurrence: OccurrenceAddress;
       readonly interacted: boolean;
+    }
+  | {
+      /** Native rerolls of the Well screen before its inventory; 0 is none. */
+      readonly kind: 'SetStygianWellRerollCount';
+      readonly occurrence: OccurrenceAddress;
+      readonly count: number;
     }
   | {
       readonly kind: 'ReplaceStygianWellOffer';
@@ -760,6 +813,7 @@ export type ProjectCommand =
   | TopologyCommand
   | RoomReplacementCommand
   | RoomActionCommand
+  | RerollCommand
   | Exclude<RouteDetourCommand, { readonly kind: 'GenerateChaos' | 'RemoveGeneratedChaos' }>
   | OccurrenceLeafCommand
   | FieldsSpatialCommand

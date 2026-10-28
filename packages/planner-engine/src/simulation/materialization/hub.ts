@@ -1,9 +1,11 @@
+import { hubRerolledOwners } from '../../authored-project/rerolls';
 import type { Catalog, HubDecisionDescriptor, RoomDeclaration } from '../../catalog-schema';
 import { createDefaultRoomEncounterState } from '../../authored-project/room-state/encounter-envelope';
 import { alwaysActiveEncounterSlotKeys, materializeEncounterPhases } from '../encounters/resolve';
 import {
   createHubDecisionAddress,
   createHubFountainAddress,
+  createHubRerollAddress,
   createHubOpenSetAddress,
   createHubRoomAddress,
   createHubSlotAddress,
@@ -227,6 +229,7 @@ function materializeBoard(
 ): CanonicalHubBoard {
   const bySlot = new Map(decision.openTargets.map((target) => [target.hubSlotKey, target]));
   const visited = new Set(hubVisitSlotKeys(decision));
+  const rerolledOwners = hubRerolledOwners(biome, decision);
   return Object.freeze({
     origin: createHubOpenSetAddress(biome, descriptor.hubKey),
     room,
@@ -251,6 +254,7 @@ function materializeBoard(
               entered: visited.has(slot.slotKey),
               lifecycleProfileKey: 'EphyraMainRoom',
               ...(loadout === undefined ? {} : { loadout }),
+              rerolledOwners,
             }),
           }),
         ];
@@ -354,12 +358,28 @@ export function materializeHubDecision(
     loadout,
   );
   const precedingVisitCount = hubFountainPrecedingVisitCount(decision);
+  const firstVisitIndex = decision.actions.findIndex((action) => action.kind === 'roomVisit');
+  const rerolls = Object.freeze(
+    decision.actions.flatMap((action, index) =>
+      action.kind === 'reroll'
+        ? [
+            Object.freeze({
+              origin: createHubRerollAddress(biome, descriptor.hubKey, action.rerollId),
+              hubSlotKey: action.hubSlotKey,
+              reward: action.reward,
+              afterFirstVisit: firstVisitIndex >= 0 && index > firstVisitIndex,
+            }),
+          ]
+        : [],
+    ),
+  );
   return Object.freeze({
     kind: 'hub',
     origin: createHubDecisionAddress(biome, descriptor.hubKey),
     source: hubSourceReference(biome, decision, occurrences),
     room,
     board,
+    rerolls,
     ...(precedingVisitCount === undefined
       ? {}
       : {

@@ -143,6 +143,9 @@ export function executionTimelineTransactions(
         blessingKey: selected.offer.blessingKey,
         rarity: selected.offer.rarity,
         blessingValues: Object.freeze({ ...selected.offer.blessingValues }),
+        ...(selected.offer.rerollCount === undefined
+          ? {}
+          : { rerollCount: selected.offer.rerollCount }),
       });
     if (selected.offer.kind !== 'traits')
       throw new CompilerError(
@@ -415,6 +418,9 @@ export function executionTimelineTransactions(
         : { rejected: selected.offer.rejectedOptionKey }),
       ...(publishedHexTree === undefined ? {} : { hexTree: publishedHexTree }),
       ...(expectation === undefined ? {} : { expectation }),
+      ...(selected.offer.rerollCount === undefined
+        ? {}
+        : { rerollCount: selected.offer.rerollCount }),
     });
   };
   const levelResolution = (
@@ -446,6 +452,9 @@ export function executionTimelineTransactions(
           ? selected.value.selectedTraitKey
           : selected.value.targetTraitKey,
       levelCount,
+      ...(selected.value.kind === 'choice' && selected.value.rerollCount !== undefined
+        ? { rerollCount: selected.value.rerollCount }
+        : {}),
     });
   };
   const transactions: ExecutionTimelineTransaction[] = [];
@@ -713,7 +722,9 @@ export function executionTimelineTransactions(
       // Fields cage completion is represented by the ordered encounter phases;
       // native ChooseEncounter is the only steering contact.  The room action
       // itself has no separate executable callback or transaction.
-      timeline.action.reference.kind === 'completeFieldsCage'
+      timeline.action.reference.kind === 'completeFieldsCage' ||
+      // Rerolls publish in order on the occurrence; the press is native.
+      timeline.action.reference.kind === 'reroll'
     )
       continue;
     if (

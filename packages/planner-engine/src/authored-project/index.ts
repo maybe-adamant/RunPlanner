@@ -125,6 +125,7 @@ export {
   createHubRoomAddress,
   createHubVisitAddress,
   createHubFountainAddress,
+  createHubRerollAddress,
   createLocalVisitDecisionAddress,
   createLocalVisitSlotAddress,
   createLocalVisitOrderAddress,
@@ -184,6 +185,7 @@ export {
   type IncomingRewardAddress,
   type InfernalContractPedestalAddress,
   type PhantomExitAddress,
+  type HubRerollAddress,
   type HubSlotAddress,
   type HubOpenSetAddress,
   type HubRoomAddress,
@@ -325,6 +327,16 @@ export {
   roomHasPhantomExit,
 } from './phantom-exit';
 export {
+  biomeRerolledOwners,
+  hubRerolledOwners,
+  rerolledRewardOf,
+  rerollTargetOwner,
+  sourceRerolledOwners,
+  type OwnerRerolls,
+  type RerolledRewardOwner,
+} from './rerolls';
+export { screenRerollCost, screenRerollSupported, type RerollableScreen } from './screen-rerolls';
+export {
   applyProjectCommand,
   projectCommandAddress,
   projectCommandAuthoringAddresses,
@@ -458,6 +470,9 @@ export {
   type ShopOfferState,
   type InfernalContractPedestalState,
   type PhantomExitState,
+  type HubRerollAction,
+  type RerollRoomAction,
+  type RerollTarget,
   type ShopState,
 } from './model';
 export {

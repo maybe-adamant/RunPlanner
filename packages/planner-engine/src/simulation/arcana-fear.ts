@@ -72,8 +72,17 @@ export function currentArcanaCards(state: ArcanaFearState): readonly CurrentArca
     state.arcana.active.map(({ key, rarity }) => Object.freeze({ key, rarity })),
   );
 }
+/**
+ * The run's shared native `NumRerolls`: every grant so far and every spend.
+ * Remaining is always derived; a negative remainder is an authored over-spend.
+ */
+export interface RerollPoolState {
+  readonly granted: number;
+  readonly spent: number;
+}
 export interface ArcanaState {
   readonly active: readonly ActiveArcanaState[];
+  readonly rerollPool: RerollPoolState;
   /** Exact successful source interactions; remaining capacity is always derived. */
   readonly artificerUses: readonly ArtificerUseEvidence[];
   /** Room-entry stat cycles of active cards that declare one, by card key. */
@@ -210,6 +219,53 @@ export function reconcileBarrenArcana(
   });
 }
 export const PROMOTED_ARCANA_RARITY = 'Heroic' as const;
+
+function rerollGrant(catalog: Catalog, key: string, rarity: InRunTraitRarity): number {
+  return catalog.arcanaCards.byKey[key]?.rerolls?.countByRarity[rarity] ?? 0;
+}
+
+function addRerollGrant(pool: RerollPoolState, amount: number): RerollPoolState {
+  return amount === 0 ? pool : Object.freeze({ ...pool, granted: pool.granted + amount });
+}
+
+/** The pool's remainder: Arcana grants and acquired reroll drops, less every spend. */
+export function rerollPoolRemaining(state: {
+  readonly arcanaFear: ArcanaFearState;
+  readonly traitHistory: { readonly rerollPickupGrant?: number };
+}): number {
+  const pool = state.arcanaFear.arcana.rerollPool;
+  return pool.granted + (state.traitHistory.rerollPickupGrant ?? 0) - pool.spent;
+}
+
+/** Records a spend; the remainder may go negative and the caller reports it. */
+export function spendRerolls(state: ArcanaFearState, amount: number): ArcanaFearState {
+  if (amount === 0) return state;
+  return Object.freeze({
+    ...state,
+    arcana: Object.freeze({
+      ...state.arcana,
+      rerollPool: Object.freeze({
+        ...state.arcana.rerollPool,
+        spent: state.arcana.rerollPool.spent + amount,
+      }),
+    }),
+  });
+}
+
+/**
+ * Whether a held card enables this reroll kind now. Barren removes the
+ * enabling card's trait while it lasts; the pool is unchanged.
+ */
+export function rerollKindEnabled(
+  catalog: Catalog,
+  state: ArcanaFearState,
+  kind: 'doors' | 'screens',
+): boolean {
+  return state.arcana.active.some(
+    (card) =>
+      card.unequipped !== true && catalog.arcanaCards.byKey[card.key]?.rerolls?.enables === kind,
+  );
+}
 
 /** Complete declaration-independent target product for one selected Circe effect. */
 export interface CirceResolutionDomain {
@@ -418,17 +474,21 @@ export function createArcanaFearState(
 ): ArcanaFearState {
   const derived = deriveRouteLoadout(catalog, loadout);
   const manual = new Set(loadout.manualArcanaKeys);
+  const active = derived.activeArcanaKeys.map((key) =>
+    Object.freeze({
+      key,
+      origin: manual.has(key) ? ('manual' as const) : ('automatic' as const),
+      rarity: 'Epic' as const,
+    }),
+  );
   return Object.freeze({
     arcana: Object.freeze({
-      active: Object.freeze(
-        derived.activeArcanaKeys.map((key) =>
-          Object.freeze({
-            key,
-            origin: manual.has(key) ? ('manual' as const) : ('automatic' as const),
-            rarity: 'Epic' as const,
-          }),
-        ),
-      ),
+      active: Object.freeze(active),
+      // StartNewRun counts every equipped card's RerollCount before any curse applies.
+      rerollPool: Object.freeze({
+        granted: active.reduce((sum, card) => sum + rerollGrant(catalog, card.key, card.rarity), 0),
+        spent: 0,
+      }),
       artificerUses: Object.freeze([]),
     }),
     fear: Object.freeze({
@@ -565,6 +625,11 @@ export function activateTemporaryArcana(
   )
     return rejected(state, 'randomDrawRequirementsUnsatisfied');
   const canonicalKeys = canonicalArcanaSet(catalog, arcanaKeys);
+  // GrantMetaUpgradeRerolls adds a granted card's full RerollCount.
+  const rerollPool = addRerollGrant(
+    state.arcana.rerollPool,
+    canonicalKeys.reduce((sum, key) => sum + rerollGrant(catalog, key, rarity), 0),
+  );
   const active = [
     ...state.arcana.active,
     ...canonicalKeys.map((key) => Object.freeze({ key, origin: 'temporary' as const, rarity })),
@@ -577,7 +642,7 @@ export function activateTemporaryArcana(
     legal: true,
     state: Object.freeze({
       ...state,
-      arcana: Object.freeze({ ...state.arcana, active: Object.freeze(active) }),
+      arcana: Object.freeze({ ...state.arcana, active: Object.freeze(active), rerollPool }),
       events: Object.freeze([
         ...state.events,
         Object.freeze({
@@ -628,6 +693,17 @@ export function promoteArcana(
       arcana: Object.freeze({
         ...state.arcana,
         ...(roomEntryGrowth === undefined ? {} : { roomEntryGrowth }),
+        // UpgradeMetaUpgradeRerolls adds only the rarity difference.
+        rerollPool: addRerollGrant(
+          state.arcana.rerollPool,
+          canonicalKeys.reduce(
+            (sum, key) =>
+              sum +
+              rerollGrant(catalog, key, PROMOTED_ARCANA_RARITY) -
+              rerollGrant(catalog, key, 'Epic'),
+            0,
+          ),
+        ),
         active: Object.freeze(
           state.arcana.active.map((candidate) =>
             canonicalKeys.includes(candidate.key)

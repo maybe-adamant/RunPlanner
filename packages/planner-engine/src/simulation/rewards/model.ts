@@ -247,6 +247,22 @@ export interface PhantomExitSettlement {
   readonly offers: readonly import('../../reward-kernel').ResolvedRewardOffer[];
 }
 
+/**
+ * One reached door, cage, wheel or Hub board reroll. Each costs one reroll from
+ * the run's pool; the pool remainder is the minimum over reached branches.
+ */
+export interface RerollSettlement {
+  readonly owner:
+    | import('../../authored-project/addresses').RoomActionAddress
+    | import('../../authored-project/addresses').HubRerollAddress;
+  /** The reward owner it redraws. */
+  readonly target: import('../../authored-project/rerolls').RerolledRewardOwner;
+  readonly historySequence: number;
+  readonly reward: import('../../reward-kernel').ResolvedRewardOffer;
+  /** The run's pool remainder after this reroll, absent when no branch reached it. */
+  readonly poolRemainingAfter?: number;
+}
+
 export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly generatedPickupPlacements?: readonly import('./acquisition/contracts').GeneratedPickupPlacement[];
   /** Reward transitions publish only exact owner relations; room actions publish structural facts. */
@@ -270,6 +286,8 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly bossArcanaOutcomes: readonly BossArcanaOutcome[];
   /** Reached phantom exits in chronological order. */
   readonly phantomExits: readonly PhantomExitSettlement[];
+  /** Reached door, cage, wheel and Hub board rerolls in chronological order. */
+  readonly rerolls: readonly RerollSettlement[];
   readonly storeSupport: readonly RewardStoreSupportEntry[];
   readonly targetHistory: readonly TargetRewardHistoryCheckpoint[];
   readonly runStateSnapshots: readonly RunStateSnapshot[];

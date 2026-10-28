@@ -13,10 +13,11 @@ import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model'
 import type { Catalog } from '../../catalog-schema';
 import { resolvedEncounterPhaseForDefinition } from '../../simulation/encounters/resolve';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
-import type {
-  CanonicalAuthoredRoom,
-  CanonicalBatch,
-  CanonicalFieldsEntryPair,
+import {
+  forGeneration,
+  type CanonicalAuthoredRoom,
+  type CanonicalBatch,
+  type CanonicalFieldsEntryPair,
 } from '../../simulation/materialization';
 import type { RewardEvent } from '../../simulation/rewards/model';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
@@ -55,14 +56,24 @@ export function executionKeepsakeEquipResults(
   });
 }
 
-export function executionReward(room: CanonicalAuthoredRoom): ExecutionReward | undefined {
+/**
+ * A room's incoming reward: as its door first offers it (`generated`), or as
+ * it is entered after the door's rerolls (`acquired`).
+ */
+export function executionReward(
+  room: CanonicalAuthoredRoom,
+  view: 'generated' | 'acquired' = 'acquired',
+): ExecutionReward | undefined {
   if (room.clockworkReward === 'goal') {
     return Object.freeze({
       rewardType: 'ClockworkGoal',
       producerLifecycleKey: 'ClockworkGoalRoom',
     });
   }
-  const incoming = room.incomingReward;
+  const incoming =
+    view === 'generated' && room.incomingReward !== undefined
+      ? forGeneration(room.incomingReward)
+      : room.incomingReward;
   if (incoming === undefined) return undefined;
   return executionRewardFromOffer(
     incoming.offer,
@@ -418,8 +429,9 @@ function executionRewardWheels(
           wheel.offers.map((offer) =>
             Object.freeze({
               offerKey: offer.offerKey,
+              // The wheel spawns its first draws; rerolls are published separately.
               reward: executionRewardFromOffer(
-                offer.offer,
+                forGeneration(offer).offer,
                 wheel.producerLifecycleKey,
                 wheel.storeKey,
               ),
@@ -605,6 +617,9 @@ function executionStygianWell(
   if (room.stygianWell === undefined) return undefined;
   return Object.freeze({
     interacted: room.stygianWell.interacted,
+    ...(room.stygianWell.interacted && room.stygianWell.rerollCount !== undefined
+      ? { rerollCount: room.stygianWell.rerollCount }
+      : {}),
     ...(room.stygianWell.interacted
       ? {
           offers: Object.freeze(
@@ -655,6 +670,9 @@ function executionPurgingPool(
   if (room.purgingPool === undefined) return undefined;
   return Object.freeze({
     interacted: room.purgingPool.interacted,
+    ...(room.purgingPool.interacted && room.purgingPool.rerollCount !== undefined
+      ? { rerollCount: room.purgingPool.rerollCount }
+      : {}),
     ...(room.purgingPool.interacted
       ? {
           traits: Object.freeze(

@@ -1,3 +1,4 @@
+import { settleScreenRerolls } from '../../screen-rerolls';
 import {
   applyTraitOfferTransition,
   invalidatedTraitOffers,
@@ -84,6 +85,28 @@ export function applyFountainUsedTransition(
   }
   if (used.branches.length === 0) return used;
   const pool = room.purgingPool;
+  // The sell screen's rerolls happen before its final list.
+  const rerolledBranches = Object.freeze(
+    used.branches.map((branch) => {
+      const rerolled = settleScreenRerolls(
+        catalog,
+        branch,
+        pool.rerollCount,
+        createRoomFeatureAddress(room.origin, { kind: 'purgingPoolInventory' }),
+        event.sequence,
+        chronology(),
+      );
+      for (const entry of rerolled.findings)
+        findings.push(
+          Object.freeze({
+            finding: entry.finding,
+            region: entry.atomicRegion,
+            chronology: entry.chronology ?? chronology(),
+          }),
+        );
+      return rerolled.branch;
+    }),
+  );
   const assessments = Object.freeze(
     used.branches.map((branch) =>
       assessPurgingPool(catalog, pool, branch.state.traitHistory.equippedTraits),
@@ -108,6 +131,7 @@ export function applyFountainUsedTransition(
   }
   return Object.freeze({
     ...used,
+    branches: rerolledBranches,
     findings: Object.freeze(findings),
     purgingPoolAssessment: Object.freeze({
       key: semanticAddressKey(room.origin),

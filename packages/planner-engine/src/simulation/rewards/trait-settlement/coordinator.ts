@@ -1,3 +1,4 @@
+import { settleScreenRerolls } from '../screen-rerolls';
 import { replaceSimulationTraitHistory } from '../../state/transitions';
 import {
   applyTraitOfferContextTransition,
@@ -1198,14 +1199,33 @@ export function applyTraitOfferForAcquisition(
           }),
         });
   const blockedChild = settlement.blockedChild;
-  return complete({
+  // The screen's rerolls happen before its final rows are chosen.
+  const screenOwner = owner === undefined ? undefined : createTraitOfferAddress(owner, role);
+  const rerolled =
+    authored.kind === 'fallbackGold' || screenOwner === undefined
+      ? undefined
+      : settleScreenRerolls(
+          catalog,
+          spentBranch,
+          authored.rerollCount,
+          screenOwner,
+          sequence,
+          findingChronology,
+        );
+  const completed = complete({
     ...settlement,
     ...(priorTraitMutations === undefined ? {} : { priorTraitMutations }),
-    branch: spentBranch,
+    branch: rerolled?.branch ?? spentBranch,
     ...(blockedChild === undefined || blockedChild.branch !== settlement.branch
       ? {}
       : { blockedChild: Object.freeze({ ...blockedChild, branch: tagged }) }),
   });
+  return rerolled === undefined || rerolled.findings.length === 0
+    ? completed
+    : Object.freeze({
+        ...completed,
+        findingEntries: Object.freeze([...completed.findingEntries, ...rerolled.findings]),
+      });
 }
 
 /** Whether this screen used one Ordinary curse use, read from the settled history. */

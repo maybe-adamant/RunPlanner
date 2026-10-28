@@ -165,6 +165,21 @@ const findingCopy = {
   phantomExitRewardUnavailable: {
     title: 'Hidden door reward unavailable',
   },
+  rerolledRewardMismatch: {
+    title: 'Rerolled reward no longer matches its last reroll',
+  },
+  rerollUnavailable: {
+    title: 'Rerolls are not available here',
+  },
+  rerollTargetUnavailable: {
+    title: 'This reward cannot be rerolled',
+  },
+  rerollPoolExceeded: {
+    title: 'Not enough rerolls left',
+  },
+  screenRerollUnavailable: {
+    title: 'Screen rerolls are not available',
+  },
   traitOfferMissing: {
     title: 'Choose a trait offer',
   },

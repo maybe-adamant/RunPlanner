@@ -1,3 +1,4 @@
+import { rerolledRewardOf, withRerolledReward } from '../../rerolls';
 import type { Catalog } from '../../../catalog-schema';
 import type {
   AcquisitionDisposition,
@@ -130,6 +131,30 @@ export function applyAcquisitionDispositionCommand(
       );
     }
   };
+  // A rerolled owner's acquisition is its effective reward's.
+  const rerolledOwner =
+    owner.kind === 'incomingReward' ||
+    owner.kind === 'localReward' ||
+    owner.kind === 'rewardWheelOffer'
+      ? owner
+      : undefined;
+  const rerolled =
+    rerolledOwner === undefined ? undefined : rerolledRewardOf(occurrence, rerolledOwner);
+  if (rerolledOwner !== undefined && rerolled !== undefined)
+    return updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(
+        topology,
+        retainArtificerReplacementEntry(
+          withRerolledReward(occurrence, rerolledOwner, replace(rerolled)),
+          located,
+          owner,
+          role,
+          command.value.kind === 'artificer',
+        ),
+      ),
+    );
   let state: RoomOccurrence['state'];
   switch (owner.kind) {
     case 'gorgonPhase':

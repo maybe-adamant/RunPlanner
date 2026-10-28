@@ -243,6 +243,7 @@ describe('authored topology queries', () => {
         index: 1,
         type: 'ShipsExitDoor',
         compatibilityPolicyKey: 'Unconstrained',
+        allowReroll: false,
       },
     ]);
     expect(
@@ -261,6 +262,7 @@ describe('authored topology queries', () => {
         index: 1,
         type: 'N_OpeningDoor',
         compatibilityPolicyKey: 'Unconstrained',
+        allowReroll: true,
       },
     ]);
     expect(
@@ -279,6 +281,7 @@ describe('authored topology queries', () => {
         index: 1,
         type: 'EphyraExitBossDoor',
         compatibilityPolicyKey: 'Unconstrained',
+        allowReroll: true,
       },
     ]);
     expect(

@@ -1,3 +1,8 @@
+import {
+  decodeScreenRerollCount,
+  screenRerollCountField,
+  screenRerollSupported,
+} from '../../screen-rerolls';
 import type { Catalog } from '../../../catalog-schema';
 import type { CountedRewardBinding } from '../../../reward-kernel/bindings';
 import type {
@@ -167,7 +172,13 @@ function decodeTraitOffers(
           'blessingKey',
           'rarity',
           'blessingValues',
+          ...(Object.hasOwn(record, 'rerollCount') ? ['rerollCount'] : []),
         ],
+        rolePath,
+      );
+      const chaosRerollCount = decodeScreenRerollCount(
+        record,
+        screenRerollSupported(catalog, { kind: 'traitOffer', giverKey }),
         rolePath,
       );
       const rawValues = (key: 'selectedCurseValues' | 'blessingValues') => {
@@ -217,6 +228,10 @@ function decodeTraitOffers(
           >,
           blessingValues: rawValues('blessingValues'),
         });
+        result[roleKey] = Object.freeze({
+          ...result[roleKey]!,
+          ...screenRerollCountField(chaosRerollCount),
+        });
       } catch (error) {
         failProjectDocument(
           rolePath,
@@ -246,7 +261,13 @@ function decodeTraitOffers(
         ...('concaveStoneResult' in record ? ['concaveStoneResult'] : []),
         ...('hexTree' in record ? ['hexTree'] : []),
         ...('steadyGrowthTargets' in record ? ['steadyGrowthTargets'] : []),
+        ...(Object.hasOwn(record, 'rerollCount') ? ['rerollCount'] : []),
       ],
+      rolePath,
+    );
+    const rerollCount = decodeScreenRerollCount(
+      record,
+      screenRerollSupported(catalog, { kind: 'traitOffer', giverKey }),
       rolePath,
     );
     const optionsRaw = expectArray(record.options, `${rolePath}.options`);
@@ -661,6 +682,7 @@ function decodeTraitOffers(
         : { rejectedOptionKey: rejectedOptionKey as TraitOptionKey }),
       ...(concaveStoneResult === undefined ? {} : { concaveStoneResult }),
       ...(hexTree === undefined ? {} : { hexTree }),
+      ...screenRerollCountField(rerollCount),
     });
     const steadyGrowthTargets = decodeSteadyGrowthTargets(
       record.steadyGrowthTargets,
@@ -951,7 +973,21 @@ function decodeLevelResolutions(
       failProjectDocument(`${path}.${role}`, 'has no Pom level-resolution effect');
     const entry = expectRecord(encoded, `${path}.${role}`);
     if (effect.kind === 'visibleChoice') {
-      expectExactKeys(entry, ['kind', 'offeredTraitKeys', 'selectedTraitKey'], `${path}.${role}`);
+      expectExactKeys(
+        entry,
+        [
+          'kind',
+          'offeredTraitKeys',
+          'selectedTraitKey',
+          ...(Object.hasOwn(entry, 'rerollCount') ? ['rerollCount'] : []),
+        ],
+        `${path}.${role}`,
+      );
+      const rerollCount = decodeScreenRerollCount(
+        entry,
+        screenRerollSupported(catalog, { kind: 'levelChoice', rewardType: offer.rewardType }),
+        `${path}.${role}`,
+      );
       if (expectString(entry.kind, `${path}.${role}.kind`) !== 'choice')
         failProjectDocument(`${path}.${role}.kind`, 'expected choice');
       const keys = expectArray(entry.offeredTraitKeys, `${path}.${role}.offeredTraitKeys`).map(
@@ -982,6 +1018,7 @@ function decodeLevelResolutions(
         kind: 'choice',
         offeredTraitKeys: Object.freeze(keys),
         selectedTraitKey: selected,
+        ...screenRerollCountField(rerollCount),
       });
     } else {
       expectExactKeys(entry, ['kind', 'targetTraitKey'], `${path}.${role}`);
@@ -997,4 +1034,28 @@ function decodeLevelResolutions(
     }
   }
   return Object.freeze(result);
+}
+
+/**
+ * The effective rewards of rerolled owners, keyed by a declared owner key;
+ * present only with at least one entry.
+ */
+export function decodeRerolledRewards(
+  value: unknown,
+  keys: readonly string[],
+  path: string,
+  decodeEntry: (raw: unknown, path: string) => AuthoredRewardState,
+): Readonly<Record<string, AuthoredRewardState>> {
+  const raw = expectRecord(value, path);
+  const entries = Object.keys(raw);
+  if (entries.length === 0) failProjectDocument(path, 'must name at least one rerolled reward');
+  for (const key of entries)
+    if (!keys.includes(key)) failProjectDocument(`${path}.${key}`, 'is not a declared reward key');
+  return Object.freeze(
+    Object.fromEntries(
+      keys.flatMap((key) =>
+        Object.hasOwn(raw, key) ? [[key, decodeEntry(raw[key], `${path}.${key}`)] as const] : [],
+      ),
+    ),
+  );
 }

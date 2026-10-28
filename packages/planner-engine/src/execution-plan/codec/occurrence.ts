@@ -2,6 +2,8 @@ import type {
   ExecutionAnomalyReplacement,
   ExecutionBiomeKey,
   ExecutionOccurrence,
+  ExecutionReroll,
+  ExecutionRerollTarget,
   ExecutionRoomExitConformanceFactKind,
 } from '../model';
 import {
@@ -10,6 +12,7 @@ import {
   booleanValue,
   exact,
   fail,
+  integer,
   object,
   stringArray,
   stringValue,
@@ -188,6 +191,53 @@ function validateShopTransactionOwners(
     )
       fail(`${label}.overview.shop transaction owner must name one occurrence transaction`);
   }
+}
+
+export function rerollTarget(value: unknown, label: string): ExecutionRerollTarget {
+  const record = object(value, label);
+  const kind = stringValue(record.kind, `${label}.kind`);
+  switch (kind) {
+    case 'door':
+      exact(record, ['kind', 'exitKey'], [], label);
+      return Object.freeze({ kind, exitKey: stringValue(record.exitKey, `${label}.exitKey`) });
+    case 'cage':
+      exact(record, ['kind', 'exitKey', 'cageIndex'], [], label);
+      return Object.freeze({
+        kind,
+        exitKey: stringValue(record.exitKey, `${label}.exitKey`),
+        cageIndex: integer(record.cageIndex, `${label}.cageIndex`, 1),
+      });
+    case 'wheelOffer':
+      exact(record, ['kind', 'wheelKey', 'offerKey'], [], label);
+      return Object.freeze({
+        kind,
+        wheelKey: stringValue(record.wheelKey, `${label}.wheelKey`),
+        offerKey: stringValue(record.offerKey, `${label}.offerKey`),
+      });
+    default:
+      fail(`${label}.kind is unsupported`);
+  }
+}
+
+function rerolls(value: unknown, label: string): readonly ExecutionReroll[] {
+  const rows = array(value, label);
+  if (rows.length === 0) fail(`${label} must be absent when empty`);
+  const owners = new Set<string>();
+  return Object.freeze(
+    rows.map((entry, index) => {
+      const rowLabel = `${label}[${index}]`;
+      const record = object(entry, rowLabel);
+      exact(record, ['owner', 'target', 'reward'], [], rowLabel);
+      const owner = stringValue(record.owner, `${rowLabel}.owner`, MAX_OWNER_STRING);
+      if (owners.has(owner)) fail(`${label} has duplicate reroll owner`);
+      owners.add(owner);
+      return Object.freeze({
+        owner,
+        target: rerollTarget(record.target, `${rowLabel}.target`),
+        reward: reward(record.reward, `${rowLabel}.reward`),
+      });
+    }),
+  );
 }
 
 function roomGuideDescription(value: unknown, label: string) {
@@ -378,6 +428,13 @@ function roomGuideDescription(value: unknown, label: string) {
     case 'interactEris':
       exact(record, ['kind'], [], label);
       return Object.freeze({ kind });
+    case 'reroll':
+      exact(record, ['kind', 'target', 'reward'], [], label);
+      return Object.freeze({
+        kind,
+        target: rerollTarget(record.target, `${label}.target`),
+        reward: reward(record.reward, `${label}.reward`),
+      });
     case 'interactInfernalContractPedestal': {
       exact(record, ['kind'], ['rewardType', 'conversion'], label);
       if (record.conversion !== undefined && record.conversion !== 'timePiece')
@@ -433,7 +490,7 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   exact(
     record,
     ['id', 'owner', 'biomeKey', 'gameName', 'kind', 'overview', 'timeline', 'roomGuide', 'doors'],
-    ['anomaly', 'roomExitConformance', 'diagnostics', 'suppressedNpcShopping'],
+    ['anomaly', 'roomExitConformance', 'diagnostics', 'suppressedNpcShopping', 'rerolls'],
     label,
   );
   const suppressedNpcShopping =
@@ -547,6 +604,9 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
     overview: parsedOverview,
     timeline: parsedTimeline,
     roomGuide: parsedRoomGuide,
+    ...(record.rerolls === undefined
+      ? {}
+      : { rerolls: rerolls(record.rerolls, `${label}.rerolls`) }),
     doors: doors(record.doors, `${label}.doors`),
     ...(conformanceFacts === undefined
       ? {}

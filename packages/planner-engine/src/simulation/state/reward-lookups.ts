@@ -52,3 +52,20 @@ export function addHubBoardRewardLookup(
     }),
   });
 }
+
+/** A Hub board reroll overwrites its door's offered reward, so the board's set is rebuilt. */
+export function replaceHubBoardRewardLookup(
+  state: SimulationState,
+  lookupKey: string,
+  rewardTypes: readonly string[],
+): SimulationState {
+  if (state.rewardLookups[lookupKey] === undefined)
+    throw new Error(`unknown Hub reward lookup ${lookupKey}`);
+  return Object.freeze({
+    ...state,
+    rewardLookups: Object.freeze({
+      ...state.rewardLookups,
+      [lookupKey]: Object.freeze([...new Set(rewardTypes)]),
+    }),
+  });
+}

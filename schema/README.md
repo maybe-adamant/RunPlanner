@@ -40,6 +40,14 @@ is settled by the simulation (first eligible placeholder; the reward type with
 the most entries left in that placeholder's store); a pinned value is kept and
 assessed. The transition gives every such room both fields null.
 
+Rerolls are new optional state. A `reroll` room action (`rerollId`, `target`:
+a door, a door's cage slot or a wheel offer, and the new `reward`) and a Hub
+`reroll` action (`rerollId`, `hubSlotKey`, `reward`) each record one press;
+the target keeps its first draw. A rerolled owner holds the reward it is
+entered with in `rerolledIncomingReward`, `rerolledCages` or
+`rerolledOffers`. Trait, Pom, Well and Pool screens hold an optional
+`rerollCount`. The transition writes none of them.
+
 The migration moves a Shop-owned pedestal item, its collect action and its
 source entry to the room unchanged, and gives every other pedestal-declaring
 Preboss occurrence an unset item.

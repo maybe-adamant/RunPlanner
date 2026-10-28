@@ -21,7 +21,12 @@ import {
   requireEphyraSideRooms,
   requireShipCombatWheels,
 } from '../declaration';
-import { decodeCountedOffer, decodeNullableRewardState } from './reward-acquisition-codec';
+import {
+  decodeCountedOffer,
+  decodeNullableRewardState,
+  decodeRerolledRewards,
+  decodeRewardState,
+} from './reward-acquisition-codec';
 
 function expectedKind(value: unknown, expected: string, path: string): void {
   const kind = expectString(value, `${path}.kind`);
@@ -37,7 +42,18 @@ function decodeRewardWheel(
   path: string,
 ): RewardWheelState {
   const wheel = expectRecord(value, path);
-  expectExactKeys(wheel, ['storeKey', 'offerCount', 'offers', 'pickedOfferIndex'], path);
+  const hasRerolledOffers = Object.hasOwn(wheel, 'rerolledOffers');
+  expectExactKeys(
+    wheel,
+    [
+      'storeKey',
+      'offerCount',
+      'offers',
+      ...(hasRerolledOffers ? ['rerolledOffers'] : []),
+      'pickedOfferIndex',
+    ],
+    path,
+  );
   const storeKey = expectString(wheel.storeKey, `${path}.storeKey`);
   if (!descriptor.reward.storeKeys.includes(storeKey)) {
     failProjectDocument(`${path}.storeKey`, `${storeKey} is not available from this wheel`);
@@ -74,6 +90,28 @@ function decodeRewardWheel(
       );
     offers[offerKey] = reward;
   }
+  const rerolledOffers = hasRerolledOffers
+    ? decodeRerolledRewards(
+        wheel.rerolledOffers,
+        descriptor.offerKeys,
+        `${path}.rerolledOffers`,
+        (raw, rewardPath) => {
+          const reward = decodeRewardState(
+            raw,
+            catalog,
+            rewardPath,
+            { kind: 'producerLifecycle', key: descriptor.reward.producerLifecycleKey },
+            routeKey,
+          );
+          if (!descriptor.reward.allowedRewardTypes.includes(reward.offer.rewardType))
+            failProjectDocument(
+              `${rewardPath}.offer.rewardType`,
+              `${reward.offer.rewardType} is filtered from this wheel`,
+            );
+          return reward;
+        },
+      )
+    : undefined;
   const pickedOfferIndex = expectPositiveInteger(
     wheel.pickedOfferIndex,
     `${path}.pickedOfferIndex`,
@@ -85,6 +123,7 @@ function decodeRewardWheel(
     storeKey,
     offerCount,
     offers: Object.freeze(offers),
+    ...(rerolledOffers === undefined ? {} : { rerolledOffers }),
     pickedOfferIndex,
   });
 }

@@ -33,6 +33,13 @@ interface OperationContext extends ExecutionContext {
 interface ExecutionState {
   readonly events: readonly RoomLifecycleEvent[];
   readonly blockedAt?: import('../../authored-project/addresses').RoomActionSemanticAddress;
+  /**
+   * Wheel rerolls ranked before their wheel's use. The wheel's offers spawn as
+   * its phase starts, after the use's rank, so they settle right after.
+   */
+  readonly pendingWheelRerolls?: readonly EventData<
+    Extract<RoomLifecycleEvent, { readonly kind: 'rewardRerolled' }>
+  >[];
 }
 
 interface RoomActionSchedule {
@@ -161,12 +168,23 @@ const lifecycleEffectRegistry = Object.freeze({
   },
   recordPhaseOfferPoint: (context, state) => {
     const attachment = requireEncounterPhase(context).rewardAttachment;
-    return attachment?.kind !== 'rewardWheel'
-      ? state
-      : appendEvent(state, context, {
-          kind: 'offerPointMaterialized',
-          offerPoint: attachment.key,
-        });
+    if (attachment?.kind !== 'rewardWheel') return state;
+    let next = appendEvent(state, context, {
+      kind: 'offerPointMaterialized',
+      offerPoint: attachment.key,
+    });
+    const pending = next.pendingWheelRerolls ?? [];
+    for (const reroll of pending)
+      if (reroll.target.kind === 'wheelOffer' && reroll.target.wheelKey === attachment.key)
+        next = appendEvent(next, context, reroll);
+    const remaining = pending.filter(
+      (reroll) => reroll.target.kind !== 'wheelOffer' || reroll.target.wheelKey !== attachment.key,
+    );
+    const { pendingWheelRerolls: _settled, ...rest } = next;
+    void _settled;
+    return Object.freeze(
+      remaining.length === 0 ? rest : { ...rest, pendingWheelRerolls: Object.freeze(remaining) },
+    );
   },
   recordAppearance: (context, state) =>
     appendEvent(state, context, {
@@ -767,6 +785,19 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           kind: 'erisInteracted',
           owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
         });
+      case 'reroll': {
+        const reroll = Object.freeze({
+          kind: 'rewardRerolled' as const,
+          owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
+          target: row.reference.target,
+        });
+        return row.reference.target.kind === 'wheelOffer'
+          ? Object.freeze({
+              ...state,
+              pendingWheelRerolls: Object.freeze([...(state.pendingWheelRerolls ?? []), reroll]),
+            })
+          : appendEvent(state, operationContext, reroll);
+      }
       case 'completeFieldsCage':
       case 'chooseRewardWheel':
         throw new LifecycleExecutionContractError(

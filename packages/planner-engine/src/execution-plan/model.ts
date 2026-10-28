@@ -231,6 +231,24 @@ export interface ExecutionPhantomExit {
   };
 }
 
+/**
+ * What one reroll press redraws: a door of this room, one cage of a door into a
+ * Fields room (the one-based `CageRewards` index the game would pick at
+ * random), or one offer of this room's ship wheel.
+ */
+export type ExecutionRerollTarget =
+  | { readonly kind: 'door'; readonly exitKey: string }
+  | { readonly kind: 'cage'; readonly exitKey: string; readonly cageIndex: number }
+  | { readonly kind: 'wheelOffer'; readonly wheelKey: string; readonly offerKey: string };
+
+/** One reroll press: its target and the reward the native redraw must yield. */
+export interface ExecutionReroll {
+  /** Stable opaque reroll identity; never a position. */
+  readonly owner: string;
+  readonly target: ExecutionRerollTarget;
+  readonly reward: ExecutionReward;
+}
+
 /** Exact layout inputs consumed by native Mourning Fields setup. */
 export interface ExecutionFieldsLayout {
   readonly entryPair: {
@@ -434,6 +452,8 @@ export type ExecutionTraitOffer =
       /** Present only for a selected ordinary SpellDrop offer. */
       readonly hexTree?: ExecutionHexTree;
       readonly expectation?: ExecutionTraitScreenExpectation;
+      /** Native screen rerolls before these final rows; absent is none. */
+      readonly rerollCount?: number;
     }
   | {
       readonly kind: 'chaos';
@@ -447,12 +467,16 @@ export type ExecutionTraitOffer =
       readonly blessingKey: string;
       readonly rarity: string;
       readonly blessingValues: Readonly<Record<string, number>>;
+      /** Native screen rerolls before these final rows; absent is none. */
+      readonly rerollCount?: number;
     };
 
 export interface ExecutionLevelResolution {
   readonly offeredTargets: readonly string[];
   readonly selectedTarget: string | null;
   readonly levelCount: number;
+  /** Native screen rerolls before these final rows; absent is none. */
+  readonly rerollCount?: number;
 }
 
 /** Published acquisition roles are all intended materializations.
@@ -645,6 +669,12 @@ export interface ExecutionOverview {
     readonly fountain: ExecutionHubFountainUse;
     /** One entry per Hub departure, ordered by preceding visits 0..requiredVisitCount. */
     readonly departures: readonly ExecutionHubDepartureConformance[];
+    /** Board rerolls pressed in the Hub's first entry, in order; absent is none. */
+    readonly rerolls?: readonly {
+      readonly owner: string;
+      readonly slotKey: string;
+      readonly reward: ExecutionReward;
+    }[];
   };
   /** Complete declared N side-door state for a visited main room. */
   readonly localSlots?: readonly {
@@ -759,6 +789,8 @@ export interface ExecutionOverview {
   };
   readonly stygianWell?: {
     readonly interacted: boolean;
+    /** Native screen rerolls before the authored inventory; absent is none. */
+    readonly rerollCount?: number;
     readonly offers?: readonly {
       readonly generationKey: 'initial:healing' | 'initial:secondLeft' | 'initial:secondRight';
       readonly offerKey: string;
@@ -767,6 +799,8 @@ export interface ExecutionOverview {
   };
   readonly purgingPool?: {
     readonly interacted: boolean;
+    /** Native screen rerolls before the final list; absent is none. */
+    readonly rerollCount?: number;
     readonly traits?: readonly {
       readonly slotKey: 'left' | 'middle' | 'right';
       readonly traitKey: string | null;
@@ -1017,7 +1051,12 @@ export type ExecutionRoomGuideDescription =
     }
   | { readonly kind: 'useFountain'; readonly aromaticPhialTarget?: string }
   | { readonly kind: 'interactKeepsakeRack'; readonly keepsakeKey?: string }
-  | { readonly kind: 'interactEris' };
+  | { readonly kind: 'interactEris' }
+  | {
+      readonly kind: 'reroll';
+      readonly target: ExecutionRerollTarget;
+      readonly reward: ExecutionReward;
+    };
 
 /** One display-ordered authored action, optionally joined to its exact transaction. */
 export interface ExecutionRoomGuideRow {
@@ -1072,6 +1111,8 @@ export interface ExecutionOccurrence {
   readonly timeline: ExecutionTimeline;
   /** Existing canonical action chronology, projected for read-only room guidance. */
   readonly roomGuide: readonly ExecutionRoomGuideRow[];
+  /** Door, cage and wheel rerolls in the room's action order; absent is none. */
+  readonly rerolls?: readonly ExecutionReroll[];
   readonly doors: ExecutionDoors;
   readonly roomExitConformance?: ExecutionRoomExitConformance;
   readonly diagnostics?: {

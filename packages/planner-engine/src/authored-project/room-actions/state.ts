@@ -117,13 +117,14 @@ export function activeRoomActionReferences(
         );
     }
   }
+  // A rerolled door's room acquires its rerolled reward; its first draw is inert.
   const stateReward =
     occurrence.state.kind === 'counted' ||
     occurrence.state.kind === 'fixed' ||
     occurrence.state.kind === 'anomaly' ||
     occurrence.state.kind === 'ephyraCombat' ||
     occurrence.state.kind === 'freeReward'
-      ? occurrence.state.reward
+      ? (occurrence.rerolledIncomingReward ?? occurrence.state.reward)
       : undefined;
   const reward =
     scope?.incomingRewardState !== undefined
@@ -160,16 +161,25 @@ export function activeRoomActionReferences(
     references.push(Object.freeze({ kind: 'interactKeepsakeRack' }));
   if (occurrence.eris !== undefined && routeErisHost(room, biome.routeKey) !== undefined)
     references.push(Object.freeze({ kind: 'interactEris' }));
-  if (occurrence.state.kind === 'shipCombat') {
-    const activeWheels =
-      scope?.activeRewardWheelKeys !== undefined
+  const activeWheels =
+    occurrence.state.kind !== 'shipCombat'
+      ? new Set<string>()
+      : scope?.activeRewardWheelKeys !== undefined
         ? new Set(scope.activeRewardWheelKeys)
         : new Set(occurrence.state.encounterCount === 2 ? ['wheel1'] : ['wheel1', 'wheel2']);
+  if (occurrence.state.kind === 'shipCombat') {
     for (const wheelKey of Object.keys(occurrence.state.wheels)) {
-      if (activeWheels !== undefined && !activeWheels.has(wheelKey)) continue;
+      if (!activeWheels.has(wheelKey)) continue;
       references.push(Object.freeze({ kind: 'chooseRewardWheel', wheelKey }));
       references.push(Object.freeze({ kind: 'interactWheelReward', wheelKey }));
     }
+  }
+  // An authored reroll participates by its presence; a wheel reroll only while its wheel is active.
+  for (const reference of occurrence.roomActions.order) {
+    if (reference.kind !== 'reroll') continue;
+    if (reference.target.kind === 'wheelOffer' && !activeWheels.has(reference.target.wheelKey))
+      continue;
+    references.push(reference);
   }
   if (occurrence.state.kind === 'shop') {
     if (scope?.shopInventoryActive === undefined || scope.shopInventoryActive) {

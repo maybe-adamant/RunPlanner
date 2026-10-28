@@ -1,3 +1,4 @@
+import { screenRerollCountField, screenRerollSupported } from '../../screen-rerolls';
 import type { Catalog } from '../../../catalog-schema';
 import { routeErisHost, routeRoomShop } from '../../route-profile';
 import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
@@ -482,6 +483,28 @@ export function applyOccurrenceCommand(
         }),
       );
     }
+    case 'SetPurgingPoolRerollCount': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      if (occurrence.purgingPool === undefined)
+        failCommand(command, 'occurrence has no Purging Pool');
+      const room = catalog.rooms.byKey[occurrence.gameName];
+      requireScreenRerollCount(
+        command,
+        command.count,
+        room !== undefined && screenRerollSupported(catalog, { kind: 'purgingPool', room }),
+      );
+      if ((occurrence.purgingPool.rerollCount ?? 0) === command.count) return document;
+      const { rerollCount: _previous, ...pool } = occurrence.purgingPool;
+      void _previous;
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({
+          ...occurrence,
+          purgingPool: Object.freeze({ ...pool, ...screenRerollCountField(command.count) }),
+        }),
+      );
+    }
     case 'SetErisSpawned': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
       if (!command.spawned) {
@@ -624,6 +647,28 @@ export function applyOccurrenceCommand(
         Object.freeze({
           ...occurrence,
           stygianWell: Object.freeze({ ...occurrence.stygianWell, interacted: true }),
+        }),
+      );
+    }
+    case 'SetStygianWellRerollCount': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const room = catalog.rooms.byKey[occurrence.gameName];
+      if (occurrence.stygianWell === undefined || room === undefined)
+        failCommand(command, 'occurrence has no present Stygian Well');
+      requireScreenRerollCount(
+        command,
+        command.count,
+        screenRerollSupported(catalog, { kind: 'stygianWell', room }),
+      );
+      if ((occurrence.stygianWell.rerollCount ?? 0) === command.count) return document;
+      const { rerollCount: _previous, ...well } = occurrence.stygianWell;
+      void _previous;
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({
+          ...occurrence,
+          stygianWell: Object.freeze({ ...well, ...screenRerollCountField(command.count) }),
         }),
       );
     }
@@ -854,4 +899,14 @@ export function applyOccurrenceCommand(
     case 'ReplaceGorgonDeathDefianceCondition':
       return applyEncounterOccurrenceCommand(document, catalog, located, command);
   }
+}
+
+function requireScreenRerollCount(
+  command: Parameters<typeof failCommand>[0],
+  count: number,
+  supported: boolean,
+): void {
+  if (!Number.isInteger(count) || count < 0)
+    failCommand(command, 'screen reroll count must be a non-negative integer');
+  if (count > 0 && !supported) failCommand(command, 'this screen cannot be rerolled');
 }

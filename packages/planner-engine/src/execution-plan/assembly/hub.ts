@@ -1,3 +1,4 @@
+import { executionHubRerolls } from './rerolls';
 import { semanticAddressKey } from '../../authored-project/addresses';
 import type {
   CanonicalBatch,
@@ -41,11 +42,12 @@ export function hubOverview(
       'executionCoverageMissing',
       `${hub.room.gameName} lacks its final handoff`,
     );
+  const rerolls = executionHubRerolls(hub);
   return Object.freeze({
     room: Object.freeze({ gameName: hub.room.gameName }),
     slots: Object.freeze(
       hub.board.targets.map((target) => {
-        const reward = executionReward(target.room);
+        const reward = executionReward(target.room, 'generated');
         if (reward === undefined)
           throw new CompilerError(
             'executionCoverageMissing',
@@ -64,6 +66,7 @@ export function hubOverview(
     requiredVisitCount: hub.visits.length,
     fountain: hubFountainUse(hub),
     departures: hubDepartures(catalog, hub, departures),
+    ...(rerolls === undefined ? {} : { rerolls }),
   });
 }
 

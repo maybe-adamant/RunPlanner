@@ -187,8 +187,16 @@ export interface HubFountainUsedHistoryEvent extends HistoryEventBase {
   readonly owner: HubFountainAddress;
 }
 
+/** One Hub board reroll, pressed in the Hub's first entry after its board generates. */
+export interface HubRewardRerolledHistoryEvent extends HistoryEventBase {
+  readonly kind: 'hubRewardRerolled';
+  readonly origin: HubRoomAddress;
+  readonly owner: import('../../authored-project/addresses').HubRerollAddress;
+}
+
 export type HistoryEvent =
   | BiomeCompletedHistoryEvent
+  | HubRewardRerolledHistoryEvent
   | BiomeCounterResetHistoryEvent
   | BiomeStartedHistoryEvent
   | ClockworkBatchStateHistoryEvent

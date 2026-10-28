@@ -22,6 +22,7 @@ import { applyResourcePlacementCommand } from './resources';
 import type { ProjectCommand } from './types';
 import { semanticAddressKey } from '../addresses';
 import { applyRoomActionCommand } from './room-actions';
+import { applyRerollCommand } from './rerolls';
 import { reconcileNewRequiredRoomActions } from '../room-actions/defaults';
 import {
   parseEchoLastRewardPickupEntryKey,
@@ -186,6 +187,19 @@ function applyUnchecked(
         locateBiome(document, catalog, command),
         command,
       );
+    case 'InsertReroll':
+    case 'ReplaceRerollReward':
+    case 'InsertHubReroll':
+    case 'ReplaceHubRerollReward':
+    case 'RemoveHubReroll':
+    case 'DropRerolledReward':
+    case 'AdoptRerolledReward':
+      return applyRerollCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
     case 'InsertRoomAction':
     case 'UnplaceGeneratedDelivery':
     case 'RemoveRoomAction':
@@ -231,11 +245,13 @@ function applyUnchecked(
     case 'SetInfernalContractPedestalCollected':
     case 'ReplacePhantomExit':
     case 'SetPurgingPoolInteraction':
+    case 'SetPurgingPoolRerollCount':
     case 'ReplacePurgingPoolSlot':
     case 'SetErisSpawned':
     case 'AddStygianWell':
     case 'RemoveStygianWell':
     case 'SetStygianWellInteraction':
+    case 'SetStygianWellRerollCount':
     case 'ReplaceStygianWellOffer':
     case 'SetStygianWellPurchase':
     case 'ReplaceStygianWellTwistResult':

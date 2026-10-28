@@ -8,6 +8,8 @@ import {
   type InfernalContractPedestalAddress,
   type PhantomExitAddress,
   type StartingRewardAddress,
+  type RoomActionAddress,
+  type HubRerollAddress,
 } from '../../authored-project/addresses';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { ShopOptionSelection, ShopSlotAssessment } from '../../reward-kernel';
@@ -61,7 +63,10 @@ export type RewardProducerOwnerAddress =
   | InfernalContractPedestalAddress
   | PhantomExitAddress
   | AcquisitionEntryAddress
-  | StartingRewardAddress;
+  | StartingRewardAddress
+  /** A door, cage, wheel or Hub board reroll's new reward. */
+  | RoomActionAddress
+  | HubRerollAddress;
 
 export interface RewardProducerCandidateCapability {
   /** Reached generation contact, when backed by a captured producer frontier. */

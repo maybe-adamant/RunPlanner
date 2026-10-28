@@ -2,6 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument, AuthoredRewardState } from '../model';
 import type { AuthoredLevelResolution } from '../traits/state';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
+import { screenRerollCountField, screenRerollSupported } from '../screen-rerolls';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { locateReward, replaceOwnedReward } from './acquisition/reward-source';
 import type { LevelResolutionCommand } from './types';
@@ -25,6 +26,8 @@ function validate(
   effect: NonNullable<ReturnType<typeof levelResolutionEffectFor>>,
   value: AuthoredLevelResolution,
   command: LevelResolutionCommand,
+  rewardType: string,
+  existing: AuthoredLevelResolution | undefined,
 ): AuthoredLevelResolution {
   if (effect.kind === 'visibleChoice') {
     if (value.kind !== 'choice') failCommand(command, 'Pom acquisition requires a visible choice');
@@ -39,10 +42,21 @@ function validate(
       failCommand(command, `unknown trait ${value.selectedTraitKey}`);
     if (value.selectedTraitKey !== null && !value.offeredTraitKeys.includes(value.selectedTraitKey))
       failCommand(command, 'Pom selected trait must be one of the offered traits');
+    const count =
+      value.rerollCount ?? (existing?.kind === 'choice' ? existing.rerollCount : undefined);
+    if (count !== undefined && (!Number.isInteger(count) || count < 0))
+      failCommand(command, 'screen reroll count must be a non-negative integer');
+    if (
+      count !== undefined &&
+      count > 0 &&
+      !screenRerollSupported(catalog, { kind: 'levelChoice', rewardType })
+    )
+      failCommand(command, `${rewardType} screens cannot be rerolled`);
     return Object.freeze({
       kind: 'choice',
       offeredTraitKeys: Object.freeze([...value.offeredTraitKeys]),
       selectedTraitKey: value.selectedTraitKey,
+      ...screenRerollCountField(count),
     });
   }
   if (value.kind !== 'random')
@@ -97,11 +111,18 @@ export function applyLevelResolutionCommand(
       command,
       `no Pom level-resolution effect at role ${command.levelResolution.acquisitionRole}`,
     );
-  const value = validate(catalog, effect, command.value, command);
   const existing =
     locatedReward.reward.levelResolutionsByAcquisitionRole?.[
       command.levelResolution.acquisitionRole
     ];
+  const value = validate(
+    catalog,
+    effect,
+    command.value,
+    command,
+    locatedReward.reward.offer.rewardType,
+    existing,
+  );
   if (JSON.stringify(existing) === JSON.stringify(value)) return document;
   return replaceOwnedReward(
     document,

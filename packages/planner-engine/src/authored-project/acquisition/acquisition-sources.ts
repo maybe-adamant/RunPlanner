@@ -105,11 +105,20 @@ export function authoredAcquisitionSources(
     case 'anomaly':
     case 'ephyraCombat':
     case 'freeReward':
-      add(createIncomingRewardAddress(biome, occurrence.occurrenceId), occurrence.state.reward);
+      // A rerolled owner acquires its rerolled reward; its first draw is inert.
+      // An explicit incoming acquisition replaces the occurrence's own.
+      if (routeStartIncoming === undefined)
+        add(
+          createIncomingRewardAddress(biome, occurrence.occurrenceId),
+          occurrence.rerolledIncomingReward ?? occurrence.state.reward,
+        );
       break;
     case 'fieldsCombat':
       for (const [slotKey, reward] of Object.entries(occurrence.state.cages))
-        add(createLocalRewardAddress(biome, occurrence.occurrenceId, 'cages', slotKey), reward);
+        add(
+          createLocalRewardAddress(biome, occurrence.occurrenceId, 'cages', slotKey),
+          occurrence.state.rerolledCages?.[slotKey] ?? reward,
+        );
       for (const [slotKey, reward] of Object.entries(occurrence.state.optionalRewards))
         add(
           createLocalRewardAddress(biome, occurrence.occurrenceId, 'optionalRewards', slotKey),
@@ -121,7 +130,7 @@ export function authoredAcquisitionSources(
         for (const [offerKey, reward] of Object.entries(wheel.offers))
           add(
             createRewardWheelOfferAddress(biome, occurrence.occurrenceId, wheelKey, offerKey),
-            reward,
+            wheel.rerolledOffers?.[offerKey] ?? reward,
           );
       break;
     case 'shop':

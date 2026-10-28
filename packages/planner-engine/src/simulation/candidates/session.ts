@@ -68,7 +68,9 @@ import {
   type InfernalContractPedestalOptionCandidateQuery,
   type EvaluatedInfernalContractPedestalCandidate,
   type EvaluatedPhantomExitRewardCandidate,
+  type EvaluatedRerollRewardCandidate,
   type PhantomExitRewardCandidateQuery,
+  type RerollRewardCandidateQuery,
 } from './reward-producer';
 import {
   rewardWheelContextReached,
@@ -212,6 +214,7 @@ export type ProjectCandidateQuery =
   | ShopOfferOptionCandidateQuery
   | InfernalContractPedestalCandidateQuery
   | PhantomExitRewardCandidateQuery
+  | RerollRewardCandidateQuery
   | InfernalContractPedestalOptionCandidateQuery
   | AcquisitionEntryOfferCandidateQuery
   | SideRoomEntryOrderCandidateQuery
@@ -262,6 +265,7 @@ export type ProjectCandidateEvaluation =
   | EvaluatedShopOfferCandidate
   | EvaluatedInfernalContractPedestalCandidate
   | EvaluatedPhantomExitRewardCandidate
+  | EvaluatedRerollRewardCandidate
   | EvaluatedAcquisitionEntryOfferCandidate
   | EvaluatedSideRoomEntryOrderCandidate
   | EvaluatedSideRoomGenerationCandidate
@@ -558,15 +562,18 @@ function evaluateCandidateQuery(
         query,
       );
     case 'phantomExitReward':
+    case 'rerollReward': {
+      const owner = query.kind === 'phantomExitReward' ? query.exit : query.reroll;
       return evaluateRewardProducerCandidate(
         catalog,
         project,
         evaluation,
-        candidateArtifacts.biomeAt(createBiomeAddress(query.exit.routeKey, query.exit.biomeKey))
+        candidateArtifacts.biomeAt(createBiomeAddress(owner.routeKey, owner.biomeKey))
           ?.rewardProducers,
         undefined,
         query,
       );
+    }
     case 'acquisitionEntryOffer':
       return evaluateRewardProducerCandidate(
         catalog,

@@ -326,6 +326,15 @@ export function updateHub(
   }
   if (visits.length > descriptor.requiredVisits)
     failCommand(command, `Hub supports ${descriptor.requiredVisits} visits`);
+  // Reordering keeps every reroll exactly; rerolls are added and removed by their own commands.
+  const rerolls = (list: readonly HubAction[]) =>
+    JSON.stringify(
+      list
+        .flatMap((action) => (action.kind === 'reroll' ? [action] : []))
+        .sort((left, right) => left.rerollId.localeCompare(right.rerollId)),
+    );
+  if (rerolls(actions) !== rerolls(hub.actions))
+    failCommand(command, 'Hub action order must keep its rerolls');
   if (
     actions.length === hub.actions.length &&
     actions.every((action, index) => sameHubAction(action, hub.actions[index]!))
@@ -355,15 +364,30 @@ function normalizedHubActions(
 ): readonly HubAction[] {
   if (!Array.isArray(command.actions) || !command.actions.every(isHubAction))
     failCommand(command, 'Hub action order must contain Hub actions');
-  return command.actions.map((action): HubAction =>
-    action.kind === 'useFountain'
-      ? Object.freeze({ kind: 'useFountain' })
-      : Object.freeze({ kind: 'roomVisit', hubSlotKey: action.hubSlotKey }),
-  );
+  return command.actions.map((action): HubAction => {
+    switch (action.kind) {
+      case 'useFountain':
+        return Object.freeze({ kind: 'useFountain' });
+      case 'roomVisit':
+        return Object.freeze({ kind: 'roomVisit', hubSlotKey: action.hubSlotKey });
+      case 'reroll':
+        return Object.freeze({
+          kind: 'reroll',
+          rerollId: action.rerollId,
+          hubSlotKey: action.hubSlotKey,
+          reward: action.reward,
+        });
+    }
+  });
 }
 
 function sameHubAction(left: HubAction, right: HubAction): boolean {
-  return left.kind === 'roomVisit'
-    ? right.kind === 'roomVisit' && left.hubSlotKey === right.hubSlotKey
-    : right.kind === 'useFountain';
+  switch (left.kind) {
+    case 'roomVisit':
+      return right.kind === 'roomVisit' && left.hubSlotKey === right.hubSlotKey;
+    case 'useFountain':
+      return right.kind === 'useFountain';
+    case 'reroll':
+      return right.kind === 'reroll' && left.rerollId === right.rerollId;
+  }
 }

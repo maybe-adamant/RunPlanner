@@ -13,7 +13,7 @@ import { attestEncounterEntryVowRanks } from '../../arcana-fear';
 import type { HistoryEvent } from '../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '../../materialization';
 import { resourcePlacementFindingRegions } from '../../resources';
-import { addHubBoardRewardLookup } from '../../state/reward-lookups';
+import { addHubBoardRewardLookup, replaceHubBoardRewardLookup } from '../../state/reward-lookups';
 import {
   normalizeOfferedRewardTypes,
   publishOfferedRewardTypes,
@@ -63,6 +63,12 @@ import { applyRoomDepartedTransition } from './lifecycle-transitions/room-depart
 import { applyRoomEnteredTransition } from './lifecycle-transitions/room-entered';
 import { applyRoomExitedTransition } from './lifecycle-transitions/room-exited';
 import { applyRoomPreparedTransition } from './lifecycle-transitions/room-prepared';
+import {
+  applyRewardRerolledTransition,
+  hubTargetContext,
+  roomTargetContext,
+} from './lifecycle-transitions/reward-rerolled';
+import { historyFindingChronology } from './finding-chronology';
 import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
 import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
 import { spawnInfernalContractPedestal } from './offer-lifecycle/infernal-contract-pedestal';
@@ -84,6 +90,106 @@ const erisInteracted: ChronologySeamHandler<'erisInteracted'> = (context, state,
     state.branches,
   );
   return { state: withBranches(state, transition.branches), emissions: [] };
+};
+
+/** One door, cage or wheel reroll press at its authored rank. */
+const rewardRerolled: ChronologySeamHandler<'rewardRerolled'> = (context, state, event) => {
+  const source = authoredRoom(context, event.origin);
+  const ownerKey = semanticAddressKey(event.owner);
+  const reroll = source?.roomActionRoster.rows.find(
+    (row) => semanticAddressKey(row.owner) === ownerKey,
+  )?.reference;
+  if (source === undefined || reroll?.kind !== 'reroll')
+    throw new BiomeRewardSimulationContractError(`${ownerKey} reached without its reroll`);
+  const transition = applyRewardRerolledTransition({
+    catalog: context.catalog,
+    owner: event.owner,
+    reward: reroll.reward,
+    target: roomTargetContext(
+      context.catalog,
+      source,
+      context.prepared.batchesByParent.get(semanticAddressKey(source.origin)),
+      reroll,
+      state.peers,
+    ),
+    historySequence: event.sequence,
+    view: context.history.viewsBySequence[event.sequence - 1],
+    branches: state.branches,
+    rerolledOffers: state.rerolledOffers,
+  });
+  return {
+    state: Object.freeze({
+      ...state,
+      branches: transition.branches,
+      rerolledOffers: transition.rerolledOffers,
+    }),
+    emissions: [
+      generationFindings(transition.findings),
+      { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
+      ...(transition.settlement === undefined
+        ? []
+        : [{ kind: 'rerollSettlement' as const, settlement: transition.settlement }]),
+    ],
+  };
+};
+
+/** One Hub board reroll, after the board generated and before the first room visit. */
+const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, state, event) => {
+  const ownerKey = semanticAddressKey(event.owner);
+  const hub = context.snapshot.decisions.find(
+    (decision): decision is CanonicalHubDecision =>
+      decision.kind === 'hub' && decision.origin.hubKey === event.owner.hubKey,
+  );
+  const reroll = hub?.rerolls.find(
+    (candidate) => semanticAddressKey(candidate.origin) === ownerKey,
+  );
+  if (hub === undefined || reroll === undefined)
+    throw new BiomeRewardSimulationContractError(`${ownerKey} reached without its Hub reroll`);
+  const transition = applyRewardRerolledTransition({
+    catalog: context.catalog,
+    owner: event.owner,
+    reward: reroll.reward,
+    target: hubTargetContext(context.catalog, hub, reroll.hubSlotKey, state.peers),
+    ...(reroll.afterFirstVisit ? { refused: 'afterHubVisit' as const } : {}),
+    historySequence: event.sequence,
+    view: context.history.viewsBySequence[event.sequence - 1],
+    chronology: Object.freeze({
+      kind: 'hubBoard' as const,
+      history: historyFindingChronology(event.sequence),
+    }),
+    branches: state.branches,
+    rerolledOffers: state.rerolledOffers,
+  });
+  const { progression } = context.prepared.layout;
+  const boardTypes = state.peers.map(
+    (peer) =>
+      (transition.rerolledOffers.get(semanticAddressKey(peer.origin)) ?? peer.offer).rewardType,
+  );
+  const branches =
+    progression.kind !== 'hub' || transition.settlement?.poolRemainingAfter === undefined
+      ? transition.branches
+      : Object.freeze(
+          transition.branches.map((branch) =>
+            Object.freeze({
+              ...branch,
+              state: replaceHubBoardRewardLookup(
+                branch.state,
+                progression.rewardLookup.key,
+                boardTypes,
+              ),
+            }),
+          ),
+        );
+  return {
+    state: Object.freeze({ ...state, branches, rerolledOffers: transition.rerolledOffers }),
+    emissions: [
+      generationFindings(transition.findings),
+      { kind: 'producerFrontiers', frontiers: transition.producerFrontiers },
+      ...(transition.settlement === undefined
+        ? []
+        : [{ kind: 'rerollSettlement' as const, settlement: transition.settlement }]),
+    ],
+  };
 };
 
 const keepsakeRackUsed: ChronologySeamHandler<'keepsakeRackUsed'> = (context, state, event) => {
@@ -1152,6 +1258,8 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     fountainUsed: { step: fountainUsed },
     keepsakeRackUsed: { step: keepsakeRackUsed },
     erisInteracted: { step: erisInteracted },
+    rewardRerolled: { step: rewardRerolled },
+    hubRewardRerolled: { step: hubRewardRerolled },
     requiredObjectSpawned: { step: advanceOnly },
     encounterRecorded: { step: advanceOnly },
     encounterStarted: { step: encounterStarted },

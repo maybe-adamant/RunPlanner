@@ -21,6 +21,7 @@ import {
   object,
   stringArray,
   stringValue,
+  screenRerollCount,
 } from './primitives';
 
 /** A nonempty `depth:slot` to talent map of one realised Hex tree. */
@@ -185,7 +186,7 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
         'rarity',
         'blessingValues',
       ],
-      [],
+      ['rerollCount'],
       label,
     );
     if (record.giver !== 'Chaos') fail(`${label}.giver must be Chaos`);
@@ -216,13 +217,14 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
       blessingKey: stringValue(record.blessingKey, `${label}.blessingKey`),
       rarity: stringValue(record.rarity, `${label}.rarity`),
       blessingValues: numberRecord(record.blessingValues, `${label}.blessingValues`),
+      ...screenRerollCount(record, label),
     });
   }
   if (record.kind !== 'traits') fail(`${label}.kind is unsupported`);
   exact(
     record,
     ['kind', 'giver', 'options', 'selected'],
-    ['rejected', 'hexTree', 'expectation'],
+    ['rejected', 'hexTree', 'expectation', 'rerollCount'],
     label,
   );
   const hexTree = (value: unknown, treeLabel: string): ExecutionHexTree => {
@@ -648,12 +650,13 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
             TRAIT_SCREEN_EXPECTATION_KEYS,
           ),
         }),
+    ...screenRerollCount(record, label),
   });
 }
 
 export function levelResolution(value: unknown, label: string): ExecutionLevelResolution {
   const record = object(value, label);
-  exact(record, ['offeredTargets', 'selectedTarget', 'levelCount'], [], label);
+  exact(record, ['offeredTargets', 'selectedTarget', 'levelCount'], ['rerollCount'], label);
   return Object.freeze({
     offeredTargets: Object.freeze(stringArray(record.offeredTargets, `${label}.offeredTargets`, 3)),
     selectedTarget:
@@ -661,6 +664,7 @@ export function levelResolution(value: unknown, label: string): ExecutionLevelRe
         ? null
         : stringValue(record.selectedTarget, `${label}.selectedTarget`),
     levelCount: integer(record.levelCount, `${label}.levelCount`),
+    ...screenRerollCount(record, label),
   });
 }
 

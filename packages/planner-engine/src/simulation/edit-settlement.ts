@@ -9,7 +9,10 @@ import {
   type OccurrenceAddress,
   type SemanticAddress,
 } from '../authored-project/addresses';
-import { ProjectCommandContractError } from '../authored-project/commands/contract';
+import {
+  ProjectCommandContractError,
+  projectCommandAddress,
+} from '../authored-project/commands/contract';
 import { applyProjectCommand } from '../authored-project/commands/dispatch';
 import type { ProjectCommand } from '../authored-project/commands/types';
 import type { ProjectDocument, RoomOccurrence } from '../authored-project/model';
@@ -203,6 +206,23 @@ function settleProjectEditRepairs(options: ProjectEditSettlementOptions): Projec
   let project = applyProjectCommand(before.project, catalog, command);
   if (project === before.project) return Object.freeze({ assembly: before });
   let assembly = evaluate(project);
+  // The reroll pool is a fixed budget: a new spend past it is refused, while
+  // an upstream edit that shrinks the pool keeps its spends with a finding.
+  if (addsRerollSpend(before.project, project, command)) {
+    const overspent = (evaluated: ProjectEvaluationAssembly) =>
+      new Set(
+        evaluated.evaluation.findings
+          .filter((finding) => finding.code === 'rerollPoolExceeded')
+          .map((finding) => semanticAddressKey(finding.origin)),
+      );
+    const prior = overspent(before);
+    if ([...overspent(assembly)].some((owner) => !prior.has(owner)))
+      throw new ProjectCommandContractError(
+        command.kind,
+        projectCommandAddress(command),
+        'the reroll pool has nothing left for this spend',
+      );
+  }
   // Each repair consumes one exact displaced owner or required obligation. A
   // repeated repair means an inconsistent contact, not permission to replay
   // forever: settlement stops with the last evaluated assembly and the fault.
@@ -389,4 +409,33 @@ export function settleCommandWithoutNewFinding(
   return settled.evaluation.findings.every((finding) => known.has(key(finding)))
     ? settled
     : undefined;
+}
+
+/** Every screen reroll count authored anywhere in a project: trait, Pom, Well and Pool screens. */
+function screenRerollTotal(value: unknown): number {
+  if (Array.isArray(value))
+    return value.reduce((sum: number, entry) => sum + screenRerollTotal(entry), 0);
+  if (value === null || typeof value !== 'object') return 0;
+  return Object.entries(value).reduce(
+    (sum, [key, entry]) =>
+      sum + (key === 'rerollCount' && typeof entry === 'number' ? entry : screenRerollTotal(entry)),
+    0,
+  );
+}
+
+/** Whether the command presses a new reroll or raises a screen's reroll count. */
+function addsRerollSpend(
+  before: ProjectDocument,
+  after: ProjectDocument,
+  command: ProjectCommand,
+): boolean {
+  if (command.kind === 'InsertReroll' || command.kind === 'InsertHubReroll') return true;
+  if (
+    command.kind !== 'SetStygianWellRerollCount' &&
+    command.kind !== 'SetPurgingPoolRerollCount' &&
+    command.kind !== 'ReplaceTraitOffer' &&
+    command.kind !== 'ReplaceLevelResolution'
+  )
+    return false;
+  return screenRerollTotal(after.route) > screenRerollTotal(before.route);
 }

@@ -20,6 +20,7 @@ import {
   decodeCountedOffer,
   decodeNullableRewardState,
   decodePayload,
+  decodeRerolledRewards,
   decodeRewardState,
 } from './decoding/reward-acquisition-codec';
 import { decodeEphyraCombatState, decodeShipCombatState } from './decoding/ship-ephyra-codec';
@@ -57,9 +58,17 @@ export function decodeRoomState(
     case 'FieldsCombat': {
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'fieldsCombat', path);
+      const hasRerolledCages = Object.hasOwn(state, 'rerolledCages');
       expectExactKeys(
         state,
-        ['kind', 'cages', 'optionalRewardCount', 'optionalRewards', 'spatial'],
+        [
+          'kind',
+          'cages',
+          ...(hasRerolledCages ? ['rerolledCages'] : []),
+          'optionalRewardCount',
+          'optionalRewards',
+          'spatial',
+        ],
         path,
       );
       const descriptor = requireFieldsCages(room, path);
@@ -89,6 +98,29 @@ export function decodeRoomState(
         );
         cages[slotKey] = Object.freeze({ ...reward, offer });
       }
+      const rerolledCages = hasRerolledCages
+        ? decodeRerolledRewards(
+            state.rerolledCages,
+            descriptor.slotKeys,
+            `${path}.rerolledCages`,
+            (raw, rewardPath) => {
+              const reward = decodeRewardState(
+                raw,
+                catalog,
+                rewardPath,
+                { kind: 'producerLifecycle', key: descriptor.reward.producerLifecycleKey },
+                routeKey,
+              );
+              const offer = decodeCountedOffer(
+                reward.offer,
+                catalog,
+                descriptor.reward,
+                `${rewardPath}.offer`,
+              );
+              return Object.freeze({ ...reward, offer });
+            },
+          )
+        : undefined;
       const optionalDescriptor = requireFieldsOptionalRewards(room, path);
       const optionalRewardCount = state.optionalRewardCount;
       if (
@@ -128,6 +160,7 @@ export function decodeRoomState(
       return Object.freeze({
         kind: 'fieldsCombat',
         cages: Object.freeze(cages),
+        ...(rerolledCages === undefined ? {} : { rerolledCages }),
         optionalRewardCount,
         optionalRewards: Object.freeze(optionalRewards),
         spatial: decodeFieldsSpatialState(state.spatial, room, `${path}.spatial`),

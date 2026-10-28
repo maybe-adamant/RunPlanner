@@ -420,6 +420,24 @@ export function phantomExitSettlementForProjectEvaluationAssembly(
   );
 }
 
+/**
+ * One reached reroll as the simulation settled it, with the run's reroll pool
+ * remainder after it; undefined while unreached.
+ */
+export function rerollSettlementForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  reroll:
+    | import('../../authored-project/addresses').RoomActionAddress
+    | import('../../authored-project/addresses').HubRerollAddress,
+): import('../rewards/model').RerollSettlement | undefined {
+  const biome = assembly.evaluation.route.biomes.find(
+    (candidate) => candidate.biomeKey === reroll.biomeKey,
+  );
+  if (biome === undefined || !('rewards' in biome)) return undefined;
+  const key = semanticAddressKey(reroll);
+  return biome.rewards.rerolls.find((settlement) => semanticAddressKey(settlement.owner) === key);
+}
+
 /** Narrow exact-assembly query for derived entries at one reached acquisition site. */
 export function derivedAcquisitionEntriesForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,

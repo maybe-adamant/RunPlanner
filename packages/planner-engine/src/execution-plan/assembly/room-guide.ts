@@ -1,7 +1,8 @@
 import { semanticAddressKey } from '../../authored-project/addresses';
 import { hermesShrineInitialSlotKey, type RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions/key';
-import type { CanonicalAuthoredRoom } from '../../simulation/materialization';
+import type { CanonicalAuthoredRoom, CanonicalBatch } from '../../simulation/materialization';
+import { rerollGuideDescription } from './rerolls';
 import type { CompleteValidBiomeProjectEvaluation } from '../../simulation/evaluation/evaluation-products';
 import type {
   ExecutionReward,
@@ -19,6 +20,7 @@ function rewardFor(transaction: ExecutionTimelineTransaction | undefined) {
 function descriptionFor(
   reference: RoomActionReference,
   room: CanonicalAuthoredRoom,
+  batch: CanonicalBatch | undefined,
   transaction: ExecutionTimelineTransaction | undefined,
   timePieced: boolean,
   convertedReward: ExecutionReward | undefined,
@@ -156,6 +158,8 @@ function descriptionFor(
       });
     case 'interactEris':
       return Object.freeze({ kind: reference.kind });
+    case 'reroll':
+      return rerollGuideDescription(room, batch, reference);
     case 'purchaseHermesShrineOffer': {
       const shrine = room.hermesShrine;
       const slotKey = hermesShrineInitialSlotKey(reference.generationKey);
@@ -179,6 +183,7 @@ function descriptionFor(
  */
 export function assembleExecutionRoomGuide(
   room: CanonicalAuthoredRoom,
+  batch: CanonicalBatch | undefined,
   biome: CompleteValidBiomeProjectEvaluation,
   transactions: readonly ExecutionTimelineTransaction[],
   selected: boolean,
@@ -230,6 +235,7 @@ export function assembleExecutionRoomGuide(
           description: descriptionFor(
             entry.action.reference,
             room,
+            batch,
             transaction,
             convertedReward !== undefined,
             convertedReward,

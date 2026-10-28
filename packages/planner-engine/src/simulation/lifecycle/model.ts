@@ -49,6 +49,12 @@ export type RoomLifecycleEvent =
       readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
     })
   | (RoomLifecycleEventBase & {
+      /** One door, cage or wheel reroll press at its authored rank. */
+      readonly kind: 'rewardRerolled';
+      readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
+      readonly target: import('../../authored-project/model').RerollTarget;
+    })
+  | (RoomLifecycleEventBase & {
       readonly kind: 'erisInteracted';
       readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
     })

@@ -411,10 +411,36 @@ function baseContribution(
         reference,
         'required',
         frozen({ kind: 'shipPreCombat', wheelKey: reference.wheelKey }),
-        reference.wheelKey === 'wheel2'
-          ? [frozen({ kind: 'afterCheckpoint', checkpointKey: 'nextPhaseUsable:wheel1' })]
-          : [],
+        [
+          ...(reference.wheelKey === 'wheel2'
+            ? [
+                frozen({
+                  kind: 'afterCheckpoint' as const,
+                  checkpointKey: 'nextPhaseUsable:wheel1',
+                }),
+              ]
+            : []),
+          // Using the wheel ends its rerolls.
+          ...occurrence.roomActions.order.flatMap((action) =>
+            action.kind === 'reroll' &&
+            action.target.kind === 'wheelOffer' &&
+            action.target.wheelKey === reference.wheelKey
+              ? [frozen({ kind: 'afterAction' as const, action })]
+              : [],
+          ),
+        ],
         createRewardWheelAddress(biome, occurrence.occurrenceId, reference.wheelKey),
+      );
+    case 'reroll':
+      // Door and cage rerolls follow the doors unlocking; a wheel's precede its use.
+      return contribution(
+        biome,
+        occurrence,
+        reference,
+        'optional',
+        reference.target.kind === 'wheelOffer'
+          ? frozen({ kind: 'shipPreCombat', wheelKey: reference.target.wheelKey })
+          : frozen({ kind: 'postOutgoing' }),
       );
     case 'interactWheelReward': {
       const wheel =

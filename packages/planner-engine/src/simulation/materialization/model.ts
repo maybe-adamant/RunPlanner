@@ -51,7 +51,37 @@ export type BiomeMaterializationLoadout = Pick<
   'weaponKey' | 'aspectKey' | 'fearRanks' | 'startingReward'
 >;
 
-export interface CanonicalResolvedIncomingReward {
+/**
+ * A rerolled owner's effective reward: `offer` and its acquisition are the
+ * reward after the last reroll, while generation offers the first draw.
+ */
+export interface CanonicalRewardReroll {
+  readonly generatedOffer: ResolvedRewardOffer;
+}
+
+/** Fields a rerollable reward owner carries beside its offer. */
+export interface CanonicalRerollableReward {
+  readonly reroll?: CanonicalRewardReroll;
+  /**
+   * The authored rerolled acquisition does not match the effective offer, or
+   * no reroll remains for it; kept for repair and reported.
+   */
+  readonly rerolledRewardMismatch?: true;
+}
+
+/**
+ * The owner as its own generation sees it: a rerolled owner offers its first
+ * draw. Acquisition reads the owner itself.
+ */
+export function forGeneration<
+  T extends { readonly offer: ResolvedRewardOffer; readonly reroll?: CanonicalRewardReroll },
+>(reward: T): T {
+  return reward.reroll === undefined
+    ? reward
+    : Object.freeze({ ...reward, offer: reward.reroll.generatedOffer });
+}
+
+export interface CanonicalResolvedIncomingReward extends CanonicalRerollableReward {
   readonly origin: IncomingRewardAddress | LocalRewardAddress;
   /** Offer ownership can remain route-start while its acquisition remains room-local. */
   readonly offerOrigin?: StartingRewardAddress;
@@ -121,7 +151,7 @@ export interface CanonicalShopEntryState {
   readonly travelDealRefill?: CanonicalShopOffer | null;
 }
 
-export interface CanonicalLocalReward {
+export interface CanonicalLocalReward extends CanonicalRerollableReward {
   readonly origin: LocalRewardAddress;
   readonly groupKey: string;
   readonly slotKey: string;
@@ -157,7 +187,7 @@ export interface CanonicalFieldsEntryPair {
   readonly endPointId: number;
 }
 
-export interface CanonicalRewardWheelOffer {
+export interface CanonicalRewardWheelOffer extends CanonicalRerollableReward {
   readonly origin: RewardWheelOfferAddress;
   readonly offerKey: string;
   readonly offer: ResolvedRewardOffer;
@@ -367,6 +397,8 @@ export type CanonicalPhysicalExit =
       readonly compatibilityPolicyKey: string;
       /** Declaration-owned visibility/automatic-continuation behavior. */
       readonly behavior: import('../../catalog-schema').ExitBehavior;
+      /** Native door `AllowReroll`; the destination's `ForceDoorAllowReroll` can still grant it. */
+      readonly allowReroll: boolean;
     }
   | { readonly kind: 'unavailable'; readonly exitKey: string; readonly index: number };
 
@@ -483,6 +515,16 @@ export interface CanonicalHubDecision {
   readonly visits: readonly CanonicalHubVisit[];
   /** Present once the fountain use is placed; absent while it is unplanned. */
   readonly fountain?: CanonicalHubFountainUse;
+  /** Board rerolls in authored order, pressed in the Hub's first entry. */
+  readonly rerolls: readonly CanonicalHubReroll[];
+}
+
+/** One Hub board reroll; one authored after a room visit meets a restored board. */
+export interface CanonicalHubReroll {
+  readonly origin: import('../../authored-project/addresses').HubRerollAddress;
+  readonly hubSlotKey: string;
+  readonly reward: ResolvedRewardOffer;
+  readonly afterFirstVisit: boolean;
 }
 
 /** The Hub fountain use, settled in the Hub after its preceding room visits. */

@@ -19,6 +19,7 @@ import { authoredShopOffer, TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { updateOccurrence } from './occurrence/mutation';
 import type { RoomActionCommand } from './types';
+import { reconcileRemovedOrMovedReroll } from './rerolls';
 
 function requireIndex(
   command: RoomActionCommand,
@@ -168,6 +169,9 @@ export function applyRoomActionCommand(
       if (command.reference.kind === 'interactInfernalContractPedestal') {
         failCommand(command, 'the Contract pedestal uses SetInfernalContractPedestalCollected');
       }
+      if (command.reference.kind === 'reroll') {
+        failCommand(command, 'rerolls use InsertReroll');
+      }
       const key = roomActionKey(command.reference);
       if (key !== command.action.actionKey) {
         failCommand(command, 'reference does not match the addressed room action');
@@ -312,5 +316,13 @@ export function applyRoomActionCommand(
     if (Object.keys(acquisitionSites).length === 0) delete nextOccurrence.acquisitionSites;
     else nextOccurrence.acquisitionSites = Object.freeze(acquisitionSites);
   }
-  return updateOccurrence(document, located, Object.freeze(nextOccurrence));
+  const updated = updateOccurrence(document, located, Object.freeze(nextOccurrence));
+  // Removing or moving a reroll can change its target's effective reward.
+  const reroll =
+    command.kind === 'RemoveRoomAction' || command.kind === 'MoveRoomAction'
+      ? order[existingIndex]
+      : undefined;
+  return reroll?.kind === 'reroll'
+    ? reconcileRemovedOrMovedReroll(updated, catalog, located, occurrence, reroll)
+    : updated;
 }

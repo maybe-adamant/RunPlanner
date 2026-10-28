@@ -28,7 +28,12 @@ import {
 import type { TraitHistoryState } from '../traits/history/model';
 import { echoShopDuplicateStatus, steadyGrowthInterval } from '../traits/history/fold';
 import type { SimulationState } from '../state/model';
-import { artificerStatus, attestEffectiveHordesRank } from '../arcana-fear';
+import {
+  artificerStatus,
+  attestEffectiveHordesRank,
+  rerollKindEnabled,
+  rerollPoolRemaining,
+} from '../arcana-fear';
 import {
   projectStygianWellLegality,
   type StygianWellLegalityState,
@@ -161,6 +166,12 @@ export interface RunStateSnapshot {
     readonly investedPathPoints: number;
     /** Task Force's prerequisite: the God Sent Olympian talent is invested. */
     readonly olympianTalentInvested: boolean;
+  };
+  /** The run's reroll pool and which reroll kinds a held card enables now. */
+  readonly rerolls: {
+    readonly remaining: number;
+    readonly doorsEnabled: boolean;
+    readonly screensEnabled: boolean;
   };
   /** Normalized Artificer counters, derived where the catalog is available. */
   readonly artificer?: {
@@ -817,6 +828,11 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
       bankedPathPoints: first.hexProgress.bankedPathPoints,
       investedPathPoints: first.hexProgress.investedNodeKeys.length,
       olympianTalentInvested: hexOlympianTalentInvested(context.catalog, first.hexProgress),
+    }),
+    rerolls: Object.freeze({
+      remaining: rerollPoolRemaining(firstState),
+      doorsEnabled: rerollKindEnabled(context.catalog, firstState.arcanaFear, 'doors'),
+      screensEnabled: rerollKindEnabled(context.catalog, firstState.arcanaFear, 'screens'),
     }),
     ...(currentArtificerStatus === undefined
       ? {}

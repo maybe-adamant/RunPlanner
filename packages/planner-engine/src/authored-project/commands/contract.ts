@@ -136,11 +136,13 @@ function commandContractAddress(
     case 'ReplaceShipEncounterCount':
     case 'ReplaceFieldsOptionalRewardCount':
     case 'SetPurgingPoolInteraction':
+    case 'SetPurgingPoolRerollCount':
     case 'ReplacePurgingPoolSlot':
     case 'SetErisSpawned':
     case 'AddStygianWell':
     case 'RemoveStygianWell':
     case 'SetStygianWellInteraction':
+    case 'SetStygianWellRerollCount':
     case 'ReplaceStygianWellOffer':
     case 'SetStygianWellPurchase':
     case 'ReplaceStygianWellTwistResult':
@@ -155,7 +157,18 @@ function commandContractAddress(
     case 'RemoveRoomAction':
     case 'MoveRoomAction':
     case 'SetHermesShrinePurchaseRush':
+    case 'ReplaceRerollReward':
       return command.action;
+    case 'InsertReroll':
+      return command.occurrence;
+    case 'InsertHubReroll':
+      return command.hub;
+    case 'ReplaceHubRerollReward':
+    case 'RemoveHubReroll':
+      return command.reroll;
+    case 'DropRerolledReward':
+    case 'AdoptRerolledReward':
+      return command.owner;
     case 'ReplaceShopPurchaseParticipation':
       return command.offer;
     case 'ReplaceIncomingReward':
@@ -224,6 +237,7 @@ export function projectCommandAddress(
     case 'RemoveStygianWell':
       return createRoomFeatureAddress(command.occurrence, { kind: 'stygianWellPresence' });
     case 'SetStygianWellInteraction':
+    case 'SetStygianWellRerollCount':
       return createRoomFeatureAddress(command.occurrence, { kind: 'stygianWellInventory' });
     case 'ReplaceStygianWellOffer':
       return createRoomFeatureAddress(command.occurrence, {
@@ -246,6 +260,7 @@ export function projectCommandAddress(
         generationKey: command.generationKey,
       });
     case 'SetPurgingPoolInteraction':
+    case 'SetPurgingPoolRerollCount':
       return createRoomFeatureAddress(command.occurrence, { kind: 'purgingPoolInventory' });
     case 'ReplacePurgingPoolSlot':
       return createRoomFeatureAddress(command.occurrence, {

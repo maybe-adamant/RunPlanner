@@ -1,5 +1,6 @@
 import { routeRoomDeclaration } from '../route-profile';
-import { locateReward, updateRewardState } from './acquisition/reward-source';
+import { screenRerollSupported } from '../screen-rerolls';
+import { locateReward, replaceOccurrenceReward } from './acquisition/reward-source';
 import type { Catalog } from '../../catalog-schema';
 import {
   traitGiverForAcquisitionRole,
@@ -86,12 +87,45 @@ function replaceTraitOfferValue(
   existing: AuthoredTraitOffer | null,
   command: TraitOfferOwnedCommand,
 ): AuthoredTraitOffer | null {
-  return reconcileSteadyGrowthTargets(
+  return reconcileScreenRerollCount(
     catalog,
     existing,
-    replaceTraitOfferValueWithoutTargets(catalog, existing, command),
+    reconcileSteadyGrowthTargets(
+      catalog,
+      existing,
+      replaceTraitOfferValueWithoutTargets(catalog, existing, command),
+      command,
+    ),
     command,
   );
+}
+
+/**
+ * The screen's reroll count survives every edit of its rows; a complete
+ * replacement may set it, and 0 clears it.
+ */
+function reconcileScreenRerollCount(
+  catalog: Catalog,
+  existing: AuthoredTraitOffer | null,
+  next: AuthoredTraitOffer | null,
+  command: TraitOfferOwnedCommand,
+): AuthoredTraitOffer | null {
+  if (next === null || next.kind === 'fallbackGold') return next;
+  const requested =
+    command.kind === 'ReplaceTraitOffer' && command.value.kind !== 'fallbackGold'
+      ? command.value.rerollCount
+      : undefined;
+  const count =
+    requested ??
+    (existing !== null && existing.kind !== 'fallbackGold' ? existing.rerollCount : undefined);
+  const { rerollCount: _previous, ...rest } = next;
+  void _previous;
+  if (count === undefined || count === 0) return Object.freeze(rest) as AuthoredTraitOffer;
+  if (!Number.isInteger(count) || count < 0)
+    failCommand(command, 'screen reroll count must be a non-negative integer');
+  if (!screenRerollSupported(catalog, { kind: 'traitOffer', giverKey: next.giverKey }))
+    failCommand(command, `${next.giverKey} screens cannot be rerolled`);
+  return Object.freeze({ ...rest, rerollCount: count }) as AuthoredTraitOffer;
 }
 
 function replaceTraitOfferValueWithoutTargets(
@@ -664,17 +698,7 @@ export function applyTraitOfferCommand(
             reward: nextReward,
           }),
         })
-      : Object.freeze({
-          ...occurrence,
-          state: updateRewardState(
-            catalog,
-            occurrence,
-            occurrence.state,
-            owner,
-            command,
-            () => nextReward,
-          ),
-        });
+      : replaceOccurrenceReward(catalog, occurrence, owner, command, nextReward);
   return updateOccurrenceTopology(
     document,
     located,

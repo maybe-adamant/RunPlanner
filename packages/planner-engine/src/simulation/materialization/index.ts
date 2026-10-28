@@ -22,6 +22,7 @@ export {
   type EnteredRewardStore,
 } from './entered-reward-stores';
 export { materializeShipCombatState, type MaterializedShipCombatState } from './rooms/templates';
+export { forGeneration } from './model';
 export type {
   CanonicalAuthoredRoom,
   CanonicalAdditionalContinuation,
@@ -52,6 +53,8 @@ export type {
   CanonicalRewardWheelOffer,
   CanonicalPhysicalExit,
   CanonicalResolvedIncomingReward,
+  CanonicalRerollableReward,
+  CanonicalRewardReroll,
   CanonicalRoom,
   CanonicalRoomReference,
   CanonicalRoomRestore,

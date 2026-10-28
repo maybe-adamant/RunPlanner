@@ -921,6 +921,12 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'reward', message: 'This room cannot fill the hidden door here.' };
     case 'phantomExitRewardUnavailable':
       return { kind: 'bag', message: 'This room’s pool cannot draw this reward here.' };
+    case 'rerolledRewardMismatch':
+    case 'rerollUnavailable':
+    case 'rerollTargetUnavailable':
+    case 'rerollPoolExceeded':
+    case 'screenRerollUnavailable':
+      return presented('reward', finding);
     case 'traitOfferMissing':
       return { kind: 'trait', message: 'Choose the generated trait offer.' };
     case 'rewardSourceUnavailable':
@@ -1131,6 +1137,7 @@ function unexplainedImpossibility(
       return { kind: 'shop', message: 'No Shop roll here stocks this item.' };
     case 'infernalContractPedestal':
     case 'phantomExitReward':
+    case 'rerollReward':
       return { kind: 'reward', message: 'No reward roll here produces this reward.' };
     case 'acquisitionEntryOffer':
       return { kind: 'reward', message: 'This source cannot produce this reward here.' };
@@ -1246,6 +1253,7 @@ function rewardOfferExclusions(
     case 'shopOffer':
     case 'infernalContractPedestal':
     case 'phantomExitReward':
+    case 'rerollReward':
     case 'acquisitionEntryOffer':
       return evaluation.result.exclusions ?? [];
     default:

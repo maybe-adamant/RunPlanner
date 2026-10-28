@@ -311,6 +311,8 @@ export function occurrenceActionLabel(
       return 'Keepsake Rack';
     case 'interactEris':
       return 'Talk to Eris';
+    case 'reroll':
+      return 'Reroll';
   }
 }
 

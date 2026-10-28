@@ -4,10 +4,11 @@ import { createUnresolvedAcquisitionRewardState } from '../../../../authored-pro
 import type { RouteLoadout } from '../../../../authored-project/model';
 import { locallyValidRewardOffers, type ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
-import type {
-  CanonicalAuthoredRoom,
-  CanonicalResolvedIncomingReward,
-  CanonicalRewardWheel,
+import {
+  forGeneration,
+  type CanonicalAuthoredRoom,
+  type CanonicalResolvedIncomingReward,
+  type CanonicalRewardWheel,
 } from '../../../materialization';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
@@ -111,7 +112,14 @@ export function applyRewardWheelOfferPointMaterialization(
     throw new BiomeRewardSimulationContractError(
       'reward-wheel transition received a non-wheel point',
     );
-  const wheel = room.rewardWheels?.find((candidate) => candidate.wheelKey === event.offerPoint);
+  const ownedWheel = room.rewardWheels?.find(
+    (candidate) => candidate.wheelKey === event.offerPoint,
+  );
+  // A rerolled offer is still spawned as its first draw; its acquisition is the effective reward's.
+  const wheel =
+    ownedWheel === undefined || ownedWheel.offers.every((offer) => offer.reroll === undefined)
+      ? ownedWheel
+      : Object.freeze({ ...ownedWheel, offers: ownedWheel.offers.map(forGeneration) });
   const view = roomView.offerPoints?.find(
     (candidate) => candidate.offerPoint === event.offerPoint,
   )?.before;
@@ -122,6 +130,14 @@ export function applyRewardWheelOfferPointMaterialization(
   }
 
   const findings = new Map<string, FindingRegionEntry>();
+  for (const offer of ownedWheel?.offers ?? [])
+    if (offer.rerolledRewardMismatch === true)
+      addRewardFinding(
+        findings,
+        rewardFinding('rerolledRewardMismatch', offer.origin, {}),
+        ownerRegion(wheel.origin),
+        historyFindingChronology(event.sequence),
+      );
   const layout = catalog.biomeLayouts.byKey[room.origin.biomeKey];
   if (layout === undefined) {
     throw new BiomeRewardSimulationContractError(
@@ -310,6 +326,7 @@ export function applyRewardWheelOfferPointMaterialization(
       if (
         candidateBranches.length > 0 &&
         selectedOffer?.picked === true &&
+        selectedOffer.reroll === undefined &&
         acquisitionView !== undefined &&
         acquisitionEvent?.kind === 'offerPointAcquired' &&
         acquisitionEvent.sequence <= reachedThrough
@@ -381,7 +398,7 @@ export function applyRewardWheelOfferPointMaterialization(
     }
   }
   const shipLifecycleCandidate =
-    room.rewardWheels?.[0] !== wheel
+    room.rewardWheels?.[0] !== ownedWheel
       ? undefined
       : prepareShipLifecycleCandidateContext({
           catalog,
@@ -403,7 +420,7 @@ export function applyRewardWheelOfferPointMaterialization(
     producerFrontiers: Object.freeze([producerFrontier]),
     fixedAcquisitionRealizations: pickedWheelForfeitRealizations(
       catalog,
-      wheel,
+      ownedWheel ?? wheel,
       nextBranches,
       event.sequence,
     ),

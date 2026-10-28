@@ -1,5 +1,6 @@
 import {
   MAX_OWNER_STRING,
+  screenRerollCount,
   array,
   booleanValue,
   exact,
@@ -213,6 +214,27 @@ function hubFountainUse(
           ),
         }),
   });
+}
+
+function hubRerolls(value: unknown, label: string) {
+  const rows = array(value, label);
+  if (rows.length === 0) fail(`${label} must be absent when empty`);
+  const owners = new Set<string>();
+  return Object.freeze(
+    rows.map((entry, index) => {
+      const rowLabel = `${label}[${index}]`;
+      const row = object(entry, rowLabel);
+      exact(row, ['owner', 'slotKey', 'reward'], [], rowLabel);
+      const owner = stringValue(row.owner, `${rowLabel}.owner`, MAX_OWNER_STRING);
+      if (owners.has(owner)) fail(`${label} has duplicate reroll owner`);
+      owners.add(owner);
+      return Object.freeze({
+        owner,
+        slotKey: stringValue(row.slotKey, `${rowLabel}.slotKey`),
+        reward: reward(row.reward, `${rowLabel}.reward`),
+      });
+    }),
+  );
 }
 
 function hubDepartures(
@@ -646,7 +668,8 @@ export function overview(value: unknown, label: string) {
     record.stygianWell === undefined
       ? undefined
       : object(record.stygianWell, `${label}.stygianWell`);
-  if (well !== undefined) exact(well, ['interacted'], ['offers'], `${label}.stygianWell`);
+  if (well !== undefined)
+    exact(well, ['interacted'], ['offers', 'rerollCount'], `${label}.stygianWell`);
   if (well !== undefined) {
     const interacted = booleanValue(well.interacted, `${label}.stygianWell.interacted`);
     if (interacted !== (well.offers !== undefined))
@@ -657,6 +680,7 @@ export function overview(value: unknown, label: string) {
       ? undefined
       : Object.freeze({
           interacted: booleanValue(well.interacted, `${label}.stygianWell.interacted`),
+          ...screenRerollCount(well, `${label}.stygianWell`),
           ...(well.offers === undefined
             ? {}
             : {
@@ -704,7 +728,8 @@ export function overview(value: unknown, label: string) {
     record.purgingPool === undefined
       ? undefined
       : object(record.purgingPool, `${label}.purgingPool`);
-  if (pool !== undefined) exact(pool, ['interacted'], ['traits'], `${label}.purgingPool`);
+  if (pool !== undefined)
+    exact(pool, ['interacted'], ['traits', 'rerollCount'], `${label}.purgingPool`);
   if (pool !== undefined) {
     const interacted = booleanValue(pool.interacted, `${label}.purgingPool.interacted`);
     if (interacted !== (pool.traits !== undefined))
@@ -715,6 +740,7 @@ export function overview(value: unknown, label: string) {
       ? undefined
       : Object.freeze({
           interacted: booleanValue(pool.interacted, `${label}.purgingPool.interacted`),
+          ...screenRerollCount(pool, `${label}.purgingPool`),
           ...(pool.traits === undefined
             ? {}
             : {
@@ -823,7 +849,7 @@ export function overview(value: unknown, label: string) {
     exact(
       hub,
       ['room', 'slots', 'finalHandoff', 'requiredVisitCount', 'fountain', 'departures'],
-      [],
+      ['rerolls'],
       `${label}.hub`,
     );
   const parsedHub =
@@ -873,6 +899,9 @@ export function overview(value: unknown, label: string) {
               requiredVisitCount,
               `${label}.hub.departures`,
             ),
+            ...(hub.rerolls === undefined
+              ? {}
+              : { rerolls: hubRerolls(hub.rerolls, `${label}.hub.rerolls`) }),
           });
         })();
   const localSlots =

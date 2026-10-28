@@ -112,6 +112,9 @@ export function materializeAuthoredRoom(
         context.occurrence.startingRewardAcquisition,
       ) ?? undefined;
   }
+  // A rerolled door's room acquires its effective reward, so its actions follow that.
+  if (leaf.rerolledIncomingAcquisition !== undefined)
+    routeStartIncoming = leaf.rerolledIncomingAcquisition;
   const selectedEncounterPhases =
     leaf.encounterPhases ??
     materializeEncounterPhases(
@@ -365,11 +368,9 @@ export function materializeAuthoredRoom(
     lifecycleProfileKey: base.lifecycleProfileKey,
     incomingRewardActive: base.incomingReward?.acquisitionEnabled !== false,
     ...(context.entry === true
-      ? {
-          incomingRewardBinding: resolvedEntry.incomingRewardBinding,
-          ...(routeStartIncoming === undefined ? {} : { incomingRewardState: routeStartIncoming }),
-        }
+      ? { incomingRewardBinding: resolvedEntry.incomingRewardBinding }
       : {}),
+    ...(routeStartIncoming === undefined ? {} : { incomingRewardState: routeStartIncoming }),
     activeEncounterSlotKeys: base.encounterPhases.map((phase) => phase.slotKey),
     shopInventoryActive: base.entryState?.kind === 'shop',
     entryActive: base.entered,

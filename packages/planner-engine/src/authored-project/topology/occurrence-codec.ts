@@ -1,3 +1,8 @@
+import {
+  decodeScreenRerollCount,
+  screenRerollCountField,
+  screenRerollSupported,
+} from '../screen-rerolls';
 import type { BiomeLayout, Catalog } from '../../catalog-schema';
 import { routeErisHost, routeHasKeepsakeRack, routeRoomShop } from '../route-profile';
 import type {
@@ -58,7 +63,11 @@ import { decodeKeepsakeEquipResults } from '../keepsake-equip-codec';
 import { expectBoolean, expectString } from '../validation';
 import type { ResolvedRoutePosition } from '../route-context';
 import { resolveEntryDeclaration } from '../room-state/entry-resolution';
-import { decodeRewardState } from '../room-state/decoding/reward-acquisition-codec';
+import {
+  decodeCountedOffer,
+  decodeRewardState,
+} from '../room-state/decoding/reward-acquisition-codec';
+import { requireCountedBinding } from '../room-state/declaration';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import {
   composeStartingReward,
@@ -116,7 +125,16 @@ function decodePurgingPoolState(
   if (room.purgingPool === undefined)
     failProjectDocument(path, 'requires a room declaration with a Purging Pool');
   const raw = expectRecord(value, path);
-  expectExactKeys(raw, ['interacted', 'traitKeyBySlot'], path);
+  expectExactKeys(
+    raw,
+    ['interacted', 'traitKeyBySlot', ...(Object.hasOwn(raw, 'rerollCount') ? ['rerollCount'] : [])],
+    path,
+  );
+  const rerollCount = decodeScreenRerollCount(
+    raw,
+    screenRerollSupported(catalog, { kind: 'purgingPool', room }),
+    path,
+  );
   const traits = expectRecord(raw.traitKeyBySlot, `${path}.traitKeyBySlot`);
   expectExactKeys(traits, [...room.purgingPool.slotKeys], `${path}.traitKeyBySlot`);
   const traitKeyBySlot = Object.fromEntries(
@@ -132,6 +150,7 @@ function decodePurgingPoolState(
   return Object.freeze({
     interacted: expectBoolean(raw.interacted, `${path}.interacted`),
     traitKeyBySlot: Object.freeze(traitKeyBySlot),
+    ...screenRerollCountField(rerollCount),
   });
 }
 
@@ -493,10 +512,37 @@ export function decodeRoomOccurrence(input: {
         `${rawOccurrence.path}.phantomExit`,
       )
     : undefined;
+  const rerolledIncomingReward = rawOccurrence.hasRerolledIncomingReward
+    ? (() => {
+        const path = `${rawOccurrence.path}.rerolledIncomingReward`;
+        const binding = requireCountedBinding(contextualRoom, path);
+        const reward = decodeRewardState(
+          rawOccurrence.rerolledIncomingReward,
+          catalog,
+          path,
+          { kind: 'producerLifecycle', key: binding.producerLifecycleKey },
+          routeKey,
+        );
+        return Object.freeze({
+          ...reward,
+          offer: decodeCountedOffer(reward.offer, catalog, binding, `${path}.offer`),
+        });
+      })()
+    : undefined;
   const roomActions = decodeRoomActionState(
     rawOccurrence.roomActions,
+    catalog,
     `${rawOccurrence.path}.roomActions`,
   );
+  for (const [index, reference] of roomActions.order.entries()) {
+    if (reference.kind !== 'reroll' || reference.target.kind !== 'wheelOffer') continue;
+    const wheel = state.kind === 'shipCombat' ? state.wheels[reference.target.wheelKey] : undefined;
+    if (wheel === undefined || !Object.hasOwn(wheel.offers, reference.target.offerKey))
+      failProjectDocument(
+        `${rawOccurrence.path}.roomActions.order[${index}].target`,
+        'names no wheel offer of this room',
+      );
+  }
   if (
     roomActions.order.filter((reference) => reference.kind === 'interactInfernalContractPedestal')
       .length > (infernalContractPedestal === undefined ? 0 : 1)
@@ -565,6 +611,7 @@ export function decodeRoomOccurrence(input: {
     ...(eris === undefined ? {} : { eris }),
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(phantomExit === undefined ? {} : { phantomExit }),
+    ...(rerolledIncomingReward === undefined ? {} : { rerolledIncomingReward }),
     roomActions: Object.freeze({ order: Object.freeze([]) }),
     additionalExits: Object.freeze([]),
   });
@@ -949,6 +996,7 @@ export function decodeRoomOccurrence(input: {
     ...(eris === undefined ? {} : { eris }),
     ...(infernalContractPedestal === undefined ? {} : { infernalContractPedestal }),
     ...(phantomExit === undefined ? {} : { phantomExit }),
+    ...(rerolledIncomingReward === undefined ? {} : { rerolledIncomingReward }),
     ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
     additionalExits,
   });

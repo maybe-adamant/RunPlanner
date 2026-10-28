@@ -1,4 +1,9 @@
-import type { Catalog, TraitElement, TraitRarity } from '../../../catalog-schema';
+import {
+  acquisitionOrdinalValue,
+  type Catalog,
+  type TraitElement,
+  type TraitRarity,
+} from '../../../catalog-schema';
 import { semanticAddressKey } from '../../../authored-project/addresses';
 import { optionIndex, type EquippedTrait } from '../../../authored-project/traits/state';
 import { resolveTraitMaxHealthRoll } from '../../../authored-project/traits/max-health-roll';
@@ -348,6 +353,7 @@ export function foldTraitHistoryEvents(
   const creationElements: ElementTotals = { ...emptyElements };
   let activeSources: ReadonlySet<string> = new Set();
   const maxStatGrants: Record<string, MaxStatAmounts> = {};
+  let rerollPickupGrant = 0;
   const grantMaxStat = (traitKey: string, stat: keyof MaxStatAmounts, amount: number) => {
     const current = maxStatGrants[traitKey] ?? { maxHealth: 0, maxMana: 0 };
     maxStatGrants[traitKey] = Object.freeze({ ...current, [stat]: current[stat] + amount });
@@ -741,6 +747,10 @@ export function foldTraitHistoryEvents(
       );
       if (rolledMaxHealth !== undefined)
         grantMaxStat(option.traitKey, 'maxHealth', rolledMaxHealth);
+      // The gift's reroll drop is assumed collected at once; the planner models no pickup for it.
+      const rerollPickup = catalog.traits.byKey[option.traitKey]?.rerollPickupByAcquisitionOrdinal;
+      if (rerollPickup !== undefined)
+        rerollPickupGrant += acquisitionOrdinalValue(rerollPickup, event.acquisitionOrdinal ?? 1);
       const targeted = event.targetedAcquisitionTransition;
       if (targeted !== undefined) {
         switch (targeted.kind) {
@@ -800,6 +810,7 @@ export function foldTraitHistoryEvents(
     ...(Object.keys(maxStatGrants).length === 0
       ? {}
       : { maxStatGrants: Object.freeze(maxStatGrants) }),
+    ...(rerollPickupGrant === 0 ? {} : { rerollPickupGrant }),
   });
 }
 

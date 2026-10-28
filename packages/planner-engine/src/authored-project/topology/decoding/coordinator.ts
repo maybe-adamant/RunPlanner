@@ -619,6 +619,7 @@ export function decodeTopologyStructure(
     const hasEris = Object.hasOwn(occurrence, 'eris');
     const hasInfernalContractPedestal = Object.hasOwn(occurrence, 'infernalContractPedestal');
     const hasPhantomExit = Object.hasOwn(occurrence, 'phantomExit');
+    const hasRerolledIncomingReward = Object.hasOwn(occurrence, 'rerolledIncomingReward');
     const hasFigurineArcanaKeysByPhase = Object.hasOwn(occurrence, 'figurineArcanaKeysByPhase');
     expectExactKeys(
       occurrence,
@@ -640,6 +641,7 @@ export function decodeTopologyStructure(
         ...(hasEris ? ['eris'] : []),
         ...(hasInfernalContractPedestal ? ['infernalContractPedestal'] : []),
         ...(hasPhantomExit ? ['phantomExit'] : []),
+        ...(hasRerolledIncomingReward ? ['rerolledIncomingReward'] : []),
         ...(hasFigurineArcanaKeysByPhase ? ['figurineArcanaKeysByPhase'] : []),
       ],
       occurrencePath,
@@ -680,6 +682,8 @@ export function decodeTopologyStructure(
         hasInfernalContractPedestal,
         phantomExit: occurrence.phantomExit,
         hasPhantomExit,
+        rerolledIncomingReward: occurrence.rerolledIncomingReward,
+        hasRerolledIncomingReward,
         figurineArcanaKeysByPhase: occurrence.figurineArcanaKeysByPhase,
         hasFigurineArcanaKeysByPhase,
         path: occurrencePath,
