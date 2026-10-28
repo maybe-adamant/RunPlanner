@@ -109,4 +109,12 @@ and the door-order probe are done.
 - **Open:**
   - The order of the hidden draw against the room's own side-door draws
     within the same unlock (door creation order).
-  - Which placeholders are forced to a Shop (`ChooseNextRoomData`).
+  - The placeholder is chosen by `ChooseNextRoomData` (RunLogic.lua), like any
+    next room: the room set (`ForceNextRoomSet`, else a random `NextRoomSet`),
+    rooms passing `IsRoomEligible`, a random pick among `IsRoomForced` rooms
+    when any exist (that is how a forced Preboss Shop placeholder arises, which
+    draws nothing), else a random eligible room. A non-forced placeholder is
+    random and must be authored with the reward; the record holds it in
+    `ExitDoorRooms`.
+  - Does creating the placeholder count toward `RoomCreations` /
+    `MaxCreationsThisRun`, and so change which rooms later doors can offer?
