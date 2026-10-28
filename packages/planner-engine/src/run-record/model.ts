@@ -121,10 +121,16 @@ export interface RunRecordRoom {
    */
   readonly grantedArcana?: readonly string[];
   /**
-   * Door and ship-wheel rerolls spent here: `NumRerolls` spent beyond the room's
-   * screen rerolls, each matched by a reward-store draw no offer explains.
+   * Door, ship-wheel and Fields cage rerolls spent here: the `NumRerolls` the
+   * room spent beyond its screen rerolls. A gain in the same room hides spends.
    */
   readonly rerolls?: number;
+  /**
+   * `SpentRerolls`: screen rerolls by the rerolled screen's id, a loot's object
+   * id or a store screen's name (`WellShop`, `SellTraits`). The n-th reroll of
+   * one screen costs n.
+   */
+  readonly spentRerolls?: Readonly<Record<string, number>>;
   /**
    * `PoseidonDoubleRewardCount` gained here: pickups Sea Star duplicated. The
    * duplicated pickups are not saved.
@@ -169,6 +175,8 @@ export interface RunRecordRoomEntry {
   readonly wellShopPurchases?: Readonly<Record<string, number>>;
   /** `BiomeBoonSkipCount`: Forfeit skips this biome. */
   readonly biomeBoonSkipCount?: number;
+  /** `NumRerolls`: the run's rerolls left. */
+  readonly numRerolls?: number;
   /** Invested Path of Stars nodes by `depth:slot`, sorted. */
   readonly investedTalents?: readonly string[];
 }

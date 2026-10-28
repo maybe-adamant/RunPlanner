@@ -124,6 +124,11 @@ describe('run record codec', () => {
       /grantedArcana must not repeat a card/,
     );
     rejects((record) => (room(record, 1).rerolls = 0), /rerolls must be an integer >= 1/);
+    rejects((record) => (room(record, 1).spentRerolls = {}), /spentRerolls must not be empty/);
+    rejects(
+      (record) => (room(record, 1).spentRerolls = { WellShop: 0 }),
+      /spentRerolls.WellShop must be an integer >= 1/,
+    );
   });
 
   it("keeps each room's entry save on every room or none", () => {
@@ -136,6 +141,7 @@ describe('run record codec', () => {
       keepsake: 'GoldifyKeepsake',
       rewardStores: { RunProgress: { Boon: 3 }, Secrets: {} },
       bannedTraits: ['HeraManaBoon', 'ZeusSprintBoon'],
+      numRerolls: 3,
       investedTalents: ['1:1', '2:1'],
     };
     room(withEntries, 1).entry = {};
@@ -151,6 +157,7 @@ describe('run record codec', () => {
     rejects(entry({ bannedTraits: ['ZeusSprintBoon', 'HeraManaBoon'] }), /sorted without repeats/);
     rejects(entry({ investedTalents: ['1-1'] }), /must be depth:slot/);
     rejects(entry({ metaConversionUses: 0 }), /metaConversionUses must be an integer >= 1/);
+    rejects(entry({ numRerolls: 0 }), /numRerolls must be an integer >= 1/);
     rejects(entry({ lostTraits: [] }), /lostTraits must not be empty/);
     rejects(entry({ traits: { ZeusWeaponBoon: { level: 0 } } }), /level must be an integer >= 1/);
     rejects(entry({ elements: { Air: 0 } }), /elements.Air must be an integer >= 1/);

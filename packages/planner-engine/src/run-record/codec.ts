@@ -689,6 +689,7 @@ function roomEntry(value: unknown, label: string): RunRecordRoomEntry {
       'metaConversionUses',
       'wellShopPurchases',
       'biomeBoonSkipCount',
+      'numRerolls',
       'investedTalents',
     ],
     label,
@@ -725,6 +726,7 @@ function roomEntry(value: unknown, label: string): RunRecordRoomEntry {
     ...optional(record, 'metaConversionUses', label, (entry, path) => integer(entry, path, 1)),
     ...optional(record, 'wellShopPurchases', label, nonEmptyCounts),
     ...optional(record, 'biomeBoonSkipCount', label, (entry, path) => integer(entry, path, 1)),
+    ...optional(record, 'numRerolls', label, (entry, path) => integer(entry, path, 1)),
     ...optional(record, 'investedTalents', label, (entry, path) =>
       sortedNames(entry, path, (item, at) => {
         const node = text(item, at);
@@ -754,6 +756,7 @@ const ROOM_OPTIONAL = [
   'toolElements',
   'grantedArcana',
   'rerolls',
+  'spentRerolls',
   'doubleRewards',
   'olympusEagleSpawn',
   'entry',
@@ -801,6 +804,11 @@ function room(value: unknown, label: string): RunRecordRoom {
       return names;
     }),
     ...optional(record, 'rerolls', label, (entry, path) => integer(entry, path, 1)),
+    ...optional(record, 'spentRerolls', label, (entry, path) => {
+      const result = counts(entry, path);
+      if (Object.keys(result).length === 0) fail(`${path} must not be empty`);
+      return result;
+    }),
     ...optional(record, 'doubleRewards', label, (entry, path) => integer(entry, path, 1)),
     ...optional(record, 'olympusEagleSpawn', label, flag),
     ...optional(record, 'entry', label, roomEntry),

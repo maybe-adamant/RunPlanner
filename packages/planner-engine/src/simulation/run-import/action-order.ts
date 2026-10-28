@@ -8,6 +8,7 @@ import {
 } from '../../authored-project';
 import { roomActionAddress } from './actions';
 import type { RunImportContext } from './import';
+import { deliveredCageReward, deliveredIncomingReward } from './occurrences';
 
 const OPTION_INDEX = { option1: 0, option2: 1, option3: 2 } as const;
 
@@ -48,17 +49,15 @@ function actionTraits(
   const state = occurrence.state;
   switch (reference.kind) {
     case 'interactIncomingReward':
-      return 'reward' in state
-        ? rewardTraits(state.reward, reference.acquisitionRole)
-        : rewardTraits(undefined);
+      return rewardTraits(deliveredIncomingReward(occurrence), reference.acquisitionRole);
     case 'collectRequiredReward':
-      return 'reward' in state ? rewardTraits(state.reward) : rewardTraits(undefined);
+      return rewardTraits(deliveredIncomingReward(occurrence));
     case 'interactLocalReward':
       return state.kind === 'fieldsCombat'
         ? rewardTraits(
-            (reference.groupKey === 'cages' ? state.cages : state.optionalRewards)[
-              reference.slotKey
-            ],
+            reference.groupKey === 'cages'
+              ? deliveredCageReward(occurrence, reference.slotKey)
+              : state.optionalRewards[reference.slotKey],
           )
         : rewardTraits(undefined);
     case 'interactShopOffer':

@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import {
   createOccurrenceId,
+  type AuthoredRewardState,
   type OccurrenceId,
   type ProjectDocument,
   type RoomOccurrence,
@@ -164,4 +165,22 @@ export function authoredOccurrence(
   return project.route.biomes
     .find((biome) => biome.biomeKey === biomeKey)
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
+}
+
+/** The reward a room's door delivers: its last reroll's, else its first draw. */
+export function deliveredIncomingReward(
+  occurrence: RoomOccurrence,
+): AuthoredRewardState | null | undefined {
+  if (occurrence.rerolledIncomingReward !== undefined) return occurrence.rerolledIncomingReward;
+  return 'reward' in occurrence.state ? occurrence.state.reward : undefined;
+}
+
+/** The reward a Fields cage delivers: its last reroll's, else its first draw. */
+export function deliveredCageReward(
+  occurrence: RoomOccurrence,
+  slotKey: string,
+): AuthoredRewardState | null | undefined {
+  const state = occurrence.state;
+  if (state.kind !== 'fieldsCombat') return undefined;
+  return state.rerolledCages?.[slotKey] ?? state.cages[slotKey];
 }

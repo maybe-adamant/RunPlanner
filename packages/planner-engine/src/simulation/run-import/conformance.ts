@@ -24,6 +24,7 @@ export interface RecordedEntryState {
   readonly metaConversionUses: number;
   readonly wellShopPurchases: Readonly<Record<string, number>>;
   readonly biomeBoonSkipCount: number;
+  readonly numRerolls: number;
   readonly investedTalents: readonly string[];
 }
 
@@ -48,6 +49,7 @@ export function recordedEntryStates(record: RunRecord): readonly RecordedEntrySt
       metaConversionUses: entry.metaConversionUses ?? 0,
       wellShopPurchases: entry.wellShopPurchases ?? {},
       biomeBoonSkipCount: entry.biomeBoonSkipCount ?? 0,
+      numRerolls: entry.numRerolls ?? 0,
       investedTalents: entry.investedTalents ?? [],
     });
   }
@@ -164,7 +166,7 @@ function setDiff(
  * takes one, but the fills are not simulated facts, so names with such an
  * entry are left out.
  */
-function storeCounts(catalog: Catalog, routeKey: string, snapshot: RunStateSnapshot) {
+export function storeCounts(catalog: Catalog, routeKey: string, snapshot: RunStateSnapshot) {
   const result = new Map<
     string,
     { readonly counts: Readonly<Record<string, number>>; readonly offRoute: ReadonlySet<string> }
@@ -196,6 +198,7 @@ function compareEntry(
   saved: RecordedEntryState,
   snapshot: RunStateSnapshot,
   entered: RunStateSnapshot | undefined,
+  rerollsRecorded: boolean,
 ): readonly Difference[] {
   const found: Difference[] = [];
   const differ = (area: RunImportArea, field: string, values: Values | undefined) => {
@@ -313,6 +316,13 @@ function compareEntry(
     setDiff(saved.investedTalents, snapshot.hexProgress.investedNodeKeys),
   );
 
+  // The planner's reroll pool against the game's: a gain or spend the plan misses persists.
+  if (rerollsRecorded)
+    differ('reroll', 'NumRerolls', {
+      expected: show(saved.numRerolls),
+      actual: show(snapshot.rerolls.remaining),
+    });
+
   // The game derives Forfeit from the biome's skip count against the Vow's rank.
   const rank = record.loadout.vows[FORFEIT_VOW] ?? 0;
   differ('forfeit', 'BiomeBoonSkipCount', {
@@ -324,6 +334,67 @@ function compareEntry(
   if (entered !== undefined)
     differ('elements', 'Elements', countDiff(saved.elements, entered.traits.elementCounts));
   return found;
+}
+
+const snapshotsByAssembly = new WeakMap<
+  ProjectEvaluationAssembly,
+  ReadonlyMap<string, RunStateSnapshot>
+>();
+
+/** The plan's run-state snapshot at one occurrence checkpoint, when evaluation reached it. */
+export function occurrenceSnapshot(
+  assembly: ProjectEvaluationAssembly,
+  occurrence: RecordOccurrence,
+  kind: 'roomEntered' | 'beforeRoomExit',
+): RunStateSnapshot | undefined {
+  let snapshots = snapshotsByAssembly.get(assembly);
+  if (snapshots === undefined) {
+    const byOwner = new Map<string, RunStateSnapshot>();
+    for (const biome of assembly.evaluation.route.biomes)
+      if ('rewards' in biome)
+        for (const snapshot of biome.rewards.runStateSnapshots)
+          byOwner.set(semanticAddressKey(snapshot.owner), snapshot);
+    snapshotsByAssembly.set(assembly, byOwner);
+    snapshots = byOwner;
+  }
+  return snapshots.get(
+    semanticAddressKey(
+      createRoomRunStateCheckpointAddress(
+        createOccurrenceAddress(
+          createBiomeAddress(assembly.project.route.routeKey, occurrence.biomeKey),
+          occurrence.occurrenceId,
+        ),
+        { kind },
+      ),
+    ),
+  );
+}
+
+/**
+ * The plan's run state at a record room's entry save: the left room's exit,
+ * or, leaving a Hub visit or a room visited more than once, and for the run's
+ * first room, the entered room's first entry.
+ */
+export function entrySnapshot(
+  assembly: ProjectEvaluationAssembly,
+  occurrences: RecordOccurrences,
+  roomIndex: number,
+): RunStateSnapshot | undefined {
+  const at = (index: number): RecordOccurrence => ({
+    biomeKey: occurrences.biomeOfRoom[index]!,
+    occurrenceId: occurrences.occurrenceOf(index),
+  });
+  // The run's first save follows the opening room's own draw.
+  if (roomIndex === 0) return occurrenceSnapshot(assembly, at(0), 'roomEntered');
+  const left = occurrences.occurrenceOf(roomIndex - 1);
+  const exit =
+    occurrences.visitsOf(left).length === 1
+      ? occurrenceSnapshot(assembly, at(roomIndex - 1), 'beforeRoomExit')
+      : undefined;
+  if (exit !== undefined) return exit;
+  return occurrences.visitsOf(occurrences.occurrenceOf(roomIndex))[0] === roomIndex
+    ? occurrenceSnapshot(assembly, at(roomIndex), 'roomEntered')
+    : undefined;
 }
 
 /**
@@ -340,24 +411,11 @@ export function compareImportToRecord(
 ): readonly RunImportReportEntry[] {
   const states = recordedEntryStates(record);
   if (states.length === 0) return [];
-  const snapshots = new Map<string, RunStateSnapshot>();
-  for (const biome of assembly.evaluation.route.biomes)
-    if ('rewards' in biome)
-      for (const snapshot of biome.rewards.runStateSnapshots)
-        snapshots.set(semanticAddressKey(snapshot.owner), snapshot);
   const routeKey = assembly.project.route.routeKey;
   const snapshot = (occurrence: RecordOccurrence, kind: 'roomEntered' | 'beforeRoomExit') =>
-    snapshots.get(
-      semanticAddressKey(
-        createRoomRunStateCheckpointAddress(
-          createOccurrenceAddress(
-            createBiomeAddress(routeKey, occurrence.biomeKey),
-            occurrence.occurrenceId,
-          ),
-          { kind },
-        ),
-      ),
-    );
+    occurrenceSnapshot(assembly, occurrence, kind);
+  // A record whose saves never held a reroll writes no pool to compare.
+  const rerollsRecorded = record.rooms.some((room) => room.entry?.numRerolls !== undefined);
   const entries: RunImportReportEntry[] = [];
   // A difference that persists is reported where it begins and again where it changes.
   const previous = new Map<string, string>();
@@ -375,6 +433,7 @@ export function compareImportToRecord(
       states[roomIndex]!,
       exit,
       entered === undefined ? undefined : snapshot(entered, 'roomEntered'),
+      rerollsRecorded,
     );
     const current = new Map(
       found.map((entry) => [

@@ -7,6 +7,7 @@ import {
 } from '../../authored-project';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { RunImportContext } from './import';
+import { authoredOccurrence, deliveredIncomingReward } from './occurrences';
 
 export type ConversionKind = 'artificer' | 'timePiece';
 
@@ -36,10 +37,9 @@ export function importDispositions(context: RunImportContext): void {
     const kind = kinds[0]!;
     const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
     const occurrenceId = context.occurrences.occurrenceOf(roomIndex);
-    const state = project.route.biomes
-      .find((biome) => biome.biomeKey === biomeKey)
-      ?.topology?.occurrences.find((entry) => entry.occurrenceId === occurrenceId)?.state;
-    if (state === undefined || !('reward' in state) || state.reward === null) continue;
+    const occurrence = authoredOccurrence(project, biomeKey, occurrenceId);
+    const reward = occurrence === undefined ? undefined : deliveredIncomingReward(occurrence);
+    if (reward === undefined || reward === null) continue;
     const acquisition = createAcquisitionRoleAddress(
       createIncomingRewardAddress(
         createBiomeAddress(project.route.routeKey, biomeKey),
@@ -47,7 +47,7 @@ export function importDispositions(context: RunImportContext): void {
       ),
       'self',
     );
-    if (convertAcquisition(context, acquisition, kind, state.reward.offer.rewardType, roomIndex))
+    if (convertAcquisition(context, acquisition, kind, reward.offer.rewardType, roomIndex))
       context.used.add(used);
   }
 }

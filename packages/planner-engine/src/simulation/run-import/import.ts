@@ -43,6 +43,7 @@ import { areaOfFinding, isQuestionFinding } from './areas';
 import { importResourcePlacements } from './resources';
 import { routeKeyForRecord } from './vocabulary';
 import { compareImportToRecord } from './conformance';
+import { importRerolls, unreachedRerolls, unsupportedScreenRerolls } from './rerolls';
 
 /**
  * A complete import settles every question; a stopped one ends its plan before
@@ -155,12 +156,10 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
     entries,
   );
   walk.importLoadout();
-  // Door and wheel rerolls are not modelled: the plan's stores keep the rewards they replaced.
-  for (const [roomIndex, room] of record.rooms.entries())
-    for (let count = 0; count < (room.rerolls ?? 0); count += 1)
-      entries.push({ area: 'reroll', reason: 'unsupportedArea', record: { roomIndex, visit: 0 } });
+  entries.push(...unsupportedScreenRerolls(catalog, record));
   const stop = walk.run();
   walk.reportUnusedScreens(stop);
+  walk.reportUnreachedRerolls();
   entries.push(
     ...compareImportToRecord(
       catalog,
@@ -345,6 +344,11 @@ class RunImportWalk {
           });
   }
 
+  /** Door rerolls in rooms whose bracket the walk never closed. */
+  reportUnreachedRerolls(): void {
+    this.entries.push(...unreachedRerolls(this.context));
+  }
+
   /** Weapon, aspect, familiar, starting keepsake, Arcana and Fear, each validated by its command. */
   importLoadout(): void {
     const { loadout } = this.record;
@@ -402,6 +406,8 @@ class RunImportWalk {
         before = this.assembly;
         this.occurrences.bindEngineOccurrences(this.assembly.project);
         this.markDirty();
+        // A bracket's rerolls rewrite its draws before the entered room's pickup is answered.
+        importRerolls(this.context);
         importEncounters(this.context);
         importDispositions(this.context);
         importSideRoomVisits(this.context);

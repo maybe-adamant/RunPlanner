@@ -154,6 +154,18 @@ describe('run record capture fixtures', () => {
     ]);
     // G_MiniBoss02 and G_PreBoss01 rerolled a boon screen; no door was rerolled.
     expect(record.rooms.filter((entry) => entry.rerolls !== undefined)).toEqual([]);
+    expect(
+      record.rooms.flatMap((entry, index) =>
+        entry.spentRerolls === undefined ? [] : [[index, entry.spentRerolls]],
+      ),
+    ).toEqual([
+      [18, { '2000591': 1 }],
+      [22, { '2000031': 1 }],
+    ]);
+    // The reroll cards drawn at the F Boss grant ten rerolls; each screen reroll spends one.
+    expect(record.rooms.map((entry) => entry.entry?.numRerolls ?? 0).slice(12, 24)).toEqual([
+      0, 10, 10, 10, 10, 10, 10, 9, 9, 9, 9, 8,
+    ]);
   });
 
   it('records the Surface victory', () => {

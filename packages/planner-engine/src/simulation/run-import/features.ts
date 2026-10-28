@@ -33,7 +33,7 @@ import { acquisitionConversionCandidateForProjectEvaluationAssembly } from '../e
 import type { SemanticFinding } from '../model';
 import { insertRoomAction, removeRoomAction } from './actions';
 import type { RunImportContext } from './import';
-import { occurrenceIdOf } from './occurrences';
+import { deliveredIncomingReward, occurrenceIdOf } from './occurrences';
 import { pickupUseCount } from './vocabulary';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
@@ -707,7 +707,7 @@ function importSeaStar(
   const count = context.record.rooms[roomIndex]!.doubleRewards ?? 0;
   const used = `seaStar:${roomIndex}`;
   if (count === 0 || context.used.has(used)) return;
-  const reward = 'reward' in occurrence.state ? occurrence.state.reward : undefined;
+  const reward = deliveredIncomingReward(occurrence);
   // An unauthored reward is answered later; the duplicate waits for it.
   if (reward === null) return;
   context.used.add(used);

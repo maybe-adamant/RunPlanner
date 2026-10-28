@@ -87,3 +87,6 @@ export function pickupUseCount(catalog: Catalog, room: RunRecordRoom, rewardType
   ]);
   return [...names].reduce((count, name) => count + (room.uses[name] ?? 0), 0);
 }
+
+/** Pom level-up screens, by their loot: a Pom of Power and a Big Pom. */
+export const POM_GIVERS: ReadonlySet<string> = new Set(['StackUpgrade', 'StackUpgradeBig']);

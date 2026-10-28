@@ -564,6 +564,14 @@ function buildRoom(
     ...optional('grantedArcana', grantedArcana(room)),
     ...optional('rerolls', doorRerolls(room, settled)),
     ...optional(
+      'spentRerolls',
+      nonEmpty(
+        previousVisit
+          ? gains(previousVisit.spentRerolls ?? {}, settled.spentRerolls ?? {})
+          : wholeCounts(settled.spentRerolls ?? {}),
+      ),
+    ),
+    ...optional(
       'doubleRewards',
       gain(before.poseidonDoubleRewardCount, after.poseidonDoubleRewardCount),
     ),
@@ -642,6 +650,7 @@ function roomEntry(save: SaveCheckpoint, previous: SaveCheckpoint | undefined): 
     ...optional('metaConversionUses', whole(save.run.metaConversionUses, 1)),
     ...optional('wellShopPurchases', nonEmpty(wholeCounts(save.run.wellShopPurchases))),
     ...optional('biomeBoonSkipCount', whole(save.run.biomeBoonSkipCount, 1)),
+    ...optional('numRerolls', whole(save.run.numRerolls, 1)),
     ...optional('investedTalents', invested.length > 0 ? invested : undefined),
   };
 }
@@ -669,70 +678,28 @@ function grantedArcana(room: RoomSaves): string[] | undefined {
   return [...ordered, ...[...drawn].sort()];
 }
 
-/** Total store entries removed from `before` to `after`; undefined when a store gained one (a refill). */
-function storeLoss(before: SaveCheckpoint, after: SaveCheckpoint): number | undefined {
-  if (storeRemovals(after, before).size > 0) return undefined;
-  let loss = 0;
-  for (const bag of storeRemovals(before, after).values())
-    for (const count of bag.values()) loss += count;
-  return loss;
-}
-
 /**
- * Door and ship-wheel rerolls (`AttemptReroll`) spend one `NumRerolls` each and
- * draw a fresh reward from the stores; screen rerolls (`AttemptPanelReroll`)
- * draw nothing and mark the room's `SpentRerolls`, the n-th reroll of one
- * screen costing n. A bracket counts rerolls only where `NumRerolls` fell and
- * the stores lost more than its known rolls: the room's wheel offers and
- * Artificer rolls in the room, the doors' offers and the entered room's cages
- * on leaving. A refill, or an untaken door without an offer whose cage rolls
- * are not known, leaves the bracket uncounted.
+ * Door, ship-wheel and Fields cage rerolls (`AttemptReroll`) spend one
+ * `NumRerolls` each; screen rerolls (`AttemptPanelReroll`) mark the room's
+ * `SpentRerolls`, the n-th reroll of one screen costing n. The room's door
+ * rerolls are what its `NumRerolls` falls spent beyond its screen rerolls; a
+ * gain in the same room hides spends, which the importer's store check reports.
  */
 function doorRerolls(room: RoomSaves, settled: SavedRoom): number | undefined {
-  const brackets: { start: SaveCheckpoint; end: SaveCheckpoint; known: number | undefined }[] = [];
-  if (room.postReward !== undefined) {
-    // Every rolled wheel offer leaves its store; one with an unknown offer count leaves it unknown.
-    const rolled = (wheels(room, settled, settled.useRecord) ?? []).map((wheel) => wheel.offers);
-    const conversions = room.postReward.run.metaConversionUses - room.entry.run.metaConversionUses;
-    brackets.push({
-      start: room.entry,
-      end: room.postReward,
-      known: rolled.includes(undefined)
-        ? undefined
-        : rolled.reduce<number>((total, offers) => total + offers!, Math.max(0, conversions)),
-    });
-  }
-  const closing = room.closing;
-  if (closing !== undefined && closing.kind !== 'hub') {
-    const next = closing.currentRoom;
-    const offered = settled.exitDoors.filter(
-      (door) => settled.offeredRewards[String(door.door)] !== undefined,
-    ).length;
-    const unknownCages = settled.exitDoors.some(
-      (door) => settled.offeredRewards[String(door.door)] === undefined && door.room !== next.name,
-    );
-    brackets.push({
-      start: room.postReward ?? room.entry,
-      end: closing,
-      known: unknownCages ? undefined : offered + next.cages.length,
-    });
-  }
+  const checkpoints = [room.entry, room.postReward, room.closing].filter(
+    (save): save is SaveCheckpoint => save !== undefined && save.kind !== 'hub',
+  );
   let spent = 0;
-  let counted = 0;
-  for (const { start, end, known } of brackets) {
-    if (start.run.numRerolls === undefined || end.run.numRerolls === undefined) continue;
-    const fell = start.run.numRerolls - end.run.numRerolls;
-    if (fell <= 0) continue;
-    spent += fell;
-    const loss = storeLoss(start, end);
-    if (known !== undefined && loss !== undefined && loss > known)
-      counted += Math.min(fell, loss - known);
+  for (const [index, end] of checkpoints.entries()) {
+    const start = checkpoints[index - 1];
+    if (start?.run.numRerolls === undefined || end.run.numRerolls === undefined) continue;
+    spent += Math.max(0, start.run.numRerolls - end.run.numRerolls);
   }
   const screens = Object.values(settled.spentRerolls ?? {}).reduce(
     (cost, count) => cost + (count * (count + 1)) / 2,
     0,
   );
-  return whole(Math.min(counted, spent - screens), 1);
+  return whole(spent - screens, 1);
 }
 
 /** Gathering tools whose element first spawned within the room's bracket. */

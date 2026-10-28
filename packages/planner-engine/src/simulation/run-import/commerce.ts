@@ -44,6 +44,7 @@ import type { RunImportContext } from './import';
 import type { RunImportArea } from './report';
 import { isQuestionFinding } from './areas';
 import { authoredOccurrence, occurrenceIdOf } from './occurrences';
+import { applyScreenRerolls } from './rerolls';
 import { pickupUseCount } from './vocabulary';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
@@ -923,8 +924,8 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
         address: feature,
         record: record(visit.roomIndex),
       });
+    if (!opened) return;
     if (
-      opened &&
       !context.applyValid({
         kind: 'SetStygianWellInteraction',
         occurrence: address,
@@ -932,6 +933,12 @@ function importWell(context: RunImportContext, biomeKey: string, occurrence: Roo
       })
     )
       noteOnce(context, `${presence}:refused`, 'well', 'refused', feature, visit.roomIndex);
+    else
+      applyScreenRerolls(context, visit.roomIndex, 'well', feature, (count) => ({
+        kind: 'SetStygianWellRerollCount',
+        occurrence: address,
+        count,
+      }));
     return;
   }
   const well = authoredOccurrence(
@@ -1112,7 +1119,14 @@ function importPool(context: RunImportContext, biomeKey: string, occurrence: Roo
         address: createRoomFeatureAddress(address, { kind: 'purgingPoolInventory' }),
         record: record(roomIndex),
       });
-    }
+    } else
+      applyScreenRerolls(
+        context,
+        roomIndex,
+        'pool',
+        createRoomFeatureAddress(address, { kind: 'purgingPoolInventory' }),
+        (count) => ({ kind: 'SetPurgingPoolRerollCount', occurrence: address, count }),
+      );
     return;
   }
   // The list is authored once the Pool's own frontier is reached.

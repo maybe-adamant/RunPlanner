@@ -12,9 +12,16 @@ import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
 } from '../evaluation/project-evaluation-assembly';
-import { occurrenceIdOf } from './occurrences';
+import {
+  authoredOccurrence,
+  deliveredCageReward,
+  deliveredIncomingReward,
+  occurrenceIdOf,
+} from './occurrences';
 import { recordedEntryStates } from './conformance';
 import { chaosOffer } from './features';
+import { applyScreenRerolls } from './rerolls';
+import { POM_GIVERS } from './vocabulary';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
@@ -256,9 +263,6 @@ export function answerSteadyGrowth(context: RunImportContext, reason: SemanticFi
   return false;
 }
 
-/** Pom level-up screens, by their loot: a Pom of Power and a Big Pom. */
-const POM_GIVERS: ReadonlySet<string> = new Set(['StackUpgrade', 'StackUpgradeBig']);
-
 /** Answers a Pom's level-up from the next unconsumed level-up screen of its room. */
 export function answerLevelResolution(context: RunImportContext, reason: SemanticFinding): boolean {
   if (
@@ -295,6 +299,12 @@ export function answerLevelResolution(context: RunImportContext, reason: Semanti
         if (capability.evaluate(value)[branchIndex]?.supported !== true) continue;
         if (context.apply({ kind: 'ReplaceLevelResolution', levelResolution, value })) {
           context.used.add(key);
+          if (value.kind === 'choice')
+            applyScreenRerolls(context, roomIndex, position, levelResolution, (count) => ({
+              kind: 'ReplaceLevelResolution',
+              levelResolution,
+              value: { ...value, rerollCount: count },
+            }));
           return true;
         }
       }
@@ -376,18 +386,23 @@ function ownerGiver(context: RunImportContext, trait: TraitOfferAddress): string
     return definition?.traitOfferProducer?.giverKey;
   }
   if (owner.kind !== 'incomingReward' && owner.kind !== 'localReward') return undefined;
-  const state = context
-    .assembly()
-    .project.route.biomes.find((biome) => biome.biomeKey === owner.biomeKey)
-    ?.topology?.occurrences.find((entry) => entry.occurrenceId === owner.occurrenceId)?.state;
+  const occurrence = authoredOccurrence(
+    context.assembly().project,
+    owner.biomeKey,
+    owner.occurrenceId,
+  );
+  const state = occurrence?.state;
   const offer =
     owner.kind === 'localReward'
       ? state?.kind === 'fieldsCombat'
-        ? (owner.groupKey === 'cages' ? state.cages : state.optionalRewards)[owner.slotKey]?.offer
+        ? (owner.groupKey === 'cages'
+            ? deliveredCageReward(occurrence!, owner.slotKey)
+            : state.optionalRewards[owner.slotKey]
+          )?.offer
         : undefined
-      : state !== undefined && 'reward' in state
-        ? state.reward?.offer
-        : undefined;
+      : occurrence === undefined
+        ? undefined
+        : deliveredIncomingReward(occurrence)?.offer;
   if (offer === undefined) return undefined;
   const loot =
     offer.payload?.kind === 'BoonSource'
@@ -402,8 +417,8 @@ function ownerGiver(context: RunImportContext, trait: TraitOfferAddress): string
 
 /**
  * Applies a screen's offer, else the offer without the unselected rows the
- * engine refuses, reported. An offer carrying a Concave Stone result is kept
- * only when its extra pick settles without a finding.
+ * engine refuses, reported, and returns the value applied. An offer carrying a
+ * Concave Stone result is kept only when its extra pick settles without a finding.
  */
 function applyScreenOffer(
   context: RunImportContext,
@@ -411,15 +426,15 @@ function applyScreenOffer(
   value: AuthoredTraitOffer,
   record: { readonly roomIndex: number; readonly visit: number },
   ambiguous: boolean,
-): boolean {
+): AuthoredTraitOffer | undefined {
   const stone = value.kind === 'traits' && value.concaveStoneResult !== undefined;
   const apply = (command: ProjectCommand) =>
     stone ? context.applyValid(command) : context.apply(command);
   const command = { kind: 'ReplaceTraitOffer', trait, value } as const;
   const evaluation = context.candidates().evaluate({ kind: 'traitOffer', trait, value });
-  if (evaluation.kind !== 'traitOffer') return false;
+  if (evaluation.kind !== 'traitOffer') return undefined;
   if (evaluation.result.supported && evaluation.result.findings.length === 0) {
-    if (!apply(command)) return false;
+    if (!apply(command)) return undefined;
     if (ambiguous)
       context.note({
         area: 'traitOffer',
@@ -428,12 +443,12 @@ function applyScreenOffer(
         applied: command,
         record,
       });
-    return true;
+    return value;
   }
   context.refuse();
   // The engine refuses some unselected rows here; the observed pick keeps the others.
   const reduced = withoutIllegalRows(value, evaluation.result.assessments);
-  if (reduced === undefined) return false;
+  if (reduced === undefined) return undefined;
   const retry = context.candidates().evaluate({ kind: 'traitOffer', trait, value: reduced });
   const reducedCommand = { kind: 'ReplaceTraitOffer', trait, value: reduced } as const;
   if (
@@ -442,7 +457,7 @@ function applyScreenOffer(
     retry.result.findings.length > 0 ||
     !apply(reducedCommand)
   )
-    return false;
+    return undefined;
   context.note({
     area: 'traitOffer',
     reason: 'refused',
@@ -450,7 +465,22 @@ function applyScreenOffer(
     applied: reducedCommand,
     record,
   });
-  return true;
+  return reduced;
+}
+
+/** Authors a screen's recorded rerolls on the final rows just applied. */
+function applyTraitScreenRerolls(
+  context: RunImportContext,
+  trait: TraitOfferAddress,
+  value: AuthoredTraitOffer,
+  roomIndex: number,
+  position: number,
+): void {
+  applyScreenRerolls(context, roomIndex, position, trait, (count) => ({
+    kind: 'ReplaceTraitOffer',
+    trait,
+    value: { ...value, rerollCount: count } as AuthoredTraitOffer,
+  }));
 }
 
 /**
@@ -471,29 +501,34 @@ export function answerTraitOffer(context: RunImportContext, reason: SemanticFind
         POM_GIVERS.has(screen.giver) ||
         (giver !== undefined && screenGiver(context, screen) !== giver)
         ? []
-        : [{ screen, key, roomIndex }];
+        : [{ screen, key, roomIndex, position }];
     }),
   );
   const ambiguous =
     giver === undefined && new Set(screens.map((entry) => entry.screen.giver)).size > 1;
-  for (const { screen, key, roomIndex } of screens) {
+  for (const { screen, key, roomIndex, position } of screens) {
     const record = { roomIndex, visit: 0 };
     if (screenGiver(context, screen) === 'Chaos') {
-      if (answerChaosScreen(context, trait, screen, key, roomIndex)) return true;
+      if (answerChaosScreen(context, trait, screen, key, roomIndex, position)) return true;
       if (giver !== undefined) return false;
       continue;
     }
     const value = traitsOffer(context, screen, roomIndex);
     if (value === undefined) continue;
-    if (applyScreenOffer(context, trait, value, record, ambiguous)) {
+    const applied = applyScreenOffer(context, trait, value, record, ambiguous);
+    if (applied !== undefined) {
       context.used.add(key);
+      applyTraitScreenRerolls(context, trait, applied, roomIndex, position);
       return true;
     }
     // The engine refused the Stone's extra pick; the screen's own pick may still stand.
     const plain = withoutConcaveStone(value);
-    if (plain !== value && applyScreenOffer(context, trait, plain, record, ambiguous)) {
+    const appliedPlain =
+      plain === value ? undefined : applyScreenOffer(context, trait, plain, record, ambiguous);
+    if (appliedPlain !== undefined) {
       context.used.add(key);
       context.note({ area: 'traitOffer', reason: 'refused', address: trait, record });
+      applyTraitScreenRerolls(context, trait, appliedPlain, roomIndex, position);
       return true;
     }
     // A screen tied to its owner is that owner's answer; a later screen is not.
@@ -512,6 +547,7 @@ function answerChaosScreen(
   screen: RunRecordTraitScreen,
   key: string,
   roomIndex: number,
+  position: number,
 ): boolean {
   const record = { roomIndex, visit: 0 };
   for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -532,6 +568,7 @@ function answerChaosScreen(
       continue;
     }
     context.used.add(key);
+    applyTraitScreenRerolls(context, trait, built.value, roomIndex, position);
     // Unpicked durations are never saved.
     context.note({
       area: 'traitOffer',

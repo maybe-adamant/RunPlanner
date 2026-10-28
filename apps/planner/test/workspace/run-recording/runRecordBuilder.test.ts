@@ -1088,41 +1088,36 @@ describe('run record builder', () => {
     expect(record.rooms[1]?.grantedArcana).toBeUndefined();
   });
 
-  it('counts a door reroll by the store draw no offer explains, never a screen reroll', () => {
-    const visit = (left: readonly string[], spentRerolls?: Record<string, number>) => {
+  it('counts door rerolls as the rerolls spent beyond screen rerolls and keeps each screen count', () => {
+    const visit = (spent: number, spentRerolls?: Record<string, number>) => {
       const source = room('F_Combat01', {
-        exitDoors: [
-          { door: 1, room: 'F_Combat02' },
-          { door: 2, room: 'F_Combat03' },
-        ],
-        offeredRewards: {
-          '1': { type: 'Boon', lootName: 'ZeusUpgrade' },
-          '2': { type: 'MaxHealthDrop' },
-        },
+        exitDoors: [{ door: 1, room: 'F_Combat02' }],
+        offeredRewards: { '1': { type: 'MaxHealthDrop' } },
         ...(spentRerolls === undefined ? {} : { spentRerolls }),
       });
       return buildRunRecord([
-        save({
-          history: [],
-          current: source,
-          run: {
-            numRerolls: 3,
-            rewardStores: { RunProgress: ['Boon', 'MaxHealthDrop', 'TalentDrop', 'StackUpgrade'] },
-          },
-        }),
+        save({ history: [], current: source, run: { numRerolls: 4 } }),
         save({
           history: ['F_Combat01'],
           current: room('F_Combat02'),
           departure: source,
-          run: { numRerolls: 2, rewardStores: { RunProgress: left } },
+          run: { numRerolls: 4 - spent },
         }),
-      ]).rooms[0]?.rerolls;
+      ]);
     };
-    expect(visit(['StackUpgrade'])).toBe(1);
-    // The rerolled screen spent the reroll; its doors drew only their offers.
-    expect(visit(['TalentDrop', 'StackUpgrade'], { '2000591': 1 })).toBeUndefined();
-    // A screen reroll does not explain a draw beyond the offers.
-    expect(visit(['StackUpgrade'], { '2000591': 1 })).toBeUndefined();
+    const door = visit(1);
+    expect(door.rooms[0]).toMatchObject({ rerolls: 1, entry: { numRerolls: 4 } });
+    expect(door.rooms[1]?.entry?.numRerolls).toBe(3);
+    // A screen's second reroll costs two: the room spent all three on its screen.
+    const screens = visit(3, { '2000591': 2, WellShop: 0 });
+    expect(screens.rooms[0]?.rerolls).toBeUndefined();
+    expect(screens.rooms[0]?.spentRerolls).toEqual({ '2000591': 2 });
+    expect(visit(4, { '2000591': 2 }).rooms[0]).toMatchObject({
+      rerolls: 1,
+      spentRerolls: { '2000591': 2 },
+    });
+    // Spending every reroll leaves no pool to record.
+    expect(visit(4).rooms[1]?.entry?.numRerolls).toBeUndefined();
   });
 
   it('ends a run on the hub save of the dead hero', () => {
