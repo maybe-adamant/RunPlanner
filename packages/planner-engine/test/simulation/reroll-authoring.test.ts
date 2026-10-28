@@ -31,7 +31,12 @@ import {
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
-import { supportedRerollRewards, withArcana, withJudgment } from '../support/rerolls';
+import {
+  supportedRerollRewards,
+  withArcana,
+  withGoldenUnderworldJudgments,
+  withJudgment,
+} from '../support/rerolls';
 
 const f = createBiomeAddress('Underworld', 'F');
 const n = createBiomeAddress('Surface', 'N');
@@ -205,6 +210,21 @@ describe('room door surfaces', () => {
     ).toEqual({ rewardType: 'MaxHealthDrop' });
   });
 
+  it('offer no pending press without a door-reroll card', () => {
+    const plain = loadUnderworldFGCheckpoint();
+    expect(rerollSurfaceForProjectEvaluationAssembly(evaluate(plain), doors(source))?.enabled).toBe(
+      false,
+    );
+    expect(
+      createPreparedProjectCandidateSession(catalog, evaluate(plain)).evaluate({
+        kind: 'pendingRerollReward',
+        surface: doors(source),
+        target: door('exit2', 'golden-f-b3-e2'),
+        value: { rewardType: 'RoomMoneyDrop' },
+      }),
+    ).toMatchObject({ kind: 'unavailable', reason: 'targetNotReachable' });
+  });
+
   it('name the doors the game never rerolls', () => {
     const surface = rerollSurfaceForProjectEvaluationAssembly(
       evaluate(base),
@@ -325,6 +345,112 @@ describe('reroll spend allowance', () => {
     const twice = applyProjectCommand(project, catalog, count(2));
     expect(screen(twice, 2)).toMatchObject({ cost: 3, lowestRemaining: 0, allowed: false });
     expect(settles(twice, count(3))).toThrow('the reroll pool has nothing left for this spend');
+  });
+
+  it('counts spends in later biomes', () => {
+    const project = withGoldenUnderworldJudgments(base);
+    const earlier = doors('golden-f-b2-e1');
+    const allowance = (current: ProjectDocument) =>
+      rerollSpendAllowanceForProjectEvaluationAssembly(evaluate(current), {
+        kind: 'press',
+        surface: earlier,
+      });
+    // A door not taken may draw anything; the taken one only what needs no screen.
+    const resources = ['RoomMoneyDrop', 'MaxHealthDrop', 'MaxManaDrop'];
+    const nextPress = (current: ProjectDocument) => {
+      const biomeG = evaluate(current).evaluation.route.biomes[1]!;
+      if (!('rewards' in biomeG) || !('history' in biomeG)) throw new Error('G was not evaluated');
+      const entered = new Set(
+        biomeG.history.rooms.flatMap((room) =>
+          room.origin.kind === 'occurrence' ? [room.origin.occurrenceId as string] : [],
+        ),
+      );
+      for (const surface of biomeG.rewards.rerollSurfaces)
+        for (const { target, unavailable } of surface.targets) {
+          if (unavailable !== undefined || target.kind === 'hubSlot') continue;
+          const types =
+            target.kind !== 'wheelOffer' && entered.has(target.occurrenceId)
+              ? resources
+              : ROOM_REWARDS;
+          if (pendingRewards(current, surface.surface, target, types).length > 0)
+            return press(current, surface.surface, target, types).project;
+        }
+      throw new Error('no G press is supported');
+    };
+    let current = project;
+    let presses = 0;
+    for (; (allowance(current) as { allowed?: boolean }).allowed === true; presses += 1)
+      current = nextPress(current);
+    expect(presses).toBeGreaterThan(0);
+    expect(allowance(current)).toMatchObject({ lowestRemaining: 0, allowed: false });
+    // No F spend follows the earlier doors, so only G's spends leave it short.
+    expect(
+      rerollSurfaceForProjectEvaluationAssembly(evaluate(current), earlier)?.poolRemaining,
+    ).toBeGreaterThan(0);
+    // A draw that starves no later room, so only the pool is short.
+    const exit2 = door('exit2', 'golden-f-b3-e2');
+    const reward = pendingRewards(current, earlier, exit2, ROOM_REWARDS).find((offer) =>
+      evaluate(
+        applyProjectCommand(current, catalog, appendPress(current, earlier, exit2, offer)),
+      ).evaluation.findings.every((finding) => finding.code === 'rerollPoolExceeded'),
+    )!;
+    expect(
+      settles(current, appendPress(current, earlier, door('exit2', 'golden-f-b3-e2'), reward)),
+    ).toThrow('the reroll pool has nothing left for this spend');
+  });
+
+  it('refuses a Hub stay press that a later stay leaves the pool short for', () => {
+    // combat01, combat03 and combat10 are never entered.
+    let project = withArcana(loadSurfaceNProject(), ['DoorReroll']);
+    project = press(project, stay(4), slot('combat03')).project;
+    project = press(project, stay(4), slot('combat10')).project;
+    const allowance = () =>
+      rerollSpendAllowanceForProjectEvaluationAssembly(evaluate(project), {
+        kind: 'press',
+        surface: stay(1),
+      });
+    expect(allowance()).toMatchObject({ lowestRemaining: 1, allowed: true });
+    const reward = pendingRewards(project, stay(1), slot('combat01'), HUB_REWARDS)[0]!;
+    expect(settles(project, appendPress(project, stay(1), slot('combat01'), reward))).not.toThrow();
+    project = press(project, stay(5), slot('combat03')).project;
+    expect(allowance()).toMatchObject({ lowestRemaining: 0, allowed: false });
+    expect(settles(project, appendPress(project, stay(1), slot('combat01'), reward))).toThrow(
+      'the reroll pool has nothing left for this spend',
+    );
+  });
+
+  it('may refuse a press whose own draw would stop the later spends', () => {
+    const later = doors('golden-f-b6-e1');
+    const exit = rerollSurfaceForProjectEvaluationAssembly(evaluate(base), later)!.targets[0]!
+      .target;
+    let project = base;
+    for (let count = 0; count < 3; count += 1)
+      project = press(
+        project,
+        later,
+        exit,
+        ROOM_REWARDS.filter((type) => type !== 'Boon'),
+      ).project;
+    const earlier = doors('golden-f-b2-e1');
+    expect(
+      rerollSpendAllowanceForProjectEvaluationAssembly(evaluate(project), {
+        kind: 'press',
+        surface: earlier,
+      }),
+    ).toMatchObject({ allowed: false });
+    // A Boon on the door taken needs its screen, so the walk stops before the later presses
+    // and the settlement accepts the press with that finding instead.
+    const target = door('exit1', 'golden-f-b3-e1');
+    const reward = pendingRewards(project, earlier, target, ['Boon'])[0]!;
+    const settled = settleProjectEdit({
+      catalog,
+      before: evaluate(project),
+      command: appendPress(project, earlier, target, reward),
+      evaluate,
+    }).assembly;
+    expect(settled.evaluation.findings.map((finding) => finding.code)).toEqual([
+      'traitOfferMissing',
+    ]);
   });
 
   it('is unreached for a surface the walk never reached', () => {

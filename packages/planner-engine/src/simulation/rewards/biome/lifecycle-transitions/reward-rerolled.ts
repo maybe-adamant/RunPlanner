@@ -67,6 +67,10 @@ export interface RerollTargetContext {
   readonly peerKey: string;
   /** Its reward when its doors were last assigned: the first draw, or a restored Hub's persisted offer. */
   readonly generated: ResolvedRewardOffer;
+  /** Its own first draw, before any press: its current reward until one settles. */
+  readonly firstDraw: ResolvedRewardOffer;
+  /** A Hub board door whose room an earlier visit entered: closed for the run. */
+  readonly slotEntered?: true;
   readonly producerLifecycleKey: string;
   readonly resolvedStoreKey?: string;
   readonly binding?: CountedRewardBinding;
@@ -130,6 +134,7 @@ export function roomTargetContext(
       owner,
       peerKey: semanticAddressKey(offer.origin),
       generated: generated.offer,
+      firstDraw: generated.offer,
       producerLifecycleKey: wheel.producerLifecycleKey,
       resolvedStoreKey: wheel.storeKey,
       binding: rewardWheelBinding(catalog, sourceDeclaration, wheel),
@@ -162,6 +167,7 @@ export function roomTargetContext(
       owner,
       peerKey: semanticAddressKey(cage.origin),
       generated,
+      firstDraw: generated,
       producerLifecycleKey: cage.producerLifecycleKey,
       resolvedStoreKey: cage.resolvedStoreKey,
       binding: localRewardBinding(destination, cage),
@@ -187,6 +193,7 @@ export function roomTargetContext(
     owner,
     peerKey: semanticAddressKey(door.origin),
     generated: generated.offer,
+    firstDraw: generated.offer,
     producerLifecycleKey: incoming.producerLifecycleKey,
     ...(incoming.resolvedStoreKey === undefined
       ? {}
@@ -244,6 +251,8 @@ export function hubTargetContext(
     ),
     peerKey,
     generated: assigned,
+    firstDraw: generated.offer,
+    ...(entered.has(hubSlotKey) ? { slotEntered: true as const } : {}),
     producerLifecycleKey: incoming.producerLifecycleKey,
     ...(incoming.resolvedStoreKey === undefined
       ? {}

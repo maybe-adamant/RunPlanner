@@ -22,7 +22,6 @@ import type {
   CanonicalBatch,
   CanonicalHubDecision,
 } from '../../materialization';
-import { forGeneration } from '../../materialization';
 import type { FindingChronology } from '../../finding-regions';
 import type { RerollSurfaceSettlement, RerollSurfaceTarget } from '../model';
 import type { RewardProducerCandidateResult } from '../producer-frontiers';
@@ -42,7 +41,7 @@ import {
 
 /** Evaluates new rewards for a press not yet authored, appended to one surface. */
 export interface RerollSurfaceCapability {
-  /** Undefined when the surface has no such target or a press of it is refused. */
+  /** Undefined when rerolls are not enabled, or the target is missing or refused. */
   readonly evaluateOffer: (
     target: RerollPressTarget,
     offer: ResolvedRewardOffer,
@@ -91,8 +90,6 @@ const DOORS_CLOSED_BY = new Set<HistoryEvent['kind']>([
 interface SurfaceTargetContext {
   readonly target: RerollPressTarget;
   readonly context: RerollTargetContext;
-  /** Its reward before any press: what `current` falls back to. */
-  readonly drawn: ResolvedRewardOffer;
   readonly unavailable?: RerollSurfaceTarget['unavailable'];
 }
 
@@ -112,20 +109,21 @@ function surfaceCapture(
   const view = context.history.viewsBySequence[event.sequence];
   if (view === undefined) return undefined;
   const pool = lowestRerollPool(state.branches);
+  const enabled = state.rerollsFlagged.get(inputs.flagKey) === true;
   const settle = (poolRemainingAtStart: number): RerollSurfaceSettlement =>
     Object.freeze({
       surface: inputs.surface,
       historySequence: event.sequence,
-      enabled: state.rerollsFlagged.get(inputs.flagKey) === true,
+      enabled,
       poolRemainingAtStart,
       poolRemaining: pool,
       targets: Object.freeze(
-        inputs.targets().map(({ target, context: targetContext, drawn, unavailable }) =>
+        inputs.targets().map(({ target, context: targetContext, unavailable }) =>
           Object.freeze({
             target,
             owner: targetContext.owner,
             assigned: targetContext.generated,
-            current: state.rerolledOffers.get(targetContext.peerKey) ?? drawn,
+            current: state.rerolledOffers.get(targetContext.peerKey) ?? targetContext.firstDraw,
             ...(unavailable === undefined ? {} : { unavailable }),
           }),
         ),
@@ -141,6 +139,8 @@ function surfaceCapture(
     settle,
     capability: Object.freeze({
       evaluateOffer: (target: RerollPressTarget, offer: ResolvedRewardOffer) => {
+        // Without a door-reroll card when its targets were assigned, no press acts.
+        if (!enabled) return undefined;
         const key = JSON.stringify(target);
         let evaluate = evaluators.get(key);
         if (evaluate === undefined) {
@@ -192,7 +192,6 @@ function roomSurfaceTarget(
   return Object.freeze({
     target,
     context: resolved,
-    drawn: resolved.generated,
     ...(resolved.rerollable ? {} : { unavailable: 'notRerollable' as const }),
   });
 }
@@ -270,9 +269,6 @@ function hubCapture(
   stay: NonNullable<ChronologyWalkState['hubStay']>,
 ): RerollSurfaceCapture | undefined {
   const biome = createBiomeAddress(hub.origin.routeKey, hub.origin.biomeKey);
-  const entered = new Set(
-    hub.visits.slice(0, stay.precedingVisitCount).map((visit) => visit.target.hubSlotKey),
-  );
   const contextFor = (target: RerollPressTarget): SurfaceTargetContext | undefined => {
     if (target.kind !== 'hubSlot') return undefined;
     const resolved = hubTargetContext(
@@ -282,15 +278,11 @@ function hubCapture(
       stay.precedingVisitCount,
       stay.assigned,
     );
-    const incoming = hub.board.targets.find(
-      (candidate) => candidate.hubSlotKey === target.hubSlotKey,
-    )?.room.incomingReward;
-    if (resolved === undefined || incoming === undefined) return undefined;
+    if (resolved === undefined) return undefined;
     return Object.freeze({
       target,
       context: resolved,
-      drawn: forGeneration(incoming).offer,
-      ...(entered.has(target.hubSlotKey)
+      ...(resolved.slotEntered === true
         ? { unavailable: 'slotEntered' as const }
         : resolved.rerollable
           ? {}
