@@ -47,6 +47,8 @@ export interface StygianWellRollWalk {
 export interface PurgingPoolRollWalk {
   readonly rollKey: string;
   readonly offeredSlotKeys: readonly PurgingPoolSlotKey[];
+  /** Eligible traits when the list was drawn; more than it shows leaves unshown values. */
+  readonly eligibleCount: number;
   readonly sold: readonly PurgingPoolSlotKey[];
   readonly rerollCount: number;
 }
@@ -76,10 +78,12 @@ export function initialStygianWellRollWalk(): Extract<
 /** The initial list offers its authored slots. */
 export function initialPurgingPoolRollWalk(
   pool: PurgingPoolState,
+  eligibleCount: number,
 ): Extract<FeatureRollWalk, { readonly feature: 'purgingPool' }> {
   return Object.freeze({
     feature: 'purgingPool',
     rollKey: INITIAL_ROLL_KEY,
+    eligibleCount,
     offeredSlotKeys: Object.freeze(
       PURGING_POOL_SLOT_KEYS.filter((slotKey) => pool.traitKeyBySlot[slotKey] !== null),
     ),
@@ -195,11 +199,13 @@ export function purgingPoolAfterReroll<W extends PurgingPoolRollWalk>(
   walk: W,
   rerollId: string,
   offeredSlotKeys: readonly PurgingPoolSlotKey[],
+  eligibleCount: number,
 ): W {
   return Object.freeze({
     ...walk,
     rollKey: rerollId,
     offeredSlotKeys,
+    eligibleCount,
     sold: Object.freeze([]),
     rerollCount: walk.rerollCount + 1,
   });
@@ -247,4 +253,16 @@ export function parsePurgingPoolSalePoint(
     slotKey: slotKey as PurgingPoolSlotKey,
     ...(rollKey === undefined ? {} : { rollKey }),
   });
+}
+
+/**
+ * The game bans one random item still on show from each reroll's draw, so a
+ * reroll whose pins include every item on show right before it cannot occur.
+ * An unpinned slot on show, or none on show, never proves it.
+ */
+export function rollRepeatsAllOffers(
+  onShow: readonly (string | null)[],
+  pins: readonly string[],
+): boolean {
+  return onShow.length > 0 && onShow.every((itemKey) => itemKey !== null && pins.includes(itemKey));
 }

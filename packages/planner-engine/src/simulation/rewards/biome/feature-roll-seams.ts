@@ -31,6 +31,7 @@ import {
   purgingPoolOfferedSlots,
   purgingPoolRerollSlots,
   rollPosition,
+  rollRepeatsAllOffers,
   stygianWellAfterPurchase,
   stygianWellAfterReroll,
   stygianWellLiveRefillSlot,
@@ -51,7 +52,11 @@ import {
   stygianWellRestockCandidates,
   type StygianWellInteraction,
 } from '../../commerce/stygian-well';
-import { ownerRegion, type FindingRegionEntry } from '../../finding-regions';
+import {
+  ownerRegion,
+  type FindingChronology,
+  type FindingRegionEntry,
+} from '../../finding-regions';
 import type { HistoryEvent } from '../../history';
 import type { CanonicalAuthoredRoom } from '../../materialization';
 import type { RewardBranchState } from '../branch-primitives';
@@ -107,7 +112,15 @@ function purgingPoolWalk(
 ): Extract<FeatureRollWalk, { readonly feature: 'purgingPool' }> | undefined {
   const walk = state.featureRolls.get(featureRollWalkKey(roomKey, 'purgingPool'));
   if (walk?.feature === 'purgingPool') return walk;
-  return room.purgingPool === undefined ? undefined : initialPurgingPoolRollWalk(room.purgingPool);
+  const initial = state.purgingPoolAssessments.get(roomKey)?.assessments ?? [];
+  return room.purgingPool === undefined
+    ? undefined
+    : initialPurgingPoolRollWalk(
+        room.purgingPool,
+        initial.length === 0
+          ? 0
+          : Math.min(...initial.map((assessment) => assessment.eligibleTraitKeys.length)),
+      );
 }
 
 function withWalk(
@@ -163,6 +176,24 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
     });
     const offered = stygianWellRestockedSlots(walk);
     const pins = reference?.kind === 'rerollStygianWell' ? reference.offerKeyBySlot : {};
+    const view = wellOccurrenceView(room);
+    const refillSlot = stygianWellLiveRefillSlot(walk);
+    const onShow = [
+      ...stygianWellOfferedSlots(walk).map(
+        (slotKey) =>
+          stygianWellGenerationItemKey(view, stygianWellGenerationKey(walk.rollKey, slotKey)) ??
+          null,
+      ),
+      ...(refillSlot === undefined ? [] : [room.stygianWell?.travelDealRefillKey ?? null]),
+    ];
+    reportRepeatsAllOffers(
+      findings,
+      event.owner,
+      onShow,
+      Object.values(pins).filter((itemKey): itemKey is string => itemKey !== undefined),
+      region,
+      chronology,
+    );
     const rolls = settled.branches.map((branch) =>
       assessStygianWellRoll(
         context.catalog,
@@ -225,6 +256,20 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
     chronology,
   });
   const pins = reference?.kind === 'rerollPurgingPool' ? reference.traitKeyBySlot : {};
+  // The ban applies only when the previous draw left eligible traits unshown.
+  if (walk.eligibleCount > walk.offeredSlotKeys.length) {
+    const view = { purgingPool: room.purgingPool, roomActions: { order: rankedReferences(room) } };
+    reportRepeatsAllOffers(
+      findings,
+      event.owner,
+      purgingPoolOfferedSlots(walk).map(
+        (slotKey) => purgingPoolRollTraitKey(view, walk.rollKey, slotKey) ?? null,
+      ),
+      Object.values(pins).filter((traitKey): traitKey is string => traitKey !== undefined),
+      region,
+      chronology,
+    );
+  }
   const assessments = Object.freeze(
     settled.branches.map((branch) =>
       assessPurgingPoolList(context.catalog, pins, branch.state.traitHistory.equippedTraits, false),
@@ -258,7 +303,12 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
       featureRolls: withWalk(
         state,
         roomKey,
-        purgingPoolAfterReroll(walk, event.rerollId, offeredSlotKeys),
+        purgingPoolAfterReroll(
+          walk,
+          event.rerollId,
+          offeredSlotKeys,
+          Math.min(...assessments.map((assessment) => assessment.eligibleTraitKeys.length)),
+        ),
       ),
       purgingPoolAssessments: new Map(state.purgingPoolAssessments).set(
         roomKey,
@@ -274,6 +324,25 @@ export const featureRerolled: ChronologySeamHandler<'featureRerolled'> = (
     emissions: [settledFindings([...settled.findings, ...findings.values()]), timeline],
   };
 };
+
+function reportRepeatsAllOffers(
+  findings: Map<string, FindingRegionEntry>,
+  owner: RoomActionAddress,
+  onShow: readonly (string | null)[],
+  pins: readonly string[],
+  region: string,
+  chronology: FindingChronology,
+): void {
+  if (rollRepeatsAllOffers(onShow, pins))
+    addRewardFinding(
+      findings,
+      rewardFinding('rollRepeatsAllOffers', owner, {
+        itemKeys: onShow.filter((key): key is string => key !== null),
+      }),
+      region,
+      chronology,
+    );
+}
 
 function rerollReference(feature: RollFeature, rerollId: string): RoomActionReference {
   return feature === 'stygianWell'

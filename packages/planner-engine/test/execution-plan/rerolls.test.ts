@@ -234,7 +234,7 @@ describe('Well and Pool roll publication', () => {
       kind: 'ReplaceStygianWellRollOffer',
       action: action(['rerollStygianWell', 'r1']),
       slotKey: 'healing',
-      itemKey: 'ArmorBoostStore',
+      itemKey: 'HealDropRange',
     });
     apply({
       kind: 'SetStygianWellPurchase',
@@ -264,7 +264,7 @@ describe('Well and Pool roll publication', () => {
     const plan = planOf(rolledProject());
     const roomPlan = plan.occurrences.find((candidate) => candidate.id === postboss)!;
     expect(roomPlan.overview.stygianWell?.rerolls).toEqual([
-      { rollKey: 'r1', offers: [{ generationKey: 'r1:healing', offerKey: 'ArmorBoostStore' }] },
+      { rollKey: 'r1', offers: [{ generationKey: 'r1:healing', offerKey: 'HealDropRange' }] },
     ]);
     expect(roomPlan.overview.purgingPool?.rerolls).toEqual([
       { rollKey: 'r1', traits: [{ slotKey: 'middle', traitKey: 'HeraCastBoon' }] },

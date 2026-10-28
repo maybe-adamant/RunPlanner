@@ -166,7 +166,7 @@ describe('Stygian Well rolls', () => {
       kind: 'ReplaceStygianWellRollOffer',
       action: wellReroll('r1'),
       slotKey: 'healing',
-      itemKey: 'ArmorBoostStore',
+      itemKey: 'HealDropRange',
     });
     project = settle(project, {
       kind: 'SetStygianWellPurchase',
@@ -188,10 +188,10 @@ describe('Stygian Well rolls', () => {
       occurrence: room,
       generationKey: 'r1:healing',
       purchased: true,
-      itemKey: 'ArmorBoostStore',
+      itemKey: 'HealDropRange',
     });
     expect(order(bought).slice(-2)).toEqual([
-      { kind: 'rerollStygianWell', rerollId: 'r1', offerKeyBySlot: { healing: 'ArmorBoostStore' } },
+      { kind: 'rerollStygianWell', rerollId: 'r1', offerKeyBySlot: { healing: 'HealDropRange' } },
       { kind: 'purchaseStygianWellOffer', generationKey: 'r1:healing' },
     ]);
     expect(findings(bought)).toEqual([]);
@@ -201,9 +201,42 @@ describe('Stygian Well rolls', () => {
         occurrence: room,
         generationKey: 'initial:healing',
         purchased: true,
-        itemKey: 'ArmorBoostStore',
+        itemKey: 'HealDropRange',
       }),
     ).toThrow('only a reroll slot is pinned with its purchase');
+  });
+
+  it('refuse a reroll whose pins repeat every item still on show', () => {
+    // Only the initial healing item is on show before the reroll: one item is always banned.
+    const repeated = applyProjectCommand(appendWellReroll(base()), catalog, {
+      kind: 'ReplaceStygianWellRollOffer',
+      action: wellReroll('r1'),
+      slotKey: 'healing',
+      itemKey: 'ArmorBoostStore',
+    });
+    expect(findings(repeated)).toEqual([
+      {
+        code: 'rollRepeatsAllOffers',
+        origin: semanticAddressKey(wellReroll('r1')),
+        evidence: { itemKeys: ['ArmorBoostStore'] },
+      },
+    ]);
+    // With secondRight and the restock still on show, repeating one item is possible.
+    let partial = base();
+    for (const generationKey of ['travelDealRefill', 'initial:secondRight'] as const)
+      partial = applyProjectCommand(partial, catalog, {
+        kind: 'SetStygianWellPurchase',
+        occurrence: room,
+        generationKey,
+        purchased: false,
+      });
+    partial = applyProjectCommand(appendWellReroll(partial), catalog, {
+      kind: 'ReplaceStygianWellRollOffer',
+      action: wellReroll('r1'),
+      slotKey: 'healing',
+      itemKey: 'ArmorBoostStore',
+    });
+    expect(findings(partial)).toEqual([]);
   });
 
   it('keep a purchase from a replaced or removed roll with its finding', () => {
@@ -226,7 +259,7 @@ describe('Stygian Well rolls', () => {
       kind: 'ReplaceStygianWellRollOffer',
       action: wellReroll('r1'),
       slotKey: 'healing',
-      itemKey: 'ArmorBoostStore',
+      itemKey: 'HealDropRange',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'SetStygianWellPurchase',
@@ -370,6 +403,67 @@ describe('Pool of Purging rolls', () => {
       { kind: 'sellPurgingPoolTrait', slotKey: 'right', rollKey: 'r1' },
     ]);
     expect(findings(sold)).toEqual([]);
+  });
+
+  function pinnedPoolReroll(
+    project: ProjectDocument,
+    rerollId: string,
+    traits: Readonly<Partial<Record<'left' | 'middle' | 'right', string>>>,
+  ): ProjectDocument {
+    let next = applyProjectCommand(project, catalog, {
+      kind: 'InsertPurgingPoolReroll',
+      occurrence: room,
+      index: order(project).length,
+    });
+    for (const [slotKey, traitKey] of Object.entries(traits))
+      next = applyProjectCommand(next, catalog, {
+        kind: 'ReplacePurgingPoolRollSlot',
+        action: poolReroll(rerollId),
+        slotKey: slotKey as 'left' | 'middle' | 'right',
+        traitKey,
+      });
+    return next;
+  }
+
+  it('refuse a list repeating every trait on show while the last draw left traits unshown', () => {
+    // Four eligible traits, three shown: the reroll bans one of them.
+    const repeated = pinnedPoolReroll(interacted(), 'r1', {
+      left: 'ApolloWeaponBoon',
+      middle: 'HeraCastBoon',
+      right: 'ZeusSpecialBoon',
+    });
+    expect(findings(repeated)).toEqual([
+      {
+        code: 'rollRepeatsAllOffers',
+        origin: semanticAddressKey(poolReroll('r1')),
+        evidence: { itemKeys: ['ApolloWeaponBoon', 'HeraCastBoon', 'ZeusSpecialBoon'] },
+      },
+    ]);
+    const partial = pinnedPoolReroll(interacted(), 'r1', {
+      left: 'ApolloWeaponBoon',
+      middle: 'HeraCastBoon',
+    });
+    expect(findings(partial)).toEqual([]);
+  });
+
+  it('allow a list repeating every trait when the last draw showed every eligible trait', () => {
+    let project = interacted();
+    for (const slotKey of ['left', 'middle'] as const) {
+      const sale = { kind: 'sellPurgingPoolTrait', slotKey } as const;
+      project = applyProjectCommand(project, catalog, {
+        kind: 'InsertRoomAction',
+        action: actionAt(sale),
+        reference: sale,
+        index: order(project).length,
+      });
+    }
+    // Zeus is on show with Travel Deal unshown, so r1 repeating it is banned;
+    // r1 then shows both eligible traits, so r2 may repeat them.
+    const pins = { left: 'ZeusSpecialBoon', middle: 'RestockBoon' } as const;
+    project = pinnedPoolReroll(pinnedPoolReroll(project, 'r1', pins), 'r2', pins);
+    expect(findings(project).map((finding) => [finding.code, finding.origin])).toEqual([
+      ['rollRepeatsAllOffers', semanticAddressKey(poolReroll('r1'))],
+    ]);
   });
 
   it('report a sale from the replaced initial list', () => {

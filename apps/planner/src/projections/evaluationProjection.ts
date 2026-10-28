@@ -183,6 +183,9 @@ const findingCopy = {
   rollOfferUnavailable: {
     title: 'Not on offer at this point',
   },
+  rollRepeatsAllOffers: {
+    title: 'One of the previous items is always replaced',
+  },
   traitOfferMissing: {
     title: 'Choose a trait offer',
   },
