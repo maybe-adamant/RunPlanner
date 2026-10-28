@@ -121,24 +121,28 @@ promoted.
   reward: N side and return doors, Story, Shop and Boss destinations never
   reroll; O and Q exits into `O_MiniBoss01`, `O_MiniBoss02`, `O_Reprieve01` and
   `Q_BaseMiniBoss` do. First visit only, except Hub board doors (above).
-- **Editor (later):** this bundle lands the model and keeps today's editor
-  working; a later projection and UI plan, with no schema change, adds one
-  style for every reward-offering surface: a door-like section with the first
-  draws followed by an ordered **Rerolls** list (row = target + new reward;
-  append and remove at the end only; door lines read first draw → final).
-  Normal rooms keep Room Doors and gain the list below the doors. O rooms move
-  each wheel encounter into its own tab (e.g. Overview · Intro Timeline ·
-  Intro Wheels · Combat 1 Timeline · Room Doors) holding offers, rerolls and
-  the pick, keeping a read-only marker in the timeline if anything authored
-  can follow the wheel in its phase. The Hub becomes one timeline with the
-  required visits and fountain pinned, a board recap after each visit, and a
-  Rerolls list in each gap. Screen-reroll counts get their controls there too.
-- **Screen rerolls:** authored as a count only, on the supported screens: the nine core
-  Olympians, Hermes, Athena, Dionysus, Artemis, Hades, Chaos, Pom of Power, the Wells and the Pool
-  of Purging. Not NPC screens, Hammers, Hermes Shrines, Selene or the World
-  Shop. Legal only when screen rerolls are enabled; k rerolls of one screen
-  cost k(k+1)/2. The final rows stay authored as today; screen
-  rerolls touch no store.
+- **Editor:** delivered by [the reroll UI plan](REROLL_UI.md), with no
+  further schema change.
+- **Screen rerolls:** a count only on single-pick screens (the nine core
+  Olympians, Hermes, Athena, Dionysus, Artemis, Hades, Chaos, Pom of Power);
+  k rerolls of one screen cost k(k+1)/2; the final rows stay authored as
+  today. Not NPC screens, Hammers, Hermes Shrines, Selene or the World Shop.
+  Screen rerolls touch no store.
+- **Stygian Well and Pool of Purging rolls:** these allow several purchases
+  or sales per visit, interleaved with rerolls, so a count cannot represent
+  them. The authored feature state is the **initial** stock (Well items or
+  Pool sell options); each Well or Pool reroll is a repeatable room action
+  with its own persisted id holding the new roll's slots (optional pickers:
+  an unpinned slot stays native); each purchase or sale names its roll and
+  slot. The engine derives what is offered at each point: a Well reroll
+  restocks only unbought slots (bought slots stay blank; the Travel Deal
+  first-purchase item respawns in its own slot and stays offered), each roll
+  checked against live state; a Pool reroll redraws all three sell options
+  from current traits. The k-th reroll of the same Well or Pool in a room
+  costs k (separate counters). The game's random one-item exclusion and Pool
+  sell values are not modelled. The reroll count fields on the Well and Pool
+  are replaced by these actions (unpushed schema 100, straight reshape; local
+  counts become unpinned reroll actions).
 - Migration: no rerolls anywhere.
 
 ## Ownership
