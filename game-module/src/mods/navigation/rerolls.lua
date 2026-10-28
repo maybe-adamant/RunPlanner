@@ -1,5 +1,6 @@
 -- Planned door, cage, ship-wheel and Hub board rerolls. A target publishes its
--- first native draw; its last planned reroll is what it offers onward.
+-- first native draw; its last planned reroll, across Hub stays for a board
+-- door, is what it offers onward.
 local rerolls = {}
 
 local function pressesOf(occurrence, matches)

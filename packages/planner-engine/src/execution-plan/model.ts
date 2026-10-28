@@ -669,7 +669,7 @@ export interface ExecutionOverview {
     readonly fountain: ExecutionHubFountainUse;
     /** One entry per Hub departure, ordered by preceding visits 0..requiredVisitCount. */
     readonly departures: readonly ExecutionHubDepartureConformance[];
-    /** Board rerolls pressed in the Hub's first entry, in order; absent is none. */
+    /** Board rerolls pressed across Hub stays, in order; absent is none. */
     readonly rerolls?: readonly {
       readonly owner: string;
       readonly slotKey: string;

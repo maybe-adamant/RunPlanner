@@ -469,7 +469,7 @@ local function fields(value, label)
 end
 
 -- Expected modeled trait inventory at one ordered Hub departure.
--- Board rerolls pressed at the Hub's first entry, in order; each names its slot.
+-- Board rerolls pressed across Hub stays, in order; each names its slot.
 local function hubRerolls(value, slotKeys, label)
     local rows, errorMessage = p.arr(value, label)
     if not rows then return nil, errorMessage end
