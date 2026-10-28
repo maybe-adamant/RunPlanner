@@ -82,33 +82,37 @@ promoted.
 - **Pool:** the simulation derives the run's reroll pool from those sources
   and every spend. Adding a reroll beyond the remaining pool is blocked (fixed
   budget rule); a preserved over-spend is a finding.
-- **Door and wheel rerolls:** each door offer, Hub board door and ship-wheel
-  offer holds an ordered **reroll chain**: the first draw, then each reroll's
-  result; the last element is the offer. Every element is a real draw: it
-  leaves its store, and its side effects apply. Each reroll's candidates use
-  the normal door legality, excluding the reward being replaced and the other
-  doors' current rewards, and cost 1. Only with `AllowDoorReroll`, and only
-  where the native rule allows it: (the door's `AllowReroll` or the
-  destination's `ForceDoorAllowReroll`) and not the destination's `NoReroll`
-  and not a Shop reward. So N side and return doors, Story, Shop and Boss
-  destinations never reroll, while O and Q exits into `O_MiniBoss01`,
-  `O_MiniBoss02`, `O_Reprieve01` and `Q_BaseMiniBoss` do. First visit only:
-  a restored door is never rerollable.
+- **Door and wheel rerolls:** the authored door reward (normal door, Hub
+  board door, ship-wheel offer) stays the first native draw, with its
+  existing picker, candidates and meaning. Rerolls are an ordered list beside
+  it; each element is a further real draw: it leaves its store and its side
+  effects apply. The simulation settles the first draw at doors-unlock as
+  today and the rerolls when the walk leaves the room; the last element (the
+  first draw when there are none) is what the door offers onward: the next
+  room's incoming reward, the entered reward, the picked and unpicked wheel
+  offers. Each reroll's candidates use the normal door legality, excluding the
+  door's original reward and every door's (or wheel's) current reward, and
+  cost 1. Only with `AllowDoorReroll`, and only where the native rule allows
+  it: (the door's `AllowReroll` or the destination's `ForceDoorAllowReroll`)
+  and not the destination's `NoReroll` and not a Shop reward. So N side and
+  return doors, Story, Shop and Boss destinations never reroll, while O and Q
+  exits into `O_MiniBoss01`, `O_MiniBoss02`, `O_Reprieve01` and
+  `Q_BaseMiniBoss` do. First visit only: a restored door is never rerollable.
 - **Fields cage doors:** one reroll replaces one cage's reward, the cage chosen
-  natively at random (`RerollIndex`). Each step of a cage door's chain authors
-  the cage slot and its new reward; candidates exclude every cage's current
-  reward. The game module sets the slot before the native reroll runs. The
-  dialog adds a cage-slot picker per row.
-  The editor isolates rerolls so the door layouts, the Hub board above all,
-  stay as they are. The Reward line of a Hub board door, ship-wheel offer or
-  normal door gains a small reroll button (shown only when door rerolls are
-  enabled and the door is rerollable, with the reroll count once there is
-  one); the line itself keeps showing and editing the final reward. The button
-  opens a dialog listing the chain, one picker per element over that step's
-  candidates, with the remaining pool. Only the last element has **Reroll**
-  (appends the next draw; disabled when the pool is spent) and **Remove**
-  (drops it), so deletion is always explicit; editing an earlier element that
-  invalidates a later one leaves the later one preserved with a finding.
+  natively at random (`RerollIndex`). Each cage reroll authors the cage slot
+  and its new reward; candidates exclude every cage's current reward. The
+  game module sets the slot before the native reroll runs.
+- **Reroll editor:** rerolls stay contained so the door layouts, the Hub board
+  above all, are unchanged. The Reward line of a rerollable door, wheel offer
+  or cage door keeps showing and editing the first draw and gains a small
+  reroll button (only when door rerolls are enabled), which shows the final
+  reward once rerolls exist. It opens a dialog listing the first draw and each
+  reroll, one picker per element over that step's candidates (plus a
+  cage-slot picker for cages), with the remaining pool. Only the last reroll
+  has **Reroll** (appends the next draw; disabled when the pool is spent) and
+  **Remove** (drops it), so deletion is always explicit; editing an earlier
+  element that invalidates a later one leaves the later one preserved with a
+  finding.
 - **Screen rerolls:** a count only, on the supported screens: the nine core
   Olympians, Hermes, Athena, Dionysus, Artemis, Chaos, Pom of Power, the Wells and the Pool
   of Purging. Not NPC screens, Hammers, Hermes Shrines, Selene or the World
