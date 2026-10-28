@@ -105,6 +105,20 @@ export interface ChronologyWalkState {
    */
   readonly rerollsFlagged: ReadonlyMap<string, boolean>;
   /**
+   * The Hub stay in progress, from the board's assignment or a restore until
+   * the next departure: the visits returned before it and each board door's
+   * settled current reward when it began, which the stay assigned.
+   */
+  readonly hubStay:
+    | {
+        readonly precedingVisitCount: number;
+        readonly assigned: ReadonlyMap<
+          string,
+          import('../../../reward-kernel').ResolvedRewardOffer
+        >;
+      }
+    | undefined;
+  /**
    * One persistent Ephyra board-generation region. It starts from the
    * post-Hub-entry reward branches and contains every open physical door,
    * independently from the later six-room visit chronology.
@@ -143,6 +157,7 @@ export function createChronologyWalkState(
     peers: Object.freeze([]),
     rerolledOffers: new Map(),
     rerollsFlagged: new Map(),
+    hubStay: undefined,
     pendingHubBoard: undefined,
     batchTargetGeneration: undefined,
     expectedStores: new Map(),

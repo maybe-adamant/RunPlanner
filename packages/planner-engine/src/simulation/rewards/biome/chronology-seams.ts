@@ -68,8 +68,10 @@ import { applyRoomPreparedTransition } from './lifecycle-transitions/room-prepar
 import {
   applyRewardRerolledTransition,
   hubTargetContext,
+  lowestRerollPool,
   roomTargetContext,
 } from './lifecycle-transitions/reward-rerolled';
+import { captureRerollSurfaces } from './reroll-surfaces';
 import { historyFindingChronology } from './finding-chronology';
 import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
 import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
@@ -126,7 +128,7 @@ const rewardRerolled: ChronologySeamHandler<'rewardRerolled'> = (context, state,
       context.catalog,
       source,
       context.prepared.batchesByParent.get(semanticAddressKey(source.origin)),
-      reroll,
+      reroll.target,
       state.peers,
     ),
     flagged:
@@ -170,13 +172,19 @@ const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, 
   const reroll = hub?.rerolls.find(
     (candidate) => semanticAddressKey(candidate.origin) === ownerKey,
   );
-  if (hub === undefined || reroll === undefined)
+  if (hub === undefined || reroll === undefined || state.hubStay === undefined)
     throw new BiomeRewardSimulationContractError(`${ownerKey} reached without its Hub reroll`);
   const transition = applyRewardRerolledTransition({
     catalog: context.catalog,
     owner: event.owner,
     reward: reroll.reward,
-    target: hubTargetContext(context.catalog, hub, reroll),
+    target: hubTargetContext(
+      context.catalog,
+      hub,
+      reroll.hubSlotKey,
+      reroll.precedingVisitCount,
+      state.hubStay.assigned,
+    ),
     ...(reroll.slotEntered ? { refused: 'slotEntered' as const } : {}),
     flagged: state.rerollsFlagged.get(rerollFlagKey(semanticAddressKey(hub.origin))) === true,
     historySequence: event.sequence,
@@ -232,6 +240,9 @@ const roomRestored: ChronologySeamHandler<'roomRestored'> = (context, state, eve
   const advanced = withBranches(state, advanceRewardBranches(state.branches, event.sequence));
   if (event.restoreKind !== 'hub') return { state: advanced, emissions: [] };
   const hub = context.snapshot.decisions.find((decision) => decision.kind === 'hub');
+  if (event.after.kind !== 'hubVisit')
+    throw new BiomeRewardSimulationContractError('a Hub restore follows no Hub visit');
+  const { visitIndex } = event.after;
   return {
     state:
       hub === undefined
@@ -243,6 +254,11 @@ const roomRestored: ChronologySeamHandler<'roomRestored'> = (context, state, eve
               advanced,
               rerollFlagKey(semanticAddressKey(hub.origin)),
             ),
+            // The restore re-assigns each open door its persisted offer.
+            hubStay: Object.freeze({
+              precedingVisitCount: visitIndex,
+              assigned: advanced.rerolledOffers,
+            }),
           }),
     emissions: [],
   };
@@ -303,7 +319,10 @@ const roomDeparted: ChronologySeamHandler<'roomDeparted'> = (context, state, eve
   ...(event.origin.kind === 'hubRoom'
     ? { leadingEmissions: hubDepartureEmissions(context, state, event.origin, event.sequence) }
     : {}),
-  state: withBranches(state, applyRoomDepartedTransition(context.catalog, event, state.branches)),
+  state: Object.freeze({
+    ...withBranches(state, applyRoomDepartedTransition(context.catalog, event, state.branches)),
+    ...(event.origin.kind === 'hubRoom' ? { hubStay: undefined } : {}),
+  }),
   emissions: [],
 });
 
@@ -848,6 +867,11 @@ function flushPendingHubBoard(
         hub === undefined
           ? state.rerollsFlagged
           : flagRerolls(context, state, rerollFlagKey(semanticAddressKey(hub.origin))),
+      // The first stay assigns the first draws.
+      hubStay:
+        hub === undefined
+          ? state.hubStay
+          : Object.freeze({ precedingVisitCount: 0, assigned: new Map() }),
     }),
     emissions: [
       generationFindings(flushed.findings),
@@ -1407,5 +1431,20 @@ export function walkHistoryEvent(
   // The table pairs each kind with its own handler; the union call is sound.
   const entry = chronologySeamTable[event.kind] as ChronologySeam<HistoryEvent['kind']>;
   const next = applySeamStep(context, accumulator, state, entry.step(context, state, event));
-  return reachHistorySequence(context, next, event.sequence);
+  const reached = reachHistorySequence(context, next, event.sequence);
+  if (reached.branches.length > 0)
+    accumulator.mergeEmissions([
+      {
+        kind: 'rerollPool',
+        point: Object.freeze({
+          historySequence: event.sequence,
+          remaining: lowestRerollPool(reached.branches),
+        }),
+      },
+      ...captureRerollSurfaces(context, reached, event).map((capture) => ({
+        kind: 'rerollSurface' as const,
+        capture,
+      })),
+    ]);
+  return reached;
 }

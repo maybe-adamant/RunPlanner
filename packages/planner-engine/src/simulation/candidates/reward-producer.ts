@@ -34,8 +34,11 @@ import {
   coverageUnavailable,
   producerUnavailable,
   unavailableForBiome,
+  unreachableTarget,
   type CandidateContextUnavailable,
 } from './availability';
+import type { RerollSurfaceCandidateArtifacts } from '../rewards/biome/reroll-surfaces';
+import { rerollSurfaceOwner } from '../../authored-project/rerolls';
 import { candidateBiome, type CandidateBiomeEvaluation } from './evaluated-biome';
 import { wheelState } from './ship-owner';
 
@@ -101,6 +104,14 @@ export interface RerollRewardCandidateQuery {
   readonly reroll:
     | import('../../authored-project/addresses').RoomActionAddress
     | import('../../authored-project/addresses').HubRerollAddress;
+  readonly value: ResolvedRewardOffer;
+}
+
+/** One new reward for a press not yet authored, appended to a surface on a target. */
+export interface PendingRerollRewardCandidateQuery {
+  readonly kind: 'pendingRerollReward';
+  readonly surface: import('../../authored-project/rerolls').RerollSurface;
+  readonly target: import('../../authored-project/rerolls').RerollPressTarget;
   readonly value: ResolvedRewardOffer;
 }
 
@@ -335,4 +346,35 @@ export function evaluateRewardProducerCandidate(
     case 'acquisitionEntryOffer':
       return Object.freeze({ kind: 'acquisitionEntryOffer', result });
   }
+}
+
+/**
+ * Evaluates a new reward for a press not yet authored at the surface's append
+ * point, against the same exclusions as a press authored there.
+ */
+export function evaluatePendingRerollRewardCandidate(
+  evaluation: ProjectEvaluation,
+  artifacts: RerollSurfaceCandidateArtifacts | undefined,
+  query: PendingRerollRewardCandidateQuery,
+): CandidateContextUnavailable | EvaluatedRerollRewardCandidate {
+  const surface = query.surface;
+  const owner = rerollSurfaceOwner(surface);
+  const biome = candidateBiome(evaluation, owner.routeKey, owner.biomeKey);
+  if (biome === undefined)
+    return unavailableForBiome(
+      evaluation,
+      owner.routeKey,
+      owner.biomeKey,
+      owner,
+      'afterRoomLifecycle',
+    );
+  const capability = artifacts?.at(surface);
+  if (capability === undefined)
+    return biome.coverage.kind === 'prefix'
+      ? coverageUnavailable(evaluation, owner, 'afterRoomLifecycle')
+      : producerUnavailable(owner);
+  const result = capability.evaluateOffer(query.target, query.value);
+  return result === undefined
+    ? unreachableTarget(owner)
+    : Object.freeze({ kind: 'rerollReward', result });
 }

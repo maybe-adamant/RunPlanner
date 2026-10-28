@@ -20,6 +20,7 @@ import {
 import { publishRunStateThroughCoverage } from '../run-state';
 import { createRoomLifecycleCandidateArtifacts } from '../lifecycle-artifacts';
 import { selectedTraitOfferProducts } from './selected-trait-products';
+import { createRerollSurfaceCandidateArtifacts } from './reroll-surfaces';
 import type { ChronologyAccumulation } from './chronology-accumulator';
 import { type ChronologyWalkContext, type ChronologyWalkState } from './chronology-walk';
 import {
@@ -120,6 +121,8 @@ export function publishChronology(
     bossArcanaOutcomes: accumulation.bossArcanaOutcomes,
     phantomExits: accumulation.phantomExits,
     rerolls: accumulation.rerolls,
+    rerollPool: accumulation.rerollPool,
+    rerollSurfaces: accumulation.rerollSurfaces,
     storeSupport: accumulation.storeSupport,
     targetHistory: accumulation.targetHistory,
     branches: Object.freeze(walk.branches.map(publicRewardBranch)),
@@ -276,6 +279,9 @@ export function publishChronology(
           assessments,
         ]),
       ),
+    ),
+    rerollSurfaceArtifacts: createRerollSurfaceCandidateArtifacts(
+      accumulation.rerollSurfaceCapabilities,
     ),
     stygianWellArtifacts: createStygianWellCandidateArtifacts(
       new Map(

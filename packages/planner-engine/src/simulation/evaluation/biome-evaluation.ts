@@ -694,6 +694,7 @@ export function evaluateBiomeAssembly(
         rewards.transcendentEmbryoArtifacts,
         roomGeneration.candidateArtifacts.chaos,
         roomGeneration.candidateArtifacts.zagreusContracts,
+        rewards.rerollSurfaceArtifacts,
       ),
     });
   }
@@ -730,6 +731,7 @@ export function evaluateBiomeAssembly(
         rewards.transcendentEmbryoArtifacts,
         roomGeneration.candidateArtifacts.chaos,
         roomGeneration.candidateArtifacts.zagreusContracts,
+        rewards.rerollSurfaceArtifacts,
       ),
       history: Object.freeze({
         routeKey: history.routeKey,

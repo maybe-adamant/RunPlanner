@@ -259,8 +259,46 @@ export interface RerollSettlement {
   readonly target: import('../../authored-project/rerolls').RerolledRewardOwner;
   readonly historySequence: number;
   readonly reward: import('../../reward-kernel').ResolvedRewardOffer;
+  /** The run's pool remainder before this reroll. */
+  readonly poolRemainingBefore: number;
   /** The run's pool remainder after this reroll, absent when no branch reached it. */
   readonly poolRemainingAfter?: number;
+}
+
+/** The run's reroll pool after one history event, lowest over reached branches. */
+export interface RerollPoolPoint {
+  readonly historySequence: number;
+  readonly remaining: number;
+}
+
+/** One target a press appended to a surface may name. */
+export interface RerollSurfaceTarget {
+  readonly target: import('../../authored-project/rerolls').RerollPressTarget;
+  readonly owner: import('../../authored-project/rerolls').RerolledRewardOwner;
+  /** Its reward when its doors were assigned: the first draw, or a restored Hub stay's persisted offer. */
+  readonly assigned: import('../../reward-kernel').ResolvedRewardOffer;
+  /** Its current reward at the append point; a press that did not settle changed nothing. */
+  readonly current: import('../../reward-kernel').ResolvedRewardOffer;
+  /** Why a press of it is refused; absent when it can be rerolled. */
+  readonly unavailable?: 'notRerollable' | 'slotEntered';
+}
+
+/**
+ * A reached reroll surface at its append point, after every press authored
+ * on it: a room's doors once they unlock, a ship wheel's offers before its
+ * use, or one Hub stay's board.
+ */
+export interface RerollSurfaceSettlement {
+  readonly surface: import('../../authored-project/rerolls').RerollSurface;
+  /** The history event a press appended to the surface would follow. */
+  readonly historySequence: number;
+  /** Whether a held card enabled door rerolls when its targets were assigned. */
+  readonly enabled: boolean;
+  /** The run's pool when the surface opened, lowest over reached branches. */
+  readonly poolRemainingAtStart: number;
+  /** The run's pool at the append point, lowest over reached branches. */
+  readonly poolRemaining: number;
+  readonly targets: readonly RerollSurfaceTarget[];
 }
 
 export interface BiomeRewardSimulation extends RewardSimulationBase {
@@ -288,6 +326,10 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly phantomExits: readonly PhantomExitSettlement[];
   /** Reached door, cage, wheel and Hub board rerolls in chronological order. */
   readonly rerolls: readonly RerollSettlement[];
+  /** The run's reroll pool after each walked event where it changed. */
+  readonly rerollPool: readonly RerollPoolPoint[];
+  /** Every reached reroll surface at its append point. */
+  readonly rerollSurfaces: readonly RerollSurfaceSettlement[];
   readonly storeSupport: readonly RewardStoreSupportEntry[];
   readonly targetHistory: readonly TargetRewardHistoryCheckpoint[];
   readonly runStateSnapshots: readonly RunStateSnapshot[];

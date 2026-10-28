@@ -145,6 +145,7 @@ export {
   type PhantomExitRewardCandidateQuery,
   type EvaluatedPhantomExitRewardCandidate,
   type RerollRewardCandidateQuery,
+  type PendingRerollRewardCandidateQuery,
   type EvaluatedRerollRewardCandidate,
   type InfernalContractPedestalOptionCandidateQuery,
   type EvaluatedInfernalContractPedestalCandidate,
@@ -345,6 +346,9 @@ export {
   type BiomeRewardSimulation,
   type PhantomExitSettlement,
   type RerollSettlement,
+  type RerollPoolPoint,
+  type RerollSurfaceSettlement,
+  type RerollSurfaceTarget,
   type FigLeafPhaseCandidateSupport,
   type GorgonPhaseCandidateSupport,
   type NemesisRandomEventBranchAssessment,
@@ -477,6 +481,13 @@ export {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   ProjectSimulationContractError,
 } from './evaluation/project-evaluation-assembly';
+export {
+  hubStaysForProjectEvaluationAssembly,
+  rerollSpendAllowanceForProjectEvaluationAssembly,
+  rerollSurfaceForProjectEvaluationAssembly,
+  type RerollSpend,
+  type RerollSpendAllowance,
+} from './evaluation/reroll-authoring';
 export { evaluateBiome, materializedBiomePrefixCoveragePoint } from './evaluation/biome-evaluation';
 export { simulateProject, simulateProjectAssembly } from './evaluation/project';
 export { startInstallationAt } from './start-installation/start-point';

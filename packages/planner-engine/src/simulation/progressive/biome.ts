@@ -53,6 +53,7 @@ import { assessmentRepairOwner, findingRegion, type FindingRegionEntry } from '.
 import { createAssessmentIssue } from '../assessment-issue';
 import { evaluateBiomeRewardsAssemblyInternal } from '../rewards/biome';
 import type { BiomeRewardSimulation, RewardBranch } from '../rewards';
+import type { RerollSurfaceCandidateArtifacts } from '../rewards/biome/reroll-surfaces';
 import type { RewardProducerCandidateArtifacts } from '../rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
 import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes/encounter-effects';
@@ -201,6 +202,7 @@ function generation(
   stygianWells: StygianWellCandidateArtifacts,
   transcendentEmbryo: TranscendentEmbryoCandidateArtifacts,
   fountainRarity: FountainRarityCandidateArtifacts,
+  rerollSurfaces: RerollSurfaceCandidateArtifacts,
   encounterEntryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks>,
   forcedChaosOccurrenceKeys?: ReadonlySet<string>,
   carriedRewardLookups?: Readonly<Record<string, readonly string[]>>,
@@ -269,6 +271,7 @@ function generation(
       transcendentEmbryo,
       ordinary.chaos,
       ordinary.zagreusContracts,
+      rerollSurfaces,
     ),
     findingRegions: Object.freeze([
       ...ordinary.findingRegions,
@@ -347,6 +350,7 @@ function products(
     rewards.stygianWellArtifacts,
     rewards.transcendentEmbryoArtifacts,
     rewards.fountainRarityArtifacts,
+    rewards.rerollSurfaceArtifacts,
     rewards.encounterEntryVowRanks,
     context.forcedChaosOccurrenceKeys,
     context.seed === undefined

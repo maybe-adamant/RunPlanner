@@ -24,7 +24,7 @@ export function roomActionKey(reference: RoomActionReference): string {
     case 'interactAcquisitionEntry':
       return JSON.stringify([reference.kind, reference.siteKey, reference.entryKey]);
     case 'reroll':
-      return JSON.stringify([reference.kind, reference.rerollId]);
+      return rerollActionKey(reference.rerollId);
     case 'collectRequiredReward':
     case 'useFountain':
     case 'interactKeepsakeRack':
@@ -32,4 +32,9 @@ export function roomActionKey(reference: RoomActionReference): string {
     case 'interactInfernalContractPedestal':
       return JSON.stringify([reference.kind]);
   }
+}
+
+/** The action key of the room reroll with this persisted id. */
+export function rerollActionKey(rerollId: string): string {
+  return JSON.stringify(['reroll', rerollId]);
 }

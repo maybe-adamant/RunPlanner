@@ -237,7 +237,7 @@ export function applyRerollCommand(
             roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
           }),
         ),
-        [rerollTargetOwner(biome, source.occurrenceId, reroll)],
+        [rerollTargetOwner(biome, source.occurrenceId, reroll.target)],
       );
     }
     case 'ReplaceRerollReward': {
@@ -258,7 +258,7 @@ export function applyRerollCommand(
             roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
           }),
         ),
-        [rerollTargetOwner(biome, source.occurrenceId, existing)],
+        [rerollTargetOwner(biome, source.occurrenceId, existing.target)],
       );
     }
     case 'InsertHubReroll':
@@ -384,7 +384,7 @@ export function reconcileRemovedOrMovedReroll(
   if (plan === undefined || topology === null || topology === undefined) return document;
   const biome = createBiomeAddress(located.routeKey, plan.biomeKey);
   const reconciled = reconcileRerolledRewards(catalog, located.routePosition, biome, topology, [
-    rerollTargetOwner(biome, source.occurrenceId, reroll),
+    rerollTargetOwner(biome, source.occurrenceId, reroll.target),
   ]);
   return reconciled === topology
     ? document

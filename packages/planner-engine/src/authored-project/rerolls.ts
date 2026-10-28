@@ -5,8 +5,11 @@ import {
   createRewardWheelOfferAddress,
   semanticAddressKey,
   type BiomeAddress,
+  type HubDecisionAddress,
   type IncomingRewardAddress,
   type LocalRewardAddress,
+  type OccurrenceAddress,
+  type RewardWheelAddress,
   type RewardWheelOfferAddress,
   type SemanticAddress,
 } from './addresses';
@@ -16,7 +19,9 @@ import type {
   HubDecision,
   HubRerollAction,
   OccurrenceId,
+  ProjectDocument,
   RerollRoomAction,
+  RerollTarget,
   RoomOccurrence,
 } from './model';
 
@@ -26,13 +31,107 @@ export type RerolledRewardOwner =
 
 export const FIELDS_CAGE_GROUP_KEY = 'cages';
 
-/** The reward owner one room reroll redraws. */
+/**
+ * Where a new reroll press is appended: after a room's doors unlock (its
+ * doors and their cages), among one ship wheel's offers before its use, or at
+ * the end of one Hub stay.
+ */
+export type RerollSurface =
+  | { readonly kind: 'doors'; readonly occurrence: OccurrenceAddress }
+  | { readonly kind: 'rewardWheel'; readonly wheel: RewardWheelAddress }
+  | {
+      readonly kind: 'hubStay';
+      readonly hub: HubDecisionAddress;
+      /** Room visits returned before the stay; 0 is the Hub's first entry. */
+      readonly precedingVisitCount: number;
+    };
+
+/** A Hub board door a press names by its slot. */
+export interface HubSlotRerollTarget {
+  readonly kind: 'hubSlot';
+  readonly hubSlotKey: string;
+}
+
+/** What one press redraws: a room's door, cage or wheel offer, or a Hub board door. */
+export type RerollPressTarget = RerollTarget | HubSlotRerollTarget;
+
+/** The room, wheel or Hub that owns a surface. */
+export function rerollSurfaceOwner(
+  surface: RerollSurface,
+): OccurrenceAddress | RewardWheelAddress | HubDecisionAddress {
+  switch (surface.kind) {
+    case 'doors':
+      return surface.occurrence;
+    case 'rewardWheel':
+      return surface.wheel;
+    case 'hubStay':
+      return surface.hub;
+  }
+}
+
+export function rerollSurfaceKey(surface: RerollSurface): string {
+  switch (surface.kind) {
+    case 'doors':
+      return `doors ${semanticAddressKey(surface.occurrence)}`;
+    case 'rewardWheel':
+      return `rewardWheel ${semanticAddressKey(surface.wheel)}`;
+    case 'hubStay':
+      return `hubStay ${semanticAddressKey(surface.hub)} ${surface.precedingVisitCount}`;
+  }
+}
+
+/**
+ * The index of `InsertReroll` or `InsertHubReroll` that appends a press to the
+ * surface: the end of the room's action order, after the wheel's last press
+ * (else before its use), or before the Hub's next room visit. Undefined when
+ * the surface's room or Hub is not authored.
+ */
+export function rerollAppendIndex(
+  document: ProjectDocument,
+  surface: RerollSurface,
+): number | undefined {
+  const address = rerollSurfaceOwner(surface);
+  const topology = document.route.biomes.find(
+    (biome) => biome.biomeKey === address.biomeKey,
+  )?.topology;
+  if (topology === undefined || topology === null) return undefined;
+  if (surface.kind === 'hubStay') {
+    const hub = topology.decisions.find(
+      (decision): decision is HubDecision =>
+        decision.kind === 'hub' && decision.hubKey === surface.hub.hubKey,
+    );
+    if (hub === undefined) return undefined;
+    const visits = hub.actions.flatMap((action, index) =>
+      action.kind === 'roomVisit' ? [index] : [],
+    );
+    return visits[surface.precedingVisitCount] ?? hub.actions.length;
+  }
+  const occurrenceId =
+    surface.kind === 'doors' ? surface.occurrence.occurrenceId : surface.wheel.occurrenceId;
+  const order = topology.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+    ?.roomActions.order;
+  if (order === undefined) return undefined;
+  if (surface.kind === 'doors') return order.length;
+  const wheelKey = surface.wheel.wheelKey;
+  const lastPress = order.findLastIndex(
+    (action) =>
+      action.kind === 'reroll' &&
+      action.target.kind === 'wheelOffer' &&
+      action.target.wheelKey === wheelKey,
+  );
+  if (lastPress >= 0) return lastPress + 1;
+  const use = order.findIndex(
+    (action) => action.kind === 'chooseRewardWheel' && action.wheelKey === wheelKey,
+  );
+  return use < 0 ? order.length : use;
+}
+
+/** The reward owner a room reroll of this target redraws. */
 export function rerollTargetOwner(
   biome: BiomeAddress,
   sourceOccurrenceId: OccurrenceId,
-  reroll: RerollRoomAction,
+  target: RerollTarget,
 ): RerolledRewardOwner {
-  const target = reroll.target;
   switch (target.kind) {
     case 'door':
       return createIncomingRewardAddress(biome, target.occurrenceId);
@@ -92,7 +191,7 @@ export function sourceRerolledOwners(
   return collectOwners(
     source.roomActions.order.flatMap((action) =>
       action.kind === 'reroll'
-        ? [{ owner: rerollTargetOwner(biome, source.occurrenceId, action), reroll: action }]
+        ? [{ owner: rerollTargetOwner(biome, source.occurrenceId, action.target), reroll: action }]
         : [],
     ),
   );

@@ -9,7 +9,7 @@ import {
 } from '../../../../authored-project/addresses';
 import type { RerolledRewardOwner } from '../../../../authored-project/rerolls';
 import { rerollTargetOwner } from '../../../../authored-project/rerolls';
-import type { RerollRoomAction } from '../../../../authored-project/model';
+import type { RerollTarget } from '../../../../authored-project/model';
 import type { CountedRewardBinding } from '../../../../reward-kernel/bindings';
 import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import { rerollPoolRemaining, spendRerolls } from '../../../arcana-fear';
@@ -19,7 +19,6 @@ import type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
   CanonicalHubDecision,
-  CanonicalHubReroll,
 } from '../../../materialization';
 import { forGeneration } from '../../../materialization';
 import {
@@ -41,6 +40,7 @@ import {
 } from '../../offer-generation';
 import {
   createRewardProducerCandidateResult,
+  type RewardProducerCandidateResult,
   type RewardProducerFrontier,
 } from '../../producer-frontiers';
 import type { RerollSettlement } from '../../model';
@@ -114,14 +114,13 @@ export function roomTargetContext(
   catalog: Catalog,
   source: CanonicalAuthoredRoom,
   batch: CanonicalBatch | undefined,
-  reroll: RerollRoomAction,
+  target: RerollTarget,
   batchPeers: readonly OfferProcessingPeer[],
 ): RerollTargetContext | undefined {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) return undefined;
   const biome = createBiomeAddress(source.origin.routeKey, source.origin.biomeKey);
-  const owner = rerollTargetOwner(biome, source.occurrenceId, reroll);
-  const target = reroll.target;
+  const owner = rerollTargetOwner(biome, source.occurrenceId, target);
   if (target.kind === 'wheelOffer') {
     const wheel = source.rewardWheels?.find((candidate) => candidate.wheelKey === target.wheelKey);
     const offer = wheel?.offers.find((candidate) => candidate.offerKey === target.offerKey);
@@ -211,10 +210,14 @@ export function roomTargetContext(
 export function hubTargetContext(
   catalog: Catalog,
   hub: CanonicalHubDecision,
-  reroll: CanonicalHubReroll,
+  hubSlotKey: string,
+  /** Room visits returned before the stay; their slots' doors are closed. */
+  precedingVisitCount: number,
+  /** Each door's settled current reward when the stay began, by its peer origin. */
+  assignedOffers: RerolledOffers,
 ): RerollTargetContext | undefined {
   const sourceRoom = hub.room;
-  const slot = hub.board.targets.find((candidate) => candidate.hubSlotKey === reroll.hubSlotKey);
+  const slot = hub.board.targets.find((candidate) => candidate.hubSlotKey === hubSlotKey);
   const incoming = slot?.room.incomingReward;
   const sourceDeclaration = catalog.rooms.byKey[sourceRoom.gameName];
   const destination = slot === undefined ? undefined : catalog.rooms.byKey[slot.room.gameName];
@@ -226,17 +229,12 @@ export function hubTargetContext(
   )
     return undefined;
   const generated = forGeneration(incoming);
+  const peerKey = semanticAddressKey(incoming.origin);
+  // Only settled presses persist an offer; the first stay assigns the first draws.
   const assigned =
-    hub.rerolls
-      .filter(
-        (earlier) =>
-          earlier.hubSlotKey === reroll.hubSlotKey &&
-          !earlier.slotEntered &&
-          earlier.precedingVisitCount < reroll.precedingVisitCount,
-      )
-      .at(-1)?.reward ?? generated.offer;
+    (precedingVisitCount === 0 ? undefined : assignedOffers.get(peerKey)) ?? generated.offer;
   const entered = new Set(
-    hub.visits.slice(0, reroll.precedingVisitCount).map((visit) => visit.target.hubSlotKey),
+    hub.visits.slice(0, precedingVisitCount).map((visit) => visit.target.hubSlotKey),
   );
   const binding = countedBinding(destination, generated, slot.room.incomingRewardBinding);
   return Object.freeze({
@@ -244,7 +242,7 @@ export function hubTargetContext(
       createBiomeAddress(hub.origin.routeKey, hub.origin.biomeKey),
       slot.room.occurrenceId,
     ),
-    peerKey: semanticAddressKey(incoming.origin),
+    peerKey,
     generated: assigned,
     producerLifecycleKey: incoming.producerLifecycleKey,
     ...(incoming.resolvedStoreKey === undefined
@@ -266,6 +264,82 @@ export function hubTargetContext(
     source: sourceRoom,
     sourceDeclaration,
     peerCreationSource: 'hubTarget',
+  });
+}
+
+/** The lowest reroll pool remainder over reached branches. */
+export function lowestRerollPool(branches: readonly RewardBranchState[]): number {
+  return Math.min(...branches.map((branch) => rerollPoolRemaining(branch.state)));
+}
+
+/**
+ * Evaluates one new reward for a press on the target, against the branches
+ * that reach the press and every door's (wheel's, cage's) current reward.
+ */
+export function rerollOfferEvaluator(inputs: {
+  readonly catalog: Catalog;
+  readonly owner: RoomActionAddress | HubRerollAddress;
+  readonly target: RerollTargetContext;
+  readonly historySequence: number;
+  readonly view: HistoryStateView;
+  readonly chronology: FindingChronology;
+  readonly branches: readonly RewardBranchState[];
+  readonly rerolledOffers: RerolledOffers;
+}): {
+  readonly contextFor: (offer: ResolvedRewardOffer) => OfferProcessingContext;
+  readonly evaluateOffer: (offer: ResolvedRewardOffer) => RewardProducerCandidateResult;
+} {
+  const { catalog, owner, target, historySequence, view, chronology, branches } = inputs;
+  const peers = Object.freeze([
+    ...(target.excludesOriginal
+      ? [Object.freeze({ origin: target.owner as SemanticAddress, offer: target.generated })]
+      : []),
+    ...withCurrent(target.peers, inputs.rerolledOffers),
+  ]);
+  const contextFor = (offer: ResolvedRewardOffer): OfferProcessingContext =>
+    Object.freeze({
+      catalog,
+      reward: Object.freeze({
+        origin: owner,
+        offer,
+        producerLifecycleKey: target.producerLifecycleKey,
+        ...(target.resolvedStoreKey === undefined
+          ? {}
+          : { resolvedStoreKey: target.resolvedStoreKey }),
+        ...(target.traitContext === undefined ? {} : { traitContext: target.traitContext }),
+      }),
+      ...(target.binding === undefined ? {} : { binding: target.binding }),
+      historySequence,
+      findingChronology: chronology,
+      peers,
+      facts: (state: SimulationState) =>
+        createBiomeRewardFacts({
+          catalog,
+          state,
+          source: target.source,
+          currentRoom: target.source,
+          sourceDeclaration: target.sourceDeclaration,
+          view,
+          ...(target.peerCreationSource === undefined
+            ? {}
+            : { peerCreationSource: target.peerCreationSource }),
+          hubBoardLookups: 'notConsulted',
+        }),
+    });
+  return Object.freeze({
+    contextFor,
+    evaluateOffer: (offer: ResolvedRewardOffer) => {
+      const candidateFindings = new Map<string, FindingRegionEntry>();
+      const context = contextFor(offer);
+      const candidateBranches = processRewardOffer(branches, context, candidateFindings);
+      return createRewardProducerCandidateResult(
+        candidateFindings,
+        candidateBranches,
+        candidateBranches.length === 0
+          ? explainRewardOfferExclusions(branches, context)
+          : undefined,
+      );
+    },
   });
 }
 
@@ -325,7 +399,7 @@ export function applyRewardRerolledTransition(inputs: {
       `${semanticAddressKey(owner)} has no history view`,
     );
   // An over-spend is spent and reported, like a screen's; the timeline continues.
-  const remaining = Math.min(...inputs.branches.map((branch) => rerollPoolRemaining(branch.state)));
+  const remaining = lowestRerollPool(inputs.branches);
   if (remaining < 1)
     addRewardFinding(
       findings,
@@ -333,44 +407,18 @@ export function applyRewardRerolledTransition(inputs: {
       region,
       chronology,
     );
-  const peers = Object.freeze([
-    ...(target.excludesOriginal
-      ? [Object.freeze({ origin: target.owner as SemanticAddress, offer: target.generated })]
-      : []),
-    ...withCurrent(target.peers, inputs.rerolledOffers),
-  ]);
-  const contextFor = (offer: ResolvedRewardOffer): OfferProcessingContext =>
-    Object.freeze({
-      catalog,
-      reward: Object.freeze({
-        origin: owner,
-        offer,
-        producerLifecycleKey: target.producerLifecycleKey,
-        ...(target.resolvedStoreKey === undefined
-          ? {}
-          : { resolvedStoreKey: target.resolvedStoreKey }),
-        ...(target.traitContext === undefined ? {} : { traitContext: target.traitContext }),
-      }),
-      ...(target.binding === undefined ? {} : { binding: target.binding }),
-      historySequence,
-      findingChronology: chronology,
-      peers,
-      facts: (state: SimulationState) =>
-        createBiomeRewardFacts({
-          catalog,
-          state,
-          source: target.source,
-          currentRoom: target.source,
-          sourceDeclaration: target.sourceDeclaration,
-          view,
-          ...(target.peerCreationSource === undefined
-            ? {}
-            : { peerCreationSource: target.peerCreationSource }),
-          hubBoardLookups: 'notConsulted',
-        }),
-    });
   const frontierBranches = inputs.branches;
-  const drawn = processRewardOffer(frontierBranches, contextFor(inputs.reward), findings);
+  const evaluator = rerollOfferEvaluator({
+    catalog,
+    owner,
+    target,
+    historySequence,
+    view,
+    chronology,
+    branches: frontierBranches,
+    rerolledOffers: inputs.rerolledOffers,
+  });
+  const drawn = processRewardOffer(frontierBranches, evaluator.contextFor(inputs.reward), findings);
   const branches =
     drawn.length === 0
       ? Object.freeze([])
@@ -402,16 +450,7 @@ export function applyRewardRerolledTransition(inputs: {
       evaluateOffer: (candidate: SemanticAddress, offer: ResolvedRewardOffer) => {
         if (semanticAddressKey(candidate) !== ownerKey)
           throw new BiomeRewardSimulationContractError('reroll frontier received a foreign owner');
-        const candidateFindings = new Map<string, FindingRegionEntry>();
-        const context = contextFor(offer);
-        const candidateBranches = processRewardOffer(frontierBranches, context, candidateFindings);
-        return createRewardProducerCandidateResult(
-          candidateFindings,
-          candidateBranches,
-          candidateBranches.length === 0
-            ? explainRewardOfferExclusions(frontierBranches, context)
-            : undefined,
-        );
+        return evaluator.evaluateOffer(offer);
       },
     }),
   ]);
@@ -428,13 +467,8 @@ export function applyRewardRerolledTransition(inputs: {
       target: target.owner,
       historySequence,
       reward: inputs.reward,
-      ...(settled
-        ? {
-            poolRemainingAfter: Math.min(
-              ...branches.map((branch) => rerollPoolRemaining(branch.state)),
-            ),
-          }
-        : {}),
+      poolRemainingBefore: remaining,
+      ...(settled ? { poolRemainingAfter: lowestRerollPool(branches) } : {}),
     }),
   });
 }

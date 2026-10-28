@@ -48,12 +48,15 @@ import type {
   DerivedAcquisitionEntryFrontier,
 } from '../acquisition/contracts';
 import type { RewardBranchState } from '../branch-primitives';
+import type { RerollSurfaceCapability, RerollSurfaceCapture } from './reroll-surfaces';
 import { addRewardFinding, mergeRewardFindingEmissions } from '../findings';
 import type {
   BiomeRewardSimulation,
   BossArcanaOutcome,
   PhantomExitSettlement,
+  RerollPoolPoint,
   RerollSettlement,
+  RerollSurfaceSettlement,
   FigLeafPhaseCandidateSupport,
   GorgonPhaseCandidateSupport,
   HubDepartureRunState,
@@ -205,6 +208,8 @@ export type ChronologyEmission =
   | { readonly kind: 'bossArcanaOutcomes'; readonly outcomes: readonly BossArcanaOutcome[] }
   | { readonly kind: 'phantomExitSettlement'; readonly settlement: PhantomExitSettlement }
   | { readonly kind: 'rerollSettlement'; readonly settlement: RerollSettlement }
+  | { readonly kind: 'rerollPool'; readonly point: RerollPoolPoint }
+  | { readonly kind: 'rerollSurface'; readonly capture: RerollSurfaceCapture }
   | {
       readonly kind: 'steadyGrowthThresholds';
       readonly thresholds: readonly {
@@ -270,6 +275,9 @@ export interface ChronologyAccumulation {
   readonly bossArcanaOutcomes: readonly BossArcanaOutcome[];
   readonly phantomExits: readonly PhantomExitSettlement[];
   readonly rerolls: readonly RerollSettlement[];
+  readonly rerollPool: readonly RerollPoolPoint[];
+  readonly rerollSurfaces: readonly RerollSurfaceSettlement[];
+  readonly rerollSurfaceCapabilities: ReadonlyMap<string, RerollSurfaceCapability>;
   readonly steadyGrowthCandidateContexts: ReadonlyMap<
     string,
     readonly ReachedSteadyGrowthThreshold[]
@@ -430,6 +438,11 @@ export function createChronologyAccumulator(
   const bossArcanaOutcomes = new Map<string, BossArcanaOutcome>();
   const phantomExits = new Map<string, PhantomExitSettlement>();
   const rerolls = new Map<string, RerollSettlement>();
+  const rerollPool: RerollPoolPoint[] = [];
+  const rerollSurfaces = new Map<
+    string,
+    { readonly capture: RerollSurfaceCapture; readonly poolRemainingAtStart: number }
+  >();
   const steadyGrowthCandidateContexts = new Map<string, ReachedSteadyGrowthThreshold[]>();
   const steadyGrowthOutcomeAddresses = new Map<string, LandedOutcome<SteadyGrowthOutcomeAddress>>();
   const latestSteadyGrowthOutcomes = new Map<string, SteadyGrowthOutcomeAddress>();
@@ -871,6 +884,19 @@ export function createChronologyAccumulator(
       case 'rerollSettlement':
         rerolls.set(semanticAddressKey(emission.settlement.owner), emission.settlement);
         return;
+      case 'rerollPool':
+        if (rerollPool.at(-1)?.remaining !== emission.point.remaining)
+          rerollPool.push(emission.point);
+        return;
+      case 'rerollSurface': {
+        // A surface keeps the pool it opened with; its append point moves on.
+        const opened = rerollSurfaces.get(emission.capture.key)?.poolRemainingAtStart;
+        rerollSurfaces.set(emission.capture.key, {
+          capture: emission.capture,
+          poolRemainingAtStart: opened ?? emission.capture.poolRemaining,
+        });
+        return;
+      }
       case 'steadyGrowthThresholds':
         for (const { address, landing, threshold } of emission.thresholds) {
           const key = semanticAddressKey(address);
@@ -963,6 +989,15 @@ export function createChronologyAccumulator(
         bossArcanaOutcomes: Object.freeze([...bossArcanaOutcomes.values()]),
         phantomExits: Object.freeze([...phantomExits.values()]),
         rerolls: Object.freeze([...rerolls.values()]),
+        rerollPool: Object.freeze([...rerollPool]),
+        rerollSurfaces: Object.freeze(
+          [...rerollSurfaces.values()].map(({ capture, poolRemainingAtStart }) =>
+            capture.settle(poolRemainingAtStart),
+          ),
+        ),
+        rerollSurfaceCapabilities: new Map(
+          [...rerollSurfaces].map(([key, { capture }]) => [key, capture.capability]),
+        ),
         steadyGrowthCandidateContexts,
         steadyGrowthOutcomeAddresses,
         transcendentEmbryoCandidateContexts,

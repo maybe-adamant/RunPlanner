@@ -329,11 +329,17 @@ export {
 export {
   biomeRerolledOwners,
   hubRerolledOwners,
+  rerollAppendIndex,
   rerolledRewardOf,
+  rerollSurfaceKey,
+  rerollSurfaceOwner,
   rerollTargetOwner,
   sourceRerolledOwners,
+  type HubSlotRerollTarget,
   type OwnerRerolls,
   type RerolledRewardOwner,
+  type RerollPressTarget,
+  type RerollSurface,
 } from './rerolls';
 export { screenRerollCost, screenRerollSupported, type RerollableScreen } from './screen-rerolls';
 export {
