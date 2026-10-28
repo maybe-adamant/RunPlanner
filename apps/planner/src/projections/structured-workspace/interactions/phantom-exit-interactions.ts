@@ -25,49 +25,6 @@ function exclusionReason(exclusion: PhantomPlaceholderExclusion): string {
   }
 }
 
-/** Puts the Auto choice first among the choices that can be made. */
-function withAuto(
-  model: ContextualPickerModel<string | null>,
-  label: string,
-  selected: boolean,
-): ContextualPickerModel<string | null> {
-  const auto = Object.freeze({
-    key: 'auto',
-    value: null,
-    label,
-    state: 'possible' as const,
-    selected,
-    disabled: false,
-  });
-  const index = model.sections.findIndex((section) => section.kind === 'category');
-  const sections =
-    index < 0
-      ? [
-          ...model.sections.filter((section) => section.kind !== 'unavailable'),
-          Object.freeze({
-            key: 'auto',
-            kind: 'category' as const,
-            label: 'Available',
-            collapsible: false,
-            items: Object.freeze([auto]),
-          }),
-          ...model.sections.filter((section) => section.kind === 'unavailable'),
-        ]
-      : model.sections.map((section, at) =>
-          at === index
-            ? Object.freeze({ ...section, items: Object.freeze([auto, ...section.items]) })
-            : section,
-        );
-  return Object.freeze({
-    ...(selected
-      ? { selected: auto }
-      : model.selected === undefined
-        ? {}
-        : { selected: model.selected }),
-    sections: Object.freeze(sections),
-  });
-}
-
 /** Binds one hidden door's room and reward pickers over engine candidates. */
 export function bindPhantomExitInteraction(input: {
   readonly candidates: CandidateProjectionSession;
@@ -85,27 +42,24 @@ export function bindPhantomExitInteraction(input: {
         value: Object.freeze({ placeholderRoomGameName, rewardType }),
       }),
     });
-  let rooms: ContextualPickerModel<string | null> | undefined;
+  let rooms: ContextualPickerModel<string> | undefined;
   return Object.freeze({
     key: requirement.interactionKey,
     owner,
     rooms: Object.freeze({
       load: () =>
-        (rooms ??= declaredChoicesPicker<string | null>(
-          [
-            Object.freeze({ key: 'auto', value: null, label: requirement.autoRoomLabel }),
-            ...requirement.rooms.map((room) =>
-              Object.freeze({
-                key: room.gameName,
-                value: room.gameName,
-                label: room.label,
-                ...(room.exclusion === undefined
-                  ? {}
-                  : { disabled: true, explanation: exclusionReason(room.exclusion) }),
-              }),
-            ),
-          ],
-          value.placeholderRoomGameName,
+        (rooms ??= declaredChoicesPicker<string>(
+          requirement.rooms.map((room) =>
+            Object.freeze({
+              key: room.gameName,
+              value: room.gameName,
+              label: room.label,
+              ...(room.exclusion === undefined
+                ? {}
+                : { disabled: true, explanation: exclusionReason(room.exclusion) }),
+            }),
+          ),
+          requirement.effectiveRoomGameName,
         )),
     }),
     rewards: Object.freeze({
@@ -117,32 +71,31 @@ export function bindPhantomExitInteraction(input: {
         const labels = new Map(
           requirement.rewardTypes.map((type) => [type.rewardType, type.label]),
         );
-        const model = input.contextualPicker.project<string | null>(
+        return input.contextualPicker.project<string>(
           domain.types.map((option) =>
             Object.freeze({ value: option.key, evaluation: option.evaluation }),
           ),
           (option) =>
             Object.freeze({
-              label: labels.get(option.value ?? '') ?? option.value ?? '',
-              selected: option.value === value.rewardType,
+              label: labels.get(option.value) ?? option.value,
+              selected: option.value === requirement.effectiveRewardType,
             }),
-          (rewardType) => rewardType ?? 'auto',
+          (rewardType) => rewardType,
         );
-        return withAuto(model, requirement.autoRewardLabel, value.rewardType === null);
       },
     }),
     // A pinned reward survives a room change only where the new room's store offers it.
-    roomIntent: (placeholderRoomGameName: string | null) =>
+    roomIntent: (placeholderRoomGameName: string) =>
       replace(
         placeholderRoomGameName,
-        placeholderRoomGameName !== null &&
-          value.rewardType !== null &&
+        value.rewardType !== null &&
           phantomPlaceholderRewardTypes(input.catalog, placeholderRoomGameName).includes(
             value.rewardType,
           )
           ? value.rewardType
           : null,
       ),
-    rewardIntent: (rewardType: string | null) => replace(value.placeholderRoomGameName, rewardType),
+    rewardIntent: (rewardType: string) => replace(value.placeholderRoomGameName, rewardType),
+    resetIntent: () => replace(null, null),
   });
 }

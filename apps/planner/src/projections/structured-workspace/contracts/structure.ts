@@ -379,39 +379,44 @@ export type WorkspaceNode =
 
 /**
  * The hidden door back to the Hub that a room fills when its doors first
- * unlock: a placeholder room and the reward drawn for it. An unpinned field
- * shows the value the simulation settled; `locked` names why it cannot be
- * chosen now.
+ * unlock: a placeholder room and the reward drawn for it. Each field shows its
+ * effective value, pinned or settled by the simulation; `locked` names why it
+ * cannot be chosen now.
  */
 export interface WorkspacePhantomExitControl {
   readonly address: PhantomExitAddress;
   readonly interactionKey: string;
   readonly marker: WorkspaceMarker;
+  /** Whether either field is authored rather than left to the simulation. */
+  readonly pinned: boolean;
+  /** The settled room and reward, once the room's doors unlock is reached. */
+  readonly summary?: string;
   readonly room: {
-    readonly pinned: boolean;
     readonly summary: string;
     readonly locked?: 'unreached';
   };
   readonly reward: {
-    readonly pinned: boolean;
     readonly summary: string;
     /** `autoRoom`: the room is unpinned; `noDraw`: the room draws no reward. */
     readonly locked?: 'unreached' | 'autoRoom' | 'noDraw';
   };
 }
 
-/** Engine-backed pickers for one hidden door; a null value returns a field to Auto. */
+/** Engine-backed pickers for one hidden door; reset returns both fields to the simulation. */
 export interface WorkspacePhantomExitInteraction {
   readonly key: string;
   readonly owner: PhantomExitAddress;
-  readonly rooms: { readonly load: () => ContextualPickerModel<string | null> };
-  readonly rewards: { readonly load: () => Promise<ContextualPickerModel<string | null>> };
+  readonly rooms: { readonly load: () => ContextualPickerModel<string> };
+  readonly rewards: { readonly load: () => Promise<ContextualPickerModel<string>> };
   readonly roomIntent: (
-    placeholderRoomGameName: string | null,
+    placeholderRoomGameName: string,
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplacePhantomExit' }>>;
   readonly rewardIntent: (
-    rewardType: string | null,
+    rewardType: string,
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplacePhantomExit' }>>;
+  readonly resetIntent: () => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplacePhantomExit' }>
+  >;
 }
 
 export type WorkspaceOccurrenceStageOutgoing =

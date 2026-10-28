@@ -1172,3 +1172,42 @@ select {
 .contextual-picker-trigger-separator {
   white-space: pre;
 }
+
+/* The hidden return door sits below the room's real doors, quieter than they are. */
+.hidden-door {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #353640;
+  color: var(--muted);
+}
+
+.hidden-door-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.hidden-door-title {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.hidden-door-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.hidden-door-state {
+  font-size: 0.8rem;
+}
+
+.hidden-door-line > button {
+  margin-left: auto;
+}

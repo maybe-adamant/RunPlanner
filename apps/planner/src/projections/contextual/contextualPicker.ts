@@ -48,7 +48,8 @@ export function declaredChoicesPicker<T>(
     readonly disabled?: boolean;
     readonly explanation?: string;
   }[],
-  selected: T,
+  /** Absent when no choice is current. */
+  selected: T | undefined,
 ): ContextualPickerModel<T> {
   const items: ContextualPickerItem<T>[] = choices.map(({ explanation, ...choice }) =>
     Object.freeze({

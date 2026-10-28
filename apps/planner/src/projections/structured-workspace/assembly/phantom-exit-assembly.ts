@@ -36,7 +36,7 @@ function rewardTypeLabel(catalog: Catalog, rewardType: string): string {
 
 /**
  * The hidden door a room's first doors unlock fills. Unpinned fields show the
- * engine settlement; the placeholder candidates and their exclusions are the
+ * engine settlement, and the summary names the settled door; the placeholder candidates and their exclusions are the
  * engine's, and the reward domain is the pinned placeholder's declared store.
  */
 export function assemblePhantomExit(input: {
@@ -72,30 +72,32 @@ export function assemblePhantomExit(input: {
           ? ('autoRoom' as const)
           : undefined;
   const interactionKey = semanticAddressKey(address);
+  const effectiveRoom = pinnedRoom ?? settled?.placeholderRoomGameName;
+  const effectiveReward = value.rewardType ?? settledReward;
+  const rewardSummary =
+    effectiveReward !== undefined
+      ? rewardTypeLabel(catalog, effectiveReward)
+      : draws === false
+        ? 'No reward'
+        : 'Automatic';
   const control: WorkspacePhantomExitControl = Object.freeze({
     address,
     interactionKey,
     marker: input.markerDestinations.marker(address),
+    pinned: pinnedRoom !== null || value.rewardType !== null,
+    ...(settled === undefined
+      ? {}
+      : {
+          summary: `${roomLabel(settled.placeholderRoomGameName)} · ${
+            settledReward === undefined ? 'no reward' : rewardTypeLabel(catalog, settledReward)
+          }`,
+        }),
     room: Object.freeze({
-      pinned: pinnedRoom !== null,
-      summary:
-        pinnedRoom !== null
-          ? roomLabel(pinnedRoom)
-          : settled === undefined
-            ? 'Auto'
-            : `Auto · ${roomLabel(settled.placeholderRoomGameName)}`,
+      summary: effectiveRoom === undefined ? 'Automatic' : roomLabel(effectiveRoom),
       ...(settled === undefined ? { locked: 'unreached' as const } : {}),
     }),
     reward: Object.freeze({
-      pinned: value.rewardType !== null,
-      summary:
-        value.rewardType !== null
-          ? rewardTypeLabel(catalog, value.rewardType)
-          : draws === false
-            ? 'No reward'
-            : settledReward === undefined
-              ? 'Auto'
-              : `Auto · ${rewardTypeLabel(catalog, settledReward)}`,
+      summary: rewardSummary,
       ...(rewardLocked === undefined ? {} : { locked: rewardLocked }),
     }),
   });
@@ -104,10 +106,8 @@ export function assemblePhantomExit(input: {
     owner: address,
     interactionKey,
     value,
-    // Auto names the settled value only while that field is the one settled.
-    autoRoomLabel: pinnedRoom === null ? control.room.summary : 'Auto',
-    autoRewardLabel:
-      value.rewardType === null && settledReward !== undefined ? control.reward.summary : 'Auto',
+    ...(effectiveRoom === undefined ? {} : { effectiveRoomGameName: effectiveRoom }),
+    ...(effectiveReward === undefined ? {} : { effectiveRewardType: effectiveReward }),
     rooms: Object.freeze(
       (settled?.placeholderCandidates ?? []).map((candidate) =>
         Object.freeze({

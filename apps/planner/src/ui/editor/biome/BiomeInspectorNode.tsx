@@ -122,10 +122,6 @@ function OccurrenceOutgoing({
     case 'blockedOrUnentered':
     case 'topologyOwned':
     case 'terminal':
-      if (outgoing.kind === 'topologyOwned' && phantomExit !== undefined)
-        return (
-          <PhantomExitDoor control={phantomExit} idPrefix={idPrefix} interactions={interactions} />
-        );
       return (
         <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
           <div className="owner-markers">
@@ -141,6 +137,13 @@ function OccurrenceOutgoing({
           <p className="fixed-room-state">
             {outgoing.kind === 'blockedOrUnentered' ? outgoing.message : outgoing.label}
           </p>
+          {outgoing.kind === 'topologyOwned' && phantomExit !== undefined ? (
+            <PhantomExitDoor
+              control={phantomExit}
+              idPrefix={idPrefix}
+              interactions={interactions}
+            />
+          ) : null}
         </section>
       );
   }

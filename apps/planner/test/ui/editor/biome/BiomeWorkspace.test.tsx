@@ -1342,9 +1342,11 @@ describe('BiomeWorkspace', () => {
       'region',
       { name: 'Outgoing doors' },
     );
-    // The Hub and its side visits own every door but the room's hidden return door.
+    expect(
+      within(outgoing).getByText('Continuation is owned by this room’s local visits.'),
+    ).toBeTruthy();
+    // Its local visits own every door but the room's hidden return door.
     expect(within(outgoing).getByRole('heading', { name: 'Hidden return door' })).toBeTruthy();
-    expect(within(outgoing).queryByText(/Continuation is owned/)).toBeNull();
 
     act(() =>
       view.application.store.dispatch(

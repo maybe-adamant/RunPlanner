@@ -13,7 +13,12 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { findingSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import type { PlannerApplication } from '@planner/composition/createApplication';
-import { loadSurfaceNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOPQProject,
+  nBiome,
+  nLocalOccurrenceId,
+  nOccurrenceId,
+} from '@run-planner/test-fixtures/surface';
 import { renderWorkspace } from '@planner-test/support/biome-workbench';
 
 afterEach(cleanup);
@@ -47,19 +52,47 @@ async function choose(view: ReturnType<typeof renderWorkspace>, picker: HTMLElem
 }
 
 describe('PhantomExitDoor', () => {
-  it('pins a main room’s hidden door room and reward, then returns it to Auto', async () => {
+  it('collapses an automatic door to its settled room and reward', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     let door = await openDoors(view, combat05);
+    expect(door.textContent).toContain('Preboss · no reward');
+    expect(door.textContent).toContain('Automatic');
+    expect(within(door).queryByRole('button', { name: 'Room' })).toBeNull();
+    expect(within(door).getByRole('heading', { name: 'Hidden return door' }).dataset.hint).toMatch(
+      /^The game also draws a room and reward/,
+    );
+
+    door = await openDoors(view, nLocalOccurrenceId('combat05', 'sideDoor1'));
+    expect(door.textContent).toMatch(/Side Room 01 · (?!no reward)\S/);
+    expect(within(door).getByRole('button', { name: 'Choose' })).toBeTruthy();
+    expect(within(door).queryByRole('button', { name: 'Reward' })).toBeNull();
+  });
+
+  it('chooses a room and reward, then resets the door to automatic', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    let door = await openDoors(view, combat05);
+    await view.user.click(within(door).getByRole('button', { name: 'Choose' }));
     const room = within(door).getByRole('button', { name: 'Room' });
-    expect(room.textContent).toContain('Auto · Preboss');
+    expect(room.textContent).toContain('Preboss');
     // The settled room draws nothing, so there is no reward to choose.
     const reward = within(door).getByRole('button', { name: 'Reward' });
     expect(reward.textContent).toContain('No reward');
     expect(reward.hasAttribute('disabled') || reward.getAttribute('aria-disabled') === 'true').toBe(
       true,
     );
+    // Collapsing without a pick leaves the door automatic.
+    await view.user.click(within(door).getByRole('button', { name: 'Cancel' }));
+    expect(within(door).queryByRole('button', { name: 'Room' })).toBeNull();
+    expect(authoredExit(view.application, combat05)).toEqual({
+      placeholderRoomGameName: null,
+      rewardType: null,
+    });
 
-    await choose(view, room, /^Combat 13/);
+    await view.user.click(within(door).getByRole('button', { name: 'Choose' }));
+    await view.user.click(within(door).getByRole('button', { name: 'Room' }));
+    const listbox = await screen.findByRole('listbox');
+    expect(within(listbox).queryByRole('option', { name: /^Auto/ })).toBeNull();
+    await view.user.click(await within(listbox).findByRole('option', { name: /^Combat 13/ }));
     await waitFor(() =>
       expect(authoredExit(view.application, combat05)).toEqual({
         placeholderRoomGameName: 'N_Combat13',
@@ -76,16 +109,19 @@ describe('PhantomExitDoor', () => {
     );
 
     door = screen.getByRole('article', { name: 'Hidden return door' });
-    await choose(view, within(door).getByRole('button', { name: 'Room' }), /^Auto/);
+    await view.user.click(within(door).getByRole('button', { name: 'Reset to automatic' }));
     await waitFor(() =>
       expect(authoredExit(view.application, combat05)).toEqual({
         placeholderRoomGameName: null,
         rewardType: null,
       }),
     );
+    door = screen.getByRole('article', { name: 'Hidden return door' });
+    expect(within(door).queryByRole('button', { name: 'Room' })).toBeNull();
+    expect(within(door).getByRole('button', { name: 'Choose' })).toBeTruthy();
   });
 
-  it('navigates an unavailable pinned room to its picker in Room Doors', async () => {
+  it('opens the door and focuses an unavailable pinned room from its finding', async () => {
     const combat02 = nOccurrenceId('combat02');
     const exit = createPhantomExitAddress(nBiome, combat02);
     const view = renderWorkspace(

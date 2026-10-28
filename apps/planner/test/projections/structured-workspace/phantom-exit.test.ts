@@ -66,14 +66,17 @@ describe('hidden return door', () => {
   it('shows a main room the settled exit, with no reward for a no-draw room', () => {
     const projected = projectStructuredWorkspaceFixture(loadSurfaceNOPQProject());
     const { control, interaction } = hiddenDoor(projected, combat05);
-    expect(control.room).toEqual({ pinned: false, summary: 'Auto · Preboss' });
-    expect(control.reward).toEqual({ pinned: false, summary: 'No reward', locked: 'noDraw' });
+    expect(control).toMatchObject({ pinned: false, summary: 'Preboss · no reward' });
+    expect(control.room).toEqual({ summary: 'Preboss' });
+    expect(control.reward).toEqual({ summary: 'No reward', locked: 'noDraw' });
     expect(
       projected.workspace.focusByOwner.get(semanticAddressKey(exitOf(combat05))),
     ).toMatchObject({ roomTab: 'doors' });
 
+    // Only real candidates are listed; the settled room is the current one.
     const items = interaction.rooms.load().sections.flatMap((section) => section.items);
-    expect(items[0]).toMatchObject({ value: null, label: 'Auto · Preboss', selected: true });
+    expect(items.some((item) => /^Auto/.test(item.label))).toBe(false);
+    expect(items.find((item) => item.value === 'N_PreBoss01')).toMatchObject({ selected: true });
     expect(items.find((item) => item.value === 'N_Combat13')).toMatchObject({ disabled: false });
     // The engine turns away the room itself and a Mini-Boss the Hub board already created.
     expect(items.find((item) => item.value === 'N_Combat05')).toMatchObject({
@@ -88,18 +91,20 @@ describe('hidden return door', () => {
 
   it('gives a Mini-Boss without side doors the same door', () => {
     const projected = projectStructuredWorkspaceFixture(loadSurfaceNOPQProject());
-    expect(hiddenDoor(projected, miniBoss01).control.room.summary).toBe('Auto · Preboss');
+    expect(hiddenDoor(projected, miniBoss01).control.summary).toBe('Preboss · no reward');
   });
 
   it('shows a side room its settled draw and waits on a pinned room for the reward', () => {
     const projected = projectStructuredWorkspaceFixture(loadSurfaceNOPQProject());
     const { control } = hiddenDoor(projected, side);
-    expect(control.room.summary).toBe('Auto · Side Room 01');
-    expect(control.reward).toMatchObject({ pinned: false, locked: 'autoRoom' });
-    expect(control.reward.summary).toMatch(/^Auto · \S/);
+    expect(control.pinned).toBe(false);
+    expect(control.room.summary).toBe('Side Room 01');
+    expect(control.reward).toMatchObject({ locked: 'autoRoom' });
+    expect(control.reward.summary).not.toMatch(/Auto|No reward/);
+    expect(control.summary).toBe(`Side Room 01 · ${control.reward.summary}`);
   });
 
-  it('pins the room, then a reward from its own store, and returns both to Auto', async () => {
+  it('pins the room, then a reward from its own store, and resets both', async () => {
     let project = loadSurfaceNOPQProject();
     const pinRoom = hiddenDoor(projectStructuredWorkspaceFixture(project), combat05).interaction;
     const roomCommand = pinRoom.roomIntent('N_Combat13').command;
@@ -111,13 +116,16 @@ describe('hidden return door', () => {
     project = applyProjectCommand(project, catalog, roomCommand);
 
     const roomPinned = hiddenDoor(projectStructuredWorkspaceFixture(project), combat05);
-    expect(roomPinned.control.room).toEqual({ pinned: true, summary: 'Combat 13' });
+    expect(roomPinned.control.pinned).toBe(true);
+    expect(roomPinned.control.room).toEqual({ summary: 'Combat 13' });
     expect(roomPinned.control.reward.locked).toBeUndefined();
     const rewards = (await roomPinned.interaction.rewards.load()).sections.flatMap(
       (section) => section.items,
     );
-    expect(rewards[0]).toMatchObject({ value: null, selected: true });
-    expect(rewards[0]!.label).toMatch(/^Auto · /);
+    // The settled reward is current until one is pinned; there is no Auto entry.
+    expect(rewards.some((item) => /^Auto/.test(item.label))).toBe(false);
+    expect(rewards.filter((item) => item.selected)).toHaveLength(1);
+    expect(rewards.find((item) => item.selected)!.label).toBe(roomPinned.control.reward.summary);
     const boon = rewards.find((item) => item.value === 'Boon');
     expect(boon).toMatchObject({ state: 'possible', disabled: false });
     project = applyProjectCommand(
@@ -127,8 +135,8 @@ describe('hidden return door', () => {
     );
 
     const bothPinned = hiddenDoor(projectStructuredWorkspaceFixture(project), combat05);
-    expect(bothPinned.control.reward).toEqual({ pinned: true, summary: 'Boon' });
-    // A room whose store offers the pinned reward keeps it; Auto clears both.
+    expect(bothPinned.control.reward).toEqual({ summary: 'Boon' });
+    // A room whose store offers the pinned reward keeps it; reset clears both.
     expect(bothPinned.interaction.roomIntent('N_Combat01').command.value).toEqual({
       placeholderRoomGameName: 'N_Combat01',
       rewardType: 'Boon',
@@ -137,14 +145,13 @@ describe('hidden return door', () => {
       placeholderRoomGameName: 'N_PreBoss01',
       rewardType: null,
     });
-    project = applyProjectCommand(
-      project,
-      catalog,
-      bothPinned.interaction.roomIntent(null).command,
-    );
+    const reset = bothPinned.interaction.resetIntent().command;
+    expect(reset.value).toEqual({ placeholderRoomGameName: null, rewardType: null });
+    project = applyProjectCommand(project, catalog, reset);
     expect(hiddenDoor(projectStructuredWorkspaceFixture(project), combat05).control).toMatchObject({
-      room: { pinned: false, summary: 'Auto · Preboss' },
-      reward: { pinned: false, locked: 'noDraw' },
+      pinned: false,
+      summary: 'Preboss · no reward',
+      reward: { locked: 'noDraw' },
     });
   });
 

@@ -139,8 +139,9 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly owner: PhantomExitAddress;
       readonly interactionKey: string;
       readonly value: PhantomExitState;
-      readonly autoRoomLabel: string;
-      readonly autoRewardLabel: string;
+      /** The effective room and reward, pinned or settled; absent while unreached or undrawn. */
+      readonly effectiveRoomGameName?: string;
+      readonly effectiveRewardType?: string;
       /** Empty while the room's doors unlock is unreached. */
       readonly rooms: readonly {
         readonly gameName: string;
