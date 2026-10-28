@@ -85,11 +85,22 @@ and the door-order probe are done.
   `OfferedRewards` one for one: N_Sub01 → RoomMoneyTinyDrop; N_Combat14,
   N_Combat06 and N_Combat10 → Boons; N_Combat01 → HermesUpgrade. Import
   conformance flags the drift at rooms 5, 8, 10, 12 and 14.
-- **Correction:** a timeline event at each first visit's doors-unlocked
-  point, authoring the hidden draw from the room's store. The drawn entry is
-  random, so it is authored like a visible door reward. Settlement orders it
-  with the visible side-door draws. The record already holds it in the return
-  door's `OfferedRewards`.
+- **Draw rules:** the hidden door is an ordinary door the player never sees.
+  `ChooseNextRoomData` picks a placeholder room (observed: N_Sub04,
+  N_Combat19, N_Combat12, N_Combat15, N_Combat11). The draw then follows
+  that room's normal rules (`RoomLogic.lua:3920-3960`,
+  `RewardLogic.lua:117-185`):
+  - store: the placeholder's `IndividualRewardStore`, else its
+    `ForcedRewardStore`, else the default store;
+  - eligibility: `ForcedFirstReward`/`ForcedRewards`,
+    `ChooseRewardRequirements`, `IsRoomRewardEligible` with the
+    `rewardsChosen` shared by every door of the same unlock, and
+    `RewardPriorities`;
+  - then a random pick among the eligible entries.
+- **Correction:** author the hidden door as a full door (target room and
+  reward) at each first visit's doors-unlocked point, under the same rules
+  and validation as visible doors. The record already holds both values,
+  in the return door's `ExitDoorRooms` and `OfferedRewards`.
 - **Open:**
   - The order of the hidden draw against the room's own side-door draws
     within the same unlock (door creation order).
