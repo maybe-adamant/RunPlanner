@@ -109,3 +109,27 @@ and the door-order probe are done.
   - The order of the hidden draw against the room's own side-door draws
     within the same unlock (door creation order).
   - Which placeholders are forced to a Shop (`ChooseNextRoomData`).
+
+### Nectar's run-progress level-up
+
+- **Finding:** once the incantation `WorldUpgradeGiftDropRunProgress`
+  (`WorldUpgradeData.lua:2454`) is unlocked, picking up Nectar (`GiftDrop`)
+  uses its `RunProgress` variant (`ConsumableData.lua:1852-1866`):
+  `UseStoreRewardRandomStack` with `NumTraits = 1, NumStacks = 1`. That
+  adds one level to one random upgradeable boon, the same function as the
+  random Pom shop item.
+- **Planner today:** Nectar is a meta resource only, and the incantation is a
+  profile-progression predicate the catalog does not model.
+- **Evidence:** run 1010, G_Combat05. The uses were `BloodDrop` and
+  `GiftDrop`, and Storm Ring (ZeusCastBoon) went from level 1 to 2 with no
+  screen. Import conformance flags it at room 17. The relaunch in the same
+  room was a coincidence.
+- **Correction:**
+  - a modeled input for the incantation, as a run modifier (the tolerant bag)
+    or as a loadout field;
+  - the engine applies Nectar's random +1 level when that input is on, with
+    an authored target like the random Pom;
+  - the importer reads the target from the trait whose level rose.
+- **Open:** run modifier or loadout field for the input; which other
+  incantation-gated run effects exist (check `WorldUpgradeData` for other
+  `RunProgress` variants).
