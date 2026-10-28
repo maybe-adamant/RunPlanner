@@ -106,7 +106,8 @@ promoted.
   above all, are unchanged. The Reward line of a rerollable door, wheel offer
   or cage door keeps its picker for the first draw; once rerolled, the
   picker's label reads first draw → final reward (intermediate draws only in
-  the dialog). A small reroll button beside it (only when door rerolls are
+  the dialog). The Hub board moves from four columns to three, always,
+  so the wider label fits without reflowing when a reroll is added. A small reroll button beside it (only when door rerolls are
   enabled) opens a dialog listing the first draw and each reroll, one picker
   per element over that step's candidates (plus a cage-slot picker for
   cages), with the remaining pool. Only the last reroll has **Reroll**
