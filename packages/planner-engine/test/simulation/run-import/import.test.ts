@@ -1335,6 +1335,40 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
       rewardType: 'WeaponUpgrade',
     });
   });
+  it('redraws a Hub board door in the restored stay whose bracket shows the spend', () => {
+    // N_Combat19, never entered, shows MaxManaDropBig until the fourth Hub visit's press.
+    const base = withReroll(surfaceWithEnchantress(10), 8, 'HubRewards', { WeaponUpgrade: -1 });
+    const record: RunRecord = {
+      ...base,
+      rooms: base.rooms.map((room, index) =>
+        index < 8 || room.name !== 'N_Hub'
+          ? room
+          : {
+              ...room,
+              doors: room.doors.map((door) =>
+                door.door === 560620 ? { ...door, reward: { type: 'WeaponUpgrade' } } : door,
+              ),
+            },
+      ),
+    };
+    const imported = projectFromRunRecord(catalog, record);
+    expect(rerollLines(imported, 8)).toEqual(['assumption reroll r8 hubDecision@N:hub']);
+    const hub = imported.project.route.biomes[0]!.topology!.decisions.find(
+      (decision) => decision.kind === 'hub',
+    );
+    expect(hub?.kind === 'hub' && hub.actions.slice(3, 5)).toEqual([
+      { kind: 'roomVisit', hubSlotKey: 'combat21' },
+      {
+        kind: 'reroll',
+        rerollId: 'r1',
+        hubSlotKey: 'combat19',
+        reward: { rewardType: 'WeaponUpgrade' },
+      },
+    ]);
+    expect(reward(imported.project, 'N-r2-d560620').offer).toEqual({
+      rewardType: 'MaxManaDropBig',
+    });
+  });
 });
 
 describe('run import of Fig Leaf skip marks in the live Underworld recording', () => {

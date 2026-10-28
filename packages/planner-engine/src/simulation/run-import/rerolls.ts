@@ -26,7 +26,7 @@ import { entrySnapshot, recordedEntryStates, storeCounts } from './conformance';
 import type { RunImportContext } from './import';
 import { authoredOccurrence } from './occurrences';
 import type { RunImportReportEntry } from './report';
-import { POM_GIVERS } from './vocabulary';
+import { POM_GIVERS, recordedOffer } from './vocabulary';
 
 /** `SpentRerolls` ids of the store screens the plan holds counts for. */
 const WELL_SCREEN = 'WellShop';
@@ -313,11 +313,15 @@ function poolSpends(context: RunImportContext, roomIndex: number): number | unde
 
 /** A reward owner one press may redraw, with how to rewrite its draws. */
 interface PressTarget {
-  /** The owner's current first draw. */
+  /** What the owner shows as the bracket begins: its first draw, or a Hub slot's reward from earlier stays. */
   readonly firstDraw: () => ResolvedRewardOffer | undefined;
   readonly replaceFirstDraw: (value: ResolvedRewardOffer) => ProjectCommand;
   /** A press on this owner, before its existing presses. */
   readonly press: (reward: ResolvedRewardOffer) => ProjectCommand;
+  /** A Hub board slot's physical door, whose recorded offer each Hub visit saves. */
+  readonly hubDoor?: number;
+  /** Whether a press on this Hub slot is already placed in the bracket's stay. */
+  readonly pressedInStay?: () => boolean;
 }
 
 function occurrenceOf(context: RunImportContext, biomeKey: string, occurrenceId: string) {
@@ -454,11 +458,17 @@ function bracketDrawsAuthored(
   );
 }
 
-/** Board-door presses precede the Hub's first room visit. */
+/**
+ * Board-door presses in one Hub stay, after `stay` room visits returned. A
+ * slot's draws chain through every stay: a press here redraws the reward the
+ * slot showed as this stay began, so it follows the slot's earlier-stay
+ * presses and precedes those already placed in this stay.
+ */
 function hubPressTargets(
   context: RunImportContext,
   biome: BiomeAddress,
   hub: HubDecision,
+  stay: number,
 ): readonly PressTarget[] {
   const decision = createHubDecisionAddress(biome, hub.hubKey);
   const currentHub = () =>
@@ -468,29 +478,61 @@ function hubPressTargets(
       ?.topology?.decisions.find(
         (entry): entry is HubDecision => entry.kind === 'hub' && entry.hubKey === hub.hubKey,
       );
-  return hub.openTargets.map((slot): PressTarget => {
+  /** The stay's action range and the slot's last press before it. */
+  const stayOf = (hubSlotKey: string) => {
+    const actions = currentHub()?.actions ?? [];
+    const visits = actions.flatMap((action, index) => (action.kind === 'roomVisit' ? [index] : []));
+    const start = stay === 0 ? 0 : (visits[stay - 1] ?? actions.length) + 1;
+    const end = visits[stay] ?? actions.length;
+    const presses = actions.flatMap((action, index) =>
+      action.kind === 'reroll' && action.hubSlotKey === hubSlotKey ? [{ action, index }] : [],
+    );
+    const earlier = presses.filter(({ index }) => index < start).at(-1)?.action;
+    const first = presses.find(({ index }) => index >= start && index < end)?.index;
+    return { earlier, index: first ?? end, pressed: first !== undefined };
+  };
+  const layout = context.catalog.biomeLayouts.byKey[biome.biomeKey]?.progression;
+  const doorOf = (hubSlotKey: string) =>
+    layout?.kind === 'hub'
+      ? layout.slots.find((slot) => slot.slotKey === hubSlotKey)?.physicalDoorId
+      : undefined;
+  // An entered slot's door is closed for the run.
+  const entered = new Set(
+    (currentHub()?.actions ?? [])
+      .flatMap((action) => (action.kind === 'roomVisit' ? [action.hubSlotKey] : []))
+      .slice(0, stay),
+  );
+  return hub.openTargets.flatMap((slot): readonly PressTarget[] => {
+    if (entered.has(slot.hubSlotKey)) return [];
     const reward = createIncomingRewardAddress(biome, slot.occurrenceId);
-    return {
+    const target: PressTarget = {
       firstDraw: () => {
+        const earlier = stayOf(slot.hubSlotKey).earlier;
+        if (earlier?.kind === 'reroll') return earlier.reward;
         const state = occurrenceOf(context, biome.biomeKey, slot.occurrenceId)?.state;
         return state !== undefined && 'reward' in state ? state.reward?.offer : undefined;
       },
-      replaceFirstDraw: (value) => ({ kind: 'ReplaceIncomingReward', reward, value }),
-      press: (value) => {
-        const actions = currentHub()?.actions ?? [];
-        const first = actions.findIndex(
-          (action) => action.kind === 'reroll' && action.hubSlotKey === slot.hubSlotKey,
-        );
-        const visit = actions.findIndex((action) => action.kind === 'roomVisit');
-        return {
-          kind: 'InsertHubReroll',
-          hub: decision,
-          hubSlotKey: slot.hubSlotKey,
-          reward: value,
-          index: first >= 0 ? first : visit >= 0 ? visit : actions.length,
-        };
+      replaceFirstDraw: (value) => {
+        const earlier = stayOf(slot.hubSlotKey).earlier;
+        return earlier?.kind === 'reroll'
+          ? {
+              kind: 'ReplaceHubRerollReward',
+              reroll: createHubRerollAddress(biome, hub.hubKey, earlier.rerollId),
+              reward: value,
+            }
+          : { kind: 'ReplaceIncomingReward', reward, value };
       },
+      press: (value) => ({
+        kind: 'InsertHubReroll',
+        hub: decision,
+        hubSlotKey: slot.hubSlotKey,
+        reward: value,
+        index: stayOf(slot.hubSlotKey).index,
+      }),
+      ...(doorOf(slot.hubSlotKey) === undefined ? {} : { hubDoor: doorOf(slot.hubSlotKey)! }),
+      pressedInStay: () => stayOf(slot.hubSlotKey).pressed,
     };
+    return [target];
   });
 }
 
@@ -521,8 +563,9 @@ function pressAddresses(
 }
 
 /**
- * Prepends one replaced reward to an owner's draws: it becomes the first draw
- * and a new first press redraws the previous first draw. A Boon's god is not
+ * Prepends one replaced reward to an owner's draws in the bracket: it becomes
+ * what the owner shows as the bracket begins and a new first press of the
+ * bracket redraws the previous one. A Boon's god is not
  * saved, so each god is tried in catalog order.
  */
 function prependReplaced(
@@ -547,14 +590,59 @@ function prependReplaced(
 }
 
 /**
+ * Places one press of a restored Hub stay. Its board was assigned before the
+ * bracket, so the stores lose only what the press drew: the slot whose door
+ * the previous Hub visit saved with another offer and this visit with one of
+ * that type takes it. The slot shows the earlier offer as the stay begins and
+ * the press draws the later one.
+ */
+function placeRestoredHubPress(
+  context: RunImportContext,
+  targets: readonly PressTarget[],
+  visits: { readonly previous: number; readonly current: number },
+  drawn: Replaced,
+): boolean {
+  const offerAt = (roomIndex: number, door: number) =>
+    recordedOffer(
+      context.catalog,
+      context.record.rooms[roomIndex]?.doors.find((candidate) => candidate.door === door)?.reward,
+    );
+  const same = (left: ResolvedRewardOffer, right: ResolvedRewardOffer) =>
+    JSON.stringify(left) === JSON.stringify(right);
+  for (const target of targets) {
+    if (target.hubDoor === undefined || target.pressedInStay?.() === true) continue;
+    const before = offerAt(visits.previous, target.hubDoor);
+    const after = offerAt(visits.current, target.hubDoor);
+    if (
+      before === undefined ||
+      after === undefined ||
+      same(before, after) ||
+      after.rewardType !== drawn.rewardType
+    )
+      continue;
+    const placed = context.transaction(() => {
+      const shown = target.firstDraw();
+      return (
+        shown !== undefined &&
+        (same(shown, before) || context.apply(target.replaceFirstDraw(before))) &&
+        context.apply(target.press(after))
+      );
+    });
+    if (placed) return true;
+  }
+  return false;
+}
+
+/**
  * Door, ship-wheel, Fields cage and Hub board rerolls of each record room
  * whose bracket the plan has passed. Which owner was pressed, in which order,
  * and what each press replaced are not saved; the stores' loss gives the
  * replaced rewards. Each is prepended, in store and declaration order, to the
- * first owner in native order that the engine accepts. Every assignment that
- * removes the same rewards leaves the same stores, so a placement that
- * reproduces the saved stores is one assumption for the room; otherwise each
- * press is reported.
+ * first owner in native order that the engine accepts; a restored Hub stay's
+ * loss is what its presses drew, placed by the board doors its visits saved.
+ * Every assignment that removes the same rewards leaves the same stores, so a
+ * placement that reproduces the saved stores is one assumption for the room;
+ * otherwise each press is reported.
  */
 export function importRerolls(context: RunImportContext): void {
   for (const [roomIndex, room] of context.record.rooms.entries()) {
@@ -580,19 +668,21 @@ export function importRerolls(context: RunImportContext): void {
     const topology = context
       .assembly()
       .project.route.biomes.find((entry) => entry.biomeKey === biomeKey)?.topology;
-    // A Hub visit is no occurrence: its board is the decision of the room that led to it.
+    // A Hub visit is no occurrence: its board is the decision of the room that first led to it.
+    const hubVisits = context.occurrences.visitsOf(sourceId);
     const hub = topology?.occurrences.some((entry) => entry.occurrenceId === sourceId)
       ? undefined
       : topology?.decisions.find(
           (decision): decision is HubDecision =>
             decision.kind === 'hub' &&
-            roomIndex > 0 &&
-            decision.source.occurrenceId === context.occurrences.occurrenceOf(roomIndex - 1),
+            hubVisits[0]! > 0 &&
+            decision.source.occurrenceId === context.occurrences.occurrenceOf(hubVisits[0]! - 1),
         );
+    // Each return to the Hub follows one completed room visit.
     const targets =
       hub === undefined
         ? roomPressTargets(context, biome, sourceId)
-        : hubPressTargets(context, biome, hub);
+        : hubPressTargets(context, biome, hub, hubVisits.indexOf(roomIndex));
     // The bracket's draws, a Fields door's cages included, are authored before its stores compare.
     if (!bracketDrawsAuthored(context, biomeKey, sourceId, targets)) continue;
     context.used.add(used);
@@ -629,11 +719,6 @@ export function importRerolls(context: RunImportContext): void {
       unsupported(Math.max(rerolls, recorded));
       continue;
     }
-    // A restored Hub never offers its board for rerolls again.
-    if (hub !== undefined && context.occurrences.visitsOf(sourceId)[0] !== roomIndex) {
-      unsupported(rerolls);
-      continue;
-    }
     const sourceActions = () =>
       hub === undefined ? (occurrenceOf(context, biomeKey, sourceId)?.roomActions.order ?? []) : [];
     const before = new Set(
@@ -642,8 +727,18 @@ export function importRerolls(context: RunImportContext): void {
     const earlier = new Set(
       sourceActions().flatMap((action) => (action.kind === 'reroll' ? [action.rerollId] : [])),
     );
+    const stay = hubVisits.indexOf(roomIndex);
     const placed = context.transaction(() =>
-      solution.replaced.every((entry) => prependReplaced(context, targets, entry)),
+      solution.replaced.every((entry) =>
+        hub !== undefined && stay > 0
+          ? placeRestoredHubPress(
+              context,
+              targets,
+              { previous: hubVisits[stay - 1]!, current: roomIndex },
+              entry,
+            )
+          : prependReplaced(context, targets, entry),
+      ),
     );
     if (!placed) {
       unsupported(rerolls);
