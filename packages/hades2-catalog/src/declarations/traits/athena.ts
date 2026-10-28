@@ -112,6 +112,7 @@ export const athenaTraits = [
 
 export const athenaGiver = {
   key: 'Athena',
+  screenReroll: true,
   label: 'Athena',
   providerKind: 'npc',
   shopAwareGodTrait: true,

@@ -546,6 +546,7 @@ export const apolloTraits = [
 
 export const apolloGiver = {
   key: 'Apollo',
+  screenReroll: true,
   label: 'Apollo',
   providerKind: 'olympian',
   shopAwareGodTrait: true,

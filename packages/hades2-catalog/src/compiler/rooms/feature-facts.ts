@@ -8,7 +8,7 @@ import type {
 import type { RewardKernelCatalog } from '@run-planner/engine/reward-kernel';
 
 import type { RawRoomDeclaration } from '../../declarations/index';
-import { freezeUniqueStrings } from '../common';
+import { freezeUniqueStrings, requireBoolean } from '../common';
 import { fail } from '../errors';
 import { type RoomIdentityFacts } from './core-facts';
 import { type RoomRewardFacts } from './reward-facts';
@@ -212,6 +212,10 @@ export function normalizeRoomFeatureFacts(
           return Object.freeze({
             slotKeys: Object.freeze([...slotKeys]) as readonly ['left', 'middle', 'right'],
             ...excludedRoutes(room.purgingPool.excludedRouteKeys, `${path}.purgingPool`),
+            screenReroll: requireBoolean(
+              room.purgingPool.screenReroll,
+              `${path}.purgingPool.screenReroll`,
+            ),
           });
         })();
   const challengeSwitchAnchorCount = room.challengeSwitchAnchorCount;

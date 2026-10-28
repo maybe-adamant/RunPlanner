@@ -94,6 +94,7 @@ export const dionysusTraits = [
 
 export const dionysusGiver = {
   key: 'Dionysus',
+  screenReroll: true,
   label: 'Dionysus',
   providerKind: 'npc',
   shopAwareGodTrait: true,

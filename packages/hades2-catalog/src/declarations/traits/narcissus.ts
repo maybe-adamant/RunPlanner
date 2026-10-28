@@ -153,6 +153,7 @@ export const narcissusTraits = [
 
 export const narcissusGiver = {
   key: 'Narcissus',
+  screenReroll: false,
   label: 'Narcissus',
   providerKind: 'npc',
   priorityTraitKeys: [],

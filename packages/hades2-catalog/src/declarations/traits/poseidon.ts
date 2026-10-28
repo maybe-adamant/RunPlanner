@@ -337,6 +337,7 @@ export const poseidonTraits = [
 
 export const poseidonGiver = {
   key: 'Poseidon',
+  screenReroll: true,
   label: 'Poseidon',
   providerKind: 'olympian',
   shopAwareGodTrait: true,

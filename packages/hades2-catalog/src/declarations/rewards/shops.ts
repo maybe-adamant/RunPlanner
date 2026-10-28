@@ -278,6 +278,7 @@ export const shops = [
   // Only the Talent items have modeled run requirements in this native pool.
   {
     key: 'ZagPedestalOptions',
+    screenReroll: false,
     groups: [
       {
         key: 'Reward',
@@ -300,6 +301,8 @@ export const shops = [
   // option key is the game identity; each option declares what it grants.
   {
     key: 'RoomShop',
+    // The Well screen's reroll button (StoreData WellShop).
+    screenReroll: true,
     groups: [
       {
         key: 'Healing',
@@ -432,6 +435,8 @@ export const shops = [
   // purchase settlement, but it uses the same normalized slot/pool contract.
   {
     key: 'SurfaceShop',
+    // The Hermes Shrine screen has no reroll button.
+    screenReroll: false,
     groups: [
       {
         key: 'First',
@@ -478,6 +483,8 @@ export const shops = [
   },
   {
     key: 'WorldShop',
+    // World items, not a screen.
+    screenReroll: false,
     groups: worldGroups,
     slots: [
       { key: 'Boon', label: 'Offer 1', groupKey: 'Boon' },
@@ -495,6 +502,7 @@ export const shops = [
   },
   {
     key: 'I_WorldShop',
+    screenReroll: false,
     groups: [
       {
         key: 'BoostedBoon',
@@ -673,6 +681,7 @@ export const shops = [
   },
   {
     key: 'Q_WorldShop',
+    screenReroll: false,
     groups: [
       {
         key: 'MixedProgress',

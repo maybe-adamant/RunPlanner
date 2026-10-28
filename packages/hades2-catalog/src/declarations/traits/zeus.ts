@@ -341,6 +341,7 @@ export const zeusTraits = [
 
 export const zeusGiver = {
   key: 'Zeus',
+  screenReroll: true,
   label: 'Zeus',
   providerKind: 'olympian',
   shopAwareGodTrait: true,

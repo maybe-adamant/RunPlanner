@@ -100,6 +100,7 @@ export interface RawRewardTypeDeclaration {
   readonly offerProjection?: OfferProjectionKey;
   readonly acquisitionRoles: readonly RawAcquisitionRoleDeclaration[];
   readonly blocksDoorReroll?: true;
+  readonly screenReroll?: true;
 }
 
 export interface RawRewardStoreEntryDeclaration {
@@ -152,6 +153,7 @@ export interface RawShopProfileDeclaration {
   readonly key: string;
   readonly groups: readonly RawShopGroupDeclaration[];
   readonly slots: readonly RawShopSlotDeclaration[];
+  readonly screenReroll: boolean;
 }
 
 export interface RawProducerLifecycleOverrideDeclaration {

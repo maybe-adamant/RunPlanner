@@ -140,6 +140,7 @@ export interface RawRoomDeclaration {
   readonly purgingPool?: {
     readonly slotKeys: readonly ['left', 'middle', 'right'];
     readonly excludedRouteKeys?: readonly string[];
+    readonly screenReroll: boolean;
   };
   /** Exact installed `ChallengeSwitchBase` anchors available to competing secret spawns. */
   readonly challengeSwitchAnchorCount?: number;

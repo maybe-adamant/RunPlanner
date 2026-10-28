@@ -268,6 +268,7 @@ export const hermesTraits = [
 
 export const hermesGiver = {
   key: 'Hermes',
+  screenReroll: true,
   label: 'Hermes',
   providerKind: 'hermes',
   shopAwareGodTrait: true,

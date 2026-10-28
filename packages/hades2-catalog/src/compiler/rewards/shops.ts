@@ -13,6 +13,7 @@ import {
   createCollection,
   freezeUniqueStrings,
   requireArray,
+  requireBoolean,
   requireNonEmpty,
   requirePositiveInteger,
 } from '../common';
@@ -321,7 +322,13 @@ export function normalizeShops(
           fail(path, 'every RoomShop option must declare its Stygian Well grant');
         validateRoomShopGrants(options, acquisitions, path);
       }
-      return Object.freeze({ key, groups, slots, slotCount: slots.values.length });
+      return Object.freeze({
+        key,
+        groups,
+        slots,
+        slotCount: slots.values.length,
+        screenReroll: requireBoolean(profile.screenReroll, `${path}.screenReroll`),
+      });
     }),
     'shops',
     (shop) => shop.key,

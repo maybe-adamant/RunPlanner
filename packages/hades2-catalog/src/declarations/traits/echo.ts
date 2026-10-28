@@ -100,6 +100,7 @@ export const echoTraits = [
 
 export const echoGiver = {
   key: 'Echo',
+  screenReroll: false,
   label: 'Echo',
   providerKind: 'npc',
   priorityTraitKeys: [],

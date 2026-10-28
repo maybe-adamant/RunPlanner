@@ -75,6 +75,7 @@ export const medeaTraits = [
 
 export const medeaGiver = {
   key: 'Medea',
+  screenReroll: false,
   label: 'Medea',
   providerKind: 'npc',
   priorityTraitKeys: [],

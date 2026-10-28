@@ -1057,6 +1057,8 @@ export interface RoomDeclaration {
     readonly slotKeys: readonly ['left', 'middle', 'right'];
     /** Routes whose save profile lacks a usable Pool. */
     readonly excludedRouteKeys?: readonly string[];
+    /** The sell screen shows the native reroll button. */
+    readonly screenReroll: boolean;
   };
   /** Exact installed `ChallengeSwitchBase` anchors available to competing secret spawns. */
   readonly challengeSwitchAnchorCount?: number;

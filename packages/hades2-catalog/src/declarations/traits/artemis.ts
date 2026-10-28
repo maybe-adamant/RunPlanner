@@ -136,6 +136,7 @@ export const artemisTraits = [
 
 export const artemisGiver = {
   key: 'Artemis',
+  screenReroll: true,
   label: 'Artemis',
   providerKind: 'npc',
   shopAwareGodTrait: true,

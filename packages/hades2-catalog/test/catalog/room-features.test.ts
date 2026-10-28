@@ -13,6 +13,7 @@ describe('room feature declarations', () => {
       expect(catalog.rooms.byKey[gameName]?.purgingPool).toEqual({
         slotKeys: ['left', 'middle', 'right'],
         excludedRouteKeys: ['FreshFile'],
+        screenReroll: true,
       });
     }
   });

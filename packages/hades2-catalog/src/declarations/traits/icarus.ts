@@ -128,6 +128,7 @@ export const icarusTraits = [
 
 export const icarusGiver = {
   key: 'Icarus',
+  screenReroll: false,
   label: 'Icarus',
   providerKind: 'npc',
   priorityTraitKeys: [],

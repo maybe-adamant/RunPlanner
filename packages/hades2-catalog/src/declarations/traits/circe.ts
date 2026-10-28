@@ -113,6 +113,7 @@ export const circeTraits = [
 
 export const circeGiver = {
   key: 'Circe',
+  screenReroll: false,
   label: 'Circe',
   providerKind: 'npc',
   priorityTraitKeys: [],

@@ -162,6 +162,7 @@ export interface RawTraitGiverDeclaration {
   readonly denialParticipates?: boolean;
   readonly acquisitionOrdinalMenu?: true;
   readonly selectedOptionPathPointBonuses?: readonly [0, 1, 2];
+  readonly screenReroll: boolean;
 }
 
 export interface RawTraitOfferContextDeclaration {

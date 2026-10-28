@@ -494,6 +494,7 @@ export const demeterTraits = [
 
 export const demeterGiver = {
   key: 'Demeter',
+  screenReroll: true,
   label: 'Demeter',
   providerKind: 'olympian',
   shopAwareGodTrait: true,

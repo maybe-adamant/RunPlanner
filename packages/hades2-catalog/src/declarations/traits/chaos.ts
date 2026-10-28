@@ -458,6 +458,7 @@ export const chaosTraits: readonly RawTraitDeclaration[] = [...chaosCurses, ...c
 );
 export const chaosGiver: RawTraitGiverDeclaration = {
   key: 'Chaos',
+  screenReroll: true,
   label: 'Chaos',
   providerKind: 'chaos',
   traitKeys: [...chaosCurses, ...chaosBlessings].map((entry) => entry.key),

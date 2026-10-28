@@ -99,6 +99,7 @@ export const weaponUpgradeTraits = weaponUpgradeTraitDeclarations.map((trait) =>
 
 export const weaponUpgradeGiver = {
   key: 'WeaponUpgrade',
+  screenReroll: false,
   label: 'Daedalus Hammer',
   providerKind: 'hammer',
   priorityTraitKeys: [],

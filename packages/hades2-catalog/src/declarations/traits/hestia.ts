@@ -333,6 +333,7 @@ export const hestiaTraits = [
 
 export const hestiaGiver = {
   key: 'Hestia',
+  screenReroll: true,
   label: 'Hestia',
   providerKind: 'olympian',
   shopAwareGodTrait: true,

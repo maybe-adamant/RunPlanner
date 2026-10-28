@@ -556,6 +556,7 @@ export const aphroditeTraits = [
 
 export const aphroditeGiver = {
   key: 'Aphrodite',
+  screenReroll: true,
   label: 'Aphrodite',
   providerKind: 'olympian',
   shopAwareGodTrait: true,

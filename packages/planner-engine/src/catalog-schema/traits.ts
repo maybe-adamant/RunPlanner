@@ -731,6 +731,8 @@ export interface TraitGiverDeclaration {
    * positions. An acquired trait retains its acquisition ordinal.
    */
   readonly acquisitionOrdinalMenu?: true;
+  /** Its offer screen shows the native reroll button (no `BlockReroll`, not a Hammer). */
+  readonly screenReroll: boolean;
   /** Ordered initial-spell button bonuses, owned by the SpellDrop giver. */
   readonly selectedOptionPathPointBonuses?: readonly [0, 1, 2];
 }

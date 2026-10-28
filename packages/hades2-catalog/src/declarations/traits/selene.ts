@@ -26,6 +26,7 @@ export const seleneTraits = [
 
 export const seleneGiver = {
   key: 'SpellDrop',
+  screenReroll: false,
   label: "Selene's Gift",
   providerKind: 'spell',
   traitKeys: [

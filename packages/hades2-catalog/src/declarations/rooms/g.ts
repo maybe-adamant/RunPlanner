@@ -1348,7 +1348,11 @@ export const gRooms = [
     hasKeepsakeRack: true,
     keepsakeRackExcludedRouteKeys: ['FreshFile'],
     hasRequiredFountain: true,
-    purgingPool: { slotKeys: ['left', 'middle', 'right'], excludedRouteKeys: ['FreshFile'] },
+    purgingPool: {
+      slotKeys: ['left', 'middle', 'right'],
+      excludedRouteKeys: ['FreshFile'],
+      screenReroll: true,
+    },
     challengeSwitchAnchorCount: 2,
     roomShop: {
       profileKey: 'RoomShop',

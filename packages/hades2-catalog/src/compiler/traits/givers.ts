@@ -55,6 +55,7 @@ export function normalizeGivers(
       'denialParticipates',
       'acquisitionOrdinalMenu',
       'selectedOptionPathPointBonuses',
+      'screenReroll',
     ]);
     const unsupportedKey = Object.keys(giver).find((key) => !allowedKeys.has(key));
     if (unsupportedKey !== undefined) fail(`${path}.${unsupportedKey}`, 'is not supported');
@@ -222,6 +223,7 @@ export function normalizeGivers(
       shopAwareGodTrait: giver.shopAwareGodTrait === true,
       ...(giver.blocksConcaveStone === true ? { blocksConcaveStone: true as const } : {}),
       callingCardMenu: giver.callingCardMenu === true,
+      screenReroll: requireBoolean(giver.screenReroll, `${path}.screenReroll`),
       traitKeys,
       priorityTraitKeys,
       rarityPolicy: frozenRarityPolicy,

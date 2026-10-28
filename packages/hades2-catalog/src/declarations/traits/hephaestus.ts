@@ -428,6 +428,7 @@ export const hephaestusTraits = [
 
 export const hephaestusGiver = {
   key: 'Hephaestus',
+  screenReroll: true,
   label: 'Hephaestus',
   providerKind: 'olympian',
   shopAwareGodTrait: true,

@@ -550,6 +550,11 @@ export function normalizeRewardTypes(
         : (rewardType.blocksDoorReroll as unknown) === true
           ? { blocksDoorReroll: true as const }
           : fail(`${path}.blocksDoorReroll`, 'must be true when declared')),
+      ...(rewardType.screenReroll === undefined
+        ? {}
+        : (rewardType.screenReroll as unknown) === true
+          ? { screenReroll: true as const }
+          : fail(`${path}.screenReroll`, 'must be true when declared')),
     });
   });
   const collection = createCollection(

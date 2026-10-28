@@ -168,6 +168,8 @@ export interface RewardTypeDeclaration {
   readonly acquisitionRoles: CatalogCollection<AcquisitionRoleDeclaration>;
   /** A door offering this reward is never rerollable, whatever its door or destination. */
   readonly blocksDoorReroll?: true;
+  /** Its loot opens a giverless offer screen (Pom of Power) with the native reroll button. */
+  readonly screenReroll?: true;
 }
 
 export interface RewardStoreEntry {
@@ -259,6 +261,8 @@ export interface ShopProfileDeclaration {
   readonly groups: CatalogCollection<ShopGroupDeclaration>;
   readonly slots: CatalogCollection<ShopSlotDeclaration>;
   readonly slotCount: number;
+  /** The shop screen shows the native reroll button. */
+  readonly screenReroll: boolean;
 }
 
 export interface ProducerRewardLifecycleDeclaration {

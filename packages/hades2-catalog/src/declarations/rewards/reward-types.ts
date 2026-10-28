@@ -23,9 +23,10 @@ export const rewardTypes = [
   directReward('PoseidonUpgrade', 'Poseidon', 'loot'),
   directReward('ZeusUpgrade', 'Zeus', 'loot'),
   directReward('HermesUpgrade', 'Hermes', 'loot'),
-  directReward('StackUpgrade', 'Pom of Power', 'loot'),
-  directReward('StackUpgradeBig', 'Big Pom of Power', 'loot'),
-  directReward('StackUpgradeTriple', 'Triple Pom of Power', 'loot'),
+  // Big and Triple inherit StackUpgrade's level screen.
+  { ...directReward('StackUpgrade', 'Pom of Power', 'loot'), screenReroll: true },
+  { ...directReward('StackUpgradeBig', 'Big Pom of Power', 'loot'), screenReroll: true },
+  { ...directReward('StackUpgradeTriple', 'Triple Pom of Power', 'loot'), screenReroll: true },
   directReward('WeaponUpgrade', 'Hammer', 'loot'),
   directReward('SpellDrop', "Selene's Gift", 'loot'),
   directReward('MaxHealthDrop', 'Max Health', 'consumable'),

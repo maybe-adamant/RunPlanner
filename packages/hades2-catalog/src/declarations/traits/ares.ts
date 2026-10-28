@@ -506,6 +506,7 @@ export const aresTraits = [
 
 export const aresGiver = {
   key: 'Ares',
+  screenReroll: true,
   label: 'Ares',
   providerKind: 'olympian',
   shopAwareGodTrait: true,

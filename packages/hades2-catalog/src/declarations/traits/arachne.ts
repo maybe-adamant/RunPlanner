@@ -81,6 +81,7 @@ export const arachneTraits = [
 
 export const arachneGiver = {
   key: 'Arachne',
+  screenReroll: false,
   label: 'Arachne',
   providerKind: 'npc',
   priorityTraitKeys: [],

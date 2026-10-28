@@ -78,6 +78,7 @@ export const hadesTraits = [
 
 export const hadesGiver = {
   key: 'Hades',
+  screenReroll: true,
   label: 'Hades',
   providerKind: 'npc',
   shopAwareGodTrait: true,

@@ -455,6 +455,7 @@ export const heraTraits = [
 
 export const heraGiver = {
   key: 'Hera',
+  screenReroll: true,
   label: 'Hera',
   providerKind: 'olympian',
   shopAwareGodTrait: true,
