@@ -440,11 +440,6 @@ screen rerolls and a relaunch mid-run.
   and was not re-derived for this audit.
 - Engine-side behavior: which file "continue" loads, `.bak` rotation policy,
   quit to menu.
-- Run 1010 `G_Combat05`, replayed after a relaunch mid-room: `ZeusCastBoon`
-  rose from level 1 to 2 at the encounter's end with no screen, loot, Pom,
-  Well purchase or `LootTypeHistory` change; the save shows only the re-added
-  trait (`LastRemovedTraitName`, `CurrentRoom.AcquiredSlot`). Its source is
-  unidentified, so the import keeps level 1 and reports the mismatch.
 
 ## Discrepancies
 
@@ -492,11 +487,20 @@ screen rerolls and a relaunch mid-run.
   replaced.
 - A batch's doors are ordered by the catalog's declared native door order for
   the source room, an exact order; a room without one takes ascending door id
-  and reports the order as an assumption. The one declared room is inferred,
-  pending a native door-order probe: `H_Combat05` processes door `621199`
-  before `564448`. In the live Underworld recording's reward-bag replay that
-  generates the Mini-Boss door first, refilling the store, so `H_Combat07`'s
-  recorded Hestia cage finds a Boon; ascending id leaves it none.
+  and reports the order as an assumption. Both declared rooms are inferred
+  from reward-store replays, pending a native door-order probe:
+  - `H_Combat05` processes door `621199` before `564448`. In the live
+    Underworld recording's reward-bag replay that generates the Mini-Boss
+    door first, refilling the store, so `H_Combat07`'s recorded Hestia cage
+    finds a Boon; ascending id leaves it none.
+  - `G_Combat20` processes doors `776584`, `776586`, then `569053`. In run
+    1010 the MetaProgress store refills between saves 027 and 028: the first
+    two doors draw `MetaCardPointsCommonBigDrop` and `MetaCurrencyBigDrop`,
+    and `569053` draws `GiftDrop` from the refilled store. Ascending id
+    refuses all three, and the guess put another reward on the taken
+    `G_Combat05` door, dropping its Nectar's run-progress level-up
+    (`UseStoreRewardRandomStack`, ConsumableData.lua:1852-1866) on
+    `ZeusCastBoon`; the relaunch mid-room was coincidental.
 - An imported plan is checked against each room's entry save, which leaving
   the previous room writes: the plan's `beforeRoomExit` of that room holds the
   same moment. The checked state is held traits (rarity, and level as

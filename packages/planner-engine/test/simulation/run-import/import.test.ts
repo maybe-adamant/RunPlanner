@@ -340,7 +340,7 @@ describe('run import of the Underworld capture', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
         conversion: 3,
-        doors: 18,
+        doors: 15,
         encounter: 1,
         fields: 3,
         npc: 1,
@@ -352,11 +352,10 @@ describe('run import of the Underworld capture', () => {
       mismatch: { elements: 1, pathOfStars: 1, stores: 2, traits: 3 },
       // The H and I Preboss Travel Deal refills and I_Combat07's Well refill were never bought.
       notInRecord: { fields: 4, pathOfStars: 1, shop: 2, traitOffer: 4, well: 1 },
-      refused: { doors: 1, fields: 2, pool: 1 },
+      refused: { fields: 2, pool: 1 },
       // H_Combat07's cage boon screen stays unused.
       unsupportedArea: { traitOffer: 1 },
     });
-    // G_Combat20's positional first door (G_Combat08) is refused at its exit and moves later.
     // H_Combat07's first two cages lose their store entries to the guessed cages of its twin door.
     expect(entryLines(imported.report)).toEqual([
       'assumption traitOffer r1 traitOffer@F-r1:self -> ReplaceTraitOffer(F-r1 chaos)',
@@ -376,10 +375,6 @@ describe('run import of the Underworld capture', () => {
       'assumption doors r16 exitDecision@G-r16',
       'assumption npc r18 nemesisRandomEvent@G-r18 -> ReplaceNemesisRandomEventInteraction(G-r18 freeItem)',
       'assumption doors r18 exitDecision@G-r18',
-      'assumption doors r19 exitDecision@G-r19',
-      'refused doors r19d569053 target@G-r19:exit1 -> CreateTarget(G-r20 G_MiniBoss01)',
-      'assumption doors r19d776586 target@G-r19:exit2 -> CreateTarget(G-r19-d776586 G_MiniBoss03)',
-      'assumption doors r19d569053 target@G-r19:exit3 -> CreateTarget(G-r19-d569053 G_Combat08)',
       'assumption doors r20 exitDecision@G-r20',
       'assumption doors r21 exitDecision@G-r21',
       'assumption doors r26 exitDecision@H-r26',
@@ -823,13 +818,13 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       // G_PreBoss01's Travel Deal refill is the Poseidon boon its room used beyond its stock.
       assumption: {
         conversion: 3,
-        doors: 15,
+        doors: 14,
         fields: 3,
         roomActionOrder: 10,
         shop: 1,
         traitOffer: 1,
       },
-      mismatch: { stores: 1, traits: 1 },
+      mismatch: { stores: 1 },
       // The run was reset in H_Combat04: the rest of Ephyra's Fields is guessed.
       // G_PostBoss01's Well refill was never bought.
       notInRecord: {
@@ -841,10 +836,7 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
         traitOffer: 3,
         well: 1,
       },
-      refused: { reward: 3 },
     });
-    // G_Combat20's ascending door ids are not its native order: the game drew the GiftDrop door
-    // last, from a refilled MetaProgress store, so its three door offers are refused and guessed.
     expect(entryLines(imported.report)).toEqual([
       'assumption conversion r1 acquisitionEntry@F-r1 -> ReplaceAcquisitionEntryOffer(F-r1 Boon)',
       'assumption doors r1 exitDecision@F-r1',
@@ -856,10 +848,6 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       'assumption conversion r8 acquisitionEntry@F-r8 -> ReplaceAcquisitionEntryOffer(F-r8 Boon)',
       'assumption doors r8 exitDecision@F-r8',
       'assumption doors r9 exitDecision@F-r9',
-      'assumption doors r15 exitDecision@G-r15',
-      'refused reward r16 incomingReward@G-r16 -> ReplaceIncomingReward(G-r16 MetaCardPointsCommonBigDrop)',
-      'refused reward r15 incomingReward@G-r15-d776584 -> ReplaceIncomingReward(G-r15-d776584 MetaCurrencyBigDrop)',
-      'refused reward r15 incomingReward@G-r15-d776586 -> ReplaceIncomingReward(G-r15-d776586 GiftDrop)',
       'assumption doors r16 exitDecision@G-r16',
       'assumption doors r17 exitDecision@G-r17',
       'assumption doors r19 exitDecision@G-r19',
@@ -884,8 +872,6 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       'assumption roomActionOrder r29 occurrence@H-r29',
     ]);
     expect(mismatchLines(imported.report)).toEqual([
-      // G_Combat05, replayed after a relaunch, raised the Zeus boon's level from no known source.
-      'traits r17 ZeusCastBoon: Rare level 2 | Rare level 1',
       // H_Combat07's optional rewards are guessed: one was collected during combat, without a point.
       'stores r27 FieldsOptionalRewards: MaxHealthDropSmall 1 | MaxHealthDropSmall 2',
     ]);

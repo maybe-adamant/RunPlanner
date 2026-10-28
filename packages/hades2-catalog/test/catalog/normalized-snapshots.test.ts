@@ -4,7 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 
 const normalizedBiomeSnapshotHashes = [
   ['F', '3ad3d80cd84d0f96'],
-  ['G', '1908213ffe870ada'],
+  ['G', 'd0bccaff5c231253'],
   ['H', '075a1bed985832bc'],
   ['I', 'ee8026bfbdd57bcb'],
   ['N', '5b6012a07e755d60'],

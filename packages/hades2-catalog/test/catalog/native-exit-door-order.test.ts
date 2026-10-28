@@ -16,7 +16,7 @@ describe('native exit door order declarations', () => {
           room.nativeExitDoorOrder === undefined ? [] : [[room.gameName, room.nativeExitDoorOrder]],
         ),
       ),
-    ).toEqual({ H_Combat05: [621199, 564448] });
+    ).toEqual({ G_Combat20: [776584, 776586, 569053], H_Combat05: [621199, 564448] });
     expect(Object.isFrozen(catalog.rooms.byKey.H_Combat05?.nativeExitDoorOrder)).toBe(true);
   });
 
