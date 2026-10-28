@@ -45,26 +45,26 @@ function boonForm(): ProjectDocument {
 
 function pedestal(): HTMLElement {
   fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
-  return screen.getByRole('group', { name: 'Contract Pedestal configuration' });
+  return screen.getByRole('group', { name: 'Champion Item configuration' });
 }
 
-describe('Contract pedestal panel', () => {
+describe('Champion Item panel', () => {
   it('picks and collects the boon-form pedestal item', async () => {
     const view = renderOccurrenceWorkbench(boonForm(), 'Underworld', 'G', select(peerId));
     const panel = pedestal();
-    const collect = within(panel).getByRole('checkbox', { name: 'Collect Contract Pedestal item' });
+    const collect = within(panel).getByRole('checkbox', { name: 'Collect Champion Item' });
     expect(collect).toHaveProperty('disabled', true);
 
-    await view.user.click(within(panel).getByRole('button', { name: /Item/ }));
+    await view.user.click(within(panel).getByRole('button', { name: /^Champion Item/ }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Big Pom of Power'));
     const chosen = pedestal();
     const enabled = within(chosen).getByRole('checkbox', {
-      name: 'Collect Contract Pedestal item',
+      name: 'Collect Champion Item',
     });
     expect(enabled).toHaveProperty('disabled', false);
     await view.user.click(enabled);
     expect(
-      within(pedestal()).getByRole('checkbox', { name: 'Collect Contract Pedestal item' }),
+      within(pedestal()).getByRole('checkbox', { name: 'Collect Champion Item' }),
     ).toHaveProperty('checked', true);
 
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
@@ -82,11 +82,11 @@ describe('Contract pedestal panel', () => {
     expect(
       within(screen.getByRole('region', { name: 'Shop inventory' })).queryByText(/Contract/),
     ).toBeNull();
-    const collect = within(panel).getByRole('checkbox', { name: 'Collect Contract Pedestal item' });
+    const collect = within(panel).getByRole('checkbox', { name: 'Collect Champion Item' });
     expect(collect).toHaveProperty('checked', true);
     await view.user.click(collect);
     expect(
-      within(pedestal()).getByRole('checkbox', { name: 'Collect Contract Pedestal item' }),
+      within(pedestal()).getByRole('checkbox', { name: 'Collect Champion Item' }),
     ).toHaveProperty('checked', false);
   });
 
@@ -97,7 +97,7 @@ describe('Contract pedestal panel', () => {
       'G',
       select(shopId),
     );
-    await view.user.click(within(pedestal()).getByRole('button', { name: /Item/ }));
+    await view.user.click(within(pedestal()).getByRole('button', { name: /^Champion Item/ }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
     const row = screen.getByText('Collect Mystery Boon · Contract Item').closest('li');
