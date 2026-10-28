@@ -562,7 +562,7 @@ function buildRoom(
     ...optional('spell', spellChange(traitsBefore?.spell, traitsAfter?.spell)),
     ...optional('toolElements', toolElements(before, after)),
     ...optional('grantedArcana', grantedArcana(room)),
-    ...optional('rerolls', doorRerolls(room, settled)),
+    ...optional('rerolls', doorRerolls(room, settled, previousVisit)),
     ...optional(
       'spentRerolls',
       nonEmpty(
@@ -683,9 +683,13 @@ function grantedArcana(room: RoomSaves): string[] | undefined {
  * `NumRerolls` each; screen rerolls (`AttemptPanelReroll`) mark the room's
  * `SpentRerolls`, the n-th reroll of one screen costing n. The room's door
  * rerolls are what its `NumRerolls` falls spent beyond its screen rerolls; a
- * gain in the same room hides spends, which the importer's store check reports.
+ * gain in the same room hides spends, which the importer's pool check finds.
  */
-function doorRerolls(room: RoomSaves, settled: SavedRoom): number | undefined {
+function doorRerolls(
+  room: RoomSaves,
+  settled: SavedRoom,
+  previousVisit: SavedRoom | undefined,
+): number | undefined {
   const checkpoints = [room.entry, room.postReward, room.closing].filter(
     (save): save is SaveCheckpoint => save !== undefined && save.kind !== 'hub',
   );
@@ -695,10 +699,10 @@ function doorRerolls(room: RoomSaves, settled: SavedRoom): number | undefined {
     if (start?.run.numRerolls === undefined || end.run.numRerolls === undefined) continue;
     spent += Math.max(0, start.run.numRerolls - end.run.numRerolls);
   }
-  const screens = Object.values(settled.spentRerolls ?? {}).reduce(
-    (cost, count) => cost + (count * (count + 1)) / 2,
-    0,
-  );
+  // A revisited room keeps its screen counts, so this visit spent only their growth.
+  const cost = (counts: Counts | undefined) =>
+    Object.values(counts ?? {}).reduce((total, count) => total + (count * (count + 1)) / 2, 0);
+  const screens = cost(settled.spentRerolls) - cost(previousVisit?.spentRerolls);
   return whole(spent - screens, 1);
 }
 

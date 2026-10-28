@@ -661,6 +661,37 @@ describe('run record builder', () => {
     ]);
   });
 
+  it("charges a revisit only its own growth of the room's screen rerolls", () => {
+    // The Well was rerolled once on the first visit and twice more on the revisit: 2 + 3 spent.
+    const combat = (timesVisited: number, spentRerolls: Record<string, number>) =>
+      room('N_Combat02', { timesVisited, spentRerolls });
+    const record = buildRunRecord([
+      save({ history: [], current: room('N_Combat02'), run: { numRerolls: 9 } }),
+      save({
+        history: ['N_Combat02'],
+        current: room('N_Sub01'),
+        departure: combat(1, { WellShop: 1 }),
+        run: { numRerolls: 8 },
+      }),
+      save({
+        history: ['N_Combat02', 'N_Sub01'],
+        current: room('N_Combat02'),
+        departure: room('N_Sub01'),
+        run: { numRerolls: 8 },
+      }),
+      save({
+        history: ['N_Combat02', 'N_Sub01', 'N_Combat02'],
+        current: room('N_Hub'),
+        departure: combat(3, { WellShop: 3 }),
+        run: { numRerolls: 2 },
+      }),
+    ]);
+    expect(record.rooms[0]).toMatchObject({ spentRerolls: { WellShop: 1 } });
+    expect(record.rooms[0]?.rerolls).toBeUndefined();
+    // 6 spent on the revisit: 5 by the Well's second and third rerolls, 1 by a door.
+    expect(record.rooms[2]).toMatchObject({ spentRerolls: { WellShop: 2 }, rerolls: 1 });
+  });
+
   it('keeps a revisit to what that visit itself shows', () => {
     const combat = (values: Partial<SavedRoom>) =>
       room('N_Combat02', {
