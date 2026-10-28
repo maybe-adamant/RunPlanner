@@ -336,7 +336,7 @@ describe('Well and Pool rerolls', () => {
         slotKey: 'healing',
         itemKey: 'ArmorBoostStore',
       }),
-    ).toThrow('room action is not an ordered Well reroll');
+    ).toThrow('room action is not an ordered Well or Pool reroll');
   });
 });
 

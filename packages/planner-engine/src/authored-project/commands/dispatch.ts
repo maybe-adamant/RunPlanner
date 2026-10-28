@@ -247,6 +247,7 @@ function applyUnchecked(
     case 'SetPurgingPoolInteraction':
     case 'InsertPurgingPoolReroll':
     case 'ReplacePurgingPoolRollSlot':
+    case 'SellPurgingPoolRollSlot':
     case 'ReplacePurgingPoolSlot':
     case 'SetErisSpawned':
     case 'AddStygianWell':

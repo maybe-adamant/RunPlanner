@@ -181,6 +181,31 @@ describe('Stygian Well rolls', () => {
     });
   });
 
+  it('pin and buy a reroll slot in one edit', () => {
+    const project = appendWellReroll(base());
+    const bought = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: room,
+      generationKey: 'r1:healing',
+      purchased: true,
+      itemKey: 'ArmorBoostStore',
+    });
+    expect(order(bought).slice(-2)).toEqual([
+      { kind: 'rerollStygianWell', rerollId: 'r1', offerKeyBySlot: { healing: 'ArmorBoostStore' } },
+      { kind: 'purchaseStygianWellOffer', generationKey: 'r1:healing' },
+    ]);
+    expect(findings(bought)).toEqual([]);
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'SetStygianWellPurchase',
+        occurrence: room,
+        generationKey: 'initial:healing',
+        purchased: true,
+        itemKey: 'ArmorBoostStore',
+      }),
+    ).toThrow('only a reroll slot is pinned with its purchase');
+  });
+
   it('keep a purchase from a replaced or removed roll with its finding', () => {
     let project = appendWellReroll(base());
     const secondRight = actionAt({
@@ -324,6 +349,27 @@ describe('Pool of Purging rolls', () => {
       ),
       evidence: { slotKey: 'left' },
     });
+  });
+
+  it('pin and sell a reroll slot in one edit', () => {
+    const project = settle(interacted(), {
+      kind: 'InsertPurgingPoolReroll',
+      occurrence: room,
+      index: order(interacted()).length,
+    });
+    const traitKey = pool(project).rolls['r1']!.candidateTraitKeysBySlot.right[0]!;
+    const sold = applyProjectCommand(project, catalog, {
+      kind: 'SellPurgingPoolRollSlot',
+      reroll: poolReroll('r1'),
+      slotKey: 'right',
+      traitKey,
+      index: order(project).length,
+    });
+    expect(order(sold).slice(-2)).toEqual([
+      { kind: 'rerollPurgingPool', rerollId: 'r1', traitKeyBySlot: { right: traitKey } },
+      { kind: 'sellPurgingPoolTrait', slotKey: 'right', rollKey: 'r1' },
+    ]);
+    expect(findings(sold)).toEqual([]);
   });
 
   it('report a sale from the replaced initial list', () => {

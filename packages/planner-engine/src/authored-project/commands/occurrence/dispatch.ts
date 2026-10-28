@@ -12,7 +12,7 @@ import { applyShopOccurrenceCommand } from './shop';
 import { applyInfernalContractPedestalCommand } from './infernal-contract-pedestal';
 import { applyPhantomExitCommand } from './phantom-exit';
 import { applyFieldsOccurrenceCommand } from './fields';
-import { applyFeatureRollCommand } from './feature-rolls';
+import { applyFeatureRollCommand, pinRollSlot } from './feature-rolls';
 import {
   INITIAL_ROLL_KEY,
   parseStygianWellGenerationKey,
@@ -643,6 +643,7 @@ export function applyOccurrenceCommand(
     case 'ReplaceStygianWellRollOffer':
     case 'InsertPurgingPoolReroll':
     case 'ReplacePurgingPoolRollSlot':
+    case 'SellPurgingPoolRollSlot':
       return applyFeatureRollCommand(document, catalog, located, command);
     case 'ReplaceStygianWellOffer': {
       const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
@@ -726,7 +727,27 @@ export function applyOccurrenceCommand(
       );
     }
     case 'SetStygianWellPurchase': {
-      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const authored = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      if (authored.stygianWell === undefined || !authored.stygianWell.interacted)
+        failCommand(command, 'Stygian Well is not being interacted with');
+      const roll = parseStygianWellGenerationKey(command.generationKey);
+      if (
+        command.itemKey !== undefined &&
+        (!command.purchased || roll === undefined || roll.rollKey === INITIAL_ROLL_KEY)
+      )
+        failCommand(command, 'only a reroll slot is pinned with its purchase');
+      const occurrence =
+        command.itemKey === undefined || roll === undefined
+          ? authored
+          : pinRollSlot(
+              catalog,
+              command,
+              authored,
+              'stygianWell',
+              roll.rollKey,
+              roll.slotKey,
+              command.itemKey,
+            );
       const well = occurrence.stygianWell;
       if (well === undefined || !well.interacted)
         failCommand(command, 'Stygian Well is not being interacted with');

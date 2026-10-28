@@ -161,6 +161,8 @@ function commandContractAddress(
     case 'ReplaceStygianWellRollOffer':
     case 'ReplacePurgingPoolRollSlot':
       return command.action;
+    case 'SellPurgingPoolRollSlot':
+      return command.reroll;
     case 'InsertReroll':
       return command.occurrence;
     case 'InsertHubReroll':
@@ -244,6 +246,8 @@ export function projectCommandAddress(
     case 'ReplaceStygianWellRollOffer':
     case 'ReplacePurgingPoolRollSlot':
       return command.action;
+    case 'SellPurgingPoolRollSlot':
+      return command.reroll;
     case 'ReplaceStygianWellOffer':
       return createRoomFeatureAddress(command.occurrence, {
         kind: 'stygianWellOffer',

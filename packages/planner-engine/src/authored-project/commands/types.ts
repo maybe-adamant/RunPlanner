@@ -554,6 +554,14 @@ export type PurgingPoolCommand =
       readonly action: RoomActionSemanticAddress;
       readonly slotKey: import('../model').PurgingPoolSlotKey;
       readonly traitKey: string | null;
+    }
+  | {
+      /** Pins a Pool reroll's slot and inserts its sale in one edit. */
+      readonly kind: 'SellPurgingPoolRollSlot';
+      readonly reroll: RoomActionSemanticAddress;
+      readonly slotKey: import('../model').PurgingPoolSlotKey;
+      readonly traitKey: string;
+      readonly index: number;
     };
 
 /** Records or clears the observation that Eris stood in a declared host room. */
@@ -625,6 +633,8 @@ export type StygianWellCommand =
       readonly occurrence: OccurrenceAddress;
       readonly generationKey: import('../model').StygianWellGenerationKey;
       readonly purchased: boolean;
+      /** A reroll slot's item, pinned in the same edit as its purchase. */
+      readonly itemKey?: string;
     }
   | {
       readonly kind: 'ReplaceStygianWellTwistResult';
