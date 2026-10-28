@@ -184,6 +184,20 @@ function chaosOffer.attach(module, session, getState, report, room, highlights)
         return result
     end)
 
+    module.hooks.wrap("HandleUpgradeChoiceSelection", "run-planner-chaos-selection", function(_, runtime, base,
+        screen, button, args)
+        local loot = type(button) == "table" and button.LootData or nil
+        local scope = loot and screens[loot] or nil
+        local planned = scope and scope.offer.rerollCount or 0
+        if scope ~= nil and (scope.rerolls or 0) < planned then
+            -- A choice before the planned rerolls is from rows the plan never offered.
+            screens[loot] = nil
+            session.mismatch(scope.state, "screen-reroll", planned, scope.rerolls or 0)
+            report(runtime)
+        end
+        return base(screen, button, args)
+    end)
+
     module.hooks.wrap("CreateUpgradeChoiceButton", "run-planner-chaos-row", function(_, _runtime, base,
         screen, loot, itemIndex, itemData, args)
         local scope = screens[loot]

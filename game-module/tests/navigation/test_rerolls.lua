@@ -221,3 +221,62 @@ function TestRerolls.testHubBoardPressDrawsItsSlotsPlannedReroll()
     lu.assertEquals(slotDoor.Room.ChosenRewardType, "GiftDrop")
     lu.assertEquals(mismatches, { { checkpoint = "reroll", expected = 1, observed = 2 } })
 end
+
+local function chaosScreen(rerollCount)
+    local chaos = require("mods.room.timeline.acquisitions.traits.chaos_offer")
+    local module, _, callbacks = capture()
+    local offer = { kind = "chaos", giver = "Chaos", selected = "option1", blessingKey = "ChaosBlessing",
+        rarity = "Rare", selectedCurseValues = {}, blessingValues = {}, rerollCount = rerollCount, curseOptions = {
+            { curseKey = "CurseA", requirementCount = 1 }, { curseKey = "CurseB", requirementCount = 1 },
+            { curseKey = "CurseC", requirementCount = 1 },
+        } }
+    local payload = { transaction = { kind = "acquisition" },
+        detail = { disposition = "normal", gameName = "TrialUpgrade", traitOffer = offer } }
+    local loot = { Name = "TrialUpgrade", UpgradeOptions = {
+        { ItemName = "RowA" }, { ItemName = "RowB" }, { ItemName = "RowC" },
+    } }
+    local handle, state, mismatches, completed = {}, { state = "synchronized" }, {}, 0
+    local room = {
+        current = function() return {} end,
+        bound = function(_, _, native) return native == loot and handle or nil end,
+        peek = function() return payload end,
+        begin = function() return payload end,
+    }
+    local session = {
+        complete = function() completed = completed + 1 end,
+        diagnostic = function() end,
+        mismatch = function(_, checkpoint, expected, observed)
+            mismatches[#mismatches + 1] = { checkpoint, expected, observed }
+        end,
+    }
+    chaos.attach(module, session, function() return state end, function() end, room)
+    callbacks.HandleLootPickup(nil, {}, function() end, {}, loot, {})
+    local function construct(reroll)
+        callbacks.CreateBoonLootButtons(nil, {}, function() end, {}, loot, reroll, {})
+    end
+    local function choose()
+        local chosen = false
+        callbacks.HandleUpgradeChoiceSelection(nil, {}, function() chosen = true end, {},
+            { LootData = loot, Data = { Name = "RowA" } }, {})
+        return chosen
+    end
+    return construct, choose, mismatches, function() return completed end
+end
+
+function TestRerolls.testChaosChoiceBeforeItsPlannedRerollLeavesThePlan()
+    local construct, choose, mismatches, completed = chaosScreen(1)
+    construct(false)
+    lu.assertTrue(choose())
+    lu.assertEquals(mismatches, { { "screen-reroll", 1, 0 } })
+    lu.assertEquals(completed(), 0)
+end
+
+function TestRerolls.testChaosChoiceAfterItsPlannedRerollStaysOnPlan()
+    local construct, choose, mismatches = chaosScreen(1)
+    construct(false)
+    construct(true)
+    lu.assertTrue(choose())
+    lu.assertEquals(mismatches, {})
+    construct(true)
+    lu.assertEquals(mismatches, { { "screen-reroll", 1, 2 } })
+end

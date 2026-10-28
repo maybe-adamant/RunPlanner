@@ -285,10 +285,13 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
         end
         if occurrence == nil then reportOutcome(session, state, errorValue) else room.enter(state, occurrence) end
         -- Every grant and spend before this room is settled by its entry.
-        if state.state == "synchronized" and occurrence.rerollPoolAtEntry ~= nil and type(liveRun) == "table"
-            and liveRun.NumRerolls ~= occurrence.rerollPoolAtEntry then
+        -- Native never goes below zero; a plan's preserved over-spend is its own finding.
+        local plannedPool = occurrence and occurrence.rerollPoolAtEntry ~= nil
+            and math.max(0, occurrence.rerollPoolAtEntry) or nil
+        if state.state == "synchronized" and plannedPool ~= nil and type(liveRun) == "table"
+            and liveRun.NumRerolls ~= plannedPool then
             session.mismatch(state, {
-                checkpoint = "reroll-pool", expected = occurrence.rerollPoolAtEntry, observed = liveRun.NumRerolls,
+                checkpoint = "reroll-pool", expected = plannedPool, observed = liveRun.NumRerolls,
             })
         end
         report(runtime)

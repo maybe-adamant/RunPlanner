@@ -359,7 +359,10 @@ function TestChaosOffer.testLaterPlayerSelectionIsNotAnAdapterTerminal()
             end
         end, {}, loot, false, {})
     end, {}, loot, {})
-    lu.assertNil(callbacks.HandleUpgradeChoiceSelection)
+    local selected = false
+    callbacks.HandleUpgradeChoiceSelection(nil, {}, function() selected = true end, {},
+        { LootData = loot, Data = { Name = "ChaosPeerA" } }, {})
+    lu.assertTrue(selected)
     lu.assertEquals(#completed, 1)
     lu.assertEquals(mismatches, {})
 end

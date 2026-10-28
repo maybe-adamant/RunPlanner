@@ -710,7 +710,8 @@ function TestRoomEntryHooks.testIncomingRewardProofRemainsNavigationOwnedAtRoomE
 end
 
 function TestRoomEntryHooks.testRoomEntryChecksThePlannedRerollPoolBeforeNativeStart()
-    for _, case in ipairs({ { pool = 3, observed = 3 }, { pool = 2, observed = 3 }, { observed = 5 } }) do
+    for _, case in ipairs({ { pool = 3, observed = 3 }, { pool = 2, observed = 3 }, { observed = 5 },
+        { pool = -2, observed = 0 }, { pool = -1, observed = 1, expected = 0 } }) do
         local module, _, callbacks = capture()
         local occurrence = { id = "opening", gameName = "F_Opening01", rerollPoolAtEntry = case.pool }
         local state = { state = "synchronized", route = {} }
@@ -738,8 +739,10 @@ function TestRoomEntryHooks.testRoomEntryChecksThePlannedRerollPoolBeforeNativeS
         callbacks.StartRoom(nil, {}, function() nativeStarted = nativeStarted + 1 end,
             { NumRerolls = case.observed }, { Name = "F_Opening01", __runPlannerExecutionRoomId = "opening" })
         lu.assertEquals(nativeStarted, 1)
-        if case.pool ~= nil and case.pool ~= case.observed then
-            lu.assertEquals(mismatches, { { checkpoint = "reroll-pool", expected = case.pool, observed = case.observed } })
+        local planned = case.pool and math.max(0, case.pool)
+        if planned ~= nil and planned ~= case.observed then
+            lu.assertEquals(mismatches, { { checkpoint = "reroll-pool", expected = case.expected or planned,
+                observed = case.observed } })
         else
             lu.assertEquals(mismatches, {})
         end
