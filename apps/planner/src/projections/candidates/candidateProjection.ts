@@ -42,6 +42,7 @@ import {
   type RewardWheelOfferAddress,
   type ShopOfferAddress,
   type InfernalContractPedestalAddress,
+  type PhantomExitAddress,
   type StartingRewardAddress,
   type SideRoomGeneration,
   type TraitOfferAddress,
@@ -89,6 +90,10 @@ export type RewardCandidateOwner =
       readonly address: InfernalContractPedestalAddress;
     }
   | { readonly kind: 'acquisitionEntry'; readonly address: AcquisitionEntryAddress };
+
+/** Owners whose reward-type domain is evaluated; a hidden door draws a type but owns no reward leaf. */
+export type RewardDomainCandidateOwner =
+  RewardCandidateOwner | { readonly kind: 'phantomExit'; readonly address: PhantomExitAddress };
 
 /** An item drawn from a declared Shop-option pool: a Shop slot or the Contract pedestal. */
 export type ShopOptionCandidateOwner = ShopOfferAddress | InfernalContractPedestalAddress;
@@ -171,7 +176,7 @@ export interface CandidateProjectionSession {
     selectedRewardType?: string,
   ) => readonly string[];
   readonly rewardDomain: (
-    owner: RewardCandidateOwner,
+    owner: RewardDomainCandidateOwner,
     rewardTypes: readonly string[],
     selected?: ResolvedRewardOffer,
   ) => Promise<ProjectedRewardDomain>;

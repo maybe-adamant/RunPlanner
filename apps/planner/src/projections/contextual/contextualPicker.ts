@@ -50,12 +50,13 @@ export function declaredChoicesPicker<T>(
   }[],
   selected: T,
 ): ContextualPickerModel<T> {
-  const items: ContextualPickerItem<T>[] = choices.map((choice) =>
+  const items: ContextualPickerItem<T>[] = choices.map(({ explanation, ...choice }) =>
     Object.freeze({
       ...choice,
       selected: choice.value === selected,
       disabled: choice.disabled === true,
       state: choice.disabled === true ? 'impossible' : 'possible',
+      ...(explanation === undefined ? {} : { explanations: Object.freeze([explanation]) }),
     }),
   );
   const groups = [

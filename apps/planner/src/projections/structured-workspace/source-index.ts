@@ -143,6 +143,10 @@ export interface WorkspaceBiomeSource {
   ) => boolean;
   /** Engine-owned reached standing of one declared Shop slot. */
   readonly shopOfferAssessment: (owner: ShopOfferAddress) => ShopSlotAssessment | undefined;
+  /** The simulation's settlement of one hidden door; undefined while its unlock is unreached. */
+  readonly phantomExitSettlement: (
+    owner: import('@run-planner/engine/authored-project').PhantomExitAddress,
+  ) => import('@run-planner/engine/simulation').PhantomExitSettlement | undefined;
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
@@ -689,6 +693,7 @@ function createWorkspaceBiomeSource(
   zagreusContractAssessment: WorkspaceBiomeSource['zagreusContractAssessment'],
   isActiveInventoryOffer: WorkspaceBiomeSource['isActiveInventoryOffer'],
   shopOfferAssessment: WorkspaceBiomeSource['shopOfferAssessment'],
+  phantomExitSettlement: WorkspaceBiomeSource['phantomExitSettlement'],
   assessmentIssue: AssessmentIssue | undefined,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
@@ -912,6 +917,7 @@ function createWorkspaceBiomeSource(
     isActiveTraitOffer,
     isActiveInventoryOffer,
     shopOfferAssessment,
+    phantomExitSettlement,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     acquisitionConversionCandidate,
@@ -990,6 +996,7 @@ export function createWorkspaceProjectSourceIndex(
   zagreusContractAssessment: WorkspaceBiomeSource['zagreusContractAssessment'] = () => undefined,
   isActiveInventoryOffer: WorkspaceBiomeSource['isActiveInventoryOffer'] = () => false,
   shopOfferAssessment: WorkspaceBiomeSource['shopOfferAssessment'] = () => undefined,
+  phantomExitSettlement: WorkspaceBiomeSource['phantomExitSettlement'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -1024,6 +1031,7 @@ export function createWorkspaceProjectSourceIndex(
             zagreusContractAssessment,
             isActiveInventoryOffer,
             shopOfferAssessment,
+            phantomExitSettlement,
             routeEvaluation?.issue,
           ),
         ),

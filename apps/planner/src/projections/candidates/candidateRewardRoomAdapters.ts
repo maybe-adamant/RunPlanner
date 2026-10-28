@@ -22,7 +22,7 @@ import type {
   CandidateOptionProjection,
   CandidateProjectionSession,
   EncounterCandidateProjectionEvaluation,
-  RewardCandidateOwner,
+  RewardDomainCandidateOwner,
   CountedRewardCandidateOwner,
 } from './candidateProjection';
 import { domainKey, offerKey, type CandidateProjectionCore } from './candidateProjectionSession';
@@ -46,7 +46,7 @@ export interface RewardDomainCache {
 }
 
 function rewardQueries(
-  owner: RewardCandidateOwner,
+  owner: RewardDomainCandidateOwner,
   offers: readonly ResolvedRewardOffer[],
 ): readonly ProjectCandidateQuery[] {
   switch (owner.kind) {
@@ -66,6 +66,8 @@ function rewardQueries(
         pedestal: owner.address,
         value,
       }));
+    case 'phantomExit':
+      return offers.map((value) => ({ kind: 'phantomExitReward', exit: owner.address, value }));
     case 'acquisitionEntry':
       return offers.map((value) => ({
         kind: 'acquisitionEntryOffer',
@@ -119,7 +121,7 @@ function countedRewardTypesFor(
 function rewardDomainFor(
   core: CandidateProjectionCore,
   cache: RewardDomainCache,
-  owner: RewardCandidateOwner,
+  owner: RewardDomainCandidateOwner,
   rewardTypes: readonly string[],
   selected?: ResolvedRewardOffer,
 ): Promise<ProjectedRewardDomain> {

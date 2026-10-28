@@ -53,6 +53,8 @@ export type {
   WorkspaceOccurrenceStageOutgoing,
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceOrdinaryBatchNode,
+  WorkspacePhantomExitControl,
+  WorkspacePhantomExitInteraction,
   WorkspacePhysicalTarget,
   WorkspaceRailEntry,
   WorkspaceRailReward,

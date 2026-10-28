@@ -186,6 +186,8 @@ import type {
   WorkspaceAnomalyControl,
   WorkspaceDoorReward,
   WorkspaceMissingTargetAuthoring,
+  WorkspacePhantomExitControl,
+  WorkspacePhantomExitInteraction,
 } from './contracts/structure';
 
 export type {
@@ -385,6 +387,7 @@ export interface WorkspaceInteractionCatalog {
     WorkspaceShopPurchaseParticipationInteraction
   >;
   readonly shopOffers: ReadonlyMap<string, WorkspaceShopOfferInteraction>;
+  readonly phantomExits: ReadonlyMap<string, WorkspacePhantomExitInteraction>;
   readonly infernalContractPedestalCollects: ReadonlyMap<
     string,
     WorkspaceInfernalContractPedestalCollectInteraction
@@ -569,6 +572,8 @@ export type WorkspaceBossDoorRewardStoreControl =
 export interface WorkspaceRoomSummary {
   readonly address: OccurrenceAddress;
   readonly bossDoorRewardStore?: WorkspaceBossDoorRewardStoreControl;
+  /** Present exactly where the room declares a hidden door back to the Hub. */
+  readonly phantomExit?: WorkspacePhantomExitControl;
   /** Authored detail activation is deliberately separate from evaluated entry. */
   readonly detailsActive: boolean;
   /** Complete reward surface exposed by this room's selected-offer binding. */

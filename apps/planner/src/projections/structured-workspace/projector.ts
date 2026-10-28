@@ -38,6 +38,7 @@ import {
   traitOfferCandidateForProjectEvaluationAssembly,
   isInventoryOfferActiveForProjectEvaluationAssembly,
   shopOfferAssessmentForProjectEvaluationAssembly,
+  phantomExitSettlementForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -349,6 +350,7 @@ export function createStructuredWorkspaceProjection(
         },
         (offer) => isInventoryOfferActiveForProjectEvaluationAssembly(assembly, offer),
         (offer) => shopOfferAssessmentForProjectEvaluationAssembly(assembly, offer),
+        (exit) => phantomExitSettlementForProjectEvaluationAssembly(assembly, exit),
       );
       const routeSource = sources.route;
       const authoredRoute =

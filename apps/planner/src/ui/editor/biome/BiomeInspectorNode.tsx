@@ -9,12 +9,14 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceNode,
   type WorkspaceOccurrenceStageOutgoing,
+  type WorkspacePhantomExitControl,
   type WorkspaceRoomTab,
 } from '@planner/projections/structured-workspace';
 import { AuthoringFrontier, BatchWorkbench } from './DecisionWorkbench';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { HubFountainControls } from './HubFountainControls';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
+import { PhantomExitDoor } from './PhantomExitDoor';
 import { BossDoorRewardPoolRow } from './OccurrenceDirectRoomWorkbench';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import {
@@ -47,12 +49,15 @@ function OccurrenceOutgoing({
   idPrefix,
   interactions,
   outgoing,
+  phantomExit,
 }: {
   /** A fixed boss door authors or reports its pool alongside its destination. */
   readonly bossDoorRewardStore?: WorkspaceBossDoorRewardStoreControl;
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly outgoing: WorkspaceOccurrenceStageOutgoing;
+  /** The room's only door it authors itself; the Hub or its side visits own the rest. */
+  readonly phantomExit?: WorkspacePhantomExitControl;
 }): ReactNode {
   switch (outgoing.kind) {
     case 'authoredDecision':
@@ -117,6 +122,10 @@ function OccurrenceOutgoing({
     case 'blockedOrUnentered':
     case 'topologyOwned':
     case 'terminal':
+      if (outgoing.kind === 'topologyOwned' && phantomExit !== undefined)
+        return (
+          <PhantomExitDoor control={phantomExit} idPrefix={idPrefix} interactions={interactions} />
+        );
       return (
         <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
           <div className="owner-markers">
@@ -202,6 +211,9 @@ function OccurrenceInspector({
                 idPrefix={`occurrence-${node.room.occurrenceId}`}
                 interactions={interactions}
                 outgoing={outgoing}
+                {...(node.room.phantomExit === undefined
+                  ? {}
+                  : { phantomExit: node.room.phantomExit })}
               />
             )
           ) : (

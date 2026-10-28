@@ -20,6 +20,8 @@ import {
   type RewardWheelAddress,
   type ShopOfferAddress,
   type InfernalContractPedestalAddress,
+  type PhantomExitAddress,
+  type PhantomExitState,
   type SideRoomGeneration,
   type FieldsSpatialAddress,
   type FieldsSpatialTarget,
@@ -130,6 +132,22 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly kind: 'shopPurchaseParticipation';
       readonly owner: ShopOfferAddress;
       readonly purchased: boolean;
+    }
+  | {
+      /** A hidden door's pickers: engine placeholder candidates and the pinned room's rewards. */
+      readonly kind: 'phantomExit';
+      readonly owner: PhantomExitAddress;
+      readonly interactionKey: string;
+      readonly value: PhantomExitState;
+      readonly autoRoomLabel: string;
+      readonly autoRewardLabel: string;
+      /** Empty while the room's doors unlock is unreached. */
+      readonly rooms: readonly {
+        readonly gameName: string;
+        readonly label: string;
+        readonly exclusion?: import('@run-planner/engine/simulation').PhantomPlaceholderExclusion;
+      }[];
+      readonly rewardTypes: readonly { readonly rewardType: string; readonly label: string }[];
     }
   | {
       readonly kind: 'infernalContractPedestalCollect';

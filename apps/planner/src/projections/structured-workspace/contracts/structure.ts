@@ -16,6 +16,7 @@ import type {
   HubSlotAddress,
   KeepsakeEquipResultAddress,
   OccurrenceId,
+  PhantomExitAddress,
   ProjectCommand,
   SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -375,6 +376,43 @@ export type WorkspaceNode =
   | WorkspaceMixedBatchNode
   | WorkspaceHubDecisionNode
   | WorkspaceOccurrenceWorkbenchNode;
+
+/**
+ * The hidden door back to the Hub that a room fills when its doors first
+ * unlock: a placeholder room and the reward drawn for it. An unpinned field
+ * shows the value the simulation settled; `locked` names why it cannot be
+ * chosen now.
+ */
+export interface WorkspacePhantomExitControl {
+  readonly address: PhantomExitAddress;
+  readonly interactionKey: string;
+  readonly marker: WorkspaceMarker;
+  readonly room: {
+    readonly pinned: boolean;
+    readonly summary: string;
+    readonly locked?: 'unreached';
+  };
+  readonly reward: {
+    readonly pinned: boolean;
+    readonly summary: string;
+    /** `autoRoom`: the room is unpinned; `noDraw`: the room draws no reward. */
+    readonly locked?: 'unreached' | 'autoRoom' | 'noDraw';
+  };
+}
+
+/** Engine-backed pickers for one hidden door; a null value returns a field to Auto. */
+export interface WorkspacePhantomExitInteraction {
+  readonly key: string;
+  readonly owner: PhantomExitAddress;
+  readonly rooms: { readonly load: () => ContextualPickerModel<string | null> };
+  readonly rewards: { readonly load: () => Promise<ContextualPickerModel<string | null>> };
+  readonly roomIntent: (
+    placeholderRoomGameName: string | null,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplacePhantomExit' }>>;
+  readonly rewardIntent: (
+    rewardType: string | null,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplacePhantomExit' }>>;
+}
 
 export type WorkspaceOccurrenceStageOutgoing =
   | {

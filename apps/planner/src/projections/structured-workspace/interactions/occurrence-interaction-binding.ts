@@ -55,6 +55,8 @@ import type {
   WorkspaceFieldsSpatialPointInteraction,
 } from '../contracts/locals';
 import type { WorkspaceRoomActionInteraction } from '../contracts/timeline';
+import type { WorkspacePhantomExitInteraction } from '../contracts/structure';
+import { bindPhantomExitInteraction } from './phantom-exit-interactions';
 import type {
   WorkspaceInfernalContractPedestalCollectInteraction,
   WorkspaceShopPurchaseParticipationInteraction,
@@ -121,6 +123,7 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
     string,
     WorkspaceInfernalContractPedestalCollectInteraction
   >;
+  readonly phantomExits: ReadonlyMap<string, WorkspacePhantomExitInteraction>;
   readonly purgingPoolInteractions: ReadonlyMap<string, WorkspacePurgingPoolInteraction>;
   readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;
   readonly erisObservations: ReadonlyMap<
@@ -291,6 +294,7 @@ export function bindOccurrenceLocalInteractions(
     string,
     WorkspaceInfernalContractPedestalCollectInteraction
   >();
+  const phantomExits = new Map<string, WorkspacePhantomExitInteraction>();
   const purgingPoolInteractions = new Map<string, WorkspacePurgingPoolInteraction>();
   const erisObservations = new Map<
     string,
@@ -1096,6 +1100,18 @@ export function bindOccurrenceLocalInteractions(
         );
         break;
       }
+      case 'phantomExit': {
+        if (phantomExits.has(requirement.interactionKey)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${requirement.interactionKey} has multiple bound hidden door interactions`,
+          );
+        }
+        phantomExits.set(
+          requirement.interactionKey,
+          bindPhantomExitInteraction({ candidates, catalog, contextualPicker, requirement }),
+        );
+        break;
+      }
       case 'purgingPoolInteraction': {
         if (purgingPoolInteractions.has(requirement.interactionKey)) {
           throw new StructuredWorkspaceProjectionContractError(
@@ -1568,6 +1584,7 @@ export function bindOccurrenceLocalInteractions(
     shipCombatPhaseCounts,
     shopPurchaseParticipations,
     infernalContractPedestalCollects,
+    phantomExits,
     purgingPoolInteractions,
     purgingPoolSlots,
     erisObservations,

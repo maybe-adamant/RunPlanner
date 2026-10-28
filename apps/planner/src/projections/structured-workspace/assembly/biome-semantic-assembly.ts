@@ -569,6 +569,7 @@ export function assembleWorkspaceBiomeSemantics(
       configuredRivalsRank: source.configuredRivalsRank,
       routePosition: source.routePosition,
       ...(bossDoorRewardStore === undefined ? {} : { bossDoorRewardStore }),
+      phantomExitSettlement: source.phantomExitSettlement,
       ...(anomalyReplacementRoomGameNames === undefined ? {} : { anomalyReplacementRoomGameNames }),
       biome,
       catalog,

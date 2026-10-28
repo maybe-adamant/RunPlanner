@@ -94,6 +94,7 @@ import {
   traitOfferMarkers,
 } from './occurrence-actions-assembly';
 import { assembleOccurrenceFeatures } from './occurrence-features-assembly';
+import { assemblePhantomExit } from './phantom-exit-assembly';
 import { occurrenceInteractionRequirements } from './occurrence-interaction-requirements';
 import { roomWorkbenchPresentation } from './occurrence-room-workbench';
 import { resourceOutcomeLabel } from './resource-labels';
@@ -254,6 +255,10 @@ export interface WorkspaceOccurrenceAssemblyInput {
    */
   readonly bossDoorRewardStore?: WorkspaceBossDoorRewardStoreInput;
   readonly catalog: Catalog;
+  /** The engine settlement of this room's hidden door, when it declares one. */
+  readonly phantomExitSettlement?: (
+    owner: import('@run-planner/engine/authored-project').PhantomExitAddress,
+  ) => import('@run-planner/engine/simulation').PhantomExitSettlement | undefined;
   readonly encounterPhaseStatus: (
     phase: EncounterPhaseAddress,
   ) => EncounterPhaseSequenceStatus | undefined;
@@ -610,9 +615,17 @@ export function assembleWorkspaceOccurrence(
         });
     }
   })(input.bossDoorRewardStore);
+  const phantomExit = assemblePhantomExit({
+    biome: input.biome,
+    catalog: input.catalog,
+    markerDestinations: input.markerDestinations,
+    occurrence,
+    settlement: input.phantomExitSettlement ?? (() => undefined),
+  });
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
     ...(bossDoorRewardStore === undefined ? {} : { bossDoorRewardStore }),
+    ...(phantomExit === undefined ? {} : { phantomExit: phantomExit.control }),
     detailsActive: input.facts.detailsActive,
     offerRewardRewards: offerRewardRewardsForRoom,
     ...(judgment === undefined ? {} : { judgment }),
@@ -774,6 +787,9 @@ export function assembleWorkspaceOccurrence(
   // The boss-door pool sits beside its door, so its findings route to Doors.
   if (bossDoorRewardStore?.kind === 'editor') {
     input.markerDestinations.setRoomTab([bossDoorRewardStore.marker], 'doors');
+  }
+  if (phantomExit !== undefined) {
+    input.markerDestinations.setRoomTab([phantomExit.control.marker], 'doors');
   }
   if (roomLocal.kind === 'shop') {
     input.markerDestinations.setRoomTab(
@@ -1081,10 +1097,10 @@ export function assembleWorkspaceOccurrence(
       }
     }
   }
-  const localInteractionRequirements = occurrenceInteractionRequirements(
-    input.catalog,
-    roomSummary,
-  );
+  const localInteractionRequirements = Object.freeze([
+    ...occurrenceInteractionRequirements(input.catalog, roomSummary),
+    ...(phantomExit === undefined ? [] : [phantomExit.requirement]),
+  ]);
   input.markerDestinations.redirect(workspaceOccurrenceOwnedMarkers(node.room), node.key);
   return Object.freeze({
     node,
