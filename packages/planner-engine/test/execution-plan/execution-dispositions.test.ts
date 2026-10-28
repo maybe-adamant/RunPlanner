@@ -21,8 +21,9 @@ type ResourcePolicyField = Exclude<
   'occurrenceId'
 >;
 type DoorsKind = ExecutionDoors['kind'];
-/** Occurrence rerolls, Hub board rerolls, and screen counts on trait, Pom, Well and Pool screens. */
-type RerollWireField = 'occurrenceRerolls' | 'hubRerolls' | 'screenRerollCounts';
+/** Occurrence and Hub rerolls, screen counts, and the planned pool at each room's entry. */
+type RerollWireField =
+  'occurrenceRerolls' | 'hubRerolls' | 'screenRerollCounts' | 'rerollPoolAtEntry';
 
 /**
  * Test-owned census of the planner semantics that can reach execution.  These
@@ -54,6 +55,7 @@ const executionDispositions = {
     occurrenceRerolls: 'deferred-route',
     hubRerolls: 'deferred-route',
     screenRerollCounts: 'deferred-route',
+    rerollPoolAtEntry: 'deferred-route',
   } satisfies Record<RerollWireField, ExecutionDisposition>,
   timelineTransactions: {
     chooseRewardWheel: 'covered',

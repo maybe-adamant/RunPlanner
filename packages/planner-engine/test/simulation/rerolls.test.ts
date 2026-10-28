@@ -379,6 +379,12 @@ describe('reroll publication', () => {
         ? sourcePlan.doors.targets.find((door) => door.exitKey === 'exit2')?.reward?.rewardType
         : undefined,
     ).toBe(firstDraw.kind === 'counted' ? firstDraw.reward?.offer.rewardType : undefined);
+    // The planned pool at the room's entry pays for the press.
+    const settled = rerollSettlementForProjectEvaluationAssembly(
+      assembly,
+      createRoomActionAddress(g, gSource as never, JSON.stringify(['reroll', 'r1'])),
+    );
+    expect(sourcePlan.rerollPoolAtEntry).toBe(settled!.poolRemainingAfter! + 1);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
   });
 });

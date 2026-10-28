@@ -222,3 +222,19 @@ export function nextRerollId(present: readonly { readonly rerollId: string }[]):
   const used = new Set(present.map((reroll) => reroll.rerollId));
   for (let index = 1; ; index += 1) if (!used.has(`r${index}`)) return `r${index}`;
 }
+
+function authoredRerollCount(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(authoredRerollCount);
+  if (value === null || typeof value !== 'object') return false;
+  return Object.entries(value).some(
+    ([key, entry]) =>
+      (key === 'rerollCount' && typeof entry === 'number') ||
+      (key === 'kind' && entry === 'reroll') ||
+      authoredRerollCount(entry),
+  );
+}
+
+/** Whether the plan authors any reroll press or screen reroll count. */
+export function projectAuthorsRerolls(document: import('./model').ProjectDocument): boolean {
+  return authoredRerollCount(document.route.biomes);
+}

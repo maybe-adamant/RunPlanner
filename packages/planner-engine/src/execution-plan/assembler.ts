@@ -28,6 +28,7 @@ import {
 import { hubBySource, hubExitByRoom } from './assembly/hub';
 import { executionRoomOwnerKey } from './assembly/support';
 import { executionOccurrence } from './assembly/occurrence';
+import { projectAuthorsRerolls } from '../authored-project/rerolls';
 import { validateExecutionProduct } from './assembly/validation';
 import { executionTimelineTransactions } from './assembly/timeline-transactions';
 import { roomTimelineDependencies } from './assembly/timeline-dependencies';
@@ -49,6 +50,8 @@ export function assembleExecutionProduct({
 }: import('./model').ExecutionAssemblerInput): ExecutionSemanticProduct {
   assertExactProjectEvaluationAssembly(assembly);
   const { evaluation } = assembly;
+  // Reroll wire appears only for plans that author a reroll.
+  const publishesRerollPool = projectAuthorsRerolls(assembly.project);
   if (evaluation.catalogVersion !== EXECUTION_CATALOG_VERSION) {
     throw new CompilerError('unsupportedExtent', 'execution catalog version is unsupported');
   }
@@ -235,6 +238,7 @@ export function assembleExecutionProduct({
       localSlotsByParent.get(room.occurrenceId),
       selectedOccurrenceIdSet.has(room.occurrenceId),
       nativeExclusions,
+      publishesRerollPool,
     );
     const policy = evaluation.route.npcShopping.occurrences.find(
       (entry) => entry.occurrenceId === room.occurrenceId,

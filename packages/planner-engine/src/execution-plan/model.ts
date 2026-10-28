@@ -1113,6 +1113,8 @@ export interface ExecutionOccurrence {
   readonly roomGuide: readonly ExecutionRoomGuideRow[];
   /** Door, cage and wheel rerolls in the room's action order; absent is none. */
   readonly rerolls?: readonly ExecutionReroll[];
+  /** The planned `NumRerolls` when the room is entered; absent while the plan authors no reroll. */
+  readonly rerollPoolAtEntry?: number;
   readonly doors: ExecutionDoors;
   readonly roomExitConformance?: ExecutionRoomExitConformance;
   readonly diagnostics?: {

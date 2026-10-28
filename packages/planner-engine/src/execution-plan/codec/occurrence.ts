@@ -13,6 +13,7 @@ import {
   exact,
   fail,
   integer,
+  numberValue,
   object,
   stringArray,
   stringValue,
@@ -217,6 +218,13 @@ export function rerollTarget(value: unknown, label: string): ExecutionRerollTarg
     default:
       fail(`${label}.kind is unsupported`);
   }
+}
+
+/** A planned pool remainder; an over-spent plan may enter a room below zero. */
+function rerollPool(value: unknown, label: string): number {
+  const pool = numberValue(value, label);
+  if (!Number.isInteger(pool)) fail(`${label} must be an integer`);
+  return pool;
 }
 
 function rerolls(value: unknown, label: string): readonly ExecutionReroll[] {
@@ -490,7 +498,14 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
   exact(
     record,
     ['id', 'owner', 'biomeKey', 'gameName', 'kind', 'overview', 'timeline', 'roomGuide', 'doors'],
-    ['anomaly', 'roomExitConformance', 'diagnostics', 'suppressedNpcShopping', 'rerolls'],
+    [
+      'anomaly',
+      'roomExitConformance',
+      'diagnostics',
+      'suppressedNpcShopping',
+      'rerolls',
+      'rerollPoolAtEntry',
+    ],
     label,
   );
   const suppressedNpcShopping =
@@ -607,6 +622,9 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
     ...(record.rerolls === undefined
       ? {}
       : { rerolls: rerolls(record.rerolls, `${label}.rerolls`) }),
+    ...(record.rerollPoolAtEntry === undefined
+      ? {}
+      : { rerollPoolAtEntry: rerollPool(record.rerollPoolAtEntry, `${label}.rerollPoolAtEntry`) }),
     doors: doors(record.doors, `${label}.doors`),
     ...(conformanceFacts === undefined
       ? {}

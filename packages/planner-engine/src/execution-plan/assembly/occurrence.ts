@@ -18,6 +18,10 @@ import type {
 import { hubOverview, localSlotsOverview } from './hub';
 import { assembleExecutionRoomGuide } from './room-guide';
 import { executionRoomRerolls } from './rerolls';
+import {
+  createRoomRunStateCheckpointAddress,
+  semanticAddressKey,
+} from '../../authored-project/addresses';
 
 export function executionOccurrence(
   catalog: Catalog,
@@ -36,6 +40,7 @@ export function executionOccurrence(
   localSlots: readonly CanonicalLocalVisitRoom[] | undefined,
   selected: boolean,
   nativeExclusions: ReadonlyMap<string, readonly string[]>,
+  publishesRerollPool: boolean,
 ): ExecutionOccurrence {
   const batch = batches.get(executionRoomOwnerKey(room));
   const publishedHub =
@@ -44,6 +49,13 @@ export function executionOccurrence(
   const diagnostics = assembleOccurrenceDiagnostics(catalog, room, snapshots);
   const anomaly = assembleGAnomalyReplacement(room);
   const rerolls = selected ? executionRoomRerolls(room, batch) : undefined;
+  const entrySnapshot = snapshots.get(
+    semanticAddressKey(createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' })),
+  );
+  const rerollPoolAtEntry =
+    entrySnapshot === undefined || !publishesRerollPool
+      ? undefined
+      : entrySnapshot.rerolls.remaining;
   return Object.freeze({
     id: room.occurrenceId,
     owner: executionRoomOwnerKey(room),
@@ -59,6 +71,7 @@ export function executionOccurrence(
     timeline: assembleTimelineRelations(transactions, room, timelineFacts),
     roomGuide: assembleExecutionRoomGuide(room, batch, biome, transactions, selected),
     ...(rerolls === undefined ? {} : { rerolls }),
+    ...(rerollPoolAtEntry === undefined ? {} : { rerollPoolAtEntry }),
     doors: assembleExecutionDoors({
       room,
       batches,
