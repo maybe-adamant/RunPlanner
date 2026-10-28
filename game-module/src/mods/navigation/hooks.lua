@@ -53,6 +53,16 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
     local rerollScope
     local takePress = rerollPlan.counter()
 
+    -- A restored Hub re-assigns each open board door its persisted offer, the
+    -- god and every earlier stay's press included, with no draw to steer.
+    local function restoredBoardDoor(args)
+        local scope = ephyraDoorScope
+        local slot = scope ~= nil and scope.hub ~= nil and not scope.initialBoard
+            and type(args) == "table" and type(args.Door) == "table"
+            and scope.byDoor[args.Door.ObjectId] or nil
+        return slot ~= nil and not slot.phantom
+    end
+
     -- A rerolled door first offers its published first draw, not the reward
     -- its destination is entered with.
     local function firstDraw(state, occurrence)
@@ -141,7 +151,7 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
             return result
         end
         local state = getState(runtime)
-        if state == nil or state.state ~= "synchronized" then
+        if state == nil or state.state ~= "synchronized" or restoredBoardDoor(args) then
             return base(currentRun, nativeRoom, prior, args)
         end
         local occurrence = occurrenceForRoom(state, nativeRoom)
@@ -225,6 +235,7 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
             rerollScope.drawn = true
             return drawExpected(rerollScope.reward)
         end
+        if restoredBoardDoor(args) then return base(run, nativeRoom, rewardStore, chosen, args) end
         local physicalDoorId = type(args) == "table" and type(args.Door) == "table"
             and args.Door.ObjectId or nil
         local ephyraSlot = physicalDoorId and ephyraDoorScope

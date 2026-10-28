@@ -222,6 +222,73 @@ function TestRerolls.testHubBoardPressDrawsItsSlotsPlannedReroll()
     lu.assertEquals(mismatches, { { checkpoint = "reroll", expected = 1, observed = 2 } })
 end
 
+function TestRerolls.testRestoredHubBoardKeepsItsOffersAndPressesTheLaterStaysReroll()
+    -- slot2 is pressed once on the first Hub entry and again after main1's visit.
+    local hub = {
+        room = { gameName = "N_Hub" },
+        slots = {
+            { slotKey = "slot1", physicalDoorId = 101,
+                room = { id = "main1", biomeKey = "N", gameName = "N_Combat01" },
+                reward = reward("MaxHealthDrop") },
+            { slotKey = "slot2", physicalDoorId = 102,
+                room = { id = "main2", biomeKey = "N", gameName = "N_Combat02" },
+                reward = reward("Boon", "ZeusUpgrade") },
+        },
+        rerolls = {
+            { owner = "h1", slotKey = "slot2", reward = reward("Boon", "ApolloUpgrade") },
+            { owner = "h2", slotKey = "slot2", reward = reward("GiftDrop") },
+        },
+    }
+    local hubPlan = {
+        selectedOccurrenceIds = { "pre", "main1", "main2" },
+        occurrencesById = {
+            pre = { id = "pre", gameName = "N_PreHub01", biomeKey = "N", overview = { hub = hub },
+                doors = { kind = "terminal" } },
+            main1 = { id = "main1", gameName = "N_Combat01", biomeKey = "N",
+                overview = { incomingReward = reward("MaxHealthDrop") } },
+            main2 = { id = "main2", gameName = "N_Combat02", biomeKey = "N",
+                overview = { incomingReward = reward("GiftDrop") } },
+        },
+    }
+    local callbacks, _, state, mismatches = attached(hubPlan)
+    local run = runWith()
+    run.CurrentRoom = { Name = "N_Hub", OfferedRewards = {} }
+    local entryDoor = door(102, "main2", "N_Combat02")
+    local restoredDoor = { ObjectId = 102 }
+    withGlobals({
+        CurrentRun = run, MapState = { OfferedExitDoors = { [102] = restoredDoor } },
+        CollapseTableOrdered = function() return { restoredDoor } end,
+        game = { RoomData = { N_Hub = { PredeterminedDoorRooms = { [101] = "N_Combat01", [102] = "N_Combat02" } } } },
+    }, function()
+        -- The first entry's press, then main1's visit returns to the restored Hub.
+        state.route.index = 2
+        callbacks.AttemptRerollDoor(nil, {}, nativeDoorReroll(callbacks), run, entryDoor)
+        lu.assertEquals(entryDoor.Room.ForceLootName, "ApolloUpgrade")
+        state.route.index = 3
+        callbacks.DoUnlockRoomExits(nil, {}, function(currentRun)
+            -- Native restore returns the persisted offer without a store draw.
+            local nativeRoom = { Name = "N_Combat02", RewardStoreName = "RunProgress" }
+            restoredDoor.Room = nativeRoom
+            nativeRoom.ChosenRewardType = callbacks.ChooseRoomReward(nil, {}, function(_, room)
+                room.ForceLootName = "ApolloUpgrade"
+                return "Boon"
+            end, currentRun, nativeRoom, "RunProgress", {}, { Door = restoredDoor })
+            callbacks.SetupRoomReward(nil, {}, function() end, currentRun, nativeRoom, {}, { Door = restoredDoor })
+            callbacks.AssignRoomToExitDoor(nil, {}, function(target, assigned) target.Room = assigned end,
+                restoredDoor, nativeRoom)
+        end, run, run.CurrentRoom)
+        lu.assertEquals(restoredDoor.Room.ChosenRewardType, "Boon")
+        lu.assertEquals(restoredDoor.Room.ForceLootName, "ApolloUpgrade")
+        lu.assertEquals(restoredDoor.Room.__runPlannerExecutionRoomId, "main2")
+        callbacks.AttemptRerollDoor(nil, {}, nativeDoorReroll(callbacks), run, restoredDoor)
+    end)
+    lu.assertEquals(restoredDoor.Room.ChosenRewardType, "GiftDrop")
+    lu.assertNil(restoredDoor.Room.ForceLootName)
+    lu.assertEquals(mismatches, {})
+    -- Only the two presses drew from the store.
+    lu.assertEquals(run.RewardStores.RunProgress, { { Name = "MaxHealthDrop" }, { Name = "MaxManaDrop" } })
+end
+
 local function chaosScreen(rerollCount)
     local chaos = require("mods.room.timeline.acquisitions.traits.chaos_offer")
     local module, _, callbacks = capture()
