@@ -1,4 +1,4 @@
-import { sourceRerolledOwners } from '../../authored-project/rerolls';
+import { sourceRerolledOwners, type OwnerRerolls } from '../../authored-project/rerolls';
 import type {
   BiomeLayout,
   Catalog,
@@ -296,11 +296,10 @@ function materializeTarget(
   batchState: CanonicalBatchState,
   clockworkRewardValue: 'goal' | 'nonGoal' | undefined,
   physicalExit: CanonicalPhysicalExit,
+  rerolledOwners: ReadonlyMap<string, OwnerRerolls> | undefined,
   loadout?: RouteWeaponAspectLoadout,
 ): CanonicalTarget {
   const occurrence = requireOccurrence(occurrences, target.occurrenceId);
-  const sourceOccurrence =
-    source.kind === 'occurrence' ? occurrences.get(source.occurrenceId) : undefined;
   const room = requireRoom(catalog, layout, topology, occurrence);
   const picked = target.exitKey === selectedExitKey;
   return Object.freeze({
@@ -320,9 +319,7 @@ function materializeTarget(
       ...(batchState.kind === 'fields' ? { activeCageCount: batchState.doorCageRewardCount } : {}),
       ...(clockworkRewardValue === undefined ? {} : { clockworkReward: clockworkRewardValue }),
       ...(loadout === undefined ? {} : { loadout }),
-      ...(sourceOccurrence === undefined
-        ? {}
-        : { rerolledOwners: sourceRerolledOwners(biome, sourceOccurrence) }),
+      ...(rerolledOwners === undefined ? {} : { rerolledOwners }),
     }),
   });
 }
@@ -413,6 +410,16 @@ export function materializeBatch(
   loadout?: RouteWeaponAspectLoadout,
 ): MaterializedBatch {
   const normal = decision.normal;
+  // Derived once per batch, and only when the source room presses a reroll.
+  const rerollSource =
+    decision.source.kind === 'occurrence'
+      ? occurrences.get(decision.source.occurrenceId)
+      : undefined;
+  const rerolledOwners =
+    rerollSource === undefined ||
+    !rerollSource.roomActions.order.some((reference) => reference.kind === 'reroll')
+      ? undefined
+      : sourceRerolledOwners(biome, rerollSource);
   const source = sourceAddress(decision.source);
   const takeover = batchTakesOverNormalDoors(
     catalog,
@@ -472,6 +479,7 @@ export function materializeBatch(
         batchState,
         rewards.get(target.exitKey),
         physicalExit,
+        rerolledOwners,
         loadout,
       );
     }),
