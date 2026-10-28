@@ -280,12 +280,17 @@ export function HubDecisionWorkbench({
       {timelineView === 'map' ? 'Details →' : 'Back to Map'}
     </button>
   );
+  // The order cannot be cleared while it holds board-door rerolls.
+  const resetHeldByRerolls = actionOrderInteraction.selectedActions.some(
+    (action) => action.kind === 'reroll',
+  );
   const resetVisitsControl = (
     <button
       aria-busy={resetCandidates.pending || undefined}
       className="danger-action action-compact"
       disabled={
         hubTarget.inert ||
+        resetHeldByRerolls ||
         !actionOrderInteraction.contextReached ||
         actionOrderInteraction.selectedActions.length === 0 ||
         resetCandidates.pending ||
@@ -298,9 +303,11 @@ export function HubDecisionWorkbench({
       onFocus={() => resetCandidates.activate()}
       onPointerDown={() => resetCandidates.activate()}
       {...hintProps(
-        !actionOrderInteraction.contextReached || candidateWaits(resetCandidates.result?.[0])
-          ? candidateWaitingHint
-          : undefined,
+        resetHeldByRerolls
+          ? 'Remove Hub rerolls first.'
+          : !actionOrderInteraction.contextReached || candidateWaits(resetCandidates.result?.[0])
+            ? candidateWaitingHint
+            : undefined,
       )}
       type="button"
     >

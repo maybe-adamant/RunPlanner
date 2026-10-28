@@ -174,4 +174,16 @@ describe('Hub Timeline details', () => {
     });
     expect(stayList(projected, 3).rerolls.appendLocked).toBe('poolEmpty');
   });
+
+  it('holds back a press whose pool later presses spend', async () => {
+    let project = base;
+    for (const hubSlotKey of ['combat03', 'combat09', 'combat11'])
+      project = (await append(project, 2, hubSlotKey)).next;
+    const projected = projectStructuredWorkspaceFixture(project);
+    expect(stayList(projected, 0).rerolls).toMatchObject({
+      appendLocked: 'poolReserved',
+      poolRemaining: 3,
+    });
+    expect(stayList(projected, 2).rerolls.appendLocked).toBe('poolEmpty');
+  });
 });

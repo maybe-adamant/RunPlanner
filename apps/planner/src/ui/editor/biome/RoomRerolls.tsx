@@ -26,6 +26,8 @@ function appendHint(locked: WorkspaceRoomRerolls['appendLocked']): string | unde
       return 'Rerolls are not enabled.';
     case 'poolEmpty':
       return 'No rerolls left.';
+    case 'poolReserved':
+      return 'Later rerolls need the rest.';
   }
 }
 

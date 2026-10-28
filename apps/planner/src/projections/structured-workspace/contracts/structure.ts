@@ -224,8 +224,11 @@ export interface WorkspaceRoomRerolls {
   /** The run's pool at the append point; absent while unreached. */
   readonly poolRemaining?: number;
   readonly rows: readonly WorkspaceRerollRow[];
-  /** Why a press cannot be appended: unreached, no held card, or no pool left. */
-  readonly appendLocked?: 'unreached' | 'notEnabled' | 'poolEmpty';
+  /**
+   * Why a press cannot be appended: unreached, no held card, no pool left, or
+   * the pool left is spent by later presses.
+   */
+  readonly appendLocked?: 'unreached' | 'notEnabled' | 'poolEmpty' | 'poolReserved';
 }
 
 /** Engine-backed pickers and edits of one room's or Hub stay's rerolls. */

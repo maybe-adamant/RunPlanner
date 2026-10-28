@@ -246,6 +246,10 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(within(board).getByText('Visited')).toBeTruthy();
     expect(within(board).getByText(/ → /)).toBeTruthy();
     expect(within(details).getByRole('button', { name: 'Move Fountain' })).toBeTruthy();
+    // Clearing the order waits on removing its rerolls.
+    const reset = within(details).getByRole('button', { name: 'Reset visits' });
+    expect(reset).toHaveProperty('disabled', true);
+    expect(reset.getAttribute('data-hint')).toBe('Remove Hub rerolls first.');
 
     fireEvent.click(screen.getByRole('button', { name: 'Back to Map' }));
     expect(screen.getByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
