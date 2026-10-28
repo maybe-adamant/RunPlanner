@@ -1537,6 +1537,11 @@ ul.recent-run-assumed {
   white-space: nowrap;
 }
 
+/* Both values stay readable, so a long difference wraps instead of truncating. */
+.recent-run-guess-text[data-kind='mismatch'] {
+  white-space: normal;
+}
+
 .recent-run-guesses-empty {
   margin: 0;
   padding: 6px 12px;

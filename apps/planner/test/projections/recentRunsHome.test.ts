@@ -302,9 +302,82 @@ describe('run guesses', () => {
       [2, room('Chaos_03'), 'Guessed'],
       [6, `Erebus · ${room('F_Story01')}`, 'Not supported'],
       [5, `Erebus · ${room('F_Combat21')}`, 'Default foes'],
-      [6, `Erebus · ${room('F_Story01')}`, 'Differs'],
+      [
+        6,
+        `Erebus · ${room('F_Story01')}`,
+        `Differs: ${catalog.traits.byKey.ZeusWeaponBoon!.label} Rare vs plan Common`,
+      ],
       [null, null, 'Plan ends here'],
     ]);
+    expect(
+      groups.flatMap((group) =>
+        group.lines.filter((line) => line.mismatch).map((line) => line.key),
+      ),
+    ).toEqual(['9']);
+  });
+
+  it('words a mismatch as the game value, then the plan value, in room order', () => {
+    const at = (roomIndex: number) => ({ record: { roomIndex, visit: 1 } });
+    const mismatch = (
+      area: RunImportReportEntry['area'],
+      roomIndex: number | null,
+      field: string,
+      expected: string,
+      actual: string,
+    ): RunImportReportEntry => ({
+      area,
+      reason: 'mismatch',
+      ...(roomIndex === null ? {} : at(roomIndex)),
+      mismatch: { field, expected, actual },
+    });
+    const reward = (key: string) => catalog.rewards.rewardTypes.byKey[key]!.label;
+    const trait = (key: string) => catalog.traits.byKey[key]!.label;
+    const groups = projectRunGuesses(
+      catalog,
+      entry([
+        mismatch(
+          'stores',
+          4,
+          'HubRewards',
+          'Boon 4, HermesUpgrade 1, SpellDrop 1',
+          'Boon 1, HermesUpgrade 0, SpellDrop 0',
+        ),
+        mismatch('stores', null, 'RunProgress', 'Boon 2', 'Boon 3'),
+        mismatch('stores', 1, 'HubRewards', 'Boon 0', 'Boon 1'),
+        mismatch('traits', 2, 'ZeusWeaponBoon', 'Heroic level 7', 'Heroic level 8'),
+        mismatch('traits', 3, 'ZeusManaBoon', 'Epic level 4', 'absent'),
+        mismatch(
+          'denial',
+          3,
+          'BannedTraits',
+          'ZeusWeaponBoon, ZeusManaBoon, ZeusSpecialBoon, ZeusCastBoon',
+          'none other',
+        ),
+        mismatch('elements', 4, 'Elements', 'Air 6', 'Air 5'),
+      ]),
+    );
+    const lines = (area: string) =>
+      groups.find((group) => group.area === area)!.lines.map((line) => [line.order, line.text]);
+    expect(lines('stores')).toEqual([
+      [2, `Differs: HubRewards ${reward('Boon')} 0 vs plan 1`],
+      [
+        5,
+        `Differs: HubRewards ${reward('Boon')} 4 vs plan 1, ${reward('HermesUpgrade')} 1 vs plan 0, +1 more`,
+      ],
+      [null, `Differs: RunProgress ${reward('Boon')} 2 vs plan 3`],
+    ]);
+    expect(lines('traits')).toEqual([
+      [3, `Differs: ${trait('ZeusWeaponBoon')} Heroic level 7 vs plan 8`],
+      [4, `Differs: ${trait('ZeusManaBoon')} Epic level 4 vs plan none`],
+    ]);
+    expect(lines('denial')).toEqual([
+      [
+        4,
+        `Differs: BannedTraits ${trait('ZeusWeaponBoon')}, ${trait('ZeusManaBoon')}, ${trait('ZeusSpecialBoon')}, +1 more vs plan none`,
+      ],
+    ]);
+    expect(lines('elements')).toEqual([[5, 'Differs: Air 6 vs plan 5']]);
+    expect(groups.every((group) => group.lines.every((line) => line.mismatch))).toBe(true);
   });
 
   it('shows a save folder inside the home folder from the home marker', () => {

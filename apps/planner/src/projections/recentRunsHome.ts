@@ -5,7 +5,11 @@ import {
   type ProjectCommand,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import type { RunImportArea, RunImportReason } from '@run-planner/engine/simulation';
+import type {
+  RunImportArea,
+  RunImportReason,
+  RunImportReportEntry,
+} from '@run-planner/engine/simulation';
 
 import type { HomeContextPart } from '@planner/projections/homeContext';
 import { ownEntry } from '@planner/projections/gameSlotSummary';
@@ -302,12 +306,84 @@ export function appliedValue(catalog: Catalog, command: ProjectCommand | undefin
   }
 }
 
+/** A run-state value by its catalog name, when it names a trait, keepsake or reward. */
+function runStateName(catalog: Catalog, key: string): string {
+  return (
+    ownEntry(catalog.traits.byKey, key)?.label ??
+    ownEntry(catalog.keepsakes.byKey, key)?.label ??
+    ownEntry(catalog.rewards.rewardTypes.byKey, key)?.label ??
+    key
+  );
+}
+
+/** Differing counts shown by name; the rest are counted. */
+const SHOWN_COUNTS = 2;
+const SHOWN_NAMES = 3;
+
+/** The engine's words for an empty value or an empty set difference. */
+const shownValue = (value: string) =>
+  value === 'absent' || value === 'none other' ? 'none' : value;
+
+/** `name count` pairs, when the whole value is such a list. */
+function countPairs(value: string): readonly (readonly [string, string])[] | null {
+  const pairs = value.split(', ').map((part) => /^(\S+) (-?\d+)$/.exec(part));
+  return pairs.every((pair) => pair !== null)
+    ? pairs.map((pair) => [pair![1]!, pair![2]!] as const)
+    : null;
+}
+
+const more = (shown: string, hidden: number) => (hidden > 0 ? `${shown}, +${hidden} more` : shown);
+
+/**
+ * A mismatch as the game's value, then the plan's: counts per differing name, a grade with
+ * its shared words said once ("level 4 vs plan 3"), names by their catalog label.
+ */
+function mismatchText(
+  catalog: Catalog,
+  area: RunImportArea,
+  mismatch: NonNullable<RunImportReportEntry['mismatch']>,
+): string {
+  const name = runStateName(catalog, mismatch.field);
+  const field = name === AREA_LABELS[area] ? '' : `${name} `;
+  const game = countPairs(mismatch.expected);
+  const plan = countPairs(mismatch.actual);
+  if (
+    game !== null &&
+    plan !== null &&
+    game.length === plan.length &&
+    game.every(([key], index) => plan[index]![0] === key)
+  ) {
+    const shown = game
+      .slice(0, SHOWN_COUNTS)
+      .map(
+        ([key, count], index) =>
+          `${runStateName(catalog, key)} ${count} vs plan ${plan[index]![1]}`,
+      )
+      .join(', ');
+    return `${field}${more(shown, game.length - SHOWN_COUNTS)}`;
+  }
+  const words = (value: string) => shownValue(value).split(' ');
+  const left = words(mismatch.expected);
+  const right = words(mismatch.actual);
+  let shared = 0;
+  while (shared < left.length - 1 && shared < right.length - 1 && left[shared] === right[shared])
+    shared += 1;
+  const list = (value: string) => {
+    const names = value.split(', ').map((key) => runStateName(catalog, key));
+    return more(names.slice(0, SHOWN_NAMES).join(', '), names.length - SHOWN_NAMES);
+  };
+  const lead = left.slice(0, shared).join(' ');
+  return `${field}${lead === '' ? '' : `${lead} `}${list(left.slice(shared).join(' '))} vs plan ${list(right.slice(shared).join(' '))}`;
+}
+
 export interface RunGuessLine {
   readonly key: string;
   /** The record room's place in the run, from 1. */
   readonly order: number | null;
   readonly room: string | null;
   readonly text: string;
+  /** The plan's run state differs from the game's here. */
+  readonly mismatch: boolean;
 }
 
 /** The decision an area's value-less assumptions concern, where it differs from the area. */
@@ -356,10 +432,18 @@ export function projectRunGuesses(
       order: roomIndex === undefined ? null : roomIndex + 1,
       room: room === undefined ? null : recordedRoomLabel(catalog, room.name),
       text:
-        value === null ? REASON_TEXT[reported.reason] : `${REASON_TEXT[reported.reason]} ${value}`,
+        reported.mismatch !== undefined
+          ? `${REASON_TEXT[reported.reason]}: ${mismatchText(catalog, reported.area, reported.mismatch)}`
+          : value === null
+            ? REASON_TEXT[reported.reason]
+            : `${REASON_TEXT[reported.reason]} ${value}`,
+      mismatch: reported.mismatch !== undefined,
     });
   }
   return [...groups].map(([area, group]) => {
+    // The run's earlier rooms first; lines without a room keep their place after them.
+    const rank = (line: RunGuessLine) => line.order ?? Number.MAX_SAFE_INTEGER;
+    group.lines.sort((left, right) => rank(left) - rank(right));
     const rooms = group.assumedRooms.size;
     const noun = ASSUMED_LABELS[area] ?? AREA_LABELS[area];
     return {

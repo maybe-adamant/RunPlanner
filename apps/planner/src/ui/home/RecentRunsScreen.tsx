@@ -83,7 +83,12 @@ function GuessList({ groups }: { readonly groups: readonly RunGuessGroup[] }) {
                 {line.room === null ? null : (
                   <span className="recent-run-guess-room">{line.room}</span>
                 )}
-                <span className="recent-run-guess-text">{line.text}</span>
+                <span
+                  className="recent-run-guess-text"
+                  data-kind={line.mismatch ? 'mismatch' : undefined}
+                >
+                  {line.text}
+                </span>
               </li>
             ))}
           </ul>
