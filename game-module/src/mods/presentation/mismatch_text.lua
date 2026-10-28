@@ -149,6 +149,8 @@ function text.checkpoint(issue)
     local obligation = checkpoint:match("^obligation:(.+)$")
     if obligation then return LIFECYCLE[obligation] or "a planned step" end
     if checkpoint == "transaction-prerequisite" then return "planned order" end
+    if checkpoint == "reroll" or checkpoint == "screen-reroll" then return "a reroll" end
+    if checkpoint == "reroll-pool" then return "entering the room" end
     if DOOR_KINDS[checkpoint] or checkpoint:match("^ephyra") then return "when the doors appeared" end
     if checkpoint == "incomingReward" then return "room reward" end
     if TRAIT_CHOICE[checkpoint] or TRAIT_SCREEN[checkpoint] then return "a trait choice" end
@@ -295,6 +297,16 @@ function text.difference(issue)
     if checkpoint == "transaction-prerequisite" then
         return "a planned step happened before the step it depends on"
     end
+    if checkpoint == "reroll" then
+        return expected == 0 and "rerolled something the plan doesn't reroll"
+            or "rerolled more times than planned"
+    end
+    if checkpoint == "screen-reroll" then
+        local planned, found = tonumber(expected), tonumber(observed)
+        if planned and found and found < planned then return "chose before the planned rerolls" end
+        return planned == 0 and "rerolled a screen the plan doesn't reroll" or "rerolled more times than planned"
+    end
+    if checkpoint == "reroll-pool" then return plannedFound("rerolls left ", expected, observed) end
     if checkpoint == "npc-trait-offer" then return "the game offered different rows than the plan" end
     if checkpoint == "npc-trait-requirements" then
         return "planned " .. text.name(expected) .. " wasn't eligible to be offered"

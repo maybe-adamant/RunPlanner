@@ -2344,3 +2344,155 @@ function TestProtocol.testExactFrameSectionsDecodeStrictly()
     rejects("remainingEntryCounts", function(_, frame) frame.rewardStores[1].remainingEntryCounts = nil end)
     rejects("duplicate name", function(_, frame) frame.rewardStores[2].name = frame.rewardStores[1].name end)
 end
+
+local function occurrenceOf(plan, id)
+    for _, occurrence in ipairs(plan.occurrences) do
+        if occurrence.id == id then return occurrence end
+    end
+end
+
+-- Decodes a fixture after `edit`, with the fingerprint the decoder computes over the edit.
+local function decodeEdited(name, edit)
+    local primitives = require("mods.protocol.primitives")
+    local plan = decode(name)
+    edit(plan)
+    local original, computed = primitives.fingerprint, nil
+    primitives.fingerprint = function(value)
+        computed = original(value)
+        return computed
+    end
+    local ok = pcall(protocol.decode, plan)
+    primitives.fingerprint = original
+    assert(ok)
+    plan = decode(name)
+    edit(plan)
+    plan.planFingerprint = computed or plan.planFingerprint
+    return protocol.decode(plan)
+end
+
+local REROLL = '{"owner":"r1","target":{"kind":"door","exitKey":"exit1"},'
+    .. '"reward":{"rewardType":"GiftDrop","producerLifecycleKey":"RoomReward"}}'
+
+function TestProtocol.testOccurrenceRerollsAndEntryPoolDecodeStrictly()
+    local function withRoom(edit)
+        return decodeEdited("fg", function(plan) edit(occurrenceOf(plan, "golden-f-b1-e1")) end)
+    end
+    local decoded, errorMessage = withRoom(function(room)
+        room.rerolls = assert(json.decode("[" .. REROLL .. "]"))
+        room.rerollPoolAtEntry = -1
+        room.roomGuide[#room.roomGuide + 1] = assert(json.decode('{"key":"[\\"reroll\\",\\"r1\\"]",'
+            .. '"description":{"kind":"reroll","target":{"kind":"door","exitKey":"exit1"},'
+            .. '"reward":{"rewardType":"GiftDrop","producerLifecycleKey":"RoomReward"}}}'))
+    end)
+    lu.assertNotNil(decoded, errorMessage)
+    lu.assertEquals(occurrenceOf(decoded, "golden-f-b1-e1").rerolls[1].target.exitKey, "exit1")
+    for _, case in ipairs({
+        { "rerolls", function(room) room.rerolls = assert(json.decode("[]")) end },
+        { "rerollPoolAtEntry", function(room) room.rerollPoolAtEntry = 1.5 end },
+        { "rerollPoolAtEntry", function(room) room.rerollPoolAtEntry = "3" end },
+        { "unknown field", function(room)
+            room.rerolls = assert(json.decode("[" .. REROLL:gsub("^{", '{"extra":true,') .. "]"))
+        end },
+        { "duplicate", function(room) room.rerolls = assert(json.decode("[" .. REROLL .. "," .. REROLL .. "]")) end },
+        { "published target", function(room)
+            room.rerolls = assert(json.decode("[" .. REROLL:gsub("exit1", "exit9") .. "]"))
+        end },
+        { "published target", function(room)
+            room.rerolls = assert(json.decode("[" .. REROLL:gsub('"door","exitKey":"exit1"',
+                '"cage","exitKey":"exit1","cageIndex":1') .. "]"))
+        end },
+        { "cageIndex", function(room)
+            room.rerolls = assert(json.decode("[" .. REROLL:gsub('"door"', '"cage"') .. "]"))
+        end },
+        { "unsupported", function(room)
+            room.rerolls = assert(json.decode("[" .. REROLL:gsub('"door"', '"hub"') .. "]"))
+        end },
+        { "missing reward", function(room)
+            room.rerolls = assert(json.decode("[" .. REROLL:gsub(',"reward".*$', "}") .. "]"))
+        end },
+    }) do
+        local rejected, reason = withRoom(case[2])
+        lu.assertNil(rejected, case[1])
+        lu.assertStrContains(reason, case[1])
+    end
+end
+
+function TestProtocol.testCageRerollNamesACageOfAFieldsDoor()
+    local decoded, errorMessage = decodeEdited("underworld-fgh", function(plan)
+        occurrenceOf(plan, "golden-h-intro").rerolls = assert(json.decode('[{"owner":"r1","target":'
+            .. '{"kind":"cage","exitKey":"exit1","cageIndex":2},'
+            .. '"reward":{"rewardType":"MaxHealthDrop","producerLifecycleKey":"RoomReward"}}]'))
+    end)
+    lu.assertNotNil(decoded, errorMessage)
+    lu.assertNil(decodeEdited("underworld-fgh", function(plan)
+        occurrenceOf(plan, "golden-h-intro").rerolls = assert(json.decode('[{"owner":"r1","target":'
+            .. '{"kind":"cage","exitKey":"exit1","cageIndex":3},'
+            .. '"reward":{"rewardType":"MaxHealthDrop","producerLifecycleKey":"RoomReward"}}]'))
+    end))
+end
+
+function TestProtocol.testARerolledWheelPickAcquiresItsLastReroll()
+    local function edited(rewardType)
+        return decodeEdited("surface-nopq", function(plan)
+            local room = occurrenceOf(plan, "surface-o-combat04")
+            local offer = room.overview.rewardWheels[1].offers[1]
+            -- The wheel spawned another reward; the pick was rerolled into the acquired one.
+            offer.reward.rewardType = "MaxManaDrop"
+            room.rerolls = assert(json.decode('[{"owner":"r1","target":{"kind":"wheelOffer","wheelKey":"wheel1",'
+                .. '"offerKey":"offer1"},"reward":{"rewardType":"' .. rewardType .. '",'
+                .. '"producerLifecycleKey":"RoomReward","resolvedStoreKey":"RunProgress"}}]'))
+        end)
+    end
+    local decoded, errorMessage = edited("MaxHealthDrop")
+    lu.assertNotNil(decoded, errorMessage)
+    local rejected, reason = edited("GiftDrop")
+    lu.assertNil(rejected)
+    lu.assertStrContains(reason, "unmatched picked acquisition")
+    lu.assertNil(decodeEdited("surface-nopq", function(plan)
+        occurrenceOf(plan, "surface-o-combat04").rerolls = assert(json.decode('[{"owner":"r1","target":'
+            .. '{"kind":"wheelOffer","wheelKey":"wheel1","offerKey":"offer2"},'
+            .. '"reward":{"rewardType":"GiftDrop","producerLifecycleKey":"RoomReward"}}]'))
+    end))
+end
+
+function TestProtocol.testHubRerollsNameTheirSlot()
+    local function withHub(rows)
+        return decodeEdited("surface-nopq", function(plan)
+            occurrenceOf(plan, "surface-n-prehub").overview.hub.rerolls = assert(json.decode(rows))
+        end)
+    end
+    local row = '{"owner":"h1","slotKey":"combat01","reward":{"rewardType":"GiftDrop",'
+        .. '"producerLifecycleKey":"RoomReward","resolvedStoreKey":"HubRewards"}}'
+    local decoded, errorMessage = withHub("[" .. row .. "]")
+    lu.assertNotNil(decoded, errorMessage)
+    lu.assertNil(withHub("[]"))
+    lu.assertNil(withHub("[" .. row .. "," .. row .. "]"))
+    lu.assertNil(withHub("[" .. row:gsub("combat01", "combat99") .. "]"))
+    lu.assertNil(withHub("[" .. row:gsub('"owner":"h1",', "") .. "]"))
+end
+
+function TestProtocol.testScreenRerollCountsArePositiveIntegers()
+    local well = assert(json.decode('{"encounterPhases":[],"requiredObjects":[],"stygianWell":{"interacted":true,'
+        .. '"rerollCount":2,"offers":[]}}'))
+    lu.assertNotNil(overview.decode(well, "overview"))
+    local pool = assert(json.decode('{"encounterPhases":[],"requiredObjects":[],"purgingPool":{"interacted":true,'
+        .. '"rerollCount":1,"traits":[]}}'))
+    lu.assertNotNil(overview.decode(pool, "overview"))
+    for _, count in ipairs({ 0, 1.5, "1", true }) do
+        well.stygianWell.rerollCount, pool.purgingPool.rerollCount = count, count
+        lu.assertNil(overview.decode(well, "overview"))
+        lu.assertNil(overview.decode(pool, "overview"))
+    end
+    local offer = tagged(traitOffer())
+    offer.rerollCount = 3
+    lu.assertNotNil(rewards.traitOffer(offer, "offer"))
+    offer.rerollCount = 0
+    lu.assertNil(rewards.traitOffer(offer, "offer"))
+    local chaos = assert(json.decode('{"kind":"chaos","giver":"Chaos","selected":"option1",'
+        .. '"curseOptions":[{"curseKey":"A","requirementCount":1},{"curseKey":"B","requirementCount":1},'
+        .. '{"curseKey":"C","requirementCount":1}],"selectedCurseValues":{},"blessingKey":"Bless",'
+        .. '"rarity":"Rare","blessingValues":{},"rerollCount":1}'))
+    lu.assertNotNil(rewards.traitOffer(chaos, "chaos"))
+    chaos.rerollCount = -1
+    lu.assertNil(rewards.traitOffer(chaos, "chaos"))
+end

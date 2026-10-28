@@ -5,6 +5,8 @@ local rewards = type(import) == "function" and import("mods/navigation/rewards.l
     or require("mods.navigation.rewards")
 local ephyra = type(import) == "function" and import("mods/navigation/ephyra.lua")
     or require("mods.navigation.ephyra")
+local rerollPlan = type(import) == "function" and import("mods/navigation/rerolls.lua")
+    or require("mods.navigation.rerolls")
 local exitProtection = type(import) == "function" and import("mods/navigation/exit_protection.lua")
     or require("mods.navigation.exit_protection")
 local conformance = type(import) == "function" and import("mods/protocol/conformance.lua")
@@ -47,6 +49,23 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
     local rewardChoiceScope
     local ephyraDoorScope
     local dreamBiomeScope
+    -- The planned reward one native door or cage reroll press must draw.
+    local rerollScope
+    local takePress = rerollPlan.counter()
+
+    -- A rerolled door first offers its published first draw, not the reward
+    -- its destination is entered with.
+    local function firstDraw(state, occurrence)
+        local source = routeSession.current(state.route)
+        local batch = source and source.doors
+        if occurrence == nil or batch == nil or batch.kind ~= "batch" then return nil end
+        for _, target in ipairs(batch.targets) do
+            if target.room.id == occurrence.id and rerollPlan.doorRerolled(source, target.exitKey) then
+                return target.reward
+            end
+        end
+        return nil
+    end
 
     module.hooks.wrap("DestroyDoorRewardPresenation", "run-planner-highlight-door-preview-retire", function(_, _, base,
         door, args)
@@ -126,11 +145,15 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
             return base(currentRun, nativeRoom, prior, args)
         end
         local occurrence = occurrenceForRoom(state, nativeRoom)
-        local reward = occurrence and occurrence.overview.incomingReward
-        if occurrence == nil and ephyraDoorScope ~= nil and type(args) == "table" and type(args.Door) == "table" then
+        local reward = occurrence and (firstDraw(state, occurrence) or occurrence.overview.incomingReward)
+        if ephyraDoorScope ~= nil and type(args) == "table" and type(args.Door) == "table" then
             local slot = ephyraDoorScope.byDoor[args.Door.ObjectId]
-            if slot ~= nil and slot.phantom then reward = slot.reward end
+            if slot ~= nil and slot.phantom and occurrence == nil then reward = slot.reward end
+            if slot ~= nil and not slot.phantom and rerollPlan.hubSlotRerolled(ephyraDoorScope.hub, slot.slotKey) then
+                reward = slot.reward
+            end
         end
+        if rerollScope ~= nil then reward = rerollScope.reward end
         local function setup()
             return base(currentRun, nativeRoom, prior, args)
         end
@@ -169,8 +192,11 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         rewardStore, chosen, args)
         local nested = nestedRewardContext and nestedRewardContext() or nil
         if nested ~= nil and type(args) == "table" and args.IgnoreForcedReward == true then
-            nested.offerIndex = nested.offerIndex + 1
-            local offer = nested.wheel.offers[nested.offerIndex]
+            local offer = nested.reroll
+            if offer == nil then
+                nested.offerIndex = nested.offerIndex + 1
+                offer = nested.wheel.offers[nested.offerIndex]
+            end
             if offer == nil then return base(run, nativeRoom, rewardStore, chosen, args) end
             nested.currentOffer = offer
             if type(nativeRoom) == "table" then nativeRoom.ForceLootName = offer.reward.source end
@@ -180,6 +206,24 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         local state = getState(runtime)
         if state == nil or state.state ~= "synchronized" then
             return base(run, nativeRoom, rewardStore, chosen, args)
+        end
+        local function drawExpected(expected)
+            local resolvedStore = expected.resolvedStoreKey or rewardStore
+            if type(nativeRoom) == "table" then nativeRoom.RewardStoreName = resolvedStore end
+            rewardChoiceScope = { rewardStoreName = resolvedStore, rewardType = expected.rewardType }
+            local ok, result = pcall(base, run, nativeRoom, resolvedStore, chosen, args)
+            rewardChoiceScope = nil
+            if not ok then error(result, 0) end
+            if expected.source ~= nil and type(nativeRoom) == "table" then
+                nativeRoom.ForceLootName = expected.source
+            end
+            report(runtime)
+            return result
+        end
+        -- A reroll press is a real draw of its planned reward from the native store.
+        if rerollScope ~= nil and not rerollScope.drawn then
+            rerollScope.drawn = true
+            return drawExpected(rerollScope.reward)
         end
         local physicalDoorId = type(args) == "table" and type(args.Door) == "table"
             and args.Door.ObjectId or nil
@@ -201,8 +245,12 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         if occurrence == nil and pending == nil and ephyraSlot == nil then
             return base(run, nativeRoom, rewardStore, chosen, args)
         end
+        local drawn = ephyraSlot == nil and pending == nil and firstDraw(state, occurrence) or nil
+        -- Room creation stamped the entered reward's god; the first draw sets its own.
+        if drawn ~= nil and type(nativeRoom) == "table" then nativeRoom.ForceLootName = nil end
         local expected = ephyraSlot and ephyraSlot.reward
             or pending and pending.transaction and pending.transaction.reward
+            or drawn
             or occurrence and occurrence.overview.incomingReward
         if expected == nil then
             if occurrence and occurrence.overview.effectNeutralRequiredReward == true then
@@ -214,15 +262,42 @@ function hooks.attach(module, session, getState, report, routeSession, room, tra
         if rewards.isLogicalRoomAcquisition(expected) then
             return base(run, nativeRoom, rewardStore, chosen, args)
         end
-        local resolvedStore = expected.resolvedStoreKey or rewardStore
-        if type(nativeRoom) == "table" then nativeRoom.RewardStoreName = resolvedStore end
-        rewardChoiceScope = { rewardStoreName = resolvedStore, rewardType = expected.rewardType }
-        local ok, result = pcall(base, run, nativeRoom, resolvedStore, chosen, args)
-        rewardChoiceScope = nil
+        return drawExpected(expected)
+    end)
+
+    -- A native door or cage reroll press redraws the next planned reroll of that
+    -- target; a press the plan does not make leaves the route.
+    local function steerReroll(runtime, base, kind, run, door)
+        local state = getState(runtime)
+        if state == nil or state.state ~= "synchronized" then return base(run, door) end
+        local currentRun = _G.CurrentRun
+        local hub = ephyra.hub(state.plan, currentRun and currentRun.CurrentRoom)
+        local presses, key = rerollPlan.doorPresses(routeSession.current(state.route), hub, door, kind)
+        local press, ordinal, planned = takePress(state.route, key or "unplanned", presses or {})
+        if press == nil then
+            session.mismatch(state, { checkpoint = "reroll", expected = planned, observed = ordinal })
+            report(runtime)
+            return base(run, door)
+        end
+        if kind == "cage" then door.RerollIndex = press.target.cageIndex end
+        rerollScope = { reward = press.reward }
+        local ok, result = pcall(base, run, door)
+        rerollScope = nil
         if not ok then error(result, 0) end
-        if expected.source ~= nil and type(nativeRoom) == "table" then nativeRoom.ForceLootName = expected.source end
         report(runtime)
         return result
+    end
+
+    module.hooks.wrap("AttemptRerollDoor", "run-planner-door-reroll", function(_, runtime, base, run, door)
+        return steerReroll(runtime, base, "door", run, door)
+    end)
+
+    -- AttemptReroll picks the cage at random before this call; the plan names it.
+    module.hooks.wrap("AttemptRerollFieldsDoor", "run-planner-cage-reroll", function(_, runtime, base, run, door)
+        local doorRoom = type(door) == "table" and door.Room or nil
+        -- Without cages native rerolls the door itself through AttemptRerollDoor.
+        if type(doorRoom) ~= "table" or doorRoom.CageRewards == nil then return base(run, door) end
+        return steerReroll(runtime, base, "cage", run, door)
     end)
 
     module.hooks.wrap("AssignRoomToExitDoor", "run-planner-additional-exit-binding", function(_, runtime, base,

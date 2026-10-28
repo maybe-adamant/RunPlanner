@@ -163,6 +163,31 @@ function TestRoomGuide.testWheelChoiceUsesThePublishedPickedReward()
     lu.assertEquals(guide.project(snapshot).rows[1].instruction, "Wheel: Zeus")
 end
 
+function TestRoomGuide.testRerollRowsNameWhatEachPressReplaces()
+    local function reroll(target, reward) return row("reroll", nil, { target = target, reward = reward }) end
+    local door = { kind = "door", exitKey = "exit1" }
+    local snapshot = room({
+        reroll(door, { rewardType = "GiftDrop" }),
+        reroll(door, { rewardType = "Boon", source = "HephaestusUpgrade" }),
+        reroll({ kind = "cage", exitKey = "exit2", cageIndex = 2 }, { rewardType = "MaxManaDrop" }),
+        reroll({ kind = "wheelOffer", wheelKey = "wheel1", offerKey = "offer1" }, { rewardType = "StackUpgrade" }),
+        reroll({ kind = "door", exitKey = "exit9" }, { rewardType = "RoomMoneyDrop" }),
+    })
+    snapshot.occurrence.doors = { kind = "batch", targets = {
+        { exitKey = "exit1", reward = { rewardType = "Boon", source = "AphroditeUpgrade" } },
+        { exitKey = "exit2", cageRewards = { { rewardType = "GiftDrop" }, { rewardType = "MaxHealthDrop" } } },
+    } }
+    snapshot.occurrence.overview = { rewardWheels = { { wheelKey = "wheel1", pickedOfferKey = "offer1",
+        offers = { { offerKey = "offer1", reward = { rewardType = "WeaponUpgrade" } } } } } }
+    local rows = guide.project(snapshot).rows
+    lu.assertEquals(rows[1].instruction, "Reroll Aphro: Nectar")
+    lu.assertEquals(rows[2].instruction, "Reroll Nectar: Heph")
+    lu.assertEquals(rows[3].instruction, "Reroll: Max Magick")
+    lu.assertEquals(rows[4].instruction, "Reroll Hammer: Pom")
+    lu.assertEquals(rows[5].instruction, "Reroll: Gold")
+    for _, projected in ipairs(rows) do lu.assertTrue(guide.length(projected.instruction) <= guide.ROW_LIMIT) end
+end
+
 function TestRoomGuide.testHidesOutOfOrderCompletedOwnersWithoutCompletingInformation()
     local projection = guide.project(room({
         row("completeFieldsCage", nil, { phaseKey = "Cage01" }),

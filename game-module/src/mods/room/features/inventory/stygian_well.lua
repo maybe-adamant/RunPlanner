@@ -47,8 +47,9 @@ function wellInventory.prepareRefill(storeData, args, scope)
         args = primitives.withStoreData(args, storeData) }
 end
 
-function wellInventory.prepare(well, storeData, args)
-    if well == nil or not well.interacted then return nil end
+-- `generation` counts the native rerolls before this store fill; earlier fills stay native.
+function wellInventory.prepare(well, storeData, args, generation)
+    if well == nil or not well.interacted or (generation or 0) ~= (well.rerollCount or 0) then return nil end
     local byGeneration = offersByGeneration(well)
     local healing = byGeneration["initial:healing"]
     local left = byGeneration["initial:secondLeft"]
@@ -66,8 +67,17 @@ function wellInventory.prepare(well, storeData, args)
     local wanted = { [left.offerKey] = true, [right.offerKey] = true }
     storeData.Traits = primitives.retain(storeData.Traits, wanted)
     storeData.Consumables = primitives.retain(storeData.Consumables, wanted)
-    return { kind = "well", expected = { healing, left, right },
-        args = primitives.withStoreData(args, storeData) }
+    local prepared = primitives.withStoreData(args, storeData)
+    -- A reroll excludes one random earlier row; it is steered away from the planned rows.
+    if type(prepared.ExclusionNames) == "table" then
+        local planned = { [healing.offerKey] = true, [left.offerKey] = true, [right.offerKey] = true }
+        local kept = {}
+        for _, name in ipairs(prepared.ExclusionNames) do
+            if not planned[name] then kept[#kept + 1] = name end
+        end
+        prepared.ExclusionNames = kept
+    end
+    return { kind = "well", expected = { healing, left, right }, args = prepared }
 end
 
 return wellInventory

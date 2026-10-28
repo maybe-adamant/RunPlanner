@@ -166,7 +166,7 @@ function TestLevelAcquisitions.testHeldTraitFailureIsANativeFaultNotAMismatch()
     lu.assertEquals(#completions, 0)
 end
 
-function TestLevelAcquisitions.testRerollWithAnUnheldTargetStaysNative()
+function TestLevelAcquisitions.testUnplannedRerollLeavesThePlanAndStaysNative()
     local row = levelRow("StackUpgrade", 1, "Target")
     row.detail.levelResolution.offeredTargets = { "Target", "Other" }
     local loot = { Name = "StackUpgrade", UpgradeOptions = {} }
@@ -179,21 +179,49 @@ function TestLevelAcquisitions.testRerollWithAnUnheldTargetStaysNative()
         value.UpgradeOptions = { { ItemName = "NativeReroll" } }
     end, {}, loot, true, {})
     _G.HeroHasTrait = priorHeld
-    lu.assertEquals(mismatches, {})
+    lu.assertEquals(mismatches, { { "screen-reroll", 0, 1 } })
     lu.assertEquals(loot.UpgradeOptions[1].ItemName, "NativeReroll")
 end
 
-function TestLevelAcquisitions.testNativeRerollIsNotReSteeredAfterInitialVisibleRows()
-    local row = levelRow("StackUpgrade", 1, "Target")
+function TestLevelAcquisitions.testPlannedRerollsInstallTheRowsAtTheLastPlannedRoll()
+    local row = levelRow("StackUpgrade", 3, "Target")
     row.detail.levelResolution.offeredTargets = { "Target", "Other" }
-    local loot = { Name = "StackUpgrade", UpgradeOptions = {} }
-    local callbacks = harness(row, loot)
+    row.detail.levelResolution.rerollCount = 2
+    local loot = { Name = "StackUpgrade", UpgradeOptions = { { ItemName = "NativeFirst" } } }
+    local callbacks, _, _, _, _, completions, mismatches = harness(row, loot)
     callbacks.HandleLootPickup(nil, {}, function() end, {}, loot, {})
     callbacks.CreateBoonLootButtons(nil, {}, function() end, {}, loot, false, {})
-    callbacks.CreateBoonLootButtons(nil, {}, function(_, value)
-        value.UpgradeOptions = { { ItemName = "NativeReroll" } }
-    end, {}, loot, true, {})
-    lu.assertEquals(loot.UpgradeOptions[1].ItemName, "NativeReroll")
+    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "NativeFirst" } })
+    local function reroll(nativeRow)
+        callbacks.CreateBoonLootButtons(nil, {}, function(_, value)
+            if nativeRow then value.UpgradeOptions = { { ItemName = nativeRow } } end
+        end, {}, loot, true, {})
+    end
+    reroll("NativeSecond")
+    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "NativeSecond" } })
+    lu.assertEquals(#completions, 0)
+    reroll()
+    lu.assertEquals(loot.UpgradeOptions[1].ItemName, "Target")
+    lu.assertEquals(loot.UpgradeOptions[2].ItemName, "Other")
+    lu.assertEquals(loot.StackNum, 3)
+    lu.assertEquals(#completions, 1)
+    lu.assertEquals(mismatches, {})
+end
+
+function TestLevelAcquisitions.testChoiceBeforeThePlannedRerollsLeavesThePlan()
+    local row = levelRow("StackUpgrade", 1, "Target")
+    row.detail.levelResolution.offeredTargets = { "Target", "Other" }
+    row.detail.levelResolution.rerollCount = 1
+    local loot = { Name = "StackUpgrade", UpgradeOptions = { { ItemName = "NativeFirst" } } }
+    local callbacks, _, _, _, _, completions, mismatches = harness(row, loot)
+    callbacks.HandleLootPickup(nil, {}, function() end, {}, loot, {})
+    callbacks.CreateBoonLootButtons(nil, {}, function() end, {}, loot, false, {})
+    local selected = false
+    callbacks.HandleUpgradeChoiceSelection(nil, {}, function() selected = true end, {},
+        { LootData = loot, Data = { Name = "NativeFirst" } }, {})
+    lu.assertTrue(selected)
+    lu.assertEquals(mismatches, { { "screen-reroll", 1, 0 } })
+    lu.assertEquals(#completions, 0)
 end
 
 function TestLevelAcquisitions.testVisibleOfferCompletionDoesNotCompareTheLaterPlayerSelection()

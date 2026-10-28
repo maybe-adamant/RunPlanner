@@ -527,3 +527,39 @@ function TestThessaly.testSelectedWheelRewardBindsAndCompletesThroughStandardPic
     lu.assertEquals(completed, { choiceHandle, pickupHandle })
     lu.assertNil(shipCombat.takeRewardProducer(state, active))
 end
+
+function TestThessaly.testRerollPressDrawsTheOffersNextPlannedRerollWithoutRetiringItsScope()
+    local module, callbacks = capture()
+    local active = fixture(2, "offer1")
+    active.occurrence.rerolls = { {
+        owner = "r1", target = { kind = "wheelOffer", wheelKey = "wheel1", offerKey = "offer1" },
+        reward = { rewardType = "Boon", source = "ApolloUpgrade", producerLifecycleKey = "wheel1" },
+    } }
+    local state = { state = "synchronized" }
+    local mismatches = {}
+    local room = { current = function() return active end }
+    local session = {
+        mismatch = function(_, value) mismatches[#mismatches + 1] = value end,
+        diagnostic = function() error("unexpected diagnostic") end,
+    }
+    local shipCombat = thessaly.create()
+    navigation.attach(module, session, function() return state end, function() end, {}, room, nil,
+        shipCombat.rewardContext)
+    shipCombat.attach(module, session, function() return state end, function() end, room)
+    local wheel = { Room = {}, __runPlannerWheelKey = "wheel1", __runPlannerOfferKey = "offer1" }
+    local function nativeReroll(_, target)
+        target.ChosenRewardType = callbacks.ChooseRoomReward(nil, {}, function() return "native" end,
+            {}, {}, "RunProgress", {}, { IgnoreForcedReward = true })
+        callbacks.SetupRoomReward(nil, {}, function() target.Room.ForceLootName = "native" end,
+            {}, target.Room, {}, { ChosenRewardType = target.ChosenRewardType, AlwaysSetupForceLootName = true })
+        target.ForceLootName = target.Room.ForceLootName
+        callbacks.CreateDoorRewardPreview(nil, {}, function() end, target, target.ChosenRewardType)
+    end
+    callbacks.AttemptRerollShipWheel(nil, {}, nativeReroll, {}, wheel)
+    lu.assertEquals(wheel.ChosenRewardType, "Boon")
+    lu.assertEquals(wheel.ForceLootName, "ApolloUpgrade")
+    lu.assertEquals(wheel.__runPlannerOfferKey, "offer1")
+    lu.assertNil(shipCombat.rewardContext())
+    callbacks.AttemptRerollShipWheel(nil, {}, function() end, {}, wheel)
+    lu.assertEquals(mismatches, { { checkpoint = "reroll", expected = 1, observed = 2 } })
+end

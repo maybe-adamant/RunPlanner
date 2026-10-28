@@ -1,5 +1,7 @@
 -- Sole outer cursor for the configured route. Room exit advances the cursor;
 -- the next room entry proves the next published occurrence identity.
+local rerolls = type(import) == "function" and import("mods/navigation/rerolls.lua")
+    or require("mods.navigation.rerolls")
 local routeSession = {}
 
 local function fault(route, checkpoint, expected, observed)
@@ -163,7 +165,8 @@ local function guideNext(current, target)
     local result = { kind = "next", occurrence = target }
     for _, door in ipairs(current and current.doors and current.doors.targets or {}) do
         if target and door.room and door.room.id == target.id then
-            result.reward, result.cageRewards = door.reward, door.cageRewards
+            local effective = rerolls.effectiveTarget(current, door)
+            result.reward, result.cageRewards = effective.reward, effective.cageRewards
             break
         end
     end
@@ -195,7 +198,7 @@ function routeSession.guideNavigation(route, hubFountainUsed)
         local hub = target and hubForRoom(route, target.id)
         for _, slot in ipairs(hub and hub.slots or {}) do
             if slot.room and slot.room.id == target.id then
-                result.hubVisit, result.reward = true, slot.reward
+                result.hubVisit, result.reward = true, rerolls.hubSlotReward(hub, slot)
                 break
             end
         end

@@ -110,6 +110,7 @@ function hooks.attach(module, session, getState, report, hexTree)
             guarded(session, state, function()
                 if start.point == "opening" then install.records(start) end
                 install.barren(start)
+                install.rerollPool(state.plan.occurrencesById[start.occurrenceId])
             end)
             report(runtime)
         end

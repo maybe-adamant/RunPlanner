@@ -1,6 +1,8 @@
 -- ShipCombat phase and wheel realization. Native code owns wheel creation,
 -- input, combat, pickup spawning, and between-phase readiness; this instance
 -- only supplies the planner's resolved RNG outcomes and observes the click.
+local rerolls = type(import) == "function" and import("mods/navigation/rerolls.lua")
+    or require("mods.navigation.rerolls")
 local thessaly = {}
 
 local function wheelForPhase(active, phaseKey)
@@ -19,6 +21,7 @@ end
 function thessaly.create()
     local instance = {}
     local wheelScope
+    local takePress = rerolls.counter()
     local selectedRewardByState = setmetatable({}, { __mode = "k" })
 
     -- Navigation owns ChooseRoomReward/SetupRoomReward. This narrow context
@@ -103,7 +106,8 @@ function thessaly.create()
             if highlights and scope ~= nil then
                 highlights.wheel(runtime, scope.state, wheelObstacle, scope.wheel.pickedOfferKey)
             end
-            if wheelScope == scope and scope ~= nil and scope.offerIndex == #scope.wheel.offers then
+            if wheelScope == scope and scope ~= nil and scope.reroll == nil
+                and scope.offerIndex == #scope.wheel.offers then
                 wheelScope = scope.prior
             end
             return result
@@ -144,9 +148,34 @@ function thessaly.create()
             return result
         end)
 
-        module.hooks.wrap("AttemptRerollShipWheel", "run-planner-highlight-ship-wheel-reroll", function(_, _, base, ...)
+        -- A reroll press redraws the next planned reroll of that wheel offer through
+        -- the same nested reward boundary as the wheel's spawn.
+        module.hooks.wrap("AttemptRerollShipWheel", "run-planner-ship-wheel-reroll", function(_, runtime, base,
+            run, wheel)
             if highlights then highlights.clearWorld() end
-            return base(...)
+            local state = getState(runtime)
+            local active = room.current(state)
+            if state == nil or state.state ~= "synchronized" or active == nil then return base(run, wheel) end
+            local wheelKey = type(wheel) == "table" and wheel.__runPlannerWheelKey or nil
+            local offerKey = type(wheel) == "table" and wheel.__runPlannerOfferKey or nil
+            local planned = wheelKey and wheelForKey(active, wheelKey) or nil
+            local presses = planned and rerolls.wheelPresses(active.occurrence, wheelKey, offerKey) or {}
+            local press, ordinal, count = takePress(active, tostring(wheelKey) .. "\0" .. tostring(offerKey), presses)
+            if press == nil then
+                session.mismatch(state, { checkpoint = "reroll", expected = count, observed = ordinal })
+                report(runtime)
+                return base(run, wheel)
+            end
+            local prior = wheelScope
+            wheelScope = {
+                prior = prior, state = state, active = active, wheel = planned, offerIndex = 0,
+                offerCountPending = false, reroll = { offerKey = offerKey, reward = press.reward },
+            }
+            local ok, result = pcall(base, run, wheel)
+            wheelScope = prior
+            if not ok then error(result, 0) end
+            report(runtime)
+            return result
         end)
     end
 

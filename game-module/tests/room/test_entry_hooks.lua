@@ -709,6 +709,43 @@ function TestRoomEntryHooks.testIncomingRewardProofRemainsNavigationOwnedAtRoomE
     lu.assertNil(roomProof)
 end
 
+function TestRoomEntryHooks.testRoomEntryChecksThePlannedRerollPoolBeforeNativeStart()
+    for _, case in ipairs({ { pool = 3, observed = 3 }, { pool = 2, observed = 3 }, { observed = 5 } }) do
+        local module, _, callbacks = capture()
+        local occurrence = { id = "opening", gameName = "F_Opening01", rerollPoolAtEntry = case.pool }
+        local state = { state = "synchronized", route = {} }
+        local mismatches = {}
+        local session = stub()
+        session.mismatch = function(_, errorValue)
+            mismatches[#mismatches + 1] = errorValue
+            state.state = "desynchronized"
+        end
+        local route = {
+            expected = function() return occurrence end,
+            enter = function() return occurrence end,
+        }
+        local roomSession = {
+            enter = function() return true end,
+            bindEntryEncounters = function() return true end,
+            proveEntry = function() return true end,
+        }
+        roomHooks.attach(module, session, function() return state end, function() end,
+            route, roomSession, nil, {
+                proveIncomingReward = function() return true end,
+                proveOutgoingDoors = function() return true end,
+            }, unusedLoadoutScope)
+        local nativeStarted = 0
+        callbacks.StartRoom(nil, {}, function() nativeStarted = nativeStarted + 1 end,
+            { NumRerolls = case.observed }, { Name = "F_Opening01", __runPlannerExecutionRoomId = "opening" })
+        lu.assertEquals(nativeStarted, 1)
+        if case.pool ~= nil and case.pool ~= case.observed then
+            lu.assertEquals(mismatches, { { checkpoint = "reroll-pool", expected = case.pool, observed = case.observed } })
+        else
+            lu.assertEquals(mismatches, {})
+        end
+    end
+end
+
 function TestRoomEntryHooks.testZagreusContractRemainsAnAdditionalDoorDuringExitProof()
     local module, _, callbacks = capture()
     local additional = {

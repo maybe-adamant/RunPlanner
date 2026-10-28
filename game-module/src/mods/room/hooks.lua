@@ -103,6 +103,10 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
             if taken ~= door then exitWalk = { planned = door, taken = taken } end
         end
         if not session.resync(state, decision.index, leaving) then report(runtime); return door end
+        -- The planned room is entered with its planned reroll pool.
+        if target.rerollPoolAtEntry ~= nil and type(currentRun) == "table" then
+            currentRun.NumRerolls = math.max(0, target.rerollPoolAtEntry)
+        end
         if way.kind == "room" or (way.kind == "board" and way.enters) then room.prepare(state, target) end
         local rebuild = way.rebuild
             or way.kind == "room" and type(door) == "table" and not navigation.doorTargets(door, target.id)
@@ -280,6 +284,13 @@ function hooks.attach(module, session, getState, report, route, room, featureSco
             return base(currentRun, nativeRoom)
         end
         if occurrence == nil then reportOutcome(session, state, errorValue) else room.enter(state, occurrence) end
+        -- Every grant and spend before this room is settled by its entry.
+        if state.state == "synchronized" and occurrence.rerollPoolAtEntry ~= nil and type(liveRun) == "table"
+            and liveRun.NumRerolls ~= occurrence.rerollPoolAtEntry then
+            session.mismatch(state, {
+                checkpoint = "reroll-pool", expected = occurrence.rerollPoolAtEntry, observed = liveRun.NumRerolls,
+            })
+        end
         report(runtime)
         if state.state == "synchronized" then room.bindEntryEncounters(state, nativeRoom) end
         local result = base(currentRun, nativeRoom)

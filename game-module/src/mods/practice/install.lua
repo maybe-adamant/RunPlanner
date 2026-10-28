@@ -536,6 +536,13 @@ function install.barren(start)
     end
 end
 
+-- The start room's planned reroll pool replaces the one native StartNewRun
+-- counted from the installed Arcana (RunLogic.lua:489), when the plan rerolls.
+function install.rerollPool(occurrence)
+    local pool = occurrence and occurrence.rerollPoolAtEntry
+    if pool ~= nil then _G.CurrentRun.NumRerolls = math.max(0, pool) end
+end
+
 -- Run-wide records: an Opening's after native InitializeRewardStores and before
 -- the start room's creation reads them (RunLogic.lua:502-506), a Preboss's or Boss's
 -- after its creation.

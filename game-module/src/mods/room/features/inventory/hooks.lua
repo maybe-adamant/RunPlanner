@@ -72,7 +72,7 @@ local function probeOmittedGroups(session, state, scope, base, args, prepared, o
     end
 end
 
-local function prepareInventory(occurrence, args, refillScope, contractOnly)
+local function prepareInventory(occurrence, args, refillScope, contractOnly, generation)
     local expected = occurrence and occurrence.overview or {}
     local storeData = primitives.copy(type(args) == "table" and args.StoreData or nil)
     if type(storeData) ~= "table" then return nil end
@@ -90,7 +90,7 @@ local function prepareInventory(occurrence, args, refillScope, contractOnly)
     if expected.hermesShrine ~= nil then
         return shrineInventory.prepare(expected.hermesShrine, storeData, args)
     end
-    return wellInventory.prepare(expected.stygianWell, storeData, args)
+    return wellInventory.prepare(expected.stygianWell, storeData, args, generation)
 end
 
 function hooks.attach(module, session, getState, report, room, route, scope)
@@ -118,7 +118,7 @@ function hooks.attach(module, session, getState, report, room, route, scope)
             return result
         end
         local prepared, errorValue = prepareInventory(active and active.occurrence, args, activeRefill,
-            scope.contract ~= nil)
+            scope.contract ~= nil, scope.storeReroll or 0)
         if errorValue then
             session.diagnostic(state, errorValue.checkpoint, {
                 expected = errorValue.expected, observed = errorValue.observed,
@@ -153,6 +153,32 @@ function hooks.attach(module, session, getState, report, room, route, scope)
         result = nativeOrRethrow(scope, base, args)
         report(runtime)
         return result
+    end)
+
+    -- Native Well rerolls regenerate the store; the planned inventory replaces the
+    -- one after the planned rerolls, and a further reroll leaves the plan.
+    local storeRerolls = setmetatable({}, { __mode = "k" })
+    module.hooks.wrap("RerollStore", "run-planner-well-reroll", function(_, runtime, base, ...)
+        local state = getState(runtime)
+        local active = current.resolve(state, room, route)
+        local nativeRoom = _G.CurrentRun and _G.CurrentRun.CurrentRoom
+        if state == nil or state.state ~= "synchronized" or active == nil or type(nativeRoom) ~= "table" then
+            return base(...)
+        end
+        local well = active.occurrence.overview.stygianWell
+        local planned = well and well.interacted and well.rerollCount or 0
+        local rerolls = (storeRerolls[nativeRoom] or 0) + 1
+        storeRerolls[nativeRoom] = rerolls
+        if rerolls > planned then
+            session.mismatch(state, "screen-reroll", planned, rerolls)
+            report(runtime)
+            return base(...)
+        end
+        scope.storeReroll = rerolls
+        local results = table.pack(pcall(base, ...))
+        scope.storeReroll = nil
+        if not results[1] then error(results[2], 0) end
+        return table.unpack(results, 2, results.n)
     end)
 
     module.hooks.wrap("GetEligibleInteractedGod", "run-planner-inventory-source", function(_, _, base, ignored)

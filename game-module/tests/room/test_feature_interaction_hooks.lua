@@ -791,6 +791,66 @@ end
 
 
 
+function TestFeatureInteractionHooks.testWellFillsItsPlannedInventoryOnlyAfterItsPlannedRerolls()
+    local module, _, callbacks = capture()
+    local expected = {
+        { generationKey = "initial:healing", offerKey = "ArmorBoostStore" },
+        { generationKey = "initial:secondLeft", offerKey = "TemporaryDiscountTrait" },
+        { generationKey = "initial:secondRight", offerKey = "RandomStoreItem" },
+    }
+    local active = opaque({ occurrence = { overview = {
+        stygianWell = { interacted = true, rerollCount = 1, offers = expected },
+    } } }, function() return nil end)
+    local session = stub()
+    session.current = function() return active end
+    local mismatches = {}
+    local state = { state = "synchronized" }
+    session.mismatch = function(_, checkpoint, plannedCount, observed)
+        mismatches[#mismatches + 1] = { checkpoint, plannedCount, observed }
+    end
+    attachFeatureHooks(module, session, function() return state end, function() end, session)
+    local function storeData()
+        return { StoreData = {
+            HealingOffers = { WeightedList = { { Name = "HealDropRange" }, { Name = "ArmorBoostStore" } } },
+            Traits = { { Name = "TemporaryDiscountTrait" }, { Name = "TemporaryMoveSpeedTrait" } },
+            Consumables = { { Name = "RandomStoreItem" }, { Name = "LastStandShopItem" } },
+        } }
+    end
+    local function nativeFill(args)
+        local healing = args.StoreData.HealingOffers
+        return { StoreOptions = {
+            (healing.Options or healing.WeightedList)[1], args.StoreData.Traits[1], args.StoreData.Consumables[1],
+        }, exclusions = args.ExclusionNames }
+    end
+    local nativeRoom = { Name = "F_Reprieve01" }
+    local priorRun = _G.CurrentRun
+    _G.CurrentRun = { CurrentRoom = nativeRoom }
+    local initial, rerolled, further
+    local ok, failure = pcall(function()
+        initial = callbacks.FillInShopOptions(nil, {}, nativeFill, storeData())
+        callbacks.RerollStore(nil, {}, function()
+            local args = storeData()
+            args.ExclusionNames = { "TemporaryDiscountTrait" }
+            rerolled = callbacks.FillInShopOptions(nil, {}, nativeFill, args)
+        end, {}, {})
+        callbacks.RerollStore(nil, {}, function()
+            further = callbacks.FillInShopOptions(nil, {}, nativeFill, storeData())
+        end, {}, {})
+    end)
+    _G.CurrentRun = priorRun
+    if not ok then error(failure, 0) end
+    lu.assertEquals(initial.StoreOptions[1].Name, "HealDropRange")
+    lu.assertNil(initial.StoreOptions[1].__runPlannerGenerationKey)
+    for index, offer in ipairs(expected) do
+        lu.assertEquals(rerolled.StoreOptions[index].Name, offer.offerKey)
+        lu.assertEquals(rerolled.StoreOptions[index].__runPlannerGenerationKey, offer.generationKey)
+    end
+    -- The reroll's random exclusion is steered away from the planned rows.
+    lu.assertEquals(rerolled.exclusions, {})
+    lu.assertEquals(mismatches, { { "screen-reroll", 1, 2 } })
+    lu.assertNotNil(further)
+end
+
 -- Drives the generated empty-Survival fixture through FillInShopOptions; `probeResult`
 -- is what native returns when asked about the planned-empty group.
 local function emptyGroupShop(probeResult, fixtureName)
@@ -1161,4 +1221,49 @@ function TestFeatureInteractionHooks.testInfernalContractUsesThePublishedFreePed
         end, {}, {})
         _G.CurrentRun = priorRun
     end
+end
+
+function TestFeatureInteractionHooks.testPoolInstallsAtItsLastPlannedRerollAndAFurtherRerollLeavesThePlan()
+    local module, _, callbacks = capture()
+    local state = { state = "synchronized" }
+    local mismatches = {}
+    local occurrence = { overview = { purgingPool = { interacted = true, rerollCount = 2,
+        traits = { { slotKey = "left", traitKey = "A" } } } } }
+    require("mods.room.features.inventory.purging_pool_hooks").attach(module, {
+        diagnostic = function() error("unexpected diagnostic") end,
+        mismatch = function(_, checkpoint, expected, observed)
+            mismatches[#mismatches + 1] = { checkpoint, expected, observed }
+        end,
+    }, function() return state end, function() end, { occurrence = function() return occurrence end })
+    local native = { __runPlannerExecutionRoomId = "pool", SellTraitShop = {} }
+    local priorRun, priorValues = _G.CurrentRun, _G.GenerateSellTraitValues
+    _G.CurrentRun = { CurrentRoom = native }
+    -- Native values; each reroll excludes the earlier row it drew at random.
+    _G.GenerateSellTraitValues = function(target)
+        target.SellValues = { A = { Name = "A", Value = 10 }, B = { Name = "B", Value = 20 } }
+    end
+    local function nativeReroll(row)
+        return function()
+            native.SellValues, native.SellOptions = { A = { Name = "A", Value = 10 } }, { { Name = row, Value = 20 } }
+            callbacks.CreateSellButtons(nil, {}, function() end, {})
+        end
+    end
+    local ok, failure = pcall(function()
+        openPool(callbacks, native, function()
+            native.SellValues, native.SellOptions = {}, { { Name = "B", Value = 20 } }
+        end)
+        lu.assertEquals(native.SellOptions, { { Name = "B", Value = 20 } })
+        callbacks.SellTraitScreenReroll(nil, {}, nativeReroll("B"), {})
+        lu.assertEquals(native.SellOptions, { { Name = "B", Value = 20 } })
+        lu.assertNil(native.__runPlannerPoolInventoryHandled)
+        callbacks.SellTraitScreenReroll(nil, {}, nativeReroll("B"), {})
+        lu.assertEquals(native.SellOptions, { { Name = "A", Value = 10 } })
+        lu.assertTrue(native.__runPlannerPoolInventoryHandled)
+        lu.assertEquals(mismatches, {})
+        callbacks.SellTraitScreenReroll(nil, {}, nativeReroll("B"), {})
+        lu.assertEquals(native.SellOptions, { { Name = "B", Value = 20 } })
+        lu.assertEquals(mismatches, { { "screen-reroll", 2, 3 } })
+    end)
+    _G.CurrentRun, _G.GenerateSellTraitValues = priorRun, priorValues
+    if not ok then error(failure, 0) end
 end

@@ -118,6 +118,8 @@ function levels.attach(module, session, getState, report, room, seaStar, highlig
     local retainedVisible = setmetatable({}, { __mode = "k" })
     local activeDirectUses = setmetatable({}, { __mode = "k" })
     local activeDirectTerminals = {}
+    -- Native rerolls of each open Pom screen; the planned rows replace the last planned one.
+    local screenRerolls = setmetatable({}, { __mode = "k" })
     local function seaStarDiagnostic(state, checkpoint, expected, observed)
         session.diagnostic(state, checkpoint, { expected = expected, observed = observed })
     end
@@ -176,12 +178,24 @@ function levels.attach(module, session, getState, report, room, seaStar, highlig
         if handle ~= nil and not levels.isNormalPayload(payload) then
             return base(screen, loot, reroll, args)
         end
-        if resolution(payload) == nil or not begunVisible[handle] then
-            return base(screen, loot, reroll, args)
-        end
+        if resolution(payload) == nil then return base(screen, loot, reroll, args) end
         local initial = reroll ~= true
+        local planned = resolution(payload).rerollCount or 0
+        local rerolls = screenRerolls[loot] or 0
+        if not initial then
+            rerolls = rerolls + 1
+            screenRerolls[loot] = rerolls
+            if rerolls > planned then
+                session.mismatch(state, "screen-reroll", planned, rerolls)
+                report(runtime)
+                return base(screen, loot, reroll, args)
+            end
+        end
+        if not begunVisible[handle] then return base(screen, loot, reroll, args) end
+        -- The planned rows are the screen's after its planned rerolls; earlier rows stay native.
+        local installing = rerolls == planned
         local unheld, nativeError
-        if initial then unheld, nativeError = levels.unheldTarget(payload) end
+        if installing then unheld, nativeError = levels.unheldTarget(payload) end
         if nativeError ~= nil then
             session.fault(state, {
                 outcome = "fault", checkpoint = "native-api", expected = "HeroHasTrait", observed = nativeError,
@@ -199,25 +213,20 @@ function levels.attach(module, session, getState, report, room, seaStar, highlig
             report(runtime)
             return base(screen, loot, reroll, args)
         end
-        local installed = not initial or levels.prepareVisible(payload, loot)
-        if not installed then
+        if not installing then return base(screen, loot, reroll, args) end
+        if not levels.prepareVisible(payload, loot) then
             session.diagnostic(state, "level-offer-install", {
                 expected = "published level rows", observed = "not installed",
             })
         end
-        local result
-        if initial then
-            result = withoutFatedPomBonus(function()
-                return base(screen, loot, reroll, args)
-            end)
-        else
-            result = base(screen, loot, reroll, args)
-        end
+        local result = withoutFatedPomBonus(function()
+            return base(screen, loot, reroll, args)
+        end)
         local selected = resolution(payload) and resolution(payload).selectedTarget
         if highlights and type(selected) == "string" then
             highlights.screen(runtime, state, screen, selected, false)
         end
-        if initial then
+        if not retainedVisible[handle] then
             local seaStarScope = seaStar.scope(state, payload)
             if seaStarScope.result == nil then
                 session.complete(state, handle)
@@ -242,6 +251,12 @@ function levels.attach(module, session, getState, report, room, seaStar, highlig
         end
         local effect = resolution(payload)
         if effect == nil then return base(screen, button, args) end
+        if (screenRerolls[loot] or 0) < (effect.rerollCount or 0) then
+            -- A choice before the planned rerolls is from rows the plan never offered.
+            session.mismatch(state, "screen-reroll", effect.rerollCount, screenRerolls[loot] or 0)
+            report(runtime)
+            return base(screen, button, args)
+        end
         if not begunVisible[handle] or not retainedVisible[handle] then return base(screen, button, args) end
         local seaStarScope = seaStar.scope(state, payload)
         local result = seaStar.call(seaStarScope, function() return base(screen, button, args) end,

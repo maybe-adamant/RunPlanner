@@ -142,15 +142,29 @@ function chaosOffer.attach(module, session, getState, report, room, highlights)
         return result
     end)
 
+    -- The scope lives as long as its screen: the planned rows replace the roll
+    -- after the planned native rerolls, and a further reroll leaves the plan.
     module.hooks.wrap("CreateBoonLootButtons", "run-planner-chaos-initial-screen", function(_, runtime, base,
         screen, loot, reroll, args)
         local scope = screens[loot]
-        if scope == nil or reroll == true then return base(screen, loot, reroll, args) end
-        if screenChecks.report(session, scope.state, screenChecks.chaosRows(scope.offer)) then
+        if scope == nil then return base(screen, loot, reroll, args) end
+        local planned = scope.offer.rerollCount or 0
+        if reroll == true then
+            scope.rerolls = (scope.rerolls or 0) + 1
+            if scope.rerolls > planned then
+                screens[loot] = nil
+                session.mismatch(scope.state, "screen-reroll", planned, scope.rerolls)
+                report(runtime)
+                return base(screen, loot, reroll, args)
+            end
+        elseif scope.done then
+            return base(screen, loot, reroll, args)
+        elseif screenChecks.report(session, scope.state, screenChecks.chaosRows(scope.offer)) then
             screens[loot] = nil
             report(runtime)
             return base(screen, loot, reroll, args)
         end
+        if (scope.rerolls or 0) < planned then return base(screen, loot, reroll, args) end
         scope.inCreation = true
         local ok, result = pcall(base, screen, loot, reroll, args)
         scope.inCreation = false
@@ -165,7 +179,7 @@ function chaosOffer.attach(module, session, getState, report, room, highlights)
         if highlights and scope.valid and selected and scope.offer.blessingKey then
             highlights.screen(runtime, scope.state, screen, scope.offer.blessingKey, true)
         end
-        screens[loot] = nil
+        scope.done = true
         report(runtime)
         return result
     end)

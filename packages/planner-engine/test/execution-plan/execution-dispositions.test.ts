@@ -49,13 +49,13 @@ const executionDispositions = {
     useFountain: 'covered',
     interactKeepsakeRack: 'covered',
     interactEris: 'deferred-route',
-    reroll: 'deferred-route',
+    reroll: 'covered',
   } satisfies Record<RoomActionKind, ExecutionDisposition>,
   rerolls: {
-    occurrenceRerolls: 'deferred-route',
-    hubRerolls: 'deferred-route',
-    screenRerollCounts: 'deferred-route',
-    rerollPoolAtEntry: 'deferred-route',
+    occurrenceRerolls: 'covered',
+    hubRerolls: 'covered',
+    screenRerollCounts: 'covered',
+    rerollPoolAtEntry: 'covered',
   } satisfies Record<RerollWireField, ExecutionDisposition>,
   timelineTransactions: {
     chooseRewardWheel: 'covered',

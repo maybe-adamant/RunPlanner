@@ -913,6 +913,20 @@ function TestPracticeStart.testBarrenUnequipsItsArcanaBeforeNativeStartingGold()
     end
 end
 
+-- The start room's planned reroll pool replaces native StartNewRun's count only
+-- when the plan rerolls.
+function TestPracticeStart.testPlannedRerollPoolReplacesTheNativeCount()
+    for _, pool in ipairs({ 4, false }) do
+        local plan = copy(decode("surface-start-q-opening"))
+        plan.occurrencesById[plan.startState.occurrenceId].rerollPoolAtEntry = pool or nil
+        local world = nativeWorld({ MaxHealth = 70, MaxMana = 190 }, plan.startState)
+        world.run.NumRerolls = 2
+        local state = startRun(plan, world, { StartingBiome = "F" })
+        lu.assertEquals(state.state, "synchronized")
+        lu.assertEquals(world.run.NumRerolls, pool or 2)
+    end
+end
+
 function TestPracticeStart.testEndRunRemovesOnlyAPracticeRun()
     local module, _, callbacks = support.capture()
     practiceHooks.attach(module, session, function() return nil end, function() end,

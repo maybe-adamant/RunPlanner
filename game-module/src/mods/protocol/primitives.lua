@@ -101,6 +101,13 @@ function primitives.hexTree(value, label, required)
     end
     return tree
 end
+-- Native screen rerolls before a screen's final rows; absent is none.
+function primitives.screenRerollCount(record, label)
+    if record.rerollCount ~= nil and not primitives.int(record.rerollCount, label .. ".rerollCount", 1) then
+        return primitives.fail(label .. ".rerollCount must be a positive integer")
+    end
+    return true
+end
 function primitives.roomRef(value, label)
     local record = primitives.exact(value, { "id", "biomeKey", "gameName" }, {}, label)
     if not record

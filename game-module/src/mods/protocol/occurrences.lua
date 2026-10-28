@@ -100,6 +100,14 @@ local function validateRewardWheelProduct(row, label)
         for _, offer in ipairs(wheel.offers) do
             if offer.offerKey == wheel.pickedOfferKey then picked = offer end
         end
+        -- The wheel publishes its first draws; a rerolled pick acquires its last reroll.
+        for _, reroll in ipairs(row.rerolls or {}) do
+            local target = reroll.target
+            if target.kind == "wheelOffer" and target.wheelKey == wheel.wheelKey
+                and target.offerKey == wheel.pickedOfferKey then
+                picked = { offerKey = picked.offerKey, reward = reroll.reward }
+            end
+        end
         local expectedAcquisitionOwner = string.format(
             '["rewardWheelOffer",%q,%q,%q,%q,%q]',
             routeKey, row.biomeKey, row.id, wheel.wheelKey, wheel.pickedOfferKey
@@ -157,6 +165,84 @@ local function validateFieldsCageSlots(row, label)
         local expectedSlot = "cage" .. index
         if phase.slotKey ~= expectedPhase or layout.cagePoints[index].slotKey ~= expectedSlot then
             return p.fail(label .. ".cagePoints must use canonical ordered cage slots")
+        end
+    end
+    return true
+end
+
+-- One reroll press's target: an exit door, a cage of a door into Fields (its
+-- one-based CageRewards index), or one offer of this room's ship wheel.
+local function rerollTarget(value, label)
+    local record, errorMessage = p.obj(value, label)
+    if not record then return nil, errorMessage end
+    if record.kind == "door" then
+        local row, rowError = p.exact(record, { "kind", "exitKey" }, {}, label)
+        if not row then return nil, rowError end
+        if not p.str(row.exitKey, label .. ".exitKey") then return p.fail(label .. " has invalid exitKey") end
+        return row
+    end
+    if record.kind == "cage" then
+        local row, rowError = p.exact(record, { "kind", "exitKey", "cageIndex" }, {}, label)
+        if not row then return nil, rowError end
+        if not p.str(row.exitKey, label .. ".exitKey") or not p.int(row.cageIndex, label .. ".cageIndex", 1) then
+            return p.fail(label .. " has invalid cage target")
+        end
+        return row
+    end
+    if record.kind == "wheelOffer" then
+        local row, rowError = p.exact(record, { "kind", "wheelKey", "offerKey" }, {}, label)
+        if not row then return nil, rowError end
+        if not p.str(row.wheelKey, label .. ".wheelKey") or not p.str(row.offerKey, label .. ".offerKey") then
+            return p.fail(label .. " has invalid wheel offer target")
+        end
+        return row
+    end
+    return p.fail(label .. ".kind is unsupported")
+end
+
+local function rerolls(value, label)
+    local rows, errorMessage = p.arr(value, label)
+    if not rows then return nil, errorMessage end
+    if #rows == 0 then return p.fail(label .. " must be absent when empty") end
+    local owners = {}
+    for index, valueRow in ipairs(rows) do
+        local rowLabel = label .. "[" .. index .. "]"
+        local row, rowError = p.exact(valueRow, { "owner", "target", "reward" }, {}, rowLabel)
+        if not row then return nil, rowError end
+        if not p.str(row.owner, rowLabel .. ".owner", p.MAX_OWNER_STRING) or owners[row.owner] then
+            return p.fail(label .. " has invalid or duplicate reroll owner")
+        end
+        owners[row.owner] = true
+        local _, targetError = rerollTarget(row.target, rowLabel .. ".target")
+        if targetError then return nil, targetError end
+        local _, rewardError = rewards.reward(row.reward, rowLabel .. ".reward")
+        if rewardError then return nil, rewardError end
+    end
+    return rows
+end
+
+-- Every press names a published door, cage or wheel offer of its own room.
+local function validateRerollTargets(row, label)
+    local doorTargets = row.doors.kind == "batch" and row.doors.targets or {}
+    for index, reroll in ipairs(row.rerolls or {}) do
+        local target = reroll.target
+        local resolved = false
+        if target.kind == "wheelOffer" then
+            for _, wheel in ipairs(row.overview.rewardWheels or {}) do
+                for _, offer in ipairs(wheel.wheelKey == target.wheelKey and wheel.offers or {}) do
+                    if offer.offerKey == target.offerKey then resolved = true end
+                end
+            end
+        else
+            for _, door in ipairs(doorTargets) do
+                if door.exitKey == target.exitKey then
+                    resolved = target.kind == "door"
+                        or (door.cageRewards ~= nil and target.cageIndex <= #door.cageRewards)
+                end
+            end
+        end
+        if not resolved then
+            return p.fail(label .. ".rerolls[" .. index .. "].target must name a published target")
         end
     end
     return true
@@ -301,6 +387,15 @@ local function guideDescription(value, label)
         return row
     end
     if kind == "interactEris" then return p.exact(record, { "kind" }, {}, label) end
+    if kind == "reroll" then
+        local row, rowError = p.exact(record, { "kind", "target", "reward" }, {}, label)
+        if not row then return nil, rowError end
+        local _, targetError = rerollTarget(row.target, label .. ".target")
+        if targetError then return nil, targetError end
+        local _, rewardError = rewards.reward(row.reward, label .. ".reward")
+        if rewardError then return nil, rewardError end
+        return row
+    end
     return p.fail(label .. ".kind is unsupported")
 end
 
@@ -475,7 +570,8 @@ function occurrences.decode(value, selected, label)
         local row, rowError = p.exact(
             valueRow,
             { "id", "owner", "biomeKey", "gameName", "kind", "overview", "timeline", "roomGuide", "doors" },
-            { "anomaly", "roomExitConformance", "diagnostics", "suppressedNpcShopping" },
+            { "anomaly", "roomExitConformance", "diagnostics", "suppressedNpcShopping", "rerolls",
+                "rerollPoolAtEntry" },
             label .. "[" .. index .. "]"
         )
         if not row then return nil, rowError end
@@ -497,6 +593,15 @@ function occurrences.decode(value, selected, label)
             or not p.str(row.gameName, label .. ".gameName")
             or not p.str(row.kind, label .. ".kind") then
             return p.fail(label .. " has invalid occurrence identity")
+        end
+        if row.rerolls ~= nil then
+            local _, rerollsError = rerolls(row.rerolls, label .. "[" .. index .. "].rerolls")
+            if rerollsError then return nil, rerollsError end
+        end
+        -- The planned pool may enter a room below zero when the plan over-spends.
+        if row.rerollPoolAtEntry ~= nil
+            and not p.int(row.rerollPoolAtEntry, label .. "[" .. index .. "].rerollPoolAtEntry") then
+            return p.fail(label .. "[" .. index .. "].rerollPoolAtEntry must be an integer")
         end
         ids[row.id] = row
         local _, overviewError = overview.decode(row.overview, label .. ".overview")
@@ -578,6 +683,8 @@ function occurrences.decode(value, selected, label)
     for _, row in ipairs(result) do
         local _, rowContinuationsOrError = doors(row.doors, ids, label .. ".doors")
         if type(rowContinuationsOrError) == "string" then return nil, rowContinuationsOrError end
+        local rerollsOk, rerollsError = validateRerollTargets(row, label .. "[" .. row.id .. "]")
+        if not rerollsOk then return nil, rerollsError end
         continuations[row.id] = rowContinuationsOrError
         for _, additional in ipairs(row.overview.additional or {}) do
             local reference, referenceError = assertRoomReference(

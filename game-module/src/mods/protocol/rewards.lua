@@ -231,10 +231,12 @@ function rewards.traitOffer(value, label)
                 "kind", "giver", "curseOptions", "selected", "selectedCurseValues",
                 "blessingKey", "rarity", "blessingValues",
             },
-            {},
+            { "rerollCount" },
             label
         )
         if not row then return nil, rowError end
+        local countOk, countError = p.screenRerollCount(row, label)
+        if not countOk then return nil, countError end
         if row.giver ~= "Chaos" or not p.one(row.selected, optionKeys, label .. ".selected") then
             return p.fail(label .. " is a malformed Chaos offer")
         end
@@ -265,10 +267,12 @@ function rewards.traitOffer(value, label)
     local row, rowError = p.exact(
         record,
         { "kind", "giver", "options", "selected" },
-        { "rejected", "hexTree", "expectation" },
+        { "rejected", "hexTree", "expectation", "rerollCount" },
         label
     )
     if not row then return nil, rowError end
+    local countOk, countError = p.screenRerollCount(row, label)
+    if not countOk then return nil, countError end
     if row.expectation ~= nil then
         local _, expectationError = screenExpectation(row.expectation, label .. ".expectation",
             SCREEN_EXPECTATION_KEYS)
@@ -513,10 +517,12 @@ function rewards.acquisitionRole(value, label)
         local level, levelError = p.exact(
             record.levelResolution,
             { "offeredTargets", "selectedTarget", "levelCount" },
-            {},
+            { "rerollCount" },
             label .. ".levelResolution"
         )
         if not level then return nil, levelError end
+        local countOk, countError = p.screenRerollCount(level, label .. ".levelResolution")
+        if not countOk then return nil, countError end
         local _, targetsError = p.strings(
             level.offeredTargets,
             label .. ".levelResolution.offeredTargets",

@@ -44,6 +44,8 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
     local targetedAcquisitionPending = {}
     local offPlanOuter = nil
     local checkedScreens = setmetatable({}, { __mode = "k" })
+    -- Native rerolls of each open screen; the planned rows replace the last planned one.
+    local screenRerolls = setmetatable({}, { __mode = "k" })
     local concaveStone = concaveStoneModule.create({
         module = module, session = session, getState = getState, room = room, ordinary = ordinary,
     })
@@ -438,8 +440,30 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
         local handle, payload = boundNormal(room, state, current, loot)
         local offer = ordinary.offer(payload)
         local completeAfterInstall = false
-        -- A native reroll intentionally abandons the frozen initial offer.
-        if ordinary.isCarrier(loot, offer) and reroll ~= true then
+        local carrier = ordinary.isCarrier(loot, offer)
+        local planned = carrier and offer.rerollCount or 0
+        local rerolls = screenRerolls[loot] or 0
+        if carrier and reroll == true then
+            rerolls = rerolls + 1
+            screenRerolls[loot] = rerolls
+            if rerolls > planned then
+                session.mismatch(state, "screen-reroll", planned, rerolls)
+                report(runtime)
+                return base(screen, loot, reroll, args)
+            end
+        end
+        -- The planned rows are the screen's after its planned rerolls; earlier rows stay native.
+        local installing = carrier and rerolls == planned
+        -- Screen checks read the first native roll; they hold for every later roll.
+        if carrier and reroll ~= true and not installing and not checkedScreens[loot] then
+            checkedScreens[loot] = true
+            ordinary.ensureRolled(loot)
+            if screenChecks.report(session, state, screenChecks.ordinaryScreen(offer, loot)) then
+                report(runtime)
+                return base(screen, loot, reroll, args)
+            end
+        end
+        if installing then
             local conflict, nativeError = ordinary.blockedRowConflict(payload, loot)
             if nativeError ~= nil then
                 session.fault(state, {
@@ -471,7 +495,7 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
             end
         end
         local result = base(screen, loot, reroll, args)
-        if highlights and ordinary.isCarrier(loot, offer) then
+        if highlights and installing then
             local selected = ordinary.selectedKey(payload)
             if selected then highlights.screen(runtime, state, screen, selected, false) end
         end
@@ -503,6 +527,13 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
         local selected = button and button.Data and button.Data.Name
         local seaStarScope = seaStar.scope(state, payload)
         local nested = type(args) == "table" and args.DoubleBoonChance == true
+        local plannedRerolls = ordinary.isCarrier(loot, offer) and offer.rerollCount or 0
+        if not nested and (screenRerolls[loot] or 0) < plannedRerolls then
+            -- A choice before the planned rerolls is from rows the plan never offered.
+            session.mismatch(state, "screen-reroll", plannedRerolls, screenRerolls[loot] or 0)
+            report(runtime)
+            return base(screen, button, args)
+        end
         if nested then
             local stone = concaveStone.active()
             local valid, pending = concaveStone.validateResidual(state)

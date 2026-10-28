@@ -120,12 +120,13 @@ function TestHighlightAdapterContacts:testOrdinaryHammerAndFallbackRemainMarkedA
     end
 end
 
-function TestHighlightAdapterContacts:testChaosRepeatedCursesAndNativeRerollAfterOwnerCompletion()
-    local source = { Name = "TrialUpgrade", UpgradeOptions = {
+function TestHighlightAdapterContacts:testChaosRepeatedCursesAreMarkedAtThePlannedReroll()
+    local rows = function() return {
         { ItemName = "PeerA" }, { ItemName = "PeerB" }, { ItemName = "ChaosElementalBlessing" },
-    } }
+    } end
+    local source = { Name = "TrialUpgrade", UpgradeOptions = rows() }
     local authored = { kind = "chaos", selected = "option1", blessingKey = "ChaosElementalBlessing",
-        rarity = "Rare", selectedCurseValues = {}, blessingValues = {}, curseOptions = {
+        rarity = "Rare", selectedCurseValues = {}, blessingValues = {}, rerollCount = 1, curseOptions = {
             { curseKey = "ChaosNoMoneyCurse", requirementCount = 1 },
             { curseKey = "ChaosNoMoneyCurse", requirementCount = 2 },
             { curseKey = "ChaosNoMoneyCurse", requirementCount = 3 },
@@ -136,20 +137,16 @@ function TestHighlightAdapterContacts:testChaosRepeatedCursesAndNativeRerollAfte
         chaos.attach(module, session, getState, report, room, guide)
     end)
     local screen = { Source = source, Components = {} }
+    -- The native roll before the planned reroll is not the planned screen.
     h.call("HandleLootPickup", function() h.construct(screen, source, false) end, {}, source, {})
-    lu.assertEquals(self.attached[#self.attached].DestinationId, 10)
-    lu.assertEquals(h.completed(), 1)
+    lu.assertNil(screen.Components.RunPlannerPlannedChoiceMarker)
+    lu.assertEquals(h.completed(), 0)
     h.call("RerollBoonLoot", function()
-        h.call("DestroyBoonLootButtons", function()
-            lu.assertNil(screen.Components.RunPlannerPlannedChoiceMarker)
-            h.guide.refresh(h.runtime, h.state)
-            lu.assertNil(screen.Components.RunPlannerPlannedChoiceMarker)
-            screen.UpgradeButtons = {}
-        end, screen)
-        source.UpgradeOptions = { { ItemName = "PeerA", SecondaryItemName = "ChaosNoMoneyCurse" } }
+        h.call("DestroyBoonLootButtons", function() screen.UpgradeButtons = {} end, screen)
+        source.UpgradeOptions = rows()
         h.construct(screen, source, true)
     end, screen, {})
-    lu.assertNil(screen.Components.RunPlannerPlannedChoiceMarker)
+    lu.assertEquals(self.attached[#self.attached].DestinationId, 10)
     lu.assertEquals(h.completed(), 1)
 end
 

@@ -197,8 +197,10 @@ local function phantomExit(value, label)
 end
 
 local function stygianWell(value, label)
-    local record, errorMessage = p.exact(value, { "interacted" }, { "offers" }, label)
+    local record, errorMessage = p.exact(value, { "interacted" }, { "offers", "rerollCount" }, label)
     if not record then return nil, errorMessage end
+    local countOk, countError = p.screenRerollCount(record, label)
+    if not countOk then return nil, countError end
     if not p.bool(record.interacted, label .. ".interacted")
         or record.interacted ~= (record.offers ~= nil) then
         return p.fail(label .. " has invalid interaction state")
@@ -325,8 +327,10 @@ local function rewardWheels(value, label)
 end
 
 local function purgingPool(value, label)
-    local record, errorMessage = p.exact(value, { "interacted" }, { "traits" }, label)
+    local record, errorMessage = p.exact(value, { "interacted" }, { "traits", "rerollCount" }, label)
     if not record then return nil, errorMessage end
+    local countOk, countError = p.screenRerollCount(record, label)
+    if not countOk then return nil, countError end
     if not p.bool(record.interacted, label .. ".interacted")
         or record.interacted ~= (record.traits ~= nil) then
         return p.fail(label .. " has invalid interaction state")
@@ -465,6 +469,29 @@ local function fields(value, label)
 end
 
 -- Expected modeled trait inventory at one ordered Hub departure.
+-- Board rerolls pressed at the Hub's first entry, in order; each names its slot.
+local function hubRerolls(value, slotKeys, label)
+    local rows, errorMessage = p.arr(value, label)
+    if not rows then return nil, errorMessage end
+    if #rows == 0 then return p.fail(label .. " must be absent when empty") end
+    local owners = {}
+    for index, valueRow in ipairs(rows) do
+        local rowLabel = label .. "[" .. index .. "]"
+        local row, rowError = p.exact(valueRow, { "owner", "slotKey", "reward" }, {}, rowLabel)
+        if not row then return nil, rowError end
+        if not p.str(row.owner, rowLabel .. ".owner", p.MAX_OWNER_STRING) or owners[row.owner] then
+            return p.fail(label .. " has invalid or duplicate reroll owner")
+        end
+        owners[row.owner] = true
+        if not p.str(row.slotKey, rowLabel .. ".slotKey") or not slotKeys[row.slotKey] then
+            return p.fail(rowLabel .. ".slotKey must name a Hub slot")
+        end
+        local _, rewardError = rewards.reward(row.reward, rowLabel .. ".reward")
+        if rewardError then return nil, rewardError end
+    end
+    return rows
+end
+
 local function hubDepartureConformance(value, label)
     local record, errorMessage = p.exact(value, { "precedingVisitCount", "facts", "traits" }, { "beforeRoomExit" }, label)
     if not record then return nil, errorMessage end
@@ -646,7 +673,8 @@ function overview.decode(value, label)
     end
     if record.hub ~= nil then
         local hub, hubError = p.exact(record.hub,
-            { "room", "slots", "finalHandoff", "requiredVisitCount", "fountain", "departures" }, {}, label .. ".hub")
+            { "room", "slots", "finalHandoff", "requiredVisitCount", "fountain", "departures" }, { "rerolls" },
+            label .. ".hub")
         if not hub then return nil, hubError end
         local room = p.exact(hub.room, { "gameName" }, {}, label .. ".hub.room")
         if not room or not p.str(room.gameName, label .. ".hub.room.gameName") then
@@ -654,6 +682,16 @@ function overview.decode(value, label)
         end
         local slots, slotsError = p.arr(hub.slots, label .. ".hub.slots")
         if not slots then return nil, slotsError end
+        local slotKeys = {}
+        for _, slotValue in ipairs(slots) do
+            if p.json.isObject(slotValue) and type(slotValue.slotKey) == "string" then
+                slotKeys[slotValue.slotKey] = true
+            end
+        end
+        if hub.rerolls ~= nil then
+            local _, rerollsError = hubRerolls(hub.rerolls, slotKeys, label .. ".hub.rerolls")
+            if rerollsError then return nil, rerollsError end
+        end
         for index, slotValue in ipairs(slots) do
             local slot, slotError = p.exact(slotValue, { "slotKey", "physicalDoorId", "room", "reward" }, {}, label .. ".hub.slots[" .. index .. "]")
             if not slot then return nil, slotError end

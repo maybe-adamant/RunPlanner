@@ -1,5 +1,7 @@
 -- Navigation-owned Door checkpoint proof. The adapter preserves generated physical
 -- order and checks only the complete published Doors product.
+local rerolls = type(import) == "function" and import("mods/navigation/rerolls.lua")
+    or require("mods.navigation.rerolls")
 local doors = {}
 
 local function copy(value, seen)
@@ -109,7 +111,10 @@ function doors.prove(occurrence, nativeDoors, occurrencesById)
         return nil, { kind = "sharedRewardStore", expected = expected.resolvedSharedRewardStoreKey,
             observed = nativeDoors.sharedRewardStoreKey }
     end
-    for index, target in ipairs(targets) do
+    for index, publishedTarget in ipairs(targets) do
+        -- Doors leave offering what their planned rerolls drew.
+        local target = expected.kind == "batch" and rerolls.effectiveTarget(occurrence, publishedTarget)
+            or publishedTarget
         local native = nativeDoors[index]
         local room = native and (native.Room or native.RoomData or native)
         if roomName(room) ~= target.room.gameName then
@@ -235,13 +240,16 @@ local function plannedRoom(target, game, occurrencesById)
 end
 
 -- The planned room for the occurrence at `index`, as the planned room before it
--- offers it through its door; nil when no published door leads there.
+-- offers it through its door after that door's rerolls; nil when no published door leads there.
 function doors.plannedRoom(plan, index, game)
     local source = plan.occurrencesById[plan.selectedOccurrenceIds[index - 1]]
     local id = plan.selectedOccurrenceIds[index]
     if source == nil or source.doors == nil or source.doors.kind == "terminal" then return nil end
     for _, target in ipairs(publishedTargets(source.doors, plan.occurrencesById)) do
-        if target.room.id == id then return plannedRoom(target, game, plan.occurrencesById) end
+        if target.room.id == id then
+            if source.doors.kind == "batch" then target = rerolls.effectiveTarget(source, target) end
+            return plannedRoom(target, game, plan.occurrencesById)
+        end
     end
     return nil
 end

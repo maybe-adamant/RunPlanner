@@ -12,6 +12,8 @@ local safeHooks = type(import) == "function" and import("mods/host/presentation_
     or require("mods.host.presentation_hooks")
 local names = type(import) == "function" and import("mods/presentation/names.lua")
     or require("mods.presentation.names")
+local rerolls = type(import) == "function" and import("mods/navigation/rerolls.lua")
+    or require("mods.navigation.rerolls")
 local mysteryPool = type(import) == "function" and import("mods/room/timeline/acquisitions/mystery/pool.lua")
     or require("mods.room.timeline.acquisitions.mystery.pool")
 local roomName, displayName, roomOccupants = names.room, names.display, names.occupants
@@ -162,7 +164,7 @@ local function instruction(description, occurrence, transaction)
             if wheel.wheelKey == description.wheelKey then
                 for _, offer in ipairs(wheel.offers or {}) do
                     if offer.offerKey == wheel.pickedOfferKey then
-                        return "Wheel: " .. rewardName(offer.reward)
+                        return "Wheel: " .. rewardName(rerolls.wheelOfferReward(occurrence, wheel.wheelKey, offer))
                     end
                 end
             end
@@ -299,14 +301,53 @@ local function navigationFooter(navigation, currentGameName)
     return "Next: " .. destinationName(gameName)
 end
 
+-- What a reroll's target offers before this press: its first draw, then each earlier press.
+local function rerollFrom(occurrence, target, pressed)
+    local key = table.concat({ target.kind, tostring(target.exitKey or target.wheelKey),
+        tostring(target.cageIndex or target.offerKey) }, "\0")
+    local from = pressed[key]
+    if from == nil and target.kind == "wheelOffer" then
+        for _, wheel in ipairs(occurrence.overview and occurrence.overview.rewardWheels or {}) do
+            for _, offer in ipairs(wheel.wheelKey == target.wheelKey and wheel.offers or {}) do
+                if offer.offerKey == target.offerKey then from = offer.reward end
+            end
+        end
+    elseif from == nil then
+        local batch = occurrence.doors
+        for _, door in ipairs(batch and batch.kind == "batch" and batch.targets or {}) do
+            if door.exitKey == target.exitKey then
+                from = target.kind == "cage" and door.cageRewards and door.cageRewards[target.cageIndex]
+                    or target.kind == "door" and door.reward or nil
+            end
+        end
+    end
+    return from, key
+end
+
+local function rerollInstruction(description, occurrence, pressed)
+    local from, key = rerollFrom(occurrence, description.target, pressed)
+    pressed[key] = description.reward
+    local reward = type(description.reward) == "table" and description.reward or {}
+    -- Naming the replaced reward identifies the door; the new reward is kept when both don't fit.
+    for _, compact in ipairs({ false, true }) do
+        local to = doorRewardName(reward, compact)
+        local text = from and ("Reroll " .. doorRewardName(from, true) .. ": " .. to) or ("Reroll: " .. to)
+        if length(text) <= ROW_LIMIT then return text end
+    end
+    return "Reroll: " .. doorRewardName(reward, true)
+end
+
 -- Expands published rows into display entries. A Shrine purchase shows its
 -- purchase and, when planned, its rush; native Shrine state hides each step.
 local function visibleEntries(snapshot)
     local entries = {}
     local occurrence = snapshot.occurrence
+    local pressed = {}
     for _, row in ipairs(occurrence.roomGuide or {}) do
         local description = row.description
-        if type(description) == "table" and description.kind == "purchaseHermesShrineOffer" then
+        if type(description) == "table" and description.kind == "reroll" then
+            entries[#entries + 1] = { text = rerollInstruction(description, occurrence, pressed) }
+        elseif type(description) == "table" and description.kind == "purchaseHermesShrineOffer" then
             local progress = type(snapshot.shrineProgress) == "function"
                 and snapshot.shrineProgress(description.generationKey) or "pending"
             local name = rewardName({ rewardType = description.rewardType })

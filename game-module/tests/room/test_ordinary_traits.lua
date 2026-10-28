@@ -962,10 +962,29 @@ function TestOrdinaryTraits.testCursedFallbackGoldHasNoBlockedRow()
     lu.assertEquals(completed, 1)
 end
 
-function TestOrdinaryTraits.testRerollSkipsTheBlockedRowCheck()
-    local loot, _, mismatches = openCursedScreen(threeRows(nil), 2, nil, true)
+function TestOrdinaryTraits.testUnplannedRerollLeavesThePlanWithNativeRows()
+    local loot, completed, mismatches = openCursedScreen(threeRows(nil), 2, nil, true)
+    lu.assertEquals(mismatches, { { checkpoint = "screen-reroll", expected = 0, observed = 1 } })
+    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "Native" } })
+    lu.assertEquals(completed, 0)
+end
+
+function TestOrdinaryTraits.testEarlierPlannedRerollSkipsTheBlockedRowCheck()
+    local offer = threeRows(nil)
+    offer.rerollCount = 2
+    local loot, completed, mismatches = openCursedScreen(offer, 2, nil, true)
     lu.assertEquals(mismatches, {})
     lu.assertEquals(loot.UpgradeOptions, { { ItemName = "Native" } })
+    lu.assertEquals(completed, 0)
+end
+
+function TestOrdinaryTraits.testLastPlannedRerollInstallsThePlannedRows()
+    local offer = threeRows(nil)
+    offer.rerollCount = 1
+    local loot, completed, mismatches = openCursedScreen(offer, 3, nil, true)
+    lu.assertEquals(mismatches, {})
+    lu.assertEquals(loot.UpgradeOptions[1].ItemName, "ApolloAttack")
+    lu.assertEquals(completed, 1)
 end
 
 function TestOrdinaryTraits.testChoiceCountFailureIsANativeFaultNotAMismatch()

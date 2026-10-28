@@ -1,6 +1,8 @@
 -- Mourning Fields realization. Native code remains responsible for creating
 -- cages, optional rewards, and encounters; this adapter only steers the
 -- published point and reward choices for the active Fields room.
+local rerolls = type(import) == "function" and import("mods/navigation/rerolls.lua")
+    or require("mods.navigation.rerolls")
 local fields = {}
 
 local function contains(values, wanted)
@@ -164,7 +166,7 @@ function fields.attach(module, session, getState, report, room)
     local function cageRewards(state, occurrence)
         local prior = state and state.route and state.route.lastExitedOccurrence
         for _, target in ipairs(prior and prior.doors and prior.doors.targets or {}) do
-            if target.room and target.room.id == occurrence.id then return target.cageRewards end
+            if target.room and target.room.id == occurrence.id then return rerolls.cageRewards(prior, target) end
         end
         return nil
     end
