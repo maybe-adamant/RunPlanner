@@ -1195,7 +1195,13 @@ function assembleBatchDecision(
       ...(chaos === undefined ? [] : chaos.assembly.rewardControls),
     ]),
     workbenches: Object.freeze([
-      ...projectedTargets.map((target) => target.node),
+      // A room's header names the door reward its rerolls left.
+      ...projectedTargets.map((target, index) => {
+        const door = targets[index]?.door;
+        return door === undefined || door === target.target.door
+          ? target.node
+          : Object.freeze({ ...target.node, incomingDoor: door });
+      }),
       ...(zagreusContract === undefined
         ? []
         : [

@@ -66,6 +66,20 @@ export function workspaceDoorRerollTargetLabel(
   return slot < 0 ? `${door} Cage` : `${door} Cage ${slot + 1}`;
 }
 
+/** A misplaced press is repaired by its Timeline row's Move, which the Rerolls list lacks. */
+export function rerollMovedOnTimeline(
+  input: {
+    readonly findingsFor?: (
+      owner: import('@run-planner/engine/authored-project').SemanticAddress,
+    ) => readonly { readonly code: string }[];
+  },
+  address: import('@run-planner/engine/authored-project').RoomActionAddress,
+): boolean {
+  return (input.findingsFor?.(address) ?? []).some(
+    (finding) => finding.code === 'roomActionOrderUnavailable',
+  );
+}
+
 function sameOffer(left: ResolvedRewardOffer, right: ResolvedRewardOffer): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
@@ -125,7 +139,7 @@ export function assembleRoomRerolls(input: {
       const rerolled =
         settled === undefined || sameOffer(settled.assigned, settled.current)
           ? undefined
-          : summarizeRewardOffer(catalog, settled.current);
+          : settled.current;
       if (rerolled === undefined && !mismatch) return reward;
       if (
         control.owner.address.kind !== 'incomingReward' &&
@@ -135,7 +149,12 @@ export function assembleRoomRerolls(input: {
       changed = true;
       return Object.freeze({
         ...reward,
-        ...(rerolled === undefined ? {} : { rerolledSummary: rerolled }),
+        ...(rerolled === undefined
+          ? {}
+          : {
+              rerolledOffer: rerolled,
+              rerolledSummary: summarizeRewardOffer(catalog, rerolled),
+            }),
         ...(mismatch
           ? {
               rerolledRewardRepair: Object.freeze({
@@ -182,9 +201,10 @@ export function assembleRoomRerolls(input: {
     const key = roomActionKey(reference);
     const address = createRoomActionAddress(biome, occurrence.occurrenceId, key);
     const marker = input.markerDestinations.marker(address);
-    // A press is repaired in this list, on its room's Doors tab.
+    // A press is repaired in this list, on its room's Doors tab, unless it must move.
     input.markerDestinations.redirect([marker], nodeKey);
-    input.markerDestinations.setRoomTab([marker], 'doors');
+    if (!rerollMovedOnTimeline(source, address))
+      input.markerDestinations.setRoomTab([marker], 'doors');
     return Object.freeze({
       address,
       key,

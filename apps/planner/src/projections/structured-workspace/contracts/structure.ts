@@ -57,6 +57,7 @@ export interface WorkspaceDoorReward {
   /** Goals remaining shown on a Clockwork Goal door's countdown. */
   readonly clockworkGoalsRemaining?: number;
   /** The reward the door offers after its rerolls, where it differs from the first draw. */
+  readonly rerolledOffer?: ResolvedRewardOffer;
   readonly rerolledSummary?: string;
   /**
    * A kept rerolled reward that no longer matches: adopt the last reroll's

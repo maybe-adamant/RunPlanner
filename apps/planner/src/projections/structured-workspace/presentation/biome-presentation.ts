@@ -160,7 +160,19 @@ function mainRailRewardForDoor(
     preview?.visibility === 'visible' && preview.rewards.length === 1
       ? preview.rewards[0]
       : undefined;
-  return reward?.offer === null || reward?.offer === undefined
+  return reward === undefined ? undefined : railRewardForDoorReward(reward);
+}
+
+/** A door's reward as the room receives it: the final draw where its rerolls changed it. */
+function railRewardForDoorReward(
+  reward: import('../contracts/structure').WorkspaceDoorReward,
+): WorkspaceRailReward | undefined {
+  if (reward.rerolledOffer !== undefined)
+    return Object.freeze({
+      label: reward.rerolledSummary ?? reward.summary,
+      offer: reward.rerolledOffer,
+    });
+  return reward.offer === null
     ? undefined
     : Object.freeze({ label: reward.summary, offer: reward.offer });
 }
@@ -288,10 +300,7 @@ function selectedTargetRailPresentation(
     visible.visibility === 'visible' && visible.rewards.length === 1
       ? visible.rewards[0]
       : undefined;
-  const reward =
-    onlyReward?.offer === null || onlyReward?.offer === undefined
-      ? undefined
-      : Object.freeze({ label: onlyReward.summary, offer: onlyReward.offer });
+  const reward = onlyReward === undefined ? undefined : railRewardForDoorReward(onlyReward);
   const exitTypeKey =
     node.chaos?.door === door
       ? node.chaos.exitTypeKey
@@ -306,9 +315,10 @@ function selectedTargetRailPresentation(
     ...(clockworkGoalsRemaining === undefined ? {} : { clockworkGoalsRemaining }),
     ...(reward === undefined ? {} : { reward }),
     roomRewards: Object.freeze(
-      door.offerRewardSurface.rewards.flatMap((candidate) =>
-        candidate.offer === null ? [] : [candidate.offer],
-      ),
+      door.offerRewardSurface.rewards.flatMap((candidate) => {
+        const offer = candidate.rerolledOffer ?? candidate.offer;
+        return offer === null ? [] : [offer];
+      }),
     ),
     roomIcon: railRoomIcon(catalog, door.room),
     roomLabel: door.room.label,

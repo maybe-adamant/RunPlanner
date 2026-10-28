@@ -95,6 +95,7 @@ import {
 } from './occurrence-actions-assembly';
 import { assembleOccurrenceFeatures } from './occurrence-features-assembly';
 import { assemblePhantomExit } from './phantom-exit-assembly';
+import { rerollMovedOnTimeline } from './reroll-assembly';
 import { occurrenceInteractionRequirements } from './occurrence-interaction-requirements';
 import { roomWorkbenchPresentation } from './occurrence-room-workbench';
 import { resourceOutcomeLabel } from './resource-labels';
@@ -255,6 +256,10 @@ export interface WorkspaceOccurrenceAssemblyInput {
    */
   readonly bossDoorRewardStore?: WorkspaceBossDoorRewardStoreInput;
   readonly catalog: Catalog;
+  /** The findings an owner carries, for routing a row to the control that repairs them. */
+  readonly findingsFor?: (
+    owner: import('@run-planner/engine/authored-project').SemanticAddress,
+  ) => readonly import('@run-planner/engine/simulation').SemanticFinding[];
   /** Names this room's door and cage reroll targets in its Timeline rows. */
   readonly rerollTargetLabel?: import('./occurrence-action-label').WorkspaceDoorRerollTargetLabel;
   /** The engine settlement of this room's hidden door, when it declares one. */
@@ -1033,7 +1038,9 @@ export function assembleWorkspaceOccurrence(
       }
       // Door and cage rerolls are edited in the Rerolls list beside the doors.
       const tab =
-        row.reference.kind === 'reroll' && row.reference.target.kind !== 'wheelOffer'
+        row.reference.kind === 'reroll' &&
+        row.reference.target.kind !== 'wheelOffer' &&
+        !rerollMovedOnTimeline(input, row.address)
           ? ('doors' as const)
           : roomLocal.kind === 'ship'
             ? (shipActionTabs.get(row.key) ??

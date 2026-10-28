@@ -179,6 +179,53 @@ describe('Room Doors Rerolls list', () => {
     expect((await possibleRewards(interaction.rowReward(second!.key))).length).toBeGreaterThan(0);
   });
 
+  it("names a rerolled door's final reward in the next room's header and the rail", async () => {
+    const projected = projectStructuredWorkspaceFixture(await append(base, doorKey(doorTo), 1));
+    const biome = requireWorkspaceBiome(projected.workspace, 'F');
+    const next = biome.nodes.find(
+      (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === doorTo,
+    );
+    expect(
+      next?.kind === 'occurrenceWorkbench'
+        ? next.incomingDoor?.offerRewardSurface.rewards[0]
+        : undefined,
+    ).toMatchObject({
+      offer: { rewardType: 'MaxHealthDrop' },
+      rerolledOffer: { rewardType: 'StackUpgrade' },
+    });
+    const decision = biome.rail.find(
+      (entry) =>
+        entry.kind === 'node' &&
+        (entry.node.kind === 'ordinaryBatch' || entry.node.kind === 'mixedBatch') &&
+        entry.node.source.kind === 'occurrence' &&
+        entry.node.source.occurrenceId === source,
+    );
+    expect(decision?.kind === 'node' ? decision.selectedTarget?.reward : undefined).toMatchObject({
+      offer: { rewardType: 'StackUpgrade' },
+    });
+  });
+
+  it('sends a misplaced press to its Timeline row, where it moves', async () => {
+    const project = await append(base, doorKey(door2To));
+    const [press] = rerollsOf(projectStructuredWorkspaceFixture(project)).rerolls.rows;
+    const moved = applyProjectCommand(project, catalog, {
+      kind: 'MoveRoomAction',
+      action: press!.address,
+      toIndex: 0,
+    });
+    const projected = projectStructuredWorkspaceFixture(moved);
+    expect(
+      projected.evaluation.findings.some(
+        (finding) =>
+          finding.code === 'roomActionOrderUnavailable' &&
+          semanticAddressKey(finding.origin) === semanticAddressKey(press!.address),
+      ),
+    ).toBe(true);
+    expect(projected.workspace.focusByOwner.get(semanticAddressKey(press!.address))).toMatchObject({
+      roomTab: 'actions',
+    });
+  });
+
   it('locks the next press at an empty pool and keeps rows after the card is removed', async () => {
     let project = base;
     for (const [target, skip] of [

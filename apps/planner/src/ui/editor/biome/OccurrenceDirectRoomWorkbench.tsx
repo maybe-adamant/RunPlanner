@@ -308,7 +308,7 @@ export function IncomingRewardSummary({
   const summary =
     preview.visibility === 'hidden'
       ? 'Hidden'
-      : preview.rewards.map((reward) => reward.summary).join(', ');
+      : preview.rewards.map((reward) => reward.rerolledSummary ?? reward.summary).join(', ');
   return (
     <section aria-label="Incoming reward" className="room-heading-incoming-reward">
       <span aria-hidden="true">·</span>
