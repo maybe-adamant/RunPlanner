@@ -6,6 +6,7 @@ import type {
   HubDecisionDescriptor,
   NormalDoorBatchPolicy,
   OceanusAnomalyReplacementDescriptor,
+  PhantomPlaceholderSet,
   RewardStorePolicy,
   SourceRewardStorePolicyOverride,
 } from '@run-planner/engine/catalog-schema';
@@ -31,10 +32,14 @@ export interface RawCompletedHubExitDeclaration extends Omit<
 
 export interface RawHubDecisionDeclaration extends Omit<
   HubDecisionDescriptor,
-  'fields' | 'completedExit'
+  'fields' | 'completedExit' | 'phantomExits'
 > {
   readonly fields?: readonly AuthoredFieldDescriptor[];
   readonly completedExit: RawCompletedHubExitDeclaration;
+  readonly phantomExits: {
+    readonly unlockOrderPosition: 'first';
+    readonly placeholderSets: readonly PhantomPlaceholderSet[];
+  };
 }
 
 export type RawProgressionDeclaration =

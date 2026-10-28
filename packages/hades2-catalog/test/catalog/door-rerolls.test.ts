@@ -113,6 +113,7 @@ describe('door reroll declarations', () => {
       'N_Sub13',
       'N_Sub14',
       'N_Sub15',
+      'N_Shop01',
       'N_Boss01',
       'N_Boss02',
       'N_PostBoss01',

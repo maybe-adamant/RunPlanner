@@ -162,14 +162,15 @@ function validateMode(room: RawRoomDeclaration, path: string): RoomMode {
  * rooms from the `N` set, side rooms from `N_SubRooms`.
  */
 function normalizePhantomExit(
-  raw: PhantomExitDeclaration,
+  raw: unknown,
   roomSetKey: string,
   mode: RoomMode,
   kind: RoomDeclaration['kind'],
   path: string,
 ): PhantomExitDeclaration {
+  if (raw !== true) fail(path, 'must be true when declared');
   const templateKey = mode.kind === 'authored' ? mode.templateKey : undefined;
-  const expected =
+  const placeholderRoomSetKey =
     roomSetKey !== 'N'
       ? undefined
       : templateKey === 'EphyraSideRoom'
@@ -177,18 +178,9 @@ function normalizePhantomExit(
         : templateKey === 'EphyraCombat' || (templateKey === 'Miniboss' && kind === 'Miniboss')
           ? 'N'
           : undefined;
-  if (expected === undefined)
+  if (placeholderRoomSetKey === undefined)
     fail(path, 'is declared only for Ephyra combat, Mini-Boss and side rooms');
-  if (raw.placeholderRoomSetKey !== expected)
-    fail(`${path}.placeholderRoomSetKey`, `must be ${expected}`);
-  if (raw.unlockOrderPosition !== 'first')
-    fail(`${path}.unlockOrderPosition`, 'the return door sorts first in its unlock');
-  if (Object.keys(raw).length !== 2)
-    fail(path, 'requires only placeholderRoomSetKey and unlockOrderPosition');
-  return Object.freeze({
-    placeholderRoomSetKey: raw.placeholderRoomSetKey,
-    unlockOrderPosition: raw.unlockOrderPosition,
-  });
+  return Object.freeze({ placeholderRoomSetKey });
 }
 
 /** Normalizes the room-local identity and mode facts before related products validate. */

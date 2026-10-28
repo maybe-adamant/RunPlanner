@@ -1,11 +1,11 @@
 import type { RawRoomDeclaration } from '../types';
 import { nResourcePointSupport } from '../../resources';
-import { sidePhantomExit, surfaceShopHost } from './shared';
+import { surfaceShopHost } from './shared';
 
 export const nSideRooms = [
   {
     gameName: 'N_Sub01',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -37,7 +37,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub02',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -69,7 +69,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub03',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -101,7 +101,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub04',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -133,7 +133,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub05',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 0),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -165,7 +165,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub06',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -197,7 +197,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub07',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -229,7 +229,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub08',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -261,7 +261,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub09',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -297,7 +297,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub10',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -333,7 +333,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub11',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -369,7 +369,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub12',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -401,7 +401,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub13',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -433,7 +433,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub14',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
@@ -469,7 +469,7 @@ export const nSideRooms = [
   },
   {
     gameName: 'N_Sub15',
-    phantomExit: sidePhantomExit,
+    phantomExit: true,
     noReroll: true,
     ...surfaceShopHost(0.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),

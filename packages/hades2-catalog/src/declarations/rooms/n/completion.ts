@@ -4,6 +4,31 @@ import { surfaceShopHost } from './shared';
 
 export const nCompletionRooms = [
   {
+    // Native `ChooseNextRoomData` admits it only as a phantom exit's placeholder.
+    gameName: 'N_Shop01',
+    noReroll: true,
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
+    label: 'Midshop',
+    roomSetKey: 'N',
+    advancesExperimentalHammerUses: true,
+    kind: 'Shop',
+    mode: { kind: 'authored', templateKey: 'Shop' },
+    structuralTags: [],
+    exits: [{ index: 1, type: 'EphyraExitDoorReturn' }],
+    incomingReward: {
+      kind: 'shop',
+      rewardType: 'Shop',
+      shopProfileKey: 'WorldShop',
+      producerLifecycleKey: 'RoomReward',
+    },
+    enteredRewardStoreHistory: { kind: 'none' },
+    encounterEnvelopeKey: 'SingleEncounter',
+    encounterSlotBindings: [
+      { slotKey: 'Encounter', kind: 'fixed', encounterDefinitionKey: 'Shop' },
+    ],
+    caps: {},
+  },
+  {
     gameName: 'N_PreBoss01',
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Preboss',

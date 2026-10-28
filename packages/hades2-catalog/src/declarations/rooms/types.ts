@@ -133,7 +133,8 @@ export interface RawRoomDeclaration {
   readonly noReroll?: boolean;
   /** Native RoomData `ForceDoorAllowReroll`, declared or inherited. */
   readonly forceDoorAllowReroll?: boolean;
-  readonly phantomExit?: import('@run-planner/engine/catalog-schema').PhantomExitDeclaration;
+  /** The native return door fills a placeholder; its room set follows the room's template. */
+  readonly phantomExit?: true;
   readonly hasKeepsakeRack?: boolean;
   readonly keepsakeRackExcludedRouteKeys?: readonly string[];
   readonly hasRequiredFountain?: boolean;

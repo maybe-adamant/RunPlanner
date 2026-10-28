@@ -6,6 +6,7 @@ import type {
   HubDecisionDescriptor,
   HubEntryNormalDecisionDescriptor,
   HubTerminalTakeoverDescriptor,
+  PhantomExitPolicy,
   RoomDeclaration,
   StartDescriptor,
 } from '@run-planner/engine/catalog-schema';
@@ -13,7 +14,12 @@ import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { RewardStoreDeclaration } from '@run-planner/engine/reward-kernel';
 
 import type { RawBiomeLayoutDeclaration } from '../../declarations/index';
-import { freezeUniqueStrings, requireNonEmpty, requirePositiveInteger } from '../common';
+import {
+  createCollection,
+  freezeUniqueStrings,
+  requireNonEmpty,
+  requirePositiveInteger,
+} from '../common';
 import { normalizeAuthoredFields } from '../descriptors';
 import { fail } from '../errors';
 import {
@@ -188,6 +194,59 @@ function normalizeHubTerminal(
   });
 }
 
+/**
+ * A placeholder draws from the store a door into it would (individual, else
+ * forced) or, with a fixed or Shop reward, draws nothing.
+ */
+function requirePlaceholderReward(room: RoomDeclaration, path: string): void {
+  const reward = room.incomingReward;
+  if (reward.kind === 'shop' || reward.kind === 'fixed') return;
+  if (
+    reward.kind !== 'countedChoice' ||
+    (room.individualRewardStoreKey ?? room.forcedRewardStoreKey) === undefined
+  )
+    fail(path, `${room.gameName} must draw from its own store or carry a fixed reward`);
+}
+
+function normalizePhantomExits(
+  raw: Extract<RawBiomeLayoutDeclaration['progression'], { readonly kind: 'hub' }>['phantomExits'],
+  biomeKey: string,
+  rooms: CatalogCollection<RoomDeclaration>,
+  path: string,
+): PhantomExitPolicy {
+  if (raw.unlockOrderPosition !== 'first')
+    fail(`${path}.unlockOrderPosition`, 'the return door sorts first in its unlock');
+  const keys = freezeUniqueStrings(
+    raw.placeholderSets.map((set) => set.key),
+    `${path}.placeholderSets.keys`,
+  );
+  const sets = raw.placeholderSets.map((set, index) => {
+    const setPath = `${path}.placeholderSets[${index}]`;
+    if (set.key !== 'N' && set.key !== 'N_SubRooms')
+      fail(`${setPath}.key`, `unknown placeholder room set ${String(set.key)}`);
+    const roomGameNames = freezeUniqueStrings(set.roomGameNames, `${setPath}.roomGameNames`);
+    if (roomGameNames.length === 0) fail(`${setPath}.roomGameNames`, 'must not be empty');
+    roomGameNames.forEach((gameName, roomIndex) => {
+      const roomPath = `${setPath}.roomGameNames[${roomIndex}]`;
+      const room = requireLayoutRoom(gameName, biomeKey, rooms, roomPath);
+      const side = room.mode.kind === 'authored' && room.mode.templateKey === 'EphyraSideRoom';
+      if (side !== (set.key === 'N_SubRooms'))
+        fail(roomPath, `${gameName} is not in the native ${set.key} room set`);
+      requirePlaceholderReward(room, roomPath);
+    });
+    return Object.freeze({ key: set.key, roomGameNames });
+  });
+  for (const room of rooms.values) {
+    const setKey = room.phantomExit?.placeholderRoomSetKey;
+    if (room.roomSetKey === biomeKey && setKey !== undefined && !keys.includes(setKey))
+      fail(`${path}.placeholderSets`, `${room.gameName} draws from undeclared set ${setKey}`);
+  }
+  return Object.freeze({
+    unlockOrderPosition: 'first',
+    placeholderSets: createCollection(sets, `${path}.placeholderSets`, (set) => set.key),
+  });
+}
+
 export function normalizeHubDecision(
   raw: Extract<RawBiomeLayoutDeclaration['progression'], { readonly kind: 'hub' }>,
   biomeKey: string,
@@ -357,6 +416,7 @@ export function normalizeHubDecision(
       remainingSlots: 'optional',
       forcedOrder: 'availabilityRankPrefix',
     }),
+    phantomExits: normalizePhantomExits(raw.phantomExits, biomeKey, rooms, `${path}.phantomExits`),
     fields: normalizeAuthoredFields(raw.fields ?? [], `${path}.fields`),
     completedExit,
   });

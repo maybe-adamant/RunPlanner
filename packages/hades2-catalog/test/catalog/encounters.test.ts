@@ -810,6 +810,7 @@ describe('encounter envelope catalog', () => {
       I_Reprieve01: 'HealthRestore', // RoomDataI.lua:2364
       I_PreBoss01: 'Empty', // RoomDataI.lua:888
       I_PreBoss02: 'Empty', // RoomDataI.lua:888 (I_PreBoss01)
+      N_Shop01: 'Shop', // RoomDataN.lua:1986
       N_Story01: 'Story_Medea_01', // RoomDataN.lua:3730
       N_PreBoss01: 'Shop', // RoomDataN.lua:2052
       N_PostBoss01: 'Empty', // RoomDataN.lua:2538

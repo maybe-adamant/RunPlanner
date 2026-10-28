@@ -893,15 +893,32 @@ export interface RoomCounterEffects {
   readonly resetsBiomeDepthCache?: true;
 }
 
+export type PhantomPlaceholderSetKey = 'N' | 'N_SubRooms';
+
 /**
  * A room whose return door `ChooseNextRoomData` still fills: the placeholder
- * room and its reward are drawn but never entered.
+ * room and its reward are drawn but never entered. Main rooms draw from `N`,
+ * side rooms from `N_SubRooms`.
  */
 export interface PhantomExitDeclaration {
   /** The current room's native room set, which the placeholder is drawn from. */
-  readonly placeholderRoomSetKey: 'N' | 'N_SubRooms';
-  /** Position in the unlock's name-sorted door order; the return door sorts before side doors. */
+  readonly placeholderRoomSetKey: PhantomPlaceholderSetKey;
+}
+
+/**
+ * The rooms one native room set offers a phantom exit as its placeholder,
+ * excluding those `IsRoomEligible` never admits there (entered-once and
+ * linked-only rooms). Order is the order an unpinned exit settles in.
+ */
+export interface PhantomPlaceholderSet {
+  readonly key: PhantomPlaceholderSetKey;
+  readonly roomGameNames: readonly string[];
+}
+
+export interface PhantomExitPolicy {
+  /** The return door sorts first in its unlock's name-ordered doors, before every side door. */
   readonly unlockOrderPosition: 'first';
+  readonly placeholderSets: CatalogCollection<PhantomPlaceholderSet>;
 }
 
 export interface RoomCaps {
@@ -1396,6 +1413,8 @@ export interface HubDecisionDescriptor {
   readonly rewardStorePolicy: RewardStorePolicy;
   readonly rewardLookup: HubRewardLookupDescriptor;
   readonly sideRoomGeneration: HubSideRoomGenerationPolicy;
+  /** Placeholder rooms for this Hub's rooms' hidden return doors. */
+  readonly phantomExits: PhantomExitPolicy;
   readonly fields: readonly AuthoredFieldDescriptor[];
   readonly completedExit: CompletedHubExitDescriptor;
 }

@@ -1,6 +1,6 @@
 import type { RawRoomDeclaration } from '../types';
 import { nResourcePointSupport } from '../../resources';
-import { mainPhantomExit, soulPylon } from './shared';
+import { soulPylon } from './shared';
 
 export const nHubMainRooms = [
   {
@@ -23,7 +23,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat01',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 01',
     roomSetKey: 'N',
@@ -50,7 +50,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat02',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 02',
     roomSetKey: 'N',
@@ -99,7 +99,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat03',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 03',
     roomSetKey: 'N',
@@ -142,7 +142,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat04',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 04',
     roomSetKey: 'N',
@@ -191,7 +191,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat05',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 05',
     roomSetKey: 'N',
@@ -246,7 +246,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat06',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 06',
     roomSetKey: 'N',
@@ -295,7 +295,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat07',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 07',
     roomSetKey: 'N',
@@ -322,7 +322,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat08',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Shovel']),
     label: 'Combat 08',
     roomSetKey: 'N',
@@ -349,7 +349,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat09',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 09',
     roomSetKey: 'N',
@@ -404,7 +404,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat10',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 10',
     roomSetKey: 'N',
@@ -453,7 +453,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat11',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 11',
     roomSetKey: 'N',
@@ -496,7 +496,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat12',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 12',
     roomSetKey: 'N',
@@ -551,7 +551,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat13',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 13',
     roomSetKey: 'N',
@@ -578,7 +578,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat14',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 14',
     roomSetKey: 'N',
@@ -605,7 +605,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat15',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 15',
     roomSetKey: 'N',
@@ -648,7 +648,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat16',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 16',
     roomSetKey: 'N',
@@ -691,7 +691,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat17',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 17',
     roomSetKey: 'N',
@@ -734,7 +734,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat18',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 18',
     roomSetKey: 'N',
@@ -777,7 +777,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat19',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 19',
     roomSetKey: 'N',
@@ -804,7 +804,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat20',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 20',
     roomSetKey: 'N',
@@ -847,7 +847,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat21',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 21',
     roomSetKey: 'N',
@@ -874,7 +874,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat22',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 22',
     roomSetKey: 'N',
@@ -923,7 +923,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_Combat23',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 23',
     roomSetKey: 'N',
@@ -978,7 +978,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_MiniBoss01',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Satyr Champion',
@@ -1006,7 +1006,7 @@ export const nHubMainRooms = [
   },
   {
     gameName: 'N_MiniBoss02',
-    phantomExit: mainPhantomExit,
+    phantomExit: true,
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Erymanthian Boar',
