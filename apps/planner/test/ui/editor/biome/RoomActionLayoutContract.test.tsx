@@ -62,15 +62,6 @@ function expectTimelineRows(root: HTMLElement, kinds: Set<string>): number {
       // Bands hold only single-line controls; multi-line editors continue below them.
       if (kind === 'boundary' || kind === 'checkpoint')
         expect(row.querySelector(multiLineEditors), where).toBeNull();
-      if (row.querySelector('.reward-wheel') !== null) {
-        expect(kind, where).toBe('continuation');
-        expect(row.getAttribute('data-timeline-span'), where).toBe('wide');
-        expect(
-          row.querySelector(':scope > [data-timeline-cell="label"] > .reward-wheel'),
-          where,
-        ).not.toBeNull();
-        kinds.add('wide-continuation');
-      }
       const restore = actions.querySelector('[aria-label="Restore required action"]');
       if (restore?.parentElement?.getAttribute('data-timeline-action-slot') === 'placement')
         kinds.add('restore-required');
@@ -187,7 +178,6 @@ describe('Room Timeline row structure', () => {
         'effect',
         'insertion',
         'restore-required',
-        'wide-continuation',
       ]),
     );
   });
@@ -272,15 +262,6 @@ describe('Room Timeline layout contract', () => {
     expect(source).toContain(`${banner} > [data-timeline-cell='label'] { grid-column: 1 / 4; }`);
     expect(source).toContain(
       `${banner} > :is([data-timeline-cell='handle'], [data-timeline-cell='ordinal']) { display: none; }`,
-    );
-  });
-
-  it('spans a wide card from the handle column with its other cells hidden', () => {
-    const source = styles['room-workbenches']!.replace(/\s+/g, ' ');
-    const wide = ".timeline-row[data-timeline-span='wide']";
-    expect(source).toContain(`${wide} > [data-timeline-cell='label'] { grid-column: 1 / -1; }`);
-    expect(source).toContain(
-      `${wide} > :is( [data-timeline-cell='handle'], [data-timeline-cell='ordinal'], [data-timeline-cell='editors'], [data-timeline-cell='actions'] ) { display: none; }`,
     );
   });
 

@@ -176,15 +176,14 @@ export function inspectorRoomActionContent(
       />
     );
   }
-  if (row.reference.kind === 'reroll' && row.reference.target.kind !== 'wheelOffer')
-    return <RerollTimelineLink row={row} />;
+  if (row.reference.kind === 'reroll') return <RerollTimelineLink row={row} />;
   return row.reference.kind !== 'interactKeepsakeRack' ||
     room.keepsakeSelection === undefined ? null : (
     <KeepsakeRackTimelineContent interactions={interactions} selection={room.keepsakeSelection} />
   );
 }
 
-/** A door reroll is edited in the Rerolls list beside the doors. */
+/** A reroll is edited in its Rerolls list: beside the doors, or on its wheel's tab. */
 function RerollTimelineLink({
   row,
 }: {
@@ -198,7 +197,9 @@ function RerollTimelineLink({
       onClick={() => dispatch(semanticOwnerFocused(row.address))}
       type="button"
     >
-      Room Doors
+      {row.reference.kind === 'reroll' && row.reference.target.kind === 'wheelOffer'
+        ? 'Open wheel'
+        : 'Room Doors'}
     </button>
   );
 }

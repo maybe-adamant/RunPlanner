@@ -16,7 +16,6 @@ import { RoomOverviewSections, type RoomOverviewSectionContent } from './RoomOve
 import { RoomEncounterStructureWorkbench } from './locals/RoomEncounterStructureWorkbench';
 import { EncounterPhaseControl, EncounterPhaseEvents } from './locals/EncounterPhaseControl';
 import { FieldsWorkbench } from './locals/FieldsWorkbench';
-import { RewardWheelWorkbench } from './locals/RewardWheelWorkbench';
 import { ShopWorkbench } from './commerce/ShopWorkbench';
 import { CandidatePicker } from './CandidatePicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -164,11 +163,6 @@ export function DirectRoomWorkbench({
             phase={phase}
           />
         ));
-  const renderRewardWheel = (
-    wheel: Parameters<typeof RewardWheelWorkbench>[0]['wheel'],
-  ): ReactNode => (
-    <RewardWheelWorkbench interactions={interactions} occurrence={room.address} wheel={wheel} />
-  );
   // Each room kind contributes its sections; RoomOverviewSections owns their order.
   const renderOverview = (
     sections: Pick<RoomOverviewSectionContent, 'encounters' | 'contents'>,
@@ -205,7 +199,6 @@ export function DirectRoomWorkbench({
           idPrefix={idPrefix}
           interactions={interactions}
           renderEncounterPhase={renderEncounterPhase}
-          renderRewardWheel={renderRewardWheel}
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
@@ -229,7 +222,6 @@ export function DirectRoomWorkbench({
           idPrefix={idPrefix}
           interactions={interactions}
           renderEncounterPhase={renderEncounterPhase}
-          renderRewardWheel={renderRewardWheel}
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
@@ -252,7 +244,6 @@ export function DirectRoomWorkbench({
           idPrefix={idPrefix}
           interactions={interactions}
           renderEncounterPhase={renderEncounterPhase}
-          renderRewardWheel={renderRewardWheel}
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
@@ -285,7 +276,6 @@ export function DirectRoomWorkbench({
           idPrefix={idPrefix}
           interactions={interactions}
           renderEncounterPhase={renderEncounterPhase}
-          renderRewardWheel={renderRewardWheel}
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}

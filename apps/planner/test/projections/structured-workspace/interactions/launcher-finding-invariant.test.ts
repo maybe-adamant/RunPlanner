@@ -261,17 +261,21 @@ function unboundRerollRows(
 ): readonly string[] {
   if (owner.kind !== 'roomAction' || JSON.parse(owner.actionKey)[0] !== 'reroll') return [];
   checked.reroll += 1;
-  const list = [...interactions.roomRerolls.values()].find(
-    (candidate) =>
-      candidate.owner.biomeKey === owner.biomeKey &&
-      candidate.owner.occurrenceId === owner.occurrenceId,
-  );
-  try {
-    list?.removeIntent(owner.actionKey);
-    list?.rowReward(owner.actionKey);
-  } catch {
-    return [`reroll ${semanticAddressKey(owner)}`];
-  }
+  // A room holds a list for its doors and one per wheel; one of them binds the press.
+  const list = [...interactions.roomRerolls.values()].find((candidate) => {
+    if (
+      candidate.owner.biomeKey !== owner.biomeKey ||
+      candidate.owner.occurrenceId !== owner.occurrenceId
+    )
+      return false;
+    try {
+      candidate.removeIntent(owner.actionKey);
+      candidate.rowReward(owner.actionKey);
+      return true;
+    } catch {
+      return false;
+    }
+  });
   return list === undefined ? [`reroll ${semanticAddressKey(owner)}`] : [];
 }
 
@@ -570,6 +574,28 @@ describe('a finding never disables the launcher that repairs it', () => {
       press(held, 'golden-f-b10-e1', 'exit1', 'golden-f-preboss-shop'),
     ])
       expect(check(project)).toEqual([]);
+    // A wheel press the game refuses without the card is bound in its wheel's list.
+    const o = createBiomeAddress('Surface', 'O');
+    const ship = createOccurrenceAddress(o, createOccurrenceId('surface-o-combat04'));
+    const wheelPress = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'InsertReroll',
+      occurrence: ship,
+      target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
+      reward: { rewardType: 'RoomMoneyDrop' },
+      index: rerollAppendIndex(loadSurfaceNOPQProject(), {
+        kind: 'rewardWheel',
+        wheel: {
+          kind: 'rewardWheel',
+          routeKey: 'Surface',
+          biomeKey: 'O',
+          occurrenceId: ship.occurrenceId,
+          wheelKey: 'wheel1',
+        },
+      })!,
+    });
+    const before = checked.reroll;
+    expect(check(wheelPress)).toEqual([]);
+    expect(checked.reroll).toBeGreaterThan(before);
     expect(checked.reroll).toBeGreaterThan(1);
   });
 });

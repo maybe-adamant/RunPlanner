@@ -572,6 +572,7 @@ export function assembleWorkspaceBiomeSemantics(
       ...(bossDoorRewardStore === undefined ? {} : { bossDoorRewardStore }),
       phantomExitSettlement: source.phantomExitSettlement,
       findingsFor: source.findingsFor,
+      rerollSource: source,
       rerollTargetLabel: (target) =>
         workspaceDoorRerollTargetLabel(
           { biome, catalog, layout: source.layout, plan: source.plan },

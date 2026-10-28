@@ -409,6 +409,14 @@ export interface WorkspaceRewardWheelOfferDescriptor {
   readonly control: WorkspaceCountedRewardControl;
   readonly key: string;
   readonly label: string;
+  /** The offer after its rerolls, where it differs from the first draw. */
+  readonly rerolledOffer?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+  readonly rerolledSummary?: string;
+  /** A kept rerolled reward that no longer matches its last reroll. */
+  readonly rerolledRewardRepair?: {
+    readonly owner: import('@run-planner/engine/authored-project').RerolledRewardOwner;
+    readonly repair: 'adopt' | 'drop';
+  };
 }
 
 export interface WorkspaceRewardWheelDescriptor {

@@ -16,6 +16,9 @@ export type WorkspaceRoomTab =
   | 'shipIntroActions'
   | 'shipCombat1Actions'
   | 'shipCombat2Actions'
+  /** The wheel encounter after the Intro, and after Combat 1. */
+  | 'shipIntroWheels'
+  | 'shipCombat1Wheels'
   | 'shipInactiveRepair';
 
 /** Transient destination for one presentation surface of the persistent Hub board. */

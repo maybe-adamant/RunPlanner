@@ -2080,10 +2080,23 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(
       within(screen.getByLabelText('Intro ship phase')).getByText('Room entered'),
     ).toBeTruthy();
+    // The wheel chosen after the Intro is edited on its own tab; the Timeline keeps Next phase.
     expect(
-      within(screen.getByLabelText('Intro ship phase')).getByLabelText('Combat 1 reward'),
+      within(screen.getByLabelText('Intro ship phase')).queryByLabelText('Combat 1 reward'),
+    ).toBeNull();
+    expect(
+      within(screen.getByLabelText('Intro ship phase')).getByText('Next encounter available'),
     ).toBeTruthy();
     expect(within(screen.getByLabelText('Intro ship phase')).queryByText('Doors open')).toBeNull();
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Room Overview',
+      'Intro Timeline',
+      'Intro Wheels',
+      'Combat 1 Timeline',
+      'Room Doors',
+    ]);
+    openRoomTab('Intro Wheels');
+    expect(screen.getByLabelText('Combat 1 reward')).toBeTruthy();
     openRoomTab('Combat 1 Timeline');
     const combatOne = screen.getByLabelText('Combat 1 ship phase');
     expect(combatOne).toBeTruthy();
@@ -2099,7 +2112,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         semanticOwnerNavigated(createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1')),
       ),
     );
-    openRoomTab('Intro Timeline');
+    openRoomTab('Intro Wheels');
     expect(screen.getByLabelText('Combat 1 reward')).toBeTruthy();
   });
 
@@ -2118,8 +2131,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     project = authorLegalTraitOffers(project);
     renderOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(oOccurrenceIds.combat04));
 
-    openRoomTab('Intro Timeline');
-    const ship = screen.getByLabelText('Ship combat structure');
+    openRoomTab('Intro Wheels');
+    const ship = screen.getByLabelText('Combat 1 reward');
     const trigger = getByHint(ship, 'Converted by the Vow of Forfeit.');
     expect(trigger.classList.contains('contextual-picker-trigger')).toBe(true);
     expect(trigger.textContent).toMatch(/Apollo.*\(Red Onion\)/);
@@ -2180,14 +2193,14 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     const focusByOwner = workspaceProjection(view.application).focusByOwner;
     const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
-    expect(focusByOwner.get(semanticAddressKey(wheel))?.roomTab).toBe('shipIntroActions');
-    expect(focusByOwner.get(semanticAddressKey(wheel2))?.roomTab).toBe('shipCombat1Actions');
+    expect(focusByOwner.get(semanticAddressKey(wheel))?.roomTab).toBe('shipIntroWheels');
+    expect(focusByOwner.get(semanticAddressKey(wheel2))?.roomTab).toBe('shipCombat1Wheels');
     const choiceAddress = createRoomActionAddress(
       oBiome,
       oOccurrenceIds.combat07,
       roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
     );
-    expect(focusByOwner.get(semanticAddressKey(choiceAddress))?.roomTab).toBe('shipIntroActions');
+    expect(focusByOwner.get(semanticAddressKey(choiceAddress))?.roomTab).toBe('shipIntroWheels');
     expect(focusByOwner.get(semanticAddressKey(choiceAddress))?.focusAddress).toEqual(wheel);
     expect(
       focusByOwner.get(
@@ -2212,7 +2225,11 @@ describe('OccurrenceEncounterWorkbench', () => {
       )?.some((action) => action.kind === 'chooseRewardWheel' && action.wheelKey === 'wheel1'),
     ).toBe(true);
 
-    expect(within(ship).getAllByRole('button', { name: 'Reward' }).length).toBeGreaterThan(0);
+    openRoomTab('Intro Wheels');
+    expect(
+      within(screen.getByLabelText('Combat 1 reward')).getAllByRole('button', { name: 'Reward' })
+        .length,
+    ).toBeGreaterThan(0);
     expect(
       within(screen.getByLabelText('Combat 1 reward')).queryByRole('button', {
         name: /Edit Trait/,
@@ -2273,9 +2290,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     openRoomTab('Combat 1 Timeline');
     const combatOne = screen.getByLabelText('Combat 1 ship phase');
-    expect(within(combatOne).getByLabelText('Combat 2 reward')).toBeTruthy();
+    expect(within(combatOne).queryByLabelText('Combat 2 reward')).toBeNull();
     expect(within(combatOne).queryByText('Choose Combat 2 wheel')).toBeNull();
-    const restoredWheel = within(combatOne).getByLabelText('Combat 2 reward');
+    openRoomTab('Combat 1 Wheels');
+    const restoredWheel = screen.getByLabelText('Combat 2 reward');
     expect(
       within(restoredWheel).getByRole('button', { name: 'Reward pool' }).textContent,
     ).toContain('Major Reward');
@@ -2504,7 +2522,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat07),
     );
 
-    openRoomTab('Intro Timeline');
+    openRoomTab('Intro Wheels');
     let rewardWheel = screen.getByLabelText('Combat 1 reward');
     const offerGrid = rewardWheel.querySelector<HTMLElement>('.reward-wheel-offers');
     if (offerGrid === null) throw new Error('Reward wheel offer grid is missing');
@@ -2554,7 +2572,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         name: 'Edit Trait · Choose trait',
       }),
     ).toBeTruthy();
-    openRoomTab('Intro Timeline');
+    openRoomTab('Intro Wheels');
     rewardWheel = screen.getByLabelText('Combat 1 reward');
 
     act(() =>
@@ -2567,7 +2585,6 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     );
     await waitFor(() => expect(within(rewardWheel).queryByLabelText('Offer 2')).toBeNull());
-    expect(screen.getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
     expect(
       shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
         .offers.offer2,
@@ -2590,11 +2607,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(within(restoredOffer).getByRole('button', { name: 'Reward' }).textContent).toContain(
       'Hermes',
     );
-    expect(
-      within(screen.getByRole('region', { name: 'Room Timeline' })).queryByRole('combobox', {
-        name: 'Picked offer',
-      }),
-    ).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Picked offer' })).toBeNull();
     expect(within(rewardWheel).getAllByRole('radio', { name: /Pick Offer/ })).toHaveLength(2);
   });
 
@@ -2607,7 +2620,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat07),
     );
 
-    openRoomTab('Intro Timeline');
+    openRoomTab('Intro Wheels');
     const wheel = screen.getByLabelText('Combat 1 reward');
     const pool = within(wheel).getByRole('button', { name: 'Reward pool' });
     await view.user.click(pool);

@@ -113,7 +113,7 @@ export function assertFineGrainedFindingDestination(
       (tab === 'layout' && workbench.kind === 'fields') ||
       (tab === 'actions' && workbench.kind !== 'ship') ||
       (workbench.kind === 'ship' &&
-        (workbench.phases.some((phase) => phase.tab === tab) ||
+        (workbench.phases.some((phase) => phase.tab === tab || phase.wheelTab === tab) ||
           (tab === 'shipInactiveRepair' && workbench.repairRows.length > 0)));
     if (!valid) {
       throw new StructuredWorkspaceProjectionContractError(

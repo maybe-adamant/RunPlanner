@@ -23,13 +23,18 @@ function appendHint(locked: WorkspaceRoomRerolls['appendLocked']): string | unde
     case 'unreached':
       return candidateWaitingHint;
     case 'notEnabled':
-      return 'Door rerolls are not enabled.';
+      return 'Rerolls are not enabled.';
     case 'poolEmpty':
       return 'No rerolls left.';
   }
 }
 
-/** A room's door and cage rerolls in order, with a new press appended at the end. */
+const targetNouns = {
+  door: { label: 'Door', lower: 'door' },
+  offer: { label: 'Offer', lower: 'offer' },
+} as const;
+
+/** One surface's rerolls in order, with a new press appended at the end. */
 export function RoomRerolls({
   interactions,
   rerolls,
@@ -52,6 +57,7 @@ export function RoomRerolls({
       ? pendingTarget
       : undefined;
   const targets = interaction.targets(pending);
+  const noun = targetNouns[rerolls.targetNoun];
   return (
     <section aria-label="Rerolls" className="room-rerolls">
       <header className="room-rerolls-heading">
@@ -91,20 +97,20 @@ export function RoomRerolls({
         <li className="room-reroll-row room-reroll-append">
           <span className="room-reroll-index">{rerolls.rows.length + 1}</span>
           <ContextualPicker<string>
-            ariaLabel="New reroll door"
+            ariaLabel={`New reroll ${noun.lower}`}
             {...(lockedHint === undefined ? {} : { disabledHint: lockedHint })}
             id={`${idPrefix}-target`}
-            label="Door"
+            label={noun.label}
             layout="inline"
             model={lockedHint === undefined ? targets : emptyTargets}
             onSelect={setPendingTarget}
-            placeholder="Choose door"
+            placeholder={`Choose ${noun.lower}`}
             {...(targets.selected === undefined ? {} : { triggerLabel: targets.selected.label })}
           />
           {pending === undefined ? (
             <ContextualPicker<string>
               ariaLabel="New reroll reward"
-              disabledHint={lockedHint ?? 'Choose the door first.'}
+              disabledHint={lockedHint ?? `Choose the ${noun.lower} first.`}
               id={`${idPrefix}-reward`}
               label="Reward"
               layout="inline"

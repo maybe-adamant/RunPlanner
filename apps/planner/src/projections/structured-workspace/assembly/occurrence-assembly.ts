@@ -95,7 +95,7 @@ import {
 } from './occurrence-actions-assembly';
 import { assembleOccurrenceFeatures } from './occurrence-features-assembly';
 import { assemblePhantomExit } from './phantom-exit-assembly';
-import { rerollMovedOnTimeline } from './reroll-assembly';
+import { assembleWheelRerolls, rerollMovedOnTimeline } from './reroll-assembly';
 import { occurrenceInteractionRequirements } from './occurrence-interaction-requirements';
 import { roomWorkbenchPresentation } from './occurrence-room-workbench';
 import { resourceOutcomeLabel } from './resource-labels';
@@ -260,6 +260,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly findingsFor?: (
     owner: import('@run-planner/engine/authored-project').SemanticAddress,
   ) => readonly import('@run-planner/engine/simulation').SemanticFinding[];
+  /** The engine's reroll surfaces and pool, for a ship room's wheel rerolls. */
+  readonly rerollSource?: import('./reroll-assembly').WorkspaceRerollSource;
   /** Names this room's door and cage reroll targets in its Timeline rows. */
   readonly rerollTargetLabel?: import('./occurrence-action-label').WorkspaceDoorRerollTargetLabel;
   /** The engine settlement of this room's hidden door, when it declares one. */
@@ -571,7 +573,36 @@ export function assembleWorkspaceOccurrence(
             spawned: occurrence.eris !== undefined,
           });
         })();
-  const workbench = roomWorkbenchPresentation(encounterPhases, features, roomLocal, roomActions);
+  const wheelRerollRequirements: Extract<
+    import('../interactions/interaction-requirements').WorkspaceOccurrenceInteractionRequirement,
+    { readonly kind: 'roomRerolls' }
+  >[] = [];
+  const workbench = ((presented) => {
+    if (presented.kind !== 'ship' || input.rerollSource === undefined) return presented;
+    const rerollSource = input.rerollSource;
+    return Object.freeze({
+      ...presented,
+      phases: Object.freeze(
+        presented.phases.map((phase) => {
+          if (phase.wheel === undefined || phase.wheelTab === undefined) return phase;
+          const wheel = assembleWheelRerolls({
+            catalog: input.catalog,
+            markerDestinations: input.markerDestinations,
+            occurrence: input.occurrence,
+            source: rerollSource,
+            tab: phase.wheelTab,
+            wheel: phase.wheel,
+          });
+          if (wheel.requirement !== undefined) wheelRerollRequirements.push(wheel.requirement);
+          return Object.freeze({
+            ...phase,
+            wheel: wheel.wheel,
+            ...(wheel.rerolls === undefined ? {} : { wheelRerolls: wheel.rerolls }),
+          });
+        }),
+      ),
+    });
+  })(roomWorkbenchPresentation(encounterPhases, features, roomLocal, roomActions));
   const localDetailMarkers = Object.freeze([
     ...encounterPhases.flatMap((phase) => [
       phase.marker,
@@ -1036,19 +1067,27 @@ export function assembleWorkspaceOccurrence(
           mark?.control,
         );
       }
-      // Door and cage rerolls are edited in the Rerolls list beside the doors.
+      // Rerolls are edited in their list: beside the doors, or on their wheel's tab.
+      const rerollTarget =
+        row.reference.kind === 'reroll' && !rerollMovedOnTimeline(input, row.address)
+          ? row.reference.target
+          : undefined;
+      const wheelTab =
+        rerollTarget?.kind === 'wheelOffer' && workbench.kind === 'ship'
+          ? workbench.phases.find((phase) => phase.wheel?.key === rerollTarget.wheelKey)?.wheelTab
+          : undefined;
       const tab =
-        row.reference.kind === 'reroll' &&
-        row.reference.target.kind !== 'wheelOffer' &&
-        !rerollMovedOnTimeline(input, row.address)
+        rerollTarget !== undefined && rerollTarget.kind !== 'wheelOffer'
           ? ('doors' as const)
-          : roomLocal.kind === 'ship'
-            ? (shipActionTabs.get(row.key) ??
-              (workbench.kind === 'ship' &&
-              workbench.repairRows.some((repair) => repair.key === row.key)
-                ? 'shipInactiveRepair'
-                : undefined))
-            : 'actions';
+          : wheelTab !== undefined
+            ? wheelTab
+            : roomLocal.kind === 'ship'
+              ? (shipActionTabs.get(row.key) ??
+                (workbench.kind === 'ship' &&
+                workbench.repairRows.some((repair) => repair.key === row.key)
+                  ? 'shipInactiveRepair'
+                  : undefined))
+              : 'actions';
       if (tab === undefined) {
         throw new StructuredWorkspaceProjectionContractError(
           `Ship action ${row.key} has no rendered timeline destination`,
@@ -1086,7 +1125,7 @@ export function assembleWorkspaceOccurrence(
         input.markerDestinations.setRoomTab(wheelMarkers, 'overview');
         continue;
       }
-      const tab: WorkspaceRoomTab = workbenchPhase!.tab;
+      const tab: WorkspaceRoomTab = workbenchPhase!.wheelTab ?? workbenchPhase!.tab;
       input.markerDestinations.setRoomTab(wheelMarkers, tab);
       const choice = roomActions?.rows.find(
         (row) => row.reference.kind === 'chooseRewardWheel' && row.reference.wheelKey === wheel.key,
@@ -1115,6 +1154,7 @@ export function assembleWorkspaceOccurrence(
   const localInteractionRequirements = Object.freeze([
     ...occurrenceInteractionRequirements(input.catalog, roomSummary),
     ...(phantomExit === undefined ? [] : [phantomExit.requirement]),
+    ...wheelRerollRequirements,
   ]);
   input.markerDestinations.redirect(workspaceOccurrenceOwnedMarkers(node.room), node.key);
   return Object.freeze({

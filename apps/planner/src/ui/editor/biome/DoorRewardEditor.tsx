@@ -111,8 +111,12 @@ export function RewardSurfaceEditor({
   );
 }
 
-/** A rerolled door reward's final draw, and the repair of a kept reward that no longer matches. */
-function RerolledRewardLine({ reward }: { readonly reward: WorkspaceDoorReward }) {
+/** A rerolled reward's final draw, and the repair of a kept reward that no longer matches. */
+export function RerolledRewardLine({
+  reward,
+}: {
+  readonly reward: Pick<WorkspaceDoorReward, 'rerolledRewardRepair' | 'rerolledSummary'>;
+}) {
   const executeIntent = useCommandIntent();
   const findingMark = useFindingMark();
   const repair = reward.rerolledRewardRepair;

@@ -22,6 +22,7 @@ import { RoomActionsWorkbench, type TimelineBoundaryContent } from './Occurrence
 import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRoomWorkbench';
 import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 import { LocalVisitWorkbench } from './locals/LocalVisitWorkbench';
+import { RewardWheelWorkbench } from './locals/RewardWheelWorkbench';
 import { hintProps } from '@planner/ui/controls/hint';
 
 interface OccurrenceWorkbenchProps {
@@ -112,7 +113,9 @@ export function OccurrenceWorkbench({
     ...(localVisit === undefined ? [] : (['sideRooms'] as const)),
     ...(room.workbench.kind === 'fields' ? (['layout'] as const) : []),
     ...(room.workbench.kind === 'ship'
-      ? room.workbench.phases.map((phase) => phase.tab)
+      ? room.workbench.phases.flatMap((phase) =>
+          phase.wheelTab === undefined ? [phase.tab] : [phase.tab, phase.wheelTab],
+        )
       : ['actions' as const]),
     ...(room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0
       ? (['shipInactiveRepair'] as const)
@@ -166,6 +169,10 @@ export function OccurrenceWorkbench({
     </button>
   );
   const heading = room.label;
+  const wheelPhase =
+    room.workbench.kind === 'ship'
+      ? room.workbench.phases.find((phase) => phase.wheelTab === activeTab)
+      : undefined;
   const tabRunState = room.runStateByTab[activeTab];
   const showTimelineLegend =
     activeTab === 'actions' ||
@@ -238,9 +245,12 @@ export function OccurrenceWorkbench({
           {localVisit === undefined ? null : tabButton('sideRooms', 'Side Rooms')}
           {room.workbench.kind === 'fields' ? tabButton('layout', 'Room Layout') : null}
           {room.workbench.kind === 'ship'
-            ? room.workbench.phases.map((phase) =>
+            ? room.workbench.phases.flatMap((phase) => [
                 tabButton(phase.tab, `${phase.label} Timeline`, phase.key),
-              )
+                ...(phase.wheelTab === undefined
+                  ? []
+                  : [tabButton(phase.wheelTab, `${phase.label} Wheels`, `${phase.key}-wheels`)]),
+              ])
             : tabButton('actions', 'Room Timeline')}
           {room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0
             ? tabButton('shipInactiveRepair', 'Inactive Actions')
@@ -303,6 +313,13 @@ export function OccurrenceWorkbench({
           />
         ) : activeTab === 'doors' ? (
           (doors ?? <p className="fixed-room-state">No outgoing doors for this room.</p>)
+        ) : wheelPhase?.wheel !== undefined ? (
+          <RewardWheelWorkbench
+            interactions={interactions}
+            occurrence={room.address}
+            {...(wheelPhase.wheelRerolls === undefined ? {} : { rerolls: wheelPhase.wheelRerolls })}
+            wheel={wheelPhase.wheel}
+          />
         ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (
           <RoomActionsWorkbench
             {...(room.workbench.roomActions === undefined

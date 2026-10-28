@@ -631,13 +631,17 @@ export function controlsForOccurrence(
             declaration.key,
             offerKey,
           );
+          const rerolled = wheel.rerolledOffers?.[offerKey];
           controls.push(
-            rewardControl(
-              input,
-              { kind: 'rewardWheelOffer', address },
-              declaration.reward,
-              offer?.offer ?? null,
-              offer,
+            withRerolledReward(
+              rewardControl(
+                input,
+                { kind: 'rewardWheelOffer', address },
+                declaration.reward,
+                offer?.offer ?? null,
+                rerolled ?? offer,
+              ),
+              rerolled,
             ),
           );
         }

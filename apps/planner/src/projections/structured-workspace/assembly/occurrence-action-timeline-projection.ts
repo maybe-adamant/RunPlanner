@@ -192,12 +192,7 @@ function projectRoomLifecycleTimeline(
         ? encounterSupplement(phase, cageLabelByBoundaryKey.has(boundary.key))
         : undefined;
     }
-    if (boundary.kind === 'nextPhase' && roomLocal.kind === 'ship') {
-      const wheel = roomLocal.wheels.find((candidate) => candidate.key === boundary.wheelKey);
-      return wheel === undefined
-        ? undefined
-        : Object.freeze({ kind: 'rewardWheel' as const, wheel });
-    }
+    // A wheel is edited on its own tab; its Next phase boundary stays a read-only marker.
     return undefined;
   };
   const supplementForAction = (action: (typeof timeline.entries)[number]) => {

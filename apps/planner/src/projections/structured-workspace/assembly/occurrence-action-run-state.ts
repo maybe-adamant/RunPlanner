@@ -38,6 +38,23 @@ export function roomTabForPhase(roomLocal: WorkspaceRoomLocal, phaseKey: string)
   }
 }
 
+/** The tab of the wheel chosen after a phase: Intro Wheels, then Combat 1 Wheels. */
+export function wheelTabAfterPhase(
+  roomLocal: Extract<WorkspaceRoomLocal, { readonly kind: 'ship' }>,
+  phaseKey: string,
+): Extract<WorkspaceRoomTab, 'shipIntroWheels' | 'shipCombat1Wheels'> {
+  switch (roomLocal.phases.findIndex((phase) => phase.key === phaseKey)) {
+    case 0:
+      return 'shipIntroWheels';
+    case 1:
+      return 'shipCombat1Wheels';
+    default:
+      throw new StructuredWorkspaceProjectionContractError(
+        `Ship phase ${phaseKey} precedes no wheel`,
+      );
+  }
+}
+
 export function runStateLauncher(
   input: WorkspaceOccurrenceActionsInput,
   owner: RoomRunStateCheckpointAddress,
@@ -78,6 +95,12 @@ export function assembleOccurrenceRunState(
     if (roomLocal.kind === 'ship' && entry.boundary.kind === 'encounterStart') {
       const tab = roomTabForPhase(roomLocal, entry.boundary.phaseKey);
       byTab[tab] = entry.runState;
+      // A wheel tab shows the run as the combat its pick leads into begins.
+      const phaseKey = entry.boundary.phaseKey;
+      const index = roomLocal.phases.findIndex((phase) => phase.key === phaseKey);
+      const previous = roomLocal.phases[index - 1];
+      if (previous !== undefined && roomLocal.phases[index]?.rewardWheelKey !== undefined)
+        byTab[wheelTabAfterPhase(roomLocal, previous.key)] = entry.runState;
       if (byTab.overview === undefined) {
         byTab.overview = entry.runState;
       }

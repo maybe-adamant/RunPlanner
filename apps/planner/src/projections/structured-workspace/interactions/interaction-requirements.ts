@@ -391,6 +391,9 @@ export interface WorkspaceStartInteractionRequirement {
 function occurrenceInteractionRequirementKey(
   requirement: WorkspaceOccurrenceInteractionRequirement,
 ): string {
+  // One room holds a list for its doors and one for each wheel.
+  if (requirement.kind === 'roomRerolls')
+    return `${requirement.kind}:${requirement.interactionKey}`;
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }
 

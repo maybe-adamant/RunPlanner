@@ -5,6 +5,7 @@ import {
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
   type WorkspaceRewardWheelDescriptor,
+  type WorkspaceRoomRerolls,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
@@ -18,15 +19,20 @@ import {
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { CandidatePicker } from '../CandidatePicker';
+import { RerolledRewardLine } from '../DoorRewardEditor';
+import { RoomRerolls } from '../RoomRerolls';
 import { hintProps } from '@planner/ui/controls/hint';
 
 export function RewardWheelWorkbench({
   interactions,
   occurrence,
+  rerolls,
   wheel,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly occurrence: OccurrenceAddress;
+  /** The wheel's offer rerolls, appended before the pick. */
+  readonly rerolls?: WorkspaceRoomRerolls;
   readonly wheel: WorkspaceRewardWheelDescriptor;
 }) {
   const findingAnchor = useFindingAnchor();
@@ -188,11 +194,13 @@ export function RewardWheelWorkbench({
                     idPrefix={`${idPrefix}-${offer.key}`}
                     interactions={interactions}
                   />
+                  <RerolledRewardLine reward={offer} />
                 </div>
               </section>
             );
           })}
       </div>
+      {rerolls === undefined ? null : <RoomRerolls interactions={interactions} rerolls={rerolls} />}
     </section>
   );
 }

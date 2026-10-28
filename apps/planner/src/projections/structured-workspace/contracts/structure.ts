@@ -214,10 +214,12 @@ export interface WorkspaceRerollRow {
   readonly reward: ResolvedRewardOffer;
 }
 
-/** A room's door and cage rerolls in action order, with a press appended at the end. */
+/** One surface's presses in action order, with a press appended at the end. */
 export interface WorkspaceRoomRerolls {
   readonly owner: OccurrenceAddress;
   readonly interactionKey: string;
+  /** What a press names: a door (or its cage) or a wheel offer. */
+  readonly targetNoun: 'door' | 'offer';
   /** The run's pool at the append point; absent while unreached. */
   readonly poolRemaining?: number;
   readonly rows: readonly WorkspaceRerollRow[];

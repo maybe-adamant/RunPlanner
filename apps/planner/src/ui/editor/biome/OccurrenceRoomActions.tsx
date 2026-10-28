@@ -17,7 +17,6 @@ import {
   type WorkspaceRoomActions,
   type WorkspaceRoomLifecycleBoundary,
   type WorkspaceRoomLifecycleTimelineEntry,
-  type WorkspaceRewardWheelDescriptor,
   type WorkspaceShipPhasePresentation,
 } from '@planner/projections/structured-workspace';
 import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindingTarget';
@@ -107,7 +106,6 @@ export function RoomActionsWorkbench({
   idPrefix,
   interactions,
   renderEncounterPhase,
-  renderRewardWheel,
   renderRowContent,
   renderBoundaryContent,
   mode,
@@ -119,7 +117,6 @@ export function RoomActionsWorkbench({
   readonly interactions: WorkspaceInteractionCatalog;
   /** Encounter/reward owner supplies these leaves without a reverse import. */
   readonly renderEncounterPhase?: (phase: WorkspaceEncounterPhase) => ReactNode;
-  readonly renderRewardWheel?: (wheel: WorkspaceRewardWheelDescriptor) => ReactNode;
   /** Consumer-owned leaf editor for one exact shared timeline row. */
   readonly renderRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   readonly renderBoundaryContent?: (
@@ -333,7 +330,6 @@ export function RoomActionsWorkbench({
   ): ReactNode => {
     if (supplement === undefined) return null;
     if (supplement.kind === 'encounter') return renderEncounterPhase?.(supplement.phase) ?? null;
-    if (supplement.kind === 'rewardWheel') return renderRewardWheel?.(supplement.wheel) ?? null;
     const interaction = interactions.nemesisEvents.get(workspaceInteractionKey(supplement.owner));
     return interaction === undefined ? null : (
       <NemesisInteractionEditor interaction={interaction} />
@@ -413,7 +409,7 @@ export function RoomActionsWorkbench({
           dropIndex={entry.dropIndex}
           editors={
             <>
-              {entry.supplement?.kind === 'rewardWheel' ? null : renderSupplement(entry.supplement)}
+              {renderSupplement(entry.supplement)}
               {content?.editors}
             </>
           }
@@ -430,10 +426,7 @@ export function RoomActionsWorkbench({
             : {})}
           {...(targetState === undefined ? {} : { dropState: targetState })}
         />
-        {entry.supplement?.kind === 'rewardWheel' ? (
-          // A multi-line editor attached to a band continues below it across the row.
-          <TimelineRow kind="continuation" label={renderSupplement(entry.supplement)} span="wide" />
-        ) : null}
+
         {content?.rows}
         {entry.boundary.kind === 'encounterStart'
           ? null

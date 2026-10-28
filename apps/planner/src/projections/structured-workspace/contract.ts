@@ -508,7 +508,11 @@ export interface WorkspaceShipPhasePresentation {
   readonly timeline: readonly WorkspaceRoomLifecycleTimelineEntry[];
   /** Active optional actions owned by this phase but not yet inserted. */
   readonly optionalRows: readonly WorkspaceRoomActionRow[];
+  /** The active wheel chosen after this phase, edited on its own tab after this one. */
   readonly wheel?: WorkspaceRewardWheelDescriptor;
+  readonly wheelTab?: Extract<WorkspaceRoomTab, 'shipIntroWheels' | 'shipCombat1Wheels'>;
+  /** The wheel's offer rerolls, where it can or did reroll. */
+  readonly wheelRerolls?: import('./contracts/structure').WorkspaceRoomRerolls;
 }
 
 /** Closed, render-ready composition for one direct occurrence workbench. */

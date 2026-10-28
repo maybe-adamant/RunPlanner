@@ -150,7 +150,7 @@ describe('native settings whose candidate context is unreached, on first render'
       return decodeProjectDocument(raw, catalog);
     })();
     renderOccurrenceWorkbench(frontier, 'Surface', 'O', occurrenceById(occurrenceId));
-    openRoomTab('Intro Timeline');
+    openRoomTab('Intro Wheels');
     const count = screen.getByRole('radiogroup', { name: 'Offers' });
     expect(
       within(count)

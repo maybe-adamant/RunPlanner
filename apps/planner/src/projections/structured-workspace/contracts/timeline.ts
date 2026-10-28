@@ -19,7 +19,7 @@ import type { WorkspaceMarker } from './navigation';
 import type { WorkspaceRunStateLauncher } from './run-state';
 import type { WorkspaceLevelResolutionControl, WorkspaceTraitOfferControl } from './traits';
 import type { WorkspaceRewardControl } from './rewards';
-import type { WorkspaceEncounterPhase, WorkspaceRewardWheelDescriptor } from './locals';
+import type { WorkspaceEncounterPhase } from './locals';
 import type { NemesisRandomEventAddress } from '@run-planner/engine/authored-project';
 import type { WorkspaceCommandIntent, WorkspaceInteractionChoice } from '../contract';
 import type { WorkspaceShopSupplementalDescriptor } from './commerce';
@@ -198,17 +198,15 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly placement: 'before' | 'after';
       readonly runState?: WorkspaceRunStateLauncher;
       /** Exact projected child placed at this lifecycle seam. */
-      readonly supplement?:
-        | {
-            readonly kind: 'encounter';
-            readonly phase: WorkspaceEncounterPhase;
-            /**
-             * Settled identity named in the banner of a definitional encounter start; absent
-             * for an encounter settled on entry by interaction (Nemesis event, Empty).
-             */
-            readonly identityLabel?: string;
-          }
-        | { readonly kind: 'rewardWheel'; readonly wheel: WorkspaceRewardWheelDescriptor };
+      readonly supplement?: {
+        readonly kind: 'encounter';
+        readonly phase: WorkspaceEncounterPhase;
+        /**
+         * Settled identity named in the banner of a definitional encounter start; absent
+         * for an encounter settled on entry by interaction (Nemesis event, Empty).
+         */
+        readonly identityLabel?: string;
+      };
       /** Read-only identity of the cage assigned to this encounter cycle. */
       readonly fieldsCage?: WorkspaceFieldsCageLabel;
     }

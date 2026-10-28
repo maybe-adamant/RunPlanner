@@ -1345,21 +1345,6 @@
   grid-column: 5;
 }
 
-/* A wide row is one card: its label cell carries the whole editor from the handle column. */
-.timeline-row[data-timeline-span='wide'] > [data-timeline-cell='label'] {
-  grid-column: 1 / -1;
-}
-
-.timeline-row[data-timeline-span='wide']
-  > :is(
-    [data-timeline-cell='handle'],
-    [data-timeline-cell='ordinal'],
-    [data-timeline-cell='editors'],
-    [data-timeline-cell='actions']
-  ) {
-  display: none;
-}
-
 /* Lifecycle banners read as headings: their title starts at the handle column. */
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
   > :is([data-timeline-cell='handle'], [data-timeline-cell='ordinal']) {
@@ -1388,18 +1373,15 @@
   }
 
   /* A row without editors keeps its actions on its single line. */
-  .timeline-row:not([data-timeline-span='wide']):has(> [data-timeline-cell='editors']:empty)
-    > [data-timeline-cell='label'] {
+  .timeline-row:has(> [data-timeline-cell='editors']:empty) > [data-timeline-cell='label'] {
     grid-column: 3 / 5;
   }
 
-  .timeline-row:not([data-timeline-span='wide']):has(> [data-timeline-cell='editors']:empty)
-    > [data-timeline-cell='editors'] {
+  .timeline-row:has(> [data-timeline-cell='editors']:empty) > [data-timeline-cell='editors'] {
     display: none;
   }
 
-  .timeline-row:not([data-timeline-span='wide']):has(> [data-timeline-cell='editors']:empty)
-    > [data-timeline-cell='actions'] {
+  .timeline-row:has(> [data-timeline-cell='editors']:empty) > [data-timeline-cell='actions'] {
     grid-row: 1;
   }
 
@@ -1558,7 +1540,7 @@
   background: transparent;
 }
 
-.timeline-row[data-timeline-row-kind='continuation']:not([data-timeline-span='wide']) {
+.timeline-row[data-timeline-row-kind='continuation'] {
   border-top-style: dashed;
   border-top-color: rgb(174 152 202 / 24%);
   background: rgb(18 19 24 / 44%);
@@ -1571,7 +1553,7 @@
 
 .timeline-row:is(
     [data-timeline-row-kind='insertion'],
-    [data-timeline-row-kind='continuation']:not([data-timeline-span='wide'])
+    [data-timeline-row-kind='continuation']
   )::before {
   content: none;
 }
