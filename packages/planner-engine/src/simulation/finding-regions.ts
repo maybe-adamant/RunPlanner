@@ -45,8 +45,14 @@ export function findingIdentityKey(finding: SemanticFinding): string {
     finding.code,
     finding.phase,
     semanticAddressKey(finding.origin),
-    sortFindingEvidence(finding.evidence),
+    sortFindingEvidence(identityEvidence(finding.evidence)),
   ]);
+}
+
+/** Repair hints describe a finding without distinguishing it. */
+function identityEvidence(evidence: SemanticFinding['evidence']): SemanticFinding['evidence'] {
+  if (!('phantomExitDraws' in evidence)) return evidence;
+  return Object.fromEntries(Object.entries(evidence).filter(([key]) => key !== 'phantomExitDraws'));
 }
 
 function sortFindingEvidence(value: unknown): unknown {

@@ -52,6 +52,29 @@ function semanticAddressEvidence(origin: SemanticAddress): FindingEvidence {
   return Object.freeze({ ...origin }) as FindingEvidence;
 }
 
+/**
+ * Earlier hidden return doors in this biome that drew from the same store on a
+ * reached branch, naming an alternative repair for an unavailable bag entry.
+ */
+function phantomExitDrawEvidence(
+  branches: readonly RewardBranchState[],
+  origin: SemanticAddress,
+  storeKey: string | undefined,
+): FindingEvidence {
+  if (storeKey === undefined || !('biomeKey' in origin)) return {};
+  const draws = new Map<string, FindingEvidence>();
+  for (const branch of branches)
+    for (const event of branch.events)
+      if (
+        event.kind === 'rewardOffered' &&
+        event.storeKey === storeKey &&
+        event.origin.kind === 'phantomExit' &&
+        event.origin.biomeKey === origin.biomeKey
+      )
+        draws.set(semanticAddressKey(event.origin), semanticAddressEvidence(event.origin));
+  return draws.size === 0 ? {} : { phantomExitDraws: Object.freeze([...draws.values()]) };
+}
+
 function resolvedOfferEvidence(offer: ResolvedRewardOffer): FindingEvidence {
   return Object.freeze({
     rewardType: offer.rewardType,
@@ -444,6 +467,7 @@ function processRewardOfferBranches(
       rewardFinding(code, reward.origin, {
         ...offerEvidence(reward.offer),
         storeKey: reward.resolvedStoreKey ?? null,
+        ...phantomExitDrawEvidence(branches, reward.origin, reward.resolvedStoreKey),
         ...(sawSiblingFailure
           ? {
               priorOffers: [...siblingConflicts.values()].map((peer) => ({

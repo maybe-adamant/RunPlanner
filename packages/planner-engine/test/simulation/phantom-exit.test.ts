@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createIncomingRewardAddress,
   createPhantomExitAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -217,6 +218,36 @@ describe('phantom exits', () => {
     expect(
       findings.filter((finding) => finding.code === 'phantomExitRewardUnavailable'),
     ).not.toEqual([]);
+  });
+
+  it('names the earlier hidden doors that drew from the store of an unavailable bag entry', () => {
+    const findingAt = (project: ProjectDocument, occurrenceId: string) =>
+      simulateProjectAssembly(catalog, project).evaluation.findings.find(
+        (finding) =>
+          finding.code === 'rewardBagEntryUnavailable' &&
+          semanticAddressKey(finding.origin) ===
+            semanticAddressKey(createIncomingRewardAddress(nBiome, occurrenceId as never)),
+      );
+    // SubRoomRewards holds one AirBoost; combat05's side exit takes it first.
+    const drawn = pin(loadSurfaceNProject(), side05, {
+      placeholderRoomGameName: 'N_Sub01',
+      rewardType: 'AirBoost',
+    });
+    const later = findingAt(drawn, nLocalOccurrenceId('combat02', 'sideDoor2'));
+    expect(later?.evidence).toMatchObject({
+      rewardType: 'AirBoost',
+      storeKey: 'SubRoomRewards',
+      phantomExitDraws: expect.arrayContaining([{ ...side05 }]),
+    });
+    // A collision before any hidden door draws names none.
+    const authored = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat05', 'sideDoor2')),
+      value: { rewardType: 'MaxManaDropSmall' },
+    });
+    const early = findingAt(authored, nLocalOccurrenceId('combat05', 'sideDoor2'));
+    expect(early?.evidence).toMatchObject({ storeKey: 'SubRoomRewards' });
+    expect(early?.evidence).not.toHaveProperty('phantomExitDraws');
   });
 
   it('answers reward candidates at the unlock and publishes the settled exit', () => {
