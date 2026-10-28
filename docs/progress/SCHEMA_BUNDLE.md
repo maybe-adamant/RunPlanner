@@ -105,10 +105,14 @@ promoted.
   target's current reward after the last reroll is what it offers onward: the
   next room's incoming reward, the entered reward, the wheel offers, the cage
   rewards.
-- **Hub board rerolls** are reroll actions in the Hub's ordered actions,
-  legal only before the first room visit: a restored Hub never re-flags its
-  doors (`RestoreUnlockRoomExits`; inferred, in-game check), and the board's
-  rewards persist across visits. Hub visits do not become occurrences.
+- **Hub board rerolls** are reroll actions in the Hub's ordered actions, legal
+  in any Hub stay for a board door not yet entered (an entered door is closed
+  for the run). `RestoreUnlockRoomExits` re-assigns every unentered door its
+  persisted offer (no store draw) and flags it again under the usual gate, so
+  the card is checked at each stay's assignment; a press is a real draw that
+  overwrites the persisted offer for later stays. On a restored board the
+  press excludes the door's offer as that stay assigned it and the current
+  rewards of the doors still open. Hub visits do not become occurrences.
 - **Legality:** candidates use the normal door legality, excluding the
   target's original reward and every door's (wheel's, cage's) current reward;
   each costs 1 from the pool and needs `AllowDoorReroll`. A door is
@@ -116,7 +120,7 @@ promoted.
   `ForceDoorAllowReroll`) and not the destination's `NoReroll` and not a Shop
   reward: N side and return doors, Story, Shop and Boss destinations never
   reroll; O and Q exits into `O_MiniBoss01`, `O_MiniBoss02`, `O_Reprieve01` and
-  `Q_BaseMiniBoss` do. First visit only.
+  `Q_BaseMiniBoss` do. First visit only, except Hub board doors (above).
 - **Editor (later):** this bundle lands the model and keeps today's editor
   working; a later projection and UI plan, with no schema change, adds one
   style for every reward-offering surface: a door-like section with the first
@@ -183,7 +187,7 @@ promoted.
 6. **Closure:** fresh independent review (schema and protocol change), full
    `npm run check`, design and audit updates, candidates investigation
    deleted, live checklist in `docs/testing/` (door reroll, wheel reroll, Hub reroll
-   only on the first visit,
+   on a later Hub visit,
    screen reroll, phantom exit, pedestal in a boon-form Preboss), plan
    deleted. Nothing is pushed before closure.
 

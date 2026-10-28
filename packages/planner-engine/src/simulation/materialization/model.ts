@@ -515,16 +515,21 @@ export interface CanonicalHubDecision {
   readonly visits: readonly CanonicalHubVisit[];
   /** Present once the fountain use is placed; absent while it is unplanned. */
   readonly fountain?: CanonicalHubFountainUse;
-  /** Board rerolls in authored order, pressed in the Hub's first entry. */
+  /** Board rerolls in authored order, each pressed in the Hub stay it is authored in. */
   readonly rerolls: readonly CanonicalHubReroll[];
 }
 
-/** One Hub board reroll; one authored after a room visit meets a restored board. */
+/** One Hub board reroll, pressed in the Hub after its preceding room visits returned. */
 export interface CanonicalHubReroll {
   readonly origin: import('../../authored-project/addresses').HubRerollAddress;
   readonly hubSlotKey: string;
   readonly reward: ResolvedRewardOffer;
-  readonly afterFirstVisit: boolean;
+  /** Room visits completed, including their Hub returns, before the press. */
+  readonly precedingVisitCount: number;
+  /** Whether the Hub fountain use precedes the press in the same stay. */
+  readonly afterFountain: boolean;
+  /** Whether its slot's room was entered before the press; that door is closed. */
+  readonly slotEntered: boolean;
 }
 
 /** The Hub fountain use, settled in the Hub after its preceding room visits. */

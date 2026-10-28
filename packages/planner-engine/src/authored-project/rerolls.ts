@@ -98,14 +98,19 @@ export function sourceRerolledOwners(
   );
 }
 
-/** The board-door rooms one Hub's rerolls redraw; a closed slot's reroll names no owner. */
+/**
+ * The board-door rooms one Hub's rerolls redraw; a closed slot's reroll names
+ * no owner, and a reroll after its slot's visit redraws nothing that visit saw.
+ */
 export function hubRerolledOwners(
   biome: BiomeAddress,
   hub: HubDecision,
 ): ReadonlyMap<string, OwnerRerolls> {
+  const entered = new Set<string>();
   return collectOwners(
     hub.actions.flatMap((action) => {
-      if (action.kind !== 'reroll') return [];
+      if (action.kind === 'roomVisit') entered.add(action.hubSlotKey);
+      if (action.kind !== 'reroll' || entered.has(action.hubSlotKey)) return [];
       const target = hub.openTargets.find(
         (candidate) => candidate.hubSlotKey === action.hubSlotKey,
       );

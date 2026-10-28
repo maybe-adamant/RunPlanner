@@ -19,6 +19,7 @@ import type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
   CanonicalHubDecision,
+  CanonicalHubReroll,
 } from '../../../materialization';
 import { forGeneration } from '../../../materialization';
 import {
@@ -64,6 +65,7 @@ export interface RerollTargetContext {
   readonly owner: RerolledRewardOwner;
   /** The key its current reward is tracked under: the origin its generation peers carry. */
   readonly peerKey: string;
+  /** Its reward when its doors were last assigned: the first draw, or a restored Hub's persisted offer. */
   readonly generated: ResolvedRewardOffer;
   readonly producerLifecycleKey: string;
   readonly resolvedStoreKey?: string;
@@ -200,14 +202,19 @@ export function roomTargetContext(
   });
 }
 
+/**
+ * A board door as a press in one Hub stay reads it. The first entry assigns
+ * the first draws; a restore re-assigns every unentered door its persisted
+ * offer, so the press excludes that offer and the current rewards of the
+ * doors still open, while entered doors are closed and count for nothing.
+ */
 export function hubTargetContext(
   catalog: Catalog,
   hub: CanonicalHubDecision,
-  hubSlotKey: string,
-  boardPeers: readonly OfferProcessingPeer[],
+  reroll: CanonicalHubReroll,
 ): RerollTargetContext | undefined {
   const sourceRoom = hub.room;
-  const slot = hub.board.targets.find((candidate) => candidate.hubSlotKey === hubSlotKey);
+  const slot = hub.board.targets.find((candidate) => candidate.hubSlotKey === reroll.hubSlotKey);
   const incoming = slot?.room.incomingReward;
   const sourceDeclaration = catalog.rooms.byKey[sourceRoom.gameName];
   const destination = slot === undefined ? undefined : catalog.rooms.byKey[slot.room.gameName];
@@ -219,6 +226,18 @@ export function hubTargetContext(
   )
     return undefined;
   const generated = forGeneration(incoming);
+  const assigned =
+    hub.rerolls
+      .filter(
+        (earlier) =>
+          earlier.hubSlotKey === reroll.hubSlotKey &&
+          !earlier.slotEntered &&
+          earlier.precedingVisitCount < reroll.precedingVisitCount,
+      )
+      .at(-1)?.reward ?? generated.offer;
+  const entered = new Set(
+    hub.visits.slice(0, reroll.precedingVisitCount).map((visit) => visit.target.hubSlotKey),
+  );
   const binding = countedBinding(destination, generated, slot.room.incomingRewardBinding);
   return Object.freeze({
     owner: createIncomingRewardAddress(
@@ -226,17 +245,24 @@ export function hubTargetContext(
       slot.room.occurrenceId,
     ),
     peerKey: semanticAddressKey(incoming.origin),
-    generated: generated.offer,
+    generated: assigned,
     producerLifecycleKey: incoming.producerLifecycleKey,
     ...(incoming.resolvedStoreKey === undefined
       ? {}
       : { resolvedStoreKey: incoming.resolvedStoreKey }),
     ...(binding === undefined ? {} : { binding }),
     ...(incoming.traitContext === undefined ? {} : { traitContext: incoming.traitContext }),
-    peers: boardPeers,
+    peers: Object.freeze(
+      hub.board.targets.flatMap((target) => {
+        const reward = target.room.incomingReward;
+        return reward === undefined || entered.has(target.hubSlotKey)
+          ? []
+          : [Object.freeze({ origin: reward.origin, offer: forGeneration(reward).offer })];
+      }),
+    ),
     excludesOriginal: true,
     // Board doors are ordinary exit doors; only the destination can refuse.
-    rerollable: doorRerollable(catalog, true, destination, generated.offer),
+    rerollable: doorRerollable(catalog, true, destination, assigned),
     source: sourceRoom,
     sourceDeclaration,
     peerCreationSource: 'hubTarget',
@@ -255,8 +281,8 @@ export function applyRewardRerolledTransition(inputs: {
   readonly owner: RoomActionAddress | HubRerollAddress;
   readonly reward: ResolvedRewardOffer | undefined;
   readonly target: RerollTargetContext | undefined;
-  /** Why a Hub reroll cannot act: after the first room visit the board is restored. */
-  readonly refused?: 'afterHubVisit';
+  /** Why a Hub reroll cannot act: its slot's room was entered and that door closed. */
+  readonly refused?: 'slotEntered';
   /** A held card enabled door rerolls when the target was assigned (AssignRoomToExitDoor). */
   readonly flagged: boolean;
   readonly historySequence: number;
@@ -289,8 +315,8 @@ export function applyRewardRerolledTransition(inputs: {
     throw new BiomeRewardSimulationContractError(
       `${semanticAddressKey(owner)} reached without its reroll`,
     );
-  if (inputs.refused === 'afterHubVisit')
-    return blocked('rerollTargetUnavailable', { reason: 'afterHubVisit' });
+  if (inputs.refused === 'slotEntered')
+    return blocked('rerollTargetUnavailable', { reason: 'slotEntered' });
   if (!inputs.flagged) return blocked('rerollUnavailable', { kind: 'doors' });
   if (target === undefined) return blocked('rerollTargetUnavailable', { reason: 'missing' });
   if (!target.rerollable) return blocked('rerollTargetUnavailable', { reason: 'notRerollable' });

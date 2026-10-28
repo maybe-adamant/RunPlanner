@@ -12,6 +12,7 @@ import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import { attestEncounterEntryVowRanks } from '../../arcana-fear';
 import type { HistoryEvent } from '../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '../../materialization';
+import { forGeneration } from '../../materialization';
 import { resourcePlacementFindingRegions } from '../../resources';
 import { addHubBoardRewardLookup, replaceHubBoardRewardLookup } from '../../state/reward-lookups';
 import {
@@ -156,7 +157,10 @@ const rewardRerolled: ChronologySeamHandler<'rewardRerolled'> = (context, state,
   };
 };
 
-/** One Hub board reroll, after the board generated and before the first room visit. */
+/**
+ * One Hub board reroll in the stay it is authored in. Its slot must still be
+ * open; the press redraws against the board as that stay assigned it.
+ */
 const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, state, event) => {
   const ownerKey = semanticAddressKey(event.owner);
   const hub = context.snapshot.decisions.find(
@@ -172,8 +176,8 @@ const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, 
     catalog: context.catalog,
     owner: event.owner,
     reward: reroll.reward,
-    target: hubTargetContext(context.catalog, hub, reroll.hubSlotKey, state.peers),
-    ...(reroll.afterFirstVisit ? { refused: 'afterHubVisit' as const } : {}),
+    target: hubTargetContext(context.catalog, hub, reroll),
+    ...(reroll.slotEntered ? { refused: 'slotEntered' as const } : {}),
     flagged: state.rerollsFlagged.get(rerollFlagKey(semanticAddressKey(hub.origin))) === true,
     historySequence: event.sequence,
     view: context.history.viewsBySequence[event.sequence - 1],
@@ -185,10 +189,21 @@ const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, 
     rerolledOffers: state.rerolledOffers,
   });
   const { progression } = context.prepared.layout;
-  const boardTypes = state.peers.map(
-    (peer) =>
-      (transition.rerolledOffers.get(semanticAddressKey(peer.origin)) ?? peer.offer).rewardType,
-  );
+  const boardTypes = hub.board.targets.flatMap((target) => {
+    const incoming = target.room.incomingReward;
+    return incoming === undefined
+      ? []
+      : [
+          (
+            transition.rerolledOffers.get(semanticAddressKey(incoming.origin)) ??
+            forGeneration(incoming).offer
+          ).rewardType,
+        ];
+  });
+  // Leaving the Hub adds its offered rewards to the lookup and never removes
+  // one, so only a press before the first departure replaces a first draw.
+  const updateLookup =
+    reroll.precedingVisitCount === 0 ? replaceHubBoardRewardLookup : addHubBoardRewardLookup;
   const branches =
     progression.kind !== 'hub' || transition.settlement?.poolRemainingAfter === undefined
       ? transition.branches
@@ -196,11 +211,7 @@ const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, 
           transition.branches.map((branch) =>
             Object.freeze({
               ...branch,
-              state: replaceHubBoardRewardLookup(
-                branch.state,
-                progression.rewardLookup.key,
-                boardTypes,
-              ),
+              state: updateLookup(branch.state, progression.rewardLookup.key, boardTypes),
             }),
           ),
         );
@@ -213,6 +224,27 @@ const hubRewardRerolled: ChronologySeamHandler<'hubRewardRerolled'> = (context, 
         ? []
         : [{ kind: 'rerollSettlement' as const, settlement: transition.settlement }]),
     ],
+  };
+};
+
+/** A restored Hub re-assigns its open board doors, flagging them again (AssignRoomToExitDoor). */
+const roomRestored: ChronologySeamHandler<'roomRestored'> = (context, state, event) => {
+  const advanced = withBranches(state, advanceRewardBranches(state.branches, event.sequence));
+  if (event.restoreKind !== 'hub') return { state: advanced, emissions: [] };
+  const hub = context.snapshot.decisions.find((decision) => decision.kind === 'hub');
+  return {
+    state:
+      hub === undefined
+        ? advanced
+        : Object.freeze({
+            ...advanced,
+            rerollsFlagged: flagRerolls(
+              context,
+              advanced,
+              rerollFlagKey(semanticAddressKey(hub.origin)),
+            ),
+          }),
+    emissions: [],
   };
 };
 
@@ -1288,7 +1320,7 @@ const chronologySeamTable: { readonly [K in HistoryEvent['kind']]: ChronologySea
     targetGenerationCompleted: { step: targetGenerationCompleted },
     emptyOutgoingGenerationCompleted: { step: advanceOnly },
     phantomExitCreated: { step: phantomExitCreated },
-    roomRestored: { step: advanceOnly },
+    roomRestored: { step: roomRestored },
     roomPrepared: { step: roomPrepared },
     offerPointMaterialized: { step: offerPointMaterialized },
     offerPointAcquired: { step: reachedOfferSettled },

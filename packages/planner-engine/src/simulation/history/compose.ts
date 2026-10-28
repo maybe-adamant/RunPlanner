@@ -381,27 +381,32 @@ function appendHubDecision(
     },
     deferDeparture: true,
   });
-  const appendFountainAfter = (visitCount: number): void => {
-    if (decision.fountain?.precedingVisitCount !== visitCount) return;
-    writer.append({
-      kind: 'fountainUsed',
-      origin: decision.room.origin,
-      owner: decision.fountain.origin,
-    });
+  // Each Hub stay presses its rerolls and the fountain in authored order.
+  const appendHubStay = (visitCount: number): void => {
+    const appendRerolls = (afterFountain: boolean): void => {
+      for (const reroll of decision.rerolls)
+        if (reroll.precedingVisitCount === visitCount && reroll.afterFountain === afterFountain)
+          writer.append({
+            kind: 'hubRewardRerolled',
+            origin: decision.room.origin,
+            owner: reroll.origin,
+          });
+    };
+    appendRerolls(false);
+    if (decision.fountain?.precedingVisitCount === visitCount)
+      writer.append({
+        kind: 'fountainUsed',
+        origin: decision.room.origin,
+        owner: decision.fountain.origin,
+      });
+    appendRerolls(true);
   };
-  // A restored board is never re-flagged rerollable, so every reroll is pressed here.
-  for (const reroll of decision.rerolls)
-    writer.append({
-      kind: 'hubRewardRerolled',
-      origin: decision.room.origin,
-      owner: reroll.origin,
-    });
-  appendFountainAfter(0);
+  appendHubStay(0);
   // Every visit ends by restoring the Hub; the first departure follows its commit.
   for (const [index, visit] of decision.visits.entries()) {
     appendDeparture(writer, decision.room, index > 0, 'newRoom');
     appendVisit(writer, catalog, visit, decision.room);
-    appendFountainAfter(visit.visitIndex);
+    appendHubStay(visit.visitIndex);
   }
   if (handoff === undefined) return decision.room;
   appendBatchState(writer, handoff);

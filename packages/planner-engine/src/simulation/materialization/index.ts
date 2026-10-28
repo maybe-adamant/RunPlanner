@@ -41,6 +41,7 @@ export type {
   MaterializedHubVisitFrontier,
   CanonicalHubBoard,
   CanonicalHubDecision,
+  CanonicalHubReroll,
   CanonicalHubRoom,
   CanonicalHubRoomReference,
   CanonicalHubTarget,

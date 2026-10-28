@@ -351,6 +351,26 @@ export function applyRerollCommand(
   }
 }
 
+/** Reconciles every slot a Hub's rerolls target after its actions were reordered. */
+export function reconcileHubRerolledRewards(
+  catalog: Catalog,
+  located: LocatedBiome,
+  topology: BiomeTopology,
+  hub: HubDecision,
+): BiomeTopology {
+  const biome = createBiomeAddress(located.routeKey, located.plan.biomeKey);
+  return reconcileRerolledRewards(
+    catalog,
+    located.routePosition,
+    biome,
+    topology,
+    hubRerolls(hub).flatMap((reroll) => {
+      const owner = slotOwner(biome, hub, reroll.hubSlotKey);
+      return owner === undefined ? [] : [owner];
+    }),
+  );
+}
+
 /** Reconciles the owner a removed or moved room reroll targeted. */
 export function reconcileRemovedOrMovedReroll(
   document: ProjectDocument,

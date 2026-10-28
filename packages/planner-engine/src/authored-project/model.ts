@@ -603,7 +603,7 @@ export interface HubTargetReference {
 
 /**
  * One ordered Hub action: a main-room visit through an open slot, the fountain
- * use, or a board-door reroll, which only the first entry allows.
+ * use, or a board-door reroll of a slot not yet entered, in any Hub stay.
  */
 export type HubAction =
   | { readonly kind: 'roomVisit'; readonly hubSlotKey: string }

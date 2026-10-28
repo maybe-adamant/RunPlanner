@@ -473,46 +473,96 @@ describe('Fields cage rerolls', () => {
 });
 
 describe('Hub board rerolls', () => {
-  it('redraw a board door before the first visit and refuse one after it', () => {
-    const n = createBiomeAddress('Surface', 'N');
-    const base = withArcana(loadSurfaceNProject(), ['DoorReroll']);
-    const hub = { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' } as const;
-    const inserted = applyProjectCommand(base, catalog, {
+  const n = createBiomeAddress('Surface', 'N');
+  const hub = { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' } as const;
+  const base = () => withArcana(loadSurfaceNProject(), ['DoorReroll']);
+  const hubActions = (project: ProjectDocument) => {
+    const decision = project.route.biomes[0]!.topology!.decisions.find(
+      (candidate) => candidate.kind === 'hub',
+    );
+    return decision?.kind === 'hub' ? decision.actions : [];
+  };
+  const hubFindings = (project: ProjectDocument) =>
+    evaluate(project)
+      .evaluation.findings.filter((finding) => finding.origin.kind === 'hubReroll')
+      .map((finding) => [finding.code, finding.evidence.reason]);
+  /** Inserts a press of one slot at an index of the Hub's actions and gives it a supported reward. */
+  function pressHub(project: ProjectDocument, hubSlotKey: string, index: number) {
+    const inserted = applyProjectCommand(project, catalog, {
       kind: 'InsertHubReroll',
       hub,
-      hubSlotKey: 'combat05',
+      hubSlotKey,
       reward: { rewardType: 'MaxHealthDrop' },
-      index: 0,
+      index,
     });
     const reroll = createHubRerollAddress(n, 'hub', 'r1');
     const reward = firstSupportedReroll(inserted, reroll, 'HubRewards');
-    const project = applyProjectCommand(inserted, catalog, {
-      kind: 'ReplaceHubRerollReward',
+    return {
       reroll,
       reward,
-    });
+      inserted,
+      project: applyProjectCommand(inserted, catalog, {
+        kind: 'ReplaceHubRerollReward',
+        reroll,
+        reward,
+      }),
+    };
+  }
+
+  it('redraw a board door before the first visit and refuse one after its slot was entered', () => {
+    const { project, reroll, reward } = pressHub(base(), 'combat05', 0);
     expect(rerollSettlementForProjectEvaluationAssembly(evaluate(project), reroll)).toMatchObject({
       reward,
       poolRemainingAfter: 2,
     });
     expect(rerollFindings(project)).toEqual([]);
 
-    const hubDecision = project.route.biomes[0]!.topology!.decisions.find(
-      (decision) => decision.kind === 'hub',
-    )!;
+    // combat05 is the first visit: once entered its door is closed for the run.
+    const actions = hubActions(project);
     const late = applyProjectCommand(project, catalog, {
       kind: 'ReplaceHubActionOrder',
       hub,
-      actions:
-        hubDecision.kind === 'hub'
-          ? [...hubDecision.actions.slice(1), hubDecision.actions[0]!]
-          : [],
+      actions: [...actions.slice(1), actions[0]!],
     });
+    expect(hubFindings(late)).toEqual([['rerollTargetUnavailable', 'slotEntered']]);
+    // The refused press redraws nothing the visit entered.
+    expect(occurrence(late, 'surface-n-combat05').rerolledIncomingReward).toBeUndefined();
+  });
+
+  it('redraw an unentered door on a restored board against the doors still open', () => {
+    // Visits: combat05, miniBoss01, combat02, combat11 (Ares), combat23, then combat09.
+    const ares = { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AresUpgrade' } };
+    const aresSupported = (index: number) =>
+      supportedRerollRewards(
+        applyProjectCommand(base(), catalog, {
+          kind: 'InsertHubReroll',
+          hub,
+          hubSlotKey: 'combat09',
+          reward: { rewardType: 'MaxHealthDrop' },
+          index,
+        }),
+        createHubRerollAddress(n, 'hub', 'r1'),
+        ['Boon'],
+      ).some((offer) => JSON.stringify(offer) === JSON.stringify(ares));
+    // combat11's open door offers Ares; once entered, that door is closed and counts for nothing.
+    expect(aresSupported(4)).toBe(false);
+    expect(aresSupported(5)).toBe(true);
+
+    const later = pressHub(base(), 'combat09', 5);
     expect(
-      evaluate(late)
-        .evaluation.findings.filter((finding) => finding.origin.kind === 'hubReroll')
-        .map((finding) => [finding.code, finding.evidence.reason]),
-    ).toEqual([['rerollTargetUnavailable', 'afterHubVisit']]);
+      rerollSettlementForProjectEvaluationAssembly(evaluate(later.project), later.reroll),
+    ).toMatchObject({ reward: later.reward, poolRemainingAfter: 2 });
+    expect(rerollFindings(later.project)).toEqual([]);
+    // The visit enters the reward the restored board's press drew.
+    expect(occurrence(later.project, 'surface-n-combat09').rerolledIncomingReward?.offer).toEqual(
+      later.reward,
+    );
+  });
+
+  it('need a door-reroll card held when a restored board is assigned', () => {
+    const project = pressHub(base(), 'combat09', 2).project;
+    const unflagged = withArcana(project, []);
+    expect(hubFindings(unflagged)).toEqual([['rerollUnavailable', undefined]]);
   });
 });
 

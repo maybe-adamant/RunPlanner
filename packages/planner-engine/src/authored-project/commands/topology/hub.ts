@@ -27,6 +27,7 @@ import type { TopologyCommand } from '../types';
 import { replaceDecision, appendDecision, appendOccurrence, updateTopology } from './construction';
 import { defaultOccurrence } from '../../topology/construction';
 import { appendCompletedHubChain } from './takeover';
+import { reconcileHubRerolledRewards } from '../rerolls';
 
 function terminalHubEnvelope(source: ExitDecisionSource): ExitDecision {
   return Object.freeze({
@@ -345,17 +346,16 @@ export function updateHub(
   // no outcome survives once the use itself is no longer planned.
   const { fountainRarityResult, ...withoutOutcome } = hub;
   const fountainUsed = actions.some((action) => action.kind === 'useFountain');
+  const reordered: HubDecision = Object.freeze({
+    ...withoutOutcome,
+    actions: Object.freeze(actions),
+    ...(fountainUsed && fountainRarityResult !== undefined ? { fountainRarityResult } : {}),
+  });
+  // A slot's rerolls after its visit no longer redraw what that visit enters.
   return updateTopology(
     document,
     located,
-    replaceDecision(
-      topology,
-      Object.freeze({
-        ...withoutOutcome,
-        actions: Object.freeze(actions),
-        ...(fountainUsed && fountainRarityResult !== undefined ? { fountainRarityResult } : {}),
-      }),
-    ),
+    reconcileHubRerolledRewards(catalog, located, replaceDecision(topology, reordered), reordered),
   );
 }
 

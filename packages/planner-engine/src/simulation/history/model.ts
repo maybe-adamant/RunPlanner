@@ -187,7 +187,7 @@ export interface HubFountainUsedHistoryEvent extends HistoryEventBase {
   readonly owner: HubFountainAddress;
 }
 
-/** One Hub board reroll, pressed in the Hub's first entry after its board generates. */
+/** One Hub board reroll, pressed in the Hub's first entry or a restored stay. */
 export interface HubRewardRerolledHistoryEvent extends HistoryEventBase {
   readonly kind: 'hubRewardRerolled';
   readonly origin: HubRoomAddress;

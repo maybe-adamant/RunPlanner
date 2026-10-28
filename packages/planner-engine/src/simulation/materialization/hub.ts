@@ -358,20 +358,24 @@ export function materializeHubDecision(
     loadout,
   );
   const precedingVisitCount = hubFountainPrecedingVisitCount(decision);
-  const firstVisitIndex = decision.actions.findIndex((action) => action.kind === 'roomVisit');
   const rerolls = Object.freeze(
-    decision.actions.flatMap((action, index) =>
-      action.kind === 'reroll'
-        ? [
-            Object.freeze({
-              origin: createHubRerollAddress(biome, descriptor.hubKey, action.rerollId),
-              hubSlotKey: action.hubSlotKey,
-              reward: action.reward,
-              afterFirstVisit: firstVisitIndex >= 0 && index > firstVisitIndex,
-            }),
-          ]
-        : [],
-    ),
+    decision.actions.flatMap((action, index) => {
+      if (action.kind !== 'reroll') return [];
+      const before = decision.actions.slice(0, index);
+      const visited = before.flatMap((earlier) =>
+        earlier.kind === 'roomVisit' ? [earlier.hubSlotKey] : [],
+      );
+      return [
+        Object.freeze({
+          origin: createHubRerollAddress(biome, descriptor.hubKey, action.rerollId),
+          hubSlotKey: action.hubSlotKey,
+          reward: action.reward,
+          precedingVisitCount: visited.length,
+          afterFountain: before.some((earlier) => earlier.kind === 'useFountain'),
+          slotEntered: visited.includes(action.hubSlotKey),
+        }),
+      ];
+    }),
   );
   return Object.freeze({
     kind: 'hub',
