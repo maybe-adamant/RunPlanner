@@ -71,6 +71,7 @@ local CORPUS = {
     ["surface-n-opening-composition.execution.json"] = "fece190d",
     ["surface-n-phial-intermediate-fountain.execution.json"] = "7d62e687",
     ["surface-n.execution.json"] = "ae2334f1",
+    ["surface-no-rerolls.execution.json"] = "9aaf6325",
     ["surface-nopq.execution.json"] = "656bbb91",
     ["surface-q-shop-correlation.execution.json"] = "86cd780f",
     ["surface-scheduled-lifecycle.execution.json"] = "7bd49638",
@@ -100,7 +101,7 @@ function TestFingerprint.testEveryExecutionFixtureKeepsItsFingerprint()
         lu.assertEquals(p.fingerprint(assert(p.json.decode(source))), expected, name)
         count = count + 1
     end
-    lu.assertEquals(count, 38)
+    lu.assertEquals(count, 39)
 end
 
 function TestFingerprint.testAsciiAndMultibyteStringsHashTheirBytes()
