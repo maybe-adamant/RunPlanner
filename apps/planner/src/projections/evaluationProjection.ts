@@ -671,7 +671,7 @@ export function presentFinding(finding: SemanticFinding): FindingPresentation {
     if (finding.evidence.reason === 'infernalContractNotHeld') {
       return Object.freeze({
         title: 'No Champion item without Champion of Elysium',
-        description: 'Uncheck Collect, or take Champion of Elysium earlier.',
+        description: 'Remove the Collect row, or take Champion of Elysium earlier.',
       });
     }
     if (finding.evidence.reason === 'staleHermesShrineDelivery') {

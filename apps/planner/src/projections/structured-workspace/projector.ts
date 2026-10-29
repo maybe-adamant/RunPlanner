@@ -40,6 +40,7 @@ import {
   shopOfferAssessmentForProjectEvaluationAssembly,
   phantomExitSettlementForProjectEvaluationAssembly,
   rerollSpendAllowanceForProjectEvaluationAssembly,
+  roomObjectInteractionsForProjectEvaluationAssembly,
   rerollSurfaceForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
@@ -355,6 +356,16 @@ export function createStructuredWorkspaceProjection(
         (exit) => phantomExitSettlementForProjectEvaluationAssembly(assembly, exit),
         (surface) => rerollSurfaceForProjectEvaluationAssembly(assembly, surface),
         (spend) => rerollSpendAllowanceForProjectEvaluationAssembly(assembly, spend),
+        (occurrence) => {
+          try {
+            return roomObjectInteractionsForProjectEvaluationAssembly(assembly, occurrence);
+          } catch (error) {
+            if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
+              return undefined;
+            }
+            throw error;
+          }
+        },
       );
       const routeSource = sources.route;
       const authoredRoute =

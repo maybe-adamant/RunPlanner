@@ -81,7 +81,7 @@ export function RoomFeatureSection({
                 <InfernalContractPedestalPanel
                   feature={feature}
                   interactions={interactions}
-                  key={feature.collect.interactionKey}
+                  key={feature.collect.marker.focusKey}
                 />
               );
             default:

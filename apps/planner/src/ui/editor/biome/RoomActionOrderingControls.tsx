@@ -97,10 +97,7 @@ export function RoomActionRemovalControl({
   );
   const owned = showRemoval || removable?.kind === 'unplace';
   const removalEnabled =
-    owned &&
-    (removable?.structurallyAuthorable === true ||
-      row.purchaseRemoval !== undefined ||
-      row.shopParticipation !== undefined);
+    owned && (removable?.structurallyAuthorable === true || row.purchaseRemoval !== undefined);
   // A mandatory or unplaced row's disabled delete needs no hint.
   const explanation = removalEnabled
     ? removable?.kind === 'unplace'
@@ -110,13 +107,9 @@ export function RoomActionRemovalControl({
       ? undefined
       : row.reference.kind === 'interactKeepsakeRack'
         ? undefined
-        : row.shopParticipation !== undefined
-          ? 'Purchased membership is edited in Room Overview.'
-          : !owned && row.participationOwnedByOverview
-            ? 'This action is edited in Room Overview.'
-            : row.participation === 'required'
-              ? undefined
-              : removable?.explanations.join(' ') || undefined;
+        : row.participation === 'required'
+          ? undefined
+          : removable?.explanations.join(' ') || undefined;
   return (
     <TimelineActionDeleteButton
       {...(findingMark === undefined ? {} : { findingMark })}

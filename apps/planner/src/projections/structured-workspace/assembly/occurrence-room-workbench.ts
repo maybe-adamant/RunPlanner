@@ -172,6 +172,9 @@ function shipWorkbenchPresentation(
       label: phase.label,
       timeline: Object.freeze(phaseTimelineEntries[index]!),
       optionalRows: Object.freeze(phaseOptionalRows[index]!),
+      ...(index !== roomLocal.phases.length - 1 || roomActions?.objectEntries === undefined
+        ? {}
+        : { objectEntries: roomActions.objectEntries }),
       ...(wheel === undefined ? {} : { wheel, wheelTab: wheelTabAfterPhase(roomLocal, phase.key) }),
     });
   });

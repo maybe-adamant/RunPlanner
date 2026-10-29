@@ -46,6 +46,7 @@ import {
   goldenFOccurrenceId,
   goldenHBiome,
   loadUnderworldFGProject,
+  underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
 import { createReachableNaturalChaosProject } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import {
@@ -73,6 +74,7 @@ import {
   occurrenceById,
   occurrenceRoomActionOrder,
   openRoomTab,
+  pickRoomObjectAction,
   threeCageFieldsProject,
 } from '@planner-test/support/occurrence-workbench';
 
@@ -1568,38 +1570,30 @@ describe('OccurrenceRoomActions', () => {
     expect(actionOrder()).toEqual(initialOrder);
   });
 
-  it('marks Shop purchases in Overview, reorders them in Actions, and restores membership through undo', async () => {
-    const { project, shopId: occurrenceId } = enteredShopProject();
+  it('waits on an earlier choice before buying, then reorders Shop purchases and removes one on its row through undo', async () => {
+    const entered = enteredShopProject();
+    const occurrenceId = entered.shopId;
+    let project = entered.project;
+    for (const offerKey of ['MajorNonBoon', 'Minor'])
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: createShopOfferAddress(goldenFBiome, occurrenceId, offerKey),
+        purchased: true,
+      });
     const view = renderOccurrenceWorkbench(
       project,
       'Underworld',
       'F',
       occurrenceById(occurrenceId),
     );
-    const heal = screen.getByRole('checkbox', { name: 'Purchased Offer 2' });
-    const mana = screen.getByRole('checkbox', { name: 'Purchased Offer 3' });
-    expect(
-      (screen.getByRole('checkbox', { name: 'Purchased Offer 1' }) as HTMLInputElement).checked,
-    ).toBe(false);
-    const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.click(heal);
-    await view.user.click(mana);
-    expect(
-      occurrenceRoomActionOrder(
-        view.application.store.getState().projectWorkspace.history!.present,
-        'Underworld',
-        'F',
-        occurrenceId,
-      ),
-    ).toEqual([
-      { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
-      { kind: 'interactShopOffer', offerKey: 'Minor' },
-    ]);
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      historyBefore + 2,
-    );
-
+    // The Overview authors stock only.
+    expect(screen.queryByRole('checkbox', { name: /^Purchased/ })).toBeNull();
     openRoomTab('Room Timeline');
+    // This room's actions are not reached yet, so nothing can be bought.
+    const entry = screen.getByRole('button', { name: 'World Shop' });
+    expect(entry).toHaveProperty('disabled', true);
+    expect(hintOf(entry)).toBe('Waits on an earlier choice.');
+
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(within(actions).getByText('Doors open')).toBeTruthy();
     expect(within(actions).queryByText('Outgoing generation')).toBeNull();
@@ -1608,13 +1602,7 @@ describe('OccurrenceRoomActions', () => {
 
     const minor = within(actions).getByText('Buy Max Magick · Slot 3').closest('li');
     if (minor === null) throw new Error('Minor Shop action is missing');
-    expect(minor.getAttribute('data-action-accent')).toBe('room');
-    expect(hintOf(minor)).toBeNull();
-    const minorRemoval = within(minor).getByRole('button', {
-      name: 'Remove Buy Max Magick · Slot 3 from timeline',
-    });
-    expect(minorRemoval).toHaveProperty('disabled', true);
-    expect(hintOf(minorRemoval)).toBe('Purchased membership is edited in Room Overview.');
+    expect(minor.getAttribute('data-action-accent')).toBe('optional');
     await view.user.click(
       within(minor).getByRole('button', {
         name: 'Move Buy Max Magick · Slot 3',
@@ -1636,30 +1624,42 @@ describe('OccurrenceRoomActions', () => {
       { kind: 'interactShopOffer', offerKey: 'Minor' },
       { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
     ]);
-    openRoomTab('Room Overview');
-    const reorderedHeal = screen.getByRole('checkbox', { name: 'Purchased Offer 2' });
-    await view.user.click(reorderedHeal);
-    expect((reorderedHeal as HTMLInputElement).checked).toBe(false);
+    const order = () =>
+      occurrenceRoomActionOrder(
+        view.application.store.getState().projectWorkspace.history!.present,
+        'Underworld',
+        'F',
+        occurrenceId,
+      );
+    await view.user.click(
+      screen.getByRole('button', { name: 'Remove Buy Heal · Slot 2 from timeline' }),
+    );
+    expect(order()).toEqual([{ kind: 'interactShopOffer', offerKey: 'Minor' }]);
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(
-      (screen.getByRole('checkbox', { name: 'Purchased Offer 2' }) as HTMLInputElement).checked,
-    ).toBe(true);
+    expect(order()).toEqual([
+      { kind: 'interactShopOffer', offerKey: 'Minor' },
+      { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+    ]);
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
-    expect(
-      (screen.getByRole('checkbox', { name: 'Purchased Offer 2' }) as HTMLInputElement).checked,
-    ).toBe(false);
+    expect(order()).toEqual([{ kind: 'interactShopOffer', offerKey: 'Minor' }]);
   });
 
   it('reuses the ranked pointer language for Room Action peers and keeps unranked actions below a boundary', async () => {
-    const { project, shopId: occurrenceId } = enteredShopProject();
+    const entered = enteredShopProject();
+    const occurrenceId = entered.shopId;
+    let project = entered.project;
+    for (const offerKey of ['MajorNonBoon', 'Minor'])
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: createShopOfferAddress(goldenFBiome, occurrenceId, offerKey),
+        purchased: true,
+      });
     const view = renderOccurrenceWorkbench(
       project,
       'Underworld',
       'F',
       occurrenceById(occurrenceId),
     );
-    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 2' }));
-    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 3' }));
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(within(actions).queryByRole('region', { name: 'Timeline repairs' })).toBeNull();
@@ -1723,6 +1723,42 @@ describe('OccurrenceRoomActions', () => {
       ]),
     );
     expect(document.querySelector('.room-action-drag-preview')).toBeNull();
+  });
+
+  it('buys a stocked item and the live Travel Deal item from the World Shop entry, each appended', async () => {
+    const shopId = createOccurrenceId('golden-f-preboss-shop');
+    const reference = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'roomExit' as const,
+      entryKey: 'travelDealRefill',
+    };
+    const project = applyProjectCommand(underworldWorldShopTravelDealProject(), catalog, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(goldenFBiome, shopId, roomActionKey(reference)),
+    });
+    const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(shopId));
+    openRoomTab('Room Timeline');
+    const order = () =>
+      occurrenceRoomActionOrder(
+        view.application.store.getState().projectWorkspace.history!.present,
+        'Underworld',
+        'F',
+        shopId,
+      );
+    await view.user.click(screen.getByRole('button', { name: 'World Shop' }));
+    const options = within(await screen.findByRole('listbox'))
+      .getAllByRole('option')
+      .map((option) => option.textContent);
+    expect(options).toContain('Buy Travel Deal item');
+    expect(options.some((label) => label?.startsWith('Buy ') && label.includes('Slot 2'))).toBe(
+      false,
+    );
+    await view.user.click(screen.getByRole('option', { name: 'Buy Travel Deal item' }));
+    expect(order()?.at(-1)).toEqual(reference);
+    const stocked = order()?.length ?? 0;
+    await pickRoomObjectAction(view.user, 'World Shop', /^Buy .*Slot 3$/);
+    expect(order()).toHaveLength(stocked + 1);
+    expect(order()?.at(-1)).toEqual({ kind: 'interactShopOffer', offerKey: 'Minor' });
   });
 
   it('removes a Shop purchase atomically when its occurrence is no longer a Shop', () => {

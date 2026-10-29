@@ -34,7 +34,8 @@ import { RoomActionInlineEditors } from './RoomActionInlineEditors';
 import { RoomActionPlacementControl, RoomActionRemovalControl } from './RoomActionOrderingControls';
 import { roomActionDestinationLabel } from './room-action-placement';
 import { NemesisInteractionEditor, NemesisInteractionPhrase } from './NemesisEventEditor';
-import { HermesShrineRushControl, TravelDealLine } from './commerce/PurchaseRowControls';
+import { RoomObjectEntry } from './commerce/RoomObjectEntry';
+import { TravelDealLine } from './commerce/PurchaseRowControls';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomActionIcon } from '@planner/ui/artwork/roomArtwork';
@@ -456,7 +457,6 @@ export function RoomActionsWorkbench({
       row.rank !== null &&
       rankedRows.length > 1 &&
       proposals.some((proposal) => proposal.kind === 'move');
-    const staleShopRemoval = row.stale ? row.shopParticipation : undefined;
     const placement = row.placement;
     const inlineMysteryBoonOffer =
       row.rewardPayload?.showOffer === true &&
@@ -477,18 +477,7 @@ export function RoomActionsWorkbench({
         executeIntent(row.purchaseRemoval);
         return;
       }
-      if (removable?.structurallyAuthorable === true) {
-        apply(removable.key);
-        return;
-      }
-      if (staleShopRemoval !== undefined) {
-        executeIntent(
-          requireWorkspaceInteraction(
-            interactions.shopPurchaseParticipations,
-            staleShopRemoval.interactionKey,
-          ).intentFor(false),
-        );
-      }
+      if (removable?.structurallyAuthorable === true) apply(removable.key);
     };
     const placementControl =
       placement === undefined ? (
@@ -579,13 +568,6 @@ export function RoomActionsWorkbench({
           }
           editors={
             <>
-              {row.hermesShrinePurchase === undefined ? null : (
-                <HermesShrineRushControl
-                  interactions={interactions}
-                  label={row.label}
-                  purchase={row.hermesShrinePurchase}
-                />
-              )}
               {renderRowContent?.(row)}
               <RoomActionAcquisitionRow
                 hideOffer={inlineMysteryBoonOffer}
@@ -626,12 +608,7 @@ export function RoomActionsWorkbench({
           }
         />
         {row.travelDealLine === undefined ? null : (
-          <TravelDealLine
-            interactions={interactions}
-            line={row.travelDealLine}
-            onApply={apply}
-            proposals={actions.proposals}
-          />
+          <TravelDealLine interactions={interactions} line={row.travelDealLine} />
         )}
         {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}
         {row.rank === null ? null : renderInsertion(row.rank, row.key)}
@@ -793,7 +770,8 @@ export function RoomActionsWorkbench({
                       </ol>
                     </section>
                   )}
-                  {phase.optionalRows.length === 0 ? null : (
+                  {phase.optionalRows.length === 0 &&
+                  (phase.objectEntries ?? []).length === 0 ? null : (
                     <section aria-label="Optional actions" className="room-action-optional-pool">
                       <div className="local-reward-heading">
                         <h5>Optional actions</h5>
@@ -802,6 +780,13 @@ export function RoomActionsWorkbench({
                         aria-label={`${phase.label} optional actions`}
                         className="room-action-list"
                       >
+                        {(phase.objectEntries ?? []).map((entry) => (
+                          <RoomObjectEntry
+                            entry={entry}
+                            interactions={interactions}
+                            key={entry.interactionKey}
+                          />
+                        ))}
                         {phase.optionalRows.map((row) => renderRow(row, phase.checkpoints))}
                       </ol>
                     </section>
@@ -897,12 +882,21 @@ export function RoomActionsWorkbench({
         {rankedRows.length === 0 ? checkpointRows(0) : null}
       </ol>
       {children}
-      {actions.optionalRows.length === 0 && (actions.featureRolls ?? []).length === 0 ? null : (
+      {actions.optionalRows.length === 0 &&
+      (actions.featureRolls ?? []).length === 0 &&
+      (actions.objectEntries ?? []).length === 0 ? null : (
         <section aria-label="Optional actions" className="room-action-optional-pool">
           <div className="local-reward-heading">
             <h5>Optional actions</h5>
           </div>
           <ol aria-label="Optional actions" className="room-action-list">
+            {(actions.objectEntries ?? []).map((entry) => (
+              <RoomObjectEntry
+                entry={entry}
+                interactions={interactions}
+                key={entry.interactionKey}
+              />
+            ))}
             {(actions.featureRolls ?? []).map((rolls) => (
               <FeatureRollEntry
                 actions={rolls}

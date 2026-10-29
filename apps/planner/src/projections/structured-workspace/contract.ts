@@ -14,6 +14,11 @@ export type {
   WorkspaceFeatureRollSlot,
   WorkspaceFeatureRollSlotInteraction,
   WorkspaceRoomFeature,
+  WorkspaceRoomObject,
+  WorkspaceRoomObjectEntry,
+  WorkspaceRoomObjectEntryInteraction,
+  WorkspaceRoomObjectLock,
+  WorkspaceRoomObjectOption,
   WorkspaceZagreusContractControl,
   WorkspaceZagreusSpawnControl,
 } from './contracts/features';
@@ -118,14 +123,10 @@ import type { TraitDomainProjectionService } from '../rewards/traitDomainProject
 import type {
   WorkspaceHermesShrineOfferInteraction,
   WorkspaceHermesShrinePresenceInteraction,
-  WorkspaceHermesShrinePurchaseInteraction,
-  WorkspaceInfernalContractPedestalCollectInteraction,
   WorkspacePurgingPoolSlotInteraction,
   WorkspaceShopOfferInteraction,
-  WorkspaceShopPurchaseParticipationInteraction,
   WorkspaceStygianWellOfferInteraction,
   WorkspaceStygianWellPresenceInteraction,
-  WorkspaceStygianWellPurchaseInteraction,
   WorkspaceStygianWellTwistResultInteraction,
 } from './contracts/commerce';
 import type {
@@ -199,14 +200,10 @@ import type {
 export type {
   WorkspaceHermesShrineOfferInteraction,
   WorkspaceHermesShrinePresenceInteraction,
-  WorkspaceHermesShrinePurchaseInteraction,
-  WorkspaceInfernalContractPedestalCollectInteraction,
   WorkspacePurgingPoolSlotInteraction,
   WorkspaceShopOfferInteraction,
-  WorkspaceShopPurchaseParticipationInteraction,
   WorkspaceStygianWellOfferInteraction,
   WorkspaceStygianWellPresenceInteraction,
-  WorkspaceStygianWellPurchaseInteraction,
   WorkspaceStygianWellTwistResultInteraction,
 } from './contracts/commerce';
 export type {
@@ -386,10 +383,6 @@ export interface WorkspaceInteractionCatalog {
   readonly rooms: ReadonlyMap<string, WorkspaceRoomInteraction>;
   /** O-specific authored structure: whether the optional third Ship phase is active. */
   readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspacePickerCandidateInteraction<2 | 3>>;
-  readonly shopPurchaseParticipations: ReadonlyMap<
-    string,
-    WorkspaceShopPurchaseParticipationInteraction
-  >;
   readonly shopOffers: ReadonlyMap<string, WorkspaceShopOfferInteraction>;
   readonly phantomExits: ReadonlyMap<string, WorkspacePhantomExitInteraction>;
   readonly roomRerolls: ReadonlyMap<string, WorkspaceRoomRerollsInteraction>;
@@ -398,23 +391,22 @@ export interface WorkspaceInteractionCatalog {
     string,
     import('./contracts/features').WorkspaceFeatureRollActionsInteraction
   >;
+  /** Each World Shop, Hermes Shrine and Champion item entry. */
+  readonly roomObjectEntries: ReadonlyMap<
+    string,
+    import('./contracts/features').WorkspaceRoomObjectEntryInteraction
+  >;
   /** Each Well or Pool reroll's slot pins. */
   readonly featureRollSlots: ReadonlyMap<
     string,
     import('./contracts/features').WorkspaceFeatureRollSlotInteraction
   >;
-  readonly infernalContractPedestalCollects: ReadonlyMap<
-    string,
-    WorkspaceInfernalContractPedestalCollectInteraction
-  >;
   /** One declaration-keyed Pool slot, with engine-derived contextual candidates. */
   readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;
   readonly hermesShrineOffers: ReadonlyMap<string, WorkspaceHermesShrineOfferInteraction>;
-  readonly hermesShrinePurchases: ReadonlyMap<string, WorkspaceHermesShrinePurchaseInteraction>;
   readonly hermesShrinePresences: ReadonlyMap<string, WorkspaceHermesShrinePresenceInteraction>;
   readonly stygianWellPresences: ReadonlyMap<string, WorkspaceStygianWellPresenceInteraction>;
   readonly stygianWellOffers: ReadonlyMap<string, WorkspaceStygianWellOfferInteraction>;
-  readonly stygianWellPurchases: ReadonlyMap<string, WorkspaceStygianWellPurchaseInteraction>;
   readonly stygianWellTwistResults: ReadonlyMap<string, WorkspaceStygianWellTwistResultInteraction>;
   readonly resourcePlacements: ReadonlyMap<string, WorkspaceResourcePlacementInteraction>;
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
@@ -518,6 +510,8 @@ export interface WorkspaceShipPhasePresentation {
   readonly timeline: readonly WorkspaceRoomLifecycleTimelineEntry[];
   /** Active optional actions owned by this phase but not yet inserted. */
   readonly optionalRows: readonly WorkspaceRoomActionRow[];
+  /** The room objects' entries, on the last phase, where a new action is appended. */
+  readonly objectEntries?: readonly import('./contracts/features').WorkspaceRoomObjectEntry[];
   /** The active wheel chosen after this phase, edited on its own tab after this one. */
   readonly wheel?: WorkspaceRewardWheelDescriptor;
   readonly wheelTab?: Extract<WorkspaceRoomTab, 'shipIntroWheels' | 'shipCombat1Wheels'>;

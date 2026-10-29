@@ -25,11 +25,6 @@ export interface WorkspaceShopOfferDescriptor {
   readonly key: string;
   readonly label: string;
   readonly purchase: WorkspaceShopPurchaseDescriptor;
-  readonly participation: {
-    readonly interactionKey: string;
-    readonly owner: ShopOfferAddress;
-    readonly purchased: boolean;
-  };
   readonly rewardControl: WorkspaceExplicitRewardControl;
 }
 
@@ -66,17 +61,6 @@ export type WorkspaceShopSupplementalDescriptor =
       readonly eligibleSourceOfferKeys: readonly string[];
     };
 
-export interface WorkspaceShopPurchaseParticipationInteraction {
-  readonly key: string;
-  readonly owner: ShopOfferAddress;
-  readonly purchased: boolean;
-  readonly intentFor: (
-    purchased: boolean,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceShopPurchaseParticipation' }>
-  >;
-}
-
 /** An exact item picker over a declared Shop-option pool: a Shop slot or the Contract pedestal. */
 export interface WorkspaceShopOfferInteraction {
   readonly key: string;
@@ -103,18 +87,6 @@ export interface WorkspaceShopOfferInteraction {
   >;
 }
 
-/** Whether the Preboss Contract pedestal's item is collected. */
-export interface WorkspaceInfernalContractPedestalCollectInteraction {
-  readonly key: string;
-  readonly owner: InfernalContractPedestalAddress;
-  readonly collected: boolean;
-  readonly intentFor: (
-    collected: boolean,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetInfernalContractPedestalCollected' }>
-  >;
-}
-
 /** Complete occurrence command binding for one physical Pool offer slot. */
 export interface WorkspacePurgingPoolSlotInteraction {
   readonly key: string;
@@ -127,32 +99,6 @@ export interface WorkspacePurgingPoolSlotInteraction {
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplacePurgingPoolSlot' }>>;
 }
 
-/** A bought Shrine item with the delay rolled for it. */
-export interface WorkspaceHermesShrinePurchase {
-  readonly delay: import('@run-planner/engine/authored-project').HermesShrineDelay;
-}
-
-export interface WorkspaceHermesShrinePurchaseInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey;
-  readonly purchase: WorkspaceHermesShrinePurchase | null;
-  /** Buys or clears the item; a delay on a bought item retimes it. */
-  readonly intentFor: (
-    purchase: WorkspaceHermesShrinePurchase | null,
-  ) => WorkspaceCommandIntent<
-    Extract<
-      ProjectCommand,
-      { readonly kind: 'SetHermesShrinePurchase' | 'SetHermesShrineOfferDelay' }
-    >
-  >;
-  readonly rushIntentFor: (
-    rushed: boolean,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetHermesShrinePurchaseRush' }>
-  >;
-}
-
 export interface WorkspaceHermesShrineOfferInteraction {
   readonly key: string;
   readonly owner: OccurrenceAddress;
@@ -160,12 +106,20 @@ export interface WorkspaceHermesShrineOfferInteraction {
     import('@run-planner/engine/authored-project').HermesShrineSlotKey | 'travelDealRefill';
   readonly rewardType: string | null;
   readonly candidateRewardTypes: readonly string[];
+  /** The delay rolled with the stocked item; null while unstocked. */
+  readonly delay: import('@run-planner/engine/authored-project').HermesShrineDelay | null;
   readonly load: () => ContextualPickerModel<string>;
   readonly intentFor: (
     rewardType: string,
   ) => WorkspaceCommandIntent<
     | Extract<ProjectCommand, { readonly kind: 'ReplaceHermesShrineOffer' }>
     | Extract<ProjectCommand, { readonly kind: 'ReplaceHermesShrineTravelDealRefill' }>
+  >;
+  /** Sets the delay rolled for the stocked item. */
+  readonly delayIntentFor: (
+    delay: import('@run-planner/engine/authored-project').HermesShrineDelay,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'SetHermesShrineOfferDelay' }>
   >;
 }
 
@@ -205,16 +159,6 @@ export interface WorkspaceStygianWellOfferInteraction {
     | Extract<ProjectCommand, { readonly kind: 'ReplaceStygianWellOffer' }>
     | Extract<ProjectCommand, { readonly kind: 'ReplaceStygianWellTravelDealRefill' }>
   >;
-}
-
-export interface WorkspaceStygianWellPurchaseInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
-  readonly purchased: boolean;
-  readonly intentFor: (
-    purchased: boolean,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'SetStygianWellPurchase' }>>;
 }
 
 export interface WorkspaceStygianWellTwistResultInteraction {

@@ -155,6 +155,10 @@ export interface WorkspaceBiomeSource {
   readonly rerollSpendAllowance: (
     spend: import('@run-planner/engine/simulation').RerollSpend,
   ) => import('@run-planner/engine/simulation').RerollSpendAllowance;
+  /** What can be done with a room's Shop, Shrine and Champion item; undefined while unreached. */
+  readonly roomObjectInteractions: (
+    occurrence: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').RoomObjectInteractions | undefined;
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
@@ -704,6 +708,7 @@ function createWorkspaceBiomeSource(
   phantomExitSettlement: WorkspaceBiomeSource['phantomExitSettlement'],
   rerollSurface: WorkspaceBiomeSource['rerollSurface'],
   rerollSpendAllowance: WorkspaceBiomeSource['rerollSpendAllowance'],
+  roomObjectInteractions: WorkspaceBiomeSource['roomObjectInteractions'],
   assessmentIssue: AssessmentIssue | undefined,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
@@ -930,6 +935,7 @@ function createWorkspaceBiomeSource(
     phantomExitSettlement,
     rerollSurface,
     rerollSpendAllowance,
+    roomObjectInteractions,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     acquisitionConversionCandidate,
@@ -1012,6 +1018,7 @@ export function createWorkspaceProjectSourceIndex(
   rerollSurface: WorkspaceBiomeSource['rerollSurface'] = () => undefined,
   rerollSpendAllowance: WorkspaceBiomeSource['rerollSpendAllowance'] = () =>
     Object.freeze({ kind: 'unreached' as const }),
+  roomObjectInteractions: WorkspaceBiomeSource['roomObjectInteractions'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -1049,6 +1056,7 @@ export function createWorkspaceProjectSourceIndex(
             phantomExitSettlement,
             rerollSurface,
             rerollSpendAllowance,
+            roomObjectInteractions,
             routeEvaluation?.issue,
           ),
         ),

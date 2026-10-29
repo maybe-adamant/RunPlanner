@@ -168,9 +168,8 @@ describe('Stygian Well workbench', () => {
     const refillLabel = within(line).getByRole('button', {
       name: 'Stygian Well Travel Deal Item',
     }).textContent;
-    expect(
-      within(line).getByRole('checkbox', { name: 'Purchased Stygian Well Travel Deal' }),
-    ).toHaveProperty('checked', false);
+    // The line authors the item only; buying it is the Well's own action.
+    expect(within(line).queryByRole('checkbox')).toBeNull();
 
     // The purchase is removed on its row, and bought again from the Well's entry.
     await view.user.click(

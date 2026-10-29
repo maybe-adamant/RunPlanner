@@ -28,7 +28,11 @@ import {
   renderOccurrenceWorkbench,
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
-import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
+import {
+  occurrenceById,
+  openRoomTab,
+  pickRoomObjectAction,
+} from '@planner-test/support/occurrence-workbench';
 import {
   authoredProjectCommandDispatched,
   authoredProjectUndoRequested,
@@ -88,11 +92,10 @@ it('keeps a stale Gold pickup removable after its triggering purchase is cleared
 it('adds required Gold with the purchase and restores both through one Undo and Redo', async () => {
   const project = createEchoGoldHPrebossProject();
   const view = renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(shopId));
-  openRoomTab('Room Overview');
-  await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 1' }));
+  openRoomTab('Room Timeline');
+  await pickRoomObjectAction(view.user, 'World Shop', /Slot 1$/);
   const history = view.application.store.getState().projectWorkspace.history!;
   expect(history.past).toHaveLength(1);
-  openRoomTab('Room Timeline');
   expect(goldRow().queryByRole('button', { name: 'Restore pickup' })).toBeNull();
   expect(
     (goldRow().getByRole('button', { name: /Remove .* from timeline/ }) as HTMLButtonElement)

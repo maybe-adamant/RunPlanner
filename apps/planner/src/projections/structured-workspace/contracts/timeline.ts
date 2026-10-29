@@ -7,7 +7,6 @@ import type {
   ProjectCommand,
   RoomActionAddress,
   RoomActionReference,
-  ShopOfferAddress,
   SteadyGrowthOutcomeAddress,
   TranscendentEmbryoOutcomeAddress,
 } from '@run-planner/engine/authored-project';
@@ -102,11 +101,7 @@ export interface WorkspaceRoomActionRow {
   /** The room's assessment stops at the product this row belongs to: its repair region. */
   readonly blockingProduct?: true;
   readonly stale: boolean;
-  /** Specialized removal authority for a retained stale base Shop purchase. */
-  readonly shopParticipation?: {
-    readonly interactionKey: string;
-    readonly owner: ShopOfferAddress;
-  };
+
   /** Engine-owned lifecycle window used by closed presentation groupings. */
   readonly window: RoomActionWindow;
   /** Exact encounter/Gorgon payload settled by this action. */
@@ -130,19 +125,19 @@ export interface WorkspaceRoomActionRow {
     readonly feature: import('@run-planner/engine/authored-project').RollFeature;
     readonly slots: readonly import('./features').WorkspaceFeatureRollSlot[];
   };
-  /** Rush authored on this Shrine purchase action. */
-  readonly hermesShrinePurchase?: {
-    readonly purchaseInteractionKey: string;
-    readonly rushed: boolean;
-  };
   /** Refill authoring under the purchase that triggers Travel Deal. */
   readonly travelDealLine?: WorkspaceTravelDealLine;
-  /** Removes this purchase with its own command where the generic removal does not apply. */
+  /** Undoes this purchase or collect with its own command. */
   readonly purchaseRemoval?: WorkspaceCommandIntent<
     Extract<
       ProjectCommand,
       {
-        readonly kind: 'SetHermesShrinePurchase' | 'SetStygianWellPurchase' | 'RemoveRoomAction';
+        readonly kind:
+          | 'ReplaceShopPurchaseParticipation'
+          | 'SetInfernalContractPedestalCollected'
+          | 'SetHermesShrinePurchase'
+          | 'SetStygianWellPurchase'
+          | 'RemoveRoomAction';
       }
     >
   >;
@@ -179,6 +174,8 @@ export interface WorkspaceRoomActions {
   readonly repairRows: readonly WorkspaceRoomActionRow[];
   /** Each present Well and Pool's next purchase, sale or reroll, opened above the optional actions. */
   readonly featureRolls?: readonly import('./features').WorkspaceFeatureRollActions[];
+  /** Each present World Shop, Hermes Shrine and Champion item's next action, opened above the optional actions. */
+  readonly objectEntries?: readonly import('./features').WorkspaceRoomObjectEntry[];
   readonly steadyGrowth?: readonly WorkspaceSteadyGrowthControl[];
   readonly transcendentEmbryo?: readonly WorkspaceTranscendentEmbryoControl[];
 }

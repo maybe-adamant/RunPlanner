@@ -1244,10 +1244,11 @@ describe('structured workspace actions assembly', () => {
         return [];
       }),
     ).toEqual(['MajorNonBoon', 'travelDealRefill', 'echoDoubleShopReward']);
+    // Purchases are deleted on their rows; the Gold duplicate follows its purchase.
     expect(
       result.roomActions?.rows
         .filter((row) => row.rank !== null)
-        .map((row) => row.participationOwnedByOverview),
+        .map((row) => row.purchaseRemoval !== undefined),
     ).toEqual([true, true, false]);
     expect(
       result.roomActions?.rows
@@ -1442,12 +1443,12 @@ describe('shop-like purchase rows', () => {
   const shrineRows = (project: ProjectDocument) =>
     purchaseRows(project, shrineId, 'purchaseHermesShrineOffer');
 
-  it('carries Shrine rush and the refill line on the first rushed purchase in timeline order', () => {
+  it('reads Shrine rush on the row and carries the refill line on the first rushed purchase in timeline order', () => {
     const rows = shrineRows(travelDealShrine(true));
     expect(
       rows.map((row) => [
         row.reference.kind === 'purchaseHermesShrineOffer' && row.reference.generationKey,
-        row.hermesShrinePurchase?.rushed,
+        row.label.startsWith('Rush '),
         row.travelDealLine?.kind,
       ]),
     ).toEqual([
@@ -1472,7 +1473,6 @@ describe('shop-like purchase rows', () => {
         row.reference.generationKey === 'travelDealRefill',
     );
     expect(refill).toMatchObject({
-      hermesShrinePurchase: { rushed: false },
       purchaseRemoval: {
         command: {
           kind: 'SetHermesShrinePurchase',
@@ -1500,20 +1500,8 @@ describe('shop-like purchase rows', () => {
         sourceGenerationKey: source.kind === 'purchaseStygianWellOffer' && source.generationKey,
       },
     });
-    // Each purchase is removed on its own row; a refill hosted by its line is removed there.
-    expect(
-      wellRows(checkpoint).map((row) =>
-        row.reference.kind === 'purchaseStygianWellOffer'
-          ? [row.reference.generationKey, row.purchaseRemoval !== undefined]
-          : [],
-      ),
-    ).toEqual(
-      wellRows(checkpoint).map((row) =>
-        row.reference.kind === 'purchaseStygianWellOffer'
-          ? [row.reference.generationKey, row.reference.generationKey !== 'travelDealRefill']
-          : [],
-      ),
-    );
+    // Each purchase, the hosted refill included, is removed on its own row.
+    expect(wellRows(checkpoint).every((row) => row.purchaseRemoval !== undefined)).toBe(true);
 
     let stranded = checkpoint;
     for (const generationKey of [
@@ -1833,12 +1821,10 @@ describe('room Timeline block', () => {
     expect(later?.blockingProduct).toBeUndefined();
     expect(later?.proposalKeys.length).toBeGreaterThan(0);
     expect(interactions.roomActions.get(semanticAddressKey(shop))).toMatchObject({ owner: shop });
-    const participation = later?.shopParticipation;
-    expect(
-      participation === undefined
-        ? undefined
-        : interactions.shopPurchaseParticipations.get(participation.interactionKey),
-    ).toMatchObject({ purchased: true });
+    expect(later?.purchaseRemoval?.command).toMatchObject({
+      kind: 'ReplaceShopPurchaseParticipation',
+      purchased: false,
+    });
   });
 });
 

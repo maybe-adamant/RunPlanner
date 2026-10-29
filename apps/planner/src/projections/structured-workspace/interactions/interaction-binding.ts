@@ -1,3 +1,4 @@
+import { bindRoomObjectInteractions } from './room-object-interactions';
 import { bindFeatureRollInteractions } from './feature-roll-interactions';
 import { bindRoomRerollInteractions } from './reroll-interactions';
 import type {
@@ -186,6 +187,7 @@ export function bindWorkspaceInteractions(
   });
 
   const featureRolls = bindFeatureRollInteractions(occurrenceInteractionRequirements.values());
+  const roomObjects = bindRoomObjectInteractions(occurrenceInteractionRequirements.values());
 
   return Object.freeze({
     ...batch,
@@ -193,6 +195,7 @@ export function bindWorkspaceInteractions(
     ...occurrence,
     roomRerolls,
     ...featureRolls,
+    ...roomObjects,
     ...hub,
     ...topology,
   });

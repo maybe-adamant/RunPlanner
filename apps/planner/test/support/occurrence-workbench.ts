@@ -1,5 +1,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
+import type { UserEvent } from '@testing-library/user-event';
 import { expect } from 'vitest';
 import {
   applyProjectCommand,
@@ -76,6 +77,21 @@ export function expectBefore(first: Element, second: Element): void {
 
 export function openRoomTab(name: string): void {
   fireEvent.click(screen.getByRole('tab', { name }));
+}
+
+/**
+ * Picks one action from a room object's Timeline entry (World Shop, Hermes
+ * Shrine, Champion Item, Stygian Well…); the Room Timeline tab must be open.
+ */
+export async function pickRoomObjectAction(
+  user: UserEvent,
+  object: string,
+  option: string | RegExp,
+): Promise<void> {
+  await user.click(screen.getByRole('button', { name: object }));
+  await user.click(
+    within(await screen.findByRole('listbox')).getByRole('option', { name: option }),
+  );
 }
 
 export function emptyFProject(): ProjectDocument {

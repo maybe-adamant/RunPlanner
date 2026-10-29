@@ -733,14 +733,6 @@ function roomLocalForOccurrence(
             address: purchaseAddress,
             marker: input.markerDestinations.marker(purchaseAddress),
           }),
-          participation: Object.freeze({
-            interactionKey: semanticAddressKey(offerAddress),
-            owner: offerAddress,
-            purchased: occurrence.roomActions.order.some(
-              (reference) =>
-                reference.kind === 'interactShopOffer' && reference.offerKey === slot.key,
-            ),
-          }),
           rewardControl: requireProjectedRewardControl(controls, offerAddress, 'explicitReward'),
         });
       });

@@ -193,24 +193,21 @@ function roomFeatures(
   const shrineAssessment = input.hermesShrineAssessment?.(poolOwner);
   const wellAssessment = input.stygianWellAssessment?.(poolOwner);
   const shrine = input.occurrence.hermesShrine;
-  // A bought item carries the delay rolled with it.
-  const shrinePurchase = (
+  // Each stocked item carries the delay rolled with it.
+  const shrineDelay = (
     generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
-  ) => {
-    const bought = input.occurrence.roomActions.order.some(
-      (reference) =>
-        reference.kind === 'purchaseHermesShrineOffer' && reference.generationKey === generationKey,
-    );
-    const offer =
-      generationKey === 'travelDealRefill'
-        ? shrine?.travelDealRefill?.offer
-        : shrine?.offerBySlot[
-            generationKey.slice('initial:'.length) as 'first' | 'secondLeft' | 'secondRight'
-          ];
-    return bought && offer !== null && offer !== undefined
-      ? Object.freeze({ delay: offer.delay })
-      : null;
-  };
+  ) =>
+    (generationKey === 'travelDealRefill'
+      ? shrine?.travelDealRefill?.offer
+      : shrine?.offerBySlot[
+          generationKey.slice('initial:'.length) as 'first' | 'secondLeft' | 'secondRight'
+        ]
+    )?.delay ?? null;
+  const shrineRefillBought = input.occurrence.roomActions.order.some(
+    (reference) =>
+      reference.kind === 'purchaseHermesShrineOffer' &&
+      reference.generationKey === 'travelDealRefill',
+  );
   const well = input.occurrence.stygianWell;
   const pool = input.occurrence.purgingPool;
   const declaredPoolTraitKeys = declaredPurgingPoolTraitKeys(input.catalog);
@@ -271,7 +268,6 @@ function roomFeatures(
                         ).map((key) => Object.freeze({ key, label: itemLabel(key) })),
                       ),
                       offerInteractionKey: `stygianWellOffer:${semanticAddressKey(poolOwner)}:${generationKey}`,
-                      purchaseInteractionKey: `stygianWellPurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
                       purchased: purchased.has(generationKey),
                     });
                   });
@@ -306,7 +302,6 @@ function roomFeatures(
                         candidates.map((key) => Object.freeze({ key, label: itemLabel(key) })),
                       ),
                       offerInteractionKey: `stygianWellOffer:${semanticAddressKey(poolOwner)}:${generationKey}`,
-                      purchaseInteractionKey: `stygianWellPurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
                       purchased: purchased.has(generationKey),
                       ...(sourceGenerationKey === undefined ? {} : { sourceGenerationKey }),
                     });
@@ -416,14 +411,13 @@ function roomFeatures(
                           ),
                         ),
                         offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:${slotKey}`,
-                        purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
-                        purchase: shrinePurchase(generationKey),
+                        delay: shrineDelay(generationKey),
                       });
                     }),
               ),
               ...(shrine === undefined ||
               (shrineAssessment?.travelDealRefill === undefined &&
-                shrinePurchase('travelDealRefill') === null &&
+                !shrineRefillBought &&
                 (shrineAssessment !== undefined || shrine.travelDealRefill === undefined))
                 ? {}
                 : {
@@ -465,8 +459,7 @@ function roomFeatures(
                           ),
                         ),
                         offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:travelDealRefill`,
-                        purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:travelDealRefill`,
-                        purchase: shrinePurchase('travelDealRefill'),
+                        delay: shrineDelay('travelDealRefill'),
                         ...(shrineAssessment?.travelDealRefill === undefined
                           ? {}
                           : {
@@ -612,10 +605,6 @@ function infernalContractPedestalFeature(
       collect: Object.freeze({
         address: entry,
         marker: input.markerDestinations.marker(entry),
-        interactionKey: semanticAddressKey(rewardControl.owner.address),
-        collected: input.occurrence.roomActions.order.some(
-          (reference) => reference.kind === 'interactInfernalContractPedestal',
-        ),
       }),
     }),
   ]);

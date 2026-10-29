@@ -244,7 +244,8 @@ export function occurrenceActionLabel(
                 'initial:'.length,
               ) as import('@run-planner/engine/authored-project').HermesShrineSlotKey
             ];
-      return `Buy ${
+      // A rushed item is delivered in the Shrine room.
+      return `${reference.rushed ? 'Rush' : 'Buy'} ${
         offer === null || offer === undefined
           ? slot
           : `${timelineRewardName(catalog, offer.rewardType)} · ${slot}`

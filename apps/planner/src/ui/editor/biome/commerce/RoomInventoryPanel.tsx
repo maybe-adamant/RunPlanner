@@ -83,7 +83,6 @@ export function RoomInventoryPanel({
                     key={slot.generationKey}
                     slot={slot}
                     interactions={interactions}
-                    withPurchased={false}
                   />
                 ))}
           </fieldset>
@@ -165,10 +164,6 @@ export function RoomInventoryPanel({
                 interactions.hermesShrineOffers,
                 slot.offerInteractionKey,
               );
-              const purchase = requireWorkspaceInteraction(
-                interactions.hermesShrinePurchases,
-                slot.purchaseInteractionKey,
-              );
               return (
                 <HermesShrineSlotEditor
                   key={slot.key}
@@ -177,7 +172,6 @@ export function RoomInventoryPanel({
                   rewardType={slot.rewardType}
                   {...(slot.rewardLabel === undefined ? {} : { rewardLabel: slot.rewardLabel })}
                   offer={offer}
-                  purchase={purchase}
                 />
               );
             })}
@@ -225,16 +219,13 @@ function PurgingPoolTraitPicker({
   );
 }
 
-/** One Well inventory slot: item and purchase. */
+/** One Well inventory slot's item. */
 export function StygianWellSlotEditor({
   slot,
   interactions,
-  withPurchased = true,
 }: {
   readonly slot: Omit<StygianWellFeature['slots'][number], 'key'>;
   readonly interactions: WorkspaceInteractionCatalog;
-  /** A Timeline line places Purchased in its own action slot. */
-  readonly withPurchased?: boolean;
 }) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
@@ -262,68 +253,27 @@ export function StygianWellSlotEditor({
         triggerIcon={wellIcon(slot.itemKey)}
         {...(slot.itemLabel === undefined ? {} : { triggerLabel: slot.itemLabel })}
       />
-      {withPurchased ? (
-        <StygianWellPurchasedControl
-          className="shop-family-participation"
-          interactions={interactions}
-          slot={slot}
-        />
-      ) : null}
     </div>
   );
 }
 
-export function StygianWellPurchasedControl({
-  className,
-  slot,
-  interactions,
-}: {
-  readonly className: string;
-  readonly slot: Omit<StygianWellFeature['slots'][number], 'key'>;
-  readonly interactions: WorkspaceInteractionCatalog;
-}) {
-  const executeIntent = useCommandIntent();
-  const purchase = requireWorkspaceInteraction(
-    interactions.stygianWellPurchases,
-    slot.purchaseInteractionKey,
-  );
-  return (
-    <label className={className}>
-      <input
-        aria-label={`Purchased Stygian Well ${slot.label}`}
-        checked={slot.purchased}
-        disabled={slot.itemKey === null}
-        onChange={(event) => executeIntent(purchase.intentFor(event.target.checked))}
-        type="checkbox"
-      />
-      Purchased
-    </label>
-  );
-}
-
-/** One Shrine inventory slot: item, delivery delay and purchase. */
+/** One Shrine inventory slot: its item and the delay rolled with it. */
 export function HermesShrineSlotEditor({
   label,
   marker,
   rewardLabel,
   rewardType,
   offer,
-  purchase,
-  withPurchased = true,
 }: {
-  /** A Timeline line places Purchased in its own action slot. */
-  readonly withPurchased?: boolean;
   readonly label: string;
   readonly marker: import('@planner/projections/structured-workspace').WorkspaceMarker;
   readonly rewardLabel?: string;
   readonly rewardType: string | null;
   readonly offer: import('@planner/projections/structured-workspace').WorkspaceHermesShrineOfferInteraction;
-  readonly purchase: import('@planner/projections/structured-workspace').WorkspaceHermesShrinePurchaseInteraction;
 }) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const offerPicker = useWorkspaceInteraction(offer);
-  const current = purchase.purchase;
   return (
     <div className="shop-family-offer-row hermes-shrine-slot">
       <ContextualPicker
@@ -348,21 +298,17 @@ export function HermesShrineSlotEditor({
           Delay
           <select
             aria-label={`Hermes Shrine ${label} delivery delay`}
-            disabled={current === null}
-            onChange={(event) => {
-              if (current === null) return;
+            disabled={offer.delay === null}
+            onChange={(event) =>
               executeIntent(
-                purchase.intentFor({
-                  ...current,
-                  delay: Number(event.target.value) as 2 | 3 | 4 | 5 | 6 | 7 | 8,
-                }),
-              );
-            }}
-            value={current?.delay ?? ''}
+                offer.delayIntentFor(Number(event.target.value) as 2 | 3 | 4 | 5 | 6 | 7 | 8),
+              )
+            }
+            value={offer.delay ?? ''}
           >
-            {current === null && (
+            {offer.delay === null && (
               <option value="" disabled>
-                Random
+                —
               </option>
             )}
             {[2, 3, 4, 5, 6, 7, 8].map((delay) => (
@@ -373,42 +319,6 @@ export function HermesShrineSlotEditor({
           </select>
         </label>
       </div>
-      {withPurchased ? (
-        <HermesShrinePurchasedControl
-          className="shop-family-participation"
-          label={label}
-          offer={offer}
-          purchase={purchase}
-        />
-      ) : null}
     </div>
-  );
-}
-
-export function HermesShrinePurchasedControl({
-  className,
-  label,
-  offer,
-  purchase,
-}: {
-  readonly className: string;
-  readonly label: string;
-  readonly offer: import('@planner/projections/structured-workspace').WorkspaceHermesShrineOfferInteraction;
-  readonly purchase: import('@planner/projections/structured-workspace').WorkspaceHermesShrinePurchaseInteraction;
-}) {
-  const executeIntent = useCommandIntent();
-  return (
-    <label className={className}>
-      <input
-        aria-label={`Purchased Hermes Shrine ${label}`}
-        checked={purchase.purchase !== null}
-        disabled={offer.rewardType === null}
-        onChange={(event) =>
-          executeIntent(purchase.intentFor(event.target.checked ? { delay: 2 } : null))
-        }
-        type="checkbox"
-      />
-      Purchased
-    </label>
   );
 }

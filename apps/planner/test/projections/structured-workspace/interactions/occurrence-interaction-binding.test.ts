@@ -13,7 +13,6 @@ const {
   createOccurrenceAddress,
   createOccurrenceId,
   createRewardWheelAddress,
-  createShopOfferAddress,
   createRouteStartKeepsakeSelectionAddress,
   goldenFBiome,
   goldenFOccurrenceId,
@@ -158,19 +157,11 @@ describe('structured workspace interaction binding', () => {
     expect(shop.roomActions.get(semanticAddressKey(shopOwner))).toMatchObject({
       owner: shopOwner,
     });
-    const major = createShopOfferAddress(
-      createBiomeAddress('Underworld', 'F'),
-      createOccurrenceId(enteredShop.shopId),
-      'MajorNonBoon',
+    // The Shop's entry binds even while its room's actions are unreached.
+    const entry = shop.roomObjectEntries.get(
+      `roomObject:worldShop:${semanticAddressKey(shopOwner)}`,
     );
-    const participation = shop.shopPurchaseParticipations.get(semanticAddressKey(major));
-    expect(participation).toMatchObject({ owner: major, purchased: false });
-    expect(participation?.intentFor(true)).toMatchObject({
-      command: {
-        kind: 'ReplaceShopPurchaseParticipation',
-        offer: major,
-        purchased: true,
-      },
-    });
+    expect(entry).toMatchObject({ owner: shopOwner });
+    expect(() => entry?.intentFor('buy:MajorNonBoon')).toThrow(/is not an option/);
   });
 });

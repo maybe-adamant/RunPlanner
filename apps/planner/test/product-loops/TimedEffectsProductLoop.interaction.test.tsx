@@ -41,6 +41,7 @@ import { findingSelected, semanticOwnerNavigated } from '@planner/state/editorSe
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 import { workspaceProjection } from '../support/biome-workbench';
+import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
 
 afterEach(cleanup);
 
@@ -90,7 +91,8 @@ it('inserts a purchased Hermes delivery automatically with Move and one Undo', a
   const view = renderPlannerForInteraction({ application });
   const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
   act(() => application.store.dispatch(semanticOwnerNavigated(source)));
-  await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Hermes Shrine Offer 3' }));
+  await view.user.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
+  await pickRoomObjectAction(view.user, 'Hermes Shrine', /^Buy .*· Slot 3$/);
   const history = application.store.getState().projectWorkspace.history!;
   expect(history.past).toHaveLength(1);
   const key = hermesShrineDeliveryEntryKey(source, 'initial:secondRight');

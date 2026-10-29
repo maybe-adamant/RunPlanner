@@ -18,8 +18,6 @@ import {
   type OccurrenceId,
   type ProjectCommand,
   type RewardWheelAddress,
-  type ShopOfferAddress,
-  type InfernalContractPedestalAddress,
   type PhantomExitAddress,
   type PhantomExitState,
   type SideRoomGeneration,
@@ -78,7 +76,31 @@ export type WorkspaceFeatureRollActionRequirement =
       readonly choices?: readonly { readonly key: string; readonly label: string }[];
     };
 
+/** One option of a room object's entry with the command it appends. */
+export interface WorkspaceRoomObjectActionRequirement {
+  readonly key: string;
+  readonly command: Extract<
+    import('@run-planner/engine/authored-project').ProjectCommand,
+    {
+      readonly kind:
+        | 'ReplaceShopPurchaseParticipation'
+        | 'PurchaseShopTravelDealRefill'
+        | 'PurchaseHermesShrineOffer'
+        | 'SetInfernalContractPedestalCollected';
+    }
+  >;
+  /** A blank Shrine item: the reward it stocks is chosen with the purchase. */
+  readonly rewardTypeChoices?: readonly { readonly key: string; readonly label: string }[];
+}
+
 export type WorkspaceOccurrenceInteractionRequirement =
+  | {
+      /** A World Shop, Hermes Shrine or Champion item entry. */
+      readonly kind: 'roomObjectActions';
+      readonly owner: OccurrenceAddress;
+      readonly interactionKey: string;
+      readonly options: readonly WorkspaceRoomObjectActionRequirement[];
+    }
   | {
       /** A Well or Pool's Interact picker: options appended at `appendIndex`. */
       readonly kind: 'featureRollActions';
@@ -195,11 +217,6 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly fieldsCageOrder?: true;
     }
   | {
-      readonly kind: 'shopPurchaseParticipation';
-      readonly owner: ShopOfferAddress;
-      readonly purchased: boolean;
-    }
-  | {
       /** A hidden door's pickers: engine placeholder candidates and the pinned room's rewards. */
       readonly kind: 'phantomExit';
       readonly owner: PhantomExitAddress;
@@ -238,12 +255,6 @@ export type WorkspaceOccurrenceInteractionRequirement =
       }[];
     }
   | {
-      readonly kind: 'infernalContractPedestalCollect';
-      readonly owner: InfernalContractPedestalAddress;
-      readonly interactionKey: string;
-      readonly collected: boolean;
-    }
-  | {
       readonly kind: 'erisObservation';
       readonly owner: OccurrenceAddress;
       readonly interactionKey: string;
@@ -277,9 +288,8 @@ export type WorkspaceOccurrenceInteractionRequirement =
           readonly rewardType: string;
           readonly label: string;
         }[];
-        readonly purchase: import('../contracts/commerce').WorkspaceHermesShrinePurchase | null;
+        readonly delay: import('@run-planner/engine/authored-project').HermesShrineDelay | null;
         readonly offerInteractionKey: string;
-        readonly purchaseInteractionKey: string;
       }[];
     }
   | {
@@ -297,8 +307,6 @@ export type WorkspaceOccurrenceInteractionRequirement =
         readonly candidateItemKeys: readonly string[];
         readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
         readonly offerInteractionKey: string;
-        readonly purchased: boolean;
-        readonly purchaseInteractionKey: string;
       }[];
       readonly twists: readonly {
         readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
@@ -440,7 +448,8 @@ function occurrenceInteractionRequirementKey(
   if (
     requirement.kind === 'roomRerolls' ||
     requirement.kind === 'featureRollSlots' ||
-    requirement.kind === 'featureRollActions'
+    requirement.kind === 'featureRollActions' ||
+    requirement.kind === 'roomObjectActions'
   )
     return `${requirement.kind}:${requirement.interactionKey}`;
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;

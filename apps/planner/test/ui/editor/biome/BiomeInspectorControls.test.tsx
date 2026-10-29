@@ -705,7 +705,10 @@ describe('Biome inspector controls', () => {
         );
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
     const timeline = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(within(timeline).queryByRole('region', { name: 'Optional actions' })).toBeNull();
+    // The rack is a ranked row, never an optional action; the Champion Item's entry is.
+    expect(
+      within(timeline).queryByRole('region', { name: 'Optional actions' })?.textContent ?? '',
+    ).not.toContain('Keepsake Rack');
     const rackRow = () => {
       const row = within(timeline)
         .getByText('Keepsake Rack')

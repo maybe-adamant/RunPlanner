@@ -94,6 +94,7 @@ import {
   traitOfferMarkers,
 } from './occurrence-actions-assembly';
 import { assembleOccurrenceFeatures } from './occurrence-features-assembly';
+import { assembleRoomObjectEntries } from './room-object-entry-assembly';
 import { assembleFeatureRollActions } from './feature-roll-assembly';
 import { workspaceScreenRerollSource } from './screen-reroll-assembly';
 import { assemblePhantomExit } from './phantom-exit-assembly';
@@ -305,6 +306,10 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly stygianWellAssessment?: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
+  /** What can be done with the room's Shop, Shrine and Champion item; undefined while unreached. */
+  readonly roomObjectInteractions?: (
+    occurrence: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').RoomObjectInteractions | undefined;
   /** Whether a new Well or Pool reroll fits the run's reroll pool. */
   readonly rerollSpendAllowance?: (
     spend: import('@run-planner/engine/simulation').RerollSpend,
@@ -478,6 +483,18 @@ export function assembleWorkspaceOccurrence(
     featureRollRequirements.push(rolls.requirement);
     featureRollActions.push(rolls.actions);
   }
+  // A present Shop, Shrine or Champion item appends its next action from its Timeline entry.
+  const objectEntries = assembleRoomObjectEntries({
+    catalog: input.catalog,
+    owner: createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
+    occurrence: input.occurrence,
+    roomLocal,
+    features,
+    encounterPhases,
+    interactions: input.roomObjectInteractions?.(
+      createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
+    ),
+  });
   const actionAssembly = assembleOccurrenceActions({
     roomActionPlacementRoster: input.roomActionPlacementRoster,
     biome: input.biome,
@@ -517,11 +534,15 @@ export function assembleWorkspaceOccurrence(
   });
   const { runStateByTab, runStateLaunchers } = actionAssembly;
   const roomActions =
-    actionAssembly.roomActions === undefined || featureRollActions.length === 0
+    actionAssembly.roomActions === undefined ||
+    (featureRollActions.length === 0 && objectEntries.entries.length === 0)
       ? actionAssembly.roomActions
       : Object.freeze({
           ...actionAssembly.roomActions,
-          featureRolls: Object.freeze(featureRollActions),
+          ...(featureRollActions.length === 0
+            ? {}
+            : { featureRolls: Object.freeze(featureRollActions) }),
+          ...(objectEntries.entries.length === 0 ? {} : { objectEntries: objectEntries.entries }),
         });
   const placementRepairs =
     roomActions === undefined
@@ -1049,8 +1070,30 @@ export function assembleWorkspaceOccurrence(
                 : [],
             )
           : [];
+      // A Shop purchase or Champion item collect is repaired by deleting its row.
+      const shopOfferKey =
+        row.reference.kind === 'interactShopOffer' ? row.reference.offerKey : undefined;
+      const objectPurchaseMarkers = [
+        ...(roomLocal.kind === 'shop' && shopOfferKey !== undefined
+          ? roomLocal.offers.flatMap((offer) =>
+              offer.key === shopOfferKey &&
+              row.rewardPayload?.control.marker.focusKey !== offer.purchase.marker.focusKey
+                ? [offer.purchase.marker]
+                : [],
+            )
+          : []),
+        ...(row.reference.kind === 'interactInfernalContractPedestal'
+          ? features.flatMap((feature) =>
+              feature.kind === 'infernalContractPedestal' &&
+              row.rewardPayload?.control.marker.focusKey !== feature.collect.marker.focusKey
+                ? [feature.collect.marker]
+                : [],
+            )
+          : []),
+      ];
       const acquisitionMarkers = Object.freeze([
         ...(placementEntry === undefined ? [] : [placementEntry]),
+        ...objectPurchaseMarkers,
         ...(row.stygianWellTwist === undefined ? [] : [row.stygianWellTwist.marker]),
         ...(row.featureRoll?.slots.map((slot) => slot.marker) ?? []),
         ...(invalidPlacementEntry === undefined ? [] : [invalidPlacementEntry]),
@@ -1079,7 +1122,7 @@ export function assembleWorkspaceOccurrence(
         { readonly mark: WorkspaceMarker; readonly control?: WorkspaceFindingControl }
       >();
       // Purchases that should not exist are removed; an unplaced pickup is placed.
-      for (const marker of supplementalPurchaseMarkers)
+      for (const marker of [...supplementalPurchaseMarkers, ...objectPurchaseMarkers])
         rowControlMarks.set(marker.focusKey, { mark: row.marker, control: 'delete' });
       if (invalidPlacementEntry !== undefined)
         rowControlMarks.set(invalidPlacementEntry.focusKey, {
@@ -1211,6 +1254,7 @@ export function assembleWorkspaceOccurrence(
     ...(phantomExit === undefined ? [] : [phantomExit.requirement]),
     ...wheelRerollRequirements,
     ...featureRollRequirements,
+    ...(roomActions?.objectEntries === undefined ? [] : objectEntries.requirements),
   ]);
   input.markerDestinations.redirect(workspaceOccurrenceOwnedMarkers(node.room), node.key);
   return Object.freeze({

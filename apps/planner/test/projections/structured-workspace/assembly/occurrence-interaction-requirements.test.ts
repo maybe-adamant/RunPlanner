@@ -45,11 +45,13 @@ describe('occurrence interaction requirements', () => {
     expect(shop.occurrenceInteractionRequirements).toContainEqual(
       expect.objectContaining({ kind: 'roomActions' }),
     );
-    expect(
-      shop.occurrenceInteractionRequirements.filter(
-        (requirement) => requirement.kind === 'shopPurchaseParticipation',
-      ),
-    ).toHaveLength(3);
+    // The World Shop's entry is owned with the room's actions.
+    expect(shop.occurrenceInteractionRequirements).toContainEqual(
+      expect.objectContaining({
+        kind: 'roomObjectActions',
+        interactionKey: expect.stringMatching(/^roomObject:worldShop:/),
+      }),
+    );
   });
 
   it('owns Well, Pool, Shrine, and resource requirement rows', () => {

@@ -17,6 +17,8 @@ import type {
 import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { goldenGBiome } from '@run-planner/test-fixtures/underworld';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
+import { hintOf } from '@planner-test/support/hints';
+import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
 
 afterEach(cleanup);
 
@@ -49,30 +51,33 @@ function pedestal(): HTMLElement {
 }
 
 describe('Champion Item panel', () => {
-  it('picks and collects the boon-form pedestal item', async () => {
+  it('picks the boon-form pedestal item, then collects it from its Timeline entry', async () => {
     const view = renderOccurrenceWorkbench(boonForm(), 'Underworld', 'G', select(peerId));
     const panel = pedestal();
-    const collect = within(panel).getByRole('checkbox', { name: 'Collect Champion Item' });
-    expect(collect).toHaveProperty('disabled', true);
-
-    await view.user.click(within(panel).getByRole('button', { name: /^Champion Item/ }));
-    await view.user.click(within(await screen.findByRole('listbox')).getByText('Big Pom of Power'));
-    const chosen = pedestal();
-    const enabled = within(chosen).getByRole('checkbox', {
-      name: 'Collect Champion Item',
-    });
-    expect(enabled).toHaveProperty('disabled', false);
-    await view.user.click(enabled);
-    expect(
-      within(pedestal()).getByRole('checkbox', { name: 'Collect Champion Item' }),
-    ).toHaveProperty('checked', true);
-
+    // The Overview authors the item only.
+    expect(within(panel).queryByRole('checkbox')).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    expect(screen.getAllByText('Collect Double Pom · Champion Item').length).toBeGreaterThan(0);
+    const entry = screen.getByRole('button', { name: 'Champion Item' });
+    expect(entry).toHaveProperty('disabled', true);
+    expect(hintOf(entry)).toBe('Choose the Champion item first.');
+
+    await view.user.click(within(pedestal()).getByRole('button', { name: /^Champion Item/ }));
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Big Pom of Power'));
+    fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
+    await pickRoomObjectAction(view.user, 'Champion Item', 'Collect Double Pom · Champion Item');
+    const row = screen.getAllByText('Collect Double Pom · Champion Item')[0]!.closest('li');
+    if (row === null) throw new Error('Champion Item collect row missing');
+    // Collected: nothing more to do, and the row deletes the collect.
+    expect(screen.getByRole('button', { name: 'Champion Item' })).toHaveProperty('disabled', true);
+    expect(hintOf(screen.getByRole('button', { name: 'Champion Item' }))).toBe(
+      'Already collected.',
+    );
+    await view.user.click(within(row).getByRole('button', { name: /^Remove .* from timeline$/ }));
+    expect(screen.queryByText('Collect Double Pom · Champion Item')).toBeNull();
   });
 
-  it('shows the Shop-form pedestal as a room object outside the Shop inventory', async () => {
-    const view = renderOccurrenceWorkbench(
+  it('shows the Shop-form pedestal as a room object outside the Shop inventory', () => {
+    renderOccurrenceWorkbench(
       loadUnderworldZagreusContractCheckpoint(),
       'Underworld',
       'G',
@@ -82,12 +87,8 @@ describe('Champion Item panel', () => {
     expect(
       within(screen.getByRole('region', { name: 'Shop inventory' })).queryByText(/Contract/),
     ).toBeNull();
-    const collect = within(panel).getByRole('checkbox', { name: 'Collect Champion Item' });
-    expect(collect).toHaveProperty('checked', true);
-    await view.user.click(collect);
-    expect(
-      within(pedestal()).getByRole('checkbox', { name: 'Collect Champion Item' }),
-    ).toHaveProperty('checked', false);
+    expect(within(panel).getByRole('button', { name: /^Champion Item/ })).toBeTruthy();
+    expect(within(panel).queryByRole('checkbox')).toBeNull();
   });
 
   it('resolves a Mystery item’s source on its Timeline row', async () => {

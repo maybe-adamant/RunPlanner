@@ -1,13 +1,10 @@
 import {
-  requireWorkspaceInteraction,
   type WorkspaceInteractionCatalog,
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
-import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 
-/** Fixed Shop inventory; Travel Deal is authored on the timeline under its purchase. */
+/** The Shop's stock; purchases are timeline actions, and Travel Deal is authored under its purchase. */
 export function ShopWorkbench({
   interactions,
   room,
@@ -15,8 +12,6 @@ export function ShopWorkbench({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'shop' }>;
 }) {
-  const executeIntent = useCommandIntent();
-  const findingTarget = useFindingTarget();
   if (!room.materialized) {
     return (
       <section aria-label="Shop inventory" className="shop-editor">
@@ -41,23 +36,6 @@ export function ShopWorkbench({
                 label={`${offer.label} Item`}
               />
             </div>
-            <label className="shop-family-participation">
-              <input
-                {...findingTarget(offer.purchase.address)}
-                aria-label={`Purchased ${offer.label}`}
-                checked={offer.participation.purchased}
-                onChange={(event) =>
-                  executeIntent(
-                    requireWorkspaceInteraction(
-                      interactions.shopPurchaseParticipations,
-                      offer.participation.interactionKey,
-                    ).intentFor(event.target.checked),
-                  )
-                }
-                type="checkbox"
-              />
-              Purchased
-            </label>
           </div>
         ))}
       </div>

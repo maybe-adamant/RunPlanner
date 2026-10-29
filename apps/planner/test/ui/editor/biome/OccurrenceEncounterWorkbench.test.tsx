@@ -84,6 +84,7 @@ import {
   occurrenceRoomActionOrder,
   occurrenceState,
   openRoomTab,
+  pickRoomObjectAction,
   selectedNarcissusPickupSite,
   shipWheel,
   shipWheel2,
@@ -2767,8 +2768,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.queryByText('Eventual God')).toBeNull();
     await view.user.keyboard('{Escape}');
 
-    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 1' }));
     openRoomTab('Room Timeline');
+    await pickRoomObjectAction(view.user, 'World Shop', 'Buy Mystery Boon · Slot 1');
     const timeline = screen.getByRole('region', { name: 'Room Timeline' });
     expect(within(timeline).queryByText(/Collect Mystery Boon/)).toBeNull();
     const purchase = screen.getByText('Buy Mystery Boon · Slot 1').closest('li');
@@ -2795,9 +2796,10 @@ describe('OccurrenceEncounterWorkbench', () => {
       )!;
     openRoomTab('Room Overview');
     expect(screen.queryByRole('button', { name: 'Travel Deal Item' })).toBeNull();
-    expect(screen.queryByRole('checkbox', { name: 'Purchased Travel Deal' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: /^Purchased/ })).toBeNull();
     openRoomTab('Room Timeline');
     const line = () => screen.getByRole('listitem', { name: 'Travel Deal' });
+    expect(within(line()).queryByRole('checkbox')).toBeNull();
     expect(line().previousElementSibling?.textContent).toContain('Slot 1');
     await view.user.click(within(line()).getByRole('button', { name: 'Travel Deal Item' }));
     await view.user.click(
@@ -2813,7 +2815,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
     expect(screen.queryByText('Eventual God')).toBeNull();
-    await view.user.click(within(line()).getByRole('checkbox', { name: 'Purchased Travel Deal' }));
+    await pickRoomObjectAction(view.user, 'World Shop', 'Buy Travel Deal item');
     const purchase = () => screen.getByText('Buy Mystery Boon · Travel Deal Offer').closest('li')!;
     await view.user.click(within(purchase()).getByRole('button', { name: 'Reward' }));
     const options = within(await screen.findByRole('listbox')).getAllByRole('option');
@@ -2826,16 +2828,18 @@ describe('OccurrenceEncounterWorkbench', () => {
       room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill
         ?.traitOffersByAcquisitionRole.hiddenSource,
     ).toBeTruthy();
-    await view.user.click(within(line()).getByRole('checkbox', { name: 'Purchased Travel Deal' }));
+    await view.user.click(
+      within(purchase()).getByRole('button', { name: /^Remove .* from timeline$/ }),
+    );
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
     act(() => {
       view.application.store.dispatch(authoredProjectUndoRequested());
     });
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeTruthy();
     const restoredChild = room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill;
-    openRoomTab('Room Overview');
-    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 1' }));
-    openRoomTab('Room Timeline');
+    await view.user.click(
+      screen.getByRole('button', { name: /^Remove Buy .*· Slot 1 from timeline$/ }),
+    );
     // Without its source purchase the retained refill purchase loses its line and keeps removal.
     expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toEqual(
@@ -2895,14 +2899,13 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(shop.occurrenceId),
     );
     expect(screen.queryByLabelText('Death Defiance condition met')).toBeNull();
-    const control = screen.getByRole('checkbox', { name: 'Purchased Offer 3' }) as HTMLInputElement;
-    expect(control.checked).toBe(false);
+    openRoomTab('Room Timeline');
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.click(control);
-    expect(control.checked).toBe(true);
+    await pickRoomObjectAction(view.user, 'World Shop', /Slot 3$/);
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
+    expect(screen.getByText(/^Buy .*· Slot 3$/)).toBeTruthy();
   });
 
   it('renders an unpicked Shop as dormant without inventory controls', () => {

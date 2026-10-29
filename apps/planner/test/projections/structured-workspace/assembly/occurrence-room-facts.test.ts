@@ -222,9 +222,9 @@ describe('occurrence room facts', () => {
     );
     expect(
       result.occurrenceInteractionRequirements.filter(
-        (requirement) => requirement.kind === 'shopPurchaseParticipation',
+        (requirement) => requirement.kind === 'roomObjectActions',
       ),
-    ).toHaveLength(3);
+    ).toHaveLength(1);
     expect(projected.markers.destinations().get(semanticAddressKey(duplicate))).toMatchObject({
       ownerAddress: duplicate,
       focusAddress: {

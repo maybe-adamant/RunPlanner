@@ -132,19 +132,6 @@ export function occurrenceInteractionRequirements(
       }),
     );
   }
-  const activeShopOwners = new Set<string>();
-  if (room.roomLocal.kind === 'shop' && room.roomLocal.materialized) {
-    for (const offer of room.roomLocal.offers) {
-      activeShopOwners.add(offer.participation.interactionKey);
-      requirements.push(
-        Object.freeze({
-          kind: 'shopPurchaseParticipation' as const,
-          owner: offer.participation.owner,
-          purchased: offer.participation.purchased,
-        }),
-      );
-    }
-  }
   if (room.placementRepairs !== undefined) {
     requirements.push(
       Object.freeze({
@@ -176,17 +163,6 @@ export function occurrenceInteractionRequirements(
           : { fieldsCageOrder: true as const }),
       }),
     );
-    for (const row of room.roomActions.repairRows) {
-      if (row.shopParticipation === undefined) continue;
-      if (activeShopOwners.has(row.shopParticipation.interactionKey)) continue;
-      requirements.push(
-        Object.freeze({
-          kind: 'shopPurchaseParticipation' as const,
-          owner: row.shopParticipation.owner,
-          purchased: true,
-        }),
-      );
-    }
   }
   for (const feature of room.workbench.features) {
     if (feature.kind === 'stygianWell') {
@@ -212,8 +188,6 @@ export function occurrenceInteractionRequirements(
                 candidateItemKeys: slot.candidateItemKeys,
                 candidateItems: slot.candidateItems,
                 offerInteractionKey: slot.offerInteractionKey,
-                purchased: slot.purchased,
-                purchaseInteractionKey: slot.purchaseInteractionKey,
               }),
             ),
           ),
@@ -254,9 +228,8 @@ export function occurrenceInteractionRequirements(
                 ...(slot.rewardLabel === undefined ? {} : { rewardLabel: slot.rewardLabel }),
                 candidateRewardTypes: slot.candidateRewardTypes,
                 candidateRewards: slot.candidateRewards,
-                purchase: slot.purchase,
+                delay: slot.delay,
                 offerInteractionKey: slot.offerInteractionKey,
-                purchaseInteractionKey: slot.purchaseInteractionKey,
               }),
             ),
             ...(feature.travelDealRefill === undefined
@@ -270,24 +243,11 @@ export function occurrenceInteractionRequirements(
                       : { rewardLabel: feature.travelDealRefill.rewardLabel }),
                     candidateRewardTypes: feature.travelDealRefill.candidateRewardTypes,
                     candidateRewards: feature.travelDealRefill.candidateRewards,
-                    purchase: feature.travelDealRefill.purchase,
+                    delay: feature.travelDealRefill.delay,
                     offerInteractionKey: feature.travelDealRefill.offerInteractionKey,
-                    purchaseInteractionKey: feature.travelDealRefill.purchaseInteractionKey,
                   }),
                 ]),
           ]),
-        }),
-      );
-      continue;
-    }
-    if (feature.kind === 'infernalContractPedestal') {
-      if (feature.rewardControl.owner.kind !== 'infernalContractPedestal') continue;
-      requirements.push(
-        Object.freeze({
-          kind: 'infernalContractPedestalCollect' as const,
-          owner: feature.rewardControl.owner.address,
-          interactionKey: feature.collect.interactionKey,
-          collected: feature.collect.collected,
         }),
       );
       continue;

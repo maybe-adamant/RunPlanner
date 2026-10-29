@@ -95,8 +95,8 @@ export type WorkspaceRoomFeature =
           readonly label: string;
         }[];
         readonly offerInteractionKey: string;
-        readonly purchaseInteractionKey: string;
-        readonly purchase: import('./commerce').WorkspaceHermesShrinePurchase | null;
+        /** The delay rolled with the stocked item; null while unstocked. */
+        readonly delay: import('@run-planner/engine/authored-project').HermesShrineDelay | null;
       }[];
       /** Refill inventory, authored on the timeline under the purchase that triggers it. */
       readonly travelDealRefill?: {
@@ -110,22 +110,20 @@ export type WorkspaceRoomFeature =
           readonly label: string;
         }[];
         readonly offerInteractionKey: string;
-        readonly purchaseInteractionKey: string;
-        readonly purchase: import('./commerce').WorkspaceHermesShrinePurchase | null;
+        /** The delay rolled with the stocked item; null while unstocked. */
+        readonly delay: import('@run-planner/engine/authored-project').HermesShrineDelay | null;
         /** The rushed purchase that triggers the refill; absent while Travel Deal does not apply. */
         readonly sourceGenerationKey?: import('@run-planner/engine/authored-project').HermesShrineGenerationKey;
       };
     }
   | {
-      /** The Preboss Contract pedestal's one free item and whether it is collected. */
+      /** The Preboss Contract pedestal's one free item; collecting it is a timeline action. */
       readonly kind: 'infernalContractPedestal';
       readonly rewardControl: WorkspaceExplicitRewardControl;
       readonly collect: {
         /** The collected item's acquisition, which owns its availability findings. */
         readonly address: AcquisitionEntryAddress;
         readonly marker: WorkspaceMarker;
-        readonly interactionKey: string;
-        readonly collected: boolean;
       };
     }
   | {
@@ -158,7 +156,7 @@ export interface WorkspaceStygianWellSlot {
   readonly candidateItemKeys: readonly string[];
   readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
   readonly offerInteractionKey: string;
-  readonly purchaseInteractionKey: string;
+  /** Bought on the room's timeline. */
   readonly purchased: boolean;
 }
 
@@ -341,4 +339,53 @@ export interface WorkspaceChaosSpawnInteraction {
   readonly spawnIntent: () => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'AddChaos' }>
   >;
+}
+
+/** A room object interacted with through the room's actions, apart from the Well and Pool. */
+export type WorkspaceRoomObject = 'worldShop' | 'hermesShrine' | 'championItem';
+
+/** Why a room object's entry, or one of its options, cannot be picked. */
+export type WorkspaceRoomObjectLock =
+  'unreached' | 'allBought' | 'collected' | 'itemUnchosen' | 'inactive' | 'travelDealItemUnchosen';
+
+/** One thing a Shop, Shrine or Champion item can do next, named as its timeline row. */
+export interface WorkspaceRoomObjectOption {
+  readonly key: string;
+  readonly label: string;
+  /** A blank item: picking it first chooses what it stocks. */
+  readonly needsChoice?: true;
+  readonly locked?: WorkspaceRoomObjectLock;
+}
+
+/** One present room object's entry at the top of the optional actions. */
+export interface WorkspaceRoomObjectEntry {
+  readonly interactionKey: string;
+  readonly object: WorkspaceRoomObject;
+  readonly options: readonly WorkspaceRoomObjectOption[];
+  /** Nothing can be done here now. */
+  readonly locked?: WorkspaceRoomObjectLock;
+}
+
+type RoomObjectCommand = Extract<
+  ProjectCommand,
+  {
+    readonly kind:
+      | 'ReplaceShopPurchaseParticipation'
+      | 'PurchaseShopTravelDealRefill'
+      | 'PurchaseHermesShrineOffer'
+      | 'SetInfernalContractPedestalCollected';
+  }
+>;
+
+export interface WorkspaceRoomObjectEntryInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  /** The action an option appends when it needs no choice. */
+  readonly intentFor: (optionKey: string) => WorkspaceCommandIntent<RoomObjectCommand>;
+  /** What a blank item can stock. */
+  readonly choices: (optionKey: string) => ContextualPickerModel<string>;
+  readonly choiceIntentFor: (
+    optionKey: string,
+    value: string,
+  ) => WorkspaceCommandIntent<RoomObjectCommand>;
 }

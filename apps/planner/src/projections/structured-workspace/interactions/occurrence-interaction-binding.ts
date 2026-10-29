@@ -58,15 +58,11 @@ import type { WorkspaceRoomActionInteraction } from '../contracts/timeline';
 import type { WorkspacePhantomExitInteraction } from '../contracts/structure';
 import { bindPhantomExitInteraction } from './phantom-exit-interactions';
 import type {
-  WorkspaceInfernalContractPedestalCollectInteraction,
-  WorkspaceShopPurchaseParticipationInteraction,
   WorkspacePurgingPoolSlotInteraction,
   WorkspaceHermesShrineOfferInteraction,
-  WorkspaceHermesShrinePurchaseInteraction,
   WorkspaceHermesShrinePresenceInteraction,
   WorkspaceStygianWellPresenceInteraction,
   WorkspaceStygianWellOfferInteraction,
-  WorkspaceStygianWellPurchaseInteraction,
   WorkspaceStygianWellTwistResultInteraction,
 } from '../contracts/commerce';
 import type {
@@ -113,14 +109,6 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly rewardWheelStores: ReadonlyMap<string, WorkspacePickerCandidateInteraction<string>>;
   readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspacePickerCandidateInteraction<2 | 3>>;
   readonly roomActions: ReadonlyMap<string, WorkspaceRoomActionInteraction>;
-  readonly shopPurchaseParticipations: ReadonlyMap<
-    string,
-    WorkspaceShopPurchaseParticipationInteraction
-  >;
-  readonly infernalContractPedestalCollects: ReadonlyMap<
-    string,
-    WorkspaceInfernalContractPedestalCollectInteraction
-  >;
   readonly phantomExits: ReadonlyMap<string, WorkspacePhantomExitInteraction>;
   readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;
   readonly erisObservations: ReadonlyMap<
@@ -128,11 +116,9 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
     import('../contract').WorkspaceErisObservationInteraction
   >;
   readonly hermesShrineOffers: ReadonlyMap<string, WorkspaceHermesShrineOfferInteraction>;
-  readonly hermesShrinePurchases: ReadonlyMap<string, WorkspaceHermesShrinePurchaseInteraction>;
   readonly hermesShrinePresences: ReadonlyMap<string, WorkspaceHermesShrinePresenceInteraction>;
   readonly stygianWellPresences: ReadonlyMap<string, WorkspaceStygianWellPresenceInteraction>;
   readonly stygianWellOffers: ReadonlyMap<string, WorkspaceStygianWellOfferInteraction>;
-  readonly stygianWellPurchases: ReadonlyMap<string, WorkspaceStygianWellPurchaseInteraction>;
   readonly stygianWellTwistResults: ReadonlyMap<string, WorkspaceStygianWellTwistResultInteraction>;
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
@@ -282,14 +268,6 @@ export function bindOccurrenceLocalInteractions(
   const rewardWheelStores = new Map<string, WorkspacePickerCandidateInteraction<string>>();
   const shipCombatPhaseCounts = new Map<string, WorkspacePickerCandidateInteraction<2 | 3>>();
   const roomActions = new Map<string, WorkspaceRoomActionInteraction>();
-  const shopPurchaseParticipations = new Map<
-    string,
-    WorkspaceShopPurchaseParticipationInteraction
-  >();
-  const infernalContractPedestalCollects = new Map<
-    string,
-    WorkspaceInfernalContractPedestalCollectInteraction
-  >();
   const phantomExits = new Map<string, WorkspacePhantomExitInteraction>();
   const erisObservations = new Map<
     string,
@@ -297,11 +275,9 @@ export function bindOccurrenceLocalInteractions(
   >();
   const purgingPoolSlots = new Map<string, WorkspacePurgingPoolSlotInteraction>();
   const hermesShrineOffers = new Map<string, WorkspaceHermesShrineOfferInteraction>();
-  const hermesShrinePurchases = new Map<string, WorkspaceHermesShrinePurchaseInteraction>();
   const hermesShrinePresences = new Map<string, WorkspaceHermesShrinePresenceInteraction>();
   const stygianWellPresences = new Map<string, WorkspaceStygianWellPresenceInteraction>();
   const stygianWellOffers = new Map<string, WorkspaceStygianWellOfferInteraction>();
-  const stygianWellPurchases = new Map<string, WorkspaceStygianWellPurchaseInteraction>();
   const stygianWellTwistResults = new Map<string, WorkspaceStygianWellTwistResultInteraction>();
   const localVisitOrders = new Map<string, WorkspaceLocalVisitOrderInteraction>();
   const localVisitGenerations = new Map<string, WorkspaceLocalVisitGenerationInteraction>();
@@ -981,31 +957,6 @@ export function bindOccurrenceLocalInteractions(
         );
         break;
       }
-      case 'shopPurchaseParticipation': {
-        const key = semanticAddressKey(requirement.owner);
-        if (shopPurchaseParticipations.has(key)) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${key} has multiple bound Shop purchase-participation interactions`,
-          );
-        }
-        shopPurchaseParticipations.set(
-          key,
-          Object.freeze({
-            intentFor: (purchased: boolean) =>
-              Object.freeze({
-                command: Object.freeze({
-                  kind: 'ReplaceShopPurchaseParticipation' as const,
-                  offer: requirement.owner,
-                  purchased,
-                }),
-              }),
-            key,
-            owner: requirement.owner,
-            purchased: requirement.purchased,
-          }),
-        );
-        break;
-      }
       case 'purgingPoolSlots': {
         for (const slot of requirement.slots) {
           if (purgingPoolSlots.has(slot.interactionKey)) {
@@ -1066,30 +1017,6 @@ export function bindOccurrenceLocalInteractions(
             key: requirement.interactionKey,
             owner: requirement.owner,
             spawned: requirement.spawned,
-          }),
-        );
-        break;
-      }
-      case 'infernalContractPedestalCollect': {
-        if (infernalContractPedestalCollects.has(requirement.interactionKey)) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${requirement.interactionKey} has multiple bound Contract pedestal collect interactions`,
-          );
-        }
-        infernalContractPedestalCollects.set(
-          requirement.interactionKey,
-          Object.freeze({
-            intentFor: (collected: boolean) =>
-              Object.freeze({
-                command: Object.freeze({
-                  kind: 'SetInfernalContractPedestalCollected' as const,
-                  pedestal: requirement.owner,
-                  collected,
-                }),
-              }),
-            key: requirement.interactionKey,
-            owner: requirement.owner,
-            collected: requirement.collected,
           }),
         );
         break;
@@ -1160,6 +1087,18 @@ export function bindOccurrenceLocalInteractions(
               slotKey: slot.slotKey,
               rewardType: slot.rewardType,
               candidateRewardTypes: slot.candidateRewardTypes,
+              delay: slot.delay,
+              delayIntentFor: (
+                delay: import('@run-planner/engine/authored-project').HermesShrineDelay,
+              ) =>
+                Object.freeze({
+                  command: Object.freeze({
+                    kind: 'SetHermesShrineOfferDelay' as const,
+                    occurrence: requirement.owner,
+                    generationKey,
+                    delay,
+                  }),
+                }),
               intentFor: (rewardType: string) =>
                 Object.freeze({
                   command:
@@ -1175,56 +1114,6 @@ export function bindOccurrenceLocalInteractions(
                           slotKey: slot.slotKey,
                           value: Object.freeze({ rewardType }),
                         }),
-                }),
-            }),
-          );
-          if (hermesShrinePurchases.has(slot.purchaseInteractionKey)) {
-            throw new StructuredWorkspaceProjectionContractError(
-              `${slot.purchaseInteractionKey} has multiple bound Hermes Shrine purchase interactions`,
-            );
-          }
-          hermesShrinePurchases.set(
-            slot.purchaseInteractionKey,
-            Object.freeze({
-              key: slot.purchaseInteractionKey,
-              owner: requirement.owner,
-              generationKey,
-              purchase: slot.purchase,
-              intentFor: (
-                purchase: import('../contracts/commerce').WorkspaceHermesShrinePurchase | null,
-              ) =>
-                Object.freeze({
-                  command: Object.freeze(
-                    purchase !== null && slot.purchase !== null
-                      ? {
-                          kind: 'SetHermesShrineOfferDelay' as const,
-                          occurrence: requirement.owner,
-                          generationKey,
-                          delay: purchase.delay,
-                        }
-                      : {
-                          kind: 'SetHermesShrinePurchase' as const,
-                          occurrence: requirement.owner,
-                          generationKey,
-                          purchased: purchase !== null,
-                        },
-                  ),
-                }),
-              rushIntentFor: (rushed: boolean) =>
-                Object.freeze({
-                  command: Object.freeze({
-                    kind: 'SetHermesShrinePurchaseRush' as const,
-                    action: createRoomActionAddress(
-                      createBiomeAddress(requirement.owner.routeKey, requirement.owner.biomeKey),
-                      requirement.owner.occurrenceId,
-                      roomActionKey({
-                        kind: 'purchaseHermesShrineOffer',
-                        generationKey,
-                        rushed: false,
-                      }),
-                    ),
-                    rushed,
-                  }),
                 }),
             }),
           );
@@ -1290,24 +1179,6 @@ export function bindOccurrenceLocalInteractions(
                           slotKey: slot.slotKey,
                           itemKey,
                         }),
-                }),
-            }),
-          );
-          stygianWellPurchases.set(
-            slot.purchaseInteractionKey,
-            Object.freeze({
-              key: slot.purchaseInteractionKey,
-              owner: requirement.owner,
-              generationKey: slot.generationKey,
-              purchased: slot.purchased,
-              intentFor: (purchased: boolean) =>
-                Object.freeze({
-                  command: Object.freeze({
-                    kind: 'SetStygianWellPurchase' as const,
-                    occurrence: requirement.owner,
-                    generationKey: slot.generationKey,
-                    purchased,
-                  }),
                 }),
             }),
           );
@@ -1545,17 +1416,13 @@ export function bindOccurrenceLocalInteractions(
     rewardWheelPicks,
     rewardWheelStores,
     shipCombatPhaseCounts,
-    shopPurchaseParticipations,
-    infernalContractPedestalCollects,
     phantomExits,
     purgingPoolSlots,
     erisObservations,
     hermesShrineOffers,
-    hermesShrinePurchases,
     hermesShrinePresences,
     stygianWellPresences,
     stygianWellOffers,
-    stygianWellPurchases,
     stygianWellTwistResults,
     localVisitOrders,
     localVisitGenerations,
