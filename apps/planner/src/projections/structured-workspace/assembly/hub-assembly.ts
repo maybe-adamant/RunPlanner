@@ -707,6 +707,7 @@ function projectHubNode(
                 ...(JSON.stringify(first) === JSON.stringify(target.current)
                   ? {}
                   : { rerolledSummary: summarizeRewardOffer(catalog, target.current) }),
+                offer: target.current,
               }),
             ];
           });

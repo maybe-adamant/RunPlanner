@@ -383,6 +383,8 @@ export interface WorkspaceHubBoardDoor {
   readonly summary: string;
   /** Its reward after the rerolls so far, where it differs from the first draw. */
   readonly rerolledSummary?: string;
+  /** Its current reward, for its icon. */
+  readonly offer: ResolvedRewardOffer;
 }
 
 /** The Hub between two required visits; 0 precedes the first visit. */

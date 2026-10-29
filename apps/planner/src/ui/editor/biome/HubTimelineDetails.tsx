@@ -6,6 +6,7 @@ import {
   workspaceInteractionKey,
   type WorkspaceDoorContract,
   type WorkspaceHubActionOrderInteraction,
+  type WorkspaceHubBoardDoor,
   type WorkspaceHubDecisionNode,
   type WorkspaceHubStay,
   type WorkspaceHubVisit,
@@ -14,6 +15,7 @@ import {
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { hubFountainIcon } from '@planner/ui/artwork/roomArtwork';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -180,16 +182,28 @@ function FountainRow({
   );
 }
 
+function boardRewardIcon(offer: WorkspaceHubBoardDoor['offer']): string | undefined {
+  const identity =
+    offer.rewardType === 'Boon' && offer.payload?.kind === 'BoonSource'
+      ? offer.payload.source
+      : offer.rewardType;
+  return rewardIcon(identity);
+}
+
 function BoardRecap({ stay }: { readonly stay: WorkspaceHubStay }) {
   if (stay.board === undefined) return null;
   return (
     <li className="hub-timeline-board">
-      <h5>{stay.precedingVisitCount === 0 ? 'Board at entry' : 'Board'}</h5>
+      <h5>Board</h5>
       <ul aria-label={`Board ${stayLabel(stay.precedingVisitCount)}`}>
         {stay.board.map((door) => (
           <li key={door.hubSlotKey}>
             <span className="hub-timeline-board-room">{door.label}</span>
-            <span className="hub-timeline-board-reward">
+            <span
+              className="hub-timeline-board-reward"
+              data-rerolled={door.rerolledSummary !== undefined}
+            >
+              <ArtworkIcon className="artwork-label-icon" source={boardRewardIcon(door.offer)} />
               {door.rerolledSummary === undefined
                 ? door.summary
                 : `${door.summary} → ${door.rerolledSummary}`}

@@ -2428,7 +2428,7 @@
 .hub-timeline-board {
   display: grid;
   gap: 4px;
-  padding: 8px 14px 10px calc(4.5rem + 24px);
+  padding: 8px 14px 10px calc(4.5rem + 14px);
   border-top: 1px solid #2c2d35;
 }
 
@@ -2441,18 +2441,50 @@
 
 .hub-timeline-board ul {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
-  gap: 2px 28px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px 0;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+/* Three door groups per line, a thin divider between groups. */
 .hub-timeline-board li {
   display: grid;
-  grid-template-columns: minmax(6.5rem, 8.5rem) minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 6.25rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
   font-size: 0.88rem;
+}
+
+.hub-timeline-board li:not(:nth-child(3n + 1)) {
+  border-left: 1px solid #2c2d35;
+}
+
+.hub-timeline-board li:nth-child(3n + 1) {
+  padding-left: 0;
+}
+
+.hub-timeline-board-room {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hub-timeline-board-reward {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* A rerolled reward wraps to keep both its first and final draw readable. */
+.hub-timeline-board-reward[data-rerolled='true'] {
+  white-space: normal;
 }
 
 /* The Well's Travel Deal line: its item picker spans the label column on one line. */
