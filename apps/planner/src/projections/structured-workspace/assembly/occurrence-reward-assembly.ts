@@ -233,10 +233,10 @@ function traitOfferControls(
       );
     }
     const marker = input.markerDestinations.marker(address);
-    const screenRerolls =
-      offer.kind === 'fallbackGold'
-        ? undefined
-        : input.screenRerolls?.({ kind: 'traitOffer', giverKey }, offer.rerolledScreens?.length);
+    const screenRerolls = input.screenRerolls?.(
+      { kind: 'traitOffer', giverKey },
+      offer.rerolledScreens?.length,
+    );
     controls.push(
       Object.freeze({
         acquisitionRoleLabel: workspaceAcquisitionRoleLabel(acquisitionRole),
@@ -1199,13 +1199,10 @@ export function activeEncounterPhasesForOwner(
               });
             }
             const marker = input.markerDestinations.marker(traitAddress);
-            const screenRerolls =
-              authoredTraitOffer.kind === 'fallbackGold'
-                ? undefined
-                : input.screenRerolls?.(
-                    { kind: 'traitOffer', giverKey: producer.giverKey },
-                    authoredTraitOffer.rerolledScreens?.length,
-                  );
+            const screenRerolls = input.screenRerolls?.(
+              { kind: 'traitOffer', giverKey: producer.giverKey },
+              authoredTraitOffer.rerolledScreens?.length,
+            );
             return Object.freeze({
               acquisitionRoleLabel: 'Selection',
               ...(screenRerolls === undefined ? {} : { screenRerolls }),

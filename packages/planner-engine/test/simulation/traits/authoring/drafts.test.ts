@@ -54,6 +54,23 @@ describe('ordinary trait draft structure', () => {
     ).toHaveLength(1);
   });
 
+  it('keeps rerolled screens when the final screen turns Gold or back into rows', () => {
+    const rerolledScreens = [{ options: [] }] as const;
+    const one: AuthoredTraitOfferTraits = {
+      ...full,
+      selectedOptionKey: 'option1',
+      options: [full.options[0]],
+      rerolledScreens,
+    };
+    const gold = removeTraitOfferDraft(catalog, one);
+    expect(gold).toEqual({ kind: 'fallbackGold', giverKey: 'Apollo', rerolledScreens });
+    if (gold === undefined) throw new Error('expected Gold');
+    expect(appendTraitOfferDraft(catalog, gold, traitFrontierState(before), {})).toMatchObject({
+      kind: 'traits',
+      rerolledScreens,
+    });
+  });
+
   it('returns a valid empty terminal for exhausted initial authoring and Start over', () => {
     const giver = { ...catalog.traitGivers.byKey.Hermes!, traitKeys: [], priorityTraitKeys: [] };
     const exhausted = {

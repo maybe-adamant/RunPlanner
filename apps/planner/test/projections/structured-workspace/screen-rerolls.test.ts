@@ -66,6 +66,24 @@ describe('screen reroll counts', () => {
     ).toBe(true);
   });
 
+  it('offer rerolls on a Fallback Gold screen too', () => {
+    const project = withJudgments(held, screenCard);
+    const [boon] = oceanusBoons(project);
+    const value = boon!.value as Extract<AuthoredTraitOffer, { readonly kind: 'traits' }>;
+    const gold = applyProjectCommand(
+      project,
+      catalog,
+      boon!.intentFor(Object.freeze({ kind: 'fallbackGold', giverKey: value.giverKey })).command,
+    );
+    const owner = JSON.stringify(boon!.owner);
+    const { workspace } = projectStructuredWorkspaceFixture(gold);
+    const goldOffer = [...workspace.interactions.traitOffers.values()].find(
+      (interaction) => JSON.stringify(interaction.owner) === owner,
+    );
+    expect(goldOffer?.value?.kind).toBe('fallbackGold');
+    expect(goldOffer?.screenRerolls).toMatchObject({ count: 0 });
+  });
+
   it('keep an authored count without the card, locked where it is', () => {
     const project = withJudgments(held, screenCard);
     const [boon] = oceanusBoons(project);

@@ -205,7 +205,12 @@ export function appendTraitOfferDraft(
   const candidate = automaticDraftCandidates(
     traitCandidates(catalog, value.giverKey, state, source).filter((entry) => entry.available),
   )[0];
-  return candidate === undefined ? undefined : traitDraft(value.giverKey, [candidate]);
+  if (candidate === undefined) return undefined;
+  const draft = traitDraft(value.giverKey, [candidate]);
+  // Earlier rerolled screens belong to the offer, not to its final screen's shape.
+  return value.kind !== 'fallbackGold' || value.rerolledScreens === undefined
+    ? draft
+    : Object.freeze({ ...draft, rerolledScreens: value.rerolledScreens });
 }
 
 /** Structural ordinary-offer removal.  Removing the final row is Gold. */
@@ -216,7 +221,11 @@ export function removeTraitOfferDraft(
   const giver = catalog.traitGivers.byKey[value.giverKey];
   if (giver?.providerKind !== 'olympian' && giver?.providerKind !== 'hermes') return undefined;
   if (value.options.length <= 1)
-    return Object.freeze({ kind: 'fallbackGold' as const, giverKey: value.giverKey });
+    return Object.freeze({
+      kind: 'fallbackGold' as const,
+      giverKey: value.giverKey,
+      ...(value.rerolledScreens === undefined ? {} : { rerolledScreens: value.rerolledScreens }),
+    });
   const options = Object.freeze(value.options.slice(0, -1)) as AuthoredTraitOfferTraits['options'];
   const selectedOptionKey =
     TRAIT_OPTION_KEYS[Math.min(optionIndex(value.selectedOptionKey), options.length - 1)]!;
