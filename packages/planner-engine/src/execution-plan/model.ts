@@ -484,7 +484,16 @@ export type ExecutionTraitOffer =
  * the screen opens, the k-th later one on the k-th native reroll; no pick.
  */
 export interface ExecutionRerolledTraitScreen {
-  readonly options: readonly { readonly key: string; readonly rarity?: string }[];
+  readonly options: readonly {
+    readonly key: string;
+    readonly rarity?: string;
+    /** The row's installed level (Persephone, Jeweled Pom), as on a final row. */
+    readonly effectiveLevel?: number;
+    /** An exchange row: the boon it replaces, as on a final row. */
+    readonly replacement?: NonNullable<
+      Extract<ExecutionTraitOffer, { readonly kind: 'traits' }>['options'][number]['replacement']
+    >;
+  }[];
   readonly rejected?: ExecutionTraitOptionKey;
 }
 

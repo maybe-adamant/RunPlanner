@@ -63,6 +63,19 @@ describe('reroll codec', () => {
     };
     expect(decodeWith(withScreens([null, null]))).not.toThrow();
     expect(decodeWith(withScreens([]))).toThrow('rerolledScreens');
+    const persephone = (bonus: number) =>
+      withScreens([
+        {
+          options: [
+            { traitKey: 'ZeusWeaponBoon', rarity: 'Common', persephoneLevelBonus: bonus },
+            { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
+            { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+          ],
+        },
+      ]);
+    expect(decodeWith(persephone(3))).not.toThrow();
+    expect(decodeWith(persephone(9))).toThrow('Persephone level bonus');
+    expect(decodeWith(persephone(-1))).toThrow('persephoneLevelBonus');
     expect(decodeWith(withScreens([{ options: [], extra: true }]))).toThrow('extra');
     expect(decodeWith(withScreens([{ options: [{ traitKey: 'NoSuchTrait' }] }]))).toThrow(
       'NoSuchTrait',

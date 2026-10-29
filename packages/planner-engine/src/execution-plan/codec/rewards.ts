@@ -313,17 +313,10 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
       ],
       `${label}.options[${index}]`,
     );
-    const replacement =
-      option.replacement === undefined
-        ? undefined
-        : object(option.replacement, `${label}.options[${index}].replacement`);
-    if (replacement !== undefined)
-      exact(
-        replacement,
-        ['slot', 'replacedTraitKey', 'oldRarity', 'newTraitKey', 'requiredRarity'],
-        ['levelBonus'],
-        `${label}.options[${index}].replacement`,
-      );
+    const replacement = optionReplacement(
+      option.replacement,
+      `${label}.options[${index}].replacement`,
+    );
     return Object.freeze({
       key: stringValue(option.key, `${label}.options[${index}].key`),
       ...(option.baseRarity === undefined
@@ -516,37 +509,7 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
               });
             })(),
           }),
-      ...(replacement === undefined
-        ? {}
-        : {
-            replacement: Object.freeze({
-              slot: stringValue(replacement.slot, `${label}.options[${index}].replacement.slot`),
-              replacedTraitKey: stringValue(
-                replacement.replacedTraitKey,
-                `${label}.options[${index}].replacement.replacedTraitKey`,
-              ),
-              oldRarity: stringValue(
-                replacement.oldRarity,
-                `${label}.options[${index}].replacement.oldRarity`,
-              ),
-              newTraitKey: stringValue(
-                replacement.newTraitKey,
-                `${label}.options[${index}].replacement.newTraitKey`,
-              ),
-              requiredRarity: stringValue(
-                replacement.requiredRarity,
-                `${label}.options[${index}].replacement.requiredRarity`,
-              ),
-              ...(replacement.levelBonus === undefined
-                ? {}
-                : {
-                    levelBonus: integer(
-                      replacement.levelBonus,
-                      `${label}.options[${index}].replacement.levelBonus`,
-                    ),
-                  }),
-            }),
-          }),
+      ...(replacement === undefined ? {} : { replacement }),
     });
   });
   if (options.length === 0) fail(`${label}.options must contain one to three ordered options`);
@@ -669,12 +632,30 @@ function rerolledTraitScreen(value: unknown, label: string): ExecutionRerolledTr
   exact(record, ['options'], ['rejected'], label);
   const options = array(record.options, `${label}.options`, 3).map((entry, index) => {
     const option = object(entry, `${label}.options[${index}]`);
-    exact(option, ['key'], ['rarity'], `${label}.options[${index}]`);
+    exact(
+      option,
+      ['key'],
+      ['rarity', 'effectiveLevel', 'replacement'],
+      `${label}.options[${index}]`,
+    );
+    const replacement = optionReplacement(
+      option.replacement,
+      `${label}.options[${index}].replacement`,
+    );
     return Object.freeze({
       key: stringValue(option.key, `${label}.options[${index}].key`),
       ...(option.rarity === undefined
         ? {}
         : { rarity: stringValue(option.rarity, `${label}.options[${index}].rarity`) }),
+      ...(option.effectiveLevel === undefined
+        ? {}
+        : {
+            effectiveLevel: integer(
+              option.effectiveLevel,
+              `${label}.options[${index}].effectiveLevel`,
+            ),
+          }),
+      ...(replacement === undefined ? {} : { replacement }),
     });
   });
   if (new Set(options.map((option) => option.key)).size !== options.length)
@@ -890,5 +871,31 @@ export function equipResults(value: unknown, label: string) {
             ),
           }),
         }),
+  });
+}
+
+function optionReplacement(
+  value: unknown,
+  label: string,
+):
+  | NonNullable<Extract<ExecutionTraitOffer, { kind: 'traits' }>['options'][number]['replacement']>
+  | undefined {
+  if (value === undefined) return undefined;
+  const replacement = object(value, label);
+  exact(
+    replacement,
+    ['slot', 'replacedTraitKey', 'oldRarity', 'newTraitKey', 'requiredRarity'],
+    ['levelBonus'],
+    label,
+  );
+  return Object.freeze({
+    slot: stringValue(replacement.slot, `${label}.slot`),
+    replacedTraitKey: stringValue(replacement.replacedTraitKey, `${label}.replacedTraitKey`),
+    oldRarity: stringValue(replacement.oldRarity, `${label}.oldRarity`),
+    newTraitKey: stringValue(replacement.newTraitKey, `${label}.newTraitKey`),
+    requiredRarity: stringValue(replacement.requiredRarity, `${label}.requiredRarity`),
+    ...(replacement.levelBonus === undefined
+      ? {}
+      : { levelBonus: integer(replacement.levelBonus, `${label}.levelBonus`) }),
   });
 }

@@ -545,7 +545,10 @@ export interface RerolledScreenAssessment {
   readonly missing: boolean;
   /** The first screen shows every fresh trait, so the game refuses its reroll. */
   readonly rerollRefused?: true;
+  /** Row assessments, each including its Persephone roll and level findings. */
   readonly assessments: readonly TraitAssessment[];
+  /** Each row's level: the Persephone domain and the installed level, as on a final row. */
+  readonly levelResolutions: readonly TraitOfferOptionLevelResolution[];
   /** Native staged support, linked to the screen before it, for ordinary givers. */
   readonly generation?: InitialOfferSupport;
   readonly composition: TraitOfferCompositionAssessment;
@@ -571,6 +574,7 @@ export function assessRerolledScreens(
           screen: index,
           missing: screen === null,
           assessments: Object.freeze([]),
+          levelResolutions: Object.freeze([]),
           composition:
             screen !== null && chaosCursesUnavailable(catalog, generationState, screen.curseOptions)
               ? Object.freeze({
@@ -610,8 +614,46 @@ export function assessRerolledScreens(
           screen: index,
           missing: true,
           assessments: Object.freeze([]),
+          levelResolutions: Object.freeze([]),
           composition: valid,
         });
+      const rows = screen.options.map((option) => {
+        const assessment = assessTraitOptionAgainstRarityDomain(
+          catalog,
+          option.traitKey,
+          generationState,
+          rowSource,
+          option.rarity,
+        );
+        const rowAssessment =
+          limitedSwapUses(generationState) === 0 || assessment.replacementTransition === undefined
+            ? assessment
+            : Object.freeze({
+                ...assessment,
+                replacementTransition: Object.freeze({
+                  ...assessment.replacementTransition,
+                  levelBonus: 2,
+                }),
+              });
+        const level = resolveTraitOfferOptionLevel({
+          catalog,
+          state,
+          source,
+          option,
+          assessment: rowAssessment,
+        });
+        return {
+          level,
+          assessment:
+            level.findings.length === 0
+              ? rowAssessment
+              : Object.freeze({
+                  ...rowAssessment,
+                  legal: false,
+                  findings: Object.freeze([...rowAssessment.findings, ...level.findings]),
+                }),
+        };
+      });
       const findings = godScreen
         ? rejectedRowFindings(rejectedActive, screen.options, screen.rejectedOptionKey, undefined)
         : [];
@@ -620,17 +662,8 @@ export function assessRerolledScreens(
         screen: index,
         missing: false,
         ...(index === 0 && rerollRefused ? { rerollRefused: true as const } : {}),
-        assessments: Object.freeze(
-          screen.options.map((option) =>
-            assessTraitOptionAgainstRarityDomain(
-              catalog,
-              option.traitKey,
-              generationState,
-              rowSource,
-              option.rarity,
-            ),
-          ),
-        ),
+        assessments: Object.freeze(rows.map((row) => row.assessment)),
+        levelResolutions: Object.freeze(rows.map((row) => row.level)),
         ...(generation === undefined ? {} : { generation }),
         composition:
           findings.length === 0

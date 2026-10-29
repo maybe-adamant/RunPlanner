@@ -1,7 +1,8 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import type {
-  AuthoredRerolledTraitScreen,
-  AuthoredTraitOfferTraits,
+import {
+  rerolledTraitScreenSnapshot,
+  type AuthoredRerolledTraitScreen,
+  type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 import {
   createTraitHistoryState,
@@ -293,6 +294,33 @@ describe('rerolled screen chain', () => {
         (assessment) => assessment.replacementTransition !== undefined,
       ),
     ).toBe(true);
+  });
+});
+
+describe('rerolled screen snapshot', () => {
+  it('copies every shown row field and leaves the pick and its dependents', () => {
+    expect(
+      rerolledTraitScreenSnapshot({
+        options: [
+          {
+            traitKey: 'ApolloWeaponBoon',
+            rarity: 'Rare',
+            persephoneLevelBonus: 2,
+            targetTraitKey: 'ZeusWeaponBoon',
+          },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common', maxHealthRoll: 1 },
+          { traitKey: 'ApolloManaBoon', rarity: 'Epic' },
+        ],
+        rejectedOptionKey: 'option3',
+      }),
+    ).toEqual({
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Rare', persephoneLevelBonus: 2 },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        { traitKey: 'ApolloManaBoon', rarity: 'Epic' },
+      ],
+      rejectedOptionKey: 'option3',
+    });
   });
 });
 

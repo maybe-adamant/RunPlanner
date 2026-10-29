@@ -384,6 +384,8 @@ describe('rerolled screen publication', () => {
     const screens = offer!.rerolledScreens as { options: { key: string; rarity?: string }[] }[];
     expect(screens).toHaveLength(2);
     for (const screen of screens) expect(screen.options).toHaveLength(3);
+    // Each row carries its installed level, as the final rows do.
+    expect(screens[0]!.options.every((option) => 'effectiveLevel' in option)).toBe(true);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
   });
 

@@ -124,6 +124,9 @@ export function selectedTraitOfferProducts(
                   trace.levelResolutions.map((resolution) => resolution.effectiveLevel),
                 ),
                 baseRarities: trace.baseRarities,
+                ...(trace.rerolledScreens === undefined
+                  ? {}
+                  : { rerolledScreens: trace.rerolledScreens }),
                 ...(() => {
                   const screenExpectation =
                     catalog === undefined ? undefined : traitScreenExpectation(catalog, trace);

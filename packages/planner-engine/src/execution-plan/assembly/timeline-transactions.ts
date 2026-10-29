@@ -171,6 +171,23 @@ export function executionTimelineTransactions(
       selected.branches.map((branch) => branch.effectiveLevels),
       `trait effective levels ${semanticAddressKey(selected.address)}`,
     );
+    // Each rerolled-away row's installed level, the same in every branch.
+    const rerolledScreenLevels = agreement(
+      selected.branches.map((branch) =>
+        (branch.rerolledScreens ?? []).map((screen) =>
+          screen.levelResolutions.map((resolution) => resolution.effectiveLevel),
+        ),
+      ),
+      `rerolled screen levels ${semanticAddressKey(selected.address)}`,
+    );
+    const rerolledScreenReplacements = agreement(
+      selected.branches.map((branch) =>
+        (branch.rerolledScreens ?? []).map((screen) =>
+          screen.assessments.map((assessment) => assessment.replacementTransition),
+        ),
+      ),
+      `rerolled screen replacements ${semanticAddressKey(selected.address)}`,
+    );
     const baseRarities = agreement(
       selected.branches.map((branch) => branch.baseRarities),
       `trait base rarities ${semanticAddressKey(selected.address)}`,
@@ -357,18 +374,7 @@ export function executionTimelineTransactions(
                 }),
             ...(replacement === undefined
               ? {}
-              : {
-                  replacement: Object.freeze({
-                    slot: replacement.slot,
-                    replacedTraitKey: replacement.replacedTraitKey,
-                    oldRarity: replacement.oldRarity,
-                    newTraitKey: replacement.newTraitKey,
-                    requiredRarity: replacement.requiredRarity,
-                    ...(replacement.levelBonus === undefined
-                      ? {}
-                      : { levelBonus: replacement.levelBonus }),
-                  }),
-                }),
+              : { replacement: publishedReplacement(replacement) }),
             ...(circeResolution === undefined || index !== selectedOptionIndex
               ? {}
               : { circeResolution }),
@@ -432,18 +438,29 @@ export function executionTimelineTransactions(
         : { rejected: selected.offer.rejectedOptionKey }),
       ...(publishedHexTree === undefined ? {} : { hexTree: publishedHexTree }),
       ...(expectation === undefined ? {} : { expectation }),
-      ...publishedRerolledScreens(selected.offer.rerolledScreens, selected.address, (screen) =>
-        Object.freeze({
-          options: Object.freeze(
-            screen.options.map((option) =>
-              Object.freeze({
-                key: option.traitKey,
-                ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
+      ...publishedRerolledScreens(
+        selected.offer.rerolledScreens,
+        selected.address,
+        (screen, index) =>
+          Object.freeze({
+            options: Object.freeze(
+              screen.options.map((option, row) => {
+                const level = rerolledScreenLevels[index]?.[row];
+                const replacement = rerolledScreenReplacements[index]?.[row];
+                return Object.freeze({
+                  key: option.traitKey,
+                  ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
+                  ...(level === undefined ? {} : { effectiveLevel: level }),
+                  ...(replacement === undefined
+                    ? {}
+                    : { replacement: publishedReplacement(replacement) }),
+                });
               }),
             ),
-          ),
-          ...(screen.rejectedOptionKey === undefined ? {} : { rejected: screen.rejectedOptionKey }),
-        }),
+            ...(screen.rejectedOptionKey === undefined
+              ? {}
+              : { rejected: screen.rejectedOptionKey }),
+          }),
       ),
     });
   };
@@ -1123,19 +1140,33 @@ export function executionTimelineTransactions(
 function publishedRerolledScreens<T, W>(
   screens: RerolledScreens<T> | undefined,
   owner: SemanticAddress,
-  publish: (screen: T) => W,
+  publish: (screen: T, index: number) => W,
 ): { readonly rerolledScreens?: readonly W[] } {
   if (screens === undefined || screens.length === 0) return {};
   return {
     rerolledScreens: Object.freeze(
-      screens.map((screen) => {
+      screens.map((screen, index) => {
         if (screen === null)
           throw new CompilerError(
             'executionCoverageMissing',
             `unauthored rerolled screen ${semanticAddressKey(owner)}`,
           );
-        return publish(screen);
+        return publish(screen, index);
       }),
     ),
   };
+}
+
+/** An exchange row's published replacement, the same on final and rerolled-away rows. */
+function publishedReplacement(
+  replacement: import('../../simulation/traits/history/model').TraitReplacementTransition,
+) {
+  return Object.freeze({
+    slot: replacement.slot,
+    replacedTraitKey: replacement.replacedTraitKey,
+    oldRarity: replacement.oldRarity,
+    newTraitKey: replacement.newTraitKey,
+    requiredRarity: replacement.requiredRarity,
+    ...(replacement.levelBonus === undefined ? {} : { levelBonus: replacement.levelBonus }),
+  });
 }

@@ -324,6 +324,39 @@ describe('Persephone effective offer levels', () => {
     expect(upgraded).toMatchObject({ persephoneLevelBonusMaximum: 8, effectiveLevel: 13 });
   });
 
+  it('checks and levels the Persephone roll of each rerolled-away row', () => {
+    const final = offer(2);
+    const evaluation = evaluateReachedTraitOffer(
+      catalog,
+      address,
+      'self',
+      {
+        ...final,
+        rerolledScreens: [
+          {
+            options: final.options.map((option, index) => ({
+              traitKey: option.traitKey,
+              rarity: 'Common' as const,
+              persephoneLevelBonus: index === 0 ? 7 : 1,
+            })),
+          },
+        ],
+      },
+      traitFrontierState(createTraitHistoryState(), { loadout: persephoneLoadout }),
+      context().source,
+      0,
+    );
+    const [screen] = evaluation.rerolledScreens!;
+    expect(screen!.levelResolutions.map((row) => row.persephoneLevelBonusMaximum)).toEqual([
+      5, 5, 5,
+    ]);
+    expect(screen!.levelResolutions.slice(1).map((row) => row.effectiveLevel)).toEqual([2, 2]);
+    expect(screen!.assessments[0]!.findings).toContainEqual(
+      expect.objectContaining({ code: 'persephoneLevelBonusUnavailable' }),
+    );
+    expect(screen!.assessments.slice(1).every((row) => row.legal)).toBe(true);
+  });
+
   it('suppresses both fresh contributions on Echo nested rows', () => {
     const result = resolveTraitOfferOptionLevel({
       catalog,

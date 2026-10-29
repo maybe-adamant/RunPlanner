@@ -134,6 +134,8 @@ export type RerolledScreens<T> = readonly (T | null)[];
 export interface AuthoredRerolledTraitOption {
   readonly traitKey: string;
   readonly rarity?: TraitRarity;
+  /** Persephone's roll for this row, encoded as on a final row; absent is roll 0. */
+  readonly persephoneLevelBonus?: number;
 }
 
 /** A trait screen shown and then rerolled; no rows is the Fallback Gold screen. */

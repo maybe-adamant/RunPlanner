@@ -92,8 +92,9 @@ purchase and sale names its roll.
 A rerolled trait, Chaos or Pom level screen lists its earlier screens, oldest
 first, beside its final one. The adapter installs the first when the screen
 opens and the k-th later one on the k-th native reroll; the final screen
-follows the last reroll and carries the pick. Chaos earlier screens pin only
-their curses.
+follows the last reroll and carries the pick. Earlier trait rows carry what a
+final row shows (rarity, installed level, exchange) but nothing the pick
+settles; Chaos earlier screens pin only their curses.
 
 Door destinations carry explicit `zagreusContractPresent` for both batch and
 fixed navigation. This is the same canonical additional-exit presence published

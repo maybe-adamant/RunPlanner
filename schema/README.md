@@ -47,7 +47,8 @@ the target keeps its first draw. A rerolled owner holds the reward it is
 entered with in `rerolledIncomingReward`, `rerolledCages` or
 `rerolledOffers`. Trait, Chaos and Pom choice screens hold optional
 `rerolledScreens`: the screens shown before the final one, oldest first, each
-complete (trait rows with rarities and an optional `rejectedOptionKey`, three
+complete (trait rows with rarities and optional `persephoneLevelBonus`, an
+optional `rejectedOptionKey`, three
 Chaos curses, or Pom `offeredTraitKeys`) or null while unauthored. A Stygian Well or Pool of Purging reroll is a room action
 (`rerollStygianWell` with `offerKeyBySlot`, `rerollPurgingPool` with
 `traitKeyBySlot`, each with its `rerollId` and only its pinned slots); a Well

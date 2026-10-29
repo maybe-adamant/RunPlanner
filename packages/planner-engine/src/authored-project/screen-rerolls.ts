@@ -7,6 +7,7 @@ import {
   type AuthoredChaosTraitOffer,
   type AuthoredRerolledChaosScreen,
   type AuthoredRerolledLevelScreen,
+  type AuthoredRerolledTraitOption,
   type AuthoredRerolledTraitScreen,
   type AuthoredTraitOfferTraits,
   type RerolledScreens,
@@ -15,6 +16,7 @@ import {
 import {
   expectArray,
   expectExactKeys,
+  expectNonNegativeInteger,
   expectRecord,
   expectString,
   failProjectDocument,
@@ -86,11 +88,10 @@ export function normalizeRerolledTraitScreen(
       throw new Error(`unsupported authored rarity for ${option.traitKey}`);
     if (giver.rarityPolicy.kind === 'fixed' && option.rarity !== giver.rarityPolicy.rarity)
       throw new Error(`${option.traitKey} must use fixed rarity ${giver.rarityPolicy.rarity}`);
-    return Object.freeze(
-      option.rarity === undefined
-        ? { traitKey: option.traitKey }
-        : { traitKey: option.traitKey, rarity: option.rarity },
-    );
+    const bonus = option.persephoneLevelBonus;
+    if (bonus !== undefined && (!Number.isInteger(bonus) || bonus < 0 || bonus > 8))
+      throw new Error(`${option.traitKey} Persephone level bonus must be an integer from 0 to 8`);
+    return rerolledTraitOption(option);
   });
   const rejected = screen.rejectedOptionKey;
   if (
@@ -165,20 +166,22 @@ export function withScreenRerollInserted<T>(
   return Object.freeze([...(screens ?? []), snapshot]);
 }
 
+function rerolledTraitOption(option: AuthoredRerolledTraitOption): AuthoredRerolledTraitOption {
+  return Object.freeze({
+    traitKey: option.traitKey,
+    ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
+    ...(option.persephoneLevelBonus === undefined
+      ? {}
+      : { persephoneLevelBonus: option.persephoneLevelBonus }),
+  });
+}
+
 /** The shown rows of a final trait screen, as an earlier screen. */
 export function rerolledTraitScreenSnapshot(
   offer: Pick<AuthoredTraitOfferTraits, 'options' | 'rejectedOptionKey'>,
 ): AuthoredRerolledTraitScreen {
   return Object.freeze({
-    options: Object.freeze(
-      offer.options.map((option) =>
-        Object.freeze(
-          option.rarity === undefined
-            ? { traitKey: option.traitKey }
-            : { traitKey: option.traitKey, rarity: option.rarity },
-        ),
-      ),
-    ),
+    options: Object.freeze(offer.options.map(rerolledTraitOption)),
     ...(offer.rejectedOptionKey === undefined
       ? {}
       : { rejectedOptionKey: offer.rejectedOptionKey }),
@@ -270,13 +273,28 @@ export function decodeRerolledTraitScreen(
     const option = expectRecord(raw, optionPath);
     expectExactKeys(
       option,
-      ['traitKey', ...(Object.hasOwn(option, 'rarity') ? ['rarity'] : [])],
+      [
+        'traitKey',
+        ...(Object.hasOwn(option, 'rarity') ? ['rarity'] : []),
+        ...(Object.hasOwn(option, 'persephoneLevelBonus') ? ['persephoneLevelBonus'] : []),
+      ],
       optionPath,
     );
     const traitKey = expectString(option.traitKey, `${optionPath}.traitKey`);
-    return Object.hasOwn(option, 'rarity')
-      ? { traitKey, rarity: expectString(option.rarity, `${optionPath}.rarity`) as TraitRarity }
-      : { traitKey };
+    return {
+      traitKey,
+      ...(Object.hasOwn(option, 'rarity')
+        ? { rarity: expectString(option.rarity, `${optionPath}.rarity`) as TraitRarity }
+        : {}),
+      ...(Object.hasOwn(option, 'persephoneLevelBonus')
+        ? {
+            persephoneLevelBonus: expectNonNegativeInteger(
+              option.persephoneLevelBonus,
+              `${optionPath}.persephoneLevelBonus`,
+            ),
+          }
+        : {}),
+    };
   });
   const rejected = Object.hasOwn(record, 'rejectedOptionKey')
     ? (expectString(record.rejectedOptionKey, `${path}.rejectedOptionKey`) as TraitOptionKey)
