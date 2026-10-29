@@ -508,36 +508,6 @@ export function purgingPoolSale(
     : { findings: Object.freeze([]), featureRolls };
 }
 
-/** Closing events of a room: its actions all precede them. */
-const SEQUENCE_CLOSED_BY = new Set<HistoryEvent['kind']>([
-  'roomCommitted',
-  'roomCountersAdvanced',
-  'enteredRewardStoreRecorded',
-  'roomExited',
-  'roomDeparted',
-  'roomRestored',
-]);
-
-/** Records a Well or Pool room's latest reached point before its actions close. */
-export function captureFeatureRollEnd(
-  context: ChronologyWalkContext,
-  state: ChronologyWalkState,
-  event: HistoryEvent,
-): ChronologyWalkState {
-  if (!('origin' in event) || SEQUENCE_CLOSED_BY.has(event.kind) || state.branches.length === 0)
-    return state;
-  const roomKey = semanticAddressKey(event.origin);
-  const room = authoredRoom(context, roomKey);
-  if (room?.stygianWell === undefined && room?.purgingPool === undefined) return state;
-  return Object.freeze({
-    ...state,
-    featureRollEnds: new Map(state.featureRollEnds).set(
-      roomKey,
-      Object.freeze({ historySequence: event.sequence, branches: state.branches }),
-    ),
-  });
-}
-
 function rerollOption(
   context: ChronologyWalkContext,
   branches: readonly RewardBranchState[],
@@ -560,7 +530,7 @@ export function stygianWellInteractions(
   state: ChronologyWalkState,
 ): ReadonlyMap<string, StygianWellInteraction> {
   const interactions = new Map<string, StygianWellInteraction>();
-  for (const [roomKey, end] of state.featureRollEnds) {
+  for (const [roomKey, end] of state.roomActionEnds) {
     const room = authoredRoom(context, roomKey);
     if (room?.stygianWell === undefined || !state.stygianWellAssessments.has(roomKey)) continue;
     const walk = stygianWellWalk(state, roomKey);
@@ -634,7 +604,7 @@ export function purgingPoolInteractions(
   state: ChronologyWalkState,
 ): ReadonlyMap<string, PurgingPoolInteraction> {
   const interactions = new Map<string, PurgingPoolInteraction>();
-  for (const [roomKey, end] of state.featureRollEnds) {
+  for (const [roomKey, end] of state.roomActionEnds) {
     const room = authoredRoom(context, roomKey);
     if (room?.purgingPool === undefined || !state.purgingPoolAssessments.has(roomKey)) continue;
     const walk = purgingPoolWalk(state, roomKey, room)!;

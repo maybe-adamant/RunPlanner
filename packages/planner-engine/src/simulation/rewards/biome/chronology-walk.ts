@@ -98,10 +98,11 @@ export interface ChronologyWalkState {
   /** Each Well's and Pool's roll state as its room's actions settle, by room and feature. */
   readonly featureRolls: ReadonlyMap<string, FeatureRollWalk>;
   /**
-   * The last reached point of each Well or Pool room's actions, where a new
-   * action is appended, with the branches there; by room.
+   * The last reached point of each interactive object room's actions (Well,
+   * Pool, World Shop, Shrine, Contract pedestal), where a new action is
+   * appended, with the branches there; by room.
    */
-  readonly featureRollEnds: ReadonlyMap<
+  readonly roomActionEnds: ReadonlyMap<
     string,
     { readonly historySequence: number; readonly branches: readonly RewardBranchState[] }
   >;
@@ -173,7 +174,7 @@ export function createChronologyWalkState(
     wellRefillRealizations: new Map(),
     purgingPoolAssessments: new Map(),
     featureRolls: new Map(),
-    featureRollEnds: new Map(),
+    roomActionEnds: new Map(),
     hermesShrineTravelDealRefills: new Map(),
     eligibleGorgonPhases: new Set<string>(),
     blockedGorgonPhases: new Set<string>(),

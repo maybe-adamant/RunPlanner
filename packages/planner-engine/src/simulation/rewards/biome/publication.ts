@@ -14,6 +14,7 @@ import {
 import { type PurgingPoolCandidateArtifacts } from '../../commerce/purging-pool';
 import { type SteadyGrowthCandidateArtifacts } from '../../candidates/steady-growth';
 import { type StygianWellCandidateArtifacts } from '../../commerce/stygian-well';
+import type { RoomObjectInteractionArtifacts } from '../../commerce/object-interactions';
 import type {
   LevelResolutionCandidateArtifacts,
   TraitOfferCandidateArtifacts,
@@ -41,6 +42,7 @@ export interface BiomeRewardEvaluationAssembly {
   readonly purgingPoolArtifacts: PurgingPoolCandidateArtifacts;
   readonly hermesShrineArtifacts: HermesShrineCandidateArtifacts;
   readonly stygianWellArtifacts: StygianWellCandidateArtifacts;
+  readonly objectInteractionArtifacts: RoomObjectInteractionArtifacts;
   readonly rerollSurfaceArtifacts: RerollSurfaceCandidateArtifacts;
   readonly fountainRarityArtifacts: FountainRarityCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];

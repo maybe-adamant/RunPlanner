@@ -695,6 +695,7 @@ export function evaluateBiomeAssembly(
         roomGeneration.candidateArtifacts.chaos,
         roomGeneration.candidateArtifacts.zagreusContracts,
         rewards.rerollSurfaceArtifacts,
+        rewards.objectInteractionArtifacts,
       ),
     });
   }
@@ -732,6 +733,7 @@ export function evaluateBiomeAssembly(
         roomGeneration.candidateArtifacts.chaos,
         roomGeneration.candidateArtifacts.zagreusContracts,
         rewards.rerollSurfaceArtifacts,
+        rewards.objectInteractionArtifacts,
       ),
       history: Object.freeze({
         routeKey: history.routeKey,

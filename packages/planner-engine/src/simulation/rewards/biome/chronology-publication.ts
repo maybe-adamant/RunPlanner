@@ -1,4 +1,6 @@
 import { purgingPoolInteractions, stygianWellInteractions } from './feature-roll-seams';
+import { roomObjectInteractions } from './object-interaction-seams';
+import { createRoomObjectInteractionArtifacts } from '../../commerce/object-interactions';
 import { semanticAddressKey } from '../../../authored-project/addresses';
 import type { BiomeRewardSimulation } from '../model';
 import { createAcquisitionConversionCandidateArtifacts } from '../acquisition/artifacts';
@@ -296,6 +298,9 @@ export function publishChronology(
         ]),
       ),
       stygianWellInteractions(context, walk),
+    ),
+    objectInteractionArtifacts: createRoomObjectInteractionArtifacts(
+      roomObjectInteractions(context, walk, accumulation.derivedAcquisitionEntryContexts),
     ),
     findingRegions: Object.freeze(immutableFindingRegions),
     encounterEntryVowRanks: walk.encounterEntryVowRanks,

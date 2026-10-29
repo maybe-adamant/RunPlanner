@@ -913,6 +913,7 @@ export function publishSelectedCut(
         entered.has(key(occurrence)) ? zagreusContracts.at(occurrence) : undefined,
     }),
     rewards.rerollSurfaceArtifacts,
+    rewards.objectInteractionArtifacts,
   );
   const evaluation = Object.freeze({
     history,

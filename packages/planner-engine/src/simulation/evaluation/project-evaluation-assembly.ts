@@ -267,6 +267,19 @@ export function stygianWellCandidateForProjectEvaluationAssembly(
     ?.stygianWells.at(occurrence);
 }
 
+/**
+ * What can be done with a room's World Shop, Hermes Shrine and Champion item
+ * at the end of its reached sequence; an object without one is unreached.
+ */
+export function roomObjectInteractionsForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  occurrence: import('../../authored-project/addresses').OccurrenceAddress,
+) {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
+    ?.objectInteractions.at(occurrence);
+}
+
 /** Exact reached-source Chaos placement capability for ordinary authoring. */
 export function chaosCandidateForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,

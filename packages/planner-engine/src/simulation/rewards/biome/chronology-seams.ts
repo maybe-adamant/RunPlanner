@@ -73,12 +73,8 @@ import {
   roomTargetContext,
 } from './lifecycle-transitions/reward-rerolled';
 import { captureRerollSurfaces } from './reroll-surfaces';
-import {
-  captureFeatureRollEnd,
-  featureRerolled,
-  purgingPoolSale,
-  wellPurchaseRoll,
-} from './feature-roll-seams';
+import { captureRoomActionEnd } from './object-interaction-seams';
+import { featureRerolled, purgingPoolSale, wellPurchaseRoll } from './feature-roll-seams';
 import { parsePurgingPoolSalePoint } from '../../commerce/feature-rolls';
 import { historyFindingChronology } from './finding-chronology';
 import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
@@ -1461,7 +1457,7 @@ export function walkHistoryEvent(
   // The table pairs each kind with its own handler; the union call is sound.
   const entry = chronologySeamTable[event.kind] as ChronologySeam<HistoryEvent['kind']>;
   const next = applySeamStep(context, accumulator, state, entry.step(context, state, event));
-  const reached = captureFeatureRollEnd(
+  const reached = captureRoomActionEnd(
     context,
     reachHistorySequence(context, next, event.sequence),
     event,

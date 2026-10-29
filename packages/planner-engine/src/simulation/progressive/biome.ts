@@ -203,6 +203,7 @@ function generation(
   transcendentEmbryo: TranscendentEmbryoCandidateArtifacts,
   fountainRarity: FountainRarityCandidateArtifacts,
   rerollSurfaces: RerollSurfaceCandidateArtifacts,
+  objectInteractions: import('../commerce/object-interactions').RoomObjectInteractionArtifacts,
   encounterEntryVowRanks: ReadonlyMap<string, EncounterEntryVowRanks>,
   forcedChaosOccurrenceKeys?: ReadonlySet<string>,
   carriedRewardLookups?: Readonly<Record<string, readonly string[]>>,
@@ -272,6 +273,7 @@ function generation(
       ordinary.chaos,
       ordinary.zagreusContracts,
       rerollSurfaces,
+      objectInteractions,
     ),
     findingRegions: Object.freeze([
       ...ordinary.findingRegions,
@@ -351,6 +353,7 @@ function products(
     rewards.transcendentEmbryoArtifacts,
     rewards.fountainRarityArtifacts,
     rewards.rerollSurfaceArtifacts,
+    rewards.objectInteractionArtifacts,
     rewards.encounterEntryVowRanks,
     context.forcedChaosOccurrenceKeys,
     context.seed === undefined

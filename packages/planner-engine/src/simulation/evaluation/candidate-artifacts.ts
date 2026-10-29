@@ -74,6 +74,10 @@ import {
   createEmptyStygianWellCandidateArtifacts,
   type StygianWellCandidateArtifacts,
 } from '../commerce/stygian-well';
+import {
+  createEmptyRoomObjectInteractionArtifacts,
+  type RoomObjectInteractionArtifacts,
+} from '../commerce/object-interactions';
 
 export interface BiomeCandidateArtifacts {
   readonly origin: BiomeAddress;
@@ -98,6 +102,7 @@ export interface BiomeCandidateArtifacts {
   readonly chaos: ChaosCandidateArtifacts;
   readonly zagreusContracts: ZagreusContractCandidateArtifacts;
   readonly rerollSurfaces: RerollSurfaceCandidateArtifacts;
+  readonly objectInteractions: RoomObjectInteractionArtifacts;
 }
 
 export interface ProjectCandidateArtifacts {
@@ -147,6 +152,7 @@ export function createBiomeCandidateArtifacts(
   chaos: ChaosCandidateArtifacts = createEmptyChaosCandidateArtifacts(),
   zagreusContracts: ZagreusContractCandidateArtifacts = createEmptyZagreusContractCandidateArtifacts(),
   rerollSurfaces: RerollSurfaceCandidateArtifacts = createEmptyRerollSurfaceCandidateArtifacts(),
+  objectInteractions: RoomObjectInteractionArtifacts = createEmptyRoomObjectInteractionArtifacts(),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -171,6 +177,7 @@ export function createBiomeCandidateArtifacts(
     chaos,
     zagreusContracts,
     rerollSurfaces,
+    objectInteractions,
   });
 }
 

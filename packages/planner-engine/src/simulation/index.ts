@@ -460,6 +460,14 @@ export {
   type ZagreusContractCandidateCapability,
 } from './generation/candidate-artifacts';
 export {
+  type ChampionItemCollectLock,
+  type ChampionItemInteraction,
+  type HermesShrineInteraction,
+  type HermesShrineInteractionOffer,
+  type RoomObjectInteractions,
+  type WorldShopInteraction,
+} from './commerce/object-interactions';
+export {
   assertExactProjectEvaluationAssembly,
   assertProjectEvaluationAssembly,
   assertProjectEvaluationSource,
@@ -479,6 +487,7 @@ export {
   purgingPoolCandidateForProjectEvaluationAssembly,
   hermesShrineCandidateForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
+  roomObjectInteractionsForProjectEvaluationAssembly,
   chaosCandidateForProjectEvaluationAssembly,
   zagreusContractCandidateForProjectEvaluationAssembly,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
