@@ -261,9 +261,11 @@ function rewards.traitOffer(value, label)
     local record, errorMessage = p.obj(value, label)
     if not record then return nil, errorMessage end
     if record.kind == "fallbackGold" then
-        local row, rowError = p.exact(record, { "kind", "giver" }, { "expectation" }, label)
+        local row, rowError = p.exact(record, { "kind", "giver" }, { "expectation", "rerolledScreens" }, label)
         if not row then return nil, rowError end
         if not p.str(row.giver, label .. ".giver") then return p.fail(label .. " has invalid giver") end
+        local screensOk, screensError = p.rerolledScreens(row, label, rerolledTraitScreen)
+        if not screensOk then return nil, screensError end
         if row.expectation ~= nil then
             local _, expectationError = screenExpectation(row.expectation, label .. ".expectation",
                 SCREEN_EXPECTATION_KEYS)

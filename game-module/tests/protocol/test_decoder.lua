@@ -2574,4 +2574,11 @@ function TestProtocol.testRerolledScreensAreStrictEarlierScreens()
     lu.assertNil(rewards.acquisitionRole(level, "role"))
     level.levelResolution.rerolledScreens = assert(json.decode('[]'))
     lu.assertNil(rewards.acquisitionRole(level, "role"))
+    local gold = assert(json.decode('{"kind":"fallbackGold","giver":"Zeus","rerolledScreens":'
+        .. '[{"options":[{"key":"A","effectiveLevel":2}],"rejected":"option1"},{"options":[]}]}'))
+    lu.assertNotNil(rewards.traitOffer(gold, "gold"))
+    for _, screens in ipairs({ '[]', '[{"options":[{"key":"A"},{"key":"A"}]}]', '[{"options":[],"rejected":"option1"}]' }) do
+        gold.rerolledScreens = assert(json.decode(screens))
+        lu.assertNil(rewards.traitOffer(gold, "gold"), screens)
+    end
 end

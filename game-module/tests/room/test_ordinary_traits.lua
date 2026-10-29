@@ -1020,6 +1020,45 @@ function TestOrdinaryTraits.testAnEarlierScreenRowCarriesItsLevelOrItsExchange()
     })
 end
 
+-- Opens `offer` on Apollo loot and shows `screens` screens: the opening, then each reroll.
+local function rowsAcrossScreens(offer, screens)
+    local priorChoices = _G.CalcNumLootChoices
+    _G.CalcNumLootChoices = function() return 3 end
+    local callbacks, _, completed, mismatches = attached(offer, nil, "ApolloUpgrade")
+    local loot = { GodLoot = true, Name = "ApolloUpgrade", UpgradeOptions = { { ItemName = "Native" } } }
+    callbacks.SpawnRoomReward(nil, {}, function()
+        return callbacks.CreateLoot(nil, {}, function() return loot end, {})
+    end, {}, {})
+    local shown = {}
+    for index = 1, screens do
+        callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, index > 1, {})
+        local keys = {}
+        for row, option in ipairs(loot.UpgradeOptions) do keys[row] = option.ItemName end
+        shown[index] = keys
+    end
+    _G.CalcNumLootChoices = priorChoices
+    return shown, completed(), mismatches(), loot
+end
+
+function TestOrdinaryTraits.testAGoldFinalFollowsItsEarlierTraitScreen()
+    local shown, completed, mismatches, loot = rowsAcrossScreens({ kind = "fallbackGold", giver = "Apollo",
+        rerolledScreens = { earlierScreen("First") } }, 2)
+    lu.assertEquals(shown, { { "FirstA", "FirstB", "FirstC" }, { "FallbackGold" } })
+    lu.assertEquals(loot.UpgradeOptions, { { Type = "Trait", ItemName = "FallbackGold", Rarity = "Common" } })
+    lu.assertEquals(completed, 1)
+    lu.assertEquals(mismatches, {})
+end
+
+function TestOrdinaryTraits.testAnEarlierGoldScreenPrecedesATraitFinal()
+    local offer = threeRows(nil)
+    offer.rerolledScreens = { { options = {} } }
+    local shown, completed, mismatches, loot = rowsAcrossScreens(offer, 2)
+    lu.assertEquals(shown, { { "FallbackGold" }, { "ApolloAttack", "ApolloCast", "ApolloSpecial" } })
+    lu.assertEquals(completed, 1)
+    lu.assertEquals(mismatches, {})
+    lu.assertNotNil(loot)
+end
+
 function TestOrdinaryTraits.testEachScreenInstallsItsAuthoredRowsInOrder()
     local offer = threeRows(nil)
     offer.rerolledScreens = { earlierScreen("First"), earlierScreen("Second") }
