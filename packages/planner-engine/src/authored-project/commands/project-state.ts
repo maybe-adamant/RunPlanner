@@ -1,5 +1,6 @@
 import { resolveRoutePosition } from '../route-context';
 import { assessPublicDreamItinerary } from '../dream-itinerary';
+import { dreamItineraryKeptBiomeCount } from '../dream-itinerary-replacement';
 import { routeInitialProfile } from '../route-profile';
 import type { Catalog } from '../../catalog-schema';
 import { createInitialBiomeState, replaceBiomeStateField } from '../biomeState';
@@ -193,11 +194,9 @@ function replaceDreamItinerary(
   const itineraryBiomeKeys = command.itineraryBiomeKeys;
   if (!assessPublicDreamItinerary(catalog, itineraryBiomeKeys).legal)
     failCommand(command, 'Dream Dive requires four biomes in a valid route order');
-  const kept = route.itineraryBiomeKeys.findIndex(
-    (biomeKey, index) => itineraryBiomeKeys[index] !== biomeKey,
-  );
-  if (kept < 0 && route.itineraryBiomeKeys.length === itineraryBiomeKeys.length) return document;
-  const keptCount = kept < 0 ? route.itineraryBiomeKeys.length : kept;
+  const keptCount = dreamItineraryKeptBiomeCount(route.itineraryBiomeKeys, itineraryBiomeKeys);
+  if (keptCount === itineraryBiomeKeys.length && keptCount === route.itineraryBiomeKeys.length)
+    return document;
   const dropped = new Set(route.itineraryBiomeKeys.slice(keptCount));
   const nextRoute = { ...route, itineraryBiomeKeys: Object.freeze([...itineraryBiomeKeys]) };
   const keptBiomes = route.biomes.slice(0, keptCount);

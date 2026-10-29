@@ -38,6 +38,10 @@ export {
   type DreamItineraryIssueKind,
 } from './dream-itinerary';
 export {
+  dreamItineraryReplacementDroppedBiomeKeys,
+  type DreamItineraryReplacementRoute,
+} from './dream-itinerary-replacement';
+export {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   seaStarDuplicateAcquisitionSite,
   seaStarDuplicateSiteKey,

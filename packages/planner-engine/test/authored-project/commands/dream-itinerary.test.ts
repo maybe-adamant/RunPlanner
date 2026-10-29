@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createProjectDocument,
+  dreamItineraryReplacementDroppedBiomeKeys,
   ProjectCommandContractError,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -120,5 +121,41 @@ describe('ReplaceDreamItinerary', () => {
         itineraryBiomeKeys: ['F', 'G', 'H', 'I'],
       }),
     ).toThrow(/fixed route order/);
+  });
+});
+
+describe('dreamItineraryReplacementDroppedBiomeKeys', () => {
+  const dropped = (project: ProjectDocument, itineraryBiomeKeys: readonly string[]) =>
+    dreamItineraryReplacementDroppedBiomeKeys(project.route, itineraryBiomeKeys);
+
+  it('drops nothing for the same itinerary', () => {
+    const project = withRouteSettings();
+    expect(dropped(project, project.route.itineraryBiomeKeys)).toEqual([]);
+  });
+
+  it('names dropped biomes with an authored plan', () => {
+    const project = loadDreamMixedHandoffCheckpoint();
+    expect(dropped(project, ['Q', 'F', 'O', 'H'])).toEqual(['N']);
+  });
+
+  it('names a dropped biome that only has a route-level setting', () => {
+    const project = loadDreamMixedHandoffCheckpoint();
+    const withRack = Object.freeze({
+      ...project,
+      route: Object.freeze({
+        ...project.route,
+        draft: { ...project.route.draft, rackKeepsakeByBiome: { H: 'BossPreDamageKeepsake' } },
+      }),
+    }) as ProjectDocument;
+    expect(dropped(withRack, ['Q', 'F', 'O', 'H'])).toEqual(['N', 'H']);
+  });
+
+  it('names every authored or configured biome when the first biome changes', () => {
+    expect(dropped(withRouteSettings(), ['G', 'F', 'N', 'H'])).toEqual(['Q', 'F', 'N', 'H']);
+    expect(dropped(loadDreamMixedHandoffCheckpoint(), ['G', 'F', 'N', 'H'])).toEqual([
+      'Q',
+      'F',
+      'N',
+    ]);
   });
 });
