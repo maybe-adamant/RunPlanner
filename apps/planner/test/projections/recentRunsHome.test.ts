@@ -13,6 +13,7 @@ import {
   createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRewardWheelOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
   type ProjectCommand,
@@ -180,6 +181,16 @@ describe('recording indicator', () => {
 const biome = createBiomeAddress('Underworld', 'F');
 const occurrence = createOccurrenceAddress(biome, createOccurrenceId('F-r2'));
 const cage = createLocalRewardAddress(biome, createOccurrenceId('H-r29'), 'cage', 'cage1');
+const ship = createBiomeAddress('Surface', 'O');
+const wheelOffer = (value: {
+  rewardType: string;
+  payload?: { kind: 'BoonSource'; source: string };
+}) =>
+  ({
+    kind: 'ReplaceRewardWheelOffer',
+    offer: createRewardWheelOfferAddress(ship, createOccurrenceId('O-r3'), 'wheel1', 'offer2'),
+    value,
+  }) satisfies ProjectCommand;
 const COMMANDS = {
   target: {
     kind: 'CreateTarget',
@@ -210,6 +221,11 @@ const COMMANDS = {
       selectedOptionKey: 'option2',
     },
   },
+  wheelBoon: wheelOffer({
+    rewardType: 'Boon',
+    payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+  }),
+  wheelGold: wheelOffer({ rewardType: 'RoomMoneyDrop' }),
   fallbackGold: {
     kind: 'ReplaceTraitOffer',
     trait: createTraitOfferAddress(cage, 'self'),
@@ -229,6 +245,9 @@ describe('applied values', () => {
     expect(label(COMMANDS.acquisition)).toBe(catalog.rewards.rewardTypes.byKey.StackUpgrade!.label);
     expect(label(COMMANDS.localReward)).toBe(catalog.rewards.rewardTypes.byKey.MaxManaDrop!.label);
     expect(label(COMMANDS.traits)).toBe(catalog.traits.byKey.ZeusManaBoon!.label);
+    expect(label(COMMANDS.wheelBoon)).toBe(
+      `${catalog.rewards.rewardTypes.byKey.Boon!.label} · ${catalog.rewards.rewardTypes.byKey.ZeusUpgrade!.label}`,
+    );
     expect(label(COMMANDS.fallbackGold)).toBeNull();
     expect(label(COMMANDS.other)).toBeNull();
     expect(label(undefined)).toBeNull();
@@ -279,10 +298,19 @@ describe('run guesses', () => {
           ...at(5),
           mismatch: { field: 'ZeusWeaponBoon', expected: 'Rare', actual: 'Common' },
         },
+        {
+          area: 'wheel',
+          reason: 'notInRecord',
+          ...at(5),
+          applied: COMMANDS.wheelGold,
+          alternatives: [COMMANDS.wheelBoon, wheelOffer({ rewardType: 'MaxHealthDrop' })],
+        },
+        { area: 'wheel', reason: 'notInRecord', ...at(5), applied: COMMANDS.wheelBoon },
         { area: 'route', reason: 'stopped' },
       ]),
     );
     const room = (gameName: string) => catalog.rooms.byKey[gameName]!.label;
+    const reward = (key: string) => catalog.rewards.rewardTypes.byKey[key]!.label;
     expect(groups.map((group) => [group.label, group.assumed])).toEqual([
       ['Doors', 'Door order assumed in 2 rooms'],
       ['Pickup order', 'Pickup order assumed in 1 room'],
@@ -291,6 +319,7 @@ describe('run guesses', () => {
       ['Shops', null],
       ['Encounters', null],
       ['Traits', null],
+      ['Ship wheels', null],
       ['Route', null],
     ]);
     expect(groups.find((group) => group.area === 'roomActionOrder')!.lines).toEqual([]);
@@ -307,6 +336,12 @@ describe('run guesses', () => {
         `Erebus · ${room('F_Story01')}`,
         `Differs: ${catalog.traits.byKey.ZeusWeaponBoon!.label} Rare vs plan Common`,
       ],
+      [
+        6,
+        `Erebus · ${room('F_Story01')}`,
+        `Guessed ${reward('RoomMoneyDrop')} or ${reward('Boon')} · ${reward('ZeusUpgrade')}, ${reward('MaxHealthDrop')}`,
+      ],
+      [6, `Erebus · ${room('F_Story01')}`, `Guessed ${reward('Boon')} · ${reward('ZeusUpgrade')}`],
       [null, null, 'Plan ends here'],
     ]);
     expect(
@@ -354,6 +389,7 @@ describe('run guesses', () => {
           'none other',
         ),
         mismatch('elements', 4, 'Elements', 'Air 6', 'Air 5'),
+        mismatch('wheel', 2, 'RunProgress', 'Boon 2, MaxHealthDrop 0', 'Boon 1, MaxHealthDrop 1'),
       ]),
     );
     const lines = (area: string) =>
@@ -377,6 +413,12 @@ describe('run guesses', () => {
       ],
     ]);
     expect(lines('elements')).toEqual([[5, 'Differs: Air 6 vs plan 5']]);
+    expect(lines('wheel')).toEqual([
+      [
+        3,
+        `Differs: RunProgress ${reward('Boon')} 2 vs plan 1, ${reward('MaxHealthDrop')} 0 vs plan 1`,
+      ],
+    ]);
     expect(groups.every((group) => group.lines.every((line) => line.mismatch))).toBe(true);
   });
 

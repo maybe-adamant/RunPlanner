@@ -5,6 +5,7 @@ import {
   type ProjectCommand,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type {
   RunImportArea,
   RunImportReason,
@@ -283,6 +284,18 @@ function selectedTraitKey(offer: AuthoredTraitOffer): string | undefined {
   return options[TRAIT_OPTION_KEYS.indexOf(offer.selectedOptionKey)]?.traitKey;
 }
 
+const rewardLabel = (catalog: Catalog, key: string) =>
+  ownEntry(catalog.rewards.rewardTypes.byKey, key)?.label ?? key;
+
+/** A reward offer by its type, with the god or gods it names. */
+function rewardOfferLabel(catalog: Catalog, offer: ResolvedRewardOffer): string {
+  const type = rewardLabel(catalog, offer.rewardType);
+  if (offer.payload === undefined) return type;
+  return offer.payload.kind === 'BoonSource'
+    ? `${type} · ${rewardLabel(catalog, offer.payload.source)}`
+    : `${type} · ${rewardLabel(catalog, offer.payload.chosenSource)} / ${rewardLabel(catalog, offer.payload.spurnedSource)}`;
+}
+
 /** The value an applied command chose, by its catalog name, when it names one. */
 export function appliedValue(catalog: Catalog, command: ProjectCommand | undefined): string | null {
   if (command === undefined) return null;
@@ -291,10 +304,9 @@ export function appliedValue(catalog: Catalog, command: ProjectCommand | undefin
       return ownEntry(catalog.rooms.byKey, command.gameName)?.label ?? command.gameName;
     case 'ReplaceAcquisitionEntryOffer':
     case 'ReplaceLocalReward':
-      return (
-        ownEntry(catalog.rewards.rewardTypes.byKey, command.value.rewardType)?.label ??
-        command.value.rewardType
-      );
+      return rewardLabel(catalog, command.value.rewardType);
+    case 'ReplaceRewardWheelOffer':
+      return rewardOfferLabel(catalog, command.value);
     case 'ReplaceTraitOffer': {
       const traitKey = selectedTraitKey(command.value);
       return traitKey === undefined
@@ -415,6 +427,9 @@ export function projectRunGuesses(
   for (const [position, reported] of (entry.report?.entries ?? []).entries()) {
     const roomIndex = reported.record?.roomIndex;
     const value = appliedValue(catalog, reported.applied);
+    const alternatives = (reported.alternatives ?? []).flatMap(
+      (command) => appliedValue(catalog, command) ?? [],
+    );
     const group = groups.get(reported.area) ?? {
       lines: [],
       assumedRooms: new Set<number>(),
@@ -436,7 +451,9 @@ export function projectRunGuesses(
           ? `${REASON_TEXT[reported.reason]}: ${mismatchText(catalog, reported.area, reported.mismatch)}`
           : value === null
             ? REASON_TEXT[reported.reason]
-            : `${REASON_TEXT[reported.reason]} ${value}`,
+            : `${REASON_TEXT[reported.reason]} ${value}${
+                alternatives.length === 0 ? '' : ` or ${alternatives.join(', ')}`
+              }`,
       mismatch: reported.mismatch !== undefined,
     });
   }
