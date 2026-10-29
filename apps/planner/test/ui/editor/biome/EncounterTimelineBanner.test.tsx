@@ -102,8 +102,8 @@ describe('Encounter Timeline banner', () => {
     );
     openRoomTab('Room Timeline');
     expect(bannerIdentities('Start encounter')).toEqual([
-      expect.stringMatching(/^Opening encounter · /),
-      expect.stringMatching(/^Follow-up encounter · /),
+      expect.stringMatching(/^Opening · /),
+      expect.stringMatching(/^Follow-up · /),
     ]);
   });
 

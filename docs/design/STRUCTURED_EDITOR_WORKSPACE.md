@@ -271,8 +271,9 @@ The application renders engine-owned domains/counts and does not calculate budge
 perk or conversion legality. Retained invalid values and per-control repair
 messages stay visible. The dialog itself is not another saved draft.
 
-P uses the same exact-phase presentation. Its workspace labels are **Opening
-encounter** for `Intro` and **Follow-up encounter** for `Combat`.
+P uses the same exact-phase presentation. Its phases are **Opening** for
+`Intro` and **Follow-up** for `Combat`; their encounter controls read **Opening
+encounter** and **Follow-up encounter**.
 The ordinary candidate pipeline evaluates Combat only after a valid,
 non-terminating Intro selection; a terminating Heracles choice naturally
 withholds the dormant suffix. The application renders the two existing phase
