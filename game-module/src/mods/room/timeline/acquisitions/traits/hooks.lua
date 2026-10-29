@@ -486,7 +486,7 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
         end
         shownScreens[loot] = rerolled
         if rerolled then
-            ordinary.installScreen(loot, rerolled)
+            ordinary.installScreen(loot, rerolled, rowOptions)
         elseif installing then
             if ordinary.install(payload, loot, rowOptions) ~= true then
                 diagnostic(state, "trait-offer-install", "published native rows", nativeName(loot))

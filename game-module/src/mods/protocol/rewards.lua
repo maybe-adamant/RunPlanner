@@ -235,11 +235,18 @@ local function rerolledTraitScreen(value, label)
     if not options then return nil, optionsError end
     local seen = {}
     for index, optionValue in ipairs(options) do
-        local option, optionError = p.exact(optionValue, { "key" }, { "rarity" }, label .. ".options[" .. index .. "]")
+        local optionLabel = label .. ".options[" .. index .. "]"
+        local option, optionError = p.exact(optionValue, { "key" }, { "rarity", "effectiveLevel", "replacement" },
+            optionLabel)
         if not option then return nil, optionError end
-        if not p.str(option.key, label .. ".key") or seen[option.key]
-            or (option.rarity ~= nil and not p.str(option.rarity, label .. ".rarity")) then
+        if not p.str(option.key, optionLabel .. ".key") or seen[option.key]
+            or (option.rarity ~= nil and not p.str(option.rarity, optionLabel .. ".rarity"))
+            or (option.effectiveLevel ~= nil and not p.int(option.effectiveLevel, optionLabel .. ".effectiveLevel", 0)) then
             return p.fail(label .. " has a malformed or repeated option")
+        end
+        if option.replacement ~= nil then
+            local _, replacementError = replacement(option.replacement, optionLabel .. ".replacement")
+            if replacementError then return nil, replacementError end
         end
         seen[option.key] = true
     end

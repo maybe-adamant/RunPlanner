@@ -197,7 +197,7 @@ function ordinary.rerolledScreens(offer)
 end
 
 -- Installs a rerolled-away screen's rows over the native roll; it carries no pick.
-function ordinary.installScreen(loot, screen)
+function ordinary.installScreen(loot, screen, rowOptions)
     if type(loot) ~= "table" or type(screen) ~= "table" then return false end
     ordinary.ensureRolled(loot)
     local rows = loot.UpgradeOptions or {}
@@ -207,7 +207,14 @@ function ordinary.installScreen(loot, screen)
         row.Type = row.Type or "Trait"
         row.ItemName = option.key
         row.Rarity = option.rarity
-        row.TraitToReplace, row.OldRarity, row.StackNum = nil, nil, nil
+        if option.replacement then
+            row.TraitToReplace = option.replacement.replacedTraitKey
+            row.OldRarity = option.replacement.oldRarity
+            row.StackNum = nil
+        else
+            row.TraitToReplace, row.OldRarity = nil, nil
+            row.StackNum = rowOptions.rowLevel(option.effectiveLevel)
+        end
         installed[index] = row
     end
     loot.UpgradeOptions = installed

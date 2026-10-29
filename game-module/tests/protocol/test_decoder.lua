@@ -2537,12 +2537,19 @@ end
 
 function TestProtocol.testRerolledScreensAreStrictEarlierScreens()
     local offer = tagged(traitOffer())
-    offer.rerolledScreens = assert(json.decode('[{"options":[{"key":"A","rarity":"Rare"},{"key":"B"}],'
+    offer.rerolledScreens = assert(json.decode('[{"options":[{"key":"A","rarity":"Rare","effectiveLevel":2},'
+        .. '{"key":"B","replacement":{"slot":"Melee","replacedTraitKey":"Old","oldRarity":"Common",'
+        .. '"newTraitKey":"B","requiredRarity":"Rare","levelBonus":1}}],'
         .. '"rejected":"option2"},{"options":[{"key":"C"}]}]'))
     lu.assertNotNil(rewards.traitOffer(offer, "offer"))
     for _, screens in ipairs({
         '[]', '[{"options":[{"key":"A"},{"key":"A"}]}]', '[{"options":[{"key":"A"}],"rejected":"option2"}]',
         '[{"options":[{"key":"A"}],"selected":"option1"}]', '[{"options":[{"key":"A","level":1}]}]',
+        '[{"options":[{"key":"A","effectiveLevel":1.5}]}]', '[{"options":[{"key":"A","effectiveLevel":-1}]}]',
+        '[{"options":[{"key":"A","replacement":{"slot":"Melee","replacedTraitKey":"Old","oldRarity":"Common",'
+            .. '"newTraitKey":"A"}}]}]',
+        '[{"options":[{"key":"A","replacement":{"slot":"Melee","replacedTraitKey":"Old","oldRarity":"Common",'
+            .. '"newTraitKey":"A","requiredRarity":"Rare","extra":true}}]}]',
     }) do
         offer.rerolledScreens = assert(json.decode(screens))
         lu.assertNil(rewards.traitOffer(offer, "offer"), screens)

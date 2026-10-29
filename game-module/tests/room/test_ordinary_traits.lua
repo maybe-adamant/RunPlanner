@@ -999,6 +999,27 @@ function TestOrdinaryTraits.testLastPlannedRerollInstallsThePlannedRows()
     lu.assertEquals(completed, 1)
 end
 
+function TestOrdinaryTraits.testAnEarlierScreenRowCarriesItsLevelOrItsExchange()
+    local levels = { rowLevel = function(level) return level and level * 10 or nil end }
+    local loot = { UpgradeOptions = {
+        { ItemName = "NativeA", StackNum = 1 }, { ItemName = "NativeB", TraitToReplace = "Stale", OldRarity = "Epic" },
+        { ItemName = "NativeC", StackNum = 4 },
+    } }
+    lu.assertTrue(ordinary.installScreen(loot, { options = {
+        { key = "Leveled", rarity = "Rare", effectiveLevel = 3 },
+        { key = "Plain", rarity = "Common" },
+        { key = "Exchange", rarity = "Epic", effectiveLevel = 2, replacement = {
+            slot = "Melee", replacedTraitKey = "OldMelee", oldRarity = "Rare", newTraitKey = "Exchange",
+            requiredRarity = "Epic",
+        } },
+    } }, levels))
+    lu.assertEquals(loot.UpgradeOptions, {
+        { ItemName = "Leveled", Rarity = "Rare", StackNum = 30, Type = "Trait" },
+        { ItemName = "Plain", Rarity = "Common", Type = "Trait" },
+        { ItemName = "Exchange", Rarity = "Epic", TraitToReplace = "OldMelee", OldRarity = "Rare", Type = "Trait" },
+    })
+end
+
 function TestOrdinaryTraits.testEachScreenInstallsItsAuthoredRowsInOrder()
     local offer = threeRows(nil)
     offer.rerolledScreens = { earlierScreen("First"), earlierScreen("Second") }
