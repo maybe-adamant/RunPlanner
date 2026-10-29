@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 import { createRouteAddress } from '@run-planner/engine/authored-project';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
@@ -18,7 +20,12 @@ export function RoutePrefixControl({
   return (
     <div className="route-scope field-control field-control-inline">
       <span>Plan up to</span>
-      <div className="route-prefix-options" role="radiogroup" aria-label="Biomes to configure">
+      <div
+        aria-label="Biomes to configure"
+        className="route-prefix-options route-biome-columns"
+        role="radiogroup"
+        style={{ '--route-biome-columns': biomes.length } as CSSProperties}
+      >
         {biomes.map((biome, index) => (
           <label key={biome.biomeKey}>
             <input

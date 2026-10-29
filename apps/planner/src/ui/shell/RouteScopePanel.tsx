@@ -41,14 +41,19 @@ export function RouteScopePanel({
         </div>
       </header>
       <div className="route-scope-rows">
+        {navigation.itinerarySelectionRequired && (
+          <DreamItineraryControl
+            catalog={catalog}
+            // An applied, undone or replaced itinerary discards an unfinished draft.
+            key={`${replacementKey}:${authoredRoute.itineraryBiomeKeys.join(',')}`}
+            route={authoredRoute}
+          />
+        )}
         <RoutePrefixControl
           biomes={navigation.biomePanels}
           configuredBiomeCount={configuredBiomeCount}
           routeKey={workspaceRoute.routeKey}
         />
-        {navigation.itinerarySelectionRequired && (
-          <DreamItineraryControl catalog={catalog} route={authoredRoute} />
-        )}
       </div>
       <RouteRunModifiers replacementKey={replacementKey} workspaceRoute={workspaceRoute} />
     </section>

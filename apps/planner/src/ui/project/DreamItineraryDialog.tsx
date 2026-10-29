@@ -7,30 +7,22 @@ import {
 } from '@planner/projections/dreamItinerary';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 
-/** Stages four Dream biomes, starting from an existing itinerary when one is given. */
 export function DreamItineraryDialog({
   catalog,
-  confirmLabel,
-  initialItinerary = [],
   onCancel,
-  onConfirm,
+  onCreate,
   pending,
 }: {
   readonly catalog: Catalog;
-  readonly confirmLabel: string;
-  readonly initialItinerary?: readonly string[];
   readonly onCancel: () => void;
-  readonly onConfirm: (itineraryBiomeKeys: readonly string[]) => void;
+  readonly onCreate: (itineraryBiomeKeys: readonly string[]) => void;
   readonly pending: boolean;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [draft, setDraft] = useState<readonly string[]>(initialItinerary);
+  const [draft, setDraft] = useState<readonly string[]>([]);
   const [stage, setStage] = useState(0);
+  const [pickerOpen, setPickerOpen] = useState(true);
   const projection = projectDreamItineraryDraft(catalog, draft, stage);
-  const [pickerOpen, setPickerOpen] = useState(!projection.complete);
-  const unchanged =
-    draft.length === initialItinerary.length &&
-    draft.every((biomeKey, index) => initialItinerary[index] === biomeKey);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -110,11 +102,11 @@ export function DreamItineraryDialog({
           </button>
           <button
             className="secondary-action"
-            disabled={pending || !projection.complete || unchanged}
-            onClick={() => onConfirm(draft)}
+            disabled={pending || !projection.complete}
+            onClick={() => onCreate(draft)}
             type="button"
           >
-            {pending ? 'Please wait…' : confirmLabel}
+            {pending ? 'Creating…' : 'Create project'}
           </button>
         </footer>
       </section>

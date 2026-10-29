@@ -86,7 +86,7 @@ describe('RouteScopePanel', () => {
     expect(routeMarkup(application)).not.toContain('contiguous route prefix');
   });
 
-  it('shows the full Dream itinerary with its re-pick entry in the Route panel, not only its configured prefix', () => {
+  it('shows the full Dream itinerary as biome slots above Plan up to, not only its configured prefix', () => {
     const application = createApplication();
     application.store.dispatch(
       authoredProjectReplaced(
@@ -106,7 +106,12 @@ describe('RouteScopePanel', () => {
       ),
     ).toEqual(['Summit', 'Erebus', 'Ephyra', 'Fields']);
     expect(markup).toContain('Through Summit');
-    expect(markup).toContain('Change biomes');
+    const slots = markup.indexOf('aria-label="Dream biomes"');
+    expect(slots).toBeGreaterThan(-1);
+    expect(slots).toBeLessThan(markup.indexOf('Plan up to'));
+    expect(
+      ['1. Summit', '2. Erebus', '3. Ephyra', '4. Fields'].map((slot) => markup.indexOf(slot)),
+    ).not.toContain(-1);
   });
 
   it('shows the ordinary route order in the same Route panel', () => {
@@ -116,7 +121,7 @@ describe('RouteScopePanel', () => {
         match[1]!.replace(/<[^>]*>/g, ''),
       ),
     ).toEqual(['Erebus', 'Oceanus', 'Fields', 'Tartarus']);
-    expect(markup).not.toContain('Change biomes');
+    expect(markup).not.toContain('Dream biomes');
   });
 
   it('hosts the run modifiers after the route extent, Practice mode last, including in Fresh File', () => {

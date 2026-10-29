@@ -30,7 +30,7 @@ function explanation(
   return undefined;
 }
 
-/** Adapts the engine-owned Dream legality product into the creation dialog. */
+/** Adapts the engine-owned Dream legality product into the itinerary pickers. */
 export function projectDreamItineraryDraft(
   catalog: Catalog,
   draft: readonly string[],

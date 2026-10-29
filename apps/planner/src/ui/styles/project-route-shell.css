@@ -578,8 +578,35 @@
   margin-top: 0.75rem;
 }
 
-.dream-itinerary-change {
-  justify-self: start;
+/* Dream's biome slots and Plan up to share one column per biome, so each slot sits above its option. */
+.route-biome-columns {
+  display: grid;
+  grid-template-columns: repeat(var(--route-biome-columns, 4), minmax(0, 11rem));
+  gap: 0.5rem;
+  min-width: 0;
+  font-size: 0.92rem;
+}
+
+@container app-viewport (max-width: 700px) {
+  .route-biome-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.dream-itinerary-slots > .contextual-picker {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
+.dream-itinerary-slots .contextual-picker-trigger {
+  min-height: 32px;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: inherit;
+}
+
+.dream-itinerary-slots > .contextual-picker > label {
+  display: none;
 }
 
 .route-fixed-loadout-facts {
@@ -615,19 +642,16 @@
 }
 
 .route-prefix-options {
-  display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
-  min-width: 0;
   color: #d9d4dc;
-  font-size: 0.85rem;
 }
 
 .route-prefix-options > label {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
+  min-width: 0;
+  padding-inline: 9px;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -639,8 +663,9 @@
 }
 
 .route-prefix-options input {
-  width: 16px;
-  height: 16px;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
   margin: 0;
   accent-color: var(--selection-accent);
 }
