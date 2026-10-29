@@ -23,6 +23,7 @@ function group(
         branchIndex: 0,
         supported: findings.length === 0,
         findings,
+        rerolledScreenFindings: [],
         availableTargetTraitKeys: available,
       },
     ],

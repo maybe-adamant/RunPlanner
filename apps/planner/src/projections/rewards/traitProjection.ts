@@ -13,6 +13,7 @@ import type {
   TraitReplacementTransition,
   PersephoneLevelRoll,
 } from '@run-planner/engine/simulation';
+import { findingScreenTab, type ScreenTab } from './screenRerollTabs';
 
 import type {
   CandidateOptionProjection,
@@ -135,11 +136,12 @@ function presentTraitCandidateReason(
   finding: {
     readonly code: Parameters<typeof presentTraitCandidateFinding>[0];
     readonly detail?: string;
+    readonly reason?: string;
     readonly requirementTraitKeys?: readonly string[];
   },
   traitLabel: (traitKey: string) => string,
 ): string {
-  const copy = presentTraitCandidateFinding(finding.code);
+  const copy = presentTraitCandidateFinding(finding.code, finding.reason);
   const requirementLabels = finding.requirementTraitKeys?.map(traitLabel);
   if (requirementLabels !== undefined && requirementLabels.length > 0) {
     const alternatives = formatAlternativeLabels(requirementLabels);
@@ -165,7 +167,11 @@ export function projectTraitOfferFeedback(
   offer: AuthoredTraitOffer,
   candidate: CandidateOptionProjection<AuthoredTraitOffer> | undefined,
   traitLabel: (traitKey: string) => string = (traitKey) => traitKey,
+  /** The screen whose rows `offer` holds and whose findings are grouped. */
+  screen: ScreenTab = 'final',
 ): TraitOfferFeedback {
+  const onScreen = (finding: Parameters<typeof findingScreenTab>[0]): boolean =>
+    findingScreenTab(finding) === screen;
   if (offer.kind === 'fallbackGold') {
     if (candidate === undefined)
       return Object.freeze({ options: Object.freeze([]), support: 'unavailable' });
@@ -180,9 +186,9 @@ export function projectTraitOfferFeedback(
     }
     if (evaluation.kind !== 'traitOffer')
       return Object.freeze({ options: Object.freeze([]), support });
-    const messages = evaluation.result.findings.map((finding) =>
-      presentTraitCandidateReason(finding, traitLabel),
-    );
+    const messages = evaluation.result.findings
+      .filter(onScreen)
+      .map((finding) => presentTraitCandidateReason(finding, traitLabel));
     return Object.freeze({
       ...(messages.length === 0 ? {} : { contextMessage: [...new Set(messages)].join(' ') }),
       options: Object.freeze([]),
@@ -208,7 +214,7 @@ export function projectTraitOfferFeedback(
   const findingsByTrait = new Map<string, string[]>();
   const findingsByOption = new Map<string, string[]>();
   const contextMessages = new Set<string>();
-  for (const finding of evaluation.result.findings) {
+  for (const finding of evaluation.result.findings.filter(onScreen)) {
     const reason = presentTraitCandidateReason(finding, traitLabel);
     if (finding.traitKey === undefined) {
       if (finding.optionKey !== undefined) {
@@ -232,13 +238,19 @@ export function projectTraitOfferFeedback(
           ...(findingsByTrait.get(option.traitKey) ?? []),
           ...(findingsByOption.get(['option1', 'option2', 'option3'][index]!) ?? []),
         ];
-        const replacement = uniformReplacement(
-          evaluation.result.assessments,
-          evaluation.result.branches.length,
-          option.traitKey,
-        );
-        const effectiveLevel = evaluation.result.effectiveLevels[index];
-        const persephoneLevelBonusMaximum = evaluation.result.persephoneLevelBonusMaximums[index];
+        // Replacement, level and Persephone values describe the final screen's pick.
+        const final = screen === 'final';
+        const replacement = final
+          ? uniformReplacement(
+              evaluation.result.assessments,
+              evaluation.result.branches.length,
+              option.traitKey,
+            )
+          : undefined;
+        const effectiveLevel = final ? evaluation.result.effectiveLevels[index] : undefined;
+        const persephoneLevelBonusMaximum = final
+          ? evaluation.result.persephoneLevelBonusMaximums[index]
+          : undefined;
         return Object.freeze({
           legal: reasons.length === 0,
           reasons: Object.freeze([...reasons]),

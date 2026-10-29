@@ -1,4 +1,5 @@
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
+import type { SemanticFinding } from '@run-planner/engine/simulation';
 import { createContext, useContext, useMemo, useRef, type ReactNode } from 'react';
 import {
   findingControlKey,
@@ -11,6 +12,7 @@ import {
   presentFinding,
   semanticFindingKey,
 } from '@planner/projections/evaluationProjection';
+import { findingScreenTab, type ScreenTab } from '@planner/projections/rewards/screenRerollTabs';
 import { useAppSelector } from '@planner/state/store';
 import { semanticOwnerControlElementId } from './semanticOwner';
 
@@ -110,6 +112,7 @@ export function useFindingFeedbackEntries(
 // eslint-disable-next-line react-refresh/only-export-components -- Reads the same feedback boundary.
 export function useDialogFindingEntries(
   owner?: SemanticAddress,
+  screen?: ScreenTab,
 ): readonly (readonly [key: string, message: string])[] | undefined {
   const { dialog, findings } = useContext(feedback);
   if (dialog !== true) return undefined;
@@ -117,9 +120,21 @@ export function useDialogFindingEntries(
   const entries = new Map<string, string>();
   for (const group of findings.values())
     for (const finding of group)
-      if (ownerKey === undefined || semanticAddressKey(finding.origin) === ownerKey)
+      if (
+        (ownerKey === undefined || semanticAddressKey(finding.origin) === ownerKey) &&
+        (screen === undefined || semanticFindingScreen(finding) === screen)
+      )
         entries.set(semanticFindingKey(finding), formatFindingExplanation(presentFinding(finding)));
   return [...entries];
+}
+
+function semanticFindingScreen(finding: SemanticFinding): ScreenTab {
+  const { screen, reason } = finding.evidence;
+  return findingScreenTab({
+    code: finding.code,
+    ...(typeof screen === 'number' ? { screen } : {}),
+    ...(typeof reason === 'string' ? { reason } : {}),
+  });
 }
 
 /**
@@ -138,8 +153,7 @@ export function useFindingScreens(owner: SemanticAddress): {
   for (const group of findings.values())
     for (const finding of group) {
       if (semanticAddressKey(finding.origin) !== ownerKey) continue;
-      const screen =
-        typeof finding.evidence.screen === 'number' ? finding.evidence.screen : 'final';
+      const screen = semanticFindingScreen(finding);
       marked.add(screen);
       if (selectedKey !== undefined && semanticFindingKey(finding) === selectedKey)
         selected = screen;

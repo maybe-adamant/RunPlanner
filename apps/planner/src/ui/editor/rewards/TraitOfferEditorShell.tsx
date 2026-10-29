@@ -11,6 +11,7 @@ import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
+import { findingScreenTab, type ScreenTab } from '@planner/projections/rewards/screenRerollTabs';
 import {
   projectTraitOfferFeedback,
   projectTraitOfferState,
@@ -32,13 +33,17 @@ import { useScreenTab } from './useScreenTab';
 import { hintProps } from '@planner/ui/controls/hint';
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
-/** An earlier screen shown through the final screen's editor, without its pick. */
+/**
+ * An earlier screen's rows in the final screen's editor shape, for display and
+ * row edits only; candidates always judge the whole draft.
+ */
 function traitScreenValue(
   value: AuthoredTraitOfferTraits,
   screen: AuthoredRerolledTraitScreen,
 ): AuthoredTraitOfferTraits {
-  const { rejectedOptionKey: _rejected, ...rest } = value;
+  const { rejectedOptionKey: _rejected, rerolledScreens: _screens, ...rest } = value;
   void _rejected;
+  void _screens;
   return Object.freeze({
     ...rest,
     options: screen.options as AuthoredTraitOfferTraits['options'],
@@ -93,11 +98,38 @@ export function TraitOfferEditorShell({
   );
   // Sub-editors report their draft feedback here; the dialog renders it in one fixed region.
   const [outcomeEntries, reportOutcomeFeedback] = useOutcomeFeedback();
-  const routeEntries = useDialogFindingEntries();
+  const earlierScreens: readonly unknown[] =
+    value.kind === 'fallbackGold' ? [] : (value.rerolledScreens ?? []);
+  const earlierCount = earlierScreens.length;
+  const screenTab = useScreenTab(interaction.owner, earlierCount);
+  const tabbed = interaction.screenRerolls !== undefined && value.kind !== 'fallbackGold';
+  const earlierIndex = tabbed && screenTab.active < earlierCount ? screenTab.active : undefined;
+  const activeScreen: ScreenTab = earlierIndex ?? 'final';
+  const routeEntries = useDialogFindingEntries(undefined, tabbed ? activeScreen : undefined);
   const loaded = controller.observe(loadable);
   const candidate = loaded.result?.[0];
   const support = candidateSupport(candidate);
-  const feedback = projectTraitOfferFeedback(value, candidate, interaction.traitLabel);
+  const earlierTraitScreen =
+    value.kind === 'traits' && earlierIndex !== undefined
+      ? (earlierScreens[earlierIndex] as AuthoredRerolledTraitScreen | null)
+      : undefined;
+  const feedback = projectTraitOfferFeedback(
+    value.kind === 'traits' && earlierIndex !== undefined
+      ? earlierTraitScreen === null || earlierTraitScreen === undefined
+        ? traitScreenValue(value, { options: [] })
+        : traitScreenValue(value, earlierTraitScreen)
+      : value,
+    candidate,
+    interaction.traitLabel,
+    activeScreen,
+  );
+  const candidateFindings =
+    candidate?.evaluation.kind === 'traitOffer' ? candidate.evaluation.result.findings : undefined;
+  // Each tab carries the draft's own findings; before evaluation, the route's.
+  const markedScreens =
+    candidateFindings === undefined
+      ? screenTab.marked
+      : new Set(candidateFindings.map(findingScreenTab));
   const offerState = value.kind === 'traits' ? projectTraitOfferState(candidate) : undefined;
   const selectedOutcomeDomain =
     value.kind === 'traits' ? interaction.optionDomain(value, value.selectedOptionKey) : undefined;
@@ -107,7 +139,7 @@ export function TraitOfferEditorShell({
       selectedTraitOutcomeDraftComplete(value, selectedOutcomeDomain));
   const offerMessage =
     feedback.contextMessage ??
-    (support === 'impossible'
+    (support === 'impossible' && (candidateFindings?.length ?? 0) === 0
       ? 'This offer is unavailable in the current route context.'
       : undefined);
   const rarifySupported = (optionKey: AuthoredTraitOfferTraits['selectedOptionKey']): boolean => {
@@ -164,10 +196,6 @@ export function TraitOfferEditorShell({
     setDraft(Object.freeze({ interaction, loadable: nextLoadable, value: nextValue }));
     controller.activate(nextLoadable);
   };
-  const earlierScreens: readonly unknown[] =
-    value.kind === 'fallbackGold' ? [] : (value.rerolledScreens ?? []);
-  const earlierCount = earlierScreens.length;
-  const screenTab = useScreenTab(interaction.owner, earlierCount);
   if (view === 'echoLastRunBoon' && value.kind === 'traits') {
     const child = interaction
       .optionDomain(value, value.selectedOptionKey)
@@ -258,14 +286,14 @@ export function TraitOfferEditorShell({
     );
   const screenRerolls = interaction.screenRerolls;
   const screenTabs =
-    screenRerolls === undefined || value.kind === 'fallbackGold'
+    screenRerolls === undefined || !tabbed
       ? undefined
       : (panel: ReactNode) => (
           <ScreenRerollTabs
             active={screenTab.active}
             earlierCount={earlierCount}
             idPrefix={encodeURIComponent(semanticAddressKey(interaction.owner))}
-            marked={screenTab.marked}
+            marked={markedScreens}
             onRemove={() => updateValue(withRerolledScreens(value, earlierScreens.slice(0, -1)))}
             onReroll={() => {
               updateValue(
@@ -284,8 +312,6 @@ export function TraitOfferEditorShell({
             {panel}
           </ScreenRerollTabs>
         );
-  const earlierIndex =
-    screenTabs !== undefined && screenTab.active < earlierCount ? screenTab.active : undefined;
   const replaceScreen = (index: number, screen: unknown): void =>
     updateValue(
       withRerolledScreens(
@@ -344,7 +370,7 @@ export function TraitOfferEditorShell({
       </fieldset>
     );
   if (value.kind === 'traits' && earlierIndex !== undefined) {
-    const screen = earlierScreens[earlierIndex] as AuthoredRerolledTraitScreen | null;
+    const screen = earlierTraitScreen ?? null;
     const screenValue = screen === null ? undefined : traitScreenValue(value, screen);
     const updateScreen = (next: AuthoredTraitOfferTraits): void =>
       replaceScreen(earlierIndex, rerolledTraitScreenSnapshot(next));
@@ -360,18 +386,23 @@ export function TraitOfferEditorShell({
               {rejectedRow(screenValue, updateScreen)}
               <div className="trait-offer-options">
                 {screenValue.options.map((_, index) => (
-                  <TraitOfferOrdinaryOption
-                    index={index}
-                    interaction={interaction}
+                  <div
+                    data-has-findings={(feedback.options[index]?.reasons.length ?? 0) > 0}
                     key={OPTION_KEYS[index]}
-                    onUpdate={updateScreen}
-                    optionKey={OPTION_KEYS[index]!}
-                    pickless
-                    rarifySupported={false}
-                    rejected={screenValue.rejectedOptionKey === OPTION_KEYS[index]}
-                    spellOffer={spellOffer}
-                    value={screenValue}
-                  />
+                  >
+                    <TraitOfferOrdinaryOption
+                      domainValue={value}
+                      index={index}
+                      interaction={interaction}
+                      onUpdate={updateScreen}
+                      optionKey={OPTION_KEYS[index]!}
+                      pickless
+                      rarifySupported={false}
+                      rejected={screenValue.rejectedOptionKey === OPTION_KEYS[index]}
+                      spellOffer={spellOffer}
+                      value={screenValue}
+                    />
+                  </div>
                 ))}
               </div>
             </>
@@ -487,6 +518,7 @@ export function TraitOfferEditorShell({
             />
           ) : (
             <ChaosTraitOfferEditor
+              domainValue={value}
               interaction={interaction.chaos}
               onUpdate={(next) => replaceScreen(earlierIndex, rerolledChaosScreenSnapshot(next))}
               pickless

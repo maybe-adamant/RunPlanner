@@ -220,6 +220,106 @@ describe('ordinary offer shell', () => {
     application.dispose();
   });
 
+  async function openRerolledOffer(
+    find: (entry: WorkspaceTraitOfferInteraction) => boolean,
+    screens: (
+      offer: AuthoredTraitOfferTraits,
+    ) => NonNullable<AuthoredTraitOfferTraits['rerolledScreens']>,
+    project = createGoldenFGHIProject(),
+  ) {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(project));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (entry) => find(entry) && entry.value?.kind === 'traits',
+    )!;
+    if (base.value?.kind !== 'traits') throw new Error('expected a trait offer');
+    const value = { ...base.value, rerolledScreens: screens(base.value) };
+    const interaction: WorkspaceTraitOfferInteraction = {
+      ...base,
+      value,
+      screenRerolls: { count: 1, maxCount: 3 },
+    };
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={interaction.owner}
+          interactions={{
+            ...workspace.interactions,
+            traitOffers: new Map([[interaction.key, interaction]]),
+          }}
+          onCommit={() => undefined}
+        />
+      </Provider>,
+    );
+    const save = await screen.findByRole('button', { name: 'Save trait offer' });
+    const feedbackText = () => screen.getByRole('status', { name: 'Offer feedback' }).textContent;
+    return { application, save, feedbackText };
+  }
+
+  it('blocks Save on a coreless earlier screen and shows its finding on that tab only', async () => {
+    const user = userEvent.setup();
+    const { application, save, feedbackText } = await openRerolledOffer(
+      (entry) => entry.giver.providerKind === 'olympian',
+      () => [
+        {
+          options: [
+            { traitKey: 'ApolloRetaliateBoon', rarity: 'Common' },
+            { traitKey: 'PerfectDamageBonusBoon', rarity: 'Common' },
+            { traitKey: 'BlindChanceBoon', rarity: 'Common' },
+          ],
+        },
+      ],
+    );
+    const offerTab = screen.getByRole('tab', { name: 'Offer' });
+    await waitFor(() => expect(offerTab.getAttribute('data-has-findings')).toBe('true'));
+    expect(save.hasAttribute('disabled')).toBe(true);
+    expect(feedbackText()).not.toContain('Trait choices cannot appear together');
+    await user.click(offerTab);
+    expect(feedbackText()).toContain('Trait choices cannot appear together');
+    application.dispose();
+  });
+
+  it('blocks Save on an unset earlier screen and names it on its tab', async () => {
+    const user = userEvent.setup();
+    const { application, save, feedbackText } = await openRerolledOffer(
+      (entry) => entry.giver.providerKind === 'olympian',
+      () => [null],
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: 'Offer' }).getAttribute('data-has-findings')).toBe(
+        'true',
+      ),
+    );
+    expect(save.hasAttribute('disabled')).toBe(true);
+    expect(feedbackText()).not.toContain('Choose what this reroll showed');
+    await user.click(screen.getByRole('tab', { name: 'Offer' }));
+    expect(feedbackText()).toContain('Choose what this reroll showed');
+    application.dispose();
+  });
+
+  it('flags an NPC screen that repeats its earlier screen on the final tab', async () => {
+    const { application, save, feedbackText } = await openRerolledOffer(
+      (entry) => entry.giver.providerKind === 'npc',
+      (offer) => [
+        {
+          options: offer.options.map(({ traitKey, rarity }) => ({
+            traitKey,
+            ...(rarity === undefined ? {} : { rarity }),
+          })),
+        },
+      ],
+    );
+    await waitFor(() =>
+      expect(feedbackText()).toContain('One of the previous items is always replaced'),
+    );
+    expect(save.hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('tab', { name: 'Reroll 1' }).getAttribute('data-has-findings')).toBe(
+      'true',
+    );
+    application.dispose();
+  });
+
   it('does not evaluate trait eligibility during render', () => {
     const events: ApplicationEvaluationEvent[] = [];
     const application = createApplication({

@@ -56,14 +56,17 @@ export function ChaosTraitOfferEditor({
   interaction,
   onUpdate,
   pickless = false,
+  domainValue = value,
 }: {
+  /** The draft whose candidate query lists the curses; an earlier screen uses the final one. */
+  readonly domainValue?: AuthoredChaosTraitOffer;
   /** A screen rerolled away: its curse rows only, with no pick or blessing. */
   readonly pickless?: boolean;
   readonly value: AuthoredChaosTraitOffer;
   readonly interaction: WorkspaceChaosOfferInteraction;
   readonly onUpdate: (value: AuthoredChaosTraitOffer) => void;
 }) {
-  const domain = interaction.domainFor(value);
+  const domain = interaction.domainFor(domainValue);
   // The dialog closes when its offer context is lost, so a reached Chaos offer always has a domain.
   if (domain === undefined) throw new Error('Chaos offer editor rendered without a reached domain');
   const updateCurse = (index: number, curseKey: string): void => {

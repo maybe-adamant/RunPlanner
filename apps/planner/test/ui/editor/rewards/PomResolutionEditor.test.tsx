@@ -199,6 +199,7 @@ describe('Pom resolution editor', () => {
     engine: {
       readonly available?: readonly string[];
       readonly start?: AuthoredLevelResolution;
+      readonly rerolledScreenFindings?: LevelResolutionCandidateGroup['evaluations'][number]['rerolledScreenFindings'];
     } = {},
   ): LevelResolutionCandidateGroup =>
     Object.freeze({
@@ -208,6 +209,7 @@ describe('Pom resolution editor', () => {
           availableTargetTraitKeys: Object.freeze([...(engine.available ?? targets)]),
           branchIndex: 0,
           findings: Object.freeze(findings),
+          rerolledScreenFindings: Object.freeze([...(engine.rerolledScreenFindings ?? [])]),
           supported,
         }),
       ]),
@@ -387,6 +389,51 @@ describe('Pom resolution editor', () => {
       selectedTraitKey: 'A',
       rerolledScreens: [],
     });
+  });
+
+  it('shows each rerolled screen finding on its own tab and blocks Save', async () => {
+    const user = userEvent.setup();
+    const evaluatedScreens: unknown[] = [];
+    const editorInteraction: WorkspaceLevelResolutionInteraction = {
+      ...interaction({
+        value: {
+          kind: 'choice',
+          offeredTraitKeys: ['A', 'B'],
+          selectedTraitKey: 'A',
+          rerolledScreens: [{ offeredTraitKeys: ['A', 'D'] }],
+        },
+        load: (value) => {
+          evaluatedScreens.push(value.kind === 'choice' ? value.rerolledScreens : undefined);
+          return Object.freeze({
+            groups: Object.freeze([
+              group('branch-0', 'choice', ['A', 'B', 'C'], false, [], 2, false, {
+                rerolledScreenFindings: [
+                  { code: 'pomTargetUnavailable', screen: 0 },
+                  { code: 'rollRepeatsAllOffers' },
+                ],
+              }),
+            ]),
+          });
+        },
+      }),
+      screenRerolls: { count: 1, maxCount: 2 },
+    };
+    render(<PomResolutionEditor interaction={editorInteraction} onCommit={() => undefined} />);
+    const feedback = () => screen.getByRole('status', { name: 'Pom feedback' }).textContent;
+    await waitFor(() =>
+      expect(feedback()).toContain('One of the previous items is always replaced'),
+    );
+    expect(evaluatedScreens.at(-1)).toEqual([{ offeredTraitKeys: ['A', 'D'] }]);
+    expect(screen.getByRole('tab', { name: 'Offer' }).getAttribute('data-has-findings')).toBe(
+      'true',
+    );
+    expect(feedback()).not.toContain('Pom target unavailable');
+    expect((screen.getByRole('button', { name: 'Save Pom' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    await user.click(screen.getByRole('tab', { name: 'Offer' }));
+    expect(feedback()).not.toContain('One of the previous items is always replaced');
+    expect(feedback()).toContain('Pom target unavailable');
   });
 
   it('preserves a retained partial visible Pom instead of replacing it with defaults', async () => {

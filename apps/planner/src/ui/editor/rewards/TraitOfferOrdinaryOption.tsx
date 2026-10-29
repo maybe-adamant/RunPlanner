@@ -32,6 +32,7 @@ export function TraitOfferOrdinaryOption({
   rarifySupported,
   pickless = false,
   value,
+  domainValue = value,
   onUpdate,
 }: {
   readonly index: number;
@@ -48,13 +49,15 @@ export function TraitOfferOrdinaryOption({
   /** A screen rerolled away: its rows only, with no pick, Rarify or Persephone roll. */
   readonly pickless?: boolean;
   readonly value: AuthoredTraitOfferTraits;
+  /** The draft whose candidate query lists this row's choices; an earlier screen uses the final one. */
+  readonly domainValue?: AuthoredTraitOfferTraits;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
 }) {
   const option = value.options[index];
   if (option === undefined) throw new Error(`Trait offer is missing ${optionKey}`);
   const loadable = useMemo(
-    () => interaction.optionDomain(value, optionKey),
-    [interaction, optionKey, value],
+    () => interaction.optionDomain(domainValue, optionKey),
+    [interaction, optionKey, domainValue],
   );
   const controller = useWorkspaceInteractionController<TraitOptionDomainProjection>();
   const loaded = controller.observe(loadable);
@@ -70,7 +73,7 @@ export function TraitOfferOrdinaryOption({
   const withSelectedHexDefault = (
     nextValue: AuthoredTraitOfferTraits,
   ): AuthoredTraitOfferTraits => {
-    if (!spellOffer || nextValue.selectedOptionKey !== optionKey) return nextValue;
+    if (pickless || !spellOffer || nextValue.selectedOptionKey !== optionKey) return nextValue;
     const { hexTree: _hexTree, ...withoutTree } = nextValue;
     void _hexTree;
     const selectedDomain = interaction

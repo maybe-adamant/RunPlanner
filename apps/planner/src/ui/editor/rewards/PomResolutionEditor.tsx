@@ -14,7 +14,9 @@ import { projectLevelResolutionTargetPicker } from '@planner/projections/context
 import {
   formatFindingExplanation,
   presentLevelResolutionCandidateFinding,
+  presentRerolledLevelScreenFinding,
 } from '@planner/projections/evaluationProjection';
+import { findingScreenTab, type ScreenTab } from '@planner/projections/rewards/screenRerollTabs';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -190,7 +192,18 @@ export function PomResolutionEditor({
   useEffect(() => {
     controller.activate(loadable);
   }, [controller, loadable]);
-  const evaluateDraft = (next: AuthoredLevelResolution): void => setEvaluated(next);
+  // Candidates judge the whole screen chain, so every evaluated draft carries the earlier screens.
+  const withScreens = (
+    next: AuthoredLevelResolution,
+    screens: typeof rerolledScreens = rerolledScreens,
+  ): AuthoredLevelResolution => {
+    if (next.kind !== 'choice' || interaction.screenRerolls === undefined || screens === undefined)
+      return next;
+    const { rerolledScreens: _previous, ...rest } = next;
+    void _previous;
+    return Object.freeze({ ...rest, rerolledScreens: screens });
+  };
+  const evaluateDraft = (next: AuthoredLevelResolution): void => setEvaluated(withScreens(next));
   const candidate = loaded.result;
   const groups = candidate?.groups ?? [];
   const activeGroup =
@@ -221,7 +234,7 @@ export function PomResolutionEditor({
     setActiveGroupKey(group.key);
     setChoiceSlots(start.offeredTraitKeys);
     setSelectedChoice(start.selectedTraitKey);
-    setEvaluated(start);
+    setEvaluated(withScreens(start));
   };
   if (authoredChoiceUnresolved && activeGroup !== undefined && seededGroupKey !== activeGroup.key)
     seedChoice(activeGroup);
@@ -322,12 +335,48 @@ export function PomResolutionEditor({
     });
   const earlierIndex = screenTab.active < earlierCount ? screenTab.active : undefined;
   const earlierScreen = earlierIndex === undefined ? undefined : rerolledScreens?.[earlierIndex];
+  const updateScreens = (screens: NonNullable<typeof rerolledScreens>): void => {
+    setRerolledScreens(screens);
+    setEvaluated(
+      withScreens(
+        Object.freeze({
+          kind: 'choice',
+          offeredTraitKeys: Object.freeze(
+            choiceSlots.filter((target): target is string => target !== null),
+          ),
+          selectedTraitKey: selectedChoice,
+        }),
+        screens,
+      ),
+    );
+  };
   const replaceScreen = (index: number, screen: AuthoredRerolledLevelScreen): void =>
-    setRerolledScreens(
+    updateScreens(
       Object.freeze(
         (rerolledScreens ?? []).map((current, at) => (at === index ? screen : current)),
       ),
     );
+  const screenFindings =
+    activeGroup?.evaluations.flatMap((entry) => entry.rerolledScreenFindings) ?? [];
+  const activeScreen: ScreenTab = earlierIndex ?? 'final';
+  // Each tab carries the draft's own findings; before evaluation, the route's.
+  const markedScreens =
+    candidate === undefined
+      ? screenTab.marked
+      : new Set<ScreenTab>([
+          ...screenFindings.map(findingScreenTab),
+          ...(findings.length > 0 ? (['final'] as const) : []),
+        ]);
+  const feedbackMessages = [
+    ...(activeScreen === 'final'
+      ? findings.map((finding) =>
+          formatFindingExplanation(presentLevelResolutionCandidateFinding(finding)),
+        )
+      : []),
+    ...screenFindings
+      .filter((finding) => findingScreenTab(finding) === activeScreen)
+      .map((finding) => formatFindingExplanation(presentRerolledLevelScreenFinding(finding))),
+  ];
   const updateEarlierSlot = (screenIndex: number, slot: number, target: string): void => {
     const slots = Array.from(
       { length: count },
@@ -350,10 +399,10 @@ export function PomResolutionEditor({
         active={screenTab.active}
         earlierCount={earlierCount}
         idPrefix={domKey}
-        marked={screenTab.marked}
-        onRemove={() => setRerolledScreens(Object.freeze((rerolledScreens ?? []).slice(0, -1)))}
+        marked={markedScreens}
+        onRemove={() => updateScreens(Object.freeze((rerolledScreens ?? []).slice(0, -1)))}
         onReroll={() => {
-          setRerolledScreens(Object.freeze([...(rerolledScreens ?? []), finalScreen()]));
+          updateScreens(Object.freeze([...(rerolledScreens ?? []), finalScreen()]));
           screenTab.select(earlierCount + 1);
         }}
         onSelect={screenTab.select}
@@ -456,13 +505,7 @@ export function PomResolutionEditor({
       )}
       <EditorDialogFeedback
         name="Pom feedback"
-        entries={[
-          ...new Set(
-            findings.map((finding) =>
-              formatFindingExplanation(presentLevelResolutionCandidateFinding(finding)),
-            ),
-          ),
-        ].map((message) => [message, message] as const)}
+        entries={[...new Set(feedbackMessages)].map((message) => [message, message] as const)}
       />
       <EditorDialogDraftActions
         {...(onCancel === undefined ? {} : { onCancel })}

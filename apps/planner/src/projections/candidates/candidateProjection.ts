@@ -391,6 +391,17 @@ export interface LevelResolutionCandidateGroup {
     readonly branchIndex: number;
     readonly supported: boolean;
     readonly findings: readonly string[];
+    /** Findings of the rerolled-away screens and their link to the final one. */
+    readonly rerolledScreenFindings: readonly {
+      readonly code:
+        | 'rerolledScreenMissing'
+        | 'pomWrongOfferCount'
+        | 'pomTargetUnavailable'
+        | 'rollRepeatsAllOffers'
+        | 'screenRerollUnavailable';
+      readonly screen?: number;
+      readonly reason?: 'nothingLeft';
+    }[];
     /** Eligible targets no offered slot holds. */
     readonly availableTargetTraitKeys: readonly string[];
   }[];

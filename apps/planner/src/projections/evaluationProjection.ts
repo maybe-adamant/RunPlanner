@@ -872,7 +872,12 @@ export function presentAssessmentIssue(
  * policy. Candidate findings are not project findings, so they do not have a
  * SemanticFinding origin to pass through `presentFinding`.
  */
-export function presentTraitCandidateFinding(code: TraitCandidateFindingCode): FindingPresentation {
+export function presentTraitCandidateFinding(
+  code: TraitCandidateFindingCode,
+  reason?: string,
+): FindingPresentation {
+  if (code === 'screenRerollUnavailable' && reason === 'nothingLeft')
+    return { title: 'Nothing left to reroll' };
   if (code === 'duplicateOfferedTrait') {
     return {
       title: 'Trait already offered',
@@ -889,6 +894,21 @@ const levelResolutionCandidateCopy = {
   targetUnavailable: findingCopy.pomTargetUnavailable,
   kindMismatch: { title: 'Pom choice does not match this Pom' },
 } as const satisfies Readonly<Record<LevelResolutionFindingCode, FindingPresentation>>;
+
+/** Present a Pom draft's finding about its rerolled screens with the shared copy. */
+export function presentRerolledLevelScreenFinding(finding: {
+  readonly code:
+    | 'rerolledScreenMissing'
+    | 'pomWrongOfferCount'
+    | 'pomTargetUnavailable'
+    | 'rollRepeatsAllOffers'
+    | 'screenRerollUnavailable';
+  readonly reason?: string;
+}): FindingPresentation {
+  return finding.code === 'screenRerollUnavailable' && finding.reason === 'nothingLeft'
+    ? { title: 'Nothing left to reroll' }
+    : findingCopy[finding.code];
+}
 
 /** Present a Pom draft's candidate finding with the shared Pom finding copy. */
 export function presentLevelResolutionCandidateFinding(code: string): FindingPresentation {
