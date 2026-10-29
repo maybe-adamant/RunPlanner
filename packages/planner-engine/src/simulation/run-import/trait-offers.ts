@@ -132,6 +132,13 @@ function traitsOffer(
   roomIndex: number,
 ): AuthoredTraitOffer | undefined {
   const giverKey = screenGiver(context, screen);
+  // A screen with nothing left shows the game's single Fallback Gold row.
+  if (
+    giverKey !== undefined &&
+    screen.options.length === 1 &&
+    screen.options[0]!.name === 'FallbackGold'
+  )
+    return { kind: 'fallbackGold', giverKey };
   const selected = screen.options.findIndex((option) => option.chosen);
   if (giverKey === undefined || selected < 0 || screen.options.length > 3) return undefined;
   const residual = concaveStoneResidual(context, screen, roomIndex, giverKey);

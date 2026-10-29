@@ -28,6 +28,7 @@ import {
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
+  type AuthoredTraitOfferFallbackGold,
 } from '../traits/state';
 import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../traits/hex-tree';
 import { canonicalMaxHealthRoll, traitMaxHealthRollProblem } from '../traits/max-health-roll';
@@ -137,8 +138,6 @@ function applyTraitScreenRerollCommand(
   command: TraitScreenRerollCommand,
 ): AuthoredTraitOffer {
   if (existing === null) return failCommand(command, 'author the final screen before its rerolls');
-  if (existing.kind === 'fallbackGold')
-    return failCommand(command, 'a Fallback Gold screen has no rerolls');
   try {
     if (
       command.kind === 'InsertTraitScreenReroll' &&
@@ -175,7 +174,9 @@ function applyTraitScreenRerollCommand(
         existing.rerolledScreens,
         command,
         screen,
-        rerolledTraitScreenSnapshot(existing),
+        existing.kind === 'fallbackGold'
+          ? Object.freeze({ options: Object.freeze([]) })
+          : rerolledTraitScreenSnapshot(existing),
       ),
     );
   } catch (error) {
@@ -200,10 +201,9 @@ function editedScreens<T>(
   }
 }
 
-function withRerolledScreens<T extends AuthoredTraitOfferTraits | AuthoredChaosTraitOffer>(
-  offer: T,
-  screens: T['rerolledScreens'],
-): T {
+function withRerolledScreens<
+  T extends AuthoredTraitOfferTraits | AuthoredTraitOfferFallbackGold | AuthoredChaosTraitOffer,
+>(offer: T, screens: T['rerolledScreens']): T {
   const { rerolledScreens: _previous, ...rest } = offer;
   void _previous;
   return Object.freeze({
@@ -222,14 +222,16 @@ function reconcileRerolledScreens(
   next: AuthoredTraitOffer | null,
   command: TraitOfferOwnedCommand,
 ): AuthoredTraitOffer | null {
-  if (next === null || next.kind === 'fallbackGold') return next;
+  if (next === null) return next;
+  // Trait and Gold final screens share trait-shaped earlier screens.
+  const family = (offer: AuthoredTraitOffer) => (offer.kind === 'chaos' ? 'chaos' : 'traits');
   const requested =
-    command.kind === 'ReplaceTraitOffer' && command.value.kind === next.kind
+    command.kind === 'ReplaceTraitOffer' && family(command.value) === family(next)
       ? command.value.rerolledScreens
       : undefined;
   const screens =
     requested ??
-    (existing !== null && existing.kind === next.kind ? existing.rerolledScreens : undefined);
+    (existing !== null && family(existing) === family(next) ? existing.rerolledScreens : undefined);
   const supported = screenRerollSupported(catalog, {
     kind: 'traitOffer',
     giverKey: next.giverKey,
@@ -247,7 +249,7 @@ function reconcileRerolledScreens(
     return withRerolledScreens(
       next,
       normalizeRerolledScreens(
-        screens as AuthoredTraitOfferTraits['rerolledScreens'],
+        screens as AuthoredTraitOfferTraits['rerolledScreens'] | undefined,
         supported,
         (screen) => normalizeRerolledTraitScreen(catalog, next.giverKey, screen),
       ),

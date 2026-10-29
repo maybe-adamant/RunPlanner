@@ -318,7 +318,7 @@ export function rerolledTraitScreensGuess(
   openState: SimulationState,
   source: ResolvedTraitOfferSource,
 ): readonly AuthoredRerolledTraitScreen[] | readonly AuthoredRerolledChaosScreen[] | undefined {
-  if (count < 1 || value.kind === 'fallbackGold') return undefined;
+  if (count < 1) return undefined;
   if (value.kind === 'chaos')
     return Object.freeze(
       Array.from({ length: count }, () => Object.freeze({ curseOptions: value.curseOptions })),
@@ -326,7 +326,8 @@ export function rerolledTraitScreensGuess(
   const giver = catalog.traitGivers.byKey[value.giverKey];
   if (giver === undefined) return undefined;
   const npc = giver.providerKind === 'npc';
-  const finalRarity = new Map(value.options.map((option) => [option.traitKey, option.rarity]));
+  const finalOptions = value.kind === 'traits' ? value.options : [];
+  const finalRarity = new Map(finalOptions.map((option) => [option.traitKey, option.rarity]));
   // NPC generation decides only which traits show; each row takes a rarity its giver offers.
   const npcRarity = (traitKey: string) => {
     if (finalRarity.has(traitKey)) return finalRarity.get(traitKey);
@@ -341,7 +342,7 @@ export function rerolledTraitScreensGuess(
   const rows = stagedTraitGeneration(catalog, { ...value, rerolledScreens: [null] })
     ? guessRerolledScreens(
         traitOfferGenerationInput(catalog, value.giverKey, state, source),
-        value.options,
+        finalOptions,
         count,
       )?.map((screen) =>
         npc
@@ -353,7 +354,7 @@ export function rerolledTraitScreensGuess(
             })
           : screen.options,
       )
-    : Array.from({ length: count }, () => value.options);
+    : Array.from({ length: count }, () => finalOptions);
   if (rows === undefined) return undefined;
   const rejected =
     isChaosGodScreenGiver(catalog, value.giverKey) &&

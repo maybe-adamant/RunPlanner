@@ -788,6 +788,51 @@ describe('screen rerolls', () => {
     expect(current(removed)).toEqual(offer);
   });
 
+  it('reroll a Fallback Gold final screen and keep its earlier screens through a save', () => {
+    const project = withArcana(loadUnderworldFGCheckpoint(), ['ScreenReroll']);
+    const zeus = occurrence(project, source);
+    const offers =
+      zeus.state.kind === 'counted' ? zeus.state.reward?.traitOffersByAcquisitionRole : undefined;
+    const [role] = Object.entries(offers ?? {})[0]!;
+    const trait = {
+      kind: 'traitOffer',
+      routeKey: 'Underworld',
+      biomeKey: 'F',
+      owner: createIncomingRewardAddress(f, source as never),
+      acquisitionRole: role,
+    } as const;
+    const gold = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: { kind: 'fallbackGold', giverKey: 'Zeus' },
+    });
+    const rerolled = applyProjectCommand(gold, catalog, { kind: 'InsertTraitScreenReroll', trait });
+    const current = (document: ProjectDocument) => {
+      const room = occurrence(document, source);
+      return room.state.kind === 'counted'
+        ? room.state.reward?.traitOffersByAcquisitionRole[role]
+        : undefined;
+    };
+    // The rerolled Gold screen is copied as a screen with no rows.
+    expect(current(rerolled)).toEqual({
+      kind: 'fallbackGold',
+      giverKey: 'Zeus',
+      rerolledScreens: [{ options: [] }],
+    });
+    expect(
+      current(decodeProjectDocument(JSON.parse(encodeProjectDocument(rerolled)), catalog)),
+    ).toEqual(current(rerolled));
+    // Gold is no first draw for a fresh Zeus, so both screens report it.
+    expect(
+      evaluate(rerolled)
+        .evaluation.findings.filter((finding) => finding.origin.kind === 'traitOffer')
+        .map((finding) => [finding.code, finding.evidence.screen]),
+    ).toEqual([
+      ['traitOfferGenerationUnavailable', 0],
+      ['traitOfferGenerationUnavailable', undefined],
+    ]);
+  });
+
   it('judge a candidate offer with its whole chain, as the settlement does', () => {
     const project = withArcana(loadUnderworldFGCheckpoint(), ['ScreenReroll']);
     const zeus = occurrence(project, source);

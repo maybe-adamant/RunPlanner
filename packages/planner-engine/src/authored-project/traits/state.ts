@@ -174,6 +174,8 @@ export function normalizeAuthoredConcaveStoneResult(
 export interface AuthoredTraitOfferFallbackGold {
   readonly kind: 'fallbackGold';
   readonly giverKey: string;
+  /** The screens rerolled away before this final Gold screen, oldest first; absent is none. */
+  readonly rerolledScreens?: RerolledScreens<AuthoredRerolledTraitScreen>;
 }
 
 export type TraitOptionKey = 'option1' | 'option2' | 'option3';

@@ -588,7 +588,7 @@ export function assessRerolledScreens(
         }),
       ),
     );
-  if (offer.kind !== 'traits' || offer.rerolledScreens === undefined) return Object.freeze([]);
+  if (offer.rerolledScreens === undefined) return Object.freeze([]);
   const screens = offer.rerolledScreens;
   const staged = stagedTraitGeneration(catalog, offer);
   const generationInput = traitOfferGenerationInput(

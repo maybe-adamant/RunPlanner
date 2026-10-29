@@ -160,10 +160,11 @@ function screenExpectation(
 export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
   const record = object(value, label);
   if (record.kind === 'fallbackGold') {
-    exact(record, ['kind', 'giver'], ['expectation'], label);
+    exact(record, ['kind', 'giver'], ['expectation', 'rerolledScreens'], label);
     return Object.freeze({
       kind: 'fallbackGold',
       giver: stringValue(record.giver, `${label}.giver`),
+      ...rerolledScreens(record, label, rerolledTraitScreen),
       ...(record.expectation === undefined
         ? {}
         : {

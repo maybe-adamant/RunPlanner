@@ -420,6 +420,8 @@ export type ExecutionTraitOffer =
       readonly kind: 'fallbackGold';
       readonly giver: string;
       readonly expectation?: ExecutionTraitScreenExpectation;
+      /** Screens installed on each native reroll before this Gold screen, oldest first. */
+      readonly rerolledScreens?: readonly ExecutionRerolledTraitScreen[];
     }
   | {
       readonly kind: 'traits';

@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 import {
   assessInitialOfferSupport,
   assessRerolledScreensSupport,
+  firstScreenRerollRefused,
   guessRerolledScreens,
   initialOfferStartingOptions,
 } from '../../../../src/simulation/traits/authoring/initial-composition';
@@ -294,6 +295,73 @@ describe('rerolled screen chain', () => {
         (assessment) => assessment.replacementTransition !== undefined,
       ),
     ).toBe(true);
+  });
+});
+
+describe('Fallback Gold screen rerolls', () => {
+  // Denial turns off the rarity rescue: a failed Duo or Legendary check leaves
+  // Gold while those boons stay in their buckets, so the game allows a reroll.
+  const before = history([
+    ['Apollo', 'ApolloWeaponBoon', 'Common'],
+    ['Apollo', 'ApolloCastBoon', 'Common'],
+    ['Apollo', 'DoubleStrikeChanceBoon', 'Common'],
+    ['Apollo', 'ApolloExCastBoon', 'Common'],
+    ['Zeus', 'ZeusSpecialBoon', 'Common'],
+  ]);
+  const testCatalog = apolloPool(['DoubleExManaBoon', 'ApolloSecondStageCastBoon']);
+  const denial: ResolvedTraitOfferSource = {
+    boonRarityFacts: {
+      providerBase: { Rare: 0, Epic: 0, Heroic: 0, Duo: 0.12, Legendary: 0.1 },
+      rollOrder: catalog.boonRarityRollOrder,
+      contributions: [],
+    },
+    finalRarityRescueDisabled: true,
+  };
+  const gold = { options: [] } as AuthoredRerolledTraitScreen;
+  const goldFinal = (
+    earlier: readonly (AuthoredRerolledTraitScreen | null)[],
+  ): import('@run-planner/engine/authored-project').AuthoredTraitOffer => ({
+    kind: 'fallbackGold',
+    giverKey: 'Apollo',
+    rerolledScreens: earlier,
+  });
+  const supported = (value: import('@run-planner/engine/authored-project').AuthoredTraitOffer) =>
+    assessInitialOfferSupport({ ...input(before, denial, testCatalog), offer: value }).legal;
+
+  it('reroll a Gold screen into the Duo it failed to roll, or into Gold again', () => {
+    expect(supported(offer([['ApolloSecondStageCastBoon', 'Duo']], [gold]))).toBe(true);
+    expect(supported(goldFinal([gold]))).toBe(true);
+    expect(supported(goldFinal([screen(['ApolloSecondStageCastBoon', 'Duo'])]))).toBe(true);
+    // An Olympian's declared cores keep the reroll available on a Gold screen.
+    expect(firstScreenRerollRefused(input(before, denial, testCatalog), gold)).toBe(false);
+  });
+
+  it('refuse rerolling a Gold screen with nothing left to draw', () => {
+    const hermes = {
+      ...catalog.traitGivers.byKey.Hermes!,
+      traitKeys: [],
+    };
+    const emptyCatalog = {
+      ...catalog,
+      traitGivers: {
+        ...catalog.traitGivers,
+        byKey: { ...catalog.traitGivers.byKey, Hermes: hermes },
+        values: catalog.traitGivers.values.map((entry) =>
+          entry.key === 'Hermes' ? hermes : entry,
+        ),
+      },
+    };
+    const evaluation = evaluateReachedTraitOffer(
+      emptyCatalog,
+      { kind: 'project' },
+      'source',
+      { kind: 'fallbackGold', giverKey: 'Hermes', rerolledScreens: [gold] },
+      traitFrontierState(createTraitHistoryState(), { catalog: emptyCatalog }),
+      {},
+      0,
+    );
+    expect(evaluation.rerolledScreens?.[0]).toMatchObject({ rerollRefused: true });
+    expect(evaluation.generation?.legal).toBe(true);
   });
 });
 

@@ -46,10 +46,24 @@ export function decodeEncounterTraitOffer(
   if (giver === undefined) failProjectDocument(path, `unknown giver ${giverKey}`);
   const kind = expectString(record.kind, `${path}.kind`);
   if (kind === 'fallbackGold') {
-    expectExactKeys(record, ['kind', 'giverKey'], path);
+    expectExactKeys(
+      record,
+      [
+        'kind',
+        'giverKey',
+        ...(Object.hasOwn(record, 'rerolledScreens') ? ['rerolledScreens'] : []),
+      ],
+      path,
+    );
     if (!traitOfferSupportsExhaustion(giver))
       failProjectDocument(path, 'Fallback Gold is not supported by this giver');
-    return Object.freeze({ kind: 'fallbackGold', giverKey });
+    const goldScreens = decodeRerolledScreens(
+      record,
+      screenRerollSupported(catalog, { kind: 'traitOffer', giverKey }),
+      path,
+      (screen, screenPath) => decodeRerolledTraitScreen(catalog, giverKey, screen, screenPath),
+    );
+    return Object.freeze({ kind: 'fallbackGold', giverKey, ...rerolledScreensField(goldScreens) });
   }
   if (kind !== 'traits') failProjectDocument(`${path}.kind`, 'must be traits or fallbackGold');
   expectExactKeys(

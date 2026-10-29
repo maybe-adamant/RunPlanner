@@ -412,7 +412,7 @@ export function assessInitialOfferSupport(
   return screenSupport(
     pools,
     offer.kind === 'traits' ? offer.options : [],
-    offer.kind === 'traits' ? offer.rerolledScreens?.at(-1) : undefined,
+    offer.kind === 'chaos' ? undefined : offer.rerolledScreens?.at(-1),
   );
 }
 

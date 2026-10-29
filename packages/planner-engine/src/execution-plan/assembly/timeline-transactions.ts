@@ -128,11 +128,56 @@ export function executionTimelineTransactions(
     const expectation = agreedScreenExpectation(
       selected.branches.map((branch) => branch.screenExpectation),
     );
+    // Each rerolled-away row's installed level, the same in every branch.
+    const rerolledScreenLevels = agreement(
+      selected.branches.map((branch) =>
+        (branch.rerolledScreens ?? []).map((screen) =>
+          screen.levelResolutions.map((resolution) => resolution.effectiveLevel),
+        ),
+      ),
+      `rerolled screen levels ${semanticAddressKey(selected.address)}`,
+    );
+    const rerolledScreenReplacements = agreement(
+      selected.branches.map((branch) =>
+        (branch.rerolledScreens ?? []).map((screen) =>
+          screen.assessments.map((assessment) => assessment.replacementTransition),
+        ),
+      ),
+      `rerolled screen replacements ${semanticAddressKey(selected.address)}`,
+    );
+    const traitScreens =
+      selected.offer.kind === 'chaos'
+        ? {}
+        : publishedRerolledScreens(
+            selected.offer.rerolledScreens,
+            selected.address,
+            (screen, index) =>
+              Object.freeze({
+                options: Object.freeze(
+                  screen.options.map((option, row) => {
+                    const level = rerolledScreenLevels[index]?.[row];
+                    const replacement = rerolledScreenReplacements[index]?.[row];
+                    return Object.freeze({
+                      key: option.traitKey,
+                      ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
+                      ...(level === undefined ? {} : { effectiveLevel: level }),
+                      ...(replacement === undefined
+                        ? {}
+                        : { replacement: publishedReplacement(replacement) }),
+                    });
+                  }),
+                ),
+                ...(screen.rejectedOptionKey === undefined
+                  ? {}
+                  : { rejected: screen.rejectedOptionKey }),
+              }),
+          );
     if (selected.offer.kind === 'fallbackGold')
       return Object.freeze({
         kind: 'fallbackGold' as const,
         giver: selected.offer.giverKey,
         ...(expectation === undefined ? {} : { expectation }),
+        ...traitScreens,
       });
     if (selected.offer.kind === 'chaos')
       return Object.freeze({
@@ -170,23 +215,6 @@ export function executionTimelineTransactions(
     const levels = agreement(
       selected.branches.map((branch) => branch.effectiveLevels),
       `trait effective levels ${semanticAddressKey(selected.address)}`,
-    );
-    // Each rerolled-away row's installed level, the same in every branch.
-    const rerolledScreenLevels = agreement(
-      selected.branches.map((branch) =>
-        (branch.rerolledScreens ?? []).map((screen) =>
-          screen.levelResolutions.map((resolution) => resolution.effectiveLevel),
-        ),
-      ),
-      `rerolled screen levels ${semanticAddressKey(selected.address)}`,
-    );
-    const rerolledScreenReplacements = agreement(
-      selected.branches.map((branch) =>
-        (branch.rerolledScreens ?? []).map((screen) =>
-          screen.assessments.map((assessment) => assessment.replacementTransition),
-        ),
-      ),
-      `rerolled screen replacements ${semanticAddressKey(selected.address)}`,
     );
     const baseRarities = agreement(
       selected.branches.map((branch) => branch.baseRarities),
@@ -438,30 +466,7 @@ export function executionTimelineTransactions(
         : { rejected: selected.offer.rejectedOptionKey }),
       ...(publishedHexTree === undefined ? {} : { hexTree: publishedHexTree }),
       ...(expectation === undefined ? {} : { expectation }),
-      ...publishedRerolledScreens(
-        selected.offer.rerolledScreens,
-        selected.address,
-        (screen, index) =>
-          Object.freeze({
-            options: Object.freeze(
-              screen.options.map((option, row) => {
-                const level = rerolledScreenLevels[index]?.[row];
-                const replacement = rerolledScreenReplacements[index]?.[row];
-                return Object.freeze({
-                  key: option.traitKey,
-                  ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
-                  ...(level === undefined ? {} : { effectiveLevel: level }),
-                  ...(replacement === undefined
-                    ? {}
-                    : { replacement: publishedReplacement(replacement) }),
-                });
-              }),
-            ),
-            ...(screen.rejectedOptionKey === undefined
-              ? {}
-              : { rejected: screen.rejectedOptionKey }),
-          }),
-      ),
+      ...traitScreens,
     });
   };
   const levelResolution = (

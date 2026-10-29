@@ -45,7 +45,7 @@ a door, a door's cage slot or a wheel offer, and the new `reward`) and a Hub
 `reroll` action (`rerollId`, `hubSlotKey`, `reward`) each record one press;
 the target keeps its first draw. A rerolled owner holds the reward it is
 entered with in `rerolledIncomingReward`, `rerolledCages` or
-`rerolledOffers`. Trait, Chaos and Pom choice screens hold optional
+`rerolledOffers`. Trait (Fallback Gold included), Chaos and Pom choice screens hold optional
 `rerolledScreens`: the screens shown before the final one, oldest first, each
 complete (trait rows with rarities and optional `persephoneLevelBonus`, an
 optional `rejectedOptionKey`, three

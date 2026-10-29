@@ -245,10 +245,28 @@ function decodeTraitOffers(
       continue;
     }
     if (kind === 'fallbackGold') {
-      expectExactKeys(record, ['kind', 'giverKey'], rolePath);
+      expectExactKeys(
+        record,
+        [
+          'kind',
+          'giverKey',
+          ...(Object.hasOwn(record, 'rerolledScreens') ? ['rerolledScreens'] : []),
+        ],
+        rolePath,
+      );
       if (!traitOfferSupportsExhaustion(giver))
         failProjectDocument(rolePath, 'Fallback Gold is not supported by this giver');
-      result[roleKey] = Object.freeze({ kind: 'fallbackGold', giverKey });
+      const goldScreens = decodeRerolledScreens(
+        record,
+        screenRerollSupported(catalog, { kind: 'traitOffer', giverKey }),
+        rolePath,
+        (screen, screenPath) => decodeRerolledTraitScreen(catalog, giverKey, screen, screenPath),
+      );
+      result[roleKey] = Object.freeze({
+        kind: 'fallbackGold',
+        giverKey,
+        ...rerolledScreensField(goldScreens),
+      });
       continue;
     }
     if (kind !== 'traits')

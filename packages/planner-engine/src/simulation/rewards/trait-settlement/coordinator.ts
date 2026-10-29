@@ -1249,7 +1249,7 @@ export function applyTraitOfferForAcquisition(
   // The screen's rerolls happen before its final rows are chosen.
   const screenOwner = owner === undefined ? undefined : createTraitOfferAddress(owner, role);
   const rerolled =
-    authored.kind === 'fallbackGold' || screenOwner === undefined
+    screenOwner === undefined
       ? undefined
       : settleScreenRerolls(
           catalog,

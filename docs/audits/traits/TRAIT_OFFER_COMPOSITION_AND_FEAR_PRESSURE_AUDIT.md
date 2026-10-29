@@ -222,6 +222,11 @@ recomputed false after any exclusion (`:1993-2000`), so only the first reroll
 can be refused: a loot without `PriorityUpgrades` (Hermes, Athena, Dionysus,
 Artemis, Hades) refuses its first reroll once every fresh trait is on show,
 while an Olympian's declared core list keeps `chosenPriorityTraits` nonempty.
+The reroll button reads only `BlockReroll` and the cost
+(`UpgradeChoiceLogic.lua:225-262`), so a Fallback Gold screen
+(`UpgradeChoiceLogic.lua:147-149`) is rerollable too, for example under Denial
+when a failed Duo or Legendary check leaves those boons in their buckets; it
+bans only the Gold row, which no generation draws.
 NPC loot runs the same `SetTraitsOnLoot` with no cores, exchanges or linked
 seeds, so a reroll is possible only with four or more fresh traits and every
 rerolled NPC screen still shows three. The n-th reroll of one loot costs n

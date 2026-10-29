@@ -270,7 +270,9 @@ unauthored screen, any initial outcome or single ban is accepted. Olympian and
 Hermes screens are always staged; NPC screens join the staged generation only
 once rerolled, with no core seeds and with only the rows' identities judged,
 their rarities keeping the direct row check. A giver without priority traits
-whose first screen shows every fresh trait refuses the reroll. Chaos screens are
+whose first screen shows every fresh trait refuses the reroll. A Fallback Gold
+screen, final or earlier, can be rerolled under the same rule; it bans nothing,
+so the next screen follows the initial rules. Chaos screens are
 independent, and a Pom screen must show the levellable boons less one of the
 previous screen. Findings on an earlier screen carry its tab index, and the
 candidate assessment of an offer judges the whole chain exactly as settlement
