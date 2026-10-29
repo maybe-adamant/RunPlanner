@@ -958,6 +958,28 @@ describe('Judgment fixed Boss lifecycle', () => {
     );
   });
 
+  it('offers a Fated Crystal Figurine no Fated-incompatible card', () => {
+    const seeded = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
+    const keepsakes = createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', seeded);
+    const figurine = createFigurineArcanaAddress(
+      createOccurrenceAddress(n, createOccurrenceId('surface-n-preboss:boss')),
+      'Encounter',
+    );
+    const candidates = (fatedStatus: 'Fated' | 'Unfated') =>
+      evaluateNBossLifecycle(
+        seeded,
+        [],
+        undefined,
+        [],
+        Object.freeze({ ...keepsakes, fatedStatus }),
+      ).figurineArcanaArtifacts.at(figurine)?.inactiveArcanaKeys;
+    const fatedIncompatible = ['DoorReroll', 'ScreenReroll', 'TradeOff'];
+    expect(candidates('Unfated')).toEqual(expect.arrayContaining(fatedIncompatible));
+    const fated = candidates('Fated');
+    expect(fated?.length).toBeGreaterThan(0);
+    for (const key of fatedIncompatible) expect(fated).not.toContain(key);
+  });
+
   it('activates ordinary Epic Figurine cards at Epic and Cherished-advanced cards at Heroic', () => {
     const seeded = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
     const selected = inactive([], 2);

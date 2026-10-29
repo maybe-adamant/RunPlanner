@@ -679,4 +679,47 @@ describe('Circe selected trait acquisition', () => {
       support: 'impossible',
     });
   });
+
+  it('offers a Fated Red Citrine no Fated-incompatible card', () => {
+    const offer = circeOffer('option1', [
+      { traitKey: 'RandomArcanaTrait' },
+      { traitKey: 'CirceShrinkTrait' },
+      { traitKey: 'CirceEnlargeTrait' },
+    ]);
+    const arcanaFear = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
+    const { keepsakes } = traitFrontierState(createTraitHistoryState(), { arcanaFear });
+    const candidates = (fatedStatus: 'Fated' | 'Unfated') => {
+      const fated = Object.freeze({
+        ...initializeTestRewardBranches(arcanaFear)[0]!,
+        traitEvaluations: Object.freeze([
+          evaluateReachedTraitOffer(
+            catalog,
+            circeOwner.owner,
+            'selection',
+            offer,
+            traitFrontierState(createTraitHistoryState(), {
+              arcanaFear,
+              keepsakes: Object.freeze({ ...keepsakes, fatedStatus }),
+            }),
+            Object.freeze({ resolvedProviderKey: 'Circe' }),
+            0,
+          ),
+        ]),
+      });
+      const [domain] =
+        createTraitOfferCandidateArtifacts(
+          catalog,
+          selectedTraitOfferProducts(Object.freeze([fated])).candidateContexts,
+        )
+          .at(circeOwner)
+          ?.circeResolution(offer, 'option1') ?? [];
+      expect(domain?.effect).toBe('activateArcana');
+      return domain?.arcanaKeys;
+    };
+    const fatedIncompatible = ['DoorReroll', 'ScreenReroll', 'TradeOff'];
+    expect(candidates('Unfated')).toEqual(expect.arrayContaining(fatedIncompatible));
+    const fated = candidates('Fated');
+    expect(fated?.length).toBeGreaterThan(0);
+    for (const key of fatedIncompatible) expect(fated).not.toContain(key);
+  });
 });
