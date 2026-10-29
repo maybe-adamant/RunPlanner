@@ -7,22 +7,30 @@ import {
 } from '@planner/projections/dreamItinerary';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 
+/** Stages four Dream biomes, starting from an existing itinerary when one is given. */
 export function DreamItineraryDialog({
   catalog,
+  confirmLabel,
+  initialItinerary = [],
   onCancel,
-  onCreate,
+  onConfirm,
   pending,
 }: {
   readonly catalog: Catalog;
+  readonly confirmLabel: string;
+  readonly initialItinerary?: readonly string[];
   readonly onCancel: () => void;
-  readonly onCreate: (itineraryBiomeKeys: readonly string[]) => void;
+  readonly onConfirm: (itineraryBiomeKeys: readonly string[]) => void;
   readonly pending: boolean;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [draft, setDraft] = useState<readonly string[]>([]);
+  const [draft, setDraft] = useState<readonly string[]>(initialItinerary);
   const [stage, setStage] = useState(0);
-  const [pickerOpen, setPickerOpen] = useState(true);
   const projection = projectDreamItineraryDraft(catalog, draft, stage);
+  const [pickerOpen, setPickerOpen] = useState(!projection.complete);
+  const unchanged =
+    draft.length === initialItinerary.length &&
+    draft.every((biomeKey, index) => initialItinerary[index] === biomeKey);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -54,7 +62,6 @@ export function DreamItineraryDialog({
           <div>
             <p className="eyebrow">Dream Dive</p>
             <h2 id="dream-itinerary-dialog-title">Choose four biomes</h2>
-            <p>Route is fixed after creation.</p>
           </div>
         </header>
         <div aria-label="Route order" className="dream-route-selection">
@@ -103,11 +110,11 @@ export function DreamItineraryDialog({
           </button>
           <button
             className="secondary-action"
-            disabled={pending || !projection.complete}
-            onClick={() => onCreate(draft)}
+            disabled={pending || !projection.complete || unchanged}
+            onClick={() => onConfirm(draft)}
             type="button"
           >
-            {pending ? 'Creating…' : 'Create project'}
+            {pending ? 'Please wait…' : confirmLabel}
           </button>
         </footer>
       </section>

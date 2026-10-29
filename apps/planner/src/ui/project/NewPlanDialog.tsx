@@ -86,8 +86,9 @@ export function NewPlanDialog({
       {dreamOpen && (
         <DreamItineraryDialog
           catalog={catalog}
+          confirmLabel="Create project"
           onCancel={() => setDreamOpen(false)}
-          onCreate={(itineraryBiomeKeys) => void create('Dream', itineraryBiomeKeys)}
+          onConfirm={(itineraryBiomeKeys) => void create('Dream', itineraryBiomeKeys)}
           pending={pending}
         />
       )}

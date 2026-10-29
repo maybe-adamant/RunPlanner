@@ -372,6 +372,8 @@ export function RouteWorkspace({
         <div className="editor-panel-content" data-editor-layout={contentLayout}>
           {displayedPanel.kind === 'route' ? (
             <RouteScopePanel
+              authoredRoute={project.route}
+              catalog={catalog}
               label={navigation.label}
               navigation={navigation}
               feedback={feedback}
@@ -405,6 +407,8 @@ export function RouteWorkspace({
             <RouteWellsPanel rows={wellRows} />
           ) : activeBiomeProjection === undefined ? (
             <RouteScopePanel
+              authoredRoute={project.route}
+              catalog={catalog}
               label={navigation.label}
               navigation={navigation}
               feedback={feedback}

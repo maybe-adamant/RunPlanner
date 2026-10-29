@@ -578,6 +578,10 @@
   margin-top: 0.75rem;
 }
 
+.dream-itinerary-change {
+  justify-self: start;
+}
+
 .route-fixed-loadout-facts {
   display: grid;
   gap: 0.5rem;

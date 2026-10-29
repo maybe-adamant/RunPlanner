@@ -36,6 +36,8 @@ function routeMarkup(application: ReturnType<typeof createApplication>): string 
   return renderToStaticMarkup(
     <Provider store={application.store}>
       <RouteScopePanel
+        authoredRoute={project.route}
+        catalog={application.catalog}
         feedback={feedback}
         label={navigation.label}
         navigation={navigation}
@@ -84,7 +86,7 @@ describe('RouteScopePanel', () => {
     expect(routeMarkup(application)).not.toContain('contiguous route prefix');
   });
 
-  it('shows the full immutable Dream itinerary in the Route panel, not only its configured prefix', () => {
+  it('shows the full Dream itinerary with its re-pick entry in the Route panel, not only its configured prefix', () => {
     const application = createApplication();
     application.store.dispatch(
       authoredProjectReplaced(
@@ -104,6 +106,7 @@ describe('RouteScopePanel', () => {
       ),
     ).toEqual(['Summit', 'Erebus', 'Ephyra', 'Fields']);
     expect(markup).toContain('Through Summit');
+    expect(markup).toContain('Change biomes');
   });
 
   it('shows the ordinary route order in the same Route panel', () => {
@@ -113,6 +116,7 @@ describe('RouteScopePanel', () => {
         match[1]!.replace(/<[^>]*>/g, ''),
       ),
     ).toEqual(['Erebus', 'Oceanus', 'Fields', 'Tartarus']);
+    expect(markup).not.toContain('Change biomes');
   });
 
   it('hosts the run modifiers after the route extent, Practice mode last, including in Fresh File', () => {

@@ -279,6 +279,12 @@ no route-specific reducer or second authored navigation tree exists.
 Route holds Plan up to (the plan's extent), the run modifiers with Practice
 mode, and the whole-plan status. It carries no finding marker.
 
+On Dream Dive, Route also re-opens the creation-time biome picker on the
+current itinerary. Confirming a different itinerary dispatches one
+`ReplaceDreamItinerary` history edit; when the engine reports biomes whose
+plans or per-biome route settings it would clear, a confirmation naming them
+comes first.
+
 Run modifiers render from the engine's
 [run modifier declarations](RUN_START_INSTALLATION.md#run-modifiers) by declared kind, on
 every route including Fresh File: a toggle for a boolean, and for an optional

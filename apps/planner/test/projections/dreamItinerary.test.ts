@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import { createProjectDocument } from '@run-planner/engine/authored-project';
 import {
   projectDreamItineraryDraft,
+  projectDreamItineraryReplacementLosses,
   replaceDreamItineraryDraftBiome,
 } from '@planner/projections/dreamItinerary';
 
@@ -36,5 +38,28 @@ describe('Dream Dive creation projection', () => {
       'H',
     ]);
     expect(replaceDreamItineraryDraftBiome(catalog, original, 0, 'F')).toEqual(['F']);
+  });
+});
+
+describe('Dream itinerary replacement projection', () => {
+  const route = createProjectDocument(catalog, {
+    projectId: 'dream-repick',
+    routeKey: 'Dream',
+    itineraryBiomeKeys: ['Q', 'F', 'N', 'H'],
+    configuredBiomeCount: 3,
+  }).route;
+
+  it('labels the biomes the engine would clear, and none for an unchanged itinerary', () => {
+    expect(projectDreamItineraryReplacementLosses(catalog, route, ['Q', 'F', 'N', 'H'])).toEqual(
+      [],
+    );
+    expect(projectDreamItineraryReplacementLosses(catalog, route, ['Q', 'F', 'O', 'H'])).toEqual([
+      'Ephyra',
+    ]);
+    expect(projectDreamItineraryReplacementLosses(catalog, route, ['G', 'F', 'N', 'H'])).toEqual([
+      'Summit',
+      'Erebus',
+      'Ephyra',
+    ]);
   });
 });

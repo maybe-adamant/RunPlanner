@@ -1,4 +1,8 @@
-import { assessPublicDreamItinerary } from '@run-planner/engine/authored-project';
+import {
+  assessPublicDreamItinerary,
+  dreamItineraryReplacementDroppedBiomeKeys,
+  type DreamItineraryReplacementRoute,
+} from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 import type { ContextualPickerItem, ContextualPickerModel } from './contextual/contextualPicker';
@@ -118,4 +122,17 @@ export function replaceDreamItineraryDraftBiome(
     next.push(retained);
   }
   return Object.freeze(next);
+}
+
+/** Labels of the biomes whose plans the engine would clear for this replacement itinerary. */
+export function projectDreamItineraryReplacementLosses(
+  catalog: Catalog,
+  route: DreamItineraryReplacementRoute,
+  itineraryBiomeKeys: readonly string[],
+): readonly string[] {
+  return Object.freeze(
+    dreamItineraryReplacementDroppedBiomeKeys(route, itineraryBiomeKeys).map(
+      (biomeKey) => catalog.biomes.byKey[biomeKey]?.label ?? biomeKey,
+    ),
+  );
 }

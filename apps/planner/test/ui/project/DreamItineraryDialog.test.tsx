@@ -14,8 +14,9 @@ describe('DreamItineraryDialog', () => {
     render(
       <DreamItineraryDialog
         catalog={catalog}
+        confirmLabel="Create project"
         onCancel={vi.fn()}
-        onCreate={vi.fn()}
+        onConfirm={vi.fn()}
         pending={false}
       />,
     );
@@ -40,8 +41,9 @@ describe('DreamItineraryDialog', () => {
     render(
       <DreamItineraryDialog
         catalog={catalog}
+        confirmLabel="Create project"
         onCancel={onCancel}
-        onCreate={onCreate}
+        onConfirm={onCreate}
         pending={false}
       />,
     );
@@ -62,8 +64,9 @@ describe('DreamItineraryDialog', () => {
     render(
       <DreamItineraryDialog
         catalog={catalog}
+        confirmLabel="Create project"
         onCancel={vi.fn()}
-        onCreate={onCreate}
+        onConfirm={onCreate}
         pending={false}
       />,
     );
@@ -82,5 +85,26 @@ describe('DreamItineraryDialog', () => {
     }
     fireEvent.click(screen.getByRole('button', { name: 'Create project' }));
     expect(onCreate).toHaveBeenCalledWith(['H', 'F', 'N', 'P']);
+  });
+
+  it('starts from an existing itinerary with the picker closed until the route changes', () => {
+    const onConfirm = vi.fn();
+    render(
+      <DreamItineraryDialog
+        catalog={catalog}
+        confirmLabel="Use these biomes"
+        initialItinerary={['Q', 'F', 'N', 'H']}
+        onCancel={vi.fn()}
+        onConfirm={onConfirm}
+        pending={false}
+      />,
+    );
+    expect(screen.queryByRole('option')).toBeNull();
+    const confirm = screen.getByRole('button', { name: 'Use these biomes' }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: `4. ${biomeLabel('H')}` }));
+    fireEvent.click(screen.getByRole('option', { name: biomeLabel('I') }));
+    fireEvent.click(confirm);
+    expect(onConfirm).toHaveBeenCalledWith(['Q', 'F', 'N', 'I']);
   });
 });
