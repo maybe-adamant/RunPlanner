@@ -627,7 +627,7 @@ commit predecessor with 3 acquired ordinary sources
 This trace is valid. Validating the outgoing fifth source against post-purchase
 history would be an ordering bug.
 
-The Purchased marker only inserts or removes the purchase reference; the engine
+A purchase command only inserts or removes the purchase reference; the engine
 walk performs the purchase when it reaches the ranked action. Unpurchased
 initial offers do not become active timeline or generic repair rows, and a
 retained stale purchase remains removable through its specialized
@@ -690,9 +690,9 @@ generation, opens with it). The row authors that purchase's rush and its order
 among the Shrine's purchases; the walk still schedules every initial Shrine
 purchase together at the Shrine checkpoint, while each row's position settles
 the Travel Deal refill and the refill's own purchase. Shrine purchase rows never become timeline
-transactions: each purchase's delay and rush publish through the room Overview
-inventory, and the execution room guide carries the row only as an
-informational reminder.
+transactions: each stocked item's delay, bought or not, and each purchase's
+rush publish through the room Overview inventory, and the execution room guide
+carries the row only as an informational reminder.
 
 A rushed Shrine purchase, including a Travel Deal replacement, ranks one
 optional same-room pickup at the post-outgoing action rank; the author may

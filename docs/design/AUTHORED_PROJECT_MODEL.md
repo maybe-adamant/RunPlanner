@@ -641,22 +641,22 @@ redundant authored selection.
 Shop inventory is entry-time state: selecting a Shop occurrence materializes
 it; changing selection removes unselected inventory. Its materialized state
 owns declaration-keyed offers. Exact `interactShopOffer` membership in the
-occurrence's `roomActions.order` is both the Purchased fact and the purchase
+occurrence's `roomActions.order` is both the purchased fact and the purchase
 order; no purchased set or Shop-private order is persisted. A counted-free
 Preboss keeps its complete resolved offer regardless of selection. A purchased
 Mystery Boon stores its hidden source and trait result at the acquisition entry
 where it resolves, not in generated Shop inventory. An Anvil of Fates result
 is not Shop state either; it belongs to the reward that carries the Anvil.
 
-A present Shrine of Hermes persists its visible
-initial inventory and sparse purchase terms: `HermesShrinePurchase` is
-`{ delay }`, and a generation is purchased when `purchaseBySlot` (or, for the
-refill, `travelDealRefill.purchase`) holds it. Each purchased generation has
-exactly one `{ kind: 'purchaseHermesShrineOffer', generationKey, rushed }`
-reference in `roomActions.order`, which owns its rush and its position among the
-Shrine's purchases; the codec rejects a missing, duplicate or unpurchased
-purchase action, and a same-room Shrine pickup without a rushed purchase
-action. Its rushed or delayed delivery owns concrete acquisition payload. A
+A present Shrine of Hermes persists its visible initial inventory, each
+stocked item (initial slot or Travel Deal refill) holding its reward type and
+the delay the game rolls with the stock, so an unbought item keeps its delay
+too. A generation is purchased exactly when `roomActions.order` holds its one
+`{ kind: 'purchaseHermesShrineOffer', generationKey, rushed }` reference, which
+owns its rush and its position among the Shrine's purchases; no purchase state
+is persisted beside it. The codec rejects a purchase action whose item is not
+stocked, and a same-room Shrine pickup without a rushed purchase action. Its
+rushed or delayed delivery owns concrete acquisition payload. A
 Stygian Well or Pool of Purging holds its initial stock with no interaction
 flag: a blank slot stays native, a pinned one is assessed, and a slot becomes
 required only once a purchase or sale uses it; use follows from the room's
@@ -726,23 +726,30 @@ but has no active child action. The persisted entry is ordinary
 `interactShopOffer` reference and any acquisition-resolved entry in the same
 undo step; it is how a slot whose group has become empty is repaired, and it
 is a no-op on an empty slot. The Travel refill is not a declared slot.
-`ReplaceShopPurchaseParticipation` inserts or removes one exact base-Shop
+`ReplaceShopPurchaseParticipation` appends or removes one exact base-Shop
 `interactShopOffer` reference. Generic Room Action insertion/removal rejects
-that reference family so Overview's Purchased marker is the sole membership
+that reference family so the purchase commands are the sole membership
 interaction; ranked purchases remain movable with the ordinary Room Action
 commands. Shrine and Well purchase references are rejected the same way.
 Removing participation remains accepted for a retained stale purchase after
 its Shop owner disappears, allowing exact repair without deleting unrelated
-actions.
+actions. `PurchaseShopTravelDealRefill` appends the purchase of the Shop's
+Travel Deal item and, given a value, first stocks a blank item, as one Undo
+step.
 
-`SetHermesShrinePurchase` sets one generation's delay or clears its purchase: a
-new purchase inserts its unrushed purchase action at its canonical position,
-and clearing removes that action, its pickup and placed deliveries while
-retaining delivery payload. `SetHermesShrinePurchaseRush` changes rush on one
-exact purchase action, ranking or retracting its optional same-room pickup.
-When either command changes the first rushed initial purchase, the refill's
-purchase action and pickup are rescheduled after it; when no
-rushed initial purchase remains, the refill's pickup is retracted.
+`SetHermesShrineOfferDelay` sets the delay of one stocked Shrine item, initial
+slot or refill; stocking an empty slot gives it the default delay, and
+restocking keeps it. `SetHermesShrinePurchase` adds or clears one generation's
+purchase: a new purchase inserts its unrushed purchase action at its canonical
+position, and clearing removes that action, its pickup and placed deliveries
+while retaining delivery payload. `PurchaseHermesShrineOffer` instead appends
+the purchase of one unbought item at the end of the room's actions, bought or
+rushed, first stocking a blank Travel Deal refill when given its reward, as one
+Undo step. `SetHermesShrinePurchaseRush` changes rush on one exact purchase
+action, ranking or retracting its optional same-room pickup. When any of these
+commands changes the first rushed initial purchase, the refill's purchase
+action and pickup are rescheduled after it; when no rushed initial purchase
+remains, the refill's pickup is retracted.
 
 `MoveRoomAction` changes one ranked action's position within the complete
 chronology; `ReplaceAcquisitionEntryOffer` edits only a declaration-compatible

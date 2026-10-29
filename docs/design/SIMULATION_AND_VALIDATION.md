@@ -449,6 +449,14 @@ pickups share acquisition authorities without losing their instance-specific
 capabilities. Mystery Boon source settlement belongs to its acquisition, not
 a dormant unpurchased inventory row.
 
+Chronology records where each reached object room's authored actions end, and
+engine-owned authoring queries publish what each of its objects allows there,
+each with the command that appends it: a Stygian Well's or Pool of Purging's
+offered slots and reroll with its cost, a World Shop's unbought items and its
+live Travel Deal item with the values every reached branch can stock there, a
+Hermes Shrine's unbought items to buy or rush with its live refill, and
+whether the Champion item can be collected or why not.
+
 ### Reroll settlement
 
 Every reroll spend and every hidden draw is settled in the walk at its own

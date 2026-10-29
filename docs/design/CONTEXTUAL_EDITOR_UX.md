@@ -564,8 +564,9 @@ prefixes.
 Selectable rarity uses its contextual picker; fixed Duo/Legendary rarity is
 read-only. Engine-supported replacement annotations show the exact prior
 trait, slot and promoted rarity without React deriving the transition. Rarity
-checks and replacement chance may appear in a read-only Offer State disclosure
-as branch-correlated engine facts, not normalized outcome probabilities or a
+checks and replacement chance may appear in a read-only Offer State popover,
+opened from an info button on the dialog's title line, as branch-correlated
+engine facts, not normalized outcome probabilities or a
 global rarity ledger.
 
 Selected child controls follow the live draft immediately. Targeted traits use

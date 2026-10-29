@@ -293,12 +293,13 @@ render Room Overview, Room Timeline, and Room Doors; Fields adds Room Layout,
 which edits the spawn-point placement of the entry, cages, optionals and
 Nemesis beside the room map. Overview contains read-only
 incoming context and meaningful room-local setup: Fields identities, World
-Shop inventory and Purchased markers, and Room features, whose Shrine and Well
-inventories likewise hold only their fixed slots (a Shrine slot shows Item,
-Delay and Purchased). Shrine rush and every Travel Deal refill are authored on
-the Room Timeline. A Stygian Well or Pool of Purging Overview shows only its
-presence and initial stock, whose slots are always editable and optional;
-using it starts on the Timeline. Ephyra parents with declared
+Shop inventory, and Room features, whose Shrine and Well inventories likewise
+hold only their fixed slots (a Shrine slot shows its item and the delay rolled
+with it) and whose Champion Item holds the Contract pedestal's item. Overview
+authors content only: buying, rushing, collecting and every Travel Deal refill
+are authored on the Room Timeline. A Stygian Well or Pool of Purging Overview
+shows only its presence and initial stock, whose slots are always editable and
+optional; using it starts on the Timeline. Ephyra parents with declared
 side-room groups add a dedicated Side Rooms workbench.
 Every Overview renders its sections in one order, showing only those the room
 has: Encounters, room contents (Shop inventory, Fields optional rewards),
@@ -318,27 +319,37 @@ same way. A block at the Overview leaves the Overview as the repair surface and
 the Timeline and Doors read-only.
 
 Timeline action headings name their verb (Buy for paid World Shop, Shrine and
-Well items and refills, Collect for pickups including Contract items and Echo-generated pickups, Sell for Pool sales, Reroll for rerolls) and keep
-distinguishing cage, phase, source-role, slot and boosted identities. Pom
+Well items and refills, Rush for rushed Shrine purchases, Collect for pickups
+including Contract items and Echo-generated pickups, Sell for Pool sales,
+Reroll for rerolls) and keep distinguishing cage, phase, source-role, slot and boosted identities. Pom
 actions use their pickup names (Pom, Double Pom, Triple Pom, Pom Slice)
 without changing catalog names. Headings, drag previews and action controls
 share the projected label; outcome details remain separate.
 
-A Shrine purchase row carries its Rush checkbox. The purchase row that triggers
-Travel Deal renders the refill's inventory controls as its second line: for a
+Purchase and collect rows carry no inner checkbox; their delete control
+removes the action. The purchase row that triggers Travel Deal renders the refill's inventory controls as its second line: for a
 Shrine, the engine's refill source (the first rushed initial purchase made
 with Travel Deal); for a Well, its first purchase; for a World Shop, the
 purchase the refill entry names as its source. The line has no placeholder. A
 purchased refill that no line hosts keeps its own purchase row with a bound
 removal, and refill findings route to the line's control or to that row.
 
-Each present Well or Pool has an entry at the top of the optional actions
-listing what can be done at the end of the room's current actions: buy or
-sell each offered slot (a blank initial slot takes its item or trait in the
-same pick) and Reroll with its cost, disabled with a hint when screen rerolls
-are not enabled, nothing is left to reroll or the pool cannot pay. One pick
-appends one action at the end, which Move repositions. A reroll row carries
-an optional picker for each restocked slot, pinned or native.
+Each present Stygian Well, Pool of Purging, World Shop (the Preboss Shop form
+included), Hermes Shrine and Champion Item has an entry at the top of the
+optional actions listing what the engine publishes as possible at the end of
+the room's current actions, each option named by the row it appends. A Well
+or Pool offers buy or sell for each offered slot (a blank initial slot takes
+its item or trait in the same pick) and Reroll with its cost, disabled with a
+hint when screen rerolls are not enabled, nothing is left to reroll or the
+pool cannot pay. A World Shop offers each unbought item; a Shrine offers Buy
+or Rush for each unbought item, one pick and one Undo step either way; once
+its Travel Deal item is live, either offers to buy it, a blank one taking its
+item in the same pick; a Champion Item offers its collect. These three entries
+are always shown while their object is present and are disabled with the
+reason when nothing can be done there (everything bought, the item collected or not yet
+chosen, the pedestal inactive). One pick appends one action at the end, which
+Move repositions. A reroll row carries an optional picker for each restocked
+slot, pinned or native.
 
 Room Doors keeps its door layout and lists the room's door and Fields cage
 rerolls below the doors in one ordered **Rerolls** list headed by the rerolls

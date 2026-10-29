@@ -269,8 +269,8 @@ reroll count is their number. Only a giver or Pom reward type the catalog
 declares with the native reroll button can hold them (the Olympians, Hermes,
 Athena, Dionysus, Artemis, Hades, Chaos and Pom of Power), and only while a
 held card enables screen rerolls. The k-th reroll of one screen costs k, so k
-rerolls cost k(k+1)/2 from the run's reroll pool, judged at its room's
-entry. All of them are assessed against the final
+rerolls cost k(k+1)/2 from the run's reroll pool, judged by the pool where
+the screen closes. All of them are assessed against the final
 screen's generation context. The first earlier screen follows the initial
 rules; every later screen, the final one included, must be a legal initial
 outcome with some item of the screen before it banned after seeding; after an

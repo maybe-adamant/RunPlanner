@@ -178,9 +178,9 @@ leaves use declaration-owned defaults, and no rendered position, open picker
 or local draft becomes a second source of reconciliation policy. Removal impact is likewise computed by the engine when the
 command runs; neither the projection nor React walks descendants to infer it.
 
-Membership and chronological movement use different contacts. A Purchased or
-Picked Up toggle adds/removes the participant. Move controls assess its proposed
-position. Do not require valid chronological settlement merely to toggle the
+Membership and chronological movement use different contacts. Adding an
+action (an object entry's pick or an optional action) or deleting its row
+adds/removes the participant. Move controls assess its proposed position. Do not require valid chronological settlement merely to toggle the
 action needed for repair.
 
 A purchase row owns the inventory identity; its timeline row owns reached

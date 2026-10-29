@@ -28,7 +28,7 @@ validation.
 | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Natural Resources source audit               | Resource tool/element mapping, successful interaction boundary, run-local cap, point spacing/capacity/room declaration matrix, and selected-success planner abstraction retained in **Natural Resources**.                                                                                                                          |
 | Purging Pool source audit                    | Physical F/G/H Postboss hosts, challenge-switch realization, shop-aware candidate predicate, stack removal, reroll boundary, and schema-71 sale disposition retained in **Pools of Purging**.                                                                                                                                       |
-| Shrine delivery source audit                 | Shrine host/chance/anchor matrix, three-offer inventory, pending delivery/rush/forced completion, Spell reservation, Travel Deal refill, and schema-71 disposition retained in **Shrines of Hermes**. Shared acquisition ordering remains in the acquisition and room-action authorities.                                           |
+| Shrine delivery source audit                 | Shrine host/chance/anchor matrix, three-offer inventory, pending delivery/rush/forced completion, Spell reservation, Travel Deal refill, and planner disposition retained in **Shrines of Hermes**. Shared acquisition ordering remains in the acquisition and room-action authorities.                                             |
 | Stygian Well source audit                    | Well host/spacing/anchor matrix, complete 25-identity effect table, repeat and temporary-use exceptions, consequential items, and schema-71 disposition retained in **Stygian Wells**. Ixion's exact SecretPoint host/count matrix remains with the [route-detour authority](../rooms-and-routes/ROUTE_DETOURS_GAME_DATA_AUDIT.md). |
 | Shop and Well lifecycle source audit         | Shared Shop/Well/Shrine post-outgoing boundary and RequiredNotInStore conclusion already survive in `../rewards-and-acquisition/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md`; feature-specific pool facts are retained in this audit.                                                                                               |
 | Boss completion source audit                 | Boss-death/Judgment and effect-neutral reward facts are retained in the Boss section of `../rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`; Shrine delivery remains here only for its feature-specific source facts.                                                                                                        |
@@ -365,18 +365,19 @@ later spawned object is an ordinary required pickup. The complete chronology,
 including which checkpoint can host or advance that delivery, remains in the
 acquisition and room-action authorities.
 
-### Current schema-70 planner disposition
+### Planner disposition
 
 Shrine presence is authored at exact ordinary and forced Postboss hosts, with
 all three visible offers always authored. There is no Interact/random-inventory
 bypass because visible names can affect host-room outgoing exclusions before
-purchase. Inventory owns only each visible reward type. Hidden payload and
+purchase. Inventory owns each visible reward type and the `RoomDelay` rolled
+with it, so every stocked item, bought or not, takes its authored delay in the
+game. Hidden payload and
 pickup-owned detail—including Mystery Boon's eventual God and trait offer—are
-authored only on the concrete rushed or delayed delivery pickup. Purchase state
-is sparse per stable generation and holds its delay; each purchase is also one
-timeline purchase action that owns its rush and order, from which the Travel
-Deal source follows. Pending delivery, delivery host, and Spell reservation are
-derived products. A rushed purchase ranks one optional source-room pickup;
+authored only on the concrete rushed or delayed delivery pickup. Each
+purchase is exactly one timeline purchase action that owns its rush and order,
+from which the Travel Deal source follows. Pending delivery, delivery host,
+and Spell reservation are derived products. A rushed purchase ranks one optional source-room pickup;
 a delayed purchase is scheduled at source cleanup, counts qualifying later
 encounter-end effects, and materializes at its reached host. Side-room Shrines
 use the same source rule but do not consume a newly scheduled or older pending

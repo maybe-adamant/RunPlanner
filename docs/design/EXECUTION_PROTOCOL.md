@@ -622,7 +622,10 @@ Shop, Well, and Shrine inventory is likewise Overview content. Ordinary
 payment, affordability, and purchase-counter behavior remain native and do not
 publish execution transactions. A purchased row instead publishes its acquired
 result, which the ordinary source-independent acquisition, transformation, or
-item-effect adapter settles. Travel Deal is the sole dynamic inventory
+item-effect adapter settles. Each Shrine item, initial or Travel Deal
+replacement, carries the delay rolled with it whether bought or not, and the
+module installs that delay on the native item; a purchase on the item carries
+only its rush. Travel Deal is the sole dynamic inventory
 exception: the wire names its exact refill realization and payload. World
 Shop's dedicated refill callback can report an unexpected refill
 diagnostically; Well and Shrine use generic native contacts and pass through

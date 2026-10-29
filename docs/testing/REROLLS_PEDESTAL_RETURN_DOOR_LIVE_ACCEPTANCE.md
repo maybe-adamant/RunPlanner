@@ -58,6 +58,20 @@ check.
       offer.
 - [ ] Plan a Pool reroll, then a sale from the rerolled list. The reroll shows
       the planned traits, and the sale removes the planned trait.
+- [ ] Reach a Well and a Pool the plan marks present with every initial slot
+      blank and no actions. Each shows its native stock, using it is not
+      steered, and the run stays synchronized.
+
+## Hermes Shrine delay
+
+- [ ] Plan a Shrine whose three items have different delays, buy one without
+      rushing it, and leave the others unbought. The bought item arrives after
+      its own planned delay, and the run stays synchronized.
+- [ ] At the same Shrine, check each unbought item's shown delay. Every
+      stocked item takes its planned delay, the default included, whether
+      bought or not.
+- [ ] Rush an item whose delay is not the default. It is delivered in the
+      Shrine room, ignoring its delay.
 
 ## Screen rerolls
 

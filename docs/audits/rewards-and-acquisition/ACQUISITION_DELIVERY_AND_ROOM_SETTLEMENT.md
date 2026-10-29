@@ -559,8 +559,8 @@ do not own another order.
 Under the planner's current sufficient-resource, no-restock baseline, a Shop
 keeps its purchased state as the authoring source for immediate offers.
 Membership in the occurrence's `roomActions.order` is the sole purchased fact
-and chronological authority. Overview projects that membership as Purchased;
-Room Actions renders only participating offers plus stale repair rows. No
+and chronological authority. Room Actions renders only participating offers
+plus stale repair rows; Overview holds only the inventory. No
 Shop-private or acquisition-site order and no discarded replay remains beside
 that chronology.
 
@@ -684,23 +684,22 @@ the nearest workbench that owns the exact settlement site:
 Producer surfaces retain availability, room/reward selection, and any source
 action that exists before a concrete item does. They do not retain a second
 trait or Pom editor for an acquisition that has a canonical settlement row.
-Immediate Shop inventory may keep its current purchased checkbox as the UI
-label for the concrete item's single participation fact; optional spawned
-pickups use the label picked up. A delayed Shrine purchase is different: its
-purchase schedules pending state, and the later materialized pickup
+An immediate Shop item's single participation fact is its purchase action;
+an optional spawned pickup's is its collect action. A delayed Shrine purchase
+is different: its purchase schedules pending state, and the later materialized pickup
 participates at its delivery site. The settlement row owns acquisition order,
 trait offers, Pom targets, and their acquisition findings.
 
 The settlement surface uses one ranked participant prefix across producers.
 Its drag and arrow controls replace only the order of existing participants;
-the purchase or pickup checkbox is the sole insertion/removal control. Shop
-inventory remains the source of purchased reward identity, so the corresponding
+adding the action and deleting its row are the sole insertion/removal
+controls. Shop inventory remains the source of purchased reward identity, so the corresponding
 settlement row exposes resolution children but no second reward-identity editor.
 
-A Shrine offer therefore needs two visible authoring controls when supported:
-`Purchased` and `Delivery`. `Delivery` is dormant while unpurchased and offers
-`Rush now` plus the declaration-backed delays `2` through `8`. The numeric
-choice records the initial encounter-use countdown; the engine, not React,
+A Shrine item therefore has two authored facts: its delay, `2` through `8`,
+rolled with the stock and authored with the item whether bought or not, and
+its purchase, an action that is either delayed or rushed. The delay is the
+initial encounter-use countdown of a delayed purchase; the engine, not React,
 resolves the reached delivery site. Every selected delivery disposition implies
 mandatory acquisition when it becomes due; no third pickup checkbox is
 published.

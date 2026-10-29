@@ -766,9 +766,9 @@ retaining ordinary source possibility branches. Removing the purchase clears
 that child atomically and retains inventory.
 
 Payload and order are deliberately separate. For fixed Shop, Shrine and Well
-slots, Overview inventory owns reward identity and its Purchased marker, while
-the participating action row owns chronology, Shrine rush and acquisition-time
-resolution children. Generated pickup entries whose payload is owned by the
+slots, Overview inventory owns reward identity and, for a Shrine item, the
+delay rolled with it, while the participating action row owns membership,
+chronology, Shrine rush and acquisition-time resolution children. Generated pickup entries whose payload is owned by the
 action row retain the full reward editor there.
 
 ### Contract pedestal

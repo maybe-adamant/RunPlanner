@@ -421,8 +421,8 @@ Echo Gold uses the free `echoDoubleShopReward` pickup. These two supplemental
 entries share the existing room-exit acquisition site; payload/participation
 and chronology remain separate, and Travel/Gold source dependencies are
 resolved by the occurrence's one `roomActions.order`. Base initial purchases
-participate only through their exact `interactShopOffer` references; Overview's
-Purchased markers edit that membership without adding a second persisted set.
+participate only through their exact `interactShopOffer` references; the
+purchase commands edit that membership without adding a second persisted set.
 The free pedestal item has its own collect action and acquisition, excluding
 paid-purchase effects. Native store consumables—including the pedestal—set
 `CanDuplicate = false` in `SpawnStoreItemInWorld` (`StoreLogic.lua:635`); a zero price does not
