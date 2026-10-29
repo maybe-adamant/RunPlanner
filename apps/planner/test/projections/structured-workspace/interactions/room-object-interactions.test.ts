@@ -18,7 +18,7 @@ const buy = {
   rushed: false,
 };
 
-it('appends an entry option’s command, adding a blank Travel Deal item’s chosen reward', () => {
+it('appends an entry option’s command, or a blank item’s chosen command', () => {
   const { roomObjectEntries } = bindRoomObjectInteractions([
     {
       kind: 'roomObjectActions',
@@ -28,7 +28,14 @@ it('appends an entry option’s command, adding a blank Travel Deal item’s cho
         {
           key: 'buy:travelDealRefill',
           command: buy,
-          rewardTypeChoices: [{ key: 'ArmorBoost', label: 'Armor' }],
+          choices: [
+            {
+              key: 'ArmorBoost',
+              label: 'Armor',
+              rewardType: 'ArmorBoost',
+              command: { ...buy, rewardType: 'ArmorBoost' },
+            },
+          ],
         },
       ],
     },
@@ -38,7 +45,7 @@ it('appends an entry option’s command, adding a blank Travel Deal item’s cho
   expect(
     entry
       .choices('buy:travelDealRefill')
-      .sections.flatMap((section) => section.items.map((item) => item.value)),
+      .sections.flatMap((section) => section.items.map((item) => item.value.key)),
   ).toEqual(['ArmorBoost']);
   expect(entry.choiceIntentFor('buy:travelDealRefill', 'ArmorBoost').command).toEqual({
     ...buy,

@@ -89,8 +89,17 @@ export interface WorkspaceRoomObjectActionRequirement {
         | 'SetInfernalContractPedestalCollected';
     }
   >;
-  /** A blank Shrine item: the reward it stocks is chosen with the purchase. */
-  readonly rewardTypeChoices?: readonly { readonly key: string; readonly label: string }[];
+  /** A blank item: what it stocks is chosen with the purchase, each choice its complete command. */
+  readonly choices?: readonly WorkspaceRoomObjectActionChoice[];
+}
+
+/** One item a blank Shop or Shrine item can stock, bought with it. */
+export interface WorkspaceRoomObjectActionChoice {
+  readonly key: string;
+  readonly label: string;
+  /** The reward its icon shows. */
+  readonly rewardType: string;
+  readonly command: WorkspaceRoomObjectActionRequirement['command'];
 }
 
 export type WorkspaceOccurrenceInteractionRequirement =

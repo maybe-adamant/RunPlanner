@@ -361,28 +361,18 @@
   max-width: 100%;
 }
 
-.hermes-shrine-purchase-details,
-.hermes-shrine-delay-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-
 .hermes-shrine-purchase-details {
+  display: inline-flex;
   flex-wrap: wrap;
+  align-items: center;
   min-width: 0;
   max-width: 100%;
   gap: 8px 12px;
-  white-space: normal;
 }
 
-.hermes-shrine-purchase-details:has(select:disabled) {
-  opacity: 0.68;
-}
-
-.hermes-shrine-delay-control select {
-  width: 6.5rem;
+.hermes-shrine-purchase-details > .field-control-inline {
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 6px;
 }
 
 .room-purging-pool > label {

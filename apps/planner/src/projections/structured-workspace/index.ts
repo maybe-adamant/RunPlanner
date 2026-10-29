@@ -133,6 +133,7 @@ export type {
   WorkspaceFeatureRollSlot,
   WorkspaceFeatureRollSlotInteraction,
   WorkspaceRoomObject,
+  WorkspaceRoomObjectChoice,
   WorkspaceRoomObjectEntry,
   WorkspaceRoomObjectEntryInteraction,
   WorkspaceRoomObjectLock,

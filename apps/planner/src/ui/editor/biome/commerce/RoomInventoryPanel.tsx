@@ -1,3 +1,4 @@
+import type { HermesShrineDelay } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   type WorkspaceInteractionCatalog,
@@ -6,7 +7,10 @@ import {
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import type { WorkspacePurgingPoolSlotInteraction } from '@planner/projections/structured-workspace';
-import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
+import {
+  declaredChoicesPicker,
+  type ContextualPickerModel,
+} from '@planner/projections/contextual/contextualPicker';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
@@ -17,6 +21,12 @@ import { useFindingAnchor, useFindingTarget } from '@planner/ui/feedback/useFind
 
 const wellIcon = (itemKey: string | null): string | undefined =>
   itemKey === null ? undefined : (wellArtwork[itemKey] ?? undefined);
+
+const shrineDelayChoices = Object.freeze(
+  ([2, 3, 4, 5, 6, 7, 8] as const satisfies readonly HermesShrineDelay[]).map((delay) =>
+    Object.freeze({ key: String(delay), value: delay as HermesShrineDelay, label: String(delay) }),
+  ),
+);
 
 const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
   sections: Object.freeze([]),
@@ -294,30 +304,16 @@ export function HermesShrineSlotEditor({
         {...(rewardLabel === undefined ? {} : { triggerLabel: rewardLabel })}
       />
       <div className="hermes-shrine-purchase-details">
-        <label className="hermes-shrine-delay-control">
-          Delay
-          <select
-            aria-label={`Hermes Shrine ${label} delivery delay`}
-            disabled={offer.delay === null}
-            onChange={(event) =>
-              executeIntent(
-                offer.delayIntentFor(Number(event.target.value) as 2 | 3 | 4 | 5 | 6 | 7 | 8),
-              )
-            }
-            value={offer.delay ?? ''}
-          >
-            {offer.delay === null && (
-              <option value="" disabled>
-                —
-              </option>
-            )}
-            {[2, 3, 4, 5, 6, 7, 8].map((delay) => (
-              <option key={delay} value={delay}>
-                {delay}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ContextualPicker<HermesShrineDelay>
+          ariaLabel={`Hermes Shrine ${label} delivery delay`}
+          disabled={offer.delay === null}
+          id={`${offer.key}-delay`}
+          label="Delay"
+          layout="inline"
+          model={declaredChoicesPicker(shrineDelayChoices, offer.delay ?? undefined)}
+          onSelect={(delay) => executeIntent(offer.delayIntentFor(delay))}
+          placeholder="—"
+        />
       </div>
     </div>
   );

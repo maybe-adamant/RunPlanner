@@ -115,16 +115,46 @@ export function assembleRoomObjectEntries(input: {
     const refill = shop?.travelDealRefill;
     if (refill !== undefined) {
       const key = 'buy:travelDealRefill';
-      // A blank Travel Deal item is chosen on its line under the purchase that triggers it.
+      const blank = refill.rewardType === null;
       parts!.options.push(
         Object.freeze({
           key,
-          label: 'Buy Travel Deal item',
-          ...(refill.rewardType === null ? { locked: 'travelDealItemUnchosen' as const } : {}),
+          label: blank ? 'Buy Travel Deal item…' : 'Buy Travel Deal item',
+          ...(blank ? { needsChoice: true as const } : {}),
         }),
       );
-      if (refill.rewardType !== null)
-        parts!.bound.push(Object.freeze({ key, command: refill.command }));
+      const profileKey =
+        occurrence.state.kind === 'shop' ? occurrence.state.shop?.profileKey : undefined;
+      const profile =
+        profileKey === undefined ? undefined : catalog.rewards.shops.byKey[profileKey];
+      const optionLabel = (optionKey: string): string =>
+        profile?.groups.values.find((group) => group.options.byKey[optionKey] !== undefined)
+          ?.options.byKey[optionKey]?.label ?? optionKey;
+      parts!.bound.push(
+        Object.freeze({
+          key,
+          command: refill.command,
+          ...(blank
+            ? {
+                choices: Object.freeze(
+                  refill.values.map((value) => {
+                    const source =
+                      value.offer.payload?.kind === 'BoonSource'
+                        ? value.offer.payload.source
+                        : undefined;
+                    const name = optionLabel(value.optionKey);
+                    return Object.freeze({
+                      key: JSON.stringify(value),
+                      label: source === undefined ? name : `${name} · ${rewardLabel(source)}`,
+                      rewardType: source ?? value.offer.rewardType,
+                      command: Object.freeze({ ...refill.command, value }),
+                    });
+                  }),
+                ),
+              }
+            : {}),
+        }),
+      );
     }
     add('worldShop', parts, 'allBought');
   }
@@ -144,14 +174,6 @@ export function assembleRoomObjectEntries(input: {
     ];
     for (const { offer, candidates } of offers) {
       const blank = offer.rewardType === null;
-      const choices =
-        blank && candidates !== undefined
-          ? Object.freeze(
-              candidates.map((rewardType) =>
-                Object.freeze({ key: rewardType, label: rewardLabel(rewardType) }),
-              ),
-            )
-          : undefined;
       for (const rushed of [false, true]) {
         const key = `${rushed ? 'rush' : 'buy'}:${offer.generationKey}`;
         const rowLabel = label({
@@ -166,11 +188,25 @@ export function assembleRoomObjectEntries(input: {
             ...(blank ? { needsChoice: true as const } : {}),
           }),
         );
+        const command = rushed ? offer.rush : offer.buy;
         parts!.bound.push(
           Object.freeze({
             key,
-            command: rushed ? offer.rush : offer.buy,
-            ...(choices === undefined ? {} : { rewardTypeChoices: choices }),
+            command,
+            ...(blank && candidates !== undefined
+              ? {
+                  choices: Object.freeze(
+                    candidates.map((rewardType) =>
+                      Object.freeze({
+                        key: rewardType,
+                        label: rewardLabel(rewardType),
+                        rewardType,
+                        command: Object.freeze({ ...command, rewardType }),
+                      }),
+                    ),
+                  ),
+                }
+              : {}),
           }),
         );
       }

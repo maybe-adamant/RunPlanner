@@ -60,7 +60,9 @@ import {
 import {
   authorLegalTraitOffers,
   replaceTestRoomActionOrder,
+  replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
+import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   renderOccurrenceWorkbench,
   workspaceProjection,
@@ -1759,6 +1761,49 @@ describe('OccurrenceRoomActions', () => {
     await pickRoomObjectAction(view.user, 'World Shop', /^Buy .*Slot 3$/);
     expect(order()).toHaveLength(stocked + 1);
     expect(order()?.at(-1)).toEqual({ kind: 'interactShopOffer', offerKey: 'Minor' });
+  });
+
+  it('stocks and buys a blank Travel Deal item in one pick from the World Shop entry', async () => {
+    const shopId = createOccurrenceId('golden-f-preboss-shop');
+    // A Travel Deal purchase whose refilled item was never stocked.
+    const project = authorLegalTraitOffers(
+      replaceTestShopOfferActions(
+        applyProjectCommand(loadUnderworldFStygianWellCheckpoint(), catalog, {
+          kind: 'ReplaceShopOffer',
+          offer: createShopOfferAddress(goldenFBiome, shopId, 'MajorNonBoon'),
+          value: { rewardType: 'MaxHealthDrop' },
+        }),
+        catalog,
+        createOccurrenceAddress(goldenFBiome, shopId),
+        ['MajorNonBoon'],
+      ),
+    );
+    const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(shopId));
+    openRoomTab('Room Timeline');
+    const room = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')!
+        .topology!.occurrences.find((candidate) => candidate.occurrenceId === shopId)!;
+    const before = room().roomActions.order.length;
+    await pickRoomObjectAction(view.user, 'World Shop', 'Buy Travel Deal item…');
+    await view.user.click(screen.getByRole('button', { name: 'Travel Deal item' }));
+    const choices = within(await screen.findByRole('listbox'))
+      .getAllByRole('option')
+      .map((option) => option.textContent);
+    expect(choices.length).toBeGreaterThan(1);
+    expect(room().roomActions.order).toHaveLength(before);
+    await view.user.click(screen.getAllByRole('option')[0]!);
+    expect(room().roomActions.order).toHaveLength(before + 1);
+    expect(room().roomActions.order.at(-1)).toEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'roomExit',
+      entryKey: 'travelDealRefill',
+    });
+    const state = room().state;
+    expect(state.kind === 'shop' && state.shop?.travelDealRefill?.optionKey).toEqual(
+      expect.any(String),
+    );
   });
 
   it('removes a Shop purchase atomically when its occurrence is no longer a Shop', () => {

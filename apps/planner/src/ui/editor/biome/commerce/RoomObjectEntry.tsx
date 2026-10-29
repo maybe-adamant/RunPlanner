@@ -4,6 +4,7 @@ import {
   requireWorkspaceInteraction,
   type WorkspaceInteractionCatalog,
   type WorkspaceRoomObject,
+  type WorkspaceRoomObjectChoice,
   type WorkspaceRoomObjectEntry,
   type WorkspaceRoomObjectLock,
 } from '@planner/projections/structured-workspace';
@@ -33,8 +34,6 @@ function roomObjectLockHint(lock: WorkspaceRoomObjectLock): string {
       return 'Choose the Champion item first.';
     case 'inactive':
       return 'Needs Champion of Elysium.';
-    case 'travelDealItemUnchosen':
-      return 'Choose the Travel Deal item first.';
   }
 }
 
@@ -130,16 +129,16 @@ export function RoomObjectEntry({
       }
       editors={
         pending === undefined ? null : (
-          <ContextualPicker<string>
+          <ContextualPicker<WorkspaceRoomObjectChoice>
             ariaLabel="Travel Deal item"
             id={`${idPrefix}-choice`}
-            itemIcon={(item) => rewardIcon(item.value)}
+            itemIcon={(item) => rewardIcon(item.value.rewardType)}
             key={pending}
             label=""
             model={interaction.choices(pending)}
-            onSelect={(value) => {
+            onSelect={(choice) => {
               setChoosing(undefined);
-              executeIntent(interaction.choiceIntentFor(pending, value));
+              executeIntent(interaction.choiceIntentFor(pending, choice.key));
             }}
             placeholder="Choose item"
           />

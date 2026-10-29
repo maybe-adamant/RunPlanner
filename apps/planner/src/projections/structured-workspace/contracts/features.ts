@@ -346,7 +346,7 @@ export type WorkspaceRoomObject = 'worldShop' | 'hermesShrine' | 'championItem';
 
 /** Why a room object's entry, or one of its options, cannot be picked. */
 export type WorkspaceRoomObjectLock =
-  'unreached' | 'allBought' | 'collected' | 'itemUnchosen' | 'inactive' | 'travelDealItemUnchosen';
+  'unreached' | 'allBought' | 'collected' | 'itemUnchosen' | 'inactive';
 
 /** One thing a Shop, Shrine or Champion item can do next, named as its timeline row. */
 export interface WorkspaceRoomObjectOption {
@@ -383,9 +383,16 @@ export interface WorkspaceRoomObjectEntryInteraction {
   /** The action an option appends when it needs no choice. */
   readonly intentFor: (optionKey: string) => WorkspaceCommandIntent<RoomObjectCommand>;
   /** What a blank item can stock. */
-  readonly choices: (optionKey: string) => ContextualPickerModel<string>;
+  readonly choices: (optionKey: string) => ContextualPickerModel<WorkspaceRoomObjectChoice>;
   readonly choiceIntentFor: (
     optionKey: string,
-    value: string,
+    choiceKey: string,
   ) => WorkspaceCommandIntent<RoomObjectCommand>;
+}
+
+/** One item a blank Shop or Shrine item can stock. */
+export interface WorkspaceRoomObjectChoice {
+  readonly key: string;
+  /** The reward its icon shows. */
+  readonly rewardType: string;
 }

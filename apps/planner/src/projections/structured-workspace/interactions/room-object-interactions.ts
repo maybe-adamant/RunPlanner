@@ -1,9 +1,13 @@
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 
 import { StructuredWorkspaceProjectionContractError } from '../contract';
-import type { WorkspaceRoomObjectEntryInteraction } from '../contracts/features';
+import type {
+  WorkspaceRoomObjectChoice,
+  WorkspaceRoomObjectEntryInteraction,
+} from '../contracts/features';
 import type {
   WorkspaceOccurrenceInteractionRequirement,
+  WorkspaceRoomObjectActionChoice,
   WorkspaceRoomObjectActionRequirement,
 } from './interaction-requirements';
 
@@ -13,8 +17,8 @@ type EntryRequirement = Extract<
 >;
 
 function choicesModel(
-  choices: readonly { readonly key: string; readonly label: string }[],
-): ContextualPickerModel<string> {
+  choices: readonly WorkspaceRoomObjectActionChoice[],
+): ContextualPickerModel<WorkspaceRoomObjectChoice> {
   return Object.freeze({
     sections: Object.freeze([
       Object.freeze({
@@ -27,7 +31,7 @@ function choicesModel(
               label: choice.label,
               selected: false,
               state: 'possible' as const,
-              value: choice.key,
+              value: Object.freeze({ key: choice.key, rewardType: choice.rewardType }),
             }),
           ),
         ),
@@ -48,29 +52,26 @@ function bindEntry(requirement: EntryRequirement): WorkspaceRoomObjectEntryInter
       );
     return option;
   };
-  const choicesOf = (optionKey: string) => {
-    const option = requireOption(optionKey);
-    if (
-      option.rewardTypeChoices === undefined ||
-      option.command.kind !== 'PurchaseHermesShrineOffer'
-    )
+  const choicesOf = (optionKey: string): readonly WorkspaceRoomObjectActionChoice[] => {
+    const choices = requireOption(optionKey).choices;
+    if (choices === undefined)
       throw new StructuredWorkspaceProjectionContractError(
         `${optionKey} of ${requirement.interactionKey} takes no choice`,
       );
-    return { command: option.command, choices: option.rewardTypeChoices };
+    return choices;
   };
   return Object.freeze({
     key: requirement.interactionKey,
     owner: requirement.owner,
     intentFor: (optionKey: string) => Object.freeze({ command: requireOption(optionKey).command }),
-    choices: (optionKey: string) => choicesModel(choicesOf(optionKey).choices),
-    choiceIntentFor: (optionKey: string, value: string) => {
-      const { command, choices } = choicesOf(optionKey);
-      if (!choices.some((choice) => choice.key === value))
+    choices: (optionKey: string) => choicesModel(choicesOf(optionKey)),
+    choiceIntentFor: (optionKey: string, choiceKey: string) => {
+      const choice = choicesOf(optionKey).find((candidate) => candidate.key === choiceKey);
+      if (choice === undefined)
         throw new StructuredWorkspaceProjectionContractError(
-          `${value} is not offered by ${optionKey} of ${requirement.interactionKey}`,
+          `${choiceKey} is not offered by ${optionKey} of ${requirement.interactionKey}`,
         );
-      return Object.freeze({ command: Object.freeze({ ...command, rewardType: value }) });
+      return Object.freeze({ command: choice.command });
     },
   });
 }

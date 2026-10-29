@@ -155,21 +155,18 @@ describe('Hermes Shrine workbench', () => {
       screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
     ).toHaveLength(3);
     expect(screen.queryByText(/^HealBigDrop$/)).toBeNull();
-    const delay = screen.getByRole('combobox', {
-      name: 'Hermes Shrine Offer 1 delivery delay',
-    }) as HTMLSelectElement;
+    const delay = screen.getByRole('button', { name: 'Hermes Shrine Offer 1 delivery delay' });
     // The overview holds inventory and each item's delay; buying lives on the timeline.
     expect(screen.queryByRole('checkbox', { name: /^(Rush|Purchased)/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeNull();
-    expect(delay.disabled).toBe(false);
-    await view.user.selectOptions(delay, '8');
+    expect(delay).toHaveProperty('disabled', false);
+    await view.user.click(delay);
+    await view.user.click(
+      within(await screen.findByRole('listbox')).getByRole('option', { name: '8' }),
+    );
     expect(
-      (
-        screen.getByRole('combobox', {
-          name: 'Hermes Shrine Offer 1 delivery delay',
-        }) as HTMLSelectElement
-      ).value,
-    ).toBe('8');
+      screen.getByRole('button', { name: 'Hermes Shrine Offer 1 delivery delay' }).textContent,
+    ).toContain('8');
     fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
     await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Rush Big Heal · Slot 1');
     const purchaseRow = screen.getByText('Rush Big Heal · Slot 1').closest('li');
@@ -848,7 +845,7 @@ describe('Hermes Shrine workbench', () => {
     ).toBeTruthy();
     // The Travel Deal item's delay belongs to the item; buying it is its own action.
     expect(
-      within(line).getByRole('combobox', { name: 'Hermes Shrine Travel Deal delivery delay' }),
+      within(line).getByRole('button', { name: 'Hermes Shrine Travel Deal delivery delay' }),
     ).toHaveProperty('disabled', false);
     expect(within(line).queryByRole('checkbox')).toBeNull();
 
