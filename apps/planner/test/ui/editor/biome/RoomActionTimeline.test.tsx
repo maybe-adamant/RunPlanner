@@ -1044,9 +1044,10 @@ describe('OccurrenceRoomActions', () => {
     expect(screen.queryByText(`Sell ${leftTraitLabel}`)).toBeNull();
     openRoomTab('Room Overview');
 
-    // Each sale is appended from Interact at the end of the room's actions.
+    // Each sale is appended from the Pool's Timeline entry at the end of the room's actions.
+    openRoomTab('Room Timeline');
     const sell = async (name: RegExp) => {
-      await view.user.click(screen.getByRole('button', { name: 'Interact with Pool' }));
+      await view.user.click(screen.getByRole('button', { name: 'Pool of Purging' }));
       const [option] = await within(await screen.findByRole('listbox')).findAllByRole('option', {
         name,
       });

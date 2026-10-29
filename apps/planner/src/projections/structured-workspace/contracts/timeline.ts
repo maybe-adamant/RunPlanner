@@ -177,6 +177,8 @@ export interface WorkspaceRoomActions {
   readonly optionalRows: readonly WorkspaceRoomActionRow[];
   /** Missing required or retained stale rows rendered once outside active lifecycle order. */
   readonly repairRows: readonly WorkspaceRoomActionRow[];
+  /** Each present Well and Pool's next purchase, sale or reroll, opened above the optional actions. */
+  readonly featureRolls?: readonly import('./features').WorkspaceFeatureRollActions[];
   readonly steadyGrowth?: readonly WorkspaceSteadyGrowthControl[];
   readonly transcendentEmbryo?: readonly WorkspaceTranscendentEmbryoControl[];
 }

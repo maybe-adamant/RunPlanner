@@ -60,18 +60,25 @@ function postboss(projected: Projected) {
   throw new Error('F has no projected Postboss');
 }
 
-function wellOf(projected: Projected) {
+/** One feature's entry above the optional actions of the Postboss timeline. */
+function entryOf(projected: Projected, feature: 'stygianWell' | 'purgingPool') {
   const node = postboss(projected);
-  const well = node.room.workbench.features.find(
+  const actions = node.room.roomActions?.featureRolls?.find((entry) => entry.feature === feature);
+  if (actions === undefined) throw new Error(`the Postboss has no ${feature} entry`);
+  const interaction = projected.workspace.interactions.featureRollActions.get(
+    actions.interactionKey,
+  );
+  if (interaction === undefined) throw new Error(`the ${feature} entry is unbound`);
+  return { node, actions, interaction };
+}
+
+function wellOf(projected: Projected) {
+  const entry = entryOf(projected, 'stygianWell');
+  const well = entry.node.room.workbench.features.find(
     (feature): feature is Extract<WorkspaceRoomFeature, { readonly kind: 'stygianWell' }> =>
       feature.kind === 'stygianWell',
-  );
-  if (well?.rollActions === undefined) throw new Error('the Well has no Interact picker');
-  const interaction = projected.workspace.interactions.featureRollActions.get(
-    well.rollActions.interactionKey,
-  );
-  if (interaction === undefined) throw new Error('the Well Interact picker is unbound');
-  return { node, well, actions: well.rollActions, interaction };
+  )!;
+  return { ...entry, well };
 }
 
 function apply(project: ProjectDocument, command: Parameters<typeof applyProjectCommand>[2]) {
@@ -111,6 +118,32 @@ describe('Stygian Well Interact', () => {
       occurrence: room,
       generationKey: 'initial:healing',
       purchased: true,
+    });
+  });
+
+  it('buys a blank initial slot with the item chosen then', () => {
+    const blank = apply(base, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: room,
+      slotKey: 'healing',
+      itemKey: null,
+    });
+    const { actions, interaction } = wellOf(projectStructuredWorkspaceFixture(blank));
+    expect(actions.options[0]).toEqual({
+      key: 'buy:initial:healing',
+      kind: 'offer',
+      label: 'Buy Offer 1…',
+      needsChoice: true,
+    });
+    const [itemKey] = interaction
+      .choices('buy:initial:healing')
+      .sections.flatMap((section) => section.items.map((item) => item.value));
+    expect(interaction.choiceIntentFor('buy:initial:healing', itemKey!).command).toEqual({
+      kind: 'SetStygianWellPurchase',
+      occurrence: room,
+      generationKey: 'initial:healing',
+      purchased: true,
+      itemKey,
     });
   });
 
@@ -235,19 +268,7 @@ describe('Pool of Purging Interact', () => {
     withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
   );
 
-  function poolOf(projected: Projected) {
-    const pool = postboss(projected).room.workbench.features.find(
-      (feature): feature is Extract<WorkspaceRoomFeature, { readonly kind: 'purgingPool' }> =>
-        feature.kind === 'purgingPool',
-    );
-    if (pool?.rollActions === undefined) throw new Error('the Pool has no Interact picker');
-    return {
-      actions: pool.rollActions,
-      interaction: projected.workspace.interactions.featureRollActions.get(
-        pool.rollActions.interactionKey,
-      )!,
-    };
-  }
+  const poolOf = (projected: Projected) => entryOf(projected, 'purgingPool');
 
   it('sells a listed trait, or a rerolled slot with its trait, at the end of the room', () => {
     const { actions, interaction } = poolOf(projectStructuredWorkspaceFixture(base));

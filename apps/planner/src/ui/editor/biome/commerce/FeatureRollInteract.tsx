@@ -7,6 +7,7 @@ import {
   type WorkspaceFeatureRollSlot,
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
+import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
@@ -14,6 +15,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import { TimelineRow } from '../TimelineRow';
 
 const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
   sections: Object.freeze([]),
@@ -34,8 +36,6 @@ function featureRollLockHint(lock: WorkspaceFeatureRollLock): string {
       return 'Not enough rerolls left.';
     case 'poolReserved':
       return 'Later rerolls need the rest.';
-    case 'itemFirst':
-      return 'Choose its item first.';
     case 'traitFirst':
       return 'Choose its trait first.';
   }
@@ -45,8 +45,11 @@ function rollIcon(feature: WorkspaceFeatureRollActions['feature'], key: string) 
   return feature === 'stygianWell' ? (wellArtwork[key] ?? undefined) : traitIcon(key);
 }
 
-/** What a Well or Pool visit does next: each pick appends one action to the room. */
-export function FeatureRollInteract({
+/**
+ * A Well or Pool's entry above the optional actions: what can be done at the
+ * end of the room's actions, each pick appending one action there.
+ */
+export function FeatureRollEntry({
   actions,
   interactions,
 }: {
@@ -59,7 +62,7 @@ export function FeatureRollInteract({
   );
   const executeIntent = useCommandIntent();
   const [choosing, setChoosing] = useState<string>();
-  const subject = actions.feature === 'stygianWell' ? 'Well' : 'Pool';
+  const name = actions.feature === 'stygianWell' ? 'Stygian Well' : 'Pool of Purging';
   const idPrefix = `interact-${actions.interactionKey}`;
   const pending =
     choosing !== undefined &&
@@ -75,7 +78,7 @@ export function FeatureRollInteract({
               collapsible: false,
               key: 'interact',
               kind: 'category' as const,
-              label: `Interact with ${subject}`,
+              label: name,
               items: Object.freeze(
                 actions.options.map((option) =>
                   Object.freeze({
@@ -97,51 +100,57 @@ export function FeatureRollInteract({
     ),
   });
   return (
-    <div className="feature-roll-interact">
-      <ContextualPicker<string>
-        ariaLabel={`Interact with ${subject}`}
-        {...(actions.locked === undefined
-          ? {}
-          : { disabledHint: featureRollLockHint(actions.locked) })}
-        id={`${idPrefix}-action`}
-        label={`Interact with ${subject}`}
-        layout="inline"
-        model={model}
-        onSelect={(optionKey) => {
-          const option = actions.options.find((candidate) => candidate.key === optionKey);
-          if (option === undefined || option.locked !== undefined) return;
-          if (option.needsChoice === true) {
-            setChoosing(optionKey);
-            return;
-          }
-          setChoosing(undefined);
-          executeIntent(interaction.intentFor(optionKey));
-        }}
-        placeholder="Choose…"
-        {...(pending === undefined
-          ? {}
-          : {
-              triggerLabel:
-                actions.options.find((option) => option.key === pending)?.label ?? pending,
-            })}
-      />
-      {pending === undefined ? null : (
+    <TimelineRow
+      className="room-action-feature-roll"
+      data-feature={actions.feature}
+      kind="insertion"
+      label={
         <ContextualPicker<string>
-          ariaLabel={actions.feature === 'stygianWell' ? 'Item bought' : 'Trait sold'}
-          id={`${idPrefix}-choice`}
-          itemIcon={(item) => rollIcon(actions.feature, item.value)}
-          key={pending}
-          label={actions.feature === 'stygianWell' ? 'Item' : 'Trait'}
-          layout="inline"
-          model={interaction.choices(pending)}
-          onSelect={(value) => {
+          ariaLabel={name}
+          {...(actions.locked === undefined
+            ? {}
+            : { disabledHint: featureRollLockHint(actions.locked) })}
+          id={`${idPrefix}-action`}
+          label=""
+          model={model}
+          onSelect={(optionKey) => {
+            const option = actions.options.find((candidate) => candidate.key === optionKey);
+            if (option === undefined || option.locked !== undefined) return;
+            if (option.needsChoice === true) {
+              setChoosing(optionKey);
+              return;
+            }
             setChoosing(undefined);
-            executeIntent(interaction.choiceIntentFor(pending, value));
+            executeIntent(interaction.intentFor(optionKey));
           }}
-          placeholder="Choose…"
+          placeholder={`${name} ▸`}
+          triggerIcon={roomObjectIcon(actions.feature)}
+          {...(pending === undefined
+            ? {}
+            : {
+                triggerLabel:
+                  actions.options.find((option) => option.key === pending)?.label ?? pending,
+              })}
         />
-      )}
-    </div>
+      }
+      editors={
+        pending === undefined ? null : (
+          <ContextualPicker<string>
+            ariaLabel={actions.feature === 'stygianWell' ? 'Item bought' : 'Trait sold'}
+            id={`${idPrefix}-choice`}
+            itemIcon={(item) => rollIcon(actions.feature, item.value)}
+            key={pending}
+            label=""
+            model={interaction.choices(pending)}
+            onSelect={(value) => {
+              setChoosing(undefined);
+              executeIntent(interaction.choiceIntentFor(pending, value));
+            }}
+            placeholder={actions.feature === 'stygianWell' ? 'Choose item' : 'Choose trait'}
+          />
+        )
+      }
+    />
   );
 }
 

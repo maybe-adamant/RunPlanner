@@ -42,7 +42,7 @@ function roomOrder(application: PlannerApplication) {
     )!.roomActions.order;
 }
 
-it('rerolls the Well from Interact and buys a restocked slot with its item', async () => {
+it('rerolls the Well from its Timeline entry and buys a restocked slot with its item', async () => {
   const view = renderOccurrenceWorkbench(
     withScreenRerolls(),
     'Underworld',
@@ -52,7 +52,9 @@ it('rerolls the Well from Interact and buys a restocked slot with its item', asy
   openRoomTab('Room Overview');
   const well = screen.getByRole('group', { name: 'Stygian Well configuration' });
   expect(within(well).queryByRole('checkbox', { name: /^Purchased/ })).toBeNull();
-  const interact = () => within(well).getByRole('button', { name: 'Interact with Well' });
+  // The Well's entry above the optional actions opens what it can do next.
+  openRoomTab('Room Timeline');
+  const interact = () => screen.getByRole('button', { name: 'Stygian Well' });
 
   await view.user.click(interact());
   await view.user.click(
@@ -81,7 +83,6 @@ it('rerolls the Well from Interact and buys a restocked slot with its item', asy
   expect(
     roomOrder(view.application).find((reference) => reference.kind === 'rerollStygianWell'),
   ).toMatchObject({ offerKeyBySlot: { healing: expect.any(String) } });
-  openRoomTab('Room Timeline');
   expect(screen.getByRole('button', { name: /^Move Buy .+ · roll 2$/ })).toBeTruthy();
   expect(
     screen.getByRole('button', { name: /^Remove Reroll Well · roll 2 from timeline$/ }),

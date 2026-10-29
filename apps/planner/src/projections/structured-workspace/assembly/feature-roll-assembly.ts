@@ -121,33 +121,36 @@ export function assembleFeatureRollActions(input: {
       const key = `buy:${offer.generationKey}`;
       const refill = offer.generationKey === 'travelDealRefill';
       const roll = parseStygianWellGenerationKey(offer.generationKey);
-      const unpinnedReroll =
-        offer.itemKey === null && roll !== undefined && roll.rollKey !== INITIAL_ROLL_KEY;
-      const subject =
-        offer.itemKey === null
-          ? refill
-            ? 'Travel Deal'
-            : labels.slotLabel(offer.slotKey)
-          : `${labels.itemLabel(offer.itemKey)}${refill ? ' · Travel Deal' : ''}`;
+      // A blank slot, the Travel Deal restock included, is bought with the item chosen then.
+      const blank = offer.itemKey === null;
+      const subject = blank
+        ? refill
+          ? 'Travel Deal'
+          : labels.slotLabel(offer.slotKey)
+        : `${labels.itemLabel(offer.itemKey!)}${refill ? ' · Travel Deal' : ''}`;
       options.push(
         Object.freeze({
           key,
           kind: 'offer' as const,
-          label: `Buy ${subject}${unpinnedReroll ? '…' : ''}`,
-          ...(unpinnedReroll ? { needsChoice: true as const } : {}),
-          ...(offer.itemKey === null && !unpinnedReroll ? { locked: 'itemFirst' as const } : {}),
+          label: `Buy ${subject}${blank ? '…' : ''}`,
+          ...(blank ? { needsChoice: true as const } : {}),
         }),
       );
-      const candidates =
-        unpinnedReroll && roll !== undefined
-          ? (well.rolls[roll.rollKey]?.candidateItemKeysBySlot[roll.slotKey] ?? [])
-          : [];
+      const candidates = !blank
+        ? []
+        : refill
+          ? (well.travelDealRefill?.candidateItemKeys ?? [])
+          : roll === undefined
+            ? []
+            : roll.rollKey === INITIAL_ROLL_KEY
+              ? well.candidateItemKeysBySlot[roll.slotKey]
+              : (well.rolls[roll.rollKey]?.candidateItemKeysBySlot[roll.slotKey] ?? []);
       bound.push(
         Object.freeze({
           key,
           kind: 'wellPurchase' as const,
           generationKey: offer.generationKey,
-          ...(unpinnedReroll
+          ...(blank
             ? {
                 choices: Object.freeze(
                   candidates.map((itemKey) =>

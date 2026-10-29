@@ -1,3 +1,4 @@
+import { FeatureRollEntry } from './commerce/FeatureRollInteract';
 import {
   Fragment,
   useEffect,
@@ -896,12 +897,19 @@ export function RoomActionsWorkbench({
         {rankedRows.length === 0 ? checkpointRows(0) : null}
       </ol>
       {children}
-      {actions.optionalRows.length === 0 ? null : (
+      {actions.optionalRows.length === 0 && (actions.featureRolls ?? []).length === 0 ? null : (
         <section aria-label="Optional actions" className="room-action-optional-pool">
           <div className="local-reward-heading">
             <h5>Optional actions</h5>
           </div>
           <ol aria-label="Optional actions" className="room-action-list">
+            {(actions.featureRolls ?? []).map((rolls) => (
+              <FeatureRollEntry
+                actions={rolls}
+                interactions={interactions}
+                key={rolls.interactionKey}
+              />
+            ))}
             {actions.optionalRows.map((row) => renderRow(row))}
           </ol>
         </section>

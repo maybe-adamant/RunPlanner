@@ -172,7 +172,7 @@ describe('Stygian Well workbench', () => {
       within(line).getByRole('checkbox', { name: 'Purchased Stygian Well Travel Deal' }),
     ).toHaveProperty('checked', false);
 
-    // The purchase is removed on its row, and bought again from Interact.
+    // The purchase is removed on its row, and bought again from the Well's entry.
     await view.user.click(
       screen.getByRole('button', { name: /^Remove Buy .* · Slot 2 from timeline$/ }),
     );
@@ -184,8 +184,7 @@ describe('Stygian Well workbench', () => {
           (room) => room.occurrenceId === postbossId,
         )?.stygianWell?.travelDealRefillKey,
     ).toBe('ExtendedShopTrait');
-    openOverview();
-    await view.user.click(screen.getByRole('button', { name: 'Interact with Well' }));
+    await view.user.click(screen.getByRole('button', { name: 'Stygian Well' }));
     const listbox = await screen.findByRole('listbox');
     await view.user.click(within(listbox).getAllByRole('option')[1]!);
     openTimeline();

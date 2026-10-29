@@ -60,8 +60,6 @@ export type WorkspaceRoomFeature =
       readonly assessment: WorkspaceFeatureAssessment;
       readonly inventoryAddress: RoomFeatureAddress;
       readonly inventoryMarker: WorkspaceMarker;
-      /** The next sale or reroll, appended at the end of the room's actions. */
-      readonly rollActions?: WorkspaceFeatureRollActions;
       readonly slots: readonly {
         readonly candidateTraitKeys: readonly string[];
         readonly candidateTraits: readonly { readonly key: string; readonly label: string }[];
@@ -143,8 +141,6 @@ export type WorkspaceRoomFeature =
       readonly presenceInteractionKey?: string;
       /** The initial stock. */
       readonly slots: readonly WorkspaceStygianWellSlot[];
-      /** The next purchase or reroll, appended at the end of the room's actions. */
-      readonly rollActions?: WorkspaceFeatureRollActions;
       /** Refill inventory, authored on the timeline under the purchase that triggers it. */
       readonly travelDealRefill?: Omit<WorkspaceStygianWellSlot, 'key'> & {
         readonly key: 'travelDealRefill';
@@ -176,7 +172,6 @@ export type WorkspaceFeatureRollLock =
   | 'poolEmpty'
   | 'poolShort'
   | 'poolReserved'
-  | 'itemFirst'
   | 'traitFirst';
 
 /** One thing a Well or Pool visit can do next: buy or sell an offered slot, or reroll. */
@@ -189,7 +184,7 @@ export interface WorkspaceFeatureRollOption {
   readonly locked?: WorkspaceFeatureRollLock;
 }
 
-/** The Interact picker of one Well or Pool. */
+/** One Well or Pool's options at the end of the room's actions. */
 export interface WorkspaceFeatureRollActions {
   readonly interactionKey: string;
   readonly feature: import('@run-planner/engine/authored-project').RollFeature;

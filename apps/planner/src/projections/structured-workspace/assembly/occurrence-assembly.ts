@@ -452,13 +452,16 @@ export function assembleWorkspaceOccurrence(
     roomLocal,
   );
   const { chaosSpawn, zagreusSpawn } = featureAssembly;
-  // A visited Well or Pool appends its next purchase, sale or reroll from its Interact picker.
+  // A present Well or Pool appends its next purchase, sale or reroll from its Timeline entry.
+  const featureRollActions: import('../contracts/features').WorkspaceFeatureRollActions[] = [];
   const featureRollRequirements: Extract<
     import('../interactions/interaction-requirements').WorkspaceOccurrenceInteractionRequirement,
     { readonly kind: 'featureRollActions' }
   >[] = [];
-  const features = featureAssembly.features.map((feature) => {
-    if (feature.kind !== 'stygianWell' && feature.kind !== 'purgingPool') return feature;
+  const { features } = featureAssembly;
+  for (const feature of features) {
+    if (feature.kind !== 'stygianWell' && feature.kind !== 'purgingPool') continue;
+    if (feature.kind === 'stygianWell' && feature.presence.kind === 'optionalAbsent') continue;
     const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
     const rolls = assembleFeatureRollActions({
       catalog: input.catalog,
@@ -473,8 +476,8 @@ export function assembleWorkspaceOccurrence(
         input.rerollSpendAllowance ?? (() => Object.freeze({ kind: 'unreached' as const })),
     });
     featureRollRequirements.push(rolls.requirement);
-    return Object.freeze({ ...feature, rollActions: rolls.actions });
-  });
+    featureRollActions.push(rolls.actions);
+  }
   const actionAssembly = assembleOccurrenceActions({
     roomActionPlacementRoster: input.roomActionPlacementRoster,
     biome: input.biome,
@@ -512,7 +515,14 @@ export function assembleWorkspaceOccurrence(
     roomLabel: room.label,
     roomLocal,
   });
-  const { roomActions, runStateByTab, runStateLaunchers } = actionAssembly;
+  const { runStateByTab, runStateLaunchers } = actionAssembly;
+  const roomActions =
+    actionAssembly.roomActions === undefined || featureRollActions.length === 0
+      ? actionAssembly.roomActions
+      : Object.freeze({
+          ...actionAssembly.roomActions,
+          featureRolls: Object.freeze(featureRollActions),
+        });
   const placementRepairs =
     roomActions === undefined
       ? input.structuralPlacementRepairs(

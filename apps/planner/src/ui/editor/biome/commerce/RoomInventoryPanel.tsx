@@ -10,7 +10,6 @@ import type { ContextualPickerModel } from '@planner/projections/contextual/cont
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
-import { FeatureRollInteract } from './FeatureRollInteract';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -87,9 +86,6 @@ export function RoomInventoryPanel({
                     withPurchased={false}
                   />
                 ))}
-            {feature.rollActions === undefined ? null : (
-              <FeatureRollInteract actions={feature.rollActions} interactions={interactions} />
-            )}
           </fieldset>
         );
       })();
@@ -126,9 +122,6 @@ export function RoomInventoryPanel({
                 </div>
               );
             })}
-            {feature.rollActions === undefined ? null : (
-              <FeatureRollInteract actions={feature.rollActions} interactions={interactions} />
-            )}
           </fieldset>
         );
       })();

@@ -72,18 +72,18 @@ it('leaves a blank Pool slot native, with no finding', () => {
   expect(pool.hasAttribute('data-has-findings')).toBe(false);
 });
 
-it('sells each slot still on the list from Interact, and removes a stale sale on its row', async () => {
+it('sells each slot still on the list from its Timeline entry, and removes a stale sale on its row', async () => {
   const { view, pool } = renderPostboss(
     withPoolSlot(withPoolSlot(createUnderworldFPoolCheckpoint(), 'left', null), 'middle', null),
   );
   expect(within(pool).queryByRole('checkbox', { name: /^Sold/ })).toBeNull();
-  // Interact offers every slot still on the list, blank ones included.
-  await view.user.click(within(pool).getByRole('button', { name: 'Interact with Pool' }));
+  // The Pool's Timeline entry offers every slot still on the list, blank ones included.
+  openRoomTab('Room Timeline');
+  await view.user.click(screen.getByRole('button', { name: 'Pool of Purging' }));
   const options = within(await screen.findByRole('listbox')).getAllByRole('option');
   expect(options.map((option) => option.textContent?.startsWith('Sell '))).toEqual([true, true]);
   await view.user.keyboard('{Escape}');
 
-  openRoomTab('Room Timeline');
   await view.user.click(screen.getByRole('button', { name: /^Remove Sell .* from timeline$/ }));
   await waitFor(() => expect(saleOrder(view.application)).toEqual([]));
 });
