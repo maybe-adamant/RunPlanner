@@ -123,11 +123,22 @@ promoted.
   `Q_BaseMiniBoss` do. First visit only, except Hub board doors (above).
 - **Editor:** delivered by [the reroll UI plan](REROLL_UI.md), with no
   further schema change.
-- **Screen rerolls:** a count only on single-pick screens (the nine core
-  Olympians, Hermes, Athena, Dionysus, Artemis, Hades, Chaos, Pom of Power);
-  k rerolls of one screen cost k(k+1)/2; the final rows stay authored as
-  today. Not NPC screens, Hammers, Hermes Shrines, Selene or the World Shop.
-  Screen rerolls touch no store.
+- **Screen rerolls on single-pick screens** (the nine core Olympians, Hermes,
+  Athena, Dionysus, Artemis, Hades, Chaos, Pom of Power): the screen is an
+  ordered list of fully authored screens, the first draw plus one per reroll;
+  every screen is required and only the last carries the pick; the reroll
+  count is the list length minus one, and k rerolls of one screen cost
+  k(k+1)/2. A reroll regenerates the whole screen natively with the same
+  rarity chances as the first screen and bans one random item of the
+  previous screen for that generation only. Legality: screen n is legal iff
+  some item x of screen n−1 exists such that screen n is a legal first screen
+  with x removed (a banned priority core may be replaced by any fill; the same
+  item may return at another rarity; screens may shrink). Pom: each screen is
+  a legal level screen over the levellable boons minus one item of the
+  previous screen. Chaos: no ban, each screen independently legal. Not NPC
+  screens, Hammers, Hermes Shrines, Selene or the World Shop. Screen rerolls
+  touch no store. Import authors only the recorded final screen exactly;
+  earlier screens are guessed (first legal chain) and reported.
 - **Stygian Well and Pool of Purging rolls:** these allow several purchases
   or sales per visit, interleaved with rerolls, so a count cannot represent
   them. The authored feature state is the **initial** stock (Well items or

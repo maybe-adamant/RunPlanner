@@ -41,8 +41,11 @@ owner can exercise them by hand before both plans close.
    sell each offered slot, Reroll with its cost, disabled when the pool cannot
    pay); one pick appends one action at the end of that window, which Move
    repositions. Reroll rows carry optional pickers for the restocked slots.
-7. **Screen rerolls:** a count control on single-pick screens (trait, Chaos,
-   Pom).
+7. **Screen rerolls:** the trait, Chaos and Pom dialogs show one tab per
+   screen (Offer · Reroll 1 · Reroll 2 …); each tab holds a full screen
+   (options, rarities, rejected row) and only the last has the pick. A
+   "Reroll · costs N" button adds a tab (disabled when the pool at that
+   point cannot pay) and "Remove last reroll" drops one. No count control.
 8. **Visibility:** reroll lists, counts and the Reroll entry are hidden
    without the enabling card unless the plan already holds rerolls (then
    shown with findings).
@@ -68,7 +71,9 @@ owner can exercise them by hand before both plans close.
    pre-check and candidates per roll, wire, game module installing each
    authored roll on its native reroll, import with an assumption note), then
    the panel and Interact picker.
-6. **Screen counts and Run State pool** (planner).
+6. **Screen reroll tabs** (engine screen chain, game module installing each
+   screen with the reservation removed, dialog tabs, import guesses) and the
+   **Run State pool** (planner).
 7. **Manual testing by the owner**, then the joint closure with the schema
    bundle.
 
