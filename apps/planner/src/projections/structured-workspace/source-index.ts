@@ -151,10 +151,17 @@ export interface WorkspaceBiomeSource {
   readonly rerollSurface: (
     surface: import('@run-planner/engine/authored-project').RerollSurface,
   ) => import('@run-planner/engine/simulation').RerollSurfaceSettlement | undefined;
-  /** Whether a new spend (a press, a Well or Pool reroll, a screen reroll) fits the run's reroll pool. */
+  /** Whether a new press or Well or Pool reroll fits the run's reroll pool. */
   readonly rerollSpendAllowance: (
-    spend: import('@run-planner/engine/simulation').RerollSpend,
+    spend: Exclude<
+      import('@run-planner/engine/simulation').RerollSpend,
+      import('@run-planner/engine/simulation').ScreenRerollSpend
+    >,
   ) => import('@run-planner/engine/simulation').RerollSpendAllowance;
+  /** A screen's next reroll and how far the pool at its point takes it. */
+  readonly screenRerollAllowance: (
+    spend: import('@run-planner/engine/simulation').ScreenRerollSpend,
+  ) => import('@run-planner/engine/simulation').ScreenRerollAllowance;
   /** What can be done with a room's Shop, Shrine and Champion item; undefined while unreached. */
   readonly roomObjectInteractions: (
     occurrence: OccurrenceAddress,
@@ -708,6 +715,7 @@ function createWorkspaceBiomeSource(
   phantomExitSettlement: WorkspaceBiomeSource['phantomExitSettlement'],
   rerollSurface: WorkspaceBiomeSource['rerollSurface'],
   rerollSpendAllowance: WorkspaceBiomeSource['rerollSpendAllowance'],
+  screenRerollAllowance: WorkspaceBiomeSource['screenRerollAllowance'],
   roomObjectInteractions: WorkspaceBiomeSource['roomObjectInteractions'],
   assessmentIssue: AssessmentIssue | undefined,
 ): WorkspaceBiomeSource {
@@ -935,6 +943,7 @@ function createWorkspaceBiomeSource(
     phantomExitSettlement,
     rerollSurface,
     rerollSpendAllowance,
+    screenRerollAllowance,
     roomObjectInteractions,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
@@ -1018,6 +1027,8 @@ export function createWorkspaceProjectSourceIndex(
   rerollSurface: WorkspaceBiomeSource['rerollSurface'] = () => undefined,
   rerollSpendAllowance: WorkspaceBiomeSource['rerollSpendAllowance'] = () =>
     Object.freeze({ kind: 'unreached' as const }),
+  screenRerollAllowance: WorkspaceBiomeSource['screenRerollAllowance'] = () =>
+    Object.freeze({ kind: 'unreached' as const }),
   roomObjectInteractions: WorkspaceBiomeSource['roomObjectInteractions'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
@@ -1056,6 +1067,7 @@ export function createWorkspaceProjectSourceIndex(
             phantomExitSettlement,
             rerollSurface,
             rerollSpendAllowance,
+            screenRerollAllowance,
             roomObjectInteractions,
             routeEvaluation?.issue,
           ),

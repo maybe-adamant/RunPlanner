@@ -356,6 +356,7 @@ export function createStructuredWorkspaceProjection(
         (exit) => phantomExitSettlementForProjectEvaluationAssembly(assembly, exit),
         (surface) => rerollSurfaceForProjectEvaluationAssembly(assembly, surface),
         (spend) => rerollSpendAllowanceForProjectEvaluationAssembly(assembly, spend),
+        (spend) => rerollSpendAllowanceForProjectEvaluationAssembly(assembly, spend),
         (occurrence) => {
           try {
             return roomObjectInteractionsForProjectEvaluationAssembly(assembly, occurrence);

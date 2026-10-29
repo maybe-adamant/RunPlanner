@@ -580,6 +580,7 @@ export function assembleWorkspaceBiomeSemantics(
       hermesShrineAssessment: source.hermesShrineAssessment,
       stygianWellAssessment: source.stygianWellAssessment,
       rerollSpendAllowance: source.rerollSpendAllowance,
+      screenRerollAllowance: source.screenRerollAllowance,
       roomObjectInteractions: source.roomObjectInteractions,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,
       transcendentEmbryoOutcomes: source.transcendentEmbryoOutcomes,

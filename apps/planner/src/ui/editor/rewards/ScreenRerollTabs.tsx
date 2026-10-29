@@ -8,10 +8,8 @@ import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation
 import { screenTabLabel } from '@planner/projections/rewards/screenRerollTabs';
 import { useGrowOnlyHeight } from './useGrowOnlyHeight';
 
-function lockHint(lock: WorkspaceScreenRerollLock | undefined): string | undefined {
+function lockHint(lock: WorkspaceScreenRerollLock): string {
   switch (lock) {
-    case undefined:
-      return undefined;
     case 'unreached':
       return candidateWaitingHint;
     case 'notEnabled':
@@ -132,7 +130,7 @@ export function ScreenRerollTabs({
             {...hintProps(hint)}
             type="button"
           >
-            {`Reroll · costs ${earlierCount + 1}`}
+            {`Reroll · costs ${rerolls.nextCost(earlierCount)}`}
           </button>
           <button
             className="secondary-action action-compact"

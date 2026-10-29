@@ -106,7 +106,9 @@ export interface WorkspaceScreenRerolls {
   /** The most rerolls the pool allows here; a draft stops there. */
   readonly maxCount: number;
   /** Why the count stops at `maxCount`. */
-  readonly lockAtMax?: WorkspaceScreenRerollLock;
+  readonly lockAtMax: WorkspaceScreenRerollLock;
+  /** What the next reroll costs from a draft's count of earlier screens. */
+  readonly nextCost: (fromCount: number) => number;
 }
 
 export interface WorkspaceTraitOfferControl {

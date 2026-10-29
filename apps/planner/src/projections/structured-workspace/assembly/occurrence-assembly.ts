@@ -311,9 +311,9 @@ export interface WorkspaceOccurrenceAssemblyInput {
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomObjectInteractions | undefined;
   /** Whether a new Well or Pool reroll fits the run's reroll pool. */
-  readonly rerollSpendAllowance?: (
-    spend: import('@run-planner/engine/simulation').RerollSpend,
-  ) => import('@run-planner/engine/simulation').RerollSpendAllowance;
+  readonly rerollSpendAllowance?: import('../source-index').WorkspaceBiomeSource['rerollSpendAllowance'];
+  /** A screen's next reroll and how far the pool at its point takes it. */
+  readonly screenRerollAllowance?: import('../source-index').WorkspaceBiomeSource['screenRerollAllowance'];
   readonly isActiveTraitOffer: (owner: TraitOfferAddress) => boolean;
   /** Engine-published Timeline rows of the product this room's assessment stops at. */
   readonly blockingRowKeys?: ReadonlySet<string>;
@@ -393,16 +393,16 @@ export function assembleWorkspaceOccurrence(
   const entered = input.evaluatedRoom?.entered ?? false;
   const roomControls =
     input.roomPicker === undefined ? Object.freeze([]) : Object.freeze([input.roomPicker]);
-  const rerollSpendAllowance = input.rerollSpendAllowance;
+  const screenRerollAllowance = input.screenRerollAllowance;
   const rewardLocal = assembleOccurrenceRewardLocal(
     {
-      ...(rerollSpendAllowance === undefined
+      ...(screenRerollAllowance === undefined
         ? {}
         : {
             screenRerolls: workspaceScreenRerollSource({
               catalog: input.catalog,
               occurrence: address,
-              source: { rerollSpendAllowance, runState: input.runState },
+              screenRerollAllowance,
             }),
           }),
       configuredRivalsRank: input.configuredRivalsRank,

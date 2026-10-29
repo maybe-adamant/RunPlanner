@@ -31,6 +31,9 @@ import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNStoryBoardProject } from '@run-planner/test-fixtures/surface';
 import { hintOf } from '@planner-test/support/hints';
 
+/** The published cost schedule a fixture screen hands the tabs. */
+const nextCost = (fromCount: number): number => fromCount + 1;
+
 afterEach(cleanup);
 
 describe('ordinary offer shell', () => {
@@ -151,7 +154,7 @@ describe('ordinary offer shell', () => {
     const finalTraits = base.value.options.map((option) => option.traitKey);
     const interaction: WorkspaceTraitOfferInteraction = {
       ...base,
-      screenRerolls: { count: 0, maxCount: 2, lockAtMax: 'poolShort' },
+      screenRerolls: { count: 0, maxCount: 2, lockAtMax: 'poolShort', nextCost },
     };
     const onCommit = vi.fn();
     render(
@@ -263,7 +266,7 @@ describe('ordinary offer shell', () => {
     const interaction: WorkspaceTraitOfferInteraction = {
       ...base,
       value,
-      screenRerolls: { count: 1, maxCount: 3 },
+      screenRerolls: { count: 1, maxCount: 3, lockAtMax: 'poolShort', nextCost },
     };
     render(
       <Provider store={application.store}>
@@ -366,7 +369,7 @@ describe('ordinary offer shell', () => {
         giverKey: base.giver.key,
         rerolledScreens: [{ options: rows }],
       },
-      screenRerolls: { count: 1, maxCount: 3 },
+      screenRerolls: { count: 1, maxCount: 3, lockAtMax: 'poolShort', nextCost },
     };
     render(
       <Provider store={application.store}>

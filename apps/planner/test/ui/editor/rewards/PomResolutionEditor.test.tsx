@@ -38,6 +38,9 @@ import {
 } from '@planner/ui/editor/rewards/PomResolutionEditor';
 import { hintOf } from '@planner-test/support/hints';
 
+/** The published cost schedule a fixture screen hands the tabs. */
+const nextCost = (fromCount: number): number => fromCount + 1;
+
 afterEach(cleanup);
 
 describe('Pom resolution editor', () => {
@@ -360,12 +363,17 @@ describe('Pom resolution editor', () => {
             groups: Object.freeze([group('branch-0', 'choice', ['A', 'B', 'C'], true, [], 2)]),
           }),
       }),
-      screenRerolls: { count: 0, maxCount: 1, lockAtMax: 'poolEmpty' },
+      screenRerolls: {
+        count: 0,
+        maxCount: 1,
+        lockAtMax: 'poolEmpty',
+        nextCost: (from: number) => (from + 1) * 10,
+      },
     };
     render(<PomResolutionEditor interaction={editorInteraction} onCommit={onCommit} />);
-    await user.click(screen.getByRole('button', { name: 'Reroll · costs 1' }));
+    await user.click(screen.getByRole('button', { name: 'Reroll · costs 10' }));
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Offer', 'Reroll 1']);
-    const atMax = screen.getByRole('button', { name: 'Reroll · costs 2' });
+    const atMax = screen.getByRole('button', { name: 'Reroll · costs 20' });
     expect((atMax as HTMLButtonElement).disabled).toBe(true);
     expect(hintOf(atMax)).toBe('No rerolls left.');
     expect(screen.getAllByRole('radio')).toHaveLength(2);
@@ -422,7 +430,7 @@ describe('Pom resolution editor', () => {
           });
         },
       }),
-      screenRerolls: { count: 1, maxCount: 2 },
+      screenRerolls: { count: 1, maxCount: 2, lockAtMax: 'poolShort', nextCost },
     };
     render(<PomResolutionEditor interaction={editorInteraction} onCommit={() => undefined} />);
     const feedback = () => screen.getByRole('status', { name: 'Pom feedback' }).textContent;
@@ -460,7 +468,7 @@ describe('Pom resolution editor', () => {
             ]),
           }),
       }),
-      screenRerolls: { count: 2, maxCount: 3 },
+      screenRerolls: { count: 2, maxCount: 3, lockAtMax: 'poolShort', nextCost },
     };
     render(<PomResolutionEditor interaction={editorInteraction} onCommit={() => undefined} />);
     await waitFor(() =>

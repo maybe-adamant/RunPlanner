@@ -98,10 +98,11 @@ describe('screen reroll counts', () => {
       oceanusBoons(next).find((interaction) => JSON.stringify(interaction.owner) === owner);
     expect(find(rerolled)?.screenRerolls).toMatchObject({ count: 2 });
     const withoutCard = withJudgments(rerolled, noScreenCard);
-    expect(find(withoutCard)?.screenRerolls).toEqual({
+    expect(find(withoutCard)?.screenRerolls).toMatchObject({
       count: 2,
       maxCount: 2,
       lockAtMax: 'notEnabled',
     });
+    expect(find(withoutCard)?.screenRerolls?.nextCost(2)).toBe(3);
   });
 });

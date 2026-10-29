@@ -19,7 +19,6 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type {
   FeatureRerollOption,
   PurgingPoolCandidateCapability,
-  RerollSpend,
   RerollSpendAllowance,
   StygianWellCandidateCapability,
 } from '@run-planner/engine/simulation';
@@ -35,6 +34,7 @@ import type {
   WorkspaceOccurrenceInteractionRequirement,
 } from '../interactions/interaction-requirements';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
+import type { WorkspaceBiomeSource } from '../source-index';
 
 type RollActionsRequirement = Extract<
   WorkspaceOccurrenceInteractionRequirement,
@@ -101,7 +101,7 @@ export function assembleFeatureRollActions(input: {
   readonly owner: OccurrenceAddress;
   readonly occurrence: RoomOccurrence;
   readonly capability: StygianWellCandidateCapability | PurgingPoolCandidateCapability | undefined;
-  readonly allowance: (spend: RerollSpend) => RerollSpendAllowance;
+  readonly allowance: WorkspaceBiomeSource['rerollSpendAllowance'];
 }): {
   readonly actions: WorkspaceFeatureRollActions;
   readonly requirement: RollActionsRequirement;
