@@ -56,7 +56,8 @@ export function completeCarrierChildren(
   value: AuthoredTraitOfferTraits,
   redo?: string,
 ): AuthoredTraitOfferTraits {
-  let current = redo === undefined ? value : clearChildren(context.catalog, trait, value, redo);
+  let current =
+    redo === undefined ? value : withoutCarrierChild(context.catalog, trait, value, redo);
   const settled = new Set<string>();
   for (let pick = 0; pick < MAX_CHILD_PICKS; pick += 1) {
     const child = discoverAuthoredTraitCarrierChildren(context.catalog, trait, current).find(
@@ -66,7 +67,7 @@ export function completeCarrierChildren(
         !settled.has(childKey(candidate)),
     );
     if (child === undefined) return current;
-    const next = pickChild(context, trait, current, child);
+    const next = completeCarrierChild(context, trait, current, child);
     if (next === undefined) return current;
     if (next === current) settled.add(childKey(child));
     current = next;
@@ -90,7 +91,8 @@ const CHILD_FIELDS: Readonly<
   echoLastRunBoon: 'echoLastRunBoon',
 };
 
-function clearChildren(
+/** The offer without the children at one child address, so they can be picked again. */
+export function withoutCarrierChild(
   catalog: Catalog,
   trait: TraitOfferAddress,
   value: AuthoredTraitOfferTraits,
@@ -120,7 +122,11 @@ function clearChildren(
   return current;
 }
 
-function pickChild(
+/**
+ * Authors one child with a random value from its engine domain; undefined when
+ * the domain offers none, the offer itself when the child may stay unresolved.
+ */
+export function completeCarrierChild(
   context: DraftCarrierChildContext,
   trait: TraitOfferAddress,
   value: AuthoredTraitOfferTraits,

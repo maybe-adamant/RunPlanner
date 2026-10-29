@@ -59,12 +59,11 @@ Evidence: the save-file run record audit
    authored state would be a schema change); the Recent runs row shows its
    count and opens the list.
 9. **Unsupported areas fall back loudly.** Areas no capture has exercised yet
-   (Steady Growth, Duo, Travel Deal refill, Eris, Anomaly, Gorgon, Judgment,
-   Fig Leaf, Concave Stone, Sea Star, Hammer and Pom equip results, Selene Hex
-   tree, Fresh File) take decision 8's fallback, each hit reported with its
-   area, so recorded runs inventory what to support next. Boon-screen-shaped
-   areas (Duo) go through the generic offer path and are confirmed by a later
-   capture.
+   (Steady Growth, Travel Deal refill, Eris, Anomaly, Gorgon, Judgment,
+   Fig Leaf, Sea Star, Hammer and Pom equip results, Selene Hex tree, Fresh
+   File) take decision 8's fallback, each hit reported with its area, so
+   recorded runs inventory what to support next. Duo screens go through the
+   generic offer path and their outcome children through decision 11.
 10. **Rarify clicks from spent charges.** The record keeps each rarify
     source's charges left at every entry save, not which row took a click.
     A room spends its entry charges plus the engine's advance of the current
@@ -76,6 +75,22 @@ Evidence: the save-file run record audit
     the charges are the same either way; a charge no screen takes, like any
     other remaining-charge difference, is the entry-save comparison's mismatch.
     The hover correction lowers only rows no click explains.
+11. **Special traits: one importer pass.** A picked trait whose outcome is an
+    authored child is answered by one pass over the screen's final rows, each
+    child from the record at its own carrier's acquisition time and checked
+    against the engine's domain. A child never stops the import: one the
+    record cannot answer, or whose value the engine refuses, takes the
+    engine domain's first value (Draft's policy) and is reported. The
+    owner-confirmed list (2026-10-29): carrier children of All Together,
+    Bridal Glow, Natural Selection, Latest Model, Pom Pom Pom (its no-target
+    case included), Circe's Red Citrine, Lapis and Black Night, Boon Boon
+    Boon, and any of these as Concave Stone's extra pick; and room uses shared
+    by Sea Star's duplicates with Buried Treasure's, Quick Buck's, Narcissus's
+    and Supply Chain's generated pickups. Values inferred but leaving the same
+    state (Natural Selection's order, which same-type generated pickup was
+    taken) are not reported; a Sea Star duplicate that could explain the same
+    uses as a collected generated pickup is placed after the pickups, reported
+    as an assumption.
 
 ## Ownership
 

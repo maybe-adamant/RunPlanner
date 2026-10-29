@@ -538,8 +538,17 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
 - A Fig Leaf skip is imported exactly from `SpawnsSkipped`. A record without
   the skip mark infers a skip at a phase Fig Leaf may skip whose rolled
   enemies the room never killed, and reports it as an assumption.
-- Concave Stone's extra pick is imported as the result of the screen it
-  followed.
+- A selected trait's outcome children are answered from the record on the
+  screen's final rows, each from what its room acquired or upgraded at the
+  child's own carrier's acquisition time, and each checked against the
+  engine's domain for that child: Bridal Glow's target is the trait upgraded
+  at its acquisition time, Echo's Pom target the trait whose level doubled
+  there, and Concave Stone's extra pick the result of the screen it followed
+  (its own children keyed to the extra pick's time). Several qualifying values
+  take the first the engine admits, an assumption. A child the record does not
+  answer, or whose recorded value the engine refuses, takes Draft's first
+  eligible value and is reported, so no such child stops the import; one an
+  earlier change makes stale is answered again the same way.
 - Judgment's and the Crystal Figurine's cards are imported exactly from the
   boss room's draw order. Aspect of Selene's tree is the run's first Spell
   snapshot without its God Sent nodes.

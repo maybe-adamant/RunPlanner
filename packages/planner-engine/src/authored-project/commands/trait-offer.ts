@@ -43,6 +43,7 @@ import {
 } from '../room-state/starting-reward';
 import {
   failCommand,
+  locateBiome,
   ProjectCommandContractError,
   requireOccurrence,
   requireTopology,
@@ -623,6 +624,73 @@ function updateReward(
   });
 }
 
+function traitOwnerOccurrenceId(trait: TraitOfferAddress, command: TraitOfferOwnedCommand) {
+  const owner = trait.owner;
+  return owner.kind === 'encounterPhase'
+    ? owner.owner.occurrenceId
+    : owner.kind === 'gorgonPhase'
+      ? owner.encounter.owner.occurrenceId
+      : owner.kind === 'acquisitionEntry'
+        ? owner.site.owner.kind === 'occurrence'
+          ? owner.site.owner.occurrenceId
+          : failCommand(command, 'acquisition entry is not occurrence-owned')
+        : owner.occurrenceId;
+}
+
+/**
+ * The offer authored at an encounter's or a reward's trait-offer address: null
+ * for a reset encounter offer, undefined where none is materialized.
+ */
+export function authoredTraitOfferAt(
+  document: ProjectDocument,
+  catalog: Catalog,
+  trait: TraitOfferAddress,
+): AuthoredTraitOffer | null | undefined {
+  const subject = {
+    kind: 'ReplaceTraitSelection',
+    trait,
+    selectedOptionKey: 'option1',
+  } as const satisfies TraitOfferCommand;
+  const owner = trait.owner;
+  if (owner.kind === 'gorgonPhase') return undefined;
+  try {
+    const located = locateBiome(document, catalog, subject);
+    const occurrence = requireOccurrence(
+      located.plan,
+      traitOwnerOccurrenceId(trait, subject),
+      subject,
+    );
+    if (owner.kind === 'encounterPhase') {
+      const room = routeRoomDeclaration(catalog.rooms.byKey[occurrence.gameName], owner.routeKey);
+      const encounterKey =
+        room === undefined
+          ? undefined
+          : directEncounterDefinitionKeyForSlot(
+              catalog,
+              room,
+              occurrence.encounters,
+              owner.phaseKey,
+              occurrence.gameName,
+            );
+      return encounterKey === undefined
+        ? undefined
+        : occurrence.encounters.traitOffersByPhase?.[owner.phaseKey]?.[encounterKey];
+    }
+    return locateReward(
+      document,
+      catalog,
+      located.routePosition,
+      occurrence,
+      occurrence.state,
+      owner,
+      subject,
+    )?.reward.traitOffersByAcquisitionRole[trait.acquisitionRole];
+  } catch (error) {
+    if (error instanceof ProjectCommandContractError) return undefined;
+    throw error;
+  }
+}
+
 export function applyTraitOfferCommand(
   document: ProjectDocument,
   catalog: Catalog,
@@ -632,17 +700,11 @@ export function applyTraitOfferCommand(
   const topology = requireTopology(located.plan, command);
   const trait = commandTraitAddress(command);
   const owner = trait.owner;
-  const occurrenceId =
-    owner.kind === 'encounterPhase'
-      ? owner.owner.occurrenceId
-      : owner.kind === 'gorgonPhase'
-        ? owner.encounter.owner.occurrenceId
-        : owner.kind === 'acquisitionEntry'
-          ? owner.site.owner.kind === 'occurrence'
-            ? owner.site.owner.occurrenceId
-            : failCommand(command, 'acquisition entry is not occurrence-owned')
-          : owner.occurrenceId;
-  const occurrence = requireOccurrence(located.plan, occurrenceId, command);
+  const occurrence = requireOccurrence(
+    located.plan,
+    traitOwnerOccurrenceId(trait, command),
+    command,
+  );
   if (owner.routeKey !== trait.routeKey || owner.biomeKey !== trait.biomeKey)
     failCommand(command, 'trait owner is outside its addressed biome');
   if (owner.kind === 'encounterPhase' || owner.kind === 'gorgonPhase') {

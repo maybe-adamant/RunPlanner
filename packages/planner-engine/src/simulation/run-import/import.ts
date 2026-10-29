@@ -32,6 +32,7 @@ import { answerTopology } from './topology';
 import { answerReward } from './rewards';
 import { answerLevelResolution, answerSteadyGrowth, answerTraitOffer } from './trait-offers';
 import { answerArcanaGrant } from './arcana';
+import { answerCarrierChild } from './carrier-children';
 import { importDispositions, reportUnplacedDispositions } from './dispositions';
 import { importRoomActionOrders } from './action-order';
 import { importEncounters } from './encounters';
@@ -522,6 +523,7 @@ export class RunImportWalk {
       answerTopology(this.context, reason) ||
       answerReward(this.context, reason) ||
       answerTraitOffer(this.context, reason) ||
+      answerCarrierChild(this.context, reason) ||
       answerLevelResolution(this.context, reason) ||
       answerSteadyGrowth(this.context, reason)
     );

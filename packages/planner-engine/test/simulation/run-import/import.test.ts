@@ -6,7 +6,9 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createRewardWheelOfferAddress,
+  createTraitOfferAddress,
   type OccurrenceId,
   type ProjectCommand,
   type ProjectDocument,
@@ -25,6 +27,7 @@ import {
   recordedEntryStates,
   storeCounts,
 } from '../../../src/simulation/run-import/conformance';
+import { answerCarrierChild } from '../../../src/simulation/run-import/carrier-children';
 import { RunImportWalk } from '../../../src/simulation/run-import/import';
 import {
   projectFromRunRecord,
@@ -780,12 +783,12 @@ describe('run import of the Surface victory', () => {
     imported = projectFromRunRecord(catalog, record);
   });
 
-  it("stops at O_MiniBoss01's All Together, past O_Combat07's Vivid Sea Poseidon as a fifth god", () => {
+  it("stops at P_Combat03's Sea Star Talent duplicate, past O_Combat07's Vivid Sea Poseidon as a fifth god", () => {
     expect(imported.kind).toBe('stopped');
     expect(imported.kind === 'stopped' && imported.stop).toMatchObject({
-      area: 'other',
-      code: 'allTogetherResultMissing',
-      record: { roomIndex: 24, visit: 0 },
+      area: 'pathOfStars',
+      code: 'hexActivationMissing',
+      record: { roomIndex: 31, visit: 0 },
     });
     expect(
       imported.report.entries.some(
@@ -932,7 +935,7 @@ describe('run import of the Surface victory', () => {
       }),
     };
     const result = projectFromRunRecord(catalog, altered);
-    expect(result.kind === 'stopped' && result.stop.record).toEqual({ roomIndex: 24, visit: 0 });
+    expect(result.kind === 'stopped' && result.stop.record).toEqual({ roomIndex: 31, visit: 0 });
     expect(
       result.report.entries
         .filter((entry) => entry.area === 'wheel' && entry.record?.roomIndex === 23)
@@ -976,9 +979,10 @@ describe('run import of the Surface victory', () => {
 
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
-      assumption: { conversion: 2, shop: 1, traitOffer: 2 },
-      notInRecord: { reward: 1 },
-      stopped: { other: 1 },
+      assumption: { conversion: 2, doors: 1, reward: 1, shop: 2, traitOffer: 3 },
+      mismatch: { traits: 8 },
+      notInRecord: { reward: 1, traitOffer: 1 },
+      stopped: { pathOfStars: 1 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption conversion r14 acquisitionEntry@N-r14 -> ReplaceAcquisitionEntryOffer(N-r14 HermesUpgrade)',
@@ -986,9 +990,23 @@ describe('run import of the Surface victory', () => {
       'assumption shop r17 shopOffer@N-r17 -> ReplaceShopOfferOption(N-r17)',
       'assumption conversion r22 acquisitionEntry@O-r22 -> ReplaceAcquisitionEntryOffer(O-r22 StackUpgrade)',
       'assumption traitOffer r23 traitOffer@O-r23:hiddenSource -> ReplaceTraitOffer(O-r23 ZeusCastBoon|ZeusManaBoon|BoltRetaliateBoon#option1)',
+      'assumption traitOffer r27 traitOffer@O-r27:source -> ReplaceTraitOffer(O-r27 PoseidonManaBoon|OmegaPoseidonProjectileBoon|PoseidonExCastBoon#option2)',
+      'assumption shop r27 shopOffer@O-r27 -> ReplaceShopOfferOption(O-r27)',
+      'assumption doors r30 exitDecision@P:start',
+      'assumption reward r31 acquisitionRole@P-r31:self -> ReplaceSeaStarResult(P-r31)',
     ]);
-    // O_Combat12's solved offers draw what the game drew, so its pickups and stores agree.
-    expect(mismatchLines(imported.report)).toEqual([]);
+    // O_Combat12's solved offers draw what the game drew, so its pickups and stores agree; All
+    // Together's guessed sets are not the four the game granted.
+    expect(mismatchLines(imported.report)).toEqual([
+      'traits r25 ElementalDamageBoon: absent | held',
+      'traits r25 ElementalBaseDamageBoon: absent | held',
+      'traits r25 ElementalDamageFloorBoon: absent | held',
+      'traits r25 ElementalHealthBoon: absent | held',
+      'traits r25 ElementalOlympianDamageBoon: held | absent',
+      'traits r25 ElementalRallyBoon: held | absent',
+      'traits r25 ElementalDamageCapBoon: held | absent',
+      'traits r25 ElementalDodgeBoon: held | absent',
+    ]);
   });
 });
 
@@ -1481,6 +1499,132 @@ describe('run import of Sea Star duplicates', () => {
       'assumption reward r24 acquisitionRole@O-r24:self -> ReplaceSeaStarResult(O-r24)',
       'notInRecord reward r25 incomingReward@O-r25',
     ]);
+  });
+});
+
+describe('run import of selected-outcome children', () => {
+  /** A record with one room's trait rows edited. */
+  function withRoomTraits(
+    record: RunRecord,
+    roomIndex: number,
+    edit: (traits: RunRecord['rooms'][number]['traits']) => RunRecord['rooms'][number]['traits'],
+  ): RunRecord {
+    return {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index === roomIndex ? { ...room, traits: edit(room.traits) } : room,
+      ),
+    };
+  }
+
+  it("takes the first eligible Bridal Glow target when the record shows no upgrade at the pick's time", () => {
+    const record = withRoomTraits(fixture('underworld'), 6, (traits) => ({
+      ...traits,
+      upgraded: [],
+    }));
+    const imported = projectFromRunRecord(catalog, record);
+    expect(imported.kind).toBe('complete');
+    expect(
+      imported.report.entries
+        .filter((entry) => entry.area === 'traitOffer' && entry.record?.roomIndex === 6)
+        .map(describeEntry),
+    ).toEqual([
+      'notInRecord traitOffer r6 traitAcquisitionTarget@F-r6 -> ReplaceTraitOffer(F-r6 HeraSprintBoon|HeraManaBoon|BoonDecayBoon#option3)',
+    ]);
+  });
+
+  it('takes the first eligible Echo Pom target when no level doubled at the pick', () => {
+    const record = withRoomTraits(fixture('underworld-live'), 28, (traits) => ({
+      ...traits,
+      upgraded: [],
+    }));
+    const imported = projectFromRunRecord(catalog, record);
+    expect(imported.kind).toBe('complete');
+    expect(
+      imported.report.entries
+        .filter((entry) => entry.area === 'traitOffer' && entry.record?.roomIndex === 28)
+        .map(describeEntry),
+    ).toEqual([
+      'notInRecord traitOffer r28 echoPomTarget@H-r28 -> ReplaceTraitOffer(H-r28 DiminishingDodgeBoon|EchoDoubleLevelBoon|DiminishingHealthAndManaBoon#option2)',
+    ]);
+  });
+
+  it("reports Concave Stone's extra pick as assumed when two unpicked rows were acquired after the pick", () => {
+    const record = withRoomTraits(fixture('underworld-live'), 27, (traits) => ({
+      ...traits,
+      acquired: [
+        ...traits.acquired,
+        { name: 'CastProjectileBoon', rarity: 'Common', level: 1, worldTime: 3853 },
+      ],
+    }));
+    const imported = projectFromRunRecord(catalog, record);
+    const cage = occurrence(imported.project, 'H-r27').state;
+    const offer =
+      cage.kind === 'fieldsCombat'
+        ? cage.cages['cage2']?.traitOffersByAcquisitionRole['source']
+        : undefined;
+    expect(offer?.kind === 'traits' && offer.concaveStoneResult).toEqual({
+      kind: 'proc',
+      optionKey: 'option1',
+    });
+    expect(
+      imported.report.entries
+        .filter(
+          (entry) =>
+            entry.area === 'traitOffer' &&
+            entry.record?.roomIndex === 27 &&
+            entry.reason !== 'mismatch',
+        )
+        .map(describeEntry),
+    ).toEqual([
+      'assumption traitOffer r27 traitOffer@H-r27:source -> ReplaceTraitOffer(H-r27 HestiaManaBoon|CastProjectileBoon|BurnStackBoon#option3)',
+    ]);
+  });
+
+  it('answers a child an earlier change left unavailable from the record again', () => {
+    const record = fixture('underworld-live');
+    const imported = projectFromRunRecord(catalog, record);
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        createBiomeAddress(imported.project.route.routeKey, 'H'),
+        { kind: 'occurrence', occurrenceId: 'H-r28' as OccurrenceId },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const echo = occurrence(imported.project, 'H-r28').encounters.traitOffersByPhase?.[
+      'Encounter'
+    ]?.['Story_Echo_01'];
+    if (echo?.kind !== 'traits') throw new Error('H-r28 has no Echo offer');
+    const stale = applyProjectCommand(imported.project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: {
+        ...echo,
+        options: echo.options.map((option) =>
+          option.echoPomTarget === undefined
+            ? option
+            : { ...option, echoPomTarget: 'ZeusWeaponBoon' },
+        ) as unknown as typeof echo.options,
+      },
+    });
+    const entries: RunImportReportEntry[] = [];
+    const walk = new RunImportWalk(
+      catalog,
+      record,
+      simulateProjectAssembly(catalog, stale),
+      entries,
+    );
+    const reason = walk.assembly.evaluation.issue?.reasons[0];
+    expect(reason).toMatchObject({ code: 'echoPomTargetUnavailable' });
+    expect(answerCarrierChild(walk.context, reason!)).toBe(true);
+    const repaired = occurrence(walk.assembly.project, 'H-r28').encounters.traitOffersByPhase?.[
+      'Encounter'
+    ]?.['Story_Echo_01'];
+    expect(repaired?.kind === 'traits' && repaired.options[1]?.echoPomTarget).toBe(
+      'HestiaCastBoon',
+    );
+    expect(entries).toEqual([]);
   });
 });
 
