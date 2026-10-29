@@ -436,6 +436,34 @@ describe('Pom resolution editor', () => {
     expect(feedback()).toContain('Pom target unavailable');
   });
 
+  it('names the earlier screen to fix when only it blocks Save', async () => {
+    const editorInteraction: WorkspaceLevelResolutionInteraction = {
+      ...interaction({
+        value: {
+          kind: 'choice',
+          offeredTraitKeys: ['A', 'B'],
+          selectedTraitKey: 'A',
+          rerolledScreens: [{ offeredTraitKeys: ['A', 'C'] }, null],
+        },
+        load: () =>
+          Object.freeze({
+            groups: Object.freeze([
+              group('branch-0', 'choice', ['A', 'B', 'C'], false, [], 2, false, {
+                rerolledScreenFindings: [{ code: 'rerolledScreenMissing', screen: 1 }],
+              }),
+            ]),
+          }),
+      }),
+      screenRerolls: { count: 2, maxCount: 3 },
+    };
+    render(<PomResolutionEditor interaction={editorInteraction} onCommit={() => undefined} />);
+    await waitFor(() =>
+      expect(screen.getByRole('status', { name: 'Pom feedback' }).textContent).toContain(
+        'Reroll 1 needs a fix.',
+      ),
+    );
+  });
+
   it('preserves a retained partial visible Pom instead of replacing it with defaults', async () => {
     const editorInteraction = interaction({
       value: { kind: 'choice', offeredTraitKeys: ['C'], selectedTraitKey: null },

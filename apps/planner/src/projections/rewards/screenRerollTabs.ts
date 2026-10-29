@@ -15,3 +15,19 @@ export function findingScreenTab(finding: {
     ? 0
     : 'final';
 }
+
+/** A screen's tab label: the first draw, then one per reroll. */
+export function screenTabLabel(index: number): string {
+  return index === 0 ? 'Offer' : `Reroll ${index}`;
+}
+
+/**
+ * The line a clean final tab shows when only earlier screens hold findings:
+ * it names the first of them.
+ */
+export function earlierScreenFixLine(tabs: Iterable<ScreenTab>): string | undefined {
+  const all = [...tabs];
+  const earlier = all.filter((tab): tab is number => tab !== 'final');
+  if (earlier.length === 0 || all.includes('final')) return undefined;
+  return `${screenTabLabel(Math.min(...earlier))} needs a fix.`;
+}

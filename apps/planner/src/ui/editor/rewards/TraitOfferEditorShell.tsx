@@ -11,7 +11,11 @@ import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
-import { findingScreenTab, type ScreenTab } from '@planner/projections/rewards/screenRerollTabs';
+import {
+  earlierScreenFixLine,
+  findingScreenTab,
+  type ScreenTab,
+} from '@planner/projections/rewards/screenRerollTabs';
 import {
   projectTraitOfferFeedback,
   projectTraitOfferState,
@@ -139,9 +143,13 @@ export function TraitOfferEditorShell({
       selectedTraitOutcomeDraftComplete(value, selectedOutcomeDomain));
   const offerMessage =
     feedback.contextMessage ??
-    (support === 'impossible' && (candidateFindings?.length ?? 0) === 0
-      ? 'This offer is unavailable in the current route context.'
-      : undefined);
+    (support !== 'impossible'
+      ? undefined
+      : (candidateFindings?.length ?? 0) === 0
+        ? 'This offer is unavailable in the current route context.'
+        : activeScreen === 'final'
+          ? earlierScreenFixLine(markedScreens)
+          : undefined);
   const rarifySupported = (optionKey: AuthoredTraitOfferTraits['selectedOptionKey']): boolean => {
     if (candidate?.evaluation.kind !== 'traitOffer') return false;
     const branches = candidate.evaluation.result.callingCard ?? [];
@@ -221,10 +229,14 @@ export function TraitOfferEditorShell({
     );
   }
   // At rest the region matches the launcher; an edited draft shows its own assessment.
+  const routeFixLine =
+    tabbed && activeScreen === 'final' ? earlierScreenFixLine(markedScreens) : undefined;
   const atRestEntries =
     routeEntries !== undefined &&
     draftValueIdentity(value) === draftValueIdentity(interaction.value)
-      ? routeEntries
+      ? routeEntries.length === 0 && routeFixLine !== undefined
+        ? [['offer', routeFixLine] as const]
+        : routeEntries
       : undefined;
   // Replacement previews stay; at rest the route findings stand in for candidate reasons.
   const optionFeedback =

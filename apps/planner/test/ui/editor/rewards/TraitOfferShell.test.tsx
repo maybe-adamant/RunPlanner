@@ -275,6 +275,7 @@ describe('ordinary offer shell', () => {
     await waitFor(() => expect(offerTab.getAttribute('data-has-findings')).toBe('true'));
     expect(save.hasAttribute('disabled')).toBe(true);
     expect(feedbackText()).not.toContain('Trait choices cannot appear together');
+    expect(feedbackText()).toContain('Offer needs a fix.');
     await user.click(offerTab);
     expect(feedbackText()).toContain('Trait choices cannot appear together');
     application.dispose();

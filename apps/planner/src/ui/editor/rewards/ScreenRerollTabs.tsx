@@ -5,6 +5,7 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { hintProps } from '@planner/ui/controls/hint';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
+import { screenTabLabel } from '@planner/projections/rewards/screenRerollTabs';
 
 function lockHint(lock: WorkspaceScreenRerollLock | undefined): string | undefined {
   switch (lock) {
@@ -19,11 +20,6 @@ function lockHint(lock: WorkspaceScreenRerollLock | undefined): string | undefin
     case 'poolShort':
       return 'Not enough rerolls left.';
   }
-}
-
-/** A screen's tab label: the first draw, then one per reroll. */
-function screenTabLabel(index: number): string {
-  return index === 0 ? 'Offer' : `Reroll ${index}`;
 }
 
 /**

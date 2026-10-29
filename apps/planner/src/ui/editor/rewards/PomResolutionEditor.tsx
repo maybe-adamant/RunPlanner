@@ -16,7 +16,11 @@ import {
   presentLevelResolutionCandidateFinding,
   presentRerolledLevelScreenFinding,
 } from '@planner/projections/evaluationProjection';
-import { findingScreenTab, type ScreenTab } from '@planner/projections/rewards/screenRerollTabs';
+import {
+  earlierScreenFixLine,
+  findingScreenTab,
+  type ScreenTab,
+} from '@planner/projections/rewards/screenRerollTabs';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -505,7 +509,15 @@ export function PomResolutionEditor({
       )}
       <EditorDialogFeedback
         name="Pom feedback"
-        entries={[...new Set(feedbackMessages)].map((message) => [message, message] as const)}
+        entries={[
+          ...new Set(
+            feedbackMessages.length === 0 && activeScreen === 'final' && !supported
+              ? [earlierScreenFixLine(markedScreens)].filter(
+                  (line): line is string => line !== undefined,
+                )
+              : feedbackMessages,
+          ),
+        ].map((message) => [message, message] as const)}
       />
       <EditorDialogDraftActions
         {...(onCancel === undefined ? {} : { onCancel })}
