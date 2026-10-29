@@ -201,7 +201,7 @@ function replaceDreamItinerary(
   const nextRoute = { ...route, itineraryBiomeKeys: Object.freeze([...itineraryBiomeKeys]) };
   const keptBiomes = route.biomes.slice(0, keptCount);
   const freshBiomes = itineraryBiomeKeys
-    .slice(keptBiomes.length, Math.max(1, route.biomes.length))
+    .slice(keptBiomes.length, route.biomes.length)
     .map((biomeKey) => {
       const layout = catalog.biomeLayouts.byKey[biomeKey];
       if (layout === undefined)

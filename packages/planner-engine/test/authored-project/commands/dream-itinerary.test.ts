@@ -103,6 +103,18 @@ describe('ReplaceDreamItinerary', () => {
     expect(repicked.route.practiceStart).toBeUndefined();
   });
 
+  it('keeps a plan with no configured biome empty', () => {
+    const empty = createProjectDocument(catalog, {
+      projectId: 'empty',
+      routeKey: 'Dream',
+      itineraryBiomeKeys: ['Q', 'F', 'N', 'H'],
+      configuredBiomeCount: 0,
+    });
+    const repicked = repick(empty, ['G', 'F', 'N', 'H']);
+    expect(repicked.route.itineraryBiomeKeys).toEqual(['G', 'F', 'N', 'H']);
+    expect(repicked.route.biomes).toEqual([]);
+  });
+
   it('is a no-op for the same itinerary and refuses an illegal one or a fixed route', () => {
     const project = loadDreamMixedHandoffCheckpoint();
     expect(repick(project, project.route.itineraryBiomeKeys)).toBe(project);
