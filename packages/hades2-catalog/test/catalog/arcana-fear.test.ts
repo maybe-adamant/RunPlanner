@@ -35,7 +35,10 @@ describe('Arcana and Fear catalog', () => {
         'DoorReroll',
         { countByRarity: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 }, enables: 'doors' },
       ],
-      ['TradeOff', { countByRarity: { Common: 2, Rare: 3, Epic: 4, Heroic: 5 }, enables: 'poolOnly' }],
+      [
+        'TradeOff',
+        { countByRarity: { Common: 2, Rare: 3, Epic: 4, Heroic: 5 }, enables: 'poolOnly' },
+      ],
       [
         'ScreenReroll',
         { countByRarity: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 }, enables: 'screens' },
