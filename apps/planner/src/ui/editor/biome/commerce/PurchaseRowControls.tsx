@@ -57,12 +57,15 @@ export function TravelDealLine({
   readonly proposals: readonly WorkspaceRoomActionProposal[];
 }) {
   const cells = travelDealLineCells(interactions, line, onApply, proposals);
+  // The Well's line names Travel Deal on its item picker alone.
+  const compact = line.kind === 'stygianWell';
   return (
     <TimelineRow
       aria-label="Travel Deal"
+      {...(compact ? { className: 'travel-deal-line-compact' } : {})}
       editors={cells.editors}
       kind="continuation"
-      label={<span className="timeline-continuation-label">Travel Deal</span>}
+      label={compact ? null : <span className="timeline-continuation-label">Travel Deal</span>}
       placement={cells.purchased}
     />
   );

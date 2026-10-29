@@ -1245,17 +1245,31 @@ select {
   list-style: none;
 }
 
+/* Every row: # | target | reward | remove, so the reward column never shifts. */
 .room-reroll-row {
   display: grid;
-  grid-template-columns: 1.4rem minmax(0, 1fr) 2rem;
+  grid-template-columns: 1.4rem minmax(7rem, 11rem) minmax(0, 24rem) 2rem;
   align-items: center;
   gap: 10px;
-  max-width: 640px;
 }
 
-.room-reroll-append {
-  grid-template-columns: 1.4rem minmax(0, 1fr) minmax(0, 1fr);
-  max-width: none;
+.room-reroll-row .field-control {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.room-reroll-row .field-control > label {
+  display: none;
+}
+
+.room-reroll-target {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .room-reroll-index {
@@ -1271,6 +1285,7 @@ select {
   align-items: center;
   gap: 6px 10px;
   margin-top: 4px;
+  min-height: 1.75rem;
   padding-left: calc(7.5rem + 10px);
   color: var(--text);
   font-size: 0.88rem;

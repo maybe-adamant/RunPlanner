@@ -108,6 +108,8 @@ export type WorkspaceRerollSource = Pick<
 
 /** A rerolled owner's final draw beside its first, and the repair of a kept mismatch. */
 export interface WorkspaceRerolledRewardFacts {
+  /** A held card enables rerolls here: the final-draw line keeps its place while empty. */
+  readonly rerollLineReserved?: true;
   readonly rerolledOffer?: ResolvedRewardOffer;
   readonly rerolledSummary?: string;
   readonly rerolledRewardRepair?: NonNullable<WorkspaceDoorReward['rerolledRewardRepair']>;
@@ -132,12 +134,15 @@ function rerolledRewardFacts(
     target === undefined || first === undefined || sameOffer(first, target.current)
       ? undefined
       : target.current;
-  if (rerolled === undefined && !mismatch) return undefined;
+  const reserved = settled?.enabled === true ? { rerollLineReserved: true as const } : {};
+  if (rerolled === undefined && !mismatch)
+    return settled?.enabled === true ? Object.freeze(reserved) : undefined;
   const rerolledOwners =
     source.plan.topology === null
       ? new Map()
       : biomeRerolledOwners(source.biome, source.plan.topology);
   return Object.freeze({
+    ...reserved,
     ...(rerolled === undefined
       ? {}
       : { rerolledOffer: rerolled, rerolledSummary: summarizeRewardOffer(catalog, rerolled) }),

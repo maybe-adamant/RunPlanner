@@ -687,11 +687,12 @@ function projectHubNode(
       if (action.kind === 'roomVisit') visitsBefore += 1;
       else if (visitsBefore === precedingVisitCount) rerollBeforeFountain = true;
     }
+    // Each stay recaps the doors still open: an entered door is closed for the run.
     const board =
-      precedingVisitCount === 0 || settled === undefined
+      settled === undefined
         ? undefined
         : settled.targets.flatMap((target) => {
-            if (target.target.kind !== 'hubSlot') return [];
+            if (target.target.kind !== 'hubSlot' || target.unavailable === 'slotEntered') return [];
             const hubSlotKey = target.target.hubSlotKey;
             const first =
               firstStay?.targets.find(
@@ -706,7 +707,6 @@ function projectHubNode(
                 ...(JSON.stringify(first) === JSON.stringify(target.current)
                   ? {}
                   : { rerolledSummary: summarizeRewardOffer(catalog, target.current) }),
-                entered: target.unavailable === 'slotEntered',
               }),
             ];
           });
@@ -820,14 +820,9 @@ function projectHubNode(
   markerDestinations.setHubTab(Object.freeze(node.visits.map((visit) => visit.marker)), 'timeline');
   markerDestinations.redirect([completedExit.marker], node.key);
   markerDestinations.setHubTab([completedExit.marker], 'exit');
-  // Placement always repairs on Hub Timeline; only the Phial target follows its host.
-  markerDestinations.redirect([fountain.marker], node.key);
-  markerDestinations.setHubTab([fountain.marker], 'timeline');
-  if (fountain.controlsHost?.kind !== 'room') {
-    const fountainMarkers = [fountain.outcomeMarker];
-    markerDestinations.redirect(fountainMarkers, node.key);
-    markerDestinations.setHubTab(fountainMarkers, 'timeline');
-  }
+  // Placement and the Phial target both repair on the Hub Timeline's fountain row.
+  markerDestinations.redirect([fountain.marker, fountain.outcomeMarker], node.key);
+  markerDestinations.setHubTab([fountain.marker, fountain.outcomeMarker], 'timeline');
   hubInteractionRequirements.push(
     Object.freeze({
       kind: 'hubControls' as const,

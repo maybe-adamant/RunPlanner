@@ -115,12 +115,19 @@ export function RewardSurfaceEditor({
 export function RerolledRewardLine({
   reward,
 }: {
-  readonly reward: Pick<WorkspaceDoorReward, 'rerolledRewardRepair' | 'rerolledSummary'>;
+  readonly reward: Pick<
+    WorkspaceDoorReward,
+    'rerollLineReserved' | 'rerolledRewardRepair' | 'rerolledSummary'
+  >;
 }) {
   const executeIntent = useCommandIntent();
   const findingMark = useFindingMark();
   const repair = reward.rerolledRewardRepair;
-  if (reward.rerolledSummary === undefined && repair === undefined) return null;
+  // Where rerolls are enabled the line keeps its place, so rerolling shifts nothing.
+  if (reward.rerolledSummary === undefined && repair === undefined)
+    return reward.rerollLineReserved === true ? (
+      <div aria-hidden="true" className="door-rerolled-line door-rerolled-line-reserved" />
+    ) : null;
   return (
     <div className="door-rerolled-line">
       {reward.rerolledSummary === undefined ? null : (

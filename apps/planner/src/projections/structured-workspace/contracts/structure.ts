@@ -57,6 +57,8 @@ export interface WorkspaceAnomalyControl {
 export interface WorkspaceDoorReward {
   /** Goals remaining shown on a Clockwork Goal door's countdown. */
   readonly clockworkGoalsRemaining?: number;
+  /** A held card enables rerolls here: the final-draw line keeps its place while empty. */
+  readonly rerollLineReserved?: true;
   /** The reward the door offers after its rerolls, where it differs from the first draw. */
   readonly rerolledOffer?: ResolvedRewardOffer;
   readonly rerolledSummary?: string;
@@ -373,7 +375,7 @@ export interface WorkspaceHubRequirements {
   };
 }
 
-/** One Hub board door as a stay leaves it. */
+/** One open Hub board door as a stay leaves it. */
 export interface WorkspaceHubBoardDoor {
   readonly hubSlotKey: string;
   readonly label: string;
@@ -381,8 +383,6 @@ export interface WorkspaceHubBoardDoor {
   readonly summary: string;
   /** Its reward after the rerolls so far, where it differs from the first draw. */
   readonly rerolledSummary?: string;
-  /** Closed for the run because its room was entered. */
-  readonly entered: boolean;
 }
 
 /** The Hub between two required visits; 0 precedes the first visit. */
@@ -393,7 +393,7 @@ export interface WorkspaceHubStay {
   /** The complete order that uses the fountain at the end of this stay instead. */
   readonly fountainActions?: readonly HubAction[];
   readonly rerolls?: WorkspaceRoomRerolls;
-  /** The board as the stay leaves it, after a visit; absent while unreached. */
+  /** The doors still open as the stay leaves it; absent while unreached. */
   readonly board?: readonly WorkspaceHubBoardDoor[];
 }
 
@@ -442,8 +442,6 @@ export interface WorkspaceOccurrenceWorkbenchNode {
   readonly railMarker?: WorkspaceMarker;
   readonly railVisibility?: 'inspectorOnly';
   readonly room: WorkspaceRoomSummary;
-  /** Hub fountain controls presented before this room's chronology. */
-  readonly hubFountain?: WorkspaceHubFountain;
   /** Stable Hub Timeline destination for visited rooms and the fountain's room host. */
   readonly hubTimeline?: WorkspaceMarker;
 }

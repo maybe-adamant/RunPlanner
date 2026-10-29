@@ -2304,7 +2304,7 @@ describe('structured workspace overlay contract', () => {
 });
 
 describe('Hub fountain finding destinations', () => {
-  it('routes fountain placement to the Hub timeline and its Phial outcome to the preceding room', () => {
+  it('routes fountain placement and its Phial outcome to the Hub timeline', () => {
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const fountain = createHubFountainAddress(nBiome, 'hub');
     const outcome = createFountainRarityOutcomeAddress(fountain);
@@ -2320,17 +2320,13 @@ describe('Hub fountain finding destinations', () => {
     });
     const phialWorkspace = projectWorkspace(phial);
     expect(phialWorkspace.findingsByRepairTarget.has(semanticAddressKey(outcome))).toBe(true);
-    // The fountain-first use displays after the room leading into the Hub.
-    const precedingRoom = createOccurrenceAddress(nBiome, nOccurrenceId('prehub'));
+    // The Phial target is edited on the Hub Timeline's fountain row.
     const outcomeDestination = phialWorkspace.focusByOwner.get(semanticAddressKey(outcome));
     expect(outcomeDestination).toMatchObject({
-      inspectorSubject: {
-        kind: 'node',
-        nodeKey: `occurrence:${semanticAddressKey(precedingRoom)}`,
-      },
+      hubTab: 'timeline',
+      inspectorSubject: { kind: 'node', nodeKey: `hub:${semanticAddressKey(hub)}` },
       ownerAddress: outcome,
     });
-    expect(outcomeDestination).not.toHaveProperty('hubTab');
 
     const unplannedWorkspace = projectWorkspace(unplanned);
     expect(unplannedWorkspace.findingsByRepairTarget.has(semanticAddressKey(fountain))).toBe(true);

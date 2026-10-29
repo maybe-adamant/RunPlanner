@@ -589,11 +589,11 @@ describe('BiomeWorkspace', () => {
   });
 
   it.each([
-    ['after the preceding room', nVisitSlotKeys, 'Combat 02', 3],
-    ['after the final room', nVisitSlotKeys, 'Combat 09', 6],
+    ['after the third visit', nVisitSlotKeys, 3],
+    ['after the final visit', nVisitSlotKeys, 6],
   ] as const)(
-    'routes a missing Phial target to the Hub fountain controls %s',
-    async (_case, visits, hostLabel, afterVisits) => {
+    'routes a missing Phial target to the Hub Timeline fountain row %s',
+    async (_case, visits, afterVisits) => {
       const withPhial = applyProjectCommand(loadSurfaceNProject(), catalog, {
         kind: 'ReplaceStartingKeepsake',
         selection: createRouteStartKeepsakeSelectionAddress('Surface'),
@@ -619,7 +619,9 @@ describe('BiomeWorkspace', () => {
           findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
         ),
       );
-      const controls = await screen.findByRole('region', { name: 'Hub fountain' });
+      const details = await screen.findByRole('region', { name: 'Ephyra Hub timeline' });
+      const controls = details.querySelector<HTMLElement>('.hub-timeline-fountain');
+      if (controls === null) throw new Error('the Hub Timeline fountain row is missing');
       const target = Array.from(
         document.querySelectorAll<HTMLElement>('[data-semantic-owner]'),
       ).find(
@@ -629,9 +631,6 @@ describe('BiomeWorkspace', () => {
       expect(controls.contains(target)).toBe(true);
       expect(target.getAttribute('data-selected-finding')).toBe('true');
       expect(target.closest('[inert]')).toBeNull();
-      expect(within(controls).getByText('Fountain used in the Hub after this room.')).toBeTruthy();
-      expect(screen.getByRole('heading', { name: hostLabel })).toBeTruthy();
-      expect(controls.nextElementSibling).toBeNull();
       await view.user.click(
         await screen.findByText(catalog.traits.byKey['HermesWeaponBoon']?.label ?? ''),
       );
@@ -647,7 +646,7 @@ describe('BiomeWorkspace', () => {
     },
   );
 
-  it('opens fountain timing from the completed map without separate ordering controls', async () => {
+  it('opens the fountain row with its Phial target from the completed map', async () => {
     const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceHubActionOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
@@ -662,13 +661,14 @@ describe('BiomeWorkspace', () => {
     expect(screen.queryByRole('region', { name: 'Fountain order' })).toBeNull();
     await view.user.click(await screen.findByRole('button', { name: 'Hub fountain: Step 4.' }));
     expect(screen.getByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
+    // Its Phial target is edited on the fountain row of the Hub Timeline's Details.
     await view.user.click(screen.getByRole('button', { name: 'Open Interaction →' }));
-    const hosted = await screen.findByRole('region', { name: 'Hub fountain' });
-    expect(within(hosted).getByText('Fountain used in the Hub after this room.')).toBeTruthy();
-    expect(within(hosted).queryByRole('group', { name: 'Fountain use' })).toBeNull();
-    const back = screen.getByRole('button', { name: '← Hub Timeline' });
-    expect(back.closest('.room-card-heading')?.textContent).toContain('View Map');
-    await view.user.click(back);
+    const details = await screen.findByRole('region', { name: 'Ephyra Hub timeline' });
+    const row = details.querySelector<HTMLElement>('.hub-timeline-fountain');
+    if (row === null) throw new Error('the Hub Timeline fountain row is missing');
+    expect(within(row).getByRole('button', { name: /^Phial Target/ })).toBeTruthy();
+    expect(within(row).getByRole('button', { name: 'Move Fountain' })).toBeTruthy();
+    await view.user.click(screen.getByRole('button', { name: 'Back to Map' }));
     expect(await screen.findByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
   });
 

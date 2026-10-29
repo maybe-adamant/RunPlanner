@@ -110,10 +110,15 @@ export function HubDecisionWorkbench({
   const requestedTab = initialTab ?? 'overview';
   const initialOverviewView =
     findingNavigationRevision !== undefined && requestedTab === 'overview' ? 'list' : 'map';
-  // Board-door rerolls are repaired in Details; visits and the fountain on the map.
-  const findingTimelineView = focusedOwner?.kind === 'hubReroll' ? 'details' : 'map';
+  // Board-door rerolls and the Phial target are edited in Details; visits and
+  // fountain placement on the map.
+  const detailsOwner =
+    focusedOwner?.kind === 'hubReroll' || focusedOwner?.kind === 'fountainRarityOutcome';
+  const findingTimelineView = detailsOwner ? 'details' : 'map';
   const initialTimelineView =
-    findingNavigationRevision !== undefined && requestedTab === 'timeline'
+    (findingNavigationRevision !== undefined ||
+      (navigationRevision !== undefined && detailsOwner)) &&
+    requestedTab === 'timeline'
       ? findingTimelineView
       : 'map';
   const hubIdentity = semanticAddressKey(node.owner);
@@ -126,11 +131,13 @@ export function HubDecisionWorkbench({
   });
   const [viewState, setViewState] = useState<{
     readonly handledFindingNavigationRevision: number | undefined;
+    readonly handledNavigationRevision: number | undefined;
     readonly hubIdentity: string;
     readonly overview: 'list' | 'map';
     readonly timeline: 'details' | 'map';
   }>({
     handledFindingNavigationRevision: findingNavigationRevision,
+    handledNavigationRevision: navigationRevision,
     hubIdentity,
     overview: initialOverviewView,
     timeline: initialTimelineView,
@@ -138,6 +145,7 @@ export function HubDecisionWorkbench({
   if (viewState.hubIdentity !== hubIdentity) {
     setViewState({
       handledFindingNavigationRevision: findingNavigationRevision,
+      handledNavigationRevision: navigationRevision,
       hubIdentity,
       overview: initialOverviewView,
       timeline: initialTimelineView,
@@ -151,6 +159,13 @@ export function HubDecisionWorkbench({
       handledFindingNavigationRevision: findingNavigationRevision,
       ...(requestedTab === 'overview' ? { overview: 'list' as const } : {}),
       ...(requestedTab === 'timeline' ? { timeline: findingTimelineView } : {}),
+    });
+  } else if (viewState.handledNavigationRevision !== navigationRevision) {
+    // Opening a Details owner from elsewhere, such as the map's fountain, shows Details.
+    setViewState({
+      ...viewState,
+      handledNavigationRevision: navigationRevision,
+      ...(requestedTab === 'timeline' && detailsOwner ? { timeline: 'details' as const } : {}),
     });
   }
   // Overview findings are canonical in List; Timeline findings in the view

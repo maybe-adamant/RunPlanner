@@ -32,8 +32,8 @@ function appendHint(locked: WorkspaceRoomRerolls['appendLocked']): string | unde
 }
 
 const targetNouns = {
-  door: { label: 'Door', lower: 'door' },
-  offer: { label: 'Offer', lower: 'offer' },
+  door: { lower: 'door' },
+  offer: { lower: 'offer' },
 } as const;
 
 /** One surface's rerolls in order, with a new press appended at the end. */
@@ -72,11 +72,13 @@ export function RoomRerolls({
         {rerolls.rows.map((row, index) => (
           <li className="room-reroll-row" key={row.key}>
             <span className="room-reroll-index">{index + 1}</span>
+            <span className="room-reroll-target">{row.targetLabel}</span>
             <RewardOfferPicker
               ariaLabel={`Reroll ${index + 1} reward`}
               findingTarget={findingTarget(row.address)}
               id={semanticOwnerControlElementId(row.address)}
-              label={row.targetLabel}
+              label=""
+
               offer={row.reward}
               onReplace={(reward) =>
                 executeIntent(interaction.replaceRewardIntent(row.key, reward))
@@ -102,8 +104,7 @@ export function RoomRerolls({
             ariaLabel={`New reroll ${noun.lower}`}
             {...(lockedHint === undefined ? {} : { disabledHint: lockedHint })}
             id={`${idPrefix}-target`}
-            label={noun.label}
-            layout="inline"
+            label=""
             model={lockedHint === undefined ? targets : emptyTargets}
             onSelect={setPendingTarget}
             placeholder={`Choose ${noun.lower}`}
@@ -114,8 +115,7 @@ export function RoomRerolls({
               ariaLabel="New reroll reward"
               disabledHint={lockedHint ?? `Choose the ${noun.lower} first.`}
               id={`${idPrefix}-reward`}
-              label="Reward"
-              layout="inline"
+              label=""
               model={emptyTargets}
               onSelect={() => undefined}
               placeholder="Choose reward"
@@ -125,7 +125,7 @@ export function RoomRerolls({
               ariaLabel="New reroll reward"
               id={`${idPrefix}-reward`}
               key={pending}
-              label="Reward"
+              label=""
               offer={null}
               onReplace={(reward) => {
                 setPendingTarget(undefined);
@@ -134,6 +134,7 @@ export function RoomRerolls({
               resolver={interaction.pendingReward(pending)}
             />
           )}
+          <span aria-hidden="true" className="room-reroll-remove-slot" />
         </li>
       </ol>
     </section>

@@ -21,7 +21,12 @@ import {
   candidateMayBeAuthored,
   candidateWaitingHint,
 } from '@planner/ui/feedback/candidatePresentation';
-import { useFindingMark, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
+import {
+  useFindingAnchor,
+  useFindingMark,
+  useFindingTarget,
+} from '@planner/ui/feedback/useFindingTarget';
+import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
 import { RoomRerolls } from './RoomRerolls';
 
@@ -131,18 +136,26 @@ function FountainPlacement({
 }
 
 function FountainRow({
+  interactions,
   locked,
   node,
   onApply,
   waiting,
 }: {
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly locked: boolean;
   readonly node: WorkspaceHubDecisionNode;
   readonly onApply: (actions: readonly HubAction[]) => void;
   readonly waiting: boolean;
 }) {
+  const findingAnchor = useFindingAnchor();
+  const rarity = node.fountain.rarity;
   return (
-    <li className="hub-timeline-row hub-timeline-fountain">
+    <li
+      className="hub-timeline-row hub-timeline-fountain"
+      {...(rarity === undefined ? findingAnchor(node.fountain.outcomeMarker.address) : {})}
+      tabIndex={-1}
+    >
       <span className="hub-timeline-step">
         <ArtworkIcon
           className="artwork-label-icon"
@@ -150,6 +163,11 @@ function FountainRow({
         />
       </span>
       <strong className="hub-timeline-room">Fountain</strong>
+      <span className="hub-timeline-fountain-phial">
+        {rarity === undefined ? null : (
+          <FountainRarityEffectRow control={rarity} interactions={interactions} />
+        )}
+      </span>
       <FountainPlacement
         label="Move Fountain"
         locked={locked}
@@ -166,17 +184,16 @@ function BoardRecap({ stay }: { readonly stay: WorkspaceHubStay }) {
   if (stay.board === undefined) return null;
   return (
     <li className="hub-timeline-board">
-      <h5>Board</h5>
+      <h5>{stay.precedingVisitCount === 0 ? 'Board at entry' : 'Board'}</h5>
       <ul aria-label={`Board ${stayLabel(stay.precedingVisitCount)}`}>
         {stay.board.map((door) => (
-          <li data-entered={door.entered} key={door.hubSlotKey}>
+          <li key={door.hubSlotKey}>
             <span className="hub-timeline-board-room">{door.label}</span>
             <span className="hub-timeline-board-reward">
               {door.rerolledSummary === undefined
                 ? door.summary
                 : `${door.summary} → ${door.rerolledSummary}`}
             </span>
-            {door.entered ? <span className="hub-timeline-muted">Visited</span> : null}
           </li>
         ))}
       </ul>
@@ -220,7 +237,13 @@ export function HubTimelineDetails({
     executeIntent(proposal.intent());
   };
   const fountainRow = (
-    <FountainRow locked={locked} node={node} onApply={replaceActions} waiting={waiting} />
+    <FountainRow
+      interactions={interactions}
+      locked={locked}
+      node={node}
+      onApply={replaceActions}
+      waiting={waiting}
+    />
   );
   const stayEntries = (stay: WorkspaceHubStay) => (
     <>

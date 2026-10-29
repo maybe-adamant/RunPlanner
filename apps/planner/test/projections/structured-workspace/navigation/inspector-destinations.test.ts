@@ -1517,7 +1517,7 @@ describe('workspace inspector destinations', () => {
     expect(handoffDestination.selectedRailKey).toBeUndefined();
   });
 
-  it('routes Hub fountain placement to the Timeline map and its Phial outcome to the displayed controls', () => {
+  it('routes Hub fountain placement and its Phial outcome to the Hub Timeline', () => {
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const fountain = createHubFountainAddress(nBiome, 'hub');
     const outcome = createFountainRarityOutcomeAddress(fountain);
@@ -1541,63 +1541,33 @@ describe('workspace inspector destinations', () => {
       if (node === undefined) throw new Error('N Hub node is missing');
       return node.key;
     };
-    const nextRoomKey = (workspace: StructuredWorkspaceProjection, occurrenceId: string) =>
-      occurrenceWorkbenchFor(biome(workspace, 'N'), occurrenceId).key;
+    const onTimeline = (workspace: StructuredWorkspaceProjection) => ({
+      hubTab: 'timeline',
+      inspectorSubject: { kind: 'node', nodeKey: hubNodeKey(workspace) },
+    });
 
     const unused = placed(nVisitSlotKeys, null);
-    expect(destination(unused, fountain)).toMatchObject({
-      hubTab: 'timeline',
-      inspectorSubject: { kind: 'node', nodeKey: hubNodeKey(unused) },
-    });
+    expect(destination(unused, fountain)).toMatchObject(onTimeline(unused));
 
-    const onEntry = placed(nVisitSlotKeys, 0);
-    expect(destination(onEntry, outcome).inspectorSubject).toEqual({
-      kind: 'node',
-      nodeKey: nextRoomKey(onEntry, nOccurrenceIds.preHub),
-    });
+    // Placement and the Phial target both repair on the Hub Timeline, wherever the fountain sits.
+    for (const fountainAfterVisits of [0, 3, 6]) {
+      const workspace = placed(nVisitSlotKeys, fountainAfterVisits);
+      expect(destination(workspace, fountain)).toMatchObject(onTimeline(workspace));
+      expect(destination(workspace, outcome)).toMatchObject(onTimeline(workspace));
+    }
+    const lastPlanned = placed(nVisitSlotKeys.slice(0, 3), 3);
+    expect(destination(lastPlanned, outcome)).toMatchObject(onTimeline(lastPlanned));
 
-    const beforeFourthVisit = placed(nVisitSlotKeys, 3);
-    const fourthRoom = nOccurrenceId(nVisitSlotKeys[2]!);
-    const beforeFourthDestination = destination(beforeFourthVisit, outcome);
-    expect(beforeFourthDestination.inspectorSubject).toEqual({
-      kind: 'node',
-      nodeKey: nextRoomKey(beforeFourthVisit, fourthRoom),
-    });
-    expect(beforeFourthDestination).not.toHaveProperty('hubTab');
-    // Ordering stays on the Hub even when the Phial target has a room host.
-    expect(destination(beforeFourthVisit, fountain)).toMatchObject({
-      hubTab: 'timeline',
-      inspectorSubject: { kind: 'node', nodeKey: hubNodeKey(beforeFourthVisit) },
-    });
-    expect(
-      occurrenceWorkbenchFor(biome(beforeFourthVisit, 'N'), fourthRoom).hubFountain?.address,
-    ).toEqual(fountain);
-
+    // A visited room still returns to its Hub visit.
     const beforePreboss = placed(nVisitSlotKeys, 6);
     const returnMarker = occurrenceWorkbenchFor(
       biome(beforePreboss, 'N'),
       nOccurrenceId(nVisitSlotKeys[5]!),
     ).hubTimeline;
     expect(returnMarker).toBeDefined();
-    expect(destination(beforePreboss, returnMarker!.address)).toMatchObject({
-      hubTab: 'timeline',
-      inspectorSubject: { kind: 'node', nodeKey: hubNodeKey(beforePreboss) },
-    });
-    expect(destination(beforePreboss, outcome).inspectorSubject).toEqual({
-      kind: 'node',
-      nodeKey: nextRoomKey(beforePreboss, nOccurrenceId(nVisitSlotKeys[5]!)),
-    });
-
-    // With no following room, the preceding room still hosts the controls.
-    const lastPlanned = placed(nVisitSlotKeys.slice(0, 3), 3);
-    expect(destination(lastPlanned, outcome)).toMatchObject({
-      inspectorSubject: { kind: 'node', nodeKey: nextRoomKey(lastPlanned, fourthRoom) },
-    });
-    expect(
-      biome(lastPlanned, 'N').nodes.some(
-        (node) => node.kind === 'occurrenceWorkbench' && node.hubFountain !== undefined,
-      ),
-    ).toBe(true);
+    expect(destination(beforePreboss, returnMarker!.address)).toMatchObject(
+      onTimeline(beforePreboss),
+    );
   });
 
   it('binds Fields and Ship local leaves to their containing decision rail', () => {

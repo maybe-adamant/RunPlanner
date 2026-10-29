@@ -226,9 +226,12 @@ describe('HubDecisionWorkbench interaction', () => {
             ? 'Board'
             : 'Fountain',
     );
-    // Every stay offers rerolls with the card; each after a visit recaps its board.
+    // Every stay offers rerolls with the card and recaps its open doors, the entry included.
     expect(rows.filter((row) => row.startsWith('Visit'))).toEqual(
       ['1', '2', '3', '4', '5', '6'].map((index) => `Visit ${index}`),
+    );
+    expect(rows.slice(0, rows.indexOf('Visit 1'))).toEqual(
+      expect.arrayContaining(['Rerolls', 'Board']),
     );
     expect(rows.slice(rows.indexOf('Visit 1'), rows.indexOf('Visit 2'))).toEqual(
       expect.arrayContaining(['Visit 1', 'Rerolls', 'Board']),
@@ -243,7 +246,8 @@ describe('HubDecisionWorkbench interaction', () => {
     );
     expect(within(lists[1]!).getByText('2 left')).toBeTruthy();
     const board = within(details).getByRole('list', { name: 'Board After Visit 1' });
-    expect(within(board).getByText('Visited')).toBeTruthy();
+    // The door the visit entered is closed and no longer listed.
+    expect(within(board).queryByText('Combat 05')).toBeNull();
     expect(within(board).getByText(/ → /)).toBeTruthy();
     expect(within(details).getByRole('button', { name: 'Move Fountain' })).toBeTruthy();
     // Clearing the order waits on removing its rerolls.

@@ -82,12 +82,13 @@ describe('Hub Timeline details', () => {
     const projected = projectStructuredWorkspaceFixture(base);
     const node = hubOf(projected);
     expect(node.stays.map((stay) => stay.precedingVisitCount)).toEqual([0, 1, 2, 3, 4, 5, 6]);
-    expect(node.stays[0]).not.toHaveProperty('board');
+    // The entry recap lists every open door.
+    expect(node.stays[0]!.board?.map((door) => door.hubSlotKey)).toContain('combat05');
     expect(stayList(projected, 0).rerolls).toMatchObject({ poolRemaining: 3, rows: [] });
-    // The board after a visit closes the door it entered, and its list no longer names it.
+    // The board after a visit drops the door it entered, and its list no longer names it.
     const afterFirst = node.stays[1]!;
-    expect(afterFirst.board?.find((door) => door.hubSlotKey === 'combat05')?.entered).toBe(true);
-    expect(afterFirst.board?.find((door) => door.hubSlotKey === 'combat03')?.entered).toBe(false);
+    expect(afterFirst.board?.map((door) => door.hubSlotKey)).not.toContain('combat05');
+    expect(afterFirst.board?.map((door) => door.hubSlotKey)).toContain('combat03');
     const targets = stayList(projected, 1)
       .interaction.targets(undefined)
       .sections.flatMap((section) => section.items.map((item) => item.value));

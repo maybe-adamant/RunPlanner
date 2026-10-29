@@ -1837,20 +1837,6 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-.hub-fountain-controls {
-  display: grid;
-  gap: 8px;
-  margin: 12px 0;
-  padding: 12px;
-  border: 1px solid #3a5a70;
-  border-radius: 8px;
-  background: rgb(22 38 50 / 60%);
-}
-
-.hub-fountain-controls p {
-  margin: 0;
-}
-
 .fountain-rarity-inline {
   display: flex;
   flex: 0 1 20rem;
@@ -2378,12 +2364,6 @@
   gap: 0.35rem;
 }
 
-.hub-fountain-heading {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
 /* Hub Timeline details: visits in order with each stay between them. */
 .hub-timeline-details .hub-board-heading {
   padding-bottom: 12px;
@@ -2475,7 +2455,15 @@
   font-size: 0.88rem;
 }
 
-.hub-timeline-board li[data-entered='true'] .hub-timeline-board-room,
-.hub-timeline-board li[data-entered='true'] .hub-timeline-board-reward {
-  color: var(--muted);
+/* The Well's Travel Deal line: its item picker spans the label column on one line. */
+.timeline-row.travel-deal-line-compact > [data-timeline-cell='label'] {
+  display: none;
+}
+
+.timeline-row.travel-deal-line-compact > [data-timeline-cell='editors'] {
+  grid-column: 3 / 5;
+}
+
+.travel-deal-line-compact .field-control > label {
+  white-space: nowrap;
 }

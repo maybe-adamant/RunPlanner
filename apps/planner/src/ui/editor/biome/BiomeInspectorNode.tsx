@@ -14,7 +14,6 @@ import {
 } from '@planner/projections/structured-workspace';
 import { AuthoringFrontier, BatchWorkbench } from './DecisionWorkbench';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
-import { HubFountainControls } from './HubFountainControls';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { PhantomExitDoor } from './PhantomExitDoor';
 import { BossDoorRewardPoolRow } from './OccurrenceDirectRoomWorkbench';
@@ -229,9 +228,6 @@ function OccurrenceInspector({
           )
         }
       />
-      {node.hubFountain === undefined ? null : (
-        <HubFountainControls fountain={node.hubFountain} interactions={interactions} />
-      )}
     </>
   );
 }

@@ -409,6 +409,8 @@ export interface WorkspaceRewardWheelOfferDescriptor {
   readonly control: WorkspaceCountedRewardControl;
   readonly key: string;
   readonly label: string;
+  /** A held card enables rerolls here: the final-draw line keeps its place while empty. */
+  readonly rerollLineReserved?: true;
   /** The offer after its rerolls, where it differs from the first draw. */
   readonly rerolledOffer?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
   readonly rerolledSummary?: string;

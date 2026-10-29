@@ -390,13 +390,8 @@ function appendHubAssembly(
   appendUniqueWorkspaceNodes(nodes, [assembly.node, ...assembly.workbenches]);
 }
 
-/**
- * Hub visits return to their Timeline; the preceding room hosts the Hub's Phial target.
- */
-function attachHubRoomPresentation(
-  nodes: WorkspaceNode[],
-  markerDestinations: WorkspaceMarkerDestinationEmitter,
-): void {
+/** Hub visits return to their Timeline. */
+function attachHubRoomPresentation(nodes: WorkspaceNode[]): void {
   for (const hub of nodes) {
     if (hub.kind !== 'hubDecision') continue;
     for (const visit of hub.visits) {
@@ -410,25 +405,6 @@ function attachHubRoomPresentation(
       if (room?.kind === 'occurrenceWorkbench')
         nodes[index] = Object.freeze({ ...room, hubTimeline: visit.marker });
     }
-    if (hub.fountain.controlsHost?.kind !== 'room') continue;
-    const { occurrenceId } = hub.fountain.controlsHost;
-    const index = nodes.findIndex(
-      (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
-    );
-    const host = nodes[index];
-    if (host?.kind !== 'occurrenceWorkbench') {
-      // A retained Hub can sit beyond the materialized route frontier.
-      markerDestinations.redirect([hub.fountain.outcomeMarker], hub.key);
-      markerDestinations.setHubTab([hub.fountain.outcomeMarker], 'timeline');
-      continue;
-    }
-    nodes[index] = Object.freeze({
-      ...host,
-      hubFountain: hub.fountain,
-      hubTimeline: host.hubTimeline ?? hub.fountain.marker,
-    });
-    markerDestinations.redirect([hub.fountain.outcomeMarker], host.key);
-    markerDestinations.setRoomTab([hub.fountain.outcomeMarker], 'overview');
   }
 }
 
@@ -754,7 +730,7 @@ export function assembleWorkspaceBiomeSemantics(
     if (decision.source.kind !== 'hubDecision') continue;
     projectAuthoredExitDecision(decision);
   }
-  attachHubRoomPresentation(nodes, markerDestinations);
+  attachHubRoomPresentation(nodes);
   if (frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision') {
     markerDestinations.setHubTab([frontier.marker], 'exit');
   }
