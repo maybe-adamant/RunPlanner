@@ -440,22 +440,49 @@ export function solveWheelOffers(context: RunImportContext): boolean {
     const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
     const targets = roomPressTargets(context, biome, sourceId);
     if (!bracketDrawsAuthored(context, biomeKey, sourceId, targets)) continue;
-    if (
+    const unconverted =
       recordedConversions(context, roomIndex).length > 0 &&
-      !context.used.has(`conversion:${roomIndex}`)
-    )
-      continue;
+      !context.used.has(`conversion:${roomIndex}`);
+    // A room whose sides are open converts once its split is chosen; any other first.
+    const deferred = unconverted && wheelAuthoringWaits(context, roomIndex);
+    if (unconverted && !deferred) continue;
     context.used.add(used);
     closed = true;
-    solveShip(context, roomIndex, targets);
+    solveShip(context, roomIndex, targets, deferred);
+    // The conversions follow the authored split: the fit's, or the canonical one.
+    if (deferred) {
+      context.used.add(`conversion:${roomIndex}`);
+      convertWheelPickups(context, roomIndex, true);
+    }
   }
   return closed;
+}
+
+/** Whether the solve has taken up a ship room's window. */
+export const wheelsSolved = (context: RunImportContext, roomIndex: number) =>
+  context.used.has(`wheelSolve:${roomIndex}`);
+
+/**
+ * Whether what a ship room generates from its wheel picks waits for the solve:
+ * a swap cannot carry Artificer, Time Piece or trait-generated pickups, so
+ * where the record leaves the sides open and the saves can settle them, these
+ * are authored once the split is chosen.
+ */
+export function wheelAuthoringWaits(context: RunImportContext, roomIndex: number): boolean {
+  const room = context.record.rooms[roomIndex];
+  return (
+    room?.wheels !== undefined &&
+    mixedLeftUses(room) !== undefined &&
+    !wheelsSolved(context, roomIndex) &&
+    recordedEntryStates(context.record)[roomIndex + 1] !== undefined
+  );
 }
 
 function solveShip(
   context: RunImportContext,
   roomIndex: number,
   targets: readonly PressTarget[],
+  deferred: boolean,
 ): void {
   const room = context.record.rooms[roomIndex]!;
   const unknown = unknownOffers(context, roomIndex);
@@ -476,7 +503,14 @@ function solveShip(
     0,
     poolSpends(context, roomIndex) ?? context.record.rooms[roomIndex]!.rerolls ?? 0,
   );
-  const draws = bracketDraws(context, roomIndex, offers.length + rerolls, planned);
+  // A deferred conversion's draws are known: they count as on the canonical split.
+  const measure = () => bracketDraws(context, roomIndex, offers.length + rerolls, planned);
+  const draws = deferred
+    ? context.probe(() => {
+        convertWheelPickups(context, roomIndex, true);
+        return measure();
+      })
+    : measure();
   if (draws === undefined) return;
   context.used.add(solved);
   const wheelStores = new Set(offers.map((offer) => offer.wheel.store));
@@ -507,7 +541,9 @@ function solveShip(
               const value = firstSupported(context, offer.address, assigned[index]!);
               if (value !== undefined) values.push(value);
               return value;
-            }) && remainder.every((entry) => prependReplaced(context, pressTargets, entry))
+            }) &&
+            remainder.every((entry) => prependReplaced(context, pressTargets, entry)) &&
+            (!deferred || convertWheelPickups(context, roomIndex, true))
           );
         });
         if (placed && bracketStoresMatch(context, roomIndex, wheelStores))
@@ -824,91 +860,109 @@ export function importWheelConversions(context: RunImportContext): void {
       const visit = shipVisit(context, occurrence.occurrenceId);
       if (visit === undefined) continue;
       const used = `conversion:${visit.roomIndex}`;
-      const kinds = recordedConversions(context, visit.roomIndex);
-      if (kinds.length === 0 || context.used.has(used)) continue;
+      if (recordedConversions(context, visit.roomIndex).length === 0 || context.used.has(used))
+        continue;
+      if (wheelAuthoringWaits(context, visit.roomIndex)) continue;
       // Once the window closes the room's pickups are as reached as they will be.
       const closed = bracketClosed(context, visit.roomIndex);
       if (!closed && !context.pending(occurrence.occurrenceId)) continue;
-      const wheels = Object.entries(occurrence.state.wheels).slice(
-        0,
-        visit.room.wheels?.length ?? 0,
-      );
-      const pickups = wheels.flatMap(([key, wheel]) => {
-        const reward = wheel.offers[`offer${wheel.pickedOfferIndex}`];
-        if (reward === null || reward === undefined) return [];
-        const role = Object.keys(reward.dispositionByAcquisitionRole)[0];
-        return role === undefined
-          ? []
-          : [{ key, offerKey: `offer${wheel.pickedOfferIndex}`, reward, role }];
-      });
-      const biomeAddress = createBiomeAddress(project.route.routeKey, biome.biomeKey);
-      const refused = () =>
-        context.note({
-          area: 'conversion',
-          reason: 'refused',
-          address: createOccurrenceAddress(biomeAddress, occurrence.occurrenceId as OccurrenceId),
-          record: record(visit.roomIndex),
-        });
-      const acquisitionOf = (pickup: (typeof pickups)[number]) =>
-        createAcquisitionRoleAddress(
-          createRewardWheelOfferAddress(
-            biomeAddress,
-            occurrence.occurrenceId,
-            pickup.key,
-            pickup.offerKey,
-          ),
-          pickup.role,
-        );
-      // Conversions wait for every wheel pickup to be authored and reached.
-      if (
-        pickups.length !== wheels.length ||
-        pickups.some(
-          (pickup) =>
-            context.candidates().evaluate({
-              kind: 'acquisitionConversion',
-              acquisition: acquisitionOf(pickup),
-            }).kind !== 'acquisitionConversion',
-        )
-      ) {
-        if (closed) {
-          context.used.add(used);
-          kinds.forEach(() => refused());
-        }
-        continue;
-      }
-      context.used.add(used);
-      const uncollected = pickups.filter(
-        ({ reward }) =>
-          (visit.room.uses[reward.offer.rewardType] ?? 0) === 0 &&
-          !(
-            reward.offer.payload?.kind === 'BoonSource' &&
-            (visit.room.uses[reward.offer.payload.source] ?? 0) > 0
-          ),
-      );
-      for (const kind of kinds) {
-        const target = uncollected.find((pickup) => {
-          const evaluation = context
-            .candidates()
-            .evaluate({ kind: 'acquisitionConversion', acquisition: acquisitionOf(pickup) });
-          return (
-            evaluation.kind === 'acquisitionConversion' &&
-            (kind === 'artificer'
-              ? evaluation.result.artificerSupported
-              : evaluation.result.timePieceSupported)
-          );
-        });
-        if (target === undefined) {
-          refused();
-          continue;
-        }
-        uncollected.splice(uncollected.indexOf(target), 1);
-        convertAcquisition(
-          context,
-          acquisitionOf(target),
-          kind,
-          target.reward.offer.rewardType,
-          visit.roomIndex,
-        );
-      }
+      if (convertWheelPickups(context, visit.roomIndex, closed)) context.used.add(used);
     }
+}
+
+/**
+ * Applies a ship room's recorded conversions to its wheel pickups, each to an
+ * uncollected pickup that takes it. Waits, returning false, until every pickup
+ * is authored and reached; once the window has closed what is missing is refused.
+ */
+function convertWheelPickups(
+  context: RunImportContext,
+  roomIndex: number,
+  closed: boolean,
+): boolean {
+  const room = context.record.rooms[roomIndex]!;
+  const kinds = recordedConversions(context, roomIndex);
+  const project = context.assembly().project;
+  const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
+  const occurrence = authoredOccurrence(
+    project,
+    biomeKey,
+    context.occurrences.occurrenceOf(roomIndex),
+  );
+  if (occurrence?.state.kind !== 'shipCombat') return false;
+  const wheels = Object.entries(occurrence.state.wheels).slice(0, room.wheels?.length ?? 0);
+  const pickups = wheels.flatMap(([key, wheel]) => {
+    const reward = wheel.offers[`offer${wheel.pickedOfferIndex}`];
+    if (reward === null || reward === undefined) return [];
+    const role = Object.keys(reward.dispositionByAcquisitionRole)[0];
+    return role === undefined
+      ? []
+      : [{ key, offerKey: `offer${wheel.pickedOfferIndex}`, reward, role }];
+  });
+  const biomeAddress = createBiomeAddress(project.route.routeKey, biomeKey);
+  const refused = () =>
+    context.note({
+      area: 'conversion',
+      reason: 'refused',
+      address: createOccurrenceAddress(biomeAddress, occurrence.occurrenceId as OccurrenceId),
+      record: record(roomIndex),
+    });
+  const acquisitionOf = (pickup: (typeof pickups)[number]) =>
+    createAcquisitionRoleAddress(
+      createRewardWheelOfferAddress(
+        biomeAddress,
+        occurrence.occurrenceId,
+        pickup.key,
+        pickup.offerKey,
+      ),
+      pickup.role,
+    );
+  // Conversions wait for every wheel pickup to be authored and reached.
+  if (
+    pickups.length !== wheels.length ||
+    pickups.some(
+      (pickup) =>
+        context.candidates().evaluate({
+          kind: 'acquisitionConversion',
+          acquisition: acquisitionOf(pickup),
+        }).kind !== 'acquisitionConversion',
+    )
+  ) {
+    if (closed) kinds.forEach(() => refused());
+    return closed;
+  }
+  const uncollected = pickups.filter(
+    ({ reward }) =>
+      (room.uses[reward.offer.rewardType] ?? 0) === 0 &&
+      !(
+        reward.offer.payload?.kind === 'BoonSource' &&
+        (room.uses[reward.offer.payload.source] ?? 0) > 0
+      ),
+  );
+  for (const kind of kinds) {
+    const target = uncollected.find((pickup) => {
+      const evaluation = context
+        .candidates()
+        .evaluate({ kind: 'acquisitionConversion', acquisition: acquisitionOf(pickup) });
+      return (
+        evaluation.kind === 'acquisitionConversion' &&
+        (kind === 'artificer'
+          ? evaluation.result.artificerSupported
+          : evaluation.result.timePieceSupported)
+      );
+    });
+    if (target === undefined) {
+      refused();
+      continue;
+    }
+    uncollected.splice(uncollected.indexOf(target), 1);
+    convertAcquisition(
+      context,
+      acquisitionOf(target),
+      kind,
+      target.reward.offer.rewardType,
+      roomIndex,
+    );
+  }
+  return true;
 }

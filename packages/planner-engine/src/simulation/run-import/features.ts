@@ -35,6 +35,7 @@ import { insertRoomAction, removeRoomAction } from './actions';
 import type { RunImportContext } from './import';
 import { deliveredIncomingReward, occurrenceIdOf } from './occurrences';
 import { pickupUseCount } from './vocabulary';
+import { wheelAuthoringWaits, wheelsSolved } from './wheels';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
 
@@ -683,12 +684,17 @@ export function importFeatures(context: RunImportContext): void {
   const project = context.assembly().project;
   for (const biome of project.route.biomes)
     for (const occurrence of biome.topology?.occurrences ?? []) {
-      if (!context.pending(occurrence.occurrenceId)) continue;
       const roomIndex = context.occurrences.visitsOf(occurrence.occurrenceId)[0];
       if (roomIndex === undefined) continue;
+      // A ship's trait pickups wait for its wheel sides; the solve releases them once.
+      const released = `wheelTraitPickups:${roomIndex}`;
+      const waits = wheelAuthoringWaits(context, roomIndex);
+      const solved = !waits && wheelsSolved(context, roomIndex) && !context.used.has(released);
+      if (!context.pending(occurrence.occurrenceId) && !solved) continue;
+      if (solved) context.used.add(released);
       importRack(context, biome.biomeKey, occurrence, roomIndex);
       importFountain(context, biome.biomeKey, occurrence, roomIndex);
-      importTraitPickups(context, biome.biomeKey, occurrence, roomIndex);
+      if (!waits) importTraitPickups(context, biome.biomeKey, occurrence, roomIndex);
       importSeaStar(context, biome.biomeKey, occurrence, roomIndex);
     }
 }

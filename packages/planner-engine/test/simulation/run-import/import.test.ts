@@ -648,6 +648,78 @@ describe('run import of the Surface capture', () => {
     });
   });
 
+  /** O_Combat05 as if its wheels, in `order`, had used one side each: the record no longer says which. */
+  const mixedCombat05 = (order: readonly number[]): RunRecord => ({
+    ...record,
+    rooms: record.rooms.map((room, index) =>
+      index === 25
+        ? {
+            ...room,
+            uses: {
+              ...Object.fromEntries(
+                Object.entries(room.uses).filter(([name]) => name !== 'ShipsSteeringWheelLeft'),
+              ),
+              ShipsSteeringWheelLeft: 1,
+              ShipsSteeringWheelRight: 1,
+            },
+            wheels: order.map((at): RunRecordWheel => {
+              const { store, picked, offers } = room.wheels![at]!;
+              return { store, picked, ...(offers === undefined ? {} : { offers }) };
+            }),
+          }
+        : room,
+    ),
+  });
+
+  it.each([
+    ['the converted MetaProgress wheel first', [0, 1], 1, 2],
+    ['the RunProgress wheel first', [1, 0], 2, 1],
+  ])(
+    "settles O_Combat05's split with %s, its conversions on the authored picks",
+    (_name, order, metaPick, runPick) => {
+      const result = projectFromRunRecord(catalog, mixedCombat05(order));
+      expect(
+        result.report.entries
+          .filter((entry) => entry.area === 'wheel' && entry.record?.roomIndex === 25)
+          .map(describeEntry),
+      ).toEqual([]);
+      expect(mismatchLines(result.report)).toEqual(mismatchLines(imported.report));
+      const ship = occurrence(result.project, 'O-r25').state;
+      const wheels = ship.kind === 'shipCombat' ? ship.wheels : {};
+      const [meta, run] = order[0] === 0 ? ['wheel1', 'wheel2'] : ['wheel2', 'wheel1'];
+      // Left picks go to the first wheel in setup order; Artificer and Time Piece follow them.
+      expect(wheels[meta!]).toMatchObject({
+        storeKey: 'MetaProgress',
+        pickedOfferIndex: metaPick,
+        offers: {
+          [`offer${metaPick}`]: {
+            offer: { rewardType: 'MetaCardPointsCommonBigDrop' },
+            dispositionByAcquisitionRole: { self: { kind: 'artificer' } },
+          },
+          [`offer${3 - metaPick}`]: { offer: { rewardType: 'GiftDrop' } },
+        },
+      });
+      expect(wheels[run!]).toMatchObject({
+        storeKey: 'RunProgress',
+        pickedOfferIndex: runPick,
+        offers: {
+          [`offer${runPick}`]: {
+            offer: { rewardType: 'SpellDrop' },
+            dispositionByAcquisitionRole: { self: { kind: 'timePiece' } },
+          },
+          [`offer${3 - runPick}`]: { offer: { rewardType: 'MaxManaDrop' } },
+        },
+      });
+      expect(
+        result.report.entries
+          .filter((entry) => entry.area === 'conversion' && entry.record?.roomIndex === 25)
+          .map(describeEntry),
+      ).toEqual([
+        'assumption conversion r25 acquisitionEntry@O-r25 -> ReplaceAcquisitionEntryOffer(O-r25 MaxHealthDrop)',
+      ]);
+    },
+  );
+
   it('imports the inverse customization and the recorded boon screen', () => {
     expect(
       occurrence(imported.project, 'N-r11').encounters.customizationByPhase?.['Encounter']?.[

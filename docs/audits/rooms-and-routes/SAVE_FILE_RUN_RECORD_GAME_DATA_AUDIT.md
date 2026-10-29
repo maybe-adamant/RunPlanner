@@ -600,7 +600,8 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
 - A ship room's unpicked wheel offers are solved once its save-to-save
   window closes: the next room entered, every draw authored and any Artificer
   or Time Piece conversion applied, or reported refused when no pickup of the
-  ship can take it by then. Until then each holds a provisional value,
+  ship can take it by then; a room whose sides are open applies its
+  conversions after the solve instead (below). Until then each holds a provisional value,
   the first supported type of its wheel's domain, taking types the room's
   wheels did not pick before those they did and then those the saved store
   lost most of first, so that an earlier answer is less often refused. The
@@ -626,10 +627,13 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   counts, moving each pick with its authorship to the other side, and groups
   those fits by exit state as above; a wheel whose side differs between groups
   is reported as not in the record with the other side as its alternative.
-  A wheel whose offers already have generated pickups or results (an Artificer
-  replacement, a Sea Star duplicate) keeps its side, so a split needing it to
-  move does not fit. When the window never closes or nothing fits, each
-  wheel's canonical side is reported the same way.
+  A swap cannot carry what was generated from an offer, so in such a room the
+  recorded Artificer and Time Piece conversions and the pickups a picked
+  trait drops are authored after the split is chosen: each split's simulation
+  applies the conversions to its own picks before the stores compare, and the
+  conversions' draws count as known in the arithmetic. When the window never
+  closes or nothing fits, each wheel's canonical side is reported the same
+  way, and the conversions act on the canonical picks.
 - A hidden return door's placeholder and reward are pinned exactly from the
   return door's `ExitDoorRooms` and `OfferedRewards`.
 - A batch's doors are ordered by the catalog's declared native door order for
