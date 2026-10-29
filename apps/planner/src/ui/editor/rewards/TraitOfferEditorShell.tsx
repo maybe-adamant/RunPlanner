@@ -319,7 +319,10 @@ export function TraitOfferEditorShell({
             earlierCount={earlierCount}
             idPrefix={encodeURIComponent(semanticAddressKey(interaction.owner))}
             marked={markedScreens}
-            onRemove={() => updateValue(withRerolledScreens(value, earlierScreens.slice(0, -1)))}
+            onRemove={() => {
+              updateValue(withRerolledScreens(value, earlierScreens.slice(0, -1)));
+              setEditingScreen(undefined);
+            }}
             onReroll={() => {
               updateValue(
                 withRerolledScreens(value, [

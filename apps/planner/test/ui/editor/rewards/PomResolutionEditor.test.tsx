@@ -403,6 +403,39 @@ describe('Pom resolution editor', () => {
       selectedTraitKey: 'A',
       rerolledScreens: [],
     });
+    // A screen rerolled again opens read-only.
+    await user.click(screen.getByRole('button', { name: 'Reroll · costs 10' }));
+    await user.click(screen.getByRole('tab', { name: 'Offer' }));
+    expect(screen.getByRole('button', { name: 'Edit' }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('keeps an earlier screen target in the row it was chosen for', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    const editorInteraction: WorkspaceLevelResolutionInteraction = {
+      ...interaction({
+        value: {
+          kind: 'choice',
+          offeredTraitKeys: ['A', 'B', 'C'],
+          selectedTraitKey: 'A',
+          rerolledScreens: [{ offeredTraitKeys: ['A'] }],
+        },
+        load: () =>
+          Object.freeze({
+            groups: Object.freeze([group('branch-0', 'choice', ['A', 'B', 'C', 'D'], true, [], 3)]),
+          }),
+      }),
+      screenRerolls: { count: 1, maxCount: 1, lockAtMax: 'poolEmpty', nextCost },
+    };
+    render(<PomResolutionEditor interaction={editorInteraction} onCommit={onCommit} />);
+    await user.click(screen.getByRole('tab', { name: 'Offer' }));
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(await screen.findByRole('button', { name: 'Pom target 3' }));
+    await user.click(screen.getByRole('option', { name: 'Trait D' }));
+    expect(screen.getByRole('button', { name: 'Pom target 3' }).textContent).toContain('Trait D');
+    expect(screen.getByRole('button', { name: 'Pom target 2' }).textContent).toContain(
+      'Choose a trait',
+    );
   });
 
   it('shows each rerolled screen finding on its own tab and blocks Save', async () => {

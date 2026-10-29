@@ -171,6 +171,9 @@ export function PomResolutionEditor({
   const screenTab = useScreenTab(interaction.owner, earlierCount);
   // An earlier screen shows its rows read-only until the author chooses to correct it.
   const [editingScreen, setEditingScreen] = useState<number>();
+  const [earlierSlotPlacements, setEarlierSlotPlacements] = useState<
+    Readonly<Record<number, readonly (string | null)[]>>
+  >({});
   const holdFeedback = useGrowOnlyHeight(interaction.screenRerolls !== undefined);
   const [activeGroupKey, setActiveGroupKey] = useState<string | null>(null);
   const [seededGroupKey, setSeededGroupKey] = useState<string | null>(null);
@@ -385,12 +388,23 @@ export function PomResolutionEditor({
       .filter((finding) => findingScreenTab(finding) === activeScreen)
       .map((finding) => formatFindingExplanation(presentRerolledLevelScreenFinding(finding))),
   ];
+  // A screen stores its targets in order; the rows keep each one where it was chosen.
+  const earlierSlots = (screenIndex: number): readonly (string | null)[] => {
+    const keys = rerolledScreens?.[screenIndex]?.offeredTraitKeys ?? [];
+    const placed = earlierSlotPlacements[screenIndex];
+    const filled = placed?.filter((entry): entry is string => entry !== null) ?? [];
+    if (
+      placed !== undefined &&
+      filled.length === keys.length &&
+      filled.every((key, at) => key === keys[at])
+    )
+      return placed;
+    return Array.from({ length: count }, (_, at) => keys[at] ?? null);
+  };
   const updateEarlierSlot = (screenIndex: number, slot: number, target: string): void => {
-    const slots = Array.from(
-      { length: count },
-      (_, at) => rerolledScreens?.[screenIndex]?.offeredTraitKeys[at] ?? null,
-    );
+    const slots = [...earlierSlots(screenIndex)];
     slots[slot] = target;
+    setEarlierSlotPlacements((current) => ({ ...current, [screenIndex]: Object.freeze(slots) }));
     replaceScreen(
       screenIndex,
       Object.freeze({
@@ -409,7 +423,10 @@ export function PomResolutionEditor({
         earlierCount={earlierCount}
         idPrefix={domKey}
         marked={markedScreens}
-        onRemove={() => updateScreens(Object.freeze((rerolledScreens ?? []).slice(0, -1)))}
+        onRemove={() => {
+          updateScreens(Object.freeze((rerolledScreens ?? []).slice(0, -1)));
+          setEditingScreen(undefined);
+        }}
         onReroll={() => {
           updateScreens(Object.freeze([...(rerolledScreens ?? []), finalScreen()]));
           screenTab.select(earlierCount + 1);
@@ -463,7 +480,7 @@ export function PomResolutionEditor({
           ) : (
             <div className="trait-offer-options">
               {rows.map((index) => {
-                const current = earlierScreen?.offeredTraitKeys[index] ?? null;
+                const current = earlierSlots(earlierIndex)[index] ?? null;
                 return (
                   <fieldset
                     className={`trait-offer-option${earlierReadOnly ? ' trait-offer-readonly' : ''}`}

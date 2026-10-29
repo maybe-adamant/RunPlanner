@@ -109,7 +109,6 @@ export function RewardValueEditor({
 /** A staged reward picker over one resolver: type first, then a Boon or Trial god. */
 export function RewardOfferPicker({
   ariaLabel,
-  disabledHint,
   findingTarget,
   id,
   label,
@@ -124,8 +123,6 @@ export function RewardOfferPicker({
   unresolvedSeed,
 }: {
   readonly ariaLabel?: string;
-  /** The picker cannot be opened now; the hint says why. */
-  readonly disabledHint?: string;
   readonly findingTarget?: FindingTargetProps;
   readonly id: string;
   readonly label: string;
@@ -227,7 +224,6 @@ export function RewardOfferPicker({
         cancelLabel="Cancel"
         choiceLabel={resolver.choiceLabel(active?.step ?? 'type', activeOffer)}
         closeOnSelect={false}
-        {...(disabledHint === undefined ? {} : { disabledHint })}
         id={id}
         label={label}
         layout="inline"
