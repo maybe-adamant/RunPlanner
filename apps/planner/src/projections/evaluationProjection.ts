@@ -658,6 +658,9 @@ export function presentFinding(finding: SemanticFinding): FindingPresentation {
       description: 'Check its triggering purchase, or remove this refill.',
     });
   }
+  if (finding.code === 'screenRerollUnavailable' && finding.evidence.reason === 'nothingLeft') {
+    return Object.freeze({ title: 'Nothing left to reroll' });
+  }
   if (finding.origin.kind === 'infernalContractPedestal') {
     if (finding.code === 'rewardMissing')
       return Object.freeze({ title: 'Choose the Champion item' });

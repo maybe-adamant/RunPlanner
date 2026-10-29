@@ -117,6 +117,18 @@ describe('evaluation presentation', () => {
     ).toEqual({ title: 'Anomaly cannot occur here' });
   });
 
+  it('names a screen reroll with nothing left to draw apart from a missing card', () => {
+    expect(
+      presentFinding({
+        ...finding('screenRerollUnavailable'),
+        evidence: { reason: 'nothingLeft' },
+      }),
+    ).toEqual({ title: 'Nothing left to reroll' });
+    expect(
+      presentFinding({ ...finding('screenRerollUnavailable'), evidence: { reason: 'disabled' } }),
+    ).toEqual({ title: 'Screen rerolls are not available' });
+  });
+
   it('gives Travel Deal repair guidance without assuming its triggering purchase is absent', () => {
     expect(
       presentFinding({
