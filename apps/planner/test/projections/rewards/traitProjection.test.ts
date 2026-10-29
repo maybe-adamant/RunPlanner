@@ -380,7 +380,7 @@ describe('route trait projection', () => {
     expect(feedback.contextMessage).toBe('Trait choices cannot appear together');
   });
 
-  it('previews an earlier screen row replacement from that screen only', () => {
+  it('previews an earlier screen row replacement, level and rolls from that screen only', () => {
     const rows: AuthoredTraitOfferTraits = {
       kind: 'traits',
       giverKey: 'Apollo',
@@ -411,6 +411,9 @@ describe('route trait projection', () => {
                   screen: 0,
                   missing: false,
                   assessments: [{ legal: true, findings: [], replacementTransition: transition }],
+                  levelResolutions: [
+                    { effectiveLevel: 3, persephoneLevelBonusMaximum: 2, findings: [] },
+                  ],
                   composition: {} as never,
                   // Only the rows' assessments matter to the preview.
                 } as never,
@@ -428,6 +431,10 @@ describe('route trait projection', () => {
       projectTraitOfferFeedback(rows, candidate, (key) => key, 0).options[0]?.replacement,
     ).toMatchObject({ replacedTraitLabel: 'ZeusWeaponBoon', requiredRarity: 'Rare' });
     expect(projectTraitOfferFeedback(rows, candidate).options[0]?.replacement).toBeUndefined();
+    const earlier = projectTraitOfferFeedback(rows, candidate, (key) => key, 0).options[0];
+    expect(earlier?.effectiveLevel).toBe(3);
+    expect(earlier?.persephoneLevelRolls).toHaveLength(3);
+    expect(projectTraitOfferFeedback(rows, candidate).options[0]?.effectiveLevel).toBeUndefined();
   });
 
   it('projects an active rarity-floor finding as repairable option copy', () => {

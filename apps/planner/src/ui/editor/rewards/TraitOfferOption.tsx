@@ -232,8 +232,9 @@ export function TraitOfferOption<TraitValue>({
         <dl className="trait-option-effective-summary trait-option-persephone-bonus">
           <dt>Persephone Roll</dt>
           <dd>
-            {shownOnly ? (
-              // The roll happens at the pick, which this screen never had.
+            {shownOnly &&
+            (persephoneLevelRolls === undefined || onPersephoneLevelBonusChange === undefined) ? (
+              // No roll domain is known for this row of a screen rerolled away.
               <select
                 aria-label={persephoneAriaLabel ?? `${legend} Persephone roll`}
                 disabled
@@ -247,6 +248,7 @@ export function TraitOfferOption<TraitValue>({
             ) : (
               <select
                 aria-label={persephoneAriaLabel ?? `${legend} Persephone roll`}
+                disabled={readOnly}
                 id={`${controlId}-persephone-level-bonus`}
                 onChange={(event) => onPersephoneLevelBonusChange(Number(event.target.value))}
                 value={persephoneLevelBonus ?? 0}

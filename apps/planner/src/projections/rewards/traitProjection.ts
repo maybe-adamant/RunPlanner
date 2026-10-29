@@ -238,7 +238,6 @@ export function projectTraitOfferFeedback(
           ...(findingsByTrait.get(option.traitKey) ?? []),
           ...(findingsByOption.get(['option1', 'option2', 'option3'][index]!) ?? []),
         ];
-        // Level and Persephone values describe the final screen's pick.
         const final = screen === 'final';
         const replacement = uniformReplacement(
           final
@@ -251,10 +250,27 @@ export function projectTraitOfferFeedback(
           evaluation.result.branches.length,
           option.traitKey,
         );
-        const effectiveLevel = final ? evaluation.result.effectiveLevels[index] : undefined;
+        // An earlier screen's row values are published only when every branch agrees.
+        const screenLevel = (
+          field: 'effectiveLevel' | 'persephoneLevelBonusMaximum',
+        ): number | undefined => {
+          const values = evaluation.result.branches.map(
+            (branch) =>
+              branch.rerolledScreens?.find((entry) => entry.screen === screen)?.levelResolutions[
+                index
+              ]?.[field],
+          );
+          const first = values[0];
+          return first !== undefined && values.every((value) => value === first)
+            ? first
+            : undefined;
+        };
+        const effectiveLevel = final
+          ? evaluation.result.effectiveLevels[index]
+          : screenLevel('effectiveLevel');
         const persephoneLevelBonusMaximum = final
           ? evaluation.result.persephoneLevelBonusMaximums[index]
-          : undefined;
+          : screenLevel('persephoneLevelBonusMaximum');
         return Object.freeze({
           legal: reasons.length === 0,
           reasons: Object.freeze([...reasons]),

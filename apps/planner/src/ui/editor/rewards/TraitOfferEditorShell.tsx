@@ -437,6 +437,12 @@ export function TraitOfferEditorShell({
                       {...(screenValue.options[index]?.rarity === undefined
                         ? {}
                         : { effectiveRarity: screenValue.options[index]!.rarity! })}
+                      {...(feedback.options[index]?.effectiveLevel === undefined
+                        ? {}
+                        : { effectiveLevel: feedback.options[index]!.effectiveLevel! })}
+                      {...(feedback.options[index]?.persephoneLevelRolls === undefined
+                        ? {}
+                        : { persephoneLevelRolls: feedback.options[index]!.persephoneLevelRolls! })}
                       showEffectiveValues
                       rejected={screenValue.rejectedOptionKey === OPTION_KEYS[index]}
                       spellOffer={spellOffer}

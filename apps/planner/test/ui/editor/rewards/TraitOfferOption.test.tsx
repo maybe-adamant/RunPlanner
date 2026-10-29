@@ -108,3 +108,49 @@ describe('trait rarity presentation', () => {
     },
   );
 });
+
+describe('a row of a screen rerolled away', () => {
+  const rolls = [
+    { levelBonus: 0, roll: 0 },
+    { levelBonus: 1, roll: 2 },
+  ];
+
+  it('shows its stored Persephone roll, disabled until edited, and never a pick', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const props = {
+      ...baseProps,
+      onPersephoneLevelBonusChange: onChange,
+      persephoneAriaLabel: 'Option 1 Persephone roll',
+      persephoneLevelBonus: 1,
+      persephoneLevelRolls: rolls,
+      pickable: false,
+      showPersephoneBonus: true,
+    };
+    const { rerender } = render(<TraitOfferOption {...props} readOnly />);
+    const roll = screen.getByLabelText('Option 1 Persephone roll') as HTMLSelectElement;
+    expect(roll.value).toBe('1');
+    expect(roll.disabled).toBe(true);
+    const pick = screen.getByRole('radio') as HTMLInputElement;
+    expect(pick.disabled && !pick.checked).toBe(true);
+    rerender(<TraitOfferOption {...props} />);
+    await user.selectOptions(screen.getByLabelText('Option 1 Persephone roll'), '0');
+    expect(onChange).toHaveBeenCalledWith(0);
+    expect((screen.getByRole('radio') as HTMLInputElement).disabled).toBe(true);
+  });
+
+  it('shows a disabled empty Persephone roll when no roll domain is known', () => {
+    render(
+      <TraitOfferOption
+        {...baseProps}
+        onPersephoneLevelBonusChange={() => {}}
+        persephoneAriaLabel="Option 1 Persephone roll"
+        pickable={false}
+        showPersephoneBonus
+      />,
+    );
+    const roll = screen.getByLabelText('Option 1 Persephone roll') as HTMLSelectElement;
+    expect(roll.disabled).toBe(true);
+    expect(roll.textContent).toBe('—');
+  });
+});
