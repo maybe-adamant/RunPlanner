@@ -202,6 +202,32 @@ function validateShopTransactionOwners(
   }
 }
 
+/** Every press names a published door, cage or wheel offer of its own room. */
+function validateRerollTargets(
+  occurrence: Pick<ExecutionOccurrence, 'doors' | 'overview' | 'rerolls'>,
+  label: string,
+): void {
+  const doorTargets = occurrence.doors.kind === 'batch' ? occurrence.doors.targets : [];
+  (occurrence.rerolls ?? []).forEach(({ target }, index) => {
+    const resolved =
+      target.kind === 'wheelOffer'
+        ? (occurrence.overview.rewardWheels ?? []).some(
+            (wheel) =>
+              wheel.wheelKey === target.wheelKey &&
+              wheel.offers.some((offer) => offer.offerKey === target.offerKey),
+          )
+        : (() => {
+            const door = doorTargets.findLast((candidate) => candidate.exitKey === target.exitKey);
+            if (door === undefined) return false;
+            return (
+              target.kind === 'door' ||
+              (door.cageRewards !== undefined && target.cageIndex <= door.cageRewards.length)
+            );
+          })();
+    if (!resolved) fail(`${label}.rerolls[${index}].target must name a published target`);
+  });
+}
+
 export function rerollTarget(value: unknown, label: string): ExecutionRerollTarget {
   const record = object(value, label);
   const kind = stringValue(record.kind, `${label}.kind`);
@@ -662,6 +688,7 @@ export function occurrence(value: unknown, index: number): ExecutionOccurrence {
         }),
   });
   validateShopTransactionOwners(parsed, label);
+  validateRerollTargets(parsed, label);
   validateRewardWheelProduct(parsed, label);
   return parsed;
 }

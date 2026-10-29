@@ -215,7 +215,8 @@ function hubFountainUse(
   });
 }
 
-function hubRerolls(value: unknown, label: string) {
+/** Board rerolls pressed across Hub stays, in order; each names a Hub slot. */
+function hubRerolls(value: unknown, slotKeys: ReadonlySet<string>, label: string) {
   const rows = array(value, label);
   if (rows.length === 0) fail(`${label} must be absent when empty`);
   const owners = new Set<string>();
@@ -227,9 +228,11 @@ function hubRerolls(value: unknown, label: string) {
       const owner = stringValue(row.owner, `${rowLabel}.owner`, MAX_OWNER_STRING);
       if (owners.has(owner)) fail(`${label} has duplicate reroll owner`);
       owners.add(owner);
+      const slotKey = stringValue(row.slotKey, `${rowLabel}.slotKey`);
+      if (!slotKeys.has(slotKey)) fail(`${rowLabel}.slotKey must name a Hub slot`);
       return Object.freeze({
         owner,
-        slotKey: stringValue(row.slotKey, `${rowLabel}.slotKey`),
+        slotKey,
         reward: reward(row.reward, `${rowLabel}.reward`),
       });
     }),
@@ -811,31 +814,32 @@ export function overview(value: unknown, label: string) {
           );
           if (requiredVisitCount > slotCount)
             fail(`${label}.hub.requiredVisitCount exceeds the open Hub slots`);
+          const slots = Object.freeze(
+            array(hub.slots, `${label}.hub.slots`).map((entry, index) => {
+              const row = object(entry, `${label}.hub.slots[${index}]`);
+              exact(
+                row,
+                ['slotKey', 'physicalDoorId', 'room', 'reward'],
+                [],
+                `${label}.hub.slots[${index}]`,
+              );
+              return Object.freeze({
+                slotKey: stringValue(row.slotKey, `${label}.hub.slots[${index}].slotKey`),
+                physicalDoorId: integer(
+                  row.physicalDoorId,
+                  `${label}.hub.slots[${index}].physicalDoorId`,
+                  1,
+                ),
+                room: roomReference(row.room, `${label}.hub.slots[${index}].room`),
+                reward: reward(row.reward, `${label}.hub.slots[${index}].reward`),
+              });
+            }),
+          );
           return Object.freeze({
             room: Object.freeze({
               gameName: stringValue(room.gameName, `${label}.hub.room.gameName`),
             }),
-            slots: Object.freeze(
-              array(hub.slots, `${label}.hub.slots`).map((entry, index) => {
-                const row = object(entry, `${label}.hub.slots[${index}]`);
-                exact(
-                  row,
-                  ['slotKey', 'physicalDoorId', 'room', 'reward'],
-                  [],
-                  `${label}.hub.slots[${index}]`,
-                );
-                return Object.freeze({
-                  slotKey: stringValue(row.slotKey, `${label}.hub.slots[${index}].slotKey`),
-                  physicalDoorId: integer(
-                    row.physicalDoorId,
-                    `${label}.hub.slots[${index}].physicalDoorId`,
-                    1,
-                  ),
-                  room: roomReference(row.room, `${label}.hub.slots[${index}].room`),
-                  reward: reward(row.reward, `${label}.hub.slots[${index}].reward`),
-                });
-              }),
-            ),
+            slots,
             finalHandoff: roomReference(hub.finalHandoff, `${label}.hub.finalHandoff`),
             requiredVisitCount,
             fountain: hubFountainUse(hub.fountain, requiredVisitCount, `${label}.hub.fountain`),
@@ -846,7 +850,13 @@ export function overview(value: unknown, label: string) {
             ),
             ...(hub.rerolls === undefined
               ? {}
-              : { rerolls: hubRerolls(hub.rerolls, `${label}.hub.rerolls`) }),
+              : {
+                  rerolls: hubRerolls(
+                    hub.rerolls,
+                    new Set(slots.map((slot) => slot.slotKey)),
+                    `${label}.hub.rerolls`,
+                  ),
+                }),
           });
         })();
   const localSlots =

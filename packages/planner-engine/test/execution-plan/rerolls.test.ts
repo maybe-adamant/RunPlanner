@@ -35,6 +35,10 @@ import {
 } from '../support/rerolls';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { surfaceNORerollsProject } from './support/rerolls-fixture';
+import { currentSchemaWire } from './support/current-schema-wire';
+import doorRerollsFixture from './fixtures/underworld-f-rerolls.execution.json';
+import fieldsFixture from './fixtures/underworld-fghi.execution.json';
+import surfaceRerollsFixture from './fixtures/surface-no-rerolls.execution.json';
 
 const g = createBiomeAddress('Underworld', 'G');
 const gSource = 'golden-g-b1-e1';
@@ -244,6 +248,76 @@ describe('reroll publication', () => {
         delete press(room).reward;
       }),
     ).toThrow('reward');
+  });
+});
+
+describe('reroll target decoding', () => {
+  type WireRoom = Record<string, unknown> & { readonly id: string };
+  /** Decodes a fixture after editing one room, re-stamped so only the edit can fail. */
+  function decodeEdited(fixture: unknown, roomId: string, edit: (room: WireRoom) => void) {
+    const copy = structuredClone(fixture) as { occurrences: WireRoom[] };
+    edit(copy.occurrences.find((room) => room.id === roomId)!);
+    return () => decodeExecutionPlan(currentSchemaWire(copy));
+  }
+  const press = (room: WireRoom) => (room.rerolls as Record<string, unknown>[])[0]!;
+  const unpublished = 'must name a published target';
+
+  it('rejects a door press whose exit is not a published door of its room', () => {
+    const roomId = 'golden-f-b2-e1';
+    expect(decodeEdited(doorRerollsFixture, roomId, () => undefined)).not.toThrow();
+    expect(
+      decodeEdited(doorRerollsFixture, roomId, (room) => {
+        press(room).target = { kind: 'door', exitKey: 'exit9' };
+      }),
+    ).toThrow(unpublished);
+  });
+
+  it("accepts a cage press only within its door's published cage rewards", () => {
+    const cage =
+      (cageIndex: number, exitKey = 'exit1') =>
+      (room: WireRoom) => {
+        const doors = room.doors as { targets: { cageRewards?: unknown[] }[] };
+        room.rerolls = [
+          {
+            owner: JSON.stringify(['roomAction', 'Underworld', 'H', room.id, '["reroll","r1"]']),
+            target: { kind: 'cage', exitKey, cageIndex },
+            reward: doors.targets[0]!.cageRewards![0],
+          },
+        ];
+      };
+    expect(decodeEdited(fieldsFixture, 'golden-h-combat02', cage(2))).not.toThrow();
+    expect(decodeEdited(fieldsFixture, 'golden-h-combat02', cage(3))).toThrow(unpublished);
+    expect(decodeEdited(fieldsFixture, 'golden-h-combat02', cage(1, 'exit9'))).toThrow(unpublished);
+    // A door without cage rewards publishes no cage to press.
+    expect(
+      decodeEdited(doorRerollsFixture, 'golden-f-b2-e1', (room) => {
+        press(room).target = { kind: 'cage', exitKey: 'exit2', cageIndex: 1 };
+      }),
+    ).toThrow(unpublished);
+  });
+
+  it('rejects a wheel press that names no published offer of its wheel', () => {
+    const roomId = 'surface-o-combat04';
+    expect(decodeEdited(surfaceRerollsFixture, roomId, () => undefined)).not.toThrow();
+    expect(
+      decodeEdited(surfaceRerollsFixture, roomId, (room) => {
+        press(room).target = { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer9' };
+      }),
+    ).toThrow(unpublished);
+    expect(
+      decodeEdited(surfaceRerollsFixture, roomId, (room) => {
+        press(room).target = { kind: 'wheelOffer', wheelKey: 'wheel9', offerKey: 'offer1' };
+      }),
+    ).toThrow(unpublished);
+  });
+
+  it('rejects a Hub press whose slot is not a Hub slot', () => {
+    expect(
+      decodeEdited(surfaceRerollsFixture, 'surface-n-prehub', (room) => {
+        const hub = (room.overview as { hub: { rerolls: Record<string, unknown>[] } }).hub;
+        hub.rerolls[0]!.slotKey = 'combat99';
+      }),
+    ).toThrow('slotKey must name a Hub slot');
   });
 });
 
