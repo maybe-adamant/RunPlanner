@@ -12,6 +12,7 @@ import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
 /** Complete intent-bound editor for every authored reward leaf. */
 export function RewardControlEditor({
+  ariaLabel,
   control,
   idPrefix,
   interactions,
@@ -20,6 +21,8 @@ export function RewardControlEditor({
   offerStartStep,
   offerSummaryMode = 'offer',
 }: {
+  /** A Shop item picker's accessible name where its visible label is shortened. */
+  readonly ariaLabel?: string;
   readonly control: WorkspaceRewardControl;
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
@@ -50,7 +53,12 @@ export function RewardControlEditor({
   return (
     <>
       {control.shopOption !== undefined ? (
-        <ShopOfferEditor control={control} interactions={interactions} label={label} />
+        <ShopOfferEditor
+          {...(ariaLabel === undefined ? {} : { ariaLabel })}
+          control={control}
+          interactions={interactions}
+          label={label}
+        />
       ) : control.kind === 'countedReward' ? (
         <CountedRewardEditor
           candidateOwner={control.owner}

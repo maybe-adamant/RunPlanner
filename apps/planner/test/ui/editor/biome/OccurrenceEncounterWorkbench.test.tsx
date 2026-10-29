@@ -2801,6 +2801,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     const line = () => screen.getByRole('listitem', { name: 'Travel Deal' });
     expect(within(line()).queryByRole('checkbox')).toBeNull();
     expect(line().previousElementSibling?.textContent).toContain('Slot 1');
+    // The line's title names Travel Deal once; its picker reads only "Item".
+    expect(within(line()).getByText('Travel Deal').tagName).toBe('STRONG');
+    expect(within(line()).getByText('Item', { selector: 'label' })).toBeTruthy();
     await view.user.click(within(line()).getByRole('button', { name: 'Travel Deal Item' }));
     await view.user.click(
       within(await screen.findByRole('listbox')).getByRole('option', { name: 'Mystery Boon' }),

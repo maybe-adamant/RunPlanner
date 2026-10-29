@@ -1555,11 +1555,6 @@
   background: rgb(18 19 24 / 44%);
 }
 
-.timeline-continuation-label {
-  color: #aaa7af;
-  font-size: 0.78rem;
-}
-
 .timeline-row:is(
     [data-timeline-row-kind='insertion'],
     [data-timeline-row-kind='continuation']
@@ -2500,17 +2495,4 @@
 /* A rerolled reward wraps to keep both its first and final draw readable. */
 .hub-timeline-board-reward[data-rerolled='true'] {
   white-space: normal;
-}
-
-/* The Well's Travel Deal line: its item picker spans the label column on one line. */
-.timeline-row.travel-deal-line-compact > [data-timeline-cell='label'] {
-  display: none;
-}
-
-.timeline-row.travel-deal-line-compact > [data-timeline-cell='editors'] {
-  grid-column: 3 / 5;
-}
-
-.travel-deal-line-compact .field-control > label {
-  white-space: nowrap;
 }

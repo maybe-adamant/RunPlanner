@@ -231,9 +231,12 @@ function PurgingPoolTraitPicker({
 
 /** One Well inventory slot's item. */
 export function StygianWellSlotEditor({
+  fieldLabel,
   slot,
   interactions,
 }: {
+  /** The visible label where the line already names the slot; the accessible name keeps it. */
+  readonly fieldLabel?: string;
   readonly slot: Omit<StygianWellFeature['slots'][number], 'key'>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
@@ -250,7 +253,7 @@ export function StygianWellSlotEditor({
         findingTarget={findingTarget(slot.address)}
         ariaLabel={`Stygian Well ${slot.label} Item`}
         id={`${offer.key}-picker`}
-        label={`${slot.label} Item`}
+        label={fieldLabel ?? `${slot.label} Item`}
         layout="inline"
         loading={offerPicker.pending}
         model={offerPicker.result ?? emptyNullablePicker}
@@ -269,12 +272,15 @@ export function StygianWellSlotEditor({
 
 /** One Shrine inventory slot: its item and the delay rolled with it. */
 export function HermesShrineSlotEditor({
+  fieldLabel,
   label,
   marker,
   rewardLabel,
   rewardType,
   offer,
 }: {
+  /** The visible label where the line already names the slot; the accessible name keeps it. */
+  readonly fieldLabel?: string;
   readonly label: string;
   readonly marker: import('@planner/projections/structured-workspace').WorkspaceMarker;
   readonly rewardLabel?: string;
@@ -290,7 +296,7 @@ export function HermesShrineSlotEditor({
         findingTarget={findingTarget(marker.address)}
         ariaLabel={`Hermes Shrine ${label} Item`}
         id={`${offer.key}-picker`}
-        label={`${label} Item`}
+        label={fieldLabel ?? `${label} Item`}
         layout="inline"
         loading={offerPicker.pending}
         model={offerPicker.result ?? emptyStringPicker}

@@ -19,15 +19,12 @@ export function TravelDealLine({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly line: NonNullable<WorkspaceRoomActionRow['travelDealLine']>;
 }) {
-  // The Well's line names Travel Deal on its item picker alone.
-  const compact = line.kind === 'stygianWell';
   return (
     <TimelineRow
       aria-label="Travel Deal"
-      {...(compact ? { className: 'travel-deal-line-compact' } : {})}
       editors={travelDealLineEditor(interactions, line)}
       kind="continuation"
-      label={compact ? null : <span className="timeline-continuation-label">Travel Deal</span>}
+      label={<strong>Travel Deal</strong>}
     />
   );
 }
@@ -40,6 +37,7 @@ function travelDealLineEditor(
     case 'hermesShrine':
       return (
         <HermesShrineSlotEditor
+          fieldLabel="Item"
           label="Travel Deal"
           marker={line.refill.marker}
           rewardType={line.refill.rewardType}
@@ -53,14 +51,17 @@ function travelDealLineEditor(
         />
       );
     case 'stygianWell':
-      return <StygianWellSlotEditor interactions={interactions} slot={line.refill} />;
+      return (
+        <StygianWellSlotEditor fieldLabel="Item" interactions={interactions} slot={line.refill} />
+      );
     case 'worldShop':
       return (
         <RewardControlEditor
+          ariaLabel="Travel Deal Item"
           control={line.offer.rewardControl}
           idPrefix={`shop-${line.offer.rewardControl.marker.focusKey}`}
           interactions={interactions}
-          label="Travel Deal Item"
+          label="Item"
         />
       );
     default: {

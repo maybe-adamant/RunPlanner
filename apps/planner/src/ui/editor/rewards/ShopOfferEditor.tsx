@@ -17,10 +17,12 @@ const emptyModel = Object.freeze({ sections: Object.freeze([]) });
 
 /** Exact Shop item picker; item identity and resolved Boon source commit atomically. */
 export function ShopOfferEditor({
+  ariaLabel,
   control,
   interactions,
   label,
 }: {
+  readonly ariaLabel?: string;
   readonly control: WorkspaceRewardControl;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
@@ -35,6 +37,7 @@ export function ShopOfferEditor({
   const domain = useWorkspaceInteraction(interaction);
   return (
     <ContextualPicker<ShopOptionSelection | null>
+      {...(ariaLabel === undefined ? {} : { ariaLabel })}
       cancelLabel="Cancel"
       choiceLabel={control.owner.kind === 'shopOffer' ? 'Shop item' : 'Item'}
       closeOnSelect={true}
