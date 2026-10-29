@@ -196,6 +196,15 @@ function enteredRooms(project: ProjectDocument): readonly string[] {
   return last.history.ledgers.roomAppearances.map((appearance) => appearance.gameName);
 }
 
+/** The Sea Star duplicate pickups authored in an occurrence. */
+function seaStarDuplicates(project: ProjectDocument, occurrenceId: string) {
+  return Object.entries(occurrence(project, occurrenceId).acquisitionSites ?? {})
+    .flatMap(([siteKey, site]) =>
+      siteKey.startsWith('seaStarDuplicate:') ? Object.values(site.pickupEntries ?? {}) : [],
+    )
+    .flatMap((entry) => (entry === null ? [] : [entry]));
+}
+
 function generatedCustomizations(project: ProjectDocument): number {
   return project.route.biomes
     .flatMap((biome) => biome.topology?.occurrences ?? [])
@@ -783,18 +792,65 @@ describe('run import of the Surface victory', () => {
     imported = projectFromRunRecord(catalog, record);
   });
 
-  it("stops at P_Combat03's Sea Star Talent duplicate, past O_Combat07's Vivid Sea Poseidon as a fifth god", () => {
-    expect(imported.kind).toBe('stopped');
-    expect(imported.kind === 'stopped' && imported.stop).toMatchObject({
-      area: 'pathOfStars',
-      code: 'hexActivationMissing',
-      record: { roomIndex: 31, visit: 0 },
-    });
+  it("completes as a valid plan entering every recorded room, past O_Combat07's Vivid Sea Poseidon as a fifth god", () => {
+    expect(imported.kind).toBe('complete');
+    expect(enteredRooms(imported.project)).toEqual(record.rooms.map((room) => room.name));
     expect(
       imported.report.entries.some(
         (entry) => entry.reason === 'refused' && entry.record?.roomIndex === 21,
       ),
     ).toBe(false);
+  });
+
+  it("splits P_Combat03's new Path nodes between its Talent drop and the Sea Star duplicate", () => {
+    const room = occurrence(imported.project, 'P-r31');
+    const first =
+      room.state.kind === 'counted'
+        ? room.state.reward?.hexActivationsByAcquisitionRole?.['self']?.selectedNodeKeys
+        : undefined;
+    const duplicate = seaStarDuplicates(imported.project, 'P-r31')[0]
+      ?.hexActivationsByAcquisitionRole?.['self']?.selectedNodeKeys;
+    // Each drop takes its count of nodes reachable in layout order; any valid split invests the same tree.
+    expect(first).toEqual(['3:0', '3:2', '3:5', '4:2', '4:4', '4:5', '5:2', '5:3']);
+    expect(duplicate).toEqual(['5:4', '6:2', '6:4']);
+    const invested = (index: number) =>
+      Object.entries(record.rooms[index]!.spell!.talents).flatMap(([node, talent]) =>
+        talent.invested ? [node] : [],
+      );
+    expect([...invested(23), ...first!, ...duplicate!].sort()).toEqual(invested(31).sort());
+    expect(
+      imported.report.entries
+        .filter((entry) => entry.record?.roomIndex === 31 && entry.area === 'pathOfStars')
+        .map(describeEntry),
+    ).toEqual([]);
+  });
+
+  it('places each Sea Star duplicate on the pickup whose object its room used once more', () => {
+    const duplicated = (occurrenceId: string) =>
+      seaStarDuplicates(imported.project, occurrenceId)
+        .map((entry) => entry.offer.rewardType)
+        .sort();
+    // O_Combat12's third money use is wheel1's picked RoomMoneyDrop used again.
+    expect(duplicated('O-r23')).toEqual(['RoomMoneyDrop']);
+    expect(
+      Object.keys(occurrence(imported.project, 'O-r23').acquisitionSites ?? {}),
+    ).toContainEqual(expect.stringContaining('rewardWheelOffer'));
+    expect(duplicated('P-r31')).toEqual(['TalentDrop']);
+    expect(duplicated('P-r37')).toEqual(['RoomMoneyDrop']);
+    expect(duplicated('P-r38')).toEqual(['RoomMoneyDrop']);
+    // Q_PreBoss01's Buried Treasure gold is collected first; the two leftover uses are duplicates.
+    expect(duplicated('Q-r49')).toEqual(['RoomMoneySmallDrop', 'RoomMoneyTinyDrop']);
+    expect(
+      occurrence(imported.project, 'Q-r49').roomActions.order.flatMap((action) =>
+        action.kind === 'interactAcquisitionEntry' && action.siteKey.startsWith('traitGenerated:')
+          ? [action.entryKey]
+          : [],
+      ),
+    ).toEqual(['smallGold', 'tinyGold1', 'tinyGold2', 'minorHeal1', 'minorHeal2', 'bones']);
+    // Only which of the two tiny gold pickups was duplicated is not saved.
+    expect(
+      imported.report.entries.filter((entry) => entry.area === 'reward').map(describeEntry),
+    ).toEqual(['assumption reward r49 acquisitionRole@Q-r49:self -> ReplaceSeaStarResult(Q-r49)']);
   });
 
   it("imports O_MiniBoss01's All Together sets and N_Combat21's Bridal Glow target exactly", () => {
@@ -954,7 +1010,7 @@ describe('run import of the Surface victory', () => {
       }),
     };
     const result = projectFromRunRecord(catalog, altered);
-    expect(result.kind === 'stopped' && result.stop.record).toEqual({ roomIndex: 31, visit: 0 });
+    expect(result.kind).toBe('complete');
     expect(
       result.report.entries
         .filter((entry) => entry.area === 'wheel' && entry.record?.roomIndex === 23)
@@ -998,9 +1054,17 @@ describe('run import of the Surface victory', () => {
 
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
-      assumption: { conversion: 2, doors: 1, reward: 1, shop: 2, traitOffer: 3 },
-      notInRecord: { reward: 1 },
-      stopped: { pathOfStars: 1 },
+      assumption: {
+        conversion: 2,
+        doors: 11,
+        encounter: 1,
+        reward: 1,
+        roomActionOrder: 19,
+        shop: 4,
+        traitOffer: 5,
+      },
+      notInRecord: { shop: 2 },
+      refused: { doors: 1 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption conversion r14 acquisitionEntry@N-r14 -> ReplaceAcquisitionEntryOffer(N-r14 HermesUpgrade)',
@@ -1011,10 +1075,46 @@ describe('run import of the Surface victory', () => {
       'assumption traitOffer r27 traitOffer@O-r27:source -> ReplaceTraitOffer(O-r27 PoseidonManaBoon|OmegaPoseidonProjectileBoon|PoseidonExCastBoon#option2)',
       'assumption shop r27 shopOffer@O-r27 -> ReplaceShopOfferOption(O-r27)',
       'assumption doors r30 exitDecision@P:start',
-      'assumption reward r31 acquisitionRole@P-r31:self -> ReplaceSeaStarResult(P-r31)',
+      'assumption doors r31 exitDecision@P-r31',
+      'assumption doors r32 exitDecision@P-r32',
+      'refused doors r32d723130 target@P-r32:exit1 -> CreateTarget(P-r33 P_Combat09)',
+      'assumption doors r32d723130 target@P-r32:exit2 -> CreateTarget(P-r32-d723130 P_Combat05)',
+      'assumption doors r33 exitDecision@P-r33',
+      'assumption doors r34 exitDecision@P-r34',
+      'assumption doors r35 exitDecision@P-r35',
+      'assumption doors r36 exitDecision@P-r36',
+      'assumption doors r37 exitDecision@P-r37',
+      'assumption encounter r38 encounterPhase@P-r38:Combat -> ReplaceAetosWave(P-r38)',
+      'assumption traitOffer r39 traitOffer@P-r39:source -> ReplaceTraitOffer(P-r39 HeraCastBoon|HeraManaBoon|LinkedDeathDamageBoon#option3)',
+      'assumption shop r39 shopOffer@P-r39 -> ReplaceShopOfferOption(P-r39)',
+      'assumption doors r44 exitDecision@Q-r44',
+      'assumption doors r47 exitDecision@Q-r47',
+      'assumption traitOffer r49 traitOffer@Q-r49:source -> ReplaceTraitOffer(Q-r49 PoseidonManaBoon|RoomRewardBonusBoon|EncounterStartOffenseBuffBoon#option2)',
+      'assumption shop r49 shopOffer@Q-r49 -> ReplaceShopOfferOption(Q-r49)',
+      'assumption reward r49 acquisitionRole@Q-r49:self -> ReplaceSeaStarResult(Q-r49)',
+      'assumption roomActionOrder r17 occurrence@N-r17',
+      'assumption roomActionOrder r19 occurrence@N-r17:postboss',
+      'assumption roomActionOrder r14 occurrence@N-r14',
+      'assumption roomActionOrder r21 occurrence@O-r21',
+      'assumption roomActionOrder r22 occurrence@O-r22',
+      'assumption roomActionOrder r23 occurrence@O-r23',
+      'assumption roomActionOrder r26 occurrence@O-r26',
+      'assumption roomActionOrder r27 occurrence@O-r27',
+      'assumption roomActionOrder r29 occurrence@O-r27:postboss',
+      'assumption roomActionOrder r31 occurrence@P-r31',
+      'assumption roomActionOrder r33 occurrence@P-r33',
+      'assumption roomActionOrder r34 occurrence@P-r34',
+      'assumption roomActionOrder r35 occurrence@P-r35',
+      'assumption roomActionOrder r37 occurrence@P-r37',
+      'assumption roomActionOrder r38 occurrence@P-r38',
+      'assumption roomActionOrder r39 occurrence@P-r39',
+      'assumption roomActionOrder r41 occurrence@P-r39:postboss',
+      'assumption roomActionOrder r45 occurrence@Q-r45',
+      'assumption roomActionOrder r49 occurrence@Q-r49',
     ]);
-    // O_Combat12's solved offers draw what the game drew, and All Together grants the sets the
-    // game granted, so pickups, stores and traits agree.
+    // O_Combat12's solved offers draw what the game drew, All Together grants the sets the game
+    // granted and each Sea Star duplicate is used as the game used it, so pickups, stores and
+    // traits agree.
     expect(mismatchLines(imported.report)).toEqual([]);
   });
 });
@@ -1486,27 +1586,28 @@ describe('run import of Sea Star duplicates', () => {
                 })),
               },
             }
-          : index === 24 || index === 25
-            ? { ...room, doubleRewards: 1 }
-            : room,
+          : index === 24
+            ? { ...room, doubleRewards: 1, uses: { ...room.uses, MaxManaDrop: 1 } }
+            : index === 25
+              ? { ...room, doubleRewards: 1 }
+              : room,
       ),
     };
   }
 
-  it("duplicates the room's own reward and leaves a duplicate without one unplaced", () => {
+  it('leaves a duplicate unplaced where no duplicable pickup takes a leftover use', () => {
     const imported = projectFromRunRecord(catalog, surfaceWithSeaStar());
     expect(imported.kind).toBe('complete');
-    const reprieve = occurrence(imported.project, 'O-r24');
-    expect(reprieve.roomActions.order).toContainEqual(
-      expect.objectContaining({ kind: 'interactAcquisitionEntry', entryKey: 'seaStarDuplicate' }),
-    );
+    // O_Reprieve01's Magick reward shows a leftover use, but its Time Piece conversion leaves no
+    // pickup Sea Star can duplicate; O_Combat05 used nothing more than the plan collects.
+    expect(seaStarDuplicates(imported.project, 'O-r24')).toEqual([]);
     expect(
       imported.report.entries
         .filter((entry) => entry.area === 'reward' && (entry.record?.roomIndex ?? 0) >= 24)
         .map(describeEntry),
     ).toEqual([
-      'assumption reward r24 acquisitionRole@O-r24:self -> ReplaceSeaStarResult(O-r24)',
-      'notInRecord reward r25 incomingReward@O-r25',
+      'notInRecord reward r24 occurrence@O-r24',
+      'notInRecord reward r25 occurrence@O-r25',
     ]);
   });
 });

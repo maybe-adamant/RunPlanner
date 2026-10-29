@@ -579,9 +579,23 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   included.
 - The Phial's fountain targets the trait whose rarity rose in the fountain
   room.
-- Each Sea Star duplicate a room counted is placed on the room's own reward,
-  an assumption; a further duplicate, or one in a room without a duplicable
-  reward, is reported as not in the record.
+- A room's `UseRecord` counts are shared by everything that uses a pickup
+  object: each pickup the plan collects explains one use of its object (a
+  converted pickup none). A Sea Star duplicate is one more use, of the same
+  object for a consumable (`InteractLogic.lua:1098-1121`) or of a fresh loot
+  object (`UpgradeChoiceLogic.lua:1031-1059`). A selected trait's optional
+  pickups, such as Narcissus's gifts (`TraitData_Narcissus.lua`) and Buried
+  Treasure's gold, are collected first while their object has unexplained
+  uses; each duplicate the room counted then goes on a pickup the engine lets
+  Sea Star duplicate whose object still has one (surface victory
+  `Q_PreBoss01`: Buried Treasure's two tiny and one small gold collected, the
+  two leftover uses its duplicates). A duplicate among several pickups of one
+  object is an assumption; one no leftover use explains is not placed,
+  reported as not in the record, or as an assumption when one fewer collected
+  generated pickup would have explained it. The duplicate's own children are
+  answered like its source's: a duplicated Talent drop's Path screen takes the
+  room's newly invested nodes the source's screen left, in layout order, and
+  any valid split invests the same tree.
 - Aetos is placed on the room's first phase whose encounter declares Aetos
   waves, at the first wave the plan admits; a choice among several waves is an
   assumption.
@@ -589,9 +603,6 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   targets the trait the record shows upgraded in its room or, when the trait
   was acquired there too, the trait whose level rose between the room's entry
   saves; several risen candidates make the target an assumption.
-- A selected trait's optional pickups, such as Narcissus's gifts
-  (`TraitData_Narcissus.lua`), are collected as often per reward type as the
-  room's `UseRecord` counts.
 - A screen's recorded rerolls come from `SpentRerolls`. One rerolled loot
   screen among one rerollable screen in its room is exact; otherwise the ids
   in ascending order take the rerollable screens in record order, an

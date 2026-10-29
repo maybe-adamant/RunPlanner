@@ -60,10 +60,10 @@ Evidence: the save-file run record audit
    count and opens the list.
 9. **Unsupported areas fall back loudly.** Areas no capture has exercised yet
    (Steady Growth, Travel Deal refill, Eris, Anomaly, Gorgon, Judgment,
-   Fig Leaf, Sea Star, Hammer and Pom equip results, Selene Hex tree, Fresh
-   File) take decision 8's fallback, each hit reported with its area, so
-   recorded runs inventory what to support next. Duo screens go through the
-   generic offer path and their outcome children through decision 11.
+   Fig Leaf, Hammer and Pom equip results, Selene Hex tree, Fresh File) take
+   decision 8's fallback, each hit reported with its area, so recorded runs
+   inventory what to support next. Duo screens go through the generic offer
+   path and their outcome children through decision 11.
 10. **Rarify clicks from spent charges.** The record keeps each rarify
     source's charges left at every entry save, not which row took a click.
     A room spends its entry charges plus the engine's advance of the current

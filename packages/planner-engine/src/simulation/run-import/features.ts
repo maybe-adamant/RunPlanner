@@ -1,7 +1,5 @@
 import {
-  createAcquisitionRoleAddress,
   createBiomeAddress,
-  createIncomingRewardAddress,
   createOccurrenceAddress,
   createPostbossKeepsakeSelectionAddress,
   type AuthoredExperimentalHammerEquipResult,
@@ -11,7 +9,12 @@ import {
   type RoomActionReference,
   type RoomOccurrence,
   type SemanticAddress,
+  roomActionKey,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  seaStarDuplicateAcquisitionSite,
 } from '../../authored-project';
+import { acquisitionSiteStorageKey } from '../../authored-project/acquisition/artificer';
+import type { AuthoredAcquisitionSource } from '../../authored-project/acquisition/acquisition-sources';
 import {
   chaosOperandAuthoringValues,
   chaosOperandsAtRarity,
@@ -31,10 +34,10 @@ import type {
 } from '../../run-record/model';
 import { acquisitionConversionCandidateForProjectEvaluationAssembly } from '../evaluation/project-evaluation-assembly';
 import type { SemanticFinding } from '../model';
-import { insertRoomAction, removeRoomAction } from './actions';
+import { insertRoomAction, removeRoomAction, roomActionAddress } from './actions';
 import type { RunImportContext } from './import';
-import { deliveredIncomingReward, occurrenceIdOf } from './occurrences';
-import { pickupUseCount } from './vocabulary';
+import { authoredOccurrence, deliveredIncomingReward, occurrenceIdOf } from './occurrences';
+import { collectedSources, pickupObjectName, unexplainedRoomUses } from './room-uses';
 import { wheelAuthoringWaits, wheelsSolved } from './wheels';
 
 type Origin<K extends SemanticAddress['kind']> = Extract<SemanticAddress, { readonly kind: K }>;
@@ -701,8 +704,11 @@ export function importFeatures(context: RunImportContext): void {
 
 /**
  * Sea Star duplicates counted in a room (`PoseidonDoubleRewardCount`). Which
- * pickups were duplicated is not saved: the room's own reward takes the first,
- * an assumption; any further duplicate is not placed.
+ * pickups were duplicated is not saved, but a duplicate is one more use of its
+ * object: it goes on the pickups whose objects the room used more often than
+ * the plan collects them. Several pickups of one object tie, an assumption; a
+ * duplicate no leftover use explains is not placed. Generated pickups are
+ * collected first, so a duplicate they could have explained instead is assumed.
  */
 function importSeaStar(
   context: RunImportContext,
@@ -713,52 +719,142 @@ function importSeaStar(
   const count = context.record.rooms[roomIndex]!.doubleRewards ?? 0;
   const used = `seaStar:${roomIndex}`;
   if (count === 0 || context.used.has(used)) return;
-  const reward = deliveredIncomingReward(occurrence);
-  // An unauthored reward is answered later; the duplicate waits for it.
-  if (reward === null) return;
+  // The room's own questions settle its pickups first; the duplicates wait for them.
+  const issue = context.assembly().evaluation.issue?.reasons[0];
+  if (
+    deliveredIncomingReward(occurrence) === null ||
+    wheelAuthoringWaits(context, roomIndex) ||
+    (issue !== undefined && occurrenceIdOf(issue.origin) === occurrence.occurrenceId)
+  )
+    return;
   context.used.add(used);
-  const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
-  const owner = createIncomingRewardAddress(biome, occurrence.occurrenceId);
+  const unexplained = unexplainedRoomUses(context, biomeKey, occurrence, roomIndex);
+  const collected = collectedSources(context, biomeKey, occurrence);
+  const byName = new Map<string, AuthoredAcquisitionSource[]>();
+  for (const source of collected) {
+    const owner = source.acquisition.owner;
+    if (
+      owner.kind === 'shopOffer' ||
+      owner.kind === 'infernalContractPedestal' ||
+      (owner.kind === 'acquisitionEntry' && owner.entryKey === SEA_STAR_DUPLICATE_ENTRY_KEY)
+    )
+      continue;
+    const name = pickupObjectName(context, source.reward, source.acquisition.acquisitionRole);
+    if (name === undefined || (unexplained.get(name) ?? 0) <= 0) continue;
+    byName.set(name, [...(byName.get(name) ?? []), source]);
+  }
   let placed = 0;
-  for (const role of Object.keys(reward?.dispositionByAcquisitionRole ?? {})) {
-    const command: ProjectCommand = {
-      kind: 'ReplaceSeaStarResult',
-      acquisition: createAcquisitionRoleAddress(owner, role),
-      procced: true,
-    };
-    if (!context.applyValid(command)) continue;
-    placed = 1;
-    context.note({
-      area: 'reward',
-      reason: 'assumption',
-      address: command.acquisition,
-      applied: command,
-      record: record(roomIndex),
-    });
-    context.retractable(
-      [command.acquisition],
-      { ...command, procced: false },
-      {
+  const placedByName = new Map<string, number>();
+  for (const [name, sources] of byName) {
+    const wanted = Math.min(unexplained.get(name)!, count - placed);
+    const placements: AuthoredAcquisitionSource[] = [];
+    for (const source of sources) {
+      if (placements.length >= wanted) break;
+      const evaluation = context
+        .candidates()
+        .evaluate({ kind: 'acquisitionConversion', acquisition: source.acquisition });
+      if (
+        evaluation.kind !== 'acquisitionConversion' ||
+        !evaluation.result.seaStarSupported ||
+        !context.transaction(() => placeSeaStarDuplicate(context, biomeKey, occurrence, source))
+      )
+        continue;
+      placements.push(source);
+      context.retractable([source.acquisition], seaStarResult(source, false), {
         area: 'reward',
         reason: 'refused',
-        address: command.acquisition,
+        address: source.acquisition,
         record: record(roomIndex),
-      },
-    );
-    break;
+      });
+    }
+    placed += placements.length;
+    placedByName.set(name, placements.length);
+    // Which of several pickups of one object was duplicated is not saved.
+    if (placements.length < sources.length)
+      for (const source of placements)
+        context.note({
+          area: 'reward',
+          reason: 'assumption',
+          address: source.acquisition,
+          applied: seaStarResult(source, true),
+          record: record(roomIndex),
+        });
+    if (placed >= count) break;
   }
+  if (placed >= count) return;
+  // A spare duplicate could have been one more use of a collected generated
+  // pickup's object, with one fewer of those collected.
+  const generatedNames = collected.flatMap((source) => {
+    const owner = source.acquisition.owner;
+    const name =
+      owner.kind === 'acquisitionEntry' && owner.site.pointKey.startsWith('traitGenerated:')
+        ? pickupObjectName(context, source.reward, source.acquisition.acquisitionRole)
+        : undefined;
+    return name === undefined ? [] : [name];
+  });
+  const exchangeable = [...new Set(generatedNames)].some(
+    (name) =>
+      context.catalog.rewards.acquisitions.byKey[name]?.canDuplicate === true &&
+      generatedNames.filter((entry) => entry === name).length >= (placedByName.get(name) ?? 0) + 2,
+  );
+  const address = createOccurrenceAddress(
+    createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+    occurrence.occurrenceId,
+  );
   for (let index = placed; index < count; index += 1)
     context.note({
       area: 'reward',
-      reason: 'notInRecord',
-      address: owner,
+      reason: exchangeable ? 'assumption' : 'notInRecord',
+      address,
       record: record(roomIndex),
     });
 }
 
+const seaStarResult = (source: AuthoredAcquisitionSource, procced: boolean): ProjectCommand => ({
+  kind: 'ReplaceSeaStarResult',
+  acquisition: source.acquisition,
+  procced,
+});
+
+/** Duplicates a source's pickup, used right after the source itself. */
+function placeSeaStarDuplicate(
+  context: RunImportContext,
+  biomeKey: string,
+  occurrence: RoomOccurrence,
+  source: AuthoredAcquisitionSource,
+): boolean {
+  if (!context.apply(seaStarResult(source, true))) return false;
+  const occurrenceAddress = createOccurrenceAddress(
+    createBiomeAddress(context.assembly().project.route.routeKey, biomeKey),
+    occurrence.occurrenceId,
+  );
+  const siteKey = acquisitionSiteStorageKey(
+    seaStarDuplicateAcquisitionSite(occurrenceAddress, source.acquisition),
+  );
+  const order =
+    authoredOccurrence(context.assembly().project, biomeKey, occurrence.occurrenceId)?.roomActions
+      .order ?? [];
+  const sourceIndex =
+    source.action === undefined
+      ? -1
+      : order.findIndex((entry) => roomActionKey(entry) === roomActionKey(source.action!));
+  const duplicateIndex = order.findIndex(
+    (entry) =>
+      entry.kind === 'interactAcquisitionEntry' &&
+      entry.siteKey === siteKey &&
+      entry.entryKey === SEA_STAR_DUPLICATE_ENTRY_KEY,
+  );
+  if (sourceIndex < 0 || duplicateIndex < 0 || duplicateIndex === sourceIndex + 1) return true;
+  return context.apply({
+    kind: 'MoveRoomAction',
+    action: roomActionAddress(context, biomeKey, occurrence.occurrenceId, order[duplicateIndex]!),
+    toIndex: duplicateIndex < sourceIndex ? sourceIndex : sourceIndex + 1,
+  });
+}
+
 /**
- * Collects the optional pickups a selected trait drops (Narcissus's gifts), as
- * many of each reward type as the room's uses record picked up.
+ * Collects the optional pickups a selected trait drops (Narcissus's gifts,
+ * Buried Treasure's gold) while the room's uses leave their object unexplained.
  */
 function importTraitPickups(
   context: RunImportContext,
@@ -774,7 +870,7 @@ function importTraitPickups(
     occurrence.occurrenceId,
   );
   if (host === undefined) return;
-  const room = context.record.rooms[roomIndex]!;
+  let unexplained: Map<string, number> | undefined;
   for (const contribution of host.domain.contributions) {
     if (
       contribution.kind !== 'action' ||
@@ -786,16 +882,21 @@ function importTraitPickups(
     const reference = contribution.reference;
     const used = `traitPickup:${occurrence.occurrenceId}:${reference.siteKey}:${reference.entryKey}`;
     if (context.used.has(used)) continue;
-    const rewardType =
-      occurrence.acquisitionSites?.[reference.siteKey]?.pickupEntries?.[reference.entryKey]?.offer
-        ?.rewardType;
-    if (rewardType === undefined) continue;
+    const entry =
+      occurrence.acquisitionSites?.[reference.siteKey]?.pickupEntries?.[reference.entryKey];
+    const role =
+      entry === undefined || entry === null
+        ? undefined
+        : Object.keys(entry.dispositionByAcquisitionRole)[0];
+    const name = role === undefined ? undefined : pickupObjectName(context, entry!, role);
+    if (name === undefined) continue;
     context.used.add(used);
-    const budget = `traitPickupUses:${occurrence.occurrenceId}:${rewardType}`;
-    const spent = [...context.used].filter((key) => key.startsWith(`${budget}#`)).length;
-    if (spent >= pickupUseCount(context.catalog, room, rewardType)) continue;
-    context.used.add(`${budget}#${spent}`);
-    if (!insertRoomAction(context, biomeKey, occurrence.occurrenceId, reference))
+    unexplained ??= unexplainedRoomUses(context, biomeKey, host.occurrence, roomIndex);
+    const left = unexplained.get(name) ?? 0;
+    if (left <= 0) continue;
+    if (insertRoomAction(context, biomeKey, occurrence.occurrenceId, reference))
+      unexplained.set(name, left - 1);
+    else
       context.note({
         area: 'reward',
         reason: 'refused',
