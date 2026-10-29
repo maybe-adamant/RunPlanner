@@ -27,7 +27,11 @@ import {
   type TraitOfferSourceContext,
 } from '../offer-domain';
 import type { SimulationState } from '../../state/model';
-import { assessInitialOfferSupport, type InitialOfferInput } from './initial-composition';
+import {
+  assessInitialOfferSupport,
+  stagedTraitGeneration,
+  type InitialOfferInput,
+} from './initial-composition';
 import type { InitialOfferSupport } from './initial-composition';
 
 export type { TraitFindingCode } from '../../model';
@@ -557,9 +561,7 @@ export function assessTraitOfferBeforeRarification(
   readonly legal: boolean;
 } {
   const assessments = assessTraitOffer(catalog, offer, state, source);
-  const giver = offer.kind === 'chaos' ? undefined : catalog.traitGivers.byKey[offer.giverKey];
-  const ordinary = giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes';
-  const generation = ordinary
+  const generation = stagedTraitGeneration(catalog, offer)
     ? assessInitialOfferSupport({
         ...traitOfferGenerationInput(catalog, offer.giverKey, state, source),
         offer,

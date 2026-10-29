@@ -13,6 +13,7 @@ import {
   encodeProjectDocument,
   rerollAppendIndex,
   semanticAddressKey,
+  type AuthoredTraitOffer,
   type BiomeAddress,
   type ProjectCommand,
   type ProjectDocument,
@@ -785,6 +786,50 @@ describe('screen rerolls', () => {
       trait,
     });
     expect(current(removed)).toEqual(offer);
+  });
+
+  it('judge a candidate offer with its whole chain, as the settlement does', () => {
+    const project = withArcana(loadUnderworldFGCheckpoint(), ['ScreenReroll']);
+    const zeus = occurrence(project, source);
+    const offers =
+      zeus.state.kind === 'counted' ? zeus.state.reward?.traitOffersByAcquisitionRole : undefined;
+    const [role, offer] = Object.entries(offers ?? {})[0]!;
+    if (offer === null || offer === undefined || offer.kind !== 'traits')
+      throw new Error('fixture lacks an authored Zeus screen');
+    const trait = {
+      kind: 'traitOffer',
+      routeKey: 'Underworld',
+      biomeKey: 'F',
+      owner: createIncomingRewardAddress(f, source as never),
+      acquisitionRole: role,
+    } as const;
+    const session = createPreparedProjectCandidateSession(catalog, evaluate(project));
+    const candidate = (value: AuthoredTraitOffer) => {
+      const result = session.evaluate({ kind: 'traitOffer', trait, value });
+      if (result.kind !== 'traitOffer') throw new Error('expected a trait offer candidate');
+      return [
+        result.result.supported,
+        result.result.findings.map((finding) => [finding.code, finding.screen]),
+      ];
+    };
+    expect(candidate(offer)).toEqual([true, []]);
+    // An unauthored earlier screen is required, so the offer cannot be saved yet.
+    expect(candidate({ ...offer, rerolledScreens: [null] })).toEqual([
+      false,
+      [['rerolledScreenMissing', 0]],
+    ]);
+    // An earlier screen that no first draw shows: three Zeus boons without a core.
+    const noCores = {
+      options: [
+        { traitKey: 'ZeusManaBoon', rarity: 'Common' as const },
+        { traitKey: 'CastAnywhereBoon', rarity: 'Common' as const },
+        { traitKey: 'ElementalDamageFloorBoon', rarity: 'Common' as const },
+      ],
+    };
+    const [supported, findings] = candidate({ ...offer, rerolledScreens: [noCores] });
+    expect(supported).toBe(false);
+    expect(findings).toContainEqual(['traitOfferGenerationUnavailable', 0]);
+    expect(candidate(withGuessedRerolledScreens(project, trait, offer, 2))).toEqual([true, []]);
   });
 
   it('spend k(k+1)/2 from the pool while screen rerolls are enabled', () => {

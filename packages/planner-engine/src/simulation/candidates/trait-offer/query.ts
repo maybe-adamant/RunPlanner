@@ -26,6 +26,7 @@ import type {
   TraitOfferCompositionAssessment,
   TraitOfferCompositionFinding,
 } from '../../traits/offer-domain';
+import { rerolledScreensLegal, type RerolledScreenAssessment } from '../../traits/offers';
 import type { CandidateContextUnavailable } from '../availability';
 import { unavailableForTraitOffer } from './availability';
 import {
@@ -36,7 +37,8 @@ import {
   evaluateNaturalSelectionResultCandidate,
 } from './selected-effects';
 
-export type TraitOfferCandidateFindingCode = TraitFindingCode | 'duplicateOfferedTrait';
+export type TraitOfferCandidateFindingCode =
+  TraitFindingCode | 'duplicateOfferedTrait' | 'screenRerollUnavailable';
 
 export interface TraitOfferCandidateFinding {
   readonly code: TraitOfferCandidateFindingCode;
@@ -49,6 +51,10 @@ export interface TraitOfferCandidateFinding {
   readonly optionKeys?: readonly TraitOptionKey[];
   /** Ordered Calling Card action evidence at this exact offer owner. */
   readonly actionIndex?: number;
+  /** The rerolled-away screen's tab index; absent for the final screen. */
+  readonly screen?: number;
+  /** Why a reroll is refused. */
+  readonly reason?: 'nothingLeft';
 }
 
 export interface TraitOfferCandidateQuery {
@@ -423,6 +429,30 @@ function candidateFinding(
   return Object.freeze({ ...finding });
 }
 
+/** Each rerolled-away screen's findings, with its tab index; as settlement reports them. */
+function rerolledScreenCandidateFindings(
+  screens: readonly RerolledScreenAssessment[],
+): readonly TraitOfferCandidateFinding[] {
+  return screens.flatMap((screen) => {
+    const at = (finding: Omit<TraitOfferCandidateFinding, 'screen'>) =>
+      Object.freeze({ ...finding, screen: screen.screen });
+    return [
+      ...(screen.missing ? [at({ code: 'rerolledScreenMissing' })] : []),
+      ...(screen.rerollRefused === true
+        ? [
+            Object.freeze({
+              code: 'screenRerollUnavailable' as const,
+              reason: 'nothingLeft' as const,
+            }),
+          ]
+        : []),
+      ...screen.assessments.flatMap((entry) => entry.findings.map((finding) => at(finding))),
+      ...(screen.generation?.findings.map((finding) => at(finding)) ?? []),
+      ...screen.composition.findings.map((finding) => at(finding)),
+    ];
+  });
+}
+
 /** The duplicate authority is shared by complete and focused candidate paths. */
 function duplicateOfferedTraitFindings(
   offer: AuthoredTraitOffer,
@@ -464,6 +494,7 @@ function assessTraitOfferCandidate(
     readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
     readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
     readonly effectiveLevels: readonly (number | undefined)[];
+    readonly rerolledScreens?: readonly RerolledScreenAssessment[];
   }[],
   duplicateFindings: readonly TraitOfferCandidateFinding[],
   callingCard: readonly CallingCardOfferCandidateBranch[] = Object.freeze([]),
@@ -483,6 +514,9 @@ function assessTraitOfferCandidate(
           : {}),
         persephoneLevelBonusMaximums: branch.persephoneLevelBonusMaximums,
         effectiveLevels: branch.effectiveLevels,
+        ...(branch.rerolledScreens === undefined
+          ? {}
+          : { rerolledScreens: branch.rerolledScreens }),
       }),
     ),
   );
@@ -493,6 +527,7 @@ function assessTraitOfferCandidate(
       ...(branch.generation?.findings.map(candidateFinding) ?? []),
       ...branch.composition.findings.map(candidateFinding),
       ...(branch.targetedAcquisition?.findings.map(candidateFinding) ?? []),
+      ...rerolledScreenCandidateFindings(branch.rerolledScreens ?? []),
     ]),
     ...duplicateFindings,
     ...callingCard.flatMap((branch) =>
@@ -522,6 +557,7 @@ function assessTraitOfferCandidate(
           (branch.generation?.legal ?? true) &&
           branch.composition.legal &&
           (branch.targetedAcquisition?.legal ?? true) &&
+          rerolledScreensLegal(branch.rerolledScreens) &&
           branch.assessments.every((entry) => entry.legal),
       ),
   });

@@ -28,6 +28,7 @@ import {
   removeTraitOfferDraft,
   traitOfferStartingOutcome,
   rerolledTraitScreensGuess,
+  assessRerolledScreens,
   assessSelectedTargetedAcquisition,
   selectedTargetedAcquisitionTargetKeys,
   latestModelTargetDomain,
@@ -35,6 +36,7 @@ import {
   type TraitOfferCandidateContext,
   evaluateReachedLevelResolution,
   pomEligibleTargetKeys,
+  rerolledLevelScreenFindings,
   type TraitHistoryState,
   echoPomGreatestLevelTraitKeys,
   echoLastRunBoonOutcomes,
@@ -244,6 +246,8 @@ export interface LevelResolutionCandidateEvaluation {
   readonly branchIndex: number;
   readonly supported: boolean;
   readonly findings: readonly string[];
+  /** Findings of the rerolled-away screens and their link to the final one, by tab. */
+  readonly rerolledScreenFindings: readonly import('../../traits/level-effects').RerolledLevelScreenFinding[];
   /** Eligible targets no offered slot holds; an offered slot may keep its own target. */
   readonly availableTargetTraitKeys: readonly string[];
 }
@@ -321,10 +325,12 @@ export function createLevelResolutionCandidateArtifacts(
                 branch.emptyTargetAllowed ?? false,
               );
               const offered = value.kind === 'choice' ? value.offeredTraitKeys : [];
+              const rerolledScreens = rerolledLevelScreenFindings(catalog, value, branch.before);
               return Object.freeze({
                 branchIndex,
-                supported: evaluation.findings.length === 0,
+                supported: evaluation.findings.length === 0 && rerolledScreens.length === 0,
                 findings: evaluation.findings,
+                rerolledScreenFindings: rerolledScreens,
                 availableTargetTraitKeys: Object.freeze(
                   surfaces[branchIndex]!.eligibleTargetTraitKeys.filter(
                     (traitKey) => !offered.includes(traitKey),
@@ -513,10 +519,18 @@ export function createTraitOfferCandidateArtifacts(
               // accepted. Its derived effective rarity is deliberately not a
               // fresh-roll input: Heroic and promoted replacement rows must
               // retain the legality/composition assessment of that base offer.
+              const rerolledScreens = assessRerolledScreens(
+                catalog,
+                value,
+                context.state,
+                context.generationState,
+                resolvedContext,
+              );
               return Object.freeze({
                 assessments,
                 ...(base.generation === undefined ? {} : { generation: base.generation }),
                 composition: base.composition,
+                ...(rerolledScreens.length === 0 ? {} : { rerolledScreens }),
                 ...(offerGenerationState === undefined ? {} : { offerGenerationState }),
                 persephoneLevelBonusMaximums: Object.freeze(
                   levelResolutions.map((resolution) => resolution?.persephoneLevelBonusMaximum),

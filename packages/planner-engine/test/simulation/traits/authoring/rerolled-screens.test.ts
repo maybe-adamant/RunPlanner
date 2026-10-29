@@ -16,6 +16,7 @@ import {
   assessInitialOfferSupport,
   assessRerolledScreensSupport,
   guessRerolledScreens,
+  initialOfferStartingOptions,
 } from '../../../../src/simulation/traits/authoring/initial-composition';
 import { traitOfferGenerationInput } from '../../../../src/simulation/traits/authoring/assessment';
 import { isPomEligibleTrait } from '../../../../src/simulation/traits/history/upgrades';
@@ -148,6 +149,28 @@ describe('rerolled screen chain', () => {
     ).toEqual([{ code: 'traitOfferGenerationUnavailable' }]);
   });
 
+  it('accept after an unauthored screen either a first screen or any single ban', () => {
+    const afterCores: readonly Row[] = [
+      ['ApolloWeaponBoon', 'Common'],
+      ['ApolloCastBoon', 'Common'],
+      ['PerfectDamageBonusBoon', 'Common'],
+    ];
+    expect(finalSupported(offer(afterCores, [null]))).toBe(true);
+    expect(finalSupported(offer(cores, [null]))).toBe(true);
+    expect(
+      finalSupported(
+        offer(
+          [
+            ['PerfectDamageBonusBoon', 'Common'],
+            ['DoubleStrikeChanceBoon', 'Common'],
+            ['ApolloSprintBoon', 'Common'],
+          ],
+          [null],
+        ),
+      ),
+    ).toBe(false);
+  });
+
   it('lets an unbanned item return at a freshly rolled rarity', () => {
     expect(
       finalSupported(
@@ -270,6 +293,76 @@ describe('rerolled screen chain', () => {
         (assessment) => assessment.replacementTransition !== undefined,
       ),
     ).toBe(true);
+  });
+});
+
+describe('NPC rerolled screens', () => {
+  const npcInput = (testCatalog = catalog) =>
+    traitOfferGenerationInput(
+      testCatalog,
+      'Artemis',
+      traitFrontierState(createTraitHistoryState(), { catalog: testCatalog }),
+      {},
+    );
+  const npcOffer = (
+    final: readonly { readonly traitKey: string }[],
+    earlier: readonly (AuthoredRerolledTraitScreen | null)[],
+  ): AuthoredTraitOfferTraits => ({
+    kind: 'traits',
+    giverKey: 'Artemis',
+    options: final.map(({ traitKey }) => ({ traitKey, rarity: 'Common' })) as never,
+    selectedOptionKey: 'option1',
+    ...(earlier.length === 0 ? {} : { rerolledScreens: earlier }),
+  });
+  const first = () => initialOfferStartingOptions(npcInput())!;
+
+  it('ban one item of the previous screen once a screen is rerolled', () => {
+    const rows = first();
+    expect(rows).toHaveLength(3);
+    const shown = { options: rows.map(({ traitKey }) => ({ traitKey, rarity: 'Common' })) };
+    // An unrerolled NPC screen keeps its row checks only.
+    expect(assessInitialOfferSupport({ ...npcInput(), offer: npcOffer(rows, []) }).applies).toBe(
+      false,
+    );
+    expect(
+      assessInitialOfferSupport({ ...npcInput(), offer: npcOffer(rows, [shown as never]) })
+        .findings,
+    ).toEqual([{ code: 'rollRepeatsAllOffers' }]);
+    const chain = guessRerolledScreens(npcInput(), rows, 1)!;
+    expect(assessInitialOfferSupport({ ...npcInput(), offer: npcOffer(rows, chain) }).legal).toBe(
+      true,
+    );
+  });
+
+  it('refuse the reroll of a first screen that shows every fresh trait', () => {
+    const rows = first();
+    const giver = {
+      ...catalog.traitGivers.byKey.Artemis!,
+      traitKeys: rows.map((row) => row.traitKey),
+    };
+    const testCatalog = {
+      ...catalog,
+      traitGivers: {
+        ...catalog.traitGivers,
+        byKey: { ...catalog.traitGivers.byKey, Artemis: giver },
+        values: catalog.traitGivers.values.map((entry) =>
+          entry.key === 'Artemis' ? giver : entry,
+        ),
+      },
+    };
+    const shown = {
+      options: rows.map(({ traitKey }) => ({ traitKey, rarity: 'Common' as const })),
+    };
+    const evaluation = evaluateReachedTraitOffer(
+      testCatalog,
+      { kind: 'project' },
+      'source',
+      npcOffer(rows, [shown]),
+      traitFrontierState(createTraitHistoryState(), { catalog: testCatalog }),
+      {},
+      0,
+    );
+    expect(evaluation.rerolledScreens?.[0]?.rerollRefused).toBe(true);
   });
 });
 

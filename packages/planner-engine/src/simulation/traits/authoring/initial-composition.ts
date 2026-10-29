@@ -44,6 +44,30 @@ interface InitialOfferPools {
   readonly replacementChance: number;
   readonly linked: readonly string[];
   readonly finalRescue: boolean;
+  /** NPC rows keep their own rarity checks; staged generation decides only which traits show. */
+  readonly rarityFree: boolean;
+  /** No priority traits: a first screen showing every fresh trait refuses its reroll. */
+  readonly blocksRerollWhenExhausted: boolean;
+}
+
+/**
+ * Whether the giver's screens follow the staged generation: Olympians and
+ * Hermes always, NPC givers once a screen is rerolled, where only the ban
+ * link and the rows' identities are judged.
+ */
+export function stagedTraitGeneration(
+  catalog: Catalog,
+  offer: Pick<AuthoredTraitOffer, 'kind' | 'giverKey'> & {
+    readonly rerolledScreens?: RerolledScreens<unknown>;
+  },
+): boolean {
+  if (offer.kind === 'chaos') return false;
+  const kind = catalog.traitGivers.byKey[offer.giverKey]?.providerKind;
+  return (
+    kind === 'olympian' ||
+    kind === 'hermes' ||
+    (kind === 'npc' && (offer.rerolledScreens?.length ?? 0) > 0)
+  );
 }
 
 function coreSeeds(
@@ -103,8 +127,28 @@ function preparePools(input: InitialOfferInput): InitialOfferPools | undefined {
   } = input;
   const history = state.traitHistory;
   const giver = catalog.traitGivers.byKey[giverKey];
-  if (giver?.providerKind !== 'olympian' && giver?.providerKind !== 'hermes') return undefined;
+  if (
+    giver?.providerKind !== 'olympian' &&
+    giver?.providerKind !== 'hermes' &&
+    giver?.providerKind !== 'npc'
+  )
+    return undefined;
   const eligible = giver.traitKeys.filter(declarationEligible);
+  if (giver.providerKind === 'npc')
+    // The same SetTraitsOnLoot fill and rescue, with no cores, exchanges or linked seeds.
+    return {
+      rarityOrder: ['Common'],
+      chances: {},
+      membership: new Map(eligible.map((key) => [key, ['Common'] as const])),
+      fresh: eligible.filter((key) => history.equippedTraits[key] === undefined),
+      coreSeeds: [[]],
+      replacements: [],
+      replacementChance: 0,
+      linked: [],
+      finalRescue: true,
+      rarityFree: true,
+      blocksRerollWhenExhausted: true,
+    };
   const fresh = eligible.filter((key) => {
     const slot = catalog.traits.byKey[key]!.equipmentSlot;
     return (
@@ -152,6 +196,8 @@ function preparePools(input: InitialOfferInput): InitialOfferPools | undefined {
           : (offerSource.replacementRollChance ?? boonReplacementChance(catalog, state)),
     linked: fresh.filter((traitKey) => catalog.traits.byKey[traitKey]!.optionalLinkedPriority),
     finalRescue: offerSource.finalRarityRescueDisabled !== true,
+    rarityFree: false,
+    blocksRerollWhenExhausted: giver.priorityTraitKeys.length === 0,
   };
 }
 
@@ -298,8 +344,8 @@ function findOutcome(
 
 /**
  * Whether native generation can show these rows. A rerolled screen follows a
- * previous one: some item of it is banned for this generation. An unknown
- * previous screen is judged as a first screen.
+ * previous one: some item of it is banned for this generation. After an
+ * unauthored screen, any first screen or any single ban is accepted.
  */
 function screenSupport(
   pools: InitialOfferPools,
@@ -311,14 +357,35 @@ function screenSupport(
   const shown = (banned: string | undefined) =>
     findOutcome(
       pools,
-      (option) => wanted.has(option.traitKey) && wanted.get(option.traitKey) === option.rarity,
+      (option) =>
+        wanted.has(option.traitKey) &&
+        (pools.rarityFree || wanted.get(option.traitKey) === option.rarity),
       (selected) => selected.length === options.length,
       banned,
     ) !== undefined;
-  if (previous === undefined || previous === null || previous.options.length === 0)
+  if (previous === undefined || (previous !== null && previous.options.length === 0))
     return support(shown(undefined));
-  if (previous.options.some((option) => shown(option.traitKey))) return support(true);
+  const bans = previous === null ? poolKeys(pools) : previous.options.map((row) => row.traitKey);
+  if ((previous === null && shown(undefined)) || bans.some(shown)) return support(true);
   return support(false, shown(undefined) ? 'rollRepeatsAllOffers' : undefined);
+}
+
+function poolKeys(pools: InitialOfferPools): readonly string[] {
+  return [...new Set([...pools.fresh, ...pools.replacements.map((option) => option.traitKey)])];
+}
+
+/**
+ * Whether the game refuses to reroll this first screen: a giver without
+ * priority traits shows every fresh trait, so nothing is left to draw.
+ */
+export function firstScreenRerollRefused(
+  input: InitialOfferInput,
+  firstScreen: AuthoredRerolledTraitScreen,
+): boolean {
+  const pools = preparePools(input);
+  if (pools === undefined || !pools.blocksRerollWhenExhausted) return false;
+  const shown = new Set(firstScreen.options.map((option) => option.traitKey));
+  return pools.fresh.every((traitKey) => shown.has(traitKey));
 }
 
 function support(
@@ -336,7 +403,9 @@ function support(
 export function assessInitialOfferSupport(
   input: Omit<InitialOfferInput, 'giverKey'> & { readonly offer: AuthoredTraitOffer },
 ): InitialOfferSupport {
-  const pools = preparePools({ ...input, giverKey: input.offer.giverKey });
+  const pools = stagedTraitGeneration(input.catalog, input.offer)
+    ? preparePools({ ...input, giverKey: input.offer.giverKey })
+    : undefined;
   if (pools === undefined)
     return Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) });
   const offer = input.offer;
@@ -395,14 +464,13 @@ export function guessRerolledScreens(
   const pools = preparePools(input);
   if (pools === undefined || count < 1) return undefined;
   const wanted = new Map(finalOptions.map((option) => [option.traitKey, option.rarity]));
-  const banCandidates = [
-    ...new Set([...pools.fresh, ...pools.replacements.map((option) => option.traitKey)]),
-  ];
-  const linkBan = banCandidates.find(
+  const linkBan = poolKeys(pools).find(
     (banned) =>
       findOutcome(
         pools,
-        (option) => wanted.has(option.traitKey) && wanted.get(option.traitKey) === option.rarity,
+        (option) =>
+          wanted.has(option.traitKey) &&
+          (pools.rarityFree || wanted.get(option.traitKey) === option.rarity),
         (selected) => selected.length === finalOptions.length,
         banned,
       ) !== undefined,

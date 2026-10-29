@@ -45,6 +45,8 @@ import {
 import {
   assessInitialOfferSupport,
   assessRerolledScreensSupport,
+  firstScreenRerollRefused,
+  stagedTraitGeneration,
   type InitialOfferSupport,
 } from './authoring/initial-composition';
 import { resolveTraitOfferOptionLevel, type TraitOfferOptionLevelResolution } from './offer-levels';
@@ -346,6 +348,8 @@ export interface TraitOfferBranchAssessment {
   readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
   readonly effectiveLevels: readonly (number | undefined)[];
   readonly settledHexTree?: ReachedTraitOfferEvaluation['settledHexTree'];
+  /** The screens rerolled away before the final one, oldest first. */
+  readonly rerolledScreens?: readonly RerolledScreenAssessment[];
 }
 
 /**
@@ -539,6 +543,8 @@ export interface RerolledScreenAssessment {
   readonly screen: number;
   /** Not yet authored: required, since every reroll shows a screen. */
   readonly missing: boolean;
+  /** The first screen shows every fresh trait, so the game refuses its reroll. */
+  readonly rerollRefused?: true;
   readonly assessments: readonly TraitAssessment[];
   /** Native staged support, linked to the screen before it, for ordinary givers. */
   readonly generation?: InitialOfferSupport;
@@ -550,13 +556,12 @@ export interface RerolledScreenAssessment {
  * context: a reroll regenerates under the same state and rarity chances.
  * Chaos screens are independent; trait screens ban an item of the previous one.
  */
-function assessRerolledScreens(
+export function assessRerolledScreens(
   catalog: Catalog,
   offer: AuthoredTraitOffer,
   state: SimulationState,
   generationState: SimulationState,
   source: ResolvedTraitOfferSource,
-  stagedGeneration: boolean,
 ): readonly RerolledScreenAssessment[] {
   const valid = Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) });
   if (offer.kind === 'chaos')
@@ -581,12 +586,20 @@ function assessRerolledScreens(
     );
   if (offer.kind !== 'traits' || offer.rerolledScreens === undefined) return Object.freeze([]);
   const screens = offer.rerolledScreens;
-  const supports = stagedGeneration
-    ? assessRerolledScreensSupport(
-        traitOfferGenerationInput(catalog, offer.giverKey, generationState, source),
-        screens,
-      )
-    : [];
+  const staged = stagedTraitGeneration(catalog, offer);
+  const generationInput = traitOfferGenerationInput(
+    catalog,
+    offer.giverKey,
+    generationState,
+    source,
+  );
+  const supports = staged ? assessRerolledScreensSupport(generationInput, screens) : [];
+  const first = screens[0];
+  const rerollRefused =
+    staged &&
+    first !== null &&
+    first !== undefined &&
+    firstScreenRerollRefused(generationInput, first);
   const godScreen = isChaosGodScreenGiver(catalog, offer.giverKey);
   const rejectedActive = hasActiveChaosSemanticTag(state.traitHistory, 'Rejected');
   const rowSource = { ...source, resolvedProviderKey: offer.giverKey };
@@ -606,6 +619,7 @@ function assessRerolledScreens(
       return Object.freeze({
         screen: index,
         missing: false,
+        ...(index === 0 && rerollRefused ? { rerollRefused: true as const } : {}),
         assessments: Object.freeze(
           screen.options.map((option) =>
             assessTraitOptionAgainstRarityDomain(
@@ -634,6 +648,7 @@ export function rerolledScreensLegal(
   return (screens ?? []).every(
     (screen) =>
       !screen.missing &&
+      screen.rerollRefused !== true &&
       (screen.generation?.legal ?? true) &&
       screen.composition.legal &&
       screen.assessments.every((assessment) => assessment.legal),
@@ -677,14 +692,9 @@ function evaluateReachedTraitOfferWithAssessments(
   // trait-level assessment and history event path without inheriting the
   // three-choice offer-composition contract.
   const legalityOffer = rarificationBaseOffer ?? offer;
-  const ordinary =
-    legalityOffer.kind !== 'chaos' &&
-    (() => {
-      const giver = catalog.traitGivers.byKey[legalityOffer.giverKey];
-      return giver?.providerKind === 'olympian' || giver?.providerKind === 'hermes';
-    })();
+  const staged = stagedTraitGeneration(catalog, legalityOffer);
   const generation =
-    directAcquisition || frozenAcquisition || !ordinary
+    directAcquisition || frozenAcquisition || !staged
       ? undefined
       : assessInitialOfferSupport({
           ...traitOfferGenerationInput(
@@ -788,14 +798,7 @@ function evaluateReachedTraitOfferWithAssessments(
   const rerolledScreens =
     directAcquisition || frozenAcquisition
       ? undefined
-      : assessRerolledScreens(
-          catalog,
-          legalityOffer,
-          state,
-          generationState,
-          effectiveSource,
-          ordinary,
-        );
+      : assessRerolledScreens(catalog, legalityOffer, state, generationState, effectiveSource);
   return Object.freeze({
     address,
     acquisitionRole,

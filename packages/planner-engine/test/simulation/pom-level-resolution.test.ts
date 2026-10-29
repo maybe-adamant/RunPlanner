@@ -466,12 +466,19 @@ describe('Pom level resolutions', () => {
       selectedTraitKey: 'ApolloWeaponBoon',
     };
     expect(capability?.evaluate(value)).toEqual([
-      { branchIndex: 0, supported: true, findings: [], availableTargetTraitKeys: [] },
+      {
+        branchIndex: 0,
+        supported: true,
+        findings: [],
+        availableTargetTraitKeys: [],
+        rerolledScreenFindings: [],
+      },
       {
         branchIndex: 1,
         supported: false,
         findings: ['wrongOfferCount'],
         availableTargetTraitKeys: ['HestiaSpecialBoon'],
+        rerolledScreenFindings: [],
       },
     ]);
     expect(
@@ -486,13 +493,36 @@ describe('Pom level resolutions', () => {
         supported: false,
         findings: ['wrongOfferCount', 'duplicateTargets'],
         availableTargetTraitKeys: [],
+        rerolledScreenFindings: [],
       },
       {
         branchIndex: 1,
         supported: false,
         findings: ['duplicateTargets'],
         availableTargetTraitKeys: ['HestiaSpecialBoon'],
+        rerolledScreenFindings: [],
       },
+    ]);
+    // Every rerolled screen is required, and with three or fewer boons nothing is left to draw.
+    expect(
+      capability
+        ?.evaluate({ ...value, rerolledScreens: [null] })
+        .map((branch) => [branch.supported, branch.rerolledScreenFindings]),
+    ).toEqual([
+      [
+        false,
+        [
+          { code: 'screenRerollUnavailable', reason: 'nothingLeft' },
+          { code: 'rerolledScreenMissing', screen: 0 },
+        ],
+      ],
+      [
+        false,
+        [
+          { code: 'screenRerollUnavailable', reason: 'nothingLeft' },
+          { code: 'rerolledScreenMissing', screen: 0 },
+        ],
+      ],
     ]);
   });
 

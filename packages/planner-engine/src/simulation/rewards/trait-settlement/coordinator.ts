@@ -649,6 +649,17 @@ function evaluateAuthoredOffer(
           ),
         );
       if (screen.missing) emit('rerolledScreenMissing');
+      if (screen.rerollRefused === true)
+        findingEmissions.push(
+          traitOwnerFindingEmission(
+            owner,
+            role,
+            sequence,
+            'screenRerollUnavailable',
+            Object.freeze({ acquisitionRole: role, lifecyclePoint, reason: 'nothingLeft' }),
+            findingChronology,
+          ),
+        );
       for (const assessment of screen.assessments)
         for (const finding of assessment.findings)
           emit(finding.code, finding.traitKey, finding.detail, finding.requirementTraitKeys);
@@ -1815,12 +1826,12 @@ function traitFindingEmission(
   /** The rerolled-away screen's tab index; absent for the final screen. */
   screen?: number,
 ): TraitFindingEmission {
-  const origin = createTraitOfferAddress(owner, acquisitionRole);
-  const value: SemanticFinding = Object.freeze({
+  return traitOwnerFindingEmission(
+    owner,
+    acquisitionRole,
+    sequence,
     code,
-    phase: 'rewardGeneration',
-    origin,
-    evidence: Object.freeze({
+    Object.freeze({
       acquisitionRole,
       lifecyclePoint,
       ...(traitKey === undefined ? {} : { traitKey }),
@@ -1830,6 +1841,24 @@ function traitFindingEmission(
       ...(optionKey === undefined ? {} : { optionKey }),
       ...(screen === undefined ? {} : { screen }),
     }),
+    findingChronology,
+  );
+}
+
+function traitOwnerFindingEmission(
+  owner: TraitOfferOwnerAddress,
+  acquisitionRole: string,
+  sequence: number,
+  code: TraitFindingCode | 'screenRerollUnavailable',
+  evidence: SemanticFinding['evidence'],
+  findingChronology?: FindingChronology,
+): TraitFindingEmission {
+  const origin = createTraitOfferAddress(owner, acquisitionRole);
+  const value: SemanticFinding = Object.freeze({
+    code,
+    phase: 'rewardGeneration',
+    origin,
+    evidence,
   });
   return Object.freeze({
     finding: value,

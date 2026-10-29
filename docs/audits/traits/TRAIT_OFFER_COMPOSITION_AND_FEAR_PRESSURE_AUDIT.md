@@ -219,7 +219,12 @@ rest of the rule are read from source, not yet exercised in game. Hence screen
 n is legal iff some item of screen n-1 bans to a legal first screen; the same
 item may return at another rarity, and a screen may shrink. `BlockReroll` is
 recomputed false after any exclusion (`:1993-2000`), so only the first reroll
-can be refused. The n-th reroll of one loot costs n
+can be refused: a loot without `PriorityUpgrades` (Hermes, Athena, Dionysus,
+Artemis, Hades) refuses its first reroll once every fresh trait is on show,
+while an Olympian's declared core list keeps `chosenPriorityTraits` nonempty.
+NPC loot runs the same `SetTraitsOnLoot` with no cores, exchanges or linked
+seeds, so a reroll is possible only with four or more fresh traits and every
+rerolled NPC screen still shows three. The n-th reroll of one loot costs n
 (`InteractLogic.lua:1311-1349`). Chaos rerolls reach
 `SetTransformingTraitsOnLoot` before the exclusion, so each Chaos screen is an
 independent redraw. A Pom level screen is forced Common and fills only from

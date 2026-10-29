@@ -14,7 +14,11 @@ import {
 import { createDefaultAuthoredHexTree } from '../../../authored-project/traits/hex-tree';
 import { targetedAcquisitionTargetKeys } from '../level-effects';
 import { assessTraitOffer, traitCandidates, traitOfferGenerationInput } from './assessment';
-import { guessRerolledScreens, initialOfferStartingOptions } from './initial-composition';
+import {
+  guessRerolledScreens,
+  initialOfferStartingOptions,
+  stagedTraitGeneration,
+} from './initial-composition';
 import { hasActiveChaosSemanticTag, isChaosGodScreenGiver } from '../offers';
 import {
   assessTraitOfferComposition,
@@ -321,13 +325,34 @@ export function rerolledTraitScreensGuess(
     );
   const giver = catalog.traitGivers.byKey[value.giverKey];
   if (giver === undefined) return undefined;
-  const staged = giver.providerKind === 'olympian' || giver.providerKind === 'hermes';
-  const rows = staged
+  const npc = giver.providerKind === 'npc';
+  const finalRarity = new Map(value.options.map((option) => [option.traitKey, option.rarity]));
+  // NPC generation decides only which traits show; each row takes a rarity its giver offers.
+  const npcRarity = (traitKey: string) => {
+    if (finalRarity.has(traitKey)) return finalRarity.get(traitKey);
+    if (giver.rarityPolicy.kind === 'fixed') return giver.rarityPolicy.rarity;
+    const domain = catalog.traits.byKey[traitKey]?.rarityDomain;
+    return domain?.kind !== 'ranked'
+      ? undefined
+      : domain.freshOfferRarities.includes('Common')
+        ? 'Common'
+        : domain.freshOfferRarities[0];
+  };
+  const rows = stagedTraitGeneration(catalog, { ...value, rerolledScreens: [null] })
     ? guessRerolledScreens(
         traitOfferGenerationInput(catalog, value.giverKey, state, source),
         value.options,
         count,
-      )?.map((screen) => screen.options)
+      )?.map((screen) =>
+        npc
+          ? screen.options.map((option) => {
+              const rarity = npcRarity(option.traitKey);
+              return rarity === undefined
+                ? { traitKey: option.traitKey }
+                : { traitKey: option.traitKey, rarity };
+            })
+          : screen.options,
+      )
     : Array.from({ length: count }, () => value.options);
   if (rows === undefined) return undefined;
   const rejected =

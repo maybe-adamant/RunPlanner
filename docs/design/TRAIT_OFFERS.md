@@ -265,14 +265,20 @@ the final screen that keeps the pick; every earlier screen is required, and the
 reroll count is their number. All of them are assessed against the final
 screen's generation context. The first earlier screen follows the initial
 rules; every later screen, the final one included, must be a legal initial
-outcome with some item of the screen before it banned after seeding (staged
-givers only). Chaos screens are independent, and a Pom screen must show the
-levellable boons less one of the previous screen. Findings on an earlier screen
-carry its tab index; Hymn is spent if any screen showed an exchange. Adding a
-reroll copies the final screen's rows to the newest earlier screen and keeps
-the final screen with its pick, which then reports the repeat (a staged screen
-reachable only without a ban) until its rows are edited; removing a reroll
-drops the newest earlier screen and leaves the final one unchanged. The
+outcome with some item of the screen before it banned after seeding; after an
+unauthored screen, any initial outcome or single ban is accepted. Olympian and
+Hermes screens are always staged; NPC screens join the staged generation only
+once rerolled, with no core seeds and with only the rows' identities judged,
+their rarities keeping the direct row check. A giver without priority traits
+whose first screen shows every fresh trait refuses the reroll. Chaos screens are
+independent, and a Pom screen must show the levellable boons less one of the
+previous screen. Findings on an earlier screen carry its tab index, and the
+candidate assessment of an offer judges the whole chain exactly as settlement
+does. Hymn is spent if any screen showed an exchange. Adding a reroll copies
+the final screen's rows to the newest earlier screen and keeps the final screen
+with its pick, which then reports the repeat (a staged screen reachable only
+without a ban) until its rows are edited; removing a reroll drops the newest
+earlier screen and leaves the final one unchanged. The
 [construction audit](../audits/traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md#screen-rerolls)
 owns the source rule.
 
