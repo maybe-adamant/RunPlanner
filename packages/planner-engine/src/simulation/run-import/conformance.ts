@@ -56,6 +56,18 @@ export function recordedEntryStates(record: RunRecord): readonly RecordedEntrySt
   return states;
 }
 
+/** Rarify charges the plan's keepsake state leaves on one source keepsake. */
+export function rarifyCharges(
+  catalog: Catalog,
+  keepsakes: RunStateSnapshot['keepsakes'],
+  key: string,
+): number | undefined {
+  return catalog.keepsakes.byKey[key]?.effect?.kind === 'callingCard'
+    ? keepsakes.callingCard?.remainingCharges
+    : keepsakes.olympianSources.find((source) => source.keepsakeKey === key)
+        ?.remainingRarificationUses;
+}
+
 /** An occurrence the record names, with its biome. */
 export interface RecordOccurrence {
   readonly biomeKey: string;
@@ -284,11 +296,7 @@ function compareEntry(
     const held = saved.traits.get(key);
     if (held !== undefined && held.rarityUpgradeUses === undefined) continue;
     const expected = held?.rarityUpgradeUses;
-    const actual =
-      catalog.keepsakes.byKey[key]?.effect?.kind === 'callingCard'
-        ? snapshot.keepsakes.callingCard?.remainingCharges
-        : snapshot.keepsakes.olympianSources.find((source) => source.keepsakeKey === key)
-            ?.remainingRarificationUses;
+    const actual = rarifyCharges(catalog, snapshot.keepsakes, key);
     if ((expected ?? 0) !== (actual ?? 0))
       differ('keepsake', key, { expected: show(expected), actual: show(actual) });
   }

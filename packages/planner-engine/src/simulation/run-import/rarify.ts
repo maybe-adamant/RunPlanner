@@ -7,61 +7,94 @@ import type {
 import type { Catalog, TraitRarity } from '../../catalog-schema';
 import type { RunRecord } from '../../run-record/model';
 import type { EvaluatedTraitOfferCandidate } from '../candidates';
-import { recordedEntryStates } from './conformance';
+import { advanceCurrentKeepsake } from '../keepsakes/state';
+import { entrySnapshot, rarifyCharges, recordedEntryStates } from './conformance';
 import type { RunImportContext } from './import';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
-const spendsByRecord = new WeakMap<RunRecord, readonly ReadonlyMap<string, number>[]>();
+const spendsByRecord = new WeakMap<RunRecord, Map<number, ReadonlyMap<string, number>>>();
 
 /**
- * Rarify charges each record room spent, by source trait: its
- * `RarityUpgradeData.Uses` at the room's entry save less the next entry
- * save's. Only a click spends; a rise (rank advance, Echo) is not a spend, a
- * slotted source swapped away leaves its spend unknown, and an unslotted one
- * that vanished spent to zero. Choosing a keepsake that opposes Fated zeroes
- * Calling Card without a click.
+ * Charges the room's own non-click gain adds to each source: the plan's
+ * advance of the current keepsake when the room acquires a trait that
+ * advances it (Cherished Heirloom), read from the plan's state at the room's
+ * entry save. Undefined while the plan has not reached that state.
+ */
+function rarifyGains(
+  context: RunImportContext,
+  roomIndex: number,
+): ReadonlyMap<string, number> | undefined {
+  const { catalog } = context;
+  const advance = context.record.rooms[roomIndex]!.traits.acquired.map(
+    (entry) => catalog.traits.byKey[entry.name]?.selectedDisposition,
+  ).find((disposition) => disposition?.kind === 'advanceCurrentKeepsake');
+  if (advance === undefined) return new Map();
+  const keepsakes = entrySnapshot(context.assembly(), context.occurrences, roomIndex)?.keepsakes;
+  if (keepsakes === undefined) return undefined;
+  const advanced = advanceCurrentKeepsake(catalog, keepsakes, advance.rankBonus);
+  const gains = new Map<string, number>();
+  const key = keepsakes.currentKey;
+  if (key !== null) {
+    const gain =
+      (rarifyCharges(catalog, advanced, key) ?? 0) - (rarifyCharges(catalog, keepsakes, key) ?? 0);
+    if (gain > 0) gains.set(key, gain);
+  }
+  return gains;
+}
+
+/**
+ * Rarify charges a record room spent, by source trait: its
+ * `RarityUpgradeData.Uses` at the room's entry save, plus the room's non-click
+ * gain, less the next entry save's. Any other rise (an Echo replay, which
+ * shares no room with a screen) is not a spend, a slotted source swapped away
+ * leaves its spend unknown, and an unslotted one that vanished spent to zero.
+ * Choosing a keepsake that opposes Fated zeroes Calling Card without a click.
  */
 function recordedRarifySpends(
-  catalog: Catalog,
-  record: RunRecord,
-): readonly ReadonlyMap<string, number>[] {
-  const cached = spendsByRecord.get(record);
+  context: RunImportContext,
+  roomIndex: number,
+): ReadonlyMap<string, number> {
+  const { catalog, record } = context;
+  let byRoom = spendsByRecord.get(record);
+  if (byRoom === undefined) spendsByRecord.set(record, (byRoom = new Map()));
+  const cached = byRoom.get(roomIndex);
   if (cached !== undefined) return cached;
+  const spent = new Map<string, number>();
   const states = recordedEntryStates(record);
+  const before = states[roomIndex];
+  const after = states[roomIndex + 1];
+  if (before === undefined || after === undefined) return spent;
+  const gains = rarifyGains(context, roomIndex);
+  if (gains === undefined) return spent;
   const callingCard = catalog.keepsakes.values.find(
     (keepsake) => keepsake.effect?.kind === 'callingCard',
   )?.key;
-  const spends = record.rooms.map((room, roomIndex) => {
-    const spent = new Map<string, number>();
-    const before = states[roomIndex];
-    const after = states[roomIndex + 1];
-    if (before === undefined || after === undefined) return spent;
-    for (const [name, row] of before.traits) {
-      const held = row.rarityUpgradeUses;
-      if (held === undefined || held <= 0) continue;
-      const next = after.traits.get(name);
-      const left =
-        next !== undefined
-          ? next.rarityUpgradeUses
-          : before.keepsake === name && after.keepsake !== name
-            ? undefined
-            : 0;
-      if (left === undefined || left >= held) continue;
-      const swap = room.keepsakeSwap;
-      if (
-        name === callingCard &&
-        left === 0 &&
-        swap !== undefined &&
-        catalog.keepsakes.byKey[swap.to]?.fatedDisposition === 'opposing'
-      )
-        continue;
-      spent.set(name, held - left);
-    }
-    return spent;
-  });
-  spendsByRecord.set(record, spends);
-  return spends;
+  const room = record.rooms[roomIndex]!;
+  for (const [name, row] of before.traits) {
+    if (row.rarityUpgradeUses === undefined) continue;
+    const held = row.rarityUpgradeUses + (gains.get(name) ?? 0);
+    if (held <= 0) continue;
+    const next = after.traits.get(name);
+    const left =
+      next !== undefined
+        ? next.rarityUpgradeUses
+        : before.keepsake === name && after.keepsake !== name
+          ? undefined
+          : 0;
+    if (left === undefined || left >= held) continue;
+    const swap = room.keepsakeSwap;
+    if (
+      name === callingCard &&
+      left === 0 &&
+      swap !== undefined &&
+      catalog.keepsakes.byKey[swap.to]?.fatedDisposition === 'opposing'
+    )
+      continue;
+    spent.set(name, held - left);
+  }
+  byRoom.set(roomIndex, spent);
+  return spent;
 }
 
 /**
@@ -90,8 +123,7 @@ const spentKey = (roomIndex: number, source: string, index: number) =>
 
 /** Charges the room spent on this giver's sources that no authored click has taken yet. */
 function unplacedCharges(context: RunImportContext, roomIndex: number, giverKey: string): number {
-  const spent = recordedRarifySpends(context.catalog, context.record)[roomIndex];
-  if (spent === undefined) return 0;
+  const spent = recordedRarifySpends(context, roomIndex);
   let charges = 0;
   for (const source of screenSources(context.catalog, giverKey))
     for (let index = 0; index < (spent.get(source) ?? 0); index += 1)
@@ -106,10 +138,10 @@ export function takeRarifyCharges(
   giverKey: string,
   count: number,
 ): void {
-  const spent = recordedRarifySpends(context.catalog, context.record)[roomIndex];
+  const spent = recordedRarifySpends(context, roomIndex);
   let left = count;
   for (const source of screenSources(context.catalog, giverKey))
-    for (let index = 0; left > 0 && index < (spent?.get(source) ?? 0); index += 1) {
+    for (let index = 0; left > 0 && index < (spent.get(source) ?? 0); index += 1) {
       const key = spentKey(roomIndex, source, index);
       if (context.used.has(key)) continue;
       context.used.add(key);

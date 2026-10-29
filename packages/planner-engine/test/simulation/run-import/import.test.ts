@@ -1139,6 +1139,122 @@ describe('run import of Rarify clicks and rows a held rarify source logged one r
     ).toEqual([]);
   });
 
+  /**
+   * Calling Card from the start in the Phial's place through N_MiniBoss01, with
+   * N_Combat08's Zeus screen made Demeter's and Cherished Heirloom picked on
+   * N_Combat21's Hera screen, whose Hera Mana row logged `manaLogged`; the
+   * Card holds four charges at N_Combat21's entry and `left` at the next.
+   */
+  function heirloomRoom(manaLogged: string, left: number): RunRecord {
+    const fixtureRecord = fixture('surface-victory');
+    const rooms = fixtureRecord.rooms.slice(0, 10);
+    const { exit: _exit, ...last } = rooms[9]!;
+    void _exit;
+    const demeter = JSON.parse(
+      JSON.stringify(rooms.slice(0, -1)).replace(
+        /"(ZeusUpgrade|ZeusSpecialBoon|ZeusManaBoon|FocusLightningBoon)"/g,
+        (_match, name: string) =>
+          JSON.stringify(
+            (
+              {
+                ZeusUpgrade: 'DemeterUpgrade',
+                ZeusSpecialBoon: 'DemeterSpecialBoon',
+                ZeusManaBoon: 'DemeterManaBoon',
+                FocusLightningBoon: 'DemeterCastBoon',
+              } as Readonly<Record<string, string>>
+            )[name],
+          ),
+      ),
+    ) as RunRecord['rooms'];
+    const heirloom = (name: string) => (name === 'BoonDecayBoon' ? 'KeepsakeLevelBoon' : name);
+    let record: RunRecord = withKeepsake(
+      {
+        ...fixtureRecord,
+        loadout: { ...fixtureRecord.loadout, keepsake: { name: 'RarifyKeepsake', rarity: 'Epic' } },
+        route: { biomes: ['N'], dream: false },
+        outcome: { kind: 'abandoned', endingRoom: last.name },
+        rooms: [...demeter, last].map((room, index) => {
+          const traits = room.entry?.traits;
+          return index === 7
+            ? {
+                ...room,
+                traitScreens: room.traitScreens.map((screen) => ({
+                  ...screen,
+                  options: screen.options.map((option) =>
+                    option.name === 'BoonDecayBoon'
+                      ? { ...option, name: 'KeepsakeLevelBoon', rarity: 'Duo' }
+                      : option.name === 'HeraManaBoon'
+                        ? { ...option, rarity: manaLogged }
+                        : option,
+                  ),
+                })),
+                traits: {
+                  ...room.traits,
+                  acquired: room.traits.acquired.map((trait) =>
+                    trait.name === 'BoonDecayBoon'
+                      ? { ...trait, name: 'KeepsakeLevelBoon', rarity: 'Duo' }
+                      : trait,
+                  ),
+                },
+              }
+            : index === 8 && room.entry !== undefined && traits !== undefined
+              ? {
+                  ...room,
+                  entry: {
+                    ...room.entry,
+                    traits: Object.fromEntries(
+                      Object.entries(traits).map(([name, row]) => [
+                        heirloom(name),
+                        name === 'BoonDecayBoon' ? { rarity: 'Duo' } : row,
+                      ]),
+                    ),
+                  },
+                }
+              : room;
+        }),
+      },
+      0,
+      'FountainRarityKeepsake',
+      'RarifyKeepsake',
+    );
+    record = withHeld(record, 0, 'RarifyKeepsake', { rarity: 'Epic', rarityUpgradeUses: 6 });
+    record = withHeld(record, 4, 'RarifyKeepsake', { rarity: 'Epic', rarityUpgradeUses: 4 });
+    return withHeld(record, 8, 'RarifyKeepsake', { rarity: 'Heroic', rarityUpgradeUses: left });
+  }
+
+  it("clicks a Cherished Heirloom room's spent charge net of the two its rank advance adds", () => {
+    // Four charges, two gained, five left: one click, on the Hera Mana row logged Rare.
+    const imported = projectFromRunRecord(catalog, heirloomRoom('Rare', 5));
+    expect(screenOffer(imported, 'N-r7')).toMatchObject({
+      options: [
+        { traitKey: 'HeraManaBoon', rarity: 'Common' },
+        {},
+        { traitKey: 'KeepsakeLevelBoon' },
+      ],
+      selectedOptionKey: 'option3',
+      rarificationActions: ['option1'],
+    });
+    expect(
+      mismatchLines(imported.report).filter((line) => line.includes('RarifyKeepsake')),
+    ).toEqual([]);
+  });
+
+  it('authors no click in a Cherished Heirloom room whose charges rose by its rank advance', () => {
+    const imported = projectFromRunRecord(catalog, heirloomRoom('Common', 6));
+    expect(screenOffer(imported, 'N-r7')).toMatchObject({
+      options: [
+        { traitKey: 'HeraManaBoon', rarity: 'Common' },
+        {},
+        { traitKey: 'KeepsakeLevelBoon' },
+      ],
+      selectedOptionKey: 'option3',
+      rarificationActions: [],
+    });
+    expect(
+      mismatchLines(imported.report).filter((line) => line.includes('RarifyKeepsake')),
+    ).toEqual([]);
+  });
+
   it("clicks the Conch Shell's charge on a rerolled-away screen when the final one cannot take it", () => {
     // The Surface victory with The Champions held in Strength's place and
     // O_Combat07's Poseidon screen rerolled once; its final rows all logged

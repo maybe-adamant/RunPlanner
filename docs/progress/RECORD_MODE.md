@@ -65,6 +65,8 @@ Evidence: the save-file run record audit
    capture.
 10. **Rarify clicks from spent charges.** The record keeps each rarify
     source's charges left at every entry save, not which row took a click.
+    A room spends its entry charges plus the engine's advance of the current
+    keepsake when the room picks Cherished Heirloom, less the next entry's.
     Each room's spent charges become clicks, each judged by the engine: the
     picked row first (acquired rarity = rolled + its clicks, repeated for
     Calling Card), then the screen's other rows, then its rerolled-away
