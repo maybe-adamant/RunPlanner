@@ -5,7 +5,6 @@ import {
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
-  createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createRoomActionAddress,
   roomActionKey,
@@ -301,7 +300,7 @@ export function roomPressTargets(
 }
 
 /** Whether every owner the bracket drew holds its first draw: doors, cages and both wheel offers. */
-function bracketDrawsAuthored(
+export function bracketDrawsAuthored(
   context: RunImportContext,
   biomeKey: string,
   sourceId: OccurrenceId,
@@ -516,6 +515,8 @@ export function importRerolls(context: RunImportContext): void {
       entrySnapshot(context.assembly(), context.occurrences, roomIndex + 1) === undefined
     )
       continue;
+    // A ship room's unpicked wheel offers are solved first; the stores' remaining loss is the presses'.
+    if (room.wheels !== undefined && !context.used.has(`wheelSolve:${roomIndex}`)) continue;
     const recorded = room.rerolls ?? 0;
     // The pool counts the room's spends through any grant; the recorder's count is a floor.
     const rerolls = poolSpends(context, roomIndex) ?? recorded;
@@ -615,23 +616,6 @@ export function importRerolls(context: RunImportContext): void {
           context.note({ area: 'reroll', reason: 'notInRecord', address, record });
       continue;
     }
-    // A wheel press may as well have redrawn the picked offer, which this plan cannot hold yet.
-    const wheels = new Set(
-      sourceActions().flatMap((action) =>
-        action.kind === 'reroll' &&
-        !earlier.has(action.rerollId) &&
-        action.target.kind === 'wheelOffer'
-          ? [action.target.wheelKey]
-          : [],
-      ),
-    );
-    for (const wheelKey of wheels)
-      context.note({
-        area: 'wheel',
-        reason: 'assumption',
-        address: createRewardWheelAddress(biome, sourceId, wheelKey),
-        record,
-      });
     const otherPresses =
       hub !== undefined ||
       sourceActions().some(

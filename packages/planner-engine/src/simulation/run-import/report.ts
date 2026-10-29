@@ -67,6 +67,8 @@ export interface RunImportReportEntry {
   readonly address?: SemanticAddress;
   /** The command the importer applied in place of the record's answer, if any. */
   readonly applied?: ProjectCommand;
+  /** Other commands the record fits as well as `applied` but that leave another run state. */
+  readonly alternatives?: readonly ProjectCommand[];
   readonly record?: RunImportRecordLocation;
   /** What a `mismatch` entry found. */
   readonly mismatch?: RunImportMismatch;

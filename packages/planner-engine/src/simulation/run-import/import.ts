@@ -38,7 +38,13 @@ import { importEncounters } from './encounters';
 import { answerCommerce, importCommerce } from './commerce';
 import { answerFeatures, importFeatures, recordedHexTree, reportDenialBans } from './features';
 import { answerFields, importFieldsRooms } from './fields';
-import { answerWheels, importWheelConversions, importWheels } from './wheels';
+import {
+  answerWheels,
+  importWheelConversions,
+  importWheels,
+  solveWheelOffers,
+  unsolvedWheels,
+} from './wheels';
 import { areaOfFinding, isQuestionFinding } from './areas';
 import { importResourcePlacements } from './resources';
 import { routeKeyForRecord } from './vocabulary';
@@ -349,10 +355,14 @@ class RunImportWalk {
           });
   }
 
-  /** Door rerolls in rooms whose bracket the walk never closed, and Well or Pool rerolls no screen took. */
+  /**
+   * Door rerolls and unpicked wheel offers in rooms whose bracket the walk
+   * never closed, and Well or Pool rerolls no screen took.
+   */
   reportUnreachedRerolls(): void {
     this.entries.push(
       ...unreachedRerolls(this.context),
+      ...unsolvedWheels(this.context),
       ...unplacedStoreScreenRerolls(this.context),
     );
   }
@@ -424,6 +434,8 @@ class RunImportWalk {
         importFeatures(this.context);
         importWheels(this.context);
         importWheelConversions(this.context);
+        // A ship room's rerolls wait for its unpicked offers, so a closed window sweeps again.
+        if (solveWheelOffers(this.context)) before = undefined;
         importFieldsRooms(this.context);
         importResourcePlacements(this.context);
       }

@@ -4,17 +4,36 @@ import {
   createOccurrenceAddress,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
+  routeRoomDeclaration,
   type OccurrenceId,
   type ProjectCommand,
+  type RewardWheelOfferAddress,
   type RewardWheelState,
   type RoomOccurrence,
 } from '../../authored-project';
+import { requireShipCombatWheels } from '../../authored-project/room-state/declaration';
 import { locallyValidRewardOffers, type ResolvedRewardOffer } from '../../reward-kernel';
 import type { RunRecordRoom, RunRecordWheel } from '../../run-record/model';
+import { countedRewardTypeDomain } from '../evaluation/project-evaluation-assembly';
 import type { SemanticFinding } from '../model';
+import { entrySnapshot, occurrenceSnapshot, recordedEntryStates, storeCounts } from './conformance';
 import { convertAcquisition, recordedConversions } from './dispositions';
 import type { RunImportContext } from './import';
 import { authoredOccurrence } from './occurrences';
+import type { RunImportReportEntry } from './report';
+import {
+  bracketDrawsAuthored,
+  prependReplaced,
+  roomPressTargets,
+  type PressTarget,
+} from './rerolls';
+import {
+  bracketDraws,
+  bracketStoresMatch,
+  poolSpends,
+  type Counts,
+  type Replaced,
+} from './store-brackets';
 
 const record = (roomIndex: number) => ({ roomIndex, visit: 0 });
 
@@ -113,9 +132,10 @@ function importShipWheels(
 }
 
 /**
- * A wheel offer from the record: the picked one is the setup's pick, the
- * other the store's other roll. A god the save never names takes the first
- * eligible one; an unpicked wheel boon's god is never saved.
+ * A wheel offer from the record: the picked one is the setup's pick; a god
+ * the save never names takes the first eligible one. The other offer of a
+ * two-offer wheel whose side is known is not saved: it takes a provisional
+ * value that `solveWheelOffers` settles from the room's saved stores.
  */
 export function answerWheels(context: RunImportContext, reason: SemanticFinding): boolean {
   const offer = reason.origin;
@@ -133,45 +153,481 @@ export function answerWheels(context: RunImportContext, reason: SemanticFinding)
   })();
   if (visit === undefined || recorded === undefined || state === undefined) return false;
   const offerIndex = Number(/^offer(\d+)$/.exec(offer.offerKey)?.[1]);
-  const isPicked = offerIndex === state.pickedOfferIndex;
-  const type = isPicked ? recorded.picked.type : recorded.unpicked?.type;
-  const lootName = isPicked ? recorded.picked.lootName : undefined;
+  if (offerIndex !== state.pickedOfferIndex)
+    return sidesKnown(recorded) && answerProvisionally(context, offer, visit.roomIndex);
+  const { type, lootName } = recorded.picked;
   const named = (source: string) =>
     (visit.room.uses[source] ?? 0) > 0 ||
     visit.room.traitScreens.some((screen) => screen.giver === source);
-  const boon = (value: ResolvedRewardOffer) =>
-    value.payload?.kind === 'BoonSource' ? value.payload.source : undefined;
-  const values = (type === undefined ? [] : locallyValidRewardOffers(context.catalog.rewards, type))
-    .filter((value) => lootName === undefined || boon(value) === lootName)
+  const values = locallyValidRewardOffers(context.catalog.rewards, type)
+    .filter((value) => lootName === undefined || boonSource(value) === lootName)
     .sort(
       (left, right) =>
-        Number(isPicked && boon(right) !== undefined && named(boon(right)!)) -
-        Number(isPicked && boon(left) !== undefined && named(boon(left)!)),
+        Number(boonSource(right) !== undefined && named(boonSource(right)!)) -
+        Number(boonSource(left) !== undefined && named(boonSource(left)!)),
     );
   for (const value of values) {
-    const evaluation = context.candidates().evaluate({ kind: 'rewardWheelOffer', offer, value });
-    if (
-      evaluation.kind !== 'rewardWheelOffer' ||
-      !evaluation.result.supported ||
-      evaluation.result.findings.length > 0
-    )
-      continue;
+    if (!wheelOfferSupported(context, offer, value)) continue;
     const command: ProjectCommand = { kind: 'ReplaceRewardWheelOffer', offer, value };
     if (!context.applyValid(command)) continue;
-    const god = boon(value);
-    const exact = god === undefined || god === lootName || (isPicked && named(god));
-    if (!exact)
+    const god = boonSource(value);
+    if (god !== undefined && god !== lootName && !named(god))
       context.note({
         area: 'wheel',
-        reason: isPicked ? 'notInRecord' : 'assumption',
+        reason: 'notInRecord',
         address: offer,
         applied: command,
         record: record(visit.roomIndex),
       });
     return true;
   }
-  if (type !== undefined) context.refuse();
+  context.refuse();
   return false;
+}
+
+const boonSource = (value: ResolvedRewardOffer) =>
+  value.payload?.kind === 'BoonSource' ? value.payload.source : undefined;
+
+/** Whether the record names which of a wheel's offers was picked, and so which it left. */
+const sidesKnown = (wheel: RunRecordWheel) =>
+  wheel.offers !== undefined && pickedIndex(wheel) !== undefined;
+
+function wheelOfferSupported(
+  context: RunImportContext,
+  offer: RewardWheelOfferAddress,
+  value: ResolvedRewardOffer,
+): boolean {
+  const evaluation = context.candidates().evaluate({ kind: 'rewardWheelOffer', offer, value });
+  return (
+    evaluation.kind === 'rewardWheelOffer' &&
+    evaluation.result.supported &&
+    evaluation.result.findings.length === 0
+  );
+}
+
+/**
+ * The first value of a type the engine supports for a wheel offer; a Boon
+ * takes the first god in catalog order the wheel's peer rule admits.
+ */
+function firstSupported(
+  context: RunImportContext,
+  offer: RewardWheelOfferAddress,
+  rewardType: string,
+): ResolvedRewardOffer | undefined {
+  return locallyValidRewardOffers(context.catalog.rewards, rewardType).find((value) =>
+    wheelOfferSupported(context, offer, value),
+  );
+}
+
+/**
+ * An unpicked offer's provisional value: the first supported type of the
+ * wheel's domain, so that a door or pick answered before the solve is less
+ * likely to be refused: types the room's wheels picked last, then those the
+ * saved store lost most of across the room first.
+ */
+function answerProvisionally(
+  context: RunImportContext,
+  offer: RewardWheelOfferAddress,
+  roomIndex: number,
+): boolean {
+  const occurrence = authoredOccurrence(
+    context.assembly().project,
+    offer.biomeKey,
+    offer.occurrenceId,
+  );
+  const wheel =
+    occurrence?.state.kind === 'shipCombat' ? occurrence.state.wheels[offer.wheelKey] : undefined;
+  const room = routeRoomDeclaration(
+    context.catalog.rooms.byKey[occurrence?.gameName ?? ''],
+    offer.routeKey,
+  );
+  const binding =
+    room === undefined || occurrence === undefined
+      ? undefined
+      : requireShipCombatWheels(context.catalog, room, occurrence.gameName).find(
+          (attachment) => attachment.key === offer.wheelKey,
+        )?.reward;
+  if (wheel === undefined || binding === undefined) return false;
+  const saved = recordedEntryStates(context.record);
+  const lost = (rewardType: string) =>
+    (saved[roomIndex]?.rewardStores.get(wheel.storeKey)?.[rewardType] ?? 0) -
+    (saved[roomIndex + 1]?.rewardStores.get(wheel.storeKey)?.[rewardType] ?? 0);
+  const picked = new Set(
+    context.record.rooms[roomIndex]?.wheels?.map((entry) => entry.picked.type),
+  );
+  const types = [
+    ...countedRewardTypeDomain(context.catalog, context.assembly(), offer, binding),
+  ].sort(
+    (left, right) =>
+      Number(picked.has(left)) - Number(picked.has(right)) || lost(right) - lost(left),
+  );
+  for (const rewardType of types) {
+    const value = firstSupported(context, offer, rewardType);
+    if (
+      value !== undefined &&
+      context.applyValid({ kind: 'ReplaceRewardWheelOffer', offer, value })
+    )
+      return true;
+  }
+  return false;
+}
+
+/** An unpicked offer of a wheel whose side the record names. */
+interface UnknownOffer {
+  readonly address: RewardWheelOfferAddress;
+  readonly wheel: RunRecordWheel;
+}
+
+/** A ship room's unknown offers in setup order; `complete` when every wheel's side is known. */
+function unknownOffers(
+  context: RunImportContext,
+  roomIndex: number,
+): { readonly offers: readonly UnknownOffer[]; readonly complete: boolean } | undefined {
+  const wheels = context.record.rooms[roomIndex]!.wheels ?? [];
+  const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
+  const occurrenceId = context.occurrences.occurrenceOf(roomIndex);
+  const occurrence = authoredOccurrence(context.assembly().project, biomeKey, occurrenceId);
+  if (occurrence?.state.kind !== 'shipCombat') return undefined;
+  const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
+  const offers = wheels.flatMap((wheel, index): UnknownOffer[] =>
+    wheel.offers === 2 && sidesKnown(wheel)
+      ? [
+          {
+            address: createRewardWheelOfferAddress(
+              biome,
+              occurrence.occurrenceId,
+              wheelKey(index),
+              `offer${3 - pickedIndex(wheel)!}`,
+            ),
+            wheel,
+          },
+        ]
+      : [],
+  );
+  return { offers, complete: wheels.every(sidesKnown) };
+}
+
+function offerValue(
+  context: RunImportContext,
+  offer: RewardWheelOfferAddress,
+): ResolvedRewardOffer | undefined {
+  const occurrence = authoredOccurrence(
+    context.assembly().project,
+    offer.biomeKey,
+    offer.occurrenceId,
+  );
+  return occurrence?.state.kind === 'shipCombat'
+    ? (occurrence.state.wheels[offer.wheelKey]?.offers[offer.offerKey]?.offer ?? undefined)
+    : undefined;
+}
+
+const sameOffer = (left: ResolvedRewardOffer | undefined, right: ResolvedRewardOffer) =>
+  JSON.stringify(left) === JSON.stringify(right);
+
+/** One assignment that reproduces the saved wheel stores, with the ship's exit state. */
+export interface WheelFit<Value> {
+  readonly values: readonly Value[];
+  /** The ship's exit stores, priorities, god pool and rerolls; equal fits are interchangeable. */
+  readonly fingerprint: string;
+}
+
+/**
+ * The fit to author, the first in canonical order, and per offer the values
+ * the first fit of each other exit state holds instead; undefined when none fits.
+ */
+export function chooseWheelFit<Value>(
+  fits: readonly WheelFit<Value>[],
+  same: (left: Value, right: Value) => boolean,
+):
+  | { readonly chosen: readonly Value[]; readonly alternatives: readonly (readonly Value[])[] }
+  | undefined {
+  const chosen = fits[0];
+  if (chosen === undefined) return undefined;
+  const others = fits.filter(
+    (fit, index) =>
+      fit.fingerprint !== chosen.fingerprint &&
+      fits.findIndex((first) => first.fingerprint === fit.fingerprint) === index,
+  );
+  return {
+    chosen: chosen.values,
+    alternatives: chosen.values.map((value, index) =>
+      others
+        .map((fit) => fit.values[index]!)
+        .filter(
+          (other, position, all) =>
+            !same(other, value) && all.findIndex((entry) => same(entry, other)) === position,
+        ),
+    ),
+  };
+}
+
+/**
+ * Settles each ship room's unpicked offers once its save-to-save window
+ * closes: the next room entered, every draw authored and any conversion
+ * applied. The saved stores give the multiset of draws the plan does not know;
+ * each way to give the unpicked offers their types from it, the rest left to
+ * the room's rerolls, is simulated, and those reproducing the saved wheel
+ * stores fit. Fits with one exit state are interchangeable and the first in
+ * canonical order is authored; otherwise each differing offer is reported with
+ * its alternatives. Returns whether any room's window closed.
+ */
+export function solveWheelOffers(context: RunImportContext): boolean {
+  let closed = false;
+  for (const [roomIndex, room] of context.record.rooms.entries()) {
+    const used = `wheelSolve:${roomIndex}`;
+    if (room.wheels === undefined || context.used.has(used)) continue;
+    if (
+      roomIndex + 1 >= context.record.rooms.length ||
+      !context.entered(context.occurrences.occurrenceOf(roomIndex + 1)) ||
+      entrySnapshot(context.assembly(), context.occurrences, roomIndex + 1) === undefined
+    )
+      continue;
+    const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
+    const sourceId = context.occurrences.occurrenceOf(roomIndex);
+    const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
+    const targets = roomPressTargets(context, biome, sourceId);
+    if (!bracketDrawsAuthored(context, biomeKey, sourceId, targets)) continue;
+    if (
+      recordedConversions(context, roomIndex).length > 0 &&
+      !context.used.has(`conversion:${roomIndex}`)
+    )
+      continue;
+    context.used.add(used);
+    closed = true;
+    solveShip(context, roomIndex, targets);
+  }
+  return closed;
+}
+
+function solveShip(
+  context: RunImportContext,
+  roomIndex: number,
+  targets: readonly PressTarget[],
+): void {
+  const unknown = unknownOffers(context, roomIndex);
+  if (unknown === undefined || !unknown.complete) return;
+  const { offers } = unknown;
+  const solved = `wheelSolved:${roomIndex}`;
+  if (offers.length === 0) {
+    context.used.add(solved);
+    return;
+  }
+  const planned = offers.map((offer) => ({
+    storeKey: offer.wheel.store,
+    rewardType: offerValue(context, offer.address)!.rewardType,
+  }));
+  const rerolls = Math.max(
+    0,
+    poolSpends(context, roomIndex) ?? context.record.rooms[roomIndex]!.rerolls ?? 0,
+  );
+  const draws = bracketDraws(context, roomIndex, offers.length + rerolls, planned);
+  if (draws === undefined) return;
+  context.used.add(solved);
+  const wheelStores = new Set(offers.map((offer) => offer.wheel.store));
+  const fits: WheelFit<ResolvedRewardOffer>[] = [];
+  const replace = (offer: UnknownOffer, value: ResolvedRewardOffer) =>
+    sameOffer(offerValue(context, offer.address), value) ||
+    context.apply({ kind: 'ReplaceRewardWheelOffer', offer: offer.address, value });
+  const replaceWithType = (offer: UnknownOffer, rewardType: string) => {
+    const value = locallyValidRewardOffers(context.catalog.rewards, rewardType)[0];
+    return value !== undefined && replace(offer, value);
+  };
+  for (const { types, remainder } of assignments(offers, draws.solutions)) {
+    context.transaction(() => {
+      const values: ResolvedRewardOffer[] = [];
+      const placed = context.transaction(
+        () =>
+          // Every offer takes its type before any is checked, so that no offer's
+          // earlier value leaves another's draw unavailable.
+          offers.every(
+            (offer, index) =>
+              offerValue(context, offer.address)?.rewardType === types[index] ||
+              replaceWithType(offer, types[index]!),
+          ) &&
+          offers.every((offer, index) => {
+            const value = firstSupported(context, offer.address, types[index]!);
+            if (value === undefined) return false;
+            values.push(value);
+            return replace(offer, value);
+          }) &&
+          remainder.every((entry) => prependReplaced(context, targets, entry)),
+      );
+      if (placed && bracketStoresMatch(context, roomIndex, wheelStores))
+        fits.push({ values, fingerprint: exitFingerprint(context, roomIndex) });
+      return false;
+    });
+  }
+  const choice = chooseWheelFit(fits, sameOffer);
+  const at = record(roomIndex);
+  if (choice === undefined) {
+    for (const storeKey of wheelStores)
+      context.note({
+        area: 'wheel',
+        reason: 'mismatch',
+        address: wheelOf(offers.find((offer) => offer.wheel.store === storeKey)!.address),
+        record: at,
+        mismatch: { field: storeKey, ...roomLoss(context, roomIndex, storeKey) },
+      });
+    return;
+  }
+  const commands = offers.map((offer, index): ProjectCommand => ({
+    kind: 'ReplaceRewardWheelOffer',
+    offer: offer.address,
+    value: choice.chosen[index]!,
+  }));
+  const applied = context.transaction(() =>
+    offers.every((offer, index) => replace(offer, choice.chosen[index]!)),
+  );
+  for (const [index, offer] of offers.entries()) {
+    const alternatives = choice.alternatives[index]!;
+    if (!applied)
+      context.note({
+        area: 'wheel',
+        reason: 'refused',
+        address: offer.address,
+        applied: commands[index]!,
+        record: at,
+      });
+    else if (alternatives.length > 0)
+      context.note({
+        area: 'wheel',
+        reason: 'notInRecord',
+        address: offer.address,
+        applied: commands[index]!,
+        alternatives: alternatives.map((value): ProjectCommand => ({
+          kind: 'ReplaceRewardWheelOffer',
+          offer: offer.address,
+          value,
+        })),
+        record: at,
+      });
+  }
+}
+
+const wheelOf = (offer: RewardWheelOfferAddress) =>
+  createRewardWheelAddress(
+    createBiomeAddress(offer.routeKey, offer.biomeKey),
+    offer.occurrenceId,
+    offer.wheelKey,
+  );
+
+/**
+ * Each distinct way to give the unknown offers, in setup order, a type of
+ * their own store from one multiset of draws, the rest of it left to the
+ * room's rerolls.
+ */
+function assignments(
+  offers: readonly UnknownOffer[],
+  solutions: readonly (readonly Replaced[])[],
+): readonly { readonly types: readonly string[]; readonly remainder: readonly Replaced[] }[] {
+  const found: { types: readonly string[]; remainder: readonly Replaced[] }[] = [];
+  const seen = new Set<string>();
+  for (const draws of solutions) {
+    const pick = (index: number, types: readonly string[], rest: readonly Replaced[]) => {
+      if (index === offers.length) {
+        const key = JSON.stringify([types, rest]);
+        if (!seen.has(key)) {
+          seen.add(key);
+          found.push({ types, remainder: rest });
+        }
+        return;
+      }
+      const tried = new Set<string>();
+      for (const [position, draw] of rest.entries()) {
+        if (draw.storeKey !== offers[index]!.wheel.store || tried.has(draw.rewardType)) continue;
+        tried.add(draw.rewardType);
+        pick(
+          index + 1,
+          [...types, draw.rewardType],
+          rest.filter((_entry, other) => other !== position),
+        );
+      }
+    };
+    pick(0, [], draws);
+  }
+  return found;
+}
+
+/** The ship's exit state a later room reads from the draws: stores, priorities, god pool and rerolls. */
+function exitFingerprint(context: RunImportContext, roomIndex: number): string {
+  const assembly = context.assembly();
+  const snapshot = occurrenceSnapshot(
+    assembly,
+    {
+      biomeKey: context.occurrences.biomeOfRoom[roomIndex]!,
+      occurrenceId: context.occurrences.occurrenceOf(roomIndex) as OccurrenceId,
+    },
+    'beforeRoomExit',
+  );
+  if (snapshot === undefined) return '';
+  return JSON.stringify([
+    [...storeCounts(context.catalog, assembly.project.route.routeKey, snapshot)].map(
+      ([storeKey, { counts }]) => [storeKey, counts],
+    ),
+    snapshot.rewardPriorities,
+    snapshot.godPool,
+    snapshot.rerolls.remaining,
+  ]);
+}
+
+/** What the saved store and the plan's lost across a room, by the names they differ on. */
+function roomLoss(
+  context: RunImportContext,
+  roomIndex: number,
+  storeKey: string,
+): { readonly expected: string; readonly actual: string } {
+  const saved = recordedEntryStates(context.record);
+  const routeKey = context.assembly().project.route.routeKey;
+  const planned = (index: number) => {
+    const snapshot = entrySnapshot(context.assembly(), context.occurrences, index);
+    return snapshot === undefined
+      ? {}
+      : (storeCounts(context.catalog, routeKey, snapshot).get(storeKey)?.counts ?? {});
+  };
+  const loss = (before: Counts, after: Counts) =>
+    Object.fromEntries(
+      [...new Set([...Object.keys(before), ...Object.keys(after)])].map((name) => [
+        name,
+        (before[name] ?? 0) - (after[name] ?? 0),
+      ]),
+    ) as Counts;
+  const expected = loss(
+    saved[roomIndex]?.rewardStores.get(storeKey) ?? {},
+    saved[roomIndex + 1]?.rewardStores.get(storeKey) ?? {},
+  );
+  const actual = loss(planned(roomIndex), planned(roomIndex + 1));
+  const names = [...new Set([...Object.keys(expected), ...Object.keys(actual)])]
+    .filter((name) => (expected[name] ?? 0) !== (actual[name] ?? 0))
+    .sort();
+  const list = (counts: Counts) => names.map((name) => `${name} ${counts[name] ?? 0}`).join(', ');
+  return { expected: list(expected), actual: list(actual) };
+}
+
+/**
+ * Unpicked offers of ship rooms the solve never settled, such as the last
+ * room, one whose walk stopped before the next, or a record without entry
+ * saves: the plan holds their provisional values.
+ */
+export function unsolvedWheels(context: RunImportContext): readonly RunImportReportEntry[] {
+  return context.record.rooms.flatMap((room, roomIndex) => {
+    if (room.wheels === undefined || context.used.has(`wheelSolved:${roomIndex}`)) return [];
+    return (unknownOffers(context, roomIndex)?.offers ?? []).flatMap(
+      ({ address }): RunImportReportEntry[] => {
+        const value = offerValue(context, address);
+        return value === undefined
+          ? []
+          : [
+              {
+                area: 'wheel',
+                reason: 'notInRecord',
+                address,
+                applied: { kind: 'ReplaceRewardWheelOffer', offer: address, value },
+                record: record(roomIndex),
+              },
+            ];
+      },
+    );
+  });
 }
 
 /**

@@ -3,14 +3,23 @@ import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import type {
-  ProjectCommand,
-  ProjectDocument,
-  RoomOccurrence,
-  SemanticAddress,
+import {
+  applyProjectCommand,
+  createBiomeAddress,
+  createRewardWheelOfferAddress,
+  type OccurrenceId,
+  type ProjectCommand,
+  type ProjectDocument,
+  type RoomOccurrence,
+  type SemanticAddress,
 } from '../../../src/authored-project';
+import type { ResolvedRewardOffer } from '../../../src/reward-kernel';
 import { decodeRunRecord, type RunRecord } from '../../../src/run-record';
-import { recordedEntryStates } from '../../../src/simulation/run-import/conformance';
+import {
+  occurrenceSnapshot,
+  recordedEntryStates,
+  storeCounts,
+} from '../../../src/simulation/run-import/conformance';
 import {
   projectFromRunRecord,
   simulateProjectAssembly,
@@ -116,6 +125,57 @@ function mismatchLines(report: RunImportReport): readonly string[] {
       (entry) =>
         `${entry.area} r${entry.record?.roomIndex ?? '-'} ${entry.mismatch?.field}: ${entry.mismatch?.expected} | ${entry.mismatch?.actual}`,
     );
+}
+
+/** The project with a ship's unpicked wheel offers replaced, by wheel. */
+function withWheelOffers(
+  project: ProjectDocument,
+  occurrenceId: string,
+  values: Readonly<Record<string, ResolvedRewardOffer>>,
+): ProjectDocument {
+  const ship = occurrence(project, occurrenceId);
+  const biome = project.route.biomes.find((entry) =>
+    entry.topology?.occurrences.some((candidate) => candidate.occurrenceId === occurrenceId),
+  )!;
+  return Object.entries(values).reduce((current, [wheelKey, value]) => {
+    const wheel = ship.state.kind === 'shipCombat' ? ship.state.wheels[wheelKey] : undefined;
+    if (wheel === undefined) throw new Error(`${occurrenceId} has no ${wheelKey}`);
+    return applyProjectCommand(current, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(
+        createBiomeAddress(project.route.routeKey, biome.biomeKey),
+        ship.occurrenceId,
+        wheelKey,
+        `offer${3 - wheel.pickedOfferIndex}`,
+      ),
+      value,
+    });
+  }, project);
+}
+
+/** What later rooms read of a ship's draws as it is left: stores, priorities, god pool and rerolls. */
+function shipExitState(project: ProjectDocument, occurrenceId: string) {
+  const assembly = simulateProjectAssembly(catalog, project);
+  const biomeKey = project.route.biomes.find((entry) =>
+    entry.topology?.occurrences.some((candidate) => candidate.occurrenceId === occurrenceId),
+  )!.biomeKey;
+  const snapshot = occurrenceSnapshot(
+    assembly,
+    { biomeKey, occurrenceId: occurrenceId as OccurrenceId },
+    'beforeRoomExit',
+  );
+  if (snapshot === undefined) throw new Error(`${occurrenceId} was not left`);
+  return {
+    stores: Object.fromEntries(
+      [...storeCounts(catalog, project.route.routeKey, snapshot)].map(([key, { counts }]) => [
+        key,
+        counts,
+      ]),
+    ),
+    priorities: snapshot.rewardPriorities,
+    godPool: snapshot.godPool,
+    rerolls: snapshot.rerolls.remaining,
+  };
 }
 
 /** Rooms the imported plan enters, in order, read from the evaluated route history. */
@@ -654,14 +714,79 @@ describe('run import of the Surface victory', () => {
     });
   });
 
+  it("solves O_Combat12's two unpicked RunProgress offers from the saved stores", () => {
+    const ship = occurrence(imported.project, 'O-r23').state;
+    expect(ship.kind === 'shipCombat' && ship.wheels).toMatchObject({
+      wheel1: {
+        pickedOfferIndex: 2,
+        offers: {
+          offer1: { offer: { rewardType: 'MaxManaDrop' } },
+          offer2: { offer: { rewardType: 'RoomMoneyDrop' } },
+        },
+      },
+      wheel2: {
+        pickedOfferIndex: 2,
+        offers: {
+          offer1: { offer: { rewardType: 'Boon', payload: { source: 'ApolloUpgrade' } } },
+          offer2: { offer: { rewardType: 'WeaponUpgrade' } },
+        },
+      },
+    });
+    // The swapped assignment fits as well and leaves the same exit state, so neither is reported.
+    const swapped = withWheelOffers(imported.project, 'O-r23', {
+      wheel1: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      wheel2: { rewardType: 'MaxManaDrop' },
+    });
+    expect(shipExitState(swapped, 'O-r23')).toEqual(shipExitState(imported.project, 'O-r23'));
+  });
+
+  it("leaves no trace of an unpicked wheel boon's god in the ship's exit state", () => {
+    const hera = withWheelOffers(imported.project, 'O-r23', {
+      wheel2: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+    });
+    expect(shipExitState(hera, 'O-r23')).toEqual(shipExitState(imported.project, 'O-r23'));
+  });
+
+  it('reports a wheel window whose saved stores no assignment reproduces', () => {
+    // The game's RunProgress lost one more StackUpgrade across O_Combat12 than its two unpicked offers explain.
+    const states = recordedEntryStates(record);
+    const altered: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) => {
+        if (index !== 24) return room;
+        const runProgress = { ...states[24]!.rewardStores.get('RunProgress') };
+        runProgress['StackUpgrade'] = runProgress['StackUpgrade']! - 1;
+        return {
+          ...room,
+          entry: {
+            ...room.entry,
+            rewardStores: { ...room.entry?.rewardStores, RunProgress: runProgress },
+          },
+        };
+      }),
+    };
+    const result = projectFromRunRecord(catalog, altered);
+    expect(result.kind === 'stopped' && result.stop.record).toEqual({ roomIndex: 24, visit: 0 });
+    expect(
+      result.report.entries
+        .filter((entry) => entry.area === 'wheel' && entry.record?.roomIndex === 23)
+        .map(describeEntry),
+    ).toEqual(['mismatch wheel r23 rewardWheel@O-r23']);
+    // The provisional values stay.
+    const ship = occurrence(result.project, 'O-r23').state;
+    expect(
+      ship.kind === 'shipCombat' &&
+        [ship.wheels['wheel1'], ship.wheels['wheel2']].map(
+          (wheel) => wheel?.offers['offer1']?.offer.rewardType,
+        ),
+    ).toEqual(['MaxManaDrop', 'StackUpgrade']);
+  });
+
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { conversion: 2, shop: 1, traitOffer: 2 },
-      mismatch: { stores: 1, traits: 2 },
-      notInRecord: { reward: 1, traitOffer: 1, wheel: 2 },
-      refused: { wheel: 1 },
+      notInRecord: { reward: 1 },
       stopped: { other: 1 },
-      unsupportedArea: { traitOffer: 1 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption conversion r14 acquisitionEntry@N-r14 -> ReplaceAcquisitionEntryOffer(N-r14 HermesUpgrade)',
@@ -669,13 +794,9 @@ describe('run import of the Surface victory', () => {
       'assumption shop r17 shopOffer@N-r17 -> ReplaceShopOfferOption(N-r17)',
       'assumption conversion r22 acquisitionEntry@O-r22 -> ReplaceAcquisitionEntryOffer(O-r22 StackUpgrade)',
       'assumption traitOffer r23 traitOffer@O-r23:hiddenSource -> ReplaceTraitOffer(O-r23 ZeusCastBoon|ZeusManaBoon|BoltRetaliateBoon#option1)',
-      'refused wheel r23 rewardWheelOffer@O-r23 -> ReplaceRewardWheelOffer(O-r23 StackUpgrade)',
     ]);
-    expect(mismatchLines(imported.report)).toEqual([
-      'traits r24 ApolloSprintBoon: Heroic level 1 | Heroic level 2',
-      'traits r24 SuitArmorTrait: held | absent',
-      'stores r24 RunProgress: MaxManaDrop 2, StackUpgrade 3 | MaxManaDrop 3, StackUpgrade 2',
-    ]);
+    // O_Combat12's solved offers draw what the game drew, so its pickups and stores agree.
+    expect(mismatchLines(imported.report)).toEqual([]);
   });
 });
 
@@ -1397,8 +1518,10 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
       catalog,
       withReroll(surfaceWithEnchantress(), 22, 'MetaProgress', { MetaCurrencyBigDrop: -1 }),
     );
-    // The press may as well have redrawn the picked offer, which the plan cannot hold yet.
-    expect(rerollLines(imported, 22)).toEqual(['assumption wheel r22 rewardWheel@O-r22']);
+    // The wheel's unpicked offer and the press's replaced draw are solved together. A press on
+    // the picked offer, first showing MetaCurrencyBigDrop, loses the same draws, so it is not
+    // reported: the plan holds it as a press on the unpicked offer.
+    expect(rerollLines(imported, 22)).toEqual([]);
     const ship = occurrence(imported.project, 'O-r22');
     expect(ship.roomActions.order.slice(0, 2)).toEqual([
       {
@@ -1860,5 +1983,44 @@ describe('run import of synthetic Erebus variants', () => {
       occurrence(imported.project, 'H-r30:postboss').stygianWell?.purchasedGenerationKeys,
     ).toEqual(['initial:secondRight']);
     expect(entryLines(imported.report)).toContain('refused well r32 roomFeature@H-r30:postboss');
+  });
+});
+
+describe('run import of unpicked ship-wheel offers the saved stores cannot settle', () => {
+  const wheelLines = (imported: RunImport) =>
+    imported.report.entries.filter((entry) => entry.area === 'wheel').map(describeEntry);
+
+  it('reports each unpicked offer of a record without entry saves', () => {
+    const record = fixture('surface');
+    const imported = projectFromRunRecord(catalog, {
+      ...record,
+      rooms: record.rooms.map((room) => {
+        const { entry: _entry, ...rest } = room;
+        void _entry;
+        return rest;
+      }),
+    });
+    // Each takes the first type of its wheel's store the engine supports.
+    expect(wheelLines(imported)).toEqual([
+      'notInRecord wheel r21 rewardWheelOffer@O-r21 -> ReplaceRewardWheelOffer(O-r21 GiftDrop)',
+      'notInRecord wheel r25 rewardWheelOffer@O-r25 -> ReplaceRewardWheelOffer(O-r25 MetaCurrencyBigDrop)',
+      'notInRecord wheel r25 rewardWheelOffer@O-r25 -> ReplaceRewardWheelOffer(O-r25 MaxHealthDrop)',
+    ]);
+  });
+
+  it('reports each unpicked offer of a ship that is the last room', () => {
+    const record = fixture('surface');
+    const rooms = record.rooms.slice(0, 26);
+    const { exit: _exit, ...last } = rooms[25]!;
+    void _exit;
+    const imported = projectFromRunRecord(catalog, {
+      ...record,
+      outcome: { kind: 'abandoned', endingRoom: last.name },
+      rooms: [...rooms.slice(0, 25), last],
+    });
+    expect(wheelLines(imported)).toEqual([
+      'notInRecord wheel r25 rewardWheelOffer@O-r25 -> ReplaceRewardWheelOffer(O-r25 GiftDrop)',
+      'notInRecord wheel r25 rewardWheelOffer@O-r25 -> ReplaceRewardWheelOffer(O-r25 MaxHealthDrop)',
+    ]);
   });
 });
