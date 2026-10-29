@@ -392,6 +392,13 @@ describe('ordinary offer shell', () => {
     await user.click(screen.getByRole('button', { name: 'Add option' }));
     expect(screen.getByRole('button', { name: 'option1 trait' })).toBeTruthy();
     expect(screen.queryByText('Fallback Gold')).toBeNull();
+    // The row offers the giver's whole domain, not only traits already on a screen.
+    await user.click(screen.getByRole('button', { name: 'option1 trait' }));
+    const choices = (await screen.findAllByRole('option')).filter(
+      (option) => option.getAttribute('aria-disabled') !== 'true',
+    );
+    expect(choices.length).toBeGreaterThan(1);
+    await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: 'Remove last option' }));
     expect(screen.getByText('Fallback Gold')).toBeTruthy();
     application.dispose();
