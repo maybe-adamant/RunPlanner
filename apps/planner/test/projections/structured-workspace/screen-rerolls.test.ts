@@ -66,6 +66,44 @@ describe('screen reroll counts', () => {
     ).toBe(true);
   });
 
+  it('allow exactly the rerolls a pool of 10 pays for: four, and refuse a fifth', () => {
+    // Doors, screens and The Fates around them: 3 + 3 + 4 rerolls at run start.
+    const pooled = applyProjectCommand(loadUnderworldFGCheckpoint(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      arcanaKeys: ['ScreenReroll', 'DoorReroll', 'StartingGold'],
+    });
+    const opening = (project: ProjectDocument) =>
+      [
+        ...projectStructuredWorkspaceFixture(project).workspace.interactions.traitOffers.values(),
+      ].find(
+        (interaction) =>
+          interaction.owner.owner.kind === 'incomingReward' &&
+          interaction.owner.owner.occurrenceId === createOccurrenceId('golden-f-start'),
+      )!;
+    // 1 + 2 + 3 + 4 = 10.
+    expect(opening(pooled).screenRerolls).toMatchObject({ count: 0, maxCount: 4 });
+    const value = opening(pooled).value as Extract<AuthoredTraitOffer, { readonly kind: 'traits' }>;
+    for (const count of [3, 4]) {
+      const authored = applyProjectCommand(
+        pooled,
+        catalog,
+        opening(pooled).intentFor(Object.freeze({ ...value, rerollCount: count })).command,
+      );
+      expect(opening(authored).screenRerolls).toMatchObject({ count, maxCount: 4 });
+    }
+    const exhausted = applyProjectCommand(
+      pooled,
+      catalog,
+      opening(pooled).intentFor(Object.freeze({ ...value, rerollCount: 4 })).command,
+    );
+    expect(opening(exhausted).screenRerolls).toEqual({
+      count: 4,
+      maxCount: 4,
+      lockAtMax: 'poolEmpty',
+    });
+  });
+
   it('keep an authored count without the card, locked where it is', () => {
     const project = withJudgments(held, screenCard);
     const [boon] = oceanusBoons(project);
