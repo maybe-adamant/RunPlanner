@@ -553,6 +553,7 @@ function applyScreenOffer(
     applied: reducedCommand,
     record,
   });
+  // Every lowered row is legal in this evaluation, so the reduction keeps it.
   if ((corrected?.lowered.length ?? 0) > 0)
     context.note({
       area: 'traitOffer',
