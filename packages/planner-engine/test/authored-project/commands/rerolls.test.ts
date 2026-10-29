@@ -422,4 +422,138 @@ describe('screen rerolls', () => {
       }),
     ).toThrow('must be distinct');
   });
+
+  it("move the final Rarify clicks with its rows on a reroll and keep each screen's own clicks", () => {
+    const project = withArcana(loadUnderworldFGCheckpoint(), ['ScreenReroll']);
+    const zeus = occurrence(project, source).state;
+    const offers = zeus.kind === 'counted' ? zeus.reward?.traitOffersByAcquisitionRole : undefined;
+    const [role, offer] = Object.entries(offers ?? {})[0]!;
+    if (offer?.kind !== 'traits') throw new Error('fixture lacks an authored Zeus screen');
+    const trait = {
+      kind: 'traitOffer',
+      routeKey: 'Underworld',
+      biomeKey: 'F',
+      owner: createIncomingRewardAddress(f, source as never),
+      acquisitionRole: role,
+    } as const;
+    const current = (document: ProjectDocument) => {
+      const state = occurrence(document, source).state;
+      const value =
+        state.kind === 'counted' ? state.reward?.traitOffersByAcquisitionRole[role] : undefined;
+      if (value?.kind !== 'traits') throw new Error('expected a trait offer');
+      return value;
+    };
+    const clicked = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: { ...offer, rarificationActions: ['option2', 'option2'] },
+    });
+    const rerolled = applyProjectCommand(clicked, catalog, {
+      kind: 'InsertTraitScreenReroll',
+      trait,
+    });
+    // The earlier screen is the same native screen: its clicks leave with its rows.
+    expect(current(rerolled).rarificationActions).toEqual([]);
+    expect(current(rerolled).rerolledScreens?.[0]?.rarificationActions).toEqual([
+      'option2',
+      'option2',
+    ]);
+    // An earlier screen without clicks stores none, so the reroll copies no empty list.
+    const twice = applyProjectCommand(rerolled, catalog, {
+      kind: 'InsertTraitScreenReroll',
+      trait,
+    });
+    expect(current(twice).rerolledScreens?.[1]).not.toHaveProperty('rarificationActions');
+    // Editing the final screen keeps every earlier screen's clicks.
+    const reselected = applyProjectCommand(twice, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: { ...current(twice), selectedOptionKey: 'option2', rarificationActions: ['option1'] },
+    });
+    expect(current(reselected).rerolledScreens?.[0]?.rarificationActions).toEqual([
+      'option2',
+      'option2',
+    ]);
+    // A replaced earlier screen holds exactly the clicks it is given.
+    const screen = current(reselected).rerolledScreens![1]!;
+    const replaced = applyProjectCommand(reselected, catalog, {
+      kind: 'ReplaceRerolledTraitScreen',
+      trait,
+      index: 1,
+      value: { ...screen, rarificationActions: ['option3'] },
+    });
+    expect(current(replaced).rerolledScreens?.[1]?.rarificationActions).toEqual(['option3']);
+    expect(
+      current(decodeProjectDocument(JSON.parse(encodeProjectDocument(replaced)), catalog)),
+    ).toEqual(current(replaced));
+    expect(() =>
+      applyProjectCommand(reselected, catalog, {
+        kind: 'ReplaceRerolledTraitScreen',
+        trait,
+        index: 1,
+        value: { ...screen, rarificationActions: ['option4' as never] },
+      }),
+    ).toThrow('rarification actions must name trait offer option rows');
+    // Removing the newest reroll drops its screen and the clicks made on it.
+    const removed = applyProjectCommand(replaced, catalog, {
+      kind: 'RemoveTraitScreenReroll',
+      trait,
+    });
+    expect(current(removed).rerolledScreens).toHaveLength(1);
+    expect(current(removed).rarificationActions).toEqual(['option1']);
+  });
+
+  it('decode earlier-screen Rarify clicks strictly', () => {
+    const project = withArcana(loadUnderworldFGCheckpoint(), ['ScreenReroll']);
+    const zeus = occurrence(project, source).state;
+    const offers = zeus.kind === 'counted' ? zeus.reward?.traitOffersByAcquisitionRole : undefined;
+    const [role, offer] = Object.entries(offers ?? {})[0]!;
+    if (offer?.kind !== 'traits') throw new Error('fixture lacks an authored Zeus screen');
+    const rerolled = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: {
+        kind: 'traitOffer',
+        routeKey: 'Underworld',
+        biomeKey: 'F',
+        owner: createIncomingRewardAddress(f, source as never),
+        acquisitionRole: role,
+      },
+      value: {
+        ...offer,
+        rerolledScreens: [
+          {
+            options: offer.options.map(({ traitKey, rarity }) => ({
+              traitKey,
+              ...(rarity === undefined ? {} : { rarity }),
+            })),
+            rarificationActions: ['option1'],
+          },
+        ],
+      },
+    });
+    const withScreen = (edit: (screen: Record<string, unknown>) => void) => {
+      const raw = JSON.parse(encodeProjectDocument(rerolled));
+      const room = raw.route.biomes[0].topology.occurrences.find(
+        (candidate: { occurrenceId: string }) => candidate.occurrenceId === source,
+      );
+      edit(room.state.reward.traitOffersByAcquisitionRole[role].rerolledScreens[0]);
+      return () => decodeProjectDocument(raw, catalog);
+    };
+    expect(withScreen(() => undefined)).not.toThrow();
+    expect(
+      withScreen((screen) => {
+        screen.rarificationActions = [];
+      }),
+    ).toThrow('must hold at least one click');
+    expect(
+      withScreen((screen) => {
+        screen.rarificationActions = ['option4'];
+      }),
+    ).toThrow('must name an option row');
+    expect(
+      withScreen((screen) => {
+        screen.rarifications = ['option1'];
+      }),
+    ).toThrow();
+  });
 });

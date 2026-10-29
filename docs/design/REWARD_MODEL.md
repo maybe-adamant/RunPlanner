@@ -974,8 +974,8 @@ Embryo's later transformations are
 [timed outcomes](TRAIT_OFFERS.md#timed-outcomes) beside its marked blessing.
 The result is reached on start or replacement. A route-start result is dormant
 while another starting keepsake is selected; a rack result does not survive a
-change of the rack's keepsake. Calling Card row actions stay on their exact
-trait offers, Time Piece conversion choices on exact acquisition roles, and Fig
+change of the rack's keepsake. Calling Card row actions stay on the exact
+screens of their trait offers, Time Piece conversion choices on exact acquisition roles, and Fig
 Leaf/Gorgon results on exact encounter phases, so every authored effect
 decision has one semantic owner rather than a keepsake-owned result bag.
 

@@ -13,6 +13,7 @@ import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/
 import {
   firstSupportedReroll,
   supportedRerollRewards,
+  forceApolloRerolledStartProject,
   withArcana,
   withJudgment,
 } from '../../support/rerolls';
@@ -166,4 +167,12 @@ export function surfaceNORerollsProject(): ProjectDocument {
     reward: firstSupportedReroll(project, press, 'RunProgress'),
   });
   return project;
+}
+
+/**
+ * The F route opened by an Apollo screen under Apollo's force keepsake, rerolled
+ * twice with the keepsake's one Rarify use clicked on the first screen.
+ */
+export function underworldFRarifiedScreenRerollProject(): ProjectDocument {
+  return forceApolloRerolledStartProject([['option2'], []]);
 }

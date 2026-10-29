@@ -4,8 +4,8 @@ import {
   normalizeRerolledScreens,
   normalizeRerolledTraitScreen,
   rerolledChaosScreenSnapshot,
-  rerolledTraitScreenSnapshot,
   screenRerollSupported,
+  withFinalTraitScreenRerolled,
   withRerolledScreenReplaced,
   withScreenRerollInserted,
   withScreenRerollRemoved,
@@ -131,7 +131,10 @@ function isTraitScreenRerollCommand(
   );
 }
 
-/** Adds, removes or replaces one earlier screen; the final screen is untouched. */
+/**
+ * Adds, removes or replaces one earlier screen. Only adding touches the final
+ * screen: the Rarify clicks made on it move with its rows to the new earlier screen.
+ */
 function applyTraitScreenRerollCommand(
   catalog: Catalog,
   existing: AuthoredTraitOffer | null,
@@ -162,6 +165,7 @@ function applyTraitScreenRerollCommand(
         ),
       );
     }
+    if (command.kind === 'InsertTraitScreenReroll') return withFinalTraitScreenRerolled(existing);
     const screen =
       value === null
         ? null
@@ -170,14 +174,9 @@ function applyTraitScreenRerollCommand(
           : failCommand(command, 'a trait screen shows trait options');
     return withRerolledScreens(
       existing,
-      editedScreens(
-        existing.rerolledScreens,
-        command,
-        screen,
-        existing.kind === 'fallbackGold'
-          ? Object.freeze({ options: Object.freeze([]) })
-          : rerolledTraitScreenSnapshot(existing),
-      ),
+      command.kind === 'RemoveTraitScreenReroll'
+        ? withScreenRerollRemoved(existing.rerolledScreens)
+        : withRerolledScreenReplaced(existing.rerolledScreens, command.index, screen),
     );
   } catch (error) {
     if (error instanceof ProjectCommandContractError) throw error;

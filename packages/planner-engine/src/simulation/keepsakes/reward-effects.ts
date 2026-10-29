@@ -1,5 +1,9 @@
-import type { Catalog } from '../../catalog-schema';
-import { optionIndex, type AuthoredTraitOffer } from '../../authored-project/traits/state';
+import type { Catalog, TraitRarity } from '../../catalog-schema';
+import {
+  optionIndex,
+  type AuthoredTraitOffer,
+  type TraitOptionKey,
+} from '../../authored-project/traits/state';
 import { nextRarity } from '../traits/history/upgrades';
 import type { KeepsakeState } from './state';
 
@@ -111,91 +115,140 @@ export function rarificationUsesForGiver(
   return providerSources.length > 0 ? 0 : undefined;
 }
 
-/** Replays the persisted row ledger once for every consumer of an offer. */
+/** One offer's Rarify ledger replayed over its screens, with the keepsake state it leaves. */
+export interface RarificationLedgerEvaluation {
+  /** The offer with every screen's rows at their rarity after its clicks. */
+  readonly offer: AuthoredTraitOffer;
+  readonly state: KeepsakeState;
+  /** The final screen's unavailable clicks, by position in its list. */
+  readonly invalidActions: readonly number[];
+  /** Each earlier screen's unavailable clicks, oldest first; empty without earlier screens. */
+  readonly rerolledScreenInvalidActions: readonly (readonly number[])[];
+}
+
+/**
+ * Replays the persisted Rarify ledger once for every consumer of an offer. A
+ * rerolled screen is the same native screen, so the clicks on its earlier
+ * screens spend first, oldest first, from the same sources as the final
+ * screen's. A non-MultiUse source allows one click per screen session; every
+ * such source holds one use, so spending it is that cap.
+ */
 export function evaluateCallingCardOffer(
   catalog: Catalog,
   state: KeepsakeState,
   offer: AuthoredTraitOffer,
   baseOfferLegal: boolean,
-): {
-  readonly offer: AuthoredTraitOffer;
-  readonly state: KeepsakeState;
-  readonly invalidActions: readonly number[];
-} {
+): RarificationLedgerEvaluation {
+  const earlier = offer.kind === 'chaos' ? [] : (offer.rerolledScreens ?? []);
+  const unchanged = Object.freeze({
+    offer,
+    state,
+    invalidActions: Object.freeze([]),
+    rerolledScreenInvalidActions: Object.freeze(earlier.map(() => Object.freeze([]))),
+  });
   if (
-    offer.kind !== 'traits' ||
-    offer.rarificationActions === undefined ||
-    offer.rarificationActions.length === 0
+    offer.kind === 'chaos' ||
+    ((offer.kind !== 'traits' || (offer.rarificationActions?.length ?? 0) === 0) &&
+      earlier.every((screen) => (screen?.rarificationActions?.length ?? 0) === 0))
   )
-    return Object.freeze({ offer, state, invalidActions: Object.freeze([]) });
+    return unchanged;
   let remaining = state.callingCard?.remainingCharges ?? 0;
   let olympianSources = state.olympianSources ?? Object.freeze([]);
-  const options = offer.options.map((option) => ({ ...option }));
-  const invalidActions: number[] = [];
-  for (const [index, key] of offer.rarificationActions.entries()) {
-    const option = options[optionIndex(key)];
-    const trait = option === undefined ? undefined : catalog.traits.byKey[option.traitKey];
-    const next =
-      option?.rarity === undefined
-        ? undefined
-        : nextRarity(catalog, option.traitKey, option.rarity);
-    const rarityLevel =
-      option?.rarity === undefined
-        ? 0
-        : (catalog.traitRarityOrder as readonly string[]).indexOf(option.rarity) + 1;
-    // A matching Olympian source owns this action even when its rank cap makes
-    // the action unavailable.  Falling through to Calling Card in that case
-    // would silently change the source-specific cap into a general upgrade.
-    const providerSource = olympianSources.find(
-      (source) => source.providerKey === offer.giverKey && source.remainingRarificationUses === 1,
-    );
-    if (
-      baseOfferLegal &&
-      providerSource !== undefined &&
-      option !== undefined &&
-      trait !== undefined &&
-      !trait.blockInRunRarify &&
-      next !== undefined &&
-      rarityLevel <= providerSource.maximumSourceRarityLevel &&
-      offer.rejectedOptionKey !== key
-    ) {
-      options[optionIndex(key)] = { ...option, rarity: next };
-      olympianSources = Object.freeze(
-        olympianSources
-          .map((source) =>
-            source === providerSource
-              ? Object.freeze({ ...source, remainingRarificationUses: 0 as const })
-              : source,
-          )
-          // An unslotted Gift source is removed only after the nested use is spent.
-          .filter((source) => source.origin !== 'echo' || source.remainingRarificationUses > 0),
+  const giverKey = offer.giverKey;
+  const replay = <O extends { readonly traitKey: string; readonly rarity?: TraitRarity }>(
+    shown: readonly O[],
+    actions: readonly TraitOptionKey[],
+    rejectedOptionKey: TraitOptionKey | undefined,
+  ) => {
+    const options = shown.map((option) => ({ ...option }));
+    const invalid: number[] = [];
+    for (const [index, key] of actions.entries()) {
+      const option = options[optionIndex(key)];
+      const trait = option === undefined ? undefined : catalog.traits.byKey[option.traitKey];
+      const next =
+        option?.rarity === undefined
+          ? undefined
+          : nextRarity(catalog, option.traitKey, option.rarity);
+      const rarityLevel =
+        option?.rarity === undefined
+          ? 0
+          : (catalog.traitRarityOrder as readonly string[]).indexOf(option.rarity) + 1;
+      // A matching Olympian source owns this action even when its rank cap makes
+      // the action unavailable.  Falling through to Calling Card in that case
+      // would silently change the source-specific cap into a general upgrade.
+      const providerSource = olympianSources.find(
+        (source) => source.providerKey === giverKey && source.remainingRarificationUses === 1,
       );
-      continue;
+      if (
+        baseOfferLegal &&
+        providerSource !== undefined &&
+        option !== undefined &&
+        trait !== undefined &&
+        !trait.blockInRunRarify &&
+        next !== undefined &&
+        rarityLevel <= providerSource.maximumSourceRarityLevel &&
+        rejectedOptionKey !== key
+      ) {
+        options[optionIndex(key)] = { ...option, rarity: next };
+        olympianSources = Object.freeze(
+          olympianSources
+            .map((source) =>
+              source === providerSource
+                ? Object.freeze({ ...source, remainingRarificationUses: 0 as const })
+                : source,
+            )
+            // An unslotted Gift source is removed only after the nested use is spent.
+            .filter((source) => source.origin !== 'echo' || source.remainingRarificationUses > 0),
+        );
+        continue;
+      }
+      if (providerSource !== undefined) {
+        invalid.push(index);
+        continue;
+      }
+      if (
+        !baseOfferLegal ||
+        state.fatedStatus !== 'Fated' ||
+        remaining === 0 ||
+        !catalog.traitGivers.byKey[giverKey]?.callingCardMenu ||
+        rejectedOptionKey === key ||
+        trait === undefined ||
+        trait.blockInRunRarify ||
+        next === undefined
+      ) {
+        invalid.push(index);
+        continue;
+      }
+      options[optionIndex(key)] = { ...option!, rarity: next };
+      remaining -= 1;
     }
-    if (providerSource !== undefined) {
-      invalidActions.push(index);
-      continue;
+    return { options: Object.freeze(options.map((option) => Object.freeze(option))), invalid };
+  };
+  const rerolledScreenInvalidActions: (readonly number[])[] = [];
+  const rerolledScreens = earlier.map((screen) => {
+    if (screen === null || (screen.rarificationActions?.length ?? 0) === 0) {
+      rerolledScreenInvalidActions.push(Object.freeze([]));
+      return screen;
     }
-    if (
-      !baseOfferLegal ||
-      state.fatedStatus !== 'Fated' ||
-      remaining === 0 ||
-      !catalog.traitGivers.byKey[offer.giverKey]?.callingCardMenu ||
-      offer.rejectedOptionKey === key ||
-      trait === undefined ||
-      trait.blockInRunRarify ||
-      next === undefined
-    ) {
-      invalidActions.push(index);
-      continue;
-    }
-    options[optionIndex(key)] = { ...option!, rarity: next };
-    remaining -= 1;
-  }
+    const replayed = replay(
+      screen.options,
+      screen.rarificationActions ?? [],
+      screen.rejectedOptionKey,
+    );
+    rerolledScreenInvalidActions.push(Object.freeze(replayed.invalid));
+    return Object.freeze({ ...screen, options: replayed.options });
+  });
+  const final =
+    offer.kind === 'traits'
+      ? replay(offer.options, offer.rarificationActions ?? [], offer.rejectedOptionKey)
+      : undefined;
   const effective = Object.freeze({
     ...offer,
-    options: Object.freeze(options) as typeof offer.options,
-  });
+    ...(final === undefined || offer.kind !== 'traits'
+      ? {}
+      : { options: final.options as unknown as typeof offer.options }),
+    ...(earlier.length === 0 ? {} : { rerolledScreens: Object.freeze(rerolledScreens) }),
+  }) as AuthoredTraitOffer;
   const nextState =
     remaining === (state.callingCard?.remainingCharges ?? 0) &&
     olympianSources === state.olympianSources
@@ -210,6 +263,7 @@ export function evaluateCallingCardOffer(
   return Object.freeze({
     offer: effective,
     state: nextState,
-    invalidActions: Object.freeze(invalidActions),
+    invalidActions: Object.freeze(final?.invalid ?? []),
+    rerolledScreenInvalidActions: Object.freeze(rerolledScreenInvalidActions),
   });
 }

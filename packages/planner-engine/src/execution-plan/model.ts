@@ -489,6 +489,8 @@ export type ExecutionTraitOffer =
 export interface ExecutionRerolledTraitScreen {
   readonly options: readonly {
     readonly key: string;
+    /** Native row rarity before this screen's Rarify clicks; absent when none raised it. */
+    readonly baseRarity?: string;
     readonly rarity?: string;
     /** The row's installed level (Persephone, Jeweled Pom), as on a final row. */
     readonly effectiveLevel?: number;

@@ -9,6 +9,7 @@ import {
   type AuthoredRerolledLevelScreen,
   type AuthoredRerolledTraitOption,
   type AuthoredRerolledTraitScreen,
+  type AuthoredTraitOfferFallbackGold,
   type AuthoredTraitOfferTraits,
   type RerolledScreens,
   type TraitOptionKey,
@@ -59,7 +60,8 @@ export function screenRerollCost(count: number): number {
 /**
  * Validates one authored earlier trait screen: up to three distinct rows of the
  * giver at a supported rarity; fewer than three only where the giver's pool
- * can run out; the Rejected row names a shown row.
+ * can run out; the Rejected row names a shown row. Rarify clicks name row keys
+ * only; whether a click was possible is the simulation's judgment.
  */
 export function normalizeRerolledTraitScreen(
   catalog: Catalog,
@@ -99,10 +101,26 @@ export function normalizeRerolledTraitScreen(
     (!TRAIT_OPTION_KEYS.includes(rejected) || options[optionIndex(rejected)] === undefined)
   )
     throw new Error('the rejected row must name a shown option');
+  const actions = screen.rarificationActions;
+  if (
+    actions !== undefined &&
+    (!Array.isArray(actions) || actions.some((key) => !TRAIT_OPTION_KEYS.includes(key)))
+  )
+    throw new Error('rarification actions must name trait offer option rows');
   return Object.freeze({
     options: Object.freeze(options),
     ...(rejected === undefined ? {} : { rejectedOptionKey: rejected }),
+    ...rarificationActionsField(actions),
   });
+}
+
+/** Spreads a Rarify click list only when it holds a click. */
+function rarificationActionsField(actions: readonly TraitOptionKey[] | undefined): {
+  readonly rarificationActions?: readonly TraitOptionKey[];
+} {
+  return actions === undefined || actions.length === 0
+    ? {}
+    : { rarificationActions: Object.freeze([...actions]) };
 }
 
 /** Validates one authored earlier Chaos screen. */
@@ -188,6 +206,35 @@ export function rerolledTraitScreenSnapshot(
   });
 }
 
+/**
+ * Rerolls a final trait or Gold screen. The rerolled screen is the same native
+ * screen, so its rows and the Rarify clicks made on it move to the end of the
+ * earlier screens; the final screen keeps its rows and pick with no click yet.
+ */
+export function withFinalTraitScreenRerolled(
+  offer: AuthoredTraitOfferTraits | AuthoredTraitOfferFallbackGold,
+): AuthoredTraitOfferTraits | AuthoredTraitOfferFallbackGold {
+  if (offer.kind === 'fallbackGold')
+    return Object.freeze({
+      ...offer,
+      rerolledScreens: withScreenRerollInserted(
+        offer.rerolledScreens,
+        Object.freeze({ options: Object.freeze([]) }),
+      ),
+    });
+  return Object.freeze({
+    ...offer,
+    rarificationActions: Object.freeze([]),
+    rerolledScreens: withScreenRerollInserted(
+      offer.rerolledScreens,
+      Object.freeze({
+        ...rerolledTraitScreenSnapshot(offer),
+        ...rarificationActionsField(offer.rarificationActions),
+      }),
+    ),
+  });
+}
+
 /** The shown curses of a final Chaos screen, as an earlier screen. */
 export function rerolledChaosScreenSnapshot(
   offer: Pick<AuthoredChaosTraitOffer, 'curseOptions'>,
@@ -265,7 +312,11 @@ export function decodeRerolledTraitScreen(
   const record = expectRecord(value, path);
   expectExactKeys(
     record,
-    ['options', ...(Object.hasOwn(record, 'rejectedOptionKey') ? ['rejectedOptionKey'] : [])],
+    [
+      'options',
+      ...(Object.hasOwn(record, 'rejectedOptionKey') ? ['rejectedOptionKey'] : []),
+      ...(Object.hasOwn(record, 'rarificationActions') ? ['rarificationActions'] : []),
+    ],
     path,
   );
   const options = expectArray(record.options, `${path}.options`).map((raw, index) => {
@@ -299,10 +350,22 @@ export function decodeRerolledTraitScreen(
   const rejected = Object.hasOwn(record, 'rejectedOptionKey')
     ? (expectString(record.rejectedOptionKey, `${path}.rejectedOptionKey`) as TraitOptionKey)
     : undefined;
+  // Absent is none, so a present list holds at least one click.
+  const actions = Object.hasOwn(record, 'rarificationActions')
+    ? expectArray(record.rarificationActions, `${path}.rarificationActions`).map((value, index) => {
+        const key = expectString(value, `${path}.rarificationActions[${index}]`);
+        if (!(TRAIT_OPTION_KEYS as readonly string[]).includes(key))
+          failProjectDocument(`${path}.rarificationActions[${index}]`, 'must name an option row');
+        return key as TraitOptionKey;
+      })
+    : undefined;
+  if (actions !== undefined && actions.length === 0)
+    failProjectDocument(`${path}.rarificationActions`, 'must hold at least one click');
   try {
     return normalizeRerolledTraitScreen(catalog, giverKey, {
       options,
       ...(rejected === undefined ? {} : { rejectedOptionKey: rejected }),
+      ...(actions === undefined ? {} : { rarificationActions: actions }),
     });
   } catch (error) {
     return failProjectDocument(path, error instanceof Error ? error.message : 'invalid screen');

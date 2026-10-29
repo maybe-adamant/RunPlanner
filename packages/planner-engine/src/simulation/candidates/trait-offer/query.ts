@@ -340,6 +340,17 @@ export interface CallingCardOfferCandidateBranch {
   readonly remainingCharges?: number;
   readonly invalidActionIndexes: readonly number[];
   readonly rarifiableOptionKeys: readonly TraitOptionKey[];
+  /** Each earlier screen's replay, oldest first; absent without earlier screens. */
+  readonly rerolledScreens?: readonly CallingCardRerolledScreenCandidate[];
+}
+
+/** One earlier screen's Rarify replay: its rows after its clicks, and where one more fits. */
+export interface CallingCardRerolledScreenCandidate {
+  readonly effectiveRarities: readonly (
+    import('../../../catalog-schema').TraitRarity | undefined
+  )[];
+  readonly invalidActionIndexes: readonly number[];
+  readonly rarifiableOptionKeys: readonly TraitOptionKey[];
 }
 
 export interface EvaluatedTraitOfferCandidate {
@@ -533,6 +544,23 @@ function assessTraitOfferCandidate(
     ]),
     ...duplicateFindings,
     ...callingCard.flatMap((branch) =>
+      (branch.rerolledScreens ?? []).flatMap((screen, screenIndex) =>
+        screen.invalidActionIndexes.map((index) => {
+          const optionKey =
+            value?.kind === 'chaos'
+              ? undefined
+              : value?.rerolledScreens?.[screenIndex]?.rarificationActions?.[index];
+          return Object.freeze({
+            code: 'callingCardRarificationUnavailable' as const,
+            actionIndex: index,
+            ...(optionKey === undefined ? {} : { optionKey }),
+            detail: `rarification action ${index + 1} is unavailable at this offer frontier`,
+            screen: screenIndex,
+          });
+        }),
+      ),
+    ),
+    ...callingCard.flatMap((branch) =>
       branch.invalidActionIndexes.map((index) =>
         Object.freeze({
           code: 'callingCardRarificationUnavailable' as const,
@@ -704,6 +732,25 @@ export function evaluateTraitOfferCandidate(
           : { remainingCharges: branch.remainingCharges }),
         invalidActionIndexes: branch.invalidActions,
         rarifiableOptionKeys: branch.rarifiableOptionKeys,
+        ...(branch.rerolledScreens.length === 0
+          ? {}
+          : {
+              rerolledScreens: Object.freeze(
+                branch.rerolledScreens.map((screen, index) => {
+                  const effective =
+                    branch.effectiveOffer.kind === 'chaos'
+                      ? undefined
+                      : branch.effectiveOffer.rerolledScreens?.[index];
+                  return Object.freeze({
+                    effectiveRarities: Object.freeze(
+                      (effective?.options ?? []).map((option) => option.rarity),
+                    ),
+                    invalidActionIndexes: screen.invalidActions,
+                    rarifiableOptionKeys: screen.rarifiableOptionKeys,
+                  });
+                }),
+              ),
+            }),
       }),
     ),
   );

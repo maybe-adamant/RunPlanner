@@ -284,11 +284,16 @@ so the next screen follows the initial rules. Chaos screens are
 independent, and a Pom screen must show the levellable boons less one of the
 previous screen. Findings on an earlier screen carry its tab index, and the
 candidate assessment of an offer judges the whole chain exactly as settlement
-does. Hymn is spent if any screen showed an exchange. Adding a reroll copies
-the final screen's rows to the newest earlier screen and keeps the final screen
-with its pick, which then reports the repeat (a staged screen reachable only
-without a ban) until its rows are edited; removing a reroll drops the newest
-earlier screen and leaves the final one unchanged. The
+does. Hymn is spent if any screen showed an exchange. A reroll keeps the same
+native screen, so every screen of the chain carries the Rarify clicks made on
+it: the earlier screens' clicks spend first, oldest first, from the same rarify
+sources as the final screen's, each screen's rows show the rarity its own
+clicks reached, and an unavailable click is reported at its screen. Adding a
+reroll copies the final screen's rows and clicks to the newest earlier screen
+and keeps the final screen with its pick and no click, which then reports the
+repeat (a staged screen reachable only without a ban) until its rows are
+edited; removing a reroll drops the newest earlier screen and leaves the final
+one unchanged. The
 [construction audit](../audits/traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md#screen-rerolls)
 owns the source rule.
 

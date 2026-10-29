@@ -145,6 +145,15 @@ export function executionTimelineTransactions(
       ),
       `rerolled screen replacements ${semanticAddressKey(selected.address)}`,
     );
+    // Each rerolled-away row's rarity before its screen's Rarify clicks, the same in every branch.
+    const rerolledScreenBaseRarities = selected.branches.every(
+      (branch) => branch.rerolledScreenBaseRarities === undefined,
+    )
+      ? undefined
+      : agreement(
+          selected.branches.map((branch) => branch.rerolledScreenBaseRarities),
+          `rerolled screen base rarities ${semanticAddressKey(selected.address)}`,
+        );
     const traitScreens =
       selected.offer.kind === 'chaos'
         ? {}
@@ -157,8 +166,12 @@ export function executionTimelineTransactions(
                   screen.options.map((option, row) => {
                     const level = rerolledScreenLevels[index]?.[row];
                     const replacement = rerolledScreenReplacements[index]?.[row];
+                    const baseRarity = rerolledScreenBaseRarities?.[index]?.[row];
                     return Object.freeze({
                       key: option.traitKey,
+                      ...(baseRarity === undefined || baseRarity === option.rarity
+                        ? {}
+                        : { baseRarity }),
                       ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
                       ...(level === undefined ? {} : { effectiveLevel: level }),
                       ...(replacement === undefined

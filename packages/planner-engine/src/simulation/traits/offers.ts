@@ -311,6 +311,8 @@ export interface ReachedTraitOfferEvaluation {
   readonly offer: AuthoredTraitOffer;
   /** Row rarities before Calling Card/provider-keepsake rarification. */
   readonly baseRarities: readonly (TraitRarity | undefined)[];
+  /** Each earlier screen's row rarities before its Rarify clicks; present only where one was clicked. */
+  readonly rerolledScreenBaseRarities?: readonly (readonly (TraitRarity | undefined)[])[];
   readonly source: ResolvedTraitOfferSource;
   readonly assessments: readonly TraitAssessment[];
   /** Frozen option-level outcomes used by candidate projection and settlement. */
@@ -421,6 +423,7 @@ export interface TraitScreenExpectation {
 export interface SelectedTraitOfferBranchAssessment extends TraitOfferBranchAssessment {
   readonly screenExpectation?: TraitScreenExpectation;
   readonly baseRarities: readonly (TraitRarity | undefined)[];
+  readonly rerolledScreenBaseRarities?: ReachedTraitOfferEvaluation['rerolledScreenBaseRarities'];
   /** Native-order random Arcana draw, resolved from the exact pre-offer state. */
   readonly orderedCirceActivationKeys?: readonly string[];
   /** Echo's exact nested menu after chronology-owned rarity floors are applied. */
@@ -712,6 +715,19 @@ function evaluateReachedTraitOfferWithAssessments(
         : undefined
     )?.options.map((option) => option.rarity) ?? [],
   );
+  const rarifiedScreens =
+    rarificationBaseOffer === undefined || rarificationBaseOffer.kind === 'chaos'
+      ? undefined
+      : rarificationBaseOffer.rerolledScreens;
+  const rerolledScreenBaseRarities = rarifiedScreens?.some(
+    (screen) => (screen?.rarificationActions?.length ?? 0) > 0,
+  )
+    ? Object.freeze(
+        rarifiedScreens.map((screen) =>
+          Object.freeze((screen?.options ?? []).map((option) => option.rarity)),
+        ),
+      )
+    : undefined;
   const ordinaryGiver = (() => {
     if (offer.kind === 'chaos') return false;
     const giver = catalog.traitGivers.byKey[offer.giverKey];
@@ -839,6 +855,7 @@ function evaluateReachedTraitOfferWithAssessments(
     generationState,
     offer,
     baseRarities,
+    ...(rerolledScreenBaseRarities === undefined ? {} : { rerolledScreenBaseRarities }),
     source: effectiveSource,
     assessments: resolvedAssessments,
     levelResolutions,

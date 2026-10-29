@@ -48,7 +48,8 @@ entered with in `rerolledIncomingReward`, `rerolledCages` or
 `rerolledOffers`. Trait (Fallback Gold included), Chaos and Pom choice screens hold optional
 `rerolledScreens`: the screens shown before the final one, oldest first, each
 complete (trait rows with rarities and optional `persephoneLevelBonus`, an
-optional `rejectedOptionKey`, three
+optional `rejectedOptionKey` and optional ordered `rarificationActions`, the
+Rarify clicks made on that screen, three
 Chaos curses, or Pom `offeredTraitKeys`) or null while unauthored. A Stygian Well or Pool of Purging reroll is a room action
 (`rerollStygianWell` with `offerKeyBySlot`, `rerollPurgingPool` with
 `traitKeyBySlot`, each with its `rerollId` and only its pinned slots); a Well

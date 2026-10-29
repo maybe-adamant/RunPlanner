@@ -143,6 +143,8 @@ export interface AuthoredRerolledTraitScreen {
   readonly options: readonly AuthoredRerolledTraitOption[];
   /** Rejected's blocked row on this screen. */
   readonly rejectedOptionKey?: TraitOptionKey;
+  /** Ordered Rarify clicks made on this screen before it was rerolled; absent is none. */
+  readonly rarificationActions?: readonly TraitOptionKey[];
 }
 
 /** A Chaos screen shown and then rerolled: its three curses; blessings stay native. */

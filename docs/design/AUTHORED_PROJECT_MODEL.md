@@ -845,6 +845,8 @@ invalidates.
 A rerolled single-pick trait, Chaos or Pom level screen holds its earlier
 screens, oldest first, before the final screen that keeps the pick; the reroll
 count is their number ([Trait Offers](TRAIT_OFFERS.md#ordinary-initial-screen-support)).
+An earlier trait screen may hold the ordered Rarify clicks made on it, with the
+final screen's meaning; an absent list is none.
 Well and Pool rolls are room actions
 ([Occurrence State](#occurrence-state-and-replacement)). No reroll count or
 pool total is persisted: the pool is derived.

@@ -94,7 +94,9 @@ first, beside its final one. The adapter installs the first when the screen
 opens and the k-th later one on the k-th native reroll; the final screen
 follows the last reroll and carries the pick. Earlier trait rows carry what a
 final row shows (rarity, installed level, exchange) but nothing the pick
-settles; Chaos earlier screens pin only their curses.
+settles; a row raised by a Rarify click on its screen also carries its rolled
+`baseRarity`, which the adapter installs so the player's click reaches the
+published rarity. Chaos earlier screens pin only their curses.
 
 A Preboss that spawns the Contract pedestal publishes it as its own Overview
 item in either reward form, never as Shop inventory; the adapter installs it at

@@ -636,15 +636,20 @@ function rerolledTraitScreen(value: unknown, label: string): ExecutionRerolledTr
     exact(
       option,
       ['key'],
-      ['rarity', 'effectiveLevel', 'replacement'],
+      ['baseRarity', 'rarity', 'effectiveLevel', 'replacement'],
       `${label}.options[${index}]`,
     );
     const replacement = optionReplacement(
       option.replacement,
       `${label}.options[${index}].replacement`,
     );
+    if (option.baseRarity !== undefined && option.rarity === undefined)
+      fail(`${label}.options[${index}].baseRarity needs the rarity its clicks reached`);
     return Object.freeze({
       key: stringValue(option.key, `${label}.options[${index}].key`),
+      ...(option.baseRarity === undefined
+        ? {}
+        : { baseRarity: stringValue(option.baseRarity, `${label}.options[${index}].baseRarity`) }),
       ...(option.rarity === undefined
         ? {}
         : { rarity: stringValue(option.rarity, `${label}.options[${index}].rarity`) }),

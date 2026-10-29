@@ -1,7 +1,14 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createBiomeAddress,
+  createIncomingRewardAddress,
+  createRouteStartKeepsakeSelectionAddress,
+  createStartingRewardAddress,
+  createTraitOfferAddress,
   semanticAddressKey,
+  type AuthoredTraitOfferTraits,
+  type TraitOptionKey,
   type HubRerollAddress,
   type ProjectDocument,
   type AuthoredTraitOffer,
@@ -16,6 +23,7 @@ import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { createCompleteFGProject, goldenFStartId } from '@run-planner/test-fixtures/underworld';
 
 /** Replaces the route's manual Arcana selection. */
 export function withArcana(
@@ -112,4 +120,77 @@ export function withGuessedRerolledScreens(
   ).rerolledTraitScreensGuess(trait, offer, count);
   if (screens === undefined) throw new Error(`no legal chain of ${count} rerolled screens`);
   return { ...offer, rerolledScreens: screens } as AuthoredTraitOffer;
+}
+
+/** The opening Apollo screen of the golden F route. */
+export const forceApolloStartTrait = createTraitOfferAddress(
+  createIncomingRewardAddress(createBiomeAddress('Underworld', 'F'), goldenFStartId),
+  'source',
+);
+
+/**
+ * The golden F route opened by an Apollo screen under Apollo's force keepsake,
+ * with the screen card held: the screen is rerolled once per entry of
+ * `earlierActions`, each guessed earlier screen carrying those Rarify clicks.
+ */
+export function forceApolloRerolledStartProject(
+  earlierActions: readonly (readonly TraitOptionKey[])[],
+  finalActions: readonly TraitOptionKey[] = [],
+): ProjectDocument {
+  // The screen card is held from the start, so the F Judgment draws the door card instead.
+  let project = withJudgment(
+    withJudgment(
+      withArcana(createCompleteFGProject(), ['ScreenReroll']),
+      'F',
+      'golden-f-preboss-shop:boss',
+      ['DoorReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
+    ),
+    'G',
+    'golden-g-preboss-shop:boss',
+    ['LowManaDamageBonus', 'CastCount', 'SorceryRegenUpgrade', 'CastBuff', 'BonusHealth'],
+  );
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+    keepsakeKey: 'ForceApolloBoonKeepsake',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingReward',
+    reward: createStartingRewardAddress('Underworld'),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  const offer: AuthoredTraitOfferTraits = {
+    kind: 'traits',
+    giverKey: 'Apollo',
+    options: [
+      { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+      { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+      { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+    ],
+    selectedOptionKey: 'option1',
+    rarificationActions: [],
+  };
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: forceApolloStartTrait,
+    value: offer,
+  });
+  const guessed = withGuessedRerolledScreens(
+    project,
+    forceApolloStartTrait,
+    offer,
+    earlierActions.length,
+  );
+  if (guessed.kind !== 'traits') throw new Error('expected guessed Apollo screens');
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: forceApolloStartTrait,
+    value: {
+      ...guessed,
+      rarificationActions: finalActions,
+      rerolledScreens: (guessed.rerolledScreens ?? []).map((screen, index) =>
+        screen === null ? null : { ...screen, rarificationActions: earlierActions[index] ?? [] },
+      ),
+    },
+  });
 }

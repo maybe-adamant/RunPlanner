@@ -357,6 +357,7 @@ export {
   rerolledChaosScreenSnapshot,
   rerolledLevelScreenSnapshot,
   rerolledTraitScreenSnapshot,
+  withFinalTraitScreenRerolled,
   withScreenRerollCount,
   type RerollableScreen,
 } from './screen-rerolls';

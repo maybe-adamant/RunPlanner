@@ -123,6 +123,11 @@ export interface TraitOfferCandidateCapability {
     readonly remainingCharges: number | undefined;
     readonly invalidActions: readonly number[];
     readonly rarifiableOptionKeys: readonly TraitOptionKey[];
+    /** Each earlier screen's clicks, oldest first; empty without earlier screens. */
+    readonly rerolledScreens: readonly {
+      readonly invalidActions: readonly number[];
+      readonly rarifiableOptionKeys: readonly TraitOptionKey[];
+    }[];
   }[];
   /** One exact native-supported initial traits-or-Gold outcome. */
   readonly traitOfferStartingOutcome: (giverKey: string) => AuthoredTraitOffer | undefined;
@@ -557,6 +562,27 @@ export function createTraitOfferCandidateArtifacts(
                 traitOfferCandidateSource(catalog, context, value),
               );
               const result = evaluateCallingCardOffer(catalog, keepsakes, value, base.legal);
+              // A row is rarifiable where one more click on it, after the
+              // screen's authored clicks, would be accepted by the same ledger.
+              const accepts = (
+                attempted: AuthoredTraitOffer,
+                invalidAt: (evaluation: ReturnType<typeof evaluateCallingCardOffer>) => boolean,
+              ) => {
+                const attemptedBase = assessTraitOfferBeforeRarification(
+                  catalog,
+                  attempted,
+                  context.generationState,
+                  traitOfferCandidateSource(catalog, context, attempted),
+                );
+                return !invalidAt(
+                  evaluateCallingCardOffer(catalog, keepsakes, attempted, attemptedBase.legal),
+                );
+              };
+              const rowKeys = (count: number) =>
+                (['option1', 'option2', 'option3'] as const).filter(
+                  (key) => optionIndex(key) < count,
+                );
+              const earlier = value.kind === 'chaos' ? [] : (value.rerolledScreens ?? []);
               return Object.freeze({
                 effectiveOffer: result.offer,
                 remainingCharges: result.state.callingCard?.remainingCharges,
@@ -565,32 +591,51 @@ export function createTraitOfferCandidateArtifacts(
                   value.kind !== 'traits'
                     ? Object.freeze([])
                     : Object.freeze(
-                        (['option1', 'option2', 'option3'] as const).filter((key) => {
-                          if (optionIndex(key) >= value.options.length) return false;
-                          const attempted = Object.freeze({
-                            ...value,
-                            rarificationActions: Object.freeze([
-                              ...(value.rarificationActions ?? []),
-                              key,
-                            ]),
-                          });
-                          const attemptedBase = assessTraitOfferBeforeRarification(
-                            catalog,
-                            attempted,
-                            context.generationState,
-                            traitOfferCandidateSource(catalog, context, attempted),
-                          );
-                          const attempt = evaluateCallingCardOffer(
-                            catalog,
-                            keepsakes,
-                            attempted,
-                            attemptedBase.legal,
-                          );
-                          return !attempt.invalidActions.includes(
-                            attempted.rarificationActions.length - 1,
+                        rowKeys(value.options.length).filter((key) => {
+                          const actions = [...(value.rarificationActions ?? []), key];
+                          return accepts(
+                            Object.freeze({
+                              ...value,
+                              rarificationActions: Object.freeze(actions),
+                            }),
+                            (attempt) => attempt.invalidActions.includes(actions.length - 1),
                           );
                         }),
                       ),
+                rerolledScreens: Object.freeze(
+                  earlier.map((screen, index) =>
+                    Object.freeze({
+                      invalidActions: result.rerolledScreenInvalidActions[index] ?? [],
+                      rarifiableOptionKeys:
+                        screen === null || value.kind === 'chaos'
+                          ? Object.freeze([])
+                          : Object.freeze(
+                              rowKeys(screen.options.length).filter((key) => {
+                                const actions = [...(screen.rarificationActions ?? []), key];
+                                return accepts(
+                                  Object.freeze({
+                                    ...value,
+                                    rerolledScreens: Object.freeze(
+                                      earlier.map((current, at) =>
+                                        at === index
+                                          ? Object.freeze({
+                                              ...screen,
+                                              rarificationActions: Object.freeze(actions),
+                                            })
+                                          : current,
+                                      ),
+                                    ),
+                                  }),
+                                  (attempt) =>
+                                    attempt.rerolledScreenInvalidActions[index]?.includes(
+                                      actions.length - 1,
+                                    ) ?? true,
+                                );
+                              }),
+                            ),
+                    }),
+                  ),
+                ),
               });
             }),
           ),

@@ -604,6 +604,26 @@ function evaluateAuthoredOffer(
             : evaluation,
         ]);
   const owner = traitOwnerAddress(reward.origin);
+  // The ledger spends earlier screens' clicks first, so their findings come first.
+  if (callingCard !== undefined && owner !== undefined && callingCard.offer.kind !== 'chaos')
+    for (const [screen, invalid] of callingCard.rerolledScreenInvalidActions.entries())
+      for (const actionIndex of invalid)
+        findingEmissions.push(
+          traitFindingEmission(
+            owner,
+            role,
+            lifecyclePoint,
+            sequence,
+            'callingCardRarificationUnavailable',
+            undefined,
+            `rarification action ${actionIndex + 1} is unavailable at this offer frontier`,
+            undefined,
+            findingChronology,
+            actionIndex,
+            callingCard.offer.rerolledScreens?.[screen]?.rarificationActions?.[actionIndex],
+            screen,
+          ),
+        );
   if (callingCard !== undefined && callingCard.invalidActions.length > 0 && owner !== undefined)
     for (const actionIndex of callingCard.invalidActions)
       findingEmissions.push(

@@ -37,7 +37,10 @@ import {
 } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
+import { goldenFStartId } from '@run-planner/test-fixtures/underworld';
 import {
+  forceApolloRerolledStartProject,
+  forceApolloStartTrait,
   firstSupportedReroll,
   supportedRerollRewards,
   withArcana,
@@ -786,6 +789,101 @@ describe('screen rerolls', () => {
       trait,
     });
     expect(current(removed)).toEqual(offer);
+  });
+
+  it('settle Rarify clicks across the screen chain and report an unavailable one at its screen', () => {
+    const findings = (project: ProjectDocument) =>
+      evaluate(project)
+        .evaluation.findings.filter(
+          (finding) => finding.code === 'callingCardRarificationUnavailable',
+        )
+        .map((finding) => [
+          semanticAddressKey(finding.origin),
+          finding.evidence.screen,
+          finding.evidence.actionIndex,
+          finding.evidence.optionKey,
+        ]);
+    const clicked = forceApolloRerolledStartProject([['option2'], []]);
+    expect(evaluate(clicked).evaluation.status).toBe('valid');
+    const biome = evaluate(clicked).evaluation.route?.biomes[0];
+    if (biome?.authoring !== 'complete') throw new Error('expected complete F');
+    const offer = biome.rewards.selectedTraitOffers.find(
+      (candidate) =>
+        semanticAddressKey(candidate.address) === semanticAddressKey(forceApolloStartTrait),
+    );
+    // The rerolled-away row shows the rarity its click reached; its roll stays authored.
+    expect(
+      offer?.offer.kind === 'traits' &&
+        offer.offer.rerolledScreens?.[0]?.options.map((option) => option.rarity),
+    ).toEqual(['Common', 'Rare', 'Common']);
+    expect(offer?.branches[0]?.rerolledScreenBaseRarities?.[0]).toEqual([
+      'Common',
+      'Common',
+      'Common',
+    ]);
+    // The keepsake's one use is gone by the second screen and the final one.
+    expect(
+      findings(forceApolloRerolledStartProject([['option2'], ['option1']], ['option3'])),
+    ).toEqual([
+      [semanticAddressKey(forceApolloStartTrait), 1, 0, 'option1'],
+      [semanticAddressKey(forceApolloStartTrait), undefined, 0, 'option3'],
+    ]);
+    // The editor reads where one more click fits on each screen from the same replay.
+    const session = createPreparedProjectCandidateSession(catalog, evaluate(clicked));
+    const value = occurrence(clicked, goldenFStartId).startingRewardAcquisition
+      ?.traitOffersByAcquisitionRole.source;
+    if (value?.kind !== 'traits') throw new Error('expected the opening Apollo screen');
+    const result = session.evaluate({ kind: 'traitOffer', trait: forceApolloStartTrait, value });
+    if (result.kind !== 'traitOffer') throw new Error('expected a trait offer candidate');
+    expect(
+      result.result.callingCard?.[0]?.rerolledScreens?.map((screen) => [
+        screen.effectiveRarities,
+        screen.rarifiableOptionKeys,
+      ]),
+    ).toEqual([
+      [['Common', 'Rare', 'Common'], []],
+      [['Common', 'Common', 'Common'], []],
+    ]);
+    expect(result.result.callingCard?.[0]?.rarifiableOptionKeys).toEqual([]);
+    const unclicked = forceApolloRerolledStartProject([[], []]);
+    const freshValue = occurrence(unclicked, goldenFStartId).startingRewardAcquisition
+      ?.traitOffersByAcquisitionRole.source;
+    if (freshValue?.kind !== 'traits') throw new Error('expected the opening Apollo screen');
+    const freshResult = createPreparedProjectCandidateSession(
+      catalog,
+      evaluate(unclicked),
+    ).evaluate({ kind: 'traitOffer', trait: forceApolloStartTrait, value: freshValue });
+    if (freshResult.kind !== 'traitOffer') throw new Error('expected a trait offer candidate');
+    expect(
+      freshResult.result.callingCard?.[0]?.rerolledScreens?.map(
+        (screen) => screen.rarifiableOptionKeys,
+      ),
+    ).toEqual([
+      ['option1', 'option2', 'option3'],
+      ['option1', 'option2', 'option3'],
+    ]);
+    // A candidate click on the second screen is judged and reported as settlement does.
+    const extra = session.evaluate({
+      kind: 'traitOffer',
+      trait: forceApolloStartTrait,
+      value: {
+        ...value,
+        rerolledScreens: value.rerolledScreens!.map((screen, index) =>
+          index === 1 && screen !== null
+            ? { ...screen, rarificationActions: ['option1' as const] }
+            : screen,
+        ),
+      },
+    });
+    if (extra.kind !== 'traitOffer') throw new Error('expected a trait offer candidate');
+    expect(
+      extra.result.findings.map((finding) => [
+        finding.code,
+        finding.screen,
+        finding.actionIndex,
+        finding.optionKey,
+      ]),
+    ).toEqual([['callingCardRarificationUnavailable', 1, 0, 'option1']]);
   });
 
   it('reroll a Fallback Gold final screen and keep its earlier screens through a save', () => {

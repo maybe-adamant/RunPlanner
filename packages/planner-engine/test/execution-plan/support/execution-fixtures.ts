@@ -62,8 +62,13 @@ import { simulateProjectAssembly } from '../../../src/simulation';
 import { surfaceQShopCorrelationProject } from './surface-q-shop-correlation-fixture';
 import { npcShoppingProtectionProject } from './npc-shopping-fixture';
 import { emptyShopGroupCatalog, emptyShopGroupProject } from './empty-shop-group-fixture';
-import { surfaceNORerollsProject, underworldFRerollsProject } from './rerolls-fixture';
+import {
+  surfaceNORerollsProject,
+  underworldFRarifiedScreenRerollProject,
+  underworldFRerollsProject,
+} from './rerolls-fixture';
 import underworldFRerollsFixture from '../fixtures/underworld-f-rerolls.execution.json';
+import underworldFRarifiedScreenRerollFixture from '../fixtures/underworld-f-rarified-screen-reroll.execution.json';
 import surfaceNORerollsFixture from '../fixtures/surface-no-rerolls.execution.json';
 import automaticBossFixture from '../fixtures/automatic-boss.execution.json';
 import dreamMixedPrefixFixture from '../fixtures/dream-mixed-prefix.execution.json';
@@ -288,6 +293,11 @@ export const executionFixtures: readonly ExecutionFixture[] = Object.freeze([
     name: 'underworld-f-rerolls',
     project: underworldFRerollsProject,
     wire: underworldFRerollsFixture,
+  },
+  {
+    name: 'underworld-f-rarified-screen-reroll',
+    project: underworldFRarifiedScreenRerollProject,
+    wire: underworldFRarifiedScreenRerollFixture,
   },
   {
     name: 'surface-no-rerolls',

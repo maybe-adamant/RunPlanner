@@ -124,6 +124,9 @@ export function selectedTraitOfferProducts(
                   trace.levelResolutions.map((resolution) => resolution.effectiveLevel),
                 ),
                 baseRarities: trace.baseRarities,
+                ...(trace.rerolledScreenBaseRarities === undefined
+                  ? {}
+                  : { rerolledScreenBaseRarities: trace.rerolledScreenBaseRarities }),
                 ...(trace.rerolledScreens === undefined
                   ? {}
                   : { rerolledScreens: trace.rerolledScreens }),

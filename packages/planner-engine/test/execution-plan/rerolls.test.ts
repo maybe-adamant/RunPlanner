@@ -34,11 +34,15 @@ import {
   withJudgment,
 } from '../support/rerolls';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { surfaceNORerollsProject } from './support/rerolls-fixture';
+import {
+  surfaceNORerollsProject,
+  underworldFRarifiedScreenRerollProject,
+} from './support/rerolls-fixture';
 import { currentSchemaWire } from './support/current-schema-wire';
 import doorRerollsFixture from './fixtures/underworld-f-rerolls.execution.json';
 import fieldsFixture from './fixtures/underworld-fghi.execution.json';
 import surfaceRerollsFixture from './fixtures/surface-no-rerolls.execution.json';
+import rarifiedScreenFixture from './fixtures/underworld-f-rarified-screen-reroll.execution.json';
 
 const g = createBiomeAddress('Underworld', 'G');
 const gSource = 'golden-g-b1-e1';
@@ -495,6 +499,52 @@ describe('rerolled screen publication', () => {
     // Each row carries its installed level, as the final rows do.
     expect(screens[0]!.options.every((option) => 'effectiveLevel' in option)).toBe(true);
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it("publishes a rerolled-away row's rolled rarity beside the rarity its Rarify click reached", () => {
+    const plan = planOf(underworldFRarifiedScreenRerollProject());
+    const [offer] = screenOwners(plan);
+    expect(offer).toMatchObject({ kind: 'traits', giver: 'Apollo' });
+    const screens = offer!.rerolledScreens as {
+      options: { key: string; baseRarity?: string; rarity?: string }[];
+    }[];
+    expect(screens.map((screen) => screen.options.map((option) => option.baseRarity))).toEqual([
+      [undefined, 'Common', undefined],
+      [undefined, undefined, undefined],
+    ]);
+    expect(screens[0]!.options.map((option) => option.rarity)).toEqual([
+      'Common',
+      'Rare',
+      'Common',
+    ]);
+    // The menu reads the keepsake's use when the screen opens, before any screen's click.
+    expect(offer!.expectation).toMatchObject({ rarifyUses: 1 });
+    expect(screenOwners(rarifiedScreenFixture)).toHaveLength(1);
+  });
+
+  it('decodes a rerolled row rarity strictly', () => {
+    const encoded = JSON.parse(
+      encodeExecutionPlan(planOf(underworldFRarifiedScreenRerollProject())),
+    ) as unknown;
+    const decodeWith = (edit: (option: Record<string, unknown>) => void) => {
+      const copy = structuredClone(encoded);
+      const screens = screenOwners(copy)[0]!.rerolledScreens as {
+        options: Record<string, unknown>[];
+      }[];
+      edit(screens[0]!.options[1]!);
+      return () => decodeExecutionPlan(copy);
+    };
+    expect(decodeWith(() => undefined)).not.toThrow();
+    expect(
+      decodeWith((option) => {
+        option.baseRarity = 3;
+      }),
+    ).toThrow('baseRarity');
+    expect(
+      decodeWith((option) => {
+        delete option.rarity;
+      }),
+    ).toThrow('baseRarity needs the rarity');
   });
 
   it('decodes rerolled screens strictly', () => {

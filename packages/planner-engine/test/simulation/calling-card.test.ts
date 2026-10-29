@@ -458,3 +458,119 @@ describe('Calling Card offer settlement', () => {
     );
   });
 });
+
+describe('Rarify clicks on rerolled-away screens', () => {
+  const rows = (...rarities: readonly ('Common' | 'Rare')[]): AuthoredTraitOfferTraits['options'] =>
+    (['ApolloWeaponBoon', 'ApolloSpecialBoon', 'ApolloCastBoon'] as const).map((traitKey, at) => ({
+      traitKey,
+      rarity: rarities[at] ?? 'Common',
+    })) as unknown as AuthoredTraitOfferTraits['options'];
+  const chain = (
+    earlier: readonly (readonly ('option1' | 'option2' | 'option3')[] | null)[],
+    final: readonly ('option1' | 'option2' | 'option3')[] = [],
+  ): AuthoredTraitOfferTraits => ({
+    kind: 'traits',
+    giverKey: 'Apollo',
+    options: rows(),
+    selectedOptionKey: 'option1',
+    rarificationActions: final,
+    rerolledScreens: earlier.map((actions) =>
+      actions === null ? null : { options: rows(), rarificationActions: actions },
+    ),
+  });
+  const screenRarities = (offer: ReturnType<typeof evaluateCallingCardOffer>['offer']) =>
+    offer.kind === 'chaos'
+      ? []
+      : (offer.rerolledScreens ?? []).map(
+          (screen) => screen?.options.map((option) => option.rarity) ?? null,
+        );
+
+  it('spends Calling Card charges on earlier screens first, oldest first, repeating one row', () => {
+    const state = createKeepsakeState(catalog, 'RarifyKeepsake');
+    const charges = state.callingCard!.remainingCharges;
+    const result = evaluateCallingCardOffer(
+      catalog,
+      state,
+      chain([['option1', 'option1', 'option1'], null, ['option2']], ['option3']),
+      true,
+    );
+    expect(result.rerolledScreenInvalidActions).toEqual([[], [], []]);
+    expect(result.invalidActions).toEqual([]);
+    expect(result.state.callingCard?.remainingCharges).toBe(charges - 5);
+    // Each screen's rows reflect only its own clicks; the authored rows keep the roll.
+    expect(screenRarities(result.offer)).toEqual([
+      ['Heroic', 'Common', 'Common'],
+      null,
+      ['Common', 'Rare', 'Common'],
+    ]);
+    expect(result.offer.kind === 'traits' && result.offer.options[2]?.rarity).toBe('Rare');
+  });
+
+  it('refuses a click past the charges on the screen that made it, and every later one', () => {
+    const state = createKeepsakeState(catalog, 'RarifyKeepsake');
+    const spent = Array.from(
+      { length: state.callingCard!.remainingCharges },
+      (_, at) => (['option1', 'option2', 'option3'] as const)[at % 3]!,
+    );
+    const result = evaluateCallingCardOffer(
+      catalog,
+      state,
+      chain([spent, ['option1']], ['option1']),
+      true,
+    );
+    expect(result.rerolledScreenInvalidActions).toEqual([[], [0]]);
+    expect(result.invalidActions).toEqual([0]);
+    expect(result.state.callingCard?.remainingCharges).toBe(0);
+    expect(screenRarities(result.offer)[1]).toEqual(['Common', 'Common', 'Common']);
+  });
+
+  it("spends a force keepsake's one use on the first click of the whole chain", () => {
+    const state = createKeepsakeState(catalog, 'ForceApolloBoonKeepsake');
+    const result = evaluateCallingCardOffer(
+      catalog,
+      state,
+      chain([['option2'], ['option1']], ['option1']),
+      true,
+    );
+    expect(result.rerolledScreenInvalidActions).toEqual([[], [0]]);
+    expect(result.invalidActions).toEqual([0]);
+    expect(result.state.olympianSources[0]?.remainingRarificationUses).toBe(0);
+    expect(screenRarities(result.offer)).toEqual([
+      ['Common', 'Rare', 'Common'],
+      ['Common', 'Common', 'Common'],
+    ]);
+  });
+
+  it('refuses an Unfated Calling Card click on an earlier screen', () => {
+    const arcanaFear = createArcanaFearState(catalog, {
+      ...createDefaultRouteLoadout(catalog),
+      manualArcanaKeys: ['ScreenReroll'],
+    });
+    const result = evaluateCallingCardOffer(
+      catalog,
+      createKeepsakeState(catalog, 'RarifyKeepsake', arcanaFear),
+      chain([['option1']]),
+      true,
+    );
+    expect(result.rerolledScreenInvalidActions).toEqual([[0]]);
+    expect(screenRarities(result.offer)).toEqual([['Common', 'Common', 'Common']]);
+  });
+
+  it('replays earlier screens of a Fallback Gold final screen', () => {
+    const state = createKeepsakeState(catalog, 'RarifyKeepsake');
+    const result = evaluateCallingCardOffer(
+      catalog,
+      state,
+      {
+        kind: 'fallbackGold',
+        giverKey: 'Apollo',
+        rerolledScreens: [{ options: rows(), rarificationActions: ['option3'] }],
+      },
+      true,
+    );
+    expect(result.rerolledScreenInvalidActions).toEqual([[]]);
+    expect(result.state.callingCard?.remainingCharges).toBe(
+      state.callingCard!.remainingCharges - 1,
+    );
+  });
+});
