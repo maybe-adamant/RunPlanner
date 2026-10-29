@@ -14,7 +14,7 @@ import {
   type SemanticAddress,
 } from '../../../src/authored-project';
 import type { ResolvedRewardOffer } from '../../../src/reward-kernel';
-import { decodeRunRecord, type RunRecord } from '../../../src/run-record';
+import { decodeRunRecord, type RunRecord, type RunRecordHeldTrait } from '../../../src/run-record';
 import {
   occurrenceSnapshot,
   recordedEntryStates,
@@ -870,34 +870,108 @@ describe('run import of the Surface victory', () => {
   });
 });
 
-describe('run import of rows a held rarify source logged one rarity high', () => {
-  /**
-   * O_Combat07's Poseidon screen, under the Conch Shell's provider rarify use,
-   * logging the picked row and one unpicked row as hovered: one step high.
-   */
-  function hoveredPoseidonScreen(): RunRecord {
+describe('run import of Rarify clicks and rows a held rarify source logged one rarity high', () => {
+  /** The Surface victory through Oceanus' O_Combat12, whose O_Combat07 spent the Conch Shell's one charge. */
+  function oceanusOpening(): RunRecord {
     const record = fixture('surface-victory');
-    const hovered: Readonly<Record<string, string>> = {
-      PoseidonCastBoon: 'Heroic',
-      DoubleRewardBoon: 'Epic',
-    };
+    return { ...record, rooms: record.rooms.slice(0, 24) };
+  }
+
+  /** `record` with room `roomIndex`'s screen rows renamed or re-rarified, logged as given. */
+  function withScreenRows(
+    record: RunRecord,
+    roomIndex: number,
+    rows: Readonly<Record<string, string>>,
+  ): RunRecord {
     return {
       ...record,
-      rooms: record.rooms.slice(0, 24).map((room, index) =>
-        index !== 21
+      rooms: record.rooms.map((room, index) =>
+        index !== roomIndex
           ? room
           : {
               ...room,
               traitScreens: room.traitScreens.map((screen) => ({
                 ...screen,
                 options: screen.options.map((option) => {
-                  const rarity = hovered[option.name];
+                  const rarity = rows[option.name];
                   return rarity === undefined ? option : { ...option, rarity };
                 }),
               })),
             },
       ),
     };
+  }
+
+  /** `record` with one trait's held row in room `roomIndex`'s entry save replaced. */
+  function withHeld(
+    record: RunRecord,
+    roomIndex: number,
+    name: string,
+    row: RunRecordHeldTrait,
+  ): RunRecord {
+    return {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index !== roomIndex || room.entry === undefined
+          ? room
+          : { ...room, entry: { ...room.entry, traits: { ...room.entry.traits, [name]: row } } },
+      ),
+    };
+  }
+
+  /** `record` with one keepsake renamed from room `fromRoom` on: swap, acquisition and saves. */
+  function withKeepsake(record: RunRecord, fromRoom: number, from: string, to: string): RunRecord {
+    const rename = (name: string) => (name === from ? to : name);
+    return {
+      ...record,
+      rooms: record.rooms.map((room, index) => {
+        if (index < fromRoom) return room;
+        const entry = room.entry;
+        return {
+          ...room,
+          ...(room.keepsakeSwap === undefined
+            ? {}
+            : {
+                keepsakeSwap: {
+                  ...room.keepsakeSwap,
+                  to: rename(room.keepsakeSwap.to),
+                },
+              }),
+          traits: {
+            ...room.traits,
+            acquired: room.traits.acquired.map((trait) => ({ ...trait, name: rename(trait.name) })),
+            removed: room.traits.removed.map(rename),
+          },
+          ...(entry === undefined
+            ? {}
+            : {
+                entry: {
+                  ...entry,
+                  ...(entry.keepsake === undefined ? {} : { keepsake: rename(entry.keepsake) }),
+                  ...(entry.traits === undefined
+                    ? {}
+                    : {
+                        traits: Object.fromEntries(
+                          Object.entries(entry.traits).map(([name, row]) => [rename(name), row]),
+                        ),
+                      }),
+                  ...(entry.lostTraits === undefined
+                    ? {}
+                    : { lostTraits: entry.lostTraits.map(rename) }),
+                },
+              }),
+        };
+      }),
+    };
+  }
+
+  function screenOffer(imported: RunImport, occurrenceId: string) {
+    const state = occurrence(imported.project, occurrenceId).state;
+    return state.kind === 'shipCombat'
+      ? state.wheels['wheel1']?.offers['offer1']?.traitOffersByAcquisitionRole['source']
+      : 'reward' in state
+        ? state.reward?.traitOffersByAcquisitionRole['source']
+        : undefined;
   }
 
   function poseidonScreen(imported: RunImport) {
@@ -909,8 +983,34 @@ describe('run import of rows a held rarify source logged one rarity high', () =>
       }));
   }
 
-  it('takes the pick from its acquired trait and lowers an unpicked row only the lower rarity admits', () => {
-    expect(poseidonScreen(projectFromRunRecord(catalog, hoveredPoseidonScreen()))).toEqual([
+  it("clicks O_Combat07's picked row with the Conch Shell's spent charge", () => {
+    // Logged and acquired Rare: rolled Common, rarified once.
+    const imported = projectFromRunRecord(catalog, oceanusOpening());
+    expect(screenOffer(imported, 'O-r21')).toEqual({
+      kind: 'traits',
+      giverKey: 'Poseidon',
+      options: [
+        { traitKey: 'PoseidonCastBoon', rarity: 'Epic' },
+        { traitKey: 'PoseidonManaBoon', rarity: 'Epic' },
+        { traitKey: 'DoubleRewardBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option3',
+      rarificationActions: ['option3'],
+    });
+    expect(poseidonScreen(imported)).toEqual([]);
+    expect(mismatchLines(imported.report)).toEqual([]);
+  });
+
+  it('clicks the pick its acquired rarity explains and lowers an unpicked row only the lower rarity admits', () => {
+    // Both rows hovered while the charge was left: the pick logs Epic, acquired Rare.
+    const imported = projectFromRunRecord(
+      catalog,
+      withScreenRows(oceanusOpening(), 21, {
+        PoseidonCastBoon: 'Heroic',
+        DoubleRewardBoon: 'Epic',
+      }),
+    );
+    expect(poseidonScreen(imported)).toEqual([
       {
         reason: 'assumption',
         value: expect.objectContaining({
@@ -918,12 +1018,182 @@ describe('run import of rows a held rarify source logged one rarity high', () =>
           options: [
             { traitKey: 'PoseidonCastBoon', rarity: 'Epic' },
             { traitKey: 'PoseidonManaBoon', rarity: 'Epic' },
-            { traitKey: 'DoubleRewardBoon', rarity: 'Rare' },
+            { traitKey: 'DoubleRewardBoon', rarity: 'Common' },
           ],
           selectedOptionKey: 'option3',
+          rarificationActions: ['option3'],
         }),
       },
     ]);
+    expect(mismatchLines(imported.report)).toEqual([]);
+  });
+
+  it('keeps the logged pick and reports a charge spent where no screen could take it', () => {
+    // The charge is gone at O_Combat07's entry save: spent in O_Intro, which shows no screen.
+    const imported = projectFromRunRecord(
+      catalog,
+      withHeld(oceanusOpening(), 21, 'ForcePoseidonBoonKeepsake', {
+        rarity: 'Epic',
+        rarityUpgradeUses: 0,
+      }),
+    );
+    expect(screenOffer(imported, 'O-r21')).toMatchObject({
+      options: [{}, {}, { traitKey: 'DoubleRewardBoon', rarity: 'Rare' }],
+    });
+    expect(screenOffer(imported, 'O-r21')).toMatchObject({ rarificationActions: [] });
+    expect(mismatchLines(imported.report)).toEqual([
+      'keepsake r21 ForcePoseidonBoonKeepsake: 0 | 1',
+    ]);
+  });
+
+  it('imports a record without saved charges as before, with no click', () => {
+    const record = oceanusOpening();
+    const legacy: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room) =>
+        room.entry?.traits === undefined
+          ? room
+          : {
+              ...room,
+              entry: {
+                ...room.entry,
+                traits: Object.fromEntries(
+                  Object.entries(room.entry.traits).map(([name, row]) => {
+                    const { rarityUpgradeUses: _uses, ...rest } = row;
+                    void _uses;
+                    return [name, rest];
+                  }),
+                ),
+              },
+            },
+      ),
+    };
+    const imported = projectFromRunRecord(catalog, legacy);
+    expect(screenOffer(imported, 'O-r21')).toEqual({
+      kind: 'traits',
+      giverKey: 'Poseidon',
+      options: [
+        { traitKey: 'PoseidonCastBoon', rarity: 'Epic' },
+        { traitKey: 'PoseidonManaBoon', rarity: 'Epic' },
+        { traitKey: 'DoubleRewardBoon', rarity: 'Rare' },
+      ],
+      selectedOptionKey: 'option3',
+      rarificationActions: [],
+    });
+    expect(mismatchLines(imported.report)).toEqual([]);
+  });
+
+  it("clicks a Calling Card's picked row once per spent charge, up to Heroic", () => {
+    // Calling Card from the start in the Phial's place, through N_Story01: two
+    // charges on N_Combat03's pick acquired Epic, one on N_MiniBoss01's acquired Heroic.
+    const fixtureRecord = fixture('surface-victory');
+    const rooms = fixtureRecord.rooms.slice(0, 12);
+    const { exit: _exit, ...last } = rooms[11]!;
+    void _exit;
+    let record: RunRecord = withKeepsake(
+      {
+        ...fixtureRecord,
+        loadout: { ...fixtureRecord.loadout, keepsake: { name: 'RarifyKeepsake', rarity: 'Epic' } },
+        route: { biomes: ['N'], dream: false },
+        outcome: { kind: 'abandoned', endingRoom: last.name },
+        rooms: [...rooms.slice(0, -1), last],
+      },
+      0,
+      'FountainRarityKeepsake',
+      'RarifyKeepsake',
+    );
+    record = withHeld(record, 0, 'RarifyKeepsake', { rarity: 'Epic', rarityUpgradeUses: 6 });
+    record = withHeld(record, 4, 'RarifyKeepsake', { rarity: 'Epic', rarityUpgradeUses: 4 });
+    record = withHeld(record, 10, 'RarifyKeepsake', { rarity: 'Epic', rarityUpgradeUses: 3 });
+    record = withHeld(record, 10, 'AntiArmorBoon', { rarity: 'Heroic' });
+    record = withScreenRows(record, 9, { AntiArmorBoon: 'Heroic' });
+    record = {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index !== 9
+          ? room
+          : {
+              ...room,
+              traits: {
+                ...room.traits,
+                acquired: room.traits.acquired.map((trait) =>
+                  trait.name === 'AntiArmorBoon' ? { ...trait, rarity: 'Heroic' } : trait,
+                ),
+              },
+            },
+      ),
+    };
+    const imported = projectFromRunRecord(catalog, record);
+    expect(screenOffer(imported, 'N-r3')).toMatchObject({
+      options: [{ traitKey: 'HeraWeaponBoon', rarity: 'Common' }, {}, {}],
+      selectedOptionKey: 'option1',
+      rarificationActions: ['option1', 'option1'],
+    });
+    expect(screenOffer(imported, 'N-r9')).toMatchObject({
+      options: [{}, { traitKey: 'AntiArmorBoon', rarity: 'Epic' }, {}],
+      selectedOptionKey: 'option2',
+      rarificationActions: ['option2'],
+    });
+    expect(
+      mismatchLines(imported.report).filter((line) => line.includes('RarifyKeepsake')),
+    ).toEqual([]);
+  });
+
+  it("clicks the Conch Shell's charge on a rerolled-away screen when the final one cannot take it", () => {
+    // The Surface victory with The Champions held in Strength's place and
+    // O_Combat07's Poseidon screen rerolled once; its final rows all logged
+    // Common, so no click can have raised them.
+    const record = oceanusOpening();
+    const rows: RunRecord = withScreenRows(
+      {
+        ...record,
+        loadout: {
+          ...record.loadout,
+          arcana: record.loadout.arcana.map((card) =>
+            card.name === 'LowHealthBonus' ? { name: 'ScreenReroll', level: 3 } : card,
+          ),
+        },
+        rooms: record.rooms.map((room, index) => ({
+          ...room,
+          ...(index === 21 ? { spentRerolls: { '2000001': 1 } } : {}),
+          traits:
+            index === 21
+              ? {
+                  ...room.traits,
+                  acquired: room.traits.acquired.map((trait) =>
+                    trait.name === 'DoubleRewardBoon' ? { ...trait, rarity: 'Common' } : trait,
+                  ),
+                }
+              : room.traits,
+          entry: { ...room.entry, numRerolls: index > 21 ? 2 : 3 },
+        })),
+      },
+      21,
+      { PoseidonCastBoon: 'Common', PoseidonManaBoon: 'Common', DoubleRewardBoon: 'Common' },
+    );
+    const imported = projectFromRunRecord(
+      catalog,
+      withHeld(
+        withHeld(rows, 22, 'DoubleRewardBoon', { rarity: 'Common' }),
+        23,
+        'DoubleRewardBoon',
+        {
+          rarity: 'Common',
+          level: 2,
+        },
+      ),
+    );
+    expect(screenOffer(imported, 'O-r21')).toMatchObject({
+      options: [
+        { traitKey: 'PoseidonCastBoon', rarity: 'Common' },
+        { traitKey: 'PoseidonManaBoon', rarity: 'Common' },
+        { traitKey: 'DoubleRewardBoon', rarity: 'Common' },
+      ],
+      rarificationActions: [],
+      // The guessed earlier screen takes the click on its first row the Conch Shell can raise.
+      rerolledScreens: [{ rarificationActions: ['option1'] }],
+    });
+    expect(mismatchLines(imported.report)).toEqual([]);
   });
 });
 

@@ -198,6 +198,7 @@ function compareEntry(
   saved: RecordedEntryState,
   snapshot: RunStateSnapshot,
   entered: RunStateSnapshot | undefined,
+  rarifySources: ReadonlySet<string>,
 ): readonly Difference[] {
   const found: Difference[] = [];
   const differ = (area: RunImportArea, field: string, values: Values | undefined) => {
@@ -275,6 +276,21 @@ function compareEntry(
     const actual = snapshot.keepsakes.timePiece?.remainingCharges;
     if (expected !== undefined || actual !== undefined)
       differ('conversion', timePiece.key, { expected: show(expected), actual: show(actual) });
+  }
+
+  // Rarify charges left on each source whose charges the record carries; a
+  // source the save no longer holds has none.
+  for (const key of rarifySources) {
+    const held = saved.traits.get(key);
+    if (held !== undefined && held.rarityUpgradeUses === undefined) continue;
+    const expected = held?.rarityUpgradeUses;
+    const actual =
+      catalog.keepsakes.byKey[key]?.effect?.kind === 'callingCard'
+        ? snapshot.keepsakes.callingCard?.remainingCharges
+        : snapshot.keepsakes.olympianSources.find((source) => source.keepsakeKey === key)
+            ?.remainingRarificationUses;
+    if ((expected ?? 0) !== (actual ?? 0))
+      differ('keepsake', key, { expected: show(expected), actual: show(actual) });
   }
 
   differ(
@@ -411,6 +427,14 @@ export function compareImportToRecord(
   const states = recordedEntryStates(record);
   if (states.length === 0) return [];
   const routeKey = assembly.project.route.routeKey;
+  // Rarify sources whose charges the record carries; an older record has none.
+  const rarifySources = new Set(
+    states.flatMap((state) =>
+      [...state.traits]
+        .filter(([, row]) => row.rarityUpgradeUses !== undefined)
+        .map(([name]) => name),
+    ),
+  );
   const snapshot = (occurrence: RecordOccurrence, kind: 'roomEntered' | 'beforeRoomExit') =>
     occurrenceSnapshot(assembly, occurrence, kind);
   const entries: RunImportReportEntry[] = [];
@@ -430,6 +454,7 @@ export function compareImportToRecord(
       states[roomIndex]!,
       exit,
       entered === undefined ? undefined : snapshot(entered, 'roomEntered'),
+      rarifySources,
     );
     const current = new Map(
       found.map((entry) => [

@@ -6,7 +6,6 @@ import type {
 } from '../../authored-project';
 import { concaveStoneProcGiver, type TraitRarity } from '../../catalog-schema';
 import type { RunRecordTraitScreen } from '../../run-record/model';
-import type { EvaluatedTraitOfferCandidate } from '../candidates';
 import type { SemanticFinding } from '../model';
 import type { RunImportContext } from './import';
 import {
@@ -22,6 +21,7 @@ import {
 import { recordedEntryStates } from './conformance';
 import { chaosOffer } from './features';
 import { applyScreenRerolls } from './rerolls';
+import { rarifyRerolledScreens, takeRarifyCharges, withRarifyClicks } from './rarify';
 import { POM_GIVERS } from './vocabulary';
 import { rerolledLevelScreensGuess } from '../traits/level-effects';
 
@@ -202,13 +202,19 @@ function withoutIllegalRows(
   );
   if (kept.length === value.options.length) return undefined;
   const pick = value.options[selected]!;
-  const { concaveStoneResult: stone, ...rest } = value;
+  const { concaveStoneResult: stone, rarificationActions: actions, ...rest } = value;
   const residual =
     stone?.kind === 'proc'
       ? kept.indexOf(value.options[OPTION_KEYS.indexOf(stone.optionKey)]!)
       : -1;
+  // A click on a dropped row goes with it; the others follow their rows.
+  const keptActions = (actions ?? []).flatMap((key) => {
+    const at = kept.indexOf(value.options[OPTION_KEYS.indexOf(key)]!);
+    return at < 0 ? [] : [OPTION_KEYS[at]!];
+  });
   return {
     ...rest,
+    ...(actions === undefined ? {} : { rarificationActions: keptActions }),
     options: kept as unknown as typeof value.options,
     selectedOptionKey: OPTION_KEYS[kept.indexOf(pick)]!,
     ...(residual < 0
@@ -438,36 +444,43 @@ const RARITY_ROLL_CODES: ReadonlySet<string> = new Set([
   'rarityRollUnavailable',
 ]);
 
+/** The offer without its final screen's Rarify clicks. */
+function withoutClicks(value: AuthoredTraitOffer): AuthoredTraitOffer {
+  return value.kind !== 'traits' || (value.rarificationActions?.length ?? 0) === 0
+    ? value
+    : { ...value, rarificationActions: [] };
+}
+
 /**
  * Hovering a row while a rarify source with uses is held logs it one rarity
- * step high, Rarify clicked or not. A row is lowered one step where every
- * branch could rarify it from there: the picked row when its acquired trait
- * holds the lower rarity, an unpicked row whose logged rarity alone the engine
- * refuses and whose lower rarity it admits.
- * Returns the corrected offer, its evaluation and the unpicked rows lowered.
+ * step high, Rarify clicked or not. Of `rows`, each row no authored click
+ * explains is lowered one step where every branch could rarify it from there
+ * before any click: the picked row when its acquired trait holds the lower
+ * rarity, an unpicked row whose logged rarity alone the engine refuses and
+ * whose lower rarity it admits. Returns the corrected offer and the rows lowered.
  */
 function withoutHoverRarify(
   context: RunImportContext,
   trait: TraitOfferAddress,
   value: AuthoredTraitOffer,
-  evaluation: EvaluatedTraitOfferCandidate,
   roomIndex: number,
-):
-  | {
-      readonly value: AuthoredTraitOffer;
-      readonly evaluation: EvaluatedTraitOfferCandidate;
-      readonly lowered: readonly number[];
-    }
-  | undefined {
+  rows: 'picked' | 'unpicked',
+  clicked: ReadonlySet<number> = new Set(),
+): { readonly value: AuthoredTraitOffer; readonly lowered: readonly number[] } | undefined {
   if (value.kind !== 'traits') return undefined;
+  const evaluation = context
+    .candidates()
+    .evaluate({ kind: 'traitOffer', trait, value: withoutClicks(value) });
+  if (evaluation.kind !== 'traitOffer') return undefined;
   const order = context.catalog.traitRarityOrder;
   const lower = (rarity: TraitRarity | undefined): TraitRarity | undefined =>
     rarity === undefined ? undefined : order[(order as readonly string[]).indexOf(rarity) - 1];
   const selected = OPTION_KEYS.indexOf(value.selectedOptionKey);
   const acquired = context.record.rooms[roomIndex]!.traits.acquired;
-  const rows = value.options.flatMap((option, index) => {
+  const lowering = value.options.flatMap((option, index) => {
     const rarity = lower(option.rarity);
-    if (rarity === undefined) return [];
+    if (rarity === undefined || clicked.has(index) || (index === selected) !== (rows === 'picked'))
+      return [];
     if (index !== selected) {
       const findings = evaluation.result.assessments[index]?.findings ?? [];
       return findings.length > 0 && findings.every((finding) => RARITY_ROLL_CODES.has(finding.code))
@@ -477,31 +490,62 @@ function withoutHoverRarify(
     const grants = acquired.filter((entry) => entry.name === option.traitKey);
     return grants.length === 1 && grants[0]!.rarity === rarity ? [index] : [];
   });
-  if (rows.length === 0) return undefined;
+  if (lowering.length === 0) return undefined;
   const lowered = {
     ...value,
     options: value.options.map((option, index) =>
-      rows.includes(index) ? { ...option, rarity: lower(option.rarity)! } : option,
+      lowering.includes(index) ? { ...option, rarity: lower(option.rarity)! } : option,
     ) as unknown as typeof value.options,
   };
-  const retry = context.candidates().evaluate({ kind: 'traitOffer', trait, value: lowered });
+  const retry = context
+    .candidates()
+    .evaluate({ kind: 'traitOffer', trait, value: withoutClicks(lowered) });
   if (retry.kind !== 'traitOffer') return undefined;
   const branches = retry.result.callingCard ?? [];
-  const confirmed = rows.every(
+  const confirmed = lowering.every(
     (index) =>
       branches.length > 0 &&
       branches.every((branch) => branch.rarifiableOptionKeys.includes(OPTION_KEYS[index]!)) &&
       (index === selected || retry.result.assessments[index]?.legal === true),
   );
-  return confirmed
-    ? { value: lowered, evaluation: retry, lowered: rows.filter((index) => index !== selected) }
-    : undefined;
+  return confirmed ? { value: lowered, lowered: lowering } : undefined;
 }
 
 /**
+ * A screen's rows with its spent Rarify charges and hover corrections: the
+ * unpicked rows' hover first, as the hover preceded any click; then the
+ * clicks, judged from each row's logged rarity; then the pick's hover where
+ * no click explains it. Returns the offer and the unpicked rows lowered with
+ * no click to explain them.
+ */
+function withRarifyAndHover(
+  context: RunImportContext,
+  trait: TraitOfferAddress,
+  value: AuthoredTraitOffer,
+  roomIndex: number,
+  logged: ReadonlyMap<string, string | undefined>,
+): { readonly value: AuthoredTraitOffer; readonly lowered: readonly number[] } {
+  const unpicked = withoutHoverRarify(context, trait, value, roomIndex, 'unpicked');
+  const hovered = unpicked?.value ?? value;
+  const clicks = withRarifyClicks(context, trait, hovered, roomIndex, logged);
+  const clicked = clicks?.value ?? hovered;
+  const picked = withoutHoverRarify(context, trait, clicked, roomIndex, 'picked', clicks?.clicked);
+  return {
+    value: picked?.value ?? clicked,
+    lowered: (unpicked?.lowered ?? []).filter((index) => clicks?.clicked.has(index) !== true),
+  };
+}
+
+/** The Rarify clicks an applied offer's final screen holds. */
+const clickCount = (value: AuthoredTraitOffer) =>
+  value.kind === 'traits' ? (value.rarificationActions?.length ?? 0) : 0;
+
+/**
  * Applies a screen's offer, else the offer without the unselected rows the
- * engine refuses, reported, and returns the value applied. An offer carrying a
- * Concave Stone result is kept only when its extra pick settles without a finding.
+ * engine refuses, reported, and returns the value applied. The room's spent
+ * Rarify charges become clicks on its rows, and a logged row no click
+ * explains is corrected for hover. An offer carrying a Concave Stone result
+ * is kept only when its extra pick settles without a finding.
  */
 function applyScreenOffer(
   context: RunImportContext,
@@ -511,15 +555,28 @@ function applyScreenOffer(
   ambiguous: boolean,
 ): AuthoredTraitOffer | undefined {
   const stone = recorded.kind === 'traits' && recorded.concaveStoneResult !== undefined;
-  const apply = (command: ProjectCommand) =>
-    stone ? context.applyValid(command) : context.apply(command);
-  const logged = context.candidates().evaluate({ kind: 'traitOffer', trait, value: recorded });
-  if (logged.kind !== 'traitOffer') return undefined;
-  const corrected = withoutHoverRarify(context, trait, recorded, logged, record.roomIndex);
-  const value = corrected?.value ?? recorded;
-  const evaluation = corrected?.evaluation ?? logged;
+  const apply = (command: ProjectCommand) => {
+    if (!(stone ? context.applyValid(command) : context.apply(command))) return false;
+    if (command.kind === 'ReplaceTraitOffer' && command.value.kind === 'traits')
+      takeRarifyCharges(
+        context,
+        record.roomIndex,
+        command.value.giverKey,
+        clickCount(command.value),
+      );
+    return true;
+  };
+  const logged = new Map(
+    recorded.kind === 'traits'
+      ? recorded.options.map((option) => [option.traitKey, option.rarity] as const)
+      : [],
+  );
+  const corrected = withRarifyAndHover(context, trait, recorded, record.roomIndex, logged);
+  const value = corrected.value;
+  const evaluation = context.candidates().evaluate({ kind: 'traitOffer', trait, value });
+  if (evaluation.kind !== 'traitOffer') return undefined;
   // An unpicked row's rarity lowered from the logged one is an assumption.
-  const assumed = ambiguous || (corrected?.lowered.length ?? 0) > 0;
+  const assumed = ambiguous || corrected.lowered.length > 0;
   const command = { kind: 'ReplaceTraitOffer', trait, value } as const;
   if (evaluation.result.supported && evaluation.result.findings.length === 0) {
     if (!apply(command)) return undefined;
@@ -534,9 +591,11 @@ function applyScreenOffer(
     return value;
   }
   context.refuse();
-  // The engine refuses some unselected rows here; the observed pick keeps the others.
-  const reduced = withoutIllegalRows(value, evaluation.result.assessments);
-  if (reduced === undefined) return undefined;
+  // The engine refuses some unselected rows here; the observed pick keeps the
+  // others, whose clicks and hover are judged again once the offer is legal.
+  const kept = withoutIllegalRows(recorded, evaluation.result.assessments);
+  if (kept === undefined) return undefined;
+  const reduced = withRarifyAndHover(context, trait, kept, record.roomIndex, logged).value;
   const retry = context.candidates().evaluate({ kind: 'traitOffer', trait, value: reduced });
   const reducedCommand = { kind: 'ReplaceTraitOffer', trait, value: reduced } as const;
   if (
@@ -554,7 +613,7 @@ function applyScreenOffer(
     record,
   });
   // Every lowered row is legal in this evaluation, so the reduction keeps it.
-  if ((corrected?.lowered.length ?? 0) > 0)
+  if (corrected.lowered.length > 0)
     context.note({
       area: 'traitOffer',
       reason: 'assumption',
@@ -565,7 +624,10 @@ function applyScreenOffer(
   return reduced;
 }
 
-/** Authors a screen's recorded rerolls on the final rows just applied. */
+/**
+ * Authors a screen's recorded rerolls on the final rows just applied, then the
+ * room's Rarify charges the final screen could not take on its earlier screens.
+ */
 function applyTraitScreenRerolls(
   context: RunImportContext,
   trait: TraitOfferAddress,
@@ -573,16 +635,18 @@ function applyTraitScreenRerolls(
   roomIndex: number,
   position: number,
 ): void {
-  applyScreenRerolls(context, roomIndex, position, trait, (count) => {
+  let rerolled: AuthoredTraitOffer | undefined;
+  const applied = applyScreenRerolls(context, roomIndex, position, trait, (count) => {
     const screens = context.candidates().rerolledTraitScreensGuess(trait, value, count);
-    return screens === undefined
+    rerolled =
+      screens === undefined
+        ? undefined
+        : ({ ...value, rerolledScreens: screens } as AuthoredTraitOffer);
+    return rerolled === undefined
       ? undefined
-      : {
-          kind: 'ReplaceTraitOffer',
-          trait,
-          value: { ...value, rerolledScreens: screens } as AuthoredTraitOffer,
-        };
+      : { kind: 'ReplaceTraitOffer', trait, value: rerolled };
   });
+  if (applied && rerolled !== undefined) rarifyRerolledScreens(context, trait, rerolled, roomIndex);
 }
 
 /**
