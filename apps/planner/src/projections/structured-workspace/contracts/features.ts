@@ -166,7 +166,7 @@ export interface WorkspaceStygianWellSlot {
 
 /** Why a Well or Pool option cannot be picked where it would be appended. */
 export type WorkspaceFeatureRollLock =
-  'unreached' | 'notEnabled' | 'nothingLeft' | 'poolEmpty' | 'poolShort' | 'poolReserved';
+  'unreached' | 'notEnabled' | 'nothingLeft' | 'poolEmpty' | 'poolShort';
 
 /** One thing a Well or Pool visit can do next: buy or sell an offered slot, or reroll. */
 export interface WorkspaceFeatureRollOption {

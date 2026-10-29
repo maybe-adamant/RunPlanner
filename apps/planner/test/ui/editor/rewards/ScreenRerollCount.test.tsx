@@ -13,7 +13,7 @@ it('steps the draft count, stopping where the pool does with the reason', () => 
     <ScreenRerollCount
       count={0}
       onChange={onChange}
-      rerolls={{ count: 0, maxCount: 1, lockAtMax: 'poolReserved' }}
+      rerolls={{ count: 0, maxCount: 1, lockAtMax: 'poolShort' }}
     />,
   );
   expect(screen.getByRole('button', { name: 'Fewer rerolls' })).toHaveProperty('disabled', true);
@@ -24,12 +24,12 @@ it('steps the draft count, stopping where the pool does with the reason', () => 
     <ScreenRerollCount
       count={1}
       onChange={onChange}
-      rerolls={{ count: 0, maxCount: 1, lockAtMax: 'poolReserved' }}
+      rerolls={{ count: 0, maxCount: 1, lockAtMax: 'poolShort' }}
     />,
   );
   const more = screen.getByRole('button', { name: 'More rerolls' });
   expect(more).toHaveProperty('disabled', true);
-  expect(more.getAttribute('data-hint')).toBe('Later rerolls need the rest.');
+  expect(more.getAttribute('data-hint')).toBe('Not enough rerolls left.');
   fireEvent.click(screen.getByRole('button', { name: 'Fewer rerolls' }));
   expect(onChange).toHaveBeenLastCalledWith(0);
 });

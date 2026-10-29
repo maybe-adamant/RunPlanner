@@ -176,15 +176,24 @@ describe('Hub Timeline details', () => {
     expect(stayList(projected, 3).rerolls.appendLocked).toBe('poolEmpty');
   });
 
-  it('holds back a press whose pool later presses spend', async () => {
+  it('allows an earlier press that starves later ones, which report the shortfall', async () => {
     let project = base;
     for (const hubSlotKey of ['combat03', 'combat09', 'combat11'])
       project = (await append(project, 2, hubSlotKey)).next;
-    const projected = projectStructuredWorkspaceFixture(project);
-    expect(stayList(projected, 0).rerolls).toMatchObject({
-      appendLocked: 'poolReserved',
+    // The pool is judged where the press is made: before Visit 1 three are left.
+    expect(stayList(projectStructuredWorkspaceFixture(project), 0).rerolls).toMatchObject({
       poolRemaining: 3,
     });
-    expect(stayList(projected, 2).rerolls.appendLocked).toBe('poolEmpty');
+    expect(
+      stayList(projectStructuredWorkspaceFixture(project), 0).rerolls.appendLocked,
+    ).toBeUndefined();
+    const starved = (await append(project, 0, 'combat10')).next;
+    const projected = projectStructuredWorkspaceFixture(starved);
+    const later = stayList(projected, 2).rerolls.rows.at(-1)!;
+    expect(
+      projected.workspace.findingsByRepairTarget
+        .get(semanticAddressKey(later.address))
+        ?.map((finding) => finding.code),
+    ).toContain('rerollPoolExceeded');
   });
 });

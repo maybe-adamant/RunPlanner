@@ -34,8 +34,6 @@ function featureRollLockHint(lock: WorkspaceFeatureRollLock): string {
       return 'No rerolls left.';
     case 'poolShort':
       return 'Not enough rerolls left.';
-    case 'poolReserved':
-      return 'Later rerolls need the rest.';
   }
 }
 

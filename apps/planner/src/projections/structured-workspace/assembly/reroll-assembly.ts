@@ -217,9 +217,7 @@ function assembleRerollList(input: {
       : !settled.enabled
         ? ('notEnabled' as const)
         : !allowance.allowed
-          ? settled.poolRemaining <= 0
-            ? ('poolEmpty' as const)
-            : ('poolReserved' as const)
+          ? ('poolEmpty' as const)
           : undefined;
   return Object.freeze({
     rerolls: Object.freeze({

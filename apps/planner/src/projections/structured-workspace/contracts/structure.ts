@@ -230,7 +230,7 @@ export interface WorkspaceRoomRerolls {
    * Why a press cannot be appended: unreached, no held card, no pool left, or
    * the pool left is spent by later presses.
    */
-  readonly appendLocked?: 'unreached' | 'notEnabled' | 'poolEmpty' | 'poolReserved';
+  readonly appendLocked?: 'unreached' | 'notEnabled' | 'poolEmpty';
 }
 
 /** Engine-backed pickers and edits of one room's or Hub stay's rerolls. */

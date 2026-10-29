@@ -65,9 +65,8 @@ export function workspaceScreenRerollSource(input: {
     while (maxCount < MAX_SCREEN_REROLLS && extra(maxCount + 1) <= allowance.remaining)
       maxCount += 1;
     if (maxCount === MAX_SCREEN_REROLLS) return Object.freeze({ count, maxCount });
-    const atScreen = (snapshot?.rerolls.remaining ?? 0) - screenRerollCost(count);
     const lockAtMax: WorkspaceScreenRerollLock =
-      atScreen <= 0 ? 'poolEmpty' : atScreen >= extra(maxCount + 1) ? 'poolReserved' : 'poolShort';
+      allowance.remaining - extra(maxCount) <= 0 ? 'poolEmpty' : 'poolShort';
     return Object.freeze({ count, maxCount, lockAtMax });
   };
 }

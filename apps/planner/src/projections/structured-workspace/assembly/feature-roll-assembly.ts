@@ -87,7 +87,7 @@ function rerollLock(
   if (!option.available) return 'nothingLeft';
   if (allowance.allowed) return undefined;
   if (option.poolRemaining <= 0) return 'poolEmpty';
-  return option.poolRemaining < option.cost ? 'poolShort' : 'poolReserved';
+  return 'poolShort';
 }
 
 /**

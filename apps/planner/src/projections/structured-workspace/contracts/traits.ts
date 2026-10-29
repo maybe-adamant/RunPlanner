@@ -97,8 +97,7 @@ export interface WorkspaceLauncherPresentation {
 }
 
 /** Why one more native reroll of a screen cannot be authored. */
-export type WorkspaceScreenRerollLock =
-  'unreached' | 'notEnabled' | 'poolEmpty' | 'poolShort' | 'poolReserved';
+export type WorkspaceScreenRerollLock = 'unreached' | 'notEnabled' | 'poolEmpty' | 'poolShort';
 
 /** The native rerolls of one single-pick screen before its final rows. */
 export interface WorkspaceScreenRerolls {
