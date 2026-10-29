@@ -21,6 +21,7 @@ import {
   decodeProjectDocument,
   deriveRouteLoadout,
   encodeProjectDocument,
+  HERMES_SHRINE_DELAYS,
   hermesShrineDeliveryEntryKey,
   createTraitOfferAddress,
   ProjectCommandContractError,
@@ -96,6 +97,68 @@ describe('authored-project project-state commands', () => {
         present: false,
       }),
     ).toThrow(ProjectCommandContractError);
+  });
+
+  it('spreads a newly stocked Shrine item delay by its identity and keeps an authored one', () => {
+    const occurrence = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'N'),
+      createOccurrenceId('surface-n-preboss:postboss'),
+    );
+    const stockAll = (project: ReturnType<typeof loadSurfaceNOProject>) =>
+      applyProjectCommand(
+        (['first', 'secondLeft', 'secondRight'] as const).reduce(
+          (current, slotKey) =>
+            applyProjectCommand(current, catalog, {
+              kind: 'ReplaceHermesShrineOffer',
+              occurrence,
+              slotKey,
+              value: { rewardType: 'HealBigDrop' },
+            }),
+          project,
+        ),
+        catalog,
+        {
+          kind: 'ReplaceHermesShrineTravelDealRefill',
+          occurrence,
+          value: { rewardType: 'SpellDrop' },
+        },
+      );
+    const shrineOf = (project: ReturnType<typeof loadSurfaceNOProject>) =>
+      project.route.biomes[0]?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+      )?.hermesShrine;
+    const delaysOf = (project: ReturnType<typeof loadSurfaceNOProject>) => {
+      const shrine = shrineOf(project);
+      return [
+        shrine?.offerBySlot.first?.delay,
+        shrine?.offerBySlot.secondLeft?.delay,
+        shrine?.offerBySlot.secondRight?.delay,
+        shrine?.travelDealRefill?.offer?.delay,
+      ];
+    };
+    const stocked = stockAll(loadSurfaceNOProject());
+    const delays = delaysOf(stocked);
+    for (const delay of delays) expect(HERMES_SHRINE_DELAYS).toContain(delay);
+    expect(new Set(delays).size).toBeGreaterThan(1);
+    expect(delaysOf(stockAll(loadSurfaceNOProject()))).toEqual(delays);
+
+    const authoredDelay = HERMES_SHRINE_DELAYS.find((delay) => delay !== delays[0])!;
+    const authored = applyProjectCommand(stocked, catalog, {
+      kind: 'SetHermesShrineOfferDelay',
+      occurrence,
+      generationKey: 'initial:first',
+      delay: authoredDelay,
+    });
+    const restocked = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence,
+      slotKey: 'first',
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    expect(shrineOf(restocked)?.offerBySlot.first).toEqual({
+      rewardType: 'MaxHealthDrop',
+      delay: authoredDelay,
+    });
   });
 
   it('keeps Shrine purchase membership and detail in one semantic command while rejecting malformed input', () => {

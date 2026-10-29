@@ -22,8 +22,9 @@ import type { OccurrenceLeafCommand } from '../types';
 import { requireOccurrence, failCommand } from '../contract';
 import { updateOccurrence } from './mutation';
 import {
-  DEFAULT_HERMES_SHRINE_DELAY,
+  defaultHermesShrineDelay,
   HERMES_SHRINE_DELAYS,
+  hermesShrineInitialGenerationKey,
   hermesShrineInitialSlotKey,
   type HermesShrineGenerationKey,
   type HermesShrineInventoryOffer,
@@ -126,14 +127,16 @@ function followRefillTrigger(
   );
 }
 
-/** A restocked item keeps the delay rolled with its slot, or the default when first stocked. */
+/** A restocked item keeps its rolled delay; a newly stocked one takes its identity's default. */
 function stockedOffer(
   current: HermesShrineInventoryOffer | null | undefined,
   rewardType: string,
+  occurrenceId: string,
+  generationKey: HermesShrineGenerationKey,
 ): HermesShrineInventoryOffer {
   return Object.freeze({
     rewardType,
-    delay: current?.delay ?? DEFAULT_HERMES_SHRINE_DELAY,
+    delay: current?.delay ?? defaultHermesShrineDelay(occurrenceId, generationKey),
   });
 }
 
@@ -227,6 +230,8 @@ export function applyOccurrenceCommand(
             [command.slotKey]: stockedOffer(
               shrine.offerBySlot[command.slotKey],
               command.value.rewardType,
+              occurrence.occurrenceId,
+              hermesShrineInitialGenerationKey(command.slotKey),
             ),
           }),
         }),
@@ -484,7 +489,12 @@ export function applyOccurrenceCommand(
               hermesShrine: Object.freeze({
                 ...shrine,
                 travelDealRefill: Object.freeze({
-                  offer: stockedOffer(shrine.travelDealRefill?.offer, command.rewardType),
+                  offer: stockedOffer(
+                    shrine.travelDealRefill?.offer,
+                    command.rewardType,
+                    authored.occurrenceId,
+                    'travelDealRefill',
+                  ),
                 }),
               }),
             });
@@ -549,6 +559,8 @@ export function applyOccurrenceCommand(
               offer: stockedOffer(
                 occurrence.hermesShrine.travelDealRefill?.offer,
                 command.value.rewardType,
+                occurrence.occurrenceId,
+                'travelDealRefill',
               ),
             }),
           }),

@@ -191,8 +191,23 @@ export const HERMES_SHRINE_DELAYS: readonly HermesShrineDelay[] = Object.freeze(
   2, 3, 4, 5, 6, 7, 8,
 ]);
 
-/** A newly stocked item's delay until the author picks the rolled one. */
-export const DEFAULT_HERMES_SHRINE_DELAY: HermesShrineDelay = 2;
+/**
+ * A newly stocked item's delay until the author picks the rolled one: spread
+ * across the game's roll range by a stable hash of the item's identity.
+ */
+export function defaultHermesShrineDelay(
+  occurrenceId: string,
+  generationKey: HermesShrineGenerationKey,
+): HermesShrineDelay {
+  const identity = `${occurrenceId}|${generationKey}`;
+  // FNV-1a: stable across runs and platforms.
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < identity.length; index += 1) {
+    hash ^= identity.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return HERMES_SHRINE_DELAYS[hash % HERMES_SHRINE_DELAYS.length]!;
+}
 
 /**
  * One visible Shrine item with the delay rolled for it. Concrete payload and

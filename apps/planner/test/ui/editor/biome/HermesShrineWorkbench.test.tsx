@@ -833,6 +833,7 @@ describe('Hermes Shrine workbench', () => {
         .projectWorkspace.history!.present.route.biomes[0]!.topology!.occurrences.find(
           (room) => room.occurrenceId === postbossId,
         )!;
+    const stockedRefill = shrine().hermesShrine?.travelDealRefill?.offer;
     openOverview();
     expect(screen.queryByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
@@ -866,10 +867,8 @@ describe('Hermes Shrine workbench', () => {
       within(sourceRow()).getByRole('button', { name: /^Remove .* from timeline$/ }),
     );
     expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
-    expect(shrine().hermesShrine?.travelDealRefill?.offer).toEqual({
-      rewardType: 'ArmorBoost',
-      delay: 2,
-    });
+    expect(stockedRefill?.rewardType).toBe('ArmorBoost');
+    expect(shrine().hermesShrine?.travelDealRefill?.offer).toEqual(stockedRefill);
     await pickRoomObjectAction(view.user, 'Hermes Shrine', /^Rush .*· Slot 1$/);
     expect(travelDealLine().previousElementSibling).toBe(sourceRow());
   });

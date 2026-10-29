@@ -629,10 +629,7 @@ describe('workspace inspector destinations', () => {
       ?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === 'surface-n-preboss:postboss',
       );
-    expect(repairedOccurrence?.hermesShrine?.offerBySlot.first).toEqual({
-      rewardType: 'HealBigDrop',
-      delay: 2,
-    });
+    expect(repairedOccurrence?.hermesShrine?.offerBySlot.first?.rewardType).toBe('HealBigDrop');
   });
 
   it('routes Fields capacity findings to Overview from a non-Overview authoring surface', () => {
