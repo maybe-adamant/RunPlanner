@@ -171,7 +171,7 @@ function hooks.attach(module, session, getState, report, room, route, scope)
             return base(...)
         end
         local well = active.occurrence.overview.stygianWell
-        local planned = well and well.interacted and well.rerolls and #well.rerolls or 0
+        local planned = well and well.rerolls and #well.rerolls or 0
         local rerolls = (storeRerolls[nativeRoom] or 0) + 1
         storeRerolls[nativeRoom] = rerolls
         if rerolls > planned then

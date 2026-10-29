@@ -26,14 +26,15 @@ function hooks.attach(module, session, getState, report, room, highlights)
         end
         local occurrence = room.occurrence(state, nativeRoom)
         local pool = occurrence and occurrence.overview.purgingPool
-        if pool == nil or not pool.interacted then return nil end
+        if pool == nil then return nil end
         return { state = state, nativeRoom = nativeRoom, occurrence = occurrence, pool = pool }
     end
 
     module.hooks.wrap("OpenSellTraitMenu", "run-planner-pool-open", function(_, runtime, base, ...)
         local nativeRoom = _G.CurrentRun and _G.CurrentRun.CurrentRoom
         local opening = plannedPool(getState(runtime), nativeRoom)
-        if opening ~= nil and ((poolRerolls[nativeRoom] or 0) > 0 or handled(nativeRoom, 0)) then opening = nil end
+        if opening ~= nil and ((poolRerolls[nativeRoom] or 0) > 0 or handled(nativeRoom, 0)
+            or #opening.pool.traits == 0) then opening = nil end
         if opening ~= nil then opening.roll = 0 end
         local thread = currentThread()
         local prior = openings[thread]

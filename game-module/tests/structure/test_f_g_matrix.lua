@@ -190,11 +190,11 @@ function TestFGStructureMatrix.testRoomEntryComponentsOwnFeatureAndRewardFailure
     lu.assertEquals(errorValue.kind, "incomingReward")
 end
 
-function TestFGStructureMatrix.testWellAndPoolPresenceIgnoresInteractionState()
+function TestFGStructureMatrix.testWellAndPoolPresenceIgnoresTheirPinnedStock()
     for _, key in ipairs({ "stygianWell", "purgingPool" }) do
-        for _, interacted in ipairs({ false, true }) do
+        for _, stock in ipairs({ {}, { { slotKey = "left", traitKey = "A" } } }) do
             local item = structuralOccurrence("F_PostBoss01")
-            item.overview[key] = { interacted = interacted }
+            item.overview[key] = key == "stygianWell" and { offers = stock } or { traits = stock }
             local native = nativeRoom("F_PostBoss01")
             native[key == "stygianWell" and "WellShop" or "SellTraitShop"] = {}
             lu.assertTrue(proveOverview(item, native, context()))

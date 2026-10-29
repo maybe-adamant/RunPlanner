@@ -231,15 +231,10 @@ local function featureRerolls(value, label, decodeRoll)
     return rows
 end
 
+-- A present Well: its initial roll's pinned slots, then its rerolls'. Unlisted slots stay native.
 local function stygianWell(value, label)
-    local record, errorMessage = p.exact(value, { "interacted" }, { "offers", "rerolls" }, label)
+    local record, errorMessage = p.exact(value, { "offers" }, { "rerolls" }, label)
     if not record then return nil, errorMessage end
-    if not p.bool(record.interacted, label .. ".interacted")
-        or record.interacted ~= (record.offers ~= nil)
-        or (not record.interacted and record.rerolls ~= nil) then
-        return p.fail(label .. " has invalid interaction state")
-    end
-    if record.offers == nil then return record end
     local _, offersError = wellOffers(record.offers, "initial", label .. ".offers")
     if offersError then return nil, offersError end
     if record.rerolls ~= nil then
@@ -353,15 +348,13 @@ end
 
 local POOL_SLOTS = { left = true, middle = true, right = true }
 
--- A Pool reroll's pinned slots; the others stay native.
-local function poolRoll(row, label)
-    local roll, rollError = p.exact(row, { "rollKey", "traits" }, {}, label)
-    if not roll then return nil, rollError end
-    local traits, traitsError = p.arr(roll.traits, label .. ".traits", 3)
+-- One Pool list's pinned slots; the others stay native.
+local function poolTraits(value, label)
+    local traits, traitsError = p.arr(value, label, 3)
     if not traits then return nil, traitsError end
     local seen = {}
     for index, valueRow in ipairs(traits) do
-        local rowLabel = label .. ".traits[" .. index .. "]"
+        local rowLabel = label .. "[" .. index .. "]"
         local trait, traitError = p.exact(valueRow, { "slotKey", "traitKey" }, {}, rowLabel)
         if not trait then return nil, traitError end
         if not p.one(trait.slotKey, POOL_SLOTS, rowLabel .. ".slotKey") or seen[trait.slotKey]
@@ -370,36 +363,21 @@ local function poolRoll(row, label)
         end
         seen[trait.slotKey] = true
     end
-    return roll
+    return traits
 end
 
+local function poolRoll(row, label)
+    local roll, rollError = p.exact(row, { "rollKey", "traits" }, {}, label)
+    if not roll then return nil, rollError end
+    return poolTraits(roll.traits, label .. ".traits")
+end
+
+-- A present Pool: its initial list's pinned slots, then its rerolls'.
 local function purgingPool(value, label)
-    local record, errorMessage = p.exact(value, { "interacted" }, { "traits", "rerolls" }, label)
+    local record, errorMessage = p.exact(value, { "traits" }, { "rerolls" }, label)
     if not record then return nil, errorMessage end
-    if not p.bool(record.interacted, label .. ".interacted")
-        or record.interacted ~= (record.traits ~= nil)
-        or (not record.interacted and record.rerolls ~= nil) then
-        return p.fail(label .. " has invalid interaction state")
-    end
-    if record.traits == nil then return record end
-    local traits, traitsError = p.arr(record.traits, label .. ".traits", 3)
-    if not traits then return nil, traitsError end
-    local seen = {}
-    for index, valueRow in ipairs(traits) do
-        local row, rowError = p.exact(
-            valueRow,
-            { "slotKey", "traitKey" },
-            {},
-            label .. ".traits[" .. index .. "]"
-        )
-        if not row then return nil, rowError end
-        if not p.one(row.slotKey, POOL_SLOTS, label .. ".slotKey")
-            or seen[row.slotKey]
-            or (not p.json.isNull(row.traitKey) and not p.str(row.traitKey, label .. ".traitKey")) then
-            return p.fail(label .. " has invalid trait row")
-        end
-        seen[row.slotKey] = true
-    end
+    local _, traitsError = poolTraits(record.traits, label .. ".traits")
+    if traitsError then return nil, traitsError end
     if record.rerolls ~= nil then
         local _, rerollsError = featureRerolls(record.rerolls, label .. ".rerolls", poolRoll)
         if rerollsError then return nil, rerollsError end

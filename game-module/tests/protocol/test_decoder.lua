@@ -811,7 +811,6 @@ end
 function TestProtocol.testWellOverviewCannotRetainTheMovedTravelDealRefill()
     local plan = minimalPlan({})
     plan.occurrences[1].overview.stygianWell = tagged({
-        interacted = true,
         offers = { { generationKey = "travelDealRefill", offerKey = "RandomStoreItem" } },
     })
     refreshFingerprint(plan)
@@ -2477,25 +2476,32 @@ function TestProtocol.testWellAndPoolRerollsNameTheirRollsAndPinnedSlots()
             "overview")
     end
     local initial = '"offers":[{"generationKey":"initial:healing","offerKey":"HealDropRange"}]'
-    lu.assertNotNil(decoded('"stygianWell":{"interacted":true,' .. initial .. ',"rerolls":['
+    lu.assertNotNil(decoded('"stygianWell":{' .. initial .. ',"rerolls":['
         .. '{"rollKey":"r1","offers":[{"generationKey":"r1:secondRight","offerKey":"LastStandShopItem"}]},'
         .. '{"rollKey":"r2","offers":[]}]}'))
-    lu.assertNotNil(decoded('"purgingPool":{"interacted":true,"traits":[],"rerolls":['
+    lu.assertNotNil(decoded('"stygianWell":{"offers":[]}'))
+    lu.assertNotNil(decoded('"purgingPool":{"traits":[{"slotKey":"right","traitKey":"A"}]}'))
+    lu.assertNotNil(decoded('"purgingPool":{"traits":[],"rerolls":['
         .. '{"rollKey":"r1","traits":[{"slotKey":"middle","traitKey":"A"}]},{"rollKey":"r3","traits":[]}]}'))
     for _, text in ipairs({
-        '"stygianWell":{"interacted":true,"rerollCount":2,"offers":[]}',
-        '"stygianWell":{"interacted":false,"rerolls":[{"rollKey":"r1","offers":[]}]}',
-        '"stygianWell":{"interacted":true,"offers":[],"rerolls":[]}',
-        '"stygianWell":{"interacted":true,"offers":[],"rerolls":[{"rollKey":"initial","offers":[]}]}',
-        '"stygianWell":{"interacted":true,"offers":[],"rerolls":[{"rollKey":"r1","offers":[]},'
+        '"stygianWell":{"rerollCount":2,"offers":[]}',
+        '"stygianWell":{"interacted":true,"offers":[]}',
+        '"stygianWell":{"rerolls":[{"rollKey":"r1","offers":[]}]}',
+        '"purgingPool":{"interacted":true,"traits":[]}',
+        '"purgingPool":{"rerolls":[{"rollKey":"r1","traits":[]}]}',
+        '"purgingPool":{"traits":[{"slotKey":"left","traitKey":null}]}',
+        '"purgingPool":{"traits":[{"traitKey":"A"}]}',
+        '"stygianWell":{"offers":[],"rerolls":[]}',
+        '"stygianWell":{"offers":[],"rerolls":[{"rollKey":"initial","offers":[]}]}',
+        '"stygianWell":{"offers":[],"rerolls":[{"rollKey":"r1","offers":[]},'
             .. '{"rollKey":"r1","offers":[]}]}',
-        '"stygianWell":{"interacted":true,"offers":[],"rerolls":[{"rollKey":"r1","offers":['
+        '"stygianWell":{"offers":[],"rerolls":[{"rollKey":"r1","offers":['
             .. '{"generationKey":"r2:healing","offerKey":"HealDropRange"}]}]}',
-        '"stygianWell":{"interacted":true,"offers":[{"generationKey":"r1:healing","offerKey":"HealDropRange"}]}',
-        '"purgingPool":{"interacted":true,"rerollCount":1,"traits":[]}',
-        '"purgingPool":{"interacted":true,"traits":[],"rerolls":[{"rollKey":"r1","traits":['
+        '"stygianWell":{"offers":[{"generationKey":"r1:healing","offerKey":"HealDropRange"}]}',
+        '"purgingPool":{"rerollCount":1,"traits":[]}',
+        '"purgingPool":{"traits":[],"rerolls":[{"rollKey":"r1","traits":['
             .. '{"slotKey":"left","traitKey":null}]}]}',
-        '"purgingPool":{"interacted":true,"traits":[],"rerolls":[{"rollKey":"r1","traits":['
+        '"purgingPool":{"traits":[],"rerolls":[{"rollKey":"r1","traits":['
             .. '{"slotKey":"left","traitKey":"A"},{"slotKey":"left","traitKey":"B"}]}]}',
     }) do
         lu.assertNil(decoded(text), text)

@@ -42,9 +42,9 @@ local SLOT_INDEX = { healing = 1, secondLeft = 2, secondRight = 3 }
 
 -- The roll a store fill installs: the initial roll, then the k-th reroll's entry at the k-th native reroll.
 local function rollOffers(well, generation)
-    if generation == 0 then return well.offers, true end
+    if generation == 0 then return well.offers end
     local roll = well.rerolls and well.rerolls[generation]
-    return roll and roll.offers, false
+    return roll and roll.offers
 end
 
 -- A reroll excludes one random earlier row; it is steered away from the planned rows.
@@ -63,8 +63,8 @@ end
 -- filler fill, so a slot bought earlier, which native blanks afterwards, keeps the
 -- positions of the slots after it.
 function wellInventory.prepare(well, storeData, args, generation)
-    if well == nil or not well.interacted then return nil end
-    local offers, initial = rollOffers(well, generation or 0)
+    if well == nil then return nil end
+    local offers = rollOffers(well, generation or 0)
     if offers == nil then return nil end
     local pinned, planned, healing, others = {}, {}, nil, 0
     for _, rawOffer in ipairs(offers) do
@@ -75,9 +75,6 @@ function wellInventory.prepare(well, storeData, args, generation)
         if offer.storeIndex == 1 then healing = offer else others = others + 1 end
     end
     table.sort(pinned, function(left, right) return left.storeIndex < right.storeIndex end)
-    if initial and #pinned ~= 3 then
-        return nil, { checkpoint = "well-inventory", expected = "three initial offers" }
-    end
     if #pinned == 0 then return nil end
     local fillData = #pinned < 3 and primitives.copy(storeData) or nil
     if healing ~= nil then

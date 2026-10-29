@@ -56,7 +56,7 @@ local function occurrence()
             incomingReward = { rewardType = "Boon" },
             encounterPhases = { { slotKey = "Encounter", encounterKey = "Fight" } },
             requiredObjects = { "SoulPylon" },
-            stygianWell = { interacted = true }, purgingPool = { interacted = true },
+            stygianWell = { offers = {} }, purgingPool = { traits = {} },
             hermesShrine = { offers = {} },
             keepsakeRack = {}, fountain = {}, shop = { offers = {} },
             additional = { { owner = "chaos", kind = "chaos", room = { gameName = "Chaos" } } },
@@ -111,7 +111,7 @@ function TestRoomNavigationStructure.testLockedPurgingPoolCountsAsAbsent()
     local native = room()
     native.SellTraitShop = { BlockedByRequirements = true }
     lu.assertTrue(features.prove(item, native, context()))
-    item.overview.purgingPool = { interacted = false }
+    item.overview.purgingPool = { traits = {} }
     local ok, errorValue = features.prove(item, native, context())
     lu.assertNil(ok)
     lu.assertEquals(errorValue, { kind = "feature", expected = "purgingPool", observed = false })

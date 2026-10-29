@@ -299,11 +299,11 @@ local function openPool(callbacks, nativeRoom, beforeRender)
     return result
 end
 
-function TestFeatureInteractionHooks.testUninteractedPoolLeavesNativeSaleMenuUntouched()
+function TestFeatureInteractionHooks.testUnpinnedPoolLeavesNativeSaleMenuUntouched()
     local module, _, callbacks = capture()
     local nativeOptions = { { Name = "TraitA" }, { Name = "TraitB" } }
     local active = opaque({ occurrence = { overview = {
-        purgingPool = { interacted = false },
+        purgingPool = { traits = {} },
     } } }, function() return nil end)
     local session = stub()
     session.occurrence = function() return active.occurrence end
@@ -313,10 +313,10 @@ function TestFeatureInteractionHooks.testUninteractedPoolLeavesNativeSaleMenuUnt
     lu.assertEquals(nativeOptions, { { Name = "TraitA" }, { Name = "TraitB" } })
 end
 
-function TestFeatureInteractionHooks.testInteractedPoolSteersOnlyTheNativeSaleMenu()
+function TestFeatureInteractionHooks.testPinnedPoolSteersOnlyTheNativeSaleMenu()
     local module, _, callbacks = capture()
     local active = opaque({ occurrence = { overview = {
-        purgingPool = { interacted = true, traits = {
+        purgingPool = { traits = {
             { slotKey = "left", traitKey = "TraitB" },
             { slotKey = "middle", traitKey = "TraitA" },
         } },
@@ -362,8 +362,8 @@ function TestFeatureInteractionHooks.testPoolInstallationFollowsPhialRefreshAndD
     local module, _, callbacks = capture()
     local state = { state = "synchronized" }
     local rooms = {
-        first = { overview = { purgingPool = { interacted = true, traits = { { traitKey = "A" } } } } },
-        second = { overview = { purgingPool = { interacted = true, traits = { { traitKey = "B" } } } } },
+        first = { overview = { purgingPool = { traits = { { slotKey = "left", traitKey = "A" } } } } },
+        second = { overview = { purgingPool = { traits = { { slotKey = "left", traitKey = "B" } } } } },
     }
     local session = { diagnostic = function() error("unexpected diagnostic") end }
     local room = { occurrence = function(_, native) return rooms[native.__runPlannerExecutionRoomId] end }
@@ -401,8 +401,8 @@ function TestFeatureInteractionHooks.testPoolInstallationFailureIsAtomicAndUnbou
     local module, _, callbacks = capture()
     local state = { state = "synchronized" }
     local diagnostics = {}
-    local occurrence = { overview = { purgingPool = { interacted = true,
-        traits = { { traitKey = "A" }, { traitKey = "Missing" } },
+    local occurrence = { overview = { purgingPool = {
+        traits = { { slotKey = "left", traitKey = "A" }, { slotKey = "middle", traitKey = "Missing" } },
     } } }
     local room = { occurrence = function() return occurrence end }
     require("mods.room.features.inventory.purging_pool_hooks").attach(module,
@@ -431,8 +431,8 @@ end
 function TestFeatureInteractionHooks.testPoolRefreshesValuesEvenWhenPhialTargetWasNotANativeOfferedRow()
     local module, _, callbacks = capture()
     local state = { state = "synchronized" }
-    local occurrence = { overview = { purgingPool = { interacted = true,
-        traits = { { traitKey = "A" } } } } }
+    local occurrence = { overview = { purgingPool = {
+        traits = { { slotKey = "left", traitKey = "A" } } } } }
     require("mods.room.features.inventory.purging_pool_hooks").attach(module,
         { diagnostic = function() error("unexpected diagnostic") end },
         function() return state end, function() end, { occurrence = function() return occurrence end })
@@ -464,8 +464,8 @@ end
 function TestFeatureInteractionHooks.testPoolScopeIsThreadLocalAndConsumedBeforeRerollAndClearedOnError()
     local module, _, callbacks = capture()
     local state = { state = "synchronized" }
-    local occurrence = { overview = { purgingPool = { interacted = true,
-        traits = { { traitKey = "A" } } } } }
+    local occurrence = { overview = { purgingPool = {
+        traits = { { slotKey = "left", traitKey = "A" } } } } }
     require("mods.room.features.inventory.purging_pool_hooks").attach(module,
         { diagnostic = function() error("unexpected diagnostic") end },
         function() return state end, function() end, { occurrence = function() return occurrence end })
@@ -722,10 +722,10 @@ end
 
 
 
-function TestFeatureInteractionHooks.testUninteractedWellLeavesNativeInventoryUntouched()
+function TestFeatureInteractionHooks.testUnpinnedWellLeavesNativeInventoryUntouched()
     local module, _, callbacks = capture()
     local active = opaque({ occurrence = { overview = {
-        stygianWell = { interacted = false },
+        stygianWell = { offers = {} },
     } } }, function() return nil end)
     local session = stub()
     session.current = function() return active end
@@ -747,7 +747,64 @@ function TestFeatureInteractionHooks.testUninteractedWellLeavesNativeInventoryUn
     lu.assertEquals(generated.StoreOptions[1].Name, "ArmorBoostStore")
 end
 
-function TestFeatureInteractionHooks.testInteractedWellSteersItsThreeInitialOfferSlots()
+function TestFeatureInteractionHooks.testWellPinsOnlyItsPinnedInitialSlots()
+    local module, _, callbacks = capture()
+    local active = opaque({ occurrence = { overview = {
+        stygianWell = { offers = { { generationKey = "initial:secondLeft", offerKey = "LastStandShopItem" } } },
+    } } }, function() return nil end)
+    local session = stub()
+    session.current = function() return active end
+    attachFeatureHooks(module, session, function() return {} end, function() end, session)
+    local exclusions = {}
+    -- Native: the healing row first, then the first eligible others up to MaxOffers.
+    local function nativeFill(args)
+        local data, excluded = args.StoreData, {}
+        for _, name in ipairs(args.ExclusionNames or {}) do excluded[name] = true end
+        exclusions[#exclusions + 1] = args.ExclusionNames or false
+        local options = {}
+        local healing = data.HealingOffers
+        if healing.Amount ~= 0 then options[1] = (healing.Options or healing.WeightedList)[1] end
+        for _, list in ipairs({ data.Traits, data.Consumables }) do
+            for _, row in ipairs(list) do
+                if #options < data.MaxOffers and not excluded[row.Name] then options[#options + 1] = row end
+            end
+        end
+        return { StoreOptions = options }
+    end
+    local generated = callbacks.FillInShopOptions(nil, {}, nativeFill, { StoreData = {
+        MaxOffers = 3,
+        HealingOffers = { WeightedList = { { Name = "HealDropRange" }, { Name = "ArmorBoostStore" } } },
+        Traits = { { Name = "TemporaryDiscountTrait" } },
+        Consumables = { { Name = "RandomStoreItem" }, { Name = "LastStandShopItem" } },
+    } })
+    lu.assertEquals(generated.StoreOptions[1].Name, "HealDropRange")
+    lu.assertNil(generated.StoreOptions[1].__runPlannerGenerationKey)
+    lu.assertEquals(generated.StoreOptions[2].Name, "LastStandShopItem")
+    lu.assertEquals(generated.StoreOptions[2].__runPlannerGenerationKey, "initial:secondLeft")
+    lu.assertEquals(generated.StoreOptions[3].Name, "TemporaryDiscountTrait")
+    lu.assertNil(generated.StoreOptions[3].__runPlannerGenerationKey)
+    lu.assertEquals(exclusions, { false, { "LastStandShopItem" } })
+end
+
+function TestFeatureInteractionHooks.testPoolPinsOnlyItsPinnedInitialSlots()
+    local module, _, callbacks = capture()
+    local state = { state = "synchronized" }
+    local occurrence = { overview = { purgingPool = { traits = { { slotKey = "right", traitKey = "A" } } } } }
+    require("mods.room.features.inventory.purging_pool_hooks").attach(module,
+        { diagnostic = function() error("unexpected diagnostic") end },
+        function() return state end, function() end, { occurrence = function() return occurrence end })
+    local native = { __runPlannerExecutionRoomId = "pool", SellTraitShop = {} }
+    openPool(callbacks, native, function()
+        native.SellValues = { D = { Name = "D", Value = 40 } }
+        native.SellOptions = { { Name = "A", Value = 10 }, { Name = "B", Value = 20 }, { Name = "C", Value = 30 } }
+    end)
+    lu.assertEquals(native.SellOptions, {
+        { Name = "B", Value = 20 }, { Name = "C", Value = 30 }, { Name = "A", Value = 10 },
+    })
+    lu.assertEquals(native.SellValues, { D = { Name = "D", Value = 40 } })
+end
+
+function TestFeatureInteractionHooks.testFullyPinnedWellSteersItsThreeInitialOfferSlots()
     local module, _, callbacks = capture()
     local expected = {
         { generationKey = "initial:healing", offerKey = "ArmorBoostStore" },
@@ -755,7 +812,7 @@ function TestFeatureInteractionHooks.testInteractedWellSteersItsThreeInitialOffe
         { generationKey = "initial:secondRight", offerKey = "RandomStoreItem" },
     }
     local active = opaque({ occurrence = { overview = {
-        stygianWell = { interacted = true, offers = expected },
+        stygianWell = { offers = expected },
     } } }, function() return nil end)
     local session = stub()
     session.current = function() return active end
@@ -801,7 +858,7 @@ function TestFeatureInteractionHooks.testWellInstallsEachAuthoredRollAtItsOwnRer
     -- Roll r1 pins only its right slot; roll r2 pins nothing.
     local r1 = { { generationKey = "r1:secondRight", offerKey = "LastStandShopItem" } }
     local active = opaque({ occurrence = { overview = {
-        stygianWell = { interacted = true, offers = initial,
+        stygianWell = { offers = initial,
             rerolls = { { rollKey = "r1", offers = r1 }, { rollKey = "r2", offers = {} } } },
     } } }, function() return nil end)
     local session = stub()
@@ -1260,7 +1317,7 @@ function TestFeatureInteractionHooks.testPoolInstallsEachRerollsPinsAndAFurtherR
     local module, _, callbacks = capture()
     local state = { state = "synchronized" }
     local mismatches = {}
-    local occurrence = { overview = { purgingPool = { interacted = true,
+    local occurrence = { overview = { purgingPool = {
         traits = { { slotKey = "left", traitKey = "B" } },
         rerolls = {
             { rollKey = "r1", traits = { { slotKey = "middle", traitKey = "A" } } },

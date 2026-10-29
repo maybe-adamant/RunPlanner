@@ -340,7 +340,7 @@ function TestNemesisEncounters.testTraitTradeSurvivesPoolHooksInEitherRegistrati
         local poolTarget = { Name = "PoolTarget", Value = 10, Rarity = "Common" }
         local nativeRoom = {}
         local active = { occurrence = { overview = {
-            purgingPool = { interacted = true, traits = { { traitKey = "PoolTarget" } } },
+            purgingPool = { traits = { { slotKey = "left", traitKey = "PoolTarget" } } },
         } } }
         local payload = { transaction = { kind = "encounterInteraction", resolution = {
             kind = "nemesisRandomEvent", outcome = { kind = "traitTrade", traitKey = "Target", response = "reject" },

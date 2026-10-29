@@ -357,7 +357,7 @@ function TestTravelDealRefills.testWellRefillGeneratesOneItemWithMatchingNativeP
 end
 
 function TestTravelDealRefills.testUnrelatedWellRefillsPassThroughAndUnrealizedRefillsRemainUnclaimed()
-    local overview = { stygianWell = { interacted = true, offers = {
+    local overview = { stygianWell = { offers = {
         { generationKey = "initial:healing", offerKey = "HealDropRange" },
         { generationKey = "initial:secondLeft", offerKey = "Source" },
         { generationKey = "initial:secondRight", offerKey = "Other" },
@@ -437,7 +437,7 @@ function TestTravelDealRefills.testWellMissingSlotIsDiagnosedOnlyWhenPublishedRe
 end
 
 function TestTravelDealRefills.testWellRefillWithoutCandidatePassesNativeArgumentsWithoutInitialFallback()
-    local overview = { stygianWell = { interacted = true, offers = {
+    local overview = { stygianWell = { offers = {
         { generationKey = "initial:healing", offerKey = "HealDropRange" },
         { generationKey = "initial:secondLeft", offerKey = "Source" },
         { generationKey = "initial:secondRight", offerKey = "Other" },
