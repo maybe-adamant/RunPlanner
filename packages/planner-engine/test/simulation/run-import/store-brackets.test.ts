@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { solveReplacedRewards, type Counts } from '../../../src/simulation/run-import/rerolls';
+import {
+  solveReplacedRewards,
+  type Counts,
+} from '../../../src/simulation/run-import/store-brackets';
 
 const FILLS: Readonly<Record<string, Counts>> = {
   RunProgress: { Boon: 2, MaxHealthDrop: 1, RoomMoneyDrop: 1 },
