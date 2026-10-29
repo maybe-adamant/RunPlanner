@@ -22,7 +22,12 @@ import type {
   ProjectDocument,
 } from '../../authored-project/model';
 import { resolveRoutePosition } from '../../authored-project/route-context';
-import { hubVisitSlotKeys, isHubAction } from '../../authored-project/topology/query';
+import {
+  hubActionOrderRefusal,
+  hubVisitSlotKeys,
+  isHubAction,
+  type HubActionOrderRefusal,
+} from '../../authored-project/topology/query';
 import {
   evaluateHubOpenSetConstraints,
   type HubSideRoomGenerationSupportEntry,
@@ -100,6 +105,8 @@ export interface EvaluatedHubSlotCandidate {
 export interface HubActionOrderCandidateSupport {
   readonly candidateActions: readonly HubAction[];
   readonly openHubSlotKeys: readonly string[];
+  /** Why the order cannot replace the Hub's, such as one that drops its rerolls. */
+  readonly refusal?: HubActionOrderRefusal;
   readonly findings: readonly SemanticFinding[];
   readonly selectedPossible: boolean;
 }
@@ -596,7 +603,9 @@ export function evaluateHubActionOrderCandidate(
         : [],
     ),
   );
+  const refusal = hubActionOrderRefusal(state.decision, candidateActions);
   const structurallyPossible =
+    refusal === undefined &&
     candidateHubSlotKeys.length <= state.descriptor.requiredVisits &&
     new Set(candidateHubSlotKeys).size === candidateHubSlotKeys.length &&
     candidateHubSlotKeys.every((hubSlotKey) => openHubSlotKeys.includes(hubSlotKey)) &&
@@ -659,6 +668,7 @@ export function evaluateHubActionOrderCandidate(
     result: Object.freeze({
       candidateActions,
       openHubSlotKeys,
+      ...(refusal === undefined ? {} : { refusal }),
       findings,
       // Downstream room-local work is feedback, not a reason to reject an
       // otherwise distinct open Hub visit order from authorship.

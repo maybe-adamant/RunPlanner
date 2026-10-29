@@ -811,6 +811,26 @@ export function isHubAction(value: unknown): value is HubAction {
   return action.kind === 'roomVisit' && typeof action.hubSlotKey === 'string' && keys.length === 2;
 }
 
+/**
+ * Why a proposed action order cannot replace a Hub's: reordering keeps every
+ * reroll exactly, since rerolls are added and removed only by their own
+ * commands. Undefined when the order may replace it.
+ */
+export type HubActionOrderRefusal = 'rerollsChanged';
+
+export function hubActionOrderRefusal(
+  decision: Pick<HubDecision, 'actions'>,
+  actions: readonly HubAction[],
+): HubActionOrderRefusal | undefined {
+  const rerolls = (list: readonly HubAction[]) =>
+    JSON.stringify(
+      list
+        .flatMap((action) => (action.kind === 'reroll' ? [action] : []))
+        .sort((left, right) => left.rerollId.localeCompare(right.rerollId)),
+    );
+  return rerolls(actions) === rerolls(decision.actions) ? undefined : 'rerollsChanged';
+}
+
 /** Room visits completed before the Hub fountain use, or undefined while it is unplaced. */
 export function hubFountainPrecedingVisitCount(
   decision: Pick<HubDecision, 'actions'>,

@@ -408,10 +408,12 @@ export {
   selectedExitContinuation,
   selectedExitTarget,
   type DeclaredPhysicalExit,
+  hubActionOrderRefusal,
   hubVisitSlotKeys,
   hubDecisionHandoffReadiness,
   hubFountainPrecedingVisitCount,
   isHubAction,
+  type HubActionOrderRefusal,
   type OrdinaryTargetAuthoringEligibility,
   type SelectedExitContinuation,
 } from './topology/query';

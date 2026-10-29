@@ -9,6 +9,7 @@ import {
   createRoomActionAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  hubActionOrderRefusal,
   type ProjectCommand,
   type ProjectDocument,
   type RerollRoomAction,
@@ -225,6 +226,9 @@ describe('Hub rerolls', () => {
         actions: [{ ...hub.actions[0]!, rerollId: 'r2' } as never, ...hub.actions.slice(1)],
       }),
     ).toThrow('Hub action order must keep its rerolls');
+    // Clearing the order would drop the reroll, so the same answer refuses a reset.
+    expect(hubActionOrderRefusal(hub, [])).toBe('rerollsChanged');
+    expect(hubActionOrderRefusal(hub, [...hub.actions.slice(1), hub.actions[0]!])).toBeUndefined();
   });
 
   it("follow the slot's last press before its visit when the order changes", () => {

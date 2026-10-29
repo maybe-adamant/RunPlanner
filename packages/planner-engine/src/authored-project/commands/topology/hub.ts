@@ -17,6 +17,7 @@ import type {
 import { requireEphyraSideRooms } from '../../room-state/declaration';
 import {
   exitDecisionForSource,
+  hubActionOrderRefusal,
   hubTerminalTakeoverForSource,
   hubVisitSlotKeys,
   isExactTerminalTakeoverEnvelope,
@@ -327,14 +328,7 @@ export function updateHub(
   }
   if (visits.length > descriptor.requiredVisits)
     failCommand(command, `Hub supports ${descriptor.requiredVisits} visits`);
-  // Reordering keeps every reroll exactly; rerolls are added and removed by their own commands.
-  const rerolls = (list: readonly HubAction[]) =>
-    JSON.stringify(
-      list
-        .flatMap((action) => (action.kind === 'reroll' ? [action] : []))
-        .sort((left, right) => left.rerollId.localeCompare(right.rerollId)),
-    );
-  if (rerolls(actions) !== rerolls(hub.actions))
+  if (hubActionOrderRefusal(hub, actions) !== undefined)
     failCommand(command, 'Hub action order must keep its rerolls');
   if (
     actions.length === hub.actions.length &&

@@ -517,6 +517,24 @@ describe('Hub stays', () => {
   const base = () => withArcana(loadSurfaceNProject(), ['DoorReroll']);
   // Visits: combat05, miniBoss01, combat02, combat11, combat23, then combat09.
 
+  it('refuse an action order that drops a press, such as a reset', () => {
+    const project = press(base(), stay(0), slot('combat03')).project;
+    const decision = project.route.biomes[0]!.topology!.decisions.find(
+      (candidate) => candidate.kind === 'hub',
+    );
+    if (decision?.kind !== 'hub') throw new Error('Surface N has no Hub');
+    const session = createPreparedProjectCandidateSession(catalog, evaluate(project));
+    const order = (actions: typeof decision.actions) =>
+      session.evaluate({ kind: 'hubActionOrder', hub, actions });
+    expect(order([])).toMatchObject({
+      kind: 'hubActionOrder',
+      result: { refusal: 'rerollsChanged', selectedPossible: false },
+    });
+    const kept = order(decision.actions);
+    expect(kept).toMatchObject({ result: { selectedPossible: true } });
+    expect(kept.kind === 'hubActionOrder' && kept.result).not.toHaveProperty('refusal');
+  });
+
   it('publish each stay with the doors its visits closed', () => {
     const stays = hubStaysForProjectEvaluationAssembly(evaluate(base()), hub);
     expect(stays.map((entry) => entry.surface)).toEqual([0, 1, 2, 3, 4, 5, 6].map(stay));
