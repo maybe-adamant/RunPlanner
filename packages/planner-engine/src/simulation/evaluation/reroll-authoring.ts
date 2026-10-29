@@ -1,4 +1,5 @@
 import {
+  createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type HubDecisionAddress,
   type OccurrenceAddress,
@@ -63,12 +64,18 @@ export function hubStaysForProjectEvaluationAssembly(
   );
 }
 
+/** One more reroll of a screen in this room, from its current count. */
+export interface ScreenRerollSpend {
+  readonly kind: 'screen';
+  readonly occurrence: OccurrenceAddress;
+  readonly fromCount: number;
+}
+
 /** A new spend from the run's reroll pool. */
 export type RerollSpend =
   /** One press appended to a surface (`rerollAppendIndex`). */
   | { readonly kind: 'press'; readonly surface: RerollSurface }
-  /** One more reroll of a screen in this room, from its current count. */
-  | { readonly kind: 'screen'; readonly occurrence: OccurrenceAddress; readonly fromCount: number }
+  | ScreenRerollSpend
   /** One Well or Pool reroll appended at the end of its room's actions. */
   | {
       readonly kind: 'featureReroll';
@@ -87,6 +94,26 @@ export type RerollSpendAllowance =
       /** False when the pool there cannot pay the spend; later spends it starves report. */
       readonly allowed: boolean;
     };
+
+/** Why a screen's rerolls stop at their highest count. */
+export type ScreenRerollLimit =
+  /** No held card enables screen rerolls at the room's entry. */
+  | 'notEnabled'
+  /** The pool there is spent exactly. */
+  | 'poolEmpty'
+  /** The pool there has some left, less than the next reroll costs. */
+  | 'poolShort';
+
+/** A screen's next reroll, with how far the pool at its own point can take it. */
+export type ScreenRerollAllowance =
+  | { readonly kind: 'unreached' }
+  | (Extract<RerollSpendAllowance, { readonly kind: 'reached' }> & {
+      /** Whether a held card enables screen rerolls at the room's entry. */
+      readonly enabled: boolean;
+      /** The highest count the pool there pays for; never below the current count. */
+      readonly maxCount: number;
+      readonly limit: ScreenRerollLimit;
+    });
 
 /** The run's reroll pool at one history event of a biome; undefined when none is known there. */
 function poolAt(
@@ -108,6 +135,14 @@ function poolAt(
  * question. A screen is placed at its room's entry, so a pool grant later in
  * that room before the screen can only make the answer stricter.
  */
+export function rerollSpendAllowanceForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  spend: ScreenRerollSpend,
+): ScreenRerollAllowance;
+export function rerollSpendAllowanceForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  spend: RerollSpend,
+): RerollSpendAllowance;
 export function rerollSpendAllowanceForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
   spend: RerollSpend,
@@ -150,5 +185,27 @@ export function rerollSpendAllowanceForProjectEvaluationAssembly(
   // A screen spends at its own point, after the room's entry: its own rerolls
   // so far are not yet spent there.
   const remaining = spend.kind === 'screen' ? atPoint - screenRerollCost(spend.fromCount) : atPoint;
-  return Object.freeze({ kind: 'reached', cost, remaining, allowed: remaining >= cost });
+  const reached = { kind: 'reached' as const, cost, remaining, allowed: remaining >= cost };
+  if (spend.kind !== 'screen') return Object.freeze(reached);
+  return Object.freeze({ ...reached, ...screenRerollReach(assembly, spend, remaining) });
+}
+
+/** How many rerolls of a screen the pool left at its point pays for, beyond its current count. */
+function screenRerollReach(
+  assembly: ProjectEvaluationAssembly,
+  spend: ScreenRerollSpend,
+  remaining: number,
+): { readonly enabled: boolean; readonly maxCount: number; readonly limit: ScreenRerollLimit } {
+  const entered = semanticAddressKey(
+    createRoomRunStateCheckpointAddress(spend.occurrence, { kind: 'roomEntered' }),
+  );
+  const enabled =
+    rewardsOf(assembly, spend.occurrence.biomeKey)?.runStateSnapshots.find(
+      (snapshot) => semanticAddressKey(snapshot.owner) === entered,
+    )?.rerolls.screensEnabled === true;
+  if (!enabled) return { enabled, maxCount: spend.fromCount, limit: 'notEnabled' };
+  const extra = (count: number) => screenRerollCost(count) - screenRerollCost(spend.fromCount);
+  let maxCount = spend.fromCount;
+  while (extra(maxCount + 1) <= remaining) maxCount += 1;
+  return { enabled, maxCount, limit: remaining - extra(maxCount) > 0 ? 'poolShort' : 'poolEmpty' };
 }

@@ -505,6 +505,9 @@ export {
   rerollSurfaceForProjectEvaluationAssembly,
   type RerollSpend,
   type RerollSpendAllowance,
+  type ScreenRerollAllowance,
+  type ScreenRerollLimit,
+  type ScreenRerollSpend,
 } from './evaluation/reroll-authoring';
 export { evaluateBiome, materializedBiomePrefixCoveragePoint } from './evaluation/biome-evaluation';
 export { simulateProject, simulateProjectAssembly } from './evaluation/project';

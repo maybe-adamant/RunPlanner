@@ -347,11 +347,61 @@ describe('reroll spend allowance', () => {
         fromCount,
       });
     // Three in the pool; one reroll costs 1, two cost 3, three cost 6.
-    expect(screen(once, 1)).toEqual({ kind: 'reached', cost: 2, remaining: 2, allowed: true });
+    expect(screen(once, 1)).toEqual({
+      kind: 'reached',
+      cost: 2,
+      remaining: 2,
+      allowed: true,
+      enabled: true,
+      maxCount: 2,
+      limit: 'poolEmpty',
+    });
     expect(settles(once, count(2))).not.toThrow();
     const twice = applyProjectCommand(project, catalog, count(2));
-    expect(screen(twice, 2)).toMatchObject({ cost: 3, remaining: 0, allowed: false });
+    expect(screen(twice, 2)).toMatchObject({
+      cost: 3,
+      remaining: 0,
+      allowed: false,
+      maxCount: 2,
+      limit: 'poolEmpty',
+    });
     expect(settles(twice, count(3))).toThrow('the reroll pool has nothing left for this spend');
+  });
+
+  it("stops a screen's rerolls where the pool at its room's entry runs short", () => {
+    const later = createOccurrenceAddress(f, 'golden-f-b6-e1' as never);
+    const screen = (project: ProjectDocument) =>
+      rerollSpendAllowanceForProjectEvaluationAssembly(evaluate(project), {
+        kind: 'screen',
+        occurrence: later,
+        fromCount: 0,
+      });
+    // The door card alone fills the pool but enables no screen reroll.
+    expect(screen(base)).toMatchObject({
+      remaining: 3,
+      enabled: false,
+      maxCount: 0,
+      limit: 'notEnabled',
+    });
+    const both = withArcana(loadUnderworldFGCheckpoint(), ['DoorReroll', 'ScreenReroll']);
+    // Six in the pool: three rerolls cost exactly six.
+    expect(screen(both)).toMatchObject({ remaining: 6, maxCount: 3, limit: 'poolEmpty' });
+    // An earlier press leaves five: two rerolls cost three, a third would cost three more.
+    const earlier = press(
+      both,
+      doors('golden-f-b2-e1'),
+      door('exit2', 'golden-f-b3-e2'),
+      ROOM_REWARDS.filter((type) => type !== 'Boon'),
+    ).project;
+    expect(screen(earlier)).toEqual({
+      kind: 'reached',
+      cost: 1,
+      remaining: 5,
+      allowed: true,
+      enabled: true,
+      maxCount: 2,
+      limit: 'poolShort',
+    });
   });
 
   it('does not count spends in later biomes against an earlier press', () => {
