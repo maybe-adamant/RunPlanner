@@ -795,6 +795,60 @@ describe('H Fields materialization', () => {
     expect(providerUses(forfeitedCageEntry)).toBe(1);
   });
 
+  it('forces only the first Boon set up across every door cage of one Fields exit', () => {
+    const cage = (occurrenceId: string, slotKey: string) =>
+      createLocalRewardAddress(biome, createOccurrenceId(occurrenceId), 'cages', slotKey);
+    const boon = (source: string) =>
+      ({ rewardType: 'Boon', payload: { kind: 'BoonSource', source } }) as const;
+    const forcedCages = (
+      rewards: readonly (readonly [
+        string,
+        string,
+        ReturnType<typeof boon> | { rewardType: string },
+      ])[],
+    ) => {
+      let project = createGoldenFGHProject();
+      for (const [occurrenceId, slotKey, value] of rewards)
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceLocalReward',
+          reward: cage(occurrenceId, slotKey),
+          value,
+        });
+      const evaluated = evaluateWithOlympianContactSeed(
+        authorLegalTraitOffers(project),
+        'ForceZeusBoonKeepsake',
+      );
+      return evaluated.findings
+        .filter((finding) => finding.code === 'rewardSourceUnavailable')
+        .map((finding) => semanticAddressKey(finding.origin));
+    };
+    const key = (occurrenceId: string, slotKey: string) =>
+      semanticAddressKey(cage(occurrenceId, slotKey));
+
+    // The door-1 cage set up first carries the force.
+    expect(forcedCages([['golden-h-combat09', 'cage1', boon('ApolloUpgrade')]])).toEqual([
+      key('golden-h-combat09', 'cage1'),
+    ]);
+    // Within one door, cages are set up in slot order.
+    expect(
+      forcedCages([
+        ['golden-h-combat09', 'cage1', boon('ApolloUpgrade')],
+        ['golden-h-combat09', 'cage2', boon('ZeusUpgrade')],
+      ]),
+    ).toEqual([key('golden-h-combat09', 'cage1')]);
+    // A Boon-free first door leaves the force for the next door's first Boon cage.
+    expect(forcedCages([['golden-h-combat03', 'cage1', boon('ApolloUpgrade')]])).toEqual([
+      key('golden-h-combat03', 'cage1'),
+    ]);
+    // Once a cage shows the forced god, every later Boon in the exit excludes it.
+    expect(
+      forcedCages([
+        ['golden-h-combat09', 'cage1', boon('ZeusUpgrade')],
+        ['golden-h-combat03', 'cage1', boon('ApolloUpgrade')],
+      ]),
+    ).toEqual([]);
+  });
+
   it('defaults each cage pickup after its encounter and before the next cage', () => {
     const occurrenceId = createOccurrenceId('h-materialized-combat02');
     const project = completeProject();
