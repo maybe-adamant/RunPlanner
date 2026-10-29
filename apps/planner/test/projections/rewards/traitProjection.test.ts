@@ -380,6 +380,55 @@ describe('route trait projection', () => {
     expect(feedback.contextMessage).toBe('Trait choices cannot appear together');
   });
 
+  it('previews an earlier screen row replacement from that screen only', () => {
+    const rows: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [{ traitKey: 'ApolloWeaponBoon', rarity: 'Rare' }],
+      selectedOptionKey: 'option1',
+    };
+    const transition = {
+      slot: 'Melee',
+      replacedTraitKey: 'ZeusWeaponBoon',
+      oldRarity: 'Common' as const,
+      newTraitKey: 'ApolloWeaponBoon',
+      requiredRarity: 'Rare' as const,
+    };
+    const candidate = {
+      value: rows,
+      evaluation: {
+        kind: 'traitOffer' as const,
+        result: {
+          supported: true,
+          branches: [
+            {
+              assessments: [],
+              composition: {} as never,
+              persephoneLevelBonusMaximums: [],
+              effectiveLevels: [],
+              rerolledScreens: [
+                {
+                  screen: 0,
+                  missing: false,
+                  assessments: [{ legal: true, findings: [], replacementTransition: transition }],
+                  composition: {} as never,
+                },
+              ],
+            },
+          ],
+          persephoneLevelBonusMaximums: [],
+          effectiveLevels: [],
+          assessments: [],
+          findings: [],
+        },
+      },
+    };
+    expect(
+      projectTraitOfferFeedback(rows, candidate, (key) => key, 0).options[0]?.replacement,
+    ).toMatchObject({ replacedTraitLabel: 'ZeusWeaponBoon', requiredRarity: 'Rare' });
+    expect(projectTraitOfferFeedback(rows, candidate).options[0]?.replacement).toBeUndefined();
+  });
+
   it('projects an active rarity-floor finding as repairable option copy', () => {
     const offer: AuthoredTraitOfferTraits = {
       kind: 'traits',

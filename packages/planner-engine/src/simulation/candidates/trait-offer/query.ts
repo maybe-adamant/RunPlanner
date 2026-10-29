@@ -328,6 +328,8 @@ export interface TraitOfferCandidateBranch {
   readonly targetedAcquisition?: TraitTargetedAcquisitionAssessment;
   readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
   readonly effectiveLevels: readonly (number | undefined)[];
+  /** The rerolled-away screens' assessments, oldest first; absent when none. */
+  readonly rerolledScreens?: readonly RerolledScreenAssessment[];
 }
 
 /** Exact Calling Card replay product for one surviving pre-offer branch. */

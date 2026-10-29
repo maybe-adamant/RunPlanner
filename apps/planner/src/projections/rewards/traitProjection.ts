@@ -238,15 +238,19 @@ export function projectTraitOfferFeedback(
           ...(findingsByTrait.get(option.traitKey) ?? []),
           ...(findingsByOption.get(['option1', 'option2', 'option3'][index]!) ?? []),
         ];
-        // Replacement, level and Persephone values describe the final screen's pick.
+        // Level and Persephone values describe the final screen's pick.
         const final = screen === 'final';
-        const replacement = final
-          ? uniformReplacement(
-              evaluation.result.assessments,
-              evaluation.result.branches.length,
-              option.traitKey,
-            )
-          : undefined;
+        const replacement = uniformReplacement(
+          final
+            ? evaluation.result.assessments
+            : evaluation.result.branches.flatMap(
+                (branch) =>
+                  branch.rerolledScreens?.find((entry) => entry.screen === screen)?.assessments ??
+                  [],
+              ),
+          evaluation.result.branches.length,
+          option.traitKey,
+        );
         const effectiveLevel = final ? evaluation.result.effectiveLevels[index] : undefined;
         const persephoneLevelBonusMaximum = final
           ? evaluation.result.persephoneLevelBonusMaximums[index]
