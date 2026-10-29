@@ -600,8 +600,9 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   then the store's declared type order) is authored; when every fit shares
   one exit state nothing is reported, otherwise each offer whose value
   differs is reported as not in the record with the other groups' values as
-  alternatives. When nothing fits the provisional values stay and each wheel
-  store's loss is reported as a mismatch. Unpicked offers of a room whose
+  alternatives. When nothing fits the provisional values stay, each reported
+  as not in the record, and each wheel store's loss is reported as a
+  mismatch. Unpicked offers of a room whose
   window never closes (the last room, one past a stop, a record without entry
   saves) keep their provisional values and are reported as not in the record,
   as are those of wheels whose side is unknown.

@@ -100,6 +100,11 @@ export interface RunImportContext {
   readonly applyValid: (command: ProjectCommand) => boolean;
   /** Runs several applications as one, kept only when they succeed and stay valid as `applyValid`. */
   readonly transaction: (run: () => boolean) => boolean;
+  /**
+   * Runs `run` against the plan and then undoes all of it, its authorship,
+   * report entries and withdrawn retractions included, returning its result.
+   */
+  readonly probe: <Result>(run: () => Result) => Result;
   /** Whether evaluation has entered the occurrence. */
   readonly entered: (occurrenceId: string) => boolean;
   /** Whether an entered occurrence changed, or was entered, since the previous sweep. */
@@ -183,7 +188,7 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
   return finish(walk.assembly.project, stop);
 }
 
-class RunImportWalk {
+export class RunImportWalk {
   private session: ProjectCandidateSession | undefined;
   private refusedAnswer = false;
   private guesser: RunImportGuesser | undefined;
@@ -192,7 +197,7 @@ class RunImportWalk {
     { readonly undo: ProjectCommand; readonly entry: RunImportReportEntry }
   >();
   readonly occurrences: RecordOccurrences;
-  private readonly context: RunImportContext;
+  readonly context: RunImportContext;
 
   constructor(
     readonly catalog: Catalog,
@@ -210,6 +215,7 @@ class RunImportWalk {
       apply: (command) => this.apply(command),
       applyValid: (command) => this.transaction(() => this.apply(command)),
       transaction: (run) => this.transaction(run),
+      probe: (run) => this.probe(run),
       entered: (occurrenceId) => this.enteredOccurrences().has(occurrenceId),
       pending: (occurrenceId) =>
         this.dirty.has(occurrenceId) && this.enteredOccurrences().has(occurrenceId),
@@ -307,6 +313,22 @@ class RunImportWalk {
       return true;
     }
     return this.rollback(before);
+  }
+
+  probe<Result>(run: () => Result): Result {
+    const before = this.assembly;
+    const entries = this.entries.length;
+    const retractions = new Map(this.retractions);
+    const refusedAnswer = this.refusedAnswer;
+    try {
+      return run();
+    } finally {
+      this.rollback(before);
+      this.entries.length = entries;
+      this.retractions.clear();
+      for (const [key, retraction] of retractions) this.retractions.set(key, retraction);
+      this.refusedAnswer = refusedAnswer;
+    }
   }
 
   private rollback(before: ProjectEvaluationAssembly): false {

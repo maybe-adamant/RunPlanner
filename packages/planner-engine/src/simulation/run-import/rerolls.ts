@@ -21,11 +21,16 @@ import { FIELDS_CAGE_GROUP_KEY } from '../../authored-project/rerolls';
 import type { Catalog } from '../../catalog-schema';
 import { locallyValidRewardOffers, type ResolvedRewardOffer } from '../../reward-kernel';
 import type { RunRecord, RunRecordTraitScreen } from '../../run-record/model';
-import { entrySnapshot } from './conformance';
 import type { RunImportContext } from './import';
 import { authoredOccurrence } from './occurrences';
 import type { RunImportReportEntry } from './report';
-import { bracketStoresMatch, poolSpends, replacedRewards, type Replaced } from './store-brackets';
+import {
+  bracketClosed,
+  bracketStoresMatch,
+  poolSpends,
+  replacedRewards,
+  type Replaced,
+} from './store-brackets';
 import { POM_GIVERS, recordedOffer } from './vocabulary';
 
 /** `SpentRerolls` ids of the store screens the plan holds counts for. */
@@ -508,13 +513,7 @@ export function importRerolls(context: RunImportContext): void {
   for (const [roomIndex, room] of context.record.rooms.entries()) {
     const used = `rerolls:${roomIndex}`;
     if (context.used.has(used)) continue;
-    // The bracket closes at the next entry save, once the plan has entered its room.
-    if (
-      roomIndex + 1 >= context.record.rooms.length ||
-      !context.entered(context.occurrences.occurrenceOf(roomIndex + 1)) ||
-      entrySnapshot(context.assembly(), context.occurrences, roomIndex + 1) === undefined
-    )
-      continue;
+    if (!bracketClosed(context, roomIndex)) continue;
     // A ship room's unpicked wheel offers are solved first; the stores' remaining loss is the presses'.
     if (room.wheels !== undefined && !context.used.has(`wheelSolve:${roomIndex}`)) continue;
     const recorded = room.rerolls ?? 0;

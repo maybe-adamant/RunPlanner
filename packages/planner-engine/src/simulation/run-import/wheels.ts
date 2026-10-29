@@ -28,6 +28,7 @@ import {
   type PressTarget,
 } from './rerolls';
 import {
+  bracketClosed,
   bracketDraws,
   bracketStoresMatch,
   poolSpends,
@@ -376,12 +377,7 @@ export function solveWheelOffers(context: RunImportContext): boolean {
   for (const [roomIndex, room] of context.record.rooms.entries()) {
     const used = `wheelSolve:${roomIndex}`;
     if (room.wheels === undefined || context.used.has(used)) continue;
-    if (
-      roomIndex + 1 >= context.record.rooms.length ||
-      !context.entered(context.occurrences.occurrenceOf(roomIndex + 1)) ||
-      entrySnapshot(context.assembly(), context.occurrences, roomIndex + 1) === undefined
-    )
-      continue;
+    if (!bracketClosed(context, roomIndex)) continue;
     const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
     const sourceId = context.occurrences.occurrenceOf(roomIndex);
     const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
@@ -412,9 +408,11 @@ function solveShip(
     context.used.add(solved);
     return;
   }
-  const planned = offers.map((offer) => ({
+  const provisional = offers.map((offer) => offerValue(context, offer.address));
+  if (provisional.some((value) => value === undefined)) return;
+  const planned = offers.map((offer, index) => ({
     storeKey: offer.wheel.store,
-    rewardType: offerValue(context, offer.address)!.rewardType,
+    rewardType: provisional[index]!.rewardType,
   }));
   const rerolls = Math.max(
     0,
@@ -425,38 +423,20 @@ function solveShip(
   context.used.add(solved);
   const wheelStores = new Set(offers.map((offer) => offer.wheel.store));
   const fits: WheelFit<ResolvedRewardOffer>[] = [];
-  const replace = (offer: UnknownOffer, value: ResolvedRewardOffer) =>
-    sameOffer(offerValue(context, offer.address), value) ||
-    context.apply({ kind: 'ReplaceRewardWheelOffer', offer: offer.address, value });
-  const replaceWithType = (offer: UnknownOffer, rewardType: string) => {
-    const value = locallyValidRewardOffers(context.catalog.rewards, rewardType)[0];
-    return value !== undefined && replace(offer, value);
-  };
-  for (const { types, remainder } of assignments(offers, draws.solutions)) {
-    context.transaction(() => {
+  for (const { types, remainder } of assignments(offers, draws.solutions))
+    context.probe(() => {
       const values: ResolvedRewardOffer[] = [];
       const placed = context.transaction(
         () =>
-          // Every offer takes its type before any is checked, so that no offer's
-          // earlier value leaves another's draw unavailable.
-          offers.every(
-            (offer, index) =>
-              offerValue(context, offer.address)?.rewardType === types[index] ||
-              replaceWithType(offer, types[index]!),
-          ) &&
-          offers.every((offer, index) => {
+          placeOffers(context, offers, types, (offer, index) => {
             const value = firstSupported(context, offer.address, types[index]!);
-            if (value === undefined) return false;
-            values.push(value);
-            return replace(offer, value);
-          }) &&
-          remainder.every((entry) => prependReplaced(context, targets, entry)),
+            if (value !== undefined) values.push(value);
+            return value;
+          }) && remainder.every((entry) => prependReplaced(context, targets, entry)),
       );
       if (placed && bracketStoresMatch(context, roomIndex, wheelStores))
         fits.push({ values, fingerprint: exitFingerprint(context, roomIndex) });
-      return false;
     });
-  }
   const choice = chooseWheelFit(fits, sameOffer);
   const at = record(roomIndex);
   if (choice === undefined) {
@@ -468,6 +448,7 @@ function solveShip(
         record: at,
         mismatch: { field: storeKey, ...roomLoss(context, roomIndex, storeKey) },
       });
+    for (const entry of provisionalOffers(context, roomIndex, offers)) context.note(entry);
     return;
   }
   const commands = offers.map((offer, index): ProjectCommand => ({
@@ -476,7 +457,12 @@ function solveShip(
     value: choice.chosen[index]!,
   }));
   const applied = context.transaction(() =>
-    offers.every((offer, index) => replace(offer, choice.chosen[index]!)),
+    placeOffers(
+      context,
+      offers,
+      choice.chosen.map((value) => value.rewardType),
+      (_offer, index) => choice.chosen[index],
+    ),
   );
   for (const [index, offer] of offers.entries()) {
     const alternatives = choice.alternatives[index]!;
@@ -502,6 +488,33 @@ function solveShip(
         record: at,
       });
   }
+}
+
+/**
+ * Gives every unknown offer its type before any takes its value, so that no
+ * offer's earlier value leaves another's draw unavailable, then each its value
+ * in setup order. The probes and the chosen fit go through the same steps.
+ */
+function placeOffers(
+  context: RunImportContext,
+  offers: readonly UnknownOffer[],
+  types: readonly string[],
+  valueOf: (offer: UnknownOffer, index: number) => ResolvedRewardOffer | undefined,
+): boolean {
+  const replace = (offer: UnknownOffer, value: ResolvedRewardOffer) =>
+    sameOffer(offerValue(context, offer.address), value) ||
+    context.apply({ kind: 'ReplaceRewardWheelOffer', offer: offer.address, value });
+  return (
+    offers.every((offer, index) => {
+      if (offerValue(context, offer.address)?.rewardType === types[index]) return true;
+      const value = locallyValidRewardOffers(context.catalog.rewards, types[index]!)[0];
+      return value !== undefined && replace(offer, value);
+    }) &&
+    offers.every((offer, index) => {
+      const value = valueOf(offer, index);
+      return value !== undefined && replace(offer, value);
+    })
+  );
 }
 
 const wheelOf = (offer: RewardWheelOfferAddress) =>
@@ -603,31 +616,39 @@ function roomLoss(
   return { expected: list(expected), actual: list(actual) };
 }
 
+/** Each unknown offer holding its provisional value, as a guess the record does not answer. */
+function provisionalOffers(
+  context: RunImportContext,
+  roomIndex: number,
+  offers: readonly UnknownOffer[],
+): readonly RunImportReportEntry[] {
+  return offers.flatMap(({ address }): RunImportReportEntry[] => {
+    const value = offerValue(context, address);
+    return value === undefined
+      ? []
+      : [
+          {
+            area: 'wheel',
+            reason: 'notInRecord',
+            address,
+            applied: { kind: 'ReplaceRewardWheelOffer', offer: address, value },
+            record: record(roomIndex),
+          },
+        ];
+  });
+}
+
 /**
  * Unpicked offers of ship rooms the solve never settled, such as the last
  * room, one whose walk stopped before the next, or a record without entry
  * saves: the plan holds their provisional values.
  */
 export function unsolvedWheels(context: RunImportContext): readonly RunImportReportEntry[] {
-  return context.record.rooms.flatMap((room, roomIndex) => {
-    if (room.wheels === undefined || context.used.has(`wheelSolved:${roomIndex}`)) return [];
-    return (unknownOffers(context, roomIndex)?.offers ?? []).flatMap(
-      ({ address }): RunImportReportEntry[] => {
-        const value = offerValue(context, address);
-        return value === undefined
-          ? []
-          : [
-              {
-                area: 'wheel',
-                reason: 'notInRecord',
-                address,
-                applied: { kind: 'ReplaceRewardWheelOffer', offer: address, value },
-                record: record(roomIndex),
-              },
-            ];
-      },
-    );
-  });
+  return context.record.rooms.flatMap((room, roomIndex) =>
+    room.wheels === undefined || context.used.has(`wheelSolved:${roomIndex}`)
+      ? []
+      : provisionalOffers(context, roomIndex, unknownOffers(context, roomIndex)?.offers ?? []),
+  );
 }
 
 /**
@@ -638,13 +659,15 @@ export function importWheelConversions(context: RunImportContext): void {
   const project = context.assembly().project;
   for (const biome of project.route.biomes)
     for (const occurrence of biome.topology?.occurrences ?? []) {
-      if (occurrence.state.kind !== 'shipCombat' || !context.pending(occurrence.occurrenceId))
-        continue;
+      if (occurrence.state.kind !== 'shipCombat') continue;
       const visit = shipVisit(context, occurrence.occurrenceId);
       if (visit === undefined) continue;
       const used = `conversion:${visit.roomIndex}`;
       const kinds = recordedConversions(context, visit.roomIndex);
       if (kinds.length === 0 || context.used.has(used)) continue;
+      // Once the window closes the room's pickups are as reached as they will be.
+      const closed = bracketClosed(context, visit.roomIndex);
+      if (!closed && !context.pending(occurrence.occurrenceId)) continue;
       const wheels = Object.entries(occurrence.state.wheels).slice(
         0,
         visit.room.wheels?.length ?? 0,
@@ -658,6 +681,13 @@ export function importWheelConversions(context: RunImportContext): void {
           : [{ key, offerKey: `offer${wheel.pickedOfferIndex}`, reward, role }];
       });
       const biomeAddress = createBiomeAddress(project.route.routeKey, biome.biomeKey);
+      const refused = () =>
+        context.note({
+          area: 'conversion',
+          reason: 'refused',
+          address: createOccurrenceAddress(biomeAddress, occurrence.occurrenceId as OccurrenceId),
+          record: record(visit.roomIndex),
+        });
       const acquisitionOf = (pickup: (typeof pickups)[number]) =>
         createAcquisitionRoleAddress(
           createRewardWheelOfferAddress(
@@ -678,8 +708,13 @@ export function importWheelConversions(context: RunImportContext): void {
               acquisition: acquisitionOf(pickup),
             }).kind !== 'acquisitionConversion',
         )
-      )
+      ) {
+        if (closed) {
+          context.used.add(used);
+          kinds.forEach(() => refused());
+        }
         continue;
+      }
       context.used.add(used);
       const uncollected = pickups.filter(
         ({ reward }) =>
@@ -702,12 +737,7 @@ export function importWheelConversions(context: RunImportContext): void {
           );
         });
         if (target === undefined) {
-          context.note({
-            area: 'conversion',
-            reason: 'refused',
-            address: createOccurrenceAddress(biomeAddress, occurrence.occurrenceId as OccurrenceId),
-            record: record(visit.roomIndex),
-          });
+          refused();
           continue;
         }
         uncollected.splice(uncollected.indexOf(target), 1);

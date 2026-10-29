@@ -10,6 +10,15 @@ import type { RunImportContext } from './import';
 
 export type Counts = Readonly<Record<string, number>>;
 
+/** Whether a record room's window has closed: the plan entered the next room and holds its entry save. */
+export function bracketClosed(context: RunImportContext, roomIndex: number): boolean {
+  return (
+    roomIndex + 1 < context.record.rooms.length &&
+    context.entered(context.occurrences.occurrenceOf(roomIndex + 1)) &&
+    entrySnapshot(context.assembly(), context.occurrences, roomIndex + 1) !== undefined
+  );
+}
+
 /** The plan's store contents less the saved ones at a record room's entry save, by store. */
 function storeOffsets(
   context: RunImportContext,

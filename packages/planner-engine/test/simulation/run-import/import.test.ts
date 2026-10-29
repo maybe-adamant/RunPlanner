@@ -20,6 +20,7 @@ import {
   recordedEntryStates,
   storeCounts,
 } from '../../../src/simulation/run-import/conformance';
+import { RunImportWalk } from '../../../src/simulation/run-import/import';
 import {
   projectFromRunRecord,
   simulateProjectAssembly,
@@ -574,6 +575,49 @@ describe('run import of the Surface capture', () => {
     });
   });
 
+  it('leaves the report and its retractions as they were after a probe', () => {
+    const entries: RunImportReportEntry[] = [];
+    const walk = new RunImportWalk(
+      catalog,
+      record,
+      simulateProjectAssembly(catalog, imported.project),
+      entries,
+    );
+    const { context } = walk;
+    const before = walk.assembly;
+    const offer = createRewardWheelOfferAddress(
+      createBiomeAddress('Surface', 'O'),
+      'O-r25' as OccurrenceId,
+      'wheel1',
+      'offer2',
+    );
+    const ship = occurrence(imported.project, 'O-r25').state;
+    const solved = ship.kind === 'shipCombat' ? ship.wheels['wheel1']?.offers['offer2'] : undefined;
+    const withdrawal: RunImportReportEntry = {
+      area: 'wheel',
+      reason: 'assumption',
+      address: offer,
+      record: { roomIndex: 25, visit: 0 },
+    };
+    context.retractable(
+      [offer],
+      { kind: 'ReplaceRewardWheelOffer', offer, value: solved!.offer },
+      withdrawal,
+    );
+    // The MetaProgress wheel cannot offer Gold: the finding it reveals is withdrawn as registered.
+    const unavailable: ProjectCommand = {
+      kind: 'ReplaceRewardWheelOffer',
+      offer,
+      value: { rewardType: 'RoomMoneyDrop' },
+    };
+    expect(context.probe(() => context.transaction(() => context.apply(unavailable)))).toBe(true);
+    expect(walk.assembly).toBe(before);
+    expect(entries).toEqual([]);
+    // The retraction survives the probe: outside one, the same finding still withdraws it.
+    expect(context.transaction(() => context.apply(unavailable))).toBe(true);
+    expect(entries).toEqual([{ ...withdrawal, reason: 'refused' }]);
+  });
+
   it('imports ship wheels, their conversions and Menace', () => {
     const ship = occurrence(imported.project, 'O-r25').state;
     expect(ship.kind === 'shipCombat' && ship.wheels['wheel1']).toMatchObject({
@@ -771,8 +815,12 @@ describe('run import of the Surface victory', () => {
       result.report.entries
         .filter((entry) => entry.area === 'wheel' && entry.record?.roomIndex === 23)
         .map(describeEntry),
-    ).toEqual(['mismatch wheel r23 rewardWheel@O-r23']);
-    // The provisional values stay.
+    ).toEqual([
+      'mismatch wheel r23 rewardWheel@O-r23',
+      // The provisional values stay, each a guess.
+      'notInRecord wheel r23 rewardWheelOffer@O-r23 -> ReplaceRewardWheelOffer(O-r23 MaxManaDrop)',
+      'notInRecord wheel r23 rewardWheelOffer@O-r23 -> ReplaceRewardWheelOffer(O-r23 StackUpgrade)',
+    ]);
     const ship = occurrence(result.project, 'O-r23').state;
     expect(
       ship.kind === 'shipCombat' &&
@@ -780,6 +828,28 @@ describe('run import of the Surface victory', () => {
           (wheel) => wheel?.offers['offer1']?.offer.rewardType,
         ),
     ).toEqual(['MaxManaDrop', 'StackUpgrade']);
+  });
+
+  it('reports a recorded wheel conversion no pickup of the ship can take once its window closes', () => {
+    // O_Combat07 records a second, one-offer wheel the plan's ship never rolls, so it has no pickup.
+    const altered: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index === 21
+          ? {
+              ...room,
+              conversions: { timePiece: 1 },
+              wheels: [room.wheels![0]!, { ...room.wheels![0]!, offers: 1 }],
+            }
+          : room,
+      ),
+    };
+    const result = projectFromRunRecord(catalog, altered);
+    expect(
+      result.report.entries
+        .filter((entry) => entry.area === 'conversion' && entry.record?.roomIndex === 21)
+        .map(describeEntry),
+    ).toEqual(['refused conversion r21 occurrence@O-r21']);
   });
 
   it('reports every value the record did not answer exactly', () => {
