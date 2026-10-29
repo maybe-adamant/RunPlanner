@@ -2,6 +2,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createAdditionalExitAddress,
+  createBiomeAddress,
   createProjectDocument,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -11,13 +12,18 @@ import {
   createOccurrenceId,
   createRoomFeatureAddress,
   createRoomRunStateCheckpointAddress,
+  createRouteAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly, type SemanticFinding } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
-import { findingSelected, runStateOpened } from '@planner/state/editorSessionSlice';
+import {
+  findingSelected,
+  runStateOpened,
+  semanticOwnerNavigated,
+} from '@planner/state/editorSessionSlice';
 import {
   authoredProjectCommandDispatched,
   authoredProjectRedoRequested,
@@ -548,6 +554,68 @@ describe('application editor-session reconciliation', () => {
       application.store.dispatch(authoredProjectReplaced(equivalent));
 
       expect(application.store.getState().editorSession.runStateTarget).toBeNull();
+    } finally {
+      application.dispose();
+    }
+  });
+
+  it('clears navigation into a Dream biome a re-pick drops and keeps it cleared through Undo', () => {
+    const application = createApplication();
+    try {
+      application.store.dispatch(
+        authoredProjectReplaced(
+          createProjectDocument(catalog, {
+            projectId: 'dream-repick-navigation',
+            routeKey: 'Dream',
+            itineraryBiomeKeys: ['Q', 'F', 'N', 'H'],
+            configuredBiomeCount: 3,
+          }),
+        ),
+      );
+      const before = currentProject(application);
+      const offer = [...currentWorkspace(application).focusByOwner.values()].find(
+        (destination) =>
+          destination.ownerAddress.kind === 'traitOffer' &&
+          destination.ownerAddress.biomeKey === 'N',
+      )?.ownerAddress;
+      if (offer?.kind !== 'traitOffer') throw new Error('published N trait offer is missing');
+      application.store.dispatch(semanticOwnerNavigated(offer));
+      const repick = (itineraryBiomeKeys: readonly string[]) =>
+        application.store.dispatch(
+          authoredProjectCommandDispatched({
+            kind: 'ReplaceDreamItinerary',
+            route: createRouteAddress('Dream'),
+            itineraryBiomeKeys,
+          }),
+        );
+      const session = () => application.store.getState().editorSession;
+      const routeBiomeKeys = () =>
+        currentWorkspace(application).route.biomes.map((biome) => biome.biomeKey);
+
+      repick(['Q', 'F', 'O', 'H']);
+      expect(routeBiomeKeys()).toEqual(['Q', 'F', 'O']);
+      expect(session().focusedSemanticOwner).toBeNull();
+      expect(session().traitDialogTarget).toBeNull();
+      // Panel choice stays user navigation; Route presents an unconfigured biome panel.
+      expect(session().activePanel).toEqual({ kind: 'biome', biomeKey: 'N' });
+
+      application.store.dispatch(authoredProjectUndoRequested());
+      expect(currentProject(application)).toEqual(before);
+      expect(routeBiomeKeys()).toContain('N');
+      expect(session().focusedSemanticOwner).toBeNull();
+      expect(session().traitDialogTarget).toBeNull();
+      expect(session().activePanel).toEqual({ kind: 'biome', biomeKey: 'N' });
+
+      // A refilled default biome republishes the same exact destination, which stays valid.
+      const start = createOccurrenceAddress(
+        createBiomeAddress('Dream', 'N'),
+        createOccurrenceId('N:start'),
+      );
+      application.store.dispatch(semanticOwnerNavigated(start));
+      repick(['Q', 'N', 'F', 'H']);
+      expect(routeBiomeKeys()).toEqual(['Q', 'N', 'F']);
+      expect(currentWorkspace(application).focusByOwner.has(semanticAddressKey(start))).toBe(true);
+      expect(session().focusedSemanticOwner).toEqual(start);
     } finally {
       application.dispose();
     }
