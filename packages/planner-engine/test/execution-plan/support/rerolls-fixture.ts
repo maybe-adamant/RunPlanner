@@ -2,13 +2,20 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createHubRerollAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
   type ProjectCommand,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { supportedRerollRewards, withArcana, withJudgment } from '../../support/rerolls';
+import { loadSurfaceNOCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  firstSupportedReroll,
+  supportedRerollRewards,
+  withArcana,
+  withJudgment,
+} from '../../support/rerolls';
 import { simulateProjectAssembly } from '../../../src/simulation';
 
 const f = createBiomeAddress('Underworld', 'F');
@@ -96,6 +103,67 @@ export function underworldFRerollsProject(): ProjectDocument {
     slotKey: 'middle',
     traitKey: 'HeraCastBoon',
     index: order(project, postboss).length,
+  });
+  return project;
+}
+
+/**
+ * The N and O Surface route with Hub board presses in the first stay and after
+ * the third visit, and a ship wheel offer redrawn before the wheel is used.
+ */
+export function surfaceNORerollsProject(): ProjectDocument {
+  const n = createBiomeAddress('Surface', 'N');
+  const o = createBiomeAddress('Surface', 'O');
+  const hub = { kind: 'hubDecision', routeKey: 'Surface', biomeKey: 'N', hubKey: 'hub' } as const;
+  // N's Judgment grants two more cards mid-run, each adding its full count to the pool.
+  let project = withJudgment(
+    withJudgment(
+      withArcana(loadSurfaceNOCheckpoint(), ['DoorReroll']),
+      'N',
+      'surface-n-preboss:boss',
+      ['ScreenReroll', 'TradeOff', 'StartingGold', 'HealthRegen', 'BonusDodge'],
+    ),
+    'O',
+    'surface-o-preboss:boss',
+    ['LowManaDamageBonus', 'CastCount', 'SorceryRegenUpgrade', 'CastBuff', 'BonusHealth'],
+  );
+  const apply = (command: ProjectCommand) => {
+    project = applyProjectCommand(project, catalog, command);
+  };
+  // combat03 is never entered; one press in the first stay, one after the third visit.
+  for (const [rerollId, index] of [
+    ['r1', 1],
+    ['r2', 5],
+  ] as const) {
+    apply({
+      kind: 'InsertHubReroll',
+      hub,
+      hubSlotKey: 'combat03',
+      reward: { rewardType: 'MaxHealthDropBig' },
+      index,
+    });
+    const reroll = createHubRerollAddress(n, 'hub', rerollId);
+    apply({
+      kind: 'ReplaceHubRerollReward',
+      reroll,
+      reward: firstSupportedReroll(project, reroll, 'HubRewards'),
+    });
+  }
+  const ship = 'surface-o-combat04';
+  apply({
+    kind: 'InsertReroll',
+    occurrence: createOccurrenceAddress(o, ship as never),
+    target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' },
+    reward: { rewardType: 'MaxManaDrop' },
+    index: project.route.biomes[1]!.topology!.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === ship,
+    )!.roomActions.order.findIndex((reference) => reference.kind === 'chooseRewardWheel'),
+  });
+  const press = createRoomActionAddress(o, ship as never, JSON.stringify(['reroll', 'r1']));
+  apply({
+    kind: 'ReplaceRerollReward',
+    action: press,
+    reward: firstSupportedReroll(project, press, 'RunProgress'),
   });
   return project;
 }

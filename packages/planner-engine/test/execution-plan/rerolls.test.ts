@@ -34,6 +34,7 @@ import {
   withJudgment,
 } from '../support/rerolls';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import { surfaceNORerollsProject } from './support/rerolls-fixture';
 
 const g = createBiomeAddress('Underworld', 'G');
 const gSource = 'golden-g-b1-e1';
@@ -150,6 +151,23 @@ describe('reroll publication', () => {
         reward: expect.objectContaining({ rewardType: rewards[1]!.rewardType }),
       },
     ]);
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it('keeps the first draw on a ship wheel and acquires the picked offer from its last press', () => {
+    const plan = planOf(surfaceNORerollsProject());
+    const ship = plan.occurrences.find((room) => room.id === 'surface-o-combat04')!;
+    const [press] = ship.rerolls!;
+    expect(press!.target).toEqual({ kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' });
+    const [wheel] = ship.overview.rewardWheels!;
+    expect(wheel!.pickedOfferKey).toBe('offer1');
+    expect(wheel!.offers[0]!.reward).not.toEqual(press!.reward);
+    expect(
+      ship.timeline.transactions.find(
+        (transaction) =>
+          transaction.kind === 'acquisition' && transaction.window.kind === 'shipPostCombat',
+      ),
+    ).toMatchObject({ reward: press!.reward });
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
   });
 

@@ -28,7 +28,7 @@ import { reward } from './rewards';
 function validateRewardWheelProduct(
   occurrence: Pick<
     ExecutionOccurrence,
-    'id' | 'owner' | 'biomeKey' | 'kind' | 'overview' | 'timeline'
+    'id' | 'owner' | 'biomeKey' | 'kind' | 'overview' | 'timeline' | 'rerolls'
   >,
   label: string,
 ): void {
@@ -122,7 +122,15 @@ function validateRewardWheelProduct(
     if (choices.length !== 1)
       fail(`${label}.overview.rewardWheels.${wheel.wheelKey} must match one wheel choice`);
 
-    const picked = wheel.offers.find((offer) => offer.offerKey === wheel.pickedOfferKey)!;
+    // The wheel publishes its first draws; a rerolled pick acquires its last reroll.
+    const lastReroll = (occurrence.rerolls ?? []).findLast(
+      ({ target }) =>
+        target.kind === 'wheelOffer' &&
+        target.wheelKey === wheel.wheelKey &&
+        target.offerKey === wheel.pickedOfferKey,
+    );
+    const picked =
+      lastReroll ?? wheel.offers.find((offer) => offer.offerKey === wheel.pickedOfferKey)!;
     const expectedAcquisitionOwner = JSON.stringify([
       'rewardWheelOffer',
       routeKey,
