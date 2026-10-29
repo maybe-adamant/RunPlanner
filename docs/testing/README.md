@@ -5,7 +5,7 @@ plans in `docs/progress/`. These files track observations still needed, not
 unfinished implementation. Automated verification and delivery history belong in
 commits, not these checklists.
 
-No checks are pending.
+- [Rerolls, Contract pedestal and Ephyra return door](REROLLS_PEDESTAL_RETURN_DOOR_LIVE_ACCEPTANCE.md)
 
 Keep setup, actions and expected observations with each check. Confirm results
 from live testing or explicitly waive them; retire completed items and delete
