@@ -4,15 +4,19 @@ import { loadSurfaceOrdinaryHexPathCheckpoint } from '@run-planner/test-fixtures
 import { pBiome, pOccurrenceId } from '@run-planner/test-fixtures/surface';
 import {
   applyProjectCommand,
+  createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
   createBiomeAddress,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
   createStartingRewardAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  seaStarDuplicateAcquisitionSite,
   type ProjectCommand,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -187,7 +191,7 @@ describe('Path of Stars screen selections', () => {
     );
   });
 
-  it('leaves a Sea Star duplicate of a Path grant to open its own screen', () => {
+  it('leaves a Sea Star duplicate of a Path grant its own screen, authored like the source', () => {
     const procced = applyProjectCommand(loadSurfaceOrdinaryHexPathCheckpoint(), catalog, {
       kind: 'ReplaceSeaStarResult',
       acquisition: screen,
@@ -205,5 +209,33 @@ describe('Path of Stars screen selections', () => {
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(procced)), catalog)).toEqual(
       procced,
     );
+    const duplicateScreen = createAcquisitionRoleAddress(
+      createAcquisitionEntryAddress(
+        seaStarDuplicateAcquisitionSite(
+          createOccurrenceAddress(pBiome, reward.occurrenceId),
+          screen,
+        ),
+        SEA_STAR_DUPLICATE_ENTRY_KEY,
+      ),
+      'self',
+    );
+    // The duplicate's own screen is authored like the source's.
+    const selectedNodeKeys = ['1:2', '1:4', '2:2'];
+    const chosen = applyProjectCommand(procced, catalog, {
+      kind: 'ReplaceHexActivation',
+      acquisition: duplicateScreen,
+      value: { selectedNodeKeys },
+    });
+    expect(pathSelection(chosen)).toEqual(pathSelection(procced));
+    expect(
+      Object.values(
+        chosen.route.biomes
+          .find((biome) => biome.biomeKey === 'P')!
+          .topology!.occurrences.find(
+            (candidate) => candidate.occurrenceId === reward.occurrenceId,
+          )!.acquisitionSites ?? {},
+      ).flatMap((site) => Object.values(site.pickupEntries ?? {}))[0]
+        ?.hexActivationsByAcquisitionRole?.self,
+    ).toEqual({ selectedNodeKeys });
   });
 });

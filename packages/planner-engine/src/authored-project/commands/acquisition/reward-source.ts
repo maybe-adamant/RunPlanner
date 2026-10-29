@@ -2,6 +2,7 @@ import type { Catalog } from '../../../catalog-schema';
 import type { AuthoredRewardState, ProjectDocument, RoomOccurrence } from '../../model';
 import {
   createBiomeAddress,
+  semanticAddressKey,
   type AcquisitionEntryAddress,
   type TraitOfferOwnerAddress,
 } from '../../addresses';
@@ -23,6 +24,12 @@ import {
   infernalContractPedestalProfile,
 } from '../../infernal-contract-pedestal';
 import { parseHermesShrineDeliveryEntryKey } from '../../hermes-shrine-delivery';
+import {
+  parseSeaStarDuplicateSiteKey,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  seaStarDuplicateUsesFreshObject,
+} from '../../acquisition/sea-star';
+import { authoredAcquisitionSources } from '../../acquisition/acquisition-sources';
 import { requireShipCombatWheels } from '../../room-state/declaration';
 import { incomingLevelEffectSource } from '../../room-state/level-effects';
 import { resolveEntryDeclaration } from '../../room-state/entry-resolution';
@@ -116,6 +123,37 @@ function pickupEntrySource(
       reward: entry,
       levelEffectSource: { kind: 'producerLifecycle' as const, key: 'GeneratedTraitPickup' },
     });
+  const seaStar = parseSeaStarDuplicateSiteKey(owner.site.pointKey);
+  if (seaStar !== undefined && owner.entryKey === SEA_STAR_DUPLICATE_ENTRY_KEY) {
+    const starting = routeStartIncomingReward(document, routePosition, occurrence);
+    const source = authoredAcquisitionSources(
+      createBiomeAddress(owner.routeKey, owner.biomeKey),
+      occurrence,
+      starting ?? undefined,
+    ).find(
+      (candidate) =>
+        semanticAddressKey(candidate.acquisition.owner) === seaStar.sourceKey &&
+        candidate.acquisition.acquisitionRole === seaStar.acquisitionRole,
+    );
+    if (source === undefined) failCommand(command, 'Sea Star duplicate has no authored source');
+    // A duplicated loot is a fresh room reward; a consumable keeps its source's producer.
+    if (seaStarDuplicateUsesFreshObject(catalog, source.reward, seaStar.acquisitionRole))
+      return Object.freeze({
+        reward: entry,
+        levelEffectSource: { kind: 'producerLifecycle' as const, key: 'RoomReward' },
+      });
+    const located = locateOwnReward(
+      document,
+      catalog,
+      routePosition,
+      occurrence,
+      occurrence.state,
+      source.acquisition.owner,
+      command,
+    );
+    if (located === undefined) failCommand(command, 'Sea Star duplicate has no located source');
+    return Object.freeze({ reward: entry, levelEffectSource: located.levelEffectSource });
+  }
   const producer = selectedPickupProducerForEntry(
     catalog,
     createBiomeAddress(owner.routeKey, owner.biomeKey),
