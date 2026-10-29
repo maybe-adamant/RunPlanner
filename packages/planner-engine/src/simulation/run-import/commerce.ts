@@ -759,8 +759,8 @@ function importShrine(context: RunImportContext, biomeKey: string, occurrence: R
 
 /**
  * One Shrine purchase, of a stock slot or of the Travel Deal refill: its delay,
- * then its rush. A rushed item's delay only prices it and is not saved; a
- * delayed one's delay names its delivery room.
+ * then its rush. A rushed item's delay only prices it and is not saved, so it
+ * keeps its default; a delayed one's delay names its delivery room.
  */
 function importShrinePurchase(
   context: RunImportContext,
@@ -780,7 +780,25 @@ function importShrinePurchase(
     return;
   }
   const feature = createRoomFeatureAddress(address, { kind: 'hermesShrineOffer', generationKey });
-  const delays = purchase.delay === undefined ? [2, 3, 4, 5, 6, 7, 8] : [purchase.delay];
+  const stockedOffer = () => {
+    const stocked = authoredOccurrence(
+      context.assembly().project,
+      biomeKey,
+      occurrenceId,
+    )?.hermesShrine;
+    return generationKey === 'travelDealRefill'
+      ? stocked?.travelDealRefill?.offer
+      : stocked?.offerBySlot[slotKey!];
+  };
+  const rushed = purchase.delivery === 'rushed';
+  const unknown = [2, 3, 4, 5, 6, 7, 8];
+  const kept = rushed ? stockedOffer()?.delay : undefined;
+  const delays =
+    purchase.delay !== undefined
+      ? [purchase.delay]
+      : kept === undefined
+        ? unknown
+        : [kept, ...unknown.filter((delay) => delay !== kept)];
   const purchaseCommand: ProjectCommand = {
     kind: 'SetHermesShrinePurchase',
     occurrence: address,
@@ -796,15 +814,7 @@ function importShrinePurchase(
       generationKey,
       delay: delay as HermesShrineDelay,
     };
-    const stocked = authoredOccurrence(
-      context.assembly().project,
-      biomeKey,
-      occurrenceId,
-    )?.hermesShrine;
-    const current =
-      generationKey === 'travelDealRefill'
-        ? stocked?.travelDealRefill?.offer
-        : stocked?.offerBySlot[slotKey!];
+    const current = stockedOffer();
     if (
       context.transaction(
         () =>
@@ -837,7 +847,7 @@ function importShrinePurchase(
     { kind: 'SetHermesShrinePurchase', occurrence: address, generationKey, purchased: false },
     { area: 'shop', reason: 'refused', address: feature, record: record(visit.roomIndex) },
   );
-  if (purchase.delay === undefined)
+  if (purchase.delay === undefined && !rushed)
     context.note({
       area: 'shop',
       reason: 'notInRecord',

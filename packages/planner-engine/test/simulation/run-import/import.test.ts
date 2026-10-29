@@ -753,7 +753,7 @@ describe('run import of the Surface capture', () => {
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { conversion: 2, menace: 14, roomActionOrder: 5 },
-      notInRecord: { menace: 17, shop: 10 },
+      notInRecord: { menace: 17, shop: 8 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption menace r1 encounterPhase@N-r1:Encounter -> ReplaceEncounterCustomization(N-r1 generated)',
@@ -1091,7 +1091,6 @@ describe('run import of the Surface victory', () => {
         shop: 4,
         traitOffer: 5,
       },
-      notInRecord: { shop: 2 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption conversion r14 acquisitionEntry@N-r14 -> ReplaceAcquisitionEntryOffer(N-r14 HermesUpgrade)',
