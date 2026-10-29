@@ -379,8 +379,24 @@ rules are in [O game rules](../../biomes/O_GAME_RULES.md).
 | Store and picked type | `Encounters[k].RewardStoreName` and `.EncounterRoomRewardOverride`, per setup, from the PostReward save        | exact    |
 | Picked boon god       | the matching `LootChoiceHistory` screen, or `CurrentRoom.ForceLootName` for the last setup                     | exact    |
 | Offer count and side  | `UseRecord` key: `ShipsSteeringWheel` (one offer) or `ShipsSteeringWheelLeft`/`Right` (two, left rolled first) | inferred |
-| Unpicked type         | store bracket diff, minus the picks, minus Artificer rolls                                                     | inferred |
-| Unpicked boon god     | none: the god is an RNG draw recorded nowhere                                                                  | lost     |
+| Unpicked type         | none in the record: solved by the importer from the saved stores (see Planner disposition)                     | inferred |
+| Unpicked boon god     | none: traceless except for excluding that god from the same wheel's other Boon roll                            | lost     |
+
+Both offers of a wheel draw from its one store (`RoomLogic.lua:1426-1439`).
+The RunProgress and HubRewards `Boon` entries allow duplicates
+(`IsRoomRewardEligible`), so one wheel may offer two Boons of different gods.
+An unpicked Boon's god comes from `ChooseLoot` (`RewardLogic.lua:1-13`, called
+by `SetupRoomReward` at `:228-258`), a pure random pick with no
+`LootTypeHistory` write and no store draw; its only effect is that a later
+Boon roll on the same wheel excludes that god. A held `ForceBoonName` trait
+still writes the room's forced boon names for an unpicked offer; its `Uses`
+are assumed spent only on pickup, unverified. Every roll, picked or not, also
+removes the first eligible `RewardPriorities` name (`RewardLogic.lua:~170`),
+so an unpicked draw can consume a priority, and a store refills only when
+nothing in it is eligible (`:147-157`), so draw order inside the room can
+matter. A wheel reroll press (`AttemptRerollShipWheel`,
+`InteractLogic.lua:1468-1490`) may target either offer, picked or unpicked,
+and excludes the offer's original type and every type currently on the wheel.
 
 A room with one left and one right pick across two setups cannot assign sides
 to setups. Capture S `O_Combat05`: MetaProgress lost `GiftDrop` and the picked
@@ -501,7 +517,8 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   record of each room plus the first and last `_Temp`.
 - Facts marked lost stay unauthored and surface as findings, except where the
   project owner decided otherwise:
-  - an unpicked ship-wheel boon takes the first eligible god;
+  - an unpicked ship-wheel Boon takes the first god the wheel admits,
+    unreported, since the god leaves no trace;
   - a collected Fields optional reward takes the first free optional point;
   - aspect and keepsake levels are assumed to be maximum, although the save
     records the equipped rarity.
@@ -560,9 +577,34 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   store and declaration order, on the first owner in native order the engine
   accepts. Every placement removing the same rewards leaves the same stores,
   so a placement that reproduces the saved stores is one assumption for the
-  room; otherwise each press is reported. A restored Hub stay's presses are
-  placed by the board doors whose saved offer changed between Hub visits. The
-  planner's pool is compared with `NumRerolls` at each entry save.
+  room; otherwise each press is reported. In a ship room the unpicked offers
+  and the presses are solved jointly: the presses take what the solved offers
+  leave of the room's unknown draws. A press on a picked offer loses the same
+  rewards as one on the unpicked offer of its wheel, so it is imported as that
+  unpicked offer's press, which the room simulation confirms. A restored Hub
+  stay's presses are placed by the board doors whose saved offer changed
+  between Hub visits. The planner's pool is compared with `NumRerolls` at each entry save.
+- A ship room's unpicked wheel offers are solved once its save-to-save
+  window closes: the next room entered, every draw authored and any Artificer
+  or Time Piece conversion applied. Until then each holds a provisional value,
+  the first supported type of its wheel's domain, taking types the room's
+  wheels did not pick before those they did and then those the saved store
+  lost most of first, so that an earlier answer is less often refused. The
+  store arithmetic above, with the plan's draws on those offers added back,
+  gives every multiset of unknown draws the saved stores admit; each way to give the
+  unpicked offers, in setup order, a type of their own store from it, the rest
+  left to the room's presses, is simulated, and an assignment fits when the
+  plan's wheel stores across the room match the saved ones. Fits are grouped
+  by the ship's exit state (every store's counts, reward priorities, the god
+  pool and the rerolls left). The first fit in canonical order (setup order,
+  then the store's declared type order) is authored; when every fit shares
+  one exit state nothing is reported, otherwise each offer whose value
+  differs is reported as not in the record with the other groups' values as
+  alternatives. When nothing fits the provisional values stay and each wheel
+  store's loss is reported as a mismatch. Unpicked offers of a room whose
+  window never closes (the last room, one past a stop, a record without entry
+  saves) keep their provisional values and are reported as not in the record,
+  as are those of wheels whose side is unknown.
 - A hidden return door's placeholder and reward are pinned exactly from the
   return door's `ExitDoorRooms` and `OfferedRewards`.
 - A batch's doors are ordered by the catalog's declared native door order for

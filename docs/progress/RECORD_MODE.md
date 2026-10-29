@@ -30,10 +30,12 @@ Evidence: the save-file run record audit
    Rebuild then rebuilds the record from them first.
 5. **Assumptions:** aspect and keepsake at maximum level (the planner-wide
    rule; not reported). Everything else the record cannot answer is guessed
-   and reported (decision 8): an unpicked ship-wheel boon takes the first
-   eligible god, a collected Fields optional reward the first free optional
-   point, and room-action and purchase order the native order wherever trait
-   timestamps (`Hero.Traits` ids) do not order them.
+   and reported (decision 8): a collected Fields optional reward takes the
+   first free optional point, and room-action and purchase order the native
+   order wherever trait timestamps (`Hero.Traits` ids) do not order them. An
+   unpicked ship-wheel offer's type is solved from the saved stores and
+   reported only when fits differ in exit state or none fits; its Boon god
+   leaves no trace, so it takes the first god the wheel admits, unreported.
 6. **Encounters** are imported by inverting the saved waves into the authored
    generated customization (wave count, highlight, types, base roll,
    allocations), verified by replaying the forward model; a phase whose replay
