@@ -443,7 +443,7 @@ describe('surface product loop', () => {
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
   });
 
-  it('repairs a Hub Phial target from the fountain controls after the preceding room and returns to the Hub map', async () => {
+  it('repairs a Hub Phial target on the Hub timeline fountain row and returns to the Hub map', async () => {
     const application = createApplication();
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const outcome = createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub'));
@@ -467,16 +467,16 @@ describe('surface product loop', () => {
     if (repair === null) throw new Error('selected repair banner is missing');
     await view.user.click(within(repair).getByRole('button'));
 
+    // The repair opens the fountain row's Phial target in the Hub timeline.
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    const controls = within(inspector).getByRole('region', { name: 'Hub fountain' });
-    expect(within(controls).getByText('Fountain used in the Hub after this room.')).toBeTruthy();
+    expect(within(inspector).getByRole('region', { name: 'Ephyra Hub timeline' })).toBeTruthy();
     await view.user.click(
       await screen.findByText(application.catalog.traits.byKey['HermesWeaponBoon']!.label),
     );
     await waitFor(() => expect(currentEvaluation(application).findings).toEqual([]));
 
     const historyBefore = currentHistory(application).past.length;
-    expect(within(controls).queryByRole('group', { name: 'Fountain use' })).toBeNull();
+    await view.user.click(screen.getByRole('button', { name: 'Back to Map' }));
     act(() =>
       application.store.dispatch(semanticOwnerFocused(createHubFountainAddress(nBiome, 'hub'))),
     );

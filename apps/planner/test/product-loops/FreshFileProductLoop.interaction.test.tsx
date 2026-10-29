@@ -80,7 +80,11 @@ describe('Fresh File product loop', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Edit Trait · Choose trait' }));
     const dialog = await screen.findByRole('dialog');
-    expect(dialog.textContent).toContain('Fresh rarity: Fixed Common');
+    await user.click(within(dialog).getByRole('button', { name: 'Offer state' }));
+    expect(screen.getByRole('region', { name: 'Offer generation state' }).textContent).toContain(
+      'Fresh rarity: Fixed Common',
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'Offer state' }));
     await user.click(within(dialog).getByRole('button', { name: 'option1 trait' }));
     const traits = within(await screen.findByRole('listbox')).getAllByRole('option');
     expect(traits.map((option) => option.textContent)).toEqual(['✓Nova Strike']);
