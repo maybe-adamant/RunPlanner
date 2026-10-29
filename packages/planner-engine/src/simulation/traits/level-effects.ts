@@ -419,3 +419,29 @@ import type { TraitHistoryState, TraitLevelMutationEvent } from './history/model
 import type { TraitAssessmentFinding, TraitOfferSourceContext } from './offer-domain';
 import type { SimulationState } from '../state/model';
 import { circeResolutionDomain, manualArcanaGraspCost } from '../arcana-fear';
+
+/**
+ * A guessed chain of `count` Pom screens shown and rerolled away before these
+ * final rows. With more than three levellable boons every screen shows three
+ * and must not repeat the one before it, so the chain alternates a different
+ * three with the final ones and ends on the different three.
+ */
+export function rerolledLevelScreensGuess(
+  pool: readonly string[],
+  finalOffered: readonly string[],
+  count: number,
+): readonly { readonly offeredTraitKeys: readonly string[] }[] | undefined {
+  if (count < 1 || pool.length <= 3) return undefined;
+  const outside = pool.find((traitKey) => !finalOffered.includes(traitKey));
+  if (outside === undefined) return undefined;
+  const other = Object.freeze([
+    outside,
+    ...pool.filter((traitKey) => traitKey !== outside).slice(0, 2),
+  ]);
+  const final = Object.freeze([...finalOffered]);
+  return Object.freeze(
+    Array.from({ length: count }, (_, index) =>
+      Object.freeze({ offeredTraitKeys: (count - 1 - index) % 2 === 0 ? other : final }),
+    ),
+  );
+}

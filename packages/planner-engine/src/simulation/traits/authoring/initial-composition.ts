@@ -1,5 +1,9 @@
 import type { Catalog, TraitRarity } from '../../../catalog-schema';
-import type { AuthoredTraitOffer } from '../../../authored-project/traits/state';
+import type {
+  AuthoredRerolledTraitScreen,
+  AuthoredTraitOffer,
+  RerolledScreens,
+} from '../../../authored-project/traits/state';
 import type { TraitHistoryState } from '../history/model';
 import type { ResolvedTraitOfferSource } from '../offer-domain';
 import { boonReplacementChance, limitedSwapUses } from '../offer-domain';
@@ -157,13 +161,18 @@ function findOutcome(
   pools: InitialOfferPools,
   acceptsOption: (option: InitialOfferOption) => boolean,
   acceptsOutcome: (options: Selection) => boolean,
+  /** A reroll's one banned item of the previous screen, excluded after seeding. */
+  banned?: string,
 ): Selection | undefined {
   const { rarityOrder, chances } = pools;
+  // A dropped banned replacement seed also leaves the rescue list.
+  let seededReplacement: InitialOfferOption | undefined;
   const used = (selected: Selection, key: string) =>
     selected.some((option) => option.traitKey === key);
   const bucket = (selected: Selection, rarity: TraitRarity) =>
     pools.fresh.filter(
-      (key) => !used(selected, key) && pools.membership.get(key)!.includes(rarity),
+      (key) =>
+        key !== banned && !used(selected, key) && pools.membership.get(key)!.includes(rarity),
     );
   const append = (selected: Selection, option: InitialOfferOption): Selection | undefined =>
     used(selected, option.traitKey) || !acceptsOption(option) ? undefined : [...selected, option];
@@ -191,7 +200,10 @@ function findOutcome(
 
   function replacementRescue(selected: Selection): Selection | undefined {
     if (selected.length === 3) return terminal(selected);
-    const replacements = pools.replacements.filter((option) => !used(selected, option.traitKey));
+    // Rescue reads the unpruned core list, so it may re-offer the banned item.
+    const replacements = pools.replacements.filter(
+      (option) => option !== seededReplacement && !used(selected, option.traitKey),
+    );
     if (replacements.length === 0) return finalRescue(selected);
     for (const option of replacements) {
       const next = append(selected, option);
@@ -259,15 +271,20 @@ function findOutcome(
     index = 0,
   ): Selection | undefined {
     const traitKey = pools.linked[index];
-    if (keys.length === 3 || traitKey === undefined) return seedRarities(keys);
+    if (keys.length === 3 || traitKey === undefined)
+      return seedRarities(
+        keys.filter((key) => (typeof key === 'string' ? key : key.traitKey) !== banned),
+      );
     return linkedSeeds(keys, index + 1) ?? linkedSeeds([...keys, traitKey], index + 1);
   }
 
   if (pools.replacementChance > 0)
     for (const replacement of pools.replacements) {
+      seededReplacement = replacement;
       const result = linkedSeeds([replacement]);
       if (result !== undefined) return result;
     }
+  seededReplacement = undefined;
   if (pools.replacementChance < 1 || pools.replacements.length === 0)
     for (const keys of pools.coreSeeds) {
       const result = linkedSeeds(keys);
@@ -276,29 +293,80 @@ function findOutcome(
   return undefined;
 }
 
+/**
+ * Whether native generation can show these rows. A rerolled screen follows a
+ * previous one: some item of it is banned for this generation. An unknown
+ * previous screen is judged as a first screen.
+ */
+function screenSupported(
+  pools: InitialOfferPools,
+  options: readonly { readonly traitKey: string; readonly rarity?: TraitRarity }[],
+  previous: AuthoredRerolledTraitScreen | null | undefined,
+): boolean {
+  const wanted = new Map(options.map((option) => [option.traitKey, option.rarity]));
+  if (wanted.size !== options.length || options.length > 3) return false;
+  const bans: readonly (string | undefined)[] =
+    previous === undefined || previous === null || previous.options.length === 0
+      ? [undefined]
+      : previous.options.map((option) => option.traitKey);
+  return bans.some(
+    (banned) =>
+      findOutcome(
+        pools,
+        (option) => wanted.has(option.traitKey) && wanted.get(option.traitKey) === option.rarity,
+        (selected) => selected.length === options.length,
+        banned,
+      ) !== undefined,
+  );
+}
+
+function support(applies: boolean, legal: boolean): InitialOfferSupport {
+  return Object.freeze({
+    applies,
+    legal,
+    findings: legal
+      ? Object.freeze([])
+      : Object.freeze([{ code: 'traitOfferGenerationUnavailable' as const }]),
+  });
+}
+
+/** The final screen's support, after its last rerolled screen when it has one. */
 export function assessInitialOfferSupport(
   input: Omit<InitialOfferInput, 'giverKey'> & { readonly offer: AuthoredTraitOffer },
 ): InitialOfferSupport {
   const pools = preparePools({ ...input, giverKey: input.offer.giverKey });
-  if (pools === undefined)
-    return Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) });
-  const options = input.offer.kind === 'traits' ? input.offer.options : [];
-  const wanted = new Map(options.map((option) => [option.traitKey, option.rarity]));
-  const supported =
-    wanted.size === options.length &&
-    options.length <= 3 &&
-    findOutcome(
+  if (pools === undefined) return support(false, true);
+  const offer = input.offer;
+  return support(
+    true,
+    screenSupported(
       pools,
-      (option) => wanted.has(option.traitKey) && wanted.get(option.traitKey) === option.rarity,
-      (selected) => selected.length === options.length,
-    ) !== undefined;
-  return Object.freeze({
-    applies: true,
-    legal: supported,
-    findings: supported
-      ? Object.freeze([])
-      : Object.freeze([{ code: 'traitOfferGenerationUnavailable' as const }]),
-  });
+      offer.kind === 'traits' ? offer.options : [],
+      offer.kind === 'traits' ? offer.rerolledScreens?.at(-1) : undefined,
+    ),
+  );
+}
+
+/**
+ * Each rerolled-away screen's support, oldest first: the first follows the
+ * first-screen rule, every later one bans an item of the screen before it.
+ * Undefined for a screen not yet authored or a giver without staged generation.
+ */
+export function assessRerolledScreensSupport(
+  input: InitialOfferInput,
+  screens: RerolledScreens<AuthoredRerolledTraitScreen>,
+): readonly (InitialOfferSupport | undefined)[] {
+  const pools = preparePools(input);
+  return Object.freeze(
+    screens.map((screen, index) =>
+      pools === undefined || screen === null
+        ? undefined
+        : support(
+            true,
+            screenSupported(pools, screen.options, index === 0 ? undefined : screens[index - 1]),
+          ),
+    ),
+  );
 }
 
 /** A native-supported initial outcome; an empty array is the Gold terminal. */
@@ -315,4 +383,58 @@ export function initialOfferStartingOptions(
   return outcome === undefined
     ? undefined
     : Object.freeze(outcome.map((option) => Object.freeze({ ...option })));
+}
+
+/**
+ * The first legal chain of `count` rerolled-away screens before these final
+ * rows: the last of them holds an item whose ban lets the final rows appear.
+ * Undefined when the search finds none or the giver has no staged generation.
+ */
+export function guessRerolledScreens(
+  input: InitialOfferInput,
+  finalOptions: readonly { readonly traitKey: string; readonly rarity?: TraitRarity }[],
+  count: number,
+): readonly AuthoredRerolledTraitScreen[] | undefined {
+  const pools = preparePools(input);
+  if (pools === undefined || count < 1) return undefined;
+  const wanted = new Map(finalOptions.map((option) => [option.traitKey, option.rarity]));
+  const banCandidates = [
+    ...new Set([...pools.fresh, ...pools.replacements.map((option) => option.traitKey)]),
+  ];
+  const linkBan = banCandidates.find(
+    (banned) =>
+      findOutcome(
+        pools,
+        (option) => wanted.has(option.traitKey) && wanted.get(option.traitKey) === option.rarity,
+        (selected) => selected.length === finalOptions.length,
+        banned,
+      ) !== undefined,
+  );
+  if (linkBan === undefined) return undefined;
+  const screens: AuthoredRerolledTraitScreen[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const last = index === count - 1;
+    const previous = screens[index - 1];
+    const bans: readonly (string | undefined)[] =
+      previous === undefined || previous.options.length === 0
+        ? [undefined]
+        : previous.options.map((option) => option.traitKey);
+    let next: Selection | undefined;
+    for (const banned of bans) {
+      next = findOutcome(
+        pools,
+        () => true,
+        (selected) => !last || selected.some((option) => option.traitKey === linkBan),
+        banned,
+      );
+      if (next !== undefined) break;
+    }
+    if (next === undefined) return undefined;
+    screens.push(
+      Object.freeze({
+        options: Object.freeze(next.map((option) => Object.freeze({ ...option }))),
+      }),
+    );
+  }
+  return Object.freeze(screens);
 }

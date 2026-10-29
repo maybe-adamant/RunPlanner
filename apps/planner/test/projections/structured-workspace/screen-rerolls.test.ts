@@ -73,7 +73,7 @@ describe('screen reroll counts', () => {
     const rerolled = applyProjectCommand(
       project,
       catalog,
-      boon!.intentFor(Object.freeze({ ...value, rerollCount: 2 })).command,
+      boon!.intentFor(Object.freeze({ ...value, rerolledScreens: [null, null] })).command,
     );
     const owner = JSON.stringify(boon!.owner);
     const find = (next: ProjectDocument) =>

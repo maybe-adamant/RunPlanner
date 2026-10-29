@@ -13,8 +13,8 @@ import {
   semanticAddressKey,
 } from '../../authored-project/addresses';
 import { parseHermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
-import { optionIndex } from '../../authored-project/traits/state';
-import type { TraitOfferOwnerAddress } from '../../authored-project/addresses';
+import { optionIndex, type RerolledScreens } from '../../authored-project/traits/state';
+import type { SemanticAddress, TraitOfferOwnerAddress } from '../../authored-project/addresses';
 import { nemesisGeneratedPickupSiteKey } from '../../authored-project/acquisition/pickup-producers';
 import { acquisitionSiteStorageKey } from '../../authored-project/acquisition/artificer';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../authored-project/shop';
@@ -148,9 +148,18 @@ export function executionTimelineTransactions(
         blessingKey: selected.offer.blessingKey,
         rarity: selected.offer.rarity,
         blessingValues: Object.freeze({ ...selected.offer.blessingValues }),
-        ...(selected.offer.rerollCount === undefined
-          ? {}
-          : { rerollCount: selected.offer.rerollCount }),
+        ...publishedRerolledScreens(selected.offer.rerolledScreens, selected.address, (screen) =>
+          Object.freeze({
+            curseOptions: Object.freeze(
+              screen.curseOptions.map((option) =>
+                Object.freeze({
+                  curseKey: option.curseKey,
+                  requirementCount: option.requirementCount,
+                }),
+              ),
+            ),
+          }),
+        ),
       });
     if (selected.offer.kind !== 'traits')
       throw new CompilerError(
@@ -423,9 +432,19 @@ export function executionTimelineTransactions(
         : { rejected: selected.offer.rejectedOptionKey }),
       ...(publishedHexTree === undefined ? {} : { hexTree: publishedHexTree }),
       ...(expectation === undefined ? {} : { expectation }),
-      ...(selected.offer.rerollCount === undefined
-        ? {}
-        : { rerollCount: selected.offer.rerollCount }),
+      ...publishedRerolledScreens(selected.offer.rerolledScreens, selected.address, (screen) =>
+        Object.freeze({
+          options: Object.freeze(
+            screen.options.map((option) =>
+              Object.freeze({
+                key: option.traitKey,
+                ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
+              }),
+            ),
+          ),
+          ...(screen.rejectedOptionKey === undefined ? {} : { rejected: screen.rejectedOptionKey }),
+        }),
+      ),
     });
   };
   const levelResolution = (
@@ -457,8 +476,10 @@ export function executionTimelineTransactions(
           ? selected.value.selectedTraitKey
           : selected.value.targetTraitKey,
       levelCount,
-      ...(selected.value.kind === 'choice' && selected.value.rerollCount !== undefined
-        ? { rerollCount: selected.value.rerollCount }
+      ...(selected.value.kind === 'choice'
+        ? publishedRerolledScreens(selected.value.rerolledScreens, selected.address, (screen) =>
+            Object.freeze({ offeredTargets: Object.freeze([...screen.offeredTraitKeys]) }),
+          )
         : {}),
     });
   };
@@ -1096,4 +1117,25 @@ export function executionTimelineTransactions(
     });
   }
   return Object.freeze(transactions);
+}
+
+/** Every rerolled-away screen, oldest first; a published plan has none unauthored. */
+function publishedRerolledScreens<T, W>(
+  screens: RerolledScreens<T> | undefined,
+  owner: SemanticAddress,
+  publish: (screen: T) => W,
+): { readonly rerolledScreens?: readonly W[] } {
+  if (screens === undefined || screens.length === 0) return {};
+  return {
+    rerolledScreens: Object.freeze(
+      screens.map((screen) => {
+        if (screen === null)
+          throw new CompilerError(
+            'executionCoverageMissing',
+            `unauthored rerolled screen ${semanticAddressKey(owner)}`,
+          );
+        return publish(screen);
+      }),
+    ),
+  };
 }

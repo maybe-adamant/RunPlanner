@@ -243,6 +243,11 @@ export {
   type AuthoredTraitOffer,
   type AuthoredChaosTraitOffer,
   type AuthoredChaosCurseOption,
+  type AuthoredRerolledChaosScreen,
+  type AuthoredRerolledLevelScreen,
+  type AuthoredRerolledTraitOption,
+  type AuthoredRerolledTraitScreen,
+  type RerolledScreens,
   type AuthoredTraitOfferTraits,
   type AuthoredConcaveStoneResult,
   type AuthoredLevelResolution,
@@ -341,7 +346,13 @@ export {
   type RerollPressTarget,
   type RerollSurface,
 } from './rerolls';
-export { screenRerollCost, screenRerollSupported, type RerollableScreen } from './screen-rerolls';
+export {
+  rerolledScreenCount,
+  screenRerollCost,
+  screenRerollSupported,
+  withScreenRerollCount,
+  type RerollableScreen,
+} from './screen-rerolls';
 export {
   INITIAL_ROLL_KEY,
   PURGING_POOL_SLOT_KEYS,

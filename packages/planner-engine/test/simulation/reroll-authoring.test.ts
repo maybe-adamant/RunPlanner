@@ -36,6 +36,7 @@ import {
   withArcana,
   withGoldenUnderworldJudgments,
   withJudgment,
+  withGuessedRerolledScreens,
 } from '../support/rerolls';
 
 const f = createBiomeAddress('Underworld', 'F');
@@ -321,21 +322,22 @@ describe('reroll spend allowance', () => {
     const [role, offer] = Object.entries(trait ?? {})[0]!;
     if (offer === null || offer === undefined || offer.kind === 'fallbackGold')
       throw new Error('fixture lacks an authored Zeus screen');
-    const count = (rerollCount: number): ProjectCommand => ({
-      kind: 'ReplaceTraitOffer',
-      trait: {
-        kind: 'traitOffer',
+    const address = {
+      kind: 'traitOffer',
+      routeKey: 'Underworld',
+      biomeKey: 'F',
+      owner: {
+        kind: 'incomingReward',
         routeKey: 'Underworld',
         biomeKey: 'F',
-        owner: {
-          kind: 'incomingReward',
-          routeKey: 'Underworld',
-          biomeKey: 'F',
-          occurrenceId: source as never,
-        },
-        acquisitionRole: role,
+        occurrenceId: source as never,
       },
-      value: { ...offer, rerollCount },
+      acquisitionRole: role,
+    } as const;
+    const count = (rerollCount: number): ProjectCommand => ({
+      kind: 'ReplaceTraitOffer',
+      trait: address,
+      value: withGuessedRerolledScreens(project, address, offer, rerollCount),
     });
     const once = applyProjectCommand(project, catalog, count(1));
     const screen = (from: ProjectDocument, fromCount: number) =>

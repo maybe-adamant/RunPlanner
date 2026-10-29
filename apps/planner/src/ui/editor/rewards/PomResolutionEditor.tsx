@@ -2,6 +2,7 @@ import {
   semanticAddressKey,
   type AuthoredLevelResolution,
   type LevelResolutionAddress,
+  withScreenRerollCount,
 } from '@run-planner/engine/authored-project';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -156,7 +157,7 @@ export function PomResolutionEditor({
   const [randomTarget, setRandomTarget] = useState<string | null>(
     interaction.value.kind === 'random' ? interaction.value.targetTraitKey : null,
   );
-  const [rerollCount, setRerollCount] = useState(initialChoice?.rerollCount ?? 0);
+  const [rerolledScreens, setRerolledScreens] = useState(initialChoice?.rerolledScreens);
   const [activeGroupKey, setActiveGroupKey] = useState<string | null>(null);
   const [seededGroupKey, setSeededGroupKey] = useState<string | null>(null);
   const draft: AuthoredLevelResolution =
@@ -167,7 +168,9 @@ export function PomResolutionEditor({
             choiceSlots.filter((target): target is string => target !== null),
           ),
           selectedTraitKey: selectedChoice,
-          ...(interaction.screenRerolls === undefined ? {} : { rerollCount }),
+          ...(interaction.screenRerolls === undefined || rerolledScreens === undefined
+            ? {}
+            : { rerolledScreens }),
         })
       : Object.freeze({ kind: 'random' as const, targetTraitKey: randomTarget });
   const controller =
@@ -277,8 +280,8 @@ export function PomResolutionEditor({
     <div className="trait-offer-editor pom-resolution-editor">
       {interaction.screenRerolls === undefined || interaction.value.kind !== 'choice' ? null : (
         <ScreenRerollCount
-          count={rerollCount}
-          onChange={setRerollCount}
+          count={rerolledScreens?.length ?? 0}
+          onChange={(count) => setRerolledScreens(withScreenRerollCount(rerolledScreens, count))}
           rerolls={interaction.screenRerolls}
         />
       )}

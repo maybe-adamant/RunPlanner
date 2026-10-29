@@ -319,31 +319,49 @@ describe('Well and Pool rerolls', () => {
   });
 });
 
-describe('screen reroll counts', () => {
-  it('keep a Pom count through a later choice edit', () => {
+describe('screen rerolls', () => {
+  it('add, author and remove Pom screens before the final one, which keeps its pick', () => {
     const pom = createLevelResolutionAddress(
       createIncomingRewardAddress(f, 'golden-f-b4-e1' as never),
       'self',
     );
     const project = loadUnderworldFGCheckpoint();
-    const counted = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceLevelResolution',
-      levelResolution: pom,
-      value: {
-        kind: 'choice',
-        offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'],
-        selectedTraitKey: 'ApolloWeaponBoon',
-        rerollCount: 2,
-      },
-    });
     const resolution = (document: ProjectDocument) => {
       const state = occurrence(document, 'golden-f-b4-e1').state;
       return state.kind === 'counted'
         ? state.reward?.levelResolutionsByAcquisitionRole?.self
         : undefined;
     };
-    expect(resolution(counted)).toMatchObject({ rerollCount: 2 });
-    const reselected = applyProjectCommand(counted, catalog, {
+    const chosen = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: pom,
+      value: {
+        kind: 'choice',
+        offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'],
+        selectedTraitKey: 'ApolloWeaponBoon',
+      },
+    });
+    const twice = [1, 2].reduce(
+      (document) =>
+        applyProjectCommand(document, catalog, {
+          kind: 'InsertLevelScreenReroll',
+          levelResolution: pom,
+        }),
+      chosen,
+    );
+    expect(resolution(twice)).toEqual({
+      kind: 'choice',
+      offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'],
+      selectedTraitKey: 'ApolloWeaponBoon',
+      rerolledScreens: [null, null],
+    });
+    const authored = applyProjectCommand(twice, catalog, {
+      kind: 'ReplaceRerolledLevelScreen',
+      levelResolution: pom,
+      index: 0,
+      value: { offeredTraitKeys: ['ZeusSpecialBoon'] },
+    });
+    const reselected = applyProjectCommand(authored, catalog, {
       kind: 'ReplaceLevelResolution',
       levelResolution: pom,
       value: {
@@ -354,19 +372,44 @@ describe('screen reroll counts', () => {
     });
     expect(resolution(reselected)).toMatchObject({
       selectedTraitKey: 'ZeusSpecialBoon',
-      rerollCount: 2,
+      rerolledScreens: [{ offeredTraitKeys: ['ZeusSpecialBoon'] }, null],
     });
+    const removed = applyProjectCommand(reselected, catalog, {
+      kind: 'RemoveLevelScreenReroll',
+      levelResolution: pom,
+    });
+    expect(resolution(removed)).toMatchObject({
+      rerolledScreens: [{ offeredTraitKeys: ['ZeusSpecialBoon'] }],
+    });
+    expect(
+      resolution(
+        applyProjectCommand(removed, catalog, {
+          kind: 'RemoveLevelScreenReroll',
+          levelResolution: pom,
+        }),
+      ),
+    ).not.toHaveProperty('rerolledScreens');
     expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'ReplaceLevelResolution',
+      applyProjectCommand(chosen, catalog, {
+        kind: 'RemoveLevelScreenReroll',
         levelResolution: pom,
-        value: {
-          kind: 'choice',
-          offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'],
-          selectedTraitKey: 'ApolloWeaponBoon',
-          rerollCount: -1,
-        },
       }),
-    ).toThrow('screen reroll count must be a non-negative integer');
+    ).toThrow('the screen has no reroll');
+    expect(() =>
+      applyProjectCommand(twice, catalog, {
+        kind: 'ReplaceRerolledLevelScreen',
+        levelResolution: pom,
+        index: 2,
+        value: null,
+      }),
+    ).toThrow('no rerolled screen 2');
+    expect(() =>
+      applyProjectCommand(twice, catalog, {
+        kind: 'ReplaceRerolledLevelScreen',
+        levelResolution: pom,
+        index: 0,
+        value: { offeredTraitKeys: ['ZeusSpecialBoon', 'ZeusSpecialBoon'] },
+      }),
+    ).toThrow('must be distinct');
   });
 });

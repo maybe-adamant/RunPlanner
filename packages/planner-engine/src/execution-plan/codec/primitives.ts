@@ -116,12 +116,18 @@ export function stableJson(value: unknown): string {
     .join(',')}}`;
 }
 
-/** A published screen reroll count: absent is none, so a present count is positive. */
-export function screenRerollCount(
+/** Published rerolled-away screens: absent is none, so a present list holds one or more. */
+export function rerolledScreens<T>(
   record: Readonly<Record<string, unknown>>,
   label: string,
-): { readonly rerollCount?: number } {
-  return record.rerollCount === undefined
-    ? {}
-    : { rerollCount: integer(record.rerollCount, `${label}.rerollCount`, 1) };
+  decode: (value: unknown, label: string) => T,
+): { readonly rerolledScreens?: readonly T[] } {
+  if (record.rerolledScreens === undefined) return {};
+  const screens = array(record.rerolledScreens, `${label}.rerolledScreens`);
+  if (screens.length === 0) fail(`${label}.rerolledScreens must hold at least one screen`);
+  return {
+    rerolledScreens: Object.freeze(
+      screens.map((screen, index) => decode(screen, `${label}.rerolledScreens[${index}]`)),
+    ),
+  };
 }

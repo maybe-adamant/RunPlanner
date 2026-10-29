@@ -260,6 +260,18 @@ The [construction
 audit](../audits/traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md)
 owns the full source sequence and Trial inheritance exception matrix.
 
+A rerolled screen is authored as its earlier screens, oldest first, before
+the final screen that keeps the pick; every earlier screen is required, and the
+reroll count is their number. All of them are assessed against the final
+screen's generation context. The first earlier screen follows the initial
+rules; every later screen, the final one included, must be a legal initial
+outcome with some item of the screen before it banned after seeding (staged
+givers only). Chaos screens are independent, and a Pom screen must show the
+levellable boons less one of the previous screen. Findings on an earlier screen
+carry its tab index; Hymn is spent if any screen showed an exchange. The
+[construction audit](../audits/traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md#screen-rerolls)
+owns the source rule.
+
 A room's `firstRunOffer` rule is source policy for trait screens opened in that
 room on its route: identities outside its forced loot table fail row
 eligibility (`offerContext`), and its Common rarity is the source's forced

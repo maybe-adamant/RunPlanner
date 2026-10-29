@@ -89,6 +89,12 @@ action order with only their pinned slots: the k-th native reroll installs the k
 stays native, and a Well slot bought earlier in the room stays blank. Each
 purchase and sale names its roll.
 
+A rerolled trait, Chaos or Pom level screen lists its earlier screens, oldest
+first, beside its final one. The adapter installs the first when the screen
+opens and the k-th later one on the k-th native reroll; the final screen
+follows the last reroll and carries the pick. Chaos earlier screens pin only
+their curses.
+
 Door destinations carry explicit `zagreusContractPresent` for both batch and
 fixed navigation. This is the same canonical additional-exit presence published
 in the destination Overview, copied for an earlier consumer rather than

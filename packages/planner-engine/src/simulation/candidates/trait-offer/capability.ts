@@ -27,6 +27,7 @@ import {
   appendTraitOfferDraft,
   removeTraitOfferDraft,
   traitOfferStartingOutcome,
+  rerolledTraitScreensGuess,
   assessSelectedTargetedAcquisition,
   selectedTargetedAcquisitionTargetKeys,
   latestModelTargetDomain,
@@ -123,6 +124,11 @@ export interface TraitOfferCandidateCapability {
   }[];
   /** One exact native-supported initial traits-or-Gold outcome. */
   readonly traitOfferStartingOutcome: (giverKey: string) => AuthoredTraitOffer | undefined;
+  /** A guessed legal chain of screens rerolled away before these final rows. */
+  readonly rerolledScreensGuess: (
+    value: AuthoredTraitOffer,
+    count: number,
+  ) => ReturnType<typeof rerolledTraitScreensGuess>;
   readonly appendTraitOptionDraft: (
     value: AuthoredTraitOffer,
   ) => AuthoredTraitOfferTraits | undefined;
@@ -586,6 +592,19 @@ export function createTraitOfferCandidateArtifacts(
               return outcome;
             })
             .find((outcome): outcome is NonNullable<typeof outcome> => outcome !== undefined),
+        rerolledScreensGuess: (value: AuthoredTraitOffer, count: number) =>
+          branchContexts
+            .map((context) =>
+              rerolledTraitScreensGuess(
+                catalog,
+                value,
+                count,
+                context.generationState,
+                context.state,
+                traitOfferCandidateSource(catalog, context, value),
+              ),
+            )
+            .find((guess) => guess !== undefined),
         appendTraitOptionDraft: (value: AuthoredTraitOffer) => {
           if (value.kind === 'chaos') return undefined;
           return branchContexts

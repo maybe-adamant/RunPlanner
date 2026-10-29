@@ -1,6 +1,7 @@
 import {
-  decodeScreenRerollCount,
-  screenRerollCountField,
+  decodeRerolledScreens,
+  decodeRerolledTraitScreen,
+  rerolledScreensField,
   screenRerollSupported,
 } from '../../screen-rerolls';
 import type { Catalog, EncounterSlotBinding } from '../../../catalog-schema';
@@ -62,14 +63,15 @@ export function decodeEncounterTraitOffer(
       ...('rejectedOptionKey' in record ? ['rejectedOptionKey'] : []),
       ...('concaveStoneResult' in record ? ['concaveStoneResult'] : []),
       ...('steadyGrowthTargets' in record ? ['steadyGrowthTargets'] : []),
-      ...(Object.hasOwn(record, 'rerollCount') ? ['rerollCount'] : []),
+      ...(Object.hasOwn(record, 'rerolledScreens') ? ['rerolledScreens'] : []),
     ],
     path,
   );
-  const rerollCount = decodeScreenRerollCount(
+  const rerolledScreens = decodeRerolledScreens(
     record,
     screenRerollSupported(catalog, { kind: 'traitOffer', giverKey }),
     path,
+    (screen, screenPath) => decodeRerolledTraitScreen(catalog, giverKey, screen, screenPath),
   );
   const rawOptions = expectArray(record.options, `${path}.options`);
   if (rawOptions.length < 1 || rawOptions.length > TRAIT_OPTION_KEYS.length)
@@ -463,7 +465,7 @@ export function decodeEncounterTraitOffer(
       ? {}
       : { rejectedOptionKey: rejectedOptionKey as TraitOptionKey }),
     ...(concaveStoneResult === undefined ? {} : { concaveStoneResult }),
-    ...screenRerollCountField(rerollCount),
+    ...rerolledScreensField(rerolledScreens),
   });
   const steadyGrowthTargets = decodeSteadyGrowthTargets(
     record.steadyGrowthTargets,

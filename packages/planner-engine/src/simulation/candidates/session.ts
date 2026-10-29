@@ -311,6 +311,10 @@ export type CandidateEvaluationEvent =
       readonly owner: import('../../authored-project/addresses').OccurrenceAddress;
     };
 
+type RerolledTraitScreensGuess =
+  | readonly import('../../authored-project/traits/state').AuthoredRerolledTraitScreen[]
+  | readonly import('../../authored-project/traits/state').AuthoredRerolledChaosScreen[];
+
 export interface ProjectCandidateSessionOptions {
   readonly observe?: (event: CandidateEvaluationEvent) => void;
 }
@@ -374,6 +378,12 @@ export interface ProjectCandidateSession {
     owner: TraitOfferAddress,
     giverKey: string,
   ) => AuthoredTraitOffer | undefined;
+  /** A guessed legal chain of screens rerolled away before these final rows. */
+  readonly rerolledTraitScreensGuess: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOffer,
+    count: number,
+  ) => RerolledTraitScreensGuess | undefined;
   readonly appendTraitOfferDraft: (
     owner: TraitOfferAddress,
     value: AuthoredTraitOffer,
@@ -849,6 +859,11 @@ export function createPreparedProjectCandidateSession(
     contextReached,
     traitOfferStartingOutcome: (owner: TraitOfferAddress, giverKey: string) =>
       traitCapability(owner)?.traitOfferStartingOutcome(giverKey),
+    rerolledTraitScreensGuess: (
+      owner: TraitOfferAddress,
+      value: AuthoredTraitOffer,
+      count: number,
+    ) => traitCapability(owner)?.rerolledScreensGuess(value, count),
     appendTraitOfferDraft: (owner: TraitOfferAddress, value: AuthoredTraitOffer) =>
       traitCapability(owner)?.appendTraitOptionDraft(value),
     removeTraitOfferDraft: (owner: TraitOfferAddress, value: AuthoredTraitOfferTraits) =>

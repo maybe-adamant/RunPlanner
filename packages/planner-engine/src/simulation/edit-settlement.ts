@@ -422,14 +422,15 @@ export function settleCommandWithoutNewFinding(
     : undefined;
 }
 
-/** Every screen reroll count authored anywhere in a project: trait, Chaos and Pom screens. */
+/** Every screen reroll authored anywhere in a project: trait, Chaos and Pom earlier screens. */
 function screenRerollTotal(value: unknown): number {
   if (Array.isArray(value))
     return value.reduce((sum: number, entry) => sum + screenRerollTotal(entry), 0);
   if (value === null || typeof value !== 'object') return 0;
   return Object.entries(value).reduce(
     (sum, [key, entry]) =>
-      sum + (key === 'rerollCount' && typeof entry === 'number' ? entry : screenRerollTotal(entry)),
+      sum +
+      (key === 'rerolledScreens' && Array.isArray(entry) ? entry.length : screenRerollTotal(entry)),
     0,
   );
 }
@@ -500,6 +501,8 @@ function addedRerollSpendOwners(
     }
     case 'ReplaceTraitOffer':
     case 'ReplaceLevelResolution':
+    case 'InsertTraitScreenReroll':
+    case 'InsertLevelScreenReroll':
       return screenRerollTotal(after.route) > screenRerollTotal(before.route)
         ? new Set([semanticAddressKey(projectCommandAddress(command) as SemanticAddress)])
         : new Set();

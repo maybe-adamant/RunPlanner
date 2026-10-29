@@ -6,6 +6,8 @@ import type {
   ExecutionHexTree,
   ExecutionHexTreeNodes,
   ExecutionLevelResolution,
+  ExecutionRerolledTraitScreen,
+  ExecutionTraitOptionKey,
   ExecutionReward,
   ExecutionTraitOffer,
   ExecutionTraitScreenExpectation,
@@ -21,7 +23,7 @@ import {
   object,
   stringArray,
   stringValue,
-  screenRerollCount,
+  rerolledScreens,
 } from './primitives';
 
 /** A nonempty `depth:slot` to talent map of one realised Hex tree. */
@@ -186,25 +188,11 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
         'rarity',
         'blessingValues',
       ],
-      ['rerollCount'],
+      ['rerolledScreens'],
       label,
     );
     if (record.giver !== 'Chaos') fail(`${label}.giver must be Chaos`);
-    const curseOptions = array(record.curseOptions, `${label}.curseOptions`, 3).map(
-      (entry, index) => {
-        const option = object(entry, `${label}.curseOptions[${index}]`);
-        exact(option, ['curseKey', 'requirementCount'], [], `${label}.curseOptions[${index}]`);
-        return Object.freeze({
-          curseKey: stringValue(option.curseKey, `${label}.curseOptions[${index}].curseKey`),
-          requirementCount: integer(
-            option.requirementCount,
-            `${label}.curseOptions[${index}].requirementCount`,
-            1,
-          ),
-        });
-      },
-    );
-    if (curseOptions.length !== 3) fail(`${label}.curseOptions must contain three ordered options`);
+    const curseOptions = chaosCurseOptions(record.curseOptions, `${label}.curseOptions`);
     const selected = stringValue(record.selected, `${label}.selected`);
     if (!['option1', 'option2', 'option3'].includes(selected))
       fail(`${label}.selected is not a valid option`);
@@ -217,14 +205,20 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
       blessingKey: stringValue(record.blessingKey, `${label}.blessingKey`),
       rarity: stringValue(record.rarity, `${label}.rarity`),
       blessingValues: numberRecord(record.blessingValues, `${label}.blessingValues`),
-      ...screenRerollCount(record, label),
+      ...rerolledScreens(record, label, (screen, screenLabel) => {
+        const value = object(screen, screenLabel);
+        exact(value, ['curseOptions'], [], screenLabel);
+        return Object.freeze({
+          curseOptions: chaosCurseOptions(value.curseOptions, `${screenLabel}.curseOptions`),
+        });
+      }),
     });
   }
   if (record.kind !== 'traits') fail(`${label}.kind is unsupported`);
   exact(
     record,
     ['kind', 'giver', 'options', 'selected'],
-    ['rejected', 'hexTree', 'expectation', 'rerollCount'],
+    ['rejected', 'hexTree', 'expectation', 'rerolledScreens'],
     label,
   );
   const hexTree = (value: unknown, treeLabel: string): ExecutionHexTree => {
@@ -650,13 +644,58 @@ export function traitOffer(value: unknown, label: string): ExecutionTraitOffer {
             TRAIT_SCREEN_EXPECTATION_KEYS,
           ),
         }),
-    ...screenRerollCount(record, label),
+    ...rerolledScreens(record, label, rerolledTraitScreen),
+  });
+}
+
+function chaosCurseOptions(
+  value: unknown,
+  label: string,
+): readonly { readonly curseKey: string; readonly requirementCount: number }[] {
+  const options = array(value, label, 3).map((entry, index) => {
+    const option = object(entry, `${label}[${index}]`);
+    exact(option, ['curseKey', 'requirementCount'], [], `${label}[${index}]`);
+    return Object.freeze({
+      curseKey: stringValue(option.curseKey, `${label}[${index}].curseKey`),
+      requirementCount: integer(option.requirementCount, `${label}[${index}].requirementCount`, 1),
+    });
+  });
+  if (options.length !== 3) fail(`${label} must contain three ordered options`);
+  return Object.freeze(options);
+}
+
+function rerolledTraitScreen(value: unknown, label: string): ExecutionRerolledTraitScreen {
+  const record = object(value, label);
+  exact(record, ['options'], ['rejected'], label);
+  const options = array(record.options, `${label}.options`, 3).map((entry, index) => {
+    const option = object(entry, `${label}.options[${index}]`);
+    exact(option, ['key'], ['rarity'], `${label}.options[${index}]`);
+    return Object.freeze({
+      key: stringValue(option.key, `${label}.options[${index}].key`),
+      ...(option.rarity === undefined
+        ? {}
+        : { rarity: stringValue(option.rarity, `${label}.options[${index}].rarity`) }),
+    });
+  });
+  if (new Set(options.map((option) => option.key)).size !== options.length)
+    fail(`${label}.options must be distinct`);
+  const rejected =
+    record.rejected === undefined ? undefined : stringValue(record.rejected, `${label}.rejected`);
+  if (
+    rejected !== undefined &&
+    (!['option1', 'option2', 'option3'].includes(rejected) ||
+      options[Number(rejected.slice(-1)) - 1] === undefined)
+  )
+    fail(`${label}.rejected is not a shown option`);
+  return Object.freeze({
+    options: Object.freeze(options),
+    ...(rejected === undefined ? {} : { rejected: rejected as ExecutionTraitOptionKey }),
   });
 }
 
 export function levelResolution(value: unknown, label: string): ExecutionLevelResolution {
   const record = object(value, label);
-  exact(record, ['offeredTargets', 'selectedTarget', 'levelCount'], ['rerollCount'], label);
+  exact(record, ['offeredTargets', 'selectedTarget', 'levelCount'], ['rerolledScreens'], label);
   return Object.freeze({
     offeredTargets: Object.freeze(stringArray(record.offeredTargets, `${label}.offeredTargets`, 3)),
     selectedTarget:
@@ -664,7 +703,15 @@ export function levelResolution(value: unknown, label: string): ExecutionLevelRe
         ? null
         : stringValue(record.selectedTarget, `${label}.selectedTarget`),
     levelCount: integer(record.levelCount, `${label}.levelCount`),
-    ...screenRerollCount(record, label),
+    ...rerolledScreens(record, label, (screen, screenLabel) => {
+      const value = object(screen, screenLabel);
+      exact(value, ['offeredTargets'], [], screenLabel);
+      return Object.freeze({
+        offeredTargets: Object.freeze(
+          stringArray(value.offeredTargets, `${screenLabel}.offeredTargets`, 3),
+        ),
+      });
+    }),
   });
 }
 

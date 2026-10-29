@@ -284,6 +284,9 @@ function applyUnchecked(
     case 'ReplaceTraitSelection':
     case 'ReplaceConcaveStoneResult':
     case 'ReplaceSteadyGrowthTarget':
+    case 'InsertTraitScreenReroll':
+    case 'RemoveTraitScreenReroll':
+    case 'ReplaceRerolledTraitScreen':
       return applyTraitOfferCommand(
         document,
         catalog,
@@ -291,6 +294,9 @@ function applyUnchecked(
         command,
       );
     case 'ReplaceLevelResolution':
+    case 'InsertLevelScreenReroll':
+    case 'RemoveLevelScreenReroll':
+    case 'ReplaceRerolledLevelScreen':
       return applyLevelResolutionCommand(
         document,
         catalog,

@@ -9,9 +9,11 @@ import type {
   TraitOfferAddress,
 } from '../../authored-project/addresses';
 import type {
+  AuthoredChaosTraitOffer,
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
   SteadyGrowthSource,
+  TraitOptionKey,
 } from '../../authored-project/traits/state';
 import type { SimulationState } from '../state/model';
 import type {
@@ -37,10 +39,12 @@ import {
   assessNaturalSelectionTargets,
   assessSelectedTargetedAcquisition,
   assessTraitOffer,
+  assessTraitOptionAgainstRarityDomain,
   traitOfferGenerationInput,
 } from './authoring/assessment';
 import {
   assessInitialOfferSupport,
+  assessRerolledScreensSupport,
   type InitialOfferSupport,
 } from './authoring/initial-composition';
 import { resolveTraitOfferOptionLevel, type TraitOfferOptionLevelResolution } from './offer-levels';
@@ -313,6 +317,8 @@ export interface ReachedTraitOfferEvaluation {
   readonly generation?: InitialOfferSupport;
   /** Non-generation screen rules, including Rejected on ordinary god offers. */
   readonly composition: TraitOfferCompositionAssessment;
+  /** The screens rerolled away before this final one, oldest first. */
+  readonly rerolledScreens?: readonly RerolledScreenAssessment[];
   readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
   /** One-use spends recorded by acquisition settlement when the screen closed. */
   readonly screenSpend?: TraitScreenSpend;
@@ -378,9 +384,11 @@ export function traitOfferAssessmentIdentity(
 }
 
 export function traitOfferGenerationLegal(
-  evaluation: Pick<ReachedTraitOfferEvaluation, 'generation' | 'composition' | 'assessments'>,
+  evaluation: Pick<ReachedTraitOfferEvaluation, 'generation' | 'composition' | 'assessments'> &
+    Partial<Pick<ReachedTraitOfferEvaluation, 'rerolledScreens'>>,
 ): boolean {
   return (
+    rerolledScreensLegal(evaluation.rerolledScreens) &&
     (evaluation.generation?.legal ?? true) &&
     evaluation.composition.legal &&
     evaluation.assessments.every((assessment) => assessment.legal)
@@ -453,6 +461,185 @@ export interface TraitContextUnavailable {
   readonly reason: 'lifecycleNotReached' | 'missingParentAcquisition';
 }
 
+function chaosRequirementUnavailable(
+  state: SimulationState,
+  requirement: import('../../catalog-schema').ChaosOfferRequirement,
+): boolean {
+  const built = state.traitHistory;
+  switch (requirement.kind) {
+    case 'matureChaosBlessing':
+      return built.maturedChaosBlessings.length === 0;
+    case 'elementMinimum':
+      return built.elementCounts[requirement.element] < requirement.minimum;
+    case 'notKeepsake':
+      return state.keepsakes.currentKey === requirement.keepsakeKey;
+    case 'notAspect':
+      return state.equipment.aspectKey === requirement.aspectKey;
+    case 'routeKey':
+      return state.reached.routePosition.routeKey !== requirement.routeKey;
+    case 'routeKeyNot':
+      return state.reached.routePosition.routeKey === requirement.routeKey;
+  }
+}
+
+/** Whether some shown Chaos curse cannot be generated from this state. */
+function chaosCursesUnavailable(
+  catalog: Catalog,
+  state: SimulationState,
+  curseOptions: AuthoredChaosTraitOffer['curseOptions'],
+): boolean {
+  return curseOptions.some((option) => {
+    const curse = catalog.chaos.curses.byKey[option.curseKey];
+    return (
+      curse === undefined ||
+      state.traitHistory.bannedTraitKeys.includes(option.curseKey) ||
+      (curse.offerRequirements ?? []).some((requirement) =>
+        chaosRequirementUnavailable(state, requirement),
+      )
+    );
+  });
+}
+
+/** Rejected blocks exactly one row of a full screen, and nothing otherwise. */
+function rejectedRowFindings(
+  rejectedActive: boolean,
+  options: readonly unknown[],
+  rejectedOptionKey: TraitOptionKey | undefined,
+  selectedOptionKey: TraitOptionKey | undefined,
+): TraitOfferCompositionFinding[] {
+  if (
+    rejectedBlocksRow(rejectedActive, { options: options as AuthoredTraitOfferTraits['options'] })
+  ) {
+    if (rejectedOptionKey === undefined)
+      return [Object.freeze({ code: 'chaosRejectedBlockMissing' as const })];
+    if (
+      rejectedOptionKey === selectedOptionKey ||
+      options[optionIndex(rejectedOptionKey)] === undefined
+    )
+      return [
+        Object.freeze({
+          code: 'chaosRejectedBlockUnavailable' as const,
+          optionKey: rejectedOptionKey,
+        }),
+      ];
+    return [];
+  }
+  return rejectedOptionKey === undefined
+    ? []
+    : [
+        Object.freeze({
+          code: 'chaosRejectedBlockUnavailable' as const,
+          optionKey: rejectedOptionKey,
+        }),
+      ];
+}
+
+/** One screen shown and rerolled away before the final screen, by its tab index. */
+export interface RerolledScreenAssessment {
+  readonly screen: number;
+  /** Not yet authored: required, since every reroll shows a screen. */
+  readonly missing: boolean;
+  readonly assessments: readonly TraitAssessment[];
+  /** Native staged support, linked to the screen before it, for ordinary givers. */
+  readonly generation?: InitialOfferSupport;
+  readonly composition: TraitOfferCompositionAssessment;
+}
+
+/**
+ * Assesses every rerolled-away screen with the final screen's generation
+ * context: a reroll regenerates under the same state and rarity chances.
+ * Chaos screens are independent; trait screens ban an item of the previous one.
+ */
+function assessRerolledScreens(
+  catalog: Catalog,
+  offer: AuthoredTraitOffer,
+  state: SimulationState,
+  generationState: SimulationState,
+  source: ResolvedTraitOfferSource,
+  stagedGeneration: boolean,
+): readonly RerolledScreenAssessment[] {
+  const valid = Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) });
+  if (offer.kind === 'chaos')
+    return Object.freeze(
+      (offer.rerolledScreens ?? []).map((screen, index) =>
+        Object.freeze({
+          screen: index,
+          missing: screen === null,
+          assessments: Object.freeze([]),
+          composition:
+            screen !== null && chaosCursesUnavailable(catalog, generationState, screen.curseOptions)
+              ? Object.freeze({
+                  applies: true,
+                  legal: false,
+                  findings: Object.freeze([
+                    Object.freeze({ code: 'chaosPairUnavailable' as const }),
+                  ]),
+                })
+              : valid,
+        }),
+      ),
+    );
+  if (offer.kind !== 'traits' || offer.rerolledScreens === undefined) return Object.freeze([]);
+  const screens = offer.rerolledScreens;
+  const supports = stagedGeneration
+    ? assessRerolledScreensSupport(
+        traitOfferGenerationInput(catalog, offer.giverKey, generationState, source),
+        screens,
+      )
+    : [];
+  const godScreen = isChaosGodScreenGiver(catalog, offer.giverKey);
+  const rejectedActive = hasActiveChaosSemanticTag(state.traitHistory, 'Rejected');
+  const rowSource = { ...source, resolvedProviderKey: offer.giverKey };
+  return Object.freeze(
+    screens.map((screen, index) => {
+      if (screen === null)
+        return Object.freeze({
+          screen: index,
+          missing: true,
+          assessments: Object.freeze([]),
+          composition: valid,
+        });
+      const findings = godScreen
+        ? rejectedRowFindings(rejectedActive, screen.options, screen.rejectedOptionKey, undefined)
+        : [];
+      const generation = supports[index];
+      return Object.freeze({
+        screen: index,
+        missing: false,
+        assessments: Object.freeze(
+          screen.options.map((option) =>
+            assessTraitOptionAgainstRarityDomain(
+              catalog,
+              option.traitKey,
+              generationState,
+              rowSource,
+              option.rarity,
+            ),
+          ),
+        ),
+        ...(generation === undefined ? {} : { generation }),
+        composition:
+          findings.length === 0
+            ? valid
+            : Object.freeze({ applies: true, legal: false, findings: Object.freeze(findings) }),
+      });
+    }),
+  );
+}
+
+/** Whether every rerolled-away screen is authored and could have been shown. */
+export function rerolledScreensLegal(
+  screens: readonly RerolledScreenAssessment[] | undefined,
+): boolean {
+  return (screens ?? []).every(
+    (screen) =>
+      !screen.missing &&
+      (screen.generation?.legal ?? true) &&
+      screen.composition.legal &&
+      screen.assessments.every((assessment) => assessment.legal),
+  );
+}
+
 function evaluateReachedTraitOfferWithAssessments(
   catalog: Catalog,
   address: SemanticAddress,
@@ -469,7 +656,6 @@ function evaluateReachedTraitOfferWithAssessments(
   frozenLevelResolutions?: readonly TraitOfferOptionLevelResolution[],
   generationState: SimulationState = state,
 ): ReachedTraitOfferEvaluation {
-  const built = generationState.traitHistory;
   const baseRarities = Object.freeze(
     (rarificationBaseOffer?.kind === 'traits'
       ? rarificationBaseOffer
@@ -518,34 +704,16 @@ function evaluateReachedTraitOfferWithAssessments(
         if (offer.kind === 'chaos') {
           const requirementUnavailable = (
             requirement: import('../../catalog-schema').ChaosOfferRequirement,
-          ) => {
-            switch (requirement.kind) {
-              case 'matureChaosBlessing':
-                return built.maturedChaosBlessings.length === 0;
-              case 'elementMinimum':
-                return built.elementCounts[requirement.element] < requirement.minimum;
-              case 'notKeepsake':
-                return generationState.keepsakes.currentKey === requirement.keepsakeKey;
-              case 'notAspect':
-                return generationState.equipment.aspectKey === requirement.aspectKey;
-              case 'routeKey':
-                return generationState.reached.routePosition.routeKey !== requirement.routeKey;
-              case 'routeKeyNot':
-                return generationState.reached.routePosition.routeKey === requirement.routeKey;
-            }
-          };
+          ) => chaosRequirementUnavailable(generationState, requirement);
           // Every authored curse is part of the generated Chaos screen. A
           // context-invalid peer therefore invalidates the whole frozen offer;
           // otherwise Denial could ban an option that could never have been
           // selected at this frontier.
-          const curseUnavailable = offer.curseOptions.some((option) => {
-            const curse = catalog.chaos.curses.byKey[option.curseKey];
-            return (
-              curse === undefined ||
-              built.bannedTraitKeys.includes(option.curseKey) ||
-              (curse.offerRequirements ?? []).some(requirementUnavailable)
-            );
-          });
+          const curseUnavailable = chaosCursesUnavailable(
+            catalog,
+            generationState,
+            offer.curseOptions,
+          );
           const blessing = catalog.chaos.blessings.byKey[offer.blessingKey];
           const unavailable =
             curseUnavailable ||
@@ -561,27 +729,13 @@ function evaluateReachedTraitOfferWithAssessments(
         }
         if (offer.kind !== 'traits') return baseComposition;
         if (!isChaosGodScreenGiver(catalog, offer.giverKey)) return baseComposition;
-        const chaosFindings: TraitOfferCompositionFinding[] = [];
         // Rejected restricts the screen when it opens, not when its options are built.
-        if (rejectedBlocksRow(hasActiveChaosSemanticTag(state.traitHistory, 'Rejected'), offer)) {
-          const blocked = offer.rejectedOptionKey;
-          if (blocked === undefined)
-            chaosFindings.push(Object.freeze({ code: 'chaosRejectedBlockMissing' }));
-          else if (
-            blocked === offer.selectedOptionKey ||
-            offer.options[optionIndex(blocked)] === undefined
-          )
-            chaosFindings.push(
-              Object.freeze({ code: 'chaosRejectedBlockUnavailable', optionKey: blocked }),
-            );
-        } else if (offer.rejectedOptionKey !== undefined) {
-          chaosFindings.push(
-            Object.freeze({
-              code: 'chaosRejectedBlockUnavailable',
-              optionKey: offer.rejectedOptionKey,
-            }),
-          );
-        }
+        const chaosFindings = rejectedRowFindings(
+          hasActiveChaosSemanticTag(state.traitHistory, 'Rejected'),
+          offer.options,
+          offer.rejectedOptionKey,
+          offer.selectedOptionKey,
+        );
         return chaosFindings.length === 0
           ? baseComposition
           : Object.freeze({
@@ -631,6 +785,17 @@ function evaluateReachedTraitOfferWithAssessments(
               });
         }),
       );
+  const rerolledScreens =
+    directAcquisition || frozenAcquisition
+      ? undefined
+      : assessRerolledScreens(
+          catalog,
+          legalityOffer,
+          state,
+          generationState,
+          effectiveSource,
+          ordinary,
+        );
   return Object.freeze({
     address,
     acquisitionRole,
@@ -643,6 +808,7 @@ function evaluateReachedTraitOfferWithAssessments(
     levelResolutions,
     ...(generation === undefined ? {} : { generation }),
     composition,
+    ...(rerolledScreens === undefined || rerolledScreens.length === 0 ? {} : { rerolledScreens }),
     targetedAcquisition,
     reached: true,
     chronologicalIndex,

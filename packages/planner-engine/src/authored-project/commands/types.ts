@@ -749,13 +749,55 @@ export type TraitOfferCommand =
       readonly kind: 'ReplaceConcaveStoneResult';
       readonly trait: TraitOfferAddress;
       readonly value: import('../traits/state').AuthoredConcaveStoneResult | null;
+    }
+  | TraitScreenRerollCommand;
+
+/** One reroll of an authored trait or Chaos screen, before its final screen. */
+export type TraitScreenRerollCommand =
+  | {
+      /** Adds a reroll: a not yet authored screen just before the final one. */
+      readonly kind: 'InsertTraitScreenReroll';
+      readonly trait: TraitOfferAddress;
+    }
+  | {
+      /** Removes the reroll whose screen sits just before the final one. */
+      readonly kind: 'RemoveTraitScreenReroll';
+      readonly trait: TraitOfferAddress;
+    }
+  | {
+      readonly kind: 'ReplaceRerolledTraitScreen';
+      readonly trait: TraitOfferAddress;
+      /** Position in the earlier screens, oldest first. */
+      readonly index: number;
+      readonly value:
+        | import('../traits/state').AuthoredRerolledTraitScreen
+        | import('../traits/state').AuthoredRerolledChaosScreen
+        | null;
     };
 
-export type LevelResolutionCommand = {
-  readonly kind: 'ReplaceLevelResolution';
-  readonly levelResolution: LevelResolutionAddress;
-  readonly value: AuthoredLevelResolution;
-};
+export type LevelResolutionCommand =
+  | {
+      readonly kind: 'ReplaceLevelResolution';
+      readonly levelResolution: LevelResolutionAddress;
+      readonly value: AuthoredLevelResolution;
+    }
+  | {
+      /** Adds a reroll: a not yet authored screen just before the final one. */
+      readonly kind: 'InsertLevelScreenReroll';
+      readonly levelResolution: LevelResolutionAddress;
+    }
+  | {
+      /** Removes the reroll whose screen sits just before the final one. */
+      readonly kind: 'RemoveLevelScreenReroll';
+      readonly levelResolution: LevelResolutionAddress;
+    }
+  | {
+      readonly kind: 'ReplaceRerolledLevelScreen';
+      readonly levelResolution: LevelResolutionAddress;
+      /** Position in the earlier screens, oldest first. */
+      readonly index: number;
+      readonly value: import('../traits/state').AuthoredRerolledLevelScreen | null;
+    };
 
 /** Exact closed disposition on one declaration-owned acquisition role. */
 export type AcquisitionDispositionCommand = {

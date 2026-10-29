@@ -42,6 +42,7 @@ import {
   withArcana,
   withGoldenUnderworldJudgments,
   withJudgment,
+  withGuessedRerolledScreens,
 } from '../support/rerolls';
 
 const f = createBiomeAddress('Underworld', 'F');
@@ -713,6 +714,77 @@ describe('ship wheel rerolls', () => {
 });
 
 describe('screen rerolls', () => {
+  it('add a blank screen before the final one, author it, and report each screen by its tab', () => {
+    const project = withArcana(loadUnderworldFGCheckpoint(), ['ScreenReroll']);
+    const zeus = occurrence(project, source);
+    const offers =
+      zeus.state.kind === 'counted' ? zeus.state.reward?.traitOffersByAcquisitionRole : undefined;
+    const [role, offer] = Object.entries(offers ?? {})[0]!;
+    if (offer === null || offer === undefined || offer.kind !== 'traits')
+      throw new Error('fixture lacks an authored Zeus screen');
+    const trait = {
+      kind: 'traitOffer',
+      routeKey: 'Underworld',
+      biomeKey: 'F',
+      owner: createIncomingRewardAddress(f, source as never),
+      acquisitionRole: role,
+    } as const;
+    const screenFindings = (current: ProjectDocument) =>
+      evaluate(current)
+        .evaluation.findings.filter(
+          (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(trait),
+        )
+        .map((finding) => [finding.code, finding.evidence.screen]);
+    const added = applyProjectCommand(project, catalog, { kind: 'InsertTraitScreenReroll', trait });
+    const current = (document: ProjectDocument) => {
+      const room = occurrence(document, source);
+      return room.state.kind === 'counted'
+        ? room.state.reward?.traitOffersByAcquisitionRole[role]
+        : undefined;
+    };
+    // The final screen keeps its rows and pick; the reroll is a blank earlier screen.
+    expect(current(added)).toEqual({ ...offer, rerolledScreens: [null] });
+    expect(screenFindings(added)).toEqual([['rerolledScreenMissing', 0]]);
+    // Repeating the final rows leaves nothing a ban of one of them could show next.
+    const repeated = applyProjectCommand(added, catalog, {
+      kind: 'ReplaceRerolledTraitScreen',
+      trait,
+      index: 0,
+      value: {
+        options: offer.options.map(({ traitKey, rarity }) => ({
+          traitKey,
+          ...(rarity === undefined ? {} : { rarity }),
+        })),
+      },
+    });
+    expect(screenFindings(repeated)).toEqual([['traitOfferGenerationUnavailable', undefined]]);
+    const guessed = withGuessedRerolledScreens(project, trait, offer, 1);
+    const authored = applyProjectCommand(added, catalog, {
+      kind: 'ReplaceRerolledTraitScreen',
+      trait,
+      index: 0,
+      value: guessed.kind === 'traits' ? guessed.rerolledScreens![0]! : null,
+    });
+    expect(screenFindings(authored)).toEqual([]);
+    expect(snapshotAt(authored, source, 'beforeRoomExit').rerolls.remaining).toBe(
+      snapshotAt(authored, source, 'roomEntered').rerolls.remaining - 1,
+    );
+    // A row of another god cannot be authored on the screen.
+    expect(() =>
+      applyProjectCommand(added, catalog, {
+        kind: 'ReplaceRerolledTraitScreen',
+        trait,
+        index: 0,
+        value: { options: [{ traitKey: 'ApolloWeaponBoon', rarity: 'Common' }] },
+      }),
+    ).toThrow('is not in giver Zeus');
+    const removed = applyProjectCommand(authored, catalog, {
+      kind: 'RemoveTraitScreenReroll',
+      trait,
+    });
+    expect(current(removed)).toEqual(offer);
+  });
+
   it('spend k(k+1)/2 from the pool while screen rerolls are enabled', () => {
     const project = withArcana(loadUnderworldFGCheckpoint(), ['ScreenReroll']);
     const zeus = occurrence(project, source);
@@ -731,14 +803,14 @@ describe('screen rerolls', () => {
     const twice = settle(project, {
       kind: 'ReplaceTraitOffer',
       trait: address,
-      value: { ...offer, rerollCount: 2 },
+      value: withGuessedRerolledScreens(project, address, offer, 2),
     });
     expect(rerollFindings(twice)).toEqual([]);
     expect(() =>
       settle(twice, {
         kind: 'ReplaceTraitOffer',
         trait: address,
-        value: { ...offer, rerollCount: 3 },
+        value: withGuessedRerolledScreens(project, address, offer, 3),
       }),
     ).toThrow('the reroll pool has nothing left for this spend');
     const disabled = settle(twice, {
@@ -759,16 +831,17 @@ describe('screen rerolls', () => {
     const [role, offer] = Object.entries(trait ?? {})[0]!;
     if (offer === null || offer === undefined || offer.kind === 'fallbackGold')
       throw new Error('fixture lacks an authored Zeus screen');
+    const address = {
+      kind: 'traitOffer',
+      routeKey: 'Underworld',
+      biomeKey: 'F',
+      owner: createIncomingRewardAddress(f, source as never),
+      acquisitionRole: role,
+    } as const;
     const count = (rerollCount: number): ProjectCommand => ({
       kind: 'ReplaceTraitOffer',
-      trait: {
-        kind: 'traitOffer',
-        routeKey: 'Underworld',
-        biomeKey: 'F',
-        owner: createIncomingRewardAddress(f, source as never),
-        acquisitionRole: role,
-      },
-      value: { ...offer, rerollCount },
+      trait: address,
+      value: withGuessedRerolledScreens(project, address, offer, rerollCount),
     });
     // Three rerolls cost 6, the whole pool of both cards.
     const thrice = settle(project, count(3));
@@ -786,7 +859,7 @@ describe('screen rerolls', () => {
     expect(rerollFindings(settle(shrunk, count(2)))).toEqual([]);
   });
 
-  it('spend a Pom of Power screen count when it is acquired', () => {
+  it('refuse rerolling a Pom of Power screen that already shows every levellable boon', () => {
     const pom = 'golden-f-b4-e1';
     const project = applyProjectCommand(
       withArcana(loadUnderworldFGCheckpoint(), ['ScreenReroll']),
@@ -801,13 +874,22 @@ describe('screen rerolls', () => {
           kind: 'choice',
           offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'],
           selectedTraitKey: 'ApolloWeaponBoon',
-          rerollCount: 2,
+          rerolledScreens: [
+            { offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'] },
+            { offeredTraitKeys: ['ZeusSpecialBoon', 'ApolloWeaponBoon'] },
+          ],
         },
       },
     );
-    expect(snapshotAt(project, pom, 'roomEntered').rerolls.remaining).toBe(3);
-    expect(snapshotAt(project, pom, 'beforeRoomExit').rerolls.remaining).toBe(0);
-    expect(rerollFindings(project)).toEqual([]);
+    // Two levellable boons are both on show, so the game refuses the first reroll.
+    expect(
+      evaluate(project).evaluation.findings.map((finding) => [finding.code, finding.evidence]),
+    ).toEqual([
+      [
+        'screenRerollUnavailable',
+        expect.objectContaining({ reason: 'nothingLeft', acquisitionRole: 'self' }),
+      ],
+    ]);
   });
 
   it('spend Stygian Well and Purging Pool rerolls, each costing one more than the last', () => {

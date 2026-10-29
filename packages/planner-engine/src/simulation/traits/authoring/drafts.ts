@@ -1,5 +1,7 @@
 import type { Catalog } from '../../../catalog-schema';
 import type {
+  AuthoredRerolledChaosScreen,
+  AuthoredRerolledTraitScreen,
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
   AuthoredTraitOption,
@@ -12,7 +14,8 @@ import {
 import { createDefaultAuthoredHexTree } from '../../../authored-project/traits/hex-tree';
 import { targetedAcquisitionTargetKeys } from '../level-effects';
 import { assessTraitOffer, traitCandidates, traitOfferGenerationInput } from './assessment';
-import { initialOfferStartingOptions } from './initial-composition';
+import { guessRerolledScreens, initialOfferStartingOptions } from './initial-composition';
+import { hasActiveChaosSemanticTag, isChaosGodScreenGiver } from '../offers';
 import {
   assessTraitOfferComposition,
   type ResolvedTraitOfferSource,
@@ -291,5 +294,60 @@ function selfContainedDraftCandidates(
         trait?.selectedDisposition.kind === 'circe'
       );
     }),
+  );
+}
+
+/**
+ * A guessed chain of `count` screens shown and rerolled away before these
+ * final rows: for staged givers the first legal chain the generation search
+ * finds; Chaos screens are independent, so each repeats the final curses;
+ * other givers repeat the final rows. Rejected blocks the first row of a full
+ * screen. Undefined when no chain is found.
+ */
+export function rerolledTraitScreensGuess(
+  catalog: Catalog,
+  value: AuthoredTraitOffer,
+  count: number,
+  /** Where the screens are built. */
+  state: SimulationState,
+  /** Where the screens open, for Rejected. */
+  openState: SimulationState,
+  source: ResolvedTraitOfferSource,
+): readonly AuthoredRerolledTraitScreen[] | readonly AuthoredRerolledChaosScreen[] | undefined {
+  if (count < 1 || value.kind === 'fallbackGold') return undefined;
+  if (value.kind === 'chaos')
+    return Object.freeze(
+      Array.from({ length: count }, () => Object.freeze({ curseOptions: value.curseOptions })),
+    );
+  const giver = catalog.traitGivers.byKey[value.giverKey];
+  if (giver === undefined) return undefined;
+  const staged = giver.providerKind === 'olympian' || giver.providerKind === 'hermes';
+  const rows = staged
+    ? guessRerolledScreens(
+        traitOfferGenerationInput(catalog, value.giverKey, state, source),
+        value.options,
+        count,
+      )?.map((screen) => screen.options)
+    : Array.from({ length: count }, () => value.options);
+  if (rows === undefined) return undefined;
+  const rejected =
+    isChaosGodScreenGiver(catalog, value.giverKey) &&
+    hasActiveChaosSemanticTag(openState.traitHistory, 'Rejected');
+  return Object.freeze(
+    rows.map((options) =>
+      Object.freeze({
+        options: Object.freeze(
+          options.map((option) =>
+            Object.freeze(
+              option.rarity === undefined ||
+                catalog.traits.byKey[option.traitKey]?.rarityDomain.kind === 'none'
+                ? { traitKey: option.traitKey }
+                : { traitKey: option.traitKey, rarity: option.rarity },
+            ),
+          ),
+        ),
+        ...(rejected && options.length === 3 ? { rejectedOptionKey: 'option1' as const } : {}),
+      }),
+    ),
   );
 }

@@ -28,4 +28,5 @@ export {
   appendTraitOfferDraft,
   removeTraitOfferDraft,
   traitOfferStartingOutcome,
+  rerolledTraitScreensGuess,
 } from './authoring/drafts';

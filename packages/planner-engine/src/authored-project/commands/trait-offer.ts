@@ -1,5 +1,13 @@
 import { routeRoomDeclaration } from '../route-profile';
-import { screenRerollSupported } from '../screen-rerolls';
+import {
+  normalizeRerolledChaosScreen,
+  normalizeRerolledScreens,
+  normalizeRerolledTraitScreen,
+  screenRerollSupported,
+  withRerolledScreenReplaced,
+  withScreenRerollInserted,
+  withScreenRerollRemoved,
+} from '../screen-rerolls';
 import { locateReward, replaceOccurrenceReward } from './acquisition/reward-source';
 import type { Catalog } from '../../catalog-schema';
 import {
@@ -13,6 +21,8 @@ import {
   normalizeAuthoredConcaveStoneResult,
   normalizeSteadyGrowthTargets,
   traitOfferGivesSteadyGrowth,
+  type AuthoredChaosTraitOffer,
+  type RerolledScreens,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -28,10 +38,16 @@ import {
   isRouteStartIncomingReward,
   startingRewardAcquisitionFrom,
 } from '../room-state/starting-reward';
-import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
+import {
+  failCommand,
+  ProjectCommandContractError,
+  requireOccurrence,
+  requireTopology,
+  type LocatedBiome,
+} from './contract';
 import { sameOccurrenceValue } from './occurrence/leaf-value';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence/mutation';
-import type { SteadyGrowthCommand, TraitOfferCommand } from './types';
+import type { SteadyGrowthCommand, TraitOfferCommand, TraitScreenRerollCommand } from './types';
 
 type TraitOfferOwnedCommand = TraitOfferCommand | SteadyGrowthCommand;
 import {
@@ -87,7 +103,9 @@ function replaceTraitOfferValue(
   existing: AuthoredTraitOffer | null,
   command: TraitOfferOwnedCommand,
 ): AuthoredTraitOffer | null {
-  return reconcileScreenRerollCount(
+  if (isTraitScreenRerollCommand(command))
+    return applyTraitScreenRerollCommand(catalog, existing, command);
+  return reconcileRerolledScreens(
     catalog,
     existing,
     reconcileSteadyGrowthTargets(
@@ -100,11 +118,89 @@ function replaceTraitOfferValue(
   );
 }
 
+function isTraitScreenRerollCommand(
+  command: TraitOfferOwnedCommand,
+): command is TraitScreenRerollCommand {
+  return (
+    command.kind === 'InsertTraitScreenReroll' ||
+    command.kind === 'RemoveTraitScreenReroll' ||
+    command.kind === 'ReplaceRerolledTraitScreen'
+  );
+}
+
+/** Adds, removes or replaces one earlier screen; the final screen is untouched. */
+function applyTraitScreenRerollCommand(
+  catalog: Catalog,
+  existing: AuthoredTraitOffer | null,
+  command: TraitScreenRerollCommand,
+): AuthoredTraitOffer {
+  if (existing === null) return failCommand(command, 'author the final screen before its rerolls');
+  if (existing.kind === 'fallbackGold')
+    return failCommand(command, 'a Fallback Gold screen has no rerolls');
+  try {
+    if (
+      command.kind === 'InsertTraitScreenReroll' &&
+      !screenRerollSupported(catalog, { kind: 'traitOffer', giverKey: existing.giverKey })
+    )
+      failCommand(command, `${existing.giverKey} screens cannot be rerolled`);
+    const value = command.kind === 'ReplaceRerolledTraitScreen' ? command.value : null;
+    if (existing.kind === 'chaos') {
+      const screen =
+        value === null
+          ? null
+          : 'curseOptions' in value
+            ? normalizeRerolledChaosScreen(catalog, value)
+            : failCommand(command, 'a Chaos screen shows curse options');
+      return withRerolledScreens(
+        existing,
+        editedScreens(existing.rerolledScreens, command, screen),
+      );
+    }
+    const screen =
+      value === null
+        ? null
+        : 'options' in value
+          ? normalizeRerolledTraitScreen(catalog, existing.giverKey, value)
+          : failCommand(command, 'a trait screen shows trait options');
+    return withRerolledScreens(existing, editedScreens(existing.rerolledScreens, command, screen));
+  } catch (error) {
+    if (error instanceof ProjectCommandContractError) throw error;
+    return failCommand(command, error instanceof Error ? error.message : 'invalid screen reroll');
+  }
+}
+
+function editedScreens<T>(
+  screens: RerolledScreens<T> | undefined,
+  command: TraitScreenRerollCommand,
+  screen: T | null,
+): RerolledScreens<T> | undefined {
+  switch (command.kind) {
+    case 'InsertTraitScreenReroll':
+      return withScreenRerollInserted(screens);
+    case 'RemoveTraitScreenReroll':
+      return withScreenRerollRemoved(screens);
+    case 'ReplaceRerolledTraitScreen':
+      return withRerolledScreenReplaced(screens, command.index, screen);
+  }
+}
+
+function withRerolledScreens<T extends AuthoredTraitOfferTraits | AuthoredChaosTraitOffer>(
+  offer: T,
+  screens: T['rerolledScreens'],
+): T {
+  const { rerolledScreens: _previous, ...rest } = offer;
+  void _previous;
+  return Object.freeze({
+    ...rest,
+    ...(screens === undefined || screens.length === 0 ? {} : { rerolledScreens: screens }),
+  }) as T;
+}
+
 /**
- * The screen's reroll count survives every edit of its rows; a complete
- * replacement may set it, and 0 clears it.
+ * The earlier screens survive every edit of the final screen of the same
+ * kind; a complete replacement may set them, and an empty list clears them.
  */
-function reconcileScreenRerollCount(
+function reconcileRerolledScreens(
   catalog: Catalog,
   existing: AuthoredTraitOffer | null,
   next: AuthoredTraitOffer | null,
@@ -112,20 +208,37 @@ function reconcileScreenRerollCount(
 ): AuthoredTraitOffer | null {
   if (next === null || next.kind === 'fallbackGold') return next;
   const requested =
-    command.kind === 'ReplaceTraitOffer' && command.value.kind !== 'fallbackGold'
-      ? command.value.rerollCount
+    command.kind === 'ReplaceTraitOffer' && command.value.kind === next.kind
+      ? command.value.rerolledScreens
       : undefined;
-  const count =
+  const screens =
     requested ??
-    (existing !== null && existing.kind !== 'fallbackGold' ? existing.rerollCount : undefined);
-  const { rerollCount: _previous, ...rest } = next;
-  void _previous;
-  if (count === undefined || count === 0) return Object.freeze(rest) as AuthoredTraitOffer;
-  if (!Number.isInteger(count) || count < 0)
-    failCommand(command, 'screen reroll count must be a non-negative integer');
-  if (!screenRerollSupported(catalog, { kind: 'traitOffer', giverKey: next.giverKey }))
-    failCommand(command, `${next.giverKey} screens cannot be rerolled`);
-  return Object.freeze({ ...rest, rerollCount: count }) as AuthoredTraitOffer;
+    (existing !== null && existing.kind === next.kind ? existing.rerolledScreens : undefined);
+  const supported = screenRerollSupported(catalog, {
+    kind: 'traitOffer',
+    giverKey: next.giverKey,
+  });
+  try {
+    if (next.kind === 'chaos')
+      return withRerolledScreens(
+        next,
+        normalizeRerolledScreens(
+          screens as AuthoredChaosTraitOffer['rerolledScreens'],
+          supported,
+          (screen) => normalizeRerolledChaosScreen(catalog, screen),
+        ),
+      );
+    return withRerolledScreens(
+      next,
+      normalizeRerolledScreens(
+        screens as AuthoredTraitOfferTraits['rerolledScreens'],
+        supported,
+        (screen) => normalizeRerolledTraitScreen(catalog, next.giverKey, screen),
+      ),
+    );
+  } catch (error) {
+    return failCommand(command, error instanceof Error ? error.message : 'invalid screen rerolls');
+  }
 }
 
 function replaceTraitOfferValueWithoutTargets(
@@ -555,6 +668,8 @@ export function applyTraitOfferCommand(
         failCommand(command, 'Gorgon Athena does not support Concave Stone results');
       if (command.kind === 'ReplaceSteadyGrowthTarget')
         failCommand(command, 'Gorgon Athena does not give Steady Growth');
+      if (isTraitScreenRerollCommand(command))
+        failCommand(command, 'Gorgon Athena screens cannot be rerolled');
       const value =
         command.kind === 'ResetEncounterTraitOffer'
           ? null

@@ -977,6 +977,8 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
         doors: 1,
         fields: 6,
         other: 1,
+        // Each rerolled screen's earlier screen is a guess: the record keeps the final one.
+        reroll: 2,
         reward: 1,
         route: 1,
         traitOffer: 3,
@@ -1025,15 +1027,16 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
   });
 
   it("authors each screen's recorded rerolls on its final rows", () => {
+    // The record keeps only the final screen; the rerolled one is a guessed legal screen.
     expect(reward(imported.project, 'G-r18').traitOffersByAcquisitionRole['source']).toMatchObject({
       giverKey: 'Zeus',
-      rerollCount: 1,
+      rerolledScreens: [{ options: expect.any(Array) }],
     });
     const preboss = occurrence(imported.project, 'G-r22').state;
     expect(
       preboss.kind === 'shop' &&
         preboss.shop?.offers['Boon']?.reward?.traitOffersByAcquisitionRole['source'],
-    ).toMatchObject({ giverKey: 'Zeus', rerollCount: 1 });
+    ).toMatchObject({ giverKey: 'Zeus', rerolledScreens: [{ options: expect.any(Array) }] });
   });
 
   it('reports door rerolls the stores do not show as an unsupported area', () => {
@@ -1281,7 +1284,9 @@ describe('run import of door, wheel, cage and Hub rerolls', () => {
     });
     expect(entered.rerolledIncomingReward).toMatchObject({
       offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
-      traitOffersByAcquisitionRole: { source: { giverKey: 'Zeus', rerollCount: 1 } },
+      traitOffersByAcquisitionRole: {
+        source: { giverKey: 'Zeus', rerolledScreens: [{ options: expect.any(Array) }] },
+      },
     });
   });
 

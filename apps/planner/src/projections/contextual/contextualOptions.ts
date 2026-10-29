@@ -931,6 +931,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return presented('reward', finding);
     case 'traitOfferMissing':
       return { kind: 'trait', message: 'Choose the generated trait offer.' };
+    case 'rerolledScreenMissing':
+      return presented('reward', finding);
     case 'rewardSourceUnavailable':
       return typeof finding.evidence.chosenSource === 'string' &&
         typeof finding.evidence.spurnedSource === 'string'

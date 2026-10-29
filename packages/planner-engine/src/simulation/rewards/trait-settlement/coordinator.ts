@@ -1,4 +1,5 @@
 import { settleScreenRerolls } from '../screen-rerolls';
+import { rerolledScreenCount } from '../../../authored-project/screen-rerolls';
 import { replaceSimulationTraitHistory } from '../../state/transitions';
 import {
   applyTraitOfferContextTransition,
@@ -622,6 +623,39 @@ function evaluateAuthoredOffer(
             : undefined,
         ),
       );
+  if (owner !== undefined)
+    for (const screen of evaluation.rerolledScreens ?? []) {
+      const emit = (
+        code: TraitFindingCode,
+        traitKey?: string,
+        detail?: string,
+        keys?: readonly string[],
+        optionKey?: string,
+      ) =>
+        findingEmissions.push(
+          traitFindingEmission(
+            owner,
+            role,
+            lifecyclePoint,
+            sequence,
+            code,
+            traitKey,
+            detail,
+            keys,
+            findingChronology,
+            undefined,
+            optionKey,
+            screen.screen,
+          ),
+        );
+      if (screen.missing) emit('rerolledScreenMissing');
+      for (const assessment of screen.assessments)
+        for (const finding of assessment.findings)
+          emit(finding.code, finding.traitKey, finding.detail, finding.requirementTraitKeys);
+      for (const finding of screen.generation?.findings ?? []) emit(finding.code);
+      for (const finding of screen.composition.findings)
+        emit(finding.code, finding.traitKey, undefined, undefined, finding.optionKey);
+    }
   if (
     owner !== undefined &&
     ((evaluation.generation?.findings.length ?? 0) > 0 ||
@@ -1174,7 +1208,9 @@ export function applyTraitOfferForAcquisition(
     limitedSwapUses(evaluation.generationState) > 0 &&
     limitedSwapUses(branch.state) > 0 &&
     traitOfferGenerationLegal(evaluation) &&
-    evaluation.assessments.some((assessment) => assessment.replacementTransition !== undefined);
+    [evaluation, ...(evaluation.rerolledScreens ?? [])].some((screen) =>
+      screen.assessments.some((assessment) => assessment.replacementTransition !== undefined),
+    );
   const tagged = withScreenSpend(branch, settlement.branch, {
     hymn: consumesHymn,
     yarn: consumesYarn,
@@ -1207,7 +1243,7 @@ export function applyTraitOfferForAcquisition(
       : settleScreenRerolls(
           catalog,
           spentBranch,
-          authored.rerollCount,
+          rerolledScreenCount(authored),
           screenOwner,
           sequence,
           findingChronology,
@@ -1776,6 +1812,8 @@ function traitFindingEmission(
   findingChronology?: FindingChronology,
   actionIndex?: number,
   optionKey?: string,
+  /** The rerolled-away screen's tab index; absent for the final screen. */
+  screen?: number,
 ): TraitFindingEmission {
   const origin = createTraitOfferAddress(owner, acquisitionRole);
   const value: SemanticFinding = Object.freeze({
@@ -1790,6 +1828,7 @@ function traitFindingEmission(
       ...(requirementTraitKeys === undefined ? {} : { requirementTraitKeys }),
       ...(actionIndex === undefined ? {} : { actionIndex }),
       ...(optionKey === undefined ? {} : { optionKey }),
+      ...(screen === undefined ? {} : { screen }),
     }),
   });
   return Object.freeze({

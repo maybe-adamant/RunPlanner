@@ -2,8 +2,22 @@ import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument, AuthoredRewardState } from '../model';
 import type { AuthoredLevelResolution } from '../traits/state';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
-import { screenRerollCountField, screenRerollSupported } from '../screen-rerolls';
-import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
+import {
+  normalizeRerolledLevelScreen,
+  normalizeRerolledScreens,
+  rerolledScreensField,
+  screenRerollSupported,
+  withRerolledScreenReplaced,
+  withScreenRerollInserted,
+  withScreenRerollRemoved,
+} from '../screen-rerolls';
+import {
+  failCommand,
+  ProjectCommandContractError,
+  requireOccurrence,
+  requireTopology,
+  type LocatedBiome,
+} from './contract';
 import { locateReward, replaceOwnedReward } from './acquisition/reward-source';
 import type { LevelResolutionCommand } from './types';
 
@@ -42,21 +56,23 @@ function validate(
       failCommand(command, `unknown trait ${value.selectedTraitKey}`);
     if (value.selectedTraitKey !== null && !value.offeredTraitKeys.includes(value.selectedTraitKey))
       failCommand(command, 'Pom selected trait must be one of the offered traits');
-    const count =
-      value.rerollCount ?? (existing?.kind === 'choice' ? existing.rerollCount : undefined);
-    if (count !== undefined && (!Number.isInteger(count) || count < 0))
-      failCommand(command, 'screen reroll count must be a non-negative integer');
-    if (
-      count !== undefined &&
-      count > 0 &&
-      !screenRerollSupported(catalog, { kind: 'levelChoice', rewardType })
-    )
-      failCommand(command, `${rewardType} screens cannot be rerolled`);
+    const supported = screenRerollSupported(catalog, { kind: 'levelChoice', rewardType });
+    let screens;
+    try {
+      screens = normalizeRerolledScreens(
+        value.rerolledScreens ??
+          (existing?.kind === 'choice' ? existing.rerolledScreens : undefined),
+        supported,
+        (screen) => normalizeRerolledLevelScreen(catalog, screen),
+      );
+    } catch (error) {
+      return failCommand(command, error instanceof Error ? error.message : 'invalid Pom rerolls');
+    }
     return Object.freeze({
       kind: 'choice',
       offeredTraitKeys: Object.freeze([...value.offeredTraitKeys]),
       selectedTraitKey: value.selectedTraitKey,
-      ...screenRerollCountField(count),
+      ...rerolledScreensField(screens),
     });
   }
   if (value.kind !== 'random')
@@ -64,6 +80,38 @@ function validate(
   if (value.targetTraitKey !== null && catalog.traits.byKey[value.targetTraitKey] === undefined)
     failCommand(command, `unknown trait ${value.targetTraitKey}`);
   return Object.freeze({ kind: 'random', targetTraitKey: value.targetTraitKey });
+}
+
+/** Adds, removes or replaces one earlier Pom screen; the final screen is untouched. */
+function applyLevelScreenRerollCommand(
+  catalog: Catalog,
+  existing: AuthoredLevelResolution | undefined,
+  command: Exclude<LevelResolutionCommand, { readonly kind: 'ReplaceLevelResolution' }>,
+  rewardType: string,
+): AuthoredLevelResolution {
+  if (existing?.kind !== 'choice')
+    return failCommand(command, 'only a visible Pom choice can be rerolled');
+  try {
+    let screens;
+    if (command.kind === 'InsertLevelScreenReroll') {
+      if (!screenRerollSupported(catalog, { kind: 'levelChoice', rewardType }))
+        failCommand(command, `${rewardType} screens cannot be rerolled`);
+      screens = withScreenRerollInserted(existing.rerolledScreens);
+    } else if (command.kind === 'RemoveLevelScreenReroll')
+      screens = withScreenRerollRemoved(existing.rerolledScreens);
+    else
+      screens = withRerolledScreenReplaced(
+        existing.rerolledScreens,
+        command.index,
+        command.value === null ? null : normalizeRerolledLevelScreen(catalog, command.value),
+      );
+    const { rerolledScreens: _previous, ...rest } = existing;
+    void _previous;
+    return Object.freeze({ ...rest, ...rerolledScreensField(screens) });
+  } catch (error) {
+    if (error instanceof ProjectCommandContractError) throw error;
+    return failCommand(command, error instanceof Error ? error.message : 'invalid screen reroll');
+  }
 }
 
 export function applyLevelResolutionCommand(
@@ -115,14 +163,22 @@ export function applyLevelResolutionCommand(
     locatedReward.reward.levelResolutionsByAcquisitionRole?.[
       command.levelResolution.acquisitionRole
     ];
-  const value = validate(
-    catalog,
-    effect,
-    command.value,
-    command,
-    locatedReward.reward.offer.rewardType,
-    existing,
-  );
+  const value =
+    command.kind === 'ReplaceLevelResolution'
+      ? validate(
+          catalog,
+          effect,
+          command.value,
+          command,
+          locatedReward.reward.offer.rewardType,
+          existing,
+        )
+      : applyLevelScreenRerollCommand(
+          catalog,
+          existing,
+          command,
+          locatedReward.reward.offer.rewardType,
+        );
   if (JSON.stringify(existing) === JSON.stringify(value)) return document;
   return replaceOwnedReward(
     document,

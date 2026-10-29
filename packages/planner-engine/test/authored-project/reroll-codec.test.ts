@@ -56,13 +56,18 @@ describe('reroll codec', () => {
         }),
       ),
     ).toThrow('names no wheel offer of this room');
-    const withCount = (count: number) => (room: Record<string, unknown>) => {
+    const withScreens = (screens: unknown) => (room: Record<string, unknown>) => {
       const reward = (room.state as { reward: { traitOffersByAcquisitionRole: object } }).reward;
       for (const offer of Object.values(reward.traitOffersByAcquisitionRole))
-        (offer as Record<string, unknown>).rerollCount = count;
+        (offer as Record<string, unknown>).rerolledScreens = screens;
     };
-    expect(decodeWith(withCount(2))).not.toThrow();
-    expect(decodeWith(withCount(0))).toThrow('rerollCount');
+    expect(decodeWith(withScreens([null, null]))).not.toThrow();
+    expect(decodeWith(withScreens([]))).toThrow('rerolledScreens');
+    expect(decodeWith(withScreens([{ options: [], extra: true }]))).toThrow('extra');
+    expect(decodeWith(withScreens([{ options: [{ traitKey: 'NoSuchTrait' }] }]))).toThrow(
+      'NoSuchTrait',
+    );
+    expect(decodeWith((room) => withScreens(2)(room))).toThrow('rerolledScreens');
   });
 
   it('decodes Hub rerolls strictly and round-trips them', () => {

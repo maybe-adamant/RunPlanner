@@ -5,9 +5,9 @@
 This audit owns ordinary initial Olympian/Hermes screen construction, when a
 loot's options are built and rebuilt, Denial's bans and exhaustion effect, and
 Forfeit's reward substitution. The supported
-baseline is a progressed run with three generation positions. Rerolls,
-first-run overrides, profile-first-seen priorities and debug requirement
-stripping are outside the planner model.
+baseline is a progressed run with three generation positions. It also owns
+screen rerolls of these screens. First-run overrides, profile-first-seen
+priorities and debug requirement stripping are outside the planner model.
 
 Related authorities:
 
@@ -202,6 +202,31 @@ rescue. A native-helper probe produced Glorious Disaster this way. This does
 not permit all Duos in Trials, bypass prerequisites, or enable a normal Duo
 roll. Catalog requirements preserve the resolved source facts; the engine
 needs no five-trait exception switch.
+
+### Screen rerolls
+
+A screen reroll (`RerollBoonLoot`, `UpgradeChoiceLogic.lua:707-718`) runs the
+whole `SetTraitsOnLoot` again with the previous screen's final chance table
+(`BoonRaritiesOverride`, room and other bonuses ignored, so every screen uses
+the first screen's chances) and one random item of the shown screen in
+`ExclusionNames`. The ban lasts one generation and is applied after seeding
+(`TraitLogic.lua:1846-1856`) and to every rarity bucket (`:1892-1900`): a
+banned seed is dropped without a substitute and its vacancy is filled; every
+other stage, including the replacement and linked rolls and Hymn's seed, runs
+again. The replacement rescue reads the unpruned core list (`:1949-1961`), so
+an otherwise exhausted screen may re-offer the banned exchange; this and the
+rest of the rule are read from source, not yet exercised in game. Hence screen
+n is legal iff some item of screen n-1 bans to a legal first screen; the same
+item may return at another rarity, and a screen may shrink. `BlockReroll` is
+recomputed false after any exclusion (`:1993-2000`), so only the first reroll
+can be refused. The n-th reroll of one loot costs n
+(`InteractLogic.lua:1311-1349`). Chaos rerolls reach
+`SetTransformingTraitsOnLoot` before the exclusion, so each Chaos screen is an
+independent redraw. A Pom level screen is forced Common and fills only from
+the Common bucket (`TraitLogic.lua:1928,1973`), so Duo- and Legendary-only
+boons are never level targets; a Pom reroll bans one shown boon, and with
+three or fewer levellable boons nothing is left and the reroll is refused.
+The run record keeps only the final screen of each loot.
 
 ## Generation position and option rebuild
 
@@ -484,8 +509,10 @@ miniboss encounters declare that they create the room reward before combat
 
 Olympian/Hermes outcomes contain one to three distinct traits or mutually
 exclusive Fallback Gold. Empty and short outcomes obey terminal-stage rules,
-not ordinary/high-tier/replacement count quotas. Other provider families, Echo
-replay and later rerolls do not inherit this algorithm.
+not ordinary/high-tier/replacement count quotas. A rerolled screen follows the
+same algorithm with one item of the previous screen banned (see
+[Screen rerolls](#screen-rerolls)). Other provider families and Echo replay do
+not inherit it.
 
 Denial records actual unselected keys; Forfeit substitutes a concrete required
 Onion before the affected trait lifecycle begins. Original reward/bag evidence

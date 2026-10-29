@@ -711,6 +711,38 @@ describe('Chaos paired-trait history', () => {
     ).toEqual([{ legal: true, findings: [] }]);
   });
 
+  it('judges each rerolled Chaos screen on its own, with no link to the screen before', () => {
+    const final = chaos();
+    const atrophic = chaos('ChaosHealthCurse', 'ChaosWeaponBlessing').curseOptions;
+    const evaluation = evaluateReachedTraitOffer(
+      catalog,
+      rewardOwner,
+      'self',
+      {
+        ...final,
+        rerolledScreens: [{ curseOptions: final.curseOptions }, { curseOptions: atrophic }, null],
+      },
+      traitFrontierState(createTraitHistoryState(), {
+        startingKeepsakeKey: 'LowHealthCritKeepsake',
+      }),
+      {},
+      0,
+    );
+    // A screen may repeat the one before it; only a curse the state excludes is illegal.
+    expect(
+      evaluation.rerolledScreens?.map((screen) => [
+        screen.screen,
+        screen.missing,
+        screen.composition.findings.map((finding) => finding.code),
+      ]),
+    ).toEqual([
+      [0, false, []],
+      [1, false, ['chaosPairUnavailable']],
+      [2, true, []],
+    ]);
+    expect(evaluation.composition.findings).toEqual([]);
+  });
+
   it('excludes Atrophic while White Antler is held but retains the authored pair for repair', () => {
     const atrophic = chaos('ChaosHealthCurse', 'ChaosWeaponBlessing');
     const blocked = evaluateReachedTraitOffer(

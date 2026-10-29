@@ -223,8 +223,14 @@ function commandContractAddress(
     case 'ReplaceGorgonAthenaOffer':
     case 'ReplaceTraitSelection':
     case 'ReplaceConcaveStoneResult':
+    case 'InsertTraitScreenReroll':
+    case 'RemoveTraitScreenReroll':
+    case 'ReplaceRerolledTraitScreen':
       return command.trait;
     case 'ReplaceLevelResolution':
+    case 'InsertLevelScreenReroll':
+    case 'RemoveLevelScreenReroll':
+    case 'ReplaceRerolledLevelScreen':
       return command.levelResolution;
     case 'ReplaceAcquisitionDisposition':
     case 'ReplaceSeaStarResult':

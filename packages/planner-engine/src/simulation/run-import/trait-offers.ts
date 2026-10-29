@@ -22,6 +22,7 @@ import { recordedEntryStates } from './conformance';
 import { chaosOffer } from './features';
 import { applyScreenRerolls } from './rerolls';
 import { POM_GIVERS } from './vocabulary';
+import { rerolledLevelScreensGuess } from '../traits/level-effects';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
@@ -300,11 +301,20 @@ export function answerLevelResolution(context: RunImportContext, reason: Semanti
         if (context.apply({ kind: 'ReplaceLevelResolution', levelResolution, value })) {
           context.used.add(key);
           if (value.kind === 'choice')
-            applyScreenRerolls(context, roomIndex, position, levelResolution, (count) => ({
-              kind: 'ReplaceLevelResolution',
-              levelResolution,
-              value: { ...value, rerollCount: count },
-            }));
+            applyScreenRerolls(context, roomIndex, position, levelResolution, (count) => {
+              const screens = rerolledLevelScreensGuess(
+                capability.branches[branchIndex]!.eligibleTargetTraitKeys,
+                value.offeredTraitKeys,
+                count,
+              );
+              return screens === undefined
+                ? undefined
+                : {
+                    kind: 'ReplaceLevelResolution',
+                    levelResolution,
+                    value: { ...value, rerolledScreens: screens },
+                  };
+            });
           return true;
         }
       }
@@ -476,11 +486,16 @@ function applyTraitScreenRerolls(
   roomIndex: number,
   position: number,
 ): void {
-  applyScreenRerolls(context, roomIndex, position, trait, (count) => ({
-    kind: 'ReplaceTraitOffer',
-    trait,
-    value: { ...value, rerollCount: count } as AuthoredTraitOffer,
-  }));
+  applyScreenRerolls(context, roomIndex, position, trait, (count) => {
+    const screens = context.candidates().rerolledTraitScreensGuess(trait, value, count);
+    return screens === undefined
+      ? undefined
+      : {
+          kind: 'ReplaceTraitOffer',
+          trait,
+          value: { ...value, rerolledScreens: screens } as AuthoredTraitOffer,
+        };
+  });
 }
 
 /**

@@ -123,8 +123,34 @@ export interface AuthoredTraitOfferTraits {
   readonly rejectedOptionKey?: TraitOptionKey;
   /** Concave Stone's post-primary frozen residual choice. */
   readonly concaveStoneResult?: AuthoredConcaveStoneResult;
-  /** Native screen rerolls before these final rows; absent is none. */
-  readonly rerollCount?: number;
+  /** The screens rerolled away before this final one, oldest first; absent is none. */
+  readonly rerolledScreens?: RerolledScreens<AuthoredRerolledTraitScreen>;
+}
+
+/** Earlier screens of one rerolled screen, oldest first; null is not yet authored. */
+export type RerolledScreens<T> = readonly (T | null)[];
+
+/** One row of a screen that was rerolled away: shown, never picked. */
+export interface AuthoredRerolledTraitOption {
+  readonly traitKey: string;
+  readonly rarity?: TraitRarity;
+}
+
+/** A trait screen shown and then rerolled; no rows is the Fallback Gold screen. */
+export interface AuthoredRerolledTraitScreen {
+  readonly options: readonly AuthoredRerolledTraitOption[];
+  /** Rejected's blocked row on this screen. */
+  readonly rejectedOptionKey?: TraitOptionKey;
+}
+
+/** A Chaos screen shown and then rerolled: its three curses; blessings stay native. */
+export interface AuthoredRerolledChaosScreen {
+  readonly curseOptions: AuthoredChaosTraitOffer['curseOptions'];
+}
+
+/** A Pom level screen shown and then rerolled. */
+export interface AuthoredRerolledLevelScreen {
+  readonly offeredTraitKeys: readonly string[];
 }
 
 export type AuthoredConcaveStoneResult =
@@ -170,8 +196,8 @@ export interface AuthoredChaosTraitOffer {
   readonly blessingKey: string;
   readonly rarity: Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary'>;
   readonly blessingValues: Readonly<Record<string, number>>;
-  /** Native screen rerolls before these final rows; absent is none. */
-  readonly rerollCount?: number;
+  /** The screens rerolled away before this final one, oldest first; absent is none. */
+  readonly rerolledScreens?: RerolledScreens<AuthoredRerolledChaosScreen>;
 }
 
 export type AuthoredTraitOffer =
@@ -258,8 +284,8 @@ export type AuthoredLevelResolution =
       readonly kind: 'choice';
       readonly offeredTraitKeys: readonly string[];
       readonly selectedTraitKey: string | null;
-      /** Native screen rerolls before these final rows; absent is none. */
-      readonly rerollCount?: number;
+      /** The screens rerolled away before this final one, oldest first; absent is none. */
+      readonly rerolledScreens?: RerolledScreens<AuthoredRerolledLevelScreen>;
     }
   | { readonly kind: 'random'; readonly targetTraitKey: string | null };
 
@@ -511,6 +537,26 @@ export function normalizeSteadyGrowthTargets(
   });
 }
 
+/** Three Chaos curse options, each with a declared requirement count. */
+export function normalizeChaosCurseOptions(
+  catalog: Catalog,
+  options: readonly AuthoredChaosCurseOption[],
+): AuthoredChaosTraitOffer['curseOptions'] {
+  if (options.length !== 3) throw new Error('Chaos screens show exactly three curse options');
+  return Object.freeze(
+    options.map((option, index) => {
+      const curse = catalog.chaos.curses.byKey[option.curseKey];
+      if (curse === undefined) throw new Error(`unknown Chaos curse ${option.curseKey}`);
+      const requirement = normalizeChaosValues(
+        [curse.duration],
+        { duration: option.requirementCount },
+        `curseOptions[${index}].requirementCount`,
+      ).duration!;
+      return Object.freeze({ curseKey: curse.key, requirementCount: requirement });
+    }),
+  ) as unknown as AuthoredChaosTraitOffer['curseOptions'];
+}
+
 export function normalizeAuthoredChaosTraitOffer(
   catalog: Catalog,
   value: AuthoredChaosTraitOffer,
@@ -522,16 +568,7 @@ export function normalizeAuthoredChaosTraitOffer(
     value.curseOptions[optionIndex(value.selectedOptionKey)] === undefined
   )
     throw new Error('Chaos offers require exactly three curse options and one selected option');
-  const curseOptions = value.curseOptions.map((option, index) => {
-    const curse = catalog.chaos.curses.byKey[option.curseKey];
-    if (curse === undefined) throw new Error(`unknown Chaos curse ${option.curseKey}`);
-    const requirement = normalizeChaosValues(
-      [curse.duration],
-      { duration: option.requirementCount },
-      `curseOptions[${index}].requirementCount`,
-    ).duration!;
-    return Object.freeze({ curseKey: curse.key, requirementCount: requirement });
-  }) as unknown as AuthoredChaosTraitOffer['curseOptions'];
+  const curseOptions = normalizeChaosCurseOptions(catalog, value.curseOptions);
   const selectedCurse =
     catalog.chaos.curses.byKey[curseOptions[optionIndex(value.selectedOptionKey)]!.curseKey];
   if (selectedCurse === undefined) throw new Error('unknown selected Chaos curse');
@@ -548,7 +585,7 @@ export function normalizeAuthoredChaosTraitOffer(
   return Object.freeze({
     kind: 'chaos',
     giverKey: 'Chaos',
-    curseOptions: Object.freeze(curseOptions),
+    curseOptions,
     selectedOptionKey: value.selectedOptionKey,
     selectedCurseValues: normalizeChaosValues(
       selectedCurse.operands,

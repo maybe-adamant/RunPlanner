@@ -89,15 +89,17 @@ function roomScreenRerolls(
 }
 
 /**
- * Authors a screen's recorded reroll count once its final rows are authored.
- * A count the engine refuses is reported; a count placed by id order is an assumption.
+ * Authors a screen's recorded rerolls once its final rows are authored. The
+ * record keeps only the final screen, so the earlier screens are guessed and
+ * reported; rerolls the engine refuses or no guess supports are reported and
+ * left out. A count placed by id order is also an assumption.
  */
 export function applyScreenRerolls(
   context: RunImportContext,
   roomIndex: number,
   screen: RerolledScreen,
   address: SemanticAddress,
-  command: (count: number) => ProjectCommand,
+  command: (count: number) => ProjectCommand | undefined,
 ): void {
   const rerolls = roomScreenRerolls(context, roomIndex);
   const count = rerolls.counts.get(screen);
@@ -105,10 +107,18 @@ export function applyScreenRerolls(
   context.used.add(`screenRerolls:${roomIndex}:${screen}`);
   const record = { roomIndex, visit: 0 };
   const applied = command(count);
-  if (!context.applyValid(applied)) {
-    context.note({ area: 'reroll', reason: 'refused', address, applied, record });
+  if (applied === undefined || !context.applyValid(applied)) {
+    context.note({
+      area: 'reroll',
+      reason: 'refused',
+      address,
+      ...(applied === undefined ? {} : { applied }),
+      record,
+    });
     return;
   }
+  if (typeof screen === 'number')
+    context.note({ area: 'reroll', reason: 'notInRecord', address, applied, record });
   if (rerolls.ambiguous && typeof screen === 'number')
     context.note({ area: 'reroll', reason: 'assumption', address, applied, record });
 }

@@ -460,8 +460,8 @@ export type ExecutionTraitOffer =
       /** Present only for a selected ordinary SpellDrop offer. */
       readonly hexTree?: ExecutionHexTree;
       readonly expectation?: ExecutionTraitScreenExpectation;
-      /** Native screen rerolls before these final rows; absent is none. */
-      readonly rerollCount?: number;
+      /** Screens installed on each native reroll before these final rows, oldest first. */
+      readonly rerolledScreens?: readonly ExecutionRerolledTraitScreen[];
     }
   | {
       readonly kind: 'chaos';
@@ -475,16 +475,38 @@ export type ExecutionTraitOffer =
       readonly blessingKey: string;
       readonly rarity: string;
       readonly blessingValues: Readonly<Record<string, number>>;
-      /** Native screen rerolls before these final rows; absent is none. */
-      readonly rerollCount?: number;
+      /** Curse screens installed on each native reroll before these final rows, oldest first. */
+      readonly rerolledScreens?: readonly ExecutionRerolledChaosScreen[];
     };
+
+/**
+ * A trait screen the game shows and then rerolls: the first is installed when
+ * the screen opens, the k-th later one on the k-th native reroll; no pick.
+ */
+export interface ExecutionRerolledTraitScreen {
+  readonly options: readonly { readonly key: string; readonly rarity?: string }[];
+  readonly rejected?: ExecutionTraitOptionKey;
+}
+
+/** A Chaos screen the game shows and then rerolls; its blessings stay native. */
+export interface ExecutionRerolledChaosScreen {
+  readonly curseOptions: readonly {
+    readonly curseKey: string;
+    readonly requirementCount: number;
+  }[];
+}
+
+/** A Pom level screen the game shows and then rerolls. */
+export interface ExecutionRerolledLevelScreen {
+  readonly offeredTargets: readonly string[];
+}
 
 export interface ExecutionLevelResolution {
   readonly offeredTargets: readonly string[];
   readonly selectedTarget: string | null;
   readonly levelCount: number;
-  /** Native screen rerolls before these final rows; absent is none. */
-  readonly rerollCount?: number;
+  /** Screens installed on each native reroll before these final rows, oldest first. */
+  readonly rerolledScreens?: readonly ExecutionRerolledLevelScreen[];
 }
 
 /** Published acquisition roles are all intended materializations.

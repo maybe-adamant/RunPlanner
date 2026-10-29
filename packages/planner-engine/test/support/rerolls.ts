@@ -4,7 +4,9 @@ import {
   semanticAddressKey,
   type HubRerollAddress,
   type ProjectDocument,
+  type AuthoredTraitOffer,
   type RoomActionAddress,
+  type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import {
   locallyValidRewardOffers,
@@ -94,4 +96,20 @@ export function firstSupportedReroll(
   if (first === undefined)
     throw new Error(`no reward is supported for ${semanticAddressKey(reroll)}`);
   return first;
+}
+
+/** The offer with `count` guessed legal screens rerolled away before its final rows. */
+export function withGuessedRerolledScreens(
+  project: ProjectDocument,
+  trait: TraitOfferAddress,
+  offer: AuthoredTraitOffer,
+  count: number,
+): AuthoredTraitOffer {
+  if (count === 0) return { ...offer, rerolledScreens: [] } as AuthoredTraitOffer;
+  const screens = createPreparedProjectCandidateSession(
+    catalog,
+    simulateProjectAssembly(catalog, project),
+  ).rerolledTraitScreensGuess(trait, offer, count);
+  if (screens === undefined) throw new Error(`no legal chain of ${count} rerolled screens`);
+  return { ...offer, rerolledScreens: screens } as AuthoredTraitOffer;
 }

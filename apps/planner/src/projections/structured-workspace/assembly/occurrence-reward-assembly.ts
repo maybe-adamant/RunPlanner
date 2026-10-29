@@ -236,7 +236,7 @@ function traitOfferControls(
     const screenRerolls =
       offer.kind === 'fallbackGold'
         ? undefined
-        : input.screenRerolls?.({ kind: 'traitOffer', giverKey }, offer.rerollCount);
+        : input.screenRerolls?.({ kind: 'traitOffer', giverKey }, offer.rerolledScreens?.length);
     controls.push(
       Object.freeze({
         acquisitionRoleLabel: workspaceAcquisitionRoleLabel(acquisitionRole),
@@ -285,7 +285,7 @@ function levelResolutionControls(
         value.kind === 'choice'
           ? input.screenRerolls?.(
               { kind: 'levelChoice', rewardType: reward.offer.rewardType },
-              value.rerollCount,
+              value.rerolledScreens?.length,
             )
           : undefined;
       return [
@@ -1204,7 +1204,7 @@ export function activeEncounterPhasesForOwner(
                 ? undefined
                 : input.screenRerolls?.(
                     { kind: 'traitOffer', giverKey: producer.giverKey },
-                    authoredTraitOffer.rerollCount,
+                    authoredTraitOffer.rerolledScreens?.length,
                   );
             return Object.freeze({
               acquisitionRoleLabel: 'Selection',

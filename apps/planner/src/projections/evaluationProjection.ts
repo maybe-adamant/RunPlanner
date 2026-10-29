@@ -189,6 +189,9 @@ const findingCopy = {
   traitOfferMissing: {
     title: 'Choose a trait offer',
   },
+  rerolledScreenMissing: {
+    title: 'Choose what this reroll showed',
+  },
   rewardSourceUnavailable: {
     title: 'Reward source unavailable',
   },

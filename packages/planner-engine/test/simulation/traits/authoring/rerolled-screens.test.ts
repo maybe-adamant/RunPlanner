@@ -1,0 +1,269 @@
+import { catalog } from '@run-planner/hades2-catalog';
+import type {
+  AuthoredRerolledTraitScreen,
+  AuthoredTraitOfferTraits,
+} from '@run-planner/engine/authored-project';
+import {
+  createTraitHistoryState,
+  evaluateReachedTraitOffer,
+  foldTraitHistoryEvents,
+  type ResolvedTraitOfferSource,
+  type TraitHistoryState,
+  type TraitOfferEvent,
+} from '@run-planner/engine/simulation';
+import { describe, expect, it } from 'vitest';
+import {
+  assessInitialOfferSupport,
+  assessRerolledScreensSupport,
+  guessRerolledScreens,
+} from '../../../../src/simulation/traits/authoring/initial-composition';
+import { traitOfferGenerationInput } from '../../../../src/simulation/traits/authoring/assessment';
+import { isPomEligibleTrait } from '../../../../src/simulation/traits/history/upgrades';
+import { rerolledLevelScreensGuess } from '../../../../src/simulation/traits/level-effects';
+import { traitFrontierState } from '../../../support/simulation-state';
+
+function history(entries: readonly [string, string, string][]): TraitHistoryState {
+  return foldTraitHistoryEvents(
+    catalog,
+    entries.map(([giverKey, traitKey, rarity], sequence) => ({
+      kind: 'traitOffer',
+      owner: { kind: 'project' },
+      acquisitionRole: 'source',
+      sequence,
+      giverKey,
+      options: [{ traitKey, rarity }] as TraitOfferEvent['options'],
+      selectedOptionKey: 'option1',
+      acquisitionPoint: 'roomRewardPickup',
+    })),
+  );
+}
+
+type Row = readonly [string, string];
+const rows = (...entries: readonly Row[]) =>
+  entries.map(([traitKey, rarity]) => ({ traitKey, rarity })) as never;
+const screen = (...entries: readonly Row[]): AuthoredRerolledTraitScreen => ({
+  options: rows(...entries),
+});
+
+function offer(
+  final: readonly Row[],
+  earlier: readonly (AuthoredRerolledTraitScreen | null)[],
+): AuthoredTraitOfferTraits {
+  return {
+    kind: 'traits',
+    giverKey: 'Apollo',
+    options: rows(...final),
+    selectedOptionKey: 'option1',
+    ...(earlier.length === 0 ? {} : { rerolledScreens: earlier }),
+  };
+}
+
+function input(
+  before: TraitHistoryState,
+  context: ResolvedTraitOfferSource = {},
+  testCatalog = catalog,
+) {
+  return traitOfferGenerationInput(
+    testCatalog,
+    'Apollo',
+    traitFrontierState(before, { catalog: testCatalog }),
+    context,
+  );
+}
+
+function finalSupported(
+  value: AuthoredTraitOfferTraits,
+  before = createTraitHistoryState(),
+  context: ResolvedTraitOfferSource = {},
+  testCatalog = catalog,
+): boolean {
+  return assessInitialOfferSupport({ ...input(before, context, testCatalog), offer: value }).legal;
+}
+
+/** Smaller declaration domains isolate generation stages, not a copied oracle. */
+function apolloPool(keys: readonly string[], priority: readonly string[] = []) {
+  const giver = {
+    ...catalog.traitGivers.byKey.Apollo!,
+    traitKeys: keys,
+    priorityTraitKeys: priority,
+  };
+  return {
+    ...catalog,
+    traitGivers: {
+      ...catalog.traitGivers,
+      byKey: { ...catalog.traitGivers.byKey, Apollo: giver },
+      values: catalog.traitGivers.values.map((entry) => (entry.key === 'Apollo' ? giver : entry)),
+    },
+  };
+}
+
+const cores: readonly Row[] = [
+  ['ApolloWeaponBoon', 'Common'],
+  ['ApolloCastBoon', 'Common'],
+  ['ApolloManaBoon', 'Common'],
+];
+
+describe('rerolled screen chain', () => {
+  it('bans one item of the previous screen, so a banned core seed gives way to any fill', () => {
+    const afterCores: readonly Row[] = [
+      ['ApolloWeaponBoon', 'Common'],
+      ['ApolloCastBoon', 'Common'],
+      ['PerfectDamageBonusBoon', 'Common'],
+    ];
+    // Not a first screen: a fresh god seeds three cores.
+    expect(finalSupported(offer(afterCores, []))).toBe(false);
+    // Banning Mana drops it from the seeded cores and the vacancy is filled.
+    expect(finalSupported(offer(afterCores, [screen(...cores)]))).toBe(true);
+    // Every ban removes one of the repeated rows, which nothing re-offers.
+    expect(finalSupported(offer(cores, [screen(...cores)]))).toBe(false);
+  });
+
+  it('lets an unbanned item return at a freshly rolled rarity', () => {
+    expect(
+      finalSupported(
+        offer(
+          [
+            ['ApolloWeaponBoon', 'Rare'],
+            ['ApolloCastBoon', 'Epic'],
+            ['ApolloSprintBoon', 'Common'],
+          ],
+          [screen(...cores)],
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it('judges each earlier screen against the one before it, the first as a first screen', () => {
+    const value = offer(cores, [
+      screen(...cores),
+      screen(
+        ['ApolloWeaponBoon', 'Common'],
+        ['ApolloCastBoon', 'Common'],
+        ['ApolloSprintBoon', 'Common'],
+      ),
+      null,
+      screen(...cores),
+    ]);
+    expect(
+      assessRerolledScreensSupport(input(createTraitHistoryState()), value.rerolledScreens!).map(
+        (support) => support?.legal,
+      ),
+    ).toEqual([true, true, undefined, true]);
+    expect(
+      assessRerolledScreensSupport(input(createTraitHistoryState()), [
+        screen(
+          ['ApolloWeaponBoon', 'Common'],
+          ['ApolloCastBoon', 'Common'],
+          ['PerfectDamageBonusBoon', 'Common'],
+        ),
+      ])[0]?.legal,
+    ).toBe(false);
+  });
+
+  // Source reading (TraitLogic.lua SetTraitsOnLoot: the exclusion prunes seeds and
+  // buckets only; the replacement rescue reads the unpruned core list), not yet
+  // exercised in game: an exhausted screen may re-offer the banned exchange.
+  it('re-offers a banned exchange through the replacement rescue of an exhausted screen', () => {
+    const keys = ['ApolloWeaponBoon', 'ApolloSpecialBoon', 'ApolloCastBoon'];
+    const testCatalog = apolloPool(keys, keys);
+    const before = history([
+      ['Zeus', 'ZeusWeaponBoon', 'Common'],
+      ['Zeus', 'ZeusSpecialBoon', 'Rare'],
+      ['Zeus', 'ZeusCastBoon', 'Epic'],
+    ]);
+    const context = { freshRarityOverride: 'Common' as const, replacementRollChance: 0 };
+    const exchanges: readonly Row[] = [
+      ['ApolloCastBoon', 'Heroic'],
+      ['ApolloWeaponBoon', 'Rare'],
+      ['ApolloSpecialBoon', 'Epic'],
+    ];
+    expect(
+      finalSupported(offer(exchanges, [screen(...exchanges)]), before, context, testCatalog),
+    ).toBe(true);
+    expect(
+      finalSupported(
+        offer(exchanges.slice(1), [screen(...exchanges)]),
+        before,
+        context,
+        testCatalog,
+      ),
+    ).toBe(false);
+  });
+
+  it('guesses the first legal chain ending on an item whose ban admits the final rows', () => {
+    const final: readonly Row[] = [
+      ['ApolloWeaponBoon', 'Common'],
+      ['ApolloCastBoon', 'Common'],
+      ['PerfectDamageBonusBoon', 'Common'],
+    ];
+    const guessed = guessRerolledScreens(input(createTraitHistoryState()), rows(...final), 2);
+    expect(guessed).toHaveLength(2);
+    expect(finalSupported(offer(final, guessed!))).toBe(true);
+    expect(
+      assessRerolledScreensSupport(input(createTraitHistoryState()), guessed!).map(
+        (support) => support?.legal,
+      ),
+    ).toEqual([true, true]);
+  });
+
+  it('records each earlier screen with its rows, generation and Hymn exchange', () => {
+    const before = history([['Zeus', 'ZeusWeaponBoon', 'Common']]);
+    const state = traitFrontierState(before, { stygianWell: { hymnUses: 1 } });
+    const evaluation = evaluateReachedTraitOffer(
+      catalog,
+      { kind: 'project' },
+      'source',
+      offer(
+        [
+          ['ApolloCastBoon', 'Common'],
+          ['PerfectDamageBonusBoon', 'Common'],
+          ['DoubleStrikeChanceBoon', 'Common'],
+        ],
+        [
+          screen(
+            ['ApolloWeaponBoon', 'Rare'],
+            ['PerfectDamageBonusBoon', 'Common'],
+            ['DoubleStrikeChanceBoon', 'Common'],
+          ),
+          null,
+        ],
+      ),
+      state,
+      {},
+      0,
+    );
+    expect(evaluation.rerolledScreens?.map((entry) => entry.screen)).toEqual([0, 1]);
+    expect(evaluation.rerolledScreens?.[1]?.missing).toBe(true);
+    expect(evaluation.rerolledScreens?.[0]?.generation?.legal).toBe(true);
+    expect(
+      evaluation.rerolledScreens?.[0]?.assessments.some(
+        (assessment) => assessment.replacementTransition !== undefined,
+      ),
+    ).toBe(true);
+  });
+});
+
+describe('Pom level screens', () => {
+  // Source reading (TraitLogic.lua: a forced-Common Pom screen fills only from the
+  // Common bucket): a Duo- or Legendary-only boon is never a Pom level target.
+  it('never level a Duo- or Legendary-only boon', () => {
+    const highOnly = catalog.traits.values.filter(
+      (trait) =>
+        trait.rarityDomain.kind === 'ranked' &&
+        trait.rarityDomain.freshOfferRarities.every(
+          (rarity) => rarity === 'Duo' || rarity === 'Legendary',
+        ),
+    );
+    expect(highOnly.length).toBeGreaterThan(0);
+    expect(highOnly.filter((trait) => isPomEligibleTrait(catalog, trait.key))).toEqual([]);
+  });
+
+  it('guess a chain that never repeats the screen before, and none with nothing left', () => {
+    const pool = ['A', 'B', 'C', 'D'];
+    const guess = rerolledLevelScreensGuess(pool, ['A', 'B', 'C'], 3);
+    const screens = [...guess!.map((screen) => screen.offeredTraitKeys), ['A', 'B', 'C']];
+    for (let index = 1; index < screens.length; index += 1)
+      expect([...screens[index]!].sort()).not.toEqual([...screens[index - 1]!].sort());
+    expect(rerolledLevelScreensGuess(['A', 'B', 'C'], ['A', 'B', 'C'], 1)).toBeUndefined();
+  });
+});

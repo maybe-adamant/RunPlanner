@@ -1,6 +1,9 @@
 import {
-  decodeScreenRerollCount,
-  screenRerollCountField,
+  decodeRerolledChaosScreen,
+  decodeRerolledLevelScreen,
+  decodeRerolledScreens,
+  decodeRerolledTraitScreen,
+  rerolledScreensField,
   screenRerollSupported,
 } from '../../screen-rerolls';
 import type { Catalog } from '../../../catalog-schema';
@@ -172,14 +175,15 @@ function decodeTraitOffers(
           'blessingKey',
           'rarity',
           'blessingValues',
-          ...(Object.hasOwn(record, 'rerollCount') ? ['rerollCount'] : []),
+          ...(Object.hasOwn(record, 'rerolledScreens') ? ['rerolledScreens'] : []),
         ],
         rolePath,
       );
-      const chaosRerollCount = decodeScreenRerollCount(
+      const chaosRerolledScreens = decodeRerolledScreens(
         record,
         screenRerollSupported(catalog, { kind: 'traitOffer', giverKey }),
         rolePath,
+        (screen, screenPath) => decodeRerolledChaosScreen(catalog, screen, screenPath),
       );
       const rawValues = (key: 'selectedCurseValues' | 'blessingValues') => {
         const values = expectRecord(record[key], `${rolePath}.${key}`);
@@ -230,7 +234,7 @@ function decodeTraitOffers(
         });
         result[roleKey] = Object.freeze({
           ...result[roleKey]!,
-          ...screenRerollCountField(chaosRerollCount),
+          ...rerolledScreensField(chaosRerolledScreens),
         });
       } catch (error) {
         failProjectDocument(
@@ -261,14 +265,15 @@ function decodeTraitOffers(
         ...('concaveStoneResult' in record ? ['concaveStoneResult'] : []),
         ...('hexTree' in record ? ['hexTree'] : []),
         ...('steadyGrowthTargets' in record ? ['steadyGrowthTargets'] : []),
-        ...(Object.hasOwn(record, 'rerollCount') ? ['rerollCount'] : []),
+        ...(Object.hasOwn(record, 'rerolledScreens') ? ['rerolledScreens'] : []),
       ],
       rolePath,
     );
-    const rerollCount = decodeScreenRerollCount(
+    const rerolledScreens = decodeRerolledScreens(
       record,
       screenRerollSupported(catalog, { kind: 'traitOffer', giverKey }),
       rolePath,
+      (screen, screenPath) => decodeRerolledTraitScreen(catalog, giverKey, screen, screenPath),
     );
     const optionsRaw = expectArray(record.options, `${rolePath}.options`);
     if (optionsRaw.length < 1 || optionsRaw.length > TRAIT_OPTION_KEYS.length)
@@ -682,7 +687,7 @@ function decodeTraitOffers(
         : { rejectedOptionKey: rejectedOptionKey as TraitOptionKey }),
       ...(concaveStoneResult === undefined ? {} : { concaveStoneResult }),
       ...(hexTree === undefined ? {} : { hexTree }),
-      ...screenRerollCountField(rerollCount),
+      ...rerolledScreensField(rerolledScreens),
     });
     const steadyGrowthTargets = decodeSteadyGrowthTargets(
       record.steadyGrowthTargets,
@@ -979,14 +984,15 @@ function decodeLevelResolutions(
           'kind',
           'offeredTraitKeys',
           'selectedTraitKey',
-          ...(Object.hasOwn(entry, 'rerollCount') ? ['rerollCount'] : []),
+          ...(Object.hasOwn(entry, 'rerolledScreens') ? ['rerolledScreens'] : []),
         ],
         `${path}.${role}`,
       );
-      const rerollCount = decodeScreenRerollCount(
+      const rerolledScreens = decodeRerolledScreens(
         entry,
         screenRerollSupported(catalog, { kind: 'levelChoice', rewardType: offer.rewardType }),
         `${path}.${role}`,
+        (screen, screenPath) => decodeRerolledLevelScreen(catalog, screen, screenPath),
       );
       if (expectString(entry.kind, `${path}.${role}.kind`) !== 'choice')
         failProjectDocument(`${path}.${role}.kind`, 'expected choice');
@@ -1018,7 +1024,7 @@ function decodeLevelResolutions(
         kind: 'choice',
         offeredTraitKeys: Object.freeze(keys),
         selectedTraitKey: selected,
-        ...screenRerollCountField(rerollCount),
+        ...rerolledScreensField(rerolledScreens),
       });
     } else {
       expectExactKeys(entry, ['kind', 'targetTraitKey'], `${path}.${role}`);

@@ -1,5 +1,22 @@
-import type { Catalog, RoomDeclaration } from '../catalog-schema';
-import { expectPositiveInteger, failProjectDocument } from './validation';
+import type { Catalog, RoomDeclaration, TraitRarity } from '../catalog-schema';
+import {
+  normalizeChaosCurseOptions,
+  optionIndex,
+  TRAIT_OPTION_KEYS,
+  traitOfferSupportsExhaustion,
+  type AuthoredRerolledChaosScreen,
+  type AuthoredRerolledLevelScreen,
+  type AuthoredRerolledTraitScreen,
+  type RerolledScreens,
+  type TraitOptionKey,
+} from './traits/state';
+import {
+  expectArray,
+  expectExactKeys,
+  expectRecord,
+  expectString,
+  failProjectDocument,
+} from './validation';
 
 /**
  * An offer screen whose final rows the plan authors and whose native reroll
@@ -35,21 +52,247 @@ export function screenRerollCost(count: number): number {
   return (count * (count + 1)) / 2;
 }
 
-/** A persisted screen reroll count: absent is none, so a present count is positive. */
-export function decodeScreenRerollCount(
+/**
+ * Validates one authored earlier trait screen: up to three distinct rows of the
+ * giver at a supported rarity; fewer than three only where the giver's pool
+ * can run out; the Rejected row names a shown row.
+ */
+export function normalizeRerolledTraitScreen(
+  catalog: Catalog,
+  giverKey: string,
+  screen: AuthoredRerolledTraitScreen,
+): AuthoredRerolledTraitScreen {
+  const giver = catalog.traitGivers.byKey[giverKey];
+  if (giver === undefined) throw new Error(`unknown trait giver ${giverKey}`);
+  if (!Array.isArray(screen.options) || screen.options.length > TRAIT_OPTION_KEYS.length)
+    throw new Error('a rerolled screen shows at most three options');
+  if (!traitOfferSupportsExhaustion(giver) && screen.options.length !== TRAIT_OPTION_KEYS.length)
+    throw new Error('this trait giver shows exactly three options');
+  if (new Set(screen.options.map((option) => option.traitKey)).size !== screen.options.length)
+    throw new Error('rerolled screen trait keys must be distinct');
+  const options = screen.options.map((option, index) => {
+    const trait = catalog.traits.byKey[option.traitKey];
+    if (trait === undefined || !giver.traitKeys.includes(option.traitKey))
+      throw new Error(`option${index + 1} ${option.traitKey} is not in giver ${giverKey}`);
+    if (trait.rarityDomain.kind === 'none') {
+      if (option.rarity !== undefined)
+        throw new Error(`rarityless option ${option.traitKey} has no rarity`);
+    } else if (
+      option.rarity === undefined ||
+      !trait.rarityDomain.equippedRarities.includes(option.rarity)
+    )
+      throw new Error(`unsupported authored rarity for ${option.traitKey}`);
+    if (giver.rarityPolicy.kind === 'fixed' && option.rarity !== giver.rarityPolicy.rarity)
+      throw new Error(`${option.traitKey} must use fixed rarity ${giver.rarityPolicy.rarity}`);
+    return Object.freeze(
+      option.rarity === undefined
+        ? { traitKey: option.traitKey }
+        : { traitKey: option.traitKey, rarity: option.rarity },
+    );
+  });
+  const rejected = screen.rejectedOptionKey;
+  if (
+    rejected !== undefined &&
+    (!TRAIT_OPTION_KEYS.includes(rejected) || options[optionIndex(rejected)] === undefined)
+  )
+    throw new Error('the rejected row must name a shown option');
+  return Object.freeze({
+    options: Object.freeze(options),
+    ...(rejected === undefined ? {} : { rejectedOptionKey: rejected }),
+  });
+}
+
+/** Validates one authored earlier Chaos screen. */
+export function normalizeRerolledChaosScreen(
+  catalog: Catalog,
+  screen: AuthoredRerolledChaosScreen,
+): AuthoredRerolledChaosScreen {
+  return Object.freeze({ curseOptions: normalizeChaosCurseOptions(catalog, screen.curseOptions) });
+}
+
+/** Validates one authored earlier Pom level screen: distinct known traits. */
+export function normalizeRerolledLevelScreen(
+  catalog: Catalog,
+  screen: AuthoredRerolledLevelScreen,
+): AuthoredRerolledLevelScreen {
+  if (!Array.isArray(screen.offeredTraitKeys))
+    throw new Error('a rerolled Pom screen lists its offered traits');
+  if (new Set(screen.offeredTraitKeys).size !== screen.offeredTraitKeys.length)
+    throw new Error('Pom offered trait keys must be distinct');
+  for (const key of screen.offeredTraitKeys)
+    if (catalog.traits.byKey[key] === undefined) throw new Error(`unknown trait ${key}`);
+  return Object.freeze({ offeredTraitKeys: Object.freeze([...screen.offeredTraitKeys]) });
+}
+
+/**
+ * Validates a complete earlier-screen list for a screen that may or may not be
+ * rerolled; an empty list is no rerolls.
+ */
+export function normalizeRerolledScreens<T>(
+  screens: RerolledScreens<T> | undefined,
+  supported: boolean,
+  normalize: (screen: T) => T,
+): RerolledScreens<T> | undefined {
+  if (screens === undefined || screens.length === 0) return undefined;
+  if (!supported) throw new Error('this screen cannot be rerolled');
+  return Object.freeze(screens.map((screen) => (screen === null ? null : normalize(screen))));
+}
+
+/** Spreads an earlier-screen list only when it holds a screen. */
+export function rerolledScreensField<T>(screens: RerolledScreens<T> | undefined): {
+  readonly rerolledScreens?: RerolledScreens<T>;
+} {
+  return screens === undefined || screens.length === 0 ? {} : { rerolledScreens: screens };
+}
+
+/** The screen's reroll count: one per earlier screen. */
+export function rerolledScreenCount(value: {
+  readonly rerolledScreens?: RerolledScreens<unknown>;
+}): number {
+  return value.rerolledScreens?.length ?? 0;
+}
+
+/** A reroll adds a not yet authored screen just before the final screen, which keeps its pick. */
+export function withScreenRerollInserted<T>(
+  screens: RerolledScreens<T> | undefined,
+): RerolledScreens<T> {
+  return Object.freeze([...(screens ?? []), null]);
+}
+
+/** The screen list after adding or removing rerolls one at a time to reach `count`. */
+export function withScreenRerollCount<T>(
+  screens: RerolledScreens<T> | undefined,
+  count: number,
+): RerolledScreens<T> | undefined {
+  let next = screens;
+  while ((next?.length ?? 0) < count) next = withScreenRerollInserted(next);
+  while ((next?.length ?? 0) > Math.max(0, count)) next = withScreenRerollRemoved(next);
+  return next;
+}
+
+/** Removing a reroll drops the earlier screen just before the final one. */
+export function withScreenRerollRemoved<T>(
+  screens: RerolledScreens<T> | undefined,
+): RerolledScreens<T> | undefined {
+  if (screens === undefined || screens.length === 0) throw new Error('the screen has no reroll');
+  return screens.length === 1 ? undefined : Object.freeze(screens.slice(0, -1));
+}
+
+/** Replaces one earlier screen, or clears it back to not yet authored. */
+export function withRerolledScreenReplaced<T>(
+  screens: RerolledScreens<T> | undefined,
+  index: number,
+  value: T | null,
+): RerolledScreens<T> {
+  if (screens === undefined || !Number.isInteger(index) || index < 0 || index >= screens.length)
+    throw new Error(`the screen has no rerolled screen ${index}`);
+  return Object.freeze(screens.map((screen, at) => (at === index ? value : screen)));
+}
+
+/**
+ * Decodes a persisted earlier-screen list: absent is none, so a present list
+ * holds at least one screen, each null or decoded by its owner.
+ */
+export function decodeRerolledScreens<T>(
   record: Readonly<Record<string, unknown>>,
   supported: boolean,
   path: string,
-): number | undefined {
-  if (!Object.hasOwn(record, 'rerollCount')) return undefined;
-  const count = expectPositiveInteger(record.rerollCount, `${path}.rerollCount`);
-  if (!supported) failProjectDocument(`${path}.rerollCount`, 'this screen cannot be rerolled');
-  return count;
+  decode: (value: unknown, path: string) => T,
+): RerolledScreens<T> | undefined {
+  if (!Object.hasOwn(record, 'rerolledScreens')) return undefined;
+  const screens = expectArray(record.rerolledScreens, `${path}.rerolledScreens`);
+  if (screens.length === 0)
+    failProjectDocument(`${path}.rerolledScreens`, 'must hold at least one screen');
+  if (!supported) failProjectDocument(`${path}.rerolledScreens`, 'this screen cannot be rerolled');
+  return Object.freeze(
+    screens.map((screen, index) =>
+      screen === null ? null : decode(screen, `${path}.rerolledScreens[${index}]`),
+    ),
+  );
 }
 
-/** Spreads a screen reroll count only when present. */
-export function screenRerollCountField(count: number | undefined): {
-  readonly rerollCount?: number;
-} {
-  return count === undefined || count === 0 ? {} : { rerollCount: count };
+/** Decodes one earlier trait screen strictly. */
+export function decodeRerolledTraitScreen(
+  catalog: Catalog,
+  giverKey: string,
+  value: unknown,
+  path: string,
+): AuthoredRerolledTraitScreen {
+  const record = expectRecord(value, path);
+  expectExactKeys(
+    record,
+    ['options', ...(Object.hasOwn(record, 'rejectedOptionKey') ? ['rejectedOptionKey'] : [])],
+    path,
+  );
+  const options = expectArray(record.options, `${path}.options`).map((raw, index) => {
+    const optionPath = `${path}.options[${index}]`;
+    const option = expectRecord(raw, optionPath);
+    expectExactKeys(
+      option,
+      ['traitKey', ...(Object.hasOwn(option, 'rarity') ? ['rarity'] : [])],
+      optionPath,
+    );
+    const traitKey = expectString(option.traitKey, `${optionPath}.traitKey`);
+    return Object.hasOwn(option, 'rarity')
+      ? { traitKey, rarity: expectString(option.rarity, `${optionPath}.rarity`) as TraitRarity }
+      : { traitKey };
+  });
+  const rejected = Object.hasOwn(record, 'rejectedOptionKey')
+    ? (expectString(record.rejectedOptionKey, `${path}.rejectedOptionKey`) as TraitOptionKey)
+    : undefined;
+  try {
+    return normalizeRerolledTraitScreen(catalog, giverKey, {
+      options,
+      ...(rejected === undefined ? {} : { rejectedOptionKey: rejected }),
+    });
+  } catch (error) {
+    return failProjectDocument(path, error instanceof Error ? error.message : 'invalid screen');
+  }
+}
+
+/** Decodes one earlier Chaos screen strictly. */
+export function decodeRerolledChaosScreen(
+  catalog: Catalog,
+  value: unknown,
+  path: string,
+): AuthoredRerolledChaosScreen {
+  const record = expectRecord(value, path);
+  expectExactKeys(record, ['curseOptions'], path);
+  const curseOptions = expectArray(record.curseOptions, `${path}.curseOptions`).map(
+    (raw, index) => {
+      const optionPath = `${path}.curseOptions[${index}]`;
+      const option = expectRecord(raw, optionPath);
+      expectExactKeys(option, ['curseKey', 'requirementCount'], optionPath);
+      return {
+        curseKey: expectString(option.curseKey, `${optionPath}.curseKey`),
+        requirementCount:
+          typeof option.requirementCount === 'number'
+            ? option.requirementCount
+            : failProjectDocument(`${optionPath}.requirementCount`, 'must be a number'),
+      };
+    },
+  );
+  try {
+    return Object.freeze({ curseOptions: normalizeChaosCurseOptions(catalog, curseOptions) });
+  } catch (error) {
+    return failProjectDocument(path, error instanceof Error ? error.message : 'invalid screen');
+  }
+}
+
+/** Decodes one earlier Pom level screen strictly. */
+export function decodeRerolledLevelScreen(
+  catalog: Catalog,
+  value: unknown,
+  path: string,
+): AuthoredRerolledLevelScreen {
+  const record = expectRecord(value, path);
+  expectExactKeys(record, ['offeredTraitKeys'], path);
+  const keys = expectArray(record.offeredTraitKeys, `${path}.offeredTraitKeys`).map((key, index) =>
+    expectString(key, `${path}.offeredTraitKeys[${index}]`),
+  );
+  try {
+    return normalizeRerolledLevelScreen(catalog, { offeredTraitKeys: keys });
+  } catch (error) {
+    return failProjectDocument(path, error instanceof Error ? error.message : 'invalid screen');
+  }
 }

@@ -1,6 +1,7 @@
 import {
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
+  withScreenRerollCount,
 } from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 import { useEffect, useMemo, useState } from 'react';
@@ -226,8 +227,18 @@ export function TraitOfferEditorShell({
   const screenRerolls =
     interaction.screenRerolls === undefined || value.kind === 'fallbackGold' ? undefined : (
       <ScreenRerollCount
-        count={value.rerollCount ?? 0}
-        onChange={(count) => updateValue(Object.freeze({ ...value, rerollCount: count }))}
+        count={value.rerolledScreens?.length ?? 0}
+        onChange={(count) => {
+          const { rerolledScreens: _previous, ...rest } = value;
+          void _previous;
+          const screens = withScreenRerollCount<unknown>(value.rerolledScreens, count);
+          updateValue(
+            Object.freeze({
+              ...rest,
+              ...(screens === undefined ? {} : { rerolledScreens: screens }),
+            }) as typeof value,
+          );
+        }}
         rerolls={interaction.screenRerolls}
       />
     );

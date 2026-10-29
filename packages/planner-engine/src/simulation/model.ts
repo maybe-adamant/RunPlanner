@@ -104,6 +104,7 @@ export type RewardGenerationFindingCode =
 export type TraitFindingCode =
   | 'callingCardRarificationUnavailable'
   | 'traitOfferMissing'
+  | 'rerolledScreenMissing'
   | 'alreadyEquipped'
   | 'previouslyPicked'
   | 'bannedTrait'
@@ -217,6 +218,7 @@ export function isRequiredMissingInputFinding(
     case 'hexActivationMissing':
     case 'rewardMissing':
     case 'traitOfferMissing':
+    case 'rerolledScreenMissing':
     case 'allTogetherResultMissing':
     case 'judgmentOutcomeMissing':
     case 'figurineOutcomeMissing':

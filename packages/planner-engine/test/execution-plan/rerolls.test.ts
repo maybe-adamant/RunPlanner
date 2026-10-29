@@ -4,6 +4,7 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createHubRerollAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
   semanticAddressKey,
@@ -29,6 +30,7 @@ import {
   firstSupportedReroll,
   withArcana,
   withGoldenUnderworldJudgments,
+  withGuessedRerolledScreens,
   withJudgment,
 } from '../support/rerolls';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
@@ -325,5 +327,95 @@ describe('Well and Pool roll publication', () => {
       traitKey: 'HeraCastBoon',
     });
     expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+});
+
+describe('rerolled screen publication', () => {
+  const f = createBiomeAddress('Underworld', 'F');
+  const source = 'golden-f-b2-e1';
+
+  function rerolledScreenProject(): ProjectDocument {
+    // The screen card is held from the start, so the F Judgment draws the door card instead.
+    const project = withJudgment(
+      withJudgment(
+        withArcana(loadUnderworldFGCheckpoint(), ['ScreenReroll']),
+        'F',
+        'golden-f-preboss-shop:boss',
+        ['DoorReroll', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
+      ),
+      'G',
+      'golden-g-preboss-shop:boss',
+      ['LowManaDamageBonus', 'CastCount', 'SorceryRegenUpgrade', 'CastBuff', 'BonusHealth'],
+    );
+    const zeus = occurrence(project, source, 0);
+    const offers =
+      zeus.state.kind === 'counted' ? zeus.state.reward?.traitOffersByAcquisitionRole : undefined;
+    const [role, offer] = Object.entries(offers ?? {})[0]!;
+    if (offer === null || offer === undefined) throw new Error('fixture lacks a Zeus screen');
+    const trait = {
+      kind: 'traitOffer',
+      routeKey: 'Underworld',
+      biomeKey: 'F',
+      owner: createIncomingRewardAddress(f, source as never),
+      acquisitionRole: role,
+    } as const;
+    return applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: withGuessedRerolledScreens(project, trait, offer, 2),
+    });
+  }
+
+  /** Every published object holding rerolled screens. */
+  function screenOwners(value: unknown): Record<string, unknown>[] {
+    if (Array.isArray(value)) return value.flatMap(screenOwners);
+    if (value === null || typeof value !== 'object') return [];
+    const record = value as Record<string, unknown>;
+    return [
+      ...(Object.hasOwn(record, 'rerolledScreens') ? [record] : []),
+      ...Object.values(record).flatMap(screenOwners),
+    ];
+  }
+
+  it('publishes each earlier screen, oldest first, on the final trait screen', () => {
+    const plan = planOf(rerolledScreenProject());
+    const [offer] = screenOwners(plan);
+    expect(offer).toMatchObject({ kind: 'traits', giver: 'Zeus' });
+    const screens = offer!.rerolledScreens as { options: { key: string; rarity?: string }[] }[];
+    expect(screens).toHaveLength(2);
+    for (const screen of screens) expect(screen.options).toHaveLength(3);
+    expect(decodeExecutionPlan(JSON.parse(encodeExecutionPlan(plan)))).toEqual(plan);
+  });
+
+  it('decodes rerolled screens strictly', () => {
+    const encoded = JSON.parse(encodeExecutionPlan(planOf(rerolledScreenProject()))) as unknown;
+    const decodeWith = (edit: (offer: Record<string, unknown>) => void) => {
+      const copy = structuredClone(encoded);
+      edit(screenOwners(copy)[0]!);
+      return () => decodeExecutionPlan(copy);
+    };
+    const first = (offer: Record<string, unknown>) =>
+      (offer.rerolledScreens as Record<string, unknown>[])[0]!;
+    expect(decodeWith(() => undefined)).not.toThrow();
+    expect(
+      decodeWith((offer) => {
+        offer.rerolledScreens = [];
+      }),
+    ).toThrow('rerolledScreens');
+    expect(
+      decodeWith((offer) => {
+        first(offer).extra = true;
+      }),
+    ).toThrow('extra');
+    expect(
+      decodeWith((offer) => {
+        first(offer).rejected = 'option4';
+      }),
+    ).toThrow('rejected');
+    expect(
+      decodeWith((offer) => {
+        offer.rerollCount = 2;
+      }),
+    ).toThrow('rerollCount');
   });
 });

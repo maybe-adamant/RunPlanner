@@ -11,12 +11,14 @@ import { ownerRegion, type FindingChronology, type FindingRegionEntry } from '..
 import {
   evaluateReachedLevelResolution,
   foldTraitHistoryEvents,
+  pomEligibleTargetKeys,
   recordReachedLevelResolution,
   type TraitHistoryState,
 } from '../traits';
 import type { RewardBranchState } from './branch-primitives';
 import { addRewardFinding } from './findings';
 import { settleScreenRerolls } from './screen-rerolls';
+import { rerolledScreenCount } from '../../authored-project/screen-rerolls';
 
 export interface LevelResolutionSettlementInput {
   readonly catalog: Catalog;
@@ -150,11 +152,30 @@ export function settleReachedLevelResolution(
       );
     }
   }
+  for (const finding of rerolledLevelScreenFindings(catalog, levelResolution, generationBefore))
+    addRewardFinding(
+      localFindings,
+      Object.freeze({
+        code: finding.code,
+        phase: 'rewardGeneration',
+        origin: evaluation.address,
+        evidence: Object.freeze({
+          acquisitionRole: role,
+          lifecyclePoint,
+          levelCount: effect.levelCount,
+          ...(finding.screen === undefined ? {} : { screen: finding.screen }),
+          ...(finding.reason === undefined ? {} : { reason: finding.reason }),
+        }),
+      }),
+      ownerRegion(evaluation.address),
+      input.findingChronology ?? Object.freeze({ kind: 'history', sequence, boundary: 'at' }),
+      evaluation,
+    );
   // The Pom screen's rerolls happen before its final rows are chosen.
   const rerolled = settleScreenRerolls(
     catalog,
     branch,
-    levelResolution.kind === 'choice' ? levelResolution.rerollCount : undefined,
+    levelResolution.kind === 'choice' ? rerolledScreenCount(levelResolution) : undefined,
     address,
     sequence,
     input.findingChronology,
@@ -170,4 +191,57 @@ export function settleReachedLevelResolution(
     }),
     findingEntries: Object.freeze([...localFindings.values(), ...rerolled.findings]),
   });
+}
+
+interface RerolledLevelScreenFinding {
+  readonly code:
+    | 'rerolledScreenMissing'
+    | 'pomWrongOfferCount'
+    | 'pomTargetUnavailable'
+    | 'rollRepeatsAllOffers'
+    | 'screenRerollUnavailable';
+  /** The rerolled-away screen's tab index; absent for the final screen. */
+  readonly screen?: number;
+  readonly reason?: 'nothingLeft';
+}
+
+/**
+ * A Pom reroll redraws the level screen from the same levellable boons minus
+ * one item of the previous screen. With more than three boons every screen
+ * shows three, so a screen is linked iff it does not repeat the previous one;
+ * with three or fewer nothing is left and the reroll is refused.
+ */
+function rerolledLevelScreenFindings(
+  catalog: Catalog,
+  value: AuthoredLevelResolution,
+  generation: TraitHistoryState,
+): readonly RerolledLevelScreenFinding[] {
+  if (value.kind !== 'choice' || value.rerolledScreens === undefined) return [];
+  const screens = value.rerolledScreens;
+  const pool = new Set(pomEligibleTargetKeys(catalog, generation));
+  const findings: RerolledLevelScreenFinding[] = [];
+  if (pool.size <= 3) findings.push({ code: 'screenRerollUnavailable', reason: 'nothingLeft' });
+  const repeats = (previous: readonly string[] | undefined, offered: readonly string[]) =>
+    previous !== undefined &&
+    previous.length === offered.length &&
+    offered.every((traitKey) => previous.includes(traitKey));
+  screens.forEach((screen, index) => {
+    if (screen === null) {
+      findings.push({ code: 'rerolledScreenMissing', screen: index });
+      return;
+    }
+    if (screen.offeredTraitKeys.length !== Math.min(3, pool.size))
+      findings.push({ code: 'pomWrongOfferCount', screen: index });
+    if (screen.offeredTraitKeys.some((traitKey) => !pool.has(traitKey)))
+      findings.push({ code: 'pomTargetUnavailable', screen: index });
+    if (
+      pool.size > 3 &&
+      index > 0 &&
+      repeats(screens[index - 1]?.offeredTraitKeys, screen.offeredTraitKeys)
+    )
+      findings.push({ code: 'rollRepeatsAllOffers', screen: index });
+  });
+  if (pool.size > 3 && repeats(screens.at(-1)?.offeredTraitKeys, value.offeredTraitKeys))
+    findings.push({ code: 'rollRepeatsAllOffers' });
+  return findings;
 }
