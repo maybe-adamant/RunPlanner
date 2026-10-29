@@ -6,6 +6,7 @@ import {
   createOccurrenceAddress,
   createRoomActionAddress,
   createRoomFeatureAddress,
+  roomActionDomainForOccurrence,
   roomActionKey,
   semanticAddressKey,
   type ProjectCommand,
@@ -13,6 +14,7 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
+  assembleRoomActionRoster,
   purgingPoolCandidateForProjectEvaluationAssembly,
   rerollSpendAllowanceForProjectEvaluationAssembly,
   settleProjectEdit,
@@ -568,5 +570,73 @@ describe('Pool of Purging rolls', () => {
       origin: semanticAddressKey(actionAt(sale)),
       evidence: { reason: 'replaced' },
     });
+  });
+});
+
+describe('roll-reference ordering', () => {
+  /** Whether Move may place one action of the Postboss at a position. */
+  function canMove(project: ProjectDocument, reference: RoomActionReference, toIndex: number) {
+    const host = roomActionDomainForOccurrence(project, catalog, f, postboss as never)!;
+    const roster = assembleRoomActionRoster({
+      owner: room,
+      order: host.occurrence.roomActions.order,
+      contributions: host.domain.contributions,
+      lifecycleStructure: host.domain.lifecycleStructure,
+    });
+    return roster.proposals.find(
+      (proposal) =>
+        proposal.kind === 'move' &&
+        roomActionKey(proposal.reference) === roomActionKey(reference) &&
+        proposal.toIndex === toIndex,
+    )?.structurallyAuthorable;
+  }
+
+  it('keeps a purchase or sale from a reroll after that reroll', () => {
+    let project = applyProjectCommand(appendWellReroll(base()), catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: room,
+      generationKey: 'r1:healing',
+      purchased: true,
+      itemKey: 'HealDropRange',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertPurgingPoolReroll',
+      occurrence: room,
+      index: order(project).length,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SellPurgingPoolRollSlot',
+      occurrence: room,
+      rollKey: 'r1',
+      slotKey: 'left',
+      traitKey: 'ApolloWeaponBoon',
+      index: order(project).length,
+    });
+    const purchase = { kind: 'purchaseStygianWellOffer', generationKey: 'r1:healing' } as const;
+    const sale = { kind: 'sellPurgingPoolTrait', slotKey: 'left', rollKey: 'r1' } as const;
+    const wellAt = order(project).findIndex((action) => action.kind === 'rerollStygianWell');
+    const poolAt = order(project).findIndex((action) => action.kind === 'rerollPurgingPool');
+    expect(canMove(project, purchase, wellAt)).toBe(false);
+    expect(canMove(project, sale, poolAt)).toBe(false);
+    // Moving the reroll past its purchase is refused the same way.
+    expect(canMove(project, order(project)[wellAt]!, order(project).length - 1)).toBe(false);
+    // Initial-roll purchases are not constrained by a reroll.
+    expect(
+      canMove(
+        project,
+        { kind: 'purchaseStygianWellOffer', generationKey: 'initial:secondRight' },
+        order(project).length - 1,
+      ),
+    ).toBe(true);
+    // A misordered document is kept with its finding, never rewritten.
+    const misordered = applyProjectCommand(project, catalog, {
+      kind: 'MoveRoomAction',
+      action: actionAt(purchase),
+      toIndex: wellAt,
+    });
+    expect(order(misordered)[wellAt]).toEqual(purchase);
+    expect(findings(misordered).map((finding) => finding.origin)).toContain(
+      semanticAddressKey(actionAt(purchase)),
+    );
   });
 });

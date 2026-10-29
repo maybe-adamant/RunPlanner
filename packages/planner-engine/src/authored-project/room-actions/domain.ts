@@ -40,6 +40,7 @@ import {
   seaStarDuplicateUsesFreshObject,
 } from '../acquisition/sea-star';
 import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../shop';
+import { INITIAL_ROLL_KEY, parseStygianWellGenerationKey } from '../feature-rolls';
 import {
   INFERNAL_CONTRACT_ENTRY_KEY,
   INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
@@ -274,6 +275,38 @@ function hermesShrinePurchaseDependencies(
     : [frozen({ kind: 'afterAction' as const, action: source, authoringOnly: true as const })];
 }
 
+/**
+ * A purchase or sale from a reroll's roll follows that reroll. The game shows
+ * the roll only after the press, so the order constrains authoring; a roll
+ * whose reroll is gone has no dependency and keeps its own finding.
+ */
+function rollDependencies(
+  occurrence: RoomOccurrence,
+  reference: RoomActionReference,
+): readonly RoomActionDependency[] {
+  const roll =
+    reference.kind === 'purchaseStygianWellOffer'
+      ? reference.generationKey === 'travelDealRefill'
+        ? undefined
+        : {
+            kind: 'rerollStygianWell',
+            rollKey: parseStygianWellGenerationKey(reference.generationKey)?.rollKey,
+          }
+      : reference.kind === 'sellPurgingPoolTrait'
+        ? { kind: 'rerollPurgingPool', rollKey: reference.rollKey }
+        : undefined;
+  if (roll?.rollKey === undefined || roll.rollKey === INITIAL_ROLL_KEY) return [];
+  const reroll = occurrence.roomActions.order.find(
+    (candidate) =>
+      candidate.kind === roll.kind &&
+      'rerollId' in candidate &&
+      candidate.rerollId === roll.rollKey,
+  );
+  return reroll === undefined
+    ? []
+    : [frozen({ kind: 'afterAction' as const, action: reroll, authoringOnly: true as const })];
+}
+
 function travelDealDependencies(
   occurrence: RoomOccurrence,
   reference: RoomActionReference,
@@ -346,7 +379,10 @@ function baseContribution(
         reference,
         'optional',
         frozen({ kind: 'postOutgoing' }),
-        travelDealDependencies(occurrence, reference),
+        [
+          ...travelDealDependencies(occurrence, reference),
+          ...rollDependencies(occurrence, reference),
+        ],
       );
     case 'purchaseHermesShrineOffer':
       return contribution(
@@ -533,6 +569,14 @@ function baseContribution(
       );
     }
     case 'sellPurgingPoolTrait':
+      return contribution(
+        biome,
+        occurrence,
+        reference,
+        'optional',
+        frozen({ kind: 'postOutgoing' }),
+        rollDependencies(occurrence, reference),
+      );
     case 'rerollStygianWell':
     case 'rerollPurgingPool':
       return contribution(
