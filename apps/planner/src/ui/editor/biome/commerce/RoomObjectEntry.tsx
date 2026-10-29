@@ -136,6 +136,10 @@ export function RoomObjectEntry({
             key={pending}
             label=""
             model={interaction.choices(pending)}
+            onOpenChange={(open) => {
+              // Closing the list without a choice abandons the pick.
+              if (!open) setChoosing(undefined);
+            }}
             onSelect={(choice) => {
               setChoosing(undefined);
               executeIntent(interaction.choiceIntentFor(pending, choice.key));

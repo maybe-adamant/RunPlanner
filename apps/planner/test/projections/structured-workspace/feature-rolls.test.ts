@@ -261,6 +261,20 @@ describe('Stygian Well Interact', () => {
       locked: 'poolEmpty',
     });
   });
+
+  it('locks the entry once everything is bought and no reroll is offered', () => {
+    const plain = withScreenRerolls(
+      withArcana(loadUnderworldFStygianWellCheckpoint(), ['DoorReroll']),
+      ['CastCount', 'StartingGold', 'HealthRegen', 'BonusDodge', 'TradeOff'],
+    );
+    const { actions, interaction } = wellOf(projectStructuredWorkspaceFixture(plain));
+    expect(actions.locked).toBeUndefined();
+    const bought = apply(plain, interaction.intentFor(actions.options[0]!.key).command);
+    expect(wellOf(projectStructuredWorkspaceFixture(bought)).actions).toMatchObject({
+      options: [],
+      locked: 'allBought',
+    });
+  });
 });
 
 describe('Pool of Purging Interact', () => {

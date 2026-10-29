@@ -162,7 +162,7 @@ export interface WorkspaceStygianWellSlot {
 
 /** Why a Well or Pool option cannot be picked where it would be appended. */
 export type WorkspaceFeatureRollLock =
-  'unreached' | 'notEnabled' | 'nothingLeft' | 'poolEmpty' | 'poolShort';
+  'unreached' | 'notEnabled' | 'nothingLeft' | 'poolEmpty' | 'poolShort' | 'allBought' | 'allSold';
 
 /** One thing a Well or Pool visit can do next: buy or sell an offered slot, or reroll. */
 export interface WorkspaceFeatureRollOption {
@@ -180,7 +180,8 @@ export interface WorkspaceFeatureRollActions {
   readonly feature: import('@run-planner/engine/authored-project').RollFeature;
   /** Empty while the end of the room's actions is unreached. */
   readonly options: readonly WorkspaceFeatureRollOption[];
-  readonly locked?: 'unreached';
+  /** Nothing can be done here now. */
+  readonly locked?: WorkspaceFeatureRollLock;
 }
 
 /** One restocked slot of a Well or Pool reroll, optionally pinned on its Timeline row. */

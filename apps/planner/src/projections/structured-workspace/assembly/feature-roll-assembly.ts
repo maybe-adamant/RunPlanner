@@ -226,12 +226,18 @@ export function assembleFeatureRollActions(input: {
     );
     bound.push(Object.freeze({ key: 'reroll', kind: 'reroll' as const }));
   }
+  const locked: WorkspaceFeatureRollLock | undefined =
+    interaction === undefined
+      ? 'unreached'
+      : options.every((option) => option.locked !== undefined)
+        ? (options[0]?.locked ?? (feature === 'stygianWell' ? 'allBought' : 'allSold'))
+        : undefined;
   return Object.freeze({
     actions: Object.freeze({
       interactionKey,
       feature,
       options: Object.freeze(options),
-      ...(interaction === undefined ? { locked: 'unreached' as const } : {}),
+      ...(locked === undefined ? {} : { locked }),
     }),
     requirement: Object.freeze({
       kind: 'featureRollActions' as const,

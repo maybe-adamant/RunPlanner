@@ -21,7 +21,7 @@ const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze(
   sections: Object.freeze([]),
 });
 
-/** Why an Interact option cannot be picked here. */
+/** Why the entry, or one of its options, cannot be picked here. */
 function featureRollLockHint(lock: WorkspaceFeatureRollLock): string {
   switch (lock) {
     case 'unreached':
@@ -34,6 +34,10 @@ function featureRollLockHint(lock: WorkspaceFeatureRollLock): string {
       return 'No rerolls left.';
     case 'poolShort':
       return 'Not enough rerolls left.';
+    case 'allBought':
+      return 'Everything here is bought.';
+    case 'allSold':
+      return 'Everything here is sold.';
   }
 }
 
@@ -138,6 +142,10 @@ export function FeatureRollEntry({
             key={pending}
             label=""
             model={interaction.choices(pending)}
+            onOpenChange={(open) => {
+              // Closing the list without a choice abandons the pick.
+              if (!open) setChoosing(undefined);
+            }}
             onSelect={(value) => {
               setChoosing(undefined);
               executeIntent(interaction.choiceIntentFor(pending, value));
