@@ -3,6 +3,7 @@ import {
   optionIndex,
   semanticAddressKey,
   updateAuthoredTraitCarrierChild,
+  type AuthoredAllTogetherResult,
   type AuthoredTraitCarrierChild,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -11,8 +12,8 @@ import {
   type TraitOptionKey,
 } from '../../authored-project';
 import { authoredTraitOfferAt } from '../../authored-project/commands/trait-offer';
-import { concaveStoneProcGiver } from '../../catalog-schema';
-import type { RunRecordRoom } from '../../run-record/model';
+import { concaveStoneProcGiver, type DirectTraitSetKey } from '../../catalog-schema';
+import type { RunRecordRoom, RunRecordTraitAcquisition } from '../../run-record/model';
 import type { TraitCarrierChildDomainEvaluation } from '../candidates/trait-offer/query';
 import {
   completeCarrierChild,
@@ -32,10 +33,13 @@ type Child<K extends AuthoredTraitCarrierChild['kind']> = Extract<
 /** One child the record may answer, with the room its screen was in. */
 interface ChildQuestion<K extends AuthoredTraitCarrierChild['kind']> {
   readonly context: RunImportContext;
+  readonly trait: TraitOfferAddress;
   readonly value: AuthoredTraitOfferTraits;
   readonly child: Child<K>;
   readonly room: RunRecordRoom;
   readonly roomIndex: number;
+  /** The room's acquisition of the child's own carrier trait. */
+  readonly acquisition: RunRecordTraitAcquisition | undefined;
   /** When the room acquired the child's own carrier trait; undefined when the record holds no time. */
   readonly at: number | undefined;
   readonly domain: TraitCarrierChildDomainEvaluation;
@@ -72,8 +76,11 @@ const childKey = (child: AuthoredTraitCarrierChild) =>
 const childOptionKey = (value: AuthoredTraitOfferTraits, child: AuthoredTraitCarrierChild) =>
   child.kind === 'concaveStone' ? value.selectedOptionKey : child.optionKey;
 
+const acquisitionOf = (room: RunRecordRoom, traitKey: string | undefined) =>
+  room.traits.acquired.find((trait) => trait.name === traitKey);
+
 const acquiredAt = (room: RunRecordRoom, traitKey: string | undefined) =>
-  room.traits.acquired.find((trait) => trait.name === traitKey)?.worldTime;
+  acquisitionOf(room, traitKey)?.worldTime;
 
 /**
  * Authors every selected-outcome child of a screen's offer from the record,
@@ -119,14 +126,19 @@ export function completeRecordedCarrierChildren(
         !settled.has(childKey(candidate)),
     );
     if (child === undefined) break;
-    const carrier = current.options[optionIndex(childOptionKey(current, child))]?.traitKey;
+    const acquisition = acquisitionOf(
+      room,
+      current.options[optionIndex(childOptionKey(current, child))]?.traitKey,
+    );
     const answer = recordedAnswer({
       context,
+      trait,
       value: current,
       child,
       room,
       roomIndex,
-      at: acquiredAt(room, carrier),
+      acquisition,
+      at: acquisition?.worldTime,
       domain: evaluate({ kind: 'traitCarrierChildDomain', trait, value: current, child }),
       stoneFromRecord,
     });
@@ -156,7 +168,9 @@ function recordedAnswer(question: ChildQuestion<AuthoredTraitCarrierChild['kind'
     case 'concaveStone':
       return concaveStone({ ...question, child });
     case 'latestModelTargets':
+      return latestModelTargets({ ...question, child });
     case 'allTogetherSet':
+      return allTogether({ ...question, child });
     case 'naturalSelectionResult':
     case 'circeResolution':
     case 'echoLastRunBoon':
@@ -165,23 +179,31 @@ function recordedAnswer(question: ChildQuestion<AuthoredTraitCarrierChild['kind'
   }
 }
 
-/** A promoting pick's target is the trait its room upgraded at the pick's own acquisition time. */
+/**
+ * A promoting pick's target: the trait the game saved as its `UpgradedTraitName`,
+ * else, in an older record, the trait its room upgraded at the pick's own
+ * acquisition time. A target already at Heroic shows no upgrade.
+ */
 function promotionTarget(question: ChildQuestion<'traitAcquisitionTarget'>): ChildAnswer {
-  const { context, value, child, room, at, domain } = question;
+  const { context, value, child, room, acquisition, at, domain } = question;
   if (
     domain.kind !== 'traitAcquisitionTargetDomain' ||
     context.catalog.traits.byKey[child.traitKey]?.targetedAcquisition?.kind !==
-      'promoteGodTraitToHeroic' ||
-    at === undefined
+      'promoteGodTraitToHeroic'
   )
     return undefined;
-  const recorded = [
-    ...new Set(
-      room.traits.upgraded
-        .filter((upgrade) => upgrade.worldTime === at)
-        .map((upgrade) => upgrade.name),
-    ),
-  ];
+  const recorded =
+    acquisition?.upgradedTrait !== undefined
+      ? [acquisition.upgradedTrait]
+      : at === undefined
+        ? []
+        : [
+            ...new Set(
+              room.traits.upgraded
+                .filter((upgrade) => upgrade.worldTime === at)
+                .map((upgrade) => upgrade.name),
+            ),
+          ];
   if (recorded.length === 0) return undefined;
   const supported = recorded.filter((name) =>
     domain.result.candidates.some(
@@ -196,6 +218,99 @@ function promotionTarget(question: ChildQuestion<'traitAcquisitionTarget'>): Chi
       targetTraitKey: supported[0]!,
     }),
     assumed: supported.length > 1,
+  };
+}
+
+/**
+ * Latest Model's Hammers: the Hammer traits its room upgraded at the pick's own
+ * acquisition time (`UpgradeHammers` re-adds each at its new rarity), taken
+ * row by row through the engine's domain.
+ */
+function latestModelTargets(question: ChildQuestion<'latestModelTargets'>): ChildAnswer {
+  const { context, trait, value, child, room, at } = question;
+  if (at === undefined) return undefined;
+  const recorded = [
+    ...new Set(
+      room.traits.upgraded
+        .filter((upgrade) => upgrade.worldTime === at)
+        .map((upgrade) => upgrade.name),
+    ),
+  ];
+  let current = value;
+  for (let row = 0; row < 3; row += 1) {
+    const domain = context
+      .candidates()
+      .evaluate({ kind: 'traitCarrierChildDomain', trait, value: current, child });
+    if (domain.kind !== 'latestModelTargetsDomain') return undefined;
+    const held: readonly string[] =
+      current.options[optionIndex(child.optionKey)]?.icarusHammerTargets ?? [];
+    if (held.length > 0 && held.length >= domain.result.requiredCount) return { value: current };
+    const domainRow = domain.result.rows[held.length];
+    if (domainRow === undefined) return undefined;
+    const candidates = new Set(
+      domain.result.candidates.map((candidate) => candidate.result.traitKey),
+    );
+    const remaining = recorded.filter((name) => candidates.has(name) && !held.includes(name));
+    if (remaining.length === 0) return held.length === 0 ? undefined : 'refused';
+    const supported = new Set(
+      domain.result.candidates
+        .filter((candidate) => candidate.result.supported)
+        .map((candidate) => candidate.result.traitKey),
+    );
+    const traitKey = remaining.find(
+      (name) => supported.has(name) && domainRow.availableTargetTraitKeys.includes(name),
+    );
+    const targets = traitKey === undefined ? undefined : domainRow.valueByTraitKey[traitKey];
+    if (targets === undefined) return 'refused';
+    current = updateAuthoredTraitCarrierChild(current, {
+      kind: 'latestModelTargets',
+      child,
+      icarusHammerTargets: targets,
+    });
+  }
+  return undefined;
+}
+
+/**
+ * All Together's sets: each set's trait the room acquired at the pick's own
+ * acquisition time (`GrantBoons` grants them together), else none.
+ */
+function allTogether(question: ChildQuestion<'allTogetherSet'>): ChildAnswer {
+  const { context, trait, value, child, room, at } = question;
+  const disposition = context.catalog.traits.byKey[child.traitKey]?.selectedDisposition;
+  if (disposition?.kind !== 'directTraitSets' || at === undefined) return undefined;
+  const granted = new Set(
+    room.traits.acquired.filter((entry) => entry.worldTime === at).map((entry) => entry.name),
+  );
+  const sets = discoverAuthoredTraitCarrierChildren(context.catalog, trait, value).filter(
+    (candidate): candidate is Child<'allTogetherSet'> =>
+      candidate.kind === 'allTogetherSet' && candidate.optionKey === child.optionKey,
+  );
+  const result: Partial<Record<DirectTraitSetKey, string | null>> = {};
+  for (const set of sets) {
+    const members: readonly string[] =
+      disposition.sets.find((entry) => entry.key === set.setKey)?.traitKeys ?? [];
+    const recorded = members.filter((name) => granted.has(name));
+    if (recorded.length > 1) return undefined;
+    const answer = recorded[0] ?? null;
+    const domain = context
+      .candidates()
+      .evaluate({ kind: 'traitCarrierChildDomain', trait, value, child: set });
+    if (domain.kind !== 'allTogetherSetDomain') return undefined;
+    if (
+      !domain.result.candidates.some(
+        (candidate) => candidate.value === answer && candidate.support !== 'impossible',
+      )
+    )
+      return 'refused';
+    result[set.setKey] = answer;
+  }
+  return {
+    value: updateAuthoredTraitCarrierChild(value, {
+      kind: 'allTogetherSet',
+      child,
+      allTogetherResult: Object.freeze(result) as AuthoredAllTogetherResult,
+    }),
   };
 }
 

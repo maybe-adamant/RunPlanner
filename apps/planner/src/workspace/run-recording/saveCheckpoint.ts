@@ -76,6 +76,8 @@ export interface SavedTrait {
   readonly sourceName?: string;
   /** The numbers at the paths kept for this trait's name, by dotted path. */
   readonly savedValues?: Readonly<Record<string, number>>;
+  /** `UpgradedTraitName`: the trait a promoting pick such as Bridal Glow upgraded. */
+  readonly upgradedTrait?: string;
 }
 
 export interface SavedHero {
@@ -481,6 +483,7 @@ function hero(
         ...optional('rarityUpgradeUses', number(atPath(entry, 'RarityUpgradeData.Uses'))),
         ...optional('sourceName', text(entry.SourceName)),
         ...optional('savedValues', savedValues(entry, savedValuePaths.get(name))),
+        ...optional('upgradedTrait', text(entry.UpgradedTraitName)),
       },
     ];
   });

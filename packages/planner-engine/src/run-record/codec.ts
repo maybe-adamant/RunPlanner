@@ -363,7 +363,12 @@ function traitChanges(value: unknown, label: string): RunRecordTraitChanges {
   return Object.freeze({
     acquired: list(record.acquired, `${label}.acquired`, (entry, path) => {
       const row = object(entry, path);
-      exact(row, ['name'], ['rarity', 'level', 'worldTime', 'remainingUses', 'savedValues'], path);
+      exact(
+        row,
+        ['name'],
+        ['rarity', 'level', 'worldTime', 'remainingUses', 'savedValues', 'upgradedTrait'],
+        path,
+      );
       return Object.freeze({
         name: text(row.name, `${path}.name`),
         ...optional(row, 'rarity', path, text),
@@ -371,6 +376,7 @@ function traitChanges(value: unknown, label: string): RunRecordTraitChanges {
         ...optional(row, 'worldTime', path, worldTime),
         ...optional(row, 'remainingUses', path, (item, at) => integer(item, at, 0)),
         ...optional(row, 'savedValues', path, savedValues),
+        ...optional(row, 'upgradedTrait', path, text),
       });
     }),
     removed: list(record.removed, `${label}.removed`, text),

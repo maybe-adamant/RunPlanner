@@ -304,6 +304,8 @@ export interface RunRecordTraitAcquisition {
    * to keep, by dotted path (a numeric segment is a 1-based Lua array key).
    */
   readonly savedValues?: Readonly<Record<string, number>>;
+  /** `UpgradedTraitName`: the trait a promoting pick such as Bridal Glow upgraded. */
+  readonly upgradedTrait?: string;
 }
 
 export type RunRecordStoreKind = 'worldShop' | 'hermesShrine' | 'well';

@@ -982,6 +982,26 @@ describe('run record builder', () => {
     expect(record.rooms[1]!.traits.acquired).toEqual([]);
   });
 
+  it('carries the trait a promoting pick upgraded on its acquisition', () => {
+    const bridalGlow: SavedTrait = {
+      name: 'BoonDecayBoon',
+      id: '1248.330.75',
+      upgradedTrait: 'HeraWeaponBoon',
+    };
+    const first = save({ history: [], current: room('F_Opening01'), worldTime: 20 });
+    const second = save({
+      history: ['F_Opening01'],
+      current: room('F_Combat01'),
+      departure: room('F_Opening01'),
+      traits: [...startTraits, bridalGlow],
+      worldTime: 50,
+    });
+    const record = buildRunRecord([first, second]);
+    expect(record.rooms[0]!.traits.acquired).toEqual([
+      { name: 'BoonDecayBoon', worldTime: 48.33, upgradedTrait: 'HeraWeaponBoon' },
+    ]);
+  });
+
   it('attributes the store loss of door creation to the one untaken door without an offer', () => {
     const source = room('H_Combat15', {
       exitDoors: [

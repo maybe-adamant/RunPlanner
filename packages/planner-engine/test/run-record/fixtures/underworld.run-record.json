@@ -594,7 +594,14 @@
         }
       ],
       "traits": {
-        "acquired": [{ "name": "BoonDecayBoon", "rarity": "Common", "worldTime": 154.09256368363 }],
+        "acquired": [
+          {
+            "name": "BoonDecayBoon",
+            "rarity": "Common",
+            "worldTime": 154.09256368363,
+            "upgradedTrait": "HeraSpecialBoon"
+          }
+        ],
         "removed": [],
         "upgraded": [
           {

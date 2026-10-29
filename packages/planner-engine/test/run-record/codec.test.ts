@@ -201,6 +201,28 @@ describe('run record codec', () => {
     rejects(acquire({ Cost: '19' }), /savedValues.Cost must be finite/);
   });
 
+  it("keeps a promoting pick's upgraded trait, and decodes an older record without one", () => {
+    const acquire = (row: Record<string, unknown>) => (record: Record<string, unknown>) =>
+      ((room(record, 1).traits as Record<string, unknown>).acquired = [row]);
+    const saved = minimal();
+    acquire({ name: 'BoonDecayBoon', worldTime: 20.5, upgradedTrait: 'HeraWeaponBoon' })(saved);
+    expect(decodeRunRecord(saved).rooms[1]?.traits.acquired[0]).toEqual({
+      name: 'BoonDecayBoon',
+      worldTime: 20.5,
+      upgradedTrait: 'HeraWeaponBoon',
+    });
+    expect(decodeRunRecord(JSON.parse(encodeRunRecord(decodeRunRecord(saved))))).toEqual(
+      decodeRunRecord(saved),
+    );
+    const older = minimal();
+    acquire({ name: 'BoonDecayBoon', worldTime: 20.5 })(older);
+    expect(decodeRunRecord(older).rooms[1]?.traits.acquired[0]).toEqual({
+      name: 'BoonDecayBoon',
+      worldTime: 20.5,
+    });
+    rejects(acquire({ name: 'BoonDecayBoon', upgradedTrait: '' }), /upgradedTrait/);
+  });
+
   it('keeps the visit chain and outcome consistent', () => {
     rejects((record) => (room(record, 0).exit = 'F_Combat02'), /exit must name the next room/);
     rejects((record) => (room(record, 1).exit = 'F_Combat02'), /rooms\[1\].exit must be absent/);

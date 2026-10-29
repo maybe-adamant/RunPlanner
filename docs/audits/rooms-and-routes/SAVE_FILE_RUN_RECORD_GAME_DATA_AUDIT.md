@@ -453,7 +453,14 @@ while `TotalTime` continues from the save (run 1010, `G_Combat05`), so the
 window after a relaunch starts at zero. Together they order and timestamp every trait-granting acquisition (boons, hammers, Chaos
 blessings, talents, keepsakes and swaps, Max Health and Max Magick traits,
 pending Hermes deliveries, Essences) and place each one between two
-checkpoints. A trait later removed (sold, swapped, expired) survives only in
+checkpoints. A selected trait's own grants share its `_worldTime`: All
+Together's set boons (`GrantBoons`, `TraitLogic.lua:2703`), Bridal Glow's
+promoted boon and Latest Model's Hammers are re-added in the same call, so
+they show as acquisitions or upgrades at the carrier's time (run 1011
+`O_MiniBoss01`: the four set boons with `AllElementalBoon`). Bridal Glow also
+keeps its target as `UpgradedTraitName` (`TraitLogic.lua:2834`), one of the
+`PersistentTraitKeys` (`TraitData.lua:34`), so it is saved even when the
+target was already Heroic and shows no upgrade. A trait later removed (sold, swapped, expired) survives only in
 the checkpoints taken while it was held. Gold, fountain heals, and consumables
 that add no trait carry no timestamp; `UseRecord` and `ConsumableRecord` are
 counters without order.
@@ -541,10 +548,13 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
 - A selected trait's outcome children are answered from the record on the
   screen's final rows, each from what its room acquired or upgraded at the
   child's own carrier's acquisition time, and each checked against the
-  engine's domain for that child: Bridal Glow's target is the trait upgraded
-  at its acquisition time, Echo's Pom target the trait whose level doubled
-  there, and Concave Stone's extra pick the result of the screen it followed
-  (its own children keyed to the extra pick's time). Several qualifying values
+  engine's domain for that child: All Together's sets are the set boons
+  acquired at its time (a set with none takes none), Bridal Glow's target its
+  saved `UpgradedTraitName`, else in an older record the trait upgraded at its
+  time, Latest Model's Hammers the Hammers upgraded at its time, Echo's Pom
+  target the trait whose level doubled there, and Concave Stone's extra pick
+  the result of the screen it followed (its own children keyed to the extra
+  pick's time). Several qualifying values
   take the first the engine admits, an assumption. A child the record does not
   answer, or whose recorded value the engine refuses, takes Draft's first
   eligible value and is reported, so no such child stops the import; one an

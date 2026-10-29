@@ -187,6 +187,32 @@ describe('save checkpoint extraction', () => {
     );
   });
 
+  it('reads the trait a promoting pick upgraded from its UpgradedTraitName', () => {
+    const save = sample('underworld-062');
+    const run = save.globals.CurrentRun as LuaTable;
+    const hero = run.Hero as LuaTable;
+    const bridalGlow: LuaTable = {
+      Name: 'BoonDecayBoon',
+      Id: '4016382.919750304080.80000641569495',
+      UpgradedTraitName: 'HeraWeaponBoon',
+    };
+    const withBridalGlow: DecodedSave = {
+      ...save,
+      globals: {
+        ...save.globals,
+        CurrentRun: {
+          ...run,
+          Hero: { ...hero, Traits: [...(hero.Traits as LuaTable[]), bridalGlow] },
+        },
+      },
+    };
+    const traits = extractSaveCheckpoint(withBridalGlow, true, NO_SAVED_VALUES).hero!.traits;
+    expect(traits.find((trait) => trait.name === 'BoonDecayBoon')?.upgradedTrait).toBe(
+      'HeraWeaponBoon',
+    );
+    expect(traits.filter((trait) => trait.upgradedTrait !== undefined)).toHaveLength(1);
+  });
+
   it("reads the hero's element counts, leaving out zeros", () => {
     const save = sample('underworld-062');
     const run = save.globals.CurrentRun as LuaTable;

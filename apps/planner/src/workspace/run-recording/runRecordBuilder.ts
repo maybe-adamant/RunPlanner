@@ -410,6 +410,7 @@ function traitChanges(saves: readonly RoomSaves[], roomCount: number): readonly 
         ...optional('worldTime', time),
         ...optional('remainingUses', whole(trait.remainingUses)),
         ...optional('savedValues', trait.savedValues),
+        ...optional('upgradedTrait', trait.upgradedTrait),
       });
     }
     for (const trait of lost) target.removed.push(trait.name);

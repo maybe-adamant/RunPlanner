@@ -797,6 +797,25 @@ describe('run import of the Surface victory', () => {
     ).toBe(false);
   });
 
+  it("imports O_MiniBoss01's All Together sets and N_Combat21's Bridal Glow target exactly", () => {
+    const allTogether = reward(imported.project, 'O-r24').traitOffersByAcquisitionRole['source'];
+    expect(allTogether?.kind === 'traits' && allTogether.options[2]).toEqual({
+      traitKey: 'AllElementalBoon',
+      rarity: 'Legendary',
+      allTogetherResult: {
+        earth: 'ElementalOlympianDamageBoon',
+        fire: 'ElementalRallyBoon',
+        air: 'ElementalDodgeBoon',
+        water: 'ElementalDamageCapBoon',
+      },
+    });
+    const bridalGlow = reward(imported.project, 'N-r7').traitOffersByAcquisitionRole['source'];
+    expect(bridalGlow?.kind === 'traits' && bridalGlow.options[2]).toMatchObject({
+      traitKey: 'BoonDecayBoon',
+      targetTraitKey: 'HeraWeaponBoon',
+    });
+  });
+
   it("imports Aspect of Selene's Nacelle tree with its slot-0 node", () => {
     expect(imported.project.route.loadout.aspectHexTree).toMatchObject({
       layoutKey: 'Nacelle',
@@ -980,8 +999,7 @@ describe('run import of the Surface victory', () => {
   it('reports every value the record did not answer exactly', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: { conversion: 2, doors: 1, reward: 1, shop: 2, traitOffer: 3 },
-      mismatch: { traits: 8 },
-      notInRecord: { reward: 1, traitOffer: 1 },
+      notInRecord: { reward: 1 },
       stopped: { pathOfStars: 1 },
     });
     expect(entryLines(imported.report)).toEqual([
@@ -995,18 +1013,9 @@ describe('run import of the Surface victory', () => {
       'assumption doors r30 exitDecision@P:start',
       'assumption reward r31 acquisitionRole@P-r31:self -> ReplaceSeaStarResult(P-r31)',
     ]);
-    // O_Combat12's solved offers draw what the game drew, so its pickups and stores agree; All
-    // Together's guessed sets are not the four the game granted.
-    expect(mismatchLines(imported.report)).toEqual([
-      'traits r25 ElementalDamageBoon: absent | held',
-      'traits r25 ElementalBaseDamageBoon: absent | held',
-      'traits r25 ElementalDamageFloorBoon: absent | held',
-      'traits r25 ElementalHealthBoon: absent | held',
-      'traits r25 ElementalOlympianDamageBoon: held | absent',
-      'traits r25 ElementalRallyBoon: held | absent',
-      'traits r25 ElementalDamageCapBoon: held | absent',
-      'traits r25 ElementalDodgeBoon: held | absent',
-    ]);
+    // O_Combat12's solved offers draw what the game drew, and All Together grants the sets the
+    // game granted, so pickups, stores and traits agree.
+    expect(mismatchLines(imported.report)).toEqual([]);
   });
 });
 
@@ -1502,6 +1511,16 @@ describe('run import of Sea Star duplicates', () => {
   });
 });
 
+/** Every authored trait option of `traitKey` within a value, however deeply its owner nests it. */
+function authoredOptions(value: unknown, traitKey: string): readonly Record<string, unknown>[] {
+  if (typeof value !== 'object' || value === null) return [];
+  const record = value as Record<string, unknown>;
+  return [
+    ...(record['traitKey'] === traitKey ? [record] : []),
+    ...Object.values(record).flatMap((nested) => authoredOptions(nested, traitKey)),
+  ];
+}
+
 describe('run import of selected-outcome children', () => {
   /** A record with one room's trait rows edited. */
   function withRoomTraits(
@@ -1517,9 +1536,31 @@ describe('run import of selected-outcome children', () => {
     };
   }
 
-  it("takes the first eligible Bridal Glow target when the record shows no upgrade at the pick's time", () => {
+  it("takes Bridal Glow's saved target when its room shows no upgrade, as for a target already Heroic", () => {
     const record = withRoomTraits(fixture('underworld'), 6, (traits) => ({
       ...traits,
+      upgraded: [],
+    }));
+    const imported = projectFromRunRecord(catalog, record);
+    expect(imported.kind).toBe('complete');
+    expect(authoredOptions(occurrence(imported.project, 'F-r6'), 'BoonDecayBoon')).toEqual([
+      expect.objectContaining({ targetTraitKey: 'HeraSpecialBoon' }),
+    ]);
+    expect(
+      imported.report.entries.filter(
+        (entry) => entry.area === 'traitOffer' && entry.record?.roomIndex === 6,
+      ),
+    ).toEqual([]);
+  });
+
+  it("takes the first eligible Bridal Glow target when an older record shows no upgrade at the pick's time", () => {
+    const record = withRoomTraits(fixture('underworld'), 6, (traits) => ({
+      ...traits,
+      acquired: traits.acquired.map((trait) => {
+        const legacy = { ...trait };
+        delete legacy.upgradedTrait;
+        return legacy;
+      }),
       upgraded: [],
     }));
     const imported = projectFromRunRecord(catalog, record);
