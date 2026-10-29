@@ -1,6 +1,7 @@
 import {
   createBiomeAddress,
   createHubFountainAddress,
+  hubActionOrderRefusal,
   hubFountainPrecedingVisitCount,
   hubVisitSlotKeys,
   semanticAddressKey,
@@ -185,7 +186,9 @@ export function bindHubInteractions(
           let loaded: readonly CandidateOptionProjection<readonly HubAction[]>[] | undefined;
           const load = () =>
             (loaded ??= candidates.hubActionOrders(requirement.owner, Object.freeze([value])));
+          const refusal = hubActionOrderRefusal(requirement, value);
           const proposal = Object.freeze({
+            ...(refusal === undefined ? {} : { refusal }),
             choices: Object.freeze([
               Object.freeze({
                 label:

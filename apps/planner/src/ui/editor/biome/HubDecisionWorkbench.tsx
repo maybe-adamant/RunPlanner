@@ -1,6 +1,9 @@
 import { type KeyboardEvent as ReactKeyboardEvent, useLayoutEffect, useRef, useState } from 'react';
 
-import { semanticAddressKey } from '@run-planner/engine/authored-project';
+import {
+  semanticAddressKey,
+  type HubActionOrderRefusal,
+} from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -47,6 +50,14 @@ const hubWorkbenchTabs: readonly { readonly key: WorkspaceHubTab; readonly label
     Object.freeze({ key: 'timeline', label: 'Hub Timeline' }),
     Object.freeze({ key: 'exit', label: 'Hub Exit' }),
   ]);
+
+/** Why a proposed Hub action order cannot replace the current one. */
+function hubActionOrderRefusalHint(refusal: HubActionOrderRefusal): string {
+  switch (refusal) {
+    case 'rerollsChanged':
+      return 'Remove Hub rerolls first.';
+  }
+}
 
 function domId(value: string): string {
   return value.replaceAll(/[^A-Za-z0-9_-]/g, '-');
@@ -295,17 +306,14 @@ export function HubDecisionWorkbench({
       {timelineView === 'map' ? 'Details →' : 'Back to Map'}
     </button>
   );
-  // The order cannot be cleared while it holds board-door rerolls.
-  const resetHeldByRerolls = actionOrderInteraction.selectedActions.some(
-    (action) => action.kind === 'reroll',
-  );
+  const resetRefusal = resetActionOrder.refusal;
   const resetVisitsControl = (
     <button
       aria-busy={resetCandidates.pending || undefined}
       className="danger-action action-compact"
       disabled={
         hubTarget.inert ||
-        resetHeldByRerolls ||
+        resetRefusal !== undefined ||
         !actionOrderInteraction.contextReached ||
         actionOrderInteraction.selectedActions.length === 0 ||
         resetCandidates.pending ||
@@ -318,8 +326,8 @@ export function HubDecisionWorkbench({
       onFocus={() => resetCandidates.activate()}
       onPointerDown={() => resetCandidates.activate()}
       {...hintProps(
-        resetHeldByRerolls
-          ? 'Remove Hub rerolls first.'
+        resetRefusal !== undefined
+          ? hubActionOrderRefusalHint(resetRefusal)
           : !actionOrderInteraction.contextReached || candidateWaits(resetCandidates.result?.[0])
             ? candidateWaitingHint
             : undefined,

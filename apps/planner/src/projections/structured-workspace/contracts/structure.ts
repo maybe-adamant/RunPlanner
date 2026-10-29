@@ -9,6 +9,7 @@ import type {
   ExitDecisionAddress,
   ExitDecisionSourceAddress,
   HubAction,
+  HubActionOrderRefusal,
   HubDecisionAddress,
   HubFountainAddress,
   HubOpenSetAddress,
@@ -916,6 +917,8 @@ export type WorkspaceHubSlotInteraction =
 export interface WorkspaceHubActionOrderProposal extends WorkspaceCandidateInteraction<
   readonly HubAction[]
 > {
+  /** Why the order cannot replace the current one, such as dropping its rerolls. */
+  readonly refusal?: HubActionOrderRefusal;
   readonly intent: () => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceHubActionOrder' }>
   >;
