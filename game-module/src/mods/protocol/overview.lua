@@ -249,11 +249,9 @@ local function stygianWell(value, label)
 end
 
 local function shrinePurchase(value, label)
-    local row, errorMessage = p.exact(value, { "roomDelay", "rushed" }, {}, label)
+    local row, errorMessage = p.exact(value, { "rushed" }, {}, label)
     if not row then return nil, errorMessage end
-    if not p.int(row.roomDelay, label .. ".roomDelay", 2)
-        or row.roomDelay > 8
-        or not p.bool(row.rushed, label .. ".rushed") then
+    if not p.bool(row.rushed, label .. ".rushed") then
         return p.fail(label .. " has invalid purchase disposition")
     end
     return row
@@ -269,7 +267,7 @@ local function hermesShrine(value, label)
     for index, valueRow in ipairs(offers) do
         local row, rowError = p.exact(
             valueRow,
-            { "generationKey", "optionKey", "rewardType", "slotIndex" },
+            { "generationKey", "optionKey", "rewardType", "slotIndex", "roomDelay" },
             { "purchase", "deliverySourceKey" },
             label .. ".offers[" .. index .. "]"
         )
@@ -283,7 +281,8 @@ local function hermesShrine(value, label)
             or not p.int(row.slotIndex, label .. ".slotIndex", 1)
             or row.slotIndex > 3
             or not p.str(row.optionKey, label .. ".optionKey")
-            or not p.str(row.rewardType, label .. ".rewardType") then
+            or not p.str(row.rewardType, label .. ".rewardType")
+            or not p.shrineRoomDelay(row.roomDelay, label .. ".roomDelay") then
             return p.fail(label .. " has invalid Shrine offer")
         end
         if row.deliverySourceKey ~= nil

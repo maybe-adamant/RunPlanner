@@ -51,16 +51,14 @@ local function deliveryDelayChoices(active, options, room, state)
     local byGeneration = {}
     local shrine = active and active.occurrence.overview.hermesShrine
     for _, offer in ipairs(shrine and shrine.offers or {}) do
-        if offer.purchase ~= nil then byGeneration[offer.generationKey] = offer.purchase.roomDelay end
+        byGeneration[offer.generationKey] = offer.roomDelay
     end
     local refillHandle = active and room.resolve(state, active,
         { kind = "travelDealRefill", carrier = "hermesShrine" }) or nil
     local refillPayload = refillHandle and room.peek(state, refillHandle) or nil
     local refill = refillPayload and refillPayload.transaction and refillPayload.transaction.refill
     local replacement = refill and refill.replacement
-    if replacement and replacement.purchase ~= nil then
-        byGeneration[replacement.generationKey] = replacement.purchase.roomDelay
-    end
+    if replacement then byGeneration[replacement.generationKey] = replacement.roomDelay end
 
     local indices = {}
     for index, option in pairs(options or {}) do

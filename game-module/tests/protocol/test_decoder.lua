@@ -756,8 +756,8 @@ local function minimalShrinePlan()
             source = { generationKey = "initial:first", slotIndex = 1 },
             replacement = {
                 generationKey = "travelDealRefill", slotIndex = 1,
-                optionKey = "Armor", rewardType = "ArmorDrop",
-                purchase = { roomDelay = 8, rushed = false },
+                optionKey = "Armor", rewardType = "ArmorDrop", roomDelay = 8,
+                purchase = { rushed = false },
                 deliverySourceKey = "hermesShrineDelivery:source:refill",
             },
         },
@@ -766,16 +766,16 @@ local function minimalShrinePlan()
         offers = {
             {
                 generationKey = "initial:first", optionKey = "Heal", rewardType = "HealBigDrop",
-                slotIndex = 1, purchase = { roomDelay = 2, rushed = true },
+                slotIndex = 1, roomDelay = 2, purchase = { rushed = true },
                 deliverySourceKey = "hermesShrineDelivery:source:first",
             },
             {
                 generationKey = "initial:secondLeft", optionKey = "Health", rewardType = "MaxHealthDrop",
-                slotIndex = 2,
+                slotIndex = 2, roomDelay = 3,
             },
             {
                 generationKey = "initial:secondRight", optionKey = "Mana", rewardType = "MaxManaDrop",
-                slotIndex = 3,
+                slotIndex = 3, roomDelay = 4,
             },
         },
     })
@@ -799,6 +799,11 @@ function TestProtocol.testHermesShrinePurchaseRequiresDeliverySourcePair()
         function(plan)
             plan.occurrences[1].timeline.transactions[1].refill.replacement.purchase = nil
         end,
+        function(plan) plan.occurrences[1].overview.hermesShrine.offers[2].roomDelay = nil end,
+        function(plan) plan.occurrences[1].overview.hermesShrine.offers[2].roomDelay = 9 end,
+        function(plan) plan.occurrences[1].overview.hermesShrine.offers[1].purchase.roomDelay = 2 end,
+        function(plan) plan.occurrences[1].timeline.transactions[1].refill.replacement.roomDelay = 1 end,
+        function(plan) plan.occurrences[1].timeline.transactions[1].refill.replacement.purchase.roomDelay = 8 end,
     }
     for _, mutate in ipairs(mutations) do
         local plan = minimalShrinePlan()
@@ -2065,7 +2070,7 @@ function TestProtocol.testEveryTimelineTransactionUnionDecodes()
                 source = { generationKey = "initial:first", slotIndex = 1 },
                 replacement = {
                     generationKey = "travelDealRefill", slotIndex = 1,
-                    optionKey = "TalentDrop", rewardType = "TalentDrop",
+                    optionKey = "TalentDrop", rewardType = "TalentDrop", roomDelay = 5,
                 },
             },
         },

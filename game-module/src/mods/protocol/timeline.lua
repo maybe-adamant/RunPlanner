@@ -316,7 +316,7 @@ local function travelDealRefill(value, label)
         if not row then return nil, rowError end
         local source, sourceError = p.exact(row.source, { "generationKey", "slotIndex" }, {}, label .. ".refill.source")
         local replacement, replacementError = p.exact(row.replacement,
-            { "generationKey", "slotIndex", "optionKey", "rewardType" }, { "deliverySourceKey", "purchase" },
+            { "generationKey", "slotIndex", "optionKey", "rewardType", "roomDelay" }, { "deliverySourceKey", "purchase" },
             label .. ".refill.replacement")
         if not source then return nil, sourceError end
         if not replacement then return nil, replacementError end
@@ -325,7 +325,8 @@ local function travelDealRefill(value, label)
             or replacement.generationKey ~= "travelDealRefill" or replacement.slotIndex ~= source.slotIndex
             or not p.int(replacement.slotIndex, label .. ".refill.replacement.slotIndex", 1)
             or not p.str(replacement.optionKey, label .. ".refill.replacement.optionKey")
-            or not p.str(replacement.rewardType, label .. ".refill.replacement.rewardType") then
+            or not p.str(replacement.rewardType, label .. ".refill.replacement.rewardType")
+            or not p.shrineRoomDelay(replacement.roomDelay, label .. ".refill.replacement.roomDelay") then
             return p.fail(label .. " has invalid Shrine refill")
         end
         if (replacement.purchase == nil) ~= (replacement.deliverySourceKey == nil) then
@@ -339,15 +340,12 @@ local function travelDealRefill(value, label)
         if replacement.purchase ~= nil then
             local purchase, purchaseError = p.exact(
                 replacement.purchase,
-                { "roomDelay", "rushed" },
+                { "rushed" },
                 {},
                 label .. ".refill.replacement.purchase"
             )
             if not purchase then return nil, purchaseError end
-            if not p.int(purchase.roomDelay,
-                    label .. ".refill.replacement.purchase.roomDelay", 2)
-                or purchase.roomDelay > 8
-                or not p.bool(purchase.rushed,
+            if not p.bool(purchase.rushed,
                     label .. ".refill.replacement.purchase.rushed") then
                 return p.fail(label .. " has invalid Shrine refill purchase disposition")
             end

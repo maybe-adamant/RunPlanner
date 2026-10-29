@@ -77,17 +77,17 @@ function TestFeatureInteractionHooks.testShrinePublishesAllThreeOffersAndKeepsUn
             offers = {
                 {
                     generationKey = "initial:first", optionKey = "BoonA",
-                    rewardType = "BoonA", slotIndex = 1,
-                    purchase = { roomDelay = 2, rushed = true },
+                    rewardType = "BoonA", slotIndex = 1, roomDelay = 2,
+                    purchase = { rushed = true },
                 },
                 {
                     generationKey = "initial:secondLeft", optionKey = "BoonB",
-                    rewardType = "BoonB", slotIndex = 2,
-                    purchase = { roomDelay = 8, rushed = false },
+                    rewardType = "BoonB", slotIndex = 2, roomDelay = 8,
+                    purchase = { rushed = false },
                 },
                 {
                     generationKey = "initial:secondRight", optionKey = "BoonC",
-                    rewardType = "BoonC", slotIndex = 3,
+                    rewardType = "BoonC", slotIndex = 3, roomDelay = 5,
                 },
             },
         } } },
@@ -139,7 +139,8 @@ function TestFeatureInteractionHooks.testShrinePublishesAllThreeOffersAndKeepsUn
     lu.assertEquals(screen.Components.PurchaseButton1.Data.RoomDelay, 2)
     lu.assertEquals(generated.StoreOptions[2].RoomDelay, 8)
     lu.assertEquals(screen.Components.PurchaseButton2.Data.RoomDelay, 8)
-    lu.assertEquals(generated.StoreOptions[3].RoomDelay, 2)
+    -- An unbought item keeps its published delay too.
+    lu.assertEquals(generated.StoreOptions[3].RoomDelay, 5)
     lu.assertEquals(first, "native-first")
     lu.assertEquals(second, "native-second")
     lu.assertEquals(mismatches, {})
@@ -215,7 +216,7 @@ function TestFeatureInteractionHooks.testShrineBuilderFaultRestoresDelayScope()
     local module, _, callbacks = capture()
     local active = opaque({ occurrence = { overview = { hermesShrine = {
         offers = {
-            { slotIndex = 1, generationKey = "initial:first", purchase = { roomDelay = 2 } },
+            { slotIndex = 1, generationKey = "initial:first", roomDelay = 2, purchase = { rushed = false } },
         },
     } } } }, function() return nil end)
     local session = stub()

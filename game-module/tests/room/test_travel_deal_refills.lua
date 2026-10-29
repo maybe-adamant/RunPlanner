@@ -34,9 +34,9 @@ local function transaction(carrier)
             source = { generationKey = "initial:secondLeft", slotIndex = 2 },
             replacement = {
                 generationKey = "travelDealRefill", slotIndex = 2,
-                optionKey = "TalentDrop", rewardType = "TalentDrop",
+                optionKey = "TalentDrop", rewardType = "TalentDrop", roomDelay = 4,
                 deliverySourceKey = "shrine-refill-delivery",
-                purchase = { roomDelay = 4, rushed = false },
+                purchase = { rushed = false },
             },
         }
     end
@@ -461,14 +461,14 @@ function TestTravelDealRefills.testShrineInitialAndRefillDelaysStayWithTheirGene
         overview = { hermesShrine = { offers = {
             { generationKey = "initial:first", slotIndex = 1, optionKey = "HealBigDrop" },
             { generationKey = "initial:secondLeft", slotIndex = 2, optionKey = "MaxManaDrop" },
-            { generationKey = "initial:secondRight", slotIndex = 3, optionKey = "TalentDrop",
-                purchase = { roomDelay = 2, rushed = true } },
+            { generationKey = "initial:secondRight", slotIndex = 3, optionKey = "TalentDrop", roomDelay = 2,
+                purchase = { rushed = true } },
         } } },
     })
     refill.source.generationKey, refill.source.slotIndex = "initial:secondRight", 3
     refill.replacement.slotIndex = 3
     refill.replacement.optionKey, refill.replacement.rewardType = "BlindBoxLoot", "BlindBoxLoot"
-    refill.replacement.purchase.roomDelay = 8
+    refill.replacement.roomDelay = 8
     local generated = fill(callbacks, { GroupsOf = {
         { Offers = 1, OptionsData = { { Name = "HealBigDrop" } } },
         { Offers = 2, OptionsData = { { Name = "MaxManaDrop" }, { Name = "TalentDrop" } } },

@@ -781,7 +781,7 @@ function TestRoomGuide.testDeliveryPickupIsARemindedDeliveryUnlessRushedHere()
     })
     snapshot.occurrence.roomGuide[2].key = "second"
     snapshot.occurrence.overview = { hermesShrine = { offers = {
-        { generationKey = "initial:first", deliverySourceKey = "here", purchase = { roomDelay = 2, rushed = true } },
+        { generationKey = "initial:first", deliverySourceKey = "here", roomDelay = 2, purchase = { rushed = true } },
     } } }
     snapshot.occurrence.transactionsByOwner = {
         later = { kind = "acquisition", hermesShrineSourceKey = "elsewhere", roles = {} },

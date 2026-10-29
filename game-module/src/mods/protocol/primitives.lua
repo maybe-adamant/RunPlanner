@@ -113,6 +113,11 @@ function primitives.rerolledScreens(record, label, decode)
     end
     return true
 end
+-- A Hermes Shrine item's native RoomDelay.
+function primitives.shrineRoomDelay(value, label)
+    if not primitives.int(value, label, 2) or value > 8 then return primitives.fail(label .. " must be 2-8") end
+    return value
+end
 -- A Stygian Well or Pool of Purging reroll's id.
 function primitives.rollKey(value, label)
     if not primitives.str(value, label) or not value:match("^r[1-9]%d*$") then

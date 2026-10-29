@@ -148,7 +148,8 @@ function TestShrineDeliveryFixtures.testRushedUnrankedPickupCanBeLeftBehindWitho
     local id = "surface-o-combat07"
     local sourceKey = sourceKeyOf(plan, id, "initial:first")
     local offers = occurrence(plan, id).overview.hermesShrine.offers
-    lu.assertEquals(offers[1].purchase, { roomDelay = 2, rushed = true })
+    lu.assertEquals(offers[1].purchase, { rushed = true })
+    lu.assertEquals(offers[1].roomDelay, 2)
     for _, row in ipairs(deliveryRows(plan)) do lu.assertNotEquals(row.sourceKey, sourceKey) end
 
     local session = newSession(plan, id)
@@ -183,7 +184,8 @@ function TestShrineDeliveryFixtures.testTravelDealRefillDecodesOnTheShrineCarrie
     local replacement = payload.transaction.refill.replacement
     lu.assertEquals(replacement.generationKey, "travelDealRefill")
     lu.assertEquals(replacement.optionKey, "ArmorBoost")
-    lu.assertEquals(replacement.purchase, { roomDelay = 2, rushed = false })
+    lu.assertEquals(replacement.purchase, { rushed = false })
+    lu.assertEquals(replacement.roomDelay, 2)
     lu.assertNil(bindings.resolve(assert(bindings.index(occurrence(plan, "surface-o-combat07"))),
         deliveryContact(replacement.deliverySourceKey)))
 
@@ -231,8 +233,9 @@ end
 function TestShrineDeliveryFixtures.testDreamPendingDeliveryPublishesNoRowAndStaysSynchronizedThroughTheBoss()
     local plan = loadPlan("dream-shrine-pending")
     local sourceKey = sourceKeyOf(plan, "dream-q-ordinary", "initial:first")
-    lu.assertEquals(occurrence(plan, "dream-q-ordinary").overview.hermesShrine.offers[1].purchase,
-        { roomDelay = 8, rushed = false })
+    local shrineOffer = occurrence(plan, "dream-q-ordinary").overview.hermesShrine.offers[1]
+    lu.assertEquals(shrineOffer.purchase, { rushed = false })
+    lu.assertEquals(shrineOffer.roomDelay, 8)
     lu.assertEquals(deliveryRows(plan), {})
     lu.assertEquals(plan.selectedOccurrenceIds[#plan.selectedOccurrenceIds], "dream-q-preboss:boss")
     for _, id in ipairs(plan.selectedOccurrenceIds) do
