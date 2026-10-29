@@ -127,8 +127,27 @@ function normalizeOccurrenceRerollCounts(occurrence) {
   return changed;
 }
 
+// A trait, Chaos or Pom screen saved with a reroll count gains that many
+// earlier screens, each left unauthored: what they showed is not guessed.
+const SCREEN_KINDS = new Set(['traits', 'chaos', 'choice']);
+
+function normalizeScreenRerollCounts(value) {
+  if (Array.isArray(value)) return value.map(normalizeScreenRerollCounts).some(Boolean);
+  if (value === null || typeof value !== 'object') return false;
+  let changed = false;
+  if (SCREEN_KINDS.has(value.kind) && Object.hasOwn(value, 'rerollCount')) {
+    const count = value.rerollCount;
+    delete value.rerollCount;
+    if (Number.isInteger(count) && count > 0)
+      value.rerolledScreens = Array.from({ length: count }, () => null);
+    changed = true;
+  }
+  for (const entry of Object.values(value)) if (normalizeScreenRerollCounts(entry)) changed = true;
+  return changed;
+}
+
 /**
- * Reshapes a schema 100 document saved with Well or Pool reroll counts or
+ * Reshapes a schema 100 document saved with reroll counts or Well and Pool
  * interaction flags; returns the input itself when it holds none.
  */
 export function normalizeUnpushedSchema100(value) {
@@ -143,6 +162,7 @@ export function normalizeUnpushedSchema100(value) {
         )
       )
         changed = true;
+  if (normalizeScreenRerollCounts(copy.route)) changed = true;
   return changed ? copy : source;
 }
 

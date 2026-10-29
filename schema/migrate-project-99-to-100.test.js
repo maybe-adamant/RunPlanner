@@ -205,4 +205,38 @@ describe('unpushed schema 100 reroll counts', () => {
     const plain = { ...document([]), schemaVersion: 100 };
     assert.equal(normalizeUnpushedSchema100(plain), plain);
   });
+
+  it('turns trait, Chaos and Pom screen counts into unauthored earlier screens', () => {
+    const traits = { kind: 'traits', giverKey: 'Zeus', options: [], rerollCount: 2 };
+    const chaos = { kind: 'chaos', giverKey: 'Chaos', curseOptions: [], rerollCount: 1 };
+    const pom = { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null, rerollCount: 3 };
+    const room = {
+      occurrenceId: 'combat',
+      gameName: 'F_Combat01',
+      state: {
+        kind: 'counted',
+        reward: {
+          traitOffersByAcquisitionRole: { source: traits, chaos },
+          levelResolutionsByAcquisitionRole: { self: pom },
+        },
+      },
+      roomActions: { order: [] },
+    };
+    const normalized = normalizeUnpushedSchema100({ ...document([room]), schemaVersion: 100 });
+    const [migrated] = normalized.route.biomes[0].topology.occurrences;
+    const reward = migrated.state.reward;
+    assert.deepEqual(reward.traitOffersByAcquisitionRole.source, {
+      kind: 'traits',
+      giverKey: 'Zeus',
+      options: [],
+      rerolledScreens: [null, null],
+    });
+    assert.deepEqual(reward.traitOffersByAcquisitionRole.chaos.rerolledScreens, [null]);
+    assert.deepEqual(reward.levelResolutionsByAcquisitionRole.self.rerolledScreens, [
+      null,
+      null,
+      null,
+    ]);
+    assert.equal(traits.rerollCount, 2);
+  });
 });
