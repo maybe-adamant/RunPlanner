@@ -11,7 +11,12 @@ import {
   type HermesShrineInventoryOffer,
   type HermesShrineSlotKey,
 } from '../../../authored-project/model';
-import { TRAVEL_DEAL_REFILL_ENTRY_KEY } from '../../../authored-project/shop';
+import {
+  shopOfferOptionValues,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
+} from '../../../authored-project/shop';
+import type { Catalog } from '../../../catalog-schema';
+import type { ShopOptionSelection } from '../../../reward-kernel';
 import type {
   ChampionItemInteraction,
   HermesShrineInteraction,
@@ -87,7 +92,30 @@ function agreed(lists: readonly (readonly string[])[]): readonly string[] {
 
 type DerivedEntryFrontiers = ReadonlyMap<string, readonly DerivedAcquisitionEntryFrontier[]>;
 
+/** The refilled slot's items every branch can stock without a finding. */
+function travelDealRefillValues(
+  catalog: Catalog,
+  profileKey: string,
+  slotIndex: number | undefined,
+  frontiers: readonly DerivedAcquisitionEntryFrontier[],
+): readonly ShopOptionSelection[] {
+  const slot =
+    slotIndex === undefined
+      ? undefined
+      : catalog.rewards.shops.byKey[profileKey]?.slots.values[slotIndex];
+  if (slot === undefined) return Object.freeze([]);
+  return Object.freeze(
+    shopOfferOptionValues(catalog, profileKey, slot.key).filter((value) =>
+      frontiers.every((frontier) => {
+        const result = frontier.evaluateShopOption?.(value);
+        return result?.supported === true && result.findings.length === 0;
+      }),
+    ),
+  );
+}
+
 function worldShopInteraction(
+  catalog: Catalog,
   room: CanonicalAuthoredRoom,
   historySequence: number,
   derivedEntries: DerivedEntryFrontiers,
@@ -107,7 +135,7 @@ function worldShopInteraction(
       reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY,
   );
   // The first normal paid purchase made with Travel Deal seeds the refill on every branch.
-  const seeded = attestDerivedAcquisitionEntryCandidateCapability(
+  const refillFrontiers =
     derivedEntries.get(
       semanticAddressKey(
         createShopOfferAddress(
@@ -116,8 +144,8 @@ function worldShopInteraction(
           TRAVEL_DEAL_REFILL_ENTRY_KEY,
         ),
       ),
-    ) ?? [],
-  );
+    ) ?? [];
+  const seeded = attestDerivedAcquisitionEntryCandidateCapability(refillFrontiers);
   const live = seeded?.kind === 'travelDealRefill';
   const refill = shop.travelDealRefill ?? null;
   return Object.freeze({
@@ -142,7 +170,12 @@ function worldShopInteraction(
           travelDealRefill: Object.freeze({
             rewardType: refill?.offer.rewardType ?? null,
             optionKey: refill?.optionKey ?? null,
-            rewardTypes: seeded?.rewardTypes ?? Object.freeze([]),
+            values: travelDealRefillValues(
+              catalog,
+              shop.profileKey,
+              seeded?.slotIndex,
+              refillFrontiers,
+            ),
             command: Object.freeze({
               kind: 'PurchaseShopTravelDealRefill' as const,
               occurrence: room.origin,
@@ -262,7 +295,12 @@ export function roomObjectInteractions(
   for (const [roomKey, end] of state.roomActionEnds) {
     const room = authoredRoom(context, roomKey);
     if (room === undefined) continue;
-    const worldShop = worldShopInteraction(room, end.historySequence, derivedEntries);
+    const worldShop = worldShopInteraction(
+      context.catalog,
+      room,
+      end.historySequence,
+      derivedEntries,
+    );
     const hermesShrine = hermesShrineInteraction(
       room,
       end.historySequence,

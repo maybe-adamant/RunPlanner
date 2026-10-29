@@ -7,6 +7,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomActionAddress,
+  createShopOfferAddress,
   roomActionKey,
   type ProjectCommand,
   type ProjectDocument,
@@ -15,7 +16,14 @@ import {
   roomObjectInteractionsForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { loadUnderworldZagreusContractCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldFStygianWellCheckpoint,
+  loadUnderworldZagreusContractCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  authorLegalTraitOffers,
+  replaceTestShopOfferActions,
+} from '@run-planner/test-fixtures/shared';
 import {
   nBiome as surfaceNBiome,
   surfaceShrineTravelDealProject,
@@ -72,7 +80,7 @@ describe('World Shop interaction', () => {
       rewardType: 'ArmorBoost',
       command: { kind: 'PurchaseShopTravelDealRefill', occurrence: shop },
     });
-    expect(travel!.rewardTypes).toContain('ArmorBoost');
+    expect(travel!.values.map((value) => value.offer.rewardType)).toContain('ArmorBoost');
     const bought = apply(project, travel!.command);
     const order = bought.route.biomes
       .find((biome) => biome.biomeKey === 'F')!
@@ -80,6 +88,36 @@ describe('World Shop interaction', () => {
       .order;
     expect(order.at(-1)).toEqual(refill);
     expect(interactionsAt(bought, shop)?.worldShop?.travelDealRefill).toBeUndefined();
+  });
+
+  it('stocks and buys a blank Travel Deal item in one pick from each published value', () => {
+    // A Travel Deal purchase whose refilled item was never stocked.
+    const project = authorLegalTraitOffers(
+      replaceTestShopOfferActions(
+        apply(loadUnderworldFStygianWellCheckpoint(), {
+          kind: 'ReplaceShopOffer',
+          offer: createShopOfferAddress(goldenFBiome, shop.occurrenceId, 'MajorNonBoon'),
+          value: { rewardType: 'MaxHealthDrop' },
+        }),
+        catalog,
+        shop,
+        ['MajorNonBoon'],
+      ),
+    );
+    const travel = interactionsAt(project, shop)?.worldShop?.travelDealRefill;
+    expect(travel).toMatchObject({ rewardType: null, optionKey: null });
+    expect(travel!.values.length).toBeGreaterThan(1);
+    for (const value of travel!.values) {
+      const bought = apply(project, { ...travel!.command, value });
+      const room = bought.route.biomes
+        .find((biome) => biome.biomeKey === 'F')!
+        .topology!.occurrences.find((candidate) => candidate.occurrenceId === shop.occurrenceId)!;
+      expect(room.roomActions.order.at(-1)).toEqual(refill);
+      expect(room.state.kind === 'shop' && room.state.shop?.travelDealRefill).toMatchObject({
+        optionKey: value.optionKey,
+        reward: { offer: { rewardType: value.offer.rewardType } },
+      });
+    }
   });
 });
 

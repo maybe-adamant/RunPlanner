@@ -1,6 +1,7 @@
 import { semanticAddressKey, type OccurrenceAddress } from '../../authored-project/addresses';
 import type { ProjectCommand } from '../../authored-project/commands/types';
 import type { HermesShrineDelay, HermesShrineGenerationKey } from '../../authored-project/model';
+import type { ShopOptionSelection } from '../../reward-kernel';
 
 type CommandOf<Kind extends ProjectCommand['kind']> = Extract<
   ProjectCommand,
@@ -23,8 +24,8 @@ export interface WorldShopInteraction {
     /** Null while the item is blank; the pick then adds its chosen `value` to `command`. */
     readonly rewardType: string | null;
     readonly optionKey: string | null;
-    /** The rewards every reached branch can stock there. */
-    readonly rewardTypes: readonly string[];
+    /** The items every reached branch can stock there, each ready as the command's `value`. */
+    readonly values: readonly ShopOptionSelection[];
     readonly command: CommandOf<'PurchaseShopTravelDealRefill'>;
   };
 }
