@@ -911,6 +911,7 @@ export function applyOccurrenceCommand(
     case 'ReplaceRewardWheelStore':
     case 'ReplaceRewardWheelOffer':
     case 'ReplaceRewardWheelPicked':
+    case 'SwapRewardWheelOffers':
       return applyShipOccurrenceCommand(document, catalog, located, command);
     case 'ReplaceShopOffer':
     case 'ClearShopOffer':

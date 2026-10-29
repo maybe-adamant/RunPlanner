@@ -1045,6 +1045,11 @@ order. Removing N's Opening decision therefore removes PreHub, its
 source-bearing Hub, and its completed-Hub chain through persisted ownership.
 Navigation and focus are not commands and do not enter authored history.
 
+`SwapRewardWheelOffers` exchanges a two-offer wheel's offers with their
+acquisitions, rerolled rewards and presses, so the same picks stand on the
+other sides; it refuses while a pickup or result generated from either offer
+exists. Run import uses it; the editor offers no control for it.
+
 ## Persistence and Validation
 
 The portable document has exact keys, a validated full itinerary and its

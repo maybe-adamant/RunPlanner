@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  applyProjectHistoryCommand,
+  createAcquisitionRoleAddress,
+  createProjectHistory,
   createExitDecisionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -10,6 +13,7 @@ import {
   createRewardWheelOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
+  type ProjectCommand,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
@@ -252,5 +256,128 @@ describe('authored-project Ship occurrence commands', () => {
       .find((biome) => biome.biomeKey === 'O')
       ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === fountainId);
     expect(wheel2Fountain?.state.kind).toBe('counted');
+  });
+
+  describe('swapping a two-offer wheel', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
+    const offer = (offerKey: string) =>
+      createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', offerKey);
+    const swap: ProjectCommand = { kind: 'SwapRewardWheelOffers', wheel };
+
+    /** The left offer picked with its boon screen answered, the right one pressed once. */
+    function pickedLeft(): ProjectDocument {
+      const steps: ProjectCommand[] = [
+        { kind: 'ReplaceRewardWheelOfferCount', wheel, offerCount: 2 },
+        {
+          kind: 'ReplaceRewardWheelOffer',
+          offer: offer('offer1'),
+          value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+        },
+        {
+          kind: 'ReplaceTraitOffer',
+          trait: createTraitOfferAddress(offer('offer1'), 'source'),
+          value: {
+            kind: 'traits',
+            giverKey: 'Apollo',
+            options: [
+              { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+              { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+              { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+            ],
+            selectedOptionKey: 'option2',
+          },
+        },
+        {
+          kind: 'ReplaceRewardWheelOffer',
+          offer: offer('offer2'),
+          value: { rewardType: 'RoomMoneyDrop' },
+        },
+        {
+          kind: 'InsertReroll',
+          occurrence,
+          target: { kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer2' },
+          reward: { rewardType: 'MaxManaDrop' },
+          index: 0,
+        },
+      ];
+      return steps.reduce(
+        (project, command) => applyProjectCommand(project, catalog, command),
+        loadSurfaceNOProject(),
+      );
+    }
+
+    const actions = (project: ProjectDocument) =>
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'O')
+        ?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === oOccurrenceIds.combat04,
+        )?.roomActions.order;
+
+    it("moves each offer's draw, acquisition, rerolled reward and presses to the other side", () => {
+      const before = pickedLeft();
+      const left = shipState(before).wheels.wheel1!;
+      expect(left.offers.offer1?.traitOffersByAcquisitionRole.source).toMatchObject({
+        selectedOptionKey: 'option2',
+      });
+      expect(left.rerolledOffers?.offer2?.offer).toEqual({ rewardType: 'MaxManaDrop' });
+      expect(actions(before)?.some((action) => action.kind === 'reroll')).toBe(true);
+      const swapped = applyProjectCommand(before, catalog, swap);
+      expect(shipState(swapped).wheels.wheel1).toEqual({
+        ...left,
+        pickedOfferIndex: 2,
+        offers: { offer1: left.offers.offer2, offer2: left.offers.offer1 },
+        rerolledOffers: { offer1: left.rerolledOffers!.offer2 },
+      });
+      expect(actions(swapped)).toEqual(
+        actions(before)!.map((action) =>
+          action.kind === 'reroll'
+            ? { ...action, target: { ...action.target, offerKey: 'offer1' } }
+            : action,
+        ),
+      );
+      // Swapping back restores the plan.
+      expect(applyProjectCommand(swapped, catalog, swap)).toEqual(before);
+    });
+
+    it('is one history step', () => {
+      const history = applyProjectHistoryCommand(createProjectHistory(pickedLeft()), catalog, swap);
+      expect(history.past).toHaveLength(1);
+      expect(shipState(history.present).wheels.wheel1?.pickedOfferIndex).toBe(2);
+    });
+
+    it('refuses a one-offer wheel, an unknown wheel and an offer with generated pickups', () => {
+      expect(() => applyProjectCommand(loadSurfaceNOProject(), catalog, swap)).toThrowError(
+        expect.objectContaining({
+          commandKind: 'SwapRewardWheelOffers',
+          detail: 'wheel1 has no two offers to swap',
+        }),
+      );
+      expect(() =>
+        applyProjectCommand(pickedLeft(), catalog, {
+          kind: 'SwapRewardWheelOffers',
+          wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel9'),
+        }),
+      ).toThrowError(expect.objectContaining({ detail: 'O_Combat04 has no wheel wheel9' }));
+      // Artificer's replacement is stored under its source offer's identity.
+      const converted = applyProjectCommand(
+        applyProjectCommand(pickedLeft(), catalog, {
+          kind: 'ReplaceRewardWheelOffer',
+          offer: offer('offer1'),
+          value: { rewardType: 'StackUpgrade' },
+        }),
+        catalog,
+        {
+          kind: 'ReplaceAcquisitionDisposition',
+          acquisition: createAcquisitionRoleAddress(offer('offer1'), 'self'),
+          value: { kind: 'artificer' },
+        },
+      );
+      expect(() => applyProjectCommand(converted, catalog, swap)).toThrowError(
+        expect.objectContaining({
+          detail: 'pickups or results generated from offer1 cannot follow a swap',
+        }),
+      );
+    });
   });
 });

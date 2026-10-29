@@ -238,6 +238,7 @@ function applyUnchecked(
     case 'ReplaceRewardWheelStore':
     case 'ReplaceRewardWheelOffer':
     case 'ReplaceRewardWheelPicked':
+    case 'SwapRewardWheelOffers':
     case 'ReplaceShopOffer':
     case 'ClearShopOffer':
     case 'ReplaceShopOfferOption':

@@ -190,6 +190,7 @@ function commandContractAddress(
     case 'ReplaceRewardWheelOfferCount':
     case 'ReplaceRewardWheelStore':
     case 'ReplaceRewardWheelPicked':
+    case 'SwapRewardWheelOffers':
       return command.wheel;
     case 'ReplaceRewardWheelOffer':
       return command.offer;

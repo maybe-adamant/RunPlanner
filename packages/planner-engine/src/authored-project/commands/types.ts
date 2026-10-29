@@ -449,6 +449,11 @@ export type ShipOccurrenceCommand =
       readonly kind: 'ReplaceRewardWheelPicked';
       readonly wheel: RewardWheelAddress;
       readonly pickedOfferIndex: number;
+    }
+  | {
+      /** Exchanges a two-offer wheel's offers with all their authorship, so the other side is picked. */
+      readonly kind: 'SwapRewardWheelOffers';
+      readonly wheel: RewardWheelAddress;
     };
 
 export type LocalVisitCommand =
