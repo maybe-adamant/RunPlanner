@@ -757,24 +757,36 @@ button.hex-tree-node[data-has-findings='true'] {
   gap: 0.4rem;
 }
 
-/* A single-pick screen's native rerolls before its final rows. */
-.screen-reroll-count {
+/* One tab per screen of a rerolled single-pick screen; the last is the final screen. */
+.screen-reroll-tabs {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.screen-reroll-tab-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  justify-self: start;
+  border-bottom: 1px solid var(--border);
 }
 
-.screen-reroll-count-label {
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.screen-reroll-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+  padding-bottom: 4px;
 }
 
-.screen-reroll-count-value {
-  min-width: 1.5rem;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
+.screen-reroll-tab-row button.room-workbench-tab[data-has-findings='true'] {
+  box-shadow: inset 0 -2px 0 var(--finding);
+  color: var(--text);
+}
+
+.screen-reroll-panel {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
 }

@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import type { AuthoredChaosTraitOffer } from '@run-planner/engine/authored-project';
@@ -176,6 +176,27 @@ describe('ChaosTraitOfferEditor', () => {
     expect(current.curseOptions[2]?.requirementCount).toBe(
       catalog.chaos.curses.byKey.ChaosTimeCurse!.duration.authoringDefault,
     );
+  });
+
+  it('shows only the curse rows of a rerolled-away screen and keeps the pick untouched', async () => {
+    const user = userEvent.setup();
+    const onUpdate = vi.fn();
+    render(
+      <ChaosTraitOfferEditor
+        interaction={interaction()}
+        onUpdate={onUpdate}
+        pickless
+        value={offer()}
+      />,
+    );
+    expect(screen.queryAllByRole('radio')).toHaveLength(0);
+    expect(screen.queryByRole('region', { name: 'Selected Chaos outcome' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'option1 curse' }));
+    await user.click(screen.getByRole('option', { name: 'ChaosTimeCurse' }));
+    const next = onUpdate.mock.lastCall?.[0] as AuthoredChaosTraitOffer;
+    expect(next.curseOptions[0]?.curseKey).toBe('ChaosTimeCurse');
+    expect(next.blessingKey).toBe(offer().blessingKey);
+    expect(next.selectedCurseValues).toEqual(offer().selectedCurseValues);
   });
 
   it('resets selected curse details while retaining a legal blessing identity and rarity', async () => {

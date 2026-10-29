@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
-import type { UserEvent } from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { afterEach, expect, it } from 'vitest';
-import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import { applyProjectCommand, type ProjectDocument } from '@run-planner/engine/authored-project';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
@@ -12,6 +12,7 @@ import {
   groupedOutcomeProject,
   unavailableEchoOptionProject,
 } from '@planner-test/support/finding-states';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
 afterEach(cleanup);
 
@@ -101,4 +102,29 @@ it('marks an unavailable Boon Boon Boon row on its nested launcher, then on the 
   await view.user.click(await screen.findByRole('option', { name: /^Passion Rush/ }));
   await waitFor(() => expect(feedback('Choice feedback')).not.toContain(message));
   application.dispose();
+});
+
+it('opens a rerolled offer on the screen its finding names and marks that tab', async () => {
+  const application = createApplication();
+  application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+  const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+  const offer = [...workspace.interactions.traitOffers.values()].find(
+    (entry) => entry.giver.providerKind === 'olympian' && entry.value?.kind === 'traits',
+  )!;
+  if (offer.value?.kind !== 'traits') throw new Error('expected an ordinary offer');
+  const project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: offer.owner,
+    value: { ...offer.value, rerolledScreens: [null] },
+  });
+  application.dispose();
+  const { dialog } = await openMarkedTraitDialog(project);
+  const tab = within(dialog).getByRole('tab', { name: 'Offer' });
+  expect(tab.getAttribute('aria-selected')).toBe('true');
+  expect(tab.getAttribute('data-has-findings')).toBe('true');
+  expect(within(dialog).getByText('This screen isn’t set.')).toBeTruthy();
+  await userEvent
+    .setup()
+    .click(within(dialog).getByRole('button', { name: 'Copy the final screen' }));
+  expect(within(dialog).queryByText('This screen isn’t set.')).toBeNull();
 });

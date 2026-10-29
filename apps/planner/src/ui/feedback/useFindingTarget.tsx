@@ -122,6 +122,36 @@ export function useDialogFindingEntries(
   return [...entries];
 }
 
+/**
+ * Which screens of a rerolled screen carry an owner's findings, by screen
+ * index (`final` for the last screen), and which one navigation opens on.
+ */
+// eslint-disable-next-line react-refresh/only-export-components -- Reads the same feedback boundary.
+export function useFindingScreens(owner: SemanticAddress): {
+  readonly marked: ReadonlySet<number | 'final'>;
+  readonly selected?: number | 'final';
+} {
+  const { findings, selectedKey, focusKey } = useContext(feedback);
+  const ownerKey = semanticAddressKey(owner);
+  const marked = new Set<number | 'final'>();
+  let selected: number | 'final' | undefined;
+  for (const group of findings.values())
+    for (const finding of group) {
+      if (semanticAddressKey(finding.origin) !== ownerKey) continue;
+      const screen =
+        typeof finding.evidence.screen === 'number' ? finding.evidence.screen : 'final';
+      marked.add(screen);
+      if (selectedKey !== undefined && semanticFindingKey(finding) === selectedKey)
+        selected = screen;
+    }
+  // Navigation to the owner names no screen; its screens settle oldest first.
+  if (selected === undefined && focusKey === ownerKey && marked.size > 0)
+    selected = [...marked].reduce((earliest, screen) =>
+      earliest === 'final' || (screen !== 'final' && screen < earliest) ? screen : earliest,
+    );
+  return selected === undefined ? { marked } : { marked, selected };
+}
+
 type FocusTarget = (anchor: HTMLElement) => HTMLElement | null;
 
 const nativeControls = 'button, input, select, textarea';

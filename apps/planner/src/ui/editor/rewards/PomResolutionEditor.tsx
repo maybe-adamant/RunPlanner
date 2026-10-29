@@ -1,10 +1,11 @@
 import {
   semanticAddressKey,
   type AuthoredLevelResolution,
+  type AuthoredRerolledLevelScreen,
   type LevelResolutionAddress,
-  withScreenRerollCount,
+  rerolledLevelScreenSnapshot,
 } from '@run-planner/engine/authored-project';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import type { LevelResolutionCandidateGroup } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
@@ -33,7 +34,8 @@ import {
   EditorDialogDraftActions,
   EditorDialogFeedback,
 } from '@planner/ui/controls/EditorDialog';
-import { ScreenRerollCount } from './ScreenRerollCount';
+import { ScreenRerollTabs, UnsetScreen } from './ScreenRerollTabs';
+import { useScreenTab } from './useScreenTab';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -158,6 +160,8 @@ export function PomResolutionEditor({
     interaction.value.kind === 'random' ? interaction.value.targetTraitKey : null,
   );
   const [rerolledScreens, setRerolledScreens] = useState(initialChoice?.rerolledScreens);
+  const earlierCount = rerolledScreens?.length ?? 0;
+  const screenTab = useScreenTab(interaction.owner, earlierCount);
   const [activeGroupKey, setActiveGroupKey] = useState<string | null>(null);
   const [seededGroupKey, setSeededGroupKey] = useState<string | null>(null);
   const draft: AuthoredLevelResolution =
@@ -276,15 +280,90 @@ export function PomResolutionEditor({
       }),
     );
   };
+  const finalChoiceRows = (
+    <div className="trait-offer-options">
+      {rows.map((index) => {
+        const current = choiceSlots[index] ?? null;
+        return (
+          <fieldset className="trait-offer-option" key={index}>
+            <legend>Target {index + 1}</legend>
+            <ContextualPicker
+              ariaLabel={`Pom target ${index + 1}`}
+              id={`${domKey}-pom-target-${index}`}
+              label="Trait"
+              model={targetPicker(current)}
+              onSelect={(target) => updateChoiceSlot(index, target)}
+              placeholder="Choose a trait"
+              itemIcon={(item) => traitIcon(item.value)}
+              {...(current === null
+                ? {}
+                : {
+                    triggerLabel: interaction.traitLabel(current),
+                    triggerIcon: traitIcon(current),
+                  })}
+            />
+            <label className="trait-option-selected">
+              <input
+                checked={selectedChoice === current && current !== null}
+                name={`${domKey}-pom-selected`}
+                onChange={() => current !== null && updateSelectedChoice(current)}
+                type="radio"
+              />
+              Selected
+            </label>
+          </fieldset>
+        );
+      })}
+    </div>
+  );
+  const finalScreen = (): AuthoredRerolledLevelScreen =>
+    rerolledLevelScreenSnapshot({
+      offeredTraitKeys: choiceSlots.filter((target): target is string => target !== null),
+    });
+  const earlierIndex = screenTab.active < earlierCount ? screenTab.active : undefined;
+  const earlierScreen = earlierIndex === undefined ? undefined : rerolledScreens?.[earlierIndex];
+  const replaceScreen = (index: number, screen: AuthoredRerolledLevelScreen): void =>
+    setRerolledScreens(
+      Object.freeze(
+        (rerolledScreens ?? []).map((current, at) => (at === index ? screen : current)),
+      ),
+    );
+  const updateEarlierSlot = (screenIndex: number, slot: number, target: string): void => {
+    const slots = Array.from(
+      { length: count },
+      (_, at) => rerolledScreens?.[screenIndex]?.offeredTraitKeys[at] ?? null,
+    );
+    slots[slot] = target;
+    replaceScreen(
+      screenIndex,
+      Object.freeze({
+        offeredTraitKeys: Object.freeze(slots.filter((entry): entry is string => entry !== null)),
+      }),
+    );
+  };
+  const screenRerolls = interaction.screenRerolls;
+  const withScreenTabs = (panel: ReactNode): ReactNode =>
+    screenRerolls === undefined ? (
+      panel
+    ) : (
+      <ScreenRerollTabs
+        active={screenTab.active}
+        earlierCount={earlierCount}
+        idPrefix={domKey}
+        marked={screenTab.marked}
+        onRemove={() => setRerolledScreens(Object.freeze((rerolledScreens ?? []).slice(0, -1)))}
+        onReroll={() => {
+          setRerolledScreens(Object.freeze([...(rerolledScreens ?? []), finalScreen()]));
+          screenTab.select(earlierCount + 1);
+        }}
+        onSelect={screenTab.select}
+        rerolls={screenRerolls}
+      >
+        {panel}
+      </ScreenRerollTabs>
+    );
   return (
     <div className="trait-offer-editor pom-resolution-editor">
-      {interaction.screenRerolls === undefined || interaction.value.kind !== 'choice' ? null : (
-        <ScreenRerollCount
-          count={rerolledScreens?.length ?? 0}
-          onChange={(count) => setRerolledScreens(withScreenRerollCount(rerolledScreens, count))}
-          rerolls={interaction.screenRerolls}
-        />
-      )}
       <ContextualPicker
         label="Route state"
         placeholder={groups.length === 0 ? 'Evaluating route state…' : 'Choose a route state'}
@@ -305,40 +384,39 @@ export function PomResolutionEditor({
         onSelect={selectGroup}
       />
       {interaction.value.kind === 'choice' ? (
-        <div className="trait-offer-options">
-          {rows.map((index) => {
-            const current = choiceSlots[index] ?? null;
-            return (
-              <fieldset className="trait-offer-option" key={index}>
-                <legend>Target {index + 1}</legend>
-                <ContextualPicker
-                  ariaLabel={`Pom target ${index + 1}`}
-                  id={`${domKey}-pom-target-${index}`}
-                  label="Trait"
-                  model={targetPicker(current)}
-                  onSelect={(target) => updateChoiceSlot(index, target)}
-                  placeholder="Choose a trait"
-                  itemIcon={(item) => traitIcon(item.value)}
-                  {...(current === null
-                    ? {}
-                    : {
-                        triggerLabel: interaction.traitLabel(current),
-                        triggerIcon: traitIcon(current),
-                      })}
-                />
-                <label className="trait-option-selected">
-                  <input
-                    checked={selectedChoice === current && current !== null}
-                    name={`${domKey}-pom-selected`}
-                    onChange={() => current !== null && updateSelectedChoice(current)}
-                    type="radio"
-                  />
-                  Selected
-                </label>
-              </fieldset>
-            );
-          })}
-        </div>
+        withScreenTabs(
+          earlierIndex === undefined ? (
+            finalChoiceRows
+          ) : earlierScreen === null ? (
+            <UnsetScreen onCopy={() => replaceScreen(earlierIndex, finalScreen())} />
+          ) : (
+            <div className="trait-offer-options">
+              {rows.map((index) => {
+                const current = earlierScreen?.offeredTraitKeys[index] ?? null;
+                return (
+                  <fieldset className="trait-offer-option" key={index}>
+                    <legend>Target {index + 1}</legend>
+                    <ContextualPicker
+                      ariaLabel={`Pom target ${index + 1}`}
+                      id={`${domKey}-pom-target-${index}`}
+                      label="Trait"
+                      model={targetPicker(current)}
+                      onSelect={(target) => updateEarlierSlot(earlierIndex, index, target)}
+                      placeholder="Choose a trait"
+                      itemIcon={(item) => traitIcon(item.value)}
+                      {...(current === null
+                        ? {}
+                        : {
+                            triggerLabel: interaction.traitLabel(current),
+                            triggerIcon: traitIcon(current),
+                          })}
+                    />
+                  </fieldset>
+                );
+              })}
+            </div>
+          ),
+        )
       ) : emptyNoOp ? (
         <div className="field-control field-control-inline control-placeholder">
           <span>Recorded target</span>

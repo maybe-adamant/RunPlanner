@@ -29,6 +29,7 @@ import type {
 import { TraitOfferEditor } from '@planner/ui/editor/rewards/TraitOfferEditor';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNStoryBoardProject } from '@run-planner/test-fixtures/surface';
+import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
 
@@ -135,6 +136,87 @@ describe('ordinary offer shell', () => {
     await user.click(await screen.findByRole('button', { name: 'Start over' }));
     await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
     expect(screen.getByLabelText('option3 trait')).toBeTruthy();
+    application.dispose();
+  });
+
+  it('keeps each rerolled screen on its own tab and saves the screens with the offer', async () => {
+    const user = userEvent.setup();
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (entry) => entry.giver.providerKind === 'olympian' && entry.value?.kind === 'traits',
+    )!;
+    if (base.value?.kind !== 'traits') throw new Error('expected an ordinary offer');
+    const finalTraits = base.value.options.map((option) => option.traitKey);
+    const interaction: WorkspaceTraitOfferInteraction = {
+      ...base,
+      screenRerolls: { count: 0, maxCount: 2, lockAtMax: 'poolShort' },
+    };
+    const onCommit = vi.fn();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={interaction.owner}
+          interactions={{
+            ...workspace.interactions,
+            traitOffers: new Map([[interaction.key, interaction]]),
+          }}
+          onCommit={onCommit}
+        />
+      </Provider>,
+    );
+    const tabs = await screen.findByRole('tablist', { name: 'Screens' });
+    expect(
+      within(tabs)
+        .getAllByRole('tab')
+        .map((tab) => tab.textContent),
+    ).toEqual(['Offer']);
+    expect(
+      screen.getByRole('button', { name: 'Remove last reroll' }).hasAttribute('disabled'),
+    ).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Reroll · costs 1' }));
+    expect(
+      within(tabs)
+        .getAllByRole('tab')
+        .map((tab) => tab.textContent),
+    ).toEqual(['Offer', 'Reroll 1']);
+    expect(screen.getByRole('tab', { name: 'Reroll 1' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const pickRadios = screen.getAllByRole('radio').length;
+    expect(pickRadios).toBeGreaterThan(0);
+    await user.click(screen.getByRole('tab', { name: 'Offer' }));
+    expect(screen.queryAllByRole('radio')).toHaveLength(pickRadios - finalTraits.length);
+    expect(screen.queryByRole('button', { name: 'Rarify option1' })).toBeNull();
+    // A reroll bans one shown row, so the final screen needs a row of the earlier one gone.
+    await user.click(screen.getByRole('tab', { name: 'Reroll 1' }));
+    const save = screen.getByRole('button', { name: 'Save trait offer' });
+    await waitFor(() => expect(save.hasAttribute('disabled')).toBe(true));
+    await user.click(screen.getByLabelText('option1 trait'));
+    const replacement = (await screen.findAllByRole('option')).find(
+      (option) =>
+        option.getAttribute('aria-disabled') !== 'true' &&
+        option.getAttribute('aria-selected') !== 'true',
+    )!;
+    await user.click(replacement);
+    await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
+    await user.click(save);
+    const saved = onCommit.mock.lastCall?.[0] as AuthoredTraitOfferTraits;
+    expect(
+      saved.rerolledScreens?.map((entry) => entry?.options.map((row) => row.traitKey)),
+    ).toEqual([finalTraits]);
+    expect(saved.options[0]?.traitKey).not.toBe(finalTraits[0]);
+    await user.click(screen.getByRole('button', { name: 'Reroll · costs 2' }));
+    const atMax = screen.getByRole('button', { name: 'Reroll · costs 3' });
+    expect(atMax.hasAttribute('disabled')).toBe(true);
+    expect(hintOf(atMax)).toBe('Not enough rerolls left.');
+    await user.click(screen.getByRole('button', { name: 'Remove last reroll' }));
+    await user.click(screen.getByRole('button', { name: 'Remove last reroll' }));
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Offer']);
+    await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
+    await user.click(save);
+    expect((onCommit.mock.lastCall?.[0] as AuthoredTraitOfferTraits).rerolledScreens).toEqual([]);
     application.dispose();
   });
 

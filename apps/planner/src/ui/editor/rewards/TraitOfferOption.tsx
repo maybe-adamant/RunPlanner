@@ -30,6 +30,7 @@ export function TraitOfferOption<TraitValue>({
   onSelectTrait,
   onSelectedChange,
   onTraitOpenChange,
+  pickable = true,
   persephoneLevelBonus,
   persephoneLevelRolls,
   rarityPicker,
@@ -66,6 +67,8 @@ export function TraitOfferOption<TraitValue>({
   readonly onSelectTrait: (value: TraitValue) => void;
   readonly onSelectedChange: () => void;
   readonly onTraitOpenChange?: (open: boolean) => void;
+  /** False on a screen rerolled away: its rows were shown, never picked. */
+  readonly pickable?: boolean;
   readonly persephoneLevelBonus?: number;
   readonly persephoneLevelRolls?: TraitOfferOptionFeedback['persephoneLevelRolls'];
   readonly rarityPicker?: ContextualPickerModel<TraitRarity>;
@@ -223,16 +226,18 @@ export function TraitOfferOption<TraitValue>({
           </dd>
         </dl>
       )}
-      <label className="trait-option-selected">
-        <input
-          checked={selected}
-          disabled={selectedDisabled}
-          name={selectedName}
-          onChange={onSelectedChange}
-          type="radio"
-        />
-        {selectedLabel}
-      </label>
+      {!pickable ? null : (
+        <label className="trait-option-selected">
+          <input
+            checked={selected}
+            disabled={selectedDisabled}
+            name={selectedName}
+            onChange={onSelectedChange}
+            type="radio"
+          />
+          {selectedLabel}
+        </label>
+      )}
     </fieldset>
   );
 }

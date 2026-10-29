@@ -55,7 +55,10 @@ export function ChaosTraitOfferEditor({
   value,
   interaction,
   onUpdate,
+  pickless = false,
 }: {
+  /** A screen rerolled away: its curse rows only, with no pick or blessing. */
+  readonly pickless?: boolean;
   readonly value: AuthoredChaosTraitOffer;
   readonly interaction: WorkspaceChaosOfferInteraction;
   readonly onUpdate: (value: AuthoredChaosTraitOffer) => void;
@@ -78,7 +81,7 @@ export function ChaosTraitOfferEditor({
       curseOptions: Object.freeze(options) as AuthoredChaosTraitOffer['curseOptions'],
     });
     onUpdate(
-      index === OPTION_KEYS.indexOf(value.selectedOptionKey)
+      !pickless && index === OPTION_KEYS.indexOf(value.selectedOptionKey)
         ? resetSelectedDetails(next, value.selectedOptionKey, interaction)
         : next,
     );
@@ -174,88 +177,92 @@ export function ChaosTraitOfferEditor({
                     value={option.requirementCount}
                   />
                 </label>
-                <label className="trait-option-selected">
-                  <input
-                    aria-label={`${optionKey} selected`}
-                    checked={value.selectedOptionKey === optionKey}
-                    name="chaos-selected-option"
-                    onChange={() => selectOption(optionKey)}
-                    type="radio"
-                  />
-                  Selected
-                </label>
+                {pickless ? null : (
+                  <label className="trait-option-selected">
+                    <input
+                      aria-label={`${optionKey} selected`}
+                      checked={value.selectedOptionKey === optionKey}
+                      name="chaos-selected-option"
+                      onChange={() => selectOption(optionKey)}
+                      type="radio"
+                    />
+                    Selected
+                  </label>
+                )}
               </fieldset>
             </div>
           );
         })}
       </div>
-      <SelectedOutcomeBlock
-        icon={traitIcon(selectedCurseKey(value))}
-        name="Selected Chaos outcome"
-        traitLabel={`${interaction.curseLabel(selectedCurseKey(value))} → ${interaction.blessingLabel(value.blessingKey)}`}
-      >
-        <ContextualPicker
-          ariaLabel="Chaos blessing"
-          id="chaos-selected-blessing"
-          label="Blessing"
-          layout="inline"
-          model={domain.blessingPicker}
-          onSelect={changeBlessing}
-          placeholder="Choose a blessing"
-          itemIcon={(item) => traitIcon(item.value)}
-          triggerIcon={traitIcon(value.blessingKey)}
-          triggerLabel={interaction.blessingLabel(value.blessingKey)}
-        />
-        <ContextualPicker
-          id="chaos-blessing-rarity"
-          label="Rarity"
-          layout="inline"
-          placeholder="Choose a rarity"
-          model={declaredChoicesPicker(
-            rarityOptions.map((rarity) => {
-              const presentation = traitRarityPresentation(blessingInfusion, rarity);
-              return {
-                key: rarity,
-                value: rarity,
-                label: presentation.label,
-                ...(presentation.accessibleLabel === presentation.label
-                  ? {}
-                  : { ariaLabel: presentation.accessibleLabel }),
-                disabled: !domain.rarities.includes(rarity),
-              };
-            }),
-            value.rarity,
-          )}
-          ariaLabel="Chaos blessing rarity"
-          onSelect={changeRarity}
-        />
-        {selectedOperands.map((operand) => {
-          const current = value.selectedCurseValues[operand.key] ?? operand.authoringDefault;
-          return (
-            <label
-              className="field-control field-control-inline trait-outcome-row"
-              key={operand.key}
-            >
-              <span>{operand.label}</span>
-              <ValueSlider
-                ariaLabel={operand.label}
-                maximum={operand.maximum}
-                minimum={operand.minimum}
-                onChange={(nextValue) => updateSelectedCurseValue(operand, nextValue)}
-                step={operand.step}
-                value={current}
-              />
-            </label>
-          );
-        })}
-        <ChaosBlessingValueFields
-          inline
-          onChange={(blessingValues) => onUpdate(Object.freeze({ ...value, blessingValues }))}
-          operands={blessingOperands}
-          rarity={value.rarity}
-          values={value.blessingValues}
-        />
-      </SelectedOutcomeBlock>
+      {pickless ? null : (
+        <SelectedOutcomeBlock
+          icon={traitIcon(selectedCurseKey(value))}
+          name="Selected Chaos outcome"
+          traitLabel={`${interaction.curseLabel(selectedCurseKey(value))} → ${interaction.blessingLabel(value.blessingKey)}`}
+        >
+          <ContextualPicker
+            ariaLabel="Chaos blessing"
+            id="chaos-selected-blessing"
+            label="Blessing"
+            layout="inline"
+            model={domain.blessingPicker}
+            onSelect={changeBlessing}
+            placeholder="Choose a blessing"
+            itemIcon={(item) => traitIcon(item.value)}
+            triggerIcon={traitIcon(value.blessingKey)}
+            triggerLabel={interaction.blessingLabel(value.blessingKey)}
+          />
+          <ContextualPicker
+            id="chaos-blessing-rarity"
+            label="Rarity"
+            layout="inline"
+            placeholder="Choose a rarity"
+            model={declaredChoicesPicker(
+              rarityOptions.map((rarity) => {
+                const presentation = traitRarityPresentation(blessingInfusion, rarity);
+                return {
+                  key: rarity,
+                  value: rarity,
+                  label: presentation.label,
+                  ...(presentation.accessibleLabel === presentation.label
+                    ? {}
+                    : { ariaLabel: presentation.accessibleLabel }),
+                  disabled: !domain.rarities.includes(rarity),
+                };
+              }),
+              value.rarity,
+            )}
+            ariaLabel="Chaos blessing rarity"
+            onSelect={changeRarity}
+          />
+          {selectedOperands.map((operand) => {
+            const current = value.selectedCurseValues[operand.key] ?? operand.authoringDefault;
+            return (
+              <label
+                className="field-control field-control-inline trait-outcome-row"
+                key={operand.key}
+              >
+                <span>{operand.label}</span>
+                <ValueSlider
+                  ariaLabel={operand.label}
+                  maximum={operand.maximum}
+                  minimum={operand.minimum}
+                  onChange={(nextValue) => updateSelectedCurseValue(operand, nextValue)}
+                  step={operand.step}
+                  value={current}
+                />
+              </label>
+            );
+          })}
+          <ChaosBlessingValueFields
+            inline
+            onChange={(blessingValues) => onUpdate(Object.freeze({ ...value, blessingValues }))}
+            operands={blessingOperands}
+            rarity={value.rarity}
+            values={value.blessingValues}
+          />
+        </SelectedOutcomeBlock>
+      )}
     </div>
   );
 }

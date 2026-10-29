@@ -30,6 +30,7 @@ export function TraitOfferOrdinaryOption({
   showEffectiveValues = false,
   spellOffer = false,
   rarifySupported,
+  pickless = false,
   value,
   onUpdate,
 }: {
@@ -44,6 +45,8 @@ export function TraitOfferOrdinaryOption({
   readonly showEffectiveValues?: boolean;
   readonly spellOffer?: boolean;
   readonly rarifySupported: boolean;
+  /** A screen rerolled away: its rows only, with no pick, Rarify or Persephone roll. */
+  readonly pickless?: boolean;
   readonly value: AuthoredTraitOfferTraits;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
 }) {
@@ -120,7 +123,7 @@ export function TraitOfferOrdinaryOption({
         : {})}
       legend={optionKey.replace('option', spellOffer ? 'Spell ' : 'Option ')}
       loading={loaded.pending}
-      {...(spellOffer
+      {...(spellOffer || pickless
         ? {}
         : {
             onRarify: () =>
@@ -153,8 +156,9 @@ export function TraitOfferOrdinaryOption({
         if (open) controller.activate(loadable);
       }}
       persephoneAriaLabel={`${optionKey} Persephone roll`}
+      pickable={!pickless}
       showEffectiveValues={showEffectiveValues}
-      showPersephoneBonus={interaction.showPersephoneBonus}
+      showPersephoneBonus={!pickless && interaction.showPersephoneBonus}
       {...(option.persephoneLevelBonus === undefined
         ? {}
         : { persephoneLevelBonus: option.persephoneLevelBonus })}

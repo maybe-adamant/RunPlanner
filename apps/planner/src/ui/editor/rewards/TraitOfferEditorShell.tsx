@@ -1,10 +1,14 @@
 import {
+  rerolledChaosScreenSnapshot,
+  rerolledTraitScreenSnapshot,
+  type AuthoredRerolledChaosScreen,
+  type AuthoredRerolledTraitScreen,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
-  withScreenRerollCount,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { candidateSupport } from '@planner/projections/candidates/candidateProjection';
 import {
@@ -23,9 +27,33 @@ import { TraitOfferForm, TraitOfferShapeActions, useOutcomeFeedback } from './Tr
 import { TraitOfferStateInspector } from './TraitOfferStateInspector';
 import { selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
-import { ScreenRerollCount } from './ScreenRerollCount';
+import { ScreenRerollTabs, UnsetScreen } from './ScreenRerollTabs';
+import { useScreenTab } from './useScreenTab';
 import { hintProps } from '@planner/ui/controls/hint';
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
+
+/** An earlier screen shown through the final screen's editor, without its pick. */
+function traitScreenValue(
+  value: AuthoredTraitOfferTraits,
+  screen: AuthoredRerolledTraitScreen,
+): AuthoredTraitOfferTraits {
+  const { rejectedOptionKey: _rejected, ...rest } = value;
+  void _rejected;
+  return Object.freeze({
+    ...rest,
+    options: screen.options as AuthoredTraitOfferTraits['options'],
+    ...(screen.rejectedOptionKey === undefined
+      ? {}
+      : { rejectedOptionKey: screen.rejectedOptionKey }),
+  });
+}
+
+function withRerolledScreens<T extends AuthoredTraitOffer>(
+  value: T,
+  screens: readonly unknown[],
+): T {
+  return Object.freeze({ ...value, rerolledScreens: Object.freeze([...screens]) }) as unknown as T;
+}
 
 function traitOfferLoadable(
   interaction: WorkspaceTraitOfferInteraction,
@@ -136,6 +164,10 @@ export function TraitOfferEditorShell({
     setDraft(Object.freeze({ interaction, loadable: nextLoadable, value: nextValue }));
     controller.activate(nextLoadable);
   };
+  const earlierScreens: readonly unknown[] =
+    value.kind === 'fallbackGold' ? [] : (value.rerolledScreens ?? []);
+  const earlierCount = earlierScreens.length;
+  const screenTab = useScreenTab(interaction.owner, earlierCount);
   if (view === 'echoLastRunBoon' && value.kind === 'traits') {
     const child = interaction
       .optionDomain(value, value.selectedOptionKey)
@@ -224,29 +256,137 @@ export function TraitOfferEditorShell({
         Reset to unresolved
       </button>
     );
-  const screenRerolls =
-    interaction.screenRerolls === undefined || value.kind === 'fallbackGold' ? undefined : (
-      <ScreenRerollCount
-        count={value.rerolledScreens?.length ?? 0}
-        onChange={(count) => {
-          const { rerolledScreens: _previous, ...rest } = value;
-          void _previous;
-          const screens = withScreenRerollCount<unknown>(value.rerolledScreens, count);
-          updateValue(
-            Object.freeze({
-              ...rest,
-              ...(screens === undefined ? {} : { rerolledScreens: screens }),
-            }) as typeof value,
-          );
-        }}
-        rerolls={interaction.screenRerolls}
-      />
+  const screenRerolls = interaction.screenRerolls;
+  const screenTabs =
+    screenRerolls === undefined || value.kind === 'fallbackGold'
+      ? undefined
+      : (panel: ReactNode) => (
+          <ScreenRerollTabs
+            active={screenTab.active}
+            earlierCount={earlierCount}
+            idPrefix={encodeURIComponent(semanticAddressKey(interaction.owner))}
+            marked={screenTab.marked}
+            onRemove={() => updateValue(withRerolledScreens(value, earlierScreens.slice(0, -1)))}
+            onReroll={() => {
+              updateValue(
+                withRerolledScreens(value, [
+                  ...earlierScreens,
+                  value.kind === 'traits'
+                    ? rerolledTraitScreenSnapshot(value)
+                    : rerolledChaosScreenSnapshot(value),
+                ]),
+              );
+              screenTab.select(earlierCount + 1);
+            }}
+            onSelect={screenTab.select}
+            rerolls={screenRerolls}
+          >
+            {panel}
+          </ScreenRerollTabs>
+        );
+  const earlierIndex =
+    screenTabs !== undefined && screenTab.active < earlierCount ? screenTab.active : undefined;
+  const replaceScreen = (index: number, screen: unknown): void =>
+    updateValue(
+      withRerolledScreens(
+        value,
+        earlierScreens.map((current, at) => (at === index ? screen : current)),
+      ),
     );
   const save = {
     disabled: support === 'impossible' || !selectedOutcomeComplete,
     label: value.kind === 'chaos' ? 'Save Chaos outcome' : 'Save trait offer',
     onClick: () => onCommit?.(value),
   };
+  const rejectedRow = (
+    screen: AuthoredTraitOfferTraits,
+    update: (next: AuthoredTraitOfferTraits) => void,
+  ): ReactNode =>
+    rejectedBlock === undefined ? null : (
+      <fieldset
+        aria-label="Rejected blocked row"
+        className="trait-offer-rejected-block"
+        {...hintProps(
+          rejectedBlockInactive
+            ? 'The Rejected curse doesn’t lock an option in this offer.'
+            : 'The Rejected curse makes one offered option unselectable.',
+        )}
+      >
+        <legend>Rejected blocked row</legend>
+        {rejectedBlock.canClear ? (
+          <label>
+            <input
+              checked={screen.rejectedOptionKey === undefined}
+              disabled={rejectedBlockInactive}
+              name={`${interaction.key}-rejected-block`}
+              onChange={() => {
+                const { rejectedOptionKey: _rejectedOptionKey, ...withoutBlock } = screen;
+                void _rejectedOptionKey;
+                update(Object.freeze(withoutBlock));
+              }}
+              type="radio"
+            />
+            No blocked row
+          </label>
+        ) : null}
+        {rejectedBlock.optionKeys.map((optionKey) => (
+          <label key={optionKey}>
+            <input
+              checked={screen.rejectedOptionKey === optionKey}
+              disabled={rejectedBlockInactive}
+              name={`${interaction.key}-rejected-block`}
+              onChange={() => update(Object.freeze({ ...screen, rejectedOptionKey: optionKey }))}
+              type="radio"
+            />
+            Block {optionKey.replace('option', 'Option ')}
+          </label>
+        ))}
+      </fieldset>
+    );
+  if (value.kind === 'traits' && earlierIndex !== undefined) {
+    const screen = earlierScreens[earlierIndex] as AuthoredRerolledTraitScreen | null;
+    const screenValue = screen === null ? undefined : traitScreenValue(value, screen);
+    const updateScreen = (next: AuthoredTraitOfferTraits): void =>
+      replaceScreen(earlierIndex, rerolledTraitScreenSnapshot(next));
+    return (
+      <TraitOfferForm
+        content={
+          screenValue === undefined ? (
+            <UnsetScreen
+              onCopy={() => replaceScreen(earlierIndex, rerolledTraitScreenSnapshot(value))}
+            />
+          ) : (
+            <>
+              {rejectedRow(screenValue, updateScreen)}
+              <div className="trait-offer-options">
+                {screenValue.options.map((_, index) => (
+                  <TraitOfferOrdinaryOption
+                    index={index}
+                    interaction={interaction}
+                    key={OPTION_KEYS[index]}
+                    onUpdate={updateScreen}
+                    optionKey={OPTION_KEYS[index]!}
+                    pickless
+                    rarifySupported={false}
+                    rejected={screenValue.rejectedOptionKey === OPTION_KEYS[index]}
+                    spellOffer={spellOffer}
+                    value={screenValue}
+                  />
+                ))}
+              </div>
+            </>
+          )
+        }
+        feedback={feedbackSection}
+        options={null}
+        recovery={recoveryAction}
+        reset={resetAction}
+        save={save}
+        {...(screenTabs === undefined ? {} : { screenTabs })}
+        {...(onCancel === undefined ? {} : { cancel: onCancel })}
+      />
+    );
+  }
   if (value.kind === 'traits') {
     return (
       <TraitOfferForm
@@ -257,49 +397,7 @@ export function TraitOfferEditorShell({
         }
         options={
           <>
-            {rejectedBlock === undefined ? null : (
-              <fieldset
-                aria-label="Rejected blocked row"
-                className="trait-offer-rejected-block"
-                {...hintProps(
-                  rejectedBlockInactive
-                    ? 'The Rejected curse doesn’t lock an option in this offer.'
-                    : 'The Rejected curse makes one offered option unselectable.',
-                )}
-              >
-                <legend>Rejected blocked row</legend>
-                {rejectedBlock.canClear ? (
-                  <label>
-                    <input
-                      checked={value.rejectedOptionKey === undefined}
-                      disabled={rejectedBlockInactive}
-                      name={`${interaction.key}-rejected-block`}
-                      onChange={() => {
-                        const { rejectedOptionKey: _rejectedOptionKey, ...withoutBlock } = value;
-                        void _rejectedOptionKey;
-                        updateValue(Object.freeze(withoutBlock));
-                      }}
-                      type="radio"
-                    />
-                    No blocked row
-                  </label>
-                ) : null}
-                {rejectedBlock.optionKeys.map((optionKey) => (
-                  <label key={optionKey}>
-                    <input
-                      checked={value.rejectedOptionKey === optionKey}
-                      disabled={rejectedBlockInactive}
-                      name={`${interaction.key}-rejected-block`}
-                      onChange={() =>
-                        updateValue(Object.freeze({ ...value, rejectedOptionKey: optionKey }))
-                      }
-                      type="radio"
-                    />
-                    Block {optionKey.replace('option', 'Option ')}
-                  </label>
-                ))}
-              </fieldset>
-            )}
+            {rejectedRow(value, updateValue)}
             {value.options.map((_, index) => {
               const optionKey = OPTION_KEYS[index]!;
               const optionFeedback = feedback.options[index];
@@ -364,7 +462,7 @@ export function TraitOfferEditorShell({
         recovery={recoveryAction}
         reset={resetAction}
         save={save}
-        screenRerolls={screenRerolls}
+        {...(screenTabs === undefined ? {} : { screenTabs })}
         {...(onCancel === undefined ? {} : { cancel: onCancel })}
       />
     );
@@ -377,16 +475,32 @@ export function TraitOfferEditorShell({
             <p>Fallback Gold</p>
           </section>
         ) : value.kind === 'chaos' && interaction.chaos !== undefined ? (
-          <ChaosTraitOfferEditor
-            interaction={interaction.chaos}
-            onUpdate={updateValue}
-            value={value}
-          />
+          earlierIndex === undefined ? (
+            <ChaosTraitOfferEditor
+              interaction={interaction.chaos}
+              onUpdate={updateValue}
+              value={value}
+            />
+          ) : earlierScreens[earlierIndex] === null ? (
+            <UnsetScreen
+              onCopy={() => replaceScreen(earlierIndex, rerolledChaosScreenSnapshot(value))}
+            />
+          ) : (
+            <ChaosTraitOfferEditor
+              interaction={interaction.chaos}
+              onUpdate={(next) => replaceScreen(earlierIndex, rerolledChaosScreenSnapshot(next))}
+              pickless
+              value={Object.freeze({
+                ...value,
+                ...(earlierScreens[earlierIndex] as AuthoredRerolledChaosScreen),
+              })}
+            />
+          )
         ) : null
       }
       feedback={feedbackSection}
       options={null}
-      screenRerolls={screenRerolls}
+      {...(screenTabs === undefined ? {} : { screenTabs })}
       recovery={recoveryAction}
       reset={resetAction}
       save={save}

@@ -347,6 +347,48 @@ describe('Pom resolution editor', () => {
     });
   });
 
+  it('keeps each rerolled screen on its own tab and saves the screens with the Pom', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    const editorInteraction: WorkspaceLevelResolutionInteraction = {
+      ...interaction({
+        value: choice(['A', 'B']),
+        load: () =>
+          Object.freeze({
+            groups: Object.freeze([group('branch-0', 'choice', ['A', 'B', 'C'], true, [], 2)]),
+          }),
+      }),
+      screenRerolls: { count: 0, maxCount: 1, lockAtMax: 'poolEmpty' },
+    };
+    render(<PomResolutionEditor interaction={editorInteraction} onCommit={onCommit} />);
+    await user.click(screen.getByRole('button', { name: 'Reroll · costs 1' }));
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Offer', 'Reroll 1']);
+    const atMax = screen.getByRole('button', { name: 'Reroll · costs 2' });
+    expect((atMax as HTMLButtonElement).disabled).toBe(true);
+    expect(hintOf(atMax)).toBe('No rerolls left.');
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
+    await user.click(screen.getByRole('tab', { name: 'Offer' }));
+    expect(screen.queryAllByRole('radio')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Pom target 1' }).textContent).toContain('Trait A');
+    await user.click(screen.getByRole('button', { name: 'Pom target 1' }));
+    await user.click(screen.getByRole('option', { name: 'Trait C' }));
+    await user.click(screen.getByRole('button', { name: 'Save Pom' }));
+    expect(onCommit).toHaveBeenLastCalledWith({
+      kind: 'choice',
+      offeredTraitKeys: ['A', 'B'],
+      selectedTraitKey: 'A',
+      rerolledScreens: [{ offeredTraitKeys: ['C', 'B'] }],
+    });
+    await user.click(screen.getByRole('button', { name: 'Remove last reroll' }));
+    await user.click(screen.getByRole('button', { name: 'Save Pom' }));
+    expect(onCommit).toHaveBeenLastCalledWith({
+      kind: 'choice',
+      offeredTraitKeys: ['A', 'B'],
+      selectedTraitKey: 'A',
+      rerolledScreens: [],
+    });
+  });
+
   it('preserves a retained partial visible Pom instead of replacing it with defaults', async () => {
     const editorInteraction = interaction({
       value: { kind: 'choice', offeredTraitKeys: ['C'], selectedTraitKey: null },
