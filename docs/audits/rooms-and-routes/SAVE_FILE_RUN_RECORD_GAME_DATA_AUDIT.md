@@ -586,7 +586,8 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   between Hub visits. The planner's pool is compared with `NumRerolls` at each entry save.
 - A ship room's unpicked wheel offers are solved once its save-to-save
   window closes: the next room entered, every draw authored and any Artificer
-  or Time Piece conversion applied. Until then each holds a provisional value,
+  or Time Piece conversion applied, or reported refused when no pickup of the
+  ship can take it by then. Until then each holds a provisional value,
   the first supported type of its wheel's domain, taking types the room's
   wheels did not pick before those they did and then those the saved store
   lost most of first, so that an earlier answer is less often refused. The
