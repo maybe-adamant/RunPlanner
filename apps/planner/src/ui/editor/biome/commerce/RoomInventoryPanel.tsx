@@ -1,4 +1,4 @@
-import type { HermesShrineDelay } from '@run-planner/engine/authored-project';
+import { HERMES_SHRINE_DELAYS, type HermesShrineDelay } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   type WorkspaceInteractionCatalog,
@@ -23,8 +23,8 @@ const wellIcon = (itemKey: string | null): string | undefined =>
   itemKey === null ? undefined : (wellArtwork[itemKey] ?? undefined);
 
 const shrineDelayChoices = Object.freeze(
-  ([2, 3, 4, 5, 6, 7, 8] as const satisfies readonly HermesShrineDelay[]).map((delay) =>
-    Object.freeze({ key: String(delay), value: delay as HermesShrineDelay, label: String(delay) }),
+  HERMES_SHRINE_DELAYS.map((delay) =>
+    Object.freeze({ key: String(delay), value: delay, label: String(delay) }),
   ),
 );
 
