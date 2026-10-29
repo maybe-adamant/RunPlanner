@@ -1474,7 +1474,7 @@
       "toolElements": ["ToolFishingRod2"],
       "entry": {
         "traits": {
-          "ForcePoseidonBoonKeepsake": { "rarity": "Epic" },
+          "ForcePoseidonBoonKeepsake": { "rarity": "Epic", "rarityUpgradeUses": 1 },
           "StorePendingDeliveryItem": { "remainingUses": 5 }
         },
         "lostTraits": ["FountainRarityKeepsake"],
@@ -1655,6 +1655,7 @@
       "conversions": { "artificer": 1 },
       "entry": {
         "traits": {
+          "ForcePoseidonBoonKeepsake": { "rarity": "Epic", "rarityUpgradeUses": 0 },
           "StorePendingDeliveryItem": { "remainingUses": 3 },
           "DoubleRewardBoon": { "rarity": "Rare" }
         },

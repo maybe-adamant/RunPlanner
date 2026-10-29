@@ -70,6 +70,8 @@ export interface SavedTrait {
   readonly stackNum?: number;
   readonly boonConversionUses?: number;
   readonly remainingUses?: number;
+  /** `RarityUpgradeData.Uses`: Rarify charges left, not the keepsake's own `Uses`. */
+  readonly rarityUpgradeUses?: number;
   /** `SourceName`: the Arcana card that granted the trait. */
   readonly sourceName?: string;
   /** The numbers at the paths kept for this trait's name, by dotted path. */
@@ -476,6 +478,7 @@ function hero(
         ...optional('stackNum', number(entry.StackNum)),
         ...optional('boonConversionUses', number(entry.BoonConversionUses)),
         ...optional('remainingUses', number(entry.RemainingUses)),
+        ...optional('rarityUpgradeUses', number(atPath(entry, 'RarityUpgradeData.Uses'))),
         ...optional('sourceName', text(entry.SourceName)),
         ...optional('savedValues', savedValues(entry, savedValuePaths.get(name))),
       },

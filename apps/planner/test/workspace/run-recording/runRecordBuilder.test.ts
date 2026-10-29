@@ -903,7 +903,7 @@ describe('run record builder', () => {
         history: ['F_Opening01'],
         current: room('F_Combat01'),
         departure: room('F_Opening01'),
-        traits: [{ ...startTraits[0]!, boonConversionUses: 2 }, boon],
+        traits: [{ ...startTraits[0]!, boonConversionUses: 2, rarityUpgradeUses: 0 }, boon],
         worldTime: 15,
       }),
     };
@@ -933,6 +933,12 @@ describe('run record builder', () => {
         removed: [],
       },
       conversions: { timePiece: 1 },
+    });
+    // The next entry save carries a held trait's Rarify charges beside its other counters.
+    expect(record.rooms[1]!.entry?.traits?.['GoldifyKeepsake']).toEqual({
+      rarity: 'Epic',
+      boonConversionUses: 2,
+      rarityUpgradeUses: 0,
     });
     expect(record.rooms[1]).toMatchObject({
       traits: {

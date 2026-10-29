@@ -610,6 +610,7 @@ function heldTraits(save: SaveCheckpoint): Map<string, RunRecordHeldTrait> {
         ...optional('level', whole(trait.stackNum, 1)),
         ...optional('remainingUses', whole(trait.remainingUses)),
         ...optional('boonConversionUses', whole(trait.boonConversionUses)),
+        ...optional('rarityUpgradeUses', whole(trait.rarityUpgradeUses)),
       });
   return traits;
 }

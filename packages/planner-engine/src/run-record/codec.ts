@@ -653,7 +653,12 @@ function heldTraits(value: unknown, label: string): Readonly<Record<string, RunR
         const path = `${label}.${name}`;
         text(name, `${label} key`);
         const row = object(traits[name], path);
-        exact(row, [], ['rarity', 'level', 'remainingUses', 'boonConversionUses'], path);
+        exact(
+          row,
+          [],
+          ['rarity', 'level', 'remainingUses', 'boonConversionUses', 'rarityUpgradeUses'],
+          path,
+        );
         return [
           name,
           Object.freeze({
@@ -661,6 +666,7 @@ function heldTraits(value: unknown, label: string): Readonly<Record<string, RunR
             ...optional(row, 'level', path, (item, at) => integer(item, at, 1)),
             ...optional(row, 'remainingUses', path, (item, at) => integer(item, at)),
             ...optional(row, 'boonConversionUses', path, (item, at) => integer(item, at)),
+            ...optional(row, 'rarityUpgradeUses', path, (item, at) => integer(item, at, 0)),
           }),
         ];
       }),

@@ -188,6 +188,8 @@ export interface RunRecordHeldTrait {
   readonly remainingUses?: number;
   /** `BoonConversionUses`: the Time Piece's remaining conversions. */
   readonly boonConversionUses?: number;
+  /** `RarityUpgradeData.Uses`: a Rarify source's charges left. */
+  readonly rarityUpgradeUses?: number;
 }
 
 export interface RunRecordSpell {

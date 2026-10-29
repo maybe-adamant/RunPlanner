@@ -206,6 +206,28 @@ describe('save checkpoint extraction', () => {
     });
   });
 
+  it("reads a Rarify source's charges from its nested data, not the keepsake's own uses", () => {
+    const save = sample('underworld-062');
+    const run = save.globals.CurrentRun as LuaTable;
+    const hero = run.Hero as LuaTable;
+    const conch = {
+      Name: 'ForcePoseidonBoonKeepsake',
+      Rarity: 'Epic',
+      Uses: -1,
+      RarityUpgradeData: { Uses: 1, LootName: 'PoseidonUpgrade', MaxRarity: 3 },
+    };
+    const withConch: DecodedSave = {
+      ...save,
+      globals: {
+        ...save.globals,
+        CurrentRun: { ...run, Hero: { ...hero, Traits: [conch] } },
+      },
+    };
+    expect(extractSaveCheckpoint(withConch, true, NO_SAVED_VALUES).hero?.traits).toEqual([
+      { name: 'ForcePoseidonBoonKeepsake', rarity: 'Epic', rarityUpgradeUses: 1 },
+    ]);
+  });
+
   it("keeps a Hex tree's slot 0, which Nacelle's third row holds", () => {
     const save = sample('underworld-062');
     const run = save.globals.CurrentRun as LuaTable;
