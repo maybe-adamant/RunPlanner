@@ -36,6 +36,8 @@ Evidence: the save-file run record audit
    unpicked ship-wheel offer's type is solved from the saved stores and
    reported only when fits differ in exit state or none fits; its Boon god
    leaves no trace, so it takes the first god the wheel admits, unreported.
+   Which wheel took which side when a ship's wheels used both is solved the
+   same way, starting from Left picks first in setup order.
 6. **Encounters** are imported by inverting the saved waves into the authored
    generated customization (wave count, highlight, types, base roll,
    allocations), verified by replaying the forward model; a phase whose replay

@@ -52,10 +52,56 @@ function shipVisit(
   return undefined;
 }
 
-/** The offer a wheel's side picked: Left is the first roll, Right the second. */
-function pickedIndex(wheel: RunRecordWheel): number | undefined {
-  if (wheel.offers === 1) return 1;
-  return wheel.side === 'left' ? 1 : wheel.side === 'right' ? 2 : undefined;
+/**
+ * Each wheel's picked offer: Left is the first roll, Right the second. When a
+ * room's two-offer wheels used both sides, the record does not say which took
+ * which; the first wheels in setup order take the Left uses, a canonical split
+ * the solve checks against every other.
+ */
+function pickedIndices(room: RunRecordRoom): readonly (number | undefined)[] {
+  const left = mixedLeftUses(room);
+  return (room.wheels ?? []).map((wheel, index) =>
+    wheel.offers === 1 || wheel.side === 'left'
+      ? 1
+      : wheel.side === 'right'
+        ? 2
+        : left === undefined
+          ? undefined
+          : index < left
+            ? 1
+            : 2,
+  );
+}
+
+/** The Left uses of a room whose two-offer wheels used both sides; undefined otherwise. */
+function mixedLeftUses(room: RunRecordRoom): number | undefined {
+  const wheels = room.wheels ?? [];
+  const left = room.uses['ShipsSteeringWheelLeft'] ?? 0;
+  const right = room.uses['ShipsSteeringWheelRight'] ?? 0;
+  return left > 0 &&
+    right > 0 &&
+    left + right === wheels.length &&
+    wheels.every((wheel) => wheel.offers === 2 && wheel.side === undefined)
+    ? left
+    : undefined;
+}
+
+/**
+ * Every way to give `left` of `count` wheels in setup order the Left pick, as
+ * picked offer indices, the canonical split (Left picks first) first.
+ */
+export function sideSplits(count: number, left: number): readonly (readonly number[])[] {
+  const splits: (readonly number[])[] = [];
+  const extend = (prefix: readonly number[], lefts: number) => {
+    if (prefix.length === count) {
+      if (lefts === 0) splits.push(prefix);
+      return;
+    }
+    if (lefts > 0) extend([...prefix, 1], lefts - 1);
+    if (count - prefix.length > lefts) extend([...prefix, 2], lefts);
+  };
+  extend([], left);
+  return splits;
 }
 
 /**
@@ -76,7 +122,7 @@ export function importWheels(context: RunImportContext): void {
       const visit = shipVisit(context, occurrence.occurrenceId);
       if (visit === undefined) continue;
       context.used.add(used);
-      importShipWheels(context, biome.biomeKey, occurrence, visit.room.wheels!, visit.roomIndex);
+      importShipWheels(context, biome.biomeKey, occurrence, visit.room, visit.roomIndex);
     }
 }
 
@@ -84,11 +130,12 @@ function importShipWheels(
   context: RunImportContext,
   biomeKey: string,
   occurrence: RoomOccurrence,
-  wheels: readonly RunRecordWheel[],
+  room: RunRecordRoom,
   roomIndex: number,
 ): void {
   const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
-  for (const [index, recorded] of wheels.entries()) {
+  const picks = pickedIndices(room);
+  for (const [index, recorded] of (room.wheels ?? []).entries()) {
     const wheel = createRewardWheelAddress(biome, occurrence.occurrenceId, wheelKey(index));
     const state = (): RewardWheelState | undefined => {
       const current = authoredOccurrence(
@@ -109,7 +156,7 @@ function importShipWheels(
       steps.push({ kind: 'ReplaceRewardWheelStore', wheel, storeKey: recorded.store });
     if (recorded.offers !== undefined && state()!.offerCount !== recorded.offers)
       steps.push({ kind: 'ReplaceRewardWheelOfferCount', wheel, offerCount: recorded.offers });
-    const picked = pickedIndex(recorded);
+    const picked = picks[index];
     if (picked !== undefined && state()!.pickedOfferIndex !== picked)
       steps.push({ kind: 'ReplaceRewardWheelPicked', wheel, pickedOfferIndex: picked });
     for (const step of steps)
@@ -121,7 +168,8 @@ function importShipWheels(
           applied: step,
           record: record(roomIndex),
         });
-    // Neither the save nor the use record shows which of two wheels was taken.
+    // Neither the save nor the use record shows which of two offers was taken;
+    // a split of mixed sides is settled by the solve instead.
     if (recorded.offers === undefined || picked === undefined)
       context.note({
         area: 'wheel',
@@ -155,7 +203,11 @@ export function answerWheels(context: RunImportContext, reason: SemanticFinding)
   if (visit === undefined || recorded === undefined || state === undefined) return false;
   const offerIndex = Number(/^offer(\d+)$/.exec(offer.offerKey)?.[1]);
   if (offerIndex !== state.pickedOfferIndex)
-    return sidesKnown(recorded) && answerProvisionally(context, offer, visit.roomIndex);
+    return (
+      recorded.offers !== undefined &&
+      pickedIndices(visit.room)[index] !== undefined &&
+      answerProvisionally(context, offer, visit.roomIndex)
+    );
   const { type, lootName } = recorded.picked;
   const named = (source: string) =>
     (visit.room.uses[source] ?? 0) > 0 ||
@@ -188,10 +240,6 @@ export function answerWheels(context: RunImportContext, reason: SemanticFinding)
 
 const boonSource = (value: ResolvedRewardOffer) =>
   value.payload?.kind === 'BoonSource' ? value.payload.source : undefined;
-
-/** Whether the record names which of a wheel's offers was picked, and so which it left. */
-const sidesKnown = (wheel: RunRecordWheel) =>
-  wheel.offers !== undefined && pickedIndex(wheel) !== undefined;
 
 function wheelOfferSupported(
   context: RunImportContext,
@@ -273,16 +321,20 @@ function answerProvisionally(
   return false;
 }
 
-/** An unpicked offer of a wheel whose side the record names. */
+/** An unpicked offer of a wheel whose side the record names or the canonical split assumes. */
 interface UnknownOffer {
   readonly address: RewardWheelOfferAddress;
   readonly wheel: RunRecordWheel;
 }
 
-/** A ship room's unknown offers in setup order; `complete` when every wheel's side is known. */
+/**
+ * A ship room's unknown offers in setup order, for the given picks or the
+ * record's; `complete` when every wheel's side is known.
+ */
 function unknownOffers(
   context: RunImportContext,
   roomIndex: number,
+  picks: readonly (number | undefined)[] = pickedIndices(context.record.rooms[roomIndex]!),
 ): { readonly offers: readonly UnknownOffer[]; readonly complete: boolean } | undefined {
   const wheels = context.record.rooms[roomIndex]!.wheels ?? [];
   const biomeKey = context.occurrences.biomeOfRoom[roomIndex]!;
@@ -291,21 +343,26 @@ function unknownOffers(
   if (occurrence?.state.kind !== 'shipCombat') return undefined;
   const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
   const offers = wheels.flatMap((wheel, index): UnknownOffer[] =>
-    wheel.offers === 2 && sidesKnown(wheel)
+    wheel.offers === 2 && picks[index] !== undefined
       ? [
           {
             address: createRewardWheelOfferAddress(
               biome,
               occurrence.occurrenceId,
               wheelKey(index),
-              `offer${3 - pickedIndex(wheel)!}`,
+              `offer${3 - picks[index]!}`,
             ),
             wheel,
           },
         ]
       : [],
   );
-  return { offers, complete: wheels.every(sidesKnown) };
+  return {
+    offers,
+    complete: wheels.every(
+      (wheel, index) => wheel.offers !== undefined && picks[index] !== undefined,
+    ),
+  };
 }
 
 function offerValue(
@@ -400,6 +457,7 @@ function solveShip(
   roomIndex: number,
   targets: readonly PressTarget[],
 ): void {
+  const room = context.record.rooms[roomIndex]!;
   const unknown = unknownOffers(context, roomIndex);
   if (unknown === undefined || !unknown.complete) return;
   const { offers } = unknown;
@@ -422,21 +480,43 @@ function solveShip(
   if (draws === undefined) return;
   context.used.add(solved);
   const wheelStores = new Set(offers.map((offer) => offer.wheel.store));
-  const fits: WheelFit<ResolvedRewardOffer>[] = [];
-  for (const { types, remainder } of assignments(offers, draws.solutions))
-    context.probe(() => {
-      const values: ResolvedRewardOffer[] = [];
-      const placed = context.transaction(
-        () =>
-          placeOffers(context, offers, types, (offer, index) => {
-            const value = firstSupported(context, offer.address, types[index]!);
-            if (value !== undefined) values.push(value);
-            return value;
-          }) && remainder.every((entry) => prependReplaced(context, targets, entry)),
-      );
-      if (placed && bracketStoresMatch(context, roomIndex, wheelStores))
-        fits.push({ values, fingerprint: exitFingerprint(context, roomIndex) });
-    });
+  // Mixed sides add the split as a dimension; every wheel then has an unknown offer.
+  const left = mixedLeftUses(room);
+  const splits: readonly (readonly number[] | undefined)[] =
+    left === undefined ? [undefined] : sideSplits(offers.length, left);
+  const offersOf = (split: readonly number[] | undefined) =>
+    split === undefined ? offers : unknownOffers(context, roomIndex, split)!.offers;
+  const biome = createBiomeAddress(
+    context.assembly().project.route.routeKey,
+    context.occurrences.biomeOfRoom[roomIndex]!,
+  );
+  const sourceId = context.occurrences.occurrenceOf(roomIndex);
+  const fits: (WheelFit<ResolvedRewardOffer> & { readonly split?: readonly number[] })[] = [];
+  const types = assignments(offers, draws.solutions);
+  for (const split of splits)
+    for (const { types: assigned, remainder } of types)
+      context.probe(() => {
+        const values: ResolvedRewardOffer[] = [];
+        const placed = context.transaction(() => {
+          if (!pickSides(context, offersOf(split), split)) return false;
+          // A press redraws the offers left unpicked, so the targets follow the split.
+          const pressTargets =
+            split === undefined ? targets : roomPressTargets(context, biome, sourceId);
+          return (
+            placeOffers(context, offersOf(split), assigned, (offer, index) => {
+              const value = firstSupported(context, offer.address, assigned[index]!);
+              if (value !== undefined) values.push(value);
+              return value;
+            }) && remainder.every((entry) => prependReplaced(context, pressTargets, entry))
+          );
+        });
+        if (placed && bracketStoresMatch(context, roomIndex, wheelStores))
+          fits.push({
+            values,
+            fingerprint: exitFingerprint(context, roomIndex),
+            ...(split === undefined ? {} : { split }),
+          });
+      });
   const choice = chooseWheelFit(fits, sameOffer);
   const at = record(roomIndex);
   if (choice === undefined) {
@@ -448,23 +528,37 @@ function solveShip(
         record: at,
         mismatch: { field: storeKey, ...roomLoss(context, roomIndex, storeKey) },
       });
+    for (const entry of sideGuesses(context, roomIndex, offers)) context.note(entry);
     for (const entry of provisionalOffers(context, roomIndex, offers)) context.note(entry);
     return;
   }
-  const commands = offers.map((offer, index): ProjectCommand => ({
+  const split = fits[0]!.split;
+  const chosenOffers = offersOf(split);
+  const commands = chosenOffers.map((offer, index): ProjectCommand => ({
     kind: 'ReplaceRewardWheelOffer',
     offer: offer.address,
     value: choice.chosen[index]!,
   }));
-  const applied = context.transaction(() =>
-    placeOffers(
-      context,
-      offers,
-      choice.chosen.map((value) => value.rewardType),
-      (_offer, index) => choice.chosen[index],
-    ),
+  const applied = context.transaction(
+    () =>
+      pickSides(context, chosenOffers, split) &&
+      placeOffers(
+        context,
+        chosenOffers,
+        choice.chosen.map((value) => value.rewardType),
+        (_offer, index) => choice.chosen[index],
+      ),
   );
-  for (const [index, offer] of offers.entries()) {
+  if (applied && split !== undefined) {
+    const sides = chooseWheelFit(
+      fits.map((fit) => ({ values: fit.split!, fingerprint: fit.fingerprint })),
+      (left: number, right: number) => left === right,
+    )!;
+    for (const [index, offer] of chosenOffers.entries())
+      if (sides.alternatives[index]!.length > 0)
+        context.note(sideGuess(offer, sides.chosen[index]!, sides.alternatives[index]!, at));
+  }
+  for (const [index, offer] of chosenOffers.entries()) {
     const alternatives = choice.alternatives[index]!;
     if (!applied)
       context.note({
@@ -488,6 +582,70 @@ function solveShip(
         record: at,
       });
   }
+}
+
+/**
+ * Swaps each wheel whose authored pick is not the split's, carrying the
+ * picked offer's authorship to the other side; no split leaves the picks.
+ */
+function pickSides(
+  context: RunImportContext,
+  offers: readonly UnknownOffer[],
+  split: readonly number[] | undefined,
+): boolean {
+  if (split === undefined) return true;
+  return offers.every((offer, index) => {
+    const occurrence = authoredOccurrence(
+      context.assembly().project,
+      offer.address.biomeKey,
+      offer.address.occurrenceId,
+    );
+    const wheel =
+      occurrence?.state.kind === 'shipCombat'
+        ? occurrence.state.wheels[offer.address.wheelKey]
+        : undefined;
+    return (
+      wheel !== undefined &&
+      (wheel.pickedOfferIndex === split[index] ||
+        context.apply({ kind: 'SwapRewardWheelOffers', wheel: wheelOf(offer.address) }))
+    );
+  });
+}
+
+/** A wheel's side the record leaves open: the pick authored, and the others that fit. */
+function sideGuess(
+  offer: UnknownOffer,
+  picked: number,
+  alternatives: readonly number[],
+  at: RunImportReportEntry['record'],
+): RunImportReportEntry {
+  const wheel = wheelOf(offer.address);
+  return {
+    area: 'wheel',
+    reason: 'notInRecord',
+    address: wheel,
+    applied: { kind: 'ReplaceRewardWheelPicked', wheel, pickedOfferIndex: picked },
+    alternatives: alternatives.map((pickedOfferIndex): ProjectCommand => ({
+      kind: 'ReplaceRewardWheelPicked',
+      wheel,
+      pickedOfferIndex,
+    })),
+    ...(at === undefined ? {} : { record: at }),
+  };
+}
+
+/** Each wheel of a mixed-side room the solve did not settle: its canonical side, or the other. */
+function sideGuesses(
+  context: RunImportContext,
+  roomIndex: number,
+  offers: readonly UnknownOffer[],
+): readonly RunImportReportEntry[] {
+  const room = context.record.rooms[roomIndex]!;
+  if (mixedLeftUses(room) === undefined) return [];
+  const picks = pickedIndices(room);
+  return offers.map((offer, index) =>
+    sideGuess(offer, picks[index]!, [3 - picks[index]!], record(roomIndex)),
+  );
 }
 
 /**
@@ -647,7 +805,10 @@ export function unsolvedWheels(context: RunImportContext): readonly RunImportRep
   return context.record.rooms.flatMap((room, roomIndex) =>
     room.wheels === undefined || context.used.has(`wheelSolved:${roomIndex}`)
       ? []
-      : provisionalOffers(context, roomIndex, unknownOffers(context, roomIndex)?.offers ?? []),
+      : [
+          ...sideGuesses(context, roomIndex, unknownOffers(context, roomIndex)?.offers ?? []),
+          ...provisionalOffers(context, roomIndex, unknownOffers(context, roomIndex)?.offers ?? []),
+        ],
   );
 }
 

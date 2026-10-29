@@ -13,6 +13,7 @@ import {
   createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -349,6 +350,31 @@ describe('run guesses', () => {
         group.lines.filter((line) => line.mismatch).map((line) => line.key),
       ),
     ).toEqual(['9']);
+  });
+
+  it("names a ship wheel's guessed side and the side that fits as well", () => {
+    const wheel = createRewardWheelAddress(ship, createOccurrenceId('O-r3'), 'wheel1');
+    const picked = (pickedOfferIndex: number): ProjectCommand => ({
+      kind: 'ReplaceRewardWheelPicked',
+      wheel,
+      pickedOfferIndex,
+    });
+    const groups = projectRunGuesses(
+      catalog,
+      entry([
+        {
+          area: 'wheel',
+          reason: 'notInRecord',
+          record: { roomIndex: 5, visit: 1 },
+          address: wheel,
+          applied: picked(1),
+          alternatives: [picked(2)],
+        },
+      ]),
+    );
+    expect(groups.flatMap((group) => group.lines.map((line) => line.text))).toEqual([
+      'Guessed left pick or right pick',
+    ]);
   });
 
   it('words a mismatch as the game value, then the plan value, in room order', () => {

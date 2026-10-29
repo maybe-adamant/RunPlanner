@@ -382,14 +382,14 @@ the entry from `RewardStores` whether picked or not (`RewardLogic.lua:177`).
 `UseShipWheel` (`RoomLogic.lua:1464`) writes the pick to the encounter. Wheel
 rules are in [O game rules](../../biomes/O_GAME_RULES.md).
 
-| Fact                  | Save source                                                                                                    | Status   |
-| --------------------- | -------------------------------------------------------------------------------------------------------------- | -------- |
-| Encounter count       | entry-save `len(CurrentRoom.Encounters)`                                                                       | exact    |
-| Store and picked type | `Encounters[k].RewardStoreName` and `.EncounterRoomRewardOverride`, per setup, from the PostReward save        | exact    |
-| Picked boon god       | the matching `LootChoiceHistory` screen, or `CurrentRoom.ForceLootName` for the last setup                     | exact    |
-| Offer count and side  | `UseRecord` key: `ShipsSteeringWheel` (one offer) or `ShipsSteeringWheelLeft`/`Right` (two, left rolled first) | inferred |
-| Unpicked type         | none in the record: solved by the importer from the saved stores (see Planner disposition)                     | inferred |
-| Unpicked boon god     | none: traceless except for excluding that god from the same wheel's other Boon roll                            | lost     |
+| Fact                  | Save source                                                                                                                                                     | Status   |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Encounter count       | entry-save `len(CurrentRoom.Encounters)`                                                                                                                        | exact    |
+| Store and picked type | `Encounters[k].RewardStoreName` and `.EncounterRoomRewardOverride`, per setup, from the PostReward save                                                         | exact    |
+| Picked boon god       | the matching `LootChoiceHistory` screen, or `CurrentRoom.ForceLootName` for the last setup                                                                      | exact    |
+| Offer count and side  | `UseRecord` key: `ShipsSteeringWheel` (one offer) or `ShipsSteeringWheelLeft`/`Right` (two, left rolled first); mixed sides are counted per room, not per setup | inferred |
+| Unpicked type         | none in the record: solved by the importer from the saved stores (see Planner disposition)                                                                      | inferred |
+| Unpicked boon god     | none: traceless except for excluding that god from the same wheel's other Boon roll                                                                             | lost     |
 
 Both offers of a wheel draw from its one store (`RoomLogic.lua:1426-1439`).
 The RunProgress and HubRewards `Boon` entries allow duplicates
@@ -412,7 +412,7 @@ matter. A wheel reroll press (`AttemptRerollShipWheel`,
 and excludes the offer's original type and every type currently on the wheel.
 
 A room with one left and one right pick across two setups cannot assign sides
-to setups. Capture S `O_Combat05`: MetaProgress lost `GiftDrop` and the picked
+to setups; the importer solves the split (see Planner disposition). Capture S `O_Combat05`: MetaProgress lost `GiftDrop` and the picked
 `MetaCardPointsCommonBigDrop`; RunProgress lost the picked `SpellDrop`,
 `MaxManaDrop`, and `MaxHealthDrop`, the last being the Artificer roll that
 replaced the Meta pickup.
@@ -620,6 +620,16 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   window never closes (the last room, one past a stop, a record without entry
   saves) keep their provisional values and are reported as not in the record,
   as are those of wheels whose side is unknown.
+- A ship room whose two-offer wheels used both sides first authors the
+  canonical split, the first wheels in setup order taking the Left uses. The
+  solve then also tries every other split consistent with the Left and Right
+  counts, moving each pick with its authorship to the other side, and groups
+  those fits by exit state as above; a wheel whose side differs between groups
+  is reported as not in the record with the other side as its alternative.
+  A wheel whose offers already have generated pickups or results (an Artificer
+  replacement, a Sea Star duplicate) keeps its side, so a split needing it to
+  move does not fit. When the window never closes or nothing fits, each
+  wheel's canonical side is reported the same way.
 - A hidden return door's placeholder and reward are pinned exactly from the
   return door's `ExitDoorRooms` and `OfferedRewards`.
 - A batch's doors are ordered by the catalog's declared native door order for

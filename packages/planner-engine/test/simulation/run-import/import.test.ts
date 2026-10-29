@@ -14,7 +14,12 @@ import {
   type SemanticAddress,
 } from '../../../src/authored-project';
 import type { ResolvedRewardOffer } from '../../../src/reward-kernel';
-import { decodeRunRecord, type RunRecord, type RunRecordHeldTrait } from '../../../src/run-record';
+import {
+  decodeRunRecord,
+  type RunRecord,
+  type RunRecordHeldTrait,
+  type RunRecordWheel,
+} from '../../../src/run-record';
 import {
   occurrenceSnapshot,
   recordedEntryStates,
@@ -789,6 +794,51 @@ describe('run import of the Surface victory', () => {
       wheel2: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
     });
     expect(shipExitState(hera, 'O-r23')).toEqual(shipExitState(imported.project, 'O-r23'));
+  });
+
+  it("settles a mixed-side ship's split silently when every split leaves one exit state", () => {
+    // As if O_Combat12's wheels had used one side each: the record no longer says which.
+    const mixed: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index === 23
+          ? {
+              ...room,
+              uses: {
+                ...Object.fromEntries(
+                  Object.entries(room.uses).filter(([name]) => name !== 'ShipsSteeringWheelRight'),
+                ),
+                ShipsSteeringWheelLeft: 1,
+                ShipsSteeringWheelRight: 1,
+              },
+              wheels: room.wheels!.map(({ store, picked, offers }): RunRecordWheel => ({
+                store,
+                picked,
+                ...(offers === undefined ? {} : { offers }),
+              })),
+            }
+          : room,
+      ),
+    };
+    const result = projectFromRunRecord(catalog, mixed);
+    expect(
+      result.report.entries
+        .filter((entry) => entry.area === 'wheel' && entry.record?.roomIndex === 23)
+        .map(describeEntry),
+    ).toEqual([]);
+    expect(mismatchLines(result.report)).toEqual(mismatchLines(imported.report));
+    // The canonical split: the first wheel took the Left use.
+    const ship = occurrence(result.project, 'O-r23').state;
+    expect(ship.kind === 'shipCombat' && ship.wheels).toMatchObject({
+      wheel1: {
+        pickedOfferIndex: 1,
+        offers: { offer1: { offer: { rewardType: 'RoomMoneyDrop' } } },
+      },
+      wheel2: {
+        pickedOfferIndex: 2,
+        offers: { offer2: { offer: { rewardType: 'WeaponUpgrade' } } },
+      },
+    });
   });
 
   it('reports a wheel window whose saved stores no assignment reproduces', () => {

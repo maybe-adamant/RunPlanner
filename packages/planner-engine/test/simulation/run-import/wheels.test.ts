@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { chooseWheelFit } from '../../../src/simulation/run-import/wheels';
+import { chooseWheelFit, sideSplits } from '../../../src/simulation/run-import/wheels';
 
 const same = (left: string, right: string) => left === right;
 
@@ -37,5 +37,24 @@ describe('choosing among the fits of a ship room', () => {
 
   it('has nothing to author without a fit', () => {
     expect(chooseWheelFit([], same)).toBeUndefined();
+  });
+});
+
+describe("splitting a mixed-side ship's Left and Right uses among its wheels", () => {
+  it('lists every split once, the Left picks first in setup order first', () => {
+    expect(sideSplits(2, 1)).toEqual([
+      [1, 2],
+      [2, 1],
+    ]);
+    expect(sideSplits(3, 1)).toEqual([
+      [1, 2, 2],
+      [2, 1, 2],
+      [2, 2, 1],
+    ]);
+    expect(sideSplits(3, 2)).toEqual([
+      [1, 1, 2],
+      [1, 2, 1],
+      [2, 1, 1],
+    ]);
   });
 });

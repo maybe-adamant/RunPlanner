@@ -307,6 +307,8 @@ export function appliedValue(catalog: Catalog, command: ProjectCommand | undefin
       return rewardLabel(catalog, command.value.rewardType);
     case 'ReplaceRewardWheelOffer':
       return rewardOfferLabel(catalog, command.value);
+    case 'ReplaceRewardWheelPicked':
+      return command.pickedOfferIndex === 1 ? 'left pick' : 'right pick';
     case 'ReplaceTraitOffer': {
       const traitKey = selectedTraitKey(command.value);
       return traitKey === undefined
