@@ -1,3 +1,4 @@
+import { INITIAL_ROLL_KEY } from '@run-planner/engine/authored-project';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 
 import { StructuredWorkspaceProjectionContractError } from '../contract';
@@ -121,15 +122,12 @@ function bindActions(requirement: ActionsRequirement): WorkspaceFeatureRollActio
             itemKey: value,
           }),
         });
-      if (option.reroll === undefined || option.slotKey === undefined)
-        throw new StructuredWorkspaceProjectionContractError(
-          `${optionKey} of ${requirement.interactionKey} has no reroll to pin`,
-        );
       return Object.freeze({
         command: Object.freeze({
           kind: 'SellPurgingPoolRollSlot' as const,
-          reroll: option.reroll,
-          slotKey: option.slotKey,
+          occurrence: owner,
+          rollKey: option.sale.rollKey ?? INITIAL_ROLL_KEY,
+          slotKey: option.sale.slotKey,
           traitKey: value,
           index: requirement.appendIndex,
         }),

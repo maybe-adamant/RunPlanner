@@ -289,8 +289,42 @@ describe('Pool of Purging Interact', () => {
       .sections.flatMap((section) => section.items.map((item) => item.value));
     expect(after.interaction.choiceIntentFor(unpinned.key, traitKey!).command).toMatchObject({
       kind: 'SellPurgingPoolRollSlot',
+      rollKey: 'r1',
       traitKey,
       index: order(rerolled).length,
+    });
+  });
+
+  it('sells a blank slot of the initial list with the trait chosen then', () => {
+    const blank = apply(base, {
+      kind: 'ReplacePurgingPoolSlot',
+      occurrence: room,
+      slotKey: 'left',
+      traitKey: null,
+    });
+    const { actions, interaction } = poolOf(projectStructuredWorkspaceFixture(blank));
+    const sale = actions.options.find((option) => option.key.includes('"left"'))!;
+    expect(sale).toEqual({
+      key: sale.key,
+      kind: 'offer',
+      label: 'Sell Offer 1…',
+      needsChoice: true,
+    });
+    const [traitKey] = interaction
+      .choices(sale.key)
+      .sections.flatMap((section) => section.items.map((item) => item.value));
+    const command = interaction.choiceIntentFor(sale.key, traitKey!).command;
+    expect(command).toEqual({
+      kind: 'SellPurgingPoolRollSlot',
+      occurrence: room,
+      rollKey: 'initial',
+      slotKey: 'left',
+      traitKey,
+      index: order(blank).length,
+    });
+    expect(order(apply(blank, command)).at(-1)).toEqual({
+      kind: 'sellPurgingPoolTrait',
+      slotKey: 'left',
     });
   });
 });

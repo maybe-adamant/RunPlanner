@@ -74,9 +74,7 @@ export type WorkspaceFeatureRollActionRequirement =
         { readonly kind: 'sellPurgingPoolTrait' }
       >;
       readonly action: import('@run-planner/engine/authored-project').RoomActionAddress;
-      /** An unpinned reroll slot: its trait is chosen with the sale, pinned on this reroll. */
-      readonly reroll?: import('@run-planner/engine/authored-project').RoomActionAddress;
-      readonly slotKey?: import('@run-planner/engine/authored-project').PurgingPoolSlotKey;
+      /** A blank slot: its trait is chosen with the sale, pinned on its list. */
       readonly choices?: readonly { readonly key: string; readonly label: string }[];
     };
 

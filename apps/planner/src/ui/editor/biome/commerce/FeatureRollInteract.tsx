@@ -36,8 +36,6 @@ function featureRollLockHint(lock: WorkspaceFeatureRollLock): string {
       return 'Not enough rerolls left.';
     case 'poolReserved':
       return 'Later rerolls need the rest.';
-    case 'traitFirst':
-      return 'Choose its trait first.';
   }
 }
 

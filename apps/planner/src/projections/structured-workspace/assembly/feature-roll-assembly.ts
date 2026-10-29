@@ -168,8 +168,9 @@ export function assembleFeatureRollActions(input: {
     const poolInteraction = pool.interaction!;
     for (const offer of poolInteraction.offers) {
       const key = `sell:${roomActionKey(offer.sale)}`;
+      // A blank slot is sold with the trait chosen then, pinned on its list.
+      const blank = offer.traitKey === null;
       const rollKey = offer.sale.rollKey;
-      const unpinnedReroll = offer.traitKey === null && rollKey !== undefined;
       options.push(
         Object.freeze({
           key,
@@ -178,18 +179,15 @@ export function assembleFeatureRollActions(input: {
             offer.traitKey === null
               ? labels.slotLabel(offer.slotKey)
               : labels.itemLabel(offer.traitKey)
-          }${unpinnedReroll ? '…' : ''}`,
-          ...(unpinnedReroll ? { needsChoice: true as const } : {}),
-          ...(offer.traitKey === null && !unpinnedReroll ? { locked: 'traitFirst' as const } : {}),
+          }${blank ? '…' : ''}`,
+          ...(blank ? { needsChoice: true as const } : {}),
         }),
       );
-      const candidates =
-        unpinnedReroll && rollKey !== undefined
-          ? (pool.rolls[rollKey]?.candidateTraitKeysBySlot[offer.slotKey] ?? [])
-          : [];
-      const reroll = featureRerolls(order, 'purgingPool').find(
-        (candidate) => candidate.rerollId === rollKey,
-      );
+      const candidates = !blank
+        ? []
+        : rollKey === undefined
+          ? pool.candidateTraitKeysBySlot[offer.slotKey]
+          : (pool.rolls[rollKey]?.candidateTraitKeysBySlot[offer.slotKey] ?? []);
       bound.push(
         Object.freeze({
           key,
@@ -200,14 +198,8 @@ export function assembleFeatureRollActions(input: {
             owner.occurrenceId,
             roomActionKey(offer.sale),
           ),
-          ...(unpinnedReroll && reroll !== undefined
+          ...(blank
             ? {
-                reroll: createRoomActionAddress(
-                  createBiomeAddress(owner.routeKey, owner.biomeKey),
-                  owner.occurrenceId,
-                  roomActionKey(reroll),
-                ),
-                slotKey: offer.slotKey,
                 choices: Object.freeze(
                   candidates.map((traitKey) =>
                     Object.freeze({ key: traitKey, label: labels.itemLabel(traitKey) }),
