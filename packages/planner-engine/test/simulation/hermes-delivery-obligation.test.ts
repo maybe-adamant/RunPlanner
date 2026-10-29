@@ -8,7 +8,7 @@ import {
   dueContactMatches,
   isDeliveryFlushHost,
   isSameRoomDelivery,
-  purchaseFor,
+  purchasedOfferFor,
   type HermesDeliveryObligation,
 } from '../../src/authored-project/hermes-shrine-delivery';
 import type { HermesShrineState } from '../../src/authored-project/model';
@@ -43,30 +43,32 @@ describe('isSameRoomDelivery', () => {
   });
 });
 
-describe('purchaseFor', () => {
+describe('purchasedOfferFor', () => {
   const shrine: HermesShrineState = {
     offerBySlot: {
-      first: { rewardType: 'HealBigDrop' },
-      secondLeft: { rewardType: 'MaxHealthDrop' },
+      first: { rewardType: 'HealBigDrop', delay: 3 },
+      secondLeft: { rewardType: 'MaxHealthDrop', delay: 4 },
       secondRight: null,
     },
-    purchaseBySlot: { secondLeft: { delay: 4 } },
-    travelDealRefill: {
-      offer: { rewardType: 'MaxManaDrop' },
-      purchase: { delay: 2 },
-    },
+    travelDealRefill: { offer: { rewardType: 'MaxManaDrop', delay: 2 } },
   };
+  const order = [
+    { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondLeft', rushed: false },
+    { kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill', rushed: true },
+  ] as const;
 
-  it('reads the initial slot purchase or the Travel Deal refill purchase', () => {
-    expect(purchaseFor(shrine, 'initial:secondLeft')).toEqual({ delay: 4 });
-    expect(purchaseFor(shrine, 'travelDealRefill')).toEqual({ delay: 2 });
+  it('reads the item, with its delay, of a bought slot or Travel Deal refill', () => {
+    expect(purchasedOfferFor(shrine, order, 'initial:secondLeft')).toEqual({
+      rewardType: 'MaxHealthDrop',
+      delay: 4,
+    });
+    expect(purchasedOfferFor(shrine, order, 'travelDealRefill')?.delay).toBe(2);
   });
 
-  it('is undefined for an unpurchased slot or a missing Shrine', () => {
-    expect(purchaseFor(shrine, 'initial:first')).toBeUndefined();
-    expect(purchaseFor(shrine, 'initial:secondRight')).toBeUndefined();
-    expect(purchaseFor(undefined, 'initial:first')).toBeUndefined();
-    expect(purchaseFor({ offerBySlot: shrine.offerBySlot }, 'travelDealRefill')).toBeUndefined();
+  it('is undefined for an unbought slot or a missing Shrine', () => {
+    expect(purchasedOfferFor(shrine, order, 'initial:first')).toBeUndefined();
+    expect(purchasedOfferFor(shrine, order, 'initial:secondRight')).toBeUndefined();
+    expect(purchasedOfferFor(undefined, order, 'initial:secondLeft')).toBeUndefined();
   });
 });
 

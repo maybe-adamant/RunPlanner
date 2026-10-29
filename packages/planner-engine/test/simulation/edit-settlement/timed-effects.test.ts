@@ -469,11 +469,17 @@ describe('timed-effect edit settlement', () => {
       delay: 3,
       rushed: false,
     });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrineOfferDelay',
+      occurrence: source,
+      generationKey: 'initial:secondRight',
+      delay: 3,
+    });
     const settled = settle(project, {
       kind: 'SetHermesShrinePurchase',
       occurrence: source,
       generationKey: 'initial:secondRight',
-      purchase: { delay: 3 },
+      purchased: true,
     });
     const deliveries = occurrence(settled.project, 'surface-o-devotion').roomActions.order.filter(
       (reference) =>
@@ -552,10 +558,10 @@ describe('timed-effect edit settlement', () => {
         project,
         operation === 'reschedule'
           ? {
-              kind: 'SetHermesShrinePurchase',
+              kind: 'SetHermesShrineOfferDelay',
               occurrence: source,
               generationKey: 'initial:secondLeft',
-              purchase: { delay: 4 },
+              delay: 4,
             }
           : { kind: 'PlaceHermesShrineDelivery', entry, encounterPhaseKey: 'Encounter' },
       );
@@ -650,11 +656,17 @@ describe('timed-effect edit settlement', () => {
         slotKey,
         value: { rewardType },
       });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrineOfferDelay',
+      occurrence: source,
+      generationKey: 'initial:secondRight',
+      delay: 8,
+    });
     const settled = settle(project, {
       kind: 'SetHermesShrinePurchase',
       occurrence: source,
       generationKey: 'initial:secondRight',
-      purchase: { delay: 8 },
+      purchased: true,
     });
     const key = hermesShrineDeliveryEntryKey(source, 'initial:secondRight');
     expect(occurrence(settled.project, 'surface-q-preboss').roomActions.order).toContainEqual({
@@ -694,13 +706,19 @@ describe('timed-effect edit settlement', () => {
         kind: 'ReplaceHermesShrineOffer',
         occurrence: source,
         slotKey,
-        value: offers[slotKey]!,
+        value: { rewardType: offers[slotKey]!.rewardType },
       }).project;
+    restored = settle(restored, {
+      kind: 'SetHermesShrineOfferDelay',
+      occurrence: source,
+      generationKey: 'initial:secondLeft',
+      delay: offers.secondLeft!.delay,
+    }).project;
     restored = settle(restored, {
       kind: 'SetHermesShrinePurchase',
       occurrence: source,
       generationKey: 'initial:secondLeft',
-      purchase: { delay: 3 },
+      purchased: true,
     }).project;
     expect(orders(restored)).toHaveLength(1);
   });
@@ -724,13 +742,29 @@ describe('timed-effect edit settlement', () => {
         slotKey,
         value: { rewardType },
       });
-    const purchase = (delay: 2 | 6 | null): ProjectCommand => ({
-      kind: 'SetHermesShrinePurchase',
-      occurrence: source,
-      generationKey: 'initial:secondRight',
-      purchase: delay === null ? null : { delay },
-    });
-    project = settle(project, purchase(6)).project;
+    const purchase = (delay: 2 | 6 | null): ProjectDocument =>
+      delay === null
+        ? settle(project, {
+            kind: 'SetHermesShrinePurchase',
+            occurrence: source,
+            generationKey: 'initial:secondRight',
+            purchased: false,
+          }).project
+        : settle(
+            applyProjectCommand(project, catalog, {
+              kind: 'SetHermesShrineOfferDelay',
+              occurrence: source,
+              generationKey: 'initial:secondRight',
+              delay,
+            }),
+            {
+              kind: 'SetHermesShrinePurchase',
+              occurrence: source,
+              generationKey: 'initial:secondRight',
+              purchased: true,
+            },
+          ).project;
+    project = purchase(6);
     const key = hermesShrineDeliveryEntryKey(source, 'initial:secondRight');
     const lateHostId = 'surface-o-preboss:boss';
     const trait = createTraitOfferAddress(
@@ -746,7 +780,7 @@ describe('timed-effect edit settlement', () => {
     const quickBuck = supportedTraitOffer(project, trait, 'Hermes', 'MoneyMultiplierBoon');
     if (quickBuck === undefined) throw new Error('expected a Quick Buck Hermes offer');
     project = settle(project, { kind: 'ReplaceTraitOffer', trait, value: quickBuck }).project;
-    project = settle(project, purchase(null)).project;
+    project = purchase(null);
     const retainedHost = occurrence(project, lateHostId);
     expect(retainedHost.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[key]).toBeDefined();
     expect(
@@ -755,7 +789,7 @@ describe('timed-effect edit settlement', () => {
       ),
     ).toBe(true);
 
-    const settled = settle(project, purchase(2)).project;
+    const settled = purchase(2);
     const earlyHost = occurrence(settled, 'surface-o-combat01');
     expect(earlyHost.roomActions.order).toContainEqual(
       expect.objectContaining({ siteKey: 'hermesShrineDelivery', entryKey: key }),

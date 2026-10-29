@@ -9,6 +9,7 @@ import {
   parseHermesShrineDeliveryEntryKey,
   semanticAddressKey,
   shopOfferOptionValues,
+  type HermesShrineDelay,
   type HermesShrineGenerationKey,
   type HermesShrineSlotKey,
   type OccurrenceId,
@@ -780,16 +781,38 @@ function importShrinePurchase(
   }
   const feature = createRoomFeatureAddress(address, { kind: 'hermesShrineOffer', generationKey });
   const delays = purchase.delay === undefined ? [2, 3, 4, 5, 6, 7, 8] : [purchase.delay];
+  const purchaseCommand: ProjectCommand = {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: address,
+    generationKey,
+    purchased: true,
+  };
   let applied: ProjectCommand | undefined;
+  // The delay belongs to the stocked item; a rushed one's only prices it.
   for (const delay of delays) {
-    const command: ProjectCommand = {
-      kind: 'SetHermesShrinePurchase',
+    const delayCommand: ProjectCommand = {
+      kind: 'SetHermesShrineOfferDelay',
       occurrence: address,
       generationKey,
-      purchase: { delay: delay as 2 | 3 | 4 | 5 | 6 | 7 | 8 },
+      delay: delay as HermesShrineDelay,
     };
-    if (context.applyValid(command)) {
-      applied = command;
+    const stocked = authoredOccurrence(
+      context.assembly().project,
+      biomeKey,
+      occurrenceId,
+    )?.hermesShrine;
+    const current =
+      generationKey === 'travelDealRefill'
+        ? stocked?.travelDealRefill?.offer
+        : stocked?.offerBySlot[slotKey!];
+    if (
+      context.transaction(
+        () =>
+          (current?.delay === delay || context.apply(delayCommand)) &&
+          context.apply(purchaseCommand),
+      )
+    ) {
+      applied = delayCommand;
       break;
     }
   }
@@ -811,7 +834,7 @@ function importShrinePurchase(
         rushed: false,
       }),
     ],
-    { kind: 'SetHermesShrinePurchase', occurrence: address, generationKey, purchase: null },
+    { kind: 'SetHermesShrinePurchase', occurrence: address, generationKey, purchased: false },
     { area: 'shop', reason: 'refused', address: feature, record: record(visit.roomIndex) },
   );
   if (purchase.delay === undefined)

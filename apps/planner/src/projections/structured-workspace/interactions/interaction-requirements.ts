@@ -277,8 +277,7 @@ export type WorkspaceOccurrenceInteractionRequirement =
           readonly rewardType: string;
           readonly label: string;
         }[];
-        readonly purchase:
-          import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
+        readonly purchase: import('../contracts/commerce').WorkspaceHermesShrinePurchase | null;
         readonly offerInteractionKey: string;
         readonly purchaseInteractionKey: string;
       }[];

@@ -189,7 +189,8 @@ describe('Hermes Shrine workbench', () => {
       true,
     );
     await view.user.click(purchased);
-    expect(inactiveDelay).toHaveProperty('value', '2');
+    // The delay belongs to the item, so a repurchase keeps it.
+    expect(inactiveDelay).toHaveProperty('value', '8');
     fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
     const purchaseRow = screen.getByText('Buy Big Heal · Slot 1').closest('li');
     if (purchaseRow === null) throw new Error('Shrine purchase row is missing');
@@ -266,6 +267,7 @@ describe('Hermes Shrine workbench', () => {
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
     expect(currentOccurrence()?.hermesShrine?.offerBySlot.secondRight).toEqual({
       rewardType: 'BlindBoxLoot',
+      delay: 2,
     });
     expect(currentOccurrence()?.acquisitionSites?.hermesShrineDelivery).toBeUndefined();
     expect(screen.queryByText('Eventual God')).toBeNull();
@@ -812,7 +814,7 @@ describe('Hermes Shrine workbench', () => {
     expect(remove).toHaveProperty('disabled', false);
     await view.user.click(remove);
     expect(shrine().hermesShrine?.travelDealRefill).toEqual({
-      offer: { rewardType: 'ArmorBoost' },
+      offer: { rewardType: 'ArmorBoost', delay: 4 },
     });
     expect(screen.queryByText(/· Travel Deal Offer$/)).toBeNull();
   });
@@ -883,7 +885,9 @@ describe('Hermes Shrine workbench', () => {
     await view.user.click(
       within(line).getByRole('checkbox', { name: 'Purchased Hermes Shrine Travel Deal' }),
     );
-    expect(shrine().hermesShrine?.travelDealRefill?.purchase).toEqual({ delay: 2 });
+    expect(shrine().roomActions.order).toContainEqual(
+      expect.objectContaining({ generationKey: 'travelDealRefill' }),
+    );
     const refillRow = screen.getByText(/· Travel Deal Offer$/).closest('li')!;
     expect(within(refillRow).getByRole('checkbox', { name: /^Rush / })).toHaveProperty(
       'checked',
@@ -894,12 +898,17 @@ describe('Hermes Shrine workbench', () => {
         name: 'Purchased Hermes Shrine Travel Deal',
       }),
     );
-    expect(shrine().hermesShrine?.travelDealRefill?.purchase).toBeUndefined();
+    expect(shrine().roomActions.order).not.toContainEqual(
+      expect.objectContaining({ generationKey: 'travelDealRefill' }),
+    );
 
     const rush = within(sourceRow()).getByRole('checkbox', { name: /^Rush / });
     await view.user.click(rush);
     expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
-    expect(shrine().hermesShrine?.travelDealRefill?.offer).toEqual({ rewardType: 'ArmorBoost' });
+    expect(shrine().hermesShrine?.travelDealRefill?.offer).toEqual({
+      rewardType: 'ArmorBoost',
+      delay: 2,
+    });
     await view.user.click(within(sourceRow()).getByRole('checkbox', { name: /^Rush / }));
     expect(travelDealLine().previousElementSibling).toBe(sourceRow());
   });

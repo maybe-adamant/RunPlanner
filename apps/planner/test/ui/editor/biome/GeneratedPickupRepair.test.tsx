@@ -53,8 +53,7 @@ it('runs delivery deletion as one exact authored edit and restores it through Un
   expect(document.querySelector('.room-action-issues')).toBeNull();
   const prior = view.application.store.getState().projectWorkspace;
   if (prior.kind !== 'openProject') throw new Error('project missing');
-  const sourcePurchase = occurrence(prior.history.present, source.occurrenceId).hermesShrine
-    ?.purchaseBySlot;
+  const sourceShrine = occurrence(prior.history.present, source.occurrenceId).hermesShrine;
   await view.user.click(button);
   await waitFor(() =>
     expect(screen.queryByRole('button', { name: /Remove .*Delivery.* from timeline/i })).toBeNull(),
@@ -66,9 +65,9 @@ it('runs delivery deletion as one exact authored edit and restores it through Un
     occurrence(repaired.history.present, host.occurrenceId).acquisitionSites?.hermesShrineDelivery
       ?.pickupEntries?.[entryKey],
   ).toBeUndefined();
-  expect(
-    occurrence(repaired.history.present, source.occurrenceId).hermesShrine?.purchaseBySlot,
-  ).toEqual(sourcePurchase);
+  expect(occurrence(repaired.history.present, source.occurrenceId).hermesShrine).toEqual(
+    sourceShrine,
+  );
   act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
   await screen.findByRole('button', { name: /Remove .*Delivery.* from timeline/i });
   const restored = view.application.store.getState().projectWorkspace;

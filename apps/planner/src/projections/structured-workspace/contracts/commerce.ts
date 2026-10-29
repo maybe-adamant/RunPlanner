@@ -127,15 +127,24 @@ export interface WorkspacePurgingPoolSlotInteraction {
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplacePurgingPoolSlot' }>>;
 }
 
+/** A bought Shrine item with the delay rolled for it. */
+export interface WorkspaceHermesShrinePurchase {
+  readonly delay: import('@run-planner/engine/authored-project').HermesShrineDelay;
+}
+
 export interface WorkspaceHermesShrinePurchaseInteraction {
   readonly key: string;
   readonly owner: OccurrenceAddress;
   readonly generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey;
-  readonly purchase: import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
+  readonly purchase: WorkspaceHermesShrinePurchase | null;
+  /** Buys or clears the item; a delay on a bought item retimes it. */
   readonly intentFor: (
-    purchase: import('@run-planner/engine/authored-project').HermesShrinePurchase | null,
+    purchase: WorkspaceHermesShrinePurchase | null,
   ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'SetHermesShrinePurchase' }>
+    Extract<
+      ProjectCommand,
+      { readonly kind: 'SetHermesShrinePurchase' | 'SetHermesShrineOfferDelay' }
+    >
   >;
   readonly rushIntentFor: (
     rushed: boolean,

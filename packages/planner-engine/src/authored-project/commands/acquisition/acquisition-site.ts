@@ -30,9 +30,8 @@ import {
   hermesShrineDeliverySourceAddress,
   isDeliveryFlushHost,
   isSameRoomDelivery,
-  offerFor,
   parseHermesShrineDeliveryEntryKey,
-  purchaseFor,
+  purchasedOfferFor,
   removeHermesShrineDeliveryFromOtherHosts,
   retainedHermesShrineDeliveryReward,
 } from '../../hermes-shrine-delivery';
@@ -232,9 +231,12 @@ export function applyAcquisitionSiteCommand(
       );
     if (source?.hermesShrine === undefined)
       failCommand(command, 'does not name a Shrine source occurrence');
-    const sourceOffer = offerFor(source.hermesShrine, parsed.generationKey);
-    const purchase = purchaseFor(source.hermesShrine, parsed.generationKey);
-    if (sourceOffer === undefined || sourceOffer === null || purchase === undefined)
+    const sourceOffer = purchasedOfferFor(
+      source.hermesShrine,
+      source.roomActions.order,
+      parsed.generationKey,
+    );
+    if (sourceOffer === undefined)
       failCommand(command, 'does not name a purchased Shrine delivery');
     const finalPrebossHost = isDeliveryFlushHost(
       catalog.rooms.byKey[host.gameName],

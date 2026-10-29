@@ -829,20 +829,23 @@
               "optionKey": "HealBigDrop",
               "rewardType": "HealBigDrop",
               "slotIndex": 1,
+              "roomDelay": 8,
               "deliverySourceKey": "hermesShrineDelivery:%5B%22Dream%22%2C%22Q%22%2C%22dream-q-ordinary%22%2C%22initial%3Afirst%22%5D",
-              "purchase": { "roomDelay": 8, "rushed": false }
+              "purchase": { "rushed": false }
             },
             {
               "generationKey": "initial:secondLeft",
               "optionKey": "MaxHealthDrop",
               "rewardType": "MaxHealthDrop",
-              "slotIndex": 2
+              "slotIndex": 2,
+              "roomDelay": 2
             },
             {
               "generationKey": "initial:secondRight",
               "optionKey": "MaxManaDrop",
               "rewardType": "MaxManaDrop",
-              "slotIndex": 3
+              "slotIndex": 3,
+              "roomDelay": 2
             }
           ]
         }
@@ -1431,5 +1434,5 @@
       }
     }
   ],
-  "planFingerprint": "09f7f94d"
+  "planFingerprint": "27761155"
 }

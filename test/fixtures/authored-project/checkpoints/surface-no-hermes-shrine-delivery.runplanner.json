@@ -1381,13 +1381,16 @@
               "hermesShrine": {
                 "offerBySlot": {
                   "first": {
-                    "rewardType": "HealBigDrop"
+                    "rewardType": "HealBigDrop",
+                    "delay": 2
                   },
                   "secondLeft": {
-                    "rewardType": "MaxHealthDrop"
+                    "rewardType": "MaxHealthDrop",
+                    "delay": 2
                   },
                   "secondRight": {
-                    "rewardType": "MaxManaDrop"
+                    "rewardType": "MaxManaDrop",
+                    "delay": 2
                   }
                 }
               },
@@ -1835,21 +1838,16 @@
               "hermesShrine": {
                 "offerBySlot": {
                   "first": {
-                    "rewardType": "HealBigDrop"
-                  },
-                  "secondLeft": {
-                    "rewardType": "MaxHealthDrop"
-                  },
-                  "secondRight": {
-                    "rewardType": "MaxManaDrop"
-                  }
-                },
-                "purchaseBySlot": {
-                  "first": {
+                    "rewardType": "HealBigDrop",
                     "delay": 2
                   },
                   "secondLeft": {
+                    "rewardType": "MaxHealthDrop",
                     "delay": 3
+                  },
+                  "secondRight": {
+                    "rewardType": "MaxManaDrop",
+                    "delay": 2
                   }
                 }
               },
@@ -2316,13 +2314,16 @@
               "hermesShrine": {
                 "offerBySlot": {
                   "first": {
-                    "rewardType": "HealBigDrop"
+                    "rewardType": "HealBigDrop",
+                    "delay": 2
                   },
                   "secondLeft": {
-                    "rewardType": "MaxHealthDrop"
+                    "rewardType": "MaxHealthDrop",
+                    "delay": 2
                   },
                   "secondRight": {
-                    "rewardType": "MaxManaDrop"
+                    "rewardType": "MaxManaDrop",
+                    "delay": 2
                   }
                 }
               },

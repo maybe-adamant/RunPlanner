@@ -1312,13 +1312,16 @@
               "hermesShrine": {
                 "offerBySlot": {
                   "first": {
-                    "rewardType": "ArmorBigBoost"
+                    "rewardType": "ArmorBigBoost",
+                    "delay": 2
                   },
                   "secondLeft": {
-                    "rewardType": "BlindBoxLoot"
+                    "rewardType": "BlindBoxLoot",
+                    "delay": 2
                   },
                   "secondRight": {
-                    "rewardType": "ShopHermesUpgrade"
+                    "rewardType": "ShopHermesUpgrade",
+                    "delay": 2
                   }
                 }
               },
@@ -2292,17 +2295,15 @@
               "hermesShrine": {
                 "offerBySlot": {
                   "first": {
-                    "rewardType": "RoomRewardHealDrop"
+                    "rewardType": "RoomRewardHealDrop",
+                    "delay": 2
                   },
                   "secondLeft": {
-                    "rewardType": "BlindBoxLoot"
+                    "rewardType": "BlindBoxLoot",
+                    "delay": 2
                   },
                   "secondRight": {
-                    "rewardType": "MaxHealthDrop"
-                  }
-                },
-                "purchaseBySlot": {
-                  "secondLeft": {
+                    "rewardType": "MaxHealthDrop",
                     "delay": 2
                   }
                 }

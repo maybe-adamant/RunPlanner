@@ -476,12 +476,12 @@ describe('run import of the Surface capture', () => {
   it('imports Hermes Shrine purchases, rushes and the Reprieve fountain', () => {
     const reprieve = occurrence(imported.project, 'O-r24');
     expect(reprieve.hermesShrine).toMatchObject({
+      // A delayed purchase's recorded delay belongs to its item.
       offerBySlot: {
-        first: { rewardType: 'ArmorBoost' },
+        first: { rewardType: 'ArmorBoost', delay: 8 },
         secondLeft: { rewardType: 'MaxHealthDrop' },
         secondRight: { rewardType: 'ShopHermesUpgrade' },
       },
-      purchaseBySlot: { first: { delay: 8 } },
     });
     expect(reprieve.roomActions.order).toEqual(
       expect.arrayContaining([

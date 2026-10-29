@@ -247,7 +247,7 @@ it('exports the acquired Shrine Travel Deal delivery and retains its removal thr
     kind: 'SetHermesShrinePurchase',
     occurrence: shrine,
     generationKey: 'travelDealRefill',
-    purchase: null,
+    purchased: false,
   });
   const reloaded = reloadProject(edited.present);
   expect(reloaded).toEqual(edited.present);

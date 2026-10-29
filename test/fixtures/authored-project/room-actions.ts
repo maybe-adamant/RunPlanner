@@ -255,11 +255,20 @@ export function purchaseTestHermesShrineOffer(
   generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
   purchase: { readonly delay: 2 | 3 | 4 | 5 | 6 | 7 | 8; readonly rushed: boolean } | null,
 ): ProjectDocument {
-  const purchased = applyProjectCommand(initial, catalog, {
+  const timed =
+    purchase === null
+      ? initial
+      : applyProjectCommand(initial, catalog, {
+          kind: 'SetHermesShrineOfferDelay',
+          occurrence,
+          generationKey,
+          delay: purchase.delay,
+        });
+  const purchased = applyProjectCommand(timed, catalog, {
     kind: 'SetHermesShrinePurchase',
     occurrence,
     generationKey,
-    purchase: purchase === null ? null : { delay: purchase.delay },
+    purchased: purchase !== null,
   });
   if (purchase === null) return purchased;
   return applyProjectCommand(purchased, catalog, {

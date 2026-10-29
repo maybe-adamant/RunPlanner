@@ -537,7 +537,7 @@ export function createSurfaceNUnresolvedBossHermesDeliveryCheckpoint(): ProjectD
     kind: 'SetHermesShrinePurchase',
     occurrence: source,
     generationKey: 'initial:secondLeft',
-    purchase: null,
+    purchased: false,
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceHermesShrineOffer',

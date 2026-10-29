@@ -591,13 +591,13 @@ export function overview(value: unknown, label: string) {
   ] as const;
   const shrinePurchase = (value: unknown, purchaseLabel: string) => {
     const row = object(value, purchaseLabel);
-    exact(row, ['roomDelay', 'rushed'], [], purchaseLabel);
-    const roomDelay = integer(row.roomDelay, `${purchaseLabel}.roomDelay`);
-    if (roomDelay < 2 || roomDelay > 8) fail(`${purchaseLabel}.roomDelay must be 2-8`);
-    return Object.freeze({
-      roomDelay: roomDelay as 2 | 3 | 4 | 5 | 6 | 7 | 8,
-      rushed: booleanValue(row.rushed, `${purchaseLabel}.rushed`),
-    });
+    exact(row, ['rushed'], [], purchaseLabel);
+    return Object.freeze({ rushed: booleanValue(row.rushed, `${purchaseLabel}.rushed`) });
+  };
+  const shrineRoomDelay = (value: unknown, delayLabel: string) => {
+    const roomDelay = integer(value, delayLabel);
+    if (roomDelay < 2 || roomDelay > 8) fail(`${delayLabel} must be 2-8`);
+    return roomDelay as 2 | 3 | 4 | 5 | 6 | 7 | 8;
   };
   const parsedShrine =
     shrine === undefined
@@ -609,7 +609,7 @@ export function overview(value: unknown, label: string) {
               const row = object(entry, `${label}.hermesShrine.offers[${index}]`);
               exact(
                 row,
-                ['generationKey', 'optionKey', 'rewardType', 'slotIndex'],
+                ['generationKey', 'optionKey', 'rewardType', 'slotIndex', 'roomDelay'],
                 ['purchase', 'deliverySourceKey'],
                 `${label}.hermesShrine.offers[${index}]`,
               );
@@ -638,6 +638,10 @@ export function overview(value: unknown, label: string) {
                   `${label}.hermesShrine.offers[${index}].rewardType`,
                 ),
                 slotIndex: row.slotIndex as 1 | 2 | 3,
+                roomDelay: shrineRoomDelay(
+                  row.roomDelay,
+                  `${label}.hermesShrine.offers[${index}].roomDelay`,
+                ),
                 ...(row.deliverySourceKey === undefined
                   ? {}
                   : {

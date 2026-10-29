@@ -631,6 +631,7 @@ describe('workspace inspector destinations', () => {
       );
     expect(repairedOccurrence?.hermesShrine?.offerBySlot.first).toEqual({
       rewardType: 'HealBigDrop',
+      delay: 2,
     });
   });
 

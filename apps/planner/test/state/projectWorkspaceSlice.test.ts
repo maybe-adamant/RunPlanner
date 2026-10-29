@@ -397,14 +397,24 @@ describe('project workspace application state', () => {
     const { store } = createStore();
     const source = createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat11', 'sideDoor1'));
     const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
-    store.dispatch(authoredProjectReplaced(loadSurfaceNShrineSideRoomDeliveryCheckpoint()));
+    // The checkpoint's item already has delay 2, so start from another delay.
+    store.dispatch(
+      authoredProjectReplaced(
+        applyProjectCommand(loadSurfaceNShrineSideRoomDeliveryCheckpoint(), catalog, {
+          kind: 'SetHermesShrineOfferDelay',
+          occurrence: source,
+          generationKey: 'initial:secondLeft',
+          delay: 4,
+        }),
+      ),
+    );
 
     store.dispatch(
       authoredProjectCommandDispatched({
-        kind: 'SetHermesShrinePurchase',
+        kind: 'SetHermesShrineOfferDelay',
         occurrence: source,
         generationKey: 'initial:secondLeft',
-        purchase: { delay: 2 },
+        delay: 2,
       }),
     );
     const delayTwo = presentProject(store.getState());
@@ -418,10 +428,10 @@ describe('project workspace application state', () => {
 
     store.dispatch(
       authoredProjectCommandDispatched({
-        kind: 'SetHermesShrinePurchase',
+        kind: 'SetHermesShrineOfferDelay',
         occurrence: source,
         generationKey: 'initial:secondLeft',
-        purchase: { delay: 3 },
+        delay: 3,
       }),
     );
     const delayThree = presentProject(store.getState());
@@ -452,14 +462,14 @@ describe('project workspace application state', () => {
 
     store.dispatch(authoredProjectUndoRequested());
     expect(presentProject(store)).toBe(delayTwo);
-    for (const purchase of [null, { delay: 2 }] as const) {
+    for (const purchased of [false, true]) {
       const before = store.getState().projectWorkspace.history!.past.length;
       store.dispatch(
         authoredProjectCommandDispatched({
           kind: 'SetHermesShrinePurchase',
           occurrence: source,
           generationKey: 'initial:secondLeft',
-          purchase,
+          purchased,
         }),
       );
       expect(store.getState().projectWorkspace.history!.past).toHaveLength(before + 1);

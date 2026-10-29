@@ -1,11 +1,13 @@
 import { screenRerollSupported } from '../screen-rerolls';
 import type { BiomeLayout, Catalog } from '../../catalog-schema';
 import { routeErisHost, routeHasKeepsakeRack, routeRoomShop } from '../route-profile';
-import type {
-  HermesShrineState,
-  PurgingPoolState,
-  RoomActionState,
-  RoomOccurrence,
+import {
+  HERMES_SHRINE_DELAYS,
+  type HermesShrineDelay,
+  type HermesShrineState,
+  type PurgingPoolState,
+  type RoomActionState,
+  type RoomOccurrence,
 } from '../model';
 import { activeRoomActionReferences, roomActionKey } from '../room-actions/state';
 import { decodeRoomActionState } from '../room-state/decoding/room-action-codec';
@@ -39,6 +41,7 @@ import { parseArtificerReplacementEntryKey } from '../acquisition/artificer';
 import {
   hermesShrinePurchaseAction,
   isDeliveryFlushHost,
+  offerFor,
   parseHermesShrineDeliveryEntryKey,
 } from '../hermes-shrine-delivery';
 import { rewardSourceResolvesAtAcquisition } from '../acquisition/reward-state';
@@ -145,17 +148,8 @@ function decodeOrdinaryHermesShrineState(
   path: string,
 ): HermesShrineState {
   const raw = expectRecord(value, path);
-  const hasPurchases = Object.hasOwn(raw, 'purchaseBySlot');
   const hasRefill = Object.hasOwn(raw, 'travelDealRefill');
-  expectExactKeys(
-    raw,
-    [
-      'offerBySlot',
-      ...(hasPurchases ? ['purchaseBySlot'] : []),
-      ...(hasRefill ? ['travelDealRefill'] : []),
-    ],
-    path,
-  );
+  expectExactKeys(raw, ['offerBySlot', ...(hasRefill ? ['travelDealRefill'] : [])], path);
   const offers = expectRecord(raw.offerBySlot, `${path}.offerBySlot`);
   const slots = ['first', 'secondLeft', 'secondRight'] as const;
   expectExactKeys(offers, slots, `${path}.offerBySlot`);
@@ -170,62 +164,21 @@ function decodeOrdinaryHermesShrineState(
       import('../model').HermesShrineInventoryOffer | null
     >,
   );
-  const purchases = hasPurchases ? expectRecord(raw.purchaseBySlot, `${path}.purchaseBySlot`) : {};
-  const purchaseBySlot = Object.freeze(
-    Object.fromEntries(
-      Object.entries(purchases).map(([slot, value]) => {
-        if (!slots.includes(slot as (typeof slots)[number]))
-          failProjectDocument(`${path}.purchaseBySlot.${slot}`, 'is not a Shrine slot');
-        const purchase = expectRecord(value, `${path}.purchaseBySlot.${slot}`);
-        expectExactKeys(purchase, ['delay'], `${path}.purchaseBySlot.${slot}`);
-        if (![2, 3, 4, 5, 6, 7, 8].includes(purchase.delay as number))
-          failProjectDocument(`${path}.purchaseBySlot.${slot}`, 'must have delay 2 through 8');
-        if (offerBySlot[slot as (typeof slots)[number]] === null)
-          failProjectDocument(`${path}.purchaseBySlot.${slot}`, 'requires a resolved source offer');
-        return [slot, Object.freeze({ delay: purchase.delay as 2 | 3 | 4 | 5 | 6 | 7 | 8 })];
-      }),
-    ) as import('../model').HermesShrineState['purchaseBySlot'],
-  );
   const travelDealRefill = !hasRefill
     ? undefined
     : (() => {
         const refill = expectRecord(raw.travelDealRefill, `${path}.travelDealRefill`);
-        expectExactKeys(
-          refill,
-          ['offer', ...(refill.purchase === undefined ? [] : ['purchase'])],
-          `${path}.travelDealRefill`,
-        );
-        const purchase =
-          refill.purchase === undefined
-            ? undefined
-            : (() => {
-                const value = expectRecord(refill.purchase, `${path}.travelDealRefill.purchase`);
-                expectExactKeys(value, ['delay'], `${path}.travelDealRefill.purchase`);
-                if (![2, 3, 4, 5, 6, 7, 8].includes(value.delay as number))
-                  failProjectDocument(
-                    `${path}.travelDealRefill.purchase`,
-                    'must have delay 2 through 8',
-                  );
-                return Object.freeze({ delay: value.delay as 2 | 3 | 4 | 5 | 6 | 7 | 8 });
-              })();
-        const offer = decodeHermesShrineInventoryOffer(
-          refill.offer,
-          catalog,
-          `${path}.travelDealRefill.offer`,
-        );
-        if (purchase !== undefined && offer === null)
-          failProjectDocument(
-            `${path}.travelDealRefill.purchase`,
-            'requires a resolved source offer',
-          );
+        expectExactKeys(refill, ['offer'], `${path}.travelDealRefill`);
         return Object.freeze({
-          offer,
-          ...(purchase === undefined ? {} : { purchase }),
+          offer: decodeHermesShrineInventoryOffer(
+            refill.offer,
+            catalog,
+            `${path}.travelDealRefill.offer`,
+          ),
         });
       })();
   return Object.freeze({
     offerBySlot,
-    ...(hasPurchases ? { purchaseBySlot } : {}),
     ...(travelDealRefill === undefined ? {} : { travelDealRefill }),
   }) as HermesShrineState;
 }
@@ -237,11 +190,13 @@ function decodeHermesShrineInventoryOffer(
 ): import('../model').HermesShrineInventoryOffer | null {
   if (value === null) return null;
   const raw = expectRecord(value, path);
-  expectExactKeys(raw, ['rewardType'], path);
+  expectExactKeys(raw, ['rewardType', 'delay'], path);
   const rewardType = expectString(raw.rewardType, `${path}.rewardType`);
   if (catalog.rewards.rewardTypes.byKey[rewardType] === undefined)
     failProjectDocument(`${path}.rewardType`, 'unknown reward type');
-  return Object.freeze({ rewardType });
+  if (!HERMES_SHRINE_DELAYS.includes(raw.delay as HermesShrineDelay))
+    failProjectDocument(`${path}.delay`, 'must be 2 through 8');
+  return Object.freeze({ rewardType, delay: raw.delay as HermesShrineDelay });
 }
 
 function assertHermesShrineDeliveryActionClosure(
@@ -257,24 +212,13 @@ function assertHermesShrineDeliveryActionClosure(
   routePosition: ResolvedRoutePosition,
   path: string,
 ): void {
-  const purchased = new Set<import('../model').HermesShrineGenerationKey>(
-    (['first', 'secondLeft', 'secondRight'] as const)
-      .filter((slotKey) => shrine?.purchaseBySlot?.[slotKey] !== undefined)
-      .map((slotKey) => `initial:${slotKey}` as const),
-  );
-  if (shrine?.travelDealRefill?.purchase !== undefined) purchased.add('travelDealRefill');
-  const purchaseActions = roomActions.order.filter(
-    (reference) => reference.kind === 'purchaseHermesShrineOffer',
-  );
-  // Purchase membership is the purchased fact; each purchase owns one action.
-  if (
-    purchaseActions.length !== purchased.size ||
-    purchaseActions.some((reference) => !purchased.has(reference.generationKey))
-  )
-    failProjectDocument(
-      path,
-      'Shrine purchases must exactly match purchaseHermesShrineOffer actions',
-    );
+  // Each purchase action sells one stocked item.
+  for (const reference of roomActions.order)
+    if (
+      reference.kind === 'purchaseHermesShrineOffer' &&
+      (offerFor(shrine, reference.generationKey) ?? null) === null
+    )
+      failProjectDocument(path, 'Shrine purchase actions require a stocked Shrine offer');
   const finalPrebossHost = isDeliveryFlushHost(catalog.rooms.byKey[source.gameName], routePosition);
   for (const reference of roomActions.order) {
     if (

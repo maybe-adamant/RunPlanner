@@ -193,6 +193,24 @@ function roomFeatures(
   const shrineAssessment = input.hermesShrineAssessment?.(poolOwner);
   const wellAssessment = input.stygianWellAssessment?.(poolOwner);
   const shrine = input.occurrence.hermesShrine;
+  // A bought item carries the delay rolled with it.
+  const shrinePurchase = (
+    generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
+  ) => {
+    const bought = input.occurrence.roomActions.order.some(
+      (reference) =>
+        reference.kind === 'purchaseHermesShrineOffer' && reference.generationKey === generationKey,
+    );
+    const offer =
+      generationKey === 'travelDealRefill'
+        ? shrine?.travelDealRefill?.offer
+        : shrine?.offerBySlot[
+            generationKey.slice('initial:'.length) as 'first' | 'secondLeft' | 'secondRight'
+          ];
+    return bought && offer !== null && offer !== undefined
+      ? Object.freeze({ delay: offer.delay })
+      : null;
+  };
   const well = input.occurrence.stygianWell;
   const pool = input.occurrence.purgingPool;
   const declaredPoolTraitKeys = declaredPurgingPoolTraitKeys(input.catalog);
@@ -399,13 +417,13 @@ function roomFeatures(
                         ),
                         offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:${slotKey}`,
                         purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
-                        purchase: shrine?.purchaseBySlot?.[slotKey] ?? null,
+                        purchase: shrinePurchase(generationKey),
                       });
                     }),
               ),
               ...(shrine === undefined ||
               (shrineAssessment?.travelDealRefill === undefined &&
-                shrine.travelDealRefill?.purchase === undefined &&
+                shrinePurchase('travelDealRefill') === null &&
                 (shrineAssessment !== undefined || shrine.travelDealRefill === undefined))
                 ? {}
                 : {
@@ -448,7 +466,7 @@ function roomFeatures(
                         ),
                         offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:travelDealRefill`,
                         purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:travelDealRefill`,
-                        purchase: shrine.travelDealRefill?.purchase ?? null,
+                        purchase: shrinePurchase('travelDealRefill'),
                         ...(shrineAssessment?.travelDealRefill === undefined
                           ? {}
                           : {

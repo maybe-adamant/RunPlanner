@@ -24,7 +24,7 @@ import {
   hermesShrinePurchaseAction,
   offerFor,
   parseHermesShrineDeliveryEntryKey,
-  purchaseFor,
+  purchasedOfferFor,
 } from '../authored-project/hermes-shrine-delivery';
 import {
   candidateArtifactsForProjectEvaluationAssembly,
@@ -64,10 +64,13 @@ function purchasedObligation(project: ProjectDocument, entryKey: string) {
   if (source === undefined) return undefined;
   const occurrence = occurrenceAt(project, hermesShrineDeliverySourceAddress(source));
   const shrine = occurrence?.hermesShrine;
-  const purchase = purchaseFor(shrine, source.generationKey);
+  const purchased =
+    occurrence === undefined
+      ? undefined
+      : purchasedOfferFor(shrine, occurrence.roomActions.order, source.generationKey);
   return Object.freeze({
     rewardType: offerFor(shrine, source.generationKey)?.rewardType,
-    delay: purchase?.delay,
+    delay: purchased?.delay,
     rushed:
       occurrence === undefined
         ? undefined

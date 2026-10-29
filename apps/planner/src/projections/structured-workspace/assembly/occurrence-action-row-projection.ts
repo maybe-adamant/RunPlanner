@@ -1086,7 +1086,7 @@ function shopPurchaseRowProducts(
                     kind: 'SetHermesShrinePurchase' as const,
                     occurrence: owner,
                     generationKey: 'travelDealRefill' as const,
-                    purchase: null,
+                    purchased: false,
                   }),
                 }),
               }

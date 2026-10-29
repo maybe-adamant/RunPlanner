@@ -184,26 +184,36 @@ export function hermesShrineInitialSlotKey(
     : undefined;
 }
 
-/** Purchased terms; rush and purchase order belong to the generation's purchase action. */
-export interface HermesShrinePurchase {
-  readonly delay: 2 | 3 | 4 | 5 | 6 | 7 | 8;
-}
+/** Encounters a delayed Shrine delivery counts down, rolled with each stocked item (`RoomDelay`). */
+export type HermesShrineDelay = 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
-/** Visible Shrine inventory identity. Concrete payload and pickup detail belong to delivery. */
+export const HERMES_SHRINE_DELAYS: readonly HermesShrineDelay[] = Object.freeze([
+  2, 3, 4, 5, 6, 7, 8,
+]);
+
+/** A newly stocked item's delay until the author picks the rolled one. */
+export const DEFAULT_HERMES_SHRINE_DELAY: HermesShrineDelay = 2;
+
+/**
+ * One visible Shrine item with the delay rolled for it. Concrete payload and
+ * pickup detail belong to delivery; a rush ignores the delay.
+ */
 export interface HermesShrineInventoryOffer {
   readonly rewardType: string;
+  readonly delay: HermesShrineDelay;
 }
 
 /** A Travel Deal child is a fourth generation, never a replacement initial slot. */
 export interface HermesShrineTravelDealRefill {
   readonly offer: HermesShrineInventoryOffer | null;
-  readonly purchase?: HermesShrinePurchase;
 }
 
-/** Complete entry-time Shrine inventory; purchase-owned detail is deliberately sparse. */
+/**
+ * Complete entry-time Shrine inventory. Each purchase is its timeline action,
+ * which owns its rush and order.
+ */
 export interface HermesShrineState {
   readonly offerBySlot: Readonly<Record<HermesShrineSlotKey, HermesShrineInventoryOffer | null>>;
-  readonly purchaseBySlot?: Readonly<Partial<Record<HermesShrineSlotKey, HermesShrinePurchase>>>;
   /** Retained for repair even when its qualifying Travel Deal prefix changes. */
   readonly travelDealRefill?: HermesShrineTravelDealRefill;
 }

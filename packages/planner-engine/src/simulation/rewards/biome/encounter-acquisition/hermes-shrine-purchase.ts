@@ -114,7 +114,6 @@ export function applyHermesShrinePurchaseReachedTransition(inputs: {
   const unchanged = () => Object.freeze({ branches, findings: Object.freeze([]) });
 
   if (event.generationKey === 'travelDealRefill') {
-    const purchase = shrine?.travelDealRefill?.purchase;
     const offer = shrine?.travelDealRefill?.offer;
     const row = room.roomActionRoster.rows.find(
       (candidate) =>
@@ -122,7 +121,7 @@ export function applyHermesShrinePurchaseReachedTransition(inputs: {
         candidate.reference.kind === 'purchaseHermesShrineOffer' &&
         candidate.reference.generationKey === 'travelDealRefill',
     );
-    if (purchase === undefined || row === undefined) return unchanged();
+    if (row === undefined) return unchanged();
     // Before a rush made with Travel Deal the purchased refill does not exist yet.
     if (realized === undefined) {
       addFinding('hermesShrineTravelDealRefillUnavailable', row.owner, {
@@ -144,7 +143,7 @@ export function applyHermesShrinePurchaseReachedTransition(inputs: {
       room,
       'travelDealRefill',
       offer.rewardType,
-      { delay: purchase.delay, rushed: event.rushed },
+      { delay: offer.delay, rushed: event.rushed },
       event.sequence,
     );
     return Object.freeze({

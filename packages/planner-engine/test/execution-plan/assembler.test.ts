@@ -1734,7 +1734,8 @@ describe('engine-owned F/G execution semantic product', () => {
       expect.objectContaining({
         generationKey: 'initial:first',
         slotIndex: 1,
-        purchase: { roomDelay: 2, rushed: true },
+        roomDelay: 2,
+        purchase: { rushed: true },
         deliverySourceKey: expect.stringContaining('initial%3Afirst'),
       }),
       expect.objectContaining({
@@ -1762,7 +1763,8 @@ describe('engine-owned F/G execution semantic product', () => {
           generationKey: 'travelDealRefill',
           optionKey: 'ArmorBoost',
           rewardType: 'ArmorBoost',
-          purchase: { roomDelay: 2, rushed: false },
+          roomDelay: 2,
+          purchase: { rushed: false },
         },
       },
     });
@@ -1784,7 +1786,7 @@ describe('engine-owned F/G execution semantic product', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: shrineAddress,
       generationKey: 'travelDealRefill',
-      purchase: null,
+      purchased: false,
     });
     for (const purchase of [{ delay: 2, rushed: false }, null] as const) {
       const changed = purchaseTestHermesShrineOffer(
@@ -1798,7 +1800,7 @@ describe('engine-owned F/G execution semantic product', () => {
         changed.route.biomes[0]!.topology!.occurrences.find(
           (candidate) => candidate.occurrenceId === shrineAddress.occurrenceId,
         )?.hermesShrine?.travelDealRefill?.offer,
-      ).toEqual({ rewardType: 'ArmorBoost' });
+      ).toEqual({ rewardType: 'ArmorBoost', delay: 2 });
       const nOnly = {
         ...changed,
         route: { ...changed.route, biomes: changed.route.biomes.slice(0, 1) },

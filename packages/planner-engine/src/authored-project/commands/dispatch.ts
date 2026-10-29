@@ -259,6 +259,7 @@ function applyUnchecked(
     case 'ReplaceStygianWellTravelDealRefill':
     case 'SetHermesShrinePresence':
     case 'ReplaceHermesShrineOffer':
+    case 'SetHermesShrineOfferDelay':
     case 'SetHermesShrinePurchase':
     case 'SetHermesShrinePurchaseRush':
     case 'ReplaceHermesShrineTravelDealRefill':

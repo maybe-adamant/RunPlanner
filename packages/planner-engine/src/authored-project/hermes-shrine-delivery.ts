@@ -8,7 +8,6 @@ import {
   type BiomeTopology,
   type HermesShrineGenerationKey,
   type HermesShrineInventoryOffer,
-  type HermesShrinePurchase,
   type HermesShrineState,
   type OccurrenceId,
   type ProjectDocument,
@@ -57,17 +56,6 @@ export function isSameRoomDelivery(source: OccurrenceAddress, host: OccurrenceAd
   );
 }
 
-/** The authored purchase behind one Shrine generation, initial slot or Travel Deal refill. */
-export function purchaseFor(
-  shrine: HermesShrineState | undefined,
-  generationKey: HermesShrineGenerationKey,
-): HermesShrinePurchase | undefined {
-  if (shrine === undefined) return undefined;
-  if (generationKey === 'travelDealRefill') return shrine.travelDealRefill?.purchase;
-  const slotKey = hermesShrineInitialSlotKey(generationKey);
-  return slotKey === undefined ? undefined : shrine.purchaseBySlot?.[slotKey];
-}
-
 export type HermesShrinePurchaseAction = Extract<
   RoomActionReference,
   { readonly kind: 'purchaseHermesShrineOffer' }
@@ -108,6 +96,19 @@ export function offerFor(
   if (generationKey === 'travelDealRefill') return shrine.travelDealRefill?.offer;
   const slotKey = hermesShrineInitialSlotKey(generationKey);
   return slotKey === undefined ? undefined : shrine.offerBySlot[slotKey];
+}
+
+/**
+ * The item a Shrine generation sold: its offer while a purchase action holds
+ * it, whose delay times a delayed delivery.
+ */
+export function purchasedOfferFor(
+  shrine: HermesShrineState | undefined,
+  order: readonly RoomActionReference[],
+  generationKey: HermesShrineGenerationKey,
+): HermesShrineInventoryOffer | undefined {
+  if (hermesShrinePurchaseAction(order, generationKey) === undefined) return undefined;
+  return offerFor(shrine, generationKey) ?? undefined;
 }
 
 /**
@@ -250,7 +251,15 @@ export function hermesShrineDeliverySourceIsStructurallyActive(
     ?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === source.sourceOccurrenceId,
     );
-  if (purchaseFor(occurrence?.hermesShrine, source.generationKey) === undefined) return false;
+  if (
+    occurrence === undefined ||
+    purchasedOfferFor(
+      occurrence.hermesShrine,
+      occurrence.roomActions.order,
+      source.generationKey,
+    ) === undefined
+  )
+    return false;
   return (
     structurallyActiveIdsByBiome(route)(source.biomeKey)?.has(source.sourceOccurrenceId) ?? false
   );

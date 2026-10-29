@@ -578,16 +578,25 @@ export type HermesShrineCommand =
       readonly present: boolean;
     }
   | {
+      /** Stocks one slot; its delay is kept, or defaulted for an empty slot. */
       readonly kind: 'ReplaceHermesShrineOffer';
       readonly occurrence: OccurrenceAddress;
       readonly slotKey: import('../model').HermesShrineSlotKey;
-      readonly value: import('../model').HermesShrineInventoryOffer;
+      readonly value: { readonly rewardType: string };
     }
   | {
+      /** The delay rolled with one stocked item, initial slot or Travel Deal refill. */
+      readonly kind: 'SetHermesShrineOfferDelay';
+      readonly occurrence: OccurrenceAddress;
+      readonly generationKey: import('../model').HermesShrineGenerationKey;
+      readonly delay: import('../model').HermesShrineDelay;
+    }
+  | {
+      /** A new purchase starts unrushed at its canonical timeline position. */
       readonly kind: 'SetHermesShrinePurchase';
       readonly occurrence: OccurrenceAddress;
       readonly generationKey: import('../model').HermesShrineGenerationKey;
-      readonly purchase: import('../model').HermesShrinePurchase | null;
+      readonly purchased: boolean;
     }
   | {
       /** Rushing delivers the item in the Shrine room and offers its optional pickup. */
@@ -596,9 +605,10 @@ export type HermesShrineCommand =
       readonly rushed: boolean;
     }
   | {
+      /** Stocks the Travel Deal refill; its delay is kept, or defaulted when first stocked. */
       readonly kind: 'ReplaceHermesShrineTravelDealRefill';
       readonly occurrence: OccurrenceAddress;
-      readonly value: import('../model').HermesShrineInventoryOffer;
+      readonly value: { readonly rewardType: string };
     };
 
 export type StygianWellCommand =

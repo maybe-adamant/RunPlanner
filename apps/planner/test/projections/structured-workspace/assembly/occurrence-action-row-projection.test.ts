@@ -1478,7 +1478,7 @@ describe('shop-like purchase rows', () => {
           kind: 'SetHermesShrinePurchase',
           occurrence: shrineOwner,
           generationKey: 'travelDealRefill',
-          purchase: null,
+          purchased: false,
         },
       },
     });

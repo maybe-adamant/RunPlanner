@@ -91,10 +91,36 @@ function dropFeatureInteraction(occurrence) {
   return changed;
 }
 
+// The Shrine's delay was rolled with each stocked item: a purchase's delay
+// moves onto its offer, and an unbought item takes the default delay.
+const SHRINE_DEFAULT_DELAY = 2;
+
+function withShrineDelay(offer, purchase) {
+  if (offer === null || typeof offer !== 'object' || Object.hasOwn(offer, 'delay')) return offer;
+  return { ...offer, delay: purchase?.delay ?? SHRINE_DEFAULT_DELAY };
+}
+
+function moveShrineDelays(occurrence) {
+  const shrine = occurrence?.hermesShrine;
+  if (shrine === null || typeof shrine !== 'object') return false;
+  const before = JSON.stringify(shrine);
+  const purchases = shrine.purchaseBySlot ?? {};
+  for (const slotKey of Object.keys(shrine.offerBySlot ?? {}))
+    shrine.offerBySlot[slotKey] = withShrineDelay(shrine.offerBySlot[slotKey], purchases[slotKey]);
+  delete shrine.purchaseBySlot;
+  const refill = shrine.travelDealRefill;
+  if (refill !== null && typeof refill === 'object') {
+    refill.offer = withShrineDelay(refill.offer, refill.purchase);
+    delete refill.purchase;
+  }
+  return JSON.stringify(shrine) !== before;
+}
+
 function migrateOccurrence(occurrence) {
   migratePedestal(occurrence);
   migratePhantomExit(occurrence);
   dropFeatureInteraction(occurrence);
+  moveShrineDelays(occurrence);
 }
 
 // Schema 100 is unpushed: a local plan saved while a Well or Pool held a reroll
@@ -147,8 +173,9 @@ function normalizeScreenRerollCounts(value) {
 }
 
 /**
- * Reshapes a schema 100 document saved with reroll counts or Well and Pool
- * interaction flags; returns the input itself when it holds none.
+ * Reshapes a schema 100 document saved with reroll counts, Well and Pool
+ * interaction flags or Shrine purchase delays; returns the input itself when
+ * it holds none.
  */
 export function normalizeUnpushedSchema100(value) {
   const source = record(value, 'project document');
@@ -157,9 +184,11 @@ export function normalizeUnpushedSchema100(value) {
   for (const biome of copy.route?.biomes ?? [])
     for (const occurrence of biome?.topology?.occurrences ?? [])
       if (
-        [normalizeOccurrenceRerollCounts(occurrence), dropFeatureInteraction(occurrence)].some(
-          Boolean,
-        )
+        [
+          normalizeOccurrenceRerollCounts(occurrence),
+          dropFeatureInteraction(occurrence),
+          moveShrineDelays(occurrence),
+        ].some(Boolean)
       )
         changed = true;
   if (normalizeScreenRerollCounts(copy.route)) changed = true;
@@ -167,7 +196,8 @@ export function normalizeUnpushedSchema100(value) {
 }
 
 // Browser-safe transform: the Contract pedestal becomes a Preboss room feature in either form,
-// and every Ephyra combat, Mini-Boss and side room gains its unpinned phantom exit.
+// every Ephyra combat, Mini-Boss and side room gains its unpinned phantom exit, and each
+// Shrine item carries its delay.
 export function migrateProjectDocument(value) {
   const source = record(value, 'project document');
   if (source.schemaVersion !== SOURCE_SCHEMA_VERSION)

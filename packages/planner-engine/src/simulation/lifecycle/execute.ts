@@ -645,27 +645,22 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     const purchaseActions = roster.rows.flatMap((row) =>
       row.reference.kind === 'purchaseHermesShrineOffer' ? [row.reference] : [],
     );
-    const deliveries = Object.entries(context.input.hermesShrine.purchaseBySlot ?? {}).flatMap(
-      ([slotKey, purchase]) => {
-        const offer =
-          context.input.hermesShrine?.offerBySlot[
-            slotKey as import('../../authored-project/model').HermesShrineSlotKey
+    const shrine = context.input.hermesShrine;
+    const deliveries = (['first', 'secondLeft', 'secondRight'] as const).flatMap((slotKey) => {
+      const generationKey = `initial:${slotKey}` as const;
+      const action = purchaseActions.find((candidate) => candidate.generationKey === generationKey);
+      const offer = shrine.offerBySlot[slotKey];
+      return action === undefined || offer === null
+        ? []
+        : [
+            Object.freeze({
+              generationKey,
+              rewardType: offer.rewardType,
+              delay: offer.delay,
+              rushed: action.rushed,
+            }),
           ];
-        return purchase === undefined || offer === null || offer === undefined
-          ? []
-          : [
-              Object.freeze({
-                generationKey:
-                  `initial:${slotKey}` as import('../../authored-project/model').HermesShrineGenerationKey,
-                rewardType: offer.rewardType,
-                delay: purchase.delay,
-                rushed:
-                  purchaseActions.find((action) => action.generationKey === `initial:${slotKey}`)
-                    ?.rushed === true,
-              }),
-            ];
-      },
-    );
+    });
     if (deliveries.length === 0) return initial;
     return appendEvent(
       initial,

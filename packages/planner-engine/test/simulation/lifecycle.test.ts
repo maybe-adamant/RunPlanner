@@ -260,8 +260,11 @@ describe('single-room lifecycle execution', () => {
         encounterEnvelopeKey: 'SingleEncounter',
         encounterPhases: phases('SingleEncounter', ['GeneratedN']),
         hermesShrine: {
-          offerBySlot: { first: { rewardType: 'Boon' }, secondLeft: null, secondRight: null },
-          purchaseBySlot: { first: { delay: 2 } },
+          offerBySlot: {
+            first: { rewardType: 'Boon', delay: 2 },
+            secondLeft: null,
+            secondRight: null,
+          },
         },
         roomActionRoster: actionRoster(
           sideOrigin,
@@ -316,8 +319,11 @@ describe('single-room lifecycle execution', () => {
         encounterEnvelopeKey: 'SingleEncounter',
         encounterPhases: phases('SingleEncounter', ['GeneratedN']),
         hermesShrine: {
-          offerBySlot: { first: { rewardType: 'Boon' }, secondLeft: null, secondRight: null },
-          purchaseBySlot: { first: { delay: 2 } },
+          offerBySlot: {
+            first: { rewardType: 'Boon', delay: 2 },
+            secondLeft: null,
+            secondRight: null,
+          },
         },
         roomActionRoster: actionRoster(
           sideOrigin,

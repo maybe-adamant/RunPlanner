@@ -239,4 +239,41 @@ describe('unpushed schema 100 reroll counts', () => {
     ]);
     assert.equal(traits.rerollCount, 2);
   });
+
+  it('moves each Shrine purchase delay onto its item and gives unbought items the default', () => {
+    const shrineRoom = () => ({
+      occurrenceId: 'shrine',
+      gameName: 'N_Combat01',
+      hermesShrine: {
+        offerBySlot: {
+          first: { rewardType: 'HealBigDrop' },
+          secondLeft: { rewardType: 'MaxHealthDrop' },
+          secondRight: null,
+        },
+        purchaseBySlot: { first: { delay: 6 } },
+        travelDealRefill: { offer: { rewardType: 'MaxManaDrop' }, purchase: { delay: 4 } },
+      },
+      roomActions: {
+        order: [
+          { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first', rushed: true },
+        ],
+      },
+    });
+    const expected = {
+      offerBySlot: {
+        first: { rewardType: 'HealBigDrop', delay: 6 },
+        secondLeft: { rewardType: 'MaxHealthDrop', delay: 2 },
+        secondRight: null,
+      },
+      travelDealRefill: { offer: { rewardType: 'MaxManaDrop', delay: 4 } },
+    };
+    const migrated = migrateProjectDocument(document([shrineRoom()]));
+    assert.deepEqual(migrated.route.biomes[0].topology.occurrences[0].hermesShrine, expected);
+    const source = { ...document([shrineRoom()]), schemaVersion: 100 };
+    const normalized = normalizeUnpushedSchema100(source);
+    const [room] = normalized.route.biomes[0].topology.occurrences;
+    assert.deepEqual(room.hermesShrine, expected);
+    assert.deepEqual(room.roomActions, shrineRoom().roomActions);
+    assert.equal(normalizeUnpushedSchema100(normalized), normalized);
+  });
 });

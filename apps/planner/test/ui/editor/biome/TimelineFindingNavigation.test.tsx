@@ -49,13 +49,22 @@ it.each([
     const project =
       kind === 'ship'
         ? applyProjectCommand(
-            createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false }),
+            applyProjectCommand(
+              createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false }),
+              catalog,
+              {
+                kind: 'SetHermesShrineOfferDelay',
+                occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+                generationKey: 'initial:secondLeft',
+                delay: 4,
+              },
+            ),
             catalog,
             {
               kind: 'SetHermesShrinePurchase',
               occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
               generationKey: 'initial:secondLeft',
-              purchase: { delay: 4 },
+              purchased: true,
             },
           )
         : kind === 'delivery'

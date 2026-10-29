@@ -330,9 +330,10 @@ export type ExecutionTravelDealRefill =
         readonly slotIndex: 1 | 2 | 3;
         readonly optionKey: string;
         readonly rewardType: string;
+        /** Native `RoomDelay` rolled with the item; a rush ignores it. */
+        readonly roomDelay: 2 | 3 | 4 | 5 | 6 | 7 | 8;
         readonly deliverySourceKey?: string;
         readonly purchase?: {
-          readonly roomDelay: 2 | 3 | 4 | 5 | 6 | 7 | 8;
           readonly rushed: boolean;
         };
       };
@@ -820,10 +821,11 @@ export interface ExecutionOverview {
       readonly rewardType: string;
       /** One-based native SurfaceShop button/StoreOptions index. */
       readonly slotIndex: 1 | 2 | 3;
+      /** Native `RoomDelay` rolled with the item; a rush ignores it. */
+      readonly roomDelay: 2 | 3 | 4 | 5 | 6 | 7 | 8;
       /** Exact delivery entry key carried through native pending-item copies. */
       readonly deliverySourceKey?: string;
       readonly purchase?: {
-        readonly roomDelay: 2 | 3 | 4 | 5 | 6 | 7 | 8;
         readonly rushed: boolean;
       };
     }[];

@@ -4180,19 +4180,22 @@
               "generationKey": "initial:first",
               "optionKey": "HealBigDrop",
               "rewardType": "HealBigDrop",
-              "slotIndex": 1
+              "slotIndex": 1,
+              "roomDelay": 2
             },
             {
               "generationKey": "initial:secondLeft",
               "optionKey": "MaxHealthDrop",
               "rewardType": "MaxHealthDrop",
-              "slotIndex": 2
+              "slotIndex": 2,
+              "roomDelay": 2
             },
             {
               "generationKey": "initial:secondRight",
               "optionKey": "MaxManaDrop",
               "rewardType": "MaxManaDrop",
-              "slotIndex": 3
+              "slotIndex": 3,
+              "roomDelay": 2
             }
           ]
         },
@@ -4379,5 +4382,5 @@
       }
     }
   ],
-  "planFingerprint": "a357b6da"
+  "planFingerprint": "e2a39e85"
 }

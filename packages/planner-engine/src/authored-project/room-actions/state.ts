@@ -16,7 +16,6 @@ import {
   isDeliveryFlushHost,
   isSameRoomDelivery,
   parseHermesShrineDeliveryEntryKey,
-  purchaseFor,
 } from '../hermes-shrine-delivery';
 import { authoredAcquisitionSources } from '../acquisition/acquisition-sources';
 import {
@@ -262,18 +261,15 @@ export function activeRoomActionReferences(
       references.push(Object.freeze({ kind: 'purchaseStygianWellOffer', generationKey }));
   }
   if (occurrence.hermesShrine !== undefined) {
-    // Each purchased generation has one purchase action; a new one starts unrushed.
+    // A purchase participates by its action, which owns its rush.
     for (const generationKey of [
       'initial:first',
       'initial:secondLeft',
       'initial:secondRight',
       'travelDealRefill',
     ] as const) {
-      if (purchaseFor(occurrence.hermesShrine, generationKey) === undefined) continue;
-      references.push(
-        hermesShrinePurchaseAction(occurrence.roomActions.order, generationKey) ??
-          Object.freeze({ kind: 'purchaseHermesShrineOffer', generationKey, rushed: false }),
-      );
+      const action = hermesShrinePurchaseAction(occurrence.roomActions.order, generationKey);
+      if (action !== undefined) references.push(action);
     }
   }
   for (const phase of envelopeSlots) {

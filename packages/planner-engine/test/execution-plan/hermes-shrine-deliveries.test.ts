@@ -131,12 +131,14 @@ describe('surface-shrine-deliveries execution fixture', () => {
       expect.objectContaining({
         generationKey: 'initial:secondLeft',
         deliverySourceKey: sideLeftKey,
-        purchase: { roomDelay: 5, rushed: false },
+        roomDelay: 5,
+        purchase: { rushed: false },
       }),
       expect.objectContaining({
         generationKey: 'initial:secondRight',
         deliverySourceKey: sideRightKey,
-        purchase: { roomDelay: 8, rushed: false },
+        roomDelay: 8,
+        purchase: { rushed: false },
       }),
     ]);
     expect(shrineOffers(plan, oShrine.occurrenceId)[0]).toEqual(
@@ -144,14 +146,16 @@ describe('surface-shrine-deliveries execution fixture', () => {
         generationKey: 'initial:first',
         slotIndex: 1,
         deliverySourceKey: rushedKey,
-        purchase: { roomDelay: 2, rushed: true },
+        roomDelay: 2,
+        purchase: { rushed: true },
       }),
     );
     expect(shrineOffers(plan, pPostboss.occurrenceId)[2]).toEqual(
       expect.objectContaining({
         generationKey: 'initial:secondRight',
         deliverySourceKey: flushKey,
-        purchase: { roomDelay: 8, rushed: false },
+        roomDelay: 8,
+        purchase: { rushed: false },
       }),
     );
     expect(shrineOffers(plan, 'surface-n-preboss:postboss').every((offer) => !offer.purchase)).toBe(
@@ -177,7 +181,8 @@ describe('surface-shrine-deliveries execution fixture', () => {
             optionKey: 'ArmorBoost',
             rewardType: 'ArmorBoost',
             deliverySourceKey: refillKey,
-            purchase: { roomDelay: 2, rushed: false },
+            roomDelay: 2,
+            purchase: { rushed: false },
           },
         },
       }),
@@ -258,7 +263,8 @@ describe('surface-shrine-rushed-unranked execution fixture', () => {
       expect.objectContaining({
         generationKey: 'initial:first',
         deliverySourceKey: rushedKey,
-        purchase: { roomDelay: 2, rushed: true },
+        roomDelay: 2,
+        purchase: { rushed: true },
       }),
     );
     expect(deliveryRows(plan).map(({ host, sourceKey }) => ({ host, sourceKey }))).toEqual([
@@ -318,7 +324,8 @@ describe('dream-shrine-pending execution fixture', () => {
       expect.objectContaining({
         generationKey: 'initial:first',
         deliverySourceKey: sourceKey,
-        purchase: { roomDelay: 8, rushed: false },
+        roomDelay: 8,
+        purchase: { rushed: false },
       }),
     );
     expect(deliveryRows(plan)).toEqual([]);

@@ -1191,16 +1191,24 @@ export function bindOccurrenceLocalInteractions(
               generationKey,
               purchase: slot.purchase,
               intentFor: (
-                purchase:
-                  import('@run-planner/engine/authored-project').HermesShrinePurchase | null,
+                purchase: import('../contracts/commerce').WorkspaceHermesShrinePurchase | null,
               ) =>
                 Object.freeze({
-                  command: Object.freeze({
-                    kind: 'SetHermesShrinePurchase' as const,
-                    occurrence: requirement.owner,
-                    generationKey,
-                    purchase,
-                  }),
+                  command: Object.freeze(
+                    purchase !== null && slot.purchase !== null
+                      ? {
+                          kind: 'SetHermesShrineOfferDelay' as const,
+                          occurrence: requirement.owner,
+                          generationKey,
+                          delay: purchase.delay,
+                        }
+                      : {
+                          kind: 'SetHermesShrinePurchase' as const,
+                          occurrence: requirement.owner,
+                          generationKey,
+                          purchased: purchase !== null,
+                        },
+                  ),
                 }),
               rushIntentFor: (rushed: boolean) =>
                 Object.freeze({

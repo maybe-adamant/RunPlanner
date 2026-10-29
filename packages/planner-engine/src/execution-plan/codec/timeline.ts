@@ -186,7 +186,7 @@ function travelDealRefill(value: unknown, label: string): ExecutionTravelDealRef
     const replacement = object(record.replacement, `${label}.replacement`);
     exact(
       replacement,
-      ['generationKey', 'slotIndex', 'optionKey', 'rewardType'],
+      ['generationKey', 'slotIndex', 'optionKey', 'rewardType', 'roomDelay'],
       ['deliverySourceKey', 'purchase'],
       `${label}.replacement`,
     );
@@ -208,12 +208,8 @@ function travelDealRefill(value: unknown, label: string): ExecutionTravelDealRef
         ? undefined
         : (() => {
             const row = object(replacement.purchase, `${label}.replacement.purchase`);
-            exact(row, ['roomDelay', 'rushed'], [], `${label}.replacement.purchase`);
-            const roomDelay = integer(row.roomDelay, `${label}.replacement.purchase.roomDelay`);
-            if (roomDelay < 2 || roomDelay > 8)
-              fail(`${label}.replacement.purchase.roomDelay must be 2-8`);
+            exact(row, ['rushed'], [], `${label}.replacement.purchase`);
             return Object.freeze({
-              roomDelay: roomDelay as 2 | 3 | 4 | 5 | 6 | 7 | 8,
               rushed: booleanValue(row.rushed, `${label}.replacement.purchase.rushed`),
             });
           })();
@@ -229,6 +225,11 @@ function travelDealRefill(value: unknown, label: string): ExecutionTravelDealRef
         slotIndex: replacementSlotIndex as 1 | 2 | 3,
         optionKey: stringValue(replacement.optionKey, `${label}.replacement.optionKey`),
         rewardType: stringValue(replacement.rewardType, `${label}.replacement.rewardType`),
+        roomDelay: (() => {
+          const roomDelay = integer(replacement.roomDelay, `${label}.replacement.roomDelay`);
+          if (roomDelay < 2 || roomDelay > 8) fail(`${label}.replacement.roomDelay must be 2-8`);
+          return roomDelay as 2 | 3 | 4 | 5 | 6 | 7 | 8;
+        })(),
         ...(replacement.deliverySourceKey === undefined
           ? {}
           : {

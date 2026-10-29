@@ -18,7 +18,6 @@ import {
 import {
   hermesShrineDeliveryEntryKey,
   hermesShrinePurchaseAction,
-  purchaseFor,
 } from '../../authored-project/hermes-shrine-delivery';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
@@ -525,35 +524,31 @@ export function hermesShrineTravelDealRefill(
         slotIndex,
         optionKey: refillEvidence.optionKey,
         rewardType: refillOffer.rewardType,
-        ...(travelDeal.purchase === undefined
-          ? {}
-          : {
-              deliverySourceKey: hermesShrineDeliveryEntryKey(room.origin, 'travelDealRefill'),
-              purchase: Object.freeze({
-                roomDelay: travelDeal.purchase.delay,
-                rushed: shrinePurchaseRushed(room, 'travelDealRefill'),
-              }),
-            }),
+        roomDelay: refillOffer.delay,
+        ...shrinePurchase(room, 'travelDealRefill'),
       }),
     }),
   });
 }
 
-/** Rush is authored on the generation's timeline purchase action. */
-function shrinePurchaseRushed(
+/** A purchase and its rush are the generation's timeline purchase action. */
+function shrinePurchase(
   room: CanonicalAuthoredRoom,
   generationKey: HermesShrineGenerationKey,
-): boolean {
+): {
+  readonly deliverySourceKey?: string;
+  readonly purchase?: { readonly rushed: boolean };
+} {
   const action = hermesShrinePurchaseAction(
     room.roomActionRoster.rows.map((row) => row.reference),
     generationKey,
   );
-  if (action === undefined)
-    throw new CompilerError(
-      'executionCoverageMissing',
-      `${room.gameName} lacks Shrine purchase action ${generationKey}`,
-    );
-  return action.rushed;
+  return action === undefined
+    ? {}
+    : {
+        deliverySourceKey: hermesShrineDeliveryEntryKey(room.origin, generationKey),
+        purchase: Object.freeze({ rushed: action.rushed }),
+      };
 }
 
 function executionHermesShrine(
@@ -599,23 +594,13 @@ function executionHermesShrine(
         HermesShrineGenerationKey,
         'travelDealRefill'
       >;
-      const purchase = purchaseFor(shrine, generationKey);
       return Object.freeze({
         generationKey,
         optionKey: optionKeys[index]!,
         rewardType: offer.rewardType,
         slotIndex,
-        ...(purchase === undefined
-          ? {}
-          : { deliverySourceKey: hermesShrineDeliveryEntryKey(room.origin, generationKey) }),
-        ...(purchase === undefined
-          ? {}
-          : {
-              purchase: Object.freeze({
-                roomDelay: purchase.delay,
-                rushed: shrinePurchaseRushed(room, generationKey),
-              }),
-            }),
+        roomDelay: offer.delay,
+        ...shrinePurchase(room, generationKey),
       });
     }),
   );

@@ -96,8 +96,7 @@ export type WorkspaceRoomFeature =
         }[];
         readonly offerInteractionKey: string;
         readonly purchaseInteractionKey: string;
-        readonly purchase:
-          import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
+        readonly purchase: import('./commerce').WorkspaceHermesShrinePurchase | null;
       }[];
       /** Refill inventory, authored on the timeline under the purchase that triggers it. */
       readonly travelDealRefill?: {
@@ -112,8 +111,7 @@ export type WorkspaceRoomFeature =
         }[];
         readonly offerInteractionKey: string;
         readonly purchaseInteractionKey: string;
-        readonly purchase:
-          import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
+        readonly purchase: import('./commerce').WorkspaceHermesShrinePurchase | null;
         /** The rushed purchase that triggers the refill; absent while Travel Deal does not apply. */
         readonly sourceGenerationKey?: import('@run-planner/engine/authored-project').HermesShrineGenerationKey;
       };

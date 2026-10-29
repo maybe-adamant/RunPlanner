@@ -779,11 +779,10 @@ describe('project document loader', () => {
     const occurrence = loaded.project.route.biomes
       .find((biome) => biome.biomeKey === 'N')
       ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shrine);
-    expect(occurrence?.hermesShrine?.purchaseBySlot).toEqual({
-      first: { delay: 2 },
-      secondRight: { delay: 5 },
-    });
-    expect(occurrence?.hermesShrine?.travelDealRefill?.purchase).toEqual({ delay: 2 });
+    // Each purchase's delay now belongs to its item.
+    expect(occurrence?.hermesShrine?.offerBySlot.first?.delay).toBe(2);
+    expect(occurrence?.hermesShrine?.offerBySlot.secondRight?.delay).toBe(5);
+    expect(occurrence?.hermesShrine?.travelDealRefill?.offer?.delay).toBe(2);
     expect(occurrence?.roomActions.order).toEqual([
       { kind: 'useFountain' },
       { kind: 'interactKeepsakeRack' },

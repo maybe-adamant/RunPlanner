@@ -1250,7 +1250,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: host,
       generationKey: 'travelDealRefill',
-      purchase: null,
+      purchased: false,
     });
     const unrushedSource = purchaseTestHermesShrineOffer(project, catalog, host, 'initial:first', {
       delay: 2,
@@ -1296,7 +1296,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: host,
       generationKey: 'travelDealRefill',
-      purchase: null,
+      purchased: false,
     });
     const secondPlan = bothRushed.route?.biomes.find((candidate) => candidate.biomeKey === 'O');
     if (secondPlan === undefined) throw new Error('fixture lost O after second rush');
@@ -1558,7 +1558,7 @@ describe('Hermes Shrine Travel Deal generation', () => {
         moved.route.biomes[0]!.topology!.occurrences.find(
           (occurrence) => occurrence.occurrenceId === shrine.occurrenceId,
         )?.hermesShrine?.travelDealRefill?.offer,
-      ).toEqual({ rewardType: 'ArmorBoost' });
+      ).toEqual({ rewardType: 'ArmorBoost', delay: 2 });
       expect(reordered.findings).toContainEqual(
         expect.objectContaining({
           code: 'hermesShrineTravelDealRefillUnavailable',
@@ -1725,12 +1725,14 @@ describe('Hermes Shrine Travel Deal generation', () => {
         kind: 'SetHermesShrinePurchase',
         occurrence: shrine,
         generationKey: 'travelDealRefill',
-        purchase: null,
+        purchased: false,
       });
       const room = removed.route.biomes[0]!.topology!.occurrences.find(
         (occurrence) => occurrence.occurrenceId === shrine.occurrenceId,
       );
-      expect(room?.hermesShrine?.travelDealRefill).toEqual({ offer: { rewardType: 'ArmorBoost' } });
+      expect(room?.hermesShrine?.travelDealRefill).toEqual({
+        offer: { rewardType: 'ArmorBoost', delay: 2 },
+      });
       expect(room?.roomActions.order).not.toContainEqual(
         expect.objectContaining({ generationKey: 'travelDealRefill' }),
       );

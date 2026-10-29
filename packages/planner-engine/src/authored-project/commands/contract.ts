@@ -148,6 +148,7 @@ function commandContractAddress(
     case 'ReplaceStygianWellTravelDealRefill':
     case 'SetHermesShrinePresence':
     case 'ReplaceHermesShrineOffer':
+    case 'SetHermesShrineOfferDelay':
     case 'SetHermesShrinePurchase':
     case 'ReplaceHermesShrineTravelDealRefill':
       return command.occurrence;
@@ -299,6 +300,7 @@ export function projectCommandAddress(
         kind: 'hermesShrineOffer',
         generationKey: 'travelDealRefill',
       });
+    case 'SetHermesShrineOfferDelay':
     case 'SetHermesShrinePurchase':
       return createRoomFeatureAddress(command.occurrence, {
         kind: 'hermesShrineOffer',

@@ -3837,23 +3837,26 @@
               "generationKey": "initial:first",
               "optionKey": "HealBigDrop",
               "rewardType": "HealBigDrop",
-              "slotIndex": 1
+              "slotIndex": 1,
+              "roomDelay": 2
             },
             {
               "generationKey": "initial:secondLeft",
               "optionKey": "MaxHealthDrop",
               "rewardType": "MaxHealthDrop",
               "slotIndex": 2,
+              "roomDelay": 5,
               "deliverySourceKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22N%22%2C%22surface-n-combat11-sideDoor1%22%2C%22initial%3AsecondLeft%22%5D",
-              "purchase": { "roomDelay": 5, "rushed": false }
+              "purchase": { "rushed": false }
             },
             {
               "generationKey": "initial:secondRight",
               "optionKey": "MaxManaDrop",
               "rewardType": "MaxManaDrop",
               "slotIndex": 3,
+              "roomDelay": 8,
               "deliverySourceKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22N%22%2C%22surface-n-combat11-sideDoor1%22%2C%22initial%3AsecondRight%22%5D",
-              "purchase": { "roomDelay": 8, "rushed": false }
+              "purchase": { "rushed": false }
             }
           ]
         }
@@ -4661,19 +4664,22 @@
               "generationKey": "initial:first",
               "optionKey": "HealBigDrop",
               "rewardType": "HealBigDrop",
-              "slotIndex": 1
+              "slotIndex": 1,
+              "roomDelay": 2
             },
             {
               "generationKey": "initial:secondLeft",
               "optionKey": "MaxHealthDrop",
               "rewardType": "MaxHealthDrop",
-              "slotIndex": 2
+              "slotIndex": 2,
+              "roomDelay": 2
             },
             {
               "generationKey": "initial:secondRight",
               "optionKey": "MaxManaDrop",
               "rewardType": "MaxManaDrop",
-              "slotIndex": 3
+              "slotIndex": 3,
+              "roomDelay": 2
             }
           ]
         },
@@ -5076,20 +5082,23 @@
               "optionKey": "HealBigDrop",
               "rewardType": "HealBigDrop",
               "slotIndex": 1,
+              "roomDelay": 2,
               "deliverySourceKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22O%22%2C%22surface-o-combat07%22%2C%22initial%3Afirst%22%5D",
-              "purchase": { "roomDelay": 2, "rushed": true }
+              "purchase": { "rushed": true }
             },
             {
               "generationKey": "initial:secondLeft",
               "optionKey": "MaxHealthDrop",
               "rewardType": "MaxHealthDrop",
-              "slotIndex": 2
+              "slotIndex": 2,
+              "roomDelay": 2
             },
             {
               "generationKey": "initial:secondRight",
               "optionKey": "MaxManaDrop",
               "rewardType": "MaxManaDrop",
-              "slotIndex": 3
+              "slotIndex": 3,
+              "roomDelay": 2
             }
           ]
         }
@@ -5139,8 +5148,9 @@
                 "slotIndex": 1,
                 "optionKey": "ArmorBoost",
                 "rewardType": "ArmorBoost",
+                "roomDelay": 2,
                 "deliverySourceKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22O%22%2C%22surface-o-combat07%22%2C%22travelDealRefill%22%5D",
-                "purchase": { "roomDelay": 2, "rushed": false }
+                "purchase": { "rushed": false }
               }
             },
             "window": { "kind": "postOutgoing" }
@@ -6269,19 +6279,22 @@
               "generationKey": "initial:first",
               "optionKey": "HealBigDrop",
               "rewardType": "HealBigDrop",
-              "slotIndex": 1
+              "slotIndex": 1,
+              "roomDelay": 2
             },
             {
               "generationKey": "initial:secondLeft",
               "optionKey": "MaxHealthDrop",
               "rewardType": "MaxHealthDrop",
-              "slotIndex": 2
+              "slotIndex": 2,
+              "roomDelay": 2
             },
             {
               "generationKey": "initial:secondRight",
               "optionKey": "MaxManaDrop",
               "rewardType": "MaxManaDrop",
-              "slotIndex": 3
+              "slotIndex": 3,
+              "roomDelay": 2
             }
           ]
         },
@@ -8053,21 +8066,24 @@
               "generationKey": "initial:first",
               "optionKey": "HealBigDrop",
               "rewardType": "HealBigDrop",
-              "slotIndex": 1
+              "slotIndex": 1,
+              "roomDelay": 2
             },
             {
               "generationKey": "initial:secondLeft",
               "optionKey": "MaxHealthDrop",
               "rewardType": "MaxHealthDrop",
-              "slotIndex": 2
+              "slotIndex": 2,
+              "roomDelay": 2
             },
             {
               "generationKey": "initial:secondRight",
               "optionKey": "MaxManaDrop",
               "rewardType": "MaxManaDrop",
               "slotIndex": 3,
+              "roomDelay": 8,
               "deliverySourceKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22P%22%2C%22surface-p-preboss-shop%3Apostboss%22%2C%22initial%3AsecondRight%22%5D",
-              "purchase": { "roomDelay": 8, "rushed": false }
+              "purchase": { "rushed": false }
             }
           ]
         },
@@ -9690,5 +9706,5 @@
       }
     }
   ],
-  "planFingerprint": "a1b96307"
+  "planFingerprint": "5e6a4c58"
 }

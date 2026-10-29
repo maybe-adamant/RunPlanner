@@ -94,11 +94,10 @@ function projectWithUnrankedDeliveryHost() {
     ...source,
     hermesShrine: Object.freeze({
       offerBySlot: Object.freeze({
-        first: Object.freeze({ rewardType: 'HealBigDrop' }),
+        first: Object.freeze({ rewardType: 'HealBigDrop', delay: 2 as const }),
         secondLeft: null,
         secondRight: null,
       }),
-      purchaseBySlot: Object.freeze({ first: Object.freeze({ delay: 2 }) }),
     }),
     // A side room's purchase window precedes its combat actions.
     roomActions: Object.freeze({
@@ -776,13 +775,9 @@ function projectWithTwoSideRoomDeliveries() {
     ...sourceOccurrence,
     hermesShrine: Object.freeze({
       offerBySlot: Object.freeze({
-        first: Object.freeze({ rewardType: 'HealBigDrop' }),
-        secondLeft: Object.freeze({ rewardType: 'MaxHealthDrop' }),
-        secondRight: Object.freeze({ rewardType: 'MaxManaDrop' }),
-      }),
-      purchaseBySlot: Object.freeze({
-        first: Object.freeze({ delay: 2 }),
-        secondLeft: Object.freeze({ delay: 2 }),
+        first: Object.freeze({ rewardType: 'HealBigDrop', delay: 2 as const }),
+        secondLeft: Object.freeze({ rewardType: 'MaxHealthDrop', delay: 2 as const }),
+        secondRight: Object.freeze({ rewardType: 'MaxManaDrop', delay: 2 as const }),
       }),
     }),
     // A side room's Shrine unlocks with its exits, after the room's own actions.
@@ -910,8 +905,10 @@ describe('Hermes Shrine delivery source participation', () => {
     });
     expect(orderedDeliveryKeys(withdrawn, biome.biomeKey, host.occurrenceId)).toEqual([]);
     expect(
-      occurrenceOf(withdrawn, biome.biomeKey, source.occurrenceId).hermesShrine?.purchaseBySlot,
-    ).toEqual({ first: { delay: 2 }, secondLeft: { delay: 2 } });
+      occurrenceOf(withdrawn, biome.biomeKey, source.occurrenceId).roomActions.order.filter(
+        (reference) => reference.kind === 'purchaseHermesShrineOffer',
+      ),
+    ).toHaveLength(2);
     for (const entryKey of entryKeys) {
       expect(
         occurrenceOf(withdrawn, biome.biomeKey, host.occurrenceId).acquisitionSites
@@ -1208,7 +1205,6 @@ describe('Hermes Shrine delivery source participation', () => {
         (reference) => roomActionKey(reference) === roomActionKey(rushed!),
       ),
     ).toBe(false);
-    expect(host.hermesShrine?.purchaseBySlot?.first).toEqual({ delay: 2 });
     expect(host.roomActions.order).toContainEqual({
       kind: 'purchaseHermesShrineOffer',
       generationKey: 'initial:first',
@@ -1472,11 +1468,17 @@ describe('flush-host admission after source retraction', () => {
         slotKey,
         value: { rewardType },
       });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrineOfferDelay',
+      occurrence: source,
+      generationKey: 'initial:first',
+      delay: 8,
+    });
     const settled = settle(project, {
       kind: 'SetHermesShrinePurchase',
       occurrence: source,
       generationKey: 'initial:first',
-      purchase: { delay: 8 },
+      purchased: true,
     });
     expect(settled.fault).toBeUndefined();
     expect(settled.assembly.evaluation.status).toBe('valid');
@@ -1512,7 +1514,7 @@ describe('flush-host admission after source retraction', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: source,
       generationKey: 'initial:first',
-      purchase: null,
+      purchased: false,
     });
     expect(cleared.fault).toBeUndefined();
     expect(expectDormant(cleared.assembly.project).status).toBe('valid');
@@ -1526,7 +1528,7 @@ describe('flush-host admission after source retraction', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: source,
       generationKey: 'initial:first',
-      purchase: { delay: 8 },
+      purchased: true,
     });
     expect(repurchased.fault).toBeUndefined();
     expect(repurchased.assembly.evaluation.status).toBe('valid');
@@ -1593,7 +1595,7 @@ describe('Hermes Shrine purchase actions', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: shrine,
       generationKey: 'initial:secondLeft',
-      purchase: { delay: 3 },
+      purchased: true,
     });
     expect(shrineRoom(purchased).roomActions.order).toEqual([
       { kind: 'useFountain' },
@@ -1603,23 +1605,22 @@ describe('Hermes Shrine purchase actions', () => {
       purchase('travelDealRefill', false),
       pickup('initial:first'),
     ]);
-    // A delay edit keeps the action, its rush and its rank.
+    // The delay belongs to the item: an edit keeps the action, its rush and its rank.
     const delayed = applyProjectCommand(project, catalog, {
-      kind: 'SetHermesShrinePurchase',
+      kind: 'SetHermesShrineOfferDelay',
       occurrence: shrine,
       generationKey: 'initial:first',
-      purchase: { delay: 6 },
+      delay: 6,
     });
-    expect(shrineRoom(delayed).hermesShrine?.purchaseBySlot?.first).toEqual({ delay: 6 });
+    expect(shrineRoom(delayed).hermesShrine?.offerBySlot.first?.delay).toBe(6);
     expect(shrineRoom(delayed).roomActions.order).toEqual(shrineRoom(project).roomActions.order);
 
     const cleared = applyProjectCommand(purchased, catalog, {
       kind: 'SetHermesShrinePurchase',
       occurrence: shrine,
       generationKey: 'initial:first',
-      purchase: null,
+      purchased: false,
     });
-    expect(shrineRoom(cleared).hermesShrine?.purchaseBySlot).toEqual({ secondLeft: { delay: 3 } });
     expect(shrineRoom(cleared).roomActions.order).toEqual([
       { kind: 'useFountain' },
       rack,
@@ -1630,7 +1631,9 @@ describe('Hermes Shrine purchase actions', () => {
     expect(
       shrineRoom(cleared).acquisitionSites?.hermesShrineDelivery?.pickupEntries,
     ).toHaveProperty(pickup('initial:first').entryKey);
-    expect(shrineRoom(cleared).hermesShrine?.travelDealRefill?.purchase).toEqual({ delay: 2 });
+    expect(shrineRoom(cleared).roomActions.order).toContainEqual(
+      purchase('travelDealRefill', false),
+    );
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(cleared)), catalog)).toEqual(
       cleared,
     );
@@ -1641,10 +1644,9 @@ describe('Hermes Shrine purchase actions', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: shrine,
       generationKey: 'initial:secondLeft',
-      purchase: { delay: 3 },
+      purchased: true,
     });
     const rushed = rush(project, 'initial:secondLeft', true);
-    expect(shrineRoom(rushed).hermesShrine?.purchaseBySlot?.secondLeft).toEqual({ delay: 3 });
     expect(shrineRoom(rushed).roomActions.order).toEqual([
       { kind: 'useFountain' },
       rack,
@@ -1710,7 +1712,7 @@ describe('Hermes Shrine purchase actions', () => {
         kind: 'SetHermesShrinePurchase',
         occurrence: shrine,
         generationKey: 'initial:secondLeft',
-        purchase: { delay: 3 },
+        purchased: true,
       }),
       'initial:secondLeft',
       true,
@@ -1745,7 +1747,7 @@ describe('Hermes Shrine purchase actions', () => {
       kind: 'SetHermesShrinePurchase',
       occurrence: shrine,
       generationKey: 'initial:first',
-      purchase: null,
+      purchased: false,
     });
     const clearedOrder = shrineRoom(cleared).roomActions.order.map(roomActionKey);
     expect(clearedOrder.indexOf(roomActionKey(purchase('travelDealRefill', true)))).toBeGreaterThan(
@@ -1753,15 +1755,53 @@ describe('Hermes Shrine purchase actions', () => {
     );
   });
 
-  it('rejects purchase detail beyond its delay', () => {
-    expect(() =>
-      applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
-        kind: 'SetHermesShrinePurchase',
+  it('keeps an item delay across a restock and retimes only a delayed purchase', () => {
+    const project = applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
+      kind: 'SetHermesShrineOfferDelay',
+      occurrence: shrine,
+      generationKey: 'initial:secondLeft',
+      delay: 7,
+    });
+    expect(shrineRoom(project).hermesShrine?.offerBySlot.secondLeft?.delay).toBe(7);
+    const restocked = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: shrine,
+      slotKey: 'secondLeft',
+      value: { rewardType: 'MaxManaDrop' },
+    });
+    expect(shrineRoom(restocked).hermesShrine?.offerBySlot.secondLeft).toEqual({
+      rewardType: 'MaxManaDrop',
+      delay: 7,
+    });
+    // A rush ignores its delay, so its same-room pickup stays.
+    const rushedDelay = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrineOfferDelay',
+      occurrence: shrine,
+      generationKey: 'initial:first',
+      delay: 5,
+    });
+    expect(shrineRoom(rushedDelay).roomActions.order).toEqual(
+      shrineRoom(project).roomActions.order,
+    );
+    expect(
+      applyProjectCommand(project, catalog, {
+        kind: 'SetHermesShrineOfferDelay',
         occurrence: shrine,
         generationKey: 'initial:secondLeft',
-        purchase: { delay: 3, rushed: true } as never,
+        delay: 7,
       }),
-    ).toThrow(/rush is on its action/);
+    ).toBe(project);
+  });
+
+  it('rejects a delay outside 2 through 8', () => {
+    expect(() =>
+      applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
+        kind: 'SetHermesShrineOfferDelay',
+        occurrence: shrine,
+        generationKey: 'initial:secondLeft',
+        delay: 9 as never,
+      }),
+    ).toThrow(/2 through 8/);
   });
 
   it('reorders purchases by moving their actions and keeps them out of generic insertion and removal', () => {
@@ -1770,7 +1810,7 @@ describe('Hermes Shrine purchase actions', () => {
         kind: 'SetHermesShrinePurchase',
         occurrence: shrine,
         generationKey: 'initial:secondLeft',
-        purchase: { delay: 3 },
+        purchased: true,
       }),
       'initial:secondLeft',
       true,

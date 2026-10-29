@@ -16,7 +16,7 @@ export {
 export type {
   HermesShrineGenerationKey,
   HermesShrineInventoryOffer,
-  HermesShrinePurchase,
+  HermesShrineDelay,
   HermesShrineSlotKey,
   StygianWellGenerationKey,
   StygianWellSlotKey,
