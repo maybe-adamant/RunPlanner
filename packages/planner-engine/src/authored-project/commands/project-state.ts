@@ -1,4 +1,5 @@
 import { resolveRoutePosition } from '../route-context';
+import { assessPublicDreamItinerary } from '../dream-itinerary';
 import { routeInitialProfile } from '../route-profile';
 import type { Catalog } from '../../catalog-schema';
 import { createInitialBiomeState, replaceBiomeStateField } from '../biomeState';
@@ -162,6 +163,97 @@ function configureRoutePrefix(
     ...document,
     route: replacement,
   };
+}
+
+function withoutBiomeKeys<Value>(
+  record: Readonly<Record<string, Value>>,
+  dropped: ReadonlySet<string>,
+): Readonly<Record<string, Value>> {
+  return Object.keys(record).some((key) => dropped.has(key))
+    ? Object.freeze(Object.fromEntries(Object.entries(record).filter(([key]) => !dropped.has(key))))
+    : record;
+}
+
+/**
+ * Keeps the biomes whose keys match the new itinerary position by position
+ * from its start. Every later position is dropped with its authored content
+ * and route-level per-biome settings, and fresh default biomes keep the
+ * authored prefix as long as before.
+ */
+function replaceDreamItinerary(
+  document: ProjectDocument,
+  catalog: Catalog,
+  command: Extract<ProjectStateCommand, { readonly kind: 'ReplaceDreamItinerary' }>,
+): ProjectDocument {
+  const route = document.route;
+  if (route.routeKey !== command.route.routeKey)
+    failCommand(command, `project is missing route ${command.route.routeKey}`);
+  if (catalog.routes.byKey[route.routeKey]?.dreamItinerary === undefined)
+    failCommand(command, `${route.routeKey} uses a fixed route order`);
+  const itineraryBiomeKeys = command.itineraryBiomeKeys;
+  if (!assessPublicDreamItinerary(catalog, itineraryBiomeKeys).legal)
+    failCommand(command, 'Dream Dive requires four biomes in a valid route order');
+  const kept = route.itineraryBiomeKeys.findIndex(
+    (biomeKey, index) => itineraryBiomeKeys[index] !== biomeKey,
+  );
+  if (kept < 0 && route.itineraryBiomeKeys.length === itineraryBiomeKeys.length) return document;
+  const keptCount = kept < 0 ? route.itineraryBiomeKeys.length : kept;
+  const dropped = new Set(route.itineraryBiomeKeys.slice(keptCount));
+  const nextRoute = { ...route, itineraryBiomeKeys: Object.freeze([...itineraryBiomeKeys]) };
+  const keptBiomes = route.biomes.slice(0, keptCount);
+  const freshBiomes = itineraryBiomeKeys
+    .slice(keptBiomes.length, Math.max(1, route.biomes.length))
+    .map((biomeKey) => {
+      const layout = catalog.biomeLayouts.byKey[biomeKey];
+      if (layout === undefined)
+        failCommand(command, `${biomeKey} has no authored plan initializer`);
+      return Object.freeze({
+        biomeKey,
+        state: createInitialBiomeState(layout),
+        topology: createDefaultStartTopology(
+          catalog,
+          layout,
+          resolveRoutePosition(catalog, nextRoute, biomeKey),
+          route.loadout,
+        ),
+      });
+    });
+  const placements = Object.freeze(
+    Object.fromEntries(
+      Object.entries(route.resourcePlacements).map(([family, placement]) => [
+        family,
+        placement !== null && dropped.has(placement.biomeKey) ? null : placement,
+      ]),
+    ),
+  ) as typeof route.resourcePlacements;
+  const draft = route.draft;
+  const godBoonsByBiome =
+    draft.godBoonsByBiome === undefined
+      ? undefined
+      : withoutBiomeKeys(draft.godBoonsByBiome, dropped);
+  const { godBoonsByBiome: _previousGodBoons, ...draftRest } = draft;
+  void _previousGodBoons;
+  const { practiceStart, ...routeRest } = nextRoute;
+  return Object.freeze({
+    ...document,
+    route: Object.freeze({
+      ...routeRest,
+      ...(practiceStart === undefined || dropped.has(practiceStart.biomeKey)
+        ? {}
+        : { practiceStart }),
+      resourcePlacements: placements,
+      draft: Object.freeze({
+        ...draftRest,
+        storyNpcByBiome: withoutBiomeKeys(draft.storyNpcByBiome, dropped),
+        fieldNpcsByBiome: withoutBiomeKeys(draft.fieldNpcsByBiome, dropped),
+        rackKeepsakeByBiome: withoutBiomeKeys(draft.rackKeepsakeByBiome, dropped),
+        ...(godBoonsByBiome === undefined || Object.keys(godBoonsByBiome).length === 0
+          ? {}
+          : { godBoonsByBiome }),
+      }),
+      biomes: Object.freeze([...keptBiomes, ...freshBiomes]),
+    }),
+  });
 }
 
 /** Rivals changes physical fixed Boss declarations without changing topology ownership. */
@@ -329,6 +421,8 @@ export function applyProjectStateCommand(
     }
     case 'ConfigureRoutePrefix':
       return configureRoutePrefix(document, catalog, command);
+    case 'ReplaceDreamItinerary':
+      return replaceDreamItinerary(document, catalog, command);
     case 'ReplaceRoute':
       return replaceRoute(document, catalog, command);
     case 'ReplaceRouteLoadout': {

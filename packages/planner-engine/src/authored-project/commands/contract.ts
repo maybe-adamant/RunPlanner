@@ -49,6 +49,7 @@ function commandContractAddress(
     case 'RenameProject':
       return command.project;
     case 'ConfigureRoutePrefix':
+    case 'ReplaceDreamItinerary':
     case 'ReplaceRoute':
     case 'ReplaceRouteLoadout':
     case 'ReplaceFamiliar':

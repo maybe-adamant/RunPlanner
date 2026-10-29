@@ -120,6 +120,16 @@ export type ProjectStateCommand =
       readonly configuredBiomeCount: number;
     }
   | {
+      /**
+       * Re-picks a Dream route's itinerary: biomes matching the new order by
+       * position from the start are kept, every later one is dropped with its
+       * authored content and replaced by a fresh default biome.
+       */
+      readonly kind: 'ReplaceDreamItinerary';
+      readonly route: RouteAddress;
+      readonly itineraryBiomeKeys: readonly string[];
+    }
+  | {
       readonly kind: 'ReplaceBiomeField';
       readonly field: BiomeFieldAddress;
       readonly value: AuthoredFieldValue;
@@ -914,5 +924,5 @@ export type ProjectCommand =
 
 export type BiomeOwnedProjectCommand = Exclude<
   ProjectCommand,
-  { readonly kind: 'ConfigureRoutePrefix' }
+  { readonly kind: 'ConfigureRoutePrefix' } | { readonly kind: 'ReplaceDreamItinerary' }
 >;

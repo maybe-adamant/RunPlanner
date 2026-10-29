@@ -142,6 +142,7 @@ function applyUnchecked(
     case 'ReplaceFearVowRank':
     case 'ReplaceStartingKeepsake':
     case 'ConfigureRoutePrefix':
+    case 'ReplaceDreamItinerary':
     case 'ReplaceRoute':
     case 'ReplaceBiomeField':
       return applyProjectStateCommand(document, catalog, command);
