@@ -48,7 +48,7 @@ export function TraitOfferOrdinaryOption({
   readonly showEffectiveValues?: boolean;
   readonly spellOffer?: boolean;
   readonly rarifySupported: boolean;
-  /** A screen rerolled away: its rows only, with no pick, Rarify or Persephone roll. */
+  /** A screen rerolled away: its rows and Rarify clicks, with no pick or Persephone roll. */
   readonly pickless?: boolean;
   /** Shows the row's values without editing them. */
   readonly readOnly?: boolean;
@@ -132,7 +132,7 @@ export function TraitOfferOrdinaryOption({
         : {})}
       legend={optionKey.replace('option', spellOffer ? 'Spell ' : 'Option ')}
       loading={loaded.pending}
-      {...(spellOffer || pickless
+      {...(spellOffer || (pickless && readOnly)
         ? {}
         : {
             onRarify: () =>

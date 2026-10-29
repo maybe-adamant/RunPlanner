@@ -13,6 +13,7 @@ import {
   unavailableEchoOptionProject,
 } from '@planner-test/support/finding-states';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
+import { forceApolloRerolledStartProject } from '@planner-test/support/force-apollo-rerolls';
 
 afterEach(cleanup);
 
@@ -137,4 +138,17 @@ it('opens a rerolled offer on the screen its finding names and marks that tab', 
   expect(
     within(dialog).getByRole('button', { name: 'Offer state' }).closest('header'),
   ).not.toBeNull();
+});
+
+it('opens on the earlier screen whose Rarify click no use is left for', async () => {
+  const { application, dialog } = await openMarkedTraitDialog(
+    forceApolloRerolledStartProject([['option2', 'option1']]),
+  );
+  const tab = within(dialog).getByRole('tab', { name: 'Offer' });
+  expect(tab.getAttribute('aria-selected')).toBe('true');
+  expect(tab.getAttribute('data-has-findings')).toBe('true');
+  expect(feedback('Offer feedback')).toContain('Calling Card rarification unavailable');
+  await userEvent.setup().click(within(dialog).getByRole('tab', { name: 'Reroll 1' }));
+  expect(feedback('Offer feedback')).not.toContain('Calling Card rarification unavailable');
+  application.dispose();
 });

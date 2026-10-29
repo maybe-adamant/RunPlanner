@@ -585,15 +585,17 @@ saving the incomplete outcome.
 
 A trait, Chaos or Pom dialog whose screen the native reroll button can reroll
 shows one tab per screen: Offer, then Reroll 1, Reroll 2 and so on. Each tab
-holds a full screen (options, rarities, levels, exchanges and the Rejected
-row), and only the last carries the pick. A Reroll button naming its cost
-keeps the current rows on their tab and opens a new last tab holding a copy of
-them and the pick; Remove last reroll drops the newest earlier screen. There is
+holds a full screen (options, rarities, levels, exchanges, the Rejected row
+and its Rarify clicks), and only the last carries the pick. A Reroll button
+naming its cost keeps the current rows and their Rarify clicks on their tab and
+opens a new last tab holding a copy of the rows and the pick with no click yet;
+Remove last reroll drops the newest earlier screen. There is
 no count control. Reroll is disabled while the screen is unreached, no held
 card enables screen rerolls, or the pool at that point cannot pay; a reroll
 the game would refuse is a finding instead. Earlier tabs show every control in
 place, disabled until their Edit, and are judged by the draft's whole screen
-chain; an unauthored earlier screen offers to copy the final one, and an empty
+chain; under Edit their Rarify buttons follow that screen's own remaining
+uses, and each row shows its rarity after the screen's clicks; an unauthored earlier screen offers to copy the final one, and an empty
 one shows as Gold. When only an earlier screen blocks Save, the feedback names
 that tab. Without an enabling card the reroll controls are hidden unless the
 offer already holds rerolls.

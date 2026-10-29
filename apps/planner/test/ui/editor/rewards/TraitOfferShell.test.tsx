@@ -30,6 +30,10 @@ import { TraitOfferEditor } from '@planner/ui/editor/rewards/TraitOfferEditor';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNStoryBoardProject } from '@run-planner/test-fixtures/surface';
 import { hintOf } from '@planner-test/support/hints';
+import {
+  forceApolloRerolledStartProject,
+  forceApolloStartTrait,
+} from '@planner-test/support/force-apollo-rerolls';
 
 /** The published cost schedule a fixture screen hands the tabs. */
 const nextCost = (fromCount: number): number => fromCount + 1;
@@ -404,6 +408,94 @@ describe('ordinary offer shell', () => {
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: 'Remove last option' }));
     expect(screen.getByText('Fallback Gold')).toBeTruthy();
+    application.dispose();
+  });
+
+  /** Opens the Force Apollo opening screen's editor, rerolled once per entry of `earlier`. */
+  async function openForceApolloOffer(
+    earlier: Parameters<typeof forceApolloRerolledStartProject>[0],
+  ) {
+    const project = forceApolloRerolledStartProject(earlier);
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(project));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const interaction = workspace.interactions.traitOffers.get(
+      semanticAddressKey(forceApolloStartTrait),
+    )!;
+    const onCommit = vi.fn();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={forceApolloStartTrait}
+          interactions={workspace.interactions}
+          onCommit={onCommit}
+        />
+      </Provider>,
+    );
+    const save = await screen.findByRole('button', { name: 'Save trait offer' });
+    const rarify = () =>
+      screen.getAllByRole('button', { name: 'Rarify' }) as readonly HTMLButtonElement[];
+    const effective = (index: number) =>
+      screen.getAllByLabelText('Effective trait values')[index]?.textContent;
+    return { application, effective, interaction, onCommit, project, rarify, save };
+  }
+
+  it("moves the final screen's Rarify clicks to the screen a reroll leaves behind", async () => {
+    const user = userEvent.setup();
+    const { application, effective, onCommit, rarify, save } = await openForceApolloOffer([]);
+    await waitFor(() => expect(rarify()[1]!.disabled).toBe(false));
+    await user.click(rarify()[1]!);
+    await waitFor(() => expect(effective(1)).toContain('Effective rarityRare'));
+    await user.click(screen.getByRole('button', { name: 'Reroll · costs 1' }));
+    // The final screen starts unclicked; the keepsake's one use went to the earlier screen.
+    await waitFor(() => expect(effective(1)).toContain('Effective rarityCommon'));
+    expect(rarify().every((button) => button.disabled)).toBe(true);
+    // A reroll bans one shown row, so the final screen needs a row of the earlier one gone.
+    await user.click(screen.getByLabelText('option1 trait'));
+    const replacement = (await screen.findAllByRole('option')).find(
+      (option) =>
+        option.getAttribute('aria-disabled') !== 'true' &&
+        option.getAttribute('aria-selected') !== 'true',
+    )!;
+    await user.click(replacement);
+    await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
+    await user.click(screen.getByRole('tab', { name: 'Offer' }));
+    await waitFor(() => expect(effective(1)).toContain('Effective rarityRare'));
+    expect(rarify().every((button) => button.disabled)).toBe(true);
+    await user.click(save);
+    const saved = onCommit.mock.lastCall?.[0] as AuthoredTraitOfferTraits;
+    expect(saved.rarificationActions).toEqual([]);
+    expect(saved.rerolledScreens?.map((entry) => entry?.rarificationActions)).toEqual([
+      ['option2'],
+    ]);
+    application.dispose();
+  });
+
+  it('rarifies a row of an earlier screen under Edit and saves the click with that screen', async () => {
+    const user = userEvent.setup();
+    const { application, effective, interaction, onCommit, project, rarify, save } =
+      await openForceApolloOffer([[]]);
+    await waitFor(() => expect(rarify()[1]!.disabled).toBe(false));
+    await user.click(screen.getByRole('tab', { name: 'Offer' }));
+    expect(rarify().every((button) => button.disabled)).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await waitFor(() => expect(rarify()[1]!.disabled).toBe(false));
+    await user.click(rarify()[1]!);
+    await waitFor(() => expect(effective(1)).toContain('Effective rarityRare'));
+    // The keepsake's one use is spent.
+    await waitFor(() => expect(rarify().every((button) => button.disabled)).toBe(true));
+    await user.click(screen.getByRole('tab', { name: 'Reroll 1' }));
+    await waitFor(() => expect(rarify().every((button) => button.disabled)).toBe(true));
+    await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
+    await user.click(save);
+    const saved = onCommit.mock.lastCall?.[0] as AuthoredTraitOfferTraits;
+    expect(saved.rerolledScreens?.map((entry) => entry?.rarificationActions)).toEqual([
+      ['option2'],
+    ]);
+    const { command } = interaction.intentFor(saved);
+    expect(command.kind).toBe('ReplaceTraitOffer');
+    const next = applyProjectCommand(project, application.catalog, command);
+    expect(next).not.toBe(project);
     application.dispose();
   });
 

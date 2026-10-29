@@ -1,6 +1,7 @@
 import {
   rerolledChaosScreenSnapshot,
   rerolledTraitScreenSnapshot,
+  withFinalTraitScreenRerolled,
   type AuthoredRerolledChaosScreen,
   type AuthoredRerolledTraitScreen,
   type AuthoredTraitOffer,
@@ -37,8 +38,8 @@ import { useScreenTab } from './useScreenTab';
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
 /**
- * An earlier screen's rows in the final screen's editor shape, for display and
- * row edits only; candidates always judge the whole draft.
+ * An earlier screen's rows and Rarify clicks in the final screen's editor
+ * shape, for display and row edits only; candidates always judge the whole draft.
  */
 function traitScreenValue(
   value: AuthoredTraitOfferTraits,
@@ -50,6 +51,7 @@ function traitScreenValue(
   return Object.freeze({
     ...rest,
     options: screen.options as AuthoredTraitOfferTraits['options'],
+    rarificationActions: screen.rarificationActions ?? Object.freeze([]),
     ...(screen.rejectedOptionKey === undefined
       ? {}
       : { rejectedOptionKey: screen.rejectedOptionKey }),
@@ -163,20 +165,29 @@ export function TraitOfferEditorShell({
         : activeScreen === 'final'
           ? earlierScreenFixLine(markedScreens)
           : undefined);
-  const rarifySupported = (optionKey: AuthoredTraitOfferTraits['selectedOptionKey']): boolean => {
-    if (candidate?.evaluation.kind !== 'traitOffer') return false;
-    const branches = candidate.evaluation.result.callingCard ?? [];
+  // Calling Card replay of the final screen, or of one earlier screen.
+  const callingCardScreens = (screen: ScreenTab) =>
+    candidate?.evaluation.kind !== 'traitOffer'
+      ? []
+      : (candidate.evaluation.result.callingCard ?? []).map((branch) =>
+          screen === 'final' ? branch : branch.rerolledScreens?.[screen],
+        );
+  const rarifySupported = (
+    optionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
+    screen: ScreenTab = 'final',
+  ): boolean => {
+    const branches = callingCardScreens(screen);
     return (
       branches.length > 0 &&
-      branches.every((branch) => branch.rarifiableOptionKeys.includes(optionKey))
+      branches.every((branch) => branch?.rarifiableOptionKeys.includes(optionKey) === true)
     );
   };
   const effectiveRarity = (
     optionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
+    screen: ScreenTab = 'final',
   ): TraitRarity | undefined => {
-    if (candidate?.evaluation.kind !== 'traitOffer') return undefined;
-    const values = (candidate.evaluation.result.callingCard ?? [])
-      .map((branch) => branch.effectiveRarities[OPTION_KEYS.indexOf(optionKey)])
+    const values = callingCardScreens(screen)
+      .map((branch) => branch?.effectiveRarities[OPTION_KEYS.indexOf(optionKey)])
       .filter((value): value is TraitRarity => value !== undefined);
     return values.length > 0 && values.every((value) => value === values[0])
       ? values[0]
@@ -325,10 +336,12 @@ export function TraitOfferEditorShell({
             }}
             onReroll={() => {
               updateValue(
-                withRerolledScreens(value, [
-                  ...earlierScreens,
-                  value.kind === 'chaos' ? rerolledChaosScreenSnapshot(value) : finalRowsSnapshot(),
-                ]),
+                value.kind === 'chaos'
+                  ? withRerolledScreens(value, [
+                      ...earlierScreens,
+                      rerolledChaosScreenSnapshot(value),
+                    ])
+                  : withFinalTraitScreenRerolled(value),
               );
               screenTab.select(earlierCount + 1);
             }}
@@ -405,10 +418,18 @@ export function TraitOfferEditorShell({
     // An earlier screen with no rows showed Fallback Gold.
     const goldScreen =
       screenValue !== undefined && (screenValue.options as readonly unknown[]).length === 0;
+    // Each earlier screen keeps its own Rarify clicks.
     const updateScreen = (next: AuthoredTraitOffer): void =>
       replaceScreen(
         earlierIndex,
-        next.kind === 'traits' ? rerolledTraitScreenSnapshot(next) : emptyScreen,
+        next.kind !== 'traits'
+          ? emptyScreen
+          : Object.freeze({
+              ...rerolledTraitScreenSnapshot(next),
+              ...((next.rarificationActions ?? []).length === 0
+                ? {}
+                : { rarificationActions: next.rarificationActions }),
+            }),
       );
     // Row-count edits on an earlier screen use the same engine drafts as the final one.
     const shapeDraft = (next: AuthoredTraitOffer | undefined): AuthoredTraitOffer | undefined =>
@@ -445,42 +466,49 @@ export function TraitOfferEditorShell({
           ) : (
             <>
               <div className="trait-offer-options">
-                {screenValue.options.map((_, index) => (
-                  <div
-                    data-has-findings={(feedback.options[index]?.reasons.length ?? 0) > 0}
-                    key={OPTION_KEYS[index]}
-                  >
-                    <TraitOfferOrdinaryOption
-                      domainValue={value.kind === 'traits' ? value : screenValue}
-                      headerAction={rejectToggle(
-                        screenValue,
-                        updateScreen,
-                        OPTION_KEYS[index]!,
-                        earlierReadOnly,
-                      )}
-                      index={index}
-                      interaction={interaction}
-                      onUpdate={updateScreen}
-                      optionKey={OPTION_KEYS[index]!}
-                      pickless
-                      rarifySupported={false}
-                      readOnly={earlierReadOnly}
-                      {...(screenValue.options[index]?.rarity === undefined
-                        ? {}
-                        : { effectiveRarity: screenValue.options[index]!.rarity! })}
-                      {...(feedback.options[index]?.effectiveLevel === undefined
-                        ? {}
-                        : { effectiveLevel: feedback.options[index]!.effectiveLevel! })}
-                      {...(feedback.options[index]?.persephoneLevelRolls === undefined
-                        ? {}
-                        : { persephoneLevelRolls: feedback.options[index]!.persephoneLevelRolls! })}
-                      showEffectiveValues
-                      rejected={screenValue.rejectedOptionKey === OPTION_KEYS[index]}
-                      spellOffer={spellOffer}
-                      value={screenValue}
-                    />
-                  </div>
-                ))}
+                {screenValue.options.map((_, index) => {
+                  const rowEffectiveRarity =
+                    effectiveRarity(OPTION_KEYS[index]!, earlierIndex) ??
+                    screenValue.options[index]?.rarity;
+                  return (
+                    <div
+                      data-has-findings={(feedback.options[index]?.reasons.length ?? 0) > 0}
+                      key={OPTION_KEYS[index]}
+                    >
+                      <TraitOfferOrdinaryOption
+                        domainValue={value.kind === 'traits' ? value : screenValue}
+                        headerAction={rejectToggle(
+                          screenValue,
+                          updateScreen,
+                          OPTION_KEYS[index]!,
+                          earlierReadOnly,
+                        )}
+                        index={index}
+                        interaction={interaction}
+                        onUpdate={updateScreen}
+                        optionKey={OPTION_KEYS[index]!}
+                        pickless
+                        rarifySupported={rarifySupported(OPTION_KEYS[index]!, earlierIndex)}
+                        readOnly={earlierReadOnly}
+                        {...(rowEffectiveRarity === undefined
+                          ? {}
+                          : { effectiveRarity: rowEffectiveRarity })}
+                        {...(feedback.options[index]?.effectiveLevel === undefined
+                          ? {}
+                          : { effectiveLevel: feedback.options[index]!.effectiveLevel! })}
+                        {...(feedback.options[index]?.persephoneLevelRolls === undefined
+                          ? {}
+                          : {
+                              persephoneLevelRolls: feedback.options[index]!.persephoneLevelRolls!,
+                            })}
+                        showEffectiveValues
+                        rejected={screenValue.rejectedOptionKey === OPTION_KEYS[index]}
+                        spellOffer={spellOffer}
+                        value={screenValue}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </>
           )
