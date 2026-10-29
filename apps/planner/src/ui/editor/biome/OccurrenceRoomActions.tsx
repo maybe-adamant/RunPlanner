@@ -428,7 +428,6 @@ export function RoomActionsWorkbench({
             : {})}
           {...(targetState === undefined ? {} : { dropState: targetState })}
         />
-
         {content?.rows}
         {entry.boundary.kind === 'encounterStart'
           ? null

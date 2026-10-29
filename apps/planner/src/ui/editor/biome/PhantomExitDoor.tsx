@@ -16,9 +16,6 @@ const emptyModel: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
 
-const titleHint =
-  'The game also draws a room and reward for a door you never see. Automatic picks the option that leaves later draws unaffected where possible.';
-
 const rewardFinding = (finding: { readonly code: string }) =>
   finding.code === 'phantomExitRewardUnavailable';
 
@@ -49,11 +46,7 @@ export function PhantomExitDoor({
   const roomId = `${idPrefix}-hidden-door-room`;
   const rewardId = `${idPrefix}-hidden-door-reward`;
   const rewardLocked = control.reward.locked;
-  const title = (
-    <h4 className="hidden-door-title" {...hintProps(titleHint)}>
-      Hidden return door
-    </h4>
-  );
+  const title = <h4 className="hidden-door-title">Hidden return door</h4>;
   return (
     <article aria-label="Hidden return door" className="hidden-door">
       {expanded ? (
