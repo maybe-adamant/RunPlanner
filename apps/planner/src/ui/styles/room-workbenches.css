@@ -1374,24 +1374,30 @@
     grid-column: 5;
   }
 
-  /* A row without editors keeps its actions on its single line. */
-  .timeline-row:has(> [data-timeline-cell='editors']:empty) > [data-timeline-cell='label'] {
+  /* A row without editors, or with only an empty finding anchor, keeps its actions on one line. */
+  .timeline-row:not(:has(> [data-timeline-cell='editors'] > :not([data-empty='true'])))
+    > [data-timeline-cell='label'] {
+    grid-row: 1;
     grid-column: 3 / 5;
   }
 
-  .timeline-row:has(> [data-timeline-cell='editors']:empty) > [data-timeline-cell='editors'] {
-    display: none;
+  .timeline-row:not(:has(> [data-timeline-cell='editors'] > :not([data-empty='true'])))
+    > [data-timeline-cell='editors'] {
+    /* Stays rendered so an empty finding anchor can still take focus. */
+    grid-row: 1;
+    grid-column: 4;
   }
 
-  .timeline-row:has(> [data-timeline-cell='editors']:empty) > [data-timeline-cell='actions'] {
+  .timeline-row:not(:has(> [data-timeline-cell='editors'] > :not([data-empty='true'])))
+    > [data-timeline-cell='actions'] {
     grid-row: 1;
   }
 
   /* A banner never has actions, so its heading takes the whole first line. */
   .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
     > [data-timeline-cell='label'],
-  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']):has(
-      > [data-timeline-cell='editors']:empty
+  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']):not(
+      :has(> [data-timeline-cell='editors'] > :not([data-empty='true']))
     )
     > [data-timeline-cell='label'] {
     grid-column: 1 / -1;
@@ -1403,7 +1409,9 @@
   }
 
   .timeline-row.room-action-feature-roll > [data-timeline-cell='label'],
-  .timeline-row.room-action-feature-roll:has(> [data-timeline-cell='editors']:empty)
+  .timeline-row.room-action-feature-roll:not(
+      :has(> [data-timeline-cell='editors'] > :not([data-empty='true']))
+    )
     > [data-timeline-cell='label'],
   .timeline-row.room-action-feature-roll > [data-timeline-cell='editors'] {
     grid-column: 1 / 5;
