@@ -155,9 +155,25 @@ describe('reroll publication', () => {
   });
 
   it('keeps the first draw on a ship wheel and acquires the picked offer from its last press', () => {
-    const plan = planOf(surfaceNORerollsProject());
+    const project = surfaceNORerollsProject();
+    const plan = planOf(project);
     const ship = plan.occurrences.find((room) => room.id === 'surface-o-combat04')!;
     const [press] = ship.rerolls!;
+    // The Ship room is entered with the pool its press then spends.
+    const settled = rerollSettlementForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, project),
+      createRoomActionAddress(
+        createBiomeAddress('Surface', 'O'),
+        'surface-o-combat04' as never,
+        JSON.stringify(['reroll', 'r1']),
+      ),
+    );
+    expect(ship.rerollPoolAtEntry).toBe(settled!.poolRemainingAfter! + 1);
+    // Every selected room, Ship rooms included, publishes its entry pool.
+    const byId = new Map(plan.occurrences.map((room) => [room.id, room]));
+    expect(
+      plan.selectedOccurrenceIds.filter((id) => byId.get(id)?.rerollPoolAtEntry === undefined),
+    ).toEqual([]);
     expect(press!.target).toEqual({ kind: 'wheelOffer', wheelKey: 'wheel1', offerKey: 'offer1' });
     const [wheel] = ship.overview.rewardWheels!;
     expect(wheel!.pickedOfferKey).toBe('offer1');

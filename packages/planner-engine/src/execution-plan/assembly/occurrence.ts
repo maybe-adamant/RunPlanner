@@ -49,8 +49,18 @@ export function executionOccurrence(
   const diagnostics = assembleOccurrenceDiagnostics(catalog, room, snapshots);
   const anomaly = assembleGAnomalyReplacement(room);
   const rerolls = selected ? executionRoomRerolls(room, batch) : undefined;
+  // A Ship room's earliest Run State is its first phase start, before any wheel press.
+  const firstShipPhase =
+    room.lifecycleProfileKey === 'ShipCombatRoom' ? room.encounterPhases[0]?.slotKey : undefined;
   const entrySnapshot = snapshots.get(
-    semanticAddressKey(createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' })),
+    semanticAddressKey(
+      createRoomRunStateCheckpointAddress(
+        room.origin,
+        firstShipPhase === undefined
+          ? { kind: 'roomEntered' }
+          : { kind: 'beforeEncounterStart', phaseKey: firstShipPhase },
+      ),
+    ),
   );
   const rerollPoolAtEntry =
     entrySnapshot === undefined || !publishesRerollPool

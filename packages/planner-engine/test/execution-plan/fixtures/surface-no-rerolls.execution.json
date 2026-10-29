@@ -4598,6 +4598,7 @@
           }
         }
       ],
+      "rerollPoolAtEntry": 8,
       "doors": {
         "owner": "[\"exitDecision\",\"Surface\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"surface-o-combat04\"}]",
         "kind": "batch",
@@ -4768,6 +4769,7 @@
           "transactionOwner": "[\"rewardWheelOffer\",\"Surface\",\"O\",\"surface-o-combat07\",\"wheel1\",\"offer1\"]"
         }
       ],
+      "rerollPoolAtEntry": 7,
       "doors": {
         "owner": "[\"exitDecision\",\"Surface\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"surface-o-combat07\"}]",
         "kind": "batch",
@@ -4938,6 +4940,7 @@
           "transactionOwner": "[\"rewardWheelOffer\",\"Surface\",\"O\",\"surface-o-combat01\",\"wheel1\",\"offer1\"]"
         }
       ],
+      "rerollPoolAtEntry": 7,
       "doors": {
         "owner": "[\"exitDecision\",\"Surface\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"surface-o-combat01\"}]",
         "kind": "batch",
@@ -5451,6 +5454,7 @@
           "transactionOwner": "[\"rewardWheelOffer\",\"Surface\",\"O\",\"surface-o-combat02\",\"wheel1\",\"offer1\"]"
         }
       ],
+      "rerollPoolAtEntry": 7,
       "doors": {
         "owner": "[\"exitDecision\",\"Surface\",\"O\",{\"kind\":\"occurrence\",\"occurrenceId\":\"surface-o-combat02\"}]",
         "kind": "batch",
@@ -5945,5 +5949,5 @@
       }
     }
   ],
-  "planFingerprint": "edafd360"
+  "planFingerprint": "ca2b95ea"
 }
