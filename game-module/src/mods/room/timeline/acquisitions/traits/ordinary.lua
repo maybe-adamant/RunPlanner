@@ -212,7 +212,8 @@ function ordinary.installScreen(loot, screen, rowOptions)
         local row = copy(rows[index])
         row.Type = row.Type or "Trait"
         row.ItemName = option.key
-        row.Rarity = option.rarity
+        -- A row a Rarify click raised on that screen is installed at its rolled rarity.
+        row.Rarity = option.baseRarity or option.rarity
         if option.replacement then
             row.TraitToReplace = option.replacement.replacedTraitKey
             row.OldRarity = option.replacement.oldRarity
