@@ -134,7 +134,7 @@ it never uses a null start ID or a positional synthetic parent.
 One document persists one route identity, its complete `itineraryBiomeKeys`,
 and a contiguous configured prefix of that itinerary. Underworld, Surface and
 Fresh File use their catalog presets. Dream creation selects four distinct
-biomes once in a transient draft. Engine-owned public admission enforces the
+biomes in a transient draft. Engine-owned public admission enforces the
 catalog start pool and directional successor exclusions for creation, import
 and restoration. Structural decoding remains separate from public admission so
 internal model fixtures can represent bounded non-public itineraries.
@@ -148,7 +148,7 @@ switch a hidden sibling route inside the current one.
 Underworld: [] -> [F] -> [F, G] -> [F, G, H] -> [F, G, H, I]
 Fresh File: [] -> [F] -> [F, G] -> [F, G, H] -> [F, G, H, I]
 Surface:    [] -> [N] -> [N, O] -> [N, O, P] -> [N, O, P, Q]
-Dream:      configured prefixes of the immutable four-biome order chosen at creation
+Dream:      configured prefixes of the four-biome order chosen at creation or re-pick
 ```
 
 Configured scope is not a claim that a biome is complete or simulation-valid,
@@ -212,6 +212,14 @@ biome prefix (one to every itinerary biome, in itinerary order). Resource
 placements name hosts in the replaced biomes, so they clear unless the command
 gives placements hosted in the new biomes, as a draft gives its own; the route,
 itinerary, Practice start and draft spec stay.
+
+`ReplaceDreamItinerary` re-picks a Dream itinerary under the same public
+admission as creation. Leading biomes whose key and position both match are
+kept as authored; every later position is discarded with its biome plan and
+its per-biome route settings (Draft per-biome entries, resource placements, a
+Practice start there), and fresh default biomes refill the plan to its earlier
+length. Run-wide Draft choices and the basket stay. An engine query names the
+configured biomes a re-pick would discard, so the editor can confirm first.
 
 The route also owns one always-present `draft` spec, the persisted Draft
 settings a draft generates from. It plays no part in plan legality or
