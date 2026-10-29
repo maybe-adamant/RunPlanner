@@ -28,7 +28,10 @@ export interface InitialOfferInput {
 export interface InitialOfferSupport {
   readonly applies: boolean;
   readonly legal: boolean;
-  readonly findings: readonly { readonly code: 'traitOfferGenerationUnavailable' }[];
+  readonly findings: readonly {
+    /** A rerolled screen legal only without its ban needs an item of the previous screen gone. */
+    readonly code: 'traitOfferGenerationUnavailable' | 'rollRepeatsAllOffers';
+  }[];
 }
 
 interface InitialOfferPools {
@@ -298,35 +301,34 @@ function findOutcome(
  * previous one: some item of it is banned for this generation. An unknown
  * previous screen is judged as a first screen.
  */
-function screenSupported(
+function screenSupport(
   pools: InitialOfferPools,
   options: readonly { readonly traitKey: string; readonly rarity?: TraitRarity }[],
   previous: AuthoredRerolledTraitScreen | null | undefined,
-): boolean {
+): InitialOfferSupport {
   const wanted = new Map(options.map((option) => [option.traitKey, option.rarity]));
-  if (wanted.size !== options.length || options.length > 3) return false;
-  const bans: readonly (string | undefined)[] =
-    previous === undefined || previous === null || previous.options.length === 0
-      ? [undefined]
-      : previous.options.map((option) => option.traitKey);
-  return bans.some(
-    (banned) =>
-      findOutcome(
-        pools,
-        (option) => wanted.has(option.traitKey) && wanted.get(option.traitKey) === option.rarity,
-        (selected) => selected.length === options.length,
-        banned,
-      ) !== undefined,
-  );
+  if (wanted.size !== options.length || options.length > 3) return support(false);
+  const shown = (banned: string | undefined) =>
+    findOutcome(
+      pools,
+      (option) => wanted.has(option.traitKey) && wanted.get(option.traitKey) === option.rarity,
+      (selected) => selected.length === options.length,
+      banned,
+    ) !== undefined;
+  if (previous === undefined || previous === null || previous.options.length === 0)
+    return support(shown(undefined));
+  if (previous.options.some((option) => shown(option.traitKey))) return support(true);
+  return support(false, shown(undefined) ? 'rollRepeatsAllOffers' : undefined);
 }
 
-function support(applies: boolean, legal: boolean): InitialOfferSupport {
+function support(
+  legal: boolean,
+  code: InitialOfferSupport['findings'][number]['code'] = 'traitOfferGenerationUnavailable',
+): InitialOfferSupport {
   return Object.freeze({
-    applies,
+    applies: true,
     legal,
-    findings: legal
-      ? Object.freeze([])
-      : Object.freeze([{ code: 'traitOfferGenerationUnavailable' as const }]),
+    findings: legal ? Object.freeze([]) : Object.freeze([Object.freeze({ code })]),
   });
 }
 
@@ -335,15 +337,13 @@ export function assessInitialOfferSupport(
   input: Omit<InitialOfferInput, 'giverKey'> & { readonly offer: AuthoredTraitOffer },
 ): InitialOfferSupport {
   const pools = preparePools({ ...input, giverKey: input.offer.giverKey });
-  if (pools === undefined) return support(false, true);
+  if (pools === undefined)
+    return Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) });
   const offer = input.offer;
-  return support(
-    true,
-    screenSupported(
-      pools,
-      offer.kind === 'traits' ? offer.options : [],
-      offer.kind === 'traits' ? offer.rerolledScreens?.at(-1) : undefined,
-    ),
+  return screenSupport(
+    pools,
+    offer.kind === 'traits' ? offer.options : [],
+    offer.kind === 'traits' ? offer.rerolledScreens?.at(-1) : undefined,
   );
 }
 
@@ -361,10 +361,7 @@ export function assessRerolledScreensSupport(
     screens.map((screen, index) =>
       pools === undefined || screen === null
         ? undefined
-        : support(
-            true,
-            screenSupported(pools, screen.options, index === 0 ? undefined : screens[index - 1]),
-          ),
+        : screenSupport(pools, screen.options, index === 0 ? undefined : screens[index - 1]),
     ),
   );
 }

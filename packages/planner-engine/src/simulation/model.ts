@@ -124,6 +124,8 @@ export type TraitFindingCode =
   | 'replacementMaximumRarity'
   | 'replacementRarityMismatch'
   | 'traitOfferGenerationUnavailable'
+  /** A rerolled trait screen that only appears with no item of the previous screen banned. */
+  | 'rollRepeatsAllOffers'
   | 'unsupportedSparseTraitOffer'
   | 'traitOfferSelectionUnavailable'
   | 'wrongHammerLoadout'

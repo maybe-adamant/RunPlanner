@@ -714,7 +714,7 @@ describe('ship wheel rerolls', () => {
 });
 
 describe('screen rerolls', () => {
-  it('add a blank screen before the final one, author it, and report each screen by its tab', () => {
+  it('keep the shown rows on a reroll, and report each screen by its tab', () => {
     const project = withArcana(loadUnderworldFGCheckpoint(), ['ScreenReroll']);
     const zeus = occurrence(project, source);
     const offers =
@@ -742,24 +742,25 @@ describe('screen rerolls', () => {
         ? room.state.reward?.traitOffersByAcquisitionRole[role]
         : undefined;
     };
-    // The final screen keeps its rows and pick; the reroll is a blank earlier screen.
-    expect(current(added)).toEqual({ ...offer, rerolledScreens: [null] });
-    expect(screenFindings(added)).toEqual([['rerolledScreenMissing', 0]]);
-    // Repeating the final rows leaves nothing a ban of one of them could show next.
-    const repeated = applyProjectCommand(added, catalog, {
+    // The rerolled screen keeps the final rows; the final screen keeps them and its pick.
+    const snapshot = {
+      options: offer.options.map(({ traitKey, rarity }) => ({
+        traitKey,
+        ...(rarity === undefined ? {} : { rarity }),
+      })),
+    };
+    expect(current(added)).toEqual({ ...offer, rerolledScreens: [snapshot] });
+    // A ban of any repeated row leaves the final rows unreachable until they are edited.
+    expect(screenFindings(added)).toEqual([['rollRepeatsAllOffers', undefined]]);
+    const cleared = applyProjectCommand(added, catalog, {
       kind: 'ReplaceRerolledTraitScreen',
       trait,
       index: 0,
-      value: {
-        options: offer.options.map(({ traitKey, rarity }) => ({
-          traitKey,
-          ...(rarity === undefined ? {} : { rarity }),
-        })),
-      },
+      value: null,
     });
-    expect(screenFindings(repeated)).toEqual([['traitOfferGenerationUnavailable', undefined]]);
+    expect(screenFindings(cleared)).toEqual([['rerolledScreenMissing', 0]]);
     const guessed = withGuessedRerolledScreens(project, trait, offer, 1);
-    const authored = applyProjectCommand(added, catalog, {
+    const authored = applyProjectCommand(cleared, catalog, {
       kind: 'ReplaceRerolledTraitScreen',
       trait,
       index: 0,
@@ -778,6 +779,7 @@ describe('screen rerolls', () => {
         value: { options: [{ traitKey: 'ApolloWeaponBoon', rarity: 'Common' }] },
       }),
     ).toThrow('is not in giver Zeus');
+    // Removing drops the earlier screen and leaves the final one as it is.
     const removed = applyProjectCommand(authored, catalog, {
       kind: 'RemoveTraitScreenReroll',
       trait,

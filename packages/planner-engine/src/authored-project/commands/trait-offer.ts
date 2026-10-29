@@ -3,6 +3,8 @@ import {
   normalizeRerolledChaosScreen,
   normalizeRerolledScreens,
   normalizeRerolledTraitScreen,
+  rerolledChaosScreenSnapshot,
+  rerolledTraitScreenSnapshot,
   screenRerollSupported,
   withRerolledScreenReplaced,
   withScreenRerollInserted,
@@ -153,7 +155,12 @@ function applyTraitScreenRerollCommand(
             : failCommand(command, 'a Chaos screen shows curse options');
       return withRerolledScreens(
         existing,
-        editedScreens(existing.rerolledScreens, command, screen),
+        editedScreens(
+          existing.rerolledScreens,
+          command,
+          screen,
+          rerolledChaosScreenSnapshot(existing),
+        ),
       );
     }
     const screen =
@@ -162,7 +169,15 @@ function applyTraitScreenRerollCommand(
         : 'options' in value
           ? normalizeRerolledTraitScreen(catalog, existing.giverKey, value)
           : failCommand(command, 'a trait screen shows trait options');
-    return withRerolledScreens(existing, editedScreens(existing.rerolledScreens, command, screen));
+    return withRerolledScreens(
+      existing,
+      editedScreens(
+        existing.rerolledScreens,
+        command,
+        screen,
+        rerolledTraitScreenSnapshot(existing),
+      ),
+    );
   } catch (error) {
     if (error instanceof ProjectCommandContractError) throw error;
     return failCommand(command, error instanceof Error ? error.message : 'invalid screen reroll');
@@ -173,10 +188,11 @@ function editedScreens<T>(
   screens: RerolledScreens<T> | undefined,
   command: TraitScreenRerollCommand,
   screen: T | null,
+  snapshot: T,
 ): RerolledScreens<T> | undefined {
   switch (command.kind) {
     case 'InsertTraitScreenReroll':
-      return withScreenRerollInserted(screens);
+      return withScreenRerollInserted(screens, snapshot);
     case 'RemoveTraitScreenReroll':
       return withScreenRerollRemoved(screens);
     case 'ReplaceRerolledTraitScreen':

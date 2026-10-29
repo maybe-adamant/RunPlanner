@@ -320,7 +320,7 @@ describe('Well and Pool rerolls', () => {
 });
 
 describe('screen rerolls', () => {
-  it('add, author and remove Pom screens before the final one, which keeps its pick', () => {
+  it('copy the final Pom screen on a reroll, author it and remove it; the final keeps its pick', () => {
     const pom = createLevelResolutionAddress(
       createIncomingRewardAddress(f, 'golden-f-b4-e1' as never),
       'self',
@@ -353,7 +353,10 @@ describe('screen rerolls', () => {
       kind: 'choice',
       offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'],
       selectedTraitKey: 'ApolloWeaponBoon',
-      rerolledScreens: [null, null],
+      rerolledScreens: [
+        { offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'] },
+        { offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'] },
+      ],
     });
     const authored = applyProjectCommand(twice, catalog, {
       kind: 'ReplaceRerolledLevelScreen',
@@ -372,7 +375,10 @@ describe('screen rerolls', () => {
     });
     expect(resolution(reselected)).toMatchObject({
       selectedTraitKey: 'ZeusSpecialBoon',
-      rerolledScreens: [{ offeredTraitKeys: ['ZeusSpecialBoon'] }, null],
+      rerolledScreens: [
+        { offeredTraitKeys: ['ZeusSpecialBoon'] },
+        { offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon'] },
+      ],
     });
     const removed = applyProjectCommand(reselected, catalog, {
       kind: 'RemoveLevelScreenReroll',

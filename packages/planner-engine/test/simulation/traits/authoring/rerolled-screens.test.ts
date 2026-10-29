@@ -116,6 +116,36 @@ describe('rerolled screen chain', () => {
     expect(finalSupported(offer(afterCores, [screen(...cores)]))).toBe(true);
     // Every ban removes one of the repeated rows, which nothing re-offers.
     expect(finalSupported(offer(cores, [screen(...cores)]))).toBe(false);
+    const findings = (value: AuthoredTraitOfferTraits) =>
+      assessInitialOfferSupport({ ...input(createTraitHistoryState()), offer: value }).findings;
+    expect(findings(offer(cores, [screen(...cores)]))).toEqual([{ code: 'rollRepeatsAllOffers' }]);
+    // Not a first screen either way, but a ban of Weapon admits it.
+    expect(
+      findings(
+        offer(
+          [
+            ['ApolloCastBoon', 'Common'],
+            ['ApolloManaBoon', 'Common'],
+            ['ApolloSprintBoon', 'Common'],
+          ],
+          [screen(...cores)],
+        ),
+      ),
+    ).toEqual([]);
+    // Rows no screen can show are impossible rather than a repeat.
+    expect(
+      findings(
+        offer(
+          [
+            ['ApolloWeaponBoon', 'Common'],
+            ['ApolloManaBoon', 'Common'],
+            ['PerfectDamageBonusBoon', 'Common'],
+            ['ApolloSprintBoon', 'Common'],
+          ] as never,
+          [screen(...cores)],
+        ),
+      ),
+    ).toEqual([{ code: 'traitOfferGenerationUnavailable' }]);
   });
 
   it('lets an unbanned item return at a freshly rolled rarity', () => {

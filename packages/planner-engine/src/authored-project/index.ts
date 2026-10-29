@@ -350,6 +350,9 @@ export {
   rerolledScreenCount,
   screenRerollCost,
   screenRerollSupported,
+  rerolledChaosScreenSnapshot,
+  rerolledLevelScreenSnapshot,
+  rerolledTraitScreenSnapshot,
   withScreenRerollCount,
   type RerollableScreen,
 } from './screen-rerolls';

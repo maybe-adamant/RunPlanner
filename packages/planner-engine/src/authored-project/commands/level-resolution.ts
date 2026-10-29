@@ -5,6 +5,7 @@ import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import {
   normalizeRerolledLevelScreen,
   normalizeRerolledScreens,
+  rerolledLevelScreenSnapshot,
   rerolledScreensField,
   screenRerollSupported,
   withRerolledScreenReplaced,
@@ -96,7 +97,10 @@ function applyLevelScreenRerollCommand(
     if (command.kind === 'InsertLevelScreenReroll') {
       if (!screenRerollSupported(catalog, { kind: 'levelChoice', rewardType }))
         failCommand(command, `${rewardType} screens cannot be rerolled`);
-      screens = withScreenRerollInserted(existing.rerolledScreens);
+      screens = withScreenRerollInserted(
+        existing.rerolledScreens,
+        rerolledLevelScreenSnapshot(existing),
+      );
     } else if (command.kind === 'RemoveLevelScreenReroll')
       screens = withScreenRerollRemoved(existing.rerolledScreens);
     else

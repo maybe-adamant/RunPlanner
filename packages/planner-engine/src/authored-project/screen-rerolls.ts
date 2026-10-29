@@ -4,9 +4,11 @@ import {
   optionIndex,
   TRAIT_OPTION_KEYS,
   traitOfferSupportsExhaustion,
+  type AuthoredChaosTraitOffer,
   type AuthoredRerolledChaosScreen,
   type AuthoredRerolledLevelScreen,
   type AuthoredRerolledTraitScreen,
+  type AuthoredTraitOfferTraits,
   type RerolledScreens,
   type TraitOptionKey,
 } from './traits/state';
@@ -152,20 +154,59 @@ export function rerolledScreenCount(value: {
   return value.rerolledScreens?.length ?? 0;
 }
 
-/** A reroll adds a not yet authored screen just before the final screen, which keeps its pick. */
+/**
+ * A reroll keeps the screen it rerolls: the final screen's rows are copied to
+ * the end of the earlier screens, and the final screen keeps its pick.
+ */
 export function withScreenRerollInserted<T>(
   screens: RerolledScreens<T> | undefined,
+  snapshot: T,
 ): RerolledScreens<T> {
-  return Object.freeze([...(screens ?? []), null]);
+  return Object.freeze([...(screens ?? []), snapshot]);
+}
+
+/** The shown rows of a final trait screen, as an earlier screen. */
+export function rerolledTraitScreenSnapshot(
+  offer: Pick<AuthoredTraitOfferTraits, 'options' | 'rejectedOptionKey'>,
+): AuthoredRerolledTraitScreen {
+  return Object.freeze({
+    options: Object.freeze(
+      offer.options.map((option) =>
+        Object.freeze(
+          option.rarity === undefined
+            ? { traitKey: option.traitKey }
+            : { traitKey: option.traitKey, rarity: option.rarity },
+        ),
+      ),
+    ),
+    ...(offer.rejectedOptionKey === undefined
+      ? {}
+      : { rejectedOptionKey: offer.rejectedOptionKey }),
+  });
+}
+
+/** The shown curses of a final Chaos screen, as an earlier screen. */
+export function rerolledChaosScreenSnapshot(
+  offer: Pick<AuthoredChaosTraitOffer, 'curseOptions'>,
+): AuthoredRerolledChaosScreen {
+  return Object.freeze({ curseOptions: offer.curseOptions });
+}
+
+/** The shown boons of a final Pom screen, as an earlier screen. */
+export function rerolledLevelScreenSnapshot(choice: {
+  readonly offeredTraitKeys: readonly string[];
+}): AuthoredRerolledLevelScreen {
+  return Object.freeze({ offeredTraitKeys: Object.freeze([...choice.offeredTraitKeys]) });
 }
 
 /** The screen list after adding or removing rerolls one at a time to reach `count`. */
 export function withScreenRerollCount<T>(
   screens: RerolledScreens<T> | undefined,
   count: number,
+  snapshot: T,
 ): RerolledScreens<T> | undefined {
   let next = screens;
-  while ((next?.length ?? 0) < count) next = withScreenRerollInserted(next);
+  while ((next?.length ?? 0) < count) next = withScreenRerollInserted(next, snapshot);
   while ((next?.length ?? 0) > Math.max(0, count)) next = withScreenRerollRemoved(next);
   return next;
 }
