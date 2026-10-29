@@ -6,7 +6,12 @@ import {
   scheduleRequiredRoomActions,
   structurallyActiveOccurrenceIds,
 } from '../room-actions/defaults';
-import { createBiomeAddress, createOccurrenceAddress } from '../addresses';
+import {
+  createBiomeAddress,
+  createOccurrenceAddress,
+  createRoomActionAddress,
+  createShopOfferAddress,
+} from '../addresses';
 import { reconcileAcquisitionResolvedRewardEntry } from '../acquisition/acquisition-entry';
 import { parseClockedTraitGeneratedPickupEntryKey } from '../acquisition/pickup-producers';
 import {
@@ -20,6 +25,7 @@ import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } fr
 import { updateOccurrence } from './occurrence/mutation';
 import type { RoomActionCommand } from './types';
 import { reconcileRemovedOrMovedReroll } from './rerolls';
+import { applyShopOccurrenceCommand } from './occurrence/shop';
 
 function requireIndex(
   command: RoomActionCommand,
@@ -32,12 +38,55 @@ function requireIndex(
   }
 }
 
+/** One pick: stocks a blank Travel Deal item, then appends its purchase. */
+function purchaseShopTravelDealRefill(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  command: Extract<RoomActionCommand, { readonly kind: 'PurchaseShopTravelDealRefill' }>,
+): ProjectDocument {
+  const biome = createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey);
+  const stocked =
+    command.value === undefined
+      ? document
+      : applyShopOccurrenceCommand(document, catalog, located, {
+          kind: 'ReplaceShopOfferOption',
+          offer: createShopOfferAddress(
+            biome,
+            command.occurrence.occurrenceId,
+            TRAVEL_DEAL_REFILL_ENTRY_KEY,
+          ),
+          value: command.value,
+        });
+  const relocated = { ...located, plan: stocked.route.biomes[located.biomeIndex]! };
+  const occurrence = requireOccurrence(relocated.plan, command.occurrence.occurrenceId, command);
+  if (authoredShopOffer(occurrence, TRAVEL_DEAL_REFILL_ENTRY_KEY)?.reward == null)
+    failCommand(command, 'Travel Deal item is unresolved');
+  const reference = Object.freeze({
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: 'roomExit',
+    entryKey: TRAVEL_DEAL_REFILL_ENTRY_KEY,
+  });
+  return applyRoomActionCommand(stocked, catalog, relocated, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(
+      biome,
+      command.occurrence.occurrenceId,
+      roomActionKey(reference),
+    ),
+    reference,
+    index: occurrence.roomActions.order.length,
+  });
+}
+
 export function applyRoomActionCommand(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
   command: RoomActionCommand,
 ): ProjectDocument {
+  if (command.kind === 'PurchaseShopTravelDealRefill')
+    return purchaseShopTravelDealRefill(document, catalog, located, command);
   const topology = requireTopology(located.plan, command);
   const occurrenceId =
     command.kind === 'ReplaceShopPurchaseParticipation'

@@ -314,6 +314,15 @@ export type RoomActionCommand =
       readonly kind: 'ReplaceShopPurchaseParticipation';
       readonly offer: ShopOfferAddress;
       readonly purchased: boolean;
+    }
+  | {
+      /**
+       * Buys the Shop's Travel Deal item at the end of the room's actions;
+       * `value` first stocks a blank one.
+       */
+      readonly kind: 'PurchaseShopTravelDealRefill';
+      readonly occurrence: OccurrenceAddress;
+      readonly value?: ShopOptionSelection;
     };
 
 /**
@@ -603,6 +612,17 @@ export type HermesShrineCommand =
       readonly kind: 'SetHermesShrinePurchaseRush';
       readonly action: RoomActionSemanticAddress;
       readonly rushed: boolean;
+    }
+  | {
+      /**
+       * Buys or rushes one unbought generation at the end of the room's
+       * actions; `rewardType` first stocks a blank Travel Deal refill.
+       */
+      readonly kind: 'PurchaseHermesShrineOffer';
+      readonly occurrence: OccurrenceAddress;
+      readonly generationKey: import('../model').HermesShrineGenerationKey;
+      readonly rushed: boolean;
+      readonly rewardType?: string;
     }
   | {
       /** Stocks the Travel Deal refill; its delay is kept, or defaulted when first stocked. */

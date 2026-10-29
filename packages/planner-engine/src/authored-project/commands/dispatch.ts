@@ -206,6 +206,7 @@ function applyUnchecked(
     case 'MoveRoomAction':
     case 'ReplaceFieldsCageOrder':
     case 'ReplaceShopPurchaseParticipation':
+    case 'PurchaseShopTravelDealRefill':
       return applyRoomActionCommand(
         document,
         catalog,
@@ -262,6 +263,7 @@ function applyUnchecked(
     case 'SetHermesShrineOfferDelay':
     case 'SetHermesShrinePurchase':
     case 'SetHermesShrinePurchaseRush':
+    case 'PurchaseHermesShrineOffer':
     case 'ReplaceHermesShrineTravelDealRefill':
       return applyOccurrenceCommand(
         document,

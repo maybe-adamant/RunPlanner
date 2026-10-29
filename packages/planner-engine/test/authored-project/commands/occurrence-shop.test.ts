@@ -376,6 +376,45 @@ describe('authored-project Shop occurrence commands', () => {
     expect(replaceTestShopOfferActions(project, catalog, shop, ['MajorNonBoon'])).toBe(project);
   });
 
+  it('stocks a blank Travel Deal item and appends its purchase in one edit', () => {
+    const shopId = createOccurrenceId('round-trip-n-preboss');
+    const shop = createOccurrenceAddress(nBiome, shopId);
+    const reference = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'roomExit',
+      entryKey: 'travelDealRefill',
+    } as const;
+    const room = (project: ReturnType<typeof createCompleteNProject>) =>
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'N')!
+        .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === shopId)!;
+    const project = createCompleteNProject();
+    const state = room(project).state;
+    const profileKey = state.kind === 'shop' ? state.shop?.profileKey : undefined;
+    const option = catalog.rewards.shops.byKey[profileKey ?? '']?.groups.values
+      .flatMap((group) => group.options.values)
+      .find((candidate) => candidate.rewardType === 'BlindBoxLoot');
+    if (option === undefined) throw new Error('expected a Mystery Shop option');
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'PurchaseShopTravelDealRefill',
+        occurrence: shop,
+      }),
+    ).toThrow(/Travel Deal item is unresolved/);
+    const history = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+      kind: 'PurchaseShopTravelDealRefill',
+      occurrence: shop,
+      value: { optionKey: option.key, offer: { rewardType: 'BlindBoxLoot' } },
+    });
+    const bought = room(history.present);
+    expect(bought.roomActions.order.at(-1)).toEqual(reference);
+    expect(bought.state.kind === 'shop' ? bought.state.shop?.travelDealRefill : undefined).toEqual(
+      expect.objectContaining({ optionKey: option.key }),
+    );
+    expect(bought.acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeNull();
+    expect(undoProjectHistory(history).present).toBe(project);
+  });
+
   it('reconciles a Travel Mystery child with its sole purchase participant and item identity', () => {
     const shopId = createOccurrenceId('round-trip-n-preboss');
     const offer = createShopOfferAddress(nBiome, shopId, 'travelDealRefill');

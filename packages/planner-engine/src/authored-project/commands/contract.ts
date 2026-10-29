@@ -150,6 +150,7 @@ function commandContractAddress(
     case 'ReplaceHermesShrineOffer':
     case 'SetHermesShrineOfferDelay':
     case 'SetHermesShrinePurchase':
+    case 'PurchaseHermesShrineOffer':
     case 'ReplaceHermesShrineTravelDealRefill':
       return command.occurrence;
     case 'InsertRoomAction':
@@ -179,6 +180,8 @@ function commandContractAddress(
       return command.owner;
     case 'ReplaceShopPurchaseParticipation':
       return command.offer;
+    case 'PurchaseShopTravelDealRefill':
+      return command.occurrence;
     case 'ReplaceIncomingReward':
       return command.reward;
     case 'ReplaceLocalReward':
@@ -302,6 +305,7 @@ export function projectCommandAddress(
       });
     case 'SetHermesShrineOfferDelay':
     case 'SetHermesShrinePurchase':
+    case 'PurchaseHermesShrineOffer':
       return createRoomFeatureAddress(command.occurrence, {
         kind: 'hermesShrineOffer',
         generationKey: command.generationKey,

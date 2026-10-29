@@ -40,6 +40,7 @@ import {
 import {
   createBiomeAddress,
   createOccurrenceAddress,
+  createRoomActionAddress,
   type OccurrenceAddress,
 } from '../../addresses';
 import { roomActionKey } from '../../room-actions/key';
@@ -462,6 +463,70 @@ export function applyOccurrenceCommand(
         catalog,
         located,
         source,
+      );
+    }
+    case 'PurchaseHermesShrineOffer': {
+      const authored = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const shrine = authored.hermesShrine;
+      if (shrine === undefined) failCommand(command, 'occurrence has no Hermes Shrine');
+      requireShrineGeneration(command, command.generationKey);
+      if (typeof command.rushed !== 'boolean')
+        failCommand(command, 'Shrine purchase rushed must be boolean');
+      if (command.rewardType !== undefined && command.generationKey !== 'travelDealRefill')
+        failCommand(command, 'only the Travel Deal refill is stocked with its purchase');
+      if (command.rewardType !== undefined)
+        requireSurfaceShopReward(catalog, command, command.rewardType);
+      const occurrence =
+        command.rewardType === undefined
+          ? authored
+          : Object.freeze({
+              ...authored,
+              hermesShrine: Object.freeze({
+                ...shrine,
+                travelDealRefill: Object.freeze({
+                  offer: stockedOffer(shrine.travelDealRefill?.offer, command.rewardType),
+                }),
+              }),
+            });
+      const offer = offerFor(occurrence.hermesShrine, command.generationKey);
+      if (offer === undefined || offer === null) failCommand(command, 'Shrine offer is unresolved');
+      const order = occurrence.roomActions.order;
+      if (hermesShrinePurchaseAction(order, command.generationKey) !== undefined)
+        failCommand(command, 'Shrine offer is already bought');
+      // One pick appends the purchase at the end of the room's actions.
+      const reference = Object.freeze({
+        kind: 'purchaseHermesShrineOffer' as const,
+        generationKey: command.generationKey,
+        rushed: false,
+      });
+      const bought = unplaceHermesShrineDelivery(
+        updateOccurrence(
+          document,
+          located,
+          Object.freeze({
+            ...occurrence,
+            roomActions: Object.freeze({
+              ...occurrence.roomActions,
+              order: Object.freeze([...order, reference]),
+            }),
+          }),
+        ),
+        hermesShrineDeliveryEntryKey(command.occurrence, command.generationKey),
+      );
+      if (!command.rushed) return bought;
+      return applyOccurrenceCommand(
+        bought,
+        catalog,
+        { ...located, plan: bought.route.biomes[located.biomeIndex]! },
+        {
+          kind: 'SetHermesShrinePurchaseRush',
+          action: createRoomActionAddress(
+            createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey),
+            command.occurrence.occurrenceId,
+            roomActionKey(reference),
+          ),
+          rushed: true,
+        },
       );
     }
     case 'ReplaceHermesShrineTravelDealRefill': {

@@ -1755,6 +1755,76 @@ describe('Hermes Shrine purchase actions', () => {
     );
   });
 
+  it('buys or rushes one unbought item at the end of the room in one edit', () => {
+    const project = surfaceShrineTravelDealProject();
+    const order = shrineRoom(project).roomActions.order;
+    const bought = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+      kind: 'PurchaseHermesShrineOffer',
+      occurrence: shrine,
+      generationKey: 'initial:secondLeft',
+      rushed: false,
+    });
+    expect(shrineRoom(bought.present).roomActions.order).toEqual([
+      ...order,
+      purchase('initial:secondLeft', false),
+    ]);
+    expect(undoProjectHistory(bought).present).toBe(project);
+
+    const rushed = applyProjectHistoryCommand(createProjectHistory(project), catalog, {
+      kind: 'PurchaseHermesShrineOffer',
+      occurrence: shrine,
+      generationKey: 'initial:secondLeft',
+      rushed: true,
+    });
+    expect(shrineRoom(rushed.present).roomActions.order).toEqual([
+      ...order,
+      purchase('initial:secondLeft', true),
+      pickup('initial:secondLeft'),
+    ]);
+    expect(undoProjectHistory(rushed).present).toBe(project);
+
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'PurchaseHermesShrineOffer',
+        occurrence: shrine,
+        generationKey: 'initial:first',
+        rushed: false,
+      }),
+    ).toThrow(/already bought/);
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'PurchaseHermesShrineOffer',
+        occurrence: shrine,
+        generationKey: 'initial:secondLeft',
+        rushed: false,
+        rewardType: 'MaxManaDrop',
+      }),
+    ).toThrow(/only the Travel Deal refill/);
+  });
+
+  it('stocks the Travel Deal refill with its purchase in one edit', () => {
+    const cleared = applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: shrine,
+      generationKey: 'travelDealRefill',
+      purchased: false,
+    });
+    const refilled = applyProjectCommand(cleared, catalog, {
+      kind: 'PurchaseHermesShrineOffer',
+      occurrence: shrine,
+      generationKey: 'travelDealRefill',
+      rushed: false,
+      rewardType: 'MaxManaDrop',
+    });
+    expect(shrineRoom(refilled).hermesShrine?.travelDealRefill?.offer).toEqual({
+      rewardType: 'MaxManaDrop',
+      delay: shrineRoom(cleared).hermesShrine?.travelDealRefill?.offer?.delay,
+    });
+    expect(shrineRoom(refilled).roomActions.order.at(-1)).toEqual(
+      purchase('travelDealRefill', false),
+    );
+  });
+
   it('keeps an item delay across a restock and retimes only a delayed purchase', () => {
     const project = applyProjectCommand(surfaceShrineTravelDealProject(), catalog, {
       kind: 'SetHermesShrineOfferDelay',
