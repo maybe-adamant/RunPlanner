@@ -370,7 +370,8 @@ describe('Pom resolution editor', () => {
     expect(hintOf(atMax)).toBe('No rerolls left.');
     expect(screen.getAllByRole('radio')).toHaveLength(2);
     await user.click(screen.getByRole('tab', { name: 'Offer' }));
-    expect(screen.queryAllByRole('radio')).toHaveLength(0);
+    const radios = screen.getAllByRole('radio') as HTMLInputElement[];
+    expect(radios.every((radio) => radio.disabled && !radio.checked)).toBe(true);
     expect(screen.getByRole('button', { name: 'Pom target 1' }).textContent).toContain('Trait A');
     expect(
       (screen.getByRole('button', { name: 'Pom target 1' }) as HTMLButtonElement).disabled,

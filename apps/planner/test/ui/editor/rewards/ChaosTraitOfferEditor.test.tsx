@@ -189,7 +189,10 @@ describe('ChaosTraitOfferEditor', () => {
         value={offer()}
       />,
     );
-    expect(screen.queryAllByRole('radio')).toHaveLength(0);
+    // The pick stays in place, disabled, with none chosen.
+    const radios = screen.getAllByRole('radio') as HTMLInputElement[];
+    expect(radios).toHaveLength(3);
+    expect(radios.every((radio) => radio.disabled && !radio.checked)).toBe(true);
     expect(screen.queryByRole('region', { name: 'Selected Chaos outcome' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'option1 curse' }));
     await user.click(screen.getByRole('option', { name: 'ChaosTimeCurse' }));

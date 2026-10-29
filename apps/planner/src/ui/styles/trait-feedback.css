@@ -74,18 +74,8 @@
   cursor: default;
 }
 
-/* A rerolled-away screen keeps the final screen's fields in place, unseen. */
+/* A placeholder keeps a control's space where that control does not apply. */
 [data-reserved] {
-  visibility: hidden;
-}
-
-/* A read-only screen shows its values as plain text in the same controls. */
-.trait-offer-readonly .contextual-picker-trigger:disabled {
-  cursor: default;
-  opacity: 1;
-}
-
-.trait-offer-readonly .contextual-picker-trigger-icon {
   visibility: hidden;
 }
 

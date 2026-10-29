@@ -187,14 +187,31 @@ describe('ordinary offer shell', () => {
     const pickRadios = screen.getAllByRole('radio').length;
     expect(pickRadios).toBeGreaterThan(0);
     await user.click(screen.getByRole('tab', { name: 'Offer' }));
-    expect(screen.queryAllByRole('radio')).toHaveLength(pickRadios - finalTraits.length);
-    expect(screen.queryByRole('button', { name: 'Rarify' })).toBeNull();
+    // Every field stays in place; the pick is disabled with none chosen.
+    expect(screen.getAllByRole('radio')).toHaveLength(pickRadios);
+    expect(
+      (screen.getAllByRole('radio', { name: 'Selected' }) as HTMLInputElement[]).every(
+        (radio) => radio.disabled && !radio.checked,
+      ),
+    ).toBe(true);
+    expect(
+      screen
+        .getAllByRole('button', { name: 'Rarify' })
+        .every((button) => button.hasAttribute('disabled')),
+    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(true);
     // An earlier screen is read-only until Edit.
     const earlierTrait = screen.getByRole('button', { name: 'option1 trait' }) as HTMLButtonElement;
     expect(earlierTrait.disabled).toBe(true);
+    expect(
+      screen.getByRole('button', { name: 'Remove last option' }).hasAttribute('disabled'),
+    ).toBe(true);
     await user.click(screen.getByRole('button', { name: 'Edit' }));
     expect(
       (screen.getByRole('button', { name: 'option1 trait' }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+    expect(
+      screen.getByRole('button', { name: 'Remove last option' }).hasAttribute('disabled'),
     ).toBe(false);
     await user.click(screen.getByRole('button', { name: 'Edit' }));
     // A reroll bans one shown row, so the final screen needs a row of the earlier one gone.

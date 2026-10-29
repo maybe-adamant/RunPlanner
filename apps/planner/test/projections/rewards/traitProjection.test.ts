@@ -412,7 +412,8 @@ describe('route trait projection', () => {
                   missing: false,
                   assessments: [{ legal: true, findings: [], replacementTransition: transition }],
                   composition: {} as never,
-                },
+                  // Only the rows' assessments matter to the preview.
+                } as never,
               ],
             },
           ],

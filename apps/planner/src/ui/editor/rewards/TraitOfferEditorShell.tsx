@@ -388,6 +388,18 @@ export function TraitOfferEditorShell({
     const screenValue = screen === null ? undefined : traitScreenValue(value, screen);
     const updateScreen = (next: AuthoredTraitOfferTraits): void =>
       replaceScreen(earlierIndex, rerolledTraitScreenSnapshot(next));
+    // Row-count edits on an earlier screen use the same engine drafts as the final one.
+    const shapeDraft = (
+      next: AuthoredTraitOffer | undefined,
+    ): AuthoredTraitOfferTraits | undefined => (next?.kind === 'traits' ? next : undefined);
+    const screenAppended =
+      ordinary && screenValue !== undefined && !earlierReadOnly
+        ? shapeDraft(interaction.appendTraitOfferDraft?.(screenValue))
+        : undefined;
+    const screenRemoved =
+      ordinary && screenValue !== undefined && !earlierReadOnly
+        ? shapeDraft(interaction.removeTraitOfferDraft?.(screenValue))
+        : undefined;
     return (
       <TraitOfferForm
         state={stateInspector}
@@ -422,6 +434,9 @@ export function TraitOfferEditorShell({
                       pickless
                       rarifySupported={false}
                       readOnly={earlierReadOnly}
+                      {...(screenValue.options[index]?.rarity === undefined
+                        ? {}
+                        : { effectiveRarity: screenValue.options[index]!.rarity! })}
                       showEffectiveValues
                       rejected={screenValue.rejectedOptionKey === OPTION_KEYS[index]}
                       spellOffer={spellOffer}
@@ -435,6 +450,20 @@ export function TraitOfferEditorShell({
         }
         feedback={feedbackSection}
         options={null}
+        shapeActions={
+          ordinary && screenValue !== undefined ? (
+            <TraitOfferShapeActions
+              addDisabled={screenAppended === undefined}
+              onAdd={() => {
+                if (screenAppended !== undefined) updateScreen(screenAppended);
+              }}
+              onRemove={() => {
+                if (screenRemoved !== undefined) updateScreen(screenRemoved);
+              }}
+              removeDisabled={screenRemoved === undefined}
+            />
+          ) : undefined
+        }
         recovery={recoveryAction}
         reset={resetAction}
         save={save}

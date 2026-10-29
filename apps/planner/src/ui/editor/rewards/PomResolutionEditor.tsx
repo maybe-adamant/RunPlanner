@@ -486,9 +486,9 @@ export function PomResolutionEditor({
                             triggerIcon: traitIcon(current),
                           })}
                     />
-                    {/* The pick's space stays so every screen shares one layout. */}
-                    <label aria-hidden data-reserved className="trait-option-selected">
-                      <input disabled tabIndex={-1} type="radio" />
+                    {/* A rerolled-away screen shows the pick disabled, with none chosen. */}
+                    <label className="trait-option-selected">
+                      <input checked={false} disabled readOnly type="radio" />
                       Selected
                     </label>
                   </fieldset>

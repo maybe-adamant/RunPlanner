@@ -75,12 +75,12 @@ export function TraitOfferOption<TraitValue>({
   readonly onTraitOpenChange?: (open: boolean) => void;
   /**
    * False on a screen rerolled away: its rows were shown, never picked. Its
-   * pick-only fields keep their space so every screen shares one layout.
+   * pick-only fields stay in place, disabled, so every screen shares one layout.
    */
   readonly pickable?: boolean;
   /** Shows the row's values without editing them. */
   readonly readOnly?: boolean;
-  /** Keeps the Rarify button's space on a row that cannot be rarified. */
+  /** Shows a disabled Rarify on a row of a screen rerolled away. */
   readonly reserveRarify?: boolean;
   readonly persephoneLevelBonus?: number;
   readonly persephoneLevelRolls?: TraitOfferOptionFeedback['persephoneLevelRolls'];
@@ -128,10 +128,7 @@ export function TraitOfferOption<TraitValue>({
         };
   const fixedRarityPresentation =
     fixedRarity === undefined ? undefined : traitRarityPresentation(infusion, fixedRarity);
-  const reserved = !pickable;
-  const reservedProps = reserved
-    ? ({ 'aria-hidden': true, 'data-reserved': true } as const)
-    : ({} as const);
+  const shownOnly = !pickable;
   return (
     <fieldset
       className={`trait-offer-option trait-offer-ordinary-option${readOnly ? ' trait-offer-readonly' : ''}`}
@@ -210,25 +207,15 @@ export function TraitOfferOption<TraitValue>({
         >
           Rarify
         </button>
-      ) : reserved && reserveRarify ? (
-        <button
-          {...reservedProps}
-          className="secondary-action action-compact"
-          disabled
-          tabIndex={-1}
-          type="button"
-        >
+      ) : shownOnly && reserveRarify ? (
+        <button className="secondary-action action-compact" disabled type="button">
           Rarify
         </button>
       ) : null}
       {!showEffectiveValues &&
       effectiveRarity === undefined &&
       effectiveLevel === undefined ? null : (
-        <dl
-          {...reservedProps}
-          aria-label="Effective trait values"
-          className="trait-option-effective-summary"
-        >
+        <dl aria-label="Effective trait values" className="trait-option-effective-summary">
           <dt>Effective rarity</dt>
           <dd>
             {effectiveRarity === undefined ? (
@@ -242,13 +229,20 @@ export function TraitOfferOption<TraitValue>({
         </dl>
       )}
       {!showPersephoneBonus ? null : (
-        <dl
-          {...reservedProps}
-          className="trait-option-effective-summary trait-option-persephone-bonus"
-        >
+        <dl className="trait-option-effective-summary trait-option-persephone-bonus">
           <dt>Persephone Roll</dt>
           <dd>
-            {persephoneLevelRolls === undefined || onPersephoneLevelBonusChange === undefined ? (
+            {shownOnly ? (
+              // The roll happens at the pick, which this screen never had.
+              <select
+                aria-label={persephoneAriaLabel ?? `${legend} Persephone roll`}
+                disabled
+                id={`${controlId}-persephone-level-bonus`}
+                value=""
+              >
+                <option value="">—</option>
+              </select>
+            ) : persephoneLevelRolls === undefined || onPersephoneLevelBonusChange === undefined ? (
               <span aria-label="Not applicable">N/A</span>
             ) : (
               <select
@@ -267,13 +261,12 @@ export function TraitOfferOption<TraitValue>({
           </dd>
         </dl>
       )}
-      <label {...reservedProps} className="trait-option-selected">
+      <label className="trait-option-selected">
         <input
           checked={pickable && selected}
-          disabled={reserved || selectedDisabled}
+          disabled={shownOnly || selectedDisabled}
           name={selectedName}
           onChange={onSelectedChange}
-          {...(reserved ? { tabIndex: -1 } : {})}
           type="radio"
         />
         {selectedLabel}

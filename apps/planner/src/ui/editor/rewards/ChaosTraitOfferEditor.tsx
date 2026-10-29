@@ -185,18 +185,14 @@ export function ChaosTraitOfferEditor({
                     value={option.requirementCount}
                   />
                 </label>
-                {/* A rerolled-away screen keeps the pick's space so every screen shares one layout. */}
-                <label
-                  {...(pickless ? { 'aria-hidden': true, 'data-reserved': true } : {})}
-                  className="trait-option-selected"
-                >
+                {/* A rerolled-away screen shows the pick disabled, with none chosen. */}
+                <label className="trait-option-selected">
                   <input
                     aria-label={`${optionKey} selected`}
                     checked={!pickless && value.selectedOptionKey === optionKey}
                     disabled={pickless}
                     name="chaos-selected-option"
                     onChange={() => selectOption(optionKey)}
-                    {...(pickless ? { tabIndex: -1 } : {})}
                     type="radio"
                   />
                   Selected
