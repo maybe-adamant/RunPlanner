@@ -101,11 +101,22 @@ export function TraitOfferEditorShell({
   );
   // Sub-editors report their draft feedback here; the dialog renders it in one fixed region.
   const [outcomeEntries, reportOutcomeFeedback] = useOutcomeFeedback();
-  const earlierScreens: readonly unknown[] =
-    value.kind === 'fallbackGold' ? [] : (value.rerolledScreens ?? []);
+  const earlierScreens: readonly unknown[] = value.rerolledScreens ?? [];
   const earlierCount = earlierScreens.length;
   const screenTab = useScreenTab(interaction.owner, earlierCount);
-  const tabbed = interaction.screenRerolls !== undefined && value.kind !== 'fallbackGold';
+  const tabbed = interaction.screenRerolls !== undefined;
+  // Trait-row screens of this offer; a Gold final shows earlier rows against no rows of its own.
+  const rowBase: AuthoredTraitOfferTraits | undefined =
+    value.kind === 'traits'
+      ? value
+      : value.kind === 'fallbackGold'
+        ? Object.freeze({
+            kind: 'traits' as const,
+            giverKey: value.giverKey,
+            options: Object.freeze([]) as unknown as AuthoredTraitOfferTraits['options'],
+            selectedOptionKey: 'option1' as const,
+          })
+        : undefined;
   const earlierIndex = tabbed && screenTab.active < earlierCount ? screenTab.active : undefined;
   const activeScreen: ScreenTab = earlierIndex ?? 'final';
   // An earlier screen shows its rows read-only until the author chooses to correct it.
@@ -116,14 +127,14 @@ export function TraitOfferEditorShell({
   const candidate = loaded.result?.[0];
   const support = candidateSupport(candidate);
   const earlierTraitScreen =
-    value.kind === 'traits' && earlierIndex !== undefined
+    rowBase !== undefined && earlierIndex !== undefined
       ? (earlierScreens[earlierIndex] as AuthoredRerolledTraitScreen | null)
       : undefined;
   const feedback = projectTraitOfferFeedback(
-    value.kind === 'traits' && earlierIndex !== undefined
+    rowBase !== undefined && earlierIndex !== undefined
       ? earlierTraitScreen === null || earlierTraitScreen === undefined
-        ? traitScreenValue(value, { options: [] })
-        : traitScreenValue(value, earlierTraitScreen)
+        ? traitScreenValue(rowBase, { options: [] })
+        : traitScreenValue(rowBase, earlierTraitScreen)
       : value,
     candidate,
     interaction.traitLabel,
@@ -313,9 +324,7 @@ export function TraitOfferEditorShell({
               updateValue(
                 withRerolledScreens(value, [
                   ...earlierScreens,
-                  value.kind === 'traits'
-                    ? rerolledTraitScreenSnapshot(value)
-                    : rerolledChaosScreenSnapshot(value),
+                  value.kind === 'chaos' ? rerolledChaosScreenSnapshot(value) : finalRowsSnapshot(),
                 ]),
               );
               screenTab.select(earlierCount + 1);
@@ -381,23 +390,38 @@ export function TraitOfferEditorShell({
       </button>
     );
   };
+  const emptyScreen: AuthoredRerolledTraitScreen = Object.freeze({ options: Object.freeze([]) });
+  // The rows a reroll leaves behind: a Gold final showed none.
+  const finalRowsSnapshot = (): AuthoredRerolledTraitScreen =>
+    value.kind === 'traits' ? rerolledTraitScreenSnapshot(value) : emptyScreen;
   const stateInspector =
     offerState === undefined ? undefined : <TraitOfferStateInspector presentation={offerState} />;
-  if (value.kind === 'traits' && earlierIndex !== undefined) {
+  if (rowBase !== undefined && earlierIndex !== undefined) {
     const screen = earlierTraitScreen ?? null;
-    const screenValue = screen === null ? undefined : traitScreenValue(value, screen);
-    const updateScreen = (next: AuthoredTraitOfferTraits): void =>
-      replaceScreen(earlierIndex, rerolledTraitScreenSnapshot(next));
+    const screenValue = screen === null ? undefined : traitScreenValue(rowBase, screen);
+    // An earlier screen with no rows showed Fallback Gold.
+    const goldScreen =
+      screenValue !== undefined && (screenValue.options as readonly unknown[]).length === 0;
+    const updateScreen = (next: AuthoredTraitOffer): void =>
+      replaceScreen(
+        earlierIndex,
+        next.kind === 'traits' ? rerolledTraitScreenSnapshot(next) : emptyScreen,
+      );
     // Row-count edits on an earlier screen use the same engine drafts as the final one.
-    const shapeDraft = (
-      next: AuthoredTraitOffer | undefined,
-    ): AuthoredTraitOfferTraits | undefined => (next?.kind === 'traits' ? next : undefined);
+    const shapeDraft = (next: AuthoredTraitOffer | undefined): AuthoredTraitOffer | undefined =>
+      next?.kind === 'traits' || next?.kind === 'fallbackGold' ? next : undefined;
     const screenAppended =
       ordinary && screenValue !== undefined && !earlierReadOnly
-        ? shapeDraft(interaction.appendTraitOfferDraft?.(screenValue))
+        ? shapeDraft(
+            interaction.appendTraitOfferDraft?.(
+              goldScreen
+                ? Object.freeze({ kind: 'fallbackGold' as const, giverKey: rowBase.giverKey })
+                : screenValue,
+            ),
+          )
         : undefined;
     const screenRemoved =
-      ordinary && screenValue !== undefined && !earlierReadOnly
+      ordinary && screenValue !== undefined && !goldScreen && !earlierReadOnly
         ? shapeDraft(interaction.removeTraitOfferDraft?.(screenValue))
         : undefined;
     return (
@@ -407,10 +431,14 @@ export function TraitOfferEditorShell({
           screenValue === undefined ? (
             <UnsetScreen
               onCopy={() => {
-                replaceScreen(earlierIndex, rerolledTraitScreenSnapshot(value));
+                replaceScreen(earlierIndex, finalRowsSnapshot());
                 setEditingScreen(earlierIndex);
               }}
             />
+          ) : goldScreen ? (
+            <section className="trait-offer-fallback">
+              <p>Fallback Gold</p>
+            </section>
           ) : (
             <>
               <div className="trait-offer-options">
@@ -420,7 +448,7 @@ export function TraitOfferEditorShell({
                     key={OPTION_KEYS[index]}
                   >
                     <TraitOfferOrdinaryOption
-                      domainValue={value}
+                      domainValue={value.kind === 'traits' ? value : screenValue}
                       headerAction={rejectToggle(
                         screenValue,
                         updateScreen,

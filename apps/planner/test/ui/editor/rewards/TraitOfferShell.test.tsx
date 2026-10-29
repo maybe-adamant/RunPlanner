@@ -346,6 +346,57 @@ describe('ordinary offer shell', () => {
     application.dispose();
   });
 
+  it('rerolls a Fallback Gold final, leaving an empty earlier screen shown as Gold', async () => {
+    const user = userEvent.setup();
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState())!;
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (entry) => entry.giver.providerKind === 'olympian' && entry.value?.kind === 'traits',
+    )!;
+    if (base.value?.kind !== 'traits') throw new Error('expected an ordinary offer');
+    const rows = base.value.options.map(({ traitKey, rarity }) => ({
+      traitKey,
+      ...(rarity === undefined ? {} : { rarity }),
+    }));
+    const interaction: WorkspaceTraitOfferInteraction = {
+      ...base,
+      value: {
+        kind: 'fallbackGold',
+        giverKey: base.giver.key,
+        rerolledScreens: [{ options: rows }],
+      },
+      screenRerolls: { count: 1, maxCount: 3 },
+    };
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={interaction.owner}
+          interactions={{
+            ...workspace.interactions,
+            traitOffers: new Map([[interaction.key, interaction]]),
+          }}
+          onCommit={() => undefined}
+        />
+      </Provider>,
+    );
+    expect(await screen.findByText('Fallback Gold')).toBeTruthy();
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Offer', 'Reroll 1']);
+    await user.click(screen.getByRole('button', { name: 'Reroll · costs 2' }));
+    await user.click(screen.getByRole('tab', { name: 'Reroll 1' }));
+    expect(screen.getByText('Fallback Gold')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'option1 trait' })).toBeNull();
+    // Under Edit, an empty earlier screen can take rows.
+    expect(screen.getByRole('button', { name: 'Add option' }).hasAttribute('disabled')).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: 'Add option' }));
+    expect(screen.getByRole('button', { name: 'option1 trait' })).toBeTruthy();
+    expect(screen.queryByText('Fallback Gold')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Remove last option' }));
+    expect(screen.getByText('Fallback Gold')).toBeTruthy();
+    application.dispose();
+  });
+
   it('does not evaluate trait eligibility during render', () => {
     const events: ApplicationEvaluationEvent[] = [];
     const application = createApplication({
