@@ -1,5 +1,6 @@
 import type { Catalog } from '../../../catalog-schema';
 import {
+  INITIAL_ROLL_KEY,
   PURGING_POOL_SLOT_KEYS,
   STYGIAN_WELL_SLOT_KEYS,
   featureRerolls,
@@ -123,21 +124,31 @@ export function applyFeatureRollCommand(
       return pinned === occurrence ? document : updateOccurrence(document, located, pinned);
     }
     case 'SellPurgingPoolRollSlot': {
-      const occurrence = requireOccurrence(located.plan, command.reroll.occurrenceId, command);
-      const rerollId = rerollIdOf(command, occurrence, command.reroll.actionKey);
-      const pinned = pinRollSlot(
-        catalog,
-        command,
-        occurrence,
-        'purgingPool',
-        rerollId,
-        command.slotKey,
-        command.traitKey,
-      );
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      requirePresentFeature(command, occurrence, 'purgingPool');
+      const initial = command.rollKey === INITIAL_ROLL_KEY;
+      if (
+        !initial &&
+        !featureRerolls(occurrence.roomActions.order, 'purgingPool').some(
+          (reroll) => reroll.rerollId === command.rollKey,
+        )
+      )
+        failCommand(command, 'room action is not an ordered Pool reroll');
+      const pinned = initial
+        ? pinInitialPoolSlot(catalog, command, occurrence, command.slotKey, command.traitKey)
+        : pinRollSlot(
+            catalog,
+            command,
+            occurrence,
+            'purgingPool',
+            command.rollKey,
+            command.slotKey,
+            command.traitKey,
+          );
       const sale: RoomActionReference = Object.freeze({
         kind: 'sellPurgingPoolTrait',
         slotKey: command.slotKey,
-        rollKey: rerollId,
+        ...(initial ? {} : { rollKey: command.rollKey }),
       });
       const order = pinned.roomActions.order;
       if (order.some((reference) => roomActionKey(reference) === roomActionKey(sale)))
@@ -163,6 +174,28 @@ function rerollIdOf(
   if (reference?.kind !== 'rerollStygianWell' && reference?.kind !== 'rerollPurgingPool')
     failCommand(command, 'room action is not an ordered Well or Pool reroll');
   return reference.rerollId;
+}
+
+/** Pins one slot of the Pool's initial list. */
+function pinInitialPoolSlot(
+  catalog: Catalog,
+  command: Parameters<typeof failCommand>[0],
+  occurrence: RoomOccurrence,
+  slotKey: string,
+  traitKey: string,
+): RoomOccurrence {
+  const pool = occurrence.purgingPool;
+  if (pool === undefined) failCommand(command, 'occurrence has no Purging Pool');
+  if (!(PURGING_POOL_SLOT_KEYS as readonly string[]).includes(slotKey))
+    failCommand(command, `unknown Purging Pool slot ${slotKey}`);
+  if (catalog.traits.byKey[traitKey] === undefined) failCommand(command, 'unknown trait');
+  return Object.freeze({
+    ...occurrence,
+    purgingPool: Object.freeze({
+      ...pool,
+      traitKeyBySlot: Object.freeze({ ...pool.traitKeyBySlot, [slotKey]: traitKey }),
+    }),
+  });
 }
 
 /**

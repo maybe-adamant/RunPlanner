@@ -438,7 +438,8 @@ describe('Pool of Purging rolls', () => {
     const traitKey = pool(project).rolls['r1']!.candidateTraitKeysBySlot.right[0]!;
     const sold = applyProjectCommand(project, catalog, {
       kind: 'SellPurgingPoolRollSlot',
-      reroll: poolReroll('r1'),
+      occurrence: room,
+      rollKey: 'r1',
       slotKey: 'right',
       traitKey,
       index: order(project).length,
@@ -448,6 +449,43 @@ describe('Pool of Purging rolls', () => {
       { kind: 'sellPurgingPoolTrait', slotKey: 'right', rollKey: 'r1' },
     ]);
     expect(findings(sold)).toEqual([]);
+  });
+
+  it('pin and sell a blank initial slot in one edit, and refuse a slot already sold', () => {
+    const blank = applyProjectCommand(interacted(), catalog, {
+      kind: 'ReplacePurgingPoolSlot',
+      occurrence: room,
+      slotKey: 'left',
+      traitKey: null,
+    });
+    const traitKey = pool(blank).candidateTraitKeysBySlot.left[0]!;
+    const sell = (project: ProjectDocument) =>
+      applyProjectCommand(project, catalog, {
+        kind: 'SellPurgingPoolRollSlot',
+        occurrence: room,
+        rollKey: 'initial',
+        slotKey: 'left',
+        traitKey,
+        index: order(project).length,
+      });
+    const sold = sell(blank);
+    expect(
+      sold.route.biomes[0]!.topology!.occurrences.find((entry) => entry.occurrenceId === postboss)!
+        .purgingPool?.traitKeyBySlot.left,
+    ).toBe(traitKey);
+    expect(order(sold).at(-1)).toEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' });
+    expect(findings(sold)).toEqual([]);
+    expect(() => sell(sold)).toThrow('the slot is already sold');
+    expect(() =>
+      applyProjectCommand(blank, catalog, {
+        kind: 'SellPurgingPoolRollSlot',
+        occurrence: room,
+        rollKey: 'r9',
+        slotKey: 'left',
+        traitKey,
+        index: order(blank).length,
+      }),
+    ).toThrow('room action is not an ordered Pool reroll');
   });
 
   function pinnedPoolReroll(

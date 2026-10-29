@@ -91,11 +91,8 @@ export function underworldFRerollsProject(): ProjectDocument {
   });
   apply({
     kind: 'SellPurgingPoolRollSlot',
-    reroll: createRoomActionAddress(
-      f,
-      postboss as never,
-      JSON.stringify(['rerollPurgingPool', 'r1']),
-    ),
+    occurrence: room,
+    rollKey: 'r1',
     slotKey: 'middle',
     traitKey: 'HeraCastBoon',
     index: order(project, postboss).length,

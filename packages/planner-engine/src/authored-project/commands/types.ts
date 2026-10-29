@@ -551,9 +551,14 @@ export type PurgingPoolCommand =
       readonly traitKey: string | null;
     }
   | {
-      /** Pins a Pool reroll's slot and inserts its sale in one edit. */
+      /**
+       * Pins one slot of a Pool list, the initial one or a reroll's, and
+       * inserts its sale in one edit.
+       */
       readonly kind: 'SellPurgingPoolRollSlot';
-      readonly reroll: RoomActionSemanticAddress;
+      readonly occurrence: OccurrenceAddress;
+      /** The sold list: `initial` or a Pool reroll's id. */
+      readonly rollKey: string;
       readonly slotKey: import('../model').PurgingPoolSlotKey;
       readonly traitKey: string;
       readonly index: number;
