@@ -417,7 +417,7 @@ describe('run import of the Underworld capture', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
         conversion: 3,
-        doors: 15,
+        doors: 13,
         encounter: 1,
         fields: 3,
         npc: 1,
@@ -443,7 +443,6 @@ describe('run import of the Underworld capture', () => {
       'assumption conversion r4 acquisitionEntry@F-r4 -> ReplaceAcquisitionEntryOffer(F-r4 RoomMoneyDrop)',
       'assumption doors r4 exitDecision@F-r4',
       'assumption doors r5 exitDecision@F-r5',
-      'assumption doors r6 exitDecision@F-r6',
       'assumption conversion r8 acquisitionEntry@F-r8 -> ReplaceAcquisitionEntryOffer(F-r8 WeaponUpgrade)',
       'assumption doors r8 exitDecision@F-r8',
       'assumption doors r9 exitDecision@F-r9',
@@ -457,7 +456,6 @@ describe('run import of the Underworld capture', () => {
       'assumption doors r26 exitDecision@H-r26',
       'assumption fields r26 localReward@H-r26-d621199:cage1',
       'assumption fields r27 exitDecision@H-r27 -> InitializeExitDecision(H-r27)',
-      'assumption doors r27 exitDecision@H-r27',
       'assumption fields r27 localReward@H-r27-d621470:cage1',
       'assumption doors r28 exitDecision@H-r28',
       'refused fields r29 localReward@H-r29:cage1 -> ReplaceLocalReward(H-r29 StackUpgrade)',
@@ -802,6 +800,36 @@ describe('run import of the Surface victory', () => {
     ).toBe(false);
   });
 
+  it("pairs P_Combat16's doors with the one pairing its exits admit, and keeps door order where two are legal", () => {
+    const targets = (occurrenceId: string) => {
+      const decision = imported.project.route.biomes
+        .flatMap((biome) => biome.topology?.decisions ?? [])
+        .find(
+          (entry) =>
+            entry.kind === 'exit' &&
+            entry.source.kind === 'occurrence' &&
+            entry.source.occurrenceId === occurrenceId,
+        );
+      return decision?.kind === 'exit'
+        ? decision.normal.targets.map(
+            (target) =>
+              `${target.exitKey} ${occurrence(imported.project, target.occurrenceId).gameName}`,
+          )
+        : [];
+    };
+    // Its first exit leads indoors: P_Combat09 (door 723131) takes it, P_Combat05 the outdoor one.
+    expect(targets('P-r32')).toEqual(['exit1 P_Combat09', 'exit2 P_Combat05']);
+    expect(reward(imported.project, 'P-r32-d723130').offer).toEqual({ rewardType: 'StackUpgrade' });
+    expect(
+      imported.report.entries.filter(
+        (entry) => entry.area === 'doors' && entry.record?.roomIndex === 32,
+      ),
+    ).toEqual([]);
+    // P_Combat09's two Mini-Boss doors fit either exit: ascending door id stays an assumption.
+    expect(targets('P-r33')).toEqual(['exit1 P_MiniBoss01', 'exit2 P_MiniBoss02']);
+    expect(entryLines(imported.report)).toContain('assumption doors r33 exitDecision@P-r33');
+  });
+
   it("splits P_Combat03's new Path nodes between its Talent drop and the Sea Star duplicate", () => {
     const room = occurrence(imported.project, 'P-r31');
     const first =
@@ -1056,7 +1084,7 @@ describe('run import of the Surface victory', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
         conversion: 2,
-        doors: 11,
+        doors: 7,
         encounter: 1,
         reward: 1,
         roomActionOrder: 19,
@@ -1064,7 +1092,6 @@ describe('run import of the Surface victory', () => {
         traitOffer: 5,
       },
       notInRecord: { shop: 2 },
-      refused: { doors: 1 },
     });
     expect(entryLines(imported.report)).toEqual([
       'assumption conversion r14 acquisitionEntry@N-r14 -> ReplaceAcquisitionEntryOffer(N-r14 HermesUpgrade)',
@@ -1075,14 +1102,9 @@ describe('run import of the Surface victory', () => {
       'assumption traitOffer r27 traitOffer@O-r27:source -> ReplaceTraitOffer(O-r27 PoseidonManaBoon|OmegaPoseidonProjectileBoon|PoseidonExCastBoon#option2)',
       'assumption shop r27 shopOffer@O-r27 -> ReplaceShopOfferOption(O-r27)',
       'assumption doors r30 exitDecision@P:start',
-      'assumption doors r31 exitDecision@P-r31',
-      'assumption doors r32 exitDecision@P-r32',
-      'refused doors r32d723130 target@P-r32:exit1 -> CreateTarget(P-r33 P_Combat09)',
-      'assumption doors r32d723130 target@P-r32:exit2 -> CreateTarget(P-r32-d723130 P_Combat05)',
       'assumption doors r33 exitDecision@P-r33',
       'assumption doors r34 exitDecision@P-r34',
       'assumption doors r35 exitDecision@P-r35',
-      'assumption doors r36 exitDecision@P-r36',
       'assumption doors r37 exitDecision@P-r37',
       'assumption encounter r38 encounterPhase@P-r38:Combat -> ReplaceAetosWave(P-r38)',
       'assumption traitOffer r39 traitOffer@P-r39:source -> ReplaceTraitOffer(P-r39 HeraCastBoon|HeraManaBoon|LinkedDeathDamageBoon#option3)',
@@ -1851,7 +1873,7 @@ describe('run import of the live Underworld recording', () => {
     expect(grouped(imported.report)).toEqual({
       assumption: {
         conversion: 3,
-        doors: 18,
+        doors: 16,
         encounter: 3,
         traitOffer: 1,
         reward: 1,
@@ -1893,8 +1915,6 @@ describe('run import of the live Underworld recording', () => {
       'refused traitOffer r30 traitOffer@H-r30:hiddenSource -> ReplaceTraitOffer(H-r30 CoverRegenerationBoon|DoubleExManaBoon#option1)',
       'refused pool r32 roomFeature@H-r30:postboss -> ReplacePurgingPoolSlot(H-r30:postboss)',
       'assumption encounter r34 encounterPhase@I-r34:Encounter -> ReplaceFigLeafSkip(I-r34)',
-      'assumption doors r34 exitDecision@I-r34',
-      'assumption doors r35 exitDecision@I-r35',
       'assumption doors r36 exitDecision@I-r36',
       'assumption doors r37 exitDecision@I-r37',
       'assumption roomActionOrder r1 occurrence@F-r1',
@@ -2014,7 +2034,7 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       // G_PreBoss01's Travel Deal refill is the Poseidon boon its room used beyond its stock.
       assumption: {
         conversion: 3,
-        doors: 14,
+        doors: 12,
         fields: 3,
         reroll: 1,
         roomActionOrder: 10,
@@ -2040,7 +2060,6 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       'assumption conversion r3 acquisitionEntry@F-r3 -> ReplaceAcquisitionEntryOffer(F-r3 MaxManaDrop)',
       'assumption doors r3 exitDecision@F-r3',
       'assumption doors r4 exitDecision@F-r4',
-      'assumption doors r6 exitDecision@F-r6',
       'assumption doors r7 exitDecision@F-r7',
       'assumption conversion r8 acquisitionEntry@F-r8 -> ReplaceAcquisitionEntryOffer(F-r8 Boon)',
       'assumption doors r8 exitDecision@F-r8',
@@ -2055,7 +2074,6 @@ describe('run import of the Underworld attempt reset at H_Combat04', () => {
       'assumption shop r22 shopOffer@G-r22 -> ReplaceShopOfferOption(G-r22)',
       'assumption doors r26 exitDecision@H-r26',
       'assumption fields r26 localReward@H-r26-d564448:cage1',
-      'assumption doors r27 exitDecision@H-r27',
       'assumption fields r27 localReward@H-r27-d621470:cage1',
       'assumption doors r28 exitDecision@H-r28',
       'assumption fields r28 localReward@H-r28-d565616:cage1',

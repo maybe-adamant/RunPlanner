@@ -666,10 +666,14 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   way, and the conversions act on the canonical picks.
 - A hidden return door's placeholder and reward are pinned exactly from the
   return door's `ExitDoorRooms` and `OfferedRewards`.
-- A batch's doors are ordered by the catalog's declared native door order for
-  the source room, an exact order; a room without one takes ascending door id
-  and reports the order as an assumption. Both declared rooms are inferred
-  from reward-store replays, pending a native door-order probe:
+- A batch's doors are paired with the source room's exits as the engine's
+  exit compatibility admits (surface victory `P_Combat16`: its indoor exit
+  takes the indoor `P_Combat09` whatever the door ids). One admitted pairing
+  is exact. Among several, the catalog's declared native door order for the
+  source room is exact; a door that order puts where the engine refuses it is
+  reported as refused. A room without one takes ascending door id among the
+  admitted pairings and reports the order as an assumption. Both declared rooms are inferred from
+  reward-store replays, pending a native door-order probe:
   - `H_Combat05` processes door `621199` before `564448`. In the live
     Underworld recording's reward-bag replay that generates the Mini-Boss
     door first, refilling the store, so `H_Combat07`'s recorded Hestia cage

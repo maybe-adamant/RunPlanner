@@ -4,6 +4,7 @@ import {
   createExitDecisionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createTargetAddress,
   declaredPhysicalExits,
   semanticAddressKey,
   takeoverPrebossGameNames,
@@ -246,6 +247,79 @@ function noteDoorOrder(
   });
 }
 
+/** Authors the door's room at the target's exit, returning the command applied. */
+function placeDoor(
+  context: RunImportContext,
+  target: TargetAddress,
+  decision: ReturnType<typeof createExitDecisionAddress>,
+  sourceIndex: number,
+  doors: readonly RunRecordDoor[],
+  door: RunRecordDoor,
+): ProjectCommand | undefined {
+  const occurrenceId = doorOccurrence(context, sourceIndex, doors, door);
+  const created: ProjectCommand = {
+    kind: 'CreateTarget',
+    target,
+    occurrenceId,
+    gameName: door.room,
+  };
+  const initialized: ProjectCommand = {
+    kind: 'InitializeExitDecision',
+    decision,
+    edit: { kind: 'target', target, occurrenceId, gameName: door.room },
+  };
+  return context.apply(created) ? created : context.apply(initialized) ? initialized : undefined;
+}
+
+const refusedAt = (context: RunImportContext, target: TargetAddress, door: RunRecordDoor) => {
+  const evaluation = context
+    .candidates()
+    .evaluate({ kind: 'roomTarget', target, gameName: door.room });
+  return evaluation.kind === 'roomTarget' && evaluation.result.findings.length > 0;
+};
+
+/**
+ * The pairings of the unplaced doors with the open exits that the engine
+ * accepts, each exit in turn, in door order; two are enough to tell a
+ * determined pairing from a choice.
+ */
+function acceptedPairings(
+  context: RunImportContext,
+  decision: ReturnType<typeof createExitDecisionAddress>,
+  sourceIndex: number,
+  exitKeys: readonly string[],
+  doors: readonly RunRecordDoor[],
+  unplaced: readonly RunRecordDoor[],
+): readonly (readonly RunRecordDoor[])[] {
+  const accepted: (readonly RunRecordDoor[])[] = [];
+  const pair = (paired: readonly RunRecordDoor[]): void => {
+    if (paired.length === exitKeys.length) {
+      accepted.push(paired);
+      return;
+    }
+    const target = createTargetAddress(
+      createBiomeAddress(decision.routeKey, decision.biomeKey),
+      decision.source,
+      exitKeys[paired.length]!,
+    );
+    for (const door of unplaced) {
+      if (accepted.length >= 2) return;
+      if (paired.includes(door) || refusedAt(context, target, door)) continue;
+      // A lone open exit's door is placed for real by the caller, which checks it there.
+      if (exitKeys.length === 1) {
+        accepted.push([door]);
+        continue;
+      }
+      context.probe(() => {
+        if (placeDoor(context, target, decision, sourceIndex, doors, door) !== undefined)
+          pair([...paired, door]);
+      });
+    }
+  };
+  pair([]);
+  return accepted;
+}
+
 function createTarget(context: RunImportContext, target: TargetAddress): boolean {
   if (target.source.kind !== 'occurrence') return false;
   const sourceIndex = sourceVisit(context, target.source.occurrenceId);
@@ -269,49 +343,56 @@ function createTarget(context: RunImportContext, target: TargetAddress): boolean
     target.source,
   );
   const positional = doors[position]!;
-  if (takeoverPrebossGameNames(context.catalog, target.biomeKey).includes(positional.room))
+  const takeovers = takeoverPrebossGameNames(context.catalog, target.biomeKey);
+  if (takeovers.includes(positional.room))
     return createTakeover(context, decision, sourceIndex, exits, doors, positional.room);
-  // The positional door goes first; a door the engine refuses at this exit
-  // yields to the next unplaced door in door order, reported with its id.
   const existing = exitDecisionForSource(topology, target.source);
-  const placed = new Set(
-    existing?.normal.kind === 'batch'
-      ? existing.normal.targets.map((entry) => entry.occurrenceId as string)
-      : [],
-  );
+  const placedTargets = existing?.normal.kind === 'batch' ? existing.normal.targets : [];
+  const placed = new Set(placedTargets.map((entry) => entry.occurrenceId as string));
   const unplaced = doors.filter(
     (door) => !placed.has(doorOccurrence(context, sourceIndex, doors, door)),
   );
+  // Doors pair with exits as the engine's exit compatibility allows: one
+  // accepted pairing is exact, several keep door order among them.
+  const openExits = exits
+    .slice(0, doors.length)
+    .map((exit) => exit.exitKey)
+    .filter((exitKey) => !placedTargets.some((entry) => entry.exitKey === exitKey));
+  const pairings =
+    openExits.length === unplaced.length && !unplaced.some((door) => takeovers.includes(door.room))
+      ? acceptedPairings(context, decision, sourceIndex, openExits, doors, unplaced)
+      : [];
+  const paired = pairings[0]?.[openExits.indexOf(target.exitKey)];
+  if (paired !== undefined) {
+    const applied = placeDoor(context, target, decision, sourceIndex, doors, paired);
+    if (applied !== undefined) {
+      if (pairings.length > 1) noteDoorOrder(context, decision, sourceIndex, doors.length);
+      // A declared native order the engine refuses is reported, not overridden silently.
+      if (paired !== positional && declaredDoorOrder(context, sourceIndex) !== undefined)
+        context.note({
+          area: 'doors',
+          reason: 'refused',
+          address: target,
+          applied,
+          record: { roomIndex: sourceIndex, visit: 0, door: positional.door },
+        });
+      return true;
+    }
+  }
+  // No pairing places every door: the positional door goes first; a door the
+  // engine refuses at this exit yields to the next unplaced door in door
+  // order, reported with its id.
   const ordered = [
     ...unplaced.filter((door) => door === positional),
     ...unplaced.filter((door) => door !== positional),
   ];
   let positionalRefused = false;
   for (const door of ordered) {
-    const evaluation = context
-      .candidates()
-      .evaluate({ kind: 'roomTarget', target, gameName: door.room });
-    if (evaluation.kind === 'roomTarget' && evaluation.result.findings.length > 0) {
+    if (refusedAt(context, target, door)) {
       if (door === positional) positionalRefused = true;
       continue;
     }
-    const occurrenceId = doorOccurrence(context, sourceIndex, doors, door);
-    const created: ProjectCommand = {
-      kind: 'CreateTarget',
-      target,
-      occurrenceId,
-      gameName: door.room,
-    };
-    const initialized: ProjectCommand = {
-      kind: 'InitializeExitDecision',
-      decision,
-      edit: { kind: 'target', target, occurrenceId, gameName: door.room },
-    };
-    const applied = context.apply(created)
-      ? created
-      : context.apply(initialized)
-        ? initialized
-        : undefined;
+    const applied = placeDoor(context, target, decision, sourceIndex, doors, door);
     if (applied === undefined) continue;
     noteDoorOrder(context, decision, sourceIndex, doors.length);
     // The engine refused the positional door here, or an earlier exit took it.
