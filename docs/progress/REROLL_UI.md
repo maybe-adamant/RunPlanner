@@ -1,8 +1,8 @@
 # Reroll UI
 
 Status: locked 2026-10-28. Base commit: `e75f00be4` plus the Hub later-visit
-reroll commits. No schema change beyond the schema bundle. Closes together with
-[the schema bundle](SCHEMA_BUNDLE.md), whose model it edits.
+reroll commits. No schema change beyond the schema bundle (schema 100), whose
+model, now in the design documents, it edits.
 
 ## Objective
 

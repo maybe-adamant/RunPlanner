@@ -440,6 +440,19 @@ cage-completion action remains a repair row but cannot erase that cycle. Ship
 phase grouping consumes the same structure's phase attachment; the application
 does not place wheel or action rows by rank arithmetic.
 
+### Reroll presses
+
+Door and Fields cage reroll presses are optional ranked actions in the source
+room's post-outgoing window: after its doors unlock and before it commits, so
+they interleave with other post-unlock actions such as a Mystery box or a Well
+purchase. A ship-wheel press follows its wheel's offers and precedes the
+wheel's Choose action. Hub board-door presses sit in the Hub's own action
+order, in the stay before a later visit. The walk settles each press at its
+rank as a draw from the target's store
+([Reward Model](REWARD_MODEL.md#rerolls)); a press of a target the game would
+refuse spends nothing and reports at the press. Screen rerolls are not
+actions: an offer's earlier screens settle with the offer.
+
 ## Canonical Lifecycle Profiles
 
 ### Standard Reward Room
@@ -565,7 +578,10 @@ roles at their declared points. The required Soul Pylon spawns at entry and
 completes after combat but before reward pickup, local side-room generation, or
 exit. Ephyra side rooms use the standard combat-then-reward order without
 outgoing generation; the persistent Hub uses entry, one stable-board
-generation, commit, and exit without a producer. Hub, main and side traversal,
+generation, commit, and exit without a producer. The first outgoing
+generation of an `N_Combat*`, `N_MiniBoss*` or `N_Sub*` room also fills its
+hidden return door before any side door
+([Reward Model](REWARD_MODEL.md#hidden-return-door-draws)); revisits do not. Hub, main and side traversal,
 restoration and departures are topology between fragments
 ([N rules](../biomes/N_GAME_RULES.md#restoration-and-departures)).
 
@@ -629,16 +645,22 @@ retroactively if acquired after it.
 
 ### Room Features at Cleanup
 
-Purging Pool sales and Well purchases use feature-local checkboxes to opt into
-their host occurrence's ranked action order. An unchecked sale or purchase
-remains on its owning feature and is not duplicated in the generic Optional
-actions pool; once checked, it is an ordinary ranked timeline participant. A
-Pool and Well may use their feature-local **Interact** boundary: until then
-their live random inventory remains dormant and no action is active. World Shop
-and Shrine inventories are always fully authored; neither receives that
-convenience because their visible identities affect outgoing generation. Shop,
-Shrine and Well purchase rows have no generic insert or remove proposal; their
-feature commands own membership.
+Purging Pool sales, Well purchases and their rerolls are ordinary ranked
+participants of their host occurrence's action order, inserted by their
+feature's commands rather than from the generic Optional actions pool. A Well
+or Pool has no interaction boundary: its initial stock is optional, a blank
+slot stays native, and use follows from the actions present. Each reroll
+settles in action order: a Well reroll restocks only the slots not bought
+earlier in the room (the room's first purchase under Travel Deal restocks in
+place and stays offered), a Pool reroll redraws the whole list from the traits
+held at that point, and the k-th reroll of each costs k on separate counters
+and needs a held screen-reroll card.
+A purchase or sale from a roll must follow that roll's reroll. A reroll whose
+pins include every item on show just before it cannot occur, since the game
+bans one of them. World Shop and Shrine inventories are always fully authored
+because their visible identities affect outgoing generation. Shop, Shrine and
+Well purchase rows have no generic insert or remove proposal; their feature
+commands own membership.
 
 A Well host, Purging Pool or keepsake rack declared with `excludedRouteKeys`
 (the rack's `keepsakeRackExcludedRouteKeys`) is absent on those routes: defaults
@@ -646,8 +668,8 @@ create no forced Well, Pool or rack state, commands refuse to add a Well or
 equip at the rack, the codec rejects a rack, and the forced Postboss Well is
 not required. Well and Pool state retained from before such an exclusion still
 decodes but is context-invalid: a Well reports
-`stygianWellPlacementUnavailable`, and an interacted Pool reports
-`purgingPoolUnavailable` and is never assessed, so its sales have no effect. A
+`stygianWellPlacementUnavailable`, and a Pool whose sales or rerolls are
+ranked reports `purgingPoolUnavailable` and is never assessed, so its sales have no effect. A
 Fresh File attempt has none of these features; the H Postboss Pool object it
 shows natively is locked and is not an authorable inventory.
 
@@ -657,8 +679,8 @@ candidates and inventory findings consume that post-fountain state, not room
 entry; an unresolved Phial outcome withholds the pool frontier. This models
 the inventory available when the fountain unlocks the facilities, including
 native regeneration caused by a changed offered rarity. Later sales consume
-the retained inventory and the current equipped traits; they do not regenerate
-the candidate set.
+the current list and the current equipped traits; only a ranked Pool reroll
+regenerates the list.
 
 Well purchases settle immediately as paid effects and never invoke free-pickup
 alternatives. A purchased Shrine generation, including a purchased Travel Deal
@@ -782,7 +804,10 @@ own its lifecycle.
 
 A selected Preboss completes its declaration-owned normal-door batch, enters
 through its normal room lifecycle, and then follows its fixed Boss/Postboss
-links. A persistent Hub may generate a stable board once and later emit
+links. In either reward form, a pedestal-declaring Preboss spawns the Contract
+pedestal at room start while Infernal Contract is held; collecting it is one
+optional ranked action
+([Reward Model](REWARD_MODEL.md#contract-pedestal)). A persistent Hub may generate a stable board once and later emit
 restore fragments. Those are structural compositions of room-addressed
 fragments, not reasons to weaken the ordering contract or introduce UI-shaped
 rows into history.

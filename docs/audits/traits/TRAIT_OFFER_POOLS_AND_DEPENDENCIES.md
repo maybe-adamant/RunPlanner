@@ -450,7 +450,7 @@ baseline; the current-run predicates and outputs below do not.
 | `NarcissusC` | Precious Metals       | none                                               | Silver and one `Currency` pickup; preserve the source-faithful Gold acquisition/history while affordability, quantity, and Silver remain outside the planner                                                                                                       |
 | `NarcissusD` | Mystic Secrets        | none                                               | Psyche and one `MaxManaDrop`; preserve the supported concrete acquisition/history while numeric Magick is outside the planner                                                                                                                                      |
 | `NarcissusE` | Ancestral Offering    | none                                               | Bones and one `MaxHealthDrop`; preserve the supported concrete acquisition/history while numeric Life is outside the planner                                                                                                                                       |
-| `NarcissusF` | Fates' Trimmings      | `RerollAvailable`                                  | Fabric and two rerolls; reroll inventory and use remain deferred, so the option is a declared no-op for downstream supported state                                                                                                                                 |
+| `NarcissusF` | Fates' Trimmings      | `RerollAvailable`                                  | Fabric and a reroll pickup; the collected pickup adds 2, 2, 3 or 5 by rarity to the run's reroll pool, and Fabric stays outside the planner                                                                                                                        |
 | `NarcissusG` | Heavenly Splendor     | none after progressed-story collapse               | one Stardust and two `ElementalBoost` pickups; each pickup adds one hidden `ElementalEssence` carrying Air, Earth, Fire, and Water                                                                                                                                 |
 | `NarcissusH` | Life Savings          | missing Death Defiance plus collapsed Lotus unlock | one `LastStandDrop` and Lotus; preserve the exact authored pickup history while the [volatile eligibility audit](../rewards-and-acquisition/VOLATILE_OFFER_ELIGIBILITY_GAME_DATA_AUDIT.md) owns the exact-result boundary without simulating Death Defiance counts |
 | `NarcissusI` | Mixed Blessings       | collapsed persistent Blind Box unlocks             | one `BlindBoxLoot` and one Mystery Seed; the box requires an authored hidden source and that source's ordinary trait offer at unwrap time                                                                                                                          |
@@ -986,9 +986,10 @@ The acquisition surfaces remain distinct:
 
 When fewer than three eligible traits exist, a visible Pom presents every
 eligible trait. With three or more, it presents exactly three. No Pom target
-exists when the eligible set is empty. The Fated/Arcana level bonuses,
-probability, rerolls, and numeric tooltip values remain outside the progressed
-neutral route baseline.
+exists when the eligible set is empty. A Pom screen reroll follows the
+[construction audit](TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md#screen-rerolls).
+The Fated/Arcana level bonuses, probability and numeric tooltip values remain
+outside the progressed neutral route baseline.
 
 `GiftDrop` receives the row above only when its producer constructs it with
 `RunProgressUpgradeEligible = true` and the progressed baseline's

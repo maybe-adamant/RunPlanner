@@ -173,7 +173,17 @@ The live destination declarations are:
 
 Only the reached qualifying declaration runs the event.
 
-Every qualifying declaration also hosts the route's ordinary World Shop
+`SpawnZagContractRewards` (`EventLogic.lua:1900-1935`) is a room-level
+`ShopRoomEvents` entry (`EncounterSets.lua:386-412`) that never reads the
+room's reward or store, and `SetupWorldShop` (`StoreLogic.lua:454`) skips only
+the Charon shop when the room has no store. The pedestal therefore spawns in
+every qualifying Preboss whatever its reward: the F, G, H and P Prebosses in
+their boon form as well as their Shop form, and the always-Shop N, O and Q
+Prebosses (I keeps its static World Shop). Live evidence: run 1008's
+`G_PreBoss01` in its Demeter boon form spawned the pedestal, whose
+`StackUpgradeBig` raised `HestiaCastBoon` from level 3 to 5.
+
+Where the Preboss is in its Shop form it hosts the route's ordinary World Shop
 profile. The contract item is nevertheless a separately generated physical
 object in that room: it is not inserted into the Shop profile's `GroupsOf`
 array or its ordinary spawned-item inventory. The two I declarations are
@@ -229,7 +239,7 @@ Gold or entering the ordinary Shop purchase-removal path.
 
 ### Inventory count abstraction
 
-The ordinary profiles expose these initial option counts:
+In the Shop form, the ordinary profiles expose these initial option counts:
 
 | Profile       | Ordinary options | Plus reached contract pedestal | Total opportunities |
 | ------------- | ---------------: | -----------------------------: | ------------------: |
@@ -370,7 +380,8 @@ Therefore the contract pedestal:
 - is not itself a Travel Deal refill target;
 - does not supply the option pool used by a Travel Deal refill; and
 - may still be acquired before or after normal purchases in the containing
-  room chronology when both are physically present.
+  room chronology when both are physically present, and exists in a boon-form
+  Preboss with no Shop at all.
 
 Ignoring Gold does not justify erasing the free-versus-normal provenance:
 Travel Deal's trigger depends on that distinction.
@@ -402,9 +413,9 @@ Travel Deal's trigger depends on that distinction.
 The planner implements these World-Shop facts without changing the host
 profiles' indexed slot counts. All Together persists one complete
 four-set result and directly grants each non-exhausted rarityless child without
-god-history mutation. Infernal Contract uses a conditional initial
-`infernalContractReward` Shop slot generated from its own pedestal pool.
-Travel Deal derives one paid
+god-history mutation. The Infernal Contract pedestal is a Preboss room
+feature in either reward form, outside Shop inventory, holding one item from
+its own pedestal pool. Travel Deal derives one paid
 `travelDealRefill` from the first accepted paid purchase when already equipped.
 Echo Gold uses the free `echoDoubleShopReward` pickup. These two supplemental
 entries share the existing room-exit acquisition site; payload/participation
@@ -412,8 +423,8 @@ and chronology remain separate, and Travel/Gold source dependencies are
 resolved by the occurrence's one `roomActions.order`. Base initial purchases
 participate only through their exact `interactShopOffer` references; Overview's
 Purchased markers edit that membership without adding a second persisted set.
-The free Contract slot uses that same collection path, excluding paid-purchase
-effects. Native store consumables—including the pedestal—set
+The free pedestal item has its own collect action and acquisition, excluding
+paid-purchase effects. Native store consumables—including the pedestal—set
 `CanDuplicate = false` in `SpawnStoreItemInWorld` (`StoreLogic.lua:635`); a zero price does not
 make them Sea Star sources. Its Mystery Boon resolves the hidden source through
 the existing acquisition entry rather than during inventory generation.

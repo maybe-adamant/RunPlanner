@@ -393,8 +393,9 @@ and an empty tab says nothing is active:
   the familiar), Max Health and Max Magick with their sources, Armor assuming
   no damage; the keepsake block (equipped keepsake, then each running effect of
   it or a kept keepsake: a forced-boon keepsake is Ready until its boon is
-  delivered and Used after, Jeweled Pom Active until invalidated);
-  non-zero element counts; traits with the slot boons first, then other traits,
+  delivered and Used after, Jeweled Pom Active until invalidated); the
+  rerolls left in the run's pool, while a held card enables rerolls or some
+  are left; non-zero element counts; traits with the slot boons first, then other traits,
   matured Chaos blessings and consumed Gold Gold Gold in acquisition order; the
   Hex and its invested talents.
 - **Effects:** Well (timed buffs, remaining charges), Shrine (pending

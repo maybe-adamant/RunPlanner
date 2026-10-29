@@ -208,6 +208,20 @@ They do not enter ordinary room pools through a generic special-exit escape
 hatch. [Generation](GAME_GENERATION_RULES.md) and
 [lifecycle](ROOM_LIFECYCLE_MODEL.md) own their behavior.
 
+Reroll gates are declared on the native owners: each exit's `AllowReroll`,
+each room's `NoReroll` and `ForceDoorAllowReroll` (declared or inherited), and
+the reward types (`Shop`, `ClockworkGoal`) that block a door reroll. Each offer
+screen declares whether it shows the native reroll button: trait givers, the
+Pom of Power reward types, Shop profiles (the Stygian Well) and the Pool of
+Purging feature. A flag means the button exists, not that a press is always
+usable. Ephyra rooms with a hidden return door declare their placeholder room
+set (`N` for main rooms, `N_SubRooms` for side rooms) and the door's first
+position in the room's native door order. The three reroll Arcana declare
+their count by rarity and the reroll kind they enable, and Narcissus's reroll
+pickup its count by rarity; the
+[arcana audit](../audits/loadout-and-progression/ARCANA_AND_FEAR_GAME_DATA_AUDIT.md#reroll-cards-and-the-reroll-pool)
+owns the values.
+
 ## Encounter Composition
 
 The four contracts must remain separate:

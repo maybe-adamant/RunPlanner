@@ -579,9 +579,9 @@ the planner spends one there. Last Stand remains an exact
 concrete paid consumable; a failed live predicate is an execution mismatch, and
 the planner owns no Death Defiance capacity ledger. Health, damage, Magick,
 gold, price, and meta-resource amounts remain sim-neutral. Wells and Pools are the
-only current room-feature interactions with a runtime-random Interact boundary;
-Shrines and Shops remain fully authored because their visible inventory can
-affect other generation rules.
+only room features whose stock may stay native slot by slot, initially and at
+each reroll; Shrines and Shops remain fully authored because their visible
+inventory can affect other generation rules.
 
 ## Bounded uncertainties and exclusions
 

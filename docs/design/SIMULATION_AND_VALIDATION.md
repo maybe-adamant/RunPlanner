@@ -449,6 +449,29 @@ pickups share acquisition authorities without losing their instance-specific
 capabilities. Mystery Boon source settlement belongs to its acquisition, not
 a dormant unpurchased inventory row.
 
+### Reroll settlement
+
+Every reroll spend and every hidden draw is settled in the walk at its own
+point, never by a side pass. Door, cage, wheel and Hub presses settle at
+their rank as real store draws against every target's current reward; a
+rerolled owner then offers its current reward onward and acquires the reward
+held beside its first draw. A hidden return door settles at its room's first
+outgoing generation, publishing the placeholder and reward it settled when
+either was unpinned. A rerolled screen's whole chain settles with its offer:
+the earlier screens are judged against the final screen's generation context
+and spend once, when the screen closes. Well and Pool rolls settle at their
+reroll actions.
+
+The run's reroll pool is part of the folded Arcana state. A spend past the
+pool is still spent and reported, so a preserved over-spend never stops later
+settlement; adding one is refused by edit settlement under the fixed-budget
+rule, judged by the pool at the new spend's own point, so an earlier spend
+takes precedence over the later spends it starves. Engine-owned authoring
+queries publish, at each reached reroll surface, the pool there, whether a
+held card enables it, each target's settled current reward and why a press
+would be refused, candidates for a press not yet inserted, and each Hub
+stay's board as it was assigned and after its presses.
+
 ### Selected traits and alternative candidates
 
 Selected settlement answers what the authored outcome does. Candidate
@@ -551,6 +574,13 @@ assessment at the room's Overview; the Fresh File introduction finding on the
 exact phase of a retained enemy withholds execution. Fig Leaf, Aetos and Gorgon findings have
 their own phase-child owners and stop assessment where the phase starts.
 
+Reroll findings belong to the press, the roll or the screen that made the
+spend: an unavailable target, reward or roll at its press or roll action, an
+over-spend at the spend that exceeded the pool, a rerolled reward that no
+longer matches its last press at the rerolled owner, and an earlier-screen
+finding at that screen of the offer. A hidden return door's unavailable
+placeholder or reward belongs to its room's door.
+
 Toggling a participant changes membership without replaying chronological
 legality; only a move assesses position, so an unresolved earlier item cannot
 prevent adding the action that repairs the room.
@@ -602,6 +632,8 @@ or counted again:
   come from the engine's folded products.
 - Keepsakes form one chain per entered biome; a Postboss rack's choice belongs
   to the biome that ends with it.
+- The reroll pool's remainder and whether door and screen rerolls are enabled
+  come from the folded Arcana state and trait history.
 
 Offer-local rarity and level context is not a global Run State table.
 Exact room/item witnesses, generation-time contributions and history govern

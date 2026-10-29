@@ -221,7 +221,7 @@ World Shop, Shrine and Well inventory is generated in the door transition:
 after the predecessor's exit work, `LeaveRoom` calls `RunShopGeneration` for
 the picked room (`RoomLogic.lua:4392-4394`; `StoreLogic.lua:436-452`) before
 its map loads. Shrines and Wells then stay locked until the encounter ends
-(`RoomLogic.lua:4056-4078`); their refills and rerolls happen at purchase. In
+(`RoomLogic.lua:4056-4078`); their refills happen at purchase and their rerolls at each reroll press. In
 every family, the current room's outgoing doors and previews already exist
 before the player performs ordinary purchases.
 

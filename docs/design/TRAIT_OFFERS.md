@@ -24,7 +24,10 @@ materialized position. A `fallbackGold` outcome owns only its giver; it has no
 selected key, rarity, target, Circe resolution, or Death Defiance condition.
 Only Olympian and Hermes givers support sparse or fallback outcomes. Defaults
 for every giver remain complete three-option trait outcomes, and an upstream
-edit may retain a context-invalid outcome for explicit repair.
+edit may retain a context-invalid outcome for explicit repair. A rerolled
+trait or Chaos outcome, like a Pom level resolution, also holds the screens
+its rerolls replaced, oldest first, without a pick
+([Ordinary initial-screen support](#ordinary-initial-screen-support)).
 
 Providers resolve from declaration-owned acquisition roles, not room names or
 presentation. Dormant, unpicked and unpurchased sources produce no reached
@@ -262,7 +265,12 @@ owns the full source sequence and Trial inheritance exception matrix.
 
 A rerolled screen is authored as its earlier screens, oldest first, before
 the final screen that keeps the pick; every earlier screen is required, and the
-reroll count is their number. All of them are assessed against the final
+reroll count is their number. Only a giver or Pom reward type the catalog
+declares with the native reroll button can hold them (the Olympians, Hermes,
+Athena, Dionysus, Artemis, Hades, Chaos and Pom of Power), and only while a
+held card enables screen rerolls. The k-th reroll of one screen costs k, so k
+rerolls cost k(k+1)/2 from the run's reroll pool, judged at its room's
+entry. All of them are assessed against the final
 screen's generation context. The first earlier screen follows the initial
 rules; every later screen, the final one included, must be a legal initial
 outcome with some item of the screen before it banned after seeding; after an

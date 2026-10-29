@@ -116,8 +116,12 @@ predicate intentionally excludes every exceptional disposition below.
 | Mechanical steering mismatch | exact authored identity only                                           | Owning native offer or nested-effect contact                           | A claimed contact that cannot accept the published input mismatches; adapters do not rerun planner eligibility or compare later selections. |
 | Chaos requirement and values | curse option, selected curse values, blessing, rarity, blessing values | Post-sort Chaos row construction and scoped processed-trait data       | Covered by the focused Chaos adapter.                                                                                                       |
 
-Ordinary and Chaos steering applies only to the initial authored screen;
-native rerolls remain native. Chaos rows are replaced after the game's own row
+Ordinary and Chaos steering installs each published screen: the first
+earlier screen when the screen opens, the k-th on the k-th native reroll, and
+the final rows after the last; a reroll beyond the published ones is a
+mismatch. Earlier trait rows carry rarity, installed level and exchange;
+earlier Chaos screens pin only their curses. The reroll button, its cost and
+the random ban stay native. Chaos rows are replaced after the game's own row
 sorting, repeated curse identities remain valid in different positions, and
 processed curse/blessing values are scoped to the selected pair. Finishing
 initial screen construction completes steering, while the later player choice
@@ -154,8 +158,9 @@ The adapter inserts that count as `loot.StackNum` before initial
 `CreateBoonLootButtons`. Native `UpgradeChoiceLogic.lua` would add
 `GetTotalHeroTraitValue("FatedPomLevelBonus")` again when `IsFateValid()` holds,
 so only that read is masked during the initial row build. Native eligibility,
-display, selection and mutation still use the final count; rerolls and unrelated
-reads remain native. The mask is restored on return or fault. Converting the
+display, selection and mutation still use the final count; a rerolled Pom
+screen installs each published earlier screen's targets on its native reroll,
+and unrelated reads remain native. The mask is restored on return or fault. Converting the
 wire back to a base count merely to remove this mask would require unnecessary
 semantic translation.
 

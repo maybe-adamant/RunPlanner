@@ -579,7 +579,8 @@ dedicated completed-Hub exit. An open slot creates one occurrence; its room
 identity is not replaceable. Open unvisited slots remain real offered leaves.
 
 The action list is a chronological prefix: at most six distinct open-slot
-visits and one fountain use, possibly empty. New Hubs start empty and decoding
+visits, one fountain use and any board-door reroll presses, possibly empty.
+New Hubs start empty and decoding
 never infers a use. `ReplaceHubActionOrder` edits it by action identity; visit
 ordinals count room visits only. Reordering keeps the Phial outcome, while
 removing the fountain use removes it. `ResetHubBoard` retains the Hub decision
@@ -587,6 +588,13 @@ and its source while atomically clearing its open slots, actions, fountain
 outcome, and owned main/side rooms; the completed-Hub chain stays.
 Unlike `RemoveHubDecision`, it does not restore the preceding terminal envelope.
 Resetting an empty board is a no-op; Undo restores all cleared contents together.
+
+The same order also holds board-door reroll presses (`InsertHubReroll`,
+`ReplaceHubRerollReward`, `RemoveHubReroll`): each names an open slot not yet
+entered and the reward its press drew, carries an engine-allocated `rerollId`,
+and may sit in any Hub stay, before the first visit or between later ones. A
+press placed after its slot's visit redraws nothing. The slot's target keeps
+its first native draw; see [Rerolls](#rerolls).
 
 The completed-Hub exit exists for the Hub's whole lifetime and is removed only
 with the Hub. Its source is `{ kind: 'hubDecision', decisionKey: 'hub' }`, not
@@ -612,6 +620,17 @@ Closing an unvisited slot below the declared open-set minimum retains the
 already-authored visit sequence and the completed-Hub chain as an incomplete
 Hub board.
 
+### Ephyra hidden return door
+
+Every `N_Combat*`, `N_MiniBoss*` and `N_Sub*` occurrence owns `phantomExit`:
+the placeholder room the game creates behind its hidden return door and the
+reward type drawn for it, each nullable. Rooms whose exit is linked (Opening,
+PreHub, Story, Preboss, Boss, Postboss, the Hub) have none. A null field is
+not missing: the simulation settles it and publishes the value; a pinned value
+never falls back, and a pinned reward requires a pinned room that draws one.
+`ReplacePhantomExit` edits both. The door is never entered and owns no
+occurrence, acquisition or god.
+
 ## Occurrence State and Replacement
 
 Every occurrence begins with complete declaration-owned offer-time defaults and
@@ -629,9 +648,7 @@ Mystery Boon stores its hidden source and trait result at the acquisition entry
 where it resolves, not in generated Shop inventory. An Anvil of Fates result
 is not Shop state either; it belongs to the reward that carries the Anvil.
 
-A declaration-owned Pool of Purging persists its fixed slots only after the
-player authors interaction; disabling interaction removes sale actions while
-retaining dormant slot detail. A present Shrine of Hermes persists its visible
+A present Shrine of Hermes persists its visible
 initial inventory and sparse purchase terms: `HermesShrinePurchase` is
 `{ delay }`, and a generation is purchased when `purchaseBySlot` (or, for the
 refill, `travelDealRefill.purchase`) holds it. Each purchased generation has
@@ -643,7 +660,12 @@ action. Its rushed or delayed delivery owns concrete acquisition payload. A
 Stygian Well or Pool of Purging holds its initial stock with no interaction
 flag: a blank slot stays native, a pinned one is assessed, and a slot becomes
 required only once a purchase or sale uses it; use follows from the room's
-actions. Travel Deal refill state is
+actions. Each later roll is a repeatable `rerollStygianWell` or
+`rerollPurgingPool` room action with an engine-allocated `rerollId` and
+optional slot pins (an unpinned slot stays native); each Well purchase names
+its roll and slot, and each Pool sale its list (`rollKey`, absent for the
+initial list). A purchase or sale pins a blank slot in the same edit. Travel
+Deal refill state is
 occurrence-local to its Shop, Shrine, or Well carrier. Pending deliveries,
 temporary effects, Spell reservations, and expiry remain derived simulation
 state.
@@ -677,12 +699,16 @@ ordinary `ShopOfferState` outside initial indexed inventory, addressed by
 `shopOffer` with the reserved refill key. Its retained `interactAcquisitionEntry`
 reference joins chronology; only a purchased Mystery has a separate site child,
 reconciled atomically on item replacement and purchase insertion/removal. Other
-reward children remain on the slot. Infernal Contract owns a conditional
-initial `shop.offers.infernalContractReward` slot, using the ordinary Shop
-offer and participation commands. Its room declaration binds it to the
-separate pedestal pool; the host's indexed slots remain unchanged. Like any
-Shop Mystery Boon, it has a sparse acquisition entry only when its hidden
-source must be resolved on collection.
+reward children remain on the slot.
+
+The Zagreus Contract pedestal is a Preboss room feature, not Shop inventory:
+`infernalContractPedestal` is present exactly on Preboss occurrences whose
+declaration places the pedestal, in the boon form as in the Shop form, and
+holds its one free item (an option of the separate pedestal pool and its
+reward). Membership of `interactInfernalContractPedestal` in the room's order
+is the collected fact. Its own commands replace or clear the item and insert
+or remove the collect action. Like a Shop Mystery Boon, it has a sparse
+acquisition entry only when its hidden source must be resolved on collection.
 
 Trait-generated and Sea Star duplicate sites are closed source-scoped site
 keys, not new site variants. A selected Quick Buck, Buried Treasure, or
@@ -777,6 +803,37 @@ once. Context-invalid retained interactions remain repairable through findings.
 Commands and decoding use stable phase, slot, and acquisition-role identities,
 never rendered ordinals.
 
+### Rerolls
+
+A door, Fields cage or ship-wheel reroll press is a repeatable `reroll` room
+action in the source room's order, identified by its engine-allocated
+`rerollId`, never by position. It names its target (an exit door and its
+occurrence, a cage door with the cage slot the game picks at random, or one
+offer of the room's own wheel) and the reward the redraw produced. Rerolls of
+different targets interleave freely, because each press's candidates depend on
+every target's current reward at that moment; a per-target list could not
+represent them. Board-door presses are the Hub's own actions
+([N Hub Progression](#n-hub-progression)).
+
+The target keeps its first native draw with its ordinary picker and meaning
+(the incoming reward, the cage or the wheel offer). The reward entered or
+collected after the presses, with its acquisition children, lives beside it in
+`rerolledIncomingReward`, `rerolledCages` or `rerolledOffers`; the first draw
+is inert while it is present. Its offer should equal the last press's; a
+mismatch is retained for repair (`DropRerolledReward`,
+`AdoptRerolledReward`), never rewritten. `InsertReroll` appends a press at an
+engine-supplied index (after the doors unlock, or among a wheel's offers
+before its use), `ReplaceRerollReward` changes its reward, and presses are
+removed and moved as ordinary room actions; a removal keeps later presses it
+invalidates.
+
+A rerolled single-pick trait, Chaos or Pom level screen holds its earlier
+screens, oldest first, before the final screen that keeps the pick; the reroll
+count is their number ([Trait Offers](TRAIT_OFFERS.md#ordinary-initial-screen-support)).
+Well and Pool rolls are room actions
+([Occurrence State](#occurrence-state-and-replacement)). No reroll count or
+pool total is persisted: the pool is derived.
+
 ### Room replacement and detours
 
 `ReplaceOccurrenceRoom` preserves occurrence identity and reconciles only
@@ -870,6 +927,10 @@ canonical projection for maps and markers, not another identity source.
 | Hub board                         | `HubDecisionAddress`                                                        |
 | Hub slot and visit                | `HubSlotAddress` and `HubVisitAddress`                                      |
 | Hub fountain use and Phial target | `HubFountainAddress` and its `FountainRarityOutcomeAddress`                 |
+| Hub board reroll                  | `HubRerollAddress` with Hub key and `rerollId`                              |
+| room reroll press, Well/Pool roll | room action address with its `rerollId`                                     |
+| Contract pedestal item            | `InfernalContractPedestalAddress` with occurrence ID                        |
+| hidden return door                | `PhantomExitAddress` with occurrence ID                                     |
 | local reward and wheel            | occurrence plus declaration-owned child key                                 |
 | N local visit topology            | parent occurrence, local group, and declaration-owned slot key              |
 | pool-backed encounter phase       | `EncounterPhaseAddress` with occurrence owner and stable phase key          |

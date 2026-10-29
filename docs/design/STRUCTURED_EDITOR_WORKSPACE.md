@@ -126,8 +126,8 @@ a `beforeTargetGeneration` launcher on their door cards. Room-local lifecycle
 launchers keep their exact engine owners while the application projects one
 consistent utility slot at the top of each tab panel. Ordinary/H/Shop Overview
 and Timeline reuse the same Room-entered launcher. O Overview and Intro Timeline
-reuse Intro's pre-start launcher, while each later phase tab uses that phase's
-pre-start launcher. Room Doors uses the literal pre-exit launcher. Inactive
+reuse Intro's pre-start launcher, while each later phase tab, and the wheel
+tab whose pick leads into that phase, uses that phase's pre-start launcher. Room Doors uses the literal pre-exit launcher. Inactive
 Actions is a repair surface and owns no lifecycle launcher. An unavailable
 retained checkpoint stays visible and disabled; an occurrence absent from the
 materialized prefix owns no launcher. The workspace-level launcher index
@@ -296,7 +296,9 @@ incoming context and meaningful room-local setup: Fields identities, World
 Shop inventory and Purchased markers, and Room features, whose Shrine and Well
 inventories likewise hold only their fixed slots (a Shrine slot shows Item,
 Delay and Purchased). Shrine rush and every Travel Deal refill are authored on
-the Room Timeline. Ephyra parents with declared
+the Room Timeline. A Stygian Well or Pool of Purging Overview shows only its
+presence and initial stock, whose slots are always editable and optional;
+using it starts on the Timeline. Ephyra parents with declared
 side-room groups add a dedicated Side Rooms workbench.
 Every Overview renders its sections in one order, showing only those the room
 has: Encounters, room contents (Shop inventory, Fields optional rewards),
@@ -316,7 +318,7 @@ same way. A block at the Overview leaves the Overview as the repair surface and
 the Timeline and Doors read-only.
 
 Timeline action headings name their verb (Buy for paid World Shop, Shrine and
-Well items and refills, Collect for pickups including Contract items and Echo-generated pickups, Sell for Pool sales) and keep
+Well items and refills, Collect for pickups including Contract items and Echo-generated pickups, Sell for Pool sales, Reroll for rerolls) and keep
 distinguishing cage, phase, source-role, slot and boosted identities. Pom
 actions use their pickup names (Pom, Double Pom, Triple Pom, Pom Slice)
 without changing catalog names. Headings, drag previews and action controls
@@ -329,6 +331,28 @@ with Travel Deal); for a Well, its first purchase; for a World Shop, the
 purchase the refill entry names as its source. The line has no placeholder. A
 purchased refill that no line hosts keeps its own purchase row with a bound
 removal, and refill findings route to the line's control or to that row.
+
+Each present Well or Pool has an entry at the top of the optional actions
+listing what can be done at the end of the room's current actions: buy or
+sell each offered slot (a blank initial slot takes its item or trait in the
+same pick) and Reroll with its cost, disabled with a hint when screen rerolls
+are not enabled, nothing is left to reroll or the pool cannot pay. One pick
+appends one action at the end, which Move repositions. A reroll row carries
+an optional picker for each restocked slot, pinned or native.
+
+Room Doors keeps its door layout and lists the room's door and Fields cage
+rerolls below the doors in one ordered **Rerolls** list headed by the rerolls
+left: each row is a target and its new reward with Remove, and a new row is
+appended at the end once its target is chosen. A removal keeps the later rows
+it invalidates, with their findings. The same presses appear as Timeline rows,
+where Move is the only way to change their position among other post-unlock
+actions. A rerolled target reads first draw → final, and the next room's
+header and the rail show the final reward. Reroll findings route to the list
+row, except an out-of-order press, which routes to its Timeline row. An Ephyra
+room's hidden return door sits in Room Doors as one automatic line, in place of
+a continuation note, until its placeholder room or reward is pinned; a reward
+picker waits for the room. Reroll lists and counts are hidden without a card
+that enables them unless the plan already holds rerolls.
 
 An Anvil of Fates result launcher sits on the Timeline row of the reward that
 carries the Anvil, wherever it settles: a Shop slot's purchase row, the Gold
@@ -369,14 +393,15 @@ child renders its bound Add or Remove Chaos-gate/Zagreus-contract action
 directly, without a second child heading that repeats the action's subject.
 
 ShipCombat is the deliberate fourth shape. It renders Room Overview, Intro
-Timeline, Combat 1 Timeline, structurally active Combat 2 Timeline, and Room
-Doors. Overview owns encounter count, every phase's encounter and room features.
-Each phase tab contains its Start encounter banner and events, its post-combat
-actions,
-and the declaration-attached wheel editor at the following `nextPhase`
-boundary. Wheel 1's structural editor therefore appears under Intro, Wheel 2's
-under Combat 1 when active, and final Combat 2 has no following wheel editor.
-Choose and post-combat pickup actions do not move with that structural editor.
+Timeline, Intro Wheels, Combat 1 Timeline, then Combat 1 Wheels and Combat 2
+Timeline when Combat 2 is structurally active, and Room Doors. Overview owns
+encounter count, every phase's encounter and room features. Each phase tab
+contains its Start encounter banner and events and its post-combat actions;
+its following `nextPhase` boundary is a read-only marker. Each active wheel's
+tab follows the timeline tab it closes and holds the wheel's pool, offers, its
+Rerolls list and the pick; final Combat 2 has no wheel. Wheel rerolls also
+show as Timeline rows, and Choose and post-combat pickup actions stay on their
+phase tab.
 The groups are views over one interaction and one authored order: global ranks,
 proposals, pointer drag, keyboard moves, and Undo are unchanged. The application
 consumes engine-owned timeline action keys and phase attachments; React does
@@ -628,8 +653,8 @@ language, but its center is not an ordinary decision spine. The
 - one complete room and incoming reward for each open slot;
 - Hub Overview for the complete fixed-slot set, open/closed membership, and
   each open room's reward editor; Hub Timeline for the exact authored action
-  prefix (up to six room visits and one fountain use) on the map, with
-  read-only reward context; and Hub Exit's fixed Preboss door for the Hub's
+  prefix (up to six room visits, one fountain use and board-door rerolls) on
+  the map or in its Details timeline; and Hub Exit's fixed Preboss door for the Hub's
   completed-Hub exit;
 - side-room generation and entry state under visited parents;
 - derived Hub returns and parent restores;
@@ -650,8 +675,7 @@ the parent main occurrence Side Rooms workbench;
 entered side occurrences and their acquisition
 children open the side occurrence Timeline; the completed-Hub exit opens
 Exit; Hub fountain placement opens Hub Timeline; and its Phial
-outcome opens the room entered after the use, or Hub Timeline until that room
-exists. React consumes that explicit destination and
+outcome and board-door rerolls open the Hub Timeline's Details. React consumes that explicit destination and
 does not infer tab ownership from semantic-address shapes or rendered ancestry.
 
 The board remains a joint generation region. Open-set membership and the dense
@@ -669,31 +693,28 @@ every fixed-slot card in declaration order.
 their owned visits and rooms while retaining the Hub, its source and its
 completed-Hub chain. It differs from Remove Hub and participates in ordinary Undo/Redo.
 
-Timeline is map-only. Open doors retain their stable room labels and reward
+Hub Timeline opens on the map. Open doors retain their stable room labels and reward
 icons; visited markers carry a badge with the combined action order, while room visit ordinals
 stay 1–6. Clicking an unvisited door appends it when fewer than six rooms are
 visited; the fountain's distinct marker appends its one use regardless of room
 capacity. Once all six visits and the fountain are placed, visited doors show
 a room/reward popup with an explicit Open Room action; the fountain shows its
 timing and an Open Interaction action. Clicking outside or Escape dismisses
-the popup without leaving the map. Visited room banners and the fountain's
-room host offer a Hub Timeline return beside View Map, regardless of navigation
+the popup without leaving the map. Visited room banners offer a Hub Timeline return beside View Map, regardless of navigation
 entry point. Markers do not reorder
 or open a second reward preview. Overview shows the labeled fountain diamond
 without interaction or board membership. **Reset visits** submits the empty
 action prefix, clearing the
 fountain use and its Phial outcome, as one undoable edit, including normal
-downstream cleanup.
+downstream cleanup; it is disabled while the order holds board-door rerolls.
 
-Fountain ordering stays on Hub Timeline. The read-only timing label and
-Phial target display below the preceding main room, or the Hub's source
-occurrence when the fountain is first. This host always exists; the final use
-never depends on creating Preboss. That room owns no persistence, candidate,
-or execution product for them. Hub Timeline contains no fountain outcome editor. Ordering uses
-the same map append interaction as room visits: reset visits and rebuild the
-action order to change the fountain position. There is no separate fountain
-ordering control. Only **Reset visits** removes the fountain use,
-clearing its target with it.
+**Details** opens the Hub timeline as a list: the visits in order, with each
+gap between them (each Hub stay) holding its Rerolls list for board doors not
+yet entered and a board recap of every door's current reward, first draw →
+final when rerolled. The fountain is a row in its gap, carrying its Phial
+outcome editor and a Move action that places it in any gap; before its use it
+is a Use row at the end. Map and Details send the same Hub action-order
+command; finding navigation to a reroll or the Phial outcome selects Details.
 
 The existing Hub-owned interaction assesses complete proposals with Hub-level
 readiness, not the interior readiness of each visited room. Exact visit markers

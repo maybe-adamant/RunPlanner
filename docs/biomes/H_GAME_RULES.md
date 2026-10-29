@@ -291,7 +291,7 @@ no Echo action. The model does not
 cover optional-pickup chance weights, visual map coordinates or pathfinding,
 pickup interaction during an active wave, weighted room-set replay, other
 NPC/random-event or unmodeled Shop interactions, combat-wave composition,
-rerolls, or profile-dependent variants. Those are explicit future modeling
+or profile-dependent variants. Those are explicit future modeling
 inputs, not hidden eligibility predicates.
 
 H miniboss room declarations own their sparse boon-rarity override. It applies

@@ -179,7 +179,10 @@ miniboss slots, and any eligible Story slot under the canonical baseline.
 Opening a slot creates a real occurrence and its complete incoming offer even
 when that slot is never visited. Revisiting the physical Hub restores the same
 board and offers; it does not consume reward bags again or create a second
-topology owner.
+topology owner. A board-door reroll, legal in any Hub stay for a door whose
+room is not yet entered, is the exception: it draws again and its reward
+replaces the persisted offer for later stays
+([rerolls](../design/REWARD_MODEL.md#rerolls)).
 
 The action list is independent from board generation order. Its room visits
 are six distinct open slot keys and it is the only authored traversal order.
@@ -293,6 +296,15 @@ spawned. Door setup precedes the room's own pylon, so only earlier main visits
 count and the first visit has no minimum; otherwise each door generates on a
 30% roll. Side visits are not Hub visits and must not become a second global
 topology or a graph-canvas edge set.
+
+Every `N_Combat*`, `N_MiniBoss*` and `N_Sub*` room also has a hidden return
+door (`EphyraExitDoorReturn`). Its first doors unlock creates a placeholder
+room behind it and draws one reward for it before any side door, so later
+side-door and RunProgress draws and HubRewards refill timing depend on it;
+revisits do not draw. The placeholder and reward are authored on the visit,
+and the [Reward Model](../design/REWARD_MODEL.md#hidden-return-door-draws) owns
+the draw. `N_PreHub01`'s exit uses the same obstacle but is the real door into
+the Hub, which carries no reward.
 
 A side slot retains its complete authored offer when its generation state is
 `notGenerated` or its parent target is unvisited; it becomes an active reward

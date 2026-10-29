@@ -99,7 +99,7 @@ The supported baseline includes the progressed-save Olympus map
 set, physical indoor/outdoor doors, reward producers, force pressure, and the
 fixed boss/postboss completion transition. Persistent NPC composition,
 NPC events/interactions beyond selected combat, profile-gated variants, natural
-Chaos, weighted RNG replay, combat-wave details, rerolls, and optional
+Chaos, weighted RNG replay, combat-wave details, and optional
 interactions remain excluded until modeled explicitly.
 
 P miniboss declarations own their sparse boon-rarity room facts. An eligible

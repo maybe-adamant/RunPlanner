@@ -96,6 +96,27 @@ follows the last reroll and carries the pick. Earlier trait rows carry what a
 final row shows (rarity, installed level, exchange) but nothing the pick
 settles; Chaos earlier screens pin only their curses.
 
+A Preboss that spawns the Contract pedestal publishes it as its own Overview
+item in either reward form, never as Shop inventory; the adapter installs it at
+the native pedestal spawn. An `N_Combat*`, `N_MiniBoss*` or `N_Sub*` occurrence
+publishes its hidden return door as the simulation settled it: the placeholder
+room native `ChooseNextRoomData` must return for that door at the room's first
+doors unlock, and the reward its store draw must yield (absent when the
+placeholder draws nothing; a god only where every branch drew the same one).
+The adapter identifies the door at runtime by name or
+`ReturnToPreviousRoomName` and steers it through the ordinary Ephyra door path.
+
+Door, cage and wheel rerolls are published per occurrence in action order,
+each with a stable owner, its target (an exit door, a cage of a door into a
+Fields room by its one-based `CageRewards` index, or one wheel offer) and the
+reward its redraw must yield; Hub board presses are published with the Hub
+across its stays. Every target still generates its published first draw. Each
+native press draws the target's next planned reroll; a press the plan does not
+make is a mismatch. Each room publishes the planned `NumRerolls` at its entry
+once the plan authors any reroll: the module enters a planned room with that
+pool, floored at zero because a preserved over-spend is the plan's own
+finding, and a Practice start installs it.
+
 Door destinations carry explicit `zagreusContractPresent` for both batch and
 fixed navigation. This is the same canonical additional-exit presence published
 in the destination Overview, copied for an earlier consumer rather than
@@ -436,11 +457,12 @@ The conformance surface is bounded to:
 
 | Checkpoint                    | Compared product                                                                                                                                                   |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Room entered                  | occurrence/room identity, published Overview content, and any obligation due at `roomEntered`                                                                      |
+| Room entered                  | occurrence/room identity, published Overview content, the planned reroll pool, and any obligation due at `roomEntered`                                             |
 | Semantic Timeline transaction | the exact published transaction bound to the native action when it is an explicit obligation; acquisition handles instead express steering and local DAG readiness |
 | Exits ready                   | complete exit count, physical types, target room identities, reward identities, and obligations due at outgoing generation                                         |
 | Room exit                     | obligations due at `exitUsable` and `roomExit`, and only the planner-published named conformance facts that changed in this occurrence, Hex node identity included |
 | Hub departure                 | the full modeled trait inventory published in `hub.departures` for that completed-visit count, on every departure                                                  |
+| Reroll press                  | the press is a planned one for its target; a reroll beyond the published ones, of a door, wheel, cage or screen, is a mismatch                                     |
 
 The published `exitUsable` deadline is checked at actual room closure, before
 the timeline is discarded. It does not require a separate door-use callback:
@@ -520,7 +542,11 @@ special topology and interaction owners:
 
 - Narcissus, Artemis, and supported Nemesis random-event resolutions;
 - Anomaly replacement and its authored return;
-- Zagreus Contract as a distinct additional exit;
+- Zagreus Contract as a distinct additional exit, and its Preboss pedestal in
+  either reward form;
+- door, Fields cage, ship-wheel and Hub board rerolls, screen rerolls of
+  trait, Chaos and Pom screens, Well and Pool rolls, and the reroll pool;
+- Ephyra hidden return doors;
 - natural and Ixion-generated Chaos gates;
 - H Fields cage placement and cage rewards;
 - N Hub doors, rewards, side-room presence, and side-room rewards;

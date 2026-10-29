@@ -580,6 +580,23 @@ to one. Ransom effects have a read-only preview, not invented authored
 targets. A missing or stale selected child remains repairable and prevents
 saving the incomplete outcome.
 
+### Screen reroll tabs
+
+A trait, Chaos or Pom dialog whose screen the native reroll button can reroll
+shows one tab per screen: Offer, then Reroll 1, Reroll 2 and so on. Each tab
+holds a full screen (options, rarities, levels, exchanges and the Rejected
+row), and only the last carries the pick. A Reroll button naming its cost
+keeps the current rows on their tab and opens a new last tab holding a copy of
+them and the pick; Remove last reroll drops the newest earlier screen. There is
+no count control. Reroll is disabled while the screen is unreached, no held
+card enables screen rerolls, or the pool at that point cannot pay; a reroll
+the game would refuse is a finding instead. Earlier tabs show every control in
+place, disabled until their Edit, and are judged by the draft's whole screen
+chain; an unauthored earlier screen offers to copy the final one, and an empty
+one shows as Gold. When only an earlier screen blocks Save, the feedback names
+that tab. Without an enabling card the reroll controls are hidden unless the
+offer already holds rerolls.
+
 ### Hex tree and Path of Stars
 
 A normal Spell Drop uses the shared three-row rarityless editor as Edit Hex.

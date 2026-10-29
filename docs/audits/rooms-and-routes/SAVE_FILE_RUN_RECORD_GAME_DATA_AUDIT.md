@@ -158,6 +158,9 @@ same room, attributing it to that room.
 | N Hub board and side-room generation | `PredeterminedDoorRooms` in the departure record or entry save                                                | exact  |
 | Collected pickups and uses per room  | `UseRecord` (`RecordUse`, `InteractLogic.lua:292`)                                                            | exact  |
 | Reward-store consumption             | `CurrentRun.RewardStores` bracket diff                                                                        | exact  |
+| Ephyra hidden return door            | the return door's `ExitDoorRooms` (placeholder room) and `OfferedRewards` (its draw)                          | exact  |
+| Reroll pool                          | `CurrentRun.NumRerolls`, rerolls left, at each entry save                                                     | exact  |
+| Screen rerolls per room              | `CurrentRoom.SpentRerolls` by screen id, on the departed room's history entry                                 | exact  |
 | Tartarus non-goal reward cap         | `CurrentRun.MaxClockworkNonGoalRewards`, rolled once by `InitClockworkGoalReward` (`RewardLogic.lua:277`)     | exact  |
 | Fresh-profile first attempt          | header run count zero (`#GameState.RunHistory`, which only `EndRun` grows, `RunLogic.lua:1848`)               | exact  |
 
@@ -202,14 +205,30 @@ U: two each in `H_Combat15` and `H_Combat07`).
   `HestiaManaBoon` after the Hestia screen in `H_Combat07`).
 - Rerolls leave only `NumRerolls` and the pre-reroll options are lost. A
   screen reroll (`AttemptPanelReroll`, `InteractLogic.lua:1311`) also counts
-  in `CurrentRoom.SpentRerolls` by screen id, the n-th reroll of one screen
-  costing n, and draws nothing from the stores; `SpentRerolls` survives only on
-  the departed room's history entry. A door or ship-wheel reroll
-  (`AttemptReroll`, `:1351`) costs 1, leaves no mark of its own and draws a
-  fresh reward from the stores (`AttemptRerollDoor`, `AttemptRerollShipWheel`),
-  so it is inferred where `NumRerolls` falls beyond the room's screen rerolls
-  and the stores lose more than the bracket's offers and known rolls. Run 1010
-  rerolled two boon screens (`G_MiniBoss02`, `G_PreBoss01`) and no door.
+  in `CurrentRoom.SpentRerolls` by screen id (a loot's object id, which no
+  screen record keeps, or `WellShop` and `SellTraits` for the Well and Pool),
+  the n-th reroll of one screen costing n, and draws nothing from the stores;
+  `SpentRerolls` survives only on the departed room's history entry. A door,
+  ship-wheel, Fields cage or Hub board-door reroll (`AttemptReroll`, `:1351`)
+  costs 1, leaves no mark of its own and draws a fresh reward from the stores
+  (`AttemptRerollDoor`, `AttemptRerollFieldsDoor`, `AttemptRerollShipWheel`),
+  calling `ChooseRoomReward` again: it removes a second store entry and never
+  returns the first, door order is unchanged, `OfferedRewards` keeps only the
+  final roll, and a new roll excludes types already offered. Such a press shows
+  only where `NumRerolls` falls beyond the room's screen rerolls and the
+  stores lose more than the bracket's offers and known rolls. Run 1010
+  rerolled two boon screens (`G_MiniBoss02`, `G_PreBoss01`; `NumRerolls` 10 →
+  9 → 8, no store diff) and no door.
+- Each `N_Combat*`, `N_MiniBoss*` and `N_Sub*` room's hidden return door
+  (`EphyraExitDoorReturn`) takes one extra store draw at its first doors
+  unlock, recorded under that door. In the Surface capture the extra removals
+  match the return doors' `OfferedRewards` one for one (`N_Sub01` →
+  `RoomMoneyTinyDrop`; `N_Combat14`, `N_Combat06` and `N_Combat10` → Boons;
+  `N_Combat01` → `HermesUpgrade`), with placeholders such as `N_Sub04`,
+  `N_Combat19`, `N_Combat12`, `N_Combat15` and `N_Combat11`; a Mini-Boss
+  whose placeholder is a combat room draws from HubRewards (Surface run 2:
+  `N_MiniBoss01` → `N_Combat13`). `N_PreHub01` takes none (no store change
+  before the Hub), and a revisit returns the stored offer without drawing.
 - A Forfeit skip increments `CurrentRun.BiomeBoonSkipCount` in the bracket of
   the room whose boon it replaced and spawns `RoomRewardConsolationPrize`
   (`ShrineLogic.lua:917`); the prize appears in `UseRecord` only when collected
@@ -419,8 +438,8 @@ counters without order.
 
 ## Not exercised by either capture
 
-Duo and Legendary offers, trait replacement screens, door and ship-wheel
-rerolls, Jeweled Pom and Experimental Hammer equip results, Echo replay,
+Duo and Legendary offers, trait replacement screens, door, ship-wheel, cage,
+Hub, Well and Pool rerolls, Jeweled Pom and Experimental Hammer equip results, Echo replay,
 Cocoons, Eris, Oceanus Anomaly, Gold Gold Gold, Travel Deal refills at the
 Well, the Fields Nemesis event, Dream runs, I-biome ending saves, and quit to
 menu. A later
@@ -510,9 +529,28 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
 - A selected trait's optional pickups, such as Narcissus's gifts
   (`TraitData_Narcissus.lua`), are collected as often per reward type as the
   room's `UseRecord` counts.
-- Door and ship-wheel rerolls are not modelled: each inferred one is reported
-  as an unsupported area, since the plan's stores keep the rewards they
-  replaced.
+- A screen's recorded rerolls come from `SpentRerolls`. One rerolled loot
+  screen among one rerollable screen in its room is exact; otherwise the ids
+  in ascending order take the rerollable screens in record order, an
+  assumption. The record keeps only the final screen, so it is authored
+  exactly and the earlier screens are guessed (the first legal chain) and
+  reported; a reroll the engine refuses is reported and left out. Well and
+  Pool rerolls are authored as unpinned rerolls, since only their count is
+  known, and reported.
+- Door, ship-wheel, cage and Hub rerolls are solved from the stores: the
+  rewards a bracket's presses replaced are, per store, what the game's stores
+  lost beyond the plan's draws (pre-count plus a refill multiple less
+  post-count, choosing the refill difference that leaves no negative count and
+  totals the expected press count), and the press count is how far the plan's
+  pool runs ahead of the saved `NumRerolls`. Each replaced reward is placed, in
+  store and declaration order, on the first owner in native order the engine
+  accepts. Every placement removing the same rewards leaves the same stores,
+  so a placement that reproduces the saved stores is one assumption for the
+  room; otherwise each press is reported. A restored Hub stay's presses are
+  placed by the board doors whose saved offer changed between Hub visits. The
+  planner's pool is compared with `NumRerolls` at each entry save.
+- A hidden return door's placeholder and reward are pinned exactly from the
+  return door's `ExitDoorRooms` and `OfferedRewards`.
 - A batch's doors are ordered by the catalog's declared native door order for
   the source room, an exact order; a room without one takes ascending door id
   and reports the order as an assumption. Both declared rooms are inferred

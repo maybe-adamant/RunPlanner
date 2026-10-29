@@ -568,6 +568,61 @@ ledger effect needs no boss reward types, leaf state, bag depletion, concrete
 acquisitions, history projection or editor controls. The biome documents name
 each room's policy.
 
+## Rerolls
+
+A door, Fields cage, ship-wheel or Hub board-door reroll press is a real draw:
+it takes one more entry from the target's own store, with the store's refill,
+`RewardPriorities` and other side effects, and never returns the entry it
+replaced. Its candidates follow the ordinary door legality, excluding the
+target's first-drawn reward and every door's (wheel offer's, cage's) current
+reward at that moment. The target's current reward after its last press is
+what it offers onward: the next room's incoming reward, the entered reward,
+the wheel offers or the cage rewards. Each press costs 1 from the run's reroll
+pool and needs a held card that enables door rerolls.
+
+A door is rerollable when it allows a reroll or its destination forces one,
+the destination does not refuse rerolls, and its first-drawn reward is not a
+type that blocks them (`Shop`, `ClockworkGoal`). The rule is read when the
+doors unlock, and a press is legal only on a room's first visit. Ephyra side
+and return doors and Story, Shop and Boss destinations never reroll; O and Q
+exits into their Mini-Boss and Reprieve rooms do. Hub board doors may be
+pressed in any Hub stay while their room is unentered: a restore re-assigns
+every unentered door its persisted offer without a store draw, so a press
+excludes that offer and the current rewards of the doors still open, and
+overwrites the persisted offer for later stays.
+
+The run's reroll pool counts every equipped reroll card at run start, a
+mid-run card grant's full amount, a Circe rarity upgrade's difference and
+Narcissus's collected reroll pickup, less every spend: door presses, screen
+rerolls and Well and Pool rerolls. While Barren removes the enabling card no
+reroll kind is enabled; the pool is unchanged. A new spend that the pool at
+its own point cannot pay is refused as a fixed budget; an earlier spend takes
+precedence, and later spends it starves are kept and reported over the pool.
+Screen rerolls draw nothing from any store. The
+[arcana audit](../audits/loadout-and-progression/ARCANA_AND_FEAR_GAME_DATA_AUDIT.md)
+owns card amounts.
+
+## Hidden return-door draws
+
+When an `N_Combat*`, `N_MiniBoss*` or `N_Sub*` room first unlocks its doors,
+its hidden return door is filled before any side door, as an ordinary door the
+player never sees. `ChooseNextRoomData` creates a placeholder room (from the
+`N` set for main rooms, `N_SubRooms` for side rooms) that counts toward its
+creation cap, and unless the placeholder's fixed or Shop reward returns first,
+one reward is drawn from the placeholder's own store (HubRewards for a combat
+room, RunProgress `Boon` for a Mini-Boss, the side-room store for a side room)
+with every native side effect: removal, refill, `RewardPriorities` and
+Devotion depth. A Boon draw takes the first eligible god. Revisits never draw.
+The planner's per-biome appearance cap does not apply, so a visited combat room
+is a legal placeholder; bosses and `N_PostBoss01` never are.
+
+An unpinned placeholder settles to the first eligible room in declared set
+order, the no-draw `N_PreBoss01` first for main rooms, so it needs no profile
+predicate; an unpinned reward settles to the type every branch can draw with
+the most entries left in the placeholder's store on its scarcest branch, ties
+in declaration order. Board doors left unopened are not modelled as
+creations.
+
 ## Offered-Reward Lookups
 
 Two lookups record reward types offered elsewhere. They are separate from
@@ -718,22 +773,24 @@ action row retain the full reward editor there.
 
 ### Contract pedestal
 
-Qualifying Shops have a conditional initial `infernalContractReward` slot,
-generated from `ZagPedestalOptions` without changing the host profile's indexed
-slot count or group rules. Its activation and concrete item are captured at
-entry, and its generation profile is evaluated alongside the host's room-entry
-inventory, separately from its optional `roomExit` acquisition. An active
-pedestal requires an authored reward identity even when left uncollected.
-Collection uses the ordinary Shop acquisition dispatch with free provenance: it
-triggers neither Travel Deal nor Gold Gold Gold. Native store objects cannot
-duplicate via Sea Star; eligible pedestal Poms and Paths may still be converted
-with Time Piece.
+The Zagreus Contract pedestal is a Preboss room feature, spawned at room start
+in every Preboss that declares a pedestal destination while the hero holds
+`InfernalContractBoon`, whatever the room's reward: the boon-form F, G, H and P
+Prebosses as well as the Shop-form N, O and Q ones. It never reads the room's
+reward or store, and the Shop form keeps its own inventory unchanged. Its one
+item comes from `ZagPedestalOptions` without touching any Shop profile's slots
+or group rules; its activation and concrete item are captured at room start,
+separately from its optional `roomExit` acquisition. An active pedestal
+requires an authored reward identity even when left uncollected. Collection is
+its own free acquisition: it triggers neither Travel Deal nor Gold Gold Gold.
+Native store objects cannot duplicate via Sea Star; eligible pedestal Poms and
+Paths may still be converted with Time Piece.
 
 The candidate frontier uses those frozen generation facts: buying the first Hex
 in the same Shop cannot enable an initial pedestal Path of Stars. Mystery Boon
 source resolution and trait/level choices remain acquisition-owned; an
-uncollected pedestal requires none of them. Missing or generation-invalid
-inventory points to the pedestal reward owner, not its optional pickup action.
+uncollected pedestal requires none of them. A missing or generation-invalid
+item points to the pedestal owner, not its optional pickup action.
 
 ### Refills
 

@@ -230,6 +230,31 @@ Because Judgment's card count is a rarity-scaled trait value, upgrading an
 active Epic Judgment trait to Heroic changes its postboss activation count
 from five to six.
 
+## Reroll Cards and the Reroll Pool
+
+Three cards carry a `RerollCount` added to the run's shared `NumRerolls`, and
+the card held decides which reroll kinds exist:
+
+| Card                           | Count by rarity (Common, Rare, Epic, Heroic) | Enables                                                       |
+| ------------------------------ | -------------------------------------------- | ------------------------------------------------------------- |
+| The Enchantress (`DoorReroll`) | 1, 2, 3, 4                                   | `AllowDoorReroll`: exit doors, Hub board doors, wheels, cages |
+| The Champions (`ScreenReroll`) | 1, 2, 3, 4                                   | the offer-screen reroll button, Well and Pool included        |
+| The Fates (`TradeOff`)         | 2, 3, 4, 5                                   | nothing; adds to the pool only                                |
+
+`StartNewRun` counts every equipped card's `RerollCount` before any curse
+applies. A mid-run grant (Judgment, the Crystal Figurine, Circe) adds the
+granted card's full count through `GrantMetaUpgradeRerolls`; a Circe rarity
+upgrade adds the difference. Permanent ranks stop at Epic, so Heroic comes only
+from a Circe rarity upgrade (Lapis Lazuli Insight) or grant. Narcissus's Fates' Trimmings
+(`NarcissusF`, offered only while one of the three cards is active) drops a
+reroll pickup worth 2, 2, 3 or 5 by its rarity (`RerollDrop` base 2 times 1,
+1, 1.5, 2.5; Common outside Dream) when collected. While Barren removes an
+enabling card's trait, its reroll kind is disabled; the pool is unchanged.
+
+Door, wheel, cage and Hub presses cost 1 each; the n-th reroll of one offer
+screen, Well or Pool in a room costs n. The pool is a run counter, read at
+each room entry.
+
 ## The Centaur's Room-Entry Cycle
 
 `ChamberHealthMetaUpgrade` declares `SetupFunction` `RoomStatGrowth` with
@@ -415,7 +440,10 @@ progressive state, target domains, exact authored outcomes, banned history, and
 Forfeit usage. The catalog also owns Void's source percentages and the fixed
 30-Grasp baseline; the engine rejects starting manual selections above the
 configured capacity without applying that limit to automatic or run-local
-Arcana grants. Fated mode, permanent card advancement, and every other ordinary
+Arcana grants. The catalog declares each reroll card's count and enabled
+kind; the engine derives the pool from those grants, Narcissus's pickup and
+every authored spend, and refuses a new spend past it. Fated mode, permanent
+card advancement, and every other ordinary
 Vow gameplay effect remain deliberately out of scope.
 
 Artificer's supported reward-facing effect does not change
