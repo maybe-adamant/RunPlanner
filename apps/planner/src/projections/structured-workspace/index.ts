@@ -57,8 +57,6 @@ export type {
   WorkspaceOrdinaryBatchNode,
   WorkspacePhantomExitControl,
   WorkspacePhantomExitInteraction,
-  WorkspaceRerollRow,
-  WorkspaceRerollTarget,
   WorkspaceRoomRerolls,
   WorkspaceRoomRerollsInteraction,
   WorkspacePhysicalTarget,

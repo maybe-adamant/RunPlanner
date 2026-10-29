@@ -22,7 +22,6 @@ import type {
   PhantomExitAddress,
   ProjectCommand,
   RerolledRewardOwner,
-  RerollPressTarget,
   RoomActionAddress,
   SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -198,15 +197,6 @@ interface WorkspaceBatchNodeBase {
   readonly runState?: WorkspaceRunStateLauncher;
   /** The source room's ordered door and cage rerolls, where it can or did reroll. */
   readonly rerolls?: WorkspaceRoomRerolls;
-}
-
-/** One door, Fields cage or Hub board door a press may name. */
-export interface WorkspaceRerollTarget {
-  readonly key: string;
-  readonly target: RerollPressTarget;
-  readonly label: string;
-  /** Why the game refuses a press of it; absent when it can be rerolled or is unreached. */
-  readonly unavailable?: 'notRerollable' | 'slotEntered';
 }
 
 /** One authored press in its room's or Hub's action order. */

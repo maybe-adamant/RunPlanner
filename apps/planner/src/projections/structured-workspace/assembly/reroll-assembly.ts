@@ -195,7 +195,7 @@ function assembleRerollList(input: {
   const targets: WorkspaceRerollTargetRequirement[] = (settled?.targets ?? []).flatMap(
     (candidate) =>
       // An entered Hub door is closed for the run.
-      surface.kind === 'hubStay' && candidate.unavailable === 'slotEntered'
+      candidate.unavailable === 'slotEntered'
         ? []
         : [
             Object.freeze({

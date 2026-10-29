@@ -20,12 +20,10 @@ type RoomRerollsRequirement = Extract<
   { readonly kind: 'roomRerolls' }
 >;
 
-function unavailableReason(reason: 'notRerollable' | 'slotEntered'): string {
+function unavailableReason(reason: 'notRerollable'): string {
   switch (reason) {
     case 'notRerollable':
       return 'This door cannot be rerolled.';
-    case 'slotEntered':
-      return 'This door was already entered.';
   }
 }
 

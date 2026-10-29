@@ -50,7 +50,8 @@ export interface WorkspaceRerollTargetRequirement {
   readonly target: import('@run-planner/engine/authored-project').RerollPressTarget;
   readonly rewardOwner: import('@run-planner/engine/authored-project').RerolledRewardOwner;
   readonly label: string;
-  readonly unavailable?: 'notRerollable' | 'slotEntered';
+  /** The game refuses a press of it. */
+  readonly unavailable?: 'notRerollable';
   readonly rewardTypes: WorkspaceRerollRewardTypes;
 }
 
