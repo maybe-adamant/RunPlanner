@@ -342,7 +342,7 @@ export function ContextualPicker<T>({
     <div
       className={`field-control contextual-picker${layout === 'inline' ? ' field-control-inline' : ''}`}
     >
-      <label htmlFor={id}>{label}</label>
+      {label === '' ? null : <label htmlFor={id}>{label}</label>}
       <Popover.Root open={open} onOpenChange={updateOpen}>
         <Popover.Trigger asChild>
           <button

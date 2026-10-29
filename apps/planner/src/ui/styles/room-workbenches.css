@@ -1956,11 +1956,17 @@
   width: 100%;
 }
 
-/* Pools are grouped by a light heading and their own spine, not another box. */
+/* Pools are grouped by a light heading, not another box. */
 .room-action-optional-pool,
 .room-action-repairs {
   display: grid;
   gap: 6px;
+}
+
+/* Unplaced pools sit outside the chronology, so their lists draw no spine or ticks. */
+.room-action-optional-pool > .room-action-list::before,
+.room-action-optional-pool > .room-action-list > .timeline-row::before {
+  display: none;
 }
 
 :is(.room-action-optional-pool, .room-action-repairs, .ship-action-repairs)
