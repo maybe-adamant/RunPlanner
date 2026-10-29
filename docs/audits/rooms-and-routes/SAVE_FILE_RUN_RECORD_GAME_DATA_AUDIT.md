@@ -203,6 +203,16 @@ U: two each in `H_Combat15` and `H_Combat07`).
   unpicked options, timestamped after that screen's pick and before the room's
   next one. Inferred while the Stone is held (live Underworld recording:
   `HestiaManaBoon` after the Hestia screen in `H_Combat07`).
+- Hovering a row while a rarity-upgrade trait with uses left is held (such as
+  Calling Card's `RarityUpgradeData`) calls
+  `UpgradeChoiceScreenCheckRarifyButton` (`UpgradeChoiceLogic.lua:1364`,
+  `:1377-1412`), which rewrites that row's rarity in `lootData.UpgradeOptions`
+  to `GetUpgradedRarity(...)` before any Rarify click, even if none follows.
+  The displayed row and the granted trait are unchanged, but
+  `LogUpgradeChoice` logs `UpgradeOptions`, so a recorded row can read one
+  rarity too high. The picked row's rarity is exact from the acquired trait;
+  an unpicked row's recorded rarity may be one step high while such a trait is
+  held, and the importer does not yet correct it.
 - Rerolls leave only `NumRerolls` and the pre-reroll options are lost. A
   screen reroll (`AttemptPanelReroll`, `InteractLogic.lua:1311`) also counts
   in `CurrentRoom.SpentRerolls` by screen id (a loot's object id, which no
