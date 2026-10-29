@@ -552,7 +552,7 @@ function buildRoom(
     traits: { acquired: traits.acquired, removed: traits.removed, upgraded: traits.upgraded },
     ...optional('store', store(room, entered)),
     ...optional('pool', pool(room, before.traitsSold, after.traitsSold)),
-    ...optional('wheels', combatThisVisit ? wheels(room, settled, uses) : undefined),
+    ...optional('wheels', combatThisVisit ? wheels(settled, uses) : undefined),
     ...optional('fields', combatThisVisit ? fields(room, entered, settled) : undefined),
     ...optional('forfeitSkips', forfeitSkips),
     ...optional('conversions', conversions),
@@ -909,14 +909,10 @@ function pool(room: RoomSaves, soldBefore: number, soldAfter: number): RunRecord
 }
 
 /**
- * Thessaly ship wheels. Every rolled offer leaves its store, picked or not; an
- * Artificer conversion adds one RunProgress roll that the room then collects.
+ * Thessaly ship wheels: each wheel's store, pick, side and offer count. An
+ * unpicked offer's type is not saved; the importer solves it from the stores.
  */
-function wheels(
-  room: RoomSaves,
-  settled: SavedRoom,
-  uses: Counts,
-): readonly RunRecordWheel[] | undefined {
+function wheels(settled: SavedRoom, uses: Counts): readonly RunRecordWheel[] | undefined {
   const setups = settled.encounters.filter(
     (phase) => phase.rewardStoreName !== undefined && phase.roomRewardOverride !== undefined,
   );
@@ -934,29 +930,6 @@ function wheels(
       else if (left === 0) side = 'right';
     }
   }
-  const unpicked = new Map<number, string>();
-  const postReward = room.postReward;
-  if (offers === 2 && postReward !== undefined) {
-    const removed = storeRemovals(room.entry, postReward);
-    for (const setup of setups)
-      take(removed.get(setup.rewardStoreName!), setup.roomRewardOverride!);
-    const conversions = postReward.run.metaConversionUses - room.entry.run.metaConversionUses;
-    const runProgress = removed.get('RunProgress');
-    const collected = [...(runProgress ?? new Map<string, number>()).keys()].filter(
-      (name) => (uses[name] ?? 0) > 0,
-    );
-    const separable = conversions === 0 || collected.length === conversions;
-    if (separable) for (const name of collected.slice(0, conversions)) take(runProgress, name);
-    setups.forEach((setup, index) => {
-      const store = setup.rewardStoreName!;
-      if (store === 'RunProgress' && !separable) return;
-      if (setups.filter((other) => other.rewardStoreName === store).length !== 1) return;
-      const rest = removed.get(store);
-      if (rest === undefined || rest.size !== 1) return;
-      const [name, count] = [...rest][0]!;
-      if (count === 1) unpicked.set(index, name);
-    });
-  }
   return setups.map((setup, index) => {
     const lastSetup = index === setups.length - 1;
     return {
@@ -971,7 +944,6 @@ function wheels(
       },
       ...optional('offers', offers),
       ...optional('side', side),
-      ...optional('unpicked', unpicked.has(index) ? { type: unpicked.get(index)! } : undefined),
     } as RunRecordWheel;
   });
 }

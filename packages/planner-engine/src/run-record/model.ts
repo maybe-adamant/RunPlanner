@@ -368,8 +368,6 @@ export interface RunRecordWheel {
   readonly picked: { readonly type: string; readonly lootName?: string };
   readonly offers?: 1 | 2;
   readonly side?: 'left' | 'right';
-  /** The other offer's type; the game does not record its god. */
-  readonly unpicked?: { readonly type: string };
 }
 
 export interface RunRecordFields {

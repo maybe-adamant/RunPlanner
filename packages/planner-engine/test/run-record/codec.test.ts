@@ -84,6 +84,24 @@ describe('run record codec', () => {
     });
   });
 
+  it("drops an older record's inferred unpicked wheel type and never writes one", () => {
+    const legacy = minimal();
+    room(legacy, 1).wheels = [
+      {
+        store: 'RunProgress',
+        picked: { type: 'Boon' },
+        offers: 2,
+        side: 'left',
+        unpicked: { type: 'MaxManaDrop' },
+      },
+    ];
+    const decoded = decodeRunRecord(legacy);
+    expect(decoded.rooms[1]?.wheels).toEqual([
+      { store: 'RunProgress', picked: { type: 'Boon' }, offers: 2, side: 'left' },
+    ]);
+    expect(encodeRunRecord(decoded)).not.toContain('unpicked');
+  });
+
   it('rejects unknown fields at every level', () => {
     rejects((record) => (record.extra = 1), /run record contains unknown field extra/);
     rejects((record) => (room(record, 0).highlight = 'x'), /unknown field highlight/);
@@ -325,13 +343,6 @@ describe('run record codec', () => {
           { store: 'RunProgress', picked: { type: 'Boon' }, offers: 1, side: 'left' },
         ]),
       /side requires two offers/,
-    );
-    rejects(
-      (record) =>
-        (room(record, 1).wheels = [
-          { store: 'RunProgress', picked: { type: 'Boon' }, unpicked: { type: 'MaxManaDrop' } },
-        ]),
-      /unpicked requires two offers/,
     );
   });
 });

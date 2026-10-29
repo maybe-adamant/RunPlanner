@@ -1552,8 +1552,7 @@
           "store": "RunProgress",
           "picked": { "type": "Boon", "lootName": "PoseidonUpgrade" },
           "offers": 2,
-          "side": "left",
-          "unpicked": { "type": "MaxManaDrop" }
+          "side": "left"
         }
       ],
       "npcInteractions": { "PoseidonUpgrade": 1 },
@@ -1650,8 +1649,7 @@
           "store": "MetaProgress",
           "picked": { "type": "MetaCardPointsCommonBigDrop" },
           "offers": 2,
-          "side": "left",
-          "unpicked": { "type": "GiftDrop" }
+          "side": "left"
         }
       ],
       "conversions": { "artificer": 1 },
@@ -2149,8 +2147,7 @@
           "store": "RunProgress",
           "picked": { "type": "Boon", "lootName": "HeraUpgrade" },
           "offers": 2,
-          "side": "left",
-          "unpicked": { "type": "StackUpgrade" }
+          "side": "left"
         }
       ],
       "entry": {

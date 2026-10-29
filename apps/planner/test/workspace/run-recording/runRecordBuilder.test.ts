@@ -113,7 +113,7 @@ function save(step: Step): SaveCheckpoint {
 }
 
 describe('run record builder', () => {
-  it('separates ship-wheel offers from the Artificer roll', () => {
+  it("records each wheel's store, pick, side and offer count", () => {
     const entered = room('O_Combat05', {
       encounters: [
         encounter('GeneratedO_Intro01'),
@@ -164,14 +164,12 @@ describe('run record builder', () => {
           picked: { type: 'MetaCardPointsCommonBigDrop' },
           offers: 2,
           side: 'left',
-          unpicked: { type: 'GiftDrop' },
         },
         {
           store: 'RunProgress',
           picked: { type: 'SpellDrop' },
           offers: 2,
           side: 'left',
-          unpicked: { type: 'MaxManaDrop' },
         },
       ],
       conversions: { artificer: 1 },

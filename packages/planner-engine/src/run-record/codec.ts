@@ -516,6 +516,7 @@ function pool(value: unknown, label: string): RunRecordPool {
 
 function wheel(value: unknown, label: string): RunRecordWheel {
   const record = object(value, label);
+  // Older records carried an inferred unpicked offer type; it is accepted and dropped.
   exact(record, ['store', 'picked'], ['offers', 'side', 'unpicked'], label);
   const picked = object(record.picked, `${label}.picked`);
   exact(picked, ['type'], ['lootName'], `${label}.picked`);
@@ -524,8 +525,6 @@ function wheel(value: unknown, label: string): RunRecordWheel {
   if (record.side !== undefined && record.side !== 'left' && record.side !== 'right')
     fail(`${label}.side is unsupported`);
   if (record.side !== undefined && record.offers !== 2) fail(`${label}.side requires two offers`);
-  if (record.unpicked !== undefined && record.offers !== 2)
-    fail(`${label}.unpicked requires two offers`);
   return Object.freeze({
     store: text(record.store, `${label}.store`),
     picked: Object.freeze({
@@ -534,11 +533,6 @@ function wheel(value: unknown, label: string): RunRecordWheel {
     }),
     ...(record.offers === undefined ? {} : { offers: record.offers }),
     ...(record.side === undefined ? {} : { side: record.side }),
-    ...optional(record, 'unpicked', label, (entry, path) => {
-      const row = object(entry, path);
-      exact(row, ['type'], [], path);
-      return Object.freeze({ type: text(row.type, `${path}.type`) });
-    }),
   }) as RunRecordWheel;
 }
 

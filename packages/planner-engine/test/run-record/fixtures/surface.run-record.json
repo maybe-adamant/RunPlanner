@@ -1771,8 +1771,7 @@
           "store": "MetaProgress",
           "picked": { "type": "MetaCurrencyBigDrop" },
           "offers": 2,
-          "side": "left",
-          "unpicked": { "type": "MetaCardPointsCommonBigDrop" }
+          "side": "left"
         }
       ],
       "conversions": { "artificer": 1 },
@@ -2148,16 +2147,9 @@
           "store": "MetaProgress",
           "picked": { "type": "MetaCardPointsCommonBigDrop" },
           "offers": 2,
-          "side": "left",
-          "unpicked": { "type": "GiftDrop" }
+          "side": "left"
         },
-        {
-          "store": "RunProgress",
-          "picked": { "type": "SpellDrop" },
-          "offers": 2,
-          "side": "left",
-          "unpicked": { "type": "MaxManaDrop" }
-        }
+        { "store": "RunProgress", "picked": { "type": "SpellDrop" }, "offers": 2, "side": "left" }
       ],
       "conversions": { "artificer": 1, "timePiece": 1 },
       "entry": {
