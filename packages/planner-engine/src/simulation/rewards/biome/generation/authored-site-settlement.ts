@@ -282,7 +282,12 @@ export function settleAuthoredAcquisitionSite(
         ...settled.branches,
       ]);
     }
-    if (room.entryState?.kind !== 'shop') {
+    // The Shop owns only its roomExit site (offers, Echo Gold, Travel Deal
+    // refill); a trait-generated pickup in a Shop room is an ordinary pickup.
+    const shopOwnsSite =
+      room.entryState?.kind === 'shop' &&
+      (onlyEntry === undefined || selectedSiteKey === 'roomExit');
+    if (!shopOwnsSite) {
       if (selectedSite === undefined || selectedSiteKey === undefined) return sourceBranches;
       if (producer === undefined) return sourceBranches;
       const sourceWasNormallyAcquired = producer.sourceNormal;

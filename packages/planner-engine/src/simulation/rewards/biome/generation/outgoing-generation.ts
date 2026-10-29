@@ -151,18 +151,19 @@ export function applyOutgoingGenerationTransition(
       siteSettlements.push(settlement);
       branches = settlement.branches;
     };
-    if (source.entryState?.kind === 'shop') settleSite({ completeShopAfterOrder: false });
-    else
-      for (const siteKey of Object.keys(source.acquisitionSites))
-        if (
-          source.roomActionRoster.rows.some(
-            (row) =>
-              row.reference.kind === 'interactAcquisitionEntry' &&
-              row.reference.siteKey === siteKey &&
-              row.window.kind === 'postOutgoing',
-          )
+    const shopRoom = source.entryState?.kind === 'shop';
+    if (shopRoom) settleSite({ completeShopAfterOrder: false });
+    for (const siteKey of Object.keys(source.acquisitionSites))
+      if (
+        !(shopRoom && siteKey === 'roomExit') &&
+        source.roomActionRoster.rows.some(
+          (row) =>
+            row.reference.kind === 'interactAcquisitionEntry' &&
+            row.reference.siteKey === siteKey &&
+            row.window.kind === 'postOutgoing',
         )
-          settleSite({ onlyEntry: { siteKey, entryKey: '' } });
+      )
+        settleSite({ onlyEntry: { siteKey, entryKey: '' } });
   }
 
   const checkpointOwner = hubDecisionOwner ?? batch?.origin ?? frontierOwner;
