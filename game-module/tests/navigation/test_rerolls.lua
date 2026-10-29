@@ -292,8 +292,17 @@ end
 local function chaosScreen(rerollCount)
     local chaos = require("mods.room.timeline.acquisitions.traits.chaos_offer")
     local module, _, callbacks = capture()
+    local rerolledScreens
+    for index = 1, rerollCount or 0 do
+        rerolledScreens = rerolledScreens or {}
+        rerolledScreens[index] = { curseOptions = {
+            { curseKey = "Early" .. index .. "A", requirementCount = 2 },
+            { curseKey = "Early" .. index .. "B", requirementCount = 2 },
+            { curseKey = "Early" .. index .. "C", requirementCount = 2 },
+        } }
+    end
     local offer = { kind = "chaos", giver = "Chaos", selected = "option1", blessingKey = "ChaosBlessing",
-        rarity = "Rare", selectedCurseValues = {}, blessingValues = {}, rerollCount = rerollCount, curseOptions = {
+        rarity = "Rare", selectedCurseValues = {}, blessingValues = {}, rerolledScreens = rerolledScreens, curseOptions = {
             { curseKey = "CurseA", requirementCount = 1 }, { curseKey = "CurseB", requirementCount = 1 },
             { curseKey = "CurseC", requirementCount = 1 },
         } }
@@ -327,12 +336,15 @@ local function chaosScreen(rerollCount)
             { LootData = loot, Data = { Name = "RowA" } }, {})
         return chosen
     end
-    return construct, choose, mismatches, function() return completed end
+    return construct, choose, mismatches, function() return completed end, loot
 end
 
 function TestRerolls.testChaosChoiceBeforeItsPlannedRerollLeavesThePlan()
-    local construct, choose, mismatches, completed = chaosScreen(1)
+    local construct, choose, mismatches, completed, loot = chaosScreen(1)
     construct(false)
+    -- The rerolled-away screen pins its curses; its blessings stay native.
+    lu.assertEquals(loot.UpgradeOptions[2].SecondaryItemName, "Early1B")
+    lu.assertEquals(loot.UpgradeOptions[2].ItemName, "RowB")
     lu.assertTrue(choose())
     lu.assertEquals(mismatches, { { "screen-reroll", 1, 0 } })
     lu.assertEquals(completed(), 0)

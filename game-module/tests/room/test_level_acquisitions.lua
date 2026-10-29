@@ -24,7 +24,7 @@ local function capture()
     return module, callbacks
 end
 
-local function harness(row, native, isBound, installSeaStar, levelAdapter, seaStarAdapter, reservation)
+local function harness(row, native, isBound, installSeaStar, levelAdapter, seaStarAdapter)
     local module, callbacks = capture()
     local state = { state = "synchronized" }
     local begins, completions, mismatches, releases = 0, {}, {}, 0
@@ -66,8 +66,7 @@ local function harness(row, native, isBound, installSeaStar, levelAdapter, seaSt
     }
     levelAdapter = levelAdapter or levels
     seaStarAdapter = seaStarAdapter or seaStar
-    levelAdapter.attach(module, session, function() return state end, function() end, room, seaStarAdapter, nil,
-        reservation)
+    levelAdapter.attach(module, session, function() return state end, function() end, room, seaStarAdapter)
     if installSeaStar then seaStarAdapter.attach(module) end
     return callbacks, room, state, handle, function() return begins end, completions, mismatches,
         function() return releases end
@@ -184,56 +183,44 @@ function TestLevelAcquisitions.testUnplannedRerollLeavesThePlanAndStaysNative()
     lu.assertEquals(loot.UpgradeOptions[1].ItemName, "NativeReroll")
 end
 
-function TestLevelAcquisitions.testPlannedRerollsInstallTheRowsAtTheLastPlannedRoll()
+function TestLevelAcquisitions.testEachPomScreenInstallsItsAuthoredTargetsInOrder()
     local row = levelRow("StackUpgrade", 3, "Target")
     row.detail.levelResolution.offeredTargets = { "Target", "Other" }
-    row.detail.levelResolution.rerollCount = 2
+    row.detail.levelResolution.rerolledScreens = {
+        { offeredTargets = { "FirstA", "FirstB" } }, { offeredTargets = { "SecondA" } },
+    }
     local loot = { Name = "StackUpgrade", UpgradeOptions = { { ItemName = "NativeFirst" } } }
     local callbacks, _, _, _, _, completions, mismatches = harness(row, loot)
     callbacks.HandleLootPickup(nil, {}, function() end, {}, loot, {})
     callbacks.CreateBoonLootButtons(nil, {}, function() end, {}, loot, false, {})
-    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "NativeFirst" } })
-    local function reroll(nativeRow)
-        callbacks.CreateBoonLootButtons(nil, {}, function(_, value)
-            if nativeRow then value.UpgradeOptions = { { ItemName = nativeRow } } end
-        end, {}, loot, true, {})
+    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "FirstA" }, { ItemName = "FirstB" } })
+    lu.assertEquals(loot.StackNum, 3)
+    -- The native reroll redraws the rows before it rebuilds the buttons.
+    local function reroll()
+        loot.UpgradeOptions = { { ItemName = "NativeReroll" } }
+        callbacks.CreateBoonLootButtons(nil, {}, function() end, {}, loot, true, {})
     end
-    reroll("NativeSecond")
-    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "NativeSecond" } })
+    reroll()
+    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "SecondA" } })
     lu.assertEquals(#completions, 0)
     reroll()
     lu.assertEquals(loot.UpgradeOptions[1].ItemName, "Target")
     lu.assertEquals(loot.UpgradeOptions[2].ItemName, "Other")
-    lu.assertEquals(loot.StackNum, 3)
     lu.assertEquals(#completions, 1)
     lu.assertEquals(mismatches, {})
-end
-
-function TestLevelAcquisitions.testTheFirstPomScreenBeforePlannedRerollsReservesThePlannedRows()
-    local row = levelRow("StackUpgrade", 1, "Target")
-    row.detail.levelResolution.offeredTargets = { "Target", "Other" }
-    row.detail.levelResolution.rerollCount = 1
-    local loot = { Name = "StackUpgrade", UpgradeOptions = { { ItemName = "NativeFirst" } } }
-    local reserved = {}
-    local reservation = { initial = function(native, plan) reserved[#reserved + 1] = { native, plan } end }
-    local callbacks = harness(row, loot, nil, nil, nil, nil, reservation)
-    callbacks.HandleLootPickup(nil, {}, function() end, {}, loot, {})
-    callbacks.CreateBoonLootButtons(nil, {}, function() end, {}, loot, false, {})
-    callbacks.CreateBoonLootButtons(nil, {}, function() end, {}, loot, true, {})
-    lu.assertEquals(reserved, { { loot, { planned = 1, names = { "Target", "Other" }, picked = "Target" } } })
 end
 
 function TestLevelAcquisitions.testChoiceBeforeThePlannedRerollsLeavesThePlan()
     local row = levelRow("StackUpgrade", 1, "Target")
     row.detail.levelResolution.offeredTargets = { "Target", "Other" }
-    row.detail.levelResolution.rerollCount = 1
+    row.detail.levelResolution.rerolledScreens = { { offeredTargets = { "Early" } } }
     local loot = { Name = "StackUpgrade", UpgradeOptions = { { ItemName = "NativeFirst" } } }
     local callbacks, _, _, _, _, completions, mismatches = harness(row, loot)
     callbacks.HandleLootPickup(nil, {}, function() end, {}, loot, {})
     callbacks.CreateBoonLootButtons(nil, {}, function() end, {}, loot, false, {})
     local selected = false
     callbacks.HandleUpgradeChoiceSelection(nil, {}, function() selected = true end, {},
-        { LootData = loot, Data = { Name = "NativeFirst" } }, {})
+        { LootData = loot, Data = { Name = "Early" } }, {})
     lu.assertTrue(selected)
     lu.assertEquals(mismatches, { { "screen-reroll", 1, 0 } })
     lu.assertEquals(#completions, 0)

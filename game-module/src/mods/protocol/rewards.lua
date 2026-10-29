@@ -210,6 +210,46 @@ local function echoLastRunBoon(value, label)
     return record
 end
 
+-- Three ordered Chaos curse rows.
+local function curseOptions(value, label)
+    local options, optionsError = p.arr(value, label, 3)
+    if not options then return nil, optionsError end
+    if #options ~= 3 then return p.fail(label .. " must contain three options") end
+    for index, optionValue in ipairs(options) do
+        local option, optionError = p.exact(optionValue, { "curseKey", "requirementCount" }, {},
+            label .. "[" .. index .. "]")
+        if not option then return nil, optionError end
+        if not p.str(option.curseKey, label .. ".curseKey")
+            or not p.int(option.requirementCount, label .. ".requirementCount", 1) then
+            return p.fail(label .. " has a malformed curse option")
+        end
+    end
+    return options
+end
+
+-- A trait screen shown and then rerolled away: its rows, no pick.
+local function rerolledTraitScreen(value, label)
+    local screen, screenError = p.exact(value, { "options" }, { "rejected" }, label)
+    if not screen then return nil, screenError end
+    local options, optionsError = p.arr(screen.options, label .. ".options", 3)
+    if not options then return nil, optionsError end
+    local seen = {}
+    for index, optionValue in ipairs(options) do
+        local option, optionError = p.exact(optionValue, { "key" }, { "rarity" }, label .. ".options[" .. index .. "]")
+        if not option then return nil, optionError end
+        if not p.str(option.key, label .. ".key") or seen[option.key]
+            or (option.rarity ~= nil and not p.str(option.rarity, label .. ".rarity")) then
+            return p.fail(label .. " has a malformed or repeated option")
+        end
+        seen[option.key] = true
+    end
+    if screen.rejected ~= nil and (not p.one(screen.rejected, optionKeys, label .. ".rejected")
+        or options[tonumber(screen.rejected:match("(%d)$"))] == nil) then
+        return p.fail(label .. ".rejected is not a shown option")
+    end
+    return screen
+end
+
 function rewards.traitOffer(value, label)
     local record, errorMessage = p.obj(value, label)
     if not record then return nil, errorMessage end
@@ -231,31 +271,21 @@ function rewards.traitOffer(value, label)
                 "kind", "giver", "curseOptions", "selected", "selectedCurseValues",
                 "blessingKey", "rarity", "blessingValues",
             },
-            { "rerollCount" },
+            { "rerolledScreens" },
             label
         )
         if not row then return nil, rowError end
-        local countOk, countError = p.screenRerollCount(row, label)
-        if not countOk then return nil, countError end
+        local screensOk, screensError = p.rerolledScreens(row, label, function(screen, screenLabel)
+            local chaosScreen, screenError = p.exact(screen, { "curseOptions" }, {}, screenLabel)
+            if not chaosScreen then return nil, screenError end
+            return curseOptions(chaosScreen.curseOptions, screenLabel .. ".curseOptions")
+        end)
+        if not screensOk then return nil, screensError end
         if row.giver ~= "Chaos" or not p.one(row.selected, optionKeys, label .. ".selected") then
             return p.fail(label .. " is a malformed Chaos offer")
         end
-        local options, optionsError = p.arr(row.curseOptions, label .. ".curseOptions", 3)
-        if not options then return nil, optionsError end
-        if #options ~= 3 then return p.fail(label .. ".curseOptions must contain three options") end
-        for index, optionValue in ipairs(options) do
-            local option, optionError = p.exact(
-                optionValue,
-                { "curseKey", "requirementCount" },
-                {},
-                label .. ".curseOptions[" .. index .. "]"
-            )
-            if not option then return nil, optionError end
-            if not p.str(option.curseKey, label .. ".curseKey")
-                or not p.int(option.requirementCount, label .. ".requirementCount", 1) then
-                return p.fail(label .. " has a malformed curse option")
-            end
-        end
+        local _, optionsError = curseOptions(row.curseOptions, label .. ".curseOptions")
+        if optionsError then return nil, optionsError end
         if not p.recordNumbers(row.selectedCurseValues, label .. ".selectedCurseValues")
             or not p.str(row.blessingKey, label .. ".blessingKey")
             or not p.str(row.rarity, label .. ".rarity")
@@ -267,12 +297,12 @@ function rewards.traitOffer(value, label)
     local row, rowError = p.exact(
         record,
         { "kind", "giver", "options", "selected" },
-        { "rejected", "hexTree", "expectation", "rerollCount" },
+        { "rejected", "hexTree", "expectation", "rerolledScreens" },
         label
     )
     if not row then return nil, rowError end
-    local countOk, countError = p.screenRerollCount(row, label)
-    if not countOk then return nil, countError end
+    local screensOk, screensError = p.rerolledScreens(row, label, rerolledTraitScreen)
+    if not screensOk then return nil, screensError end
     if row.expectation ~= nil then
         local _, expectationError = screenExpectation(row.expectation, label .. ".expectation",
             SCREEN_EXPECTATION_KEYS)
@@ -517,12 +547,17 @@ function rewards.acquisitionRole(value, label)
         local level, levelError = p.exact(
             record.levelResolution,
             { "offeredTargets", "selectedTarget", "levelCount" },
-            { "rerollCount" },
+            { "rerolledScreens" },
             label .. ".levelResolution"
         )
         if not level then return nil, levelError end
-        local countOk, countError = p.screenRerollCount(level, label .. ".levelResolution")
-        if not countOk then return nil, countError end
+        local screensOk, screensError = p.rerolledScreens(level, label .. ".levelResolution",
+            function(screen, screenLabel)
+                local levelScreen, screenError = p.exact(screen, { "offeredTargets" }, {}, screenLabel)
+                if not levelScreen then return nil, screenError end
+                return p.strings(levelScreen.offeredTargets, screenLabel .. ".offeredTargets", 3)
+            end)
+        if not screensOk then return nil, screensError end
         local _, targetsError = p.strings(
             level.offeredTargets,
             label .. ".levelResolution.offeredTargets",

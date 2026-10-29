@@ -118,6 +118,25 @@ local function nativeRows(scope)
     return true
 end
 
+-- A rerolled-away screen pins only its curses; its blessings stay native.
+local function rerolledRows(scope, screen)
+    local rows = scope.loot.UpgradeOptions
+    if type(rows) ~= "table" or #rows ~= 3 then
+        diagnostic(scope.session, scope, "three Chaos transforming rows",
+            type(rows) == "table" and #rows or type(rows))
+        return false
+    end
+    for index, row in ipairs(rows) do
+        row.Type = row.Type or "TransformingTrait"
+        row.SecondaryItemName = screen.curseOptions[index].curseKey
+    end
+    return true
+end
+
+local function plannedRerolls(offer)
+    return offer and offer.rerolledScreens and #offer.rerolledScreens or 0
+end
+
 function chaosOffer.attach(module, session, getState, report, room, highlights)
     local screens = setmetatable({}, { __mode = "k" })
     local processedContext
@@ -142,13 +161,14 @@ function chaosOffer.attach(module, session, getState, report, room, highlights)
         return result
     end)
 
-    -- The scope lives as long as its screen: the planned rows replace the roll
-    -- after the planned native rerolls, and a further reroll leaves the plan.
+    -- The scope lives as long as its screen: the opening shows the first
+    -- rerolled-away screen, each native reroll the next, the planned rows follow
+    -- the last reroll, and a further reroll leaves the plan.
     module.hooks.wrap("CreateBoonLootButtons", "run-planner-chaos-initial-screen", function(_, runtime, base,
         screen, loot, reroll, args)
         local scope = screens[loot]
         if scope == nil then return base(screen, loot, reroll, args) end
-        local planned = scope.offer.rerollCount or 0
+        local planned = plannedRerolls(scope.offer)
         if reroll == true then
             scope.rerolls = (scope.rerolls or 0) + 1
             if scope.rerolls > planned then
@@ -164,7 +184,16 @@ function chaosOffer.attach(module, session, getState, report, room, highlights)
             report(runtime)
             return base(screen, loot, reroll, args)
         end
-        if (scope.rerolls or 0) < planned then return base(screen, loot, reroll, args) end
+        local rerolled = scope.offer.rerolledScreens and scope.offer.rerolledScreens[(scope.rerolls or 0) + 1]
+        if rerolled ~= nil then
+            scope.rerolled = rerolledRows(scope, rerolled) and rerolled or nil
+            scope.inCreation = true
+            local ok, result = pcall(base, screen, loot, reroll, args)
+            scope.inCreation = false
+            if not ok then screens[loot] = nil; error(result, 0) end
+            scope.rerolled = nil
+            return result
+        end
         scope.inCreation = true
         local ok, result = pcall(base, screen, loot, reroll, args)
         scope.inCreation = false
@@ -188,7 +217,7 @@ function chaosOffer.attach(module, session, getState, report, room, highlights)
         screen, button, args)
         local loot = type(button) == "table" and button.LootData or nil
         local scope = loot and screens[loot] or nil
-        local planned = scope and scope.offer.rerollCount or 0
+        local planned = scope and plannedRerolls(scope.offer) or 0
         if scope ~= nil and (scope.rerolls or 0) < planned then
             -- A choice before the planned rerolls is from rows the plan never offered.
             screens[loot] = nil
@@ -203,6 +232,15 @@ function chaosOffer.attach(module, session, getState, report, room, highlights)
         local scope = screens[loot]
         if scope == nil or not scope.inCreation then
             return base(screen, loot, itemIndex, itemData, args)
+        end
+        if scope.rerolled ~= nil then
+            local curse = scope.rerolled.curseOptions[itemIndex]
+            if curse == nil then return base(screen, loot, itemIndex, itemData, args) end
+            processedContext = { curseKey = curse.curseKey, requirementCount = curse.requirementCount }
+            local ok, result = pcall(base, screen, loot, itemIndex, itemData, args)
+            processedContext = nil
+            if not ok then error(result, 0) end
+            return result
         end
         if not scope.prepared then
             scope.prepared = true

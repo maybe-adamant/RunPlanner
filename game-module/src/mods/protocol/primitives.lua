@@ -101,10 +101,15 @@ function primitives.hexTree(value, label, required)
     end
     return tree
 end
--- Native single-pick screen rerolls before a screen's final rows; absent is none.
-function primitives.screenRerollCount(record, label)
-    if record.rerollCount ~= nil and not primitives.int(record.rerollCount, label .. ".rerollCount", 1) then
-        return primitives.fail(label .. ".rerollCount must be a positive integer")
+-- A single-pick screen's rerolled-away screens, oldest first; absent is none.
+function primitives.rerolledScreens(record, label, decode)
+    if record.rerolledScreens == nil then return true end
+    local screens, screensError = primitives.arr(record.rerolledScreens, label .. ".rerolledScreens")
+    if not screens then return nil, screensError end
+    if #screens == 0 then return primitives.fail(label .. ".rerolledScreens must hold at least one screen") end
+    for index, screen in ipairs(screens) do
+        local _, screenError = decode(screen, label .. ".rerolledScreens[" .. index .. "]")
+        if screenError then return nil, screenError end
     end
     return true
 end

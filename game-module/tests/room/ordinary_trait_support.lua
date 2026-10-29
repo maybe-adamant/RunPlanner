@@ -72,7 +72,7 @@ function support.attached(offer, disposition, carrierName, adapters)
     local traitHooks = adapters and adapters.traits or hooks
     local seaStarAdapter = adapters and adapters.seaStar or seaStar
     traitHooks.attach(module, session, function() return state end, function() end, room, seaStarAdapter,
-        nil, adapters and adapters.rowOptions or rowOptions, adapters and adapters.reservation)
+        nil, adapters and adapters.rowOptions or rowOptions)
     if adapters and adapters.seaStar then seaStarAdapter.attach(module) end
     return callbacks, function() return begins end, function() return completed end,
         function() return mismatches end, function(value) active = value end

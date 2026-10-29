@@ -32,12 +32,13 @@ local function copy(value)
     return result
 end
 
-function levels.prepareVisible(row, loot)
+-- `targets` are a rerolled-away screen's; nil installs the final rows.
+function levels.prepareVisible(row, loot, targets)
     local effect = resolution(row)
     if effect == nil or type(loot) ~= "table" then return false end
     local installed = {}
     local existing = loot.UpgradeOptions or {}
-    for index, target in ipairs(effect.offeredTargets or {}) do
+    for index, target in ipairs(targets or effect.offeredTargets or {}) do
         local option = copy(existing[index])
         option.ItemName = target
         installed[index] = option
@@ -53,9 +54,9 @@ end
 
 -- Native Pom rows re-roll unless every offered trait is held. A native call
 -- failure returns nil plus its error.
-function levels.unheldTarget(row)
+function levels.unheldTarget(row, targets)
     local effect = resolution(row)
-    for _, target in ipairs(effect and effect.offeredTargets or {}) do
+    for _, target in ipairs(targets or effect and effect.offeredTargets or {}) do
         local ok, held = pcall(_G.HeroHasTrait, target)
         if not ok then return nil, tostring(held) end
         if not held then return target end
@@ -110,7 +111,7 @@ function levels.visibleRole(transaction, contact)
     return nil
 end
 
-function levels.attach(module, session, getState, report, room, seaStar, highlights, reservation)
+function levels.attach(module, session, getState, report, room, seaStar, highlights)
     assert(type(seaStar) == "table", "level acquisition Sea Star instance is required")
     local roomCoordinator = room
     local suppressFatedPomBonus = 0
@@ -118,7 +119,7 @@ function levels.attach(module, session, getState, report, room, seaStar, highlig
     local retainedVisible = setmetatable({}, { __mode = "k" })
     local activeDirectUses = setmetatable({}, { __mode = "k" })
     local activeDirectTerminals = {}
-    -- Native rerolls of each open Pom screen; the planned rows replace the last planned one.
+    -- Native rerolls of each open Pom screen.
     local screenRerolls = setmetatable({}, { __mode = "k" })
     local function seaStarDiagnostic(state, checkpoint, expected, observed)
         session.diagnostic(state, checkpoint, { expected = expected, observed = observed })
@@ -180,7 +181,8 @@ function levels.attach(module, session, getState, report, room, seaStar, highlig
         end
         if resolution(payload) == nil then return base(screen, loot, reroll, args) end
         local initial = reroll ~= true
-        local planned = resolution(payload).rerollCount or 0
+        local screens = resolution(payload).rerolledScreens or {}
+        local planned = #screens
         local rerolls = screenRerolls[loot] or 0
         if not initial then
             rerolls = rerolls + 1
@@ -192,10 +194,11 @@ function levels.attach(module, session, getState, report, room, seaStar, highlig
             end
         end
         if not begunVisible[handle] then return base(screen, loot, reroll, args) end
-        -- The planned rows are the screen's after its planned rerolls; earlier rows stay native.
+        -- The opening shows the first rerolled-away screen, each reroll the next, and
+        -- the final rows follow the last reroll.
+        local rerolled = screens[rerolls + 1]
         local installing = rerolls == planned
-        local unheld, nativeError
-        if installing then unheld, nativeError = levels.unheldTarget(payload) end
+        local unheld, nativeError = levels.unheldTarget(payload, rerolled and rerolled.offeredTargets)
         if nativeError ~= nil then
             session.fault(state, {
                 outcome = "fault", checkpoint = "native-api", expected = "HeroHasTrait", observed = nativeError,
@@ -213,15 +216,7 @@ function levels.attach(module, session, getState, report, room, seaStar, highlig
             report(runtime)
             return base(screen, loot, reroll, args)
         end
-        if not installing then
-            local effect = resolution(payload)
-            if initial and reservation then
-                reservation.initial(loot, { planned = planned, names = effect.offeredTargets or {},
-                    picked = effect.selectedTarget })
-            end
-            return base(screen, loot, reroll, args)
-        end
-        if not levels.prepareVisible(payload, loot) then
+        if not levels.prepareVisible(payload, loot, rerolled and rerolled.offeredTargets) then
             session.diagnostic(state, "level-offer-install", {
                 expected = "published level rows", observed = "not installed",
             })
@@ -229,6 +224,7 @@ function levels.attach(module, session, getState, report, room, seaStar, highlig
         local result = withoutFatedPomBonus(function()
             return base(screen, loot, reroll, args)
         end)
+        if not installing then return result end
         local selected = resolution(payload) and resolution(payload).selectedTarget
         if highlights and type(selected) == "string" then
             highlights.screen(runtime, state, screen, selected, false)
@@ -258,9 +254,10 @@ function levels.attach(module, session, getState, report, room, seaStar, highlig
         end
         local effect = resolution(payload)
         if effect == nil then return base(screen, button, args) end
-        if (screenRerolls[loot] or 0) < (effect.rerollCount or 0) then
-            -- A choice before the planned rerolls is from rows the plan never offered.
-            session.mismatch(state, "screen-reroll", effect.rerollCount, screenRerolls[loot] or 0)
+        local plannedRerolls = #(effect.rerolledScreens or {})
+        if (screenRerolls[loot] or 0) < plannedRerolls then
+            -- A choice before the planned rerolls is from rows no planned screen kept.
+            session.mismatch(state, "screen-reroll", plannedRerolls, screenRerolls[loot] or 0)
             report(runtime)
             return base(screen, button, args)
         end

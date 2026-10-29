@@ -191,6 +191,29 @@ function ordinary.install(payload, loot, rowOptions)
     return true
 end
 
+-- The screens shown and rerolled away before the final rows, oldest first.
+function ordinary.rerolledScreens(offer)
+    return type(offer) == "table" and offer.kind == "traits" and offer.rerolledScreens or {}
+end
+
+-- Installs a rerolled-away screen's rows over the native roll; it carries no pick.
+function ordinary.installScreen(loot, screen)
+    if type(loot) ~= "table" or type(screen) ~= "table" then return false end
+    ordinary.ensureRolled(loot)
+    local rows = loot.UpgradeOptions or {}
+    local installed = {}
+    for index, option in ipairs(screen.options or {}) do
+        local row = copy(rows[index])
+        row.Type = row.Type or "Trait"
+        row.ItemName = option.key
+        row.Rarity = option.rarity
+        row.TraitToReplace, row.OldRarity, row.StackNum = nil, nil, nil
+        installed[index] = row
+    end
+    loot.UpgradeOptions = installed
+    return true
+end
+
 local function physicalIndex(loot, key)
     for index, row in ipairs(loot and loot.UpgradeOptions or {}) do
         if row.ItemName == key then return index end
@@ -199,14 +222,16 @@ local function physicalIndex(loot, key)
 end
 
 -- Native blocks a random row when the loot allows fewer choices than it has
--- rows; the plan models that block only as its rejected row. A native call
--- failure returns nil plus its error.
-function ordinary.blockedRowConflict(payload, loot)
+-- rows; the plan models that block only as its rejected row. `screen` is a
+-- rerolled-away screen, nil for the final rows. A native call failure returns
+-- nil plus its error.
+function ordinary.blockedRowConflict(payload, loot, screen)
     local offer = ordinary.offer(payload)
     if offer == nil or type(_G.CalcNumLootChoices) ~= "function" then return nil end
-    local rows = offer.kind == "fallbackGold" and 1 or #(offer.options or {})
+    local shown = screen or offer
+    local rows = offer.kind == "fallbackGold" and 1 or #(shown.options or {})
     local ok, choices = pcall(_G.CalcNumLootChoices, loot)
-    local planned = offer.rejected ~= nil and offer.kind ~= "fallbackGold"
+    local planned = shown.rejected ~= nil and offer.kind ~= "fallbackGold"
     if not ok or type(choices) ~= "number" then return nil, tostring(choices) end
     local blocks = rows > choices
     if blocks == planned then return nil end
@@ -216,11 +241,19 @@ function ordinary.blockedRowConflict(payload, loot)
     }
 end
 
-function ordinary.alignRejected(payload, screen, loot)
+-- `shown` is the installed rerolled-away screen, nil for the final rows.
+function ordinary.alignRejected(payload, screen, loot, shown)
     local offer = ordinary.offer(payload)
-    if offer == nil or offer.kind == "fallbackGold" or offer.rejected == nil
-        or type(screen) ~= "table" then return end
-    local rejected = ordinary.optionKey(payload, optionIndex(offer.rejected))
+    if offer == nil or offer.kind == "fallbackGold" or type(screen) ~= "table" then return end
+    local rejectedKey = (shown or offer).rejected
+    if rejectedKey == nil then return end
+    local rejected
+    if shown ~= nil then
+        local option = shown.options[optionIndex(rejectedKey)]
+        rejected = option and option.key
+    else
+        rejected = ordinary.optionKey(payload, optionIndex(rejectedKey))
+    end
     local index = physicalIndex(loot, rejected)
     if index ~= nil then screen.BlockedIndexes = { index } end
 end

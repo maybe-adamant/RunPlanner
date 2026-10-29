@@ -33,15 +33,7 @@ local function boundNormal(room, state, current, native)
     return handle, room.begin(state, handle)
 end
 
--- The planned final rows the native screens before the final one keep free.
-local function reservedRows(payload, offer)
-    if offer == nil or offer.kind ~= "traits" then return nil end
-    local names = {}
-    for index in ipairs(offer.options or {}) do names[#names + 1] = ordinary.optionKey(payload, index) end
-    return { planned = offer.rerollCount or 0, names = names, picked = ordinary.selectedKey(payload) }
-end
-
-function hooks.attach(module, session, getState, report, room, seaStar, highlights, rowOptions, reservation)
+function hooks.attach(module, session, getState, report, room, seaStar, highlights, rowOptions)
     assert(type(seaStar) == "table", "trait acquisition Sea Star instance is required")
     assert(type(rowOptions) == "table", "trait row options are required")
     chaosOffer.attach(module, session, getState, report, room, highlights)
@@ -52,8 +44,9 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
     local targetedAcquisitionPending = {}
     local offPlanOuter = nil
     local checkedScreens = setmetatable({}, { __mode = "k" })
-    -- Native rerolls of each open screen; the planned rows replace the last planned one.
+    -- Native rerolls of each open screen, and the rerolled-away screen it shows (nil: the final rows).
     local screenRerolls = setmetatable({}, { __mode = "k" })
+    local shownScreens = setmetatable({}, { __mode = "k" })
     local concaveStone = concaveStoneModule.create({
         module = module, session = session, getState = getState, room = room, ordinary = ordinary,
     })
@@ -449,7 +442,8 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
         local offer = ordinary.offer(payload)
         local completeAfterInstall = false
         local carrier = ordinary.isCarrier(loot, offer)
-        local planned = carrier and offer.rerollCount or 0
+        local screens = ordinary.rerolledScreens(offer)
+        local planned = carrier and #screens or 0
         local rerolls = screenRerolls[loot] or 0
         if carrier and reroll == true then
             rerolls = rerolls + 1
@@ -460,22 +454,12 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
                 return base(screen, loot, reroll, args)
             end
         end
-        -- The planned rows are the screen's after its planned rerolls; earlier rows stay native.
+        -- The opening shows the first rerolled-away screen, the k-th reroll the next,
+        -- and the final rows follow the last reroll.
         local installing = carrier and rerolls == planned
-        -- Screen checks read the first native roll; they hold for every later roll.
-        if carrier and reroll ~= true and not installing and not checkedScreens[loot] then
-            checkedScreens[loot] = true
-            ordinary.ensureRolled(loot)
-            if screenChecks.report(session, state, screenChecks.ordinaryScreen(offer, loot)) then
-                report(runtime)
-                return base(screen, loot, reroll, args)
-            end
-        end
-        if carrier and reroll ~= true and not installing and reservation then
-            reservation.initial(loot, reservedRows(payload, offer))
-        end
-        if installing then
-            local conflict, nativeError = ordinary.blockedRowConflict(payload, loot)
+        local rerolled = carrier and screens[rerolls + 1] or nil
+        if installing or rerolled then
+            local conflict, nativeError = ordinary.blockedRowConflict(payload, loot, rerolled)
             if nativeError ~= nil then
                 session.fault(state, {
                     outcome = "fault", checkpoint = "native-api", expected = "CalcNumLootChoices",
@@ -489,7 +473,8 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
                 report(runtime)
                 return base(screen, loot, reroll, args)
             end
-            -- Screen checks read the native roll before the published rows replace it.
+            -- Screen checks read the first native roll before published rows replace it;
+            -- they hold for every later screen.
             if not checkedScreens[loot] then
                 checkedScreens[loot] = true
                 ordinary.ensureRolled(loot)
@@ -498,6 +483,11 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
                     return base(screen, loot, reroll, args)
                 end
             end
+        end
+        shownScreens[loot] = rerolled
+        if rerolled then
+            ordinary.installScreen(loot, rerolled)
+        elseif installing then
             if ordinary.install(payload, loot, rowOptions) ~= true then
                 diagnostic(state, "trait-offer-install", "published native rows", nativeName(loot))
             end
@@ -523,7 +513,7 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
         local current = room.current(state)
         local _, payload = boundNormal(room, state, current, loot)
         if index == 1 and ordinary.isCarrier(loot, ordinary.offer(payload)) then
-            ordinary.alignRejected(payload, screen, loot)
+            ordinary.alignRejected(payload, screen, loot, shownScreens[loot])
         end
         return base(screen, loot, index, item, args)
     end)
@@ -538,7 +528,7 @@ function hooks.attach(module, session, getState, report, room, seaStar, highligh
         local selected = button and button.Data and button.Data.Name
         local seaStarScope = seaStar.scope(state, payload)
         local nested = type(args) == "table" and args.DoubleBoonChance == true
-        local plannedRerolls = ordinary.isCarrier(loot, offer) and offer.rerollCount or 0
+        local plannedRerolls = ordinary.isCarrier(loot, offer) and #ordinary.rerolledScreens(offer) or 0
         if not nested and (screenRerolls[loot] or 0) < plannedRerolls then
             -- A choice before the planned rerolls is from rows the plan never offered.
             session.mismatch(state, "screen-reroll", plannedRerolls, screenRerolls[loot] or 0)

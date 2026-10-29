@@ -969,45 +969,65 @@ function TestOrdinaryTraits.testUnplannedRerollLeavesThePlanWithNativeRows()
     lu.assertEquals(completed, 0)
 end
 
-function TestOrdinaryTraits.testEarlierPlannedRerollSkipsTheBlockedRowCheck()
+local function earlierScreen(prefix, rejected)
+    return { rejected = rejected, options = {
+        { key = prefix .. "A", rarity = "Epic" }, { key = prefix .. "B" }, { key = prefix .. "C", rarity = "Rare" },
+    } }
+end
+
+function TestOrdinaryTraits.testAnEarlierScreenIsCheckedAgainstItsOwnBlockedRow()
     local offer = threeRows(nil)
-    offer.rerollCount = 2
+    offer.rerolledScreens = { earlierScreen("First"), earlierScreen("Second", "option3") }
     local loot, completed, mismatches = openCursedScreen(offer, 2, nil, true)
     lu.assertEquals(mismatches, {})
-    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "Native" } })
+    lu.assertEquals(loot.UpgradeOptions[1].ItemName, "SecondA")
     lu.assertEquals(completed, 0)
+    offer.rerolledScreens[2].rejected = nil
+    loot, completed, mismatches = openCursedScreen(offer, 2, nil, true)
+    lu.assertEquals(mismatches, { {
+        checkpoint = "trait-offer-blocked-row", expected = "no blocked row", observed = "blocked row",
+    } })
+    lu.assertEquals(loot.UpgradeOptions, { { ItemName = "Native" } })
 end
 
 function TestOrdinaryTraits.testLastPlannedRerollInstallsThePlannedRows()
     local offer = threeRows(nil)
-    offer.rerollCount = 1
+    offer.rerolledScreens = { earlierScreen("First") }
     local loot, completed, mismatches = openCursedScreen(offer, 3, nil, true)
     lu.assertEquals(mismatches, {})
     lu.assertEquals(loot.UpgradeOptions[1].ItemName, "ApolloAttack")
     lu.assertEquals(completed, 1)
 end
 
-function TestOrdinaryTraits.testTheFirstScreenBeforePlannedRerollsReservesThePlannedRows()
+function TestOrdinaryTraits.testEachScreenInstallsItsAuthoredRowsInOrder()
     local offer = threeRows(nil)
-    offer.rerollCount = 1
-    local reserved = {}
-    local reservation = { initial = function(loot, plan) reserved[#reserved + 1] = { loot = loot, plan = plan } end }
+    offer.rerolledScreens = { earlierScreen("First"), earlierScreen("Second") }
     local priorChoices = _G.CalcNumLootChoices
     _G.CalcNumLootChoices = function() return 3 end
-    local callbacks = attached(offer, nil, "ApolloUpgrade", { reservation = reservation })
-    local loot = { GodLoot = true, Name = "ApolloUpgrade", UpgradeOptions = { { ItemName = "Native" } } }
+    local callbacks, _, completed, mismatches = attached(offer, nil, "ApolloUpgrade")
+    local loot = { GodLoot = true, Name = "ApolloUpgrade", UpgradeOptions = {
+        { ItemName = "Native", StackNum = 2, TraitToReplace = "Old" },
+    } }
     callbacks.SpawnRoomReward(nil, {}, function()
         return callbacks.CreateLoot(nil, {}, function() return loot end, {})
     end, {}, {})
+    local function keys()
+        local result = {}
+        for index, row in ipairs(loot.UpgradeOptions) do result[index] = row.ItemName end
+        return result
+    end
     callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, false, {})
+    lu.assertEquals(keys(), { "FirstA", "FirstB", "FirstC" })
+    lu.assertEquals(loot.UpgradeOptions[1], { ItemName = "FirstA", Rarity = "Epic", Type = "Trait" })
+    lu.assertNil(loot.UpgradeOptions[2].Rarity)
+    callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, true, {})
+    lu.assertEquals(keys(), { "SecondA", "SecondB", "SecondC" })
+    lu.assertEquals(completed(), 0)
     callbacks.CreateBoonLootButtons(nil, {}, function() return true end, {}, loot, true, {})
     _G.CalcNumLootChoices = priorChoices
-    lu.assertEquals(#reserved, 1)
-    lu.assertIs(reserved[1].loot, loot)
-    lu.assertEquals(reserved[1].plan, {
-        planned = 1, names = { "ApolloAttack", "ApolloCast", "ApolloSpecial" }, picked = "ApolloAttack",
-    })
-    lu.assertEquals(loot.UpgradeOptions[1].ItemName, "ApolloAttack")
+    lu.assertEquals(keys(), { "ApolloAttack", "ApolloCast", "ApolloSpecial" })
+    lu.assertEquals(completed(), 1)
+    lu.assertEquals(mismatches(), {})
 end
 
 function TestOrdinaryTraits.testChoiceCountFailureIsANativeFaultNotAMismatch()

@@ -2535,17 +2535,36 @@ function TestProtocol.testWellAndPoolGuideRowsNameTheirRoll()
     end
 end
 
-function TestProtocol.testScreenRerollCountsArePositiveIntegers()
+function TestProtocol.testRerolledScreensAreStrictEarlierScreens()
     local offer = tagged(traitOffer())
-    offer.rerollCount = 3
+    offer.rerolledScreens = assert(json.decode('[{"options":[{"key":"A","rarity":"Rare"},{"key":"B"}],'
+        .. '"rejected":"option2"},{"options":[{"key":"C"}]}]'))
     lu.assertNotNil(rewards.traitOffer(offer, "offer"))
-    offer.rerollCount = 0
+    for _, screens in ipairs({
+        '[]', '[{"options":[{"key":"A"},{"key":"A"}]}]', '[{"options":[{"key":"A"}],"rejected":"option2"}]',
+        '[{"options":[{"key":"A"}],"selected":"option1"}]', '[{"options":[{"key":"A","level":1}]}]',
+    }) do
+        offer.rerolledScreens = assert(json.decode(screens))
+        lu.assertNil(rewards.traitOffer(offer, "offer"), screens)
+    end
+    offer.rerolledScreens, offer.rerollCount = nil, 1
     lu.assertNil(rewards.traitOffer(offer, "offer"))
-    local chaos = assert(json.decode('{"kind":"chaos","giver":"Chaos","selected":"option1",'
-        .. '"curseOptions":[{"curseKey":"A","requirementCount":1},{"curseKey":"B","requirementCount":1},'
-        .. '{"curseKey":"C","requirementCount":1}],"selectedCurseValues":{},"blessingKey":"Bless",'
-        .. '"rarity":"Rare","blessingValues":{},"rerollCount":1}'))
-    lu.assertNotNil(rewards.traitOffer(chaos, "chaos"))
-    chaos.rerollCount = -1
-    lu.assertNil(rewards.traitOffer(chaos, "chaos"))
+    local curses = '[{"curseKey":"A","requirementCount":1},{"curseKey":"B","requirementCount":1},'
+        .. '{"curseKey":"C","requirementCount":1}]'
+    local function chaos(screens)
+        return assert(json.decode('{"kind":"chaos","giver":"Chaos","selected":"option1","curseOptions":' .. curses
+            .. ',"selectedCurseValues":{},"blessingKey":"Bless","rarity":"Rare","blessingValues":{}'
+            .. (screens and (',"rerolledScreens":' .. screens) or '') .. '}'))
+    end
+    lu.assertNotNil(rewards.traitOffer(chaos('[{"curseOptions":' .. curses .. '}]'), "chaos"))
+    lu.assertNil(rewards.traitOffer(chaos('[{"curseOptions":[{"curseKey":"A","requirementCount":1}]}]'), "chaos"))
+    lu.assertNil(rewards.traitOffer(chaos('[{"curseOptions":' .. curses .. ',"blessingKey":"Bless"}]'), "chaos"))
+    local level = tagged(role())
+    level.levelResolution = assert(json.decode('{"offeredTargets":["A","B"],"selectedTarget":"A","levelCount":2,'
+        .. '"rerolledScreens":[{"offeredTargets":["C"]}]}'))
+    lu.assertNotNil(rewards.acquisitionRole(level, "role"))
+    level.levelResolution.rerolledScreens = assert(json.decode('[{"offeredTargets":["C"],"selectedTarget":"C"}]'))
+    lu.assertNil(rewards.acquisitionRole(level, "role"))
+    level.levelResolution.rerolledScreens = assert(json.decode('[]'))
+    lu.assertNil(rewards.acquisitionRole(level, "role"))
 end

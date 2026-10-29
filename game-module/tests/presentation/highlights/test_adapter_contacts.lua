@@ -126,7 +126,11 @@ function TestHighlightAdapterContacts:testChaosRepeatedCursesAreMarkedAtThePlann
     } end
     local source = { Name = "TrialUpgrade", UpgradeOptions = rows() }
     local authored = { kind = "chaos", selected = "option1", blessingKey = "ChaosElementalBlessing",
-        rarity = "Rare", selectedCurseValues = {}, blessingValues = {}, rerollCount = 1, curseOptions = {
+        rarity = "Rare", selectedCurseValues = {}, blessingValues = {}, rerolledScreens = { { curseOptions = {
+            { curseKey = "ChaosNoMoneyCurse", requirementCount = 1 },
+            { curseKey = "ChaosNoMoneyCurse", requirementCount = 1 },
+            { curseKey = "ChaosNoMoneyCurse", requirementCount = 1 },
+        } } }, curseOptions = {
             { curseKey = "ChaosNoMoneyCurse", requirementCount = 1 },
             { curseKey = "ChaosNoMoneyCurse", requirementCount = 2 },
             { curseKey = "ChaosNoMoneyCurse", requirementCount = 3 },

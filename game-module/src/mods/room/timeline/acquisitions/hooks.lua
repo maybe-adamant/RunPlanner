@@ -4,9 +4,6 @@
 local seaStarDefinition = type(import) == "function"
         and import("mods/room/timeline/acquisitions/sea_star.lua")
     or require("mods.room.timeline.acquisitions.sea_star")
-local screenReservation = type(import) == "function"
-        and import("mods/room/timeline/acquisitions/screen_reservation.lua")
-    or require("mods.room.timeline.acquisitions.screen_reservation")
 local levels = type(import) == "function" and import("mods/room/timeline/acquisitions/levels/hooks.lua")
     or require("mods.room.timeline.acquisitions.levels.hooks")
 local binding = type(import) == "function" and import("mods/room/timeline/acquisitions/binding.lua")
@@ -42,11 +39,8 @@ function acquisitions.attach(module, session, getState, report, room, hexTree, r
     local seaStar = seaStarDefinition.create()
     seaStar.attach(module)
     binding.attach(module, session, getState, report, room, rewardWheelProducer)
-    -- One reroll count per single-pick screen carrier, shared by its adapters.
-    local reservation = screenReservation.create()
-    reservation.attach(module)
     local traitScopes = traits.attach(module, session, getState, report, room, seaStar, highlights,
-        rowOptions, reservation)
+        rowOptions)
     local npcScope = npc.attach(module, session, getState, report, room, highlights, rowOptions)
     circe.attach(module, session, report, npcScope)
     icarus.attach(module, session, report, npcScope)
@@ -55,7 +49,7 @@ function acquisitions.attach(module, session, getState, report, room, hexTree, r
     spell.attach(module, session, getState, report, room, hexTree, highlights)
     path.attach(module, session, getState, report, room, seaStar, highlights)
     pickups.attach(module, session, getState, report, room, seaStar)
-    levels.attach(module, session, getState, report, room, seaStar, highlights, reservation)
+    levels.attach(module, session, getState, report, room, seaStar, highlights)
 end
 
 return acquisitions
