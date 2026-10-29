@@ -442,6 +442,7 @@ export function settleShopAcquisitionSite(
               producerLifecycleKey: profile.key,
               producerKind: 'shop',
               instanceProvenance: 'free',
+              createdNotGiven: true,
               blocksSeaStarDuplication: true,
               presentsMaterializedScreen: true,
               roleBindings: materialization.roleBindings,
@@ -533,6 +534,7 @@ export function settleShopAcquisitionSite(
                 producerLifecycleKey: profile.key,
                 producerKind: 'shop',
                 instanceProvenance: 'free',
+                createdNotGiven: true,
                 // The duplicate stands on the same materialized purchase screen.
                 presentsMaterializedScreen: true,
                 traitOffersByAcquisitionRole: child.traitOffersByAcquisitionRole,

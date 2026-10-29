@@ -317,6 +317,8 @@ export function settleAcquisitionResolvedReward(
     readonly producerLifecycleKey: string;
     readonly producerKind?: CanonicalResolvedIncomingReward['producerKind'];
     readonly instanceProvenance: 'free' | 'paid';
+    /** See {@link AcquisitionSource.createdNotGiven}. */
+    readonly createdNotGiven?: true;
     readonly blocksSeaStarDuplication?: true;
     /** Whether this settlement presents a materialized reward screen (see {@link AcquisitionSource}). */
     readonly presentsMaterializedScreen: boolean;
@@ -413,6 +415,9 @@ export function settleAcquisitionResolvedReward(
         producerLifecycleKey: request.producerLifecycleKey,
         ...(request.producerKind === undefined ? {} : { producerKind: request.producerKind }),
         instanceProvenance: request.instanceProvenance,
+        ...(request.createdNotGiven === undefined
+          ? {}
+          : { createdNotGiven: request.createdNotGiven }),
         ...(request.blocksSeaStarDuplication === undefined
           ? {}
           : { blocksSeaStarDuplication: request.blocksSeaStarDuplication }),
@@ -633,6 +638,8 @@ export function settlePickupAcquisitionSite(
     ) => AcquisitionSiteAddress;
     /** Closed entry identities that represent Sea Star's already-retained object. */
     readonly seaStarDuplicateEntryKeys?: ReadonlySet<string>;
+    /** Entry identities whose god loot is created, not given (see {@link AcquisitionSource.createdNotGiven}). */
+    readonly createdNotGivenEntryKeys?: ReadonlySet<string>;
     /** Engine-owned generated-parent provenance keyed by the concrete entry. */
     readonly producerByEntryKey?: Readonly<
       Record<string, NonNullable<ResolvedAcquisitionSource['producer']>>
@@ -741,6 +748,9 @@ export function settlePickupAcquisitionSite(
               ? {}
               : { producer: request.producerByEntryKey[key] }),
             instanceProvenance: 'free',
+            ...(request.createdNotGivenEntryKeys?.has(key) === true
+              ? { createdNotGiven: true as const }
+              : {}),
             traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
             ...(reward.levelResolutionsByAcquisitionRole === undefined
               ? {}
@@ -882,6 +892,9 @@ export function settlePickupAcquisitionSite(
             ? {}
             : { producer: request.producerByEntryKey[key] }),
           instanceProvenance: 'free',
+          ...(request.createdNotGivenEntryKeys?.has(key) === true
+            ? { createdNotGiven: true as const }
+            : {}),
           traitOffersByAcquisitionRole: reward.traitOffersByAcquisitionRole,
           ...(reward.levelResolutionsByAcquisitionRole === undefined
             ? {}

@@ -427,6 +427,7 @@ export function settleAuthoredAcquisitionSite(
         producerLifecycleKey: producer.producerLifecycleKey,
         ...(echoReplay && replayEntryKey !== undefined
           ? {
+              createdNotGivenEntryKeys: new Set([replayEntryKey]),
               producerByEntryKey: Object.freeze({
                 [replayEntryKey]: Object.freeze({
                   kind: 'echoLastReward' as const,
@@ -527,6 +528,9 @@ export function settleAuthoredAcquisitionSite(
                     ? Object.freeze([frontier.address.entryKey])
                     : Object.freeze([]),
                   producerLifecycleKey: producer.producerLifecycleKey,
+                  ...(echoReplay && replayEntryKey === frontier.address.entryKey
+                    ? { createdNotGivenEntryKeys: new Set([replayEntryKey]) }
+                    : {}),
                   authoredSeaStarDuplicateSiteKeys,
                   requiredEntryKeys,
                   historySequence,

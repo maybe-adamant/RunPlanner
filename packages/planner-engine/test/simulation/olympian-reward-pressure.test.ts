@@ -30,7 +30,17 @@ import { applyOlympianRewardPressureEquip } from '../../src/simulation/keepsakes
 import { publicRewardBranch } from '../../src/simulation/rewards/branch-lifecycle';
 import { initializeTestRewardBranchesForRoute as initializeRewardBranches } from '../support/arcana-fear';
 import { appendRewardEvent } from '../../src/simulation/rewards/branch-primitives';
-import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
+import {
+  settleOwnedAcquisitionSite,
+  settlePickupAcquisitionSite,
+} from '../../src/simulation/rewards/acquisition/site-settlement';
+import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
+import {
+  attachTraitHistory,
+  echoGoldHistory,
+  echoGoldShop,
+  initializeTestRewardBranches,
+} from './shop-trait-purchase-support';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 
 const origin = createBiomeAddress('Underworld', 'F');
@@ -628,5 +638,94 @@ describe('Olympian reward pressure', () => {
         maximumSourceRarityLevel: 3,
       }),
     );
+  });
+  it('keeps provider force through an Echo shop duplicate of a paid Boon', () => {
+    const apolloForce = (branch: RewardBranchState | undefined) =>
+      branch?.state.keepsakes.olympianSources.find((source) => source.providerKey === 'Apollo')
+        ?.remainingForceUses;
+    const result = echoGoldShop(['Boon'], {
+      includeDuplicate: true,
+      duplicateSelectOption2: true,
+      initialBranches: initializeTestRewardBranches().map((branch) =>
+        Object.freeze({
+          ...branch,
+          state: Object.freeze({
+            ...branch.state,
+            rewardHistory: attachTraitHistory(branch.state.rewardHistory, echoGoldHistory()),
+            traitHistory: echoGoldHistory(),
+            keepsakes: createKeepsakeState(
+              catalog,
+              'ForceApolloBoonKeepsake',
+              branch.state.arcanaFear,
+            ),
+          }),
+        }),
+      ),
+    });
+    const branch = result.settlement.branches[0];
+    expect([...result.findings.values()]).toEqual([]);
+    expect(
+      Object.values(branch?.state.traitHistory?.equippedTraits ?? {}).filter(
+        (trait) => trait.giverKey === 'Apollo',
+      ),
+    ).toHaveLength(2);
+    expect(apolloForce(branch)).toBe(1);
+  });
+
+  it('keeps provider force through an Echo Last Reward recreation but spends it on given loot', () => {
+    const occurrence = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'H'),
+      createOccurrenceId('olympian-echo-bridge'),
+    );
+    const site = createAcquisitionSiteAddress(occurrence, 'roomExit');
+    const unresolved = createUnresolvedAcquisitionRewardState(
+      catalog,
+      { rewardType: 'ZeusUpgrade' },
+      { kind: 'producerLifecycle', key: 'EchoLastReward' },
+      'Underworld',
+    );
+    const replay = Object.freeze({
+      ...unresolved,
+      traitOffersByAcquisitionRole: {
+        self: {
+          kind: 'traits' as const,
+          giverKey: 'Zeus',
+          options: [
+            { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+            { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
+            { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+          ] as const,
+          selectedOptionKey: 'option1' as const,
+        },
+      },
+    });
+    const settle = (createdNotGiven: boolean) =>
+      settlePickupAcquisitionSite(
+        catalog,
+        initializeRewardBranches(
+          undefined,
+          createTestArcanaFearState(),
+          catalog,
+          'ForceZeusBoonKeepsake',
+        ),
+        {
+          siteOwner: occurrence,
+          site,
+          entries: { replay },
+          order: ['replay'],
+          producerLifecycleKey: 'EchoLastReward',
+          producerByEntryKey: {
+            replay: { kind: 'echoLastReward', sourceOwner: occurrence, sourceRole: 'self' },
+          },
+          ...(createdNotGiven ? { createdNotGivenEntryKeys: new Set(['replay']) } : {}),
+          historySequence: 1,
+          facts: (state) => factsFor(state.rewardHistory),
+          presentsMaterializedScreen: true,
+        },
+      ).branches[0]?.state.keepsakes.olympianSources.find((source) => source.providerKey === 'Zeus')
+        ?.remainingForceUses;
+
+    expect(settle(true)).toBe(1);
+    expect(settle(false)).toBe(0);
   });
 });

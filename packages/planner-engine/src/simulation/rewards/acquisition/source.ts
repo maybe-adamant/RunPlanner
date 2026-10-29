@@ -19,6 +19,11 @@ export interface AcquisitionSource {
   /** Instance fact supplied by the producer, never inferred from an owner label. */
   readonly instanceProvenance: 'free' | 'paid';
   /**
+   * Free god loot the game creates directly instead of giving it (Echo Last
+   * Reward, Echo shop duplicate); its materialization spends no provider force.
+   */
+  readonly createdNotGiven?: true;
+  /**
    * Whether this source presents a materialized reward screen the player can
    * act on. The Artificer publishes its replacement-reward domain only from
    * such a screen; a settlement request without one retains the unresolved

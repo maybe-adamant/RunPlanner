@@ -325,10 +325,11 @@ export function applyProducerRoleHistory(
         })
       : forfeitBranch;
     // A concrete god-loot acquisition is a materialization contact when the
-    // producer marks it free. Blind Box hidden loot is also free even when its
-    // containing Shop box was paid; the box itself is not god loot.
+    // producer gives it free; directly created loot is not given. Blind Box
+    // hidden loot is always given, even from a paid or created box.
     const materializedProvider =
-      incoming.instanceProvenance === 'free' || resolution.lifecyclePoint === 'afterUnwrap'
+      (incoming.instanceProvenance === 'free' && incoming.createdNotGiven !== true) ||
+      resolution.lifecyclePoint === 'afterUnwrap'
         ? catalog.traitGiverByAcquisitionGameName[realizedAcquisition.acquisition.gameName]
         : undefined;
     const materializedBranch =
