@@ -6,6 +6,7 @@ import type {
 } from '../../authored-project';
 import { concaveStoneProcGiver, type TraitRarity } from '../../catalog-schema';
 import type { RunRecordTraitScreen } from '../../run-record/model';
+import type { EvaluatedTraitOfferCandidate } from '../candidates';
 import type { SemanticFinding } from '../model';
 import type { RunImportContext } from './import';
 import {
@@ -432,6 +433,71 @@ function ownerGiver(context: RunImportContext, trait: TraitOfferAddress): string
   return context.catalog.traitGiverByAcquisitionGameName[loot];
 }
 
+const RARITY_ROLL_CODES: ReadonlySet<string> = new Set([
+  'freshRarityUnavailable',
+  'rarityRollUnavailable',
+]);
+
+/**
+ * Hovering a row while a rarify source with uses is held logs it one rarity
+ * step high, Rarify clicked or not. A row is lowered one step where every
+ * branch could rarify it from there: the picked row when its acquired trait
+ * holds the lower rarity, an unpicked row whose logged rarity alone the engine
+ * refuses and whose lower rarity it admits.
+ * Returns the corrected offer, its evaluation and the unpicked rows lowered.
+ */
+function withoutHoverRarify(
+  context: RunImportContext,
+  trait: TraitOfferAddress,
+  value: AuthoredTraitOffer,
+  evaluation: EvaluatedTraitOfferCandidate,
+  roomIndex: number,
+):
+  | {
+      readonly value: AuthoredTraitOffer;
+      readonly evaluation: EvaluatedTraitOfferCandidate;
+      readonly lowered: readonly number[];
+    }
+  | undefined {
+  if (value.kind !== 'traits') return undefined;
+  const order = context.catalog.traitRarityOrder;
+  const lower = (rarity: TraitRarity | undefined): TraitRarity | undefined =>
+    rarity === undefined ? undefined : order[(order as readonly string[]).indexOf(rarity) - 1];
+  const selected = OPTION_KEYS.indexOf(value.selectedOptionKey);
+  const acquired = context.record.rooms[roomIndex]!.traits.acquired;
+  const rows = value.options.flatMap((option, index) => {
+    const rarity = lower(option.rarity);
+    if (rarity === undefined) return [];
+    if (index !== selected) {
+      const findings = evaluation.result.assessments[index]?.findings ?? [];
+      return findings.length > 0 && findings.every((finding) => RARITY_ROLL_CODES.has(finding.code))
+        ? [index]
+        : [];
+    }
+    const grants = acquired.filter((entry) => entry.name === option.traitKey);
+    return grants.length === 1 && grants[0]!.rarity === rarity ? [index] : [];
+  });
+  if (rows.length === 0) return undefined;
+  const lowered = {
+    ...value,
+    options: value.options.map((option, index) =>
+      rows.includes(index) ? { ...option, rarity: lower(option.rarity)! } : option,
+    ) as unknown as typeof value.options,
+  };
+  const retry = context.candidates().evaluate({ kind: 'traitOffer', trait, value: lowered });
+  if (retry.kind !== 'traitOffer') return undefined;
+  const branches = retry.result.callingCard ?? [];
+  const confirmed = rows.every(
+    (index) =>
+      branches.length > 0 &&
+      branches.every((branch) => branch.rarifiableOptionKeys.includes(OPTION_KEYS[index]!)) &&
+      (index === selected || retry.result.assessments[index]?.legal === true),
+  );
+  return confirmed
+    ? { value: lowered, evaluation: retry, lowered: rows.filter((index) => index !== selected) }
+    : undefined;
+}
+
 /**
  * Applies a screen's offer, else the offer without the unselected rows the
  * engine refuses, reported, and returns the value applied. An offer carrying a
@@ -440,19 +506,24 @@ function ownerGiver(context: RunImportContext, trait: TraitOfferAddress): string
 function applyScreenOffer(
   context: RunImportContext,
   trait: TraitOfferAddress,
-  value: AuthoredTraitOffer,
+  recorded: AuthoredTraitOffer,
   record: { readonly roomIndex: number; readonly visit: number },
   ambiguous: boolean,
 ): AuthoredTraitOffer | undefined {
-  const stone = value.kind === 'traits' && value.concaveStoneResult !== undefined;
+  const stone = recorded.kind === 'traits' && recorded.concaveStoneResult !== undefined;
   const apply = (command: ProjectCommand) =>
     stone ? context.applyValid(command) : context.apply(command);
+  const logged = context.candidates().evaluate({ kind: 'traitOffer', trait, value: recorded });
+  if (logged.kind !== 'traitOffer') return undefined;
+  const corrected = withoutHoverRarify(context, trait, recorded, logged, record.roomIndex);
+  const value = corrected?.value ?? recorded;
+  const evaluation = corrected?.evaluation ?? logged;
+  // An unpicked row's rarity lowered from the logged one is an assumption.
+  const assumed = ambiguous || (corrected?.lowered.length ?? 0) > 0;
   const command = { kind: 'ReplaceTraitOffer', trait, value } as const;
-  const evaluation = context.candidates().evaluate({ kind: 'traitOffer', trait, value });
-  if (evaluation.kind !== 'traitOffer') return undefined;
   if (evaluation.result.supported && evaluation.result.findings.length === 0) {
     if (!apply(command)) return undefined;
-    if (ambiguous)
+    if (assumed)
       context.note({
         area: 'traitOffer',
         reason: 'assumption',
@@ -482,6 +553,14 @@ function applyScreenOffer(
     applied: reducedCommand,
     record,
   });
+  if ((corrected?.lowered.length ?? 0) > 0)
+    context.note({
+      area: 'traitOffer',
+      reason: 'assumption',
+      address: trait,
+      applied: reducedCommand,
+      record,
+    });
   return reduced;
 }
 

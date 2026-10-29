@@ -679,6 +679,63 @@ describe('run import of the Surface victory', () => {
   });
 });
 
+describe('run import of rows a held rarify source logged one rarity high', () => {
+  /**
+   * O_Combat07's Poseidon screen, under the Conch Shell's provider rarify use,
+   * logging the picked row and one unpicked row as hovered: one step high.
+   */
+  function hoveredPoseidonScreen(): RunRecord {
+    const record = fixture('surface-victory');
+    const hovered: Readonly<Record<string, string>> = {
+      PoseidonCastBoon: 'Heroic',
+      DoubleRewardBoon: 'Epic',
+    };
+    return {
+      ...record,
+      rooms: record.rooms.slice(0, 24).map((room, index) =>
+        index !== 21
+          ? room
+          : {
+              ...room,
+              traitScreens: room.traitScreens.map((screen) => ({
+                ...screen,
+                options: screen.options.map((option) => {
+                  const rarity = hovered[option.name];
+                  return rarity === undefined ? option : { ...option, rarity };
+                }),
+              })),
+            },
+      ),
+    };
+  }
+
+  function poseidonScreen(imported: RunImport) {
+    return imported.report.entries
+      .filter((entry) => entry.area === 'traitOffer' && entry.record?.roomIndex === 21)
+      .map((entry) => ({
+        reason: entry.reason,
+        value: entry.applied?.kind === 'ReplaceTraitOffer' ? entry.applied.value : undefined,
+      }));
+  }
+
+  it('takes the pick from its acquired trait and lowers an unpicked row only the lower rarity admits', () => {
+    expect(poseidonScreen(projectFromRunRecord(catalog, hoveredPoseidonScreen()))).toEqual([
+      {
+        reason: 'assumption',
+        value: expect.objectContaining({
+          giverKey: 'Poseidon',
+          options: [
+            { traitKey: 'PoseidonCastBoon', rarity: 'Epic' },
+            { traitKey: 'PoseidonManaBoon', rarity: 'Epic' },
+            { traitKey: 'DoubleRewardBoon', rarity: 'Rare' },
+          ],
+          selectedOptionKey: 'option3',
+        }),
+      },
+    ]);
+  });
+});
+
 describe('run import of Sea Star duplicates', () => {
   /** The Surface capture with Sea Star picked at O_MiniBoss01 and duplicates counted after it. */
   function surfaceWithSeaStar(): RunRecord {
@@ -738,6 +795,14 @@ describe('run import of the live Underworld recording', () => {
   it('completes as a valid plan entering every recorded room, the Zagreus contract included', () => {
     expect(imported.kind).toBe('complete');
     expect(enteredRooms(imported.project)).toEqual(record.rooms.map((room) => room.name));
+  });
+
+  it("keeps I_MiniBoss02's logged pick above its acquired rarity with no rarify source held", () => {
+    // Logged Epic, acquired Rare: no hover explains the step.
+    expect(reward(imported.project, 'I-r36').traitOffersByAcquisitionRole['source']).toMatchObject({
+      options: [{}, { traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Epic' }, {}],
+      selectedOptionKey: 'option2',
+    });
   });
 
   it('takes the Midshop Zagreus contract door as its additional exit, not an ordinary one', () => {
