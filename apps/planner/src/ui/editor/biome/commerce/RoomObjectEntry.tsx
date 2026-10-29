@@ -10,6 +10,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
@@ -19,6 +20,12 @@ const objectName: Readonly<Record<WorkspaceRoomObject, string>> = {
   worldShop: 'World Shop',
   hermesShrine: 'Hermes Shrine',
   championItem: 'Champion Item',
+};
+
+const objectIcon: Readonly<Record<WorkspaceRoomObject, string | undefined>> = {
+  worldShop: rewardIcon('Shop'),
+  hermesShrine: roomObjectIcon('hermesShrine'),
+  championItem: traitIcon('InfernalContractBoon'),
 };
 
 /** Why an entry, or one of its options, cannot be picked here. */
@@ -92,7 +99,7 @@ export function RoomObjectEntry({
           ],
     ),
   });
-  const icon = entry.object === 'hermesShrine' ? roomObjectIcon('hermesShrine') : undefined;
+  const icon = objectIcon[entry.object];
   return (
     <TimelineRow
       className="room-action-feature-roll"

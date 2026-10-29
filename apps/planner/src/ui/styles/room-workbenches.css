@@ -1348,6 +1348,16 @@
   grid-column: 1 / 4;
 }
 
+/* Object and feature entries start where the Optional actions heading does. */
+.timeline-row.room-action-feature-roll
+  > :is([data-timeline-cell='handle'], [data-timeline-cell='ordinal']) {
+  display: none;
+}
+
+.timeline-row.room-action-feature-roll > [data-timeline-cell='label'] {
+  grid-column: 1 / 4;
+}
+
 /* Narrow lists move editors and actions under the label; handle and ordinal stay aligned. */
 @container timeline-list (max-width: 52rem) {
   .timeline-row > [data-timeline-cell='label'] {
@@ -1390,6 +1400,13 @@
   .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
     > [data-timeline-cell='actions'] {
     display: none;
+  }
+
+  .timeline-row.room-action-feature-roll > [data-timeline-cell='label'],
+  .timeline-row.room-action-feature-roll:has(> [data-timeline-cell='editors']:empty)
+    > [data-timeline-cell='label'],
+  .timeline-row.room-action-feature-roll > [data-timeline-cell='editors'] {
+    grid-column: 1 / 5;
   }
 }
 
