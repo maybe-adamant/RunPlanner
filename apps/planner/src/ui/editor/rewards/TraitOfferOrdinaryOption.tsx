@@ -3,7 +3,7 @@ import {
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 
 import type { TraitOptionDomainProjection } from '@planner/projections/rewards/traitDomainProjection';
 import type { TraitOfferOptionFeedback } from '@planner/projections/rewards/traitProjection';
@@ -31,6 +31,8 @@ export function TraitOfferOrdinaryOption({
   spellOffer = false,
   rarifySupported,
   pickless = false,
+  readOnly = false,
+  headerAction,
   value,
   domainValue = value,
   onUpdate,
@@ -48,6 +50,10 @@ export function TraitOfferOrdinaryOption({
   readonly rarifySupported: boolean;
   /** A screen rerolled away: its rows only, with no pick, Rarify or Persephone roll. */
   readonly pickless?: boolean;
+  /** Shows the row's values without editing them. */
+  readonly readOnly?: boolean;
+  /** A control at the right end of the option's header line, such as Reject. */
+  readonly headerAction?: ReactNode;
   readonly value: AuthoredTraitOfferTraits;
   /** The draft whose candidate query lists this row's choices; an earlier screen uses the final one. */
   readonly domainValue?: AuthoredTraitOfferTraits;
@@ -160,8 +166,11 @@ export function TraitOfferOrdinaryOption({
       }}
       persephoneAriaLabel={`${optionKey} Persephone roll`}
       pickable={!pickless}
+      readOnly={readOnly}
+      reserveRarify={!spellOffer}
+      {...(headerAction === undefined ? {} : { headerAction })}
       showEffectiveValues={showEffectiveValues}
-      showPersephoneBonus={!pickless && interaction.showPersephoneBonus}
+      showPersephoneBonus={interaction.showPersephoneBonus}
       {...(option.persephoneLevelBonus === undefined
         ? {}
         : { persephoneLevelBonus: option.persephoneLevelBonus })}

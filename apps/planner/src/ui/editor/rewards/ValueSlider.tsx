@@ -1,6 +1,7 @@
 /** A bounded numeric slider; `display` presents a value other than the stored one. */
 export function ValueSlider({
   ariaLabel,
+  disabled = false,
   display = String,
   maximum,
   minimum,
@@ -9,6 +10,7 @@ export function ValueSlider({
   value,
 }: {
   readonly ariaLabel: string;
+  readonly disabled?: boolean;
   readonly display?: (value: number) => string;
   readonly maximum: number;
   readonly minimum: number;
@@ -22,6 +24,7 @@ export function ValueSlider({
       <input
         aria-label={ariaLabel}
         {...(shown === String(value) ? {} : { 'aria-valuetext': shown })}
+        disabled={disabled}
         max={maximum}
         min={minimum}
         onChange={(event) => onChange(Number(event.currentTarget.value))}

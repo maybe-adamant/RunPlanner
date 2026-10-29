@@ -1,4 +1,13 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import { createPortal } from 'react-dom';
 
 import { draftEditorClosed, draftEditorOpened } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
@@ -11,6 +20,19 @@ import { ModalDialog, type ModalSurfaceProps } from './ModalDialog';
 export type EditorDialogModel =
   | { readonly kind: 'draft'; readonly onCancel: () => void }
   | { readonly kind: 'live'; readonly onDone: () => void };
+
+/** The title line's trailing slot, which dialog content can fill. */
+const headerSlot = createContext<HTMLElement | null | undefined>(undefined);
+
+/**
+ * Renders content at the right end of the enclosing editor dialog's title
+ * line; outside a dialog it renders in place.
+ */
+export function EditorDialogTitleAction({ children }: { readonly children: ReactNode }) {
+  const slot = useContext(headerSlot);
+  if (slot === undefined) return children;
+  return slot === null ? null : createPortal(children, slot);
+}
 
 const focusableControls =
   'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -54,6 +76,7 @@ export function EditorDialog({
   const dispatch = useAppDispatch();
   const titleId = useId();
   const bodyRef = useRef<HTMLDivElement>(null);
+  const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
   const close = model.kind === 'draft' ? model.onCancel : model.onDone;
   const draft = model.kind === 'draft';
   useEffect(() => {
@@ -88,13 +111,16 @@ export function EditorDialog({
       <header className="editor-dialog-header">
         <div>
           {eyebrow === undefined ? null : <p className="eyebrow">{eyebrow}</p>}
-          <h2 id={titleId}>{title}</h2>
+          <div className="editor-dialog-title-line">
+            <h2 id={titleId}>{title}</h2>
+            <span className="editor-dialog-title-action" ref={setTitleSlot} />
+          </div>
           {headerBelow}
         </div>
         {headerAction}
       </header>
       <div className="editor-dialog-body" ref={bodyRef}>
-        {children}
+        <headerSlot.Provider value={titleSlot}>{children}</headerSlot.Provider>
         {feedback}
         {model.kind === 'live' ? (
           <EditorDialogFooter>

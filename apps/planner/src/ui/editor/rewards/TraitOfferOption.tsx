@@ -1,4 +1,5 @@
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
+import type { ReactNode } from 'react';
 import type { TraitOfferOptionFeedback } from '@planner/projections/rewards/traitProjection';
 
 import type {
@@ -21,6 +22,7 @@ export function TraitOfferOption<TraitValue>({
   effectiveRarity,
   fixedRarity,
   fixedRarityAriaLabel,
+  headerAction,
   legend,
   loading,
   onRarify,
@@ -31,6 +33,8 @@ export function TraitOfferOption<TraitValue>({
   onSelectedChange,
   onTraitOpenChange,
   pickable = true,
+  readOnly = false,
+  reserveRarify = false,
   persephoneLevelBonus,
   persephoneLevelRolls,
   rarityPicker,
@@ -58,6 +62,8 @@ export function TraitOfferOption<TraitValue>({
   readonly effectiveRarity?: TraitRarity;
   readonly fixedRarity?: TraitRarity;
   readonly fixedRarityAriaLabel?: string;
+  /** A control at the right end of the option's header line. */
+  readonly headerAction?: ReactNode;
   readonly legend: string;
   readonly loading: boolean;
   readonly onRarify?: () => void;
@@ -67,8 +73,15 @@ export function TraitOfferOption<TraitValue>({
   readonly onSelectTrait: (value: TraitValue) => void;
   readonly onSelectedChange: () => void;
   readonly onTraitOpenChange?: (open: boolean) => void;
-  /** False on a screen rerolled away: its rows were shown, never picked. */
+  /**
+   * False on a screen rerolled away: its rows were shown, never picked. Its
+   * pick-only fields keep their space so every screen shares one layout.
+   */
   readonly pickable?: boolean;
+  /** Shows the row's values without editing them. */
+  readonly readOnly?: boolean;
+  /** Keeps the Rarify button's space on a row that cannot be rarified. */
+  readonly reserveRarify?: boolean;
   readonly persephoneLevelBonus?: number;
   readonly persephoneLevelRolls?: TraitOfferOptionFeedback['persephoneLevelRolls'];
   readonly rarityPicker?: ContextualPickerModel<TraitRarity>;
@@ -115,8 +128,17 @@ export function TraitOfferOption<TraitValue>({
         };
   const fixedRarityPresentation =
     fixedRarity === undefined ? undefined : traitRarityPresentation(infusion, fixedRarity);
+  const reserved = !pickable;
+  const reservedProps = reserved
+    ? ({ 'aria-hidden': true, 'data-reserved': true } as const)
+    : ({} as const);
   return (
-    <fieldset className="trait-offer-option trait-offer-ordinary-option">
+    <fieldset
+      className={`trait-offer-option trait-offer-ordinary-option${readOnly ? ' trait-offer-readonly' : ''}`}
+    >
+      {headerAction === undefined ? null : (
+        <div className="trait-option-header-action">{headerAction}</div>
+      )}
       <legend>
         {spellSlot === undefined ? (
           legend
@@ -135,6 +157,7 @@ export function TraitOfferOption<TraitValue>({
         id={`${controlId}-trait`}
         label="Trait"
         loading={loading}
+        locked={readOnly}
         model={traitPicker}
         {...(onTraitOpenChange === undefined ? {} : { onOpenChange: onTraitOpenChange })}
         onSelect={onSelectTrait}
@@ -151,6 +174,7 @@ export function TraitOfferOption<TraitValue>({
           id={`${controlId}-rarity`}
           label="Rarity"
           loading={loading}
+          locked={readOnly}
           model={presentedRarityPicker}
           {...(onRarityOpenChange === undefined ? {} : { onOpenChange: onRarityOpenChange })}
           onSelect={onSelectRarity}
@@ -177,7 +201,7 @@ export function TraitOfferOption<TraitValue>({
           </strong>
         </div>
       )}
-      {onRarify === undefined ? null : (
+      {onRarify !== undefined ? (
         <button
           className="secondary-action action-compact"
           disabled={rarifyDisabled}
@@ -186,11 +210,25 @@ export function TraitOfferOption<TraitValue>({
         >
           Rarify
         </button>
-      )}
+      ) : reserved && reserveRarify ? (
+        <button
+          {...reservedProps}
+          className="secondary-action action-compact"
+          disabled
+          tabIndex={-1}
+          type="button"
+        >
+          Rarify
+        </button>
+      ) : null}
       {!showEffectiveValues &&
       effectiveRarity === undefined &&
       effectiveLevel === undefined ? null : (
-        <dl aria-label="Effective trait values" className="trait-option-effective-summary">
+        <dl
+          {...reservedProps}
+          aria-label="Effective trait values"
+          className="trait-option-effective-summary"
+        >
           <dt>Effective rarity</dt>
           <dd>
             {effectiveRarity === undefined ? (
@@ -204,7 +242,10 @@ export function TraitOfferOption<TraitValue>({
         </dl>
       )}
       {!showPersephoneBonus ? null : (
-        <dl className="trait-option-effective-summary trait-option-persephone-bonus">
+        <dl
+          {...reservedProps}
+          className="trait-option-effective-summary trait-option-persephone-bonus"
+        >
           <dt>Persephone Roll</dt>
           <dd>
             {persephoneLevelRolls === undefined || onPersephoneLevelBonusChange === undefined ? (
@@ -226,18 +267,17 @@ export function TraitOfferOption<TraitValue>({
           </dd>
         </dl>
       )}
-      {!pickable ? null : (
-        <label className="trait-option-selected">
-          <input
-            checked={selected}
-            disabled={selectedDisabled}
-            name={selectedName}
-            onChange={onSelectedChange}
-            type="radio"
-          />
-          {selectedLabel}
-        </label>
-      )}
+      <label {...reservedProps} className="trait-option-selected">
+        <input
+          checked={pickable && selected}
+          disabled={reserved || selectedDisabled}
+          name={selectedName}
+          onChange={onSelectedChange}
+          {...(reserved ? { tabIndex: -1 } : {})}
+          type="radio"
+        />
+        {selectedLabel}
+      </label>
     </fieldset>
   );
 }

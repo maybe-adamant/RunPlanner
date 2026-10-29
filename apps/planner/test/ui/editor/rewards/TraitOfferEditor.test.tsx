@@ -1015,7 +1015,7 @@ describe('trait offer editor entry and dialog', () => {
     expect(screen.queryByRole('button', { name: 'Add option' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Select Fallback Gold' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Start over' })).toBeNull();
-    expect(screen.queryByText('Offer State')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Offer state' })).toBeNull();
 
     const historyDepth = application.store.getState().projectWorkspace.history!.past.length;
     const option2 = screen.getAllByRole('radio', { name: 'Selected' })[1];
@@ -1320,8 +1320,7 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
 
-    const summary = await screen.findByText('Offer State');
-    await user.click(summary);
+    await user.click(await screen.findByRole('button', { name: 'Offer state' }));
     const state = screen.getByRole('region', { name: 'Offer generation state' });
     expect(state.textContent).toContain('Rare');
     expect(state.textContent).toContain('Epic');
@@ -1405,11 +1404,13 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
 
-    await user.click(await screen.findByText('Offer State'));
+    await user.click(await screen.findByRole('button', { name: 'Offer state' }));
     expect(screen.getByRole('region', { name: 'Offer generation state' }).textContent).toContain(
       'Rare',
     );
     await user.click(screen.getAllByRole('radio', { name: 'Selected' })[1]!);
+    if (screen.queryByRole('region', { name: 'Offer generation state' }) === null)
+      await user.click(screen.getByRole('button', { name: 'Offer state' }));
     await waitFor(() =>
       expect(screen.getByRole('region', { name: 'Offer generation state' })).toBeTruthy(),
     );
@@ -1488,10 +1489,18 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
 
-    expect(screen.getByRole('group', { name: 'Rejected blocked row' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Reject Option 1' })).toBeNull();
     const save = screen.getByRole('button', { name: 'Save trait offer' });
     expect(save).toHaveProperty('disabled', true);
-    await user.click(screen.getByRole('radio', { name: 'Block Option 2' }));
+    await user.click(screen.getByRole('button', { name: 'Reject Option 2' }));
+    expect(
+      screen.getByRole('button', { name: 'Reject Option 2' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    await user.click(screen.getByRole('button', { name: 'Reject Option 3' }));
+    expect(
+      screen.getByRole('button', { name: 'Reject Option 2' }).getAttribute('aria-pressed'),
+    ).toBe('false');
+    await user.click(screen.getByRole('button', { name: 'Reject Option 2' }));
     expect(screen.getAllByRole('button', { name: 'Rarify' })[1]).toHaveProperty('disabled', true);
     expect(screen.getAllByRole('radio', { name: 'Blocked by Rejected' })[0]).toHaveProperty(
       'disabled',
@@ -1513,7 +1522,7 @@ describe('trait offer editor entry and dialog', () => {
     application.dispose();
   });
 
-  it('keeps an unrequired Rejected row mounted and disabled with its reason on hover', async () => {
+  it('shows no Reject toggle while the Rejected curse does not act on the offer', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const workspace = application.selectStructuredWorkspace(application.store.getState())!;
@@ -1575,11 +1584,8 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
 
-    const group = await screen.findByRole('group', { name: 'Rejected blocked row' });
-    expect(hintOf(group)).toBe('The Rejected curse doesn’t lock an option in this offer.');
-    expect(screen.getByRole('radio', { name: 'No blocked row' })).toHaveProperty('checked', true);
-    for (const radio of within(group).getAllByRole('radio'))
-      expect(radio).toHaveProperty('disabled', true);
+    await waitFor(() => expect(screen.getAllByRole('radio', { name: 'Selected' })).toHaveLength(3));
+    expect(screen.queryByRole('button', { name: /^Reject/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Save trait offer' })).toHaveProperty(
       'disabled',
       false,

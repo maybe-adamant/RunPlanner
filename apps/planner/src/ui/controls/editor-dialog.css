@@ -61,6 +61,23 @@
   padding: 1rem 1rem 0.75rem;
 }
 
+/* Content may fill the title line's trailing slot, such as an info button. */
+.editor-dialog-header > div:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.editor-dialog-title-line {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.editor-dialog-title-action:empty {
+  display: none;
+}
+
 .editor-dialog .editor-dialog-header h2 {
   color: #f2ede5;
   font-family: inherit;

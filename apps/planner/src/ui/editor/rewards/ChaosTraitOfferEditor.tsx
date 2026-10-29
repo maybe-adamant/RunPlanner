@@ -56,8 +56,11 @@ export function ChaosTraitOfferEditor({
   interaction,
   onUpdate,
   pickless = false,
+  readOnly = false,
   domainValue = value,
 }: {
+  /** Shows the curse rows' values without editing them. */
+  readonly readOnly?: boolean;
   /** The draft whose candidate query lists the curses; an earlier screen uses the final one. */
   readonly domainValue?: AuthoredChaosTraitOffer;
   /** A screen rerolled away: its curse rows only, with no pick or blessing. */
@@ -156,12 +159,13 @@ export function ChaosTraitOfferEditor({
           const requirement = optionDomain.requirements[option.curseKey];
           return (
             <div key={optionKey}>
-              <fieldset className="trait-offer-option">
+              <fieldset className={`trait-offer-option${readOnly ? ' trait-offer-readonly' : ''}`}>
                 <legend>{`Option ${index + 1}`}</legend>
                 <ContextualPicker
                   ariaLabel={`${optionKey} curse`}
                   id={`chaos-${optionKey}-curse`}
                   label="Curse"
+                  locked={readOnly}
                   model={optionDomain.cursePicker}
                   onSelect={(curseKey) => updateCurse(index, curseKey)}
                   placeholder="Choose a curse"
@@ -173,6 +177,7 @@ export function ChaosTraitOfferEditor({
                   <span>{requirement?.unit}</span>
                   <ValueSlider
                     ariaLabel={`${optionKey} requirement`}
+                    disabled={readOnly}
                     maximum={requirement?.maximum ?? option.requirementCount}
                     minimum={requirement?.minimum ?? option.requirementCount}
                     onChange={(requirementCount) => updateRequirement(index, requirementCount)}
@@ -180,18 +185,22 @@ export function ChaosTraitOfferEditor({
                     value={option.requirementCount}
                   />
                 </label>
-                {pickless ? null : (
-                  <label className="trait-option-selected">
-                    <input
-                      aria-label={`${optionKey} selected`}
-                      checked={value.selectedOptionKey === optionKey}
-                      name="chaos-selected-option"
-                      onChange={() => selectOption(optionKey)}
-                      type="radio"
-                    />
-                    Selected
-                  </label>
-                )}
+                {/* A rerolled-away screen keeps the pick's space so every screen shares one layout. */}
+                <label
+                  {...(pickless ? { 'aria-hidden': true, 'data-reserved': true } : {})}
+                  className="trait-option-selected"
+                >
+                  <input
+                    aria-label={`${optionKey} selected`}
+                    checked={!pickless && value.selectedOptionKey === optionKey}
+                    disabled={pickless}
+                    name="chaos-selected-option"
+                    onChange={() => selectOption(optionKey)}
+                    {...(pickless ? { tabIndex: -1 } : {})}
+                    type="radio"
+                  />
+                  Selected
+                </label>
               </fieldset>
             </div>
           );

@@ -372,6 +372,11 @@ describe('Pom resolution editor', () => {
     await user.click(screen.getByRole('tab', { name: 'Offer' }));
     expect(screen.queryAllByRole('radio')).toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Pom target 1' }).textContent).toContain('Trait A');
+    expect(
+      (screen.getByRole('button', { name: 'Pom target 1' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(screen.getByRole('button', { name: 'Edit' }).getAttribute('aria-pressed')).toBe('true');
     await user.click(screen.getByRole('button', { name: 'Pom target 1' }));
     await user.click(screen.getByRole('option', { name: 'Trait C' }));
     await user.click(screen.getByRole('button', { name: 'Save Pom' }));

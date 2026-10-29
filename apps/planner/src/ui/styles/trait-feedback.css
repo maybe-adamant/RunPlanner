@@ -40,38 +40,96 @@
   min-width: 0;
 }
 
-.trait-offer-rejected-block {
-  border: 1px solid var(--border, #ccd3df);
-  border-radius: 0.45rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  grid-column: 1 / -1;
-  margin: 0;
-  padding: 0.5rem 0.75rem;
+/* Rejected's toggle sits on the option's header line, so showing it moves nothing. */
+.trait-option-header-action {
+  position: absolute;
+  right: 0.6rem;
+  top: -1.35rem;
 }
 
-.trait-offer-rejected-block label {
-  align-items: center;
-  display: inline-flex;
-  gap: 0.3rem;
+.trait-option-reject {
+  background: #1c1c24;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1;
+  padding: 0.3rem 0.6rem;
+}
+
+.trait-option-reject[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--finding) 22%, #1c1c24);
+  border-color: var(--finding);
+  color: var(--text);
+}
+
+/* A required block stays pressed and readable; it moves but never clears. */
+.trait-option-reject[aria-pressed='true']:disabled {
+  opacity: 1;
+}
+
+.trait-option-reject:disabled {
+  cursor: default;
+}
+
+/* A rerolled-away screen keeps the final screen's fields in place, unseen. */
+[data-reserved] {
+  visibility: hidden;
+}
+
+/* A read-only screen shows its values as plain text in the same controls. */
+.trait-offer-readonly .contextual-picker-trigger:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.trait-offer-readonly .contextual-picker-trigger-icon {
+  visibility: hidden;
 }
 
 .trait-offer-editor {
+  /* A held minimum height leaves the extra space below, never between rows. */
+  align-content: start;
   display: grid;
   gap: 0.85rem;
   min-width: 0;
 }
 
-.trait-offer-state-inspector {
-  border: 1px solid var(--border, #ccd3df);
-  border-radius: 0.45rem;
-  padding: 0.55rem 0.7rem;
+.trait-offer-state-button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  font-family: Georgia, serif;
+  font-size: 0.8rem;
+  font-style: italic;
+  font-weight: 700;
+  height: 1.5rem;
+  justify-content: center;
+  width: 1.5rem;
 }
 
-.trait-offer-state-inspector > summary {
-  cursor: pointer;
-  font-weight: 700;
+.trait-offer-state-button:hover,
+.trait-offer-state-button[aria-expanded='true'] {
+  border-color: var(--selection-accent);
+  color: var(--text);
+}
+
+.trait-offer-state-popover {
+  background: #1b1c22;
+  color: var(--text);
+  border: 1px solid #484954;
+  border-radius: 10px;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
+  max-width: min(26rem, calc(100 * var(--app-vw) - 24px));
+  padding: 0.25rem 0.75rem 0.75rem;
+  z-index: 50;
 }
 
 .trait-offer-state-note {
@@ -162,6 +220,7 @@
 }
 
 .trait-offer-option {
+  position: relative;
   border: 1px solid var(--border, #ccd3df);
   border-radius: 0.45rem;
   display: grid;
@@ -783,6 +842,15 @@ button.hex-tree-node[data-has-findings='true'] {
 .screen-reroll-tab-row button.room-workbench-tab[data-has-findings='true'] {
   box-shadow: inset 0 -2px 0 var(--finding);
   color: var(--text);
+}
+
+.screen-reroll-tabs {
+  align-content: start;
+}
+
+/* The held feedback box itself grows, so the space reads as part of it. */
+.screen-reroll-feedback {
+  display: grid;
 }
 
 .screen-reroll-panel {

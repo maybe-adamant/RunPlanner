@@ -6,6 +6,7 @@ import type {
 import { hintProps } from '@planner/ui/controls/hint';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { screenTabLabel } from '@planner/projections/rewards/screenRerollTabs';
+import { useGrowOnlyHeight } from './useGrowOnlyHeight';
 
 function lockHint(lock: WorkspaceScreenRerollLock | undefined): string | undefined {
   switch (lock) {
@@ -31,6 +32,7 @@ export function ScreenRerollTabs({
   active,
   children,
   earlierCount,
+  edit,
   idPrefix,
   marked,
   onRemove,
@@ -42,6 +44,8 @@ export function ScreenRerollTabs({
   readonly active: number;
   readonly children: ReactNode;
   readonly earlierCount: number;
+  /** The open earlier screen's read-only switch; absent on the final or a blank screen. */
+  readonly edit?: { readonly pressed: boolean; readonly onToggle: () => void };
   readonly idPrefix: string;
   /** Tabs whose screen carries findings. */
   readonly marked: ReadonlySet<number | 'final'>;
@@ -51,6 +55,8 @@ export function ScreenRerollTabs({
   readonly rerolls: WorkspaceScreenRerolls;
 }) {
   const tabList = useRef<HTMLDivElement>(null);
+  // Switching screens never shrinks the dialog: the tabs keep the tallest screen's height.
+  const holdHeight = useGrowOnlyHeight(true);
   const count = earlierCount + 1;
   const atMax = earlierCount >= rerolls.maxCount;
   const hint = atMax ? lockHint(rerolls.lockAtMax) : undefined;
@@ -76,7 +82,7 @@ export function ScreenRerollTabs({
     focusTab(next);
   };
   return (
-    <div className="screen-reroll-tabs">
+    <div className="screen-reroll-tabs" ref={holdHeight}>
       <div className="screen-reroll-tab-row">
         <div
           aria-label="Screens"
@@ -108,6 +114,17 @@ export function ScreenRerollTabs({
           })}
         </div>
         <div className="screen-reroll-actions">
+          {/* The switch keeps its space on every tab so the actions never move. */}
+          <button
+            aria-pressed={edit?.pressed ?? false}
+            className="secondary-action action-compact"
+            {...(edit === undefined
+              ? { 'aria-hidden': true, 'data-reserved': true, disabled: true, tabIndex: -1 }
+              : { onClick: edit.onToggle })}
+            type="button"
+          >
+            Edit
+          </button>
           <button
             className="secondary-action action-compact"
             disabled={atMax}
@@ -118,7 +135,7 @@ export function ScreenRerollTabs({
             {`Reroll · costs ${earlierCount + 1}`}
           </button>
           <button
-            className="quiet-action action-compact"
+            className="secondary-action action-compact"
             disabled={earlierCount === 0}
             onClick={onRemove}
             type="button"

@@ -34,7 +34,6 @@ import { selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
 import { ScreenRerollTabs, UnsetScreen } from './ScreenRerollTabs';
 import { useScreenTab } from './useScreenTab';
-import { hintProps } from '@planner/ui/controls/hint';
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
 /**
@@ -109,6 +108,9 @@ export function TraitOfferEditorShell({
   const tabbed = interaction.screenRerolls !== undefined && value.kind !== 'fallbackGold';
   const earlierIndex = tabbed && screenTab.active < earlierCount ? screenTab.active : undefined;
   const activeScreen: ScreenTab = earlierIndex ?? 'final';
+  // An earlier screen shows its rows read-only until the author chooses to correct it.
+  const [editingScreen, setEditingScreen] = useState<number>();
+  const earlierReadOnly = earlierIndex !== undefined && editingScreen !== earlierIndex;
   const routeEntries = useDialogFindingEntries(undefined, tabbed ? activeScreen : undefined);
   const loaded = controller.observe(loadable);
   const candidate = loaded.result?.[0];
@@ -320,6 +322,14 @@ export function TraitOfferEditorShell({
             }}
             onSelect={screenTab.select}
             rerolls={screenRerolls}
+            {...(earlierIndex === undefined || earlierScreens[earlierIndex] === null
+              ? {}
+              : {
+                  edit: {
+                    pressed: !earlierReadOnly,
+                    onToggle: () => setEditingScreen(earlierReadOnly ? earlierIndex : undefined),
+                  },
+                })}
           >
             {panel}
           </ScreenRerollTabs>
@@ -336,51 +346,43 @@ export function TraitOfferEditorShell({
     label: value.kind === 'chaos' ? 'Save Chaos outcome' : 'Save trait offer',
     onClick: () => onCommit?.(value),
   };
-  const rejectedRow = (
+  // Rejected marks one blockable row while the curse acts on this offer.
+  const rejectToggle = (
     screen: AuthoredTraitOfferTraits,
     update: (next: AuthoredTraitOfferTraits) => void,
-  ): ReactNode =>
-    rejectedBlock === undefined ? null : (
-      <fieldset
-        aria-label="Rejected blocked row"
-        className="trait-offer-rejected-block"
-        {...hintProps(
-          rejectedBlockInactive
-            ? 'The Rejected curse doesn’t lock an option in this offer.'
-            : 'The Rejected curse makes one offered option unselectable.',
-        )}
+    optionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
+    readOnly: boolean,
+  ): ReactNode => {
+    if (
+      rejectedBlock === undefined ||
+      rejectedBlockInactive ||
+      !rejectedBlock.optionKeys.includes(optionKey)
+    )
+      return undefined;
+    const pressed = screen.rejectedOptionKey === optionKey;
+    return (
+      <button
+        aria-label={`Reject ${optionKey.replace('option', 'Option ')}`}
+        aria-pressed={pressed}
+        className="trait-option-reject"
+        disabled={readOnly || (pressed && !rejectedBlock.canClear)}
+        onClick={() => {
+          if (!pressed) {
+            update(Object.freeze({ ...screen, rejectedOptionKey: optionKey }));
+            return;
+          }
+          const { rejectedOptionKey: _rejectedOptionKey, ...withoutBlock } = screen;
+          void _rejectedOptionKey;
+          update(Object.freeze(withoutBlock));
+        }}
+        type="button"
       >
-        <legend>Rejected blocked row</legend>
-        {rejectedBlock.canClear ? (
-          <label>
-            <input
-              checked={screen.rejectedOptionKey === undefined}
-              disabled={rejectedBlockInactive}
-              name={`${interaction.key}-rejected-block`}
-              onChange={() => {
-                const { rejectedOptionKey: _rejectedOptionKey, ...withoutBlock } = screen;
-                void _rejectedOptionKey;
-                update(Object.freeze(withoutBlock));
-              }}
-              type="radio"
-            />
-            No blocked row
-          </label>
-        ) : null}
-        {rejectedBlock.optionKeys.map((optionKey) => (
-          <label key={optionKey}>
-            <input
-              checked={screen.rejectedOptionKey === optionKey}
-              disabled={rejectedBlockInactive}
-              name={`${interaction.key}-rejected-block`}
-              onChange={() => update(Object.freeze({ ...screen, rejectedOptionKey: optionKey }))}
-              type="radio"
-            />
-            Block {optionKey.replace('option', 'Option ')}
-          </label>
-        ))}
-      </fieldset>
+        Reject
+      </button>
     );
+  };
+  const stateInspector =
+    offerState === undefined ? undefined : <TraitOfferStateInspector presentation={offerState} />;
   if (value.kind === 'traits' && earlierIndex !== undefined) {
     const screen = earlierTraitScreen ?? null;
     const screenValue = screen === null ? undefined : traitScreenValue(value, screen);
@@ -388,14 +390,17 @@ export function TraitOfferEditorShell({
       replaceScreen(earlierIndex, rerolledTraitScreenSnapshot(next));
     return (
       <TraitOfferForm
+        state={stateInspector}
         content={
           screenValue === undefined ? (
             <UnsetScreen
-              onCopy={() => replaceScreen(earlierIndex, rerolledTraitScreenSnapshot(value))}
+              onCopy={() => {
+                replaceScreen(earlierIndex, rerolledTraitScreenSnapshot(value));
+                setEditingScreen(earlierIndex);
+              }}
             />
           ) : (
             <>
-              {rejectedRow(screenValue, updateScreen)}
               <div className="trait-offer-options">
                 {screenValue.options.map((_, index) => (
                   <div
@@ -404,12 +409,20 @@ export function TraitOfferEditorShell({
                   >
                     <TraitOfferOrdinaryOption
                       domainValue={value}
+                      headerAction={rejectToggle(
+                        screenValue,
+                        updateScreen,
+                        OPTION_KEYS[index]!,
+                        earlierReadOnly,
+                      )}
                       index={index}
                       interaction={interaction}
                       onUpdate={updateScreen}
                       optionKey={OPTION_KEYS[index]!}
                       pickless
                       rarifySupported={false}
+                      readOnly={earlierReadOnly}
+                      showEffectiveValues
                       rejected={screenValue.rejectedOptionKey === OPTION_KEYS[index]}
                       spellOffer={spellOffer}
                       value={screenValue}
@@ -433,14 +446,9 @@ export function TraitOfferEditorShell({
   if (value.kind === 'traits') {
     return (
       <TraitOfferForm
-        state={
-          offerState === undefined ? undefined : (
-            <TraitOfferStateInspector presentation={offerState} />
-          )
-        }
+        state={stateInspector}
         options={
           <>
-            {rejectedRow(value, updateValue)}
             {value.options.map((_, index) => {
               const optionKey = OPTION_KEYS[index]!;
               const optionFeedback = feedback.options[index];
@@ -456,6 +464,7 @@ export function TraitOfferEditorShell({
                     {...(rowEffectiveLevel === undefined
                       ? {}
                       : { effectiveLevel: rowEffectiveLevel })}
+                    headerAction={rejectToggle(value, updateValue, optionKey, false)}
                     index={index}
                     interaction={interaction}
                     onUpdate={updateValue}
@@ -526,7 +535,10 @@ export function TraitOfferEditorShell({
             />
           ) : earlierScreens[earlierIndex] === null ? (
             <UnsetScreen
-              onCopy={() => replaceScreen(earlierIndex, rerolledChaosScreenSnapshot(value))}
+              onCopy={() => {
+                replaceScreen(earlierIndex, rerolledChaosScreenSnapshot(value));
+                setEditingScreen(earlierIndex);
+              }}
             />
           ) : (
             <ChaosTraitOfferEditor
@@ -534,6 +546,7 @@ export function TraitOfferEditorShell({
               interaction={interaction.chaos}
               onUpdate={(next) => replaceScreen(earlierIndex, rerolledChaosScreenSnapshot(next))}
               pickless
+              readOnly={earlierReadOnly}
               value={Object.freeze({
                 ...value,
                 ...(earlierScreens[earlierIndex] as AuthoredRerolledChaosScreen),

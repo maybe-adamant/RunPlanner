@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import { EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
+import { useGrowOnlyHeight } from './useGrowOnlyHeight';
 
 /** Draft feedback from a sub-editor, keyed for the dialog's one fixed feedback region. */
 export type OutcomeFeedbackReporter = (key: string, message: string | undefined) => void;
@@ -114,6 +115,7 @@ export function TraitOfferForm({
   readonly shapeActions?: ReactNode;
   readonly state?: ReactNode;
 }) {
+  const holdFeedback = useGrowOnlyHeight(screenTabs !== undefined);
   return (
     <div className="trait-offer-editor">
       {(screenTabs ?? ((panel: ReactNode) => panel))(
@@ -126,12 +128,20 @@ export function TraitOfferForm({
           </>
         ) : (
           <>
+            {state}
             {content}
             {shapeActions}
           </>
         ),
       )}
-      {feedback}
+      {screenTabs === undefined ? (
+        feedback
+      ) : (
+        // Every screen's feedback keeps the tallest height any screen reached.
+        <div className="screen-reroll-feedback" ref={holdFeedback}>
+          {feedback}
+        </div>
+      )}
       <EditorDialogDraftActions
         {...(cancel === undefined ? {} : { onCancel: cancel })}
         onSave={save.onClick}

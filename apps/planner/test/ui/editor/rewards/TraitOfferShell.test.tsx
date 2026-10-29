@@ -188,7 +188,15 @@ describe('ordinary offer shell', () => {
     expect(pickRadios).toBeGreaterThan(0);
     await user.click(screen.getByRole('tab', { name: 'Offer' }));
     expect(screen.queryAllByRole('radio')).toHaveLength(pickRadios - finalTraits.length);
-    expect(screen.queryByRole('button', { name: 'Rarify option1' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Rarify' })).toBeNull();
+    // An earlier screen is read-only until Edit.
+    const earlierTrait = screen.getByRole('button', { name: 'option1 trait' }) as HTMLButtonElement;
+    expect(earlierTrait.disabled).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(
+      (screen.getByRole('button', { name: 'option1 trait' }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
     // A reroll bans one shown row, so the final screen needs a row of the earlier one gone.
     await user.click(screen.getByRole('tab', { name: 'Reroll 1' }));
     const save = screen.getByRole('button', { name: 'Save trait offer' });

@@ -127,4 +127,14 @@ it('opens a rerolled offer on the screen its finding names and marks that tab', 
     .setup()
     .click(within(dialog).getByRole('button', { name: 'Copy the final screen' }));
   expect(within(dialog).queryByText('This screen isn’t set.')).toBeNull();
+  // A blank screen opens for editing once copied.
+  expect(
+    (within(dialog).getByRole('button', { name: 'option1 trait' }) as HTMLButtonElement).disabled,
+  ).toBe(false);
+  expect(within(dialog).getByRole('button', { name: 'Edit' }).getAttribute('aria-pressed')).toBe(
+    'true',
+  );
+  expect(
+    within(dialog).getByRole('button', { name: 'Offer state' }).closest('header'),
+  ).not.toBeNull();
 });

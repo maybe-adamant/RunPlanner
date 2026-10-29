@@ -41,6 +41,7 @@ import {
   EditorDialogFeedback,
 } from '@planner/ui/controls/EditorDialog';
 import { ScreenRerollTabs, UnsetScreen } from './ScreenRerollTabs';
+import { useGrowOnlyHeight } from './useGrowOnlyHeight';
 import { useScreenTab } from './useScreenTab';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -168,6 +169,9 @@ export function PomResolutionEditor({
   const [rerolledScreens, setRerolledScreens] = useState(initialChoice?.rerolledScreens);
   const earlierCount = rerolledScreens?.length ?? 0;
   const screenTab = useScreenTab(interaction.owner, earlierCount);
+  // An earlier screen shows its rows read-only until the author chooses to correct it.
+  const [editingScreen, setEditingScreen] = useState<number>();
+  const holdFeedback = useGrowOnlyHeight(interaction.screenRerolls !== undefined);
   const [activeGroupKey, setActiveGroupKey] = useState<string | null>(null);
   const [seededGroupKey, setSeededGroupKey] = useState<string | null>(null);
   const draft: AuthoredLevelResolution =
@@ -394,6 +398,7 @@ export function PomResolutionEditor({
       }),
     );
   };
+  const earlierReadOnly = earlierIndex !== undefined && editingScreen !== earlierIndex;
   const screenRerolls = interaction.screenRerolls;
   const withScreenTabs = (panel: ReactNode): ReactNode =>
     screenRerolls === undefined ? (
@@ -411,6 +416,14 @@ export function PomResolutionEditor({
         }}
         onSelect={screenTab.select}
         rerolls={screenRerolls}
+        {...(earlierIndex === undefined || earlierScreen === null
+          ? {}
+          : {
+              edit: {
+                pressed: !earlierReadOnly,
+                onToggle: () => setEditingScreen(earlierReadOnly ? earlierIndex : undefined),
+              },
+            })}
       >
         {panel}
       </ScreenRerollTabs>
@@ -441,18 +454,27 @@ export function PomResolutionEditor({
           earlierIndex === undefined ? (
             finalChoiceRows
           ) : earlierScreen === null ? (
-            <UnsetScreen onCopy={() => replaceScreen(earlierIndex, finalScreen())} />
+            <UnsetScreen
+              onCopy={() => {
+                replaceScreen(earlierIndex, finalScreen());
+                setEditingScreen(earlierIndex);
+              }}
+            />
           ) : (
             <div className="trait-offer-options">
               {rows.map((index) => {
                 const current = earlierScreen?.offeredTraitKeys[index] ?? null;
                 return (
-                  <fieldset className="trait-offer-option" key={index}>
+                  <fieldset
+                    className={`trait-offer-option${earlierReadOnly ? ' trait-offer-readonly' : ''}`}
+                    key={index}
+                  >
                     <legend>Target {index + 1}</legend>
                     <ContextualPicker
                       ariaLabel={`Pom target ${index + 1}`}
                       id={`${domKey}-pom-target-${index}`}
                       label="Trait"
+                      locked={earlierReadOnly}
                       model={targetPicker(current)}
                       onSelect={(target) => updateEarlierSlot(earlierIndex, index, target)}
                       placeholder="Choose a trait"
@@ -464,6 +486,11 @@ export function PomResolutionEditor({
                             triggerIcon: traitIcon(current),
                           })}
                     />
+                    {/* The pick's space stays so every screen shares one layout. */}
+                    <label aria-hidden data-reserved className="trait-option-selected">
+                      <input disabled tabIndex={-1} type="radio" />
+                      Selected
+                    </label>
                   </fieldset>
                 );
               })}
@@ -507,18 +534,20 @@ export function PomResolutionEditor({
           selected={randomTarget}
         />
       )}
-      <EditorDialogFeedback
-        name="Pom feedback"
-        entries={[
-          ...new Set(
-            feedbackMessages.length === 0 && activeScreen === 'final' && !supported
-              ? [earlierScreenFixLine(markedScreens)].filter(
-                  (line): line is string => line !== undefined,
-                )
-              : feedbackMessages,
-          ),
-        ].map((message) => [message, message] as const)}
-      />
+      <div className="screen-reroll-feedback" ref={holdFeedback}>
+        <EditorDialogFeedback
+          name="Pom feedback"
+          entries={[
+            ...new Set(
+              feedbackMessages.length === 0 && activeScreen === 'final' && !supported
+                ? [earlierScreenFixLine(markedScreens)].filter(
+                    (line): line is string => line !== undefined,
+                  )
+                : feedbackMessages,
+            ),
+          ].map((message) => [message, message] as const)}
+        />
+      </div>
       <EditorDialogDraftActions
         {...(onCancel === undefined ? {} : { onCancel })}
         onSave={() => onCommit(draft)}
