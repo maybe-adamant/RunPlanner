@@ -62,7 +62,7 @@ export function workspaceScreenRerollSource(input: {
     // Each further reroll costs one more than the last, on top of the plan's spend.
     const extra = (to: number) => screenRerollCost(to) - screenRerollCost(count);
     let maxCount = count;
-    while (maxCount < MAX_SCREEN_REROLLS && extra(maxCount + 1) <= allowance.lowestRemaining)
+    while (maxCount < MAX_SCREEN_REROLLS && extra(maxCount + 1) <= allowance.remaining)
       maxCount += 1;
     if (maxCount === MAX_SCREEN_REROLLS) return Object.freeze({ count, maxCount });
     const atScreen = (snapshot?.rerolls.remaining ?? 0) - screenRerollCost(count);

@@ -4,6 +4,7 @@ import {
   createAcquisitionSiteAddress,
   createBiomeAddress,
   createOccurrenceAddress,
+  createHubRerollAddress,
   createRoomActionAddress,
   semanticAddressKey,
   type OccurrenceAddress,
@@ -206,9 +207,11 @@ function settleProjectEditRepairs(options: ProjectEditSettlementOptions): Projec
   let project = applyProjectCommand(before.project, catalog, command);
   if (project === before.project) return Object.freeze({ assembly: before });
   let assembly = evaluate(project);
-  // The reroll pool is a fixed budget: a new spend past it is refused, while
-  // an upstream edit that shrinks the pool keeps its spends with a finding.
-  if (addsRerollSpend(before.project, project, command)) {
+  // The reroll pool is a fixed budget at each spend's own point: a new spend
+  // past it is refused. An earlier spend takes precedence, so an edit that
+  // leaves later spends short keeps them with their findings.
+  const spendOwners = addedRerollSpendOwners(before.project, project, command);
+  if (spendOwners.size > 0) {
     // Each over-spending owner and how far past the pool it goes.
     const overspent = (evaluated: ProjectEvaluationAssembly) =>
       new Map(
@@ -220,7 +223,11 @@ function settleProjectEditRepairs(options: ProjectEditSettlementOptions): Projec
           ]),
       );
     const prior = overspent(before);
-    if ([...overspent(assembly)].some(([owner, excess]) => excess > (prior.get(owner) ?? 0)))
+    if (
+      [...overspent(assembly)].some(
+        ([owner, excess]) => spendOwners.has(owner) && excess > (prior.get(owner) ?? 0),
+      )
+    )
       throw new ProjectCommandContractError(
         command.kind,
         projectCommandAddress(command),
@@ -427,20 +434,76 @@ function screenRerollTotal(value: unknown): number {
   );
 }
 
-/** Whether the command presses a new reroll or raises a screen's reroll count. */
-function addsRerollSpend(
+const ROOM_REROLL_KINDS = new Set(['reroll', 'rerollStygianWell', 'rerollPurgingPool']);
+
+/**
+ * The owners of the spends a command adds: a new room or Hub press, a new Well
+ * or Pool reroll, or a raised screen count. Empty when it adds none.
+ */
+function addedRerollSpendOwners(
   before: ProjectDocument,
   after: ProjectDocument,
   command: ProjectCommand,
-): boolean {
-  if (
-    command.kind === 'InsertReroll' ||
-    command.kind === 'InsertHubReroll' ||
-    command.kind === 'InsertStygianWellReroll' ||
-    command.kind === 'InsertPurgingPoolReroll'
-  )
-    return true;
-  if (command.kind !== 'ReplaceTraitOffer' && command.kind !== 'ReplaceLevelResolution')
-    return false;
-  return screenRerollTotal(after.route) > screenRerollTotal(before.route);
+): ReadonlySet<string> {
+  switch (command.kind) {
+    case 'InsertReroll':
+    case 'InsertStygianWellReroll':
+    case 'InsertPurgingPoolReroll': {
+      const known = new Set(
+        (occurrenceAt(before, command.occurrence)?.roomActions.order ?? []).map(roomActionKey),
+      );
+      return new Set(
+        (occurrenceAt(after, command.occurrence)?.roomActions.order ?? []).flatMap((reference) =>
+          ROOM_REROLL_KINDS.has(reference.kind) && !known.has(roomActionKey(reference))
+            ? [
+                semanticAddressKey(
+                  createRoomActionAddress(
+                    createBiomeAddress(command.occurrence.routeKey, command.occurrence.biomeKey),
+                    command.occurrence.occurrenceId,
+                    roomActionKey(reference),
+                  ),
+                ),
+              ]
+            : [],
+        ),
+      );
+    }
+    case 'InsertHubReroll': {
+      const hubActions = (project: ProjectDocument) =>
+        project.route.biomes
+          .find((biome) => biome.biomeKey === command.hub.biomeKey)
+          ?.topology?.decisions.find(
+            (decision) => decision.kind === 'hub' && decision.hubKey === command.hub.hubKey,
+          );
+      const actionsOf = (project: ProjectDocument) => {
+        const hub = hubActions(project);
+        return hub?.kind === 'hub' ? hub.actions : [];
+      };
+      const known = new Set(
+        actionsOf(before).flatMap((action) => (action.kind === 'reroll' ? [action.rerollId] : [])),
+      );
+      return new Set(
+        actionsOf(after).flatMap((action) =>
+          action.kind === 'reroll' && !known.has(action.rerollId)
+            ? [
+                semanticAddressKey(
+                  createHubRerollAddress(
+                    createBiomeAddress(command.hub.routeKey, command.hub.biomeKey),
+                    command.hub.hubKey,
+                    action.rerollId,
+                  ),
+                ),
+              ]
+            : [],
+        ),
+      );
+    }
+    case 'ReplaceTraitOffer':
+    case 'ReplaceLevelResolution':
+      return screenRerollTotal(after.route) > screenRerollTotal(before.route)
+        ? new Set([semanticAddressKey(projectCommandAddress(command) as SemanticAddress)])
+        : new Set();
+    default:
+      return new Set();
+  }
 }

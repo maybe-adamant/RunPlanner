@@ -11,6 +11,7 @@ import {
 import type { RerollSurfaceSettlement } from '../rewards/model';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import type { RollFeature } from '../../authored-project/feature-rolls';
+import { screenRerollCost } from '../../authored-project/screen-rerolls';
 import {
   purgingPoolCandidateForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
@@ -81,44 +82,31 @@ export type RerollSpendAllowance =
       readonly kind: 'reached';
       /** What the spend adds: 1 for a press, the next count for a screen or Well or Pool. */
       readonly cost: number;
-      /** The run's lowest pool from the spend to the end of the reached run, before it. */
-      readonly lowestRemaining: number;
-      /** False when the spend would leave the pool short anywhere from there on. */
+      /** The run's pool at the spend's own point, before it. */
+      readonly remaining: number;
+      /** False when the pool there cannot pay the spend; later spends it starves report. */
       readonly allowed: boolean;
     };
 
-/**
- * The run's lowest reroll pool from one history event of a biome to the end
- * of the reached run, later biomes included; undefined when no pool is known
- * at that event.
- */
-function lowestPoolFrom(
+/** The run's reroll pool at one history event of a biome; undefined when none is known there. */
+function poolAt(
   assembly: ProjectEvaluationAssembly,
   biomeKey: string,
   historySequence: number,
 ): number | undefined {
-  const biomes = assembly.evaluation.route.biomes;
-  const index = biomes.findIndex((biome) => biome.biomeKey === biomeKey);
-  const own = biomes[index];
+  const own = assembly.evaluation.route.biomes.find((biome) => biome.biomeKey === biomeKey);
   if (own === undefined || !('rewards' in own)) return undefined;
-  const points = own.rewards.rerollPool;
-  const at = points.findLast((point) => point.historySequence <= historySequence);
-  if (at === undefined) return undefined;
-  let lowest = at.remaining;
-  for (const point of points)
-    if (point.historySequence > historySequence) lowest = Math.min(lowest, point.remaining);
-  for (const later of biomes.slice(index + 1))
-    if ('rewards' in later)
-      for (const point of later.rewards.rerollPool) lowest = Math.min(lowest, point.remaining);
-  return lowest;
+  return own.rewards.rerollPool.findLast((point) => point.historySequence <= historySequence)
+    ?.remaining;
 }
 
 /**
- * Whether a new spend fits the run's reroll pool, the fixed budget the edit
- * settlement enforces: no spend from there on may be left short. A press of a
- * target the game refuses spends nothing; that is the surface's question.
- * A screen is placed at its room's entry, so a pool grant later in that room
- * before the screen can only make the answer stricter than the settlement.
+ * Whether a new spend fits the run's reroll pool at its own point, the fixed
+ * budget the edit settlement enforces. An earlier spend takes precedence: one
+ * that starves later spends is allowed, and those report the over-spend. A
+ * press of a target the game refuses spends nothing; that is the surface's
+ * question. A screen is placed at its room's entry, so a pool grant later in
+ * that room before the screen can only make the answer stricter.
  */
 export function rerollSpendAllowanceForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
@@ -157,12 +145,10 @@ export function rerollSpendAllowanceForProjectEvaluationAssembly(
     cost = spend.fromCount + 1;
   }
   if (historySequence === undefined) return unreached;
-  const lowestRemaining = lowestPoolFrom(assembly, biomeKey, historySequence);
-  if (lowestRemaining === undefined) return unreached;
-  return Object.freeze({
-    kind: 'reached',
-    cost,
-    lowestRemaining,
-    allowed: lowestRemaining >= cost,
-  });
+  const atPoint = poolAt(assembly, biomeKey, historySequence);
+  if (atPoint === undefined) return unreached;
+  // A screen spends at its own point, after the room's entry: its own rerolls
+  // so far are not yet spent there.
+  const remaining = spend.kind === 'screen' ? atPoint - screenRerollCost(spend.fromCount) : atPoint;
+  return Object.freeze({ kind: 'reached', cost, remaining, allowed: remaining >= cost });
 }
