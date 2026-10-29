@@ -34,16 +34,18 @@ Primary evidence:
   `PersistentKeepsakeKeys`, rank profiles, uses, and acquisition callbacks;
 - `RewardLogic.lua`: `RewardStoreAddPriority`, `ChooseRoomReward`,
   `SetupRoomReward`, `IsRoomRewardEligible`, and `SpawnRoomReward`;
-- `RoomLogic.lua`: `GiveLoot`, generated exit ordering, Fields reward cages,
-  and optional Fields rewards;
+- `RoomLogic.lua`: `GiveLoot`, `CreateLoot`, generated exit ordering, Fields
+  reward cages, and optional Fields rewards;
 - `KeepsakeLogic.lua`: `EquipKeepsake`, `UnequipKeepsake`, `AdvanceKeepsake`,
   `KeepsakeAcquireSpellDrop`, rack swaps, and Gift-rack equip behavior;
 - `UpgradeChoiceLogic.lua`: provider-specific rarification precedence,
   successful-use decrement, and unslotted-source removal;
 - `TraitLogic.lua`: `AddTraitData`, `ReduceTraitUses`, and active-use checks;
 - `EncounterLogic.lua`: Devotion's initial two-loot materialization;
-- `StoreLogic.lua`: ordinary Shop/Mystery Boon `BoughtFromShop` arguments and
-  Blind Box unwrap ordering;
+- `StoreLogic.lua`: ordinary Shop/Mystery Boon `BoughtFromShop` arguments,
+  Blind Box unwrap ordering, and the Echo shop duplicate
+  (`DuplicateWorldShopItem`);
+- `EventLogic.lua`: Echo's `EchoLastReward` recreation;
 - `RunLogic.lua`: `CurrentRun.RewardPriorities` initialization,
   `GetInteractedGodsThisRun`, `ReachedMaxGods`, and loot-history membership;
 - `InteractLogic.lua`: Ship wheel reroll setup;
@@ -187,6 +189,17 @@ the provider on the generated target. Therefore:
 - removing the keepsake before a later generation removes this pressure even
   though an unconsumed generic `Boon` priority can remain.
 
+One exit's generation is a single pass sharing `rewardsChosen` across every
+door and every Fields cage it sets up: each door's reward, then that door's
+cages, door by door (`RoomLogic.lua:3948-3975`). Every Boon set up in the pass
+excludes the gods of all earlier Boons in it, door or cage alike
+(`RewardLogic.lua:231-242`). A force therefore applies to the first Boon set
+up in the exit, and no later Boon of that exit can show the forced god again.
+A Fields cage reroll is narrower: it redraws one cage against only that door's
+current `CageRewards` (`InteractLogic.lua:1444-1466`), so a live force can put
+the god on the rerolled cage even when another door already shows it. The
+scan's `IgnoreForceLootName` bypass is dead: no room data sets it.
+
 ### Devotion provider selection
 
 Devotion has a distinct source loop. `SetupRoomReward` begins from providers
@@ -216,22 +229,24 @@ has `BoughtFromShop = true`, it then scans all hero traits and calls
 provider. This occurs while the loot object is created, before trait-screen
 selection and independently of whether the player later selects a trait row.
 
-| Source                                                          | Provider steering                                                        | Matching force consumption                                                                                                                             |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| ordinary Boon room reward                                       | forced during target setup                                               | when the entered room's loot object spawns after combat                                                                                                |
-| unchosen Boon exit                                              | provider appears on the door                                             | none, because that room's loot object never spawns                                                                                                     |
-| Nemesis-suppressed room reward                                  | the original door may show the provider                                  | none, because the room reward does not spawn                                                                                                           |
-| Fields cage Boon                                                | forced while cage rewards are set up                                     | when the locked loot object is materialized, before cage pickup                                                                                        |
-| Fields optional Boon                                            | provider is not supplied by the generic reward-type-only bonus selection | an independently selected matching provider can still consume the force when spawned                                                                   |
-| Devotion                                                        | eligible force may set initial `LootAName`                               | both initial god loot objects call `GiveLoot` before the player chooses; a matching provider consumes the force then                                   |
-| fixed free or direct god loot                                   | fixed source is not changed by the keepsake                              | a matching non-purchase `GiveLoot` consumes the force                                                                                                  |
-| ordinary Shop Boon or Mystery Boon (`RandomLoot`)               | Shop generation chooses its own provider                                 | none because the spawn arguments already carry `BoughtFromShop = true`                                                                                 |
-| Blind Box unwrap, whether the box came from Narcissus or a Shop | unwrap chooses a provider without consulting `ForceBoonName`             | a matching random result consumes the force because `BoughtFromShop` is absent during `GiveLoot`; Shop unwrap assigns it only after `GiveLoot` returns |
+| Source                                                            | Provider steering                                                        | Matching force consumption                                                                                                                             |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ordinary Boon room reward                                         | forced during target setup                                               | when the entered room's loot object spawns after combat                                                                                                |
+| unchosen Boon exit                                                | provider appears on the door                                             | none, because that room's loot object never spawns                                                                                                     |
+| Nemesis-suppressed room reward                                    | the original door may show the provider                                  | none, because the room reward does not spawn                                                                                                           |
+| Fields cage Boon                                                  | forced while cage rewards are set up                                     | when the locked loot object is materialized, before cage pickup                                                                                        |
+| Fields optional Boon                                              | provider is not supplied by the generic reward-type-only bonus selection | an independently selected matching provider can still consume the force when spawned                                                                   |
+| Devotion                                                          | eligible force may set initial `LootAName`                               | both initial god loot objects call `GiveLoot` before the player chooses; a matching provider consumes the force then                                   |
+| fixed free or direct god loot                                     | fixed source is not changed by the keepsake                              | a matching non-purchase `GiveLoot` consumes the force                                                                                                  |
+| Echo Last Reward recreation; Echo shop duplicate of a bought Boon | the copied god is fixed by the source                                    | none, because both create the loot with `CreateLoot` and never call `GiveLoot` (`EventLogic.lua:1557`, `StoreLogic.lua:367`)                           |
+| ordinary Shop Boon or Mystery Boon (`RandomLoot`)                 | Shop generation chooses its own provider                                 | none because the spawn arguments already carry `BoughtFromShop = true`                                                                                 |
+| Blind Box unwrap, whether the box came from Narcissus or a Shop   | unwrap chooses a provider without consulting `ForceBoonName`             | a matching random result consumes the force because `BoughtFromShop` is absent during `GiveLoot`; Shop unwrap assigns it only after `GiveLoot` returns |
 
 The Blind Box order is a source quirk rather than a general purchase rule. The
-box acquisition does not consume the force; its later unwrapped loot can. This
-is distinct from a Shop Mystery Boon, whose direct `GiveLoot` call already has
-purchase provenance and therefore does not consume the force.
+box acquisition does not consume the force; its later unwrapped loot can, even
+when the box is an Echo shop duplicate, because the unwrap still calls
+`GiveLoot`. This is distinct from a Shop Mystery Boon, whose direct `GiveLoot`
+call already has purchase provenance and therefore does not consume the force.
 
 The current normalized planner store `FieldsOptionalRewards` excludes `Boon`,
 so the source-audited Fields optional row is dormant in the executable model.

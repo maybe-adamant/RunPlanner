@@ -398,8 +398,12 @@ An unpicked Boon's god comes from `ChooseLoot` (`RewardLogic.lua:1-13`, called
 by `SetupRoomReward` at `:228-258`), a pure random pick with no
 `LootTypeHistory` write and no store draw; its only effect is that a later
 Boon roll on the same wheel excludes that god. A held `ForceBoonName` trait
-still writes the room's forced boon names for an unpicked offer; its `Uses`
-are assumed spent only on pickup, unverified. Every roll, picked or not, also
+still writes the room's forced boon names for an unpicked offer, but its `Uses`
+are spent only when that god's loot materializes through `GiveLoot`
+(`RoomLogic.lua:2059-2068`), before pickup, so an unpicked offer spends
+nothing; the
+[Olympian keepsake audit](../loadout-and-progression/OLYMPIAN_KEEPSAKE_AND_MOON_BEAM_REWARD_PRESSURE_AUDIT.md#provider-force-consumption-is-loot-materialization)
+owns the full contact table. Every roll, picked or not, also
 removes the first eligible `RewardPriorities` name (`RewardLogic.lua:~170`),
 so an unpicked draw can consume a priority, and a store refills only when
 nothing in it is eligible (`:147-157`), so draw order inside the room can
