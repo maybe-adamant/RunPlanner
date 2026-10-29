@@ -344,10 +344,11 @@ hint when screen rerolls are not enabled, nothing is left to reroll or the
 pool cannot pay. A World Shop offers each unbought item; a Shrine offers Buy
 or Rush for each unbought item, one pick and one Undo step either way; once
 its Travel Deal item is live, either offers to buy it, a blank one taking its
-item in the same pick; a Champion Item offers its collect. These three entries
-are always shown while their object is present and are disabled with the
-reason when nothing can be done there (everything bought, the item collected or not yet
-chosen, the pedestal inactive). One pick appends one action at the end, which
+item in the same pick; a Champion Item offers its collect. Every entry is
+shown while its object is present and is disabled with the reason when nothing
+can be done there (everything bought or sold, the only option left a reroll
+that cannot be made, the item collected or not yet chosen, the pedestal
+inactive). One pick appends one action at the end, which
 Move repositions. A reroll row carries an optional picker for each restocked
 slot, pinned or native.
 
@@ -472,9 +473,9 @@ One staged Combat Order picker above Room entered displays cage identities and
 rewards. Only the final selection commits the complete permutation as one
 semantic edit; closing an unfinished picker leaves the chronology unchanged.
 Encounter-cycle headings show their assigned cage as a read-only label.
-Inventory rows own reward payload and acquisition disposition. Optional
-interaction checkboxes are derived from chronology membership; the chronology
-owns all completion, interaction, movement, and source-before-replacement
+Inventory rows own reward payload and acquisition disposition. An optional
+pickup joins or leaves the chronology from the Timeline's optional actions; the
+chronology owns all completion, interaction, movement, and source-before-replacement
 constraints. Dormant optional values and inactive cage payloads retain authored
 state but publish no control, marker, or finding destination. A retained
 inactive chronology action alone remains visible as its explicit removal
