@@ -74,7 +74,27 @@ owner can exercise them by hand before both plans close.
 6. **Screen reroll tabs** (engine screen chain, game module installing each
    screen with the reservation removed, dialog tabs, import guesses) and the
    **Run State pool** (planner).
-7. **Manual testing by the owner**, then the joint closure with the schema
+7. **Object interactions** (engine, game module if the wire moves, planner):
+   the World Shop (incl. the Preboss Shop form), the Hermes Shrine and the
+   Champion Item adopt the Well/Pool pattern. The Overview authors content
+   only: stock, and for the Shrine each item's delay (the delay belongs to
+   the item, rolled with the stock; it moves from the purchase onto the offer
+   inside unpushed schema 100, the transition moving existing delays). No
+   Purchased/Collect checkboxes. Each present object gets an entry at the top
+   of the timeline's optional section ("World Shop ▸", "Hermes Shrine ▸",
+   "Champion Item ▸") listing what can be done now — Buy X; for the Shrine
+   Buy X or Rush X as one pick (one additive combined command, one Undo
+   step); Buy Travel Deal item once live; Collect — appending one action;
+   rows read "Buy X", "Rush X", "Collect X" with a delete control and lose
+   their inner checkboxes (the Shrine rush checkbox, the Travel Deal
+   Purchased checkbox on Shop, Shrine and Well lines). Travel Deal items stay
+   authored on the line under their triggering purchase (context-based
+   refill, never Overview stock). Entries always shown when the object is
+   present, disabled with the usual reason when nothing can be done (e.g.
+   "Choose the Champion item first."); a window-reached engine fact drives
+   "Waits on an earlier choice". Gold Gold Gold placement unchanged. Picks use
+   the item's own label.
+8. **Manual testing by the owner**, then the joint closure with the schema
    bundle.
 
 Each UI gate iterates shape with screenshots on a separate Vite port and
@@ -86,5 +106,5 @@ touched.
 ## Non-goals
 
 - Moving doors into the timeline.
-- Authored-shape changes beyond the Well and Pool reshape, which lands under
-  the schema bundle's unpushed version 100.
+- Authored-shape changes beyond the Well and Pool reshape and the Shrine
+  delay move, which land under the schema bundle's unpushed version 100.
