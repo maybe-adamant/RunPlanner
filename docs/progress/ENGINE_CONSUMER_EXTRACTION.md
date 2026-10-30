@@ -273,6 +273,10 @@ Total about 7.5–9.5 days. S2–S6 are independent of each other after S1.
   `vitest.draft-corpus.config.ts` (baseline and `globalSetup`),
   `testExecutionPolicy.test.ts:203-245`.
 - Boundary enforcement for Draft; extend the boundary test.
+- `test/simulation/candidates/trait-offer/carrier-child-completion.test.ts`
+  (moved in S3) still drives its integration cases through the Draft walk:
+  move those cases to `packages/draft` as Draft witnesses (or rewrite them on
+  engine projects); its stub-session cases stay as the engine test.
 - Docs: DRAFT_MODE ownership and steering location; SIMULATION_AND_VALIDATION
   (Draft leaves the engine-stages diagram and becomes a downstream consumer);
   TESTING (Draft corpus paths); CONTRIBUTING (map and lanes); AGENTS.md lanes.
