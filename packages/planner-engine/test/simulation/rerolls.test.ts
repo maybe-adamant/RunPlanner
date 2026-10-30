@@ -870,6 +870,22 @@ describe('screen rerolls', () => {
       ['option1', 'option2', 'option3'],
       ['option1', 'option2', 'option3'],
     ]);
+    // An earlier click would take the one use from the final screen's click.
+    const finalClicked = forceApolloRerolledStartProject([[], []], ['option1']);
+    const finalValue = occurrence(finalClicked, goldenFStartId).startingRewardAcquisition
+      ?.traitOffersByAcquisitionRole.source;
+    if (finalValue?.kind !== 'traits') throw new Error('expected the opening Apollo screen');
+    const finalResult = createPreparedProjectCandidateSession(
+      catalog,
+      evaluate(finalClicked),
+    ).evaluate({ kind: 'traitOffer', trait: forceApolloStartTrait, value: finalValue });
+    if (finalResult.kind !== 'traitOffer') throw new Error('expected a trait offer candidate');
+    expect(finalResult.result.callingCard?.[0]?.invalidActionIndexes).toEqual([]);
+    expect(
+      finalResult.result.callingCard?.[0]?.rerolledScreens?.map(
+        (screen) => screen.rarifiableOptionKeys,
+      ),
+    ).toEqual([[], []]);
     // A candidate click on the second screen is judged and reported as settlement does.
     const extra = session.evaluate({
       kind: 'traitOffer',

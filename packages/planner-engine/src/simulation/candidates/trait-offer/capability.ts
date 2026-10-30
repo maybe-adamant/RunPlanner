@@ -564,6 +564,8 @@ export function createTraitOfferCandidateArtifacts(
               const result = evaluateCallingCardOffer(catalog, keepsakes, value, base.legal);
               // A row is rarifiable where one more click on it, after the
               // screen's authored clicks, would be accepted by the same ledger.
+              // An earlier screen's click spends before every later screen's, so
+              // it must also leave each click the ledger accepts now accepted.
               const accepts = (
                 attempted: AuthoredTraitOffer,
                 invalidAt: (evaluation: ReturnType<typeof evaluateCallingCardOffer>) => boolean,
@@ -578,6 +580,8 @@ export function createTraitOfferCandidateArtifacts(
                   evaluateCallingCardOffer(catalog, keepsakes, attempted, attemptedBase.legal),
                 );
               };
+              const withinInvalid = (attempted: readonly number[], current: readonly number[]) =>
+                attempted.every((index) => current.includes(index));
               const rowKeys = (count: number) =>
                 (['option1', 'option2', 'option3'] as const).filter(
                   (key) => optionIndex(key) < count,
@@ -627,9 +631,18 @@ export function createTraitOfferCandidateArtifacts(
                                     ),
                                   }),
                                   (attempt) =>
-                                    attempt.rerolledScreenInvalidActions[index]?.includes(
+                                    (attempt.rerolledScreenInvalidActions[index]?.includes(
                                       actions.length - 1,
-                                    ) ?? true,
+                                    ) ??
+                                      true) ||
+                                    !withinInvalid(attempt.invalidActions, result.invalidActions) ||
+                                    attempt.rerolledScreenInvalidActions.some(
+                                      (invalid, at) =>
+                                        !withinInvalid(
+                                          invalid,
+                                          result.rerolledScreenInvalidActions[at] ?? [],
+                                        ),
+                                    ),
                                 );
                               }),
                             ),
