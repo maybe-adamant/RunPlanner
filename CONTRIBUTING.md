@@ -69,6 +69,8 @@ Planner engine:
   resolving and preparing a room's encounters.
 - [Candidate evaluation model](docs/design/CANDIDATE_EVALUATION_MODEL.md): how
   contextual alternatives are evaluated.
+- [Engine consumers](docs/design/ENGINE_CONSUMERS.md): the engine's entry
+  tiers, programmatic authoring, hypothetical queries and adding an export.
 
 Draft:
 

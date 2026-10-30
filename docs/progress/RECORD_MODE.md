@@ -101,17 +101,19 @@ Evidence: the save-file run record audit
 
 ## Ownership
 
-- **Planner engine** owns the **run record** contract (observed facts in game
-  vocabulary: loadout, rooms in order with encounter waves, Fangs perks, kills,
-  doors and offered rewards, chosen exit, boon screens, shop stock and evidence
-  of purchases, wheel and Fields facts, counters) with a strict codec, the
-  generated-encounter inverse, and `projectFromRunRecord`: a pure,
+- **Run import** (`packages/run-import`) owns the **run record** contract
+  (observed facts in game vocabulary: loadout, rooms in order with encounter
+  waves, Fangs perks, kills, doors and offered rewards, chosen exit, boon
+  screens, shop stock and evidence of purchases, wheel and Fields facts,
+  counters) with a strict codec, and `projectFromRunRecord`: a pure,
   frontier-driven import that creates the project for the record's route,
   follows the evaluation issue like Draft, answers each question from the
   record, validates the value through the candidate session, applies one
-  command through edit settlement, and returns the project plus the import
-  report. Game-name to catalog-key mapping uses the catalog; the engine owns
-  no save-format knowledge.
+  command through the engine's authoring session, and returns the project
+  plus the import report. Game-name to catalog-key mapping uses the catalog;
+  neither package owns save-format knowledge.
+- **Planner engine** owns the generated-encounter inverse, as a query over an
+  observed phase.
 - **Hades II catalog** adds, per Fields cage point, one representative point id
   of its enemy spawn group (from the room maps), so a cage's saved spawn group
   resolves to its cage point. No catalog version bump: no plan changes meaning.
@@ -128,9 +130,9 @@ Evidence: the save-file run record audit
 ## Gates
 
 1. **Audit and plan** committed (docs only).
-2. **Record contract** (engine): types and strict codec; the extractor and the
+2. **Record contract** (run import): types and strict codec; the extractor and the
    fixture script (app, reading the captures outside the repo) produce compact
-   records from both captures, committed as engine test fixtures (Prettier
+   records from both captures, committed as run-import test fixtures (Prettier
    JSON, raw saves never committed).
 3. **Catalog spawn groups**: `FieldsSpatialDeclaration` addition, compiler,
    declarations for all 15 H rooms; H_Combat13's unmapped point stays unmapped
@@ -138,10 +140,10 @@ Evidence: the save-file run record audit
 4. **Encounter inverse** (engine): inverse plus replay check, fixed prefixes,
    intro substitution, Fangs, Menace (per wave when the source type is unique),
    spill and infinite rosters; fallback to default.
-5. **Import core** (engine): project creation, loadout, route, doors, Hub,
+5. **Import core** (run import): project creation, loadout, route, doors, Hub,
    encounters, trait offers and replacements, Artificer dispositions, the
    import report, guess policy (decision 8).
-6. **Import rooms** (engine): World Shop, Hermes Shrine (rushed and delayed
+6. **Import rooms** (run import): World Shop, Hermes Shrine (rushed and delayed
    purchases), Well, Pool, Anvil, Embryo, Path of Stars, Chaos gates, keepsake
    racks, fountains, ship wheels, Fields cages, optional rewards and spatial
    points, NPC encounters, Menace.
@@ -156,8 +158,9 @@ Evidence: the save-file run record audit
 
 ## Tests
 
-- Engine: codec and fixture round-trip; inverse against
-  `assessGeneratedEncounter` over every captured wave; import of both capture
+- Engine: inverse against `assessGeneratedEncounter` over every captured
+  wave.
+- Run import: codec and fixture round-trip; import of both capture
   records with an expected-findings and import-report snapshot per area;
   import time measured once with the performance lane.
 - Catalog: declaration and normalization for the spawn-group ids.

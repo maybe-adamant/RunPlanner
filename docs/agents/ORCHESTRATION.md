@@ -71,11 +71,11 @@ and grants or redirects, then adjusts the lanes.
 
 ## Standing executors
 
-Keep a standing executor per lane (engine; planner application and UI; catalog
-and game-source research; execution plan, fixtures and game module) and a
-reviewer per lane (engine and execution; planner and UI), as a session roster
-with each one's task count and approximate size. The roster is session state,
-not a repository file.
+Keep a standing executor per lane (engine, Draft and run import; planner
+application and UI; catalog and game-source research; execution plan, fixtures
+and game module) and a reviewer per lane (engine, Draft, run import and
+execution; planner and UI), as a session roster with each one's task count and
+approximate size. The roster is session state, not a repository file.
 
 Retire an executor when its ownership or design changes materially, after
 about ten tasks, after its second compaction, or when it visibly regresses by

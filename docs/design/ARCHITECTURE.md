@@ -16,6 +16,7 @@ Start with the lane that owns the question:
 | What does authored state mean, and what follows from it?   | [Planner Engine](SIMULATION_AND_VALIDATION.md)    |
 | How is that result edited, displayed, navigated and saved? | [Planner Application and Editor](EDITOR_MODEL.md) |
 | What random valid plan does a Draft spec produce?          | [Draft Mode](DRAFT_MODE.md)                       |
+| Which engine entry does a consumer use, and how?           | [Engine Consumers](ENGINE_CONSUMERS.md)           |
 
 The engine guide routes deeper authored-state, generation, lifecycle, reward
 and candidate contracts. The application guide routes the shell, workspace layout and
@@ -83,9 +84,9 @@ is a second composition entry point and constructs its own catalog.
 Cross-package consumers use declared package exports: Draft, the run import
 and the application import the engine only through its `package.json` entries,
 never deep paths, and the engine imports none of them. The run import uses
-Draft's issue repairer; Draft never imports the run import. ESLint and the
-planner's package boundary architecture test enforce the entries, the package
-dependency direction and declared dependencies. Within the planner,
+Draft's issue repairer; Draft never imports the run import.
+[Engine Consumers](ENGINE_CONSUMERS.md#enforcement) owns the entry tiers and
+how ESLint and the package boundary test enforce them. Within the planner,
 cross-root imports use `@planner/*` for composition, persistence, projections,
 state, ui and workspace. Test support uses `@planner-test/*`, and repository
 authored fixtures use `@run-planner/test-fixtures`. Immediate-neighborhood

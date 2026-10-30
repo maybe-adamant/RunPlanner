@@ -194,6 +194,18 @@ the spread of basket traits' in-biome landing depths, the god boon rooms'
 count, gaps and early share per biome, and the Shops entered per run; its
 committed baseline records rates and medians, not plans.
 
+## Issue Repairer
+
+The run import fills an issue the record cannot answer through Draft's issue
+repairer, which runs Draft's walk over an unsteered world: every pool god, no
+basket, NPCs or racks, and every random draw taking its domain's first
+eligible value. It drives the import's own authoring session and repairs the
+current issue once, or leaves the session as it was. One repairer serves the
+whole import, so a value it already tried for an owner is not tried again
+while the session is still at its own last result; after an outside edit, any
+value may be tried again. Occurrences it creates carry the consumer's ID
+prefix.
+
 ## Share Codes
 
 A share code carries what a player authors for a draft, so drafting a pasted

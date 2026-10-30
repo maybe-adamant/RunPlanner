@@ -218,6 +218,13 @@ infinite. Commands and decoding enforce that shape; preparation assesses depth
 gates, draw-order exclusions and the elite limit at the phase's exact
 checkpoint. It owns no wave, budget, count, highlight, Fangs or Menace choice.
 
+An observed phase (its waves, spawns and Fangs perks as a played run saw them)
+inverts against the reached phase's resolved definition, through its generated
+composition when it has one, else its infinite roster, into the customization
+that replays it exactly or the reason none does; a phase with neither
+capability has no inversion. The engine owns the inversion; the run import
+supplies only the observation.
+
 Applicable Fangs choices own one elite source type and an ordered legal perk
 assignment. Menace choices own converted source-request counts and, for
 random-pool sources, one replacement identity per source per wave. Omitted

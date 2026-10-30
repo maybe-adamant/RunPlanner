@@ -24,10 +24,17 @@ This is the engine entry document. Detailed contracts have narrower owners:
 This document owns their composition, evaluation coverage, finding chronology,
 readiness and the explicit handoffs that keep these authorities coherent.
 
-[Draft Mode](DRAFT_MODE.md) and the run import are downstream consumers, not
-engine stages: they author plans through the engine's declared entries
-(authoring session, candidates and queries) and own no game legality. The
-engine keeps the persisted Draft settings and share code in its authored model.
+### Consumers
+
+The application, [Draft Mode](DRAFT_MODE.md) and the run import are downstream
+consumers, not engine stages: they use only the engine's declared entries and
+own no game legality. Draft and the import build plans through the authoring
+session over the same edit settlement the application's history uses, and ask
+candidates and engine-owned queries for every alternative. The engine keeps the
+persisted Draft settings and share code in its authored model.
+[Engine Consumers](ENGINE_CONSUMERS.md) owns the entry tiers, the authoring
+session's refusals, the hypothetical queries and how an export is added and
+enforced.
 
 ## Engine Neighborhoods
 
