@@ -537,7 +537,7 @@ function install.barren(start)
 end
 
 -- The start room's planned reroll pool replaces the one native StartNewRun
--- counted from the installed Arcana (RunLogic.lua:489), when the plan rerolls.
+-- counted from the installed Arcana (RunLogic.lua:489), when the plan spends a reroll.
 function install.rerollPool(occurrence)
     local pool = occurrence and occurrence.rerollPoolAtEntry
     if pool ~= nil then _G.CurrentRun.NumRerolls = math.max(0, pool) end

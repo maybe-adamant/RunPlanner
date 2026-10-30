@@ -332,7 +332,7 @@ Unknown state is not published and starts as a fresh install leaves it: timers,
 including the Expiring timer and Evade Evade Evade; trait armor, which installed
 armor traits set full at their installed rarity; the Ghost Onion, Silver Wheel,
 Mist Veil and Hades lifesteal pools; spell charges, refilled including
-`BonusSpellUses`; rerolls, unless the plan authors any, when the start
+`BonusSpellUses`; rerolls, unless the plan spends any, when the start
 room's planned reroll pool is installed; Personal Loan gold; Last Gasp eligibility; and the
 last Challenge depth. Under the Boon Mana Reserve vow, installed boons hold no
 reserved Magick. Current health is set to the maximum. An Opening's weather is

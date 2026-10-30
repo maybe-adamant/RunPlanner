@@ -9,7 +9,7 @@ check.
 
 ## Reroll pool
 
-- [ ] Start a run whose plan authors rerolls. On entering the first room, and
+- [ ] Start a run whose plan spends rerolls. On entering the first room, and
       on every later room entry, `NumRerolls` equals the plan's Run State
       rerolls left, and no `reroll-pool` mismatch is reported.
 - [ ] Start the same plan as a Practice start at a later room. The start room
