@@ -53,7 +53,7 @@ export interface DraftGodBoonBudget {
 }
 
 /** The per-god cap's default: one fewer under Denial, which bans the offered rows not taken. */
-export function draftDefaultPerGodCap(
+function draftDefaultPerGodCap(
   catalog: Catalog,
   loadout: Pick<DraftSpec, 'loadout'>['loadout'],
 ): number {

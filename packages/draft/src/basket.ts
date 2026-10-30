@@ -560,7 +560,7 @@ export function draftFirstBoonRule(
 }
 
 /** Pool #1 and its first offer's traits while #1 has no basket trait to lead with. */
-export function draftPendingFirstPick(
+function draftPendingFirstPick(
   catalog: Catalog,
   route: DraftRoute,
   spec: DraftSpec,

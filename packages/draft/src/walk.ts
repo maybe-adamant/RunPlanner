@@ -48,6 +48,7 @@ import {
 } from '@run-planner/engine/reward-kernel';
 import type { AuthoringSession } from '@run-planner/engine/authoring';
 import {
+  type ProjectCandidateEvaluation,
   type ProjectCandidateSession,
   type StartRoomCandidateQuery,
   type ForcePressureLedgerEntry,
@@ -56,7 +57,6 @@ import {
   assessmentRepairOwner,
   type SemanticFinding,
   type RewardOfferExclusionEvidence,
-  type RewardProducerCandidateResult,
   prepareRouteStartTraitRequirements,
   routeResourceAuthoring,
 } from '@run-planner/engine/simulation';
@@ -103,6 +103,20 @@ function clockworkGoal(catalog: Catalog, routeKey: string, occurrence: RoomOccur
     occurrence.state.kind === 'counted' &&
     occurrence.state.reward === null
   );
+}
+
+/** An offered reward's exact result; absent when its candidate context is unavailable. */
+function rewardOfferResult(evaluation: ProjectCandidateEvaluation) {
+  switch (evaluation.kind) {
+    case 'startingReward':
+    case 'incomingReward':
+    case 'localReward':
+    case 'rewardWheelOffer':
+    case 'acquisitionEntryOffer':
+      return evaluation.result;
+    default:
+      return undefined;
+  }
 }
 
 /** A Shop door beside a door to a new god with queued traits. */
@@ -1281,7 +1295,7 @@ export class DraftWalk {
 
   private tryOffers(
     rewardTypes: readonly string[],
-    evaluate: (value: ResolvedRewardOffer) => { readonly kind: string },
+    evaluate: (value: ResolvedRewardOffer) => ProjectCandidateEvaluation,
     command: (value: ResolvedRewardOffer) => ProjectCommand,
     apply: (command: ProjectCommand) => boolean,
     wantedGodBoost = 1,
@@ -1294,11 +1308,10 @@ export class DraftWalk {
       .flatMap((type) => locallyValidRewardOffers(this.catalog.rewards, type))
       .filter((offer) => this.steering.offerWeight(offer) > 0 && !this.offerStopped(offer))
       .filter((offer) => {
-        const evaluation = evaluate(offer);
-        if (!('result' in evaluation) || typeof evaluation.result !== 'object') return false;
-        const result = evaluation.result as Partial<RewardProducerCandidateResult> | null;
-        if (result?.supported === false) this.noteExclusions(result.exclusions ?? []);
-        return result?.supported === true && result.findings?.length === 0;
+        const result = rewardOfferResult(evaluate(offer));
+        if (result === undefined) return false;
+        if (!result.supported) this.noteExclusions(result.exclusions ?? []);
+        return result.supported && result.findings.length === 0;
       });
     if (legal.length === 0 && whenNoneLegal !== undefined) return whenNoneLegal();
     this.noteSupply(legal);

@@ -11,10 +11,9 @@ import {
   draftKeepsakeOptions,
   draftRefusals,
   draftWorldOptions,
-  type DraftLoadout,
   type DraftSpec,
-  type DraftWorld,
 } from '../../src';
+import type { DraftLoadout, DraftWorld } from '../../src/spec';
 import { createDraftRng, shuffleDraft } from '../../src/rng';
 import { draftBasket } from '../support/draft-basket';
 

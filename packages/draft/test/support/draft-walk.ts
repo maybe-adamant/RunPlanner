@@ -5,7 +5,8 @@ import {
   simulateProjectAssembly,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
-import type { DraftRoute, DraftSpec } from '../../src';
+import type { DraftSpec } from '../../src';
+import type { DraftRoute } from '../../src/spec';
 import { createDraftRng } from '../../src/rng';
 import { draftGodSchedule, type DraftGodSchedule } from '../../src/schedule';
 import { draftBasketTraitKeys, draftLoadoutProject } from '../../src/spec';

@@ -397,7 +397,6 @@ export {
   type RunStateEffects,
   type DecisionTraitState,
 } from './rewards';
-export type { RewardProducerCandidateResult } from './rewards/producer-frontiers';
 export {
   heldKeepsakeRanks,
   keepsakesAfterCurrentKeepsakeAdvance,
