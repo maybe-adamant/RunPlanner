@@ -43,7 +43,8 @@ export interface RouteStartTraitRequirements {
   coreFirstOfferTraitKeys(giverKey: string): readonly string[] | undefined;
   /**
    * The trait's requirements the loadout decides, judged with the route-start traits plus
-   * `assumedTraitKeys` equipped over the route-start Arcana and Fear.
+   * `assumedTraitKeys` equipped over the route-start Arcana and Fear. The union is the contract:
+   * a trait held at the route start counts exactly like an assumed one.
    */
   assess(traitKey: string, assumedTraitKeys: readonly string[]): RouteStartTraitAssessment;
 }

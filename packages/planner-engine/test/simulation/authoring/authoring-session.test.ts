@@ -87,6 +87,41 @@ describe('authoring session', () => {
     expect(session.candidates()).toBe(prepared);
   });
 
+  it('continues from a restored assembly with that assembly’s candidate session', () => {
+    const start = evaluate(
+      createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false }),
+    );
+    const outside = createAuthoringSession(catalog, start).apply(shrineOffer);
+    if (outside.kind !== 'applied') throw new Error('expected the outside edit to apply');
+    const session = createAuthoringSession(catalog, start);
+    const prepared = session.candidates();
+    session.restore(outside.assembly);
+    expect(session.current()).toBe(outside.assembly);
+    const restored = session.candidates();
+    expect(restored).not.toBe(prepared);
+    expect(session.candidates()).toBe(restored);
+    session.restore(start);
+    expect(session.current()).toBe(start);
+    expect(session.apply(shrineOffer).kind).toBe('applied');
+  });
+
+  it('restores the assembly and its candidate session when a probe throws', () => {
+    const start = evaluate(
+      createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false }),
+    );
+    const session = createAuthoringSession(catalog, start);
+    const prepared = session.candidates();
+    expect(() =>
+      session.probe(() => {
+        session.apply(shrineOffer);
+        session.candidates();
+        throw new Error('probe failed');
+      }),
+    ).toThrow('probe failed');
+    expect(session.current()).toBe(start);
+    expect(session.candidates()).toBe(prepared);
+  });
+
   it('passes a settlement fault through with the applied assembly', () => {
     const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
     const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);

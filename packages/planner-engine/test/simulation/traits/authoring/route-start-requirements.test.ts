@@ -22,6 +22,25 @@ describe('route-start trait requirements', () => {
     expect(cores?.every((key) => catalog.traits.byKey[key]!.isCoreGodTrait)).toBe(true);
   });
 
+  it('holds no trait at any keepsake, aspect or familiar route start', () => {
+    // Held route-start traits would count toward assess beside the assumed ones; today none exist.
+    const held = [
+      ...catalog.keepsakes.values.map((keepsake) => ({
+        ...loadout,
+        startingKeepsakeKey: keepsake.key,
+      })),
+      ...catalog.aspects.values.map((aspect) => ({
+        ...loadout,
+        weaponKey: aspect.weaponKey,
+        aspectKey: aspect.key,
+      })),
+      ...catalog.familiars.values.map((familiar) => ({ ...loadout, familiarKey: familiar.key })),
+    ].flatMap((start) => [
+      ...prepareRouteStartTraitRequirements(catalog, underworld, start).held.traitKeys,
+    ]);
+    expect(held).toEqual([]);
+  });
+
   it('judges held-trait requirements over the route start plus each call’s assumed traits', () => {
     expect(requirements.assess('DoorHealToFullBoon', []).failures).toEqual([
       { code: 'missingPrerequisite', requirementTraitKeys: ['HighHealthOffenseBoon'] },
