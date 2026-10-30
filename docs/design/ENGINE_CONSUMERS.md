@@ -87,10 +87,11 @@ A consumer asks the engine what is possible; it never decides it.
   exact assembly. A consumer never builds simulation state, calls a
   requirement check directly, or re-derives chronology, keepsake, level,
   inventory or reward-store facts from its own reading of the project.
-- Run-state facts a consumer needs come from engine queries: the held keepsake
-  ranks, the trait inventory at a snapshot, the keepsakes after the current
-  keepsake advances, and a level-resolution screen's guess at the screens a
-  reroll replaced.
+- Run-state facts a consumer needs come from engine queries: the snapshot an
+  assembly published at a checkpoint (undefined where coverage did not reach
+  it), the held keepsake ranks, the trait inventory at a snapshot, the
+  keepsakes after the current keepsake advances, and a level-resolution
+  screen's guess at the screens a reroll replaced.
 - Hypothetical questions are engine-owned queries; the consumer supplies only
   its choice policy or its observation:
   - **Carrier-child completion** authors every selected-outcome child an offer

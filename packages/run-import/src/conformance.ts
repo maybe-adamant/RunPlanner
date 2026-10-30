@@ -2,7 +2,6 @@ import {
   createBiomeAddress,
   createOccurrenceAddress,
   createRoomRunStateCheckpointAddress,
-  semanticAddressKey,
   type OccurrenceId,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
@@ -11,6 +10,7 @@ import {
   type ProjectEvaluationAssembly,
   type RunStateSnapshot,
   heldKeepsakeRanks,
+  runStateSnapshotForProjectEvaluationAssembly,
   snapshotTraitInventory,
 } from '@run-planner/engine/simulation';
 import type { RunRecord, RunRecordHeldTrait } from './run-record/model';
@@ -362,36 +362,20 @@ function compareEntry(
   return found;
 }
 
-const snapshotsByAssembly = new WeakMap<
-  ProjectEvaluationAssembly,
-  ReadonlyMap<string, RunStateSnapshot>
->();
-
 /** The plan's run-state snapshot at one occurrence checkpoint, when evaluation reached it. */
 export function occurrenceSnapshot(
   assembly: ProjectEvaluationAssembly,
   occurrence: RecordOccurrence,
   kind: 'roomEntered' | 'beforeRoomExit',
 ): RunStateSnapshot | undefined {
-  let snapshots = snapshotsByAssembly.get(assembly);
-  if (snapshots === undefined) {
-    const byOwner = new Map<string, RunStateSnapshot>();
-    for (const biome of assembly.evaluation.route.biomes)
-      if ('rewards' in biome)
-        for (const snapshot of biome.rewards.runStateSnapshots)
-          byOwner.set(semanticAddressKey(snapshot.owner), snapshot);
-    snapshotsByAssembly.set(assembly, byOwner);
-    snapshots = byOwner;
-  }
-  return snapshots.get(
-    semanticAddressKey(
-      createRoomRunStateCheckpointAddress(
-        createOccurrenceAddress(
-          createBiomeAddress(assembly.project.route.routeKey, occurrence.biomeKey),
-          occurrence.occurrenceId,
-        ),
-        { kind },
+  return runStateSnapshotForProjectEvaluationAssembly(
+    assembly,
+    createRoomRunStateCheckpointAddress(
+      createOccurrenceAddress(
+        createBiomeAddress(assembly.project.route.routeKey, occurrence.biomeKey),
+        occurrence.occurrenceId,
       ),
+      { kind },
     ),
   );
 }

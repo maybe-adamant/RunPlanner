@@ -19,6 +19,7 @@ import {
   purgingPoolCandidateForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
 } from './project-evaluation-assembly';
+import { runStateSnapshotForProjectEvaluationAssembly } from './run-state-query';
 
 function rewardsOf(assembly: ProjectEvaluationAssembly, biomeKey: string) {
   const biome = assembly.evaluation.route.biomes.find(
@@ -254,12 +255,10 @@ function screenRerollReach(
   spend: ScreenRerollSpend,
   remaining: number,
 ): { readonly enabled: boolean; readonly maxCount: number; readonly limit: ScreenRerollLimit } {
-  const entered = semanticAddressKey(
-    createRoomRunStateCheckpointAddress(spend.occurrence, { kind: 'roomEntered' }),
-  );
   const enabled =
-    rewardsOf(assembly, spend.occurrence.biomeKey)?.runStateSnapshots.find(
-      (snapshot) => semanticAddressKey(snapshot.owner) === entered,
+    runStateSnapshotForProjectEvaluationAssembly(
+      assembly,
+      createRoomRunStateCheckpointAddress(spend.occurrence, { kind: 'roomEntered' }),
     )?.rerolls.screensEnabled === true;
   if (!enabled) return { enabled, maxCount: spend.fromCount, limit: 'notEnabled' };
   const extra = (count: number) => screenRerollCost(count) - screenRerollCost(spend.fromCount);

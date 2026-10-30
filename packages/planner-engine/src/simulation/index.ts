@@ -531,6 +531,7 @@ export {
   type ScreenRerollLimit,
   type ScreenRerollSpend,
 } from './evaluation/reroll-authoring';
+export { runStateSnapshotForProjectEvaluationAssembly } from './evaluation/run-state-query';
 export { evaluateBiome, materializedBiomePrefixCoveragePoint } from './evaluation/biome-evaluation';
 export { simulateProject, simulateProjectAssembly } from './evaluation/project';
 export { startInstallationAt } from './start-installation/start-point';
