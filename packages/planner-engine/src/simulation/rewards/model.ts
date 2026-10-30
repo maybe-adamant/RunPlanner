@@ -18,6 +18,7 @@ import type { NemesisRandomEventAddress } from '../../authored-project/addresses
 import type { PlannerTimelineFacts } from '../timeline-facts';
 import type { StygianWellEffect } from '../commerce/stygian-well';
 import type { PurchasePriceContextPublication } from '../commerce/gold/price-context';
+import type { GoldEventPublication } from '../commerce/gold/gain-context';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 
 /** Exact planner-owned realization of a Travel Deal Stygian Well refill. */
@@ -326,6 +327,8 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
    * only: it never feeds chronology, branch equivalence or findings.
    */
   readonly purchasePriceContexts: readonly PurchasePriceContextPublication[];
+  /** Each reached gold contact and door opening in walk order; guidance input only, like prices. */
+  readonly goldEvents: readonly GoldEventPublication[];
   /** Exact automatic Boss resolutions; empty Figurine keys mean consumption without activation. */
   readonly bossArcanaOutcomes: readonly BossArcanaOutcome[];
   /** Reached phantom exits in chronological order. */

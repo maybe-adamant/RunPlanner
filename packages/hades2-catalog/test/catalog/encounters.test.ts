@@ -1619,16 +1619,47 @@ describe('encounter envelope catalog', () => {
       },
       goldTrade: {
         variants: [
-          { rewardType: 'MaxHealthDrop', enteredBiome: { max: 2 }, requirement: 'none' },
-          { rewardType: 'MaxHealthDropBig', enteredBiome: { min: 3 }, requirement: 'none' },
-          { rewardType: 'MaxManaDrop', enteredBiome: { max: 2 }, requirement: 'none' },
-          { rewardType: 'MaxManaDropBig', enteredBiome: { min: 3 }, requirement: 'none' },
-          { rewardType: 'StackUpgrade', enteredBiome: { max: 1 }, requirement: 'pomLegal' },
-          { rewardType: 'StackUpgradeBig', enteredBiome: { min: 2 }, requirement: 'pomLegal' },
+          {
+            rewardType: 'MaxHealthDrop',
+            enteredBiome: { max: 2 },
+            requirement: 'none',
+            goldCost: { min: 105, max: 130 },
+          },
+          {
+            rewardType: 'MaxHealthDropBig',
+            enteredBiome: { min: 3 },
+            requirement: 'none',
+            goldCost: { min: 230, max: 255 },
+          },
+          {
+            rewardType: 'MaxManaDrop',
+            enteredBiome: { max: 2 },
+            requirement: 'none',
+            goldCost: { min: 80, max: 105 },
+          },
+          {
+            rewardType: 'MaxManaDropBig',
+            enteredBiome: { min: 3 },
+            requirement: 'none',
+            goldCost: { min: 180, max: 205 },
+          },
+          {
+            rewardType: 'StackUpgrade',
+            enteredBiome: { max: 1 },
+            requirement: 'pomLegal',
+            goldCost: { min: 80, max: 105 },
+          },
+          {
+            rewardType: 'StackUpgradeBig',
+            enteredBiome: { min: 2 },
+            requirement: 'pomLegal',
+            goldCost: { min: 280, max: 305 },
+          },
           {
             rewardType: 'WeaponUpgrade',
             enteredBiome: {},
             requirement: 'hammerEarlyOrLate',
+            goldCost: { min: 180, max: 205 },
           },
         ],
         response: ['accept', 'decline'],

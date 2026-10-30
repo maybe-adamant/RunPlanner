@@ -185,6 +185,8 @@ export interface WorkspaceRoomActions {
   readonly objectEntries?: readonly import('./features').WorkspaceRoomObjectEntry[];
   readonly steadyGrowth?: readonly WorkspaceSteadyGrowthControl[];
   readonly transcendentEmbryo?: readonly WorkspaceTranscendentEmbryoControl[];
+  /** Gold held when the doors open; absent when the ledger cannot say. */
+  readonly current?: WorkspaceGoldAmount;
   /** What the room's purchases cost together; absent when it pays for nothing or is not reached. */
   readonly spending?: WorkspaceGoldAmount;
 }

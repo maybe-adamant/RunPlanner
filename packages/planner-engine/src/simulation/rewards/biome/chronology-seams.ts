@@ -51,6 +51,7 @@ import { applyEncounterSettlementTransition } from './encounter-acquisition/enco
 import { applyGorgonStartedTransition } from './encounter-acquisition/gorgon-started';
 import { applyHermesShrinePurchaseReachedTransition } from './encounter-acquisition/hermes-shrine-purchase';
 import { applyWellPurchaseTransition } from './encounter-acquisition/well-purchase';
+import { withPoolSaleGold } from './gold-event-seams';
 import {
   withAcquisitionPointPrice,
   withHermesShrinePurchasePrice,
@@ -558,9 +559,11 @@ const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> 
       ...(settled.sold === undefined ? {} : { purgingPoolSale: settled.sold }),
     });
     emissions.push(...acquisitionEmissions(transition, room));
+    const sold =
+      settled.sold === undefined ? state : withPoolSaleGold(context, state, event, settled.sold);
     return {
       state: Object.freeze({
-        ...state,
+        ...sold,
         branches: transition.branches,
         featureRolls: settled.featureRolls,
       }),

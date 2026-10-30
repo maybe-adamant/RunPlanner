@@ -44,6 +44,7 @@ import {
   validateRewardAcquisitionRoleTraitGivers,
 } from './traits/givers';
 import { createTraitCatalog } from './traits/normalize';
+import { normalizeGold } from './gold';
 import { validateTraitRouteReferences } from './traits/catalog-assembly';
 
 export { CatalogContractError } from './errors';
@@ -77,6 +78,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     maxHealth: requirePositiveInteger(input.heroMaxStats.maxHealth, 'heroMaxStats.maxHealth'),
     maxMana: requirePositiveInteger(input.heroMaxStats.maxMana, 'heroMaxStats.maxMana'),
   });
+  const gold = normalizeGold(input.gold);
   validateHexBindings({
     hexes: traitCatalog.hexes,
     traits: traitCatalog.traits,
@@ -162,6 +164,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     familiars,
     defaultFamiliarKey,
     heroMaxStats,
+    gold,
     rewards,
     encounterEnvelopes,
     encounterDefinitions,

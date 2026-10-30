@@ -48,7 +48,10 @@ export const narcissusTraits = [
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',
-      pickups: [{ key: 'currency', rewardType: 'Currency' }],
+      // TraitData_Narcissus.lua:208-262 Amount 100 by rarity 1 / 1 / 1.5 / 2.5.
+      pickups: [
+        { key: 'currency', rewardType: 'Currency', goldByAcquisitionOrdinal: [100, 100, 150, 250] },
+      ],
     },
   },
   {

@@ -50,6 +50,8 @@ export type PurchasePriceUnpriced =
  * is absent only when no action row settles the purchase, a contract failure.
  */
 export interface PurchasePriceContextPublication {
+  /** The walked history event the purchase settles at. */
+  readonly sequence: number;
   readonly owner?: SemanticAddress;
   readonly room: OccurrenceAddress;
   readonly contexts: readonly PurchasePriceContext[];
@@ -106,6 +108,7 @@ function branchContext(
 /** Reads one purchase's price context from every reached branch before it settles. */
 export function purchasePriceContextPublication(inputs: {
   readonly catalog: Catalog;
+  readonly sequence: number;
   readonly owner?: SemanticAddress;
   readonly room: OccurrenceAddress;
   readonly firstPaidPurchase: boolean;
@@ -121,6 +124,7 @@ export function purchasePriceContextPublication(inputs: {
       distinct.set(JSON.stringify(context), context);
     }
   return Object.freeze({
+    sequence: inputs.sequence,
     ...(inputs.owner === undefined ? {} : { owner: inputs.owner }),
     room: inputs.room,
     contexts: Object.freeze([...distinct.values()]),

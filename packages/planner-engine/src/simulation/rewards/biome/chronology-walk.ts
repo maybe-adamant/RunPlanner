@@ -14,6 +14,7 @@ import type {
 import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
 import type { StygianWellCandidateContext } from '../../commerce/stygian-well';
 import type { PurchasePriceContextPublication } from '../../commerce/gold/price-context';
+import type { GoldEventPublication } from '../../commerce/gold/gain-context';
 import type { FeatureRollWalk } from '../../commerce/feature-rolls';
 import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from '../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../materialization';
@@ -99,6 +100,10 @@ export interface ChronologyWalkState {
   readonly purchasePriceContexts: ReadonlyMap<string, PurchasePriceContextPublication>;
   /** Rooms where a paid purchase already settled (native `CurrentRoom.FirstPurchase`). */
   readonly paidPurchaseRooms: ReadonlySet<string>;
+  /** Each reached gold contact and door opening, in walk order. */
+  readonly goldEvents: readonly GoldEventPublication[];
+  /** The encounter each started phase resolved to, by `room::phase`, for its end-of-encounter gold. */
+  readonly goldEncounterKeys: ReadonlyMap<string, string>;
   readonly purgingPoolAssessments: ReadonlyMap<string, PurgingPoolRoomAssessment>;
   /** Each Well's and Pool's roll state as its room's actions settle, by room and feature. */
   readonly featureRolls: ReadonlyMap<string, FeatureRollWalk>;
@@ -179,6 +184,8 @@ export function createChronologyWalkState(
     wellRefillRealizations: new Map(),
     purchasePriceContexts: new Map(),
     paidPurchaseRooms: new Set<string>(),
+    goldEvents: Object.freeze([]),
+    goldEncounterKeys: new Map(),
     purgingPoolAssessments: new Map(),
     featureRolls: new Map(),
     roomActionEnds: new Map(),

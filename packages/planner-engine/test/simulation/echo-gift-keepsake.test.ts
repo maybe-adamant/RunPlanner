@@ -544,6 +544,36 @@ describe('Echo Gift Gift Gift', () => {
     });
   });
 
+  it('pays a replayed Gold Purse its Common gold at the biome start', () => {
+    const replay = replayBiome([branchWithGift('BonusMoneyKeepsake', 'BlockDeathKeepsake')]);
+    expect(replay.simulation.goldEvents).toContainEqual(
+      expect.objectContaining({
+        kind: 'gain',
+        contexts: [
+          {
+            gain: { kind: 'keepsakeGold', gold: 100 },
+            multipliers: { moneyMultiplier: 1, moneyRewardBonus: 1, blocksGold: false },
+          },
+        ],
+      }),
+    );
+  });
+
+  it('refuses Echo keepsake gold that only some reached branches replay', () => {
+    // The branch already holding the Gold Purse gets no copy (RoomLogic.lua:1218-1242).
+    const replay = replayBiome([
+      branchWithGift('BonusMoneyKeepsake'),
+      branchWithGift('BonusMoneyKeepsake', 'BlockDeathKeepsake'),
+    ]);
+    expect(replay.simulation.goldEvents).toContainEqual(
+      expect.objectContaining({
+        kind: 'gain',
+        contexts: [],
+        unpriced: expect.objectContaining({ kind: 'contractFailure' }),
+      }),
+    );
+  });
+
   it('replays Crystal Figurine at Common, removes the Echo source at Boss, and replays later', () => {
     const retained = retainedKeepsakeState('BossMetaUpgradeKeepsake', 'GoldifyKeepsake');
     const { figurine: removed, ...withoutOrdinaryFigurine } = retained;

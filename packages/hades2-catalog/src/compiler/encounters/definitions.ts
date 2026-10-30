@@ -363,7 +363,22 @@ export function normalizeEncounterDefinitions(
                 Object.freeze(
                   policy.goldTrade.variants.map((variant, index) => {
                     const variantPath = `${path}.nemesisRandomEvent.goldTrade[${index}]`;
-                    exactKeys(variant, ['rewardType', 'enteredBiome', 'requirement'], variantPath);
+                    exactKeys(
+                      variant,
+                      ['rewardType', 'enteredBiome', 'requirement', 'goldCost'],
+                      variantPath,
+                    );
+                    exactKeys(variant.goldCost, ['min', 'max'], `${variantPath}.goldCost`);
+                    const costMin = requirePositiveInteger(
+                      variant.goldCost.min,
+                      `${variantPath}.goldCost.min`,
+                    );
+                    const costMax = requirePositiveInteger(
+                      variant.goldCost.max,
+                      `${variantPath}.goldCost.max`,
+                    );
+                    if (costMax < costMin)
+                      fail(`${variantPath}.goldCost`, 'maximum must not precede minimum');
                     exactKeys(
                       variant.enteredBiome,
                       ['min', 'max'].filter(
@@ -384,6 +399,7 @@ export function normalizeEncounterDefinitions(
                         `${variantPath}.enteredBiome`,
                       ),
                       requirement: variant.requirement,
+                      goldCost: Object.freeze({ min: costMin, max: costMax }),
                     });
                   }),
                 );
@@ -572,6 +588,13 @@ export function normalizeEncounterDefinitions(
         ...(raw.createsIncomingRewardAtStart === true
           ? { createsIncomingRewardAtStart: true as const }
           : {}),
+        ...(raw.goldBet === undefined
+          ? {}
+          : {
+              goldBet: Object.freeze({
+                maxBet: requirePositiveInteger(raw.goldBet.maxBet, `${path}.goldBet.maxBet`),
+              }),
+            }),
         ...(blocksKeepsakeSelectionKeys === undefined ? {} : { blocksKeepsakeSelectionKeys }),
         ...(requirements === undefined ? {} : { requirements }),
         ...(raw.sequenceEffect === undefined

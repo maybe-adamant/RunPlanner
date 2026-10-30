@@ -11,6 +11,7 @@ import {
   createRoomActionAddress,
   createShopOfferAddress,
   roomActionKey,
+  semanticAddressKey,
   type ProjectDocument,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
@@ -139,6 +140,50 @@ describe('gold ledger query', () => {
     ).toEqual({ availability: 'unavailable', reason: 'coverageNotReached' });
   });
 
+  it('reports a reached room the walk published no gold point in as spending nothing', () => {
+    const assembly = simulateProjectAssembly(catalog, loadUnderworldFStygianWellCheckpoint());
+    const roomKey = semanticAddressKey(wellRoom);
+    const stripped = {
+      ...assembly,
+      evaluation: {
+        ...assembly.evaluation,
+        route: {
+          ...assembly.evaluation.route,
+          biomes: assembly.evaluation.route.biomes.map((biome) =>
+            'rewards' in biome
+              ? {
+                  ...biome,
+                  rewards: {
+                    ...biome.rewards,
+                    purchasePriceContexts: biome.rewards.purchasePriceContexts.filter(
+                      (publication) => semanticAddressKey(publication.room) !== roomKey,
+                    ),
+                    goldEvents: biome.rewards.goldEvents.filter(
+                      (publication) =>
+                        publication.room === undefined ||
+                        semanticAddressKey(publication.room) !== roomKey,
+                    ),
+                  },
+                }
+              : biome,
+          ),
+        },
+      },
+    } as typeof assembly;
+    const notWalked = { availability: 'unavailable', reason: 'notWalked' };
+    expect(goldLedgerForProjectEvaluationAssembly(catalog, stripped).roomAt(wellRoom)).toEqual({
+      availability: 'available',
+      room: {
+        room: wellRoom,
+        purchases: [],
+        spending: { mean: 0, variance: 0, min: 0, max: 0 },
+        gains: [],
+        doorsOpenBalance: notWalked,
+        balanceAfter: notWalked,
+      },
+    });
+  });
+
   it('memoizes the ledger per catalog and assembly', () => {
     const assembly = simulateProjectAssembly(catalog, loadUnderworldFStygianWellCheckpoint());
     expect(goldLedgerForProjectEvaluationAssembly(catalog, assembly)).toBe(
@@ -235,5 +280,10 @@ describe('gold ledger query', () => {
         ),
       ),
     ).toEqual([0, 25]);
+    // Midas pays round(1.1 x 10) to round(1.8 x 30) at its purchase.
+    expect(gold.roomAt(wellRoom)).toMatchObject({
+      availability: 'available',
+      room: { gains: [{ kind: 'midasPayout', amount: { min: 11, max: 54 } }] },
+    });
   });
 });

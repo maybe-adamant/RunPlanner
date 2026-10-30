@@ -1,6 +1,7 @@
 import type {
   BiomeDeclaration,
   ExitCompatibilityPolicy,
+  GoldCatalogDeclaration,
   RouteDeclaration,
 } from '@run-planner/engine/catalog-schema';
 import type { RawArcanaCardDeclaration, RawFearVowDeclaration } from './arcana-fear-types';
@@ -29,6 +30,7 @@ export interface RawCatalogInput {
   readonly familiars: readonly RawFamiliarDeclaration[];
   readonly defaultFamiliarKey: string;
   readonly heroMaxStats: { readonly maxHealth: number; readonly maxMana: number };
+  readonly gold: GoldCatalogDeclaration;
   readonly rewardKernel: RawRewardKernelInput;
   readonly encounterEnvelopes: readonly RawEncounterEnvelopeDeclaration[];
   readonly encounterDefinitions: readonly RawEncounterDefinitionDeclaration[];

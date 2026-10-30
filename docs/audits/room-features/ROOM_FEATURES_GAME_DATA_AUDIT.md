@@ -371,7 +371,6 @@ each item's ConsumableData or LootData cost, with no entry overrides
 ordered-then-rushed item totals the impatience price. Every purchase sets
 `FirstPurchase`; under Travel Deal the first one reprices every item,
 including the rush of the item it ordered (`SurfaceShopLogic.lua:353-397`).
-Prices are processed when the screen first opens and kept.
 
 The shared distinction is that Shrine purchase schedules delivery, while the
 later spawned object is an ordinary required pickup. The complete chronology,
@@ -489,7 +488,7 @@ complete 25-name matrix.
 
 Each Well item costs its `ResourceCosts.Money` times the shop multiplier of the
 [reward audit](../rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#prices),
-rounded once when the screen processes it (`StoreLogic.lua:807-835`):
+rounded once (`StoreLogic.lua:807-835`):
 Splintered Shield 40, Life Essence 21-39, Centaur Soul 110, Breath of Eros 15,
 HydraLite 45, Charity Bottle 115, Kiss of Styx 200, Chimaera Jerky 35, Braid of
 Atlas 30, Ignited Ichor 10, Yarn 70, Witch's Mark 45, Python Scales 30, Ferry

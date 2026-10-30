@@ -67,6 +67,16 @@ function normalizeShopOptionCost(raw: ShopOptionCost, path: string): ShopOptionC
   }
 }
 
+function normalizeIntegerRange(
+  raw: { readonly min: number; readonly max: number },
+  path: string,
+): { readonly min: number; readonly max: number } {
+  const min = requirePositiveInteger(raw.min, `${path}.min`);
+  const max = requirePositiveInteger(raw.max, `${path}.max`);
+  if (max <= min) fail(`${path}.max`, 'must exceed min');
+  return Object.freeze({ min, max });
+}
+
 function normalizeShopPricing(raw: ShopPricing, path: string): ShopPricing {
   switch (raw.kind) {
     case 'free':
@@ -294,6 +304,20 @@ function normalizeShopOption(
       : { boonRarityOverride: Object.freeze({ ...boonRarityOverride }) }),
     ...(stygianWell === undefined ? {} : { stygianWell }),
     ...(raw.cost === undefined ? {} : { cost: normalizeShopOptionCost(raw.cost, `${path}.cost`) }),
+    ...(raw.goldPayout === undefined
+      ? {}
+      : {
+          goldPayout: Object.freeze({
+            healthCost: normalizeIntegerRange(
+              raw.goldPayout.healthCost,
+              `${path}.goldPayout.healthCost`,
+            ),
+            goldPerHealthHundredths: normalizeIntegerRange(
+              raw.goldPayout.goldPerHealthHundredths,
+              `${path}.goldPayout.goldPerHealthHundredths`,
+            ),
+          }),
+        }),
   });
 }
 

@@ -46,6 +46,7 @@ export type {
   TargetedTraitAcquisition,
   TraitSelectedDisposition,
   TraitAcquisitionOrdinalValues,
+  TraitGoldEffect,
   ResolvedTraitAcquisitionOrdinalEffect,
   DirectTraitSetKey,
   HexDeclaration,
@@ -175,6 +176,8 @@ export interface ArcanaCardDeclaration {
     readonly maxHealthByRarity: Readonly<Record<InRunTraitRarity, number>>;
     readonly maxManaByRarity: Readonly<Record<InRunTraitRarity, number>>;
   };
+  /** Source `BonusMoney`: gold the card pays, unmultiplied, when it becomes active, by its rarity. */
+  readonly startingGoldByRarity?: Readonly<Record<InRunTraitRarity, number>>;
   /** Flat `PropertyChanges` maxima while the card is active, by its rarity. */
   readonly maxStatBonus?: {
     readonly maxHealthByRarity: Readonly<Record<InRunTraitRarity, number>>;
@@ -259,6 +262,8 @@ export interface KeepsakeDeclaration {
   readonly label: string;
   readonly rank: 'Epic';
   readonly fatedDisposition: 'neutral' | 'enabling' | 'opposing';
+  /** Source `BonusMoney`: gold paid when the keepsake is equipped, by its rank. */
+  readonly goldByRank?: KeepsakeRankProfile<number, number, number, number>;
   /** Closed planner disposition for Echo's captured-keepsake replay. */
   readonly echoGift:
     | { readonly availability: 'excluded' }
@@ -304,6 +309,8 @@ export interface KeepsakeDeclaration {
     | {
         readonly kind: 'timePiece';
         readonly conversionChargesByRank: KeepsakeRankProfile<number, number, number, number>;
+        /** Gold added to a converted reward spawned with a boosted rarity table. */
+        readonly boostedConversionBonus: number;
       }
     | {
         readonly kind: 'figLeaf';
@@ -521,6 +528,11 @@ export interface EncounterDefinition {
   readonly suppressesIncomingReward?: boolean;
   /** The encounter spawns the room reward before its combat rather than after it. */
   readonly createsIncomingRewardAtStart?: boolean;
+  /**
+   * A kill-contest bet on the encounter's end: the bet is the held gold up to
+   * `maxBet`; a win pays it times the money multiplier, a loss takes it.
+   */
+  readonly goldBet?: { readonly maxBet: number };
   readonly nemesisRandomEvent?: {
     readonly freeItem: {
       readonly resultRewardTypes: readonly [
@@ -538,6 +550,8 @@ export interface EncounterDefinition {
         readonly rewardType: string;
         readonly enteredBiome: { readonly min?: number; readonly max?: number };
         readonly requirement: 'none' | 'pomLegal' | 'hammerEarlyOrLate';
+        /** Gold paid on accept, an integer drawn evenly from `min..max`. */
+        readonly goldCost: { readonly min: number; readonly max: number };
       }[];
       readonly response: readonly ['accept', 'decline'];
       readonly pickupRequiredOnAccept: true;
@@ -1428,6 +1442,29 @@ export interface BiomeLayout {
   readonly fields: readonly AuthoredFieldDescriptor[];
 }
 
+/** Gold facts with no narrower owner. */
+export interface GoldCatalogDeclaration {
+  /** Gold a trait screen with no options pays instead, before the money multiplier. */
+  readonly fallbackGold: number;
+  /**
+   * A Pool of Purging sale: the sold trait's rarity range drawn as an integer
+   * and floored to `roundDownTo`, plus `perLevel` for each level above the
+   * first; an Infusion uses its own range and an unranked trait `unranked`.
+   */
+  readonly purgingPoolSale: {
+    readonly byRarity: Readonly<
+      Record<
+        'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Duo' | 'Legendary',
+        { readonly min: number; readonly max: number }
+      >
+    >;
+    readonly infusion: { readonly min: number; readonly max: number };
+    readonly unranked: number;
+    readonly perLevel: number;
+    readonly roundDownTo: number;
+  };
+}
+
 export interface Catalog {
   readonly version: string;
   readonly biomes: CatalogCollection<BiomeDeclaration>;
@@ -1442,6 +1479,7 @@ export interface Catalog {
   readonly defaultFamiliarKey: string;
   /** `HeroData` base maxima before any trait. */
   readonly heroMaxStats: Readonly<Record<MaxStatKey, number>>;
+  readonly gold: GoldCatalogDeclaration;
   readonly rewards: RewardKernelCatalog;
   readonly encounterEnvelopes: CatalogCollection<EncounterEnvelope>;
   readonly encounterDefinitions: CatalogCollection<EncounterDefinition>;

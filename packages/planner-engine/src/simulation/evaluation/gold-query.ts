@@ -5,15 +5,17 @@ import {
   type OccurrenceAddress,
   type SemanticAddress,
 } from '../../authored-project/addresses';
+import { biomeGoldPrices, type BiomeGoldPrices } from '../commerce/gold/ledger';
 import {
-  biomeGoldPrices,
-  type BiomeGoldPrices,
+  routeGoldLedger,
   type GoldPurchasePrice,
   type GoldRoomSpending,
-} from '../commerce/gold/ledger';
-import { ZERO_GOLD } from '../commerce/gold/prices';
+  type GoldRunStart,
+  type RouteGoldLedger,
+} from '../commerce/gold/route-ledger';
 import type { BiomeRewardSimulation } from '../rewards/model';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
+import { ZERO_GOLD } from '../commerce/gold/prices';
 import { runStateSnapshotForProjectEvaluationAssembly } from './run-state-query';
 
 /**
@@ -32,10 +34,13 @@ export type GoldRoomAvailability =
 
 /**
  * Gold guidance over one evaluated project: what each reached purchase costs
- * and what each fully reached room spends. Never a finding; past coverage a
- * value is unavailable, never zero.
+ * and the gold held before it, and what each fully reached room gains and
+ * spends with its balances. Never a finding; past coverage a value is
+ * unavailable, never zero.
  */
 export interface GoldLedger {
+  /** Gold the run starts with, before its first room. */
+  runStart(): GoldRunStart;
   purchaseAt(owner: SemanticAddress): GoldPurchaseAvailability;
   roomAt(room: OccurrenceAddress): GoldRoomAvailability;
 }
@@ -81,21 +86,38 @@ export function goldLedgerForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
 ): GoldLedger {
   return memoized(ledgersByCatalog, catalog, assembly, () => {
-    const biomePrices = (biomeKey: string): BiomeGoldPrices | undefined => {
-      const biome = assembly.evaluation.route.biomes.find(
-        (candidate) => candidate.biomeKey === biomeKey,
+    const biomePrices = (rewards: BiomeRewardSimulation): BiomeGoldPrices =>
+      memoized(pricesByCatalog, catalog, rewards, () =>
+        biomeGoldPrices(catalog, rewards.purchasePriceContexts),
       );
-      if (biome === undefined || !('rewards' in biome)) return undefined;
-      return memoized(pricesByCatalog, catalog, biome.rewards, () =>
-        biomeGoldPrices(catalog, biome.rewards.purchasePriceContexts),
-      );
-    };
+    let route: RouteGoldLedger | undefined;
+    // The balance carries across biomes, so the route walks once, on first use.
+    const ledger = (): RouteGoldLedger =>
+      (route ??= routeGoldLedger(
+        catalog,
+        assembly.evaluation.route.biomes.flatMap((biome) =>
+          'rewards' in biome
+            ? [
+                {
+                  prices: biomePrices(biome.rewards),
+                  purchases: biome.rewards.purchasePriceContexts,
+                  events: biome.rewards.goldEvents,
+                },
+              ]
+            : [],
+        ),
+      ));
     const sameRoute = (owner: { readonly routeKey: string }) =>
       owner.routeKey === assembly.project.route.routeKey;
     return Object.freeze({
+      runStart(): GoldRunStart {
+        const start = ledger().runStart;
+        if (start.kind === 'fault') throw start.error;
+        return start.runStart;
+      },
       purchaseAt(owner: SemanticAddress): GoldPurchaseAvailability {
         if (!('biomeKey' in owner) || !('routeKey' in owner) || !sameRoute(owner)) return UNREACHED;
-        const outcome = biomePrices(owner.biomeKey)?.purchases.get(semanticAddressKey(owner));
+        const outcome = ledger().purchases.get(semanticAddressKey(owner));
         switch (outcome?.kind) {
           case undefined:
             return UNREACHED;
@@ -109,20 +131,33 @@ export function goldLedgerForProjectEvaluationAssembly(
       },
       roomAt(room: OccurrenceAddress): GoldRoomAvailability {
         if (!sameRoute(room)) return UNREACHED;
-        const outcome = biomePrices(room.biomeKey)?.rooms.get(semanticAddressKey(room));
+        const outcome = ledger().rooms.get(semanticAddressKey(room));
         if (outcome?.kind === 'fault') throw outcome.error;
         const exited = runStateSnapshotForProjectEvaluationAssembly(
           assembly,
           createRoomRunStateCheckpointAddress(room, { kind: 'beforeRoomExit' }),
         );
         if (exited === undefined) return UNREACHED;
-        if (outcome?.kind === 'itemUnresolved') return UNRESOLVED;
-        return Object.freeze({
-          availability: 'available',
-          room:
-            outcome?.room ??
-            Object.freeze({ room, purchases: Object.freeze([]), spending: ZERO_GOLD }),
-        });
+        if (outcome === undefined) {
+          // A reached room the walk recorded no point in pays and spends nothing.
+          const notWalked = Object.freeze({
+            availability: 'unavailable' as const,
+            reason: 'notWalked' as const,
+          });
+          return Object.freeze({
+            availability: 'available',
+            room: Object.freeze({
+              room,
+              purchases: Object.freeze([]),
+              spending: ZERO_GOLD,
+              gains: Object.freeze([]),
+              doorsOpenBalance: notWalked,
+              balanceAfter: notWalked,
+            }),
+          });
+        }
+        if (outcome.kind === 'itemUnresolved') return UNRESOLVED;
+        return Object.freeze({ availability: 'available', room: outcome.room });
       },
     });
   });

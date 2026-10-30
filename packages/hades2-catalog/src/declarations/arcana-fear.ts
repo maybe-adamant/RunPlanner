@@ -92,7 +92,11 @@ export const arcanaCards = [
     // RerollCount BaseValue 1 x rarity 1, 2, 3, 4; AllowDoorReroll.
     rerolls: { countByRarity: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 }, enables: 'doors' },
   },
-  card('StartingGold', 'The Boatman', 'StartingGoldMetaUpgrade', 4, 2, 5),
+  {
+    ...card('StartingGold', 'The Boatman', 'StartingGoldMetaUpgrade', 4, 2, 5),
+    // TraitData_MetaUpgrade.lua:274-310 BonusMoney 200 x rarity 1, 1.25, 1.5, 1.75.
+    startingGoldByRarity: { Common: 200, Rare: 250, Epic: 300, Heroic: 350 },
+  },
   card(
     'MetaToRunUpgrade',
     'The Artificer',

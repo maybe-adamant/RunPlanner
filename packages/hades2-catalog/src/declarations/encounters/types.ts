@@ -70,6 +70,11 @@ export interface RawEncounterDefinitionDeclaration {
   readonly suppressesIncomingReward?: boolean;
   /** The encounter spawns the room reward before its combat rather than after it. */
   readonly createsIncomingRewardAtStart?: boolean;
+  /**
+   * A kill-contest bet on the encounter's end: the bet is the held gold up to
+   * `maxBet`; a win pays it times the money multiplier, a loss takes it.
+   */
+  readonly goldBet?: { readonly maxBet: number };
   /** Closed policy owned by the one ordinary Nemesis random-event identity. */
   readonly nemesisRandomEvent?: {
     readonly freeItem: {
@@ -88,6 +93,8 @@ export interface RawEncounterDefinitionDeclaration {
         readonly rewardType: string;
         readonly enteredBiome: { readonly min?: number; readonly max?: number };
         readonly requirement: 'none' | 'pomLegal' | 'hammerEarlyOrLate';
+        /** Gold paid on accept, an integer drawn evenly from `min..max`. */
+        readonly goldCost: { readonly min: number; readonly max: number };
       }[];
       readonly response: readonly ['accept', 'decline'];
       readonly pickupRequiredOnAccept: true;

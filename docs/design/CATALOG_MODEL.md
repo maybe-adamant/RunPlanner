@@ -318,6 +318,16 @@ stepped range for an item priced from a rolled amount, and a free profile's
 options declare none; the compiler enforces both. A Well timed trait that
 multiplies shop prices declares that multiplier on its grant.
 
+Gold sources are declared beside the fact they extend: a money pickup's base
+gold and a convertible pickup's conversion value on the concrete acquisition;
+a trait's money multiplier, money-reward bonus or loan return by rarity; a
+trait-produced gold pickup's amount by acquisition ordinal; the Chaos operand
+that adds to the money multiplier and the curse that blocks gold; the
+Arcana's starting gold and the Gold Purse's gold by rank; a Well item's
+health-for-gold payout; a Nemesis combat's bet and each Nemesis trade's gold
+cost. Facts with no narrower owner, fallback gold and the Pool of Purging sale
+values, sit in the catalog's gold declaration.
+
 A producer lifecycle enumerates supported reward types and binds every role
 exactly once, with explicit per-type overrides. Producer bindings choose
 stores, fixed sources, Shop profiles and filters. Positive and negative filters

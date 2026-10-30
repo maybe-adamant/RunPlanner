@@ -137,6 +137,7 @@ const supportedEffects = [
     effect: {
       kind: 'timePiece',
       conversionChargesByRank: { Common: 2, Rare: 3, Epic: 4, Heroic: 5 },
+      boostedConversionBonus: 150,
     },
   },
   {

@@ -355,7 +355,14 @@ export const shops = [
             kind: 'consumable',
             acquisitionGameName: 'ArmorBoostStore',
           }),
-          wellOption('DamageSelfDrop', 'Price of Midas', 'RoomMoneyDrop', gold(0), immediate),
+          // ConsumableData.lua:1329-1347 HealthCost 10-30 AsInt, PayoutPerHealthPoint 1.1-1.8;
+          // InteractLogic.lua:1233-1238 DropMoney = round(PayoutPerHealthPoint x HealthCost).
+          wellOption('DamageSelfDrop', 'Price of Midas', 'RoomMoneyDrop', gold(0), immediate, {
+            goldPayout: {
+              healthCost: { min: 10, max: 30 },
+              goldPerHealthHundredths: { min: 110, max: 180 },
+            },
+          }),
           wellOption(
             'HealDropRange',
             'Life Essence',

@@ -50,8 +50,8 @@ function planSection(
   }
 }
 
-/** Purchase price contexts are additive gold guidance outside simulation semantics. */
-function withoutPriceContexts(
+/** Purchase price contexts and gold events are additive gold guidance outside simulation semantics. */
+function withoutGoldGuidance(
   evaluation: ReturnType<typeof simulateProjectAssembly>['evaluation'],
 ): unknown {
   return {
@@ -62,6 +62,7 @@ function withoutPriceContexts(
         if (!('rewards' in biome)) return biome;
         const rewards: Record<string, unknown> = { ...biome.rewards };
         delete rewards.purchasePriceContexts;
+        delete rewards.goldEvents;
         return { ...biome, rewards };
       }),
     },
@@ -72,7 +73,7 @@ export function equivalenceProducts(entry: EquivalenceEntry): EquivalenceProduct
   const project = entry.project();
   const assembly = simulateProjectAssembly(entry.catalog, project);
   // `simulateProject` publishes exactly this assembly's evaluation.
-  const simulation = canonicalDigest(withoutPriceContexts(assembly.evaluation));
+  const simulation = canonicalDigest(withoutGoldGuidance(assembly.evaluation));
   const plan = planSection(entry, assembly);
   const session = createPreparedProjectCandidateSession(entry.catalog, assembly);
   const candidates = canonicalDigest(probeCandidates(entry.catalog, project, session));

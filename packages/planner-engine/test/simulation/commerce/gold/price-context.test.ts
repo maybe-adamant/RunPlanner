@@ -26,6 +26,7 @@ describe('purchase price contexts', () => {
     const publish = (states: readonly SimulationState[], firstPaidPurchase = true) =>
       purchasePriceContextPublication({
         catalog,
+        sequence: 1,
         room,
         firstPaidPurchase,
         states,

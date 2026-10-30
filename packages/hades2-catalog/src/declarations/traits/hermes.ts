@@ -127,6 +127,8 @@ export const hermesTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    // TraitData_Hermes.lua:154-215 MoneyMultiplier 1.2, SourceIsMultiplier by 1 / 1.5 / 2 / 2.5.
+    gold: { kind: 'moneyMultiplier', byRarity: { Common: 1.2, Rare: 1.3, Epic: 1.4, Heroic: 1.5 } },
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'GeneratedTraitPickup',

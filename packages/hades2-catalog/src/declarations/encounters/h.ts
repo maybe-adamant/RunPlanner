@@ -168,6 +168,9 @@ export const hEncounterDefinitions = [
   ),
   {
     key: 'NemesisCombatH',
+    // BaseNemesisCombat: NemesisChallenge objective, HandleNemesisEncounterReward MaxBetAmount 100
+    // (EncounterData_Nemesis.lua:3-53, InteractLogic.lua:545-590).
+    goldBet: { maxBet: 100 },
     customization: [generatedEncounterChoices.NemesisCombatH],
     label: 'Nemesis combat',
     kind: 'combat',

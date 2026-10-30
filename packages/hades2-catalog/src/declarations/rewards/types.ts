@@ -13,6 +13,7 @@ import type {
   SourceSupportPolicyKey,
   ConcreteAcquisitionPickupEffect,
   ShopOptionCost,
+  ShopOptionEntry,
   ShopPricing,
   StygianWellGrant,
 } from '@run-planner/engine/reward-kernel';
@@ -74,6 +75,10 @@ export interface RawConcreteAcquisitionDeclaration {
   readonly pathPointGrant?: 1 | 3 | 5;
   /** Source LootData `GameStateRequirements` for an ordinary god. */
   readonly lootRequirement?: RequirementExpression;
+  /** Source ConsumableData `DropMoney`: the gold this money pickup pays before multipliers. */
+  readonly goldGrant?: number;
+  /** Source `GoldifyValue`: the gold Time Piece pays for converting it, before multipliers. */
+  readonly goldifyValue?: number;
   /** Source ConsumableData `AddResources`. */
   readonly resourceGrant?: Readonly<Record<string, number>>;
   /** Source ConsumableData `AddMaxHealth`/`AddMaxMana`. */
@@ -139,6 +144,7 @@ export interface RawShopOptionEntryDeclaration {
   };
   /** Base gold price; required on every option of a priced profile. */
   readonly cost?: ShopOptionCost;
+  readonly goldPayout?: ShopOptionEntry['goldPayout'];
 }
 
 export interface RawShopGroupDeclaration {

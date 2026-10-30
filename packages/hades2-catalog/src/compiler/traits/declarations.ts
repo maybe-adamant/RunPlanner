@@ -71,6 +71,41 @@ function normalizeResourceRewardBonus(
   return Object.freeze(Object.fromEntries(resources.map((resource) => [resource, byRarity])));
 }
 
+/** A trait gold effect gives a value for exactly the trait's equipped ranked rarities. */
+function normalizeTraitGold(
+  raw: NonNullable<RawTraitDeclaration['gold']>,
+  equippedRarities: readonly TraitRarity[],
+  path: string,
+): NonNullable<TraitDeclaration['gold']> {
+  const kind = raw.kind;
+  if (kind !== 'moneyMultiplier' && kind !== 'moneyRewardBonus' && kind !== 'loan')
+    fail(`${path}.kind`, 'must be moneyMultiplier, moneyRewardBonus or loan');
+  const values = requireObject(
+    kind === 'loan' ? raw.returnByRarity : raw.byRarity,
+    `${path}.${kind === 'loan' ? 'returnByRarity' : 'byRarity'}`,
+  );
+  const rarities = IN_RUN_RARITIES.filter((rarity) => equippedRarities.includes(rarity));
+  if (
+    rarities.length !== equippedRarities.length ||
+    Object.keys(values).length !== rarities.length ||
+    rarities.some((rarity) => {
+      const value = values[rarity];
+      return (
+        typeof value !== 'number' ||
+        !Number.isFinite(value) ||
+        (kind === 'loan' ? !Number.isInteger(value) || value <= 0 : value <= 1)
+      );
+    })
+  )
+    fail(path, 'must give every equipped ranked rarity a valid value');
+  const byRarity = Object.freeze({ ...values }) as Readonly<
+    Record<(typeof IN_RUN_RARITIES)[number], number>
+  >;
+  return kind === 'loan'
+    ? Object.freeze({ kind, returnByRarity: byRarity })
+    : Object.freeze({ kind, byRarity });
+}
+
 /** Scales each roll bound by its rarity multiplier; every bound must land on an integer. */
 function normalizeAcquisitionMaxHealthRoll(
   raw: NonNullable<RawTraitDeclaration['acquisitionMaxHealthRoll']>,
@@ -763,6 +798,10 @@ export function normalizeTraits(
     ) {
       fail(`${path}.selectedDisposition.clock`, 'is reserved for Supply Chain');
     }
+    const gold =
+      trait.gold === undefined
+        ? undefined
+        : normalizeTraitGold(trait.gold, equippedRarities, `${path}.gold`);
     const resourceRewardBonus =
       trait.resourceRewardBonus === undefined
         ? undefined
@@ -889,6 +928,7 @@ export function normalizeTraits(
         : { selfExclusion: requireNonEmpty(trait.selfExclusion, `${path}.selfExclusion`) }),
       ...(hammerCompatibility === undefined ? {} : { hammerCompatibility }),
       ...(resourceRewardBonus === undefined ? {} : { resourceRewardBonus }),
+      ...(gold === undefined ? {} : { gold }),
       ...(roomsPerUpgradeGrowth === undefined ? {} : { roomsPerUpgradeGrowth }),
       ...(rerollPickupByAcquisitionOrdinal === undefined
         ? {}

@@ -119,6 +119,11 @@ export const poseidonTraits = [
     blockInRunRarify: false,
     excludeFromRarityCount: false,
     // Psyche (`MemPointsCommon`) is also scaled natively; no consumer reads it.
+    // TraitData_Poseidon.lua:2058-2190 MoneyRewardBonus 1.5, SourceIsMultiplier by 1 / 1.5 / 2 / 2.5.
+    gold: {
+      kind: 'moneyRewardBonus',
+      byRarity: { Common: 1.5, Rare: 1.75, Epic: 2, Heroic: 2.25 },
+    },
     resourceRewardBonus: {
       resources: ['MetaCardPointsCommon', 'MetaCurrency'],
       baseValue: 1.5,

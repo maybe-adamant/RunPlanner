@@ -66,6 +66,8 @@ export interface ChaosCurseDeclaration {
   readonly semanticTag?: ChaosSemanticTag;
   readonly offerRequirements?: readonly ChaosOfferRequirement[];
   readonly maxStatOperand?: ChaosMaxStatOperand;
+  /** Native `BlockMoney`: while held, the gold sources it blocks pay nothing. */
+  readonly blocksGold?: true;
 }
 
 /** The named operand's authored value is a flat addition to one maximum while held. */
@@ -85,6 +87,8 @@ export interface ChaosBlessingDeclaration {
   readonly derivedOutcome?: ChaosDerivedOutcome;
   readonly offerRequirements?: readonly ChaosOfferRequirement[];
   readonly maxStatOperand?: ChaosMaxStatOperand;
+  /** The named operand's authored value is added to the money multiplier while held. */
+  readonly moneyMultiplierOperandKey?: string;
 }
 
 export type ChaosDerivedOutcome =
@@ -376,10 +380,25 @@ export interface TraitPickupDeclaration {
   readonly minimumAcquisitionOrdinal?: 2 | 3 | 4;
   /** Buried Treasure's Bones drop does not exist when the source is a Story reward. */
   readonly excludeStorySource?: true;
+  /** Gold this `Currency` pickup pays before the money multiplier, by the trait's acquisition ordinal. */
+  readonly goldByAcquisitionOrdinal?: TraitAcquisitionOrdinalValues;
 }
 
 /** The only acquisition-ordinal matrix supported for the audited NPC effects. */
 export type TraitAcquisitionOrdinalValues = readonly [number, number, number, number];
+
+/**
+ * A held trait's gold effect: a money multiplier term (`MoneyMultiplier`), a
+ * money-reward bonus term on non-NPC money pickups (`MoneyRewardBonus`), or a
+ * loan that takes the held gold at acquisition and returns it with interest at
+ * the next non-final boss (`ReturnGold`).
+ */
+export type TraitGoldEffect =
+  | {
+      readonly kind: 'moneyMultiplier' | 'moneyRewardBonus';
+      readonly byRarity: Readonly<Record<InRunTraitRarity, number>>;
+    }
+  | { readonly kind: 'loan'; readonly returnByRarity: Readonly<Record<InRunTraitRarity, number>> };
 
 /** Complete selected-disposition facts resolved once at an exact acquisition ordinal. */
 export interface ResolvedTraitAcquisitionOrdinalEffect {
@@ -690,6 +709,8 @@ export interface TraitDeclaration {
   readonly resourceRewardBonus?: Readonly<
     Record<string, Readonly<Record<InRunTraitRarity, number>>>
   >;
+  /** What holding this trait does to gold, by its equipped rarity. */
+  readonly gold?: TraitGoldEffect;
   /** Source `RoomsPerUpgrade` max Magick growth at every `interval` qualifying encounter ends. */
   readonly roomsPerUpgradeGrowth?: {
     readonly interval: number;

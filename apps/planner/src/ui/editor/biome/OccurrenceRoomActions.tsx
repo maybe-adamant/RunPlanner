@@ -414,8 +414,11 @@ export function RoomActionsWorkbench({
             <>
               {renderSupplement(entry.supplement)}
               {content?.editors}
-              {entry.boundary.kind === 'cleanup' && actions?.spending !== undefined ? (
-                <RoomGoldSummary spent={actions.spending} />
+              {entry.boundary.kind === 'cleanup' && actions !== undefined ? (
+                <RoomGoldSummary
+                  {...(actions.current === undefined ? {} : { current: actions.current })}
+                  {...(actions.spending === undefined ? {} : { spent: actions.spending })}
+                />
               ) : null}
             </>
           }

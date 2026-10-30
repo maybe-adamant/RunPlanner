@@ -114,7 +114,8 @@ const curse = (
   ...(offerRequirements === undefined ? {} : { offerRequirements }),
 });
 export const chaosCurses = [
-  curse('ChaosNoMoneyCurse', "Pauper's", 'encounters', 3, 5),
+  // TraitData_Chaos.lua:756-760 BlockMoney.
+  { ...curse('ChaosNoMoneyCurse', "Pauper's", 'encounters', 3, 5), blocksGold: true },
   {
     ...curse(
       'ChaosHealthCurse',
@@ -358,14 +359,18 @@ export const chaosBlessings = [
     ],
     'Favor',
   ),
-  blessing('ChaosMoneyBlessing', 'Affluence', [
-    rarityOperand('moneyBonus', 'Money bonus', saved('MoneyMultiplier', 'deltaFromOne'), {
-      Common: [0.4, 0.6, 0.05],
-      Rare: [0.8, 1.2, 0.05],
-      Epic: [1.2, 1.8, 0.05],
-      Heroic: [1.6, 2.4, 0.05],
-    }),
-  ]),
+  {
+    ...blessing('ChaosMoneyBlessing', 'Affluence', [
+      rarityOperand('moneyBonus', 'Money bonus', saved('MoneyMultiplier', 'deltaFromOne'), {
+        Common: [0.4, 0.6, 0.05],
+        Rare: [0.8, 1.2, 0.05],
+        Epic: [1.2, 1.8, 0.05],
+        Heroic: [1.6, 2.4, 0.05],
+      }),
+    ]),
+    // TraitData_Chaos.lua:220-258 MoneyMultiplier joins the additive money multiplier.
+    moneyMultiplierOperandKey: 'moneyBonus',
+  },
   blessing('ChaosElementalBlessing', 'Creation', [], 'Creation', undefined, undefined, {
     kind: 'creation',
     elementsPerElementByRarity: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 },

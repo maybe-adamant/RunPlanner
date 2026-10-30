@@ -82,6 +82,8 @@ export const dionysusTraits = [
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
     nonFinalBossRarityBlock: true,
+    // TraitData_Dionysus.lua:494-546 ReturnGold 300 by 1 / 4/3 / 5/3 / 2.
+    gold: { kind: 'loan', returnByRarity: { Common: 300, Rare: 400, Epic: 500, Heroic: 600 } },
   },
   {
     ...variableDionysusTrait,

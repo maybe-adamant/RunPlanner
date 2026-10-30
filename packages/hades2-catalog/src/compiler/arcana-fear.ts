@@ -142,6 +142,16 @@ export function normalizeArcanaCards(
           requirePositiveInteger(profile[rarity], `${path}.roomEntryStatGrowth.${stat}.${rarity}`);
       }
     }
+    const startingGoldByRarity = card.startingGoldByRarity;
+    if (startingGoldByRarity !== undefined) {
+      if (Object.keys(startingGoldByRarity).length !== 4)
+        fail(`${path}.startingGoldByRarity`, 'must declare all four rarities');
+      for (const rarity of ['Common', 'Rare', 'Epic', 'Heroic'] as const)
+        requirePositiveInteger(
+          startingGoldByRarity[rarity],
+          `${path}.startingGoldByRarity.${rarity}`,
+        );
+    }
     const maxStatBonus = card.maxStatBonus;
     if (maxStatBonus !== undefined)
       for (const stat of ['maxHealthByRarity', 'maxManaByRarity'] as const) {
@@ -230,6 +240,9 @@ export function normalizeArcanaCards(
               maxManaByRarity: Object.freeze({ ...maxStatBonus.maxManaByRarity }),
             }),
           }),
+      ...(startingGoldByRarity === undefined
+        ? {}
+        : { startingGoldByRarity: Object.freeze({ ...startingGoldByRarity }) }),
       ...(rerolls === undefined ? {} : { rerolls }),
       ...(roomEntryStatGrowth === undefined
         ? {}

@@ -70,6 +70,7 @@ function withPurchasePrice(
       : inputs.resolution;
   const publication = purchasePriceContextPublication({
     catalog: context.catalog,
+    sequence: inputs.sequence,
     ...(inputs.owner === undefined ? {} : { owner: inputs.owner }),
     room: inputs.room,
     firstPaidPurchase: inputs.paid && !state.paidPurchaseRooms.has(roomKey),

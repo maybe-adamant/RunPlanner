@@ -381,6 +381,30 @@ export function normalizeAcquisitions(
                 `acquisitions[${index}].grantedTraitKey`,
               ),
             }),
+        ...(acquisition.goldGrant === undefined
+          ? {}
+          : {
+              goldGrant: requirePositiveInteger(
+                acquisition.goldGrant,
+                `acquisitions[${index}].goldGrant`,
+              ),
+            }),
+        ...((): { readonly goldifyValue?: number } => {
+          const eligible = goldConversionEligible.has(acquisition.gameName);
+          if (eligible !== (acquisition.goldifyValue !== undefined))
+            fail(
+              `acquisitions[${index}].goldifyValue`,
+              'is required exactly on gold-conversion-eligible acquisitions',
+            );
+          return acquisition.goldifyValue === undefined
+            ? {}
+            : {
+                goldifyValue: requirePositiveInteger(
+                  acquisition.goldifyValue,
+                  `acquisitions[${index}].goldifyValue`,
+                ),
+              };
+        })(),
         ...(acquisition.resourceGrant === undefined
           ? {}
           : {

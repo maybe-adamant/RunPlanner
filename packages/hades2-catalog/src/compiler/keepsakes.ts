@@ -280,12 +280,20 @@ function normalizeEffect(
       }) as KeepsakeDeclaration['effect'];
     }
     case 'timePiece': {
-      requireExactObjectKeys(raw, path, ['kind', 'conversionChargesByRank']);
+      requireExactObjectKeys(raw, path, [
+        'kind',
+        'conversionChargesByRank',
+        'boostedConversionBonus',
+      ]);
       return Object.freeze({
         kind: raw.kind,
         conversionChargesByRank: normalizeNumericRankProfile(
           raw.conversionChargesByRank,
           `${path}.conversionChargesByRank`,
+        ),
+        boostedConversionBonus: requirePositiveInteger(
+          raw.boostedConversionBonus,
+          `${path}.boostedConversionBonus`,
         ),
       }) as KeepsakeDeclaration['effect'];
     }
@@ -513,11 +521,16 @@ export function normalizeKeepsakes(
     const echoGift = normalizeGift(keepsake.echoGift, `${path}.echoGift`);
     const effect = normalizeEffect(keepsake.effect, `${path}.effect`);
     validateGiftEffectAgreement(echoGift, effect, `${path}.echoGift`);
+    const goldByRank =
+      keepsake.goldByRank === undefined
+        ? undefined
+        : normalizeNumericRankProfile(keepsake.goldByRank, `${path}.goldByRank`);
     return Object.freeze({
       key,
       label,
       rank: 'Epic',
       fatedDisposition,
+      ...(goldByRank === undefined ? {} : { goldByRank }),
       echoGift,
       ...(effect === undefined ? {} : { effect }),
     });

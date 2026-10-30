@@ -9,6 +9,8 @@ export interface RawKeepsakeDeclaration {
   readonly label: string;
   readonly rank: 'Epic';
   readonly fatedDisposition: 'neutral' | 'enabling' | 'opposing';
+  /** Source `BonusMoney`: gold paid when the keepsake is equipped, by its rank. */
+  readonly goldByRank?: KeepsakeRankProfile<number, number, number, number>;
   readonly echoGift:
     | { readonly availability: 'excluded' }
     | {
@@ -52,6 +54,8 @@ export interface RawKeepsakeDeclaration {
     | {
         readonly kind: 'timePiece';
         readonly conversionChargesByRank: KeepsakeRankProfile<number, number, number, number>;
+        /** Gold added to a converted reward spawned with a boosted rarity table. */
+        readonly boostedConversionBonus: number;
       }
     | {
         readonly kind: 'figLeaf';

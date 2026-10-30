@@ -89,21 +89,21 @@ and 2 records citations.
 
 ### Fixed and bounded gold
 
-| Source                                             | Gold                                                                                                                        | Multiplier             |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| Money rewards Tiny / Small / normal / Big / Triple | 20 / 50 / 100 / 200 / 300                                                                                                   | Σ + MRB                |
-| Quick Buck pickup                                  | one 100 drop                                                                                                                | Σ (incl. itself) + MRB |
-| Buried Treasure pickup                             | 50 + 2 × 20                                                                                                                 | Σ + MRB (incl. itself) |
-| Narcissus                                          | 100 / 100 / 150 / 250 by rarity                                                                                             | Σ                      |
-| Fallback Gold                                      | 90                                                                                                                          | Σ                      |
-| Boatman Arcana starting gold                       | 200 / 250 / 300 / 350                                                                                                       | none                   |
-| Gold Purse at run start                            | 100 / 125 / 150 / 200                                                                                                       | none                   |
-| Gold Purse equipped mid-run                        | same amounts, once per equip                                                                                                | Σ                      |
-| Time Piece conversion                              | the reward's `GoldifyValue` (+150 boosted)                                                                                  | Σ                      |
-| Personal Loan                                      | takes all held gold; after the next non-final boss pays held + 300 / 400 / 500 / 600                                        | none                   |
-| Nemesis bet                                        | bet = min(100, held); win +round(bet × Σ), loss −bet, tie 0                                                                 | Σ on win               |
-| Pool of Purging sale                               | rarity range floored to 5 (Common 30–50 … Legendary 400–450, Duo 250–270, Elemental 100–130) + 20 per level above the first | none                   |
-| Price of Midas (Well)                              | round(U(1.1, 1.8) × U(10, 30))                                                                                              | Σ + MRB                |
+| Source                                       | Gold                                                                                                                        | Multiplier             |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| Money rewards Tiny / Small / normal / Triple | 20 / 50 / 100 / 300                                                                                                         | Σ + MRB                |
+| Quick Buck pickup                            | one 100 drop                                                                                                                | Σ (incl. itself) + MRB |
+| Buried Treasure pickup                       | 50 + 2 × 20                                                                                                                 | Σ + MRB (incl. itself) |
+| Narcissus                                    | 100 / 100 / 150 / 250 by rarity                                                                                             | Σ                      |
+| Fallback Gold                                | 90                                                                                                                          | Σ                      |
+| Boatman Arcana starting gold                 | 200 / 250 / 300 / 350                                                                                                       | none                   |
+| Gold Purse at run start                      | 100 / 125 / 150 / 200                                                                                                       | none                   |
+| Gold Purse equipped mid-run                  | same amounts, once per equip                                                                                                | Σ                      |
+| Time Piece conversion                        | the reward's `GoldifyValue` (+150 boosted)                                                                                  | Σ                      |
+| Personal Loan                                | takes all held gold; after the next non-final boss pays held + 300 / 400 / 500 / 600                                        | none                   |
+| Nemesis bet                                  | bet = min(100, held); win +round(bet × Σ), loss −bet, tie 0                                                                 | Σ on win               |
+| Pool of Purging sale                         | rarity range floored to 5 (Common 30–50 … Legendary 400–450, Duo 250–270, Elemental 100–130) + 20 per level above the first | none                   |
+| Price of Midas (Well)                        | round(U(1.1, 1.8) × U(10, 30))                                                                                              | Σ + MRB                |
 
 `GoldifyValue` by reward:
 

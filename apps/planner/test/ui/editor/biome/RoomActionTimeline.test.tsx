@@ -62,7 +62,10 @@ import {
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
-import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldFStygianWellCheckpoint,
+  underworldCheckpointArtifacts,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   renderOccurrenceWorkbench,
   workspaceProjection,
@@ -1820,8 +1823,28 @@ describe('OccurrenceRoomActions', () => {
       .map((label) => label.closest('li')!);
     expect(purchases.length).toBeGreaterThan(0);
     for (const row of purchases) expect(row.textContent).toMatch(/\d+ gold/);
-    expect(within(actions).getByLabelText('Doors open').textContent).toMatch(/Spent\s*\d+ gold/);
+    expect(within(actions).getByLabelText('Doors open').textContent).toMatch(
+      /Current\s*~?\u2212?\d+ gold\s*·\s*Spent\s*~?\d+ gold$/,
+    );
     expect(within(actions).getByLabelText('Room entered').textContent).not.toMatch(/Spent/);
+  });
+
+  it('keeps Current in place on the Doors open banner of a room that buys nothing', () => {
+    renderOccurrenceWorkbench(
+      underworldCheckpointArtifacts['underworld-f-pool'].load(),
+      'Underworld',
+      'G',
+      occurrenceById('golden-g-intro'),
+    );
+    openRoomTab('Room Timeline');
+    const doorsOpen = within(screen.getByRole('region', { name: 'Room Timeline' })).getByLabelText(
+      'Doors open',
+    );
+    expect(doorsOpen.textContent).toMatch(/Current\s*~\d+ gold/);
+    // The empty Spent slot holds Current's column and is never announced.
+    const placeholder = doorsOpen.querySelector('[data-placeholder]');
+    expect(placeholder?.getAttribute('aria-hidden')).toBe('true');
+    expect(placeholder?.textContent).not.toMatch(/\d/);
   });
 
   it('removes a Shop purchase atomically when its occurrence is no longer a Shop', () => {

@@ -52,6 +52,23 @@ describe('summarizeCatalog', () => {
       familiars: emptyCollection(),
       defaultFamiliarKey: 'FixtureFamiliar',
       heroMaxStats: { maxHealth: 30, maxMana: 50 },
+      gold: {
+        fallbackGold: 90,
+        purgingPoolSale: {
+          byRarity: {
+            Common: { min: 30, max: 50 },
+            Rare: { min: 70, max: 90 },
+            Epic: { min: 140, max: 160 },
+            Heroic: { min: 210, max: 230 },
+            Duo: { min: 250, max: 270 },
+            Legendary: { min: 400, max: 450 },
+          },
+          infusion: { min: 100, max: 130 },
+          unranked: 20,
+          perLevel: 20,
+          roundDownTo: 5,
+        },
+      },
       rewards: {
         payloadDomains: emptyCollection(),
         rewardTypes: emptyCollection(),

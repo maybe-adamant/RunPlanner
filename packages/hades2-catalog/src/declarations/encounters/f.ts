@@ -141,6 +141,9 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'NemesisCombatF',
+    // BaseNemesisCombat: NemesisChallenge objective, HandleNemesisEncounterReward MaxBetAmount 100
+    // (EncounterData_Nemesis.lua:3-53, InteractLogic.lua:545-590).
+    goldBet: { maxBet: 100 },
     customization: [generatedEncounterChoices.NemesisCombatF],
     label: 'Nemesis combat',
     kind: 'combat',
@@ -189,42 +192,50 @@ export const fEncounterDefinitions = [
         response: 'none',
         pickupRequired: false,
       },
+      // NPCData.lua:5560-5650 GetOptions CostResourceMin/Max, drawn by RandomInt (TradeLogic.lua:21).
       goldTrade: {
         variants: [
           {
             rewardType: 'MaxHealthDrop',
             enteredBiome: { max: 2 },
             requirement: 'none',
+            goldCost: { min: 105, max: 130 },
           },
           {
             rewardType: 'MaxHealthDropBig',
             enteredBiome: { min: 3 },
             requirement: 'none',
+            goldCost: { min: 230, max: 255 },
           },
           {
             rewardType: 'MaxManaDrop',
             enteredBiome: { max: 2 },
             requirement: 'none',
+            goldCost: { min: 80, max: 105 },
           },
           {
             rewardType: 'MaxManaDropBig',
             enteredBiome: { min: 3 },
             requirement: 'none',
+            goldCost: { min: 180, max: 205 },
           },
           {
             rewardType: 'StackUpgrade',
             enteredBiome: { max: 1 },
             requirement: 'pomLegal',
+            goldCost: { min: 80, max: 105 },
           },
           {
             rewardType: 'StackUpgradeBig',
             enteredBiome: { min: 2 },
             requirement: 'pomLegal',
+            goldCost: { min: 280, max: 305 },
           },
           {
             rewardType: 'WeaponUpgrade',
             enteredBiome: {},
             requirement: 'hammerEarlyOrLate',
+            goldCost: { min: 180, max: 205 },
           },
         ],
         response: ['accept', 'decline'],

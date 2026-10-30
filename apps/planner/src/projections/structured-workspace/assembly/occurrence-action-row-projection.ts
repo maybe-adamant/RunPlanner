@@ -30,7 +30,7 @@ import {
   appendTranscendentEmbryoTimelineEffects,
   scopeRoomLifecycleTimeline,
 } from '@run-planner/engine/simulation';
-import type { GoldAmount, GoldLedger } from '@run-planner/engine/simulation';
+import type { GoldAmount, GoldLedger, GoldMoments } from '@run-planner/engine/simulation';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
@@ -960,13 +960,21 @@ function roomActionsForOccurrence(
     rows: allProjectedRows,
     ...(steadyGrowth.length === 0 ? {} : { steadyGrowth }),
     ...(transcendentEmbryo.length === 0 ? {} : { transcendentEmbryo }),
-    ...roomSpending(input.gold, owner),
+    ...roomGold(input.gold, owner),
   });
+}
+
+/** A whole gold number; a balance below zero takes the typographic minus. */
+function goldNumber(gold: number): string {
+  return gold < 0 ? `\u2212${-gold}` : `${gold}`;
 }
 
 function goldAmount(amount: GoldAmount): WorkspaceGoldAmount {
   return Object.freeze({
-    label: amount.min === amount.max ? `${amount.min}` : `${amount.min}–${amount.max}`,
+    label:
+      amount.min === amount.max
+        ? goldNumber(amount.min)
+        : `${goldNumber(amount.min)}–${goldNumber(amount.max)}`,
   });
 }
 
@@ -980,15 +988,31 @@ function purchasePrice(
     : { price: goldAmount(priced.purchase.price) };
 }
 
-function roomSpending(
+/** A room figure: the whole amount when exact, else its rounded mean marked approximate. */
+function roomFigure(moments: GoldMoments, exact: boolean): WorkspaceGoldAmount {
+  const rounded = goldNumber(Math.round(moments.mean));
+  return Object.freeze({ label: exact ? rounded : `~${rounded}` });
+}
+
+function roomGold(
   gold: GoldLedger | undefined,
   room: OccurrenceAddress,
-): Pick<WorkspaceRoomActions, 'spending'> {
-  const spent = gold?.roomAt(room);
-  return spent?.availability !== 'available' ||
-    spent.room.purchases.every((purchase) => purchase.venue === 'free')
-    ? {}
-    : { spending: goldAmount(spent.room.spending) };
+): Pick<WorkspaceRoomActions, 'current' | 'spending'> {
+  const priced = gold?.roomAt(room);
+  if (priced?.availability !== 'available') return {};
+  const { doorsOpenBalance, purchases, spending } = priced.room;
+  return {
+    ...(doorsOpenBalance.availability === 'available'
+      ? {
+          current: roomFigure(doorsOpenBalance.balance, doorsOpenBalance.balance.variance === 0),
+        }
+      : {}),
+    ...(purchases.every((purchase) => purchase.venue === 'free')
+      ? {}
+      : {
+          spending: roomFigure(spending, spending.variance === 0 && spending.min === spending.max),
+        }),
+  };
 }
 
 type PurchaseRowProducts = Pick<WorkspaceRoomActionRow, 'travelDealLine' | 'purchaseRemoval'>;

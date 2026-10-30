@@ -63,6 +63,8 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = [
     label: 'Gold Purse',
     rank: 'Epic',
     fatedDisposition: 'neutral',
+    // TraitData_Keepsake.lua:683-715 BonusMoney 100 x rank 1, 1.25, 1.5, 2.
+    goldByRank: { Common: 100, Rare: 125, Epic: 150, Heroic: 200 },
     echoGift: {
       availability: 'eligible',
       effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
@@ -444,6 +446,9 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = [
     effect: {
       kind: 'timePiece',
       conversionChargesByRank: { Common: 2, Rare: 3, Epic: 4, Heroic: 5 },
+      // PowersLogic.lua:6745 adds 150 for AddBoostedAnimation, which CreateLoot sets in a
+      // room with BoonRaritiesOverride (RoomLogic.lua:2145-2147, 2266).
+      boostedConversionBonus: 150,
     },
   },
   {

@@ -16,17 +16,39 @@ export function GoldAmount({
         className="artwork-label-icon-small"
         source={rewardArtwork.Currency ?? undefined}
       />
-      {amount.label}
+      <span className="gold-amount-value">{amount.label}</span>
       <span className="visually-hidden"> gold</span>
     </span>
   );
 }
 
-/** What the room's purchases cost together, on its Doors open banner. */
-export function RoomGoldSummary({ spent }: { readonly spent: WorkspaceGoldAmount }) {
+/**
+ * The room's gold when its doors open, before its purchases, and what those
+ * purchases cost, on its Doors open banner. Spent keeps its slot when absent so
+ * Current stays in one column across rooms.
+ */
+export function RoomGoldSummary({
+  current,
+  spent,
+}: {
+  readonly current?: WorkspaceGoldAmount;
+  readonly spent?: WorkspaceGoldAmount;
+}) {
+  if (current === undefined && spent === undefined) return null;
   return (
     <span className="room-gold-summary">
-      Spent <GoldAmount amount={spent} />
+      {current === undefined ? null : (
+        <span className="room-gold-figure">
+          Current <GoldAmount amount={current} />
+        </span>
+      )}
+      <span
+        className="room-gold-figure"
+        {...(spent === undefined ? { 'aria-hidden': true, 'data-placeholder': true } : {})}
+      >
+        {current === undefined ? null : <span aria-hidden="true">·</span>}
+        Spent <GoldAmount amount={spent ?? { label: '' }} />
+      </span>
     </span>
   );
 }

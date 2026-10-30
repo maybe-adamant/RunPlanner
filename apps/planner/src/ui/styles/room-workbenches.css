@@ -1337,6 +1337,17 @@
   grid-column: 5;
 }
 
+/* A banner never has actions, so its editors run to the row's end. */
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > [data-timeline-cell='editors'] {
+  grid-column: 4 / -1;
+}
+
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > [data-timeline-cell='actions'] {
+  display: none;
+}
+
 /* Lifecycle banners read as headings: their title starts at the handle column. */
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
   > :is([data-timeline-cell='handle'], [data-timeline-cell='ordinal']) {
@@ -1408,6 +1419,13 @@
     display: none;
   }
 
+  /* Banner editors start below the heading like any row's and keep the row's end. */
+  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+    > [data-timeline-cell='editors'] {
+    grid-row: 2;
+    grid-column: 3 / -1;
+  }
+
   .timeline-row.room-action-feature-roll > [data-timeline-cell='label'],
   .timeline-row.room-action-feature-roll:not(
       :has(> [data-timeline-cell='editors'] > :not([data-empty='true']))
@@ -1464,12 +1482,23 @@
   justify-content: flex-end;
 }
 
-.room-gold-summary {
+.room-gold-summary,
+.room-gold-figure {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   color: var(--muted);
   white-space: nowrap;
+}
+
+/* Each figure keeps its icon beside a six-character number column so the banner never shifts. */
+.room-gold-figure .gold-amount {
+  min-width: calc(1.15rem + 2px + 6ch);
+  justify-content: flex-end;
+}
+
+.room-gold-figure[data-placeholder] {
+  visibility: hidden;
 }
 
 /* Row titles are semibold; banner titles stay bold as the headings above them. */

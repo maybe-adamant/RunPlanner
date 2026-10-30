@@ -468,10 +468,11 @@ Hermes Shrine's unbought items to buy or rush with its live refill, and
 whether the Champion item can be collected or why not.
 
 The gold query prices each reached purchase from the price facts its
-settlement published, and sums the purchases of each room reached through its
-exit, per the [price model](REWARD_MODEL.md#prices). It is guidance, never a
-finding, and never refuses an edit; past coverage a price is unavailable, not
-zero.
+settlement published and walks the [gold ledger](REWARD_MODEL.md#gold-ledger)
+from the gain facts each contact published: each room reached through its exit
+reports its gains, spending and balances, and each purchase the balance before
+it. It is guidance, never a finding, and never refuses an edit; past coverage
+a value is unavailable, not zero.
 
 ### Reroll settlement
 

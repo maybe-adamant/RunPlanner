@@ -33,8 +33,8 @@ export class GoldLedgerContractError extends Error {
   }
 }
 
-/** One reached purchase's price. */
-export interface GoldPurchasePrice {
+/** One reached purchase's price, before the balance it is paid from. */
+export interface GoldPurchaseQuote {
   readonly owner: SemanticAddress;
   readonly room: OccurrenceAddress;
   readonly venue: PurchasePriceVenue['kind'];
@@ -44,21 +44,21 @@ export interface GoldPurchasePrice {
 }
 
 /** A room's reached purchases in settlement order and what they cost together. */
-export interface GoldRoomSpending {
+export interface GoldRoomQuote {
   readonly room: OccurrenceAddress;
-  readonly purchases: readonly GoldPurchasePrice[];
+  readonly purchases: readonly GoldPurchaseQuote[];
   readonly spending: GoldAmount;
 }
 
 /** A reached purchase's price, why the plan leaves it unpriced, or a contract failure. */
 export type GoldPurchaseOutcome =
-  | { readonly kind: 'priced'; readonly purchase: GoldPurchasePrice }
+  | { readonly kind: 'priced'; readonly purchase: GoldPurchaseQuote }
   | { readonly kind: 'itemUnresolved' }
   | { readonly kind: 'fault'; readonly error: GoldLedgerContractError };
 
 /** A room's spending, or the first reason one of its purchases has no price. */
 export type GoldRoomOutcome =
-  | { readonly kind: 'priced'; readonly room: GoldRoomSpending }
+  | { readonly kind: 'priced'; readonly room: GoldRoomQuote }
   | { readonly kind: 'itemUnresolved' }
   | { readonly kind: 'fault'; readonly error: GoldLedgerContractError };
 

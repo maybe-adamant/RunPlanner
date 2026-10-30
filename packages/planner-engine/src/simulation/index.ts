@@ -280,11 +280,16 @@ export {
   type GoldRoomAvailability,
   type GoldUnavailableReason,
 } from './evaluation/gold-query';
-export {
-  GoldLedgerContractError,
-  type GoldPurchasePrice,
-  type GoldRoomSpending,
-} from './commerce/gold/ledger';
+export { GoldLedgerContractError } from './commerce/gold/ledger';
+export type {
+  GoldBalance,
+  GoldGainEntry,
+  GoldMoments,
+  GoldPurchasePrice,
+  GoldRoomSpending,
+  GoldRunStart,
+} from './commerce/gold/route-ledger';
+export type { GoldGain } from './commerce/gold/gain-context';
 export type { GoldAmount } from './commerce/gold/prices';
 export { evaluateBiome, materializedBiomePrefixCoveragePoint } from './evaluation/biome-evaluation';
 export { simulateProject, simulateProjectAssembly } from './evaluation/project';

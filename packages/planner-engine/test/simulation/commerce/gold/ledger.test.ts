@@ -31,6 +31,7 @@ let ordinal = 0;
 function purchase(venue: PurchasePriceVenue, facts: Facts = {}): PurchasePriceContextPublication {
   ordinal += 1;
   return {
+    sequence: ordinal,
     owner: createRoomActionAddress(biome, 'room' as never, `purchase-${ordinal}`),
     room: facts.at ?? room,
     contexts: [

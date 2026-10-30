@@ -514,7 +514,13 @@ describe('trait dispositions and requirements compiler owner', () => {
       }),
       C: expect.objectContaining({
         kind: 'producePickups',
-        pickups: expect.arrayContaining([{ key: 'currency', rewardType: 'Currency' }]),
+        pickups: expect.arrayContaining([
+          {
+            key: 'currency',
+            rewardType: 'Currency',
+            goldByAcquisitionOrdinal: [100, 100, 150, 250],
+          },
+        ]),
       }),
       D: expect.objectContaining({
         kind: 'producePickups',

@@ -2,6 +2,7 @@ import type {
   TraitCatalog,
   TraitDeclaration,
   TraitElement,
+  TraitGoldEffect,
   TraitRequirementExpression,
   TraitRarity,
   ProperUpbringingEffect,
@@ -55,6 +56,7 @@ export interface RawTraitDeclaration {
    * Source `RoomRewardBonus` with `SourceIsMultiplier`: each rarity scales the
    * base's excess over one by that rarity's `RarityLevels` multiplier.
    */
+  readonly gold?: TraitGoldEffect;
   readonly resourceRewardBonus?: {
     readonly resources: readonly string[];
     readonly baseValue: number;

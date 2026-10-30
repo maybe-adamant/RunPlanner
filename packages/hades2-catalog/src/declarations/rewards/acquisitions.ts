@@ -81,6 +81,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    goldifyValue: 400,
     lootRequirement: poseidonOrDemeterUsed,
     ...lastReward('AphroditeUpgrade'),
   },
@@ -89,6 +90,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    goldifyValue: 400,
     ...lastReward('ApolloUpgrade'),
   },
   {
@@ -96,6 +98,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    goldifyValue: 400,
     // Ares needs a lifetime AresFirstPickUp line.
     lootRequirement: notFreshFileRoute,
     ...lastReward('AresUpgrade'),
@@ -105,6 +108,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    goldifyValue: 400,
     ...lastReward('DemeterUpgrade'),
   },
   {
@@ -112,6 +116,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    goldifyValue: 400,
     // Hephaestus needs a lifetime Zeus use.
     lootRequirement: notFreshFileRoute,
     ...lastReward('HephaestusUpgrade'),
@@ -121,6 +126,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    goldifyValue: 400,
     // Hera needs a lifetime HeraFirstPickUp line.
     lootRequirement: notFreshFileRoute,
     ...lastReward('HeraUpgrade'),
@@ -130,6 +136,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    goldifyValue: 400,
     lootRequirement: poseidonOrDemeterUsed,
     ...lastReward('HestiaUpgrade'),
   },
@@ -138,6 +145,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    goldifyValue: 400,
     ...lastReward('PoseidonUpgrade'),
   },
   {
@@ -145,6 +153,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    goldifyValue: 400,
     // Zeus needs a lifetime ZeusFirstPickUp line.
     lootRequirement: notFreshFileRoute,
     ...lastReward('ZeusUpgrade'),
@@ -154,6 +163,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    goldifyValue: 400,
     ...lastReward('HermesUpgrade'),
   },
   {
@@ -162,6 +172,7 @@ const rawAcquisitions = [
     historyProjection: 'lootAndUse',
     levelResolutionEffect: { kind: 'visibleChoice', levelCount: 1 },
     goldConversionEligible: true,
+    goldifyValue: 300,
     ...lastReward('StackUpgrade'),
   },
   {
@@ -170,6 +181,7 @@ const rawAcquisitions = [
     historyProjection: 'lootAndUse',
     levelResolutionEffect: { kind: 'visibleChoice', levelCount: 2 },
     goldConversionEligible: true,
+    goldifyValue: 400,
     ...lastReward('StackUpgradeBig'),
   },
   {
@@ -178,6 +190,7 @@ const rawAcquisitions = [
     historyProjection: 'lootAndUse',
     levelResolutionEffect: { kind: 'visibleChoice', levelCount: 3 },
     goldConversionEligible: true,
+    goldifyValue: 500,
     ...lastReward('StackUpgradeTriple'),
   },
   {
@@ -185,6 +198,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    goldifyValue: 500,
     ...lastReward('WeaponUpgrade'),
   },
   {
@@ -192,6 +206,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    goldifyValue: 500,
   },
   {
     gameName: 'MaxHealthDrop',
@@ -199,6 +214,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     maxStatGrant: { stat: 'maxHealth', amount: 25 },
     goldConversionEligible: true,
+    goldifyValue: 300,
     ...lastReward('MaxHealthDrop'),
   },
   {
@@ -207,6 +223,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     maxStatGrant: { stat: 'maxHealth', amount: 50 },
     goldConversionEligible: true,
+    goldifyValue: 400,
     ...lastReward('MaxHealthDropBig'),
   },
   {
@@ -215,6 +232,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     maxStatGrant: { stat: 'maxHealth', amount: 5 },
     goldConversionEligible: true,
+    goldifyValue: 200,
   },
   {
     gameName: 'EmptyMaxHealthSmallDrop',
@@ -222,6 +240,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     maxStatGrant: { stat: 'maxHealth', amount: 10 },
     goldConversionEligible: true,
+    goldifyValue: 150,
   },
   {
     gameName: 'EmptyMaxHealthDrop',
@@ -229,6 +248,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     maxStatGrant: { stat: 'maxHealth', amount: 25 },
     goldConversionEligible: true,
+    goldifyValue: 200,
   },
   {
     gameName: 'MaxManaDrop',
@@ -236,6 +256,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     maxStatGrant: { stat: 'maxMana', amount: 30 },
     goldConversionEligible: true,
+    goldifyValue: 300,
     ...lastReward('MaxManaDrop'),
   },
   {
@@ -244,6 +265,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     maxStatGrant: { stat: 'maxMana', amount: 60 },
     goldConversionEligible: true,
+    goldifyValue: 400,
     ...lastReward('MaxManaDropBig'),
   },
   {
@@ -252,27 +274,36 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     maxStatGrant: { stat: 'maxMana', amount: 10 },
     goldConversionEligible: true,
+    goldifyValue: 200,
   },
   { gameName: 'Currency', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {
     gameName: 'RoomMoneyDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    goldGrant: 100,
     ...lastReward('RoomMoneyDrop'),
   },
   {
     gameName: 'RoomMoneySmallDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    goldGrant: 50,
     ...lastReward('RoomMoneySmallDrop'),
   },
   {
     gameName: 'RoomMoneyTripleDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    goldGrant: 300,
     ...lastReward('RoomMoneyTripleDrop'),
   },
-  { gameName: 'RoomMoneyTinyDrop', kind: 'consumable', historyProjection: 'consumableAndUse' },
+  {
+    gameName: 'RoomMoneyTinyDrop',
+    kind: 'consumable',
+    historyProjection: 'consumableAndUse',
+    goldGrant: 20,
+  },
   { gameName: 'HealDropMinor', kind: 'consumable', historyProjection: 'consumableAndUse' },
   { gameName: 'HealDrop', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {
@@ -281,6 +312,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     pathPointGrant: 3,
     goldConversionEligible: true,
+    goldifyValue: 300,
     ...lastReward('TalentDrop'),
   },
   {
@@ -289,6 +321,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     pathPointGrant: 5,
     goldConversionEligible: true,
+    goldifyValue: 400,
     ...lastReward('TalentBigDrop'),
   },
   {
@@ -297,6 +330,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     pathPointGrant: 1,
     goldConversionEligible: true,
+    goldifyValue: 200,
   },
   {
     gameName: 'RoomRewardHealDrop',
@@ -308,6 +342,7 @@ const rawAcquisitions = [
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    goldifyValue: 150,
   },
   { gameName: 'HealBigDrop', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {
@@ -316,6 +351,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     armorGrant: 20,
     goldConversionEligible: true,
+    goldifyValue: 200,
   },
   {
     gameName: 'ArmorBigBoost',
@@ -323,6 +359,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     armorGrant: 40,
     goldConversionEligible: true,
+    goldifyValue: 200,
   },
   {
     gameName: 'AirBoost',
@@ -365,6 +402,7 @@ const rawAcquisitions = [
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    goldifyValue: 400,
   },
   // Stygian Well consumables, acquired under their own names when purchased.
   { gameName: 'LastStandShopItem', kind: 'consumable', historyProjection: 'consumableAndUse' },
@@ -375,6 +413,7 @@ const rawAcquisitions = [
     armorGrant: 20,
     // Inherited from ArmorBoost; a Well purchase never reaches Time Piece.
     goldConversionEligible: true,
+    goldifyValue: 200,
   },
   {
     gameName: 'EmptyMaxHealthShopItem',
@@ -399,6 +438,7 @@ const rawAcquisitions = [
     kind: 'loot',
     historyProjection: 'lootAndUse',
     goldConversionEligible: true,
+    goldifyValue: 400,
   },
   { gameName: 'BlindBoxLoot', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {
@@ -406,6 +446,7 @@ const rawAcquisitions = [
     kind: 'resource',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    goldifyValue: 200,
     artificerConversionEligible: true,
     ...lastReward('GiftDrop'),
   },
@@ -415,6 +456,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     runProgressMaxStatGrant: runProgressGrant('maxMana'),
     goldConversionEligible: true,
+    goldifyValue: 200,
     artificerConversionEligible: true,
     resourceGrant: { MetaCurrency: 50 },
     ...lastReward('MetaCurrencyDrop'),
@@ -425,6 +467,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     runProgressMaxStatGrant: runProgressGrant('maxMana'),
     goldConversionEligible: true,
+    goldifyValue: 200,
     artificerConversionEligible: true,
     resourceGrant: { MetaCurrency: 100 },
     ...lastReward('MetaCurrencyBigDrop'),
@@ -435,6 +478,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     runProgressMaxStatGrant: runProgressGrant('maxHealth'),
     goldConversionEligible: true,
+    goldifyValue: 200,
     artificerConversionEligible: true,
     resourceGrant: { MetaCardPointsCommon: 5 },
     ...lastReward('MetaCardPointsCommonDrop'),
@@ -445,6 +489,7 @@ const rawAcquisitions = [
     historyProjection: 'consumableAndUse',
     runProgressMaxStatGrant: runProgressGrant('maxHealth'),
     goldConversionEligible: true,
+    goldifyValue: 200,
     artificerConversionEligible: true,
     resourceGrant: { MetaCardPointsCommon: 10 },
     ...lastReward('MetaCardPointsCommonBigDrop'),
@@ -454,6 +499,7 @@ const rawAcquisitions = [
     kind: 'resource',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
+    goldifyValue: 200,
     artificerConversionEligible: true,
     ...lastReward('MemPointsCommonDrop'),
   },

@@ -122,7 +122,9 @@ The planner folds the block at its existing non-final `bossDefeated` contact,
 before later encounter-end Steady Growth captures targets. Judgment/Figurine
 activation and Barren do not govern that contact. Final bosses and ordinary
 encounter completion do not apply it; Zagreus Contract has no
-`bossDefeated` event. Gold balances and payout amounts remain unmodeled.
+`bossDefeated` event. The gold ledger takes the held balance at acquisition
+and pays it back with the return at that contact; values are in the
+[reward audit](../rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#gold-sources).
 
 In-run target checks combine the declaration and equipped-instance blocks:
 Proper, Growth, Phial and Bridal respect both. Fresh offers still use
@@ -477,9 +479,10 @@ Buried-specific producer effect. See
 [Max health and max Magick](../loadout-and-progression/MAX_HEALTH_AND_MAGICK_GAME_DATA_AUDIT.md).
 
 Buried Treasure also multiplies later Money, Ashes, Psyche, and Bones amounts.
-Those numeric resource quantities are outside the current simulation, so this
-ongoing multiplier remains recorded trait history without another run-state
-ledger. It does not change the generated-pickup chronology above.
+The resource multiplier is folded with resource pickups; its money bonus is a
+gold-ledger multiplier
+([reward audit](../rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#gold-sources)).
+It does not change the generated-pickup chronology above.
 
 These contacts mean the trait is not effectless:
 
@@ -509,10 +512,10 @@ The generated money object is:
   Reward Reward source; and
 - not Artificer- or Time-Piece-eligible under its own declaration.
 
-Quick Buck also increases later money gains, but the Planner does not currently
-simulate carried-money arithmetic. The immediate pickup still has a supported
-Echo-history consequence, and its Sea Star result can create another such
-pickup interaction.
+Quick Buck also increases later money gains, a gold-ledger multiplier
+([reward audit](../rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#gold-sources)).
+The immediate pickup still has a supported Echo-history consequence, and its
+Sea Star result can create another such pickup interaction.
 
 The bounded Planner disposition models Quick Buck through the shared optional
 generated-pickup chronology. Its eligible money pickup participates in the

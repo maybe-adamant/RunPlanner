@@ -1043,6 +1043,75 @@ the Echo duplicate cost nothing (`EventLogic.lua:1912`). Well and Shrine
 prices are in the
 [room-feature audit](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md).
 
+### Gold sources
+
+Script root is `Content/Scripts`. Gold the run gains or loses outside shop
+purchases, as the gold ledger counts it.
+
+- **Money multiplier.** `GetTotalHeroTraitValue("MoneyMultiplier", IsMultiplier)`
+  is one plus each held trait's excess over one (`TraitLogic.lua:372-396`).
+  Quick Buck `MoneyMultiplier` 1.2 is `SourceIsMultiplier` by 1 / 1.5 / 2 /
+  2.5: 1.2 / 1.3 / 1.4 / 1.5 (`TraitData_Hermes.lua:154-215`). Chaos
+  Affluence adds its rolled `MoneyMultiplier` (`TraitData_Chaos.lua:220-258`),
+  authored as the blessing's value.
+- **Money pickups.** `ApplyConsumableItemResourceMultiplier` sets `DropMoney`
+  to `round(DropMoney × (1 + (Σ − 1) + (MoneyRewardBonus − 1)))`; an
+  `NPCDrop` forces the bonus to 1 (`InteractLogic.lua:916-965`); pickup adds it
+  unchanged (`InteractLogic.lua:1077`). `DropMoney`: Tiny 20, Small 50, normal
+  100, Triple 300 (`ConsumableData.lua:334-390`). Buried Treasure's
+  `MoneyRewardBonus` 1.5 by 1 / 1.5 / 2 / 2.5 is 1.5 / 1.75 / 2 / 2.25
+  (`TraitData_Poseidon.lua:2058-2190`). Quick Buck drops one normal and Buried
+  Treasure one Small and two Tiny money pickups, multiplied like any other.
+  Re-multiplying already spawned money when a multiplier is taken
+  (`TraitLogic.lua:1045-1058`) is not modeled.
+- **Σ-only gold.** Narcissus's Precious Metals `Amount` 100 by 1 / 1 / 1.5 /
+  2.5 (`TraitData_Narcissus.lua:208-262`), fallback gold 90
+  (`TraitData.lua:1147-1175`, `UpgradeChoiceLogic.lua:149-151`) and a Gold
+  Purse equipped mid-run (`KeepsakeLogic.lua:1209-1210, 1365-1366`) or repeated
+  by Echo at Common (`RoomLogic.lua:1237`) pay `round(gold × Σ)`. Gold Purse
+  `BonusMoney` is 100 / 125 / 150 / 200 by rank
+  (`TraitData_Keepsake.lua:683-715`).
+- **Time Piece.** `GetRewardGoldifyValue` pays `round((GoldifyValue or 100,
++150 with AddBoostedAnimation) × Σ)` (`PowersLogic.lua:6733-6749`). A boon
+  is 400, Hammer and Spell 500, Pom 300 / 400 / 500, heart and Magick drops
+  150-400, Talents 200-400, Last Stand 400, armor 200, Meta rewards 200,
+  consolation 150 (`ConsumableData.lua`, `LootData.lua`,
+  `LootData_Selene.lua`). `CreateLoot` sets `AddBoostedAnimation` on loot
+  spawned in a room with `BoonRaritiesOverride` (`RoomLogic.lua:2145-2147,
+2266`): the Mini-Boss rooms of every biome (for example
+  `RoomDataF.lua:1058`). Such loot has no cost, so Time Piece can convert it
+  with the bonus. `BoostedBoonValueAddition` is unread.
+- **Unmultiplied gold.** `CalculateStartingMoney` sums the Boatman Arcana's and
+  a starting Gold Purse's `BonusMoney` (`RunLogic.lua:41-42, 481, 514`); the
+  Boatman's is 200 / 250 / 300 / 350 by rarity
+  (`TraitData_MetaUpgrade.lua:274-310`), and a mid-run grant or upgrade pays
+  it or its difference (`MetaUpgradeLogic.lua:597-608`). Personal Loan spends
+  all held gold into `StoredGold` with `ReturnGold` 300 / 400 / 500 / 600
+  (`PowersLogic.lua:1717-1731`, `TraitData_Dionysus.lua:494-546`) and pays it
+  at the next boss while `EnteredBiomes < 4` (`CombatLogic.lua:3953-3965`).
+  A Pool sale pays `floor(RandomInt(min, max) / 5) × 5` plus 20 per level
+  above the first (`SellTraitData.lua:172-187`, `SellTraitLogic.lua:443-468`).
+- **Price of Midas** pays `round(PayoutPerHealthPoint × HealthCost)`, with
+  `HealthCost` 10-30 and `PayoutPerHealthPoint` 1.1-1.8 rolled and rounded
+  (`ConsumableData.lua:1329-1347`, `InteractLogic.lua:1233-1238`), then the
+  money-pickup formula.
+- **Nemesis.** A Nemesis trade costs `RandomInt(CostResourceMin,
+CostResourceMax)`: heart 105-130 / 230-255, Magick 80-105 / 180-205, Pom
+  80-105 / 280-305, Hammer 180-205 (`NPCData.lua:5560-5650`,
+  `TradeLogic.lua:21, 196-197`). Nemesis combat F, G, H and I
+  (`EncounterData_Nemesis.lua:3-53`) bet `min(100, held)` on kills; a win
+  pays `round(bet × Σ)`, a loss takes the bet and a tie pays nothing
+  (`InteractLogic.lua:545-590`). The outcome is not authored; the ledger
+  assumes a win.
+- **Pauper's** (`ChaosNoMoneyCurse`, `TraitData_Chaos.lua:756-760`) sets
+  `BlockMoney`, which zeroes the Midas payout (`InteractLogic.lua:1234`),
+  Time Piece (`PowersLogic.lua:6741`), the bet win (`InteractLogic.lua:578`), a
+  Pool sale (`GetTraitValue`), Arcana gold (`MetaUpgradeLogic.lua:599-606`)
+  and enemy drops (`RoomLogic.lua:2354`); money pickups still pay.
+- **Not counted.** Arachne's `DoorCash` (`CostumeLogic.lua:36-46`), Selene's
+  `MoneyOnSpell` (`SpellLogic.lua:1728`) and challenge switches
+  (`EncounterLogic.lua:2138-2141`) are outside planner authorship.
+
 ### Empty groups and bounded unknowns
 
 `FillInShopOptions` appends a group only when its filtered option list is

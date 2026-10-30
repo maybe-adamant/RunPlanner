@@ -96,6 +96,10 @@ export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddre
   readonly pathPointGrant?: 1 | 3 | 5;
   /** Source LootData `GameStateRequirements` gating this god as an ordinary source. */
   readonly lootRequirement?: RequirementExpression;
+  /** Source `DropMoney`: the gold this money pickup pays before multipliers. */
+  readonly goldGrant?: number;
+  /** Source `GoldifyValue`: what Time Piece pays for converting it; every convertible pickup has one. */
+  readonly goldifyValue?: number;
   /** Source `AddResources`: base quantities this pickup grants, by resource key. */
   readonly resourceGrant?: ResourceAmounts;
   /** Source `AddMaxHealth`/`AddMaxMana`. */
@@ -208,6 +212,15 @@ export interface ShopOptionEntry {
   };
   /** Base gold price before shop multipliers; every option of a priced profile has one. */
   readonly cost?: ShopOptionCost;
+  /**
+   * Gold this item pays at purchase for a health cost (Price of Midas):
+   * `round(healthCost × goldPerHealthHundredths / 100)`, each drawn evenly over
+   * its range and rounded, so its end values are half as likely.
+   */
+  readonly goldPayout?: {
+    readonly healthCost: { readonly min: number; readonly max: number };
+    readonly goldPerHealthHundredths: { readonly min: number; readonly max: number };
+  };
 }
 
 /**

@@ -1,4 +1,5 @@
 import { physicalExitKey } from '../../../authored-project/topology/query';
+import { withEchoKeepsakeGold, withGoldEvents, withRunStartGold } from './gold-event-seams';
 import type { Catalog } from '../../../catalog-schema';
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 import type { ResolvedRoutePosition } from '../../../authored-project/route-context';
@@ -410,25 +411,27 @@ export function evaluateBiomeRewardChronology(
     prepared,
     accumulated: accumulator,
   });
-  let walk = replayEchoKeepsake(
+  const entered = enterThroughDreamIntroDoor(
     context,
-    accumulator,
-    enterThroughDreamIntroDoor(
-      context,
-      createChronologyWalkState(
-        initializeRewardBranches(
-          initialBranches,
-          initialBranches === undefined ? createArcanaFearState(catalog, routeLoadout) : undefined,
-          catalog,
-          routeLoadout.startingKeepsakeKey,
-          routeLoadout.keepsakeEquipResults,
-          snapshot.routeKey,
-          routeLoadout,
-          { routePosition, historyView: history.biomeStart },
-        ),
+    createChronologyWalkState(
+      initializeRewardBranches(
+        initialBranches,
+        initialBranches === undefined ? createArcanaFearState(catalog, routeLoadout) : undefined,
+        catalog,
+        routeLoadout.startingKeepsakeKey,
+        routeLoadout.keepsakeEquipResults,
+        snapshot.routeKey,
+        routeLoadout,
+        { routePosition, historyView: history.biomeStart },
       ),
     ),
   );
+  let walk = withEchoKeepsakeGold(
+    context,
+    entered,
+    replayEchoKeepsake(context, accumulator, entered),
+  );
+  if (initialBranches === undefined) walk = withRunStartGold(context, walk, routeLoadout);
   const steps: WalkStep[] = [];
   for (const event of history.events) {
     if (walk.branches.length === 0) break;
@@ -437,7 +440,12 @@ export function evaluateBiomeRewardChronology(
       received: walk,
       emissionCount: accumulator.emissionCount(),
     });
-    walk = walkHistoryEvent(context, accumulator, walk, event);
+    walk = withGoldEvents(
+      context,
+      walk,
+      walkHistoryEvent(context, accumulator, walk, event),
+      event,
+    );
     if (walk.halted) break;
   }
   finalizeWalk(context, accumulator, walk);

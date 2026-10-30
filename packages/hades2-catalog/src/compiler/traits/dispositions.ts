@@ -346,17 +346,19 @@ export function normalizeSelectedDisposition(
       readonly rewardType?: unknown;
       readonly excludeStorySource?: unknown;
       readonly minimumAcquisitionOrdinal?: unknown;
+      readonly goldByAcquisitionOrdinal?: unknown;
     };
     if (
       Object.keys(entry).length !==
         2 +
           (entry.excludeStorySource === undefined ? 0 : 1) +
-          (entry.minimumAcquisitionOrdinal === undefined ? 0 : 1) ||
+          (entry.minimumAcquisitionOrdinal === undefined ? 0 : 1) +
+          (entry.goldByAcquisitionOrdinal === undefined ? 0 : 1) ||
       (entry.excludeStorySource !== undefined && entry.excludeStorySource !== true)
     )
       fail(
         `${path}.pickups[${index}]`,
-        'must contain key, rewardType, and optional minimum ordinal/excludeStorySource',
+        'must contain key, rewardType, and optional minimum ordinal/excludeStorySource/gold',
       );
     if (typeof entry.key !== 'string' || typeof entry.rewardType !== 'string')
       fail(`${path}.pickups[${index}]`, 'key and rewardType must be strings');
@@ -364,6 +366,29 @@ export function normalizeSelectedDisposition(
       key: requireNonEmpty(entry.key, `${path}.pickups[${index}].key`),
       rewardType: requireNonEmpty(entry.rewardType, `${path}.pickups[${index}].rewardType`),
       ...(entry.excludeStorySource === true ? { excludeStorySource: true as const } : {}),
+      ...(entry.goldByAcquisitionOrdinal === undefined
+        ? {}
+        : (() => {
+            const gold = requireArray(
+              entry.goldByAcquisitionOrdinal,
+              `${path}.pickups[${index}].goldByAcquisitionOrdinal`,
+            );
+            if (entry.rewardType !== 'Currency' || gold.length !== 4)
+              fail(
+                `${path}.pickups[${index}].goldByAcquisitionOrdinal`,
+                'must give a Currency pickup four ordinal amounts',
+              );
+            return {
+              goldByAcquisitionOrdinal: Object.freeze(
+                gold.map((amount, ordinal) =>
+                  requirePositiveInteger(
+                    amount as number,
+                    `${path}.pickups[${index}].goldByAcquisitionOrdinal[${ordinal}]`,
+                  ),
+                ),
+              ) as unknown as readonly [number, number, number, number],
+            };
+          })()),
       ...(entry.minimumAcquisitionOrdinal === undefined
         ? {}
         : (() => {

@@ -29,6 +29,7 @@ export interface RawArcanaCardDeclaration {
   readonly roomEntryStatGrowth?: import('@run-planner/engine/catalog-schema').ArcanaCardDeclaration['roomEntryStatGrowth'];
   readonly maxStatBonus?: import('@run-planner/engine/catalog-schema').ArcanaCardDeclaration['maxStatBonus'];
   readonly rerolls?: import('@run-planner/engine/catalog-schema').ArcanaCardDeclaration['rerolls'];
+  readonly startingGoldByRarity?: Readonly<Record<'Common' | 'Rare' | 'Epic' | 'Heroic', number>>;
 }
 export interface RawFearVowDeclaration {
   readonly key: string;

@@ -61,6 +61,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   goldenFOccurrenceId,
+  goldenGBiome,
   replaceNemesisRandomEventInteraction,
   underworldWorldShopTravelDealProject,
 } from '@run-planner/test-fixtures/underworld';
@@ -1959,6 +1960,8 @@ describe('purchase gold', () => {
   });
   const rolled: GoldAmount = { mean: 30, variance: 30, min: 21, max: 39 };
   const unreached = { availability: 'unavailable', reason: 'coverageNotReached' } as const;
+  // Balances stay out of these price witnesses.
+  const noBalance = { availability: 'unavailable', reason: 'priorFault' } as const;
 
   /** A ledger pricing each Well purchase by its generation key. */
   function ledger(
@@ -1975,10 +1978,17 @@ describe('purchase gold', () => {
           ? unreached
           : {
               availability: 'available',
-              purchase: { owner, room: wellOwner, venue: entry.venue, price: entry.price },
+              purchase: {
+                owner,
+                room: wellOwner,
+                venue: entry.venue,
+                price: entry.price,
+                balanceBefore: noBalance,
+              },
             };
       },
       roomAt: () => room,
+      runStart: () => ({ gains: [], balance: noBalance }),
     };
   }
 
@@ -2011,7 +2021,16 @@ describe('purchase gold', () => {
       availability: 'available',
       room: {
         room: wellOwner,
-        purchases: purchases.map((price) => ({ owner: wellOwner, room: wellOwner, venue, price })),
+        purchases: purchases.map((price) => ({
+          owner: wellOwner,
+          room: wellOwner,
+          venue,
+          price,
+          balanceBefore: noBalance,
+        })),
+        gains: [],
+        doorsOpenBalance: noBalance,
+        balanceAfter: noBalance,
         spending: {
           mean: purchases.reduce((sum, price) => sum + price.mean, 0),
           variance: 0,
@@ -2080,6 +2099,8 @@ describe('purchase gold', () => {
           ]),
         ),
       );
+      // These rooms buy only fixed prices; a rolled total is witnessed with the Doors open gold.
+      expect(spent.room.spending.min).toBe(spent.room.spending.max);
       expect(node.room.roomActions?.spending).toEqual({ label: label(spent.room.spending) });
     },
   );
@@ -2105,7 +2126,7 @@ describe('purchase gold', () => {
       ),
     ).toBe(true);
     expect(priceOf('travelDealRefill')).toBeUndefined();
-    expect(actions.spending).toEqual({ label: '21–39' });
+    expect(actions.spending).toEqual({ label: '~30' });
     const fixedPrices = wellActions(
       ledger(
         {
@@ -2116,11 +2137,95 @@ describe('purchase gold', () => {
       ),
     );
     expect(fixedPrices.priceOf('initial:secondRight')).toEqual({ label: '45' });
-    expect(fixedPrices.actions.spending).toEqual({ label: '66–84' });
+    expect(fixedPrices.actions.spending).toEqual({ label: '~75' });
   });
 
   it('hides the room spending when the room pays for nothing or is not priced', () => {
     expect(wellActions(ledger({}, spending([fixed(0)], 'free'))).actions.spending).toBeUndefined();
     expect(wellActions(ledger({}, unreached)).actions.spending).toBeUndefined();
+  });
+});
+
+describe('Doors open room gold', () => {
+  const plain = (gold: number) => (gold < 0 ? `−${-gold}` : `${gold}`);
+
+  function roomGoldWitness(
+    project: ProjectDocument,
+    room: ReturnType<typeof createOccurrenceAddress>,
+  ) {
+    const { assembly, workspace } = projectStructuredWorkspaceFixture(project);
+    const node = workspace.route.biomes
+      .flatMap((biome) => biome.nodes)
+      .find(
+        (candidate) =>
+          candidate.kind === 'occurrenceWorkbench' &&
+          candidate.room.occurrenceId === room.occurrenceId,
+      );
+    if (node?.kind !== 'occurrenceWorkbench') throw new Error(`${room.occurrenceId} is missing`);
+    const priced = goldLedgerForProjectEvaluationAssembly(catalog, assembly).roomAt(room);
+    if (priced.availability !== 'available') throw new Error('The room is not priced');
+    return { actions: node.room.roomActions, room: priced.room };
+  }
+
+  it('shows the exact gold held when the doors open beside the room spending', () => {
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    const { actions, room } = roomGoldWitness(
+      authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint()),
+      well,
+    );
+    const balance = room.doorsOpenBalance;
+    if (balance.availability !== 'available') throw new Error('The Well balance is unavailable');
+    expect(balance.balance.variance).toBe(0);
+    expect(actions?.current).toEqual({ label: plain(Math.round(balance.balance.mean)) });
+    expect(actions?.spending?.label).not.toMatch(/^~/);
+  });
+
+  it('marks a spread balance approximate and shows it without spending', () => {
+    const intro = createOccurrenceAddress(goldenGBiome, createOccurrenceId('golden-g-intro'));
+    const { actions, room } = roomGoldWitness(
+      underworldCheckpointArtifacts['underworld-f-pool'].load(),
+      intro,
+    );
+    const balance = room.doorsOpenBalance;
+    if (balance.availability !== 'available') throw new Error('The G intro balance is unavailable');
+    expect(balance.balance.variance).toBeGreaterThan(0);
+    expect(actions?.current).toEqual({ label: `~${plain(Math.round(balance.balance.mean))}` });
+    expect(actions?.spending).toBeUndefined();
+  });
+
+  it('marks a rolled room spending approximate while its purchase row keeps the range', () => {
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    let project = applyProjectCommand(
+      authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint()),
+      catalog,
+      {
+        kind: 'ReplaceStygianWellOffer',
+        occurrence: well,
+        slotKey: 'healing',
+        itemKey: 'HealDropRange',
+      },
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'initial:healing',
+      purchased: true,
+    });
+    const { actions, room } = roomGoldWitness(project, well);
+    expect(room.spending.min).toBeLessThan(room.spending.max);
+    expect(actions?.spending).toEqual({ label: `~${plain(Math.round(room.spending.mean))}` });
+    expect(
+      actions?.rows.find(
+        (row) =>
+          row.reference.kind === 'purchaseStygianWellOffer' &&
+          row.reference.generationKey === 'initial:healing',
+      )?.price,
+    ).toEqual({ label: '21–39' });
   });
 });

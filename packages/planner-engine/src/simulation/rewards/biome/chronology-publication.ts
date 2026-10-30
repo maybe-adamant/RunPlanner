@@ -122,6 +122,7 @@ export function publishChronology(
     timelineFacts: accumulation.timelineFacts,
     wellRefillRealizations: Object.freeze([...walk.wellRefillRealizations.values()]),
     purchasePriceContexts: Object.freeze([...walk.purchasePriceContexts.values()]),
+    goldEvents: walk.goldEvents,
     bossArcanaOutcomes: accumulation.bossArcanaOutcomes,
     phantomExits: accumulation.phantomExits,
     rerolls: accumulation.rerolls,

@@ -293,7 +293,9 @@ The inventory falls into four implementation-independent contact groups:
    reward, trait, Arcana, encounter, or counter authorities.
 3. **Partially modeled contact.** Death restoration, fountains, Selene
    progression, gold, and reward conversion have adjacent planner concepts but
-   not necessarily the full game subsystem needed by the keepsake.
+   not necessarily the full game subsystem needed by the keepsake. Gold Purse
+   and Time Piece gold are gold-ledger sources
+   ([reward audit](../rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#gold-sources)).
 4. **Combat-only or real-time effects.** Damage, health, armor, speed, and
    prior-death combat modifiers can remain inert declarations without changing
    keepsake selection legality.

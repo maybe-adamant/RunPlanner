@@ -385,10 +385,13 @@ export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTrait
             'semanticTag',
             'offerRequirements',
             'maxStatOperand',
+            'blocksGold',
           ].includes(key),
       )
     )
       fail(`chaos.curses[${index}]`, 'has an unknown declaration key');
+    if (value.blocksGold !== undefined && value.blocksGold !== true)
+      fail(`chaos.curses[${index}].blocksGold`, 'must be true when present');
     const key = requireNonEmpty(value.key as string, `chaos.curses[${index}].key`);
     const label = requireNonEmpty(value.label as string, `chaos.curses[${index}].label`);
     const clock = closedValue(value.clock, CHAOS_CLOCKS, `chaos.curses[${index}].clock`);
@@ -443,6 +446,7 @@ export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTrait
               `chaos.curses[${index}].maxStatOperand`,
             ),
           }),
+      ...(value.blocksGold === true ? { blocksGold: true as const } : {}),
     });
   });
   const normalizedBlessings = blessings.map((raw, index) => {
@@ -459,6 +463,7 @@ export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTrait
             'offerRequirements',
             'derivedOutcome',
             'maxStatOperand',
+            'moneyMultiplierOperandKey',
           ].includes(key),
       )
     )
@@ -511,6 +516,19 @@ export function normalizeChaos(input: RawTraitCatalogInput['chaos']): ChaosTrait
               `chaos.blessings[${index}].maxStatOperand`,
             ),
           }),
+      ...(value.moneyMultiplierOperandKey === undefined
+        ? {}
+        : (() => {
+            const operand = operands.find(
+              (candidate) => candidate.key === value.moneyMultiplierOperandKey,
+            );
+            if (operand?.saveField?.relation !== 'deltaFromOne')
+              fail(
+                `chaos.blessings[${index}].moneyMultiplierOperandKey`,
+                'must name an operand saved as its excess over one',
+              );
+            return { moneyMultiplierOperandKey: operand.key };
+          })()),
     });
   });
   const expectedTags = new Map([
