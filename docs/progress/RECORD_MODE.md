@@ -92,6 +92,12 @@ Evidence: the save-file run record audit
     uses as a collected generated pickup is placed after the pickups, reported
     as an assumption. Black Night and Boon Boon Boon have no record answer
     and always take the fallback until a capture shows where theirs is saved.
+    Rolls a screen keeps unsaved (owner rule, 2026-10-29): Worry Free's
+    max-health roll is read from the entry saves' max health (an older record
+    keeps the minimum, reported), the picked row's Persephone bonus from its
+    acquired level, and Rejected's blocked row is synthesized from a trait the
+    engine admits, unreported; unpicked and rerolled-away Persephone rolls stay
+    at roll 0, unreported.
 
 ## Ownership
 

@@ -14,6 +14,7 @@ import {
   type TraitOptionKey,
 } from '../../authored-project';
 import { authoredTraitOfferAt } from '../../authored-project/commands/trait-offer';
+import { traitMaxHealthRollWidth } from '../../authored-project/traits/max-health-roll';
 import { concaveStoneProcGiver, type DirectTraitSetKey } from '../../catalog-schema';
 import type { RunRecordRoom, RunRecordTraitAcquisition } from '../../run-record/model';
 import type { TraitCarrierChildDomainEvaluation } from '../candidates/trait-offer/query';
@@ -23,9 +24,10 @@ import {
   type DraftCarrierChildContext,
 } from '../draft/carrier-children';
 import type { SemanticFinding } from '../model';
+import { entrySnapshot } from './conformance';
 import type { RunImportContext } from './import';
 import { occurrenceIdOf } from './occurrences';
-import type { RunImportReason } from './report';
+import type { RunImportReason, RunImportReportEntry } from './report';
 
 type Child<K extends AuthoredTraitCarrierChild['kind']> = Extract<
   AuthoredTraitCarrierChild,
@@ -604,4 +606,122 @@ export function answerCarrierChild(context: RunImportContext, reason: SemanticFi
       record,
     });
   return true;
+}
+
+/** A picked max-health roll waiting for its room's next entry save. */
+export interface MaxHealthRollQuestion {
+  readonly trait: TraitOfferAddress;
+  readonly optionKey: TraitOptionKey;
+  readonly roomIndex: number;
+}
+
+/**
+ * Registers the applied offer's acquired rows that roll max health (Worry
+ * Free): the pick, and a Concave Stone extra pick. Their roll is answered once
+ * the room's next entry save is reached.
+ */
+export function awaitMaxHealthRolls(
+  context: RunImportContext,
+  trait: TraitOfferAddress,
+  value: AuthoredTraitOffer,
+  roomIndex: number,
+): void {
+  if (value.kind !== 'traits') return;
+  const acquired = [
+    value.selectedOptionKey,
+    ...(value.concaveStoneResult?.kind === 'proc' ? [value.concaveStoneResult.optionKey] : []),
+  ];
+  for (const optionKey of acquired) {
+    const option = value.options[optionIndex(optionKey)];
+    if (
+      option === undefined ||
+      traitMaxHealthRollWidth(context.catalog, option.traitKey) === undefined
+    )
+      continue;
+    context.maxHealthRolls.set(`${semanticAddressKey(trait)} ${optionKey}`, {
+      trait,
+      optionKey,
+      roomIndex,
+    });
+  }
+}
+
+/**
+ * Answers each waiting max-health roll once the plan reaches its room's next
+ * entry save: the roll is the save's max-health gain over the room less the
+ * plan's gain with the roll at its minimum, kept only where the engine's plan
+ * then holds the saved max health. A room with two rolls cannot split its gain.
+ */
+export function importMaxHealthRolls(context: RunImportContext): void {
+  const { record, occurrences } = context;
+  const byRoom = new Map<number, number>();
+  for (const question of context.maxHealthRolls.values())
+    byRoom.set(question.roomIndex, (byRoom.get(question.roomIndex) ?? 0) + 1);
+  for (const [key, question] of [...context.maxHealthRolls]) {
+    const { trait, optionKey, roomIndex } = question;
+    const note = (reason: RunImportReason) => {
+      context.maxHealthRolls.delete(key);
+      context.note({ area: 'traitOffer', reason, address: trait, record: { roomIndex, visit: 0 } });
+    };
+    const before = record.rooms[roomIndex]?.entry?.maxHealth;
+    const after = record.rooms[roomIndex + 1]?.entry?.maxHealth;
+    // The last room has no next entry save, and an older record keeps no max health.
+    if (before === undefined || after === undefined || byRoom.get(roomIndex)! > 1) {
+      note('notInRecord');
+      continue;
+    }
+    const assembly = context.assembly();
+    const exit = entrySnapshot(assembly, occurrences, roomIndex + 1)?.maxStats.maxHealth;
+    if (exit === undefined) continue;
+    const entry = entrySnapshot(assembly, occurrences, roomIndex)?.maxStats.maxHealth;
+    const offer = authoredTraitOfferAt(assembly.project, context.catalog, trait);
+    const option = offer?.kind === 'traits' ? offer.options[optionIndex(optionKey)] : undefined;
+    const width =
+      option === undefined ? undefined : traitMaxHealthRollWidth(context.catalog, option.traitKey);
+    if (
+      entry === undefined ||
+      offer?.kind !== 'traits' ||
+      option === undefined ||
+      width === undefined
+    ) {
+      note('notInRecord');
+      continue;
+    }
+    context.maxHealthRolls.delete(key);
+    const current = option.maxHealthRoll ?? 0;
+    const roll = after - before - (exit - entry) + current;
+    if (roll === current) continue;
+    if (!Number.isInteger(roll) || roll < 0 || roll > width) {
+      note('refused');
+      continue;
+    }
+    const command = {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: {
+        ...offer,
+        options: offer.options.map((row, index) =>
+          index === optionIndex(optionKey) ? { ...row, maxHealthRoll: roll } : row,
+        ) as unknown as typeof offer.options,
+      },
+    } as const;
+    const applied = context.transaction(
+      () =>
+        context.apply(command) &&
+        entrySnapshot(context.assembly(), occurrences, roomIndex + 1)?.maxStats.maxHealth === after,
+    );
+    if (!applied) note('refused');
+  }
+}
+
+/** Max-health rolls whose room's next entry save the walk never reached, at their default. */
+export function unansweredMaxHealthRolls(
+  context: RunImportContext,
+): readonly RunImportReportEntry[] {
+  return [...context.maxHealthRolls.values()].map(({ trait, roomIndex }) => ({
+    area: 'traitOffer',
+    reason: 'notInRecord',
+    address: trait,
+    record: { roomIndex, visit: 0 },
+  }));
 }

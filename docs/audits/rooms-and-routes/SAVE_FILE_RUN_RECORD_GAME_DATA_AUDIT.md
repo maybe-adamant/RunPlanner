@@ -160,6 +160,7 @@ same room, attributing it to that room.
 | Reward-store consumption             | `CurrentRun.RewardStores` bracket diff                                                                        | exact  |
 | Ephyra hidden return door            | the return door's `ExitDoorRooms` (placeholder room) and `OfferedRewards` (its draw)                          | exact  |
 | Reroll pool                          | `CurrentRun.NumRerolls`, rerolls left, at each entry save                                                     | exact  |
+| Max health                           | `CurrentRun.Hero.MaxHealth` at each entry save                                                                | exact  |
 | Screen rerolls per room              | `CurrentRoom.SpentRerolls` by screen id, on the departed room's history entry                                 | exact  |
 | Tartarus non-goal reward cap         | `CurrentRun.MaxClockworkNonGoalRewards`, rolled once by `InitClockworkGoalReward` (`RewardLogic.lua:277`)     | exact  |
 | Fresh-profile first attempt          | header run count zero (`#GameState.RunHistory`, which only `EndRun` grows, `RunLogic.lua:1848`)               | exact  |
@@ -179,7 +180,7 @@ opens first in the room is the chosen one (`StartDevotionTest`,
 `LootChoiceHistory` entry per completed screen: `UpgradeName` (giver), `Depth`,
 and `UpgradeChoices` of `{Name, Rarity, Chosen}` with `"true"`/`"false"`
 strings, plus `TraitToReplace`/`OldRarity` for replacements. Blocked options
-are omitted. `Depth` is `#RoomHistory` at pick time, so the screen belongs to
+are omitted (`:1185`). `Depth` is `#RoomHistory` at pick time, so the screen belongs to
 `RoomHistory[Depth + 1]` (1-based), the room where it was opened. Exact for
 options, rarity, and pick. Several screens in one room share a depth (capture
 U: two each in `H_Combat15` and `H_Combat07`).
@@ -196,6 +197,16 @@ U: two each in `H_Combat15` and `H_Combat07`).
   (`UpgradeChoiceLogic.lua:974-989`), so the bracket's newly banned names
   recover those curses; for god boons they name the banned unpicked boons.
   Without Denial the unpicked curses are lost, but inert.
+- Rejected (`RestrictBoonChoices`) blocks a random row of a full god screen
+  (`CalcNumLootChoices`, `TraitLogic.lua:1746`; `UpgradeChoiceLogic.lua:152-162`).
+  The blocked button is still created in `screen.UpgradeButtons`
+  (`:190-203`, `:441-442`), so Vow of Denial bans it with the other unpicked
+  buttons (`:974-989`); otherwise its trait and position are lost.
+- Aspect of Persephone rolls each god-trait row's bonus levels when its button
+  is built (`:293-310`) and keeps the roll on the button only, so a picked row's
+  roll shows only in the level it was acquired at, and an unpicked row's is lost.
+- Worry Free's max health is rolled at acquisition (`GrantRandomMaxHealth`,
+  `PowersLogic.lua:1731`) and kept only in `Hero.MaxHealth`.
 - Concave Stone's extra pick, made under its `DoubleBoonChance` roll, is not
   logged (`UpgradeChoiceLogic.lua:990`); the game picks a random unpicked
   non-replacement option of the same screen (`:1002-1023`). The trait diff
@@ -477,6 +488,8 @@ counters without order.
 - Purchase order within a shop.
 - Pre-reroll boon options; Chaos curses of unpicked options without Vow of
   Denial, and every unpicked Chaos option's duration.
+- Rejected's blocked row without Vow of Denial, and Aspect of Persephone's
+  rolls on unpicked rows.
 - Spell Drop unpicked options.
 - The physical resource point, and the room of a gather that granted no
   element.
@@ -574,6 +587,20 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   earlier change makes stale is answered again the same way. Black Night's
   disabled vows and Boon Boon Boon's replayed boon, nested children included,
   are not in the record and always take that fallback.
+- Worry Free's roll is the next entry save's max-health gain over its room
+  less the plan's gain there with the minimum roll, kept where the plan then
+  holds the saved max health; any other gain is refused and keeps the minimum
+  roll, as does a record without max health, reported as not in the record.
+- A picked row's Aspect of Persephone bonus is the one the engine says installs
+  the level the record acquired; none is refused and keeps roll 0. Unpicked and
+  rerolled-away rows keep roll 0 unreported: their rolls are lost and change
+  nothing after the screen.
+- A god screen logged with two rows under Rejected showed a third, blocked row:
+  the importer adds a trait the engine admits there beside the shown rows and
+  outside the room's acquisitions, a name the room banned under Denial first,
+  and blocks it. Any such row leaves the same run state, so it is not reported;
+  a screen the engine cannot fill keeps its two rows. A rerolled-away screen is
+  guessed whole, its blocked row included.
 - Judgment's and the Crystal Figurine's cards are imported exactly from the
   boss room's draw order. Aspect of Selene's tree is the run's first Spell
   snapshot without its God Sent nodes.

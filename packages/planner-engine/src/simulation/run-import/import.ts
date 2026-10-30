@@ -32,7 +32,12 @@ import { answerTopology } from './topology';
 import { answerReward } from './rewards';
 import { answerLevelResolution, answerSteadyGrowth, answerTraitOffer } from './trait-offers';
 import { answerArcanaGrant } from './arcana';
-import { answerCarrierChild } from './carrier-children';
+import {
+  answerCarrierChild,
+  importMaxHealthRolls,
+  unansweredMaxHealthRolls,
+  type MaxHealthRollQuestion,
+} from './carrier-children';
 import { importDispositions, reportUnplacedDispositions } from './dispositions';
 import { importRoomActionOrders } from './action-order';
 import { importEncounters } from './encounters';
@@ -113,6 +118,8 @@ export interface RunImportContext {
   readonly note: (entry: RunImportReportEntry) => void;
   /** Record facts already authored, so each is used once: screens, encounter phases. */
   readonly used: Set<string>;
+  /** Picked max-health rolls waiting for their room's next entry save, by offer and row. */
+  readonly maxHealthRolls: Map<string, MaxHealthRollQuestion>;
   /** Marks that the record answered the current question but the engine refused the value. */
   readonly refuse: () => void;
   /**
@@ -177,6 +184,7 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
   const stop = walk.run();
   walk.reportUnusedScreens(stop);
   walk.reportUnreachedRerolls();
+  entries.push(...unansweredMaxHealthRolls(walk.context));
   entries.push(
     ...compareImportToRecord(
       catalog,
@@ -222,6 +230,7 @@ export class RunImportWalk {
         this.dirty.has(occurrenceId) && this.enteredOccurrences().has(occurrenceId),
       note: (entry) => this.entries.push(entry),
       used: new Set(),
+      maxHealthRolls: new Map(),
       refuse: () => {
         this.refusedAnswer = true;
       },
@@ -461,6 +470,7 @@ export class RunImportWalk {
         if (solveWheelOffers(this.context)) before = undefined;
         importFieldsRooms(this.context);
         importResourcePlacements(this.context);
+        importMaxHealthRolls(this.context);
       }
       const issue = this.assembly.evaluation.issue;
       if (issue === undefined) {

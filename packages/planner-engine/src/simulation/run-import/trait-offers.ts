@@ -24,6 +24,7 @@ import { applyScreenRerolls } from './rerolls';
 import { rarifyRerolledScreens, takeRarifyCharges, withRarifyClicks } from './rarify';
 import { POM_GIVERS } from './vocabulary';
 import {
+  awaitMaxHealthRolls,
   completeRecordedCarrierChildren,
   type RecordedCarrierChildReport,
 } from './carrier-children';
@@ -414,6 +415,111 @@ function withRarifyAndHover(
   };
 }
 
+/**
+ * Rejected blocks one row of a full god screen and the game logs only the rows
+ * left, so a two-row screen under it showed a third, blocked row. That row is
+ * any trait the engine admits there beside the shown rows and outside what the
+ * room acquired, a name the room banned first (Vow of Denial bans the blocked
+ * button too); which trait and where are otherwise never saved and leave the
+ * same run state. A screen the engine cannot fill held only its two rows.
+ */
+function withRejectedRow(
+  context: RunImportContext,
+  trait: TraitOfferAddress,
+  value: AuthoredTraitOffer,
+  roomIndex: number,
+): AuthoredTraitOffer {
+  if (value.kind !== 'traits' || value.options.length !== 2) return value;
+  const room = context.record.rooms[roomIndex]!;
+  const shown = new Set([
+    ...value.options.map((option) => option.traitKey),
+    ...room.traits.acquired.map((entry) => entry.name),
+  ]);
+  const banned = new Set(room.bannedTraits ?? []);
+  const candidates = (context.catalog.traitGivers.byKey[value.giverKey]?.traitKeys ?? [])
+    .filter((traitKey) => !shown.has(traitKey))
+    .sort((left, right) => Number(banned.has(right)) - Number(banned.has(left)))
+    .flatMap((traitKey): AuthoredTraitOption[] => {
+      const domain = context.catalog.traits.byKey[traitKey]?.rarityDomain;
+      return domain?.kind === 'ranked'
+        ? domain.freshOfferRarities.map((rarity) => ({ traitKey, rarity }))
+        : [{ traitKey }];
+    });
+  for (const row of candidates) {
+    const synthesized = {
+      ...value,
+      options: [...value.options, row] as unknown as typeof value.options,
+      rejectedOptionKey: 'option3',
+    } as const;
+    const evaluation = context
+      .candidates()
+      .evaluate({ kind: 'traitOffer', trait, value: synthesized });
+    if (evaluation.kind !== 'traitOffer') return value;
+    const rules = evaluation.result.chaosOfferRules ?? [];
+    // Only a screen every branch restricts held a blocked row.
+    if (rules.length === 0 || !rules.every((rule) => rule.rejectedBlockRequired)) return value;
+    if (evaluation.result.supported && evaluation.result.findings.length === 0) return synthesized;
+  }
+  return value;
+}
+
+const withoutPersephoneBonus = (option: AuthoredTraitOption): AuthoredTraitOption => {
+  const { persephoneLevelBonus: _bonus, ...rest } = option;
+  void _bonus;
+  return rest;
+};
+
+/**
+ * Aspect of Persephone rolls each row's bonus levels when the screen opens and
+ * keeps the roll only on its button. The picked row's bonus is the one the
+ * engine says installs the level the record acquired; `refused` when none does.
+ */
+function withPersephoneLevel(
+  context: RunImportContext,
+  trait: TraitOfferAddress,
+  value: AuthoredTraitOffer,
+  roomIndex: number,
+): { readonly value: AuthoredTraitOffer; readonly refused?: true } {
+  if (value.kind !== 'traits') return { value };
+  const selected = OPTION_KEYS.indexOf(value.selectedOptionKey);
+  const picked = value.options[selected]!;
+  const acquired = context.record.rooms[roomIndex]!.traits.acquired.find(
+    (entry) => entry.name === picked.traitKey,
+  );
+  if (acquired === undefined) return { value };
+  // The game reads a trait's level as its `StackNum`, one when unset.
+  const level = acquired.level ?? 1;
+  const levelWith = (bonus: number) => {
+    const candidate = {
+      ...value,
+      options: value.options.map((option, index) =>
+        index !== selected
+          ? option
+          : bonus === 0
+            ? withoutPersephoneBonus(option)
+            : { ...option, persephoneLevelBonus: bonus },
+      ) as unknown as typeof value.options,
+    };
+    const evaluation = context
+      .candidates()
+      .evaluate({ kind: 'traitOffer', trait, value: candidate });
+    return evaluation.kind !== 'traitOffer'
+      ? undefined
+      : {
+          value: candidate,
+          maximum: evaluation.result.persephoneLevelBonusMaximums[selected],
+          level: evaluation.result.effectiveLevels[selected],
+        };
+  };
+  const current = levelWith(picked.persephoneLevelBonus ?? 0);
+  if (current?.maximum === undefined || current.level === level) return { value };
+  for (let bonus = 0; bonus <= current.maximum; bonus += 1) {
+    const result = levelWith(bonus);
+    if (result?.level === level) return { value: result.value };
+  }
+  return { value, refused: true };
+}
+
 /** The Rarify clicks an applied offer's final screen holds. */
 const clickCount = (value: AuthoredTraitOffer) =>
   value.kind === 'traits' ? (value.rarificationActions?.length ?? 0) : 0;
@@ -453,6 +559,7 @@ function applyScreenOffer(
         command.value.giverKey,
         clickCount(command.value),
       );
+    awaitMaxHealthRolls(context, trait, command.value, record.roomIndex);
     return true;
   };
   const noteChildren = (
@@ -481,7 +588,8 @@ function applyScreenOffer(
     record.roomIndex,
     stoneFromRecord,
   );
-  const value = children.value;
+  const leveled = withPersephoneLevel(context, trait, children.value, record.roomIndex);
+  const value = withRejectedRow(context, trait, leveled.value, record.roomIndex);
   const failed = { stone: stoneProc(value) };
   const evaluation = context.candidates().evaluate({ kind: 'traitOffer', trait, value });
   if (evaluation.kind !== 'traitOffer') return failed;
@@ -499,6 +607,14 @@ function applyScreenOffer(
         record,
       });
     noteChildren(children.reports, command);
+    if (leveled.refused === true)
+      context.note({
+        area: 'traitOffer',
+        reason: 'refused',
+        address: trait,
+        applied: command,
+        record,
+      });
     return { applied: value };
   }
   context.refuse();
@@ -513,7 +629,13 @@ function applyScreenOffer(
     record.roomIndex,
     stoneFromRecord,
   );
-  const reduced = reducedChildren.value;
+  const reducedLeveled = withPersephoneLevel(
+    context,
+    trait,
+    reducedChildren.value,
+    record.roomIndex,
+  );
+  const reduced = withRejectedRow(context, trait, reducedLeveled.value, record.roomIndex);
   const retry = context.candidates().evaluate({ kind: 'traitOffer', trait, value: reduced });
   const reducedCommand = { kind: 'ReplaceTraitOffer', trait, value: reduced } as const;
   if (
@@ -540,6 +662,14 @@ function applyScreenOffer(
       record,
     });
   noteChildren(reducedChildren.reports, reducedCommand);
+  if (reducedLeveled.refused === true)
+    context.note({
+      area: 'traitOffer',
+      reason: 'refused',
+      address: trait,
+      applied: reducedCommand,
+      record,
+    });
   return { applied: reduced };
 }
 
