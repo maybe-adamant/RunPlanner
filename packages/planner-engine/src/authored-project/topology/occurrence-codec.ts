@@ -615,7 +615,13 @@ export function decodeRoomOccurrence(input: {
           ? undefined
           : decodeAcquisitionSites(
               Object.fromEntries(includedEntries),
-              { path: rawOccurrence.path, gameName: rawOccurrence.gameName, routeKey },
+              {
+                path: rawOccurrence.path,
+                gameName: rawOccurrence.gameName,
+                routeKey,
+                biomeKey: layout.biomeKey,
+                occurrenceId: rawOccurrence.occurrenceId,
+              },
               catalog,
               preliminaryPickupProducers,
               echoEntryKeys,
@@ -640,7 +646,13 @@ export function decodeRoomOccurrence(input: {
   const acquisitionSites = rawOccurrence.hasAcquisitionSites
     ? decodeAcquisitionSites(
         rawOccurrence.acquisitionSites,
-        { path: rawOccurrence.path, gameName: rawOccurrence.gameName, routeKey },
+        {
+          path: rawOccurrence.path,
+          gameName: rawOccurrence.gameName,
+          routeKey,
+          biomeKey: layout.biomeKey,
+          occurrenceId: rawOccurrence.occurrenceId,
+        },
         catalog,
         pickupProducers,
         echoEntryKeys,

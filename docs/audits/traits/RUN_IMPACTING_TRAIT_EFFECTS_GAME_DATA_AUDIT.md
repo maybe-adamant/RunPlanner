@@ -553,6 +553,17 @@ pickup optional-acquisition path; their exact Artificer and Sea Star boundaries
 are retained above. All Narcissus traits now enter equipped history normally;
 their shared generated-pickup entries retain their existing source contacts.
 
+Supply Chain (`SupplyDropBoon`, `TraitData_Icarus.lua`) drops two
+`StoreRewardRandomStack` Pom Slices and one `HealDropMinor` through
+`GiveRandomConsumables` with no `CanDuplicate` override. Each Slice inherits
+`BaseConsumable`'s `CanDuplicate = true`, so Sea Star retains it for a second
+use (`InteractLogic.lua` `UseConsumableItem`); that use runs
+`UseStoreRewardRandomStack` again and adds its own random stack
+(`TraitLogic.lua`). The duplicate therefore carries its own random level
+target, authored and settled through Supply Chain's producer exactly as the
+Slice's first use. The minor heal declares `CanDuplicate = false` and has no
+modeled effect, so the planner models neither it nor a Sea Star result on it.
+
 ## Bounded follow-up questions
 
 The core source rules above are settled. A later implementation audit should

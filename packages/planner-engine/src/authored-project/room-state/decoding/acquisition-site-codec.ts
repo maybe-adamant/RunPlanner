@@ -2,7 +2,19 @@ import type { Catalog } from '../../../catalog-schema';
 import type { AuthoredRewardState } from '../../model';
 import { parseArtificerReplacementEntryKey } from '../../acquisition/artificer';
 import { parseHermesShrineDeliveryEntryKey } from '../../hermes-shrine-delivery';
-import { parseSeaStarDuplicateSiteKey } from '../../acquisition/sea-star';
+import {
+  parseSeaStarDuplicateSiteKey,
+  seaStarDuplicateUsesFreshObject,
+} from '../../acquisition/sea-star';
+import {
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
+  createBiomeAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
+  semanticAddressKey,
+} from '../../addresses';
+import type { LevelResolutionEffectSource } from '../../../reward-kernel/level-effects';
 import {
   parseClockedTraitGeneratedPickupEntryKey,
   parseTraitGeneratedPickupSiteKey,
@@ -21,6 +33,8 @@ export interface AcquisitionSiteOccurrenceContext {
   readonly path: string;
   readonly gameName: string;
   readonly routeKey: string;
+  readonly biomeKey: string;
+  readonly occurrenceId: string;
 }
 
 export function decodeAcquisitionSites(
@@ -51,6 +65,13 @@ export function decodeAcquisitionSites(
       producerByEntry.set(`${producer.siteKey}\u0000${pickup.key}`, producer);
     }
   }
+  const levelEffectSourceByEntry = new Map<string, LevelResolutionEffectSource>();
+  const deferredSeaStarSites: {
+    readonly pointKey: string;
+    readonly decodeEntries: (
+      levelEffectSource: (entryKey: string) => LevelResolutionEffectSource,
+    ) => Readonly<Record<string, AuthoredRewardState | null>>;
+  }[] = [];
   for (const [pointKey, rawSite] of Object.entries(sites)) {
     const generatedTraitSite = parseTraitGeneratedPickupSiteKey(pointKey) !== undefined;
     const generatedNemesisSite = parseNemesisGeneratedPickupSiteKey(pointKey) !== undefined;
@@ -120,61 +141,119 @@ export function decodeAcquisitionSites(
         `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries`,
         'has no selected pickup producer',
       );
-    const pickupEntries = hasPickups
-      ? Object.freeze(
-          Object.fromEntries(
-            Object.entries(
-              expectRecord(
-                site.pickupEntries,
-                `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries`,
-              ),
-            ).map(([key, raw]) => [
-              key,
-              decodeNullableRewardState(
-                raw,
-                catalog,
-                `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries.${key}`,
-                artificerSite || seaStarDuplicateSite || hermesArtificerEntry(key)
-                  ? { kind: 'producerLifecycle', key: 'RoomReward' }
-                  : hermesDeliveryEntry(key)
-                    ? { kind: 'producerLifecycle', key: 'HermesShrineDelivery' }
-                    : pedestalSite
-                      ? {
-                          kind: 'shopProfile',
-                          key:
-                            infernalContractPedestalProfile(catalog, occurrence.gameName)?.key ??
-                            '',
-                        }
-                      : pointKey === 'roomExit' &&
-                          parseClockedTraitGeneratedPickupEntryKey(key) !== undefined
-                        ? { kind: 'producerLifecycle', key: 'GeneratedTraitPickup' }
-                        : shopProfileKey === undefined
-                          ? {
-                              kind: 'producerLifecycle',
-                              key: echoLastRewardEntryKeys.has(key)
-                                ? 'EchoLastReward'
-                                : (producerByEntry.get(`${pointKey}\u0000${key}`)
-                                    ?.producerLifecycleKey ?? ''),
-                            }
-                          : {
-                              kind: 'shopProfile',
-                              key: shopProfileKey,
-                            },
-                occurrence.routeKey,
-                artificerSite ||
-                  seaStarDuplicateSite ||
-                  hermesDeliveryEntry(key) ||
-                  echoLastRewardEntryKeys.has(key)
-                  ? false
-                  : true,
-              ),
-            ]),
-          ),
-        )
-      : undefined;
+    const decodeEntries = (
+      levelEffectSource: (entryKey: string) => LevelResolutionEffectSource,
+    ): Readonly<Record<string, AuthoredRewardState | null>> =>
+      Object.freeze(
+        Object.fromEntries(
+          Object.entries(
+            expectRecord(
+              site.pickupEntries,
+              `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries`,
+            ),
+          ).map(([key, raw]) => [
+            key,
+            decodeNullableRewardState(
+              raw,
+              catalog,
+              `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries.${key}`,
+              levelEffectSource(key),
+              occurrence.routeKey,
+              artificerSite ||
+                seaStarDuplicateSite ||
+                hermesDeliveryEntry(key) ||
+                echoLastRewardEntryKeys.has(key)
+                ? false
+                : true,
+            ),
+          ]),
+        ),
+      );
+    if (seaStarDuplicateSite && hasPickups) {
+      deferredSeaStarSites.push({ pointKey, decodeEntries });
+      continue;
+    }
+    const levelEffectSource = (key: string): LevelResolutionEffectSource =>
+      artificerSite || hermesArtificerEntry(key)
+        ? { kind: 'producerLifecycle', key: 'RoomReward' }
+        : hermesDeliveryEntry(key)
+          ? { kind: 'producerLifecycle', key: 'HermesShrineDelivery' }
+          : pedestalSite
+            ? {
+                kind: 'shopProfile',
+                key: infernalContractPedestalProfile(catalog, occurrence.gameName)?.key ?? '',
+              }
+            : pointKey === 'roomExit' && parseClockedTraitGeneratedPickupEntryKey(key) !== undefined
+              ? { kind: 'producerLifecycle', key: 'GeneratedTraitPickup' }
+              : shopProfileKey === undefined
+                ? {
+                    kind: 'producerLifecycle',
+                    key: echoLastRewardEntryKeys.has(key)
+                      ? 'EchoLastReward'
+                      : (producerByEntry.get(`${pointKey}\u0000${key}`)?.producerLifecycleKey ??
+                        ''),
+                  }
+                : { kind: 'shopProfile', key: shopProfileKey };
+    for (const key of Object.keys(site.pickupEntries ?? {}))
+      levelEffectSourceByEntry.set(`${pointKey}\u0000${key}`, levelEffectSource(key));
+    const pickupEntries = hasPickups ? decodeEntries(levelEffectSource) : undefined;
     decoded[pointKey] = Object.freeze({
       ...(pickupEntries === undefined ? {} : { pickupEntries }),
     });
   }
-  return Object.freeze(decoded);
+  // A retained consumable duplicate settles through its source's own producer,
+  // so it is decoded after that source; a fresh loot duplicate is a RoomReward.
+  for (const { pointKey, decodeEntries } of deferredSeaStarSites) {
+    const levelEffectSource = seaStarDuplicateLevelEffectSource(
+      catalog,
+      pointKey,
+      occurrence,
+      decoded,
+      levelEffectSourceByEntry,
+    );
+    decoded[pointKey] = Object.freeze({ pickupEntries: decodeEntries(() => levelEffectSource) });
+  }
+  return Object.freeze(
+    Object.fromEntries(Object.keys(sites).map((pointKey) => [pointKey, decoded[pointKey]!])),
+  );
+}
+
+function seaStarDuplicateLevelEffectSource(
+  catalog: Catalog,
+  pointKey: string,
+  occurrence: AcquisitionSiteOccurrenceContext,
+  decoded: Readonly<
+    Record<
+      string,
+      { readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState | null>> }
+    >
+  >,
+  levelEffectSourceByEntry: ReadonlyMap<string, LevelResolutionEffectSource>,
+): LevelResolutionEffectSource {
+  const roomReward = { kind: 'producerLifecycle', key: 'RoomReward' } as const;
+  const parsed = parseSeaStarDuplicateSiteKey(pointKey);
+  if (parsed === undefined) return roomReward;
+  const occurrenceAddress = createOccurrenceAddress(
+    createBiomeAddress(occurrence.routeKey, occurrence.biomeKey),
+    createOccurrenceId(occurrence.occurrenceId),
+  );
+  for (const [sourcePointKey, site] of Object.entries(decoded)) {
+    for (const [entryKey, entry] of Object.entries(site.pickupEntries ?? {})) {
+      const owner = createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(occurrenceAddress, sourcePointKey),
+        entryKey,
+      );
+      if (semanticAddressKey(owner) !== parsed.sourceKey) continue;
+      if (
+        entry === null ||
+        catalog.rewards.rewardTypes.byKey[entry.offer.rewardType]?.acquisitionRoles.byKey[
+          parsed.acquisitionRole
+        ] === undefined ||
+        seaStarDuplicateUsesFreshObject(catalog, entry, parsed.acquisitionRole)
+      )
+        return roomReward;
+      return levelEffectSourceByEntry.get(`${sourcePointKey}\u0000${entryKey}`) ?? roomReward;
+    }
+  }
+  return roomReward;
 }
