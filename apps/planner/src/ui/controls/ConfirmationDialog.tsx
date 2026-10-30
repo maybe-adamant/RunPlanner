@@ -11,6 +11,7 @@ export function ConfirmationDialog({
   onCancel,
   onConfirm,
   pending,
+  returnFocusId,
   title,
 }: {
   readonly children: ReactNode;
@@ -20,6 +21,8 @@ export function ConfirmationDialog({
   readonly onCancel: () => void;
   readonly onConfirm: () => void;
   readonly pending: boolean;
+  /** The launcher that regains focus on close; the opener otherwise. */
+  readonly returnFocusId?: string;
   readonly title: string;
 }) {
   return (
@@ -28,6 +31,7 @@ export function ConfirmationDialog({
       labelledBy={id}
       onCancel={onCancel}
       pending={pending}
+      {...(returnFocusId === undefined ? {} : { returnFocusId })}
     >
       <header className="panel-heading">
         <h2 id={id}>{title}</h2>

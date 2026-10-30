@@ -1,13 +1,18 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider, useSelector } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createProjectDocument } from '@run-planner/engine/authored-project';
+import { createProjectDocument, createRouteAddress } from '@run-planner/engine/authored-project';
 import { createApplication } from '@planner/composition/createApplication';
-import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectCommandDispatched,
+  authoredProjectReplaced,
+} from '@planner/state/projectWorkspaceSlice';
 import type { RootState } from '@planner/state/store';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { DreamItineraryControl } from '@planner/ui/shell/DreamItineraryControl';
 
 afterEach(cleanup);
@@ -27,20 +32,14 @@ function renderControl() {
   const history = () => application.store.getState().projectWorkspace.history!;
   function Connected() {
     const route = useSelector((state: RootState) => state.projectWorkspace.history!.present.route);
-    return (
-      <DreamItineraryControl
-        catalog={application.catalog}
-        key={route.itineraryBiomeKeys.join(',')}
-        route={route}
-      />
-    );
+    return <DreamItineraryControl catalog={application.catalog} route={route} />;
   }
   render(
     <Provider store={application.store}>
       <Connected />
     </Provider>,
   );
-  return { history };
+  return { application, history };
 }
 
 function slotText(slot: number): string | null {
@@ -114,5 +113,54 @@ describe('DreamItineraryControl', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear and change' }));
     expect(history().present.route.itineraryBiomeKeys).toEqual(['Q', 'F', 'H', 'O']);
     expect(history().past).toHaveLength(depth + 1);
+  });
+
+  it('marks slots past the first empty one as waiting on an earlier choice', () => {
+    renderControl();
+    pick(2, 'Ephyra');
+    expect([3, 4].map(slotText)).toEqual(['3. Choose biome▾', '4. Choose biome▾']);
+    expect(screen.getByRole('button', { name: 'Biome 3' }).hasAttribute('disabled')).toBe(false);
+    const slot4 = screen.getByRole('button', { name: 'Biome 4' });
+    expect(slot4.hasAttribute('disabled')).toBe(true);
+    expect(slot4.getAttribute('data-hint')).toBe(candidateWaitingHint);
+  });
+
+  it('keeps focus on the picked slot when a change applies at once', async () => {
+    const { history } = renderControl();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Biome 4' }));
+    await user.click(screen.getByRole('option', { name: 'Tartarus' }));
+    expect(history().present.route.itineraryBiomeKeys).toEqual(['Q', 'F', 'N', 'I']);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Biome 4' })),
+    );
+  });
+
+  it('returns focus to the picked slot once a clearing change is confirmed', async () => {
+    const { history } = renderControl();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Biome 3' }));
+    await user.click(screen.getByRole('option', { name: 'Thessaly' }));
+    await user.click(screen.getByRole('button', { name: 'Clear and change' }));
+    expect(history().present.route.itineraryBiomeKeys).toEqual(['Q', 'F', 'O', 'H']);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Biome 3' })),
+    );
+  });
+
+  it('discards an unfinished draft when the itinerary changes underneath it', () => {
+    const { application } = renderControl();
+    pick(3, 'Fields');
+    expect(slotText(4)).toBe('4. Choose biome▾');
+    act(() => {
+      application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceDreamItinerary',
+          route: createRouteAddress('Dream'),
+          itineraryBiomeKeys: ['Q', 'F', 'N', 'I'],
+        }),
+      );
+    });
+    expect([3, 4].map(slotText)).toEqual(['3. Ephyra▾', '4. Tartarus▾']);
   });
 });
