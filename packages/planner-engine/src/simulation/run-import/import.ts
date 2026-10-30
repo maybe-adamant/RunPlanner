@@ -15,7 +15,7 @@ import { findingsAddedSince } from '../finding-regions';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { simulateProjectAssembly } from '../evaluation/project';
 import type { SemanticFinding } from '../model';
-import { RunImportGuesser } from './guess';
+import { createDraftIssueRepairer, type DraftIssueRepairer } from '../draft/repair';
 import { answerNemesis, guessNemesisEvent } from './nemesis';
 import { occurrenceIdOf, RecordOccurrences } from './occurrences';
 import type {
@@ -196,7 +196,7 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
 export class RunImportWalk {
   private readonly authoring: AuthoringSession;
   private refusedAnswer = false;
-  private guesser: RunImportGuesser | undefined;
+  private repairer: DraftIssueRepairer | undefined;
   private readonly retractions = new Map<
     string,
     { readonly undo: ProjectCommand; readonly entry: RunImportReportEntry }
@@ -533,13 +533,11 @@ export class RunImportWalk {
   }
 
   private guess(reason: SemanticFinding, fallback: RunImportReason): boolean {
-    let commands: readonly ProjectCommand[] | undefined;
-    this.guesser ??= new RunImportGuesser(this.catalog, this.assembly.project, this.assembly);
-    const result = this.guesser.guess(this.assembly);
-    if (result !== undefined) {
-      this.authoring.restore(result.assembly);
-      commands = result.commands;
-    } else commands = guessNemesisEvent(this.context, reason);
+    // One repairer serves the whole import; its occurrences are named apart from recorded ones.
+    this.repairer ??= createDraftIssueRepairer(this.catalog, this.authoring, {
+      occurrenceIdPrefix: 'guess',
+    });
+    const commands = this.repairer.repairIssue() ?? guessNemesisEvent(this.context, reason);
     if (commands === undefined) return false;
     const area = areaOfFinding(reason);
     // Required actions take their native schedule when no trait timestamp orders them.

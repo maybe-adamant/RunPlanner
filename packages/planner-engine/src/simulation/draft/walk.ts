@@ -340,17 +340,10 @@ export class DraftWalk {
     return true;
   }
 
-  /**
-   * Continues from an assembly another author may have changed. What this walk
-   * tried is kept only while the assembly is still its own last result; after
-   * an outside edit a value it once tried may be legal again.
-   */
-  resume(assembly: ProjectEvaluationAssembly): void {
-    if (assembly !== this.assembly) {
-      this.hooked.clear();
-      this.authoredRewards.clear();
-    }
-    this.authoring.restore(assembly);
+  /** Forgets the hooks and rewards this walk tried, so each may be tried again. */
+  forgetTried(): void {
+    this.hooked.clear();
+    this.authoredRewards.clear();
   }
 
   /** Repairs the route's current issue once, without choosing encounters; false when none applies. */
