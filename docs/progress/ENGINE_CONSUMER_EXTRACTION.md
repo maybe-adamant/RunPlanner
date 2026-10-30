@@ -42,8 +42,9 @@ hades2-catalog -> engine <- draft <- run-import <- apps/planner
 - The only reverse dependencies: `simulation/index.ts` re-exports Draft and the
   import (lines 648–720), and `encounters/encounter-inverse.ts` imports
   `RunRecordEncounter`/`RunRecordSpawn`.
-- `test/simulation/run-import/import.test.ts` holds 111 serial tests that
-  re-import full captures per test: 450–590 s on one core.
+- S0 (28b847a50) split the run-import suite: `import.test.ts` (110 serial
+  tests, ~430 s on one core) became 15 area files; the lane now runs in
+  ~100 s.
 
 ## Settled decisions (owner, 2026-10-30)
 
