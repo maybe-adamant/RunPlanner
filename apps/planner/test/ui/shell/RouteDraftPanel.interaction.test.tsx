@@ -4,7 +4,7 @@ import {
   createProjectDocument,
   createRouteStartKeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
-import { forcesGod, type DraftResult } from '@run-planner/engine/simulation';
+import { forcesGod, type DraftResult } from '@run-planner/draft';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';

@@ -20,7 +20,7 @@ import {
   type DraftRefusal,
   type DraftTargetResult,
   type DraftWorldOptions,
-} from '@run-planner/engine/simulation';
+} from '@run-planner/draft';
 
 import {
   draftSlotList,

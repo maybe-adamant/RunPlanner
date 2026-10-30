@@ -1,0 +1,43 @@
+import { describe, expect, it } from 'vitest';
+import { catalog } from '@run-planner/hades2-catalog';
+import { loadUnderworldFGHICheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import { createDefaultRouteLoadout } from '@run-planner/engine/authored-project';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
+import type { DraftSpec } from '../src';
+import { draftReport } from '../src/report';
+import { draftBasket } from './support/draft-basket';
+
+describe('draft report', () => {
+  it('reports a basket trait the evaluated route never equips as unmet', () => {
+    const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
+    void _startingReward;
+    const spec: DraftSpec = {
+      loadout,
+      world: { godKeys: [], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketByGiver: draftBasket(['SuperSacrificeBoonHera']),
+      rackKeepsakeKeys: [null, null, null],
+    };
+    const project = loadUnderworldFGHICheckpoint();
+    const report = draftReport(catalog, spec, simulateProjectAssembly(catalog, project));
+    expect(report.targets).toContainEqual({
+      kind: 'basketTrait',
+      key: 'SuperSacrificeBoonHera',
+      met: false,
+    });
+  });
+
+  it('sets no target for pool gods, Hermes or Hammers outside the basket', () => {
+    const { startingReward: _startingReward, ...loadout } = createDefaultRouteLoadout(catalog);
+    void _startingReward;
+    const spec: DraftSpec = {
+      loadout,
+      world: { godKeys: ['Zeus', 'Hera'], storyNpcByBiome: {}, fieldNpcsByBiome: {} },
+      basketByGiver: {},
+      rackKeepsakeKeys: [null, null, null],
+    };
+    const project = loadUnderworldFGHICheckpoint();
+    expect(draftReport(catalog, spec, simulateProjectAssembly(catalog, project)).targets).toEqual(
+      [],
+    );
+  });
+});

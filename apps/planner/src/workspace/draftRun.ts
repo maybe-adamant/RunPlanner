@@ -6,7 +6,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import { draftRefusals, type DraftSpec } from '@run-planner/engine/simulation';
+import { draftRefusals, type DraftSpec } from '@run-planner/draft';
 
 import { projectDraftSpec } from '@planner/projections/draftSpec';
 import {

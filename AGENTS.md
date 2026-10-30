@@ -35,8 +35,8 @@ counters, or topology repair.
 
 ## Ownership Lanes
 
-The repository has five ownership lanes—three packages, one application, and
-one game module. Route a change by the question it answers, not by the layer that
+The repository has six ownership lanes—four packages, one application, and one
+game module. Route a change by the question it answers, not by the layer that
 first needs the result.
 
 ### Hades II Catalog — `packages/hades2-catalog`
@@ -72,6 +72,22 @@ first needs the result.
   invented by the editor, or other React-facing products.
 - Primary tests live beside the owning engine authority (`npm run test:engine`).
 
+### Draft — `packages/draft`
+
+- Owns Draft mode: the spec's world options, static basket legality with its
+  caps and refusals, steering, the search and its biome walk, the encounter
+  post pass, the report, and the issue repairer the run import drives. The
+  persisted Draft settings and share code stay in the engine's authored model.
+- Answers “what random valid plan does this Draft spec produce, and which of
+  its targets did it meet?”
+- Consumes only declared `@run-planner/engine` entries, authoring through the
+  engine's authoring session, candidates and queries; it never computes game
+  legality. It must not import engine internals, the `hades2-catalog`
+  implementation (tests may construct it), the run import, the planner
+  application, or platform code, and the engine never imports it.
+- Primary tests: spec, basket, steering, walk and report witnesses
+  (`npm run test:draft`), and the Draft corpus (`npm run test:draft-corpus`).
+
 ### Run Import — `packages/run-import`
 
 - Owns the run record (its model, codec and saved-value paths, published as the
@@ -80,7 +96,8 @@ first needs the result.
 - Answers “what authored project does this recorded run correspond to, and
   what could not be matched?”
 - Consumes only declared `@run-planner/engine` entries, building through the
-  engine's authoring session and queries; it must not import engine internals,
+  engine's authoring session and queries, and Draft's issue repairer through
+  `@run-planner/draft`; it must not import engine internals,
   the `hades2-catalog` implementation (tests may construct it), the planner
   application, or platform code, and the engine never imports it.
 - Primary tests: record codec and fixtures, and import witnesses over the
@@ -248,7 +265,8 @@ execution policy and the measurement lanes' mechanics.
   architecture-boundary changes.
 - `npm run test:contract`: application/workspace capability changes.
 - `npm run test:product`: cross-layer browser workflows.
-- `npm run test:engine` / `npm run test:catalog`: their owning packages.
+- `npm run test:engine` / `npm run test:catalog` / `npm run test:draft`: their
+  owning packages.
 - `npm run test:run-import`: the run record, its import, and the app recorder;
   Record mode changes that stay inside those.
 - `npm run test:game-module`: the game module's Lua syntax, tests, and Luacheck.

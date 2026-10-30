@@ -15,6 +15,7 @@ Start with the lane that owns the question:
 | What does the game declare, and how is it normalized?      | [Catalog Model](CATALOG_MODEL.md)                 |
 | What does authored state mean, and what follows from it?   | [Planner Engine](SIMULATION_AND_VALIDATION.md)    |
 | How is that result edited, displayed, navigated and saved? | [Planner Application and Editor](EDITOR_MODEL.md) |
+| What random valid plan does a Draft spec produce?          | [Draft Mode](DRAFT_MODE.md)                       |
 
 The engine guide routes deeper authored-state, generation, lifecycle, reward
 and candidate contracts. The application guide routes the shell, workspace layout and
@@ -49,7 +50,7 @@ the application's authored model or React editor.
 
 ## Lanes and Runtime Flow
 
-[`AGENTS.md`](../../AGENTS.md#ownership-lanes) owns the five ownership lanes,
+[`AGENTS.md`](../../AGENTS.md#ownership-lanes) owns the six ownership lanes,
 dependency direction, code placement, construction and data-flow rules, and
 refactoring discipline:
 
@@ -57,6 +58,7 @@ refactoring discipline:
 | ----------- | ---------------- | --------------------------------------------------------------------------------- |
 | Catalog     | `hades2-catalog` | Game declarations and their compilation into the engine's catalog contract        |
 | Engine      | `planner-engine` | Authored state, commands, history, simulation, candidates, findings and execution |
+| Draft       | `draft`          | Draft mode: drafting a random valid route from a described world                  |
 | Run import  | `run-import`     | The run record and its import into an authored project                            |
 | Application | `apps/planner`   | Composition, persistence adapters, Redux coordination, projections and React      |
 | Game module | `game-module/`   | Lua runtime execution and conformance of published plans                          |
@@ -78,11 +80,12 @@ is a second composition entry point and constructs its own catalog.
 
 ### Imports
 
-Cross-package consumers use declared package exports: the run import and the
-application import the engine only through its `package.json` entries, never
-deep paths, and the engine imports neither. ESLint and the planner's package
-boundary architecture test enforce the entries, the package dependency
-direction and declared dependencies. Within the planner,
+Cross-package consumers use declared package exports: Draft, the run import
+and the application import the engine only through its `package.json` entries,
+never deep paths, and the engine imports none of them. The run import uses
+Draft's issue repairer; Draft never imports the run import. ESLint and the
+planner's package boundary architecture test enforce the entries, the package
+dependency direction and declared dependencies. Within the planner,
 cross-root imports use `@planner/*` for composition, persistence, projections,
 state, ui and workspace. Test support uses `@planner-test/*`, and repository
 authored fixtures use `@run-planner/test-fixtures`. Immediate-neighborhood

@@ -7,7 +7,11 @@ import { describe, expect, it } from 'vitest';
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const engineSourceRoot = join(repositoryRoot, 'packages/planner-engine/src');
-const pureSourceRoots = [engineSourceRoot, join(repositoryRoot, 'packages/run-import/src')];
+const pureSourceRoots = [
+  engineSourceRoot,
+  join(repositoryRoot, 'packages/draft/src'),
+  join(repositoryRoot, 'packages/run-import/src'),
+];
 
 function sourceFiles(directory: string): readonly string[] {
   return readdirSync(directory, { withFileTypes: true })

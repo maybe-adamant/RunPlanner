@@ -23,23 +23,36 @@ const repositoryAliases = ['@run-planner/test-fixtures', '@run-planner/test-conf
 
 /**
  * The workspace packages each lane may import from its source: the catalog compiles into the
- * engine's contract, the run import consumes declared engine entries, and the application
- * composes all of them.
+ * engine's contract, Draft consumes declared engine entries, the run import consumes those and
+ * Draft's repairer, and the application composes all of them.
  */
 const allowedSourcePackages: Readonly<Record<string, readonly string[]>> = {
   'packages/hades2-catalog': ['@run-planner/engine'],
   'packages/planner-engine': [],
-  'packages/run-import': ['@run-planner/engine'],
-  'apps/planner': ['@run-planner/engine', '@run-planner/hades2-catalog', '@run-planner/run-import'],
+  'packages/draft': ['@run-planner/engine'],
+  'packages/run-import': ['@run-planner/engine', '@run-planner/draft'],
+  'apps/planner': [
+    '@run-planner/engine',
+    '@run-planner/hades2-catalog',
+    '@run-planner/draft',
+    '@run-planner/run-import',
+  ],
 };
 /** Tests may also construct inputs from the catalog. */
 const allowedTestPackages: Readonly<Record<string, readonly string[]>> = {
   'packages/hades2-catalog': ['@run-planner/engine'],
   'packages/planner-engine': ['@run-planner/hades2-catalog'],
-  'packages/run-import': ['@run-planner/engine', '@run-planner/hades2-catalog'],
+  'packages/draft': ['@run-planner/engine', '@run-planner/hades2-catalog'],
+  'packages/run-import': [
+    '@run-planner/engine',
+    '@run-planner/draft',
+    '@run-planner/hades2-catalog',
+  ],
 };
 /** Packages that consume the engine only through its declared entries. */
-const engineConsumers = ['packages/run-import', 'apps/planner'];
+const engineConsumers = ['packages/draft', 'packages/run-import', 'apps/planner'];
+/** Packages whose relative imports stay inside their own root. */
+const consumerPackages = ['packages/draft', 'packages/run-import'];
 
 function sourceFiles(directory: string): readonly string[] {
   if (!existsSync(directory)) return [];
@@ -110,12 +123,9 @@ describe('workspace package boundaries', () => {
     expect(undeclared).toEqual([]);
   });
 
-  it('keeps every run-import relative import inside its package', () => {
-    const root = join(repositoryRoot, 'packages/run-import');
-    const escaping = [
-      ...imports('packages/run-import', 'src'),
-      ...imports('packages/run-import', 'test'),
-    ]
+  it.each(consumerPackages)('keeps every %s relative import inside its package', (directory) => {
+    const root = join(repositoryRoot, directory);
+    const escaping = [...imports(directory, 'src'), ...imports(directory, 'test')]
       .filter(({ specifier }) => specifier.startsWith('.'))
       .filter(({ path, specifier }) => !resolve(dirname(path), specifier).startsWith(root + sep))
       .map(({ file, specifier }) => `${file}: ${specifier}`);

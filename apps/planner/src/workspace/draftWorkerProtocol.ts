@@ -5,7 +5,7 @@ import {
   draftProject,
   type DraftResult,
   type DraftSpec,
-} from '@run-planner/engine/simulation';
+} from '@run-planner/draft';
 
 /** A draft result reduced to what applying it needs: the command and the report. */
 export type DraftRunOutcome =

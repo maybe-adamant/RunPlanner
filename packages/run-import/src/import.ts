@@ -15,9 +15,8 @@ import {
   type ProjectEvaluationAssembly,
   simulateProjectAssembly,
   type SemanticFinding,
-  createDraftIssueRepairer,
-  type DraftIssueRepairer,
 } from '@run-planner/engine/simulation';
+import { createDraftIssueRepairer, type DraftIssueRepairer } from '@run-planner/draft';
 import type { RunRecord } from './run-record/model';
 import { answerNemesis, guessNemesisEvent } from './nemesis';
 import { occurrenceIdOf, RecordOccurrences } from './occurrences';

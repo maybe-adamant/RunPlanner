@@ -18,6 +18,7 @@ The repository is split by ownership:
 ```text
 packages/hades2-catalog   Hades II declarations and catalog construction
 packages/planner-engine   pure authored model, reward kernel, simulation, and validation
+packages/draft            Draft mode: drafting a random valid route from a described world
 packages/run-import       run record and its import into an authored project
 apps/planner              application composition, Redux session state, and React UI
 game-module               Hades II Lua module that executes published plans
@@ -68,8 +69,11 @@ Planner engine:
   resolving and preparing a room's encounters.
 - [Candidate evaluation model](docs/design/CANDIDATE_EVALUATION_MODEL.md): how
   contextual alternatives are evaluated.
+
+Draft:
+
 - [Draft mode](docs/design/DRAFT_MODE.md): drafting a random valid route from a
-  described world.
+  described world, as a downstream consumer of the engine.
 
 Planner application and editor:
 
@@ -262,6 +266,7 @@ npm run test:planner   # planner, UI, architecture, and workspace support
 npm run test:contract  # application architecture and workspace contracts
 npm run test:product   # browser product loops
 npm run test:engine    # authored model, simulator, and validation
+npm run test:draft     # Draft spec, basket, steering, walk, and report
 npm run test:run-import  # run record, its import, and the app recorder
 npm run test:catalog   # declaration and catalog construction
 npm run test:game-module  # game module Lua syntax, tests, and Luacheck

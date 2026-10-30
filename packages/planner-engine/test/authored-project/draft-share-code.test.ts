@@ -14,7 +14,6 @@ import {
   undoProjectHistory,
   type DraftShareInputs,
 } from '@run-planner/engine/authored-project';
-import { draftProject, type DraftSpec } from '@run-planner/engine/simulation';
 import { createDefaultAuthoredHexTree } from '../../src/authored-project/traits/hex-tree';
 import { hexNodeTalentDomain } from '../../src/authored-project/traits/hex-talent-tree';
 
@@ -352,41 +351,5 @@ describe('draft share codes', () => {
     );
     expect(projectDraftShareInputs(history.present)).toEqual(surface);
     expect(undoProjectHistory(history).present).toBe(base);
-  });
-
-  it('drafts the same plan from a decoded code', () => {
-    const inputs: DraftShareInputs = {
-      ...underworld,
-      configuredBiomeCount: 1,
-      draft: {
-        ...freshFile.draft,
-        godKeys: ['Zeus', 'Apollo', 'Hestia'],
-        basketByGiver: { Zeus: ['ZeusWeaponBoon'] },
-      },
-    };
-    const draftOf = (source: DraftShareInputs) => {
-      const history = applyProjectHistoryCommands(
-        createProjectHistory(project(source.routeKey)),
-        catalog,
-        draftShareCommands(catalog, project(source.routeKey), source),
-      );
-      const { aspectHexTree: _hex, ...loadout } = source.loadout;
-      void _hex;
-      const spec: DraftSpec = {
-        loadout,
-        world: {
-          godKeys: source.draft.godKeys,
-          storyNpcByBiome: source.draft.storyNpcByBiome,
-          fieldNpcsByBiome: source.draft.fieldNpcsByBiome,
-        },
-        basketByGiver: source.draft.basketByGiver,
-        rackKeepsakeKeys: [null, null, null],
-      };
-      const result = draftProject(catalog, history.present, spec, source.draft.seed);
-      if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
-      return result.project;
-    };
-    const code = encodeDraftShareCode(catalog, inputs);
-    expect(draftOf(decoded(code))).toEqual(draftOf(inputs));
   });
 });

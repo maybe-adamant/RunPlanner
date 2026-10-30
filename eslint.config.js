@@ -22,9 +22,15 @@ const engineBoundaryImports = [
   ...platformImports,
   '@run-planner/hades2-catalog',
   ...plannerApplicationImportPatterns,
+  '@run-planner/draft',
+  '@run-planner/draft/**',
   '@run-planner/run-import',
   '@run-planner/run-import/**',
 ];
+const draftBoundaryImports = {
+  group: ['@run-planner/run-import', '@run-planner/run-import/**'],
+  message: 'Draft never imports the run import.',
+};
 const engineConsumerPackageImports = [
   { group: [...platformImports, ...plannerApplicationImportPatterns] },
   {
@@ -460,6 +466,30 @@ export default tseslint.config(
             },
           ],
         },
+      ],
+    },
+  },
+  {
+    files: ['packages/draft/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            ...engineConsumerPackageImports,
+            draftBoundaryImports,
+            { group: ['@run-planner/hades2-catalog', '@run-planner/hades2-catalog/**'] },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['packages/draft/test/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [...engineConsumerPackageImports, draftBoundaryImports] },
       ],
     },
   },

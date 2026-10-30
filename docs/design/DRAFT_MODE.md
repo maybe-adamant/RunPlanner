@@ -1,12 +1,15 @@
 # Draft Mode
 
 Draft Mode fills a route with a random plan inside a user-described world. The
-engine owns all of it: the spec's world options, static basket legality with
-its caps and refusals, the search and its biome walk, the encounter post pass
-and the report. The application only runs it in a worker and applies the result
-as one `ReplaceRoute`. Option ranges and defaults live in `DRAFT_OPTIONS`;
-steering weights live in the draft steering code. This document owns their
-meaning.
+Draft package (`packages/draft`) owns all of it: the spec's world options,
+static basket legality with its caps and refusals, the search and its biome
+walk, the encounter post pass and the report. It is a downstream consumer of
+the engine: it authors through the engine's declared authoring session,
+candidates and queries, while the persisted spec and its share code stay in the
+engine's authored model. The application only runs it in a worker and applies
+the result as one `ReplaceRoute`. Option ranges and defaults live in the
+engine's `DRAFT_OPTIONS`; steering weights live in the Draft package's steering
+code. This document owns their meaning.
 
 ## Best-Effort Contract
 
@@ -86,7 +89,7 @@ host's per-god cap, and when the host's queue reaches it before its
 prerequisites are held the host takes its next trait and returns to the Duo
 once they are.
 
-Caps are engine-owned and scale with the plan. The god boon cap sums each
+Caps are Draft-owned and scale with the plan. The god boon cap sums each
 planned biome's planned god boons, less one per biome under Forfeit; Hermes and
 Hammer share one cap equal to the planned biome count, and each also keeps its
 own cap. An over-budget basket is

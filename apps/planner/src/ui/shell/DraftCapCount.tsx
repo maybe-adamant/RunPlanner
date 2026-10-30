@@ -1,4 +1,4 @@
-import type { DraftCapUsage } from '@run-planner/engine/simulation';
+import type { DraftCapUsage } from '@run-planner/draft';
 
 /** A basket cap's use, such as 3/12; accented once the cap is reached. */
 export function DraftCapCount({ cap }: { readonly cap: DraftCapUsage | undefined }) {

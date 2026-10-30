@@ -20,10 +20,14 @@ This is the engine entry document. Detailed contracts have narrower owners:
 | [Candidate Evaluation Model](CANDIDATE_EVALUATION_MODEL.md) | Exact alternative queries and repair capabilities                          |
 | [Execution Protocol](EXECUTION_PROTOCOL.md)                 | Engine-owned execution products and downstream responsibilities            |
 | [Run-Start Installation](RUN_START_INSTALLATION.md)         | Start installations, loadout, run modifiers and snap mode                  |
-| [Draft Mode](DRAFT_MODE.md)                                 | Draft spec meaning, search contract, steering and share codes              |
 
 This document owns their composition, evaluation coverage, finding chronology,
 readiness and the explicit handoffs that keep these authorities coherent.
+
+[Draft Mode](DRAFT_MODE.md) and the run import are downstream consumers, not
+engine stages: they author plans through the engine's declared entries
+(authoring session, candidates and queries) and own no game legality. The
+engine keeps the persisted Draft settings and share code in its authored model.
 
 ## Engine Neighborhoods
 
@@ -55,7 +59,6 @@ flowchart TD
   C --> D["Findings and readiness<br/>first blocking region, selected cut, authoring readiness"]
   D --> E1["Candidates"]
   D --> E2["Execution plan"]
-  D --> E3["Draft"]
 ```
 
 Stages: [materialization](#materialization-products) and
@@ -64,8 +67,8 @@ Stages: [materialization](#materialization-products) and
 [settlement handoffs](#settlement-handoffs);
 [first blocking region](#first-blocking-region),
 [selected cut](#selected-cut) and [authoring readiness](#authoring-readiness);
-[candidates](CANDIDATE_EVALUATION_MODEL.md),
-[execution plan](EXECUTION_PROTOCOL.md) and [draft](DRAFT_MODE.md).
+[candidates](CANDIDATE_EVALUATION_MODEL.md) and
+[execution plan](EXECUTION_PROTOCOL.md).
 
 These are responsibilities, not independent passes that may be freely reordered.
 Reward acquisitions can affect later generation, and generation determines

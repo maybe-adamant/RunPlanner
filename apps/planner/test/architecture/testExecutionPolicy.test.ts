@@ -201,7 +201,7 @@ describe('repository test execution policy', () => {
       'utf8',
     );
     const equivalenceFile = "'packages/planner-engine/test/equivalence/equivalence.test.ts'";
-    const draftCorpusFiles = "'packages/planner-engine/test/draft-corpus/**/*.test.ts'";
+    const draftCorpusFiles = "'packages/draft/test/draft-corpus/**/*.test.ts'";
     const draftCorpusConfig = readFileSync(
       `${repositoryRoot}/vitest.draft-corpus.config.ts`,
       'utf8',

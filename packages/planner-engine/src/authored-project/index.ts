@@ -23,13 +23,17 @@ export type {
 } from './model';
 export { resolveRoutePosition, type ResolvedRoutePosition } from './route-context';
 export {
+  biomeStartRoomGameNames,
+  resolveBiomeStart,
   routeErisHost,
   routeHasKeepsakeRack,
   routeInitialProfile,
   routePurgingPool,
   routeRoomDeclaration,
   routeRoomShop,
+  routeSaveFileGodHistory,
 } from './route-profile';
+export { customizationDecisionOnRoute } from './room-state/encounter-customization';
 export {
   assessPublicDreamItinerary,
   type DreamItineraryAssessment,

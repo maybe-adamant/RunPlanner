@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction, type Reducer } from '@reduxjs/toolkit';
-import type { DraftRefusal, DraftReport } from '@run-planner/engine/simulation';
+import type { DraftRefusal, DraftReport } from '@run-planner/draft';
 
 import { authoredProjectReplaced } from './projectWorkspaceSlice';
 

@@ -30,7 +30,7 @@ import {
   type DraftSpec,
   type DraftTraitAssessment,
   type DraftWorldOptions,
-} from '@run-planner/engine/simulation';
+} from '@run-planner/draft';
 
 /** A Postboss rack slot; a slot without its own choice inherits the previous keepsake. */
 export interface DraftRackSlot {

@@ -284,6 +284,7 @@ export {
   type GeneratedEncounterAssessment,
   type GeneratedEncounterIssue,
   type InfiniteRosterAssessment,
+  type GeneratedEncounterCandidateCapability,
   type InfiniteRosterCandidateCapability,
   type InfiniteRosterIssue,
   type ResolvedEncounterPhase,
@@ -396,6 +397,7 @@ export {
   type RunStateEffects,
   type DecisionTraitState,
 } from './rewards';
+export type { RewardProducerCandidateResult } from './rewards/producer-frontiers';
 export {
   heldKeepsakeRanks,
   keepsakesAfterCurrentKeepsakeAdvance,
@@ -663,74 +665,13 @@ export {
   type TraitRequirementFailure,
 } from './traits/authoring/route-start-requirements';
 export type { AssessmentIssue } from './assessment-issue';
-export { findingsAddedSince } from './finding-regions';
+export { assessmentRepairOwner, findingsAddedSince } from './finding-regions';
 
 export {
   settleProjectEdit,
   type ProjectEditSettlement,
   type SettlementFault,
 } from './edit-settlement';
-export {
-  draftBasketTraitKeys,
-  draftKeepsakeOptions,
-  draftPlannedBiomeKeys,
-  forcesGod,
-  type DraftKeepsakeOptions,
-  type DraftLoadout,
-  type DraftRoute,
-  type DraftSpec,
-  type DraftWorld,
-} from './draft/spec';
-export { draftRefusals, type DraftRefusal } from './draft/refusals';
-export { createDraftIssueRepairer, type DraftIssueRepairer } from './draft/repair';
-export {
-  draftDefaultPerGodCap,
-  draftGodBoonBudget,
-  type DraftGodBoonBiome,
-  type DraftGodBoonBudget,
-} from './draft/budget';
-export {
-  assessDraftGods,
-  draftGodRules,
-  type DraftGodRules,
-  draftWorldGiverKeys,
-  draftWorldOptions,
-  type DraftGodAssessment,
-  type DraftGodRefusal,
-  type DraftBiomeWorldOptions,
-  type DraftFieldNpcOption,
-  type DraftNpcOption,
-  type DraftWorldOptions,
-} from './draft/world';
-export {
-  assessDraftBasket,
-  draftExcludingTraitKeys,
-  draftSourceQueues,
-  draftFirstBoonRule,
-  draftPendingFirstPick,
-  type DraftFirstBoonRule,
-  type DraftSourceQueue,
-  type DraftBasketAssessment,
-  type DraftBasketCaps,
-  type DraftCapUsage,
-  type DraftGiverCapUsage,
-  type DraftTraitAssessment,
-  type DraftTraitKind,
-  type DraftTraitRefusal,
-} from './draft/basket';
-export {
-  DEFAULT_DRAFT_BUDGET,
-  draftProject,
-  type DraftBudget,
-  type DraftResult,
-} from './draft/generator';
-export {
-  draftReport,
-  type DraftExtra,
-  type DraftReport,
-  type DraftTargetKind,
-  type DraftTargetResult,
-} from './draft/report';
 export type { RequirementEvaluationEvidence } from '../requirements/evidence';
 export type {
   RewardOfferExclusionEvidence,
