@@ -117,6 +117,9 @@ function divergentOutcomeLandingFault(
   return undefined;
 }
 
+/** The fixed reroll pool refusing a new spend; known only once the edit is evaluated. */
+class RerollPoolRefusal extends ProjectCommandContractError {}
+
 interface ProjectEditSettlementOptions {
   readonly catalog: Catalog;
   readonly before: ProjectEvaluationAssembly;
@@ -234,7 +237,7 @@ function settleProjectEditRepairs(options: ProjectEditSettlementOptions): Projec
         ([owner, excess]) => spendOwners.has(owner) && excess > (prior.get(owner) ?? 0),
       )
     )
-      throw new ProjectCommandContractError(
+      throw new RerollPoolRefusal(
         command.kind,
         projectCommandAddress(command),
         'the reroll pool has nothing left for this spend',
@@ -403,8 +406,13 @@ export function settleCommandUnlessRefused(
       },
     });
   } catch (error) {
-    // A refusal before anything is evaluated is the command's own; later ones are engine defects.
-    if (error instanceof ProjectCommandContractError && !evaluated) return undefined;
+    // A refusal before anything is evaluated is the command's own, as is the
+    // reroll pool's; other later ones are engine defects.
+    if (
+      error instanceof ProjectCommandContractError &&
+      (!evaluated || error instanceof RerollPoolRefusal)
+    )
+      return undefined;
     throw error;
   }
   return settled.assembly.project === before.project ? undefined : settled.assembly;

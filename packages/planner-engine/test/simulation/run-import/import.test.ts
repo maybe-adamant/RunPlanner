@@ -1525,6 +1525,21 @@ describe('run import of Rarify clicks and rows a held rarify source logged one r
     ).toEqual([]);
   });
 
+  it('reports a screen reroll the reroll pool cannot pay as refused', () => {
+    // O_Combat07's Poseidon screen rerolled once with no reroll card held.
+    const record = oceanusOpening();
+    const imported = projectFromRunRecord(catalog, {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index === 21 ? { ...room, spentRerolls: { '2000001': 1 } } : room,
+      ),
+    });
+    expect(
+      imported.report.entries.filter((entry) => entry.area === 'reroll').map(describeEntry),
+    ).toEqual([expect.stringMatching(/^refused reroll r21 traitOffer@O-r21:source /)]);
+    expect(screenOffer(imported, 'O-r21')).not.toHaveProperty('rerolledScreens');
+  });
+
   it("clicks the Conch Shell's charge on a rerolled-away screen when the final one cannot take it", () => {
     // The Surface victory with The Champions held in Strength's place and
     // O_Combat07's Poseidon screen rerolled once; its final rows all logged
