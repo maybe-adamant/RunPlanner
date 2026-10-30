@@ -123,14 +123,15 @@ An export exists for a consumer that needs it now.
 
 ## Enforcement
 
-- **ESLint** blocks, for each consumer package's source and tests, planner
-  application, platform and deep engine imports, relative imports that climb
-  out of the package, and the catalog implementation in source (tests may
-  construct a catalog). Draft additionally may not import the run import, and
-  the engine may import none of its consumers.
+- **ESLint** bans, by import specifier, for each consumer package's source
+  and tests, planner application, platform and deep engine imports and the
+  catalog implementation in source (tests may construct a catalog). Draft
+  additionally may not import the run import, and the engine may import none
+  of its consumers.
 - **The planner's package boundary architecture test**
-  (`apps/planner/test/architecture/packageBoundaries.test.ts`) checks that
-  every engine specifier is a declared entry, relative imports stay inside
-  their package, the package graph follows the direction above, and every
+  (`apps/planner/test/architecture/packageBoundaries.test.ts`) owns relative
+  escapes and dependency direction: every engine specifier is a declared
+  entry, the relative imports of every package and the application stay inside
+  their own root, the package graph follows the direction above, and every
   import is a declared dependency. The pure package import graph test keeps
   each consumer package's source free of runtime import cycles.

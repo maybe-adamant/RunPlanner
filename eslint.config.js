@@ -37,10 +37,6 @@ const engineConsumerPackageImports = [
     group: ['**/planner-engine', '**/planner-engine/**', '@run-planner/engine/*/**'],
     message: 'Use the declared @run-planner/engine entries.',
   },
-  {
-    group: ['../../../**'],
-    message: 'Relative imports stay inside their package.',
-  },
 ];
 const catalogSchemaImportPatterns = [
   '../catalog-schema',

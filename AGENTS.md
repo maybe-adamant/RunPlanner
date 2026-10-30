@@ -25,7 +25,11 @@ in-game acceptance checklists in `docs/testing/`.
 
 ```text
 catalog construction -> pure core <- application composition -> React UI
+hades2-catalog -> planner-engine <- draft <- run-import <- apps/planner
 ```
+
+The second line is the workspace package graph; Draft and the run import are
+pure engine consumers that the application composes.
 
 The pure core may define the normalized interfaces it consumes, but it must
 not import React, Redux, Tauri, browser APIs, filesystem APIs, or UI component

@@ -51,8 +51,13 @@ const allowedTestPackages: Readonly<Record<string, readonly string[]>> = {
 };
 /** Packages that consume the engine only through its declared entries. */
 const engineConsumers = ['packages/draft', 'packages/run-import', 'apps/planner'];
-/** Packages whose relative imports stay inside their own root. */
-const consumerPackages = ['packages/draft', 'packages/run-import'];
+/**
+ * Every lane's relative imports stay inside its own root, so a relative path cannot bypass the
+ * dependency direction or the engine's declared entries.
+ */
+const relativeImportRoots = Object.keys(allowedSourcePackages);
+/** Tests may run the repository's offline schema migration tool on legacy documents. */
+const schemaMigrationTool = join(repositoryRoot, 'schema', 'migrate-project.js');
 
 function sourceFiles(directory: string): readonly string[] {
   if (!existsSync(directory)) return [];
@@ -123,12 +128,17 @@ describe('workspace package boundaries', () => {
     expect(undeclared).toEqual([]);
   });
 
-  it.each(consumerPackages)('keeps every %s relative import inside its package', (directory) => {
+  it.each(relativeImportRoots)('keeps every %s relative import inside its package', (directory) => {
     const root = join(repositoryRoot, directory);
-    const escaping = [...imports(directory, 'src'), ...imports(directory, 'test')]
-      .filter(({ specifier }) => specifier.startsWith('.'))
-      .filter(({ path, specifier }) => !resolve(dirname(path), specifier).startsWith(root + sep))
-      .map(({ file, specifier }) => `${file}: ${specifier}`);
+    const escapes = (tree: 'src' | 'test') =>
+      imports(directory, tree)
+        .filter(({ specifier }) => specifier.startsWith('.'))
+        .map((entry) => ({ ...entry, target: resolve(dirname(entry.path), entry.specifier) }))
+        .filter(({ target }) => !target.startsWith(root + sep));
+    const escaping = [
+      ...escapes('src'),
+      ...escapes('test').filter(({ target }) => target !== schemaMigrationTool),
+    ].map(({ file, specifier }) => `${file}: ${specifier}`);
 
     expect(escaping).toEqual([]);
   });

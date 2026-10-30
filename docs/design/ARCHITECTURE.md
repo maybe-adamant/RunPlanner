@@ -2,11 +2,12 @@
 
 ## Purpose and Reading Map
 
-Run Planner is an authoring and simulation application. Its three planner
-ownership lanes are the Hades II catalog, the pure planner engine, and the
-planner application; the Hades II game module in `game-module/` is a fourth,
-downstream lane. This document explains their relationship and how to extend
-them without creating parallel policy.
+Run Planner is an authoring and simulation application. Its five planner
+ownership lanes are the Hades II catalog, the pure planner engine, the Draft
+and run-import consumer packages, and the planner application; the Hades II
+game module in `game-module/` is a sixth, downstream lane. This document
+explains their relationship and how to extend them without creating parallel
+policy.
 
 Start with the lane that owns the question:
 
