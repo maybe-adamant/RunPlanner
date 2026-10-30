@@ -8,6 +8,7 @@ import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createRewardWheelOfferAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   type OccurrenceId,
   type ProjectCommand,
@@ -29,6 +30,7 @@ import {
 } from '../../../src/simulation/run-import/conformance';
 import { answerCarrierChild } from '../../../src/simulation/run-import/carrier-children';
 import { RunImportWalk } from '../../../src/simulation/run-import/import';
+import { recordedRarifySpends } from '../../../src/simulation/run-import/rarify';
 import {
   projectFromRunRecord,
   simulateProjectAssembly,
@@ -1507,6 +1509,24 @@ describe('run import of Rarify clicks and rows a held rarify source logged one r
     expect(
       mismatchLines(imported.report).filter((line) => line.includes('RarifyKeepsake')),
     ).toEqual([]);
+  });
+
+  it("reads a room's spent charges from the plan each walk holds, not an earlier import of its record", () => {
+    const record = heirloomRoom('Rare', 5);
+    const imported = projectFromRunRecord(catalog, record);
+    const spends = (project: ProjectDocument) =>
+      recordedRarifySpends(
+        new RunImportWalk(catalog, record, simulateProjectAssembly(catalog, project), []).context,
+        7,
+      );
+    // With the Phial held instead, the Heirloom advances no charges: the Card's rise is no spend.
+    const phial = applyProjectCommand(imported.project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress(imported.project.route.routeKey),
+      keepsakeKey: 'FountainRarityKeepsake',
+    });
+    expect(spends(phial)).toEqual(new Map());
+    expect(spends(imported.project)).toEqual(new Map([['RarifyKeepsake', 1]]));
   });
 
   it('authors no click in a Cherished Heirloom room whose charges rose by its rank advance', () => {

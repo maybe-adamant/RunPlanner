@@ -5,15 +5,12 @@ import type {
   TraitOptionKey,
 } from '../../authored-project';
 import type { Catalog, TraitRarity } from '../../catalog-schema';
-import type { RunRecord } from '../../run-record/model';
 import type { EvaluatedTraitOfferCandidate } from '../candidates';
 import { advanceCurrentKeepsake } from '../keepsakes/state';
 import { entrySnapshot, rarifyCharges, recordedEntryStates } from './conformance';
 import type { RunImportContext } from './import';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
-
-const spendsByRecord = new WeakMap<RunRecord, Map<number, ReadonlyMap<string, number>>>();
 
 /**
  * Charges the room's own non-click gain adds to each source: the plan's
@@ -50,16 +47,13 @@ function rarifyGains(
  * shares no room with a screen) is not a spend, a slotted source swapped away
  * leaves its spend unknown, and an unslotted one that vanished spent to zero.
  * Choosing a keepsake that opposes Fated zeroes Calling Card without a click.
+ * The gain reads the plan's current state, so the spends are read afresh.
  */
-function recordedRarifySpends(
+export function recordedRarifySpends(
   context: RunImportContext,
   roomIndex: number,
 ): ReadonlyMap<string, number> {
   const { catalog, record } = context;
-  let byRoom = spendsByRecord.get(record);
-  if (byRoom === undefined) spendsByRecord.set(record, (byRoom = new Map()));
-  const cached = byRoom.get(roomIndex);
-  if (cached !== undefined) return cached;
   const spent = new Map<string, number>();
   const states = recordedEntryStates(record);
   const before = states[roomIndex];
@@ -93,7 +87,6 @@ function recordedRarifySpends(
       continue;
     spent.set(name, held - left);
   }
-  byRoom.set(roomIndex, spent);
   return spent;
 }
 
