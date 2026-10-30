@@ -458,9 +458,27 @@ export function solveWheelOffers(context: RunImportContext): boolean {
   return closed;
 }
 
-/** Whether the solve has taken up a ship room's window. */
+/** Whether the solve has taken up a ship room's window, or the walk ended with it open. */
 export const wheelsSolved = (context: RunImportContext, roomIndex: number) =>
-  context.used.has(`wheelSolve:${roomIndex}`);
+  context.used.has(`wheelSolve:${roomIndex}`) || context.used.has(`wheelOpen:${roomIndex}`);
+
+/**
+ * Releases what entered ship rooms still hold for a window that can no longer
+ * close, once the walk would end: it is authored on the canonical split, as
+ * the provisional sides stand. Returns whether any room was released.
+ */
+export function releaseOpenWheelWindows(context: RunImportContext): boolean {
+  let released = false;
+  for (const roomIndex of context.record.rooms.keys())
+    if (
+      wheelAuthoringWaits(context, roomIndex) &&
+      context.entered(context.occurrences.occurrenceOf(roomIndex))
+    ) {
+      context.used.add(`wheelOpen:${roomIndex}`);
+      released = true;
+    }
+  return released;
+}
 
 /**
  * Whether what a ship room generates from its wheel picks waits for the solve:

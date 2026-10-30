@@ -1021,6 +1021,47 @@ describe('run import of the Surface victory', () => {
     });
   });
 
+  it("authors a mixed-side ship's Sea Star duplicate on the canonical split when its window never closes", () => {
+    // As above, but O_Combat12's exit names a door the ship cannot offer, so O_MiniBoss01 is never entered.
+    const open: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index === 23
+          ? {
+              ...room,
+              exit: 'F_Boss01',
+              doors: room.doors.map((door) => ({ ...door, room: 'F_Boss01' })),
+              uses: {
+                ...Object.fromEntries(
+                  Object.entries(room.uses).filter(([name]) => name !== 'ShipsSteeringWheelRight'),
+                ),
+                ShipsSteeringWheelLeft: 1,
+                ShipsSteeringWheelRight: 1,
+              },
+              wheels: room.wheels!.map(({ store, picked, offers }): RunRecordWheel => ({
+                store,
+                picked,
+                ...(offers === undefined ? {} : { offers }),
+              })),
+            }
+          : room,
+      ),
+    };
+    const result = projectFromRunRecord(catalog, open);
+    expect(seaStarDuplicates(result.project, 'O-r23')).toHaveLength(1);
+    // The unsettled sides and offers stay provisional, each reported.
+    expect(
+      result.report.entries
+        .filter((entry) => entry.area === 'wheel' && entry.record?.roomIndex === 23)
+        .map((entry) => `${entry.reason} ${entry.address?.kind}`),
+    ).toEqual([
+      'notInRecord rewardWheel',
+      'notInRecord rewardWheel',
+      'notInRecord rewardWheelOffer',
+      'notInRecord rewardWheelOffer',
+    ]);
+  });
+
   it('reports a wheel window whose saved stores no assignment reproduces', () => {
     // The game's RunProgress lost one more StackUpgrade across O_Combat12 than its two unpicked offers explain.
     const states = recordedEntryStates(record);

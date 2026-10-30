@@ -48,6 +48,7 @@ import {
   answerWheels,
   importWheelConversions,
   importWheels,
+  releaseOpenWheelWindows,
   solveWheelOffers,
   unsolvedWheels,
 } from './wheels';
@@ -473,6 +474,8 @@ export class RunImportWalk {
         importMaxHealthRolls(this.context);
       }
       const issue = this.assembly.evaluation.issue;
+      // A ship window still open as the walk ends never closes; its waiting pickups are authored.
+      if (issue === undefined && releaseOpenWheelWindows(this.context)) continue;
       if (issue === undefined) {
         // Ordering by trait times runs once the plan is complete; a question it reveals is answered next.
         if (!ordered) {
@@ -511,6 +514,7 @@ export class RunImportWalk {
         this.guess(reason, refused.has(key) ? 'refused' : 'notInRecord')
       )
         continue;
+      if (releaseOpenWheelWindows(this.context)) continue;
       const record = this.occurrences.locationOf(reason.origin);
       return {
         area: areaOfFinding(reason),

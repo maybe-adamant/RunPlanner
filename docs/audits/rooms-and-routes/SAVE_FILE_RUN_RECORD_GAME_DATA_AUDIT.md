@@ -705,7 +705,9 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   applies the conversions to its own picks before the stores compare, and the
   conversions' draws count as known in the arithmetic. When the window never
   closes or nothing fits, each wheel's canonical side is reported the same
-  way, and the conversions act on the canonical picks.
+  way, and the conversions act on the canonical picks; a window still open
+  when the walk ends releases the trait pickups and Sea Star duplicates
+  waiting on it onto the canonical picks.
 - A hidden return door's placeholder and reward are pinned exactly from the
   return door's `ExitDoorRooms` and `OfferedRewards`.
 - A batch's doors are paired with the source room's exits as the engine's
