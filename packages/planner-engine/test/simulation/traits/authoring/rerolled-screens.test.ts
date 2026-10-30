@@ -1,6 +1,11 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  createBiomeAddress,
+  createIncomingRewardAddress,
+  createLevelResolutionAddress,
+  createOccurrenceId,
   rerolledTraitScreenSnapshot,
+  semanticAddressKey,
   type AuthoredRerolledTraitScreen,
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
@@ -22,7 +27,7 @@ import {
 } from '../../../../src/simulation/traits/authoring/initial-composition';
 import { traitOfferGenerationInput } from '../../../../src/simulation/traits/authoring/assessment';
 import { isPomEligibleTrait } from '../../../../src/simulation/traits/history/upgrades';
-import { rerolledLevelScreensGuess } from '../../../../src/simulation/traits/level-effects';
+import { createLevelResolutionCandidateArtifacts } from '../../../../src/simulation/candidates/trait-offer/capability';
 import { traitFrontierState } from '../../../support/simulation-state';
 
 function history(entries: readonly [string, string, string][]): TraitHistoryState {
@@ -478,11 +483,39 @@ describe('Pom level screens', () => {
   });
 
   it('guess a chain that never repeats the screen before, and none with nothing left', () => {
-    const pool = ['A', 'B', 'C', 'D'];
-    const guess = rerolledLevelScreensGuess(pool, ['A', 'B', 'C'], 3);
-    const screens = [...guess!.map((screen) => screen.offeredTraitKeys), ['A', 'B', 'C']];
+    const address = createLevelResolutionAddress(
+      createIncomingRewardAddress(
+        createBiomeAddress('Underworld', 'F'),
+        createOccurrenceId('pom-test'),
+      ),
+      'self',
+    );
+    const pomCapability = (before: TraitHistoryState) =>
+      createLevelResolutionCandidateArtifacts(
+        catalog,
+        new Map([
+          [
+            semanticAddressKey(address),
+            [{ address, before, levelCount: 1, effectKind: 'choice' as const }],
+          ],
+        ]),
+      ).at(address)!;
+    const held: [string, string, string][] = [
+      ['Apollo', 'ApolloWeaponBoon', 'Common'],
+      ['Apollo', 'ApolloSpecialBoon', 'Common'],
+      ['Apollo', 'ApolloCastBoon', 'Common'],
+      ['Apollo', 'ApolloManaBoon', 'Common'],
+    ];
+    const four = pomCapability(history(held));
+    expect(four.branches[0]!.eligibleTargetTraitKeys).toHaveLength(4);
+    const final = four.branches[0]!.eligibleTargetTraitKeys.slice(0, 3);
+    const guess = four.rerolledScreensGuess(0, final, 3);
+    const screens = [...guess!.map((screen) => screen.offeredTraitKeys), final];
     for (let index = 1; index < screens.length; index += 1)
       expect([...screens[index]!].sort()).not.toEqual([...screens[index - 1]!].sort());
-    expect(rerolledLevelScreensGuess(['A', 'B', 'C'], ['A', 'B', 'C'], 1)).toBeUndefined();
+    const three = pomCapability(history(held.slice(0, 3)));
+    expect(
+      three.rerolledScreensGuess(0, three.branches[0]!.eligibleTargetTraitKeys, 1),
+    ).toBeUndefined();
   });
 });

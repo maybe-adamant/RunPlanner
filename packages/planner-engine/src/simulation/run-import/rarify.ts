@@ -6,7 +6,7 @@ import type {
 } from '../../authored-project';
 import type { Catalog, TraitRarity } from '../../catalog-schema';
 import type { EvaluatedTraitOfferCandidate } from '../candidates';
-import { advanceCurrentKeepsake } from '../keepsakes/state';
+import { keepsakesAfterCurrentKeepsakeAdvance } from '../rewards/run-state-conformance';
 import { entrySnapshot, rarifyCharges, recordedEntryStates } from './conformance';
 import type { RunImportContext } from './import';
 
@@ -29,7 +29,7 @@ function rarifyGains(
   if (advance === undefined) return new Map();
   const keepsakes = entrySnapshot(context.assembly(), context.occurrences, roomIndex)?.keepsakes;
   if (keepsakes === undefined) return undefined;
-  const advanced = advanceCurrentKeepsake(catalog, keepsakes, advance.rankBonus);
+  const advanced = keepsakesAfterCurrentKeepsakeAdvance(catalog, keepsakes, advance.rankBonus);
   const gains = new Map<string, number>();
   const key = keepsakes.currentKey;
   if (key !== null) {

@@ -28,7 +28,6 @@ import {
   completeRecordedCarrierChildren,
   type RecordedCarrierChildReport,
 } from './carrier-children';
-import { rerolledLevelScreensGuess } from '../traits/level-effects';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
@@ -195,8 +194,8 @@ export function answerLevelResolution(context: RunImportContext, reason: Semanti
           context.used.add(key);
           if (value.kind === 'choice')
             applyScreenRerolls(context, roomIndex, position, levelResolution, (count) => {
-              const screens = rerolledLevelScreensGuess(
-                capability.branches[branchIndex]!.eligibleTargetTraitKeys,
+              const screens = capability.rerolledScreensGuess(
+                branchIndex,
                 value.offeredTraitKeys,
                 count,
               );

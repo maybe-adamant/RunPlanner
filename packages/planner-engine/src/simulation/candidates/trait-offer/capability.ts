@@ -262,10 +262,42 @@ export interface LevelResolutionCandidateCapability {
   readonly evaluate: (
     value: AuthoredLevelResolution,
   ) => readonly LevelResolutionCandidateEvaluation[];
+  /** A guessed legal chain of the branch's Pom screens rerolled away before these final targets. */
+  readonly rerolledScreensGuess: (
+    branchIndex: number,
+    offeredTraitKeys: readonly string[],
+    count: number,
+  ) => readonly { readonly offeredTraitKeys: readonly string[] }[] | undefined;
 }
 
 export interface LevelResolutionCandidateArtifacts {
   readonly at: (address: LevelResolutionAddress) => LevelResolutionCandidateCapability | undefined;
+}
+
+/**
+ * A guessed chain of `count` Pom screens shown and rerolled away before these
+ * final rows. With more than three levellable boons every screen shows three
+ * and must not repeat the one before it, so the chain alternates a different
+ * three with the final ones and ends on the different three.
+ */
+function rerolledLevelScreensGuess(
+  pool: readonly string[],
+  finalOffered: readonly string[],
+  count: number,
+): readonly { readonly offeredTraitKeys: readonly string[] }[] | undefined {
+  if (count < 1 || pool.length <= 3) return undefined;
+  const outside = pool.find((traitKey) => !finalOffered.includes(traitKey));
+  if (outside === undefined) return undefined;
+  const other = Object.freeze([
+    outside,
+    ...pool.filter((traitKey) => traitKey !== outside).slice(0, 2),
+  ]);
+  const final = Object.freeze([...finalOffered]);
+  return Object.freeze(
+    Array.from({ length: count }, (_, index) =>
+      Object.freeze({ offeredTraitKeys: (count - 1 - index) % 2 === 0 ? other : final }),
+    ),
+  );
 }
 
 export function createLevelResolutionCandidateArtifacts(
@@ -344,6 +376,16 @@ export function createLevelResolutionCandidateArtifacts(
               });
             }),
           ),
+        rerolledScreensGuess: (
+          branchIndex: number,
+          offeredTraitKeys: readonly string[],
+          count: number,
+        ) => {
+          const surface = surfaces[branchIndex];
+          return surface === undefined
+            ? undefined
+            : rerolledLevelScreensGuess(surface.eligibleTargetTraitKeys, offeredTraitKeys, count);
+        },
       });
     },
   });

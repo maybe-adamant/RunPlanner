@@ -5,7 +5,7 @@ import {
 } from '../../authored-project/addresses';
 import type { Catalog } from '../../catalog-schema';
 import type { RunStateSnapshot } from './run-state';
-import type { KeepsakeState } from '../keepsakes/state';
+import { advanceCurrentKeepsake, type KeepsakeState } from '../keepsakes/state';
 import { projectStartKeepsake } from '../start-installation/projection';
 
 export interface PendingKeepsakeEffects {
@@ -120,6 +120,15 @@ export function heldKeepsakeRanks(catalog: Catalog, snapshot: RunStateSnapshot) 
     keepsakes: snapshot.keepsakes,
     traitHistory: { equippedTraits: snapshot.traits.equippedTraits },
   }).held;
+}
+
+/** The snapshot's keepsakes once a trait that advances the current keepsake is acquired. */
+export function keepsakesAfterCurrentKeepsakeAdvance(
+  catalog: Catalog,
+  keepsakes: RunStateSnapshot['keepsakes'],
+  rankBonus: 1,
+): RunStateSnapshot['keepsakes'] {
+  return advanceCurrentKeepsake(catalog, keepsakes, rankBonus);
 }
 
 function chaosValues(snapshot: RunStateSnapshot) {
