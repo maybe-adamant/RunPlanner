@@ -1,4 +1,10 @@
-export { createAuthoringSession, type AuthoringSession } from './session';
+export {
+  createAuthoringSession,
+  type AuthoringAdmission,
+  type AuthoringOutcome,
+  type AuthoringRefusal,
+  type AuthoringSession,
+} from './session';
 export {
   completeTraitCarrierChild,
   completeTraitCarrierChildren,
