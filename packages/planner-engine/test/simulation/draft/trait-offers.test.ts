@@ -39,7 +39,7 @@ function allowance(basketByGiver: DraftSpec['basketByGiver']) {
     steering,
     hooked: new Set(),
     project: () => base,
-    evaluate: unused,
+    candidates: unused,
     startingOutcome: unused,
     apply: unused,
     shuffle: (values) => [...values],

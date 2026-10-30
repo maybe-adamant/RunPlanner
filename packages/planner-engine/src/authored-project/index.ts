@@ -274,6 +274,7 @@ export {
   discoverAuthoredTraitCarrierPayloads,
   prepareEchoLastRunBoonDraft,
   updateAuthoredTraitCarrierChild,
+  withoutTraitCarrierChild,
   type AuthoredEchoLastRunBoonDraftRow,
   type AuthoredEchoLastRunBoonDraftChild,
   type AuthoredTraitCarrierChild,

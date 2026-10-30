@@ -175,7 +175,7 @@ export class DraftWalk {
       steering: this.steering,
       hooked: this.hooked,
       project: () => this.project,
-      evaluate: this.evaluate,
+      candidates: () => this.candidates(),
       startingOutcome: (trait, giverKey) =>
         this.candidates().traitOfferStartingOutcome(trait, giverKey),
       apply,

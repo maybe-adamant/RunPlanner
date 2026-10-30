@@ -1,41 +1,55 @@
-import type { Catalog, DirectTraitSetKey } from '../../catalog-schema';
+import type { Catalog, DirectTraitSetKey } from '../../../catalog-schema';
+import {
+  semanticAddressKey,
+  type SemanticAddress,
+  type TraitOfferAddress,
+} from '../../../authored-project/addresses';
 import {
   discoverAuthoredTraitCarrierChildren,
-  optionIndex,
-  semanticAddressKey,
   updateAuthoredTraitCarrierChild,
+  withoutTraitCarrierChild,
+  type AuthoredTraitCarrierChild,
+} from '../../../authored-project/traits/carrier-children';
+import {
+  optionIndex,
   type AuthoredAllTogetherResult,
   type AuthoredCirceResolution,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
-  type AuthoredTraitCarrierChild,
   type AuthoredTraitOfferTraits,
-  type AuthoredTraitOption,
   type OneToEight,
-  type TraitOfferAddress,
-} from '../../authored-project';
+} from '../../../authored-project/traits/state';
+import type { ProjectCandidateSession } from '../session';
 import type {
   EvaluatedDirectTraitOutcomeCandidate,
   TraitCarrierChildDomainEvaluation,
-  TraitCarrierChildDomainQuery,
-} from '../candidates/trait-offer/query';
+} from './query';
 
-/** What the walk lends the child pass: engine domains, its rng and its steering. */
-export interface DraftCarrierChildContext {
-  readonly catalog: Catalog;
-  readonly evaluate: (query: TraitCarrierChildDomainQuery) => TraitCarrierChildDomainEvaluation;
-  readonly shuffle: <T>(values: readonly T[]) => T[];
-  /** A trait a child would add to the run: Echo's replayed boon or Stone's residual row. */
+/** How a consumer chooses among the values a carrier child's engine domain allows. */
+export interface CarrierChildChoice {
+  /** Orders a domain's possible values; completion takes the first that settles. */
+  readonly order: <T>(values: readonly T[]) => readonly T[];
+  /** Whether a child may add this trait to the run: Echo's replayed boon, a Concave Stone residual row. */
   readonly allowsTrait: (traitKey: string) => boolean;
   readonly prefersTrait: (traitKey: string) => boolean;
-  /** The complete offer is supported with no finding. */
-  readonly supported: (value: AuthoredTraitOfferTraits) => boolean;
 }
+
+/** Each domain's values in engine order, every trait allowed, none preferred. */
+export const FIRST_ELIGIBLE_CARRIER_CHILD_CHOICE: CarrierChildChoice = Object.freeze({
+  order: <T>(values: readonly T[]) => [...values],
+  allowsTrait: () => true,
+  prefersTrait: () => false,
+});
 
 type Child<K extends AuthoredTraitCarrierChild['kind']> = Extract<
   AuthoredTraitCarrierChild,
   { readonly kind: K }
 >;
+
+type ChildDomain = (
+  current: AuthoredTraitOfferTraits,
+  of?: AuthoredTraitCarrierChild,
+) => TraitCarrierChildDomainEvaluation;
 
 /** Every child an offer can raise is at most a few nested picks deep. */
 const MAX_CHILD_PICKS = 16;
@@ -46,28 +60,53 @@ const childKey = (child: AuthoredTraitCarrierChild) =>
 const possible = <T>(candidates: readonly EvaluatedDirectTraitOutcomeCandidate<T>[]): T[] =>
   candidates.filter((candidate) => candidate.support !== 'impossible').map((c) => c.value);
 
-/**
- * Authors every selected-outcome child the offer raises with a random value from
- * its engine domain. `redo` names a child address to clear and pick again.
- */
-export function completeCarrierChildren(
-  context: DraftCarrierChildContext,
+/** Preferred values first, otherwise in the choice's order. */
+const preferredFirst = <T>(
+  choice: CarrierChildChoice,
+  values: readonly T[],
+  traitOf: (value: T) => string,
+): T[] =>
+  [...choice.order(values)].sort(
+    (a, b) => Number(choice.prefersTrait(traitOf(b))) - Number(choice.prefersTrait(traitOf(a))),
+  );
+
+/** The complete offer is supported with no finding. */
+function offerSupported(
+  candidates: ProjectCandidateSession,
   trait: TraitOfferAddress,
   value: AuthoredTraitOfferTraits,
-  redo?: string,
+): boolean {
+  const evaluation = candidates.evaluate({ kind: 'traitOffer', trait, value });
+  return (
+    evaluation.kind === 'traitOffer' &&
+    evaluation.result.supported &&
+    evaluation.result.findings.length === 0
+  );
+}
+
+/**
+ * Authors every selected-outcome child the offer raises with the first chosen
+ * value its engine domain settles. `redo` names a child to clear and author again.
+ */
+export function completeTraitCarrierChildren(
+  catalog: Catalog,
+  candidates: ProjectCandidateSession,
+  trait: TraitOfferAddress,
+  value: AuthoredTraitOfferTraits,
+  choice: CarrierChildChoice,
+  redo?: SemanticAddress,
 ): AuthoredTraitOfferTraits {
-  let current =
-    redo === undefined ? value : withoutCarrierChild(context.catalog, trait, value, redo);
+  let current = redo === undefined ? value : withoutTraitCarrierChild(catalog, trait, value, redo);
   const settled = new Set<string>();
   for (let pick = 0; pick < MAX_CHILD_PICKS; pick += 1) {
-    const child = discoverAuthoredTraitCarrierChildren(context.catalog, trait, current).find(
+    const child = discoverAuthoredTraitCarrierChildren(catalog, trait, current).find(
       (candidate) =>
         !candidate.authoredComplete &&
         candidate.kind !== 'hexTree' &&
         !settled.has(childKey(candidate)),
     );
     if (child === undefined) return current;
-    const next = completeCarrierChild(context, trait, current, child);
+    const next = completeTraitCarrierChild(catalog, candidates, trait, current, child, choice);
     if (next === undefined) return current;
     if (next === current) settled.add(childKey(child));
     current = next;
@@ -75,70 +114,26 @@ export function completeCarrierChildren(
   return current;
 }
 
-/** The option field each option-owned child is stored in. */
-const CHILD_FIELDS: Readonly<
-  Record<
-    Exclude<AuthoredTraitCarrierChild['kind'], 'hexTree' | 'concaveStone'>,
-    keyof AuthoredTraitOption
-  >
-> = {
-  traitAcquisitionTarget: 'targetTraitKey',
-  latestModelTargets: 'icarusHammerTargets',
-  allTogetherSet: 'allTogetherResult',
-  naturalSelectionResult: 'naturalSelectionTargets',
-  circeResolution: 'circeResolution',
-  echoPomTarget: 'echoPomTarget',
-  echoLastRunBoon: 'echoLastRunBoon',
-};
-
-/** The offer without the children at one child address, so they can be picked again. */
-export function withoutCarrierChild(
-  catalog: Catalog,
-  trait: TraitOfferAddress,
-  value: AuthoredTraitOfferTraits,
-  redo: string,
-): AuthoredTraitOfferTraits {
-  let current = value;
-  for (const child of discoverAuthoredTraitCarrierChildren(catalog, trait, value)) {
-    if (semanticAddressKey(child.address) !== redo || child.kind === 'hexTree') continue;
-    if (child.kind === 'concaveStone') {
-      const { concaveStoneResult: _result, ...rest } = current;
-      void _result;
-      current = rest;
-      continue;
-    }
-    const field = CHILD_FIELDS[child.kind];
-    const options = current.options.map((option, index) => {
-      if (index !== optionIndex(child.optionKey)) return option;
-      const cleared = { ...option };
-      delete cleared[field];
-      return cleared;
-    });
-    current = {
-      ...current,
-      options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-    };
-  }
-  return current;
-}
-
 /**
- * Authors one child with a random value from its engine domain; undefined when
- * the domain offers none, the offer itself when the child may stay unresolved.
+ * Authors one child with the first chosen value from its engine domain;
+ * undefined when the domain offers none, the offer itself when the child may
+ * stay unresolved.
  */
-export function completeCarrierChild(
-  context: DraftCarrierChildContext,
+export function completeTraitCarrierChild(
+  catalog: Catalog,
+  candidates: ProjectCandidateSession,
   trait: TraitOfferAddress,
   value: AuthoredTraitOfferTraits,
   child: AuthoredTraitCarrierChild,
+  choice: CarrierChildChoice,
 ): AuthoredTraitOfferTraits | undefined {
-  const domain = (current: AuthoredTraitOfferTraits, of: AuthoredTraitCarrierChild = child) =>
-    context.evaluate({ kind: 'traitCarrierChildDomain', trait, value: current, child: of });
+  const domain: ChildDomain = (current, of = child) =>
+    candidates.evaluate({ kind: 'traitCarrierChildDomain', trait, value: current, child: of });
   switch (child.kind) {
     case 'traitAcquisitionTarget': {
       const evaluated = domain(value);
       if (evaluated.kind !== 'traitAcquisitionTargetDomain') return undefined;
-      const targetTraitKey = context.shuffle(
+      const targetTraitKey = choice.order(
         evaluated.result.candidates.filter((c) => c.result.supported).map((c) => c.result.traitKey),
       )[0];
       return targetTraitKey === undefined
@@ -146,9 +141,9 @@ export function completeCarrierChild(
         : updateAuthoredTraitCarrierChild(value, { kind: child.kind, child, targetTraitKey });
     }
     case 'latestModelTargets':
-      return latestModel(context, value, child, domain);
+      return latestModel(choice, value, child, domain);
     case 'allTogetherSet': {
-      const sets = discoverAuthoredTraitCarrierChildren(context.catalog, trait, value).filter(
+      const sets = discoverAuthoredTraitCarrierChildren(catalog, trait, value).filter(
         (candidate): candidate is Child<'allTogetherSet'> =>
           candidate.kind === 'allTogetherSet' && candidate.optionKey === child.optionKey,
       );
@@ -156,7 +151,7 @@ export function completeCarrierChild(
       for (const set of sets) {
         const evaluated = domain(value, set);
         if (evaluated.kind !== 'allTogetherSetDomain') return undefined;
-        const values = context.shuffle(possible(evaluated.result.candidates));
+        const values = choice.order(possible(evaluated.result.candidates));
         if (values.length === 0) return undefined;
         result[set.setKey] = values[0]!;
       }
@@ -173,7 +168,7 @@ export function completeCarrierChild(
         const evaluated = domain(current);
         if (evaluated.kind !== 'naturalSelectionResult') return undefined;
         if (targets.length > 0 && evaluated.result.complete) return current;
-        const next = context.shuffle(evaluated.result.nextTargetTraitKeys)[0];
+        const next = choice.order(evaluated.result.nextTargetTraitKeys)[0];
         if (next === undefined) return undefined;
         targets.push(next);
         current = updateAuthoredTraitCarrierChild(current, {
@@ -188,8 +183,8 @@ export function completeCarrierChild(
       const evaluated = domain(value);
       if (evaluated.kind !== 'circeResolutionDomain') return undefined;
       const { effect, requiredCount, arcanaCandidates, vowCandidates } = evaluated.result;
-      const keys = context
-        .shuffle(possible(effect === 'disableFear' ? vowCandidates : arcanaCandidates))
+      const keys = choice
+        .order(possible(effect === 'disableFear' ? vowCandidates : arcanaCandidates))
         .slice(0, requiredCount);
       if (keys.length < requiredCount) return undefined;
       const resolution: AuthoredCirceResolution =
@@ -205,13 +200,13 @@ export function completeCarrierChild(
     case 'echoPomTarget': {
       const evaluated = domain(value);
       if (evaluated.kind !== 'echoPomTargetDomain') return undefined;
-      const values = context.shuffle(possible(evaluated.result.candidates));
+      const values = choice.order(possible(evaluated.result.candidates));
       return values.length === 0
         ? undefined
         : updateAuthoredTraitCarrierChild(value, { kind: child.kind, child, value: values[0]! });
     }
     case 'echoLastRunBoon':
-      return echoLastRunBoon(context, value, child, domain);
+      return echoLastRunBoon(choice, value, child, domain);
     case 'concaveStone': {
       const evaluated = domain(value);
       if (evaluated.kind !== 'concaveStone') return undefined;
@@ -223,20 +218,19 @@ export function completeCarrierChild(
       );
       const traitOf = (key: (typeof residual)[number]) =>
         value.options[optionIndex(key)]?.traitKey ?? '';
-      const ordered = context
-        .shuffle(residual.filter((key) => context.allowsTrait(traitOf(key))))
-        .sort(
-          (a, b) =>
-            Number(context.prefersTrait(traitOf(b))) - Number(context.prefersTrait(traitOf(a))),
-        );
+      const ordered = preferredFirst(
+        choice,
+        residual.filter((key) => choice.allowsTrait(traitOf(key))),
+        traitOf,
+      );
       for (const optionKey of ordered) {
         const proc = updateAuthoredTraitCarrierChild(value, {
           kind: 'concaveStone',
           child,
           value: Object.freeze({ kind: 'proc', optionKey }),
         });
-        const complete = completeCarrierChildren(context, trait, proc);
-        if (context.supported(complete)) return complete;
+        const complete = completeTraitCarrierChildren(catalog, candidates, trait, proc, choice);
+        if (offerSupported(candidates, trait, complete)) return complete;
       }
       return undefined;
     }
@@ -247,10 +241,10 @@ export function completeCarrierChild(
 
 /** Latest Model's Hammers, one row at a time from the first. */
 function latestModel(
-  context: DraftCarrierChildContext,
+  choice: CarrierChildChoice,
   value: AuthoredTraitOfferTraits,
   child: Child<'latestModelTargets'>,
-  domain: (current: AuthoredTraitOfferTraits) => TraitCarrierChildDomainEvaluation,
+  domain: ChildDomain,
 ): AuthoredTraitOfferTraits | undefined {
   let current = value;
   for (let row = 0; row < 3; row += 1) {
@@ -263,7 +257,7 @@ function latestModel(
     const supported = new Set(
       evaluated.result.candidates.filter((c) => c.result.supported).map((c) => c.result.traitKey),
     );
-    const traitKey = context.shuffle(
+    const traitKey = choice.order(
       domainRow.availableTargetTraitKeys.filter((key) => supported.has(key)),
     )[0];
     const targets = traitKey === undefined ? undefined : domainRow.valueByTraitKey[traitKey];
@@ -279,29 +273,25 @@ function latestModel(
 
 /** Boon Boon Boon as one replayed row, then its own target or nested carrier. */
 function echoLastRunBoon(
-  context: DraftCarrierChildContext,
+  choice: CarrierChildChoice,
   value: AuthoredTraitOfferTraits,
   child: Child<'echoLastRunBoon'>,
-  domain: (current: AuthoredTraitOfferTraits) => TraitCarrierChildDomainEvaluation,
+  domain: ChildDomain,
 ): AuthoredTraitOfferTraits | undefined {
   const evaluated = domain(value);
   if (evaluated.kind !== 'echoLastRunBoonDomain') return undefined;
-  const candidates = context
-    .shuffle(
-      evaluated.result.candidates.filter(
-        (candidate) =>
-          candidate.support !== 'impossible' && context.allowsTrait(candidate.option.traitKey),
-      ),
-    )
-    .sort(
-      (a, b) =>
-        Number(context.prefersTrait(b.option.traitKey)) -
-        Number(context.prefersTrait(a.option.traitKey)),
-    );
+  const candidates = preferredFirst(
+    choice,
+    evaluated.result.candidates.filter(
+      (candidate) =>
+        candidate.support !== 'impossible' && choice.allowsTrait(candidate.option.traitKey),
+    ),
+    (candidate) => candidate.option.traitKey,
+  );
   for (const candidate of candidates) {
     let row: AuthoredEchoLastRunBoonOption = candidate.option;
     if (candidate.targetRequired) {
-      const target = context.shuffle(possible(candidate.targetCandidates))[0];
+      const target = choice.order(possible(candidate.targetCandidates))[0];
       if (target === undefined) continue;
       row = { ...row, targetTraitKey: target };
     }
@@ -323,14 +313,14 @@ function echoLastRunBoon(
       if (carrier.kind === 'allTogether') {
         const result: Partial<Record<DirectTraitSetKey, string | null>> = {};
         for (const set of carrier.sets) {
-          const values = context.shuffle(possible(set.candidates));
+          const values = choice.order(possible(set.candidates));
           if (values.length === 0) break;
           result[set.setKey] = values[0]!;
         }
         if (Object.keys(result).length !== carrier.sets.length) break;
         row = { ...row, allTogetherResult: Object.freeze(result) as AuthoredAllTogetherResult };
       } else {
-        const next = context.shuffle(possible(carrier.nextTargetCandidates))[0];
+        const next = choice.order(possible(carrier.nextTargetCandidates))[0];
         if (next === undefined) break;
         row = {
           ...row,

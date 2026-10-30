@@ -13,8 +13,11 @@ import {
 } from '../../authored-project';
 import { createDefaultAuthoredHexTree } from '../../authored-project/traits/hex-tree';
 import type { ProjectCandidateSession } from '../candidates/session';
+import {
+  completeTraitCarrierChildren,
+  type CarrierChildChoice,
+} from '../candidates/trait-offer/carrier-child-completion';
 import { draftCappedGiver, draftExcludingTraitKeys, draftIllegalTrait } from './basket';
-import { completeCarrierChildren, type DraftCarrierChildContext } from './carrier-children';
 import { draftDenialActive, type DraftSpec } from './spec';
 import type { DraftProgress, DraftSteering } from './steering';
 
@@ -26,7 +29,7 @@ export interface DraftTraitOfferContext {
   /** Keys of repairs already tried in this walk. */
   readonly hooked: Set<string>;
   readonly project: () => ProjectDocument;
-  readonly evaluate: ProjectCandidateSession['evaluate'];
+  readonly candidates: () => ProjectCandidateSession;
   readonly startingOutcome: (
     trait: TraitOfferAddress,
     giverKey: string,
@@ -83,7 +86,7 @@ export class DraftTraitOffers {
   }
 
   private offerSupported(trait: TraitOfferAddress, value: AuthoredTraitOffer): boolean {
-    const evaluation = this.context.evaluate({ kind: 'traitOffer', trait, value });
+    const evaluation = this.context.candidates().evaluate({ kind: 'traitOffer', trait, value });
     return (
       evaluation.kind === 'traitOffer' &&
       evaluation.result.supported &&
@@ -119,19 +122,17 @@ export class DraftTraitOffers {
     );
   }
 
-  private childContext(trait: TraitOfferAddress): DraftCarrierChildContext {
+  /** Children take the walk's random order, steered toward the basket. */
+  private childChoice(): CarrierChildChoice {
     const steering = this.context.steering;
     const progress = steering.progress();
     return {
-      catalog: this.catalog,
-      evaluate: (query) => this.context.evaluate(query),
-      shuffle: (values) => this.context.shuffle(values),
+      order: (values) => this.context.shuffle(values),
       allowsTrait: (traitKey) => this.traitAllowed(traitKey, progress),
       prefersTrait: (traitKey) => {
         const now = steering.progress();
         return steering.wantedBasket(now).includes(traitKey) && steering.orderAllows(traitKey, now);
       },
-      supported: (value) => this.offerSupported(trait, value),
     };
   }
 
@@ -139,7 +140,13 @@ export class DraftTraitOffers {
     trait: TraitOfferAddress,
     value: AuthoredTraitOfferTraits,
   ): AuthoredTraitOfferTraits {
-    return completeCarrierChildren(this.childContext(trait), trait, value);
+    return completeTraitCarrierChildren(
+      this.catalog,
+      this.context.candidates(),
+      trait,
+      value,
+      this.childChoice(),
+    );
   }
 
   /** Picks the finding's child of an offer this walk authored again. */
@@ -149,11 +156,13 @@ export class DraftTraitOffers {
     const key = `repick:${semanticAddressKey(origin)}`;
     if (this.context.hooked.has(key)) return false;
     this.context.hooked.add(key);
-    const repicked = completeCarrierChildren(
-      this.childContext(trait),
+    const repicked = completeTraitCarrierChildren(
+      this.catalog,
+      this.context.candidates(),
       trait,
       value,
-      semanticAddressKey(origin),
+      this.childChoice(),
+      origin,
     );
     return (
       this.offerSupported(trait, repicked) && this.context.apply(offerCommand(trait, repicked))
@@ -167,7 +176,7 @@ export class DraftTraitOffers {
     if (selected === undefined) return false;
     const declaration = this.catalog.traits.byKey[selected.traitKey];
     if (declaration === undefined || draftIllegalTrait(declaration)) return false;
-    const evaluation = this.context.evaluate({ kind: 'traitOffer', trait, value });
+    const evaluation = this.context.candidates().evaluate({ kind: 'traitOffer', trait, value });
     return (
       evaluation.kind === 'traitOffer' &&
       evaluation.result.assessments[index]?.replacementTransition === undefined

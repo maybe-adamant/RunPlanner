@@ -6,11 +6,13 @@ import {
   createEchoPomTargetAddress,
   createNaturalSelectionResultAddress,
   createTraitAcquisitionTargetAddress,
+  semanticAddressKey,
   type AllTogetherSetAddress,
   type CirceResolutionAddress,
   type EchoLastRunBoonAddress,
   type EchoPomTargetAddress,
   type NaturalSelectionResultAddress,
+  type SemanticAddress,
   type TraitOfferAddress,
   type TraitAcquisitionTargetAddress,
 } from '../addresses';
@@ -25,6 +27,7 @@ import {
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
   type AuthoredHexTreeConfiguration,
+  type AuthoredTraitOption,
   type OneToEight,
   type OneToThree,
   type TraitOptionKey,
@@ -556,4 +559,52 @@ export function updateAuthoredTraitCarrierChild(
     ...(update.kind === 'hexTree' ? { hexTree: update.value } : {}),
     options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
   });
+}
+
+/** The option field each option-owned child is stored in. */
+const CHILD_FIELDS: Readonly<
+  Record<
+    Exclude<AuthoredTraitCarrierChild['kind'], 'hexTree' | 'concaveStone'>,
+    keyof AuthoredTraitOption
+  >
+> = {
+  traitAcquisitionTarget: 'targetTraitKey',
+  latestModelTargets: 'icarusHammerTargets',
+  allTogetherSet: 'allTogetherResult',
+  naturalSelectionResult: 'naturalSelectionTargets',
+  circeResolution: 'circeResolution',
+  echoPomTarget: 'echoPomTarget',
+  echoLastRunBoon: 'echoLastRunBoon',
+};
+
+/** The offer without its authored children at one child address, so they can be authored again. */
+export function withoutTraitCarrierChild(
+  catalog: Catalog,
+  trait: TraitOfferAddress,
+  value: AuthoredTraitOfferTraits,
+  child: SemanticAddress,
+): AuthoredTraitOfferTraits {
+  const key = semanticAddressKey(child);
+  let current = value;
+  for (const discovered of discoverAuthoredTraitCarrierChildren(catalog, trait, value)) {
+    if (semanticAddressKey(discovered.address) !== key || discovered.kind === 'hexTree') continue;
+    if (discovered.kind === 'concaveStone') {
+      const { concaveStoneResult: _result, ...rest } = current;
+      void _result;
+      current = rest;
+      continue;
+    }
+    const field = CHILD_FIELDS[discovered.kind];
+    const options = current.options.map((option, index) => {
+      if (index !== optionIndex(discovered.optionKey)) return option;
+      const cleared = { ...option };
+      delete cleared[field];
+      return cleared;
+    });
+    current = {
+      ...current,
+      options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
+    };
+  }
+  return current;
 }

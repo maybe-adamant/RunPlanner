@@ -3,6 +3,7 @@ import {
   optionIndex,
   semanticAddressKey,
   updateAuthoredTraitCarrierChild,
+  withoutTraitCarrierChild,
   type AuthoredAllTogetherResult,
   type AuthoredCirceResolution,
   type AuthoredTraitCarrierChild,
@@ -17,12 +18,11 @@ import { authoredTraitOfferAt } from '../../authored-project/commands/trait-offe
 import { traitMaxHealthRollWidth } from '../../authored-project/traits/max-health-roll';
 import { concaveStoneProcGiver, type DirectTraitSetKey } from '../../catalog-schema';
 import type { RunRecordRoom, RunRecordTraitAcquisition } from '../../run-record/model';
-import type { TraitCarrierChildDomainEvaluation } from '../candidates/trait-offer/query';
 import {
-  completeCarrierChild,
-  withoutCarrierChild,
-  type DraftCarrierChildContext,
-} from '../draft/carrier-children';
+  completeTraitCarrierChild,
+  FIRST_ELIGIBLE_CARRIER_CHILD_CHOICE,
+} from '../candidates/trait-offer/carrier-child-completion';
+import type { TraitCarrierChildDomainEvaluation } from '../candidates/trait-offer/query';
 import type { SemanticFinding } from '../model';
 import { entrySnapshot } from './conformance';
 import type { RunImportContext } from './import';
@@ -102,23 +102,6 @@ export function completeRecordedCarrierChildren(
 ): RecordedCarrierChildren {
   if (value.kind !== 'traits') return { value, reports: [] };
   const room = context.record.rooms[roomIndex]!;
-  const evaluate: DraftCarrierChildContext['evaluate'] = (query) =>
-    context.candidates().evaluate(query);
-  const fallback: DraftCarrierChildContext = {
-    catalog: context.catalog,
-    evaluate,
-    shuffle: (values) => [...values],
-    allowsTrait: () => true,
-    prefersTrait: () => false,
-    supported: (offer) => {
-      const evaluation = context.candidates().evaluate({ kind: 'traitOffer', trait, value: offer });
-      return (
-        evaluation.kind === 'traitOffer' &&
-        evaluation.result.supported &&
-        evaluation.result.findings.length === 0
-      );
-    },
-  };
   let current = value;
   const settled = new Set<string>();
   const reports: RecordedCarrierChildReport[] = [];
@@ -143,7 +126,9 @@ export function completeRecordedCarrierChildren(
       roomIndex,
       acquisition,
       at: acquisition?.worldTime,
-      domain: evaluate({ kind: 'traitCarrierChildDomain', trait, value: current, child }),
+      domain: context
+        .candidates()
+        .evaluate({ kind: 'traitCarrierChildDomain', trait, value: current, child }),
       stoneFromRecord,
     });
     let next: AuthoredTraitOfferTraits | undefined;
@@ -151,7 +136,14 @@ export function completeRecordedCarrierChildren(
       next = answer.value;
       if (answer.assumed === true) reports.push({ address: child.address, reason: 'assumption' });
     } else {
-      next = completeCarrierChild(fallback, trait, current, child);
+      next = completeTraitCarrierChild(
+        context.catalog,
+        context.candidates(),
+        trait,
+        current,
+        child,
+        FIRST_ELIGIBLE_CARRIER_CHILD_CHOICE,
+      );
       if (answer === 'refused') reports.push({ address: child.address, reason: 'refused' });
       else if (next !== undefined && next !== current)
         reports.push({ address: child.address, reason: 'notInRecord' });
@@ -587,12 +579,7 @@ export function answerCarrierChild(context: RunImportContext, reason: SemanticFi
     visits.find((index) => acquiredAt(context.record.rooms[index]!, picked) !== undefined) ??
     visits[0];
   if (roomIndex === undefined) return false;
-  const cleared = withoutCarrierChild(
-    context.catalog,
-    trait,
-    offer,
-    semanticAddressKey(reason.origin),
-  );
+  const cleared = withoutTraitCarrierChild(context.catalog, trait, offer, reason.origin);
   const completed = completeRecordedCarrierChildren(context, trait, cleared, roomIndex);
   if (completed.value === offer) return false;
   const command = { kind: 'ReplaceTraitOffer', trait, value: completed.value } as const;

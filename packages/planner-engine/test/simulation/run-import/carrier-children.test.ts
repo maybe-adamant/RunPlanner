@@ -9,14 +9,67 @@ import {
   type OccurrenceId,
 } from '../../../src/authored-project';
 import type { RunRecord, RunRecordTraitChanges } from '../../../src/run-record';
-import {
-  latestModelHammerRows,
-  type TraitCarrierChildDomainQuery,
-} from '../../../src/simulation/candidates/trait-offer/query';
+import type { TraitCarrierChildDomainQuery } from '../../../src/simulation/candidates/trait-offer/query';
 import { completeRecordedCarrierChildren } from '../../../src/simulation/run-import/carrier-children';
 import type { RunImportContext } from '../../../src/simulation/run-import/import';
 
 const HAMMERS = ['StaffDashAttackTrait', 'StaffOneWayAttackTrait', 'StaffExAoETrait'] as const;
+const [DASH, ONE_WAY, EX_AOE] = HAMMERS;
+const open = (
+  available: readonly string[],
+  valueByTraitKey: Record<string, readonly string[]>,
+) => ({
+  availableTargetTraitKeys: available,
+  requiresEarlierRow: false,
+  valueByTraitKey,
+});
+/** The engine's per-row Hammer domains for two required rows, by the Hammers already held. */
+const HAMMER_ROWS: Readonly<Record<string, readonly unknown[]>> = {
+  '': [
+    open(HAMMERS, { [DASH]: [DASH], [ONE_WAY]: [ONE_WAY], [EX_AOE]: [EX_AOE] }),
+    { availableTargetTraitKeys: HAMMERS, requiresEarlierRow: true, valueByTraitKey: {} },
+  ],
+  [DASH]: [
+    open(HAMMERS, { [DASH]: [DASH], [ONE_WAY]: [ONE_WAY], [EX_AOE]: [EX_AOE] }),
+    open([ONE_WAY, EX_AOE], {
+      [DASH]: [DASH],
+      [ONE_WAY]: [DASH, ONE_WAY],
+      [EX_AOE]: [DASH, EX_AOE],
+    }),
+  ],
+  [EX_AOE]: [
+    open(HAMMERS, { [DASH]: [DASH], [ONE_WAY]: [ONE_WAY], [EX_AOE]: [EX_AOE] }),
+    open([DASH, ONE_WAY], {
+      [DASH]: [EX_AOE, DASH],
+      [ONE_WAY]: [EX_AOE, ONE_WAY],
+      [EX_AOE]: [EX_AOE],
+    }),
+  ],
+  [`${DASH},${ONE_WAY}`]: [
+    open([DASH, EX_AOE], {
+      [DASH]: [DASH, ONE_WAY],
+      [ONE_WAY]: [ONE_WAY],
+      [EX_AOE]: [EX_AOE, ONE_WAY],
+    }),
+    open([ONE_WAY, EX_AOE], {
+      [DASH]: [DASH],
+      [ONE_WAY]: [DASH, ONE_WAY],
+      [EX_AOE]: [DASH, EX_AOE],
+    }),
+  ],
+  [`${EX_AOE},${DASH}`]: [
+    open([ONE_WAY, EX_AOE], {
+      [DASH]: [DASH],
+      [ONE_WAY]: [ONE_WAY, DASH],
+      [EX_AOE]: [EX_AOE, DASH],
+    }),
+    open([DASH, ONE_WAY], {
+      [DASH]: [EX_AOE, DASH],
+      [ONE_WAY]: [EX_AOE, ONE_WAY],
+      [EX_AOE]: [EX_AOE],
+    }),
+  ],
+};
 const giverKey = catalog.traitGivers.values.find((giver) =>
   giver.traitKeys.includes('UpgradeHammerBoon'),
 )!.key;
@@ -53,7 +106,7 @@ function contextFor(traits: RunRecordTraitChanges): RunImportContext {
           kind: 'traitAcquisitionTarget',
           result: { traitKey, supported: true, branchSupport: [true], findings: [] },
         })),
-        rows: latestModelHammerRows(HAMMERS, 2, targets),
+        rows: HAMMER_ROWS[targets.join(',')] ?? expect.unreachable(`rows for ${targets.join(',')}`),
       },
     };
   };
