@@ -595,8 +595,8 @@ card enables screen rerolls, or the pool at that point cannot pay; a reroll
 the game would refuse is a finding instead. Earlier tabs show every control in
 place, disabled until their Edit, and are judged by the draft's whole screen
 chain; under Edit their Rarify buttons follow that screen's own remaining
-uses, and each row shows its rarity after the screen's clicks; an unauthored earlier screen offers to copy the final one, and an empty
-one shows as Gold. When only an earlier screen blocks Save, the feedback names
+uses, and each row shows its rarity after the screen's clicks; an unauthored
+earlier screen offers to copy the final one, and an empty one shows as Gold. When only an earlier screen blocks Save, the feedback names
 that tab. Without an enabling card the reroll controls are hidden unless the
 offer already holds rerolls.
 
