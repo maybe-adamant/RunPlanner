@@ -1985,45 +1985,81 @@ describe('run import of selected-outcome children', () => {
   });
 
   it("refuses Natural Selection's recorded gains when no order reaches them, taking the first eligible order", () => {
-    const imported = projectFromRunRecord(
-      catalog,
-      naturalSelectionRun((worldTime) => [
-        {
-          name: 'DemeterWeaponBoon',
-          from: { rarity: 'Rare', level: 4 },
-          to: { rarity: 'Rare', level: 7 },
-          worldTime,
-        },
-        {
-          name: 'ZeusCastBoon',
-          from: { rarity: 'Rare', level: 2 },
-          to: { rarity: 'Rare', level: 4 },
-          worldTime,
-        },
-        {
-          name: 'AresSpecialBoon',
-          from: { rarity: 'Common' },
-          to: { rarity: 'Common', level: 2 },
-          worldTime,
-        },
-        {
-          name: 'DemeterSprintBoon',
-          from: { rarity: 'Common' },
-          to: { rarity: 'Common', level: 2 },
-          worldTime,
-        },
-        {
-          name: 'PoseidonManaBoon',
-          from: { rarity: 'Rare' },
-          to: { rarity: 'Rare', level: 2 },
-          worldTime,
-        },
-      ]),
-    );
+    const record = naturalSelectionRun((worldTime) => [
+      {
+        name: 'DemeterWeaponBoon',
+        from: { rarity: 'Rare', level: 4 },
+        to: { rarity: 'Rare', level: 7 },
+        worldTime,
+      },
+      {
+        name: 'ZeusCastBoon',
+        from: { rarity: 'Rare', level: 2 },
+        to: { rarity: 'Rare', level: 4 },
+        worldTime,
+      },
+      {
+        name: 'AresSpecialBoon',
+        from: { rarity: 'Common' },
+        to: { rarity: 'Common', level: 2 },
+        worldTime,
+      },
+      {
+        name: 'DemeterSprintBoon',
+        from: { rarity: 'Common' },
+        to: { rarity: 'Common', level: 2 },
+        worldTime,
+      },
+      {
+        name: 'PoseidonManaBoon',
+        from: { rarity: 'Rare' },
+        to: { rarity: 'Rare', level: 2 },
+        worldTime,
+      },
+    ]);
+    const imported = projectFromRunRecord(catalog, record);
     expect(imported.kind).toBe('complete');
     expect(roomLines(imported.report, 27)).toEqual([
       expect.stringMatching(/^refused traitOffer r27 naturalSelectionResult@H-r27 /),
     ]);
+    // Answered again, the refused search visits each first-round order of the five cores once.
+    const child = imported.report.entries.find(
+      (entry) => entry.address?.kind === 'naturalSelectionResult',
+    )!.address as Extract<SemanticAddress, { kind: 'naturalSelectionResult' }>;
+    const state = occurrence(imported.project, 'H-r27').state;
+    const offer =
+      'reward' in state ? state.reward?.traitOffersByAcquisitionRole['source'] : undefined;
+    if (offer?.kind !== 'traits') throw new Error('H-r27 has no Natural Selection offer');
+    const cleared = applyProjectCommand(imported.project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: child.trait,
+      value: {
+        ...offer,
+        options: offer.options.map((option) => {
+          const { naturalSelectionTargets: targets, ...rest } = option;
+          void targets;
+          return rest;
+        }) as unknown as typeof offer.options,
+      },
+    });
+    const walk = new RunImportWalk(catalog, record, simulateProjectAssembly(catalog, cleared), []);
+    const reason = walk.assembly.evaluation.issue?.reasons[0];
+    expect(reason).toMatchObject({ code: 'naturalSelectionResultMissing' });
+    let evaluations = 0;
+    const counting: typeof walk.context = {
+      ...walk.context,
+      candidates: () => {
+        const session = walk.context.candidates();
+        const evaluate = ((query: { readonly kind?: string }) => {
+          if (query.kind === 'traitCarrierChildDomain') evaluations += 1;
+          return session.evaluate(query as never);
+        }) as unknown as typeof session.evaluate;
+        return { ...session, evaluate };
+      },
+    };
+    expect(answerCarrierChild(counting, reason!)).toBe(true);
+    // 686 nodes at most (120 orders, each forced to eight targets), with the fallback's few.
+    expect(evaluations).toBeLessThan(700);
   });
 
   /** The Surface victory through O_Combat05 with Circe's O_Story01 pick renamed. */

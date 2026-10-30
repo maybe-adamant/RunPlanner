@@ -326,7 +326,8 @@ function allTogether(question: ChildQuestion<'allTogetherSet'>): ChildAnswer {
  * per level (`IncreaseTraitLevel`), so its room's upgrades at the pick's own
  * acquisition time give each target's level gain. The game's shuffled order is
  * never saved; any order the engine admits that reaches the same gains is the
- * same run state.
+ * same run state. Only the first round's order branches; the round robin
+ * forces every later target, so the search is bounded by the cores' orders.
  */
 function naturalSelection(question: ChildQuestion<'naturalSelectionResult'>): ChildAnswer {
   const { context, trait, value, child, room, at } = question;
