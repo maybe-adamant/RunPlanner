@@ -1,5 +1,5 @@
-import { decodeRunRecord, type RunRecord } from '@run-planner/engine/run-record';
-import type { RunImportReport } from '@run-planner/engine/simulation';
+import { decodeRunRecord, type RunRecord } from '@run-planner/run-import/run-record';
+import type { RunImportReport } from '@run-planner/run-import';
 
 import type { RecentRunsHost } from '@planner/persistence/recordHost';
 import type { RawSaveCapture } from './rawSaves';

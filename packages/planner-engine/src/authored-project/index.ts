@@ -56,10 +56,13 @@ export {
   type ResolvedEntryRoom,
 } from './room-state/entry-resolution';
 export { routeStartIncomingReward } from './room-state/starting-reward';
+export { requireShipCombatWheels } from './room-state/declaration';
 export { countedRewardBinding } from './room-state/reward-binding';
 export {
+  acquisitionSourceIsParticipating,
   authoredAcquisitionSources,
   authoredAcquisitionSourceAt,
+  type AuthoredAcquisitionSource,
 } from './acquisition/acquisition-sources';
 export {
   assembleRoomLifecycleStructure,
@@ -353,6 +356,7 @@ export {
   type RerolledRewardOwner,
   type RerollPressTarget,
   type RerollSurface,
+  FIELDS_CAGE_GROUP_KEY,
 } from './rerolls';
 export {
   rerolledScreenCount,
@@ -390,6 +394,7 @@ export {
   type ProjectCommand,
   ProjectCommandContractError,
 } from './commands/dispatch';
+export { authoredTraitOfferAt } from './commands/trait-offer';
 export {
   forcedChaosOccurrenceKeys,
   ixionGeneratedChaosOccurrenceKeys,
@@ -425,6 +430,7 @@ export {
   type HubActionOrderRefusal,
   type OrdinaryTargetAuthoringEligibility,
   type SelectedExitContinuation,
+  exitDecisionForSource,
 } from './topology/query';
 export { legalTopologyOccurrenceRoom } from './topology/room-ownership';
 export {
@@ -525,6 +531,7 @@ export {
   type PurgingPoolSlotKey,
   type RerollTarget,
   type ShopState,
+  hermesShrineInitialSlotKey,
 } from './model';
 export {
   createDefaultRoomActionState,

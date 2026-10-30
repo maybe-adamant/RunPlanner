@@ -1,5 +1,5 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import type { RunRecordSavedValuePaths } from '@run-planner/engine/run-record';
+import type { RunRecordSavedValuePaths } from '@run-planner/run-import/run-record';
 
 import { extractSaveCheckpoint, type SaveCheckpoint } from './saveCheckpoint';
 import { decodeSaveFile, readSaveContainer } from './saveFile';

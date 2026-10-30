@@ -13,7 +13,7 @@ import type {
 import { ExecutionCompilerError as CompilerError } from '../assembler-errors';
 import { executionReward } from './overview';
 import type { HubDepartureRunState } from '../../simulation/rewards/model';
-import { hubDepartureTraitInventory } from '../../simulation/rewards/run-state-conformance';
+import { snapshotTraitInventory } from '../../simulation/rewards/run-state-conformance';
 import type { Catalog } from '../../catalog-schema';
 import { assembleRunStateDiagnostic } from './diagnostics';
 
@@ -93,9 +93,7 @@ function hubDepartures(
         facts: Object.freeze([Object.freeze({ kind: 'traitInventory' as const })]),
         traits: Object.freeze({
           equipped: Object.freeze(
-            hubDepartureTraitInventory(departure.departure).map((trait) =>
-              Object.freeze({ ...trait }),
-            ),
+            snapshotTraitInventory(departure.departure).map((trait) => Object.freeze({ ...trait })),
           ),
         }),
         beforeRoomExit: assembleRunStateDiagnostic(catalog, departure.departure),

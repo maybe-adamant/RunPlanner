@@ -6,7 +6,7 @@ import { format, resolveConfig } from 'prettier';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { encodeRunRecord, runRecordSavedValuePaths } from '@run-planner/engine/run-record';
+import { encodeRunRecord, runRecordSavedValuePaths } from '@run-planner/run-import/run-record';
 import { buildRunRecord } from '@planner/workspace/run-recording/runRecordBuilder';
 import { extractSaveCheckpoint } from '@planner/workspace/run-recording/saveCheckpoint';
 import { decodeSaveFile } from '@planner/workspace/run-recording/saveFile';
@@ -14,18 +14,18 @@ import { decodeSaveFile } from '@planner/workspace/run-recording/saveFile';
 const captureDirectory = process.env.RUN_PLANNER_RUN_RECORD_CAPTURE;
 const fixtureName = process.env.RUN_PLANNER_RUN_RECORD_FIXTURE;
 const fixtureDirectory = fileURLToPath(
-  new URL('../../../../../packages/planner-engine/test/run-record/fixtures/', import.meta.url),
+  new URL('../../../../../packages/run-import/test/run-record/fixtures/', import.meta.url),
 );
 
 /**
- * Writes one engine run-record fixture from a capture folder of numbered save
+ * Writes one run-import record fixture from a capture folder of numbered save
  * writes (`NNN-Profile1_Temp.sav`, `NNN-Profile1.sav`). Raw saves never enter
  * the repository; only `npm run fixtures:run-record` sets the inputs.
  */
 describe.skipIf(captureDirectory === undefined || fixtureName === undefined)(
   'run record fixture generation',
   () => {
-    it('writes the capture record through the engine codec', async () => {
+    it('writes the capture record through the run-record codec', async () => {
       const savedValuePaths = runRecordSavedValuePaths(catalog);
       const files = readdirSync(captureDirectory!)
         .filter((name) => /^\d+-Profile1(_Temp)?\.sav$/.test(name))

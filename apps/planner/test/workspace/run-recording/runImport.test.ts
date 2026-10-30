@@ -1,5 +1,5 @@
 import { parseProjectDocument } from '@run-planner/engine/authored-project';
-import { decodeRunRecord } from '@run-planner/engine/run-record';
+import { decodeRunRecord } from '@run-planner/run-import/run-record';
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it, vi } from 'vitest';
 

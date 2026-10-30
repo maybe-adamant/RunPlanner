@@ -35,8 +35,8 @@ counters, or topology repair.
 
 ## Ownership Lanes
 
-The repository has four ownership lanes—two packages, one application, and one
-game module. Route a change by the question it answers, not by the layer that
+The repository has five ownership lanes—three packages, one application, and
+one game module. Route a change by the question it answers, not by the layer that
 first needs the result.
 
 ### Hades II Catalog — `packages/hades2-catalog`
@@ -71,6 +71,20 @@ first needs the result.
 - Must not return picker sections, component state, focus destinations, labels
   invented by the editor, or other React-facing products.
 - Primary tests live beside the owning engine authority (`npm run test:engine`).
+
+### Run Import — `packages/run-import`
+
+- Owns the run record (its model, codec and saved-value paths, published as the
+  `@run-planner/run-import/run-record` entry) and the import that turns a
+  recorded run into an authored project with its report.
+- Answers “what authored project does this recorded run correspond to, and
+  what could not be matched?”
+- Consumes only declared `@run-planner/engine` entries, building through the
+  engine's authoring session and queries; it must not import engine internals,
+  the `hades2-catalog` implementation (tests may construct it), the planner
+  application, or platform code, and the engine never imports it.
+- Primary tests: record codec and fixtures, and import witnesses over the
+  capture fixtures (`npm run test:run-import`).
 
 ### Planner Application and React — `apps/planner`
 

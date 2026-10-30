@@ -1,7 +1,11 @@
 import { encodeProjectDocument } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
-import { decodeRunRecord, encodeRunRecord, type RunRecord } from '@run-planner/engine/run-record';
-import { projectFromRunRecord, type RunImportReport } from '@run-planner/engine/simulation';
+import {
+  decodeRunRecord,
+  encodeRunRecord,
+  type RunRecord,
+} from '@run-planner/run-import/run-record';
+import { projectFromRunRecord, type RunImportReport } from '@run-planner/run-import';
 
 import { buildRunRecord } from './runRecordBuilder';
 import type { SaveCheckpoint } from './saveCheckpoint';

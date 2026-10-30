@@ -2,7 +2,7 @@ import {
   decodeRunRecord,
   encodeRunRecord,
   type RunRecordSavedValuePaths,
-} from '@run-planner/engine/run-record';
+} from '@run-planner/run-import/run-record';
 
 import type {
   RawSavesHost,

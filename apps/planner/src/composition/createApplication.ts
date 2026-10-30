@@ -5,7 +5,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { summarizeCatalog } from '@run-planner/engine/catalog-schema';
 import { type ProjectDocument } from '@run-planner/engine/authored-project';
-import { runRecordSavedValuePaths } from '@run-planner/engine/run-record';
+import { runRecordSavedValuePaths } from '@run-planner/run-import/run-record';
 
 import { createCandidateSessionFactory } from '../projections/candidates/candidateProjection';
 import { createContextualOptionResolver } from '../projections/contextual/contextualOptions';

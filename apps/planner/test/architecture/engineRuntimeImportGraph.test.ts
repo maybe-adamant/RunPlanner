@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const engineSourceRoot = join(repositoryRoot, 'packages/planner-engine/src');
+const pureSourceRoots = [engineSourceRoot, join(repositoryRoot, 'packages/run-import/src')];
 
 function sourceFiles(directory: string): readonly string[] {
   return readdirSync(directory, { withFileTypes: true })
@@ -44,7 +45,7 @@ function resolveRelativeImport(from: string, specifier: string): string {
   );
   if (resolved === undefined)
     throw new Error(
-      `unresolved relative import ${specifier} from ${relative(engineSourceRoot, from)}`,
+      `unresolved relative import ${specifier} from ${relative(repositoryRoot, from)}`,
     );
   return resolved;
 }
@@ -89,7 +90,7 @@ function runtimeCycles(graph: ReadonlyMap<string, readonly string[]>): readonly 
         const start = stack.indexOf(dependency);
         cycles.push(
           [...stack.slice(start), dependency]
-            .map((entry) => relative(engineSourceRoot, entry))
+            .map((entry) => relative(repositoryRoot, entry))
             .join(' -> '),
         );
       } else if (status.get(dependency) !== 'visited') {
@@ -105,13 +106,16 @@ function runtimeCycles(graph: ReadonlyMap<string, readonly string[]>): readonly 
   return cycles;
 }
 
-describe('planner-engine runtime import graph', () => {
-  it('has no relative runtime import cycles', () => {
-    const paths = sourceFiles(engineSourceRoot);
-    const graph = new Map(paths.map((path) => [path, runtimeRelativeImports(path)]));
+describe('pure package runtime import graphs', () => {
+  it.each(pureSourceRoots.map((root) => [relative(repositoryRoot, root), root]))(
+    '%s has no relative runtime import cycles',
+    (_name, root) => {
+      const paths = sourceFiles(root);
+      const graph = new Map(paths.map((path) => [path, runtimeRelativeImports(path)]));
 
-    expect(runtimeCycles(graph)).toEqual([]);
-  });
+      expect(runtimeCycles(graph)).toEqual([]);
+    },
+  );
 
   it('detects a runtime barrel cycle while ignoring type-only imports', () => {
     const structural = join(engineSourceRoot, 'fixture/structural.ts');

@@ -21,7 +21,7 @@ import {
   type RunRecordTraitGrade,
   type RunRecordTraitUpgrade,
   type RunRecordWheel,
-} from '@run-planner/engine/run-record';
+} from '@run-planner/run-import/run-record';
 
 import type {
   SaveCheckpoint,

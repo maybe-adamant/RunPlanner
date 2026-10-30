@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { decodeRunRecord } from '@run-planner/engine/run-record';
-import type { RunImportReportEntry } from '@run-planner/engine/simulation';
+import { decodeRunRecord } from '@run-planner/run-import/run-record';
+import type { RunImportReportEntry } from '@run-planner/run-import';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -34,7 +34,7 @@ const record = decodeRunRecord(
   JSON.parse(
     readFileSync(
       new URL(
-        '../../../../packages/planner-engine/test/run-record/fixtures/underworld.run-record.json',
+        '../../../../packages/run-import/test/run-record/fixtures/underworld.run-record.json',
         import.meta.url,
       ),
       'utf8',

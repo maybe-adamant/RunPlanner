@@ -397,6 +397,11 @@ export {
   type DecisionTraitState,
 } from './rewards';
 export {
+  heldKeepsakeRanks,
+  keepsakesAfterCurrentKeepsakeAdvance,
+  snapshotTraitInventory,
+} from './rewards/run-state-conformance';
+export {
   materializeBiome,
   materializeBiomePrefix,
   selectedBatchContinuation,
@@ -454,6 +459,7 @@ export {
   type RewardGenerationFindingCode,
   type SemanticFinding,
   type SimulationPhase,
+  isRequiredMissingInputFinding,
 } from './model';
 export { type AcquisitionConversionCandidateCapability } from './rewards/acquisition/artifacts';
 export {
@@ -508,6 +514,7 @@ export {
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  reachedEncounterPhasesForProjectEvaluationAssembly,
   ProjectSimulationContractError,
 } from './evaluation/project-evaluation-assembly';
 export {
@@ -675,15 +682,7 @@ export {
   type DraftWorld,
 } from './draft/spec';
 export { draftRefusals, type DraftRefusal } from './draft/refusals';
-export { projectFromRunRecord, type RunImport } from './run-import/import';
-export type {
-  RunImportArea,
-  RunImportReason,
-  RunImportRecordLocation,
-  RunImportReport,
-  RunImportReportEntry,
-  RunImportStop,
-} from './run-import/report';
+export { createDraftIssueRepairer, type DraftIssueRepairer } from './draft/repair';
 export {
   draftDefaultPerGodCap,
   draftGodBoonBudget,

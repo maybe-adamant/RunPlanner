@@ -249,10 +249,10 @@ export function deriveRoomExitConformanceDeltas(
 }
 
 /**
- * Each Hub departure is its own conformance window: the expected modeled trait
- * inventory when the Hub is left, in the room-exit Run State row shape and order.
+ * The modeled trait inventory a snapshot holds, in the room-exit Run State row
+ * shape and order; at a Hub departure it is that departure's conformance window.
  */
-export function hubDepartureTraitInventory(
+export function snapshotTraitInventory(
   departure: RunStateSnapshot,
 ): readonly ModeledTraitInventoryEntry[] {
   return Object.freeze(Object.values(modeledTraitInventory(departure)));

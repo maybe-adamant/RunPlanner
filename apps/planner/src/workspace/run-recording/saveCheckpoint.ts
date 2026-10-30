@@ -1,4 +1,4 @@
-import type { RunRecordSavedValuePaths } from '@run-planner/engine/run-record';
+import type { RunRecordSavedValuePaths } from '@run-planner/run-import/run-record';
 
 import type { LuaTable, LuaValue } from './luabins';
 import type { DecodedSave } from './saveFile';

@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import process from 'node:process';
 
 /**
- * Rewrites one engine run-record fixture from a capture folder outside the
+ * Rewrites one run-import record fixture from a capture folder outside the
  * repository: `npm run fixtures:run-record -- <capture-dir> <fixture-name>`.
  */
 const [captureDirectory, fixtureName] = process.argv.slice(2);

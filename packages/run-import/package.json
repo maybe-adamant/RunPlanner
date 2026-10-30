@@ -1,0 +1,19 @@
+{
+  "name": "@run-planner/run-import",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./run-record": "./src/run-record/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --project tsconfig.json"
+  },
+  "dependencies": {
+    "@run-planner/engine": "0.0.0"
+  },
+  "devDependencies": {
+    "@run-planner/hades2-catalog": "0.0.0"
+  }
+}

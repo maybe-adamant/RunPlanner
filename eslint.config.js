@@ -22,6 +22,19 @@ const engineBoundaryImports = [
   ...platformImports,
   '@run-planner/hades2-catalog',
   ...plannerApplicationImportPatterns,
+  '@run-planner/run-import',
+  '@run-planner/run-import/**',
+];
+const engineConsumerPackageImports = [
+  { group: [...platformImports, ...plannerApplicationImportPatterns] },
+  {
+    group: ['**/planner-engine', '**/planner-engine/**', '@run-planner/engine/*/**'],
+    message: 'Use the declared @run-planner/engine entries.',
+  },
+  {
+    group: ['../../../**'],
+    message: 'Relative imports stay inside their package.',
+  },
 ];
 const catalogSchemaImportPatterns = [
   '../catalog-schema',
@@ -448,6 +461,26 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    files: ['packages/run-import/src/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            ...engineConsumerPackageImports,
+            { group: ['@run-planner/hades2-catalog', '@run-planner/hades2-catalog/**'] },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['packages/run-import/test/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: engineConsumerPackageImports }],
     },
   },
   {

@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { encodeProjectDocument } from '@run-planner/engine/authored-project';
-import { decodeRunRecord, encodeRunRecord } from '@run-planner/engine/run-record';
+import { decodeRunRecord, encodeRunRecord } from '@run-planner/run-import/run-record';
 import { catalog } from '@run-planner/hades2-catalog';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -25,7 +25,7 @@ const record = decodeRunRecord(
     readFileSync(
       resolve(
         import.meta.dirname,
-        '../../../../../packages/planner-engine/test/run-record/fixtures/underworld.run-record.json',
+        '../../../../../packages/run-import/test/run-record/fixtures/underworld.run-record.json',
       ),
       'utf8',
     ),

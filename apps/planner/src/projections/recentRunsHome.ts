@@ -6,11 +6,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import type {
-  RunImportArea,
-  RunImportReason,
-  RunImportReportEntry,
-} from '@run-planner/engine/simulation';
+import type { RunImportArea, RunImportReason, RunImportReportEntry } from '@run-planner/run-import';
 
 import type { HomeContextPart } from '@planner/projections/homeContext';
 import { ownEntry } from '@planner/projections/gameSlotSummary';

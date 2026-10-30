@@ -8,7 +8,6 @@ import type {
   GeneratedEncounterSelection,
   InfiniteRosterSelection,
 } from '../../../src/catalog-schema';
-import { decodeRunRecord, type RunRecord } from '../../../src/run-record';
 import {
   invertGeneratedEncounter,
   invertInfiniteRoster,
@@ -20,15 +19,23 @@ import {
 } from '../../../src/simulation/encounters/generation';
 import { assessInfiniteRoster } from '../../../src/simulation/encounters/infinite-roster';
 
-function fixture(name: string): RunRecord {
-  return decodeRunRecord(
-    JSON.parse(
-      readFileSync(
-        new URL(`../../run-record/fixtures/${name}.run-record.json`, import.meta.url),
-        'utf8',
-      ),
-    ),
-  );
+/** The observed phases of a capture run: per room, its waved encounters then its cages. */
+interface CapturePhases {
+  readonly hordesRank: number;
+  readonly fangsRank: number;
+  readonly menaceRank: number;
+  readonly rooms: readonly {
+    readonly name: string;
+    readonly phases: readonly (ObservedEncounterPhase & { readonly name: string })[];
+  }[];
+}
+
+const capturePhases = JSON.parse(
+  readFileSync(new URL('./fixtures/observed-capture-phases.json', import.meta.url), 'utf8'),
+) as Readonly<Record<'surface' | 'underworld', CapturePhases>>;
+
+function fixture(name: 'surface' | 'underworld'): CapturePhases {
+  return capturePhases[name];
 }
 
 /** NPC selection-weight duplicates the planner authors as their primary encounter. */
@@ -84,14 +91,13 @@ function observe(
   };
 }
 
-function recordContext(record: RunRecord, roomName: string, depths: Depths) {
-  const vows = record.loadout.vows;
+function recordContext(record: CapturePhases, roomName: string, depths: Depths) {
   return {
     ...depths,
     knownRunBlacklist: [],
-    hordesRank: vows.EnemyCountShrineUpgrade ?? 0,
-    fangsRank: vows.EnemyEliteShrineUpgrade ?? 0,
-    menaceRank: vows.NextBiomeEnemyShrineUpgrade ?? 0,
+    hordesRank: record.hordesRank,
+    fangsRank: record.fangsRank,
+    menaceRank: record.menaceRank,
     roomSetKey: roomName[0]!,
   };
 }
@@ -114,37 +120,34 @@ describe('generated encounter inverse over the capture records', () => {
    * depth on its budget axis that replays exactly is pinned below with the room's
    * position in its biome.
    */
-  const resolved = (name: string) => {
+  const resolved = (name: 'surface' | 'underworld') => {
     const record = fixture(name);
     return record.rooms.flatMap((room, roomIndex) =>
-      [...room.encounters, ...(room.fields?.cages ?? []).map((cage) => cage.encounter)]
-        .filter((encounter) => (encounter.waves?.length ?? 0) > 0)
-        .map((encounter) => {
-          const selection = decision(encounter.name);
-          if (selection?.kind !== 'generated')
-            return { roomIndex, room: room.name, encounter: encounter.name, generated: false };
-          const matches = depthGrid.filter(
-            (depths) =>
-              invert(selection, recordContext(record, room.name, depths), encounter).kind ===
-              'match',
-          );
-          const axis = selection.budget.depthAxis;
-          const pinned = [
-            ...new Set(
-              matches.map((depths) =>
-                axis === 'biomeDepthCache' ? depths.biomeDepthCache : depths.biomeEncounterDepth,
-              ),
+      room.phases.map((encounter) => {
+        const selection = decision(encounter.name);
+        if (selection?.kind !== 'generated')
+          return { roomIndex, room: room.name, encounter: encounter.name, generated: false };
+        const matches = depthGrid.filter(
+          (depths) =>
+            invert(selection, recordContext(record, room.name, depths), encounter).kind === 'match',
+        );
+        const axis = selection.budget.depthAxis;
+        const pinned = [
+          ...new Set(
+            matches.map((depths) =>
+              axis === 'biomeDepthCache' ? depths.biomeDepthCache : depths.biomeEncounterDepth,
             ),
-          ];
-          return {
-            roomIndex,
-            room: room.name,
-            encounter: encounter.name,
-            generated: true,
-            axis,
-            depths: pinned,
-          };
-        }),
+          ),
+        ];
+        return {
+          roomIndex,
+          room: room.name,
+          encounter: encounter.name,
+          generated: true,
+          axis,
+          depths: pinned,
+        };
+      }),
     );
   };
 
@@ -229,7 +232,7 @@ describe('generated encounter inverse', () => {
     recordContext(surface, roomName, { biomeDepthCache: biomeEncounterDepth, biomeEncounterDepth });
 
   it('infers the shared highlight, per-wave additions, canonical allocations and Fangs', () => {
-    const observed = surface.rooms[11]!.encounters[0]!;
+    const observed = surface.rooms[11]!.phases[0]!;
     const result = invert(policy('GeneratedN_Bigger'), surfaceContext(5), observed);
     expect(result).toEqual({
       kind: 'match',
@@ -362,7 +365,7 @@ describe('generated encounter inverse', () => {
 
   it('returns a typed mismatch rather than an unverified guess', () => {
     const selection = policy('GeneratedN_Bigger');
-    const observed = surface.rooms[11]!.encounters[0]!;
+    const observed = surface.rooms[11]!.phases[0]!;
     const context = surfaceContext(5);
     const recount = (wave: number, spawn: number, count: number): ObservedEncounterPhase => ({
       ...observed,

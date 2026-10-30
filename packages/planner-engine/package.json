@@ -9,8 +9,8 @@
     "./requirements": "./src/requirements/index.ts",
     "./reward-kernel": "./src/reward-kernel/index.ts",
     "./simulation": "./src/simulation/index.ts",
-    "./execution-plan": "./src/execution-plan/index.ts",
-    "./run-record": "./src/run-record/index.ts"
+    "./authoring": "./src/simulation/authoring/index.ts",
+    "./execution-plan": "./src/execution-plan/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --project tsconfig.json"

@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 
-import { hubDepartureTraitInventory } from '../../../../src/simulation/rewards/run-state-conformance';
+import { snapshotTraitInventory } from '../../../../src/simulation/rewards/run-state-conformance';
 import type { StygianWellRunState } from '../../../../src/simulation/commerce/stygian-well';
 import {
   fightKey,
@@ -89,12 +89,12 @@ describe('N room-departure clocks', () => {
     );
     expect(removal?.sequence).toBe(departures[firstHub]!.sequence);
     const [first, second] = result.simulation.hubDepartures;
-    expect(hubDepartureTraitInventory(first!.departure).map((trait) => trait.traitKey)).toContain(
+    expect(snapshotTraitInventory(first!.departure).map((trait) => trait.traitKey)).toContain(
       fightKey,
     );
-    expect(
-      hubDepartureTraitInventory(second!.departure).map((trait) => trait.traitKey),
-    ).not.toContain(fightKey);
+    expect(snapshotTraitInventory(second!.departure).map((trait) => trait.traitKey)).not.toContain(
+      fightKey,
+    );
   });
 
   it('spends room-clocked Well uses at every native departure, Hub revisits included', () => {
