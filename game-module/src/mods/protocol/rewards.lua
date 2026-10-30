@@ -245,6 +245,9 @@ local function rerolledTraitScreen(value, label)
             or (option.effectiveLevel ~= nil and not p.int(option.effectiveLevel, optionLabel .. ".effectiveLevel", 0)) then
             return p.fail(label .. " has a malformed or repeated option")
         end
+        if option.baseRarity ~= nil and option.rarity == nil then
+            return p.fail(optionLabel .. ".baseRarity needs the rarity its clicks reached")
+        end
         if option.replacement ~= nil then
             local _, replacementError = replacement(option.replacement, optionLabel .. ".replacement")
             if replacementError then return nil, replacementError end
