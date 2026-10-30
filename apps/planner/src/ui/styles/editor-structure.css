@@ -612,7 +612,6 @@ select {
   gap: 4px;
   min-width: 0;
   overflow-x: auto;
-  scrollbar-width: thin;
 }
 
 .room-workbench-tab-utility {

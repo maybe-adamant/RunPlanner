@@ -43,6 +43,28 @@
   text-rendering: optimizeLegibility;
 }
 
+/* Scrollbars wear a muted selection gold on a clear track, everywhere. */
+* {
+  scrollbar-color: color-mix(in srgb, var(--selection-accent) 55%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+/* Chromium before the standard properties, including older WebView2. */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--selection-accent) 55%, transparent);
+}
+
 /* Radix positions floating wrappers in screen pixels; scale only their content. */
 [data-radix-popper-content-wrapper] {
   zoom: calc(1 / var(--app-scale, 1));
