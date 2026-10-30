@@ -690,6 +690,7 @@ function roomEntry(value: unknown, label: string): RunRecordRoomEntry {
       'lostTraits',
       'keepsake',
       'elements',
+      'maxHealth',
       'rewardStores',
       'bannedTraits',
       'metaConversionUses',
@@ -716,6 +717,7 @@ function roomEntry(value: unknown, label: string): RunRecordRoomEntry {
     ...optional(record, 'lostTraits', label, sortedNames),
     ...optional(record, 'keepsake', label, text),
     ...optional(record, 'elements', label, nonEmptyCounts),
+    ...optional(record, 'maxHealth', label, (entry, path) => integer(entry, path, 1)),
     ...(stores === undefined
       ? {}
       : {

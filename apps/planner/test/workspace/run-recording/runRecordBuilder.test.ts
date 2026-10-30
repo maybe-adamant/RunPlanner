@@ -76,6 +76,7 @@ interface Step {
   readonly traits?: readonly SavedTrait[] | null;
   readonly spell?: SavedSpell;
   readonly elements?: Readonly<Record<string, number>>;
+  readonly maxHealth?: number;
   readonly worldTime?: number;
 }
 
@@ -100,6 +101,7 @@ function save(step: Step): SaveCheckpoint {
             slotted: { Keepsake: 'GoldifyKeepsake', Aspect: 'StaffClearCastAspect' },
             ...(step.spell === undefined ? {} : { spell: step.spell }),
             elements: step.elements ?? {},
+            ...(step.maxHealth === undefined ? {} : { maxHealth: step.maxHealth }),
           },
         }),
     profile: {
@@ -510,6 +512,7 @@ describe('run record builder', () => {
           curse,
         ],
         elements: { Air: 2, Fire: 0 },
+        maxHealth: 108,
         spell: {
           name: 'SpellLeapTrait',
           talents: {
@@ -554,6 +557,7 @@ describe('run record builder', () => {
         },
         keepsake: 'GoldifyKeepsake',
         elements: { Air: 2 },
+        maxHealth: 108,
         rewardStores: { RunProgress: { Boon: 2, StackUpgrade: 1 } },
         bannedTraits: ['HeraManaBoon', 'ZeusSprintBoon'],
         metaConversionUses: 1,

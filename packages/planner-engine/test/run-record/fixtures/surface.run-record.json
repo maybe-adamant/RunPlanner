@@ -113,6 +113,7 @@
           "EffectVulnerabilityMetaUpgrade": { "rarity": "Epic" }
         },
         "keepsake": "HadesAndPersephoneKeepsake",
+        "maxHealth": 70,
         "rewardStores": {
           "TyphonBossRewards": {
             "Boon": 2,
@@ -257,6 +258,7 @@
         "traits": { "WaterEssence": {} },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 1 },
+        "maxHealth": 70,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -346,6 +348,7 @@
         "traits": { "AphroditeSpecialBoon": { "rarity": "Rare", "level": 4 } },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2 },
+        "maxHealth": 70,
         "bannedTraits": ["AphroditeManaBoon", "AphroditeSprintBoon"],
         "biomeBoonSkipCount": 1
       }
@@ -418,6 +421,7 @@
       "entry": {
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2 },
+        "maxHealth": 70,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -474,6 +478,7 @@
         "traits": { "BoltRetaliateBoon": { "rarity": "Common", "level": 4 } },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 1 },
+        "maxHealth": 70,
         "rewardStores": {
           "SubRoomRewards": {
             "MaxManaDropSmall": 1,
@@ -522,6 +527,7 @@
         "traits": { "RoomRewardMaxManaTrait": {}, "RoomRewardMaxHealthTrait": {} },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 1 },
+        "maxHealth": 75,
         "rewardStores": {
           "SubRoomRewards": {
             "MaxManaDropSmall": 1,
@@ -620,6 +626,7 @@
       "entry": {
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 1 },
+        "maxHealth": 75,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -703,6 +710,7 @@
       "entry": {
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 1 },
+        "maxHealth": 75,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -784,6 +792,7 @@
         "traits": { "PerfectDamageBonusBoon": { "rarity": "Epic", "level": 4 } },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 2 },
+        "maxHealth": 75,
         "rewardStores": { "HubRewards": {} },
         "bannedTraits": [
           "AphroditeManaBoon",
@@ -865,6 +874,7 @@
       "entry": {
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 2 },
+        "maxHealth": 75,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -947,6 +957,7 @@
         "traits": { "StaffDashAttackTrait": {} },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 2 },
+        "maxHealth": 75,
         "rewardStores": {
           "HubRewards": {
             "MaxHealthDropBig": 1,
@@ -1067,6 +1078,7 @@
       "entry": {
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 2 },
+        "maxHealth": 75,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -1149,6 +1161,7 @@
         "traits": { "HighHealthOffenseBoon": { "rarity": "Common", "level": 4 } },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 3 },
+        "maxHealth": 75,
         "rewardStores": {
           "SubRoomRewardsHard": {
             "MaxHealthDrop": 2,
@@ -1245,6 +1258,7 @@
       "entry": {
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 3 },
+        "maxHealth": 75,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -1328,6 +1342,7 @@
       "entry": {
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 3 },
+        "maxHealth": 125,
         "rewardStores": {
           "HubRewards": {
             "MaxHealthDropBig": 1,
@@ -1408,6 +1423,7 @@
       "entry": {
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 3 },
+        "maxHealth": 125,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -1493,6 +1509,7 @@
         "traits": { "AphroditeCastBoon": { "rarity": "Rare", "level": 4 } },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 4 },
+        "maxHealth": 130,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -1536,6 +1553,7 @@
       "entry": {
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 4 },
+        "maxHealth": 130,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -1571,6 +1589,7 @@
       "entry": {
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 4 },
+        "maxHealth": 130,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -1633,6 +1652,7 @@
       "entry": {
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Water": 2, "Air": 4 },
+        "maxHealth": 130,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -1665,6 +1685,7 @@
         },
         "keepsake": "GoldifyKeepsake",
         "elements": { "Water": 3, "Air": 4 },
+        "maxHealth": 130,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -1778,6 +1799,7 @@
       "entry": {
         "keepsake": "GoldifyKeepsake",
         "elements": { "Water": 3, "Air": 4 },
+        "maxHealth": 130,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -1870,6 +1892,7 @@
         "traits": { "AphroditeCastBoon": { "rarity": "Rare", "level": 5 } },
         "keepsake": "GoldifyKeepsake",
         "elements": { "Water": 3, "Air": 4 },
+        "maxHealth": 135,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -1946,6 +1969,7 @@
         "traits": { "GoldifyKeepsake": { "rarity": "Epic", "boonConversionUses": 3 } },
         "keepsake": "GoldifyKeepsake",
         "elements": { "Water": 3, "Air": 4 },
+        "maxHealth": 135,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 4,
@@ -2025,6 +2049,7 @@
         },
         "keepsake": "GoldifyKeepsake",
         "elements": { "Fire": 1, "Water": 4, "Air": 4 },
+        "maxHealth": 135,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 4,
@@ -2160,6 +2185,7 @@
         },
         "keepsake": "GoldifyKeepsake",
         "elements": { "Fire": 1, "Water": 4, "Air": 5 },
+        "maxHealth": 135,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -2293,6 +2319,7 @@
         },
         "keepsake": "GoldifyKeepsake",
         "elements": { "Fire": 1, "Water": 4, "Air": 5 },
+        "maxHealth": 160,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 3,
@@ -2378,6 +2405,7 @@
         },
         "keepsake": "GoldifyKeepsake",
         "elements": { "Fire": 2, "Water": 5, "Air": 5 },
+        "maxHealth": 165,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",
@@ -2424,6 +2452,7 @@
         "traits": { "ElementalDodgeBoon": { "rarity": "Common" } },
         "keepsake": "GoldifyKeepsake",
         "elements": { "Fire": 2, "Water": 5, "Air": 5 },
+        "maxHealth": 165,
         "bannedTraits": [
           "AphroditeManaBoon",
           "AphroditeSprintBoon",

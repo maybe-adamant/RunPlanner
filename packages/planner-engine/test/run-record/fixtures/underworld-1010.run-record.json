@@ -100,6 +100,7 @@
           "SorceryRegenMetaUpgrade": { "rarity": "Epic" }
         },
         "keepsake": "BossMetaUpgradeKeepsake",
+        "maxHealth": 30,
         "rewardStores": {
           "SubRoomRewards": {
             "MaxManaDropSmall": 1,
@@ -248,6 +249,7 @@
         },
         "keepsake": "BossMetaUpgradeKeepsake",
         "elements": { "Water": 1 },
+        "maxHealth": 30,
         "rewardStores": {
           "MetaProgress": {
             "GiftDrop": 1,
@@ -303,6 +305,7 @@
         "traits": { "ZeusCastBoon": { "rarity": "Rare" } },
         "keepsake": "BossMetaUpgradeKeepsake",
         "elements": { "Air": 1, "Water": 1 },
+        "maxHealth": 30,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -358,6 +361,7 @@
         "traits": { "FocusLightningBoon": { "rarity": "Rare" } },
         "keepsake": "BossMetaUpgradeKeepsake",
         "elements": { "Air": 2, "Water": 1 },
+        "maxHealth": 30,
         "rewardStores": {
           "MetaProgress": {
             "MetaCurrencyDrop": 4,
@@ -438,6 +442,7 @@
         "traits": { "RoomRewardMaxManaTrait": {} },
         "keepsake": "BossMetaUpgradeKeepsake",
         "elements": { "Air": 2, "Water": 1 },
+        "maxHealth": 30,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -491,6 +496,7 @@
         "traits": { "FocusLightningBoon": { "rarity": "Rare", "level": 2 } },
         "keepsake": "BossMetaUpgradeKeepsake",
         "elements": { "Air": 2, "Water": 1 },
+        "maxHealth": 30,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 4,
@@ -574,6 +580,7 @@
         "traits": { "DemeterWeaponBoon": { "rarity": "Rare" } },
         "keepsake": "BossMetaUpgradeKeepsake",
         "elements": { "Air": 2, "Water": 2 },
+        "maxHealth": 30,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 4,
@@ -631,6 +638,7 @@
         "traits": { "DashOmegaBuffBoon": { "rarity": "Rare" } },
         "keepsake": "BossMetaUpgradeKeepsake",
         "elements": { "Air": 3, "Water": 2 },
+        "maxHealth": 30,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 3,
@@ -737,6 +745,7 @@
         "traits": { "CastNovaBoon": { "rarity": "Common" } },
         "keepsake": "BossMetaUpgradeKeepsake",
         "elements": { "Air": 3, "Water": 3 },
+        "maxHealth": 30,
         "rewardStores": {
           "MetaProgress": {
             "MetaCurrencyDrop": 3,
@@ -803,6 +812,7 @@
         },
         "keepsake": "BossMetaUpgradeKeepsake",
         "elements": { "Air": 3, "Earth": 1, "Water": 3 },
+        "maxHealth": 30,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 3,
@@ -865,6 +875,7 @@
         },
         "keepsake": "BossMetaUpgradeKeepsake",
         "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "maxHealth": 30,
         "rewardStores": {
           "MetaProgress": {
             "MetaCurrencyDrop": 2,
@@ -909,6 +920,7 @@
         },
         "keepsake": "BossMetaUpgradeKeepsake",
         "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "maxHealth": 35,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 3,
@@ -967,6 +979,7 @@
         "traits": { "SuitAttackRangeTrait": { "rarity": "Common" } },
         "keepsake": "BossMetaUpgradeKeepsake",
         "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "maxHealth": 35,
         "metaConversionUses": 3,
         "wellShopPurchases": { "RandomStoreItem": 1 }
       }
@@ -1020,6 +1033,7 @@
         },
         "keepsake": "BossMetaUpgradeKeepsake",
         "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "maxHealth": 75,
         "metaConversionUses": 3,
         "wellShopPurchases": { "RandomStoreItem": 1 },
         "numRerolls": 10
@@ -1040,6 +1054,7 @@
         "lostTraits": ["BossMetaUpgradeKeepsake", "VanillaState"],
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "maxHealth": 75,
         "metaConversionUses": 3,
         "wellShopPurchases": { "RandomStoreItem": 1 },
         "numRerolls": 10
@@ -1132,6 +1147,7 @@
       "entry": {
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "maxHealth": 75,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 3,
@@ -1205,6 +1221,7 @@
         },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Air": 3, "Earth": 2, "Water": 3 },
+        "maxHealth": 75,
         "rewardStores": {
           "MetaProgress": {
             "MetaCurrencyDrop": 6,
@@ -1270,6 +1287,7 @@
         "lostTraits": ["TemporaryImprovedCastTrait"],
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Water": 3, "Earth": 2, "Air": 3 },
+        "maxHealth": 75,
         "rewardStores": {
           "MetaProgress": {
             "MetaCurrencyDrop": 6,
@@ -1319,6 +1337,7 @@
         "traits": { "RestockBoon": { "rarity": "Common" }, "MinorArmorBoon": {} },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Water": 3, "Earth": 2, "Fire": 1, "Air": 3 },
+        "maxHealth": 75,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 5,
@@ -1402,6 +1421,7 @@
         "traits": { "RootStrikeBoon": { "rarity": "Duo" } },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Water": 3, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "maxHealth": 75,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 5,
@@ -1469,6 +1489,7 @@
       "entry": {
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Water": 3, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "maxHealth": 75,
         "rewardStores": {
           "MetaProgress": {
             "MetaCurrencyDrop": 10,
@@ -1564,6 +1585,7 @@
         "lostTraits": ["MinorArmorBoon"],
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Water": 3, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "maxHealth": 75,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 5,
@@ -1657,6 +1679,7 @@
         },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Water": 3, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "maxHealth": 75,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 5,
@@ -1732,6 +1755,7 @@
         },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Water": 4, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "maxHealth": 75,
         "metaConversionUses": 3,
         "wellShopPurchases": { "RandomStoreItem": 1 },
         "numRerolls": 8,
@@ -1811,6 +1835,7 @@
         },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Water": 4, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "maxHealth": 75,
         "metaConversionUses": 3,
         "wellShopPurchases": { "RandomStoreItem": 1 },
         "numRerolls": 8,
@@ -1846,6 +1871,7 @@
         "lostTraits": ["SpellTalentKeepsake"],
         "keepsake": "AthenaEncounterKeepsake",
         "elements": { "Water": 4, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "maxHealth": 75,
         "metaConversionUses": 3,
         "wellShopPurchases": { "TemporaryImprovedSecondaryTrait": 1, "RandomStoreItem": 1 },
         "numRerolls": 8,
@@ -2044,6 +2070,7 @@
       "entry": {
         "keepsake": "AthenaEncounterKeepsake",
         "elements": { "Water": 4, "Earth": 2, "Fire": 1, "Air": 3, "Aether": 1 },
+        "maxHealth": 75,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 5,
@@ -2132,6 +2159,7 @@
         },
         "keepsake": "AthenaEncounterKeepsake",
         "elements": { "Water": 4, "Earth": 2, "Fire": 2, "Air": 3, "Aether": 1 },
+        "maxHealth": 80,
         "rewardStores": {
           "FieldsOptionalRewards": {
             "MaxManaDropSmall": 3,
@@ -2225,6 +2253,7 @@
         },
         "keepsake": "AthenaEncounterKeepsake",
         "elements": { "Water": 5, "Earth": 2, "Fire": 2, "Air": 4, "Aether": 1 },
+        "maxHealth": 80,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 5,
@@ -2383,6 +2412,7 @@
         },
         "keepsake": "AthenaEncounterKeepsake",
         "elements": { "Water": 5, "Earth": 2, "Fire": 2, "Air": 4, "Aether": 1 },
+        "maxHealth": 80,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 4,

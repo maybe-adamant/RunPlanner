@@ -162,6 +162,8 @@ export interface RunRecordRoomEntry {
   readonly keepsake?: string;
   /** `Hero.Elements`. */
   readonly elements?: Readonly<Record<string, number>>;
+  /** `Hero.MaxHealth`; absent in a record made before it was kept. */
+  readonly maxHealth?: number;
   /**
    * `RewardStores` entry counts by name, for each store whose contents differ
    * from the previous room's entry save; the first room holds every store.

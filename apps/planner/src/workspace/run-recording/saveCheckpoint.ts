@@ -86,6 +86,8 @@ export interface SavedHero {
   readonly spell?: SavedSpell;
   /** `Hero.Elements`: element counts, zeros left out. */
   readonly elements: Readonly<Record<string, number>>;
+  /** `Hero.MaxHealth`. */
+  readonly maxHealth?: number;
 }
 
 /** `Hero.SlottedSpell`: the spell, its tree structure and talents by `depth:slot`. */
@@ -492,7 +494,13 @@ function hero(
   for (const [slot, trait] of Object.entries(table(value.SlottedTraits)))
     if (typeof trait === 'string') slotted[slot] = trait;
   const savedSpell = spell(value.SlottedSpell);
-  return { traits, slotted, ...optional('spell', savedSpell), elements: counts(value.Elements) };
+  return {
+    traits,
+    slotted,
+    ...optional('spell', savedSpell),
+    elements: counts(value.Elements),
+    ...optional('maxHealth', number(value.MaxHealth)),
+  };
 }
 
 function spell(value: LuaValue | undefined): SavedSpell | undefined {

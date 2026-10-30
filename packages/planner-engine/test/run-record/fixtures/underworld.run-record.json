@@ -123,6 +123,7 @@
           "BossShieldMetaUpgrade": { "rarity": "Epic" }
         },
         "keepsake": "HadesAndPersephoneKeepsake",
+        "maxHealth": 70,
         "rewardStores": {
           "TartarusRewards": {
             "RoomMoneyTripleDrop": 1,
@@ -257,6 +258,7 @@
         "traits": { "HeraSpecialBoon": { "rarity": "Common", "level": 4 }, "EarthEssence": {} },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Earth": 2 },
+        "maxHealth": 70,
         "rewardStores": {
           "MetaProgress": {
             "GiftDrop": 1,
@@ -318,6 +320,7 @@
         "traits": { "ChaosDashCurse": { "remainingUses": 5 }, "FireEssence": {}, "WetState": {} },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Earth": 2, "Fire": 1 },
+        "maxHealth": 70,
         "rewardStores": {
           "MetaProgress": {
             "GiftDrop": 1,
@@ -396,6 +399,7 @@
         },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Earth": 2, "Fire": 1 },
+        "maxHealth": 70,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -496,6 +500,7 @@
         },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Earth": 2, "Fire": 1 },
+        "maxHealth": 70,
         "rewardStores": {
           "MetaProgress": {
             "MetaCurrencyDrop": 2,
@@ -552,6 +557,7 @@
         },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Earth": 3, "Fire": 1 },
+        "maxHealth": 75,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -625,6 +631,7 @@
         "traits": { "CastDamageCostume": { "rarity": "Common" } },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Earth": 3, "Fire": 1 },
+        "maxHealth": 75,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -683,6 +690,7 @@
         },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Earth": 3, "Fire": 1, "Water": 1 },
+        "maxHealth": 75,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -751,6 +759,7 @@
         },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Earth": 4, "Fire": 1, "Water": 1 },
+        "maxHealth": 75,
         "rewardStores": {
           "MetaProgress": {
             "MetaCurrencyDrop": 2,
@@ -819,6 +828,7 @@
         "lostTraits": ["ChaosDashCurse"],
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Earth": 4, "Fire": 1, "Water": 1 },
+        "maxHealth": 75,
         "rewardStores": {
           "MetaProgress": {
             "MetaCurrencyDrop": 6,
@@ -918,6 +928,7 @@
         },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Earth": 4, "Fire": 1, "Water": 1 },
+        "maxHealth": 80,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -983,6 +994,7 @@
         },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Earth": 4, "Fire": 1, "Water": 1 },
+        "maxHealth": 80,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 1,
@@ -1011,6 +1023,7 @@
         "traits": { "AphroditeManaBoon": { "rarity": "Common", "level": 4 } },
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Earth": 4, "Fire": 1, "Air": 1, "Water": 1 },
+        "maxHealth": 80,
         "metaConversionUses": 3,
         "wellShopPurchases": { "TemporaryEmptySlotDamageTrait": 1, "TemporaryMoveSpeedTrait": 2 }
       }
@@ -1070,6 +1083,7 @@
         "lostTraits": ["TemporaryEmptySlotDamageTrait"],
         "keepsake": "HadesAndPersephoneKeepsake",
         "elements": { "Earth": 4, "Fire": 1, "Air": 1, "Water": 1 },
+        "maxHealth": 80,
         "metaConversionUses": 3,
         "wellShopPurchases": { "TemporaryEmptySlotDamageTrait": 1, "TemporaryMoveSpeedTrait": 2 }
       }
@@ -1107,6 +1121,7 @@
         "lostTraits": ["BoonDecayBoon", "WetState"],
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 4, "Fire": 1, "Air": 1 },
+        "maxHealth": 80,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 1,
@@ -1159,6 +1174,7 @@
         "lostTraits": ["TemporaryForcedSecretDoorTrait"],
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 4, "Fire": 1, "Air": 1 },
+        "maxHealth": 85,
         "rewardStores": {
           "MetaProgress": {
             "MetaCurrencyDrop": 6,
@@ -1216,6 +1232,7 @@
         "traits": { "ChaosDashCurse": { "remainingUses": 5 } },
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 4, "Fire": 1, "Air": 1 },
+        "maxHealth": 85,
         "rewardStores": {
           "MetaProgress": {
             "MetaCurrencyDrop": 6,
@@ -1280,6 +1297,7 @@
         },
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 4, "Fire": 1, "Air": 1 },
+        "maxHealth": 90,
         "rewardStores": {
           "MetaProgress": {
             "MetaCurrencyDrop": 6,
@@ -1318,6 +1336,7 @@
         "traits": { "NarcissusG": { "rarity": "Common" }, "ElementalEssence": {} },
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 6, "Fire": 3, "Air": 3, "Water": 2 },
+        "maxHealth": 90,
         "rewardStores": {
           "RunProgress": { "WeaponUpgrade": 1, "HermesUpgrade": 1, "Devotion": 1, "TalentDrop": 1 }
         },
@@ -1416,6 +1435,7 @@
       "entry": {
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 6, "Fire": 3, "Air": 3, "Water": 2 },
+        "maxHealth": 90,
         "rewardStores": {
           "RunProgress": {
             "WeaponUpgrade": 3,
@@ -1495,6 +1515,7 @@
         },
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 6, "Fire": 3, "Air": 3, "Water": 2 },
+        "maxHealth": 95,
         "rewardStores": {
           "RunProgress": {
             "WeaponUpgrade": 3,
@@ -1570,6 +1591,7 @@
         },
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 6, "Fire": 3, "Air": 4, "Water": 2 },
+        "maxHealth": 95,
         "rewardStores": {
           "MetaProgress": {
             "MetaCurrencyDrop": 6,
@@ -1638,6 +1660,7 @@
         },
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 6, "Fire": 3, "Air": 4, "Water": 2 },
+        "maxHealth": 100,
         "rewardStores": {
           "RunProgress": {
             "WeaponUpgrade": 3,
@@ -1676,6 +1699,7 @@
         "traits": { "HighHealthOffenseBoon": { "rarity": "Common", "level": 5 } },
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 6, "Fire": 3, "Air": 5, "Water": 2 },
+        "maxHealth": 100,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 1,
@@ -1737,6 +1761,7 @@
         "lostTraits": ["ChaosDashCurse"],
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 6, "Fire": 3, "Air": 5, "Water": 2 },
+        "maxHealth": 100,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 1,
@@ -1759,6 +1784,7 @@
         "traits": { "LimitedSwapBonusTrait": {} },
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 6, "Fire": 3, "Air": 5, "Water": 2 },
+        "maxHealth": 105,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 1,
@@ -1919,6 +1945,7 @@
       "entry": {
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 6, "Fire": 3, "Air": 5, "Water": 2 },
+        "maxHealth": 105,
         "rewardStores": {
           "RunProgress": {
             "WeaponUpgrade": 2,
@@ -2005,6 +2032,7 @@
         },
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 6, "Fire": 4, "Air": 5, "Water": 3 },
+        "maxHealth": 105,
         "rewardStores": {
           "RunProgress": {
             "WeaponUpgrade": 2,
@@ -2082,6 +2110,7 @@
         "lostTraits": ["ChaosManaCostBlessing", "LimitedSwapBonusTrait"],
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 6, "Fire": 4, "Air": 5, "Water": 4 },
+        "maxHealth": 105,
         "rewardStores": {
           "RunProgress": {
             "WeaponUpgrade": 2,
@@ -2301,6 +2330,7 @@
         "traits": { "EchoRepeatKeepsakeBoon": { "rarity": "Epic" } },
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 6, "Fire": 4, "Air": 5, "Water": 4 },
+        "maxHealth": 105,
         "rewardStores": {
           "RunProgress": {
             "WeaponUpgrade": 4,
@@ -2378,6 +2408,7 @@
         },
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 6, "Fire": 5, "Air": 6, "Water": 4 },
+        "maxHealth": 135,
         "rewardStores": {
           "RunProgress": {
             "WeaponUpgrade": 4,
@@ -2430,6 +2461,7 @@
         },
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 7, "Fire": 5, "Air": 6, "Water": 4 },
+        "maxHealth": 135,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 1,
@@ -2488,6 +2520,7 @@
         "lostTraits": ["CastDamageCostume"],
         "keepsake": "RandomBlessingKeepsake",
         "elements": { "Earth": 7, "Fire": 5, "Air": 6, "Water": 4 },
+        "maxHealth": 135,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 1,
@@ -2522,6 +2555,7 @@
         "lostTraits": ["RandomBlessingKeepsake"],
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Earth": 7, "Fire": 5, "Air": 6, "Water": 4 },
+        "maxHealth": 30,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 1,
@@ -2583,6 +2617,7 @@
         },
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Earth": 7, "Fire": 5, "Air": 6, "Water": 4 },
+        "maxHealth": 30,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 1,
@@ -2635,6 +2670,7 @@
         },
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Earth": 7, "Fire": 5, "Air": 6, "Water": 4 },
+        "maxHealth": 30,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 1,
@@ -2687,6 +2723,7 @@
         },
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Earth": 7, "Fire": 5, "Air": 6, "Water": 4 },
+        "maxHealth": 30,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 1,
@@ -2751,6 +2788,7 @@
         },
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Earth": 7, "Fire": 5, "Air": 7, "Water": 4 },
+        "maxHealth": 30,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 1,
@@ -2815,6 +2853,7 @@
         },
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Earth": 7, "Fire": 5, "Air": 7, "Water": 4 },
+        "maxHealth": 30,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 2,
@@ -2865,6 +2904,7 @@
         "lostTraits": ["TemporaryForcedSecretDoorTrait"],
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Earth": 7, "Fire": 5, "Air": 7, "Water": 4 },
+        "maxHealth": 30,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 2,
@@ -2920,6 +2960,7 @@
         "traits": { "ChaosDashCurse": { "remainingUses": 3 } },
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Earth": 7, "Fire": 5, "Air": 7, "Water": 4 },
+        "maxHealth": 30,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 2,
@@ -2952,6 +2993,7 @@
         "lostTraits": ["StaffAttackRecoveryTrait"],
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Earth": 7, "Fire": 5, "Air": 7, "Water": 4 },
+        "maxHealth": 30,
         "metaConversionUses": 3,
         "wellShopPurchases": {
           "TemporaryForcedSecretDoorTrait": 2,

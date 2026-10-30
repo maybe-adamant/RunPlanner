@@ -644,6 +644,7 @@ function roomEntry(save: SaveCheckpoint, previous: SaveCheckpoint | undefined): 
     ...optional('lostTraits', lostTraits.length > 0 ? lostTraits : undefined),
     ...optional('keepsake', hero?.slotted.Keepsake),
     ...optional('elements', nonEmpty(wholeCounts(hero?.elements ?? {}))),
+    ...optional('maxHealth', whole(hero?.maxHealth, 1)),
     ...optional('rewardStores', nonEmpty(stores)),
     ...optional(
       'bannedTraits',

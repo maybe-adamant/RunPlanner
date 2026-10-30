@@ -232,6 +232,19 @@ describe('save checkpoint extraction', () => {
     });
   });
 
+  it("reads the hero's max health", () => {
+    const save = sample('underworld-062');
+    const run = save.globals.CurrentRun as LuaTable;
+    const withMaxHealth: DecodedSave = {
+      ...save,
+      globals: {
+        ...save.globals,
+        CurrentRun: { ...run, Hero: { ...(run.Hero as LuaTable), MaxHealth: 135 } },
+      },
+    };
+    expect(extractSaveCheckpoint(withMaxHealth, true, NO_SAVED_VALUES).hero?.maxHealth).toBe(135);
+  });
+
   it("reads a Rarify source's charges from its nested data, not the keepsake's own uses", () => {
     const save = sample('underworld-062');
     const run = save.globals.CurrentRun as LuaTable;

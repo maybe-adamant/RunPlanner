@@ -113,6 +113,7 @@
           "DoorHealMetaUpgrade": { "rarity": "Epic" }
         },
         "keepsake": "FountainRarityKeepsake",
+        "maxHealth": 70,
         "rewardStores": {
           "FieldsCombatRewards": {},
           "RunProgress": {
@@ -271,6 +272,7 @@
         "traits": { "SuitInherentSpeedBoon": {}, "ApolloSprintBoon": { "rarity": "Common" } },
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 1 },
+        "maxHealth": 70,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -366,6 +368,7 @@
         },
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 1 },
+        "maxHealth": 70,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
     },
@@ -412,6 +415,7 @@
       "entry": {
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 1 },
+        "maxHealth": 70,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -504,6 +508,7 @@
         "traits": { "HeraWeaponBoon": { "rarity": "Epic" } },
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 1, "Earth": 1 },
+        "maxHealth": 70,
         "rewardStores": { "HubRewards": { "SpellDrop": 1 } },
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
@@ -554,6 +559,7 @@
       "entry": {
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 1, "Earth": 1 },
+        "maxHealth": 70,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
     },
@@ -647,6 +653,7 @@
         },
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 1, "Earth": 1, "Air": 1 },
+        "maxHealth": 75,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
     },
@@ -725,6 +732,7 @@
         "traits": { "ApolloSprintBoon": { "rarity": "Heroic", "level": 1 } },
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 1, "Earth": 1, "Air": 1 },
+        "maxHealth": 75,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
     },
@@ -806,6 +814,7 @@
         },
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 1, "Water": 1, "Earth": 1, "Air": 1 },
+        "maxHealth": 75,
         "rewardStores": {
           "HubRewards": {
             "SpellDrop": 2,
@@ -871,6 +880,7 @@
       "entry": {
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 1, "Water": 1, "Earth": 1, "Air": 1 },
+        "maxHealth": 75,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
     },
@@ -949,6 +959,7 @@
         "traits": { "AntiArmorBoon": { "rarity": "Epic" }, "AirEssence": {} },
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 2, "Water": 1, "Earth": 1, "Air": 2 },
+        "maxHealth": 75,
         "rewardStores": {
           "HubRewards": {
             "SpellDrop": 2,
@@ -991,6 +1002,7 @@
       "entry": {
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 2, "Water": 1, "Earth": 1, "Air": 2 },
+        "maxHealth": 75,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
     },
@@ -1070,6 +1082,7 @@
         "traits": { "MoneyOnDeathCurse": { "rarity": "Common" } },
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 2, "Water": 1, "Earth": 1, "Air": 2 },
+        "maxHealth": 75,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
     },
@@ -1151,6 +1164,7 @@
       "entry": {
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 2, "Water": 1, "Earth": 1, "Air": 2 },
+        "maxHealth": 75,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
     },
@@ -1207,6 +1221,7 @@
         "traits": { "DamageSharePotencyBoon": { "rarity": "Common" } },
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 2, "Water": 2, "Earth": 1, "Air": 2 },
+        "maxHealth": 75,
         "rewardStores": {
           "HubRewards": {
             "SpellDrop": 2,
@@ -1253,6 +1268,7 @@
         "traits": { "RestockBoon": { "rarity": "Common" } },
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 3, "Water": 2, "Earth": 1, "Air": 2 },
+        "maxHealth": 80,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -1350,6 +1366,7 @@
       "entry": {
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 3, "Water": 2, "Earth": 1, "Air": 2 },
+        "maxHealth": 80,
         "metaConversionUses": 1,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
@@ -1400,6 +1417,7 @@
       "entry": {
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 3, "Water": 2, "Earth": 1, "Air": 2 },
+        "maxHealth": 80,
         "metaConversionUses": 1,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
@@ -1422,6 +1440,7 @@
         },
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 4, "Water": 2, "Earth": 1, "Air": 3 },
+        "maxHealth": 80,
         "metaConversionUses": 1,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
@@ -1460,6 +1479,7 @@
       "entry": {
         "keepsake": "FountainRarityKeepsake",
         "elements": { "Fire": 4, "Water": 2, "Earth": 1, "Air": 3 },
+        "maxHealth": 80,
         "metaConversionUses": 1,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
@@ -1487,6 +1507,7 @@
         "lostTraits": ["FountainRarityKeepsake"],
         "keepsake": "ForcePoseidonBoonKeepsake",
         "elements": { "Fire": 4, "Water": 2, "Earth": 1, "Air": 3 },
+        "maxHealth": 80,
         "metaConversionUses": 1,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
@@ -1567,6 +1588,7 @@
         "traits": { "WaterEssence": {} },
         "keepsake": "ForcePoseidonBoonKeepsake",
         "elements": { "Fire": 4, "Water": 3, "Earth": 1, "Air": 3 },
+        "maxHealth": 80,
         "metaConversionUses": 1,
         "investedTalents": ["1:2", "2:2", "3:3"]
       }
@@ -1668,6 +1690,7 @@
         },
         "keepsake": "ForcePoseidonBoonKeepsake",
         "elements": { "Fire": 4, "Water": 4, "Earth": 1, "Air": 3 },
+        "maxHealth": 85,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -1885,6 +1908,7 @@
         },
         "keepsake": "ForcePoseidonBoonKeepsake",
         "elements": { "Fire": 4, "Water": 4, "Earth": 1, "Air": 3 },
+        "maxHealth": 85,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -1973,6 +1997,7 @@
         "lostTraits": ["StorePendingDeliveryItem"],
         "keepsake": "ForcePoseidonBoonKeepsake",
         "elements": { "Fire": 4, "Water": 4, "Earth": 1, "Air": 4 },
+        "maxHealth": 85,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 4,
@@ -2026,6 +2051,7 @@
         },
         "keepsake": "ForcePoseidonBoonKeepsake",
         "elements": { "Fire": 5, "Water": 5, "Earth": 2, "Air": 5, "Aether": 1 },
+        "maxHealth": 85,
         "metaConversionUses": 2,
         "investedTalents": ["1:2", "1:4", "2:2", "2:4", "3:3", "4:3"]
       }
@@ -2162,6 +2188,7 @@
         "traits": { "CirceSorceryDamageBoon": { "rarity": "Common" } },
         "keepsake": "ForcePoseidonBoonKeepsake",
         "elements": { "Fire": 5, "Water": 5, "Earth": 2, "Air": 5, "Aether": 1 },
+        "maxHealth": 85,
         "metaConversionUses": 2,
         "investedTalents": ["1:2", "1:4", "2:2", "2:4", "3:3", "4:3"]
       }
@@ -2237,6 +2264,7 @@
         },
         "keepsake": "ForcePoseidonBoonKeepsake",
         "elements": { "Fire": 5, "Water": 5, "Earth": 2, "Air": 5, "Aether": 1 },
+        "maxHealth": 90,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 4,
@@ -2273,6 +2301,7 @@
         },
         "keepsake": "ForcePoseidonBoonKeepsake",
         "elements": { "Fire": 5, "Water": 6, "Earth": 3, "Air": 5, "Aether": 1 },
+        "maxHealth": 90,
         "metaConversionUses": 2,
         "investedTalents": ["1:2", "1:4", "2:2", "2:4", "3:3", "4:3"]
       }
@@ -2311,6 +2340,7 @@
       "entry": {
         "keepsake": "ForcePoseidonBoonKeepsake",
         "elements": { "Fire": 5, "Water": 6, "Earth": 3, "Air": 5, "Aether": 1 },
+        "maxHealth": 90,
         "metaConversionUses": 2,
         "investedTalents": ["1:2", "1:4", "2:2", "2:4", "3:3", "4:3"]
       }
@@ -2348,6 +2378,7 @@
         "lostTraits": ["ForcePoseidonBoonKeepsake"],
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Fire": 5, "Water": 6, "Earth": 3, "Air": 5, "Aether": 1 },
+        "maxHealth": 90,
         "metaConversionUses": 2,
         "investedTalents": ["1:2", "1:4", "2:2", "2:4", "3:3", "4:3"]
       }
@@ -2467,6 +2498,7 @@
         "traits": { "StorePendingDeliveryItem": { "remainingUses": 4 } },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Fire": 5, "Water": 6, "Earth": 3, "Air": 5, "Aether": 1 },
+        "maxHealth": 90,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 3,
@@ -2565,6 +2597,7 @@
         },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Fire": 5, "Water": 6, "Earth": 3, "Air": 5, "Aether": 1 },
+        "maxHealth": 95,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 2,
@@ -2689,6 +2722,7 @@
         },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Fire": 5, "Water": 6, "Earth": 3, "Air": 5, "Aether": 1 },
+        "maxHealth": 95,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 1,
@@ -2766,6 +2800,7 @@
         "traits": { "StorePendingDeliveryItem": { "remainingUses": 1 } },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Fire": 5, "Water": 6, "Earth": 3, "Air": 5, "Aether": 1 },
+        "maxHealth": 120,
         "rewardStores": {
           "RunProgress": {
             "MaxHealthDrop": 1,
@@ -2873,6 +2908,7 @@
         },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Fire": 5, "Water": 6, "Earth": 4, "Air": 5, "Aether": 2 },
+        "maxHealth": 120,
         "rewardStores": {
           "RunProgress": {
             "Devotion": 2,
@@ -2945,6 +2981,7 @@
         },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Fire": 5, "Water": 6, "Earth": 4, "Air": 6, "Aether": 2 },
+        "maxHealth": 120,
         "rewardStores": {
           "RunProgress": {
             "Devotion": 2,
@@ -3031,6 +3068,7 @@
         "traits": { "PowerDrinkBoon": { "rarity": "Rare" } },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Fire": 5, "Water": 7, "Earth": 4, "Air": 6, "Aether": 2 },
+        "maxHealth": 125,
         "rewardStores": {
           "RunProgress": {
             "Devotion": 2,
@@ -3138,6 +3176,7 @@
         "traits": { "StorePendingDeliveryItem": { "remainingUses": 5 } },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Fire": 5, "Water": 7, "Earth": 4, "Air": 6, "Aether": 2 },
+        "maxHealth": 125,
         "rewardStores": {
           "RunProgress": {
             "Devotion": 2,
@@ -3223,6 +3262,7 @@
         "traits": { "StorePendingDeliveryItem": { "remainingUses": 4 } },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Fire": 5, "Water": 7, "Earth": 4, "Air": 6, "Aether": 2 },
+        "maxHealth": 125,
         "rewardStores": {
           "RunProgress": {
             "Devotion": 3,
@@ -3277,6 +3317,7 @@
         },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Fire": 5, "Water": 7, "Earth": 4, "Air": 8, "Aether": 2 },
+        "maxHealth": 125,
         "metaConversionUses": 2,
         "investedTalents": [
           "1:2",
@@ -3394,6 +3435,7 @@
         "traits": { "StorePendingDeliveryItem": { "remainingUses": 3 } },
         "keepsake": "SpellTalentKeepsake",
         "elements": { "Fire": 5, "Water": 7, "Earth": 4, "Air": 8, "Aether": 2 },
+        "maxHealth": 125,
         "metaConversionUses": 2,
         "investedTalents": [
           "1:2",
@@ -3436,6 +3478,7 @@
         "lostTraits": ["SpellTalentKeepsake"],
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Fire": 5, "Water": 8, "Earth": 4, "Air": 8, "Aether": 2 },
+        "maxHealth": 30,
         "metaConversionUses": 2,
         "investedTalents": [
           "1:2",
@@ -3489,6 +3532,7 @@
       "entry": {
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Fire": 5, "Water": 8, "Earth": 4, "Air": 8, "Aether": 2 },
+        "maxHealth": 30,
         "metaConversionUses": 2,
         "investedTalents": [
           "1:2",
@@ -3563,6 +3607,7 @@
         "traits": { "StorePendingDeliveryItem": { "remainingUses": 2 } },
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Fire": 5, "Water": 8, "Earth": 4, "Air": 8, "Aether": 2 },
+        "maxHealth": 30,
         "metaConversionUses": 2,
         "investedTalents": [
           "1:2",
@@ -3654,6 +3699,7 @@
         },
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Fire": 6, "Water": 8, "Earth": 4, "Air": 8, "Aether": 2 },
+        "maxHealth": 30,
         "rewardStores": {
           "TyphonBossRewards": { "Boon": 1, "TalentBigDrop": 1, "WeaponUpgrade": 2 }
         },
@@ -3724,6 +3770,7 @@
         "lostTraits": ["StorePendingDeliveryItem"],
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Fire": 8, "Water": 8, "Earth": 5, "Air": 8, "Aether": 2 },
+        "maxHealth": 30,
         "metaConversionUses": 2,
         "investedTalents": [
           "1:2",
@@ -3788,6 +3835,7 @@
       "entry": {
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Fire": 8, "Water": 8, "Earth": 5, "Air": 8, "Aether": 2 },
+        "maxHealth": 30,
         "metaConversionUses": 2,
         "investedTalents": [
           "1:2",
@@ -3850,6 +3898,7 @@
       "entry": {
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Fire": 8, "Water": 8, "Earth": 5, "Air": 8, "Aether": 2 },
+        "maxHealth": 30,
         "rewardStores": {
           "TyphonBossRewards": {
             "TalentBigDrop": 2,
@@ -3955,6 +4004,7 @@
         "traits": { "ArmorBoon": { "rarity": "Epic" } },
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Fire": 8, "Water": 8, "Earth": 6, "Air": 8, "Aether": 2 },
+        "maxHealth": 30,
         "metaConversionUses": 2,
         "investedTalents": [
           "1:2",
@@ -4004,6 +4054,7 @@
         },
         "keepsake": "LowHealthCritKeepsake",
         "elements": { "Fire": 8, "Water": 9, "Earth": 6, "Air": 9, "Aether": 2 },
+        "maxHealth": 30,
         "metaConversionUses": 2,
         "investedTalents": [
           "1:2",
