@@ -115,7 +115,7 @@ reward its redraw must yield; Hub board presses are published with the Hub
 across its stays. Every target still generates its published first draw. Each
 native press draws the target's next planned reroll; a press the plan does not
 make is a mismatch. Each room publishes the planned `NumRerolls` at its entry
-once the plan authors any reroll: the module enters a planned room with that
+once the plan spends any reroll: the module enters a planned room with that
 pool, floored at zero because a preserved over-spend is the plan's own
 finding, and a Practice start installs it.
 

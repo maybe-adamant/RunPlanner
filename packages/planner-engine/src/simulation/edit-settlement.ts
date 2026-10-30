@@ -15,9 +15,12 @@ import {
   projectCommandAddress,
 } from '../authored-project/commands/contract';
 import { applyProjectCommand } from '../authored-project/commands/dispatch';
+import { authoredLevelResolutionAt } from '../authored-project/commands/level-resolution';
+import { authoredTraitOfferAt } from '../authored-project/commands/trait-offer';
 import type { ProjectCommand } from '../authored-project/commands/types';
 import type { ProjectDocument, RoomOccurrence } from '../authored-project/model';
 import { roomActionKey } from '../authored-project/room-actions/state';
+import { rerolledScreenCount } from '../authored-project/screen-rerolls';
 import {
   discardDisplacedHermesShrineDelivery,
   hermesShrineDeliverySourceAddress,
@@ -213,7 +216,7 @@ function settleProjectEditRepairs(options: ProjectEditSettlementOptions): Projec
   // The reroll pool is a fixed budget at each spend's own point: a new spend
   // past it is refused. An earlier spend takes precedence, so an edit that
   // leaves later spends short keeps them with their findings.
-  const spendOwners = addedRerollSpendOwners(before.project, project, command);
+  const spendOwners = addedRerollSpendOwners(catalog, before.project, project, command);
   if (spendOwners.size > 0) {
     // Each over-spending owner and how far past the pool it goes.
     const overspent = (evaluated: ProjectEvaluationAssembly) =>
@@ -425,17 +428,28 @@ export function settleCommandWithoutNewFinding(
     : undefined;
 }
 
-/** Every screen reroll authored anywhere in a project: trait, Chaos and Pom earlier screens. */
-function screenRerollTotal(value: unknown): number {
-  if (Array.isArray(value))
-    return value.reduce((sum: number, entry) => sum + screenRerollTotal(entry), 0);
-  if (value === null || typeof value !== 'object') return 0;
-  return Object.entries(value).reduce(
-    (sum, [key, entry]) =>
-      sum +
-      (key === 'rerolledScreens' && Array.isArray(entry) ? entry.length : screenRerollTotal(entry)),
-    0,
-  );
+/** The earlier-screen count of the trait offer or Pom choice a screen command addresses. */
+function addressedScreenRerollCount(
+  document: ProjectDocument,
+  catalog: Catalog,
+  command: Extract<
+    ProjectCommand,
+    {
+      readonly kind:
+        | 'ReplaceTraitOffer'
+        | 'ReplaceLevelResolution'
+        | 'InsertTraitScreenReroll'
+        | 'InsertLevelScreenReroll';
+    }
+  >,
+): number {
+  const screens =
+    command.kind === 'ReplaceTraitOffer' || command.kind === 'InsertTraitScreenReroll'
+      ? authoredTraitOfferAt(document, catalog, command.trait)
+      : authoredLevelResolutionAt(document, catalog, command.levelResolution);
+  return screens === null || screens === undefined || screens.kind === 'random'
+    ? 0
+    : rerolledScreenCount(screens);
 }
 
 const ROOM_REROLL_KINDS = new Set(['reroll', 'rerollStygianWell', 'rerollPurgingPool']);
@@ -445,6 +459,7 @@ const ROOM_REROLL_KINDS = new Set(['reroll', 'rerollStygianWell', 'rerollPurging
  * or Pool reroll, or a raised screen count. Empty when it adds none.
  */
 function addedRerollSpendOwners(
+  catalog: Catalog,
   before: ProjectDocument,
   after: ProjectDocument,
   command: ProjectCommand,
@@ -506,7 +521,8 @@ function addedRerollSpendOwners(
     case 'ReplaceLevelResolution':
     case 'InsertTraitScreenReroll':
     case 'InsertLevelScreenReroll':
-      return screenRerollTotal(after.route) > screenRerollTotal(before.route)
+      return addressedScreenRerollCount(after, catalog, command) >
+        addressedScreenRerollCount(before, catalog, command)
         ? new Set([semanticAddressKey(projectCommandAddress(command) as SemanticAddress)])
         : new Set();
     default:

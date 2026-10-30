@@ -12,8 +12,10 @@ import {
   withScreenRerollInserted,
   withScreenRerollRemoved,
 } from '../screen-rerolls';
+import type { LevelResolutionAddress } from '../addresses';
 import {
   failCommand,
+  locateBiome,
   ProjectCommandContractError,
   requireOccurrence,
   requireTopology,
@@ -115,6 +117,43 @@ function applyLevelScreenRerollCommand(
   } catch (error) {
     if (error instanceof ProjectCommandContractError) throw error;
     return failCommand(command, error instanceof Error ? error.message : 'invalid screen reroll');
+  }
+}
+
+/** The resolution authored at a Pom level-resolution address; undefined where none is. */
+export function authoredLevelResolutionAt(
+  document: ProjectDocument,
+  catalog: Catalog,
+  levelResolution: LevelResolutionAddress,
+): AuthoredLevelResolution | undefined {
+  const subject = {
+    kind: 'RemoveLevelScreenReroll',
+    levelResolution,
+  } as const satisfies LevelResolutionCommand;
+  const owner = levelResolution.owner;
+  if (owner.kind === 'encounterPhase' || owner.kind === 'gorgonPhase') return undefined;
+  try {
+    const located = locateBiome(document, catalog, subject);
+    const occurrenceId =
+      owner.kind === 'acquisitionEntry'
+        ? owner.site.owner.kind === 'occurrence'
+          ? owner.site.owner.occurrenceId
+          : undefined
+        : owner.occurrenceId;
+    if (occurrenceId === undefined) return undefined;
+    const occurrence = requireOccurrence(located.plan, occurrenceId, subject);
+    return locateReward(
+      document,
+      catalog,
+      located.routePosition,
+      occurrence,
+      occurrence.state,
+      owner,
+      subject,
+    )?.reward.levelResolutionsByAcquisitionRole?.[levelResolution.acquisitionRole];
+  } catch (error) {
+    if (error instanceof ProjectCommandContractError) return undefined;
+    throw error;
   }
 }
 
