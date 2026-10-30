@@ -15,7 +15,9 @@ export type RunImportReason =
   /** No answer or guess settled this question; the plan ends before it. */
   | 'stopped'
   /** The plan's run state differs from the state the game saved on entering the room. */
-  | 'mismatch';
+  | 'mismatch'
+  /** The engine's settlement faulted at this owner while applying an answer; the answer is kept. */
+  | 'engineFault';
 
 export type RunImportArea =
   | 'loadout'

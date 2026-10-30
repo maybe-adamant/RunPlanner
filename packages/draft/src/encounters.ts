@@ -23,6 +23,7 @@ import {
   infiniteRosterSupportForProjectEvaluationAssembly,
   reachedEncounterPhasesForProjectEvaluationAssembly,
   type SemanticFinding,
+  type SettlementFault,
   type FigLeafPhaseCandidateSupport,
   type GorgonPhaseCandidateSupport,
 } from '@run-planner/engine/simulation';
@@ -200,6 +201,12 @@ function sampleDeclared(
   }
 }
 
+export interface DraftedEncounters {
+  readonly assembly: ProjectEvaluationAssembly;
+  /** Settlement faults beside the customizations kept. */
+  readonly faults: readonly SettlementFault[];
+}
+
 /**
  * Customizes every reached encounter phase of one biome in route order from the engine's
  * legal options, re-querying each after the previous one settles. A value that
@@ -210,10 +217,15 @@ export function draftEncounters(
   start: ProjectEvaluationAssembly,
   biomeKey: string,
   rng: DraftRng,
-): ProjectEvaluationAssembly {
+): DraftedEncounters {
   const session = createAuthoringSession(catalog, start);
-  const settle = (command: ProjectCommand): boolean =>
-    session.apply(command, 'noNewFinding').kind === 'applied';
+  const faults: SettlementFault[] = [];
+  const settle = (command: ProjectCommand): boolean => {
+    const outcome = session.apply(command, 'noNewFinding');
+    if (outcome.kind !== 'applied') return false;
+    if (outcome.fault !== undefined) faults.push(outcome.fault);
+    return true;
+  };
   const customize = (
     phase: EncounterPhaseAddress,
     decisionKey: string,
@@ -287,7 +299,7 @@ export function draftEncounters(
         settle({ kind: 'ReplaceAetosWave', phase, value: wave });
     }
   }
-  return session.current();
+  return Object.freeze({ assembly: session.current(), faults: Object.freeze(faults) });
 }
 
 /** What encounter selection during the walk borrows from it. */

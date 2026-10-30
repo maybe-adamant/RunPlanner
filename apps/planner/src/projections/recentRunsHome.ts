@@ -271,6 +271,7 @@ const REASON_TEXT: Readonly<Record<RunImportReason, string>> = {
   assumption: 'Assumed',
   stopped: 'Plan ends here',
   mismatch: 'Differs',
+  engineFault: 'Planner error',
 };
 
 /** The trait a trait offer selected, when it offers traits. */

@@ -7,6 +7,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   type ProjectEvaluationAssembly,
+  type SettlementFault,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 import { createAuthoringSession } from '@run-planner/engine/authoring';
@@ -52,6 +53,8 @@ export type DraftResult =
       readonly project: ProjectDocument;
       readonly report: DraftReport;
       readonly attempts: number;
+      /** Engine settlement faults beside the commands the drafted plan kept. */
+      readonly faults: readonly SettlementFault[];
     };
 
 /**
@@ -109,10 +112,12 @@ export function draftProject(
     createDraftRng((seed * 2_654_435_761) >>> 0),
   );
   let attempts = 0;
+  const faults: SettlementFault[] = [];
   for (const [biomeIndex, biomeKey] of biomeKeys.entries()) {
     let best:
       | {
           assembly: ProjectEvaluationAssembly;
+          faults: readonly SettlementFault[];
           score: number;
           localMet: boolean;
         }
@@ -158,7 +163,7 @@ export function draftProject(
         score > best.score ||
         (score === best.score && localMet && !best.localMet)
       )
-        best = { assembly: walk.assembly, score, localMet };
+        best = { assembly: walk.assembly, faults: walk.faults, score, localMet };
       // An unmet scheduled Hermes or Hammer some decision could take here earns one retry.
       if (
         localMet &&
@@ -173,12 +178,14 @@ export function draftProject(
     }
     if (best === undefined) return Object.freeze({ kind: 'failed', biomeKey, reasons });
     // Only the chosen attempt's encounters are drafted, before the next biome builds on them.
-    current = draftEncounters(
+    const encounters = draftEncounters(
       catalog,
       best.assembly,
       biomeKey,
       createDraftRng((seed * 2_246_822_519 + biomeIndex * 7_919 + 1) >>> 0),
     );
+    current = encounters.assembly;
+    faults.push(...best.faults, ...encounters.faults);
   }
   const evaluation = current.evaluation;
   if (evaluation.status !== 'valid' || evaluation.findings.length > 0)
@@ -201,5 +208,6 @@ export function draftProject(
     project: current.project,
     report: draftReport(catalog, spec, current),
     attempts,
+    faults: Object.freeze(faults),
   });
 }

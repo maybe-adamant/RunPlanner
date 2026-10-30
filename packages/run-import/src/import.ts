@@ -15,6 +15,7 @@ import {
   type ProjectEvaluationAssembly,
   simulateProjectAssembly,
   type SemanticFinding,
+  type SettlementFault,
 } from '@run-planner/engine/simulation';
 import { createDraftIssueRepairer, type DraftIssueRepairer } from '@run-planner/draft';
 import type { RunRecord } from './run-record/model';
@@ -52,7 +53,7 @@ import {
   solveWheelOffers,
   unsolvedWheels,
 } from './wheels';
-import { areaOfFinding, isQuestionFinding } from './areas';
+import { areaOfFinding, areaOfOwner, isQuestionFinding } from './areas';
 import { importResourcePlacements } from './resources';
 import { routeKeyForRecord } from './vocabulary';
 import { compareImportToRecord } from './conformance';
@@ -285,7 +286,8 @@ export class RunImportWalk {
    */
   transaction(run: () => boolean): boolean {
     const before = this.assembly;
-    if (!run()) return this.rollback(before);
+    const mark = this.entries.length;
+    if (!run()) return this.rollback(before, mark);
     const ownerKey = (finding: SemanticFinding) => semanticAddressKey(finding.origin);
     const stop = new Set(before.evaluation.issue?.reasons.map(ownerKey) ?? []);
     const enteredBefore = this.enteredOccurrences(before);
@@ -303,7 +305,7 @@ export class RunImportWalk {
     for (const finding of added().filter(inEnteredRoom)) {
       const retraction = this.retractions.get(ownerKey(finding));
       if (retraction === undefined) continue;
-      if (!this.apply(retraction.undo)) return this.rollback(before);
+      if (!this.apply(retraction.undo)) return this.rollback(before, mark);
       withdrawn.push(ownerKey(finding));
     }
     const remaining = added();
@@ -320,7 +322,7 @@ export class RunImportWalk {
       }
       return true;
     }
-    return this.rollback(before);
+    return this.rollback(before, mark);
   }
 
   probe<Result>(run: () => Result): Result {
@@ -337,14 +339,25 @@ export class RunImportWalk {
     }
   }
 
-  private rollback(before: ProjectEvaluationAssembly): false {
+  /** Restores `before`, dropping the faults of applications made since `mark`. */
+  private rollback(before: ProjectEvaluationAssembly, mark: number): false {
     this.authoring.restore(before);
+    const kept = this.entries.slice(mark).filter((entry) => entry.reason !== 'engineFault');
+    this.entries.length = mark;
+    this.entries.push(...kept);
     return false;
   }
 
-  /** Settles one command; false when it is refused or changes nothing. A settlement fault is accepted. */
+  /** Settles one command; false when it is refused or changes nothing. A settlement fault is reported and the command kept. */
   apply(command: ProjectCommand): boolean {
-    return this.authoring.apply(command).kind === 'applied';
+    const outcome = this.authoring.apply(command);
+    if (outcome.kind !== 'applied') return false;
+    if (outcome.fault !== undefined) this.reportFault(outcome.fault);
+    return true;
+  }
+
+  private reportFault(fault: SettlementFault): void {
+    this.report(areaOfOwner(fault.owner), 'engineFault', fault.owner);
   }
 
   private report(
@@ -539,12 +552,14 @@ export class RunImportWalk {
     this.repairer ??= createDraftIssueRepairer(this.catalog, this.authoring, {
       occurrenceIdPrefix: 'guess',
     });
-    const commands = this.repairer.repairIssue() ?? guessNemesisEvent(this.context, reason);
+    const repair = this.repairer.repairIssue();
+    const commands = repair?.commands ?? guessNemesisEvent(this.context, reason);
     if (commands === undefined) return false;
     const area = areaOfFinding(reason);
     // Required actions take their native schedule when no trait timestamp orders them.
     const why = area === 'roomActionOrder' ? 'assumption' : fallback;
     for (const command of commands) this.report(area, why, reason.origin, command);
+    for (const fault of repair?.faults ?? []) this.reportFault(fault);
     return true;
   }
 }

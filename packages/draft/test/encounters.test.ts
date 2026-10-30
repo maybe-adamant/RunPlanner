@@ -73,7 +73,7 @@ function generatedValues(project: ProjectDocument) {
 
 describe('draftEncounters', () => {
   const start = walkedFirstBiome();
-  const drafted = draftEncounters(catalog, start, 'F', createDraftRng(11));
+  const drafted = draftEncounters(catalog, start, 'F', createDraftRng(11)).assembly;
 
   it('customizes every reached generated encounter without a new finding', () => {
     expect(drafted.evaluation.findings).toEqual(start.evaluation.findings);
@@ -130,7 +130,7 @@ describe('draftEncounters', () => {
       },
     });
     const values = generatedValues(
-      draftEncounters(catalog, unvowed, 'F', createDraftRng(11)).project,
+      draftEncounters(catalog, unvowed, 'F', createDraftRng(11)).assembly.project,
     );
     expect(values.length).toBeGreaterThan(0);
     for (const value of values) expect(value.kind === 'generated' && value.menace).toBeFalsy();
@@ -159,7 +159,7 @@ describe('draftEncounters', () => {
   });
 
   it('drafts the same encounters for the same seed', () => {
-    expect(draftEncounters(catalog, start, 'F', createDraftRng(11)).project).toEqual(
+    expect(draftEncounters(catalog, start, 'F', createDraftRng(11)).assembly.project).toEqual(
       drafted.project,
     );
   });

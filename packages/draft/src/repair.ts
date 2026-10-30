@@ -1,7 +1,7 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ProjectCommand } from '@run-planner/engine/authored-project';
 import type { AuthoringSession } from '@run-planner/engine/authoring';
-import type { ProjectEvaluationAssembly } from '@run-planner/engine/simulation';
+import type { ProjectEvaluationAssembly, SettlementFault } from '@run-planner/engine/simulation';
 import { draftGodSchedule } from './schedule';
 import type { DraftSpec } from './spec';
 import { DraftWalk } from './walk';
@@ -10,13 +10,19 @@ import { draftWorld, draftWorldOptions } from './world';
 /** A draw that keeps every shuffled domain in its declared order. */
 const firstInOrder = () => 1 - 1e-9;
 
+/** One repair: the commands applied and the settlement faults beside them. */
+export interface DraftIssueRepair {
+  readonly commands: readonly ProjectCommand[];
+  readonly faults: readonly SettlementFault[];
+}
+
 export interface DraftIssueRepairer {
   /**
    * Repairs the session's current assessment issue once with Draft's
-   * first-eligible value; the commands applied, or undefined when none settles
-   * it and the session is left as it was.
+   * first-eligible value, or returns undefined when none settles it and the
+   * session is left as it was.
    */
-  repairIssue(): readonly ProjectCommand[] | undefined;
+  repairIssue(): DraftIssueRepair | undefined;
 }
 
 /**
@@ -60,13 +66,17 @@ export function createDraftIssueRepairer(
       // After an outside edit a value this walk once tried may be legal again.
       if (start !== lastResult) walk.forgetTried();
       const before = walk.appliedCommands.length;
+      const faultsBefore = walk.faults.length;
       const repaired = walk.repairIssue();
       lastResult = session.current();
       if (!repaired) {
         session.restore(start);
         return undefined;
       }
-      return walk.appliedCommands.slice(before);
+      return {
+        commands: walk.appliedCommands.slice(before),
+        faults: walk.faults.slice(faultsBefore),
+      };
     },
   };
 }

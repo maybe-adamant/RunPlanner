@@ -87,6 +87,7 @@ function openUnderworld(runner: DraftRunner, seeds: readonly number[] = [11]) {
       },
       report: draftReport(catalog, request.spec, simulateProjectAssembly(catalog, generated)),
       attempts: 4,
+      faults: [],
     };
   };
   const history = () => {

@@ -78,7 +78,12 @@ export function areaOfFinding(finding: SemanticFinding): RunImportArea {
     return 'other';
   }
   if (finding.evidence['pickupEffect'] === 'anvilOfFates') return 'anvil';
-  return areaByOriginKind[origin.kind] ?? 'other';
+  return areaOfOwner(origin);
+}
+
+/** The record area of a semantic owner by its kind alone. */
+export function areaOfOwner(owner: SemanticAddress): RunImportArea {
+  return areaByOriginKind[owner.kind] ?? 'other';
 }
 
 /** Missing input, and a Pom whose level-up its default authoring leaves unresolved. */

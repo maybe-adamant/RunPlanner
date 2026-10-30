@@ -56,6 +56,7 @@ import {
   type ProjectEvaluationAssembly,
   assessmentRepairOwner,
   type SemanticFinding,
+  type SettlementFault,
   type RewardOfferExclusionEvidence,
   prepareRouteStartTraitRequirements,
   routeResourceAuthoring,
@@ -145,6 +146,8 @@ export class DraftWalk {
   private stepCount = 0;
   /** Every command this walk applied, in order. */
   readonly appliedCommands: ProjectCommand[] = [];
+  /** Settlement faults beside the commands this walk applied, in order. */
+  readonly faults: SettlementFault[] = [];
   /** Names the occurrences this walk creates, so walks over one project never collide. */
   occurrenceIdPrefix = 'draft';
   private failureReason: string | undefined;
@@ -336,7 +339,9 @@ export class DraftWalk {
         },
         'noNewFinding',
       );
-      if (outcome.kind === 'applied') return;
+      if (outcome.kind !== 'applied') continue;
+      if (outcome.fault !== undefined) this.faults.push(outcome.fault);
+      return;
     }
   }
 
@@ -349,8 +354,10 @@ export class DraftWalk {
 
   /** Applies a command through edit settlement; false when the command authority refuses it. */
   apply(command: ProjectCommand): boolean {
-    if (this.authoring.apply(command).kind !== 'applied') return false;
+    const outcome = this.authoring.apply(command);
+    if (outcome.kind !== 'applied') return false;
     this.appliedCommands.push(command);
+    if (outcome.fault !== undefined) this.faults.push(outcome.fault);
     return true;
   }
 

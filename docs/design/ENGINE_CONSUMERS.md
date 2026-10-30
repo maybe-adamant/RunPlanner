@@ -74,7 +74,9 @@ session where it was.
 
 Faults are engine defects, never authoring outcomes. A settlement fault rides
 beside the applied assembly and is kept as settlement returned it; Draft and
-the import currently accept it without reporting it. Any other contract error
+the import keep the command and report the fault: the import as a report entry
+at the fault's owner, Draft in its drafted result beside the commands the plan
+kept. Any other contract error
 raised after evaluation is thrown, not converted into a refusal.
 
 ## Alternatives and Hypotheticals
