@@ -457,7 +457,13 @@ checkpoints. A selected trait's own grants share its `_worldTime`: All
 Together's set boons (`GrantBoons`, `TraitLogic.lua:2703`), Bridal Glow's
 promoted boon and Latest Model's Hammers are re-added in the same call, so
 they show as acquisitions or upgrades at the carrier's time (run 1011
-`O_MiniBoss01`: the four set boons with `AllElementalBoon`). Bridal Glow also
+`O_MiniBoss01`: the four set boons with `AllElementalBoon`). By source, not
+yet captured: Natural Selection's `DistributeLevels` (`TraitLogic.lua:2759`)
+re-adds each target once per level through `IncreaseTraitLevel`
+(`TraitLogic.lua:2533`), so each target shows one upgrade at the carrier's
+time carrying its whole gain; Red Citrine's `AddRandomMetaUpgrades` and
+Lapis's `CirceMetaUpgradeRarity` (`EventLogic.lua:1359-1397`) add or re-add
+the chosen cards' traits in the same call. Bridal Glow also
 keeps its target as `UpgradedTraitName` (`TraitLogic.lua:2834`), one of the
 `PersistentTraitKeys` (`TraitData.lua:34`), so it is saved even when the
 target was already Heroic and shows no upgrade. A trait later removed (sold, swapped, expired) survives only in
@@ -483,6 +489,8 @@ counters without order.
 - The World Shop Travel Deal refill item's identity, and the Hermes Shrine
   refill's when it was itself rushed.
 - Which pickups Sea Star duplicated, and the phase and wave Aetos joined.
+- Natural Selection's shuffled order (`FYShuffle` in `DistributeLevels`);
+  only each target's level gain survives.
 - The unpicked ship-wheel boon god.
 - Physical points of collected Fields optional rewards and of Fields Nemesis.
 
@@ -551,14 +559,21 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   engine's domain for that child: All Together's sets are the set boons
   acquired at its time (a set with none takes none), Bridal Glow's target its
   saved `UpgradedTraitName`, else in an older record the trait upgraded at its
-  time, Latest Model's Hammers the Hammers upgraded at its time, Echo's Pom
-  target the trait whose level doubled there, and Concave Stone's extra pick
+  time, Latest Model's Hammers the Hammers upgraded at its time, Natural
+  Selection's sequence any order the engine admits that reaches each target's
+  level gain at its time (none fitting is refused), Echo's Pom target the
+  trait whose level doubled there (none doubled is no target where the engine
+  allows it), Red Citrine's cards those granted whose traits joined at its
+  time, Lapis's the cards whose traits rose in rarity then, and Concave
+  Stone's extra pick
   the result of the screen it followed (its own children keyed to the extra
   pick's time). Several qualifying values
   take the first the engine admits, an assumption. A child the record does not
   answer, or whose recorded value the engine refuses, takes Draft's first
   eligible value and is reported, so no such child stops the import; one an
-  earlier change makes stale is answered again the same way.
+  earlier change makes stale is answered again the same way. Black Night's
+  disabled vows and Boon Boon Boon's replayed boon, nested children included,
+  are not in the record and always take that fallback.
 - Judgment's and the Crystal Figurine's cards are imported exactly from the
   boss room's draw order. Aspect of Selene's tree is the run's first Spell
   snapshot without its God Sent nodes.

@@ -90,7 +90,8 @@ Evidence: the save-file run record audit
     state (Natural Selection's order, which same-type generated pickup was
     taken) are not reported; a Sea Star duplicate that could explain the same
     uses as a collected generated pickup is placed after the pickups, reported
-    as an assumption.
+    as an assumption. Black Night and Boon Boon Boon have no record answer
+    and always take the fallback until a capture shows where theirs is saved.
 
 ## Ownership
 

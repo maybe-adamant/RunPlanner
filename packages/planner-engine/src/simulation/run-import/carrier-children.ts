@@ -4,9 +4,11 @@ import {
   semanticAddressKey,
   updateAuthoredTraitCarrierChild,
   type AuthoredAllTogetherResult,
+  type AuthoredCirceResolution,
   type AuthoredTraitCarrierChild,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
+  type OneToEight,
   type SemanticAddress,
   type TraitOfferAddress,
   type TraitOptionKey,
@@ -172,7 +174,10 @@ function recordedAnswer(question: ChildQuestion<AuthoredTraitCarrierChild['kind'
     case 'allTogetherSet':
       return allTogether({ ...question, child });
     case 'naturalSelectionResult':
+      return naturalSelection({ ...question, child });
     case 'circeResolution':
+      return circeResolution({ ...question, child });
+    // Boon Boon Boon replays a previous run's boon, which the record does not hold.
     case 'echoLastRunBoon':
     case 'hexTree':
       return undefined;
@@ -314,7 +319,117 @@ function allTogether(question: ChildQuestion<'allTogetherSet'>): ChildAnswer {
   };
 }
 
-/** Echo's Pom doubles one boon's level at the pick's own acquisition time. */
+/**
+ * Natural Selection's sequence: `DistributeLevels` re-adds each target once
+ * per level (`IncreaseTraitLevel`), so its room's upgrades at the pick's own
+ * acquisition time give each target's level gain. The game's shuffled order is
+ * never saved; any order the engine admits that reaches the same gains is the
+ * same run state.
+ */
+function naturalSelection(question: ChildQuestion<'naturalSelectionResult'>): ChildAnswer {
+  const { context, trait, value, child, room, at } = question;
+  if (question.domain.kind !== 'naturalSelectionResult' || at === undefined) return undefined;
+  const remaining = new Map<string, number>();
+  for (const upgrade of room.traits.upgraded) {
+    const gain = (upgrade.to.level ?? 1) - (upgrade.from.level ?? 1);
+    if (upgrade.worldTime === at && gain > 0)
+      remaining.set(upgrade.name, (remaining.get(upgrade.name) ?? 0) + gain);
+  }
+  if (remaining.size === 0) return undefined;
+  const search = (
+    current: AuthoredTraitOfferTraits,
+    targets: readonly string[],
+  ): AuthoredTraitOfferTraits | undefined => {
+    const domain = context
+      .candidates()
+      .evaluate({ kind: 'traitCarrierChildDomain', trait, value: current, child });
+    if (domain.kind !== 'naturalSelectionResult') return undefined;
+    if (targets.length > 0 && domain.result.complete)
+      return domain.result.supported && [...remaining.values()].every((left) => left === 0)
+        ? current
+        : undefined;
+    if (targets.length >= child.slotCount) return undefined;
+    for (const traitKey of domain.result.nextTargetTraitKeys) {
+      const left = remaining.get(traitKey) ?? 0;
+      if (left === 0) continue;
+      const next = [...targets, traitKey];
+      remaining.set(traitKey, left - 1);
+      const found = search(
+        updateAuthoredTraitCarrierChild(current, {
+          kind: 'naturalSelectionResult',
+          child,
+          targets: Object.freeze(next) as unknown as OneToEight<string>,
+        }),
+        next,
+      );
+      remaining.set(traitKey, left);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  };
+  const found = search(value, []);
+  return found === undefined ? 'refused' : { value: found };
+}
+
+/**
+ * Circe's Arcana. Red Citrine's cards are those its room granted whose traits
+ * joined at the pick's own acquisition time (`AddRandomMetaUpgrades`), so a
+ * boss room's Judgment and Crystal Figurine cards never answer it; Lapis's are
+ * the cards whose traits its room re-added at a higher rarity then
+ * (`CirceMetaUpgradeRarity`). Black Night's disabled vows are not saved.
+ */
+function circeResolution(question: ChildQuestion<'circeResolution'>): ChildAnswer {
+  const { context, trait, value, child, room, at, domain } = question;
+  if (domain.kind !== 'circeResolutionDomain' || at === undefined) return undefined;
+  const { effect, requiredCount, branchAgreement } = domain.result;
+  if (effect === 'disableFear' || !branchAgreement) return undefined;
+  const cards = context.catalog.arcanaCards.values;
+  const recorded =
+    effect === 'activateArcana'
+      ? (room.grantedArcana ?? []).filter((key) => {
+          const traitKey = cards.find((card) => card.key === key)?.traitKey;
+          return room.traits.acquired.some(
+            (entry) => entry.name === traitKey && entry.worldTime === at,
+          );
+        })
+      : [
+          ...new Set(
+            room.traits.upgraded
+              .filter(
+                (upgrade) => upgrade.worldTime === at && upgrade.to.rarity !== upgrade.from.rarity,
+              )
+              .flatMap((upgrade) =>
+                cards.filter((card) => card.traitKey === upgrade.name).map((card) => card.key),
+              ),
+          ),
+        ];
+  if (recorded.length === 0 && requiredCount > 0) return undefined;
+  if (recorded.length !== requiredCount) return 'refused';
+  const written = updateAuthoredTraitCarrierChild(value, {
+    kind: 'circeResolution',
+    child,
+    value: Object.freeze({
+      kind: effect,
+      arcanaKeys: Object.freeze(recorded),
+    }) as AuthoredCirceResolution,
+  });
+  const assessed = context
+    .candidates()
+    .evaluate({ kind: 'traitCarrierChildDomain', trait, value: written, child });
+  return assessed.kind === 'circeResolutionDomain' &&
+    recorded.every((key) =>
+      assessed.result.arcanaCandidates.some(
+        (candidate) => candidate.value === key && candidate.support !== 'impossible',
+      ),
+    )
+    ? { value: written }
+    : 'refused';
+}
+
+/**
+ * Echo's Pom doubles one boon's level at the pick's own acquisition time; a
+ * room that doubled none had no target where the engine allows that.
+ */
 function echoPomTarget(question: ChildQuestion<'echoPomTarget'>): ChildAnswer {
   const { value, child, room, at, domain } = question;
   if (domain.kind !== 'echoPomTargetDomain') return undefined;
@@ -324,6 +439,19 @@ function echoPomTarget(question: ChildQuestion<'echoPomTarget'>): ChildAnswer {
       upgrade.from.level !== undefined &&
       upgrade.to.level === upgrade.from.level * 2,
   );
+  if (doubled.length === 0)
+    return question.acquisition !== undefined &&
+      domain.result.candidates.some(
+        (candidate) => candidate.value === null && candidate.support !== 'impossible',
+      )
+      ? {
+          value: updateAuthoredTraitCarrierChild(value, {
+            kind: 'echoPomTarget',
+            child,
+            value: null,
+          }),
+        }
+      : undefined;
   if (doubled.length !== 1) return undefined;
   const target = doubled[0]!.name;
   return domain.result.candidates.some(

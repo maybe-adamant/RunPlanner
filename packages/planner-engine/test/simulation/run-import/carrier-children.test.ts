@@ -99,3 +99,46 @@ describe("run import of Latest Model's Hammers", () => {
     ]);
   });
 });
+
+describe("run import of Pom Pom Pom's target", () => {
+  const echo: AuthoredTraitOfferTraits = {
+    kind: 'traits',
+    giverKey: catalog.traitGivers.values.find((giver) =>
+      giver.traitKeys.includes('EchoDoubleLevelBoon'),
+    )!.key,
+    options: [{ traitKey: 'EchoDoubleLevelBoon' }],
+    selectedOptionKey: 'option1',
+  };
+
+  /** An import context whose engine finds no boon to double, so only no target is possible. */
+  function contextWithNoTarget(traits: RunRecordTraitChanges): RunImportContext {
+    const evaluate = (query: { readonly kind: string }) =>
+      query.kind === 'traitOffer'
+        ? { kind: 'traitOffer', result: { supported: true, findings: [] } }
+        : {
+            kind: 'echoPomTargetDomain',
+            result: {
+              candidates: [
+                { value: null, support: 'forced', branchSupport: [true], selected: false },
+              ],
+              emptyNoOpAllowed: true,
+            },
+          };
+    const record = { rooms: [{ traitScreens: [], traits }] } as unknown as RunRecord;
+    return { catalog, record, candidates: () => ({ evaluate }) } as unknown as RunImportContext;
+  }
+
+  it('takes no target when its room doubled no level and the engine allows none', () => {
+    const context = contextWithNoTarget({
+      acquired: [{ name: 'EchoDoubleLevelBoon', worldTime: 10 }],
+      removed: [],
+      upgraded: [],
+    });
+    const completed = completeRecordedCarrierChildren(context, trait, echo, 0);
+    expect(completed.value.kind === 'traits' && completed.value.options[0]).toEqual({
+      traitKey: 'EchoDoubleLevelBoon',
+      echoPomTarget: null,
+    });
+    expect(completed.reports).toEqual([]);
+  });
+});
