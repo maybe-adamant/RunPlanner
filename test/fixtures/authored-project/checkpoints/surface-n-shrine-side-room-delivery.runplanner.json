@@ -304,7 +304,7 @@
                 "offerBySlot": {
                   "first": {
                     "rewardType": "HealBigDrop",
-                    "delay": 2
+                    "delay": 8
                   },
                   "secondLeft": {
                     "rewardType": "MaxHealthDrop",

@@ -1847,7 +1847,7 @@
                   },
                   "secondRight": {
                     "rewardType": "MaxManaDrop",
-                    "delay": 2
+                    "delay": 4
                   }
                 }
               },
