@@ -1,15 +1,46 @@
+import type { EncounterPhaseAddress } from '../../authored-project';
 import type {
   AuthoredEncounterCustomization,
   AuthoredGeneratedEncounterCustomization,
 } from '../../authored-project/model';
+import { customizationDecisionOnRoute } from '../../authored-project/room-state/encounter-customization';
 import type {
+  Catalog,
   EncounterEnemyChoice,
   GeneratedEncounterSelection,
   InfiniteRosterSelection,
 } from '../../catalog-schema';
-import type { RunRecordEncounter, RunRecordSpawn } from '../../run-record/model';
+import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
+import {
+  encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  generatedEncounterSupportForProjectEvaluationAssembly,
+  infiniteRosterSupportForProjectEvaluationAssembly,
+} from '../evaluation/project-evaluation-assembly';
 import type { GeneratedEncounterAssessment, GeneratedEncounterIssue } from './generation';
 import type { InfiniteRosterAssessment, InfiniteRosterIssue } from './infinite-roster';
+
+/** One spawn request an encounter phase was observed to make. */
+export interface ObservedEncounterSpawn {
+  readonly enemy: string;
+  readonly count?: number;
+  /** The game generated this request rather than taking it from the encounter's template. */
+  readonly generated?: true;
+  readonly miniBossShrine?: true;
+  readonly infinite?: true;
+}
+
+export interface ObservedEncounterWave {
+  readonly difficulty?: number;
+  readonly spawns: readonly ObservedEncounterSpawn[];
+}
+
+/** The waves, spawns and Fangs perks one played encounter phase was observed to have. */
+export interface ObservedEncounterPhase {
+  readonly difficulty?: number;
+  readonly waves?: readonly ObservedEncounterWave[];
+  /** Fangs perks by elite enemy name. */
+  readonly fangs?: Readonly<Record<string, readonly string[]>>;
+}
 
 /** Why an observed encounter phase has no authored customization that replays it exactly. */
 export type EncounterInverseMismatch =
@@ -162,7 +193,7 @@ function allocationsFor(
 export function invertGeneratedEncounter(
   policy: GeneratedEncounterSelection,
   assess: (value: AuthoredGeneratedEncounterCustomization) => GeneratedEncounterAssessment,
-  observed: RunRecordEncounter,
+  observed: ObservedEncounterPhase,
 ): EncounterInverse<AuthoredGeneratedEncounterCustomization> {
   const waves = observed.waves ?? [];
   if (waves.length === 0) return noMatch({ reason: 'wavesMissing' });
@@ -177,7 +208,7 @@ export function invertGeneratedEncounter(
   const nativeIdByKey = new Map<string, string>();
   for (const choice of [...policy.choices, ...seeds, ...policy.fixedEnemies, ...fixedWaves.flat()])
     nativeIdByKey.set(choice.key, choice.nativeId);
-  const declared = (spawn: RunRecordSpawn, choice: EncounterEnemyChoice) =>
+  const declared = (spawn: ObservedEncounterSpawn, choice: EncounterEnemyChoice) =>
     spawn.enemy === choice.nativeId &&
     spawn.generated !== true &&
     spawn.count === (choice.fixedCount ?? 1);
@@ -350,7 +381,7 @@ export function invertGeneratedEncounter(
 export function invertInfiniteRoster(
   selection: InfiniteRosterSelection,
   assess: (typeKeys: readonly string[]) => InfiniteRosterAssessment,
-  observed: RunRecordEncounter,
+  observed: ObservedEncounterPhase,
 ): EncounterInverse<{ readonly kind: 'infiniteRoster'; readonly typeKeys: readonly string[] }> {
   const waves = observed.waves ?? [];
   if (waves.length === 0) return noMatch({ reason: 'wavesMissing' });
@@ -368,4 +399,62 @@ export function invertInfiniteRoster(
     kind: 'match',
     customization: Object.freeze({ kind: 'infiniteRoster', typeKeys: Object.freeze(typeKeys) }),
   });
+}
+
+/** The authored customization that replays an observed phase on its exact reached capability. */
+export type ObservedEncounterCustomization =
+  | {
+      readonly kind: 'generated';
+      readonly decisionKey: string;
+      readonly selection: GeneratedEncounterSelection;
+      readonly inverse: EncounterInverse<AuthoredGeneratedEncounterCustomization>;
+    }
+  | {
+      readonly kind: 'infiniteRoster';
+      readonly decisionKey: string;
+      readonly inverse: EncounterInverse<{
+        readonly kind: 'infiniteRoster';
+        readonly typeKeys: readonly string[];
+      }>;
+    };
+
+/**
+ * Inverts an observed phase against the reached phase's resolved definition:
+ * its generated capability first, then its infinite roster. Undefined when the
+ * phase has neither on this route.
+ */
+export function observedEncounterCustomizationForProjectEvaluationAssembly(
+  catalog: Catalog,
+  assembly: ProjectEvaluationAssembly,
+  phase: EncounterPhaseAddress,
+  observed: ObservedEncounterPhase,
+): ObservedEncounterCustomization | undefined {
+  const status = encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase);
+  const definitionKey = status?.kind === 'active' ? status.encounterDefinitionKey : undefined;
+  const definition =
+    definitionKey === undefined ? undefined : catalog.encounterDefinitions.byKey[definitionKey];
+  const selectionOf = (key: string) => {
+    const decision = definition?.customization?.find((entry) => entry.key === key);
+    return decision === undefined
+      ? undefined
+      : customizationDecisionOnRoute(decision, phase.routeKey).selection;
+  };
+  const generated = generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase);
+  const policy = generated === undefined ? undefined : selectionOf(generated.decisionKey);
+  if (generated !== undefined && policy?.kind === 'generated')
+    return Object.freeze({
+      kind: 'generated',
+      decisionKey: generated.decisionKey,
+      selection: policy,
+      inverse: invertGeneratedEncounter(policy, generated.assess, observed),
+    });
+  const roster = infiniteRosterSupportForProjectEvaluationAssembly(assembly, phase);
+  const selection = roster === undefined ? undefined : selectionOf(roster.decisionKey);
+  if (roster !== undefined && selection?.kind === 'infiniteRoster')
+    return Object.freeze({
+      kind: 'infiniteRoster',
+      decisionKey: roster.decisionKey,
+      inverse: invertInfiniteRoster(selection, roster.assess, observed),
+    });
+  return undefined;
 }

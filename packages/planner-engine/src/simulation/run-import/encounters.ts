@@ -7,12 +7,11 @@ import {
   type EncounterPhaseAddress,
   type ProjectCommand,
 } from '../../authored-project';
-import { customizationDecisionOnRoute } from '../../authored-project/room-state/encounter-customization';
 import type { RunRecordEncounter } from '../../run-record/model';
 import type { GeneratedEncounterSelection } from '../../catalog-schema';
 import type { AuthoredGeneratedEncounterCustomization } from '../../authored-project/model';
 import type { EncounterPhaseCandidateSupport } from '../encounters/preparation';
-import { invertGeneratedEncounter, invertInfiniteRoster } from '../encounters/encounter-inverse';
+import { observedEncounterCustomizationForProjectEvaluationAssembly } from '../encounters/encounter-inverse';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
@@ -392,54 +391,34 @@ function customizeEncounter(
   observed: RunRecordEncounter,
   record: { readonly roomIndex: number; readonly visit: number },
 ): void {
-  const definitionKey = resolvedDefinition(context, phase);
-  const definition =
-    definitionKey === undefined
-      ? undefined
-      : context.catalog.encounterDefinitions.byKey[definitionKey];
-  const decisionOf = (key: string) => {
-    const decision = definition?.customization?.find((entry) => entry.key === key);
-    return decision === undefined
-      ? undefined
-      : customizationDecisionOnRoute(decision, phase.routeKey);
-  };
-  const generated = generatedEncounterSupportForProjectEvaluationAssembly(
+  const customization = observedEncounterCustomizationForProjectEvaluationAssembly(
+    context.catalog,
     context.assembly(),
     phase,
+    observed,
   );
-  const policy = generated === undefined ? undefined : decisionOf(generated.decisionKey)?.selection;
-  if (generated !== undefined && policy?.kind === 'generated') {
-    const result = invertGeneratedEncounter(policy, generated.assess, observed);
-    if (
-      result.kind === 'noMatch' ||
-      !context.apply({
-        kind: 'ReplaceEncounterCustomization',
-        phase,
-        decisionKey: generated.decisionKey,
-        value: result.customization,
-      })
-    ) {
-      context.note({ area: 'encounter', reason: 'inverseMismatch', address: phase, record });
-      return;
-    }
-    importMenace(context, phase, policy, record, result.customization);
+  if (customization === undefined) return;
+  const { inverse } = customization;
+  if (
+    inverse.kind === 'noMatch' ||
+    !context.apply({
+      kind: 'ReplaceEncounterCustomization',
+      phase,
+      decisionKey: customization.decisionKey,
+      value: inverse.customization,
+    })
+  ) {
+    context.note({ area: 'encounter', reason: 'inverseMismatch', address: phase, record });
     return;
   }
-  const roster = infiniteRosterSupportForProjectEvaluationAssembly(context.assembly(), phase);
-  const selection = roster === undefined ? undefined : decisionOf(roster.decisionKey)?.selection;
-  if (roster !== undefined && selection?.kind === 'infiniteRoster') {
-    const result = invertInfiniteRoster(selection, roster.assess, observed);
-    if (
-      result.kind === 'noMatch' ||
-      !context.apply({
-        kind: 'ReplaceEncounterCustomization',
-        phase,
-        decisionKey: roster.decisionKey,
-        value: result.customization,
-      })
-    )
-      context.note({ area: 'encounter', reason: 'inverseMismatch', address: phase, record });
-  }
+  if (customization.kind === 'generated' && customization.inverse.kind === 'match')
+    importMenace(
+      context,
+      phase,
+      customization.selection,
+      record,
+      customization.inverse.customization,
+    );
 }
 
 /** Next-biome kills not yet claimed by a Menace conversion, per record room. */

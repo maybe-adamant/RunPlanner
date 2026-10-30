@@ -282,10 +282,21 @@ export {
   type EncounterResolutionContext,
   type EncounterResolutionRoomFacts,
   type GeneratedEncounterAssessment,
+  type GeneratedEncounterIssue,
   type InfiniteRosterAssessment,
   type InfiniteRosterCandidateCapability,
+  type InfiniteRosterIssue,
   type ResolvedEncounterPhase,
 } from './encounters';
+export {
+  observedEncounterCustomizationForProjectEvaluationAssembly,
+  type EncounterInverse,
+  type EncounterInverseMismatch,
+  type ObservedEncounterCustomization,
+  type ObservedEncounterPhase,
+  type ObservedEncounterSpawn,
+  type ObservedEncounterWave,
+} from './encounters/encounter-inverse';
 export {
   composeBiomeHistory,
   composeBiomeHistoryPrefix,

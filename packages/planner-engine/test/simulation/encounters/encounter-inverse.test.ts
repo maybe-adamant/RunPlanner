@@ -8,10 +8,11 @@ import type {
   GeneratedEncounterSelection,
   InfiniteRosterSelection,
 } from '../../../src/catalog-schema';
-import { decodeRunRecord, type RunRecord, type RunRecordEncounter } from '../../../src/run-record';
+import { decodeRunRecord, type RunRecord } from '../../../src/run-record';
 import {
   invertGeneratedEncounter,
   invertInfiniteRoster,
+  type ObservedEncounterPhase,
 } from '../../../src/simulation/encounters/encounter-inverse';
 import {
   assessGeneratedEncounter,
@@ -50,7 +51,7 @@ function policy(encounterKey: string): GeneratedEncounterSelection {
 const invert = (
   selection: GeneratedEncounterSelection,
   context: EncounterGenerationContext,
-  observed: RunRecordEncounter,
+  observed: ObservedEncounterPhase,
 ) =>
   invertGeneratedEncounter(
     selection,
@@ -63,7 +64,7 @@ function observe(
   selection: GeneratedEncounterSelection,
   value: AuthoredGeneratedEncounterCustomization,
   context: EncounterGenerationContext,
-): RunRecordEncounter {
+): ObservedEncounterPhase {
   const assessment = assessGeneratedEncounter(selection, value, context);
   const operands = assessment.operands;
   if (operands === undefined) throw new Error(JSON.stringify(assessment.issues));
@@ -71,7 +72,6 @@ function observe(
   const all = [...selection.choices, ...(selection.generatedSeeds ?? []), ...declared];
   const budgets = assessment.budget!.waveBudgets as readonly number[];
   return {
-    name: 'observed',
     difficulty: operands.expectedBudget,
     waves: operands.waves.map((wave) => ({
       difficulty: budgets[wave.waveIndex - 1]!,
@@ -278,7 +278,7 @@ describe('generated encounter inverse', () => {
     expect(result.customization.waves!.map((wave) => wave.waveIndex)).toEqual([2]);
     expect(observe(selection, result.customization, context)).toEqual(observed);
     const [fixed, ...rest] = observed.waves!;
-    const altered: RunRecordEncounter = {
+    const altered: ObservedEncounterPhase = {
       ...observed,
       waves: [{ ...fixed!, spawns: [{ ...fixed!.spawns[0]!, count: 6 }] }, ...rest],
     };
@@ -364,7 +364,7 @@ describe('generated encounter inverse', () => {
     const selection = policy('GeneratedN_Bigger');
     const observed = surface.rooms[11]!.encounters[0]!;
     const context = surfaceContext(5);
-    const recount = (wave: number, spawn: number, count: number): RunRecordEncounter => ({
+    const recount = (wave: number, spawn: number, count: number): ObservedEncounterPhase => ({
       ...observed,
       waves: observed.waves!.map((entry, waveIndex) => ({
         ...entry,
@@ -423,7 +423,10 @@ describe('generated encounter inverse', () => {
   });
 });
 
-function without(encounter: RunRecordEncounter, field: 'difficulty' | 'fangs'): RunRecordEncounter {
+function without(
+  encounter: ObservedEncounterPhase,
+  field: 'difficulty' | 'fangs',
+): ObservedEncounterPhase {
   const copy = { ...encounter };
   delete copy[field];
   return copy;
@@ -464,7 +467,6 @@ describe('infinite roster inverse', () => {
     const typeKeys = assess([]).eligibleKeysByPosition[0]!.slice(0, 2);
     expect(
       invertInfiniteRoster(selection, assess, {
-        name: 'GeneratedAnomalyB',
         waves: [{ spawns: typeKeys.map(spawn) }],
       }),
     ).toEqual({ kind: 'match', customization: { kind: 'infiniteRoster', typeKeys } });
@@ -474,7 +476,6 @@ describe('infinite roster inverse', () => {
     const [key] = assess([]).eligibleKeysByPosition[0]!;
     expect(
       invertInfiniteRoster(selection, assess, {
-        name: 'GeneratedAnomalyB',
         waves: [{ spawns: [{ enemy: spawn(key!).enemy, count: 3 }] }],
       }),
     ).toEqual({
