@@ -1,4 +1,5 @@
-import type { Catalog, TraitPickupDeclaration, TraitRarity } from '../../../catalog-schema';
+import type { Catalog, TraitRarity } from '../../../catalog-schema';
+import type { TraitPickupDeclaration } from '../../../catalog-schema/traits';
 import type { SemanticAddress, TraitOfferAddress } from '../../../authored-project/addresses';
 import type {
   PickupProducerProgressEvent,
@@ -133,7 +134,7 @@ export function advanceChaosClock(
   catalog: Catalog,
   before: TraitHistoryState,
   sequence: number,
-  clock: import('../../../catalog-schema').ChaosClockKind,
+  clock: import('../../../catalog-schema/traits').ChaosClockKind,
 ): TraitHistoryState {
   const owner = before.activeChaosCurses.find((active) => active.clock === clock)?.owner;
   if (owner === undefined) return before;

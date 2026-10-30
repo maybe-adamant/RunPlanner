@@ -1,10 +1,10 @@
 import type {
-  BoonRarityContribution,
   BoonRarityOverride,
   BoonRarityRollOrder,
   BoonRarityValues,
   TraitRarity,
 } from '../../catalog-schema';
+import type { BoonRarityContribution } from '../../catalog-schema/traits';
 
 export const BOON_RARITY_CHECKS = ['Rare', 'Epic', 'Heroic', 'Duo', 'Legendary'] as const;
 type Check = (typeof BOON_RARITY_CHECKS)[number];

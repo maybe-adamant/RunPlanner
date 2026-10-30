@@ -6,12 +6,8 @@ import {
   type RequirementEvaluationEvidence,
 } from '../../requirements/evidence';
 import {
-  countedOfferExclusion,
-  DEVOTION_REQUIRED_SOURCES,
-  devotionPairShortfall,
   ORDINARY_SOURCE_CAP,
   ordinarySourceGameNames,
-  sourceSupportExclusion,
   storeEntryOnRoute,
   type CountedOfferTransitionOptions,
   type ResolvedRewardOffer,
@@ -20,6 +16,12 @@ import {
   type RewardKernelFacts,
   type RewardStoreDeclaration,
 } from '../../reward-kernel';
+import { countedOfferExclusion } from '../../reward-kernel/bag';
+import {
+  DEVOTION_REQUIRED_SOURCES,
+  devotionPairShortfall,
+  sourceSupportExclusion,
+} from '../../reward-kernel/support';
 
 /** Why a producer cannot offer a reward; params only, copy is the application's. */
 export type RewardOfferExclusionReason =

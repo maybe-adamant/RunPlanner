@@ -9,7 +9,6 @@ import type { RequirementExpression } from '../../requirements/model';
 import { evaluateRequirement } from '../../requirements/evaluator';
 import {
   createRewardBagState,
-  eligibleOrdinarySourceGameNames,
   isOrdinarySourcePolicy,
   ordinarySourceGameNames,
   storeEntryOnRoute,
@@ -18,6 +17,7 @@ import {
   type RewardStoreDeclaration,
   type RewardTypeDeclaration,
 } from '../../reward-kernel';
+import { eligibleOrdinarySourceGameNames } from '../../reward-kernel/support';
 import type { HistoryCounters } from '../history';
 import {
   bankableRewardStoreKeys,
@@ -86,14 +86,14 @@ export interface DecisionActiveChaosState {
   readonly remaining: number;
   readonly curseValues: Readonly<Record<string, number>>;
   readonly blessingValues: Readonly<Record<string, number>>;
-  readonly derivedOutcome?: import('../../catalog-schema').ChaosDerivedOutcome;
+  readonly derivedOutcome?: import('../../catalog-schema/traits').ChaosDerivedOutcome;
 }
 export interface DecisionMaturedChaosState {
   readonly blessingKey: string;
   readonly blessingLabel: string;
   readonly rarity: string;
   readonly blessingValues: Readonly<Record<string, number>>;
-  readonly derivedOutcome?: import('../../catalog-schema').ChaosDerivedOutcome;
+  readonly derivedOutcome?: import('../../catalog-schema/traits').ChaosDerivedOutcome;
 }
 
 export interface DecisionCounterState extends HistoryCounters {

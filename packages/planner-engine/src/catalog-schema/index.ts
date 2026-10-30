@@ -17,8 +17,6 @@ export type {
 
 export type {
   AspectDeclaration,
-  BoonRarityCheck,
-  BoonRarityContribution,
   BoonRarityOverride,
   BoonRarityRollOrder,
   BoonRarityValues,
@@ -28,40 +26,28 @@ export type {
   ChaosTraitCatalog,
   ChaosCurseDeclaration,
   ChaosBlessingDeclaration,
-  ChaosDerivedOutcome,
   ChaosMaxStatOperand,
   ChaosNumericOperand,
   ChaosOperandSaveField,
   ChaosOfferRequirement,
-  ChaosClockKind,
-  ChaosSemanticTag,
   TraitDeclaration,
   TraitElement,
   EchoLastRunBoonCatalog,
-  EchoLastRunBoonVariantDeclaration,
   TraitGiverDeclaration,
   TraitOfferContextDeclaration,
-  TraitOfferContextKey,
   TraitEquipmentSlot,
   TraitOrdinaryBoonSlot,
-  TraitProviderKind,
   TraitRarity,
   InRunTraitRarity,
-  MaxStatKey,
   TraitMaxStatEffect,
   TraitMaxStatValue,
-  TraitArmor,
   TraitRequirementExpression,
-  ScalableGodTraitRarityFloorEffect,
-  TraitActivationRequirement,
   ProperUpbringingEffect,
   TargetedTraitAcquisition,
   TraitSelectedDisposition,
   TraitAcquisitionOrdinalValues,
   ResolvedTraitAcquisitionOrdinalEffect,
-  DirectTraitSetDeclaration,
   DirectTraitSetKey,
-  TraitPickupDeclaration,
   HexDeclaration,
   HexGodSentDeclaration,
   HexLayoutDeclaration,
@@ -73,7 +59,6 @@ export type {
   WeaponDeclaration,
 } from './traits';
 export {
-  acquisitionOrdinalValue,
   BASE_TRAIT_ELEMENTS,
   highestBaseElementCount,
   concaveStoneProcGiver,
@@ -101,7 +86,7 @@ export interface BiomeDeclaration {
 }
 
 /** Native Dream-route choice facts. The engine applies the public itinerary policy. */
-export interface DreamItineraryDeclaration {
+interface DreamItineraryDeclaration {
   readonly biomeCount: number;
   readonly initialBiomeKeys: readonly string[];
   readonly laterAdditionalBiomeKeys: readonly string[];
@@ -140,7 +125,7 @@ export type RouteInitialProfileDeclaration =
     };
 
 /** The one declaration-owned reward domain offered before a route chooses an entry room. */
-export interface RunStartRewardDeclaration {
+interface RunStartRewardDeclaration {
   readonly incomingReward: CountedRewardBinding;
 }
 
@@ -449,7 +434,7 @@ export interface EncounterRewardWheelAttachment {
 }
 
 /** A Fields-style local reward owned by an exact local-child slot. */
-export interface EncounterLocalRewardAttachment {
+interface EncounterLocalRewardAttachment {
   readonly kind: 'localReward';
   readonly groupKey: string;
   readonly slotKey: string;
@@ -589,13 +574,13 @@ export interface EncounterDefinition {
 }
 
 /** One declaration-owned fixed spawn with its native count. */
-export interface EncounterFixedSpawn {
+interface EncounterFixedSpawn {
   readonly enemyKey: string;
   readonly label: string;
   readonly count: number;
 }
 
-export interface EncounterCustomizationChoice {
+interface EncounterCustomizationChoice {
   readonly key: string;
   readonly label: string;
   readonly nativeId: string;
@@ -648,7 +633,7 @@ export type EncounterCustomizationDecision =
     };
 
 /** Closed concrete identity mapping for one persisted authored encounter choice. */
-export type EncounterChoiceResolution =
+type EncounterChoiceResolution =
   | { readonly kind: 'direct'; readonly encounterDefinitionKey: string }
   | {
       readonly kind: 'rewardContext';
@@ -720,11 +705,11 @@ export type RoomLifecycleEffectKind =
   | 'recordRequiredObjectSpawns'
   | 'recordAcquisitionPoint';
 
-export interface OnlyEncounterSlotSelector {
+interface OnlyEncounterSlotSelector {
   readonly kind: 'only';
 }
 
-export type EncounterSlotSelector = OnlyEncounterSlotSelector;
+type EncounterSlotSelector = OnlyEncounterSlotSelector;
 
 interface RoomLifecycleOperationBase {
   readonly effects: readonly RoomLifecycleEffectKind[];
@@ -813,7 +798,7 @@ export type RoomTemplateKey =
   | 'StandardCombat'
   | 'Story';
 
-export type DerivedRoomClassification = 'hub';
+type DerivedRoomClassification = 'hub';
 
 export type RoomMode =
   | { readonly kind: 'authored'; readonly templateKey: RoomTemplateKey }
@@ -860,7 +845,7 @@ export interface RoomExit {
   readonly allowReroll: boolean;
 }
 
-export interface ZagreusContractAdditionalExitDeclaration {
+interface ZagreusContractAdditionalExitDeclaration {
   readonly kind: 'zagreusContract';
   readonly key: 'zagreusContract';
   readonly physicalExit: Omit<RoomExit, 'index'>;
@@ -870,7 +855,7 @@ export interface ZagreusContractAdditionalExitDeclaration {
   readonly requirement?: RequirementExpression;
 }
 
-export interface ChaosAdditionalExitDeclaration {
+interface ChaosAdditionalExitDeclaration {
   readonly kind: 'chaos';
   readonly key: 'chaos';
   readonly physicalExit: Omit<RoomExit, 'index'>;
@@ -896,7 +881,7 @@ export interface RoomCounterEffects {
   readonly resetsBiomeDepthCache?: true;
 }
 
-export type PhantomPlaceholderSetKey = 'N' | 'N_SubRooms';
+type PhantomPlaceholderSetKey = 'N' | 'N_SubRooms';
 
 /**
  * A room whose return door `ChooseNextRoomData` still fills: the placeholder
@@ -965,11 +950,11 @@ export type RoomForce =
   | { readonly kind: 'requirement'; readonly requirement: RequirementExpression }
   | { readonly kind: 'always' };
 
-export type RemainingPrebossOfferPolicy =
+type RemainingPrebossOfferPolicy =
   { readonly kind: 'none' } | { readonly kind: 'counted'; readonly reward: CountedRewardBinding };
 
 /** The room-owned reward surface exposed by a selected starting point or door. */
-export type RoomOfferRewardBinding =
+type RoomOfferRewardBinding =
   | { readonly kind: 'none' }
   | { readonly kind: 'incomingReward' }
   | { readonly kind: 'localRewardGroup'; readonly groupKey: string };
@@ -1236,14 +1221,14 @@ export type RewardStorePolicy =
     }
   | { readonly kind: 'none' };
 
-export type SourceOfferPointSelector = 'lastActiveWheel';
+type SourceOfferPointSelector = 'lastActiveWheel';
 
 export interface SourceRewardStorePolicyOverride {
   readonly sourceRoomTemplateKey: RoomTemplateKey;
   readonly policy: RewardStorePolicy;
 }
 
-export interface StagedCandidatePoolDescriptor {
+interface StagedCandidatePoolDescriptor {
   readonly key: string;
   readonly roomGameNames: readonly string[];
 }
@@ -1369,29 +1354,29 @@ export interface CompletionDescriptor {
   readonly bossRewardStorePolicy?: RewardStorePolicy;
 }
 
-export interface HubSlotDescriptor {
+interface HubSlotDescriptor {
   readonly slotKey: string;
   readonly roomGameName: string;
   readonly physicalDoorId: number;
 }
 
-export interface HubOpenSlotConstraint {
+interface HubOpenSlotConstraint {
   readonly kind: 'maxOpenFromSlots';
   readonly slotKeys: readonly string[];
   readonly max: number;
 }
 
-export interface HubRewardLookupDescriptor {
+interface HubRewardLookupDescriptor {
   readonly key: string;
   readonly source: 'allOpenTargetOffers';
 }
 
-export interface HubTargetCompletionDescriptor {
+interface HubTargetCompletionDescriptor {
   readonly kind: 'requiredRoomObject';
   readonly objectKey: 'SoulPylon';
 }
 
-export interface HubSideRoomGenerationPolicy {
+interface HubSideRoomGenerationPolicy {
   readonly kind: 'visitPressure';
   readonly generatedCountKey: string;
   readonly minimumPerVisit: {

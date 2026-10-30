@@ -8,7 +8,8 @@ import {
   PROJECT_DOCUMENT_SCHEMA_REVISION,
   PROJECT_DOCUMENT_SCHEMA_VERSION,
 } from '../../src/authored-project/model';
-import { EXECUTION_CATALOG_VERSION, EXECUTION_PLAN_FORMAT } from '../../src/execution-plan';
+import { EXECUTION_PLAN_FORMAT } from '../../src/execution-plan';
+import { EXECUTION_CATALOG_VERSION } from '../../src/execution-plan/model';
 
 const moduleSource = join(dirname(fileURLToPath(import.meta.url)), '../../../../game-module/src');
 

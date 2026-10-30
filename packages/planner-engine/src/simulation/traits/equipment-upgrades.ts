@@ -1,9 +1,6 @@
 import { optionIndex } from '../../authored-project/traits/state';
-import {
-  acquisitionOrdinalValue,
-  type Catalog,
-  type FamiliarDeclaration,
-} from '../../catalog-schema';
+import { type Catalog, type FamiliarDeclaration } from '../../catalog-schema';
+import { acquisitionOrdinalValue } from '../../catalog-schema/traits';
 import type { TraitHistoryState } from './history/model';
 
 type PickedTraits = Pick<TraitHistoryState, 'previouslyPickedTraitKeys'>;

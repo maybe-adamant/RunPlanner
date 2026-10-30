@@ -9,7 +9,8 @@ import type { EquippedTrait } from '../../authored-project/traits/state';
 import type { TraitHistoryEvent, TraitHistoryState } from '../traits/history/model';
 import type { AcquisitionRoleAddress } from '../../authored-project/addresses';
 import type { RewardBranchState } from './branch-primitives';
-import { pickupEffectForOffer, type ResolvedRewardOffer } from '../../reward-kernel';
+import { type ResolvedRewardOffer } from '../../reward-kernel';
+import { pickupEffectForOffer } from '../../reward-kernel/history';
 
 export interface AnvilResultAssessment {
   readonly legal: boolean;

@@ -1,12 +1,11 @@
 import type { EquippedTrait } from '../authored-project/traits/state';
 import {
-  acquisitionOrdinalValue,
   type Catalog,
   type InRunTraitRarity,
-  type MaxStatKey,
   type TraitAcquisitionOrdinalValues,
   type TraitMaxStatValue,
 } from '../catalog-schema';
+import { acquisitionOrdinalValue, type MaxStatKey } from '../catalog-schema/traits';
 import type { SimulationState } from './state/model';
 import {
   aspectIsPerfect,

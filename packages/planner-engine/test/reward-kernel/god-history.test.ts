@@ -9,11 +9,11 @@ import {
   createRewardHistoryState,
   factsWithHistory,
   ordinarySourceGameNames,
-  recordGodLootPickup,
   supportedPayloads,
   type RewardHistoryState,
   type RewardKernelFacts,
 } from '../../src/reward-kernel';
+import { recordGodLootPickup } from '../../src/reward-kernel/history';
 import { evaluateRequirement, type RequirementEvaluationContext } from '../../src/requirements';
 
 const rewards = catalog.rewards;

@@ -10,13 +10,13 @@ import {
   isOfferSupportedAtResolutionPoint,
   isPayloadLocallyValid,
   sameRewardOffer,
-  sourceSupportExclusion,
   type CountedOfferTransitionOptions,
   type RewardBagState,
   type RewardPeerContext,
   type RewardStoreDeclaration,
   type ResolvedRewardOffer,
 } from '../../reward-kernel';
+import { sourceSupportExclusion } from '../../reward-kernel/support';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import { evaluateRequirement } from '../../requirements/evaluator';
 

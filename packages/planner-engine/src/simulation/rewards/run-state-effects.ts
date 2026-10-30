@@ -1,5 +1,6 @@
-import type { Catalog, ChaosClockKind, KeepsakeRank, TraitElement } from '../../catalog-schema';
-import type { StygianWellClock } from '../../reward-kernel';
+import type { Catalog, KeepsakeRank, TraitElement } from '../../catalog-schema';
+import type { ChaosClockKind } from '../../catalog-schema/traits';
+import type { StygianWellClock } from '../../reward-kernel/model';
 import { artificerStatus } from '../arcana-fear';
 import { stygianWellChargeItemKey } from '../commerce/stygian-well';
 import { keepsakeRankForEquip } from '../keepsakes/state';

@@ -27,7 +27,8 @@ import {
   type TraitOfferAddress,
   type TraitOfferOwnerAddress,
 } from '../../../authored-project/addresses';
-import { creditItemArmor, recordLootTypeHistorySource } from '../../../reward-kernel';
+import { recordLootTypeHistorySource } from '../../../reward-kernel';
+import { creditItemArmor } from '../../../reward-kernel/history';
 import type { CanonicalResolvedIncomingReward } from '../../materialization';
 import { type SemanticFinding, type TraitFindingCode } from '../../model';
 import {

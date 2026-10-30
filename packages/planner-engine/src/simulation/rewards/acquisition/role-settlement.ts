@@ -16,16 +16,18 @@ import type { Catalog } from '../../../catalog-schema';
 import {
   applyConcreteAcquisition,
   consumeCountedOffer,
-  creditItemArmor,
-  creditMaxStatGain,
   creditResourceGains,
   isOfferSupportedAtResolutionPoint,
   locallyValidRewardOffers,
-  recordGodLootPickup,
   resolveAcquisitionRole,
   type ConcreteAcquisitionEvent,
   type ResolvedRewardOffer,
 } from '../../../reward-kernel';
+import {
+  creditItemArmor,
+  creditMaxStatGain,
+  recordGodLootPickup,
+} from '../../../reward-kernel/history';
 import { consumeRoomRewardForfeit } from '../../arcana-fear';
 import type { FindingChronology, FindingRegionEntry } from '../../finding-regions';
 import { bankPathPoints } from '../../hex-progress';

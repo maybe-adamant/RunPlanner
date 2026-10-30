@@ -11,11 +11,8 @@ import { roomActionKey } from '../../../../authored-project/room-actions/state';
 import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../../materialization';
 import { findingRegion, type FindingRegionEntry } from '../../../finding-regions';
-import {
-  applyConcreteAcquisition,
-  creditItemArmor,
-  creditMaxStatGain,
-} from '../../../../reward-kernel';
+import { applyConcreteAcquisition } from '../../../../reward-kernel';
+import { creditItemArmor, creditMaxStatGain } from '../../../../reward-kernel/history';
 import {
   stygianWellGenerationItemKey,
   stygianWellGenerationTwistResultKey,

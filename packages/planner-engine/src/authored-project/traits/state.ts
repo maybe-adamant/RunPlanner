@@ -1,4 +1,5 @@
-import type { Catalog, TraitRarity, TraitProviderKind } from '../../catalog-schema';
+import type { Catalog, TraitRarity } from '../../catalog-schema';
+import type { TraitProviderKind } from '../../catalog-schema/traits';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { SelectedPickupProducer } from '../acquisition/pickup-producers';
 import {
@@ -616,7 +617,7 @@ export function traitOfferSupportsExhaustion(giver: {
 
 function requirementUsesContext(
   requirement: import('../../catalog-schema').TraitRequirementExpression,
-  context: import('../../catalog-schema').TraitOfferContextKey,
+  context: import('../../catalog-schema/traits').TraitOfferContextKey,
 ): boolean {
   switch (requirement.kind) {
     case 'all':
@@ -632,7 +633,7 @@ function requirementUsesContext(
 export function traitGiverUsesOfferContext(
   catalog: Catalog,
   giverKey: string,
-  context: import('../../catalog-schema').TraitOfferContextKey,
+  context: import('../../catalog-schema/traits').TraitOfferContextKey,
 ): boolean {
   const giver = catalog.traitGivers.byKey[giverKey];
   return (

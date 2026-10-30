@@ -162,7 +162,7 @@ export function resolveTraitOfferSource(
 function arcanaAndFavorBoonRarityContributions(
   catalog: Catalog,
   state: SimulationState,
-): readonly import('../../catalog-schema').BoonRarityContribution[] {
+): readonly import('../../catalog-schema/traits').BoonRarityContribution[] {
   const history = state.traitHistory;
   const arcana = state.arcanaFear.arcana.active.flatMap((active) => {
     const table = catalog.arcanaCards.byKey[active.key]?.boonRarityContributions;
@@ -296,7 +296,7 @@ export function boonRarityFactsForOffer(
 /** Exact derived fact; active Chaos state is history-owned and never persisted. */
 export function hasActiveChaosSemanticTag(
   history: TraitHistoryState,
-  tag: import('../../catalog-schema').ChaosSemanticTag,
+  tag: import('../../catalog-schema/traits').ChaosSemanticTag,
 ): boolean {
   return history.activeChaosCurses.some((curse) => curse.semanticTag === tag);
 }

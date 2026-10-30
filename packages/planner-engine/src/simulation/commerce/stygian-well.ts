@@ -8,7 +8,8 @@ import type {
 import { STYGIAN_WELL_SLOT_KEYS } from '../../authored-project/feature-rolls';
 import type { FeatureRerollOption } from './feature-rolls';
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
-import type { StygianWellClock, StygianWellGrant } from '../../reward-kernel';
+import type { StygianWellGrant } from '../../reward-kernel';
+import type { StygianWellClock } from '../../reward-kernel/model';
 
 /** Closed planner-modeled effect a Well offer publishes; derived from its declared grant. */
 export type StygianWellEffect =

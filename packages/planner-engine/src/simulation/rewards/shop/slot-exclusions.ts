@@ -2,8 +2,6 @@ import type { SemanticAddress } from '../../../authored-project/addresses';
 import type { RequirementExpression } from '../../../requirements';
 import { requirementEvidence } from '../../../requirements/evidence';
 import {
-  shopSlotExclusion,
-  shopSlotStocksOffer,
   type AuthoredShopOffer,
   type ResolvedRewardOffer,
   type RewardKernelCatalog,
@@ -11,6 +9,7 @@ import {
   type ShopGenerationConstraints,
   type ShopProfileDeclaration,
 } from '../../../reward-kernel';
+import { shopSlotExclusion, shopSlotStocksOffer } from '../../../reward-kernel/shop';
 import { sourceSupportReason, type RewardOfferExclusionReason } from '../offer-exclusions';
 
 export interface ShopSlotExclusionInput {

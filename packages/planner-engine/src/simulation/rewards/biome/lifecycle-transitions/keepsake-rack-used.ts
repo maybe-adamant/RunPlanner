@@ -1,5 +1,5 @@
 import { replaceSimulationTraitHistory } from '../../../state/transitions';
-import { creditItemArmor } from '../../../../reward-kernel';
+import { creditItemArmor } from '../../../../reward-kernel/history';
 import type { Catalog } from '../../../../catalog-schema';
 import {
   createKeepsakeEquipResultAddress,

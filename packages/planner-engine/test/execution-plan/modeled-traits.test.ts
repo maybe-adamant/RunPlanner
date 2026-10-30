@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { EXECUTION_CATALOG_VERSION } from '../../src/execution-plan';
+import { EXECUTION_CATALOG_VERSION } from '../../src/execution-plan/model';
 import { snapModeledTraitKeys } from '../../src/execution-plan/modeled-traits';
 
 const modulePath = join(

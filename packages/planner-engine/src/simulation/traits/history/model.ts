@@ -242,8 +242,8 @@ export interface ChaosCurseInstance {
   readonly curseKey: string;
   readonly duration: number;
   readonly remaining: number;
-  readonly clock: import('../../../catalog-schema').ChaosClockKind;
-  readonly semanticTag?: import('../../../catalog-schema').ChaosSemanticTag;
+  readonly clock: import('../../../catalog-schema/traits').ChaosClockKind;
+  readonly semanticTag?: import('../../../catalog-schema/traits').ChaosSemanticTag;
   readonly curseValues: Readonly<Record<string, number>>;
   readonly blessingKey: string;
   readonly rarity: AuthoredChaosTraitOffer['rarity'];
@@ -295,7 +295,7 @@ export interface DirectChaosBlessingRemovalEvent {
 export interface ChaosClockEvent {
   readonly kind: 'chaosClock';
   readonly sequence: number;
-  readonly clock: import('../../../catalog-schema').ChaosClockKind;
+  readonly clock: import('../../../catalog-schema/traits').ChaosClockKind;
   /** The originating selected pair provides stable chronology ownership. */
   readonly owner: SemanticAddress;
   readonly acquisitionRole: 'chaosClock';

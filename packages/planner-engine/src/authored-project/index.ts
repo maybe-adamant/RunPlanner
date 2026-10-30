@@ -6,16 +6,12 @@ export {
   parseArtificerReplacementEntryKey,
 } from './acquisition/artificer';
 export {
-  HERMES_SHRINE_DELIVERY_SITE_KEY,
   defaultHermesShrineDeliveryReward,
   hermesShrineDeliveryEntryKey,
-  hermesShrinePurchaseAction,
-  isDeliveryFlushHost,
   parseHermesShrineDeliveryEntryKey,
 } from './hermes-shrine-delivery';
 export type {
   HermesShrineGenerationKey,
-  HermesShrineInventoryOffer,
   HermesShrineDelay,
   HermesShrineSlotKey,
   StygianWellGenerationKey,
@@ -34,13 +30,7 @@ export {
   routeSaveFileGodHistory,
 } from './route-profile';
 export { customizationDecisionOnRoute } from './room-state/encounter-customization';
-export {
-  assessPublicDreamItinerary,
-  type DreamItineraryAssessment,
-  type DreamItineraryChoice,
-  type DreamItineraryIssue,
-  type DreamItineraryIssueKind,
-} from './dream-itinerary';
+export { assessPublicDreamItinerary, type DreamItineraryAssessment } from './dream-itinerary';
 export {
   dreamItineraryReplacementDroppedBiomeKeys,
   type DreamItineraryReplacementRoute,
@@ -49,7 +39,6 @@ export {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   seaStarDuplicateAcquisitionSite,
   seaStarDuplicateSiteKey,
-  parseSeaStarDuplicateSiteKey,
   seaStarDuplicateSourceIsActive,
 } from './acquisition/sea-star';
 export { activeRoomActionReferences } from './room-actions/state';
@@ -65,35 +54,18 @@ export { countedRewardBinding } from './room-state/reward-binding';
 export {
   acquisitionSourceIsParticipating,
   authoredAcquisitionSources,
-  authoredAcquisitionSourceAt,
   type AuthoredAcquisitionSource,
 } from './acquisition/acquisition-sources';
 export {
-  assembleRoomLifecycleStructure,
-  roomLifecycleWindowOrdinal,
-  scopeRoomLifecycleStructure,
-  type RoomActionWindow,
   type RoomLifecycleStructure,
   type RoomLifecycleStructurePhase,
-  type RoomLifecycleStructurePoint,
 } from './room-actions/lifecycle-structure';
+export { assembleRoomActionDomain, type RoomActionDomain } from './room-actions/domain';
 export {
-  assembleRoomActionDomain,
-  type FieldsCageOrderState,
-  type RoomActionCheckpointContribution,
-  type RoomActionContribution,
-  type RoomActionDependency,
-  type RoomActionDomain,
-  type RoomActionDomainContribution,
-  type RoomActionParticipation,
-} from './room-actions/domain';
-export {
-  reconcileNewRequiredRoomActions,
   roomActionDomainForOccurrence,
   scheduleRequiredRoomActions,
   structurallyActiveOccurrenceIds,
 } from './room-actions/defaults';
-export { deriveFieldsActiveCageCount, fieldsDefaultActiveCageCount } from './fields';
 export {
   decodeProjectDocument,
   encodeProjectDocument,
@@ -142,7 +114,6 @@ export {
   createLocalVisitOrderAddress,
   createLocalRewardAddress,
   createRoomActionAddress,
-  createTravelDealRefillRealizationAddress,
   createRoomRunStateCheckpointAddress,
   createOccurrenceAddress,
   createFieldsSpatialAddress,
@@ -168,7 +139,6 @@ export {
   createLevelResolutionAddress,
   createTargetAddress,
   createHubDecisionAddress,
-  SemanticAddressContractError,
   semanticAddressKey,
   type BiomeAddress,
   type BiomeFieldAddress,
@@ -208,7 +178,6 @@ export {
   type LocalRewardAddress,
   type RoomActionAddress,
   type RoomActionSemanticAddress,
-  type TravelDealRefillRealizationAddress,
   type RoomRunStateCheckpoint,
   type RoomRunStateCheckpointAddress,
   type OccurrenceAddress,
@@ -242,23 +211,16 @@ export {
 export {
   TRAIT_OPTION_KEYS,
   optionIndex,
-  normalizeAllTogetherResult,
-  normalizeAuthoredTranscendentEmbryoOutcome,
-  normalizeChaosValues,
   chaosOperandsAtRarity,
   chaosOperandAuthoringValues,
   traitGiverForAcquisitionRole,
-  traitGiverUsesOfferContext,
   materializeGorgonAthenaOffer,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredChaosTraitOffer,
-  type AuthoredChaosCurseOption,
   type AuthoredRerolledChaosScreen,
   type AuthoredRerolledLevelScreen,
-  type AuthoredRerolledTraitOption,
   type AuthoredRerolledTraitScreen,
-  type RerolledScreens,
   type AuthoredTraitOfferTraits,
   type AuthoredConcaveStoneResult,
   type AuthoredLevelResolution,
@@ -270,7 +232,6 @@ export {
   type AuthoredCirceResolution,
   type EquippedTrait,
   type TraitOptionKey,
-  traitOfferOption,
 } from './traits/state';
 export type { AuthoredHexTreeConfiguration } from './traits/state';
 export type { OneToEight } from './traits/state';
@@ -278,14 +239,12 @@ export {
   discoverAuthoredTraitCarrierChildren,
   completeAuthoredEchoLastRunBoonDraft,
   discoverAuthoredEchoLastRunBoonDraftChildren,
-  discoverAuthoredTraitCarrierPayloads,
   prepareEchoLastRunBoonDraft,
   updateAuthoredTraitCarrierChild,
   withoutTraitCarrierChild,
   type AuthoredEchoLastRunBoonDraftRow,
   type AuthoredEchoLastRunBoonDraftChild,
   type AuthoredTraitCarrierChild,
-  type AuthoredTraitCarrierPayload,
   type AuthoredTraitCarrierChildUpdate,
   type PreparedEchoLastRunBoonDraft,
 } from './traits/carrier-children';
@@ -295,16 +254,11 @@ export {
   authoredHexCommonDecks,
   authoredHexNodeEditOptions,
   createDefaultAuthoredHexTree,
-  normalizeAuthoredHexTree,
   type AuthoredHexNodeEditGroup,
   type AuthoredHexNodeEditOption,
   type AuthoredHexTreeEdit,
 } from './traits/hex-tree';
-export {
-  type HexCommonDecks,
-  type HexTalentTree,
-  type HexTalentTreeViolation,
-} from './traits/hex-talent-tree';
+export { type HexCommonDecks, type HexTalentTreeViolation } from './traits/hex-talent-tree';
 export {
   resolveTraitMaxHealthRoll,
   traitMaxHealthRollDomain,
@@ -321,7 +275,6 @@ export {
   nemesisGeneratedPickupSiteKey,
   selectedPickupProducers,
   activeSelectedPickupProducers,
-  selectedPickupProducerForEntry,
 } from './acquisition/pickup-producers';
 export {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
@@ -334,26 +287,15 @@ export {
   INFERNAL_CONTRACT_PEDESTAL_SITE_KEY,
   infernalContractPedestalOptionValues,
   infernalContractPedestalProfile,
-  roomHasInfernalContractPedestal,
 } from './infernal-contract-pedestal';
-export {
-  phantomExitDomainError,
-  phantomPlaceholderDraw,
-  phantomPlaceholderRewardTypes,
-  phantomPlaceholderSet,
-  roomHasPhantomExit,
-} from './phantom-exit';
+export { phantomPlaceholderDraw, phantomPlaceholderRewardTypes } from './phantom-exit';
 export {
   biomeRerolledOwners,
-  hubRerolledOwners,
   hubStayRows,
   rerollAppendIndex,
-  rerolledRewardOf,
   rerollSurfaceKey,
-  rerollSurfaceOwner,
   rerollTargetOwner,
   sourceRerolledOwners,
-  type HubSlotRerollTarget,
   type HubStayRow,
   type HubStayRows,
   type OwnerRerolls,
@@ -363,25 +305,20 @@ export {
   FIELDS_CAGE_GROUP_KEY,
 } from './rerolls';
 export {
-  rerolledScreenCount,
   screenRerollCost,
   screenRerollSupported,
   rerolledChaosScreenSnapshot,
   rerolledLevelScreenSnapshot,
   rerolledTraitScreenSnapshot,
   withFinalTraitScreenRerolled,
-  withScreenRerollCount,
   type RerollableScreen,
 } from './screen-rerolls';
 export {
   INITIAL_ROLL_KEY,
-  PURGING_POOL_SLOT_KEYS,
-  STYGIAN_WELL_SLOT_KEYS,
   featureRerolls,
   parseStygianWellGenerationKey,
   purgingPoolRerolls,
   purgingPoolRollTraitKey,
-  purgingPoolSaleRollKey,
   stygianWellGenerationItemKey,
   stygianWellGenerationKey,
   stygianWellGenerationTwistResultKey,
@@ -394,7 +331,6 @@ export {
   projectCommandAddress,
   projectCommandAuthoringAddresses,
   type AcquisitionOutcomeCommand,
-  type EncounterOccurrenceCommand,
   type ProjectCommand,
   ProjectCommandContractError,
 } from './commands/dispatch';
@@ -405,24 +341,17 @@ export {
 } from './chaos-gate-reconciliation';
 export {
   declaredPhysicalExits,
-  automaticHostContinuationExitForDetourRoom,
-  isHostRouteDetourRoom,
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
   takeoverBatchExitRepairAvailable,
   normalDecisionProgressionForLayout,
   bossDoorRewardStoreKeysForLayout,
-  bossDoorRewardStorePolicyForLayout,
-  bossDoorRewardStoreLinkForSource,
   bossDoorLinkForSource,
   type BossDoorRewardStoreLink,
   additionalExitsForDecision,
   ordinaryTargetAuthoringEligibility,
-  uncommittedOrdinaryTargetAuthoringEligibility,
   ordinaryTargetGameNames,
   takeoverPrebossGameNames,
-  selectedExitKey,
-  selectedAdditionalExit,
   selectedExitContinuation,
   selectedExitTarget,
   type DeclaredPhysicalExit,
@@ -430,13 +359,11 @@ export {
   hubVisitSlotKeys,
   hubDecisionHandoffReadiness,
   hubFountainPrecedingVisitCount,
-  isHubAction,
   type HubActionOrderRefusal,
   type OrdinaryTargetAuthoringEligibility,
   type SelectedExitContinuation,
   exitDecisionForSource,
 } from './topology/query';
-export { legalTopologyOccurrenceRoom } from './topology/room-ownership';
 export {
   applyTopologyRemovalImpact,
   describeClearTopologyImpact,
@@ -465,26 +392,20 @@ export {
   HERMES_SHRINE_DELAYS,
   NEMESIS_RANDOM_EVENT_FAMILIES,
   type AuthoredBiomePlan,
-  type AuthoredBiomeState,
-  type AuthoredFieldValue,
   type AuthoredRoomState,
   type AuthoredRewardState,
   type AuthoredAnvilResult,
   type AuthoredHexActivation,
-  type HexActivationsByAcquisitionRole,
   type AuthoredNemesisRandomEventKind,
   type AuthoredNemesisRandomEventOutcome,
   type AuthoredEncounterCustomization,
   type AuthoredGeneratedEncounterCustomization,
   type AcquisitionDisposition,
-  type TraitOffersByAcquisitionRole,
   type AuthoredRoutePlan,
   type AuthoredDraftSpec,
   type DraftRoomForcing,
   type DraftFillerKind,
   type DraftFillerRank,
-  type AuthoredKeepsakeRack,
-  type ResourceFamily,
   type ResourcePlacement,
   type ResourcePlacements,
   type RouteLoadout,
@@ -492,43 +413,26 @@ export {
   type AuthoredKeepsakeEquipResultValue,
   type AuthoredFountainRarityResult,
   type AuthoredExperimentalHammerEquipResult,
-  type RouteWeaponAspectLoadout,
   type AuthoredBatchState,
   type AuthoredAdditionalExit,
-  type AnomalyReplacementProvenance,
-  type AnomalyRoomState,
-  type BatchRewardStoreState,
-  type FieldsCageBatchState,
   type FieldsCombatState,
-  type FieldsSpatialState,
-  type HubTargetReference,
-  type EphyraCombatState,
   type LocalVisitDecision,
-  type LocalVisitTargetReference,
   type SideRoomGeneration,
   type RewardWheelState,
-  type ShipCombatState,
   type BiomeTopology,
   type ExitDecision,
   type ExitDecisionSource,
   type ExitSelection,
   type ExitTargetReference,
-  type ZagreusContractAdditionalExit,
   type HubDecision,
   type HubAction,
-  type NextRoomDecision,
-  type NormalDoorBatch,
   type OccurrenceId,
   type ProjectDocument,
   type RoomOccurrence,
   type RoomActionReference,
-  type RoomActionState,
   type RoomEncounterState,
-  type AuthoredGorgonPhaseResult,
   type ShopOfferState,
-  type InfernalContractPedestalState,
   type PhantomExitState,
-  type HubRerollAction,
   type RerollRoomAction,
   type StygianWellRerollAction,
   type PurgingPoolRerollAction,
@@ -537,14 +441,8 @@ export {
   type ShopState,
   hermesShrineInitialSlotKey,
 } from './model';
+export { roomActionKey } from './room-actions/state';
 export {
-  createDefaultRoomActionState,
-  createEmptyRoomActionState,
-  roomActionKey,
-} from './room-actions/state';
-export {
-  createInitialBatchRewardStore,
-  createInitialBatchState,
   createInitialExitDecision,
   sourceOfferPointStoreResolution,
   type SourceOfferPointStoreResolution,
@@ -555,8 +453,6 @@ export {
   deriveRouteLoadout,
   routeLoadoutEditDomain,
   type DerivedRouteLoadout,
-  type FearVowRankDomain,
-  type ManualArcanaToggle,
   type RouteLoadoutEditDomain,
   type StartingArcanaGraspAssessment,
 } from './loadout';
@@ -573,8 +469,6 @@ export {
   NATIVE_RUN_MODIFIERS,
   runModifierDeclaration,
   isRunModifierAuthored,
-  executionRunModifiers,
-  sameRunModifierValue,
   isRunModifierValue,
   routeRunModifiers,
   decodeRunModifiers,
@@ -588,7 +482,6 @@ export {
   type RunModifiersRecord,
 } from './run-modifiers';
 export {
-  RUN_START_POINTS,
   PRACTICE_START_GOLD,
   decodePracticeStart,
   samePracticeStart,
@@ -597,24 +490,15 @@ export {
 export { DEFAULT_PROJECT_NAME, PROJECT_NAME_MAX, normalizeProjectName } from './project-name';
 export {
   DRAFT_OPTIONS,
-  DRAFT_OPTION_KEYS,
   EMPTY_DRAFT_SPEC,
   MAX_DRAFT_SEED,
-  decodeDraftSpec,
   defaultDraftGodBoons,
   draftAdvancedChanged,
   sameDraftSpec,
   withDraftAdvancedDefaults,
   withDraftGodBoons,
   withDraftOption,
-  type ChoiceDraftOptionDeclaration,
-  type DraftOptionDeclaration,
-  type DraftOptionKey,
   type DraftOptionValue,
-  type FlagDraftOptionDeclaration,
-  type IntegerDraftOptionDeclaration,
-  type PerBiomeDraftOptionDeclaration,
-  type RankingDraftOptionDeclaration,
   type ScalarDraftOptionKey,
 } from './draft-spec';
 
@@ -627,5 +511,4 @@ export {
   type DraftShareCodeDecoding,
   type DraftShareCodeRefusal,
   type DraftShareInputs,
-  type DraftShareLoadout,
 } from './draft-share-code';

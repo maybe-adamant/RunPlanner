@@ -1,10 +1,10 @@
 import {
-  acquisitionOrdinalValue,
   highestBaseElementCount,
   type Catalog,
   type TraitElement,
   type TraitRarity,
 } from '../../../catalog-schema';
+import { acquisitionOrdinalValue } from '../../../catalog-schema/traits';
 import { semanticAddressKey } from '../../../authored-project/addresses';
 import { optionIndex, type EquippedTrait } from '../../../authored-project/traits/state';
 import { resolveTraitMaxHealthRoll } from '../../../authored-project/traits/max-health-roll';
