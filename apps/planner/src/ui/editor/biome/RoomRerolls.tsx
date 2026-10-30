@@ -34,11 +34,29 @@ const targetNouns = {
   offer: { lower: 'offer' },
 } as const;
 
-/** A Hub stay's list: its presses, each with its Move, among the other rows of the stay. */
+/**
+ * A Hub stay's list: its presses, each with its Move, among the other rows of
+ * the stay. It places every one of the surface's presses exactly once.
+ */
 export type RoomRerollsOrder = readonly (
   | { readonly kind: 'press'; readonly key: string; readonly move: ReactNode }
   | { readonly kind: 'row'; readonly key: string; readonly row: ReactNode }
 )[];
+
+/** Resolves each ordered press to its row, refusing an order that drops or invents one. */
+function orderedRows(order: RoomRerollsOrder, rows: WorkspaceRoomRerolls['rows']) {
+  const pressKeys = order.flatMap((entry) => (entry.kind === 'press' ? [entry.key] : []));
+  const resolved = order.map((entry) => {
+    if (entry.kind === 'row') return entry;
+    const index = rows.findIndex((row) => row.key === entry.key);
+    if (index < 0) throw new Error(`Reroll order names unknown press ${entry.key}`);
+    return { kind: 'press' as const, press: rows[index]!, index, move: entry.move };
+  });
+  if (pressKeys.length !== rows.length || new Set(pressKeys).size !== rows.length) {
+    throw new Error(`Reroll order places ${pressKeys.length} of ${rows.length} presses`);
+  }
+  return resolved;
+}
 
 /** One surface's rerolls in order, with a new press appended at the end. */
 export function RoomRerolls({
@@ -110,11 +128,9 @@ export function RoomRerolls({
       <ol className="room-rerolls-list">
         {order === undefined
           ? rerolls.rows.map((row, index) => pressRow(row, index, undefined))
-          : order.map((entry) => {
-              if (entry.kind === 'row') return entry.row;
-              const index = rerolls.rows.findIndex((row) => row.key === entry.key);
-              return index < 0 ? null : pressRow(rerolls.rows[index]!, index, entry.move);
-            })}
+          : orderedRows(order, rerolls.rows).map((entry) =>
+              entry.kind === 'row' ? entry.row : pressRow(entry.press, entry.index, entry.move),
+            )}
         <li className="room-reroll-row room-reroll-append">
           <span className="room-reroll-index">{rerolls.rows.length + 1}</span>
           <ContextualPicker<string>

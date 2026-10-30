@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useRef, type ReactNode } from 'react';
 
 import type { HubAction } from '@run-planner/engine/authored-project';
 import {
@@ -114,6 +114,7 @@ function moveLabel(move: WorkspaceHubRowMove): string {
 /** Moves one stay row, or places the unused fountain, as a complete Hub action order. */
 function HubRowPlacement({
   findingMark,
+  id,
   label,
   locked,
   moves,
@@ -122,6 +123,7 @@ function HubRowPlacement({
   waiting,
 }: {
   readonly findingMark?: FindingMarkProps;
+  readonly id?: string;
   readonly label: string;
   readonly locked: boolean;
   readonly moves: readonly WorkspaceHubRowMove[];
@@ -129,6 +131,8 @@ function HubRowPlacement({
   readonly trigger: string;
   readonly waiting: boolean;
 }) {
+  // A row with nowhere to go has no Move; the slot keeps the list's columns.
+  if (moves.length === 0) return <span aria-hidden="true" className="room-reroll-move-slot" />;
   const choices = moves.map((move) => ({
     key: move.key,
     label: moveLabel(move),
@@ -138,14 +142,11 @@ function HubRowPlacement({
   return (
     <RoomActionPlacementPicker
       {...(findingMark === undefined ? {} : { findingMark })}
+      {...(id === undefined ? {} : { id })}
       label={label}
       trigger={trigger}
       choices={choices}
-      {...(waiting
-        ? { disabledHint: candidateWaitingHint }
-        : moves.length === 0
-          ? { disabledHint: 'No other position is available.' }
-          : {})}
+      {...(waiting ? { disabledHint: candidateWaitingHint } : {})}
       onApply={(key) => {
         const move = moves.find((candidate) => candidate.key === key);
         if (move !== undefined) onApply(move.actions);
@@ -159,12 +160,14 @@ function FountainRow({
   inList,
   interactions,
   locked,
+  moveId,
   moves,
   node,
   onApply,
   waiting,
 }: {
   readonly inList: boolean;
+  readonly moveId: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly locked: boolean;
   readonly moves: readonly WorkspaceHubRowMove[];
@@ -197,6 +200,7 @@ function FountainRow({
       </span>
       <HubRowPlacement
         findingMark={findingMark(node.fountain.address)}
+        id={moveId}
         label="Move Fountain"
         locked={locked}
         moves={moves}
@@ -272,21 +276,40 @@ export function HubTimelineDetails({
       ReturnType<ReturnType<WorkspaceHubActionOrderInteraction['proposalFor']>['load']>
     >();
   const waiting = !interaction.contextReached;
+  const idPrefix = useId();
+  const moveId = (rowKey: string): string => `${idPrefix}-move-${rowKey}`;
+  // A moved row that changes list is a new element; its Move regains lost focus.
+  const refocus = useRef<string>(undefined);
+  useEffect(() => {
+    const id = refocus.current;
+    refocus.current = undefined;
+    const active = document.activeElement;
+    if (id !== undefined && (active === null || active === document.body)) {
+      document.getElementById(id)?.focus();
+    }
+  });
   const replaceActions = (actions: readonly HubAction[]): void => {
     const proposal = interaction.proposalFor(actions);
     const options = candidates.activate(proposal);
     if (!candidateMayBeAuthored(options?.[0])) return;
     executeIntent(proposal.intent());
   };
+  const moveRow =
+    (rowKey: string) =>
+    (actions: readonly HubAction[]): void => {
+      refocus.current = moveId(rowKey);
+      replaceActions(actions);
+    };
   const fountainRow = (moves: readonly WorkspaceHubRowMove[], inList: boolean) => (
     <FountainRow
       inList={inList}
       interactions={interactions}
       key="fountain"
       locked={locked}
+      moveId={moveId('fountain')}
       moves={moves}
       node={node}
-      onApply={replaceActions}
+      onApply={moveRow('fountain')}
       waiting={waiting}
     />
   );
@@ -315,9 +338,10 @@ export function HubTimelineDetails({
                             stay.rows.slice(0, index + 1).filter((other) => other.kind === 'reroll')
                               .length
                           }`}
+                          id={moveId(row.key)}
                           locked={locked}
                           moves={row.moves}
-                          onApply={replaceActions}
+                          onApply={moveRow(row.key)}
                           trigger="Move…"
                           waiting={waiting}
                         />
@@ -354,7 +378,7 @@ export function HubTimelineDetails({
           );
         })}
       </ol>
-      {node.fountain.appendActions === undefined ? null : (
+      {node.fountain.useIn === undefined ? null : (
         <div className="hub-timeline-row hub-timeline-fountain" data-used="false">
           <span className="hub-timeline-step">
             <ArtworkIcon
@@ -367,7 +391,7 @@ export function HubTimelineDetails({
             findingMark={findingMark(node.fountain.address)}
             label="Use Fountain"
             locked={locked}
-            moves={node.fountain.useIn ?? []}
+            moves={node.fountain.useIn}
             onApply={replaceActions}
             trigger="Use…"
             waiting={waiting}

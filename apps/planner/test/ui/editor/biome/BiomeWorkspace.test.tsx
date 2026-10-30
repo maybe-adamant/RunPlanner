@@ -592,6 +592,29 @@ describe('BiomeWorkspace', () => {
           : 'Reroll',
     );
     expect(rows).toEqual(['Reroll', 'Fountain', 'Reroll', 'Append']);
+    // Keyboard focus stays on the moved row's Move control.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(details).getByRole('button', { name: 'Move Fountain' }),
+      ),
+    );
+    await view.user.click(within(details).getByRole('button', { name: 'Move reroll 1' }));
+    await view.user.click(await screen.findByRole('option', { name: /After Reroll 2/ }));
+    await waitFor(() => expect(actions()).toEqual(['useFountain', 'reroll', 'reroll']));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(details).getByRole('button', { name: 'Move reroll 2' }),
+      ),
+    );
+    await view.user.click(within(details).getByRole('button', { name: 'Move Fountain' }));
+    // Leaving the list for a stay without rerolls, it keeps focus too.
+    await view.user.click(await screen.findByRole('option', { name: /After Visit 1/ }));
+    await waitFor(() => expect(actions()).toEqual(['reroll', 'reroll', 'roomVisit']));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(details).getByRole('button', { name: 'Move Fountain' }),
+      ),
+    );
   });
 
   it('routes a Hub board reroll finding to its stay in the Timeline details', async () => {

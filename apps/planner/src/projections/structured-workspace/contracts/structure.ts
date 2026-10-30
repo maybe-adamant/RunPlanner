@@ -338,8 +338,6 @@ export interface WorkspaceHubFountain {
   readonly marker: WorkspaceMarker;
   /** One-based position among the Hub's visits and fountain use, absent while unused. */
   readonly actionPosition?: number;
-  /** The complete appended order, offered only while the fountain is unused. */
-  readonly appendActions?: readonly HubAction[];
   /** Each stay it can be used in, at the stay's end, offered only while it is unused. */
   readonly useIn?: readonly WorkspaceHubRowMove[];
   /** The Phial outcome owner; its target control is present whenever the fountain is used. */

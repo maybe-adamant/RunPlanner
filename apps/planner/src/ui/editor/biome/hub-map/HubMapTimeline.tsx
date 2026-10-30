@@ -265,7 +265,8 @@ function TimelineFountainMarker({
   const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
   const marker = useRef<HTMLButtonElement>(null);
-  const appendActions = fountain.appendActions;
+  // Using it at the end of the last stay appends it to the Hub's order.
+  const appendActions = fountain.useIn?.at(-1)?.actions;
   const canAppend = appendActions !== undefined;
   const canOpen = !canAppend && complete;
   const appendWaits = canAppend && waiting && !locked;

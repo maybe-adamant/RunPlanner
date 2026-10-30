@@ -254,7 +254,8 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(fountains).toHaveLength(1);
     expect(lists[0]!.contains(fountains[0]!)).toBe(true);
     expect(within(lists[0]!).getByRole('button', { name: 'Move Fountain' })).toBeTruthy();
-    expect(within(lists[1]!).getByRole('button', { name: 'Move reroll 1' })).toBeTruthy();
+    // A lone press has nowhere to move, so it has no Move.
+    expect(within(lists[1]!).queryByRole('button', { name: /^Move/ })).toBeNull();
     // Clearing the order waits on removing its rerolls.
     const reset = within(details).getByRole('button', { name: 'Reset visits' });
     expect(reset).toHaveProperty('disabled', true);

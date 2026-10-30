@@ -676,10 +676,6 @@ function projectHubNode(
     ...(fountainIndex < 0 ? {} : { actionPosition: fountainIndex + 1 }),
     ...(fountainIndex < 0
       ? {
-          appendActions: Object.freeze([
-            ...hub.actions,
-            Object.freeze({ kind: 'useFountain' as const }),
-          ]),
           useIn: Object.freeze(
             authoredStays.map((stay) =>
               Object.freeze({

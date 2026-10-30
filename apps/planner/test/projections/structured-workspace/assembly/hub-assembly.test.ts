@@ -122,7 +122,6 @@ describe('structured workspace Hub assembly', () => {
     const unused = withActions(null);
     expect(unused.fountain).toMatchObject({
       address: createHubFountainAddress(nBiome, 'hub'),
-      appendActions: hubVisitActions(visits, 2),
       hub,
     });
     // Unused, it can be used at the end of any stay the authored visits reach.
@@ -149,7 +148,6 @@ describe('structured workspace Hub assembly', () => {
       actionPosition: 2,
       controlsHost: { kind: 'room', occurrenceId: nOccurrenceId(visits[0]!) },
     });
-    expect(between.fountain).not.toHaveProperty('appendActions');
     expect(between.fountain).not.toHaveProperty('useIn');
     // Its row stands in the stay after the first visit and moves to the end of the others.
     expect(between.stays.map((stay) => stay.rows.map((row) => row.kind))).toEqual([

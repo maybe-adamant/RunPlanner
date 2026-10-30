@@ -15,6 +15,7 @@ export function RoomActionPlacementPicker({
   trigger,
   choices,
   disabledHint,
+  id: givenId,
   onApply,
 }: {
   /** Findings repaired by moving this action. */
@@ -24,9 +25,12 @@ export function RoomActionPlacementPicker({
   readonly choices: readonly RoomActionPlacementChoice[];
   /** Hover text while no destination is structurally authorable. */
   readonly disabledHint?: string;
+  /** The trigger's id, when its owner refocuses it. */
+  readonly id?: string;
   readonly onApply: (key: string) => void;
 }) {
-  const id = useId();
+  const generatedId = useId();
+  const id = givenId ?? generatedId;
   const noDestination = !choices.some((choice) => choice.structurallyAuthorable);
   return (
     <div className="room-action-placement-picker">
