@@ -151,16 +151,25 @@ function importShipWheels(
       context.note({ area: 'wheel', reason: 'refused', address: wheel, record: record(roomIndex) });
       continue;
     }
-    const steps: ProjectCommand[] = [];
-    if (state()!.storeKey !== recorded.store)
-      steps.push({ kind: 'ReplaceRewardWheelStore', wheel, storeKey: recorded.store });
-    if (recorded.offers !== undefined && state()!.offerCount !== recorded.offers)
-      steps.push({ kind: 'ReplaceRewardWheelOfferCount', wheel, offerCount: recorded.offers });
     const picked = picks[index];
-    if (picked !== undefined && state()!.pickedOfferIndex !== picked)
-      steps.push({ kind: 'ReplaceRewardWheelPicked', wheel, pickedOfferIndex: picked });
-    for (const step of steps)
-      if (!context.applyValid(step))
+    // Each step reads the wheel the previous left: a one-offer count already picks its offer.
+    const steps: readonly ((current: RewardWheelState) => ProjectCommand | undefined)[] = [
+      (current) =>
+        current.storeKey === recorded.store
+          ? undefined
+          : { kind: 'ReplaceRewardWheelStore', wheel, storeKey: recorded.store },
+      (current) =>
+        recorded.offers === undefined || current.offerCount === recorded.offers
+          ? undefined
+          : { kind: 'ReplaceRewardWheelOfferCount', wheel, offerCount: recorded.offers },
+      (current) =>
+        picked === undefined || current.pickedOfferIndex === picked
+          ? undefined
+          : { kind: 'ReplaceRewardWheelPicked', wheel, pickedOfferIndex: picked },
+    ];
+    for (const next of steps) {
+      const step = next(state()!);
+      if (step !== undefined && !context.applyValid(step))
         context.note({
           area: 'wheel',
           reason: 'refused',
@@ -168,6 +177,7 @@ function importShipWheels(
           applied: step,
           record: record(roomIndex),
         });
+    }
     // Neither the save nor the use record shows which of two offers was taken;
     // a split of mixed sides is settled by the solve instead.
     if (recorded.offers === undefined || picked === undefined)

@@ -1062,6 +1062,37 @@ describe('run import of the Surface victory', () => {
     ]);
   });
 
+  it("authors a one-offer wheel's count without a side for its only offer", () => {
+    // Walking the plan again with O_Combat12's right-picked second wheel recorded as one-offer.
+    const altered: RunRecord = {
+      ...record,
+      rooms: record.rooms.map((room, index) =>
+        index === 23
+          ? {
+              ...room,
+              wheels: room.wheels!.map((wheel, at) => (at === 1 ? { ...wheel, offers: 1 } : wheel)),
+            }
+          : room,
+      ),
+    };
+    const entries: RunImportReportEntry[] = [];
+    const walk = new RunImportWalk(
+      catalog,
+      altered,
+      simulateProjectAssembly(catalog, imported.project),
+      entries,
+    );
+    walk.run();
+    const ship = occurrence(walk.assembly.project, 'O-r23').state;
+    expect(ship.kind === 'shipCombat' && ship.wheels['wheel2']).toMatchObject({
+      offerCount: 1,
+      pickedOfferIndex: 1,
+    });
+    expect(entries.filter((entry) => entry.applied?.kind === 'ReplaceRewardWheelPicked')).toEqual(
+      [],
+    );
+  });
+
   it('reports a wheel window whose saved stores no assignment reproduces', () => {
     // The game's RunProgress lost one more StackUpgrade across O_Combat12 than its two unpicked offers explain.
     const states = recordedEntryStates(record);
