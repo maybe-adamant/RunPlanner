@@ -9,11 +9,9 @@ import {
   type SemanticAddress,
 } from '../../authored-project';
 import type { RunRecord } from '../../run-record/model';
-import {
-  createPreparedProjectCandidateSession,
-  type ProjectCandidateSession,
-} from '../candidates/session';
-import { settleCommandUnlessRefused } from '../edit-settlement';
+import type { ProjectCandidateSession } from '../candidates/session';
+import { createAuthoringSession, type AuthoringSession } from '../authoring/session';
+import { findingsAddedSince } from '../finding-regions';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { simulateProjectAssembly } from '../evaluation/project';
 import type { SemanticFinding } from '../model';
@@ -80,9 +78,6 @@ export type RunImport =
       readonly report: RunImportReport;
       readonly stop: RunImportStop;
     };
-
-const findingKey = (finding: SemanticFinding) =>
-  `${finding.code} ${semanticAddressKey(finding.origin)}`;
 
 /** Rooms the assessment has entered; an earlier stop shrinks them. */
 const enteredRoomCount = (assembly: ProjectEvaluationAssembly) =>
@@ -199,7 +194,7 @@ export function projectFromRunRecord(catalog: Catalog, record: RunRecord): RunIm
 }
 
 export class RunImportWalk {
-  private session: ProjectCandidateSession | undefined;
+  private readonly authoring: AuthoringSession;
   private refusedAnswer = false;
   private guesser: RunImportGuesser | undefined;
   private readonly retractions = new Map<
@@ -212,16 +207,17 @@ export class RunImportWalk {
   constructor(
     readonly catalog: Catalog,
     readonly record: RunRecord,
-    public assembly: ProjectEvaluationAssembly,
+    start: ProjectEvaluationAssembly,
     private readonly entries: RunImportReportEntry[],
   ) {
+    this.authoring = createAuthoringSession(catalog, start);
     this.occurrences = new RecordOccurrences(catalog, record);
     this.context = {
       catalog,
       record,
       occurrences: this.occurrences,
       assembly: () => this.assembly,
-      candidates: () => this.candidates(),
+      candidates: () => this.authoring.candidates(),
       apply: (command) => this.apply(command),
       applyValid: (command) => this.transaction(() => this.apply(command)),
       transaction: (run) => this.transaction(run),
@@ -242,8 +238,8 @@ export class RunImportWalk {
     };
   }
 
-  private candidates(): ProjectCandidateSession {
-    return (this.session ??= createPreparedProjectCandidateSession(this.catalog, this.assembly));
+  get assembly(): ProjectEvaluationAssembly {
+    return this.authoring.current();
   }
 
   private dirty = new Set<string>();
@@ -290,11 +286,10 @@ export class RunImportWalk {
     if (!run()) return this.rollback(before);
     const ownerKey = (finding: SemanticFinding) => semanticAddressKey(finding.origin);
     const stop = new Set(before.evaluation.issue?.reasons.map(ownerKey) ?? []);
-    const known = new Set(before.evaluation.findings.map(findingKey));
     const enteredBefore = this.enteredOccurrences(before);
     const added = () =>
-      this.assembly.evaluation.findings.filter(
-        (finding) => !known.has(findingKey(finding)) && !isQuestionFinding(finding),
+      findingsAddedSince(before.evaluation.findings, this.assembly.evaluation.findings).filter(
+        (finding) => !isQuestionFinding(finding),
       );
     const inEnteredRoom = (finding: SemanticFinding) => {
       const occurrenceId = occurrenceIdOf(finding.origin);
@@ -327,14 +322,12 @@ export class RunImportWalk {
   }
 
   probe<Result>(run: () => Result): Result {
-    const before = this.assembly;
     const entries = this.entries.length;
     const retractions = new Map(this.retractions);
     const refusedAnswer = this.refusedAnswer;
     try {
-      return run();
+      return this.authoring.probe(run);
     } finally {
-      this.rollback(before);
       this.entries.length = entries;
       this.retractions.clear();
       for (const [key, retraction] of retractions) this.retractions.set(key, retraction);
@@ -343,17 +336,13 @@ export class RunImportWalk {
   }
 
   private rollback(before: ProjectEvaluationAssembly): false {
-    this.assembly = before;
-    this.session = undefined;
+    this.authoring.restore(before);
     return false;
   }
 
+  /** Settles one command; false when it is refused or changes nothing. A settlement fault is accepted. */
   apply(command: ProjectCommand): boolean {
-    const settled = settleCommandUnlessRefused(this.catalog, this.assembly, command);
-    if (settled === undefined) return false;
-    this.assembly = settled;
-    this.session = undefined;
-    return true;
+    return this.authoring.apply(command).kind === 'applied';
   }
 
   private report(
@@ -548,8 +537,7 @@ export class RunImportWalk {
     this.guesser ??= new RunImportGuesser(this.catalog, this.assembly.project, this.assembly);
     const result = this.guesser.guess(this.assembly);
     if (result !== undefined) {
-      this.assembly = result.assembly;
-      this.session = undefined;
+      this.authoring.restore(result.assembly);
       commands = result.commands;
     } else commands = guessNemesisEvent(this.context, reason);
     if (commands === undefined) return false;

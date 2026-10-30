@@ -34,8 +34,6 @@ import {
   attestClockedTraitPickupPlacementForProjectEvaluationAssembly,
 } from './evaluation/project-evaluation-assembly';
 import type { ProjectEvaluationAssembly } from './evaluation/evaluation-products';
-import { simulateProjectAssembly } from './evaluation/project';
-import type { SemanticFinding } from './model';
 
 function occurrences(project: ProjectDocument) {
   return project.route.biomes.flatMap((biome) =>
@@ -118,7 +116,7 @@ function divergentOutcomeLandingFault(
 }
 
 /** The fixed reroll pool refusing a new spend; known only once the edit is evaluated. */
-class RerollPoolRefusal extends ProjectCommandContractError {}
+export class RerollPoolRefusal extends ProjectCommandContractError {}
 
 interface ProjectEditSettlementOptions {
   readonly catalog: Catalog;
@@ -385,55 +383,6 @@ function settleProjectEditRepairs(options: ProjectEditSettlementOptions): Projec
     }
     assembly = evaluate(project);
   }
-}
-
-/** Settles one command; undefined when the command authority refuses it or it changes nothing. */
-export function settleCommandUnlessRefused(
-  catalog: Catalog,
-  before: ProjectEvaluationAssembly,
-  command: ProjectCommand,
-): ProjectEvaluationAssembly | undefined {
-  let settled: ProjectEditSettlement;
-  let evaluated = false;
-  try {
-    settled = settleProjectEdit({
-      catalog,
-      before,
-      command,
-      evaluate: (project) => {
-        evaluated = true;
-        return simulateProjectAssembly(catalog, project);
-      },
-    });
-  } catch (error) {
-    // A refusal before anything is evaluated is the command's own, as is the
-    // reroll pool's; other later ones are engine defects.
-    if (
-      error instanceof ProjectCommandContractError &&
-      (!evaluated || error instanceof RerollPoolRefusal)
-    )
-      return undefined;
-    throw error;
-  }
-  return settled.assembly.project === before.project ? undefined : settled.assembly;
-}
-
-/**
- * Settles one command unless it is refused or adds a finding. A partly authored
- * route keeps its later frontier finding; an earlier block would replace it.
- */
-export function settleCommandWithoutNewFinding(
-  catalog: Catalog,
-  before: ProjectEvaluationAssembly,
-  command: ProjectCommand,
-): ProjectEvaluationAssembly | undefined {
-  const settled = settleCommandUnlessRefused(catalog, before, command);
-  if (settled === undefined) return undefined;
-  const key = (finding: SemanticFinding) => `${finding.code} ${semanticAddressKey(finding.origin)}`;
-  const known = new Set(before.evaluation.findings.map(key));
-  return settled.evaluation.findings.every((finding) => known.has(key(finding)))
-    ? settled
-    : undefined;
 }
 
 /** The earlier-screen count of the trait offer or Pom choice a screen command addresses. */

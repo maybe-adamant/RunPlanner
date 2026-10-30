@@ -49,6 +49,19 @@ export function findingIdentityKey(finding: SemanticFinding): string {
   ]);
 }
 
+/**
+ * The findings in `after` absent from `before`, keyed by code and semantic
+ * origin: an owner's changed evidence is not a new finding.
+ */
+export function findingsAddedSince(
+  before: readonly SemanticFinding[],
+  after: readonly SemanticFinding[],
+): readonly SemanticFinding[] {
+  const key = (finding: SemanticFinding) => `${finding.code} ${semanticAddressKey(finding.origin)}`;
+  const known = new Set(before.map(key));
+  return after.filter((finding) => !known.has(key(finding)));
+}
+
 /** Repair hints describe a finding without distinguishing it. */
 function identityEvidence(evidence: SemanticFinding['evidence']): SemanticFinding['evidence'] {
   if (!('phantomExitDraws' in evidence)) return evidence;

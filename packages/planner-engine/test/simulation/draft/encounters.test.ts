@@ -16,10 +16,7 @@ import {
 } from '../../../src/simulation/draft/encounters';
 import { DEFAULT_DRAFT_BUDGET } from '../../../src/simulation/draft/generator';
 import { createDraftRng } from '../../../src/simulation/draft/rng';
-import {
-  settleCommandUnlessRefused,
-  settleCommandWithoutNewFinding,
-} from '../../../src/simulation/edit-settlement';
+import { createAuthoringSession } from '../../../src/simulation/authoring/session';
 import { startDraftWalk } from '../../support/draft-walk';
 import type { ProjectEvaluationAssembly } from '../../../src/simulation/evaluation/evaluation-products';
 import {
@@ -149,10 +146,15 @@ describe('draftEncounters', () => {
       // Five waves is representable but beyond every declared policy.
       value: { kind: 'generated' as const, waveCount: 5 },
     };
-    const settled = settleCommandUnlessRefused(catalog, start, command)!;
+    const outcome = createAuthoringSession(catalog, start).apply(command);
+    if (outcome.kind !== 'applied') throw new Error('the edit was refused');
+    const settled = outcome.assembly;
     expect(settled.evaluation.findings).toHaveLength(start.evaluation.findings.length);
     expect(settled.evaluation.findings).not.toEqual(start.evaluation.findings);
-    expect(settleCommandWithoutNewFinding(catalog, start, command)).toBeUndefined();
+    expect(createAuthoringSession(catalog, start).apply(command, 'noNewFinding')).toMatchObject({
+      kind: 'refused',
+      refusal: { kind: 'newFinding' },
+    });
   });
 
   it('drafts the same encounters for the same seed', () => {

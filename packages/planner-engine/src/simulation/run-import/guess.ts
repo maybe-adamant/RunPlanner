@@ -1,5 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectCommand, ProjectDocument } from '../../authored-project';
+import { createAuthoringSession } from '../authoring/session';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { draftGodSchedule } from '../draft/schedule';
 import type { DraftSpec } from '../draft/spec';
@@ -40,7 +41,14 @@ export class RunImportGuesser {
     };
     const world = draftWorld(catalog, route, spec);
     const schedule = draftGodSchedule(catalog, route, spec, world, firstInOrder);
-    this.walk = new DraftWalk(catalog, start, spec, firstInOrder, schedule, world);
+    this.walk = new DraftWalk(
+      catalog,
+      createAuthoringSession(catalog, start),
+      spec,
+      firstInOrder,
+      schedule,
+      world,
+    );
     this.walk.occurrenceIdPrefix = 'guess';
   }
 

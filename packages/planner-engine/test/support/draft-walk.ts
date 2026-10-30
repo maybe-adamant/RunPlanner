@@ -6,6 +6,7 @@ import { createDraftRng } from '../../src/simulation/draft/rng';
 import { draftGodSchedule, type DraftGodSchedule } from '../../src/simulation/draft/schedule';
 import { draftBasketTraitKeys, draftLoadoutProject } from '../../src/simulation/draft/spec';
 import { DraftWalk } from '../../src/simulation/draft/walk';
+import { createAuthoringSession } from '../../src/simulation/authoring/session';
 import { DraftSteering } from '../../src/simulation/draft/steering';
 import { createDraftPrerequisites } from '../../src/simulation/draft/prerequisites';
 import { draftStartTraits } from '../../src/simulation/draft/basket';
@@ -46,7 +47,14 @@ export function startDraftWalk(
   const start =
     options.from ??
     simulateProjectAssembly(catalog, draftLoadoutProject(catalog, base, spec.loadout));
-  return new DraftWalk(catalog, start, spec, createDraftRng(seed), schedule, world);
+  return new DraftWalk(
+    catalog,
+    createAuthoringSession(catalog, start),
+    spec,
+    createDraftRng(seed),
+    schedule,
+    world,
+  );
 }
 
 /** The walk's steering over the base project's drafted loadout, at its first biome. */

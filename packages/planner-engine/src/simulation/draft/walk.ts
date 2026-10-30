@@ -47,10 +47,8 @@ import {
   ORDINARY_SOURCE_CAP,
   type ResolvedRewardOffer,
 } from '../../reward-kernel';
-import {
-  createPreparedProjectCandidateSession,
-  type ProjectCandidateSession,
-} from '../candidates/session';
+import type { AuthoringSession } from '../authoring/session';
+import type { ProjectCandidateSession } from '../candidates/session';
 import type { StartRoomCandidateQuery } from '../candidates/start-room';
 import type { ForcePressureLedgerEntry } from '../generation';
 import { DRAFT_OPTIONS } from '../../authored-project/draft-spec';
@@ -79,7 +77,6 @@ import {
   type DraftSampleContext,
 } from './samples';
 import { draftProvider, type DraftGodSchedule, type DraftSupply } from './schedule';
-import { settleCommandUnlessRefused, settleCommandWithoutNewFinding } from '../edit-settlement';
 import { routeResourceAuthoring } from '../resources';
 import { draftBasketTraitKeys, draftKeepsakeOptions, type DraftSpec } from './spec';
 import {
@@ -121,8 +118,6 @@ const RESOURCE_FAMILIES = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
  * an engine domain and is admitted by the engine's own candidate query.
  */
 export class DraftWalk {
-  assembly: ProjectEvaluationAssembly;
-  private session: ProjectCandidateSession | undefined;
   private readonly hooked = new Set<string>();
   private readonly steering: DraftSteering;
   private readonly traitOffers: DraftTraitOffers;
@@ -152,14 +147,13 @@ export class DraftWalk {
 
   constructor(
     readonly catalog: Catalog,
-    start: ProjectEvaluationAssembly,
+    private readonly authoring: AuthoringSession,
     readonly spec: DraftSpec,
     readonly rng: DraftRng,
     schedule: DraftGodSchedule,
     world: DraftWorldProduct,
   ) {
-    this.assembly = start;
-    const held = draftStartTraits(catalog, start.project.route, spec.loadout);
+    const held = draftStartTraits(catalog, authoring.current().project.route, spec.loadout);
     this.steering = new DraftSteering(
       catalog,
       spec,
@@ -218,6 +212,10 @@ export class DraftWalk {
   /** Why the last biome run stopped short. */
   get failure(): string | undefined {
     return this.failureReason;
+  }
+
+  get assembly(): ProjectEvaluationAssembly {
+    return this.authoring.current();
   }
 
   get project(): ProjectDocument {
@@ -311,21 +309,21 @@ export class DraftWalk {
     };
     const ordered = this.shuffle(families).sort((a, b) => preferred(b) - preferred(a));
     for (const family of ordered) {
-      const settled = settleCommandWithoutNewFinding(this.catalog, this.assembly, {
-        kind: 'ReplaceResourcePlacement',
-        route: createRouteAddress(route.routeKey),
-        family,
-        value: { biomeKey: biomeKey!, occurrenceId },
-      });
-      if (settled === undefined) continue;
-      this.assembly = settled;
-      this.session = undefined;
-      return;
+      const outcome = this.authoring.apply(
+        {
+          kind: 'ReplaceResourcePlacement',
+          route: createRouteAddress(route.routeKey),
+          family,
+          value: { biomeKey: biomeKey!, occurrenceId },
+        },
+        'noNewFinding',
+      );
+      if (outcome.kind === 'applied') return;
     }
   }
 
   private candidates(): ProjectCandidateSession {
-    return (this.session ??= createPreparedProjectCandidateSession(this.catalog, this.assembly));
+    return this.authoring.candidates();
   }
 
   private evaluate: ProjectCandidateSession['evaluate'] = ((query: never) =>
@@ -333,10 +331,7 @@ export class DraftWalk {
 
   /** Applies a command through edit settlement; false when the command authority refuses it. */
   apply(command: ProjectCommand): boolean {
-    const settled = settleCommandUnlessRefused(this.catalog, this.assembly, command);
-    if (settled === undefined) return false;
-    this.assembly = settled;
-    this.session = undefined;
+    if (this.authoring.apply(command).kind !== 'applied') return false;
     this.appliedCommands.push(command);
     return true;
   }
@@ -351,8 +346,7 @@ export class DraftWalk {
       this.hooked.clear();
       this.authoredRewards.clear();
     }
-    this.assembly = assembly;
-    this.session = undefined;
+    this.authoring.restore(assembly);
   }
 
   /** Repairs the route's current issue once, without choosing encounters; false when none applies. */

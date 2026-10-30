@@ -6,6 +6,7 @@ import {
 } from '../../authored-project';
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { simulateProjectAssembly } from '../evaluation/project';
+import { createAuthoringSession } from '../authoring/session';
 import { draftEncounters } from './encounters';
 import { draftGodSchedule } from './schedule';
 import { draftReport, type DraftReport } from './report';
@@ -128,7 +129,7 @@ export function draftProject(
       if (best !== undefined) afterSuccess += 1;
       const walk = new DraftWalk(
         catalog,
-        current,
+        createAuthoringSession(catalog, current),
         spec,
         createDraftRng(attemptSeed(seed, biomeIndex, attempt)),
         schedule,

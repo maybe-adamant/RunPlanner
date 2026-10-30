@@ -26,7 +26,7 @@ import {
 import type { SemanticFinding } from '../model';
 import type { FigLeafPhaseCandidateSupport, GorgonPhaseCandidateSupport } from '../rewards/model';
 import type { DraftRng } from './rng';
-import { settleCommandWithoutNewFinding } from '../edit-settlement';
+import { createAuthoringSession } from '../authoring/session';
 import type { DraftSpec } from './spec';
 import type { DraftSteering } from './steering';
 
@@ -210,12 +210,9 @@ export function draftEncounters(
   biomeKey: string,
   rng: DraftRng,
 ): ProjectEvaluationAssembly {
-  let assembly = start;
-  const settle = (command: ProjectCommand): boolean => {
-    const settled = settleCommandWithoutNewFinding(catalog, assembly, command);
-    if (settled !== undefined) assembly = settled;
-    return settled !== undefined;
-  };
+  const session = createAuthoringSession(catalog, start);
+  const settle = (command: ProjectCommand): boolean =>
+    session.apply(command, 'noNewFinding').kind === 'applied';
   const customize = (
     phase: EncounterPhaseAddress,
     decisionKey: string,
@@ -231,29 +228,39 @@ export function draftEncounters(
     }
   };
   const aetosWaves = (phase: EncounterPhaseAddress): readonly number[] => {
-    const status = encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase);
+    const status = encounterPhaseSequenceStatusForProjectEvaluationAssembly(
+      session.current(),
+      phase,
+    );
     return status?.kind === 'active' ? (status.aetos?.waves ?? []) : [];
   };
-  const phases = reachedEncounterPhasesForProjectEvaluationAssembly(assembly).filter(
+  const phases = reachedEncounterPhasesForProjectEvaluationAssembly(session.current()).filter(
     (phase) => phase.biomeKey === biomeKey,
   );
   for (const [index, phase] of phases.entries()) {
-    const status = encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase);
+    const status = encounterPhaseSequenceStatusForProjectEvaluationAssembly(
+      session.current(),
+      phase,
+    );
     if (status?.kind !== 'active') continue;
-    const generated = generatedEncounterSupportForProjectEvaluationAssembly(assembly, phase);
+    const generated = generatedEncounterSupportForProjectEvaluationAssembly(
+      session.current(),
+      phase,
+    );
     if (generated !== undefined) {
       let sampled: AuthoredGeneratedEncounterCustomization | undefined;
       for (let attempt = 0; sampled === undefined && attempt < GENERATED_ATTEMPTS; attempt += 1)
         sampled = sampleGenerated(catalog, generated, rng);
       customize(phase, generated.decisionKey, () => sampled, generated.initialize);
     }
-    const roster = infiniteRosterSupportForProjectEvaluationAssembly(assembly, phase);
+    const roster = infiniteRosterSupportForProjectEvaluationAssembly(session.current(), phase);
     if (roster !== undefined) {
       const typeKeys = sampleRoster(roster, rng);
       customize(phase, roster.decisionKey, () => typeKeys && { kind: 'infiniteRoster', typeKeys });
     }
-    const occurrence = assembly.project.route.biomes
-      .find((biome) => biome.biomeKey === phase.biomeKey)
+    const occurrence = session
+      .current()
+      .project.route.biomes.find((biome) => biome.biomeKey === phase.biomeKey)
       ?.topology?.occurrences.find((entry) => entry.occurrenceId === phase.owner.occurrenceId);
     const cocoonRewardPointIds =
       catalog.rooms.byKey[occurrence?.gameName ?? '']?.cocoonRewardPointIds ?? [];
@@ -279,7 +286,7 @@ export function draftEncounters(
         settle({ kind: 'ReplaceAetosWave', phase, value: wave });
     }
   }
-  return assembly;
+  return session.current();
 }
 
 /** What encounter selection during the walk borrows from it. */

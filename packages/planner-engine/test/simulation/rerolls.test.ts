@@ -48,7 +48,6 @@ import {
   withJudgment,
   withGuessedRerolledScreens,
 } from '../support/rerolls';
-import { settleCommandUnlessRefused } from '../../src/simulation/edit-settlement';
 
 const f = createBiomeAddress('Underworld', 'F');
 const source = 'golden-f-b2-e1';
@@ -251,13 +250,6 @@ describe('door rerolls', () => {
     expect(() => settle(project, insertReroll(project, door('exit2', otherTarget)))).toThrow(
       'the reroll pool has nothing left for this spend',
     );
-    expect(
-      settleCommandUnlessRefused(
-        catalog,
-        evaluate(project),
-        insertReroll(project, door('exit2', otherTarget)),
-      ),
-    ).toBeUndefined();
 
     // A preserved over-spend still draws, so the timeline continues past it.
     const over = press(project, door('exit2', otherTarget));

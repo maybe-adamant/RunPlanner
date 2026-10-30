@@ -9,11 +9,9 @@ import {
   createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
   hermesShrineDeliveryEntryKey,
-  ProjectCommandContractError,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { settleProjectEdit, simulateProjectAssembly } from '@run-planner/engine/simulation';
-import { settleCommandUnlessRefused } from '../../../src/simulation/edit-settlement';
 import {
   createSurfaceNOHermesShrineDeliveryCheckpoint,
   oBiome,
@@ -59,25 +57,6 @@ describe('settlement repeat-repair guard', () => {
     expect(settled.assembly.project).toEqual(apply(project, catalog, command));
     expect(settled.assembly.evaluation.findings).toContainEqual(
       expect.objectContaining({ code: 'hermesShrineDeliveryPlacementRequired', origin: entry }),
-    );
-  });
-
-  it('throws a repair the command authority refuses after evaluation', () => {
-    const project = createSurfaceNOHermesShrineDeliveryCheckpoint({ placeDelayedDelivery: false });
-    const apply = commands.applyProjectCommand;
-    vi.spyOn(commands, 'applyProjectCommand').mockImplementation((document, catalog, command) => {
-      if (command.kind === 'PlaceHermesShrineDelivery')
-        throw new ProjectCommandContractError(command.kind, command.entry, 'refused repair');
-      return apply(document, catalog, command);
-    });
-    const command = {
-      kind: 'ReplaceHermesShrineOffer',
-      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
-      slotKey: 'secondRight',
-      value: { rewardType: 'MaxManaDrop' },
-    } as const;
-    expect(() => settleCommandUnlessRefused(catalog, evaluate(project), command)).toThrow(
-      'refused repair',
     );
   });
 
