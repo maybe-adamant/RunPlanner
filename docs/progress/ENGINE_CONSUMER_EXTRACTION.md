@@ -254,6 +254,11 @@ Total about 7.5–9.5 days. S2–S6 are independent of each other after S1.
   fixture paths; root `test:run-import` and `fixtures:run-record` paths and the
   regenerate script's wording. `npm install` links the workspace.
 - Boundary enforcement for the package (below).
+- `test/simulation/encounters/encounter-inverse.test.ts` (S4) still decodes the
+  run-record capture fixtures for its depth-grid and `surface.rooms[11]` cases:
+  extract the observed phases it needs into an engine test fixture (preferred,
+  the engine must not depend on `@run-planner/run-import`) before the fixtures
+  move.
 - Docs: AGENTS.md lanes and testing list; ARCHITECTURE lane table and Imports;
   record/import path claims in AUTHORED_PROJECT_MODEL, RUN_START_INSTALLATION
   and the save-file run record audit.
