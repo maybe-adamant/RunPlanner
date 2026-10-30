@@ -712,8 +712,10 @@ to one room (`Q_Combat14` to `Q_MiniBoss03`).
   return door's `ExitDoorRooms` and `OfferedRewards`.
 - A batch's doors are paired with the source room's exits as the engine's
   exit compatibility admits (surface victory `P_Combat16`: its indoor exit
-  takes the indoor `P_Combat09` whatever the door ids). One admitted pairing
-  is exact. Among several, the catalog's declared native door order for the
+  takes the indoor `P_Combat09` whatever the door ids). A batch holding an
+  unplaced takeover door is not paired: each exit takes its positional door,
+  and a door the engine refuses there yields to the next unplaced door in
+  door order, reported with its id. One admitted pairing is exact. Among several, the catalog's declared native door order for the
   source room is exact; a door that order puts where the engine refuses it is
   reported as refused. A room without one takes ascending door id among the
   admitted pairings and reports the order as an assumption. Both declared rooms are inferred from
