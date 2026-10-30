@@ -32,14 +32,23 @@ percentage.
    P(income so far − earlier spending ≥ price), assuming every earlier
    purchase is made. Rooms show their spending. Past an invalid or incomplete
    cut the value is unavailable, not 0.
-6. **Enemy gold is a calibrated store model.** Per generated encounter, gold
-   paid = the encounter's expected store × a per-biome paid fraction × Σ. The
-   store is the native uniform draw plus the run-depth ramp. The paid fraction
-   (and a per-biome residual spread and expected kills) are small calibrated
-   constants, derived once from an offline simulation spike and the observed
-   saves; there is no generated table and no per-enemy data. Minibosses and
-   Heracles combats use per-encounter constants; bosses and story encounters
-   pay nothing. Record mode captures can refine the constants later.
+6. **Enemy gold = cap × payout.** The cap is exact game data: the
+   encounter's store (native uniform draw plus the run-depth ramp, × Σ).
+   Gold paid given the cap has two forms:
+   - **Known roster** (fully determined authored customization, imported
+     waves, fixed-roster encounters; gate 3b): per-kill drop chance and parcel
+     range from catalog drop data, summed and capped by the store plus the
+     crossing overshoot, computed in closed form.
+   - **Unknown roster** (gate 3a): a biome-wide payout policy, expected gold
+     as a fraction of the cap with a residual spread and expected kills.
+     These are tuning constants, seeded from the simulation spike and the
+     observed saves, and re-tuned from recorded runs with a development tool.
+     Where the simulation and observation disagree, observation wins (I and H
+     use about 1.2 with a capped spread).
+     Minibosses use per-encounter constants; Heracles combats pay a flat 100
+     bounty (unmultiplied) plus their store drops; bosses, story encounters and
+     Chaos rooms pay nothing; the Anomaly pays its store plus a constant
+     overshoot.
 7. **Run modifiers adjust the model.** `encounterGoldRange = p` fixes the store
    at `floor((100·min + p·(max−min) + 50)/100)` with no store variance.
    `enemyGoldDropChance = q` selects the paid fraction calibrated at q = 25,
@@ -237,14 +246,21 @@ consumer.
    - Scope: catalog gold grants and gain multipliers; engine ledger and
      balance; editor room balance.
    - Lanes: `test:catalog`, `test:engine`, `test:planner`.
-3. **Estimate and affordability.**
-   - Scope: catalog money stores and Medea; engine calibrated estimate,
-     run-modifier knobs, normal approximation and `affordableProbability`;
-     editor "N% affordable", with placement iterated by screenshots (price
-     beside the item name, percentage in the right column; picker prices only
-     if they reuse candidate context cheaply).
-   - Lanes: `test:catalog`, `test:engine`, `test:ui`.
+3. **Estimate and affordability (3a).**
+   - Scope: catalog money stores and Medea; engine cap, biome payout policy
+     and constants, run-modifier knobs, Medea and urns, normal approximation
+     and `affordableProbability`; editor "N% affordable", with placement
+     iterated by screenshots (price beside the item name, percentage in the
+     right column; picker prices only if they reuse candidate context
+     cheaply); the development tool that derives policy constants from
+     recorded runs.
+   - Lanes: `test:catalog`, `test:engine`, `test:planner`, `test:ui`.
    - Performance snapshot before and after if rebuild or edit latency moves.
+4. **Known-roster payout (3b).**
+   - Scope: catalog per-enemy drop data (with resolved inheritance and native
+     draw weights); engine closed-form payout for fully determined rosters,
+     replacing the biome policy there. No display change.
+   - Lanes: `test:catalog`, `test:engine`.
 
 Docs:
 
@@ -269,8 +285,7 @@ Docs:
 
 ## Non-goals
 
-- Runtime drop simulation, a generated encounter table, per-enemy drop data
-  or per-room exact rosters.
+- Runtime drop simulation or a generated encounter table.
 - Hard-encounter status (the engine prepares encounters as non-hard; caps do
   not differ).
 - Challenge switches, Arachne costume gold, Selene per-cast gold.
