@@ -32,17 +32,19 @@ percentage.
    P(income so far − earlier spending ≥ price), assuming every earlier
    purchase is made. Rooms show their spending. Past an invalid or incomplete
    cut the value is unavailable, not 0.
-6. **Enemy gold comes from a simulated table.** An offline tool rolls each
-   encounter's roster through the engine's forward encounter model and applies
-   the game's drop rules against the store. It publishes the mean and variance
-   of gold paid per encounter (and per depth where the store or roster ramps),
-   plus expected kills. The engine looks the table up; it never simulates drops
-   at runtime.
-7. **Run modifiers are knobs of the table.** `encounterGoldRange = p` fixes the
-   store at `floor((100·min + p·(max−min) + 50)/100)`. `enemyGoldDropChance = q`
-   overrides drop chance; the table is generated at q = 0, 25, 50, 75, 100 and
-   native, and interpolated between. The gold multiplier Σ scales the store and
-   every parcel, so payout scales by Σ without extra rows.
+6. **Enemy gold is a calibrated store model.** Per generated encounter, gold
+   paid = the encounter's expected store × a per-biome paid fraction × Σ. The
+   store is the native uniform draw plus the run-depth ramp. The paid fraction
+   (and a per-biome residual spread and expected kills) are small calibrated
+   constants, derived once from an offline simulation spike and the observed
+   saves; there is no generated table and no per-enemy data. Minibosses and
+   Heracles combats use per-encounter constants; bosses and story encounters
+   pay nothing. Record mode captures can refine the constants later.
+7. **Run modifiers adjust the model.** `encounterGoldRange = p` fixes the store
+   at `floor((100·min + p·(max−min) + 50)/100)` with no store variance.
+   `enemyGoldDropChance = q` selects the paid fraction calibrated at q = 25,
+   50, 75, 100 (interpolated); q = 0 and Pauper's pay nothing. The gold
+   multiplier Σ scales the mean and Σ² the variance.
 8. **Draft is revisited after this feature ships.** It keeps
    `purchasesPerBiome` until then. Its spec decodes tolerantly, so a later
    gold-driven option needs no schema bump (new share-code tag).
@@ -161,15 +163,16 @@ The eligible set is confirmed per reward in gate 2.
 - **Encounter gold.** The store is a cap: payout = min(store, drops). Drops
   exhaust it in F–I (observed: drained = gained in 140/150 rooms) but not in
   Q (observed mean 42 against a store mean of 73), and only marginally in N, O
-  and P. The simulated table captures this. Its witnesses are the observed
+  and P. The per-biome paid fraction captures this. Its witnesses are the observed
   per-biome means (F 18, G 35, I 49, N 19, Q 42).
 - **Normal approximation over the route.** Each term contributes a mean and
   variance:
-  - encounter gold comes from the table, with mean × Σ and variance × Σ²;
+  - encounter gold: store variance × fraction² plus the residual spread, all
+    × Σ²;
   - rolled prices and sale values are uniform on their step;
   - Chaos Affluence's roll is taken from authored values;
   - Medea is `E[min(Binomial(kills, 0.1 × luck), 2)]` per room, with kills
-    from the table's expected count;
+    from the per-biome expected kills;
   - urns use the per-room constants above.
 - **Collection rate.** Medea drops and urns are counted at 70% collection;
   everything else at 100%.
@@ -182,7 +185,8 @@ The eligible set is confirmed per reward in gate 2.
   failure: the query throws so it is investigated, never averaged.
 - **Quick Buck's re-multiplying of already-spawned money** is ignored. It is a
   same-room edge case.
-- **Engine estimate policy.** The constants (70%, urn table, Medea) live in the
+- **Engine estimate policy.** The constants (paid fractions, residual spread,
+  expected kills, miniboss and Heracles constants, 70%, urn table, Medea) live in the
   engine, not the catalog, and the design doc names them as bounded
   approximations.
 
@@ -201,15 +205,7 @@ The eligible set is confirmed per reward in gate 2.
   - Personal Loan payback by rarity;
   - Pool of Purging sale ranges;
   - encounter `moneyStore` beside the generation budget;
-  - per-enemy drop data (chance, value per difficulty, rating variance), with
-    `InheritFrom` resolved; it is consumed only by the table tool;
-  - the generated encounter gold table, checked in as a catalog file;
   - Medea curse gold.
-- **Table tool** (development tooling, outside production `src/`; may import
-  the catalog and the engine's forward encounter model):
-  - a seeded Monte Carlo, so output is deterministic;
-  - re-run when the game updates;
-  - a catalog test fails when the checked-in table differs from a fresh run.
 - **Engine:**
   - Settlements publish a per-purchase and per-sale price context on
     `BiomeRewardSimulation`: owner action, item, first paid purchase, active
@@ -242,12 +238,11 @@ consumer.
      balance; editor room balance.
    - Lanes: `test:catalog`, `test:engine`, `test:planner`.
 3. **Estimate and affordability.**
-   - Scope: catalog money stores, per-enemy drop data and Medea; the table tool
-     and its generated table; engine estimate, run-modifier knobs, normal
-     approximation and `affordableProbability`; editor "N% affordable".
-   - Before building the tool, confirm the forward encounter model can sample
-     rosters (base roll, waves, types) from a seed; if it cannot, stop and
-     report.
+   - Scope: catalog money stores and Medea; engine calibrated estimate,
+     run-modifier knobs, normal approximation and `affordableProbability`;
+     editor "N% affordable", with placement iterated by screenshots (price
+     beside the item name, percentage in the right column; picker prices only
+     if they reuse candidate context cheaply).
    - Lanes: `test:catalog`, `test:engine`, `test:ui`.
    - Performance snapshot before and after if rebuild or edit latency moves.
 
@@ -274,7 +269,8 @@ Docs:
 
 ## Non-goals
 
-- Runtime drop simulation or per-room exact rosters.
+- Runtime drop simulation, a generated encounter table, per-enemy drop data
+  or per-room exact rosters.
 - Hard-encounter status (the engine prepares encounters as non-hard; caps do
   not differ).
 - Challenge switches, Arachne costume gold, Selene per-cast gold.
