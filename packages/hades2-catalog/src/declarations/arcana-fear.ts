@@ -218,7 +218,11 @@ const vow = (
 });
 export const fearVows = [
   vow('HealingReductionShrineUpgrade', 'Vow of Scars', [1, 1, 2]),
-  vow('ShopPricesShrineUpgrade', 'Vow of Debt', [1, 1]),
+  // MetaUpgradeData.lua:1650-1671 ShopPricesShrineUpgrade Ranks ChangeValue 1.4, 1.8.
+  vow('ShopPricesShrineUpgrade', 'Vow of Debt', [1, 1], true, {
+    kind: 'shopPriceMultiplier',
+    multiplierByRank: [1.4, 1.8],
+  }),
   vow('EnemyHealthShrineUpgrade', 'Vow of Grit', [1, 1, 1]),
   vow('EnemyDamageShrineUpgrade', 'Vow of Pain', [1, 2, 2]),
   vow('EnemySpeedShrineUpgrade', 'Vow of Frenzy', [3, 3]),

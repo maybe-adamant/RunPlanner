@@ -36,6 +36,7 @@ import { roomActionDestinationLabel } from './room-action-placement';
 import { NemesisInteractionEditor, NemesisInteractionPhrase } from './NemesisEventEditor';
 import { RoomObjectEntry } from './commerce/RoomObjectEntry';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
+import { GoldAmount, RoomGoldSummary } from './commerce/GoldAmount';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomActionIcon } from '@planner/ui/artwork/roomArtwork';
@@ -413,6 +414,9 @@ export function RoomActionsWorkbench({
             <>
               {renderSupplement(entry.supplement)}
               {content?.editors}
+              {entry.boundary.kind === 'cleanup' && actions?.spending !== undefined ? (
+                <RoomGoldSummary spent={actions.spending} />
+              ) : null}
             </>
           }
           label={entry.label}
@@ -585,6 +589,9 @@ export function RoomActionsWorkbench({
                   findingMark={(control) => findingMark(row.address, control)}
                   interaction={nemesisInteraction}
                 />
+              )}
+              {row.price === undefined ? null : (
+                <GoldAmount amount={row.price} className="timeline-row-price" />
               )}
             </>
           }

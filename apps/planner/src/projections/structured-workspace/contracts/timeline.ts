@@ -62,6 +62,11 @@ export interface WorkspaceRoomActionProposal {
   readonly toIndex?: number;
 }
 
+/** A gold amount as shown: one number, or the range of a rolled price. */
+export interface WorkspaceGoldAmount {
+  readonly label: string;
+}
+
 export interface WorkspaceRoomActionRow {
   readonly address: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
   readonly key: string;
@@ -127,6 +132,8 @@ export interface WorkspaceRoomActionRow {
   };
   /** Refill authoring under the purchase that triggers Travel Deal. */
   readonly travelDealLine?: WorkspaceTravelDealLine;
+  /** What this purchase costs; absent for a free item or where the plan is not evaluated. */
+  readonly price?: WorkspaceGoldAmount;
   /** Undoes this purchase or collect with its own command. */
   readonly purchaseRemoval?: WorkspaceCommandIntent<
     Extract<
@@ -178,6 +185,8 @@ export interface WorkspaceRoomActions {
   readonly objectEntries?: readonly import('./features').WorkspaceRoomObjectEntry[];
   readonly steadyGrowth?: readonly WorkspaceSteadyGrowthControl[];
   readonly transcendentEmbryo?: readonly WorkspaceTranscendentEmbryoControl[];
+  /** What the room's purchases cost together; absent when it pays for nothing or is not reached. */
+  readonly spending?: WorkspaceGoldAmount;
 }
 
 export type WorkspaceRoomLifecycleBoundary =

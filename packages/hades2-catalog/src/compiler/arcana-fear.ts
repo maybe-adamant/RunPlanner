@@ -322,10 +322,28 @@ export function normalizeFearVows(
     const isForfeit = vow.key === 'BoonSkipShrineUpgrade';
     const isVoid = vow.key === 'LimitGraspShrineUpgrade';
     const isMenace = vow.key === 'NextBiomeEnemyShrineUpgrade';
+    const isDebt = vow.key === 'ShopPricesShrineUpgrade';
     if (isDenial && vow.effect === undefined)
       fail(`${path}.effect`, 'Vow of Denial must declare banUnselectedTraits');
-    if (!isDenial && !isForfeit && !isVoid && !isMenace && vow.effect !== undefined)
-      fail(`${path}.effect`, 'only Vow of Denial, Forfeit, Void, or Menace may declare an effect');
+    if (!isDenial && !isForfeit && !isVoid && !isMenace && !isDebt && vow.effect !== undefined)
+      fail(
+        `${path}.effect`,
+        'only Vow of Denial, Forfeit, Void, Menace, or Debt may declare an effect',
+      );
+    if (isDebt) {
+      const effect = vow.effect;
+      if (effect?.kind !== 'shopPriceMultiplier')
+        fail(`${path}.effect`, 'Vow of Debt must declare shopPriceMultiplier');
+      if (effect.multiplierByRank.length !== vow.incrementalFear.length)
+        fail(`${path}.effect.multiplierByRank`, 'must declare one multiplier per rank');
+      effect.multiplierByRank.forEach((multiplier, rank) => {
+        if (!Number.isFinite(multiplier) || multiplier <= (effect.multiplierByRank[rank - 1] ?? 1))
+          fail(
+            `${path}.effect.multiplierByRank[${rank}]`,
+            'must exceed the previous rank and raise prices',
+          );
+      });
+    }
     if (
       isDenial &&
       vow.effect !== undefined &&
@@ -398,7 +416,14 @@ export function normalizeFearVows(
                     chanceByRank: Object.freeze([0.1, 0.25]),
                   }),
                 }
-              : {}),
+              : isDebt && vow.effect?.kind === 'shopPriceMultiplier'
+                ? {
+                    effect: Object.freeze({
+                      kind: 'shopPriceMultiplier' as const,
+                      multiplierByRank: Object.freeze([...vow.effect.multiplierByRank]),
+                    }),
+                  }
+                : {}),
     });
   });
   if (values.length !== 17) fail('fearVows', 'must declare all 17 Vows');

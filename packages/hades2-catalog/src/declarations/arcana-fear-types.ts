@@ -48,5 +48,6 @@ export interface RawFearVowDeclaration {
         readonly baseCapacity: 30;
         readonly availablePercentByRank: readonly [60, 40, 20, 0];
       }
-    | { readonly kind: 'substituteNextBiomeEnemy'; readonly chanceByRank: readonly [0.1, 0.25] };
+    | { readonly kind: 'substituteNextBiomeEnemy'; readonly chanceByRank: readonly [0.1, 0.25] }
+    | { readonly kind: 'shopPriceMultiplier'; readonly multiplierByRank: readonly number[] };
 }

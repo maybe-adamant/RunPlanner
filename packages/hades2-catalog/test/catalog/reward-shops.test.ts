@@ -3,8 +3,10 @@ import { catalog } from '../../src';
 import { validateRewardRouteAndAspectReferences } from '../../src/compiler/rewards/requirements';
 import {
   createRewardKernelCatalog,
+  rawInput,
   replaceShopOption,
   rewardKernelCatalog,
+  rewardKernelDeclarations,
 } from './support/reward-kernel';
 import { describe, expect, it } from 'vitest';
 import type { RawRewardKernelInput } from '../../src/declarations/rewards';
@@ -765,6 +767,122 @@ describe('reward compiler Shop normalizer', () => {
           offerRequirements: ['unknownRequirement'],
         },
       })),
+    ];
+    for (const input of malformed)
+      expect(() => createRewardKernelCatalog(input)).toThrow(CatalogContractError);
+  });
+
+  it('prices every purchasable option from its item cost or its entry Cost override', () => {
+    const cost = (profileKey: string, optionKey: string) =>
+      rewardKernelCatalog.shops.byKey[profileKey]!.groups.values.flatMap(
+        (group) => group.options.values,
+      ).find((option) => option.key === optionKey)?.cost;
+    const fixed = (gold: number) => ({ kind: 'fixed', gold });
+    // ConsumableData Money values.
+    expect(cost('WorldShop', 'RandomLoot')).toEqual(fixed(150));
+    expect(cost('WorldShop', 'WeaponUpgradeDropEarly')).toEqual(fixed(200));
+    expect(cost('WorldShop', 'FireBoost')).toEqual(fixed(20));
+    expect(cost('I_WorldShop', 'BoostedRandomLoot')).toEqual(fixed(450));
+    expect(cost('SurfaceShop', 'HealBigDrop')).toEqual(fixed(90));
+    expect(cost('SurfaceShop', 'SpellDrop')).toEqual(fixed(100));
+    // StoreData entry Cost overrides.
+    expect(cost('WorldShop', 'StackUpgrade')).toEqual(fixed(100));
+    expect(cost('WorldShop', 'StoreRewardRandomStack')).toEqual(fixed(50));
+    expect(cost('I_WorldShop', 'StackUpgradeBig')).toEqual(fixed(300));
+    expect(cost('Q_WorldShop', 'StackUpgradeBig')).toEqual(fixed(300));
+    expect(cost('I_WorldShop', 'ChaosWeaponUpgrade')).toEqual(fixed(650));
+    expect(cost('Q_WorldShop', 'WeaponPointsRareDrop')).toEqual(fixed(1300));
+    expect(cost('Q_WorldShop', 'CardUpgradePointsDrop')).toEqual(fixed(1000));
+    expect(cost('WorldShop', 'ShopHermesUpgrade')).toEqual(fixed(150));
+    expect(cost('SurfaceShop', 'ShopHermesUpgrade')).toEqual(fixed(150));
+    expect(cost('I_WorldShop', 'ShopHermesUpgrade')).toEqual(fixed(500));
+    expect(cost('Q_WorldShop', 'ShopHermesUpgrade')).toEqual(fixed(500));
+    // TraitData_Store and the Well's rolled amounts.
+    expect(cost('RoomShop', 'TemporaryDiscountTrait')).toEqual(fixed(80));
+    expect(cost('RoomShop', 'ExtendedShopTrait')).toEqual(fixed(90));
+    expect(cost('RoomShop', 'DamageSelfDrop')).toEqual(fixed(0));
+    expect(cost('RoomShop', 'SeedMysteryRange')).toEqual(fixed(30));
+    expect(cost('RoomShop', 'HealDropRange')).toEqual({
+      kind: 'uniform',
+      min: 21,
+      max: 39,
+      step: 1,
+    });
+    expect(cost('RoomShop', 'MetaCurrencyRange')).toEqual({
+      kind: 'uniform',
+      min: 40,
+      max: 80,
+      step: 2,
+    });
+    expect(cost('RoomShop', 'MetaCardPointsCommonRange')).toEqual({
+      kind: 'uniform',
+      min: 30,
+      max: 60,
+      step: 5,
+    });
+    expect(cost('RoomShop', 'MemPointsCommonRange')).toEqual({
+      kind: 'uniform',
+      min: 20,
+      max: 30,
+      step: 1,
+    });
+    expect(rewardKernelCatalog.shops.byKey.ZagPedestalOptions!.pricing).toEqual({ kind: 'free' });
+    expect(
+      rewardKernelCatalog.shops.byKey.ZagPedestalOptions!.groups.values.flatMap((group) =>
+        group.options.values.flatMap((option) => (option.cost === undefined ? [] : [option.key])),
+      ),
+    ).toEqual([]);
+    expect(rewardKernelCatalog.shops.byKey.SurfaceShop!.pricing).toEqual({
+      kind: 'delayedDelivery',
+      delayPriceFactors: [1.3, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.6],
+      rushPriceMultiplier: 1.5,
+    });
+    for (const key of ['RoomShop', 'WorldShop', 'I_WorldShop', 'Q_WorldShop'])
+      expect(rewardKernelCatalog.shops.byKey[key]!.pricing).toEqual({ kind: 'gold' });
+  });
+
+  it('rejects a missing, malformed or free-profile cost and malformed pricing', () => {
+    const withPricing = (profileKey: string, pricing: unknown) =>
+      rawInput({
+        ...rewardKernelDeclarations,
+        shops: rewardKernelDeclarations.shops.map((shop) =>
+          shop.key === profileKey ? { ...shop, pricing } : shop,
+        ),
+      });
+    const malformed: readonly RawRewardKernelInput[] = [
+      replaceShopOption('WorldShop', 'RandomLoot', (option) => {
+        const withoutCost = { ...option };
+        delete withoutCost.cost;
+        return withoutCost;
+      }),
+      replaceShopOption('ZagPedestalOptions', 'StackUpgrade', (option) => ({
+        ...option,
+        cost: { kind: 'fixed', gold: 100 },
+      })),
+      replaceShopOption('WorldShop', 'RandomLoot', (option) => ({
+        ...option,
+        cost: { kind: 'fixed', gold: -1 },
+      })),
+      replaceShopOption('RoomShop', 'HealDropRange', (option) => ({
+        ...option,
+        cost: { kind: 'uniform', min: 21, max: 40, step: 2 },
+      })),
+      replaceShopOption('RoomShop', 'HealDropRange', (option) => ({
+        ...option,
+        cost: { kind: 'uniform', min: 39, max: 21, step: 1 },
+      })),
+      withPricing('SurfaceShop', {
+        kind: 'delayedDelivery',
+        delayPriceFactors: [],
+        rushPriceMultiplier: 1.5,
+      }),
+      withPricing('SurfaceShop', {
+        kind: 'delayedDelivery',
+        delayPriceFactors: [1],
+        rushPriceMultiplier: 0,
+      }),
+      withPricing('WorldShop', { kind: 'unknownPricing' }),
+      withPricing('WorldShop', { kind: 'free' }),
     ];
     for (const input of malformed)
       expect(() => createRewardKernelCatalog(input)).toThrow(CatalogContractError);

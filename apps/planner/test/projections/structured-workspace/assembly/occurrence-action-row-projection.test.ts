@@ -5,7 +5,11 @@ import {
 } from '@run-planner/test-fixtures/shared';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 import { loadSurfaceNOProject as loadSurfaceNO, nBiome } from '@run-planner/test-fixtures/surface';
-import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
+import {
+  loadUnderworldFStygianWellCheckpoint,
+  underworldCheckpointArtifacts,
+} from '@run-planner/test-fixtures/checkpoints/underworld';
+import { surfaceCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/surface';
 import { describe, expect, it } from 'vitest';
 import {
   assemble,
@@ -70,6 +74,13 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { bind } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import {
+  goldLedgerForProjectEvaluationAssembly,
+  type GoldAmount,
+  type GoldLedger,
+  type GoldPurchasePrice,
+  type GoldRoomAvailability,
+} from '@run-planner/engine/simulation';
 import { occurrenceActionLabel } from '@planner/projections/structured-workspace/assembly/occurrence-action-label';
 import type { WorkspaceExplicitRewardControl } from '@planner/projections/structured-workspace/contracts/rewards';
 import type { WorkspaceRoomLocal } from '@planner/projections/structured-workspace/contracts/locals';
@@ -1931,5 +1942,185 @@ describe('room Timeline block in opening, fixed and Hub rooms', () => {
         (offer) => offer.contextReached,
       ),
     ).toEqual([false]);
+  });
+});
+
+describe('purchase gold', () => {
+  const wellId = createOccurrenceId('golden-f-preboss-shop:postboss');
+  const wellOwner = createOccurrenceAddress(goldenFBiome, wellId);
+  const checkpoint = () => authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint());
+  // A Combat room Well buying both side slots and its Travel Deal refill.
+  const combatWellId = createOccurrenceId('d476f7b4-5302-4e1a-9876-7f0dcbd17654');
+  const fixed = (amount: number): GoldAmount => ({
+    mean: amount,
+    variance: 0,
+    min: amount,
+    max: amount,
+  });
+  const rolled: GoldAmount = { mean: 30, variance: 30, min: 21, max: 39 };
+  const unreached = { availability: 'unavailable', reason: 'coverageNotReached' } as const;
+
+  /** A ledger pricing each Well purchase by its generation key. */
+  function ledger(
+    prices: Readonly<Record<string, { venue: GoldPurchasePrice['venue']; price: GoldAmount }>>,
+    room: GoldRoomAvailability,
+  ): GoldLedger {
+    return {
+      purchaseAt: (owner) => {
+        const key = semanticAddressKey(owner);
+        const entry = Object.entries(prices).find(([generationKey]) =>
+          key.includes(generationKey),
+        )?.[1];
+        return entry === undefined
+          ? unreached
+          : {
+              availability: 'available',
+              purchase: { owner, room: wellOwner, venue: entry.venue, price: entry.price },
+            };
+      },
+      roomAt: () => room,
+    };
+  }
+
+  function wellActions(gold: GoldLedger) {
+    const { assembly } = assemble(
+      underworldCheckpointArtifacts['underworld-f-trait-order-checks'].load(),
+      goldenFBiome.routeKey,
+      goldenFBiome.biomeKey,
+      combatWellId,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      catalog,
+      (source) => ({ ...source, gold }),
+    );
+    const actions = assembly.node.room.roomActions;
+    if (actions === undefined) throw new Error('The Well room has no timeline');
+    const priceOf = (generationKey: string) =>
+      actions.rows.find(
+        (row) =>
+          row.reference.kind === 'purchaseStygianWellOffer' &&
+          row.reference.generationKey === generationKey,
+      )?.price;
+    return { actions, priceOf };
+  }
+
+  const spending = (purchases: readonly GoldAmount[], venue: GoldPurchasePrice['venue']) =>
+    ({
+      availability: 'available',
+      room: {
+        room: wellOwner,
+        purchases: purchases.map((price) => ({ owner: wellOwner, room: wellOwner, venue, price })),
+        spending: {
+          mean: purchases.reduce((sum, price) => sum + price.mean, 0),
+          variance: 0,
+          min: purchases.reduce((sum, price) => sum + price.min, 0),
+          max: purchases.reduce((sum, price) => sum + price.max, 0),
+        },
+      },
+    }) as const;
+
+  const label = (amount: GoldAmount) =>
+    amount.min === amount.max ? `${amount.min}` : `${amount.min}–${amount.max}`;
+
+  it.each([
+    ['Stygian Well', () => checkpoint(), goldenFBiome, wellId],
+    [
+      'World Shop with its Travel Deal refill',
+      underworldWorldShopTravelDealProject,
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop'),
+    ],
+    [
+      'Hermes Shrine',
+      () => surfaceCheckpointArtifacts['surface-scheduled-lifecycle'].load(),
+      nBiome,
+      createOccurrenceId('surface-n-preboss:postboss'),
+    ],
+  ] as const)(
+    'prices each %s purchase row and the room from the evaluated ledger',
+    (_, load, biome, id) => {
+      const room = createOccurrenceAddress(biome, id);
+      const { assembly, workspace } = projectStructuredWorkspaceFixture(load());
+      const gold = goldLedgerForProjectEvaluationAssembly(catalog, assembly);
+      const node = workspace.route.biomes
+        .flatMap((biome) => biome.nodes)
+        .find(
+          (candidate) =>
+            candidate.kind === 'occurrenceWorkbench' &&
+            candidate.room.occurrenceId === room.occurrenceId,
+        );
+      if (node?.kind !== 'occurrenceWorkbench') throw new Error(`${room.occurrenceId} is missing`);
+      const rows = node.room.roomActions?.rows ?? [];
+      // The ledger names a World Shop purchase, its Travel Deal refill included, by its offer.
+      const ownerKey = (row: (typeof rows)[number]) =>
+        semanticAddressKey(
+          row.reference.kind === 'interactShopOffer'
+            ? createShopOfferAddress(biome, id, row.reference.offerKey)
+            : row.reference.kind === 'interactAcquisitionEntry' &&
+                row.reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+              ? createShopOfferAddress(biome, id, TRAVEL_DEAL_REFILL_ENTRY_KEY)
+              : row.address,
+        );
+      const spent = gold.roomAt(room);
+      if (spent.availability !== 'available') throw new Error('The room is not priced');
+      const paid = spent.room.purchases.filter((purchase) => purchase.venue !== 'free');
+      expect(paid.length).toBeGreaterThan(0);
+      const priced = new Map(
+        rows.flatMap((row) =>
+          row.price === undefined ? [] : [[ownerKey(row), row.price] as const],
+        ),
+      );
+      expect(Object.fromEntries(priced)).toEqual(
+        Object.fromEntries(
+          paid.map((purchase) => [
+            semanticAddressKey(purchase.owner),
+            { label: label(purchase.price) },
+          ]),
+        ),
+      );
+      expect(node.room.roomActions?.spending).toEqual({ label: label(spent.room.spending) });
+    },
+  );
+
+  it('shows a fixed price, a rolled range, and nothing for a free or unavailable purchase', () => {
+    const { actions, priceOf } = wellActions(
+      ledger(
+        {
+          'initial:secondLeft': { venue: 'stygianWell', price: rolled },
+          'initial:secondRight': { venue: 'free', price: fixed(0) },
+        },
+        spending([rolled], 'stygianWell'),
+      ),
+    );
+    expect(priceOf('initial:secondLeft')).toEqual({ label: '21–39' });
+    expect(priceOf('initial:secondRight')).toBeUndefined();
+    // The Travel Deal refill is bought but this ledger cannot price it.
+    expect(
+      actions.rows.some(
+        (row) =>
+          row.reference.kind === 'purchaseStygianWellOffer' &&
+          row.reference.generationKey === 'travelDealRefill',
+      ),
+    ).toBe(true);
+    expect(priceOf('travelDealRefill')).toBeUndefined();
+    expect(actions.spending).toEqual({ label: '21–39' });
+    const fixedPrices = wellActions(
+      ledger(
+        {
+          'initial:secondLeft': { venue: 'stygianWell', price: rolled },
+          'initial:secondRight': { venue: 'stygianWell', price: fixed(45) },
+        },
+        spending([rolled, fixed(45)], 'stygianWell'),
+      ),
+    );
+    expect(fixedPrices.priceOf('initial:secondRight')).toEqual({ label: '45' });
+    expect(fixedPrices.actions.spending).toEqual({ label: '66–84' });
+  });
+
+  it('hides the room spending when the room pays for nothing or is not priced', () => {
+    expect(wellActions(ledger({}, spending([fixed(0)], 'free'))).actions.spending).toBeUndefined();
+    expect(wellActions(ledger({}, unreached)).actions.spending).toBeUndefined();
   });
 });

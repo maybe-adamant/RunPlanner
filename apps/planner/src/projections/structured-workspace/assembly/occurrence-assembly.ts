@@ -306,6 +306,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly stygianWellAssessment?: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
+  readonly gold?: import('@run-planner/engine/simulation').GoldLedger;
   /** What can be done with the room's Shop, Shrine and Champion item; undefined while unreached. */
   readonly roomObjectInteractions?: (
     occurrence: OccurrenceAddress,
@@ -522,6 +523,7 @@ export function assembleWorkspaceOccurrence(
     ...(input.purgingPoolAssessment === undefined
       ? {}
       : { purgingPoolAssessment: input.purgingPoolAssessment }),
+    ...(input.gold === undefined ? {} : { gold: input.gold }),
     ...(input.blockingRowKeys === undefined ? {} : { blockingRowKeys: input.blockingRowKeys }),
     ...(input.rerollTargetLabel === undefined
       ? {}

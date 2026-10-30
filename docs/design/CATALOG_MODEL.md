@@ -311,6 +311,13 @@ groups instead own counts and without-replacement membership; their emitted
 slots have explicit keys, labels, groups and distinct valid defaults. Neither
 slot identity nor default selection is inferred from option order.
 
+Each Shop profile declares how it charges: free, gold, or gold scaled by
+delivery delay with an impatience multiple for a rush (the Hermes Shrine).
+Every option of a charging profile declares its base gold price, fixed or a
+stepped range for an item priced from a rolled amount, and a free profile's
+options declare none; the compiler enforces both. A Well timed trait that
+multiplies shop prices declares that multiplier on its grant.
+
 A producer lifecycle enumerates supported reward types and binds every role
 exactly once, with explicit per-type overrides. Producer bindings choose
 stores, fixed sources, Shop profiles and filters. Positive and negative filters
@@ -383,7 +390,9 @@ duplicated on the keepsake. Exact values and exclusions live in the
 
 Arcana and Fear are separate collections. Cards declare board location, Grasp,
 ordinary activation and supported rank/effect profiles; Vows declare bounded
-ranks and suppressibility. Live activation, bans, consumption and suppression
+ranks and suppressibility, and a Vow with a modeled effect declares it per rank
+(the Vow of Debt its shop price multiplier). Live activation, bans,
+consumption and suppression
 are simulation state. Spell/Hex declarations similarly describe pools, slots,
 layout domains and aspect links, not live tree closure or delivery clocks. Each
 Hex layout declares its source node graph, keyed `depth:slot`, with node kind,

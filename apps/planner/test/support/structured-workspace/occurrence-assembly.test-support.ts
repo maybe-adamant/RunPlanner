@@ -204,6 +204,7 @@ export function assemble(
     ...(steadyGrowthOutcomes === undefined ? {} : { steadyGrowthOutcomes }),
     markerDestinations: markers.emitter,
     acquisitionConversionCandidate: source.acquisitionConversionCandidate,
+    ...(source.gold === undefined ? {} : { gold: source.gold }),
     occurrence,
     ...(isEntry && source.startingReward !== undefined
       ? { startingReward: source.startingReward }

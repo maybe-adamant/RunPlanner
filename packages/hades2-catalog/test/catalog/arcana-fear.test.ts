@@ -199,6 +199,10 @@ describe('Arcana and Fear catalog', () => {
       kind: 'substituteNextBiomeEnemy',
       chanceByRank: [0.1, 0.25],
     });
+    expect(catalog.fearVows.byKey.ShopPricesShrineUpgrade?.effect).toEqual({
+      kind: 'shopPriceMultiplier',
+      multiplierByRank: [1.4, 1.8],
+    });
     expect(
       catalog.traitGivers.values
         .filter((giver) => giver.denialParticipates)
@@ -314,6 +318,21 @@ describe('Arcana and Fear catalog', () => {
         ) as unknown as typeof declarations.fearVows,
       }),
     ).toThrow(/Denial must declare/);
+    for (const [effect, message] of [
+      [undefined, /Debt must declare shopPriceMultiplier/],
+      [{ kind: 'shopPriceMultiplier', multiplierByRank: [1.4] }, /one multiplier per rank/],
+      [{ kind: 'shopPriceMultiplier', multiplierByRank: [1.8, 1.4] }, /must exceed/],
+    ] as const)
+      expect(() =>
+        createCatalog({
+          ...declarations,
+          fearVows: declarations.fearVows.map((vow) =>
+            vow.key === 'ShopPricesShrineUpgrade'
+              ? { ...vow, ...(effect === undefined ? { effect: undefined } : { effect }) }
+              : vow,
+          ) as unknown as typeof declarations.fearVows,
+        }),
+      ).toThrow(message);
     for (const effect of [
       undefined,
       { kind: 'substituteNextBiomeEnemy', chanceByRank: [0.25, 0.1] },
@@ -397,7 +416,7 @@ describe('Arcana and Fear catalog', () => {
             : vow,
         ),
       }),
-    ).toThrow(/only Vow of Denial, Forfeit, Void, or Menace may declare an effect/);
+    ).toThrow(/only Vow of Denial, Forfeit, Void, Menace, or Debt may declare an effect/);
     expect(() =>
       createCatalog({
         ...declarations,

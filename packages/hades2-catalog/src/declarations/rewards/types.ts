@@ -12,6 +12,8 @@ import type {
   SourceResolutionPoint,
   SourceSupportPolicyKey,
   ConcreteAcquisitionPickupEffect,
+  ShopOptionCost,
+  ShopPricing,
   StygianWellGrant,
 } from '@run-planner/engine/reward-kernel';
 
@@ -135,6 +137,8 @@ export interface RawShopOptionEntryDeclaration {
     readonly offerRequirements?: readonly ('inactive' | 'emptyAttackOrSpecial')[];
     readonly excludedRouteKeys?: readonly string[];
   };
+  /** Base gold price; required on every option of a priced profile. */
+  readonly cost?: ShopOptionCost;
 }
 
 export interface RawShopGroupDeclaration {
@@ -154,6 +158,7 @@ export interface RawShopProfileDeclaration {
   readonly groups: readonly RawShopGroupDeclaration[];
   readonly slots: readonly RawShopSlotDeclaration[];
   readonly screenReroll: boolean;
+  readonly pricing: ShopPricing;
 }
 
 export interface RawProducerLifecycleOverrideDeclaration {

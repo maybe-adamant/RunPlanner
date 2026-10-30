@@ -407,6 +407,14 @@ action. Danger communicates subtraction but adds no distinct command or
 recovery protocol. Green is status language. Layout helpers arrange controls;
 they do not alter command behavior.
 
+Gold is guidance read from the engine's gold ledger, never a finding or a
+reason to disable a control. Each paid purchase on a room timeline shows its
+price; a rolled price shows its range. A free item, or a purchase the ledger
+cannot price, shows nothing rather than zero. The room's total spending, over
+every purchase in the room, sits on the room's doors-open boundary, where the
+room's other gold figures will join it; a room that pays for nothing shows no
+total. The projection formats amounts; React only places them.
+
 ## Extending and Verifying
 
 When extending a feature, obtain the complete supported engine product first,

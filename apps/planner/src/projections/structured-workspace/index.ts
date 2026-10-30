@@ -94,6 +94,7 @@ export type {
   WorkspaceLocalVisitSlot,
   WorkspaceExitSelectionInteraction,
   WorkspaceRoomActionInteraction,
+  WorkspaceGoldAmount,
   WorkspaceRoomActionProposal,
   WorkspaceRoomActionRow,
   WorkspaceRoomFeature,

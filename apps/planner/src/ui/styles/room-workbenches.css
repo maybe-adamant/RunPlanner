@@ -1448,6 +1448,30 @@
   overflow-wrap: anywhere;
 }
 
+.gold-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Gold figures fill the rest of the editors cell and sit at its end. */
+.timeline-row-price,
+.room-gold-summary {
+  flex: 1 0 auto;
+  justify-content: flex-end;
+}
+
+.room-gold-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 /* Row titles are semibold; banner titles stay bold as the headings above them. */
 .timeline-cell-label > strong,
 .nemesis-interaction-phrase > strong,

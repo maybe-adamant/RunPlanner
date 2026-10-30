@@ -17,6 +17,7 @@ import type { TraitRarity } from '../../catalog-schema';
 import type { NemesisRandomEventAddress } from '../../authored-project/addresses';
 import type { PlannerTimelineFacts } from '../timeline-facts';
 import type { StygianWellEffect } from '../commerce/stygian-well';
+import type { PurchasePriceContextPublication } from '../commerce/gold/price-context';
 import type { AuthoredKeepsakeEquipResults } from '../../authored-project/model';
 
 /** Exact planner-owned realization of a Travel Deal Stygian Well refill. */
@@ -320,6 +321,11 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   };
   /** Deferred Stygian Well Travel Deal refill payloads, separate from authored purchases. */
   readonly wellRefillRealizations: readonly WellRefillRealization[];
+  /**
+   * Each reached purchase's price facts in settlement order. Guidance input
+   * only: it never feeds chronology, branch equivalence or findings.
+   */
+  readonly purchasePriceContexts: readonly PurchasePriceContextPublication[];
   /** Exact automatic Boss resolutions; empty Figurine keys mean consumption without activation. */
   readonly bossArcanaOutcomes: readonly BossArcanaOutcome[];
   /** Reached phantom exits in chronological order. */

@@ -13,6 +13,7 @@ import type {
 } from '../../commerce/hermes-shrine';
 import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
 import type { StygianWellCandidateContext } from '../../commerce/stygian-well';
+import type { PurchasePriceContextPublication } from '../../commerce/gold/price-context';
 import type { FeatureRollWalk } from '../../commerce/feature-rolls';
 import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from '../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../materialization';
@@ -94,6 +95,10 @@ export interface ChronologyWalkState {
   readonly halted: boolean;
   readonly stygianWellAssessments: ReadonlyMap<string, StygianWellRoomAssessment>;
   readonly wellRefillRealizations: ReadonlyMap<string, WellRefillRealization>;
+  /** Each reached purchase's price context in settlement order, by owner. */
+  readonly purchasePriceContexts: ReadonlyMap<string, PurchasePriceContextPublication>;
+  /** Rooms where a paid purchase already settled (native `CurrentRoom.FirstPurchase`). */
+  readonly paidPurchaseRooms: ReadonlySet<string>;
   readonly purgingPoolAssessments: ReadonlyMap<string, PurgingPoolRoomAssessment>;
   /** Each Well's and Pool's roll state as its room's actions settle, by room and feature. */
   readonly featureRolls: ReadonlyMap<string, FeatureRollWalk>;
@@ -172,6 +177,8 @@ export function createChronologyWalkState(
     halted: false,
     stygianWellAssessments: new Map(),
     wellRefillRealizations: new Map(),
+    purchasePriceContexts: new Map(),
+    paidPurchaseRooms: new Set<string>(),
     purgingPoolAssessments: new Map(),
     featureRolls: new Map(),
     roomActionEnds: new Map(),

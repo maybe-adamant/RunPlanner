@@ -187,6 +187,8 @@ export interface WorkspaceBiomeSource {
   readonly stygianWellAssessment: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
+  /** Purchase prices and room spending of the evaluated project. */
+  readonly gold: import('@run-planner/engine/simulation').GoldLedger | undefined;
   readonly chaosAssessment: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').ChaosCandidateCapability | undefined;
@@ -722,6 +724,7 @@ function createWorkspaceBiomeSource(
   rerollSpendAllowance: WorkspaceBiomeSource['rerollSpendAllowance'],
   screenRerollAllowance: WorkspaceBiomeSource['screenRerollAllowance'],
   roomObjectInteractions: WorkspaceBiomeSource['roomObjectInteractions'],
+  gold: WorkspaceBiomeSource['gold'],
   assessmentIssue: AssessmentIssue | undefined,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
@@ -957,6 +960,7 @@ function createWorkspaceBiomeSource(
     purgingPoolAssessment,
     hermesShrineAssessment,
     stygianWellAssessment,
+    gold,
     chaosAssessment,
     chaosGateForced,
     zagreusContractAssessment,
@@ -1037,6 +1041,7 @@ export function createWorkspaceProjectSourceIndex(
   screenRerollAllowance: WorkspaceBiomeSource['screenRerollAllowance'] = () =>
     Object.freeze({ kind: 'unreached' as const }),
   roomObjectInteractions: WorkspaceBiomeSource['roomObjectInteractions'] = () => undefined,
+  gold: WorkspaceBiomeSource['gold'] = undefined,
 ): WorkspaceProjectSourceIndex {
   const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   const route = project.route;
@@ -1077,6 +1082,7 @@ export function createWorkspaceProjectSourceIndex(
             rerollSpendAllowance,
             screenRerollAllowance,
             roomObjectInteractions,
+            gold,
             routeEvaluation?.issue,
           ),
         ),

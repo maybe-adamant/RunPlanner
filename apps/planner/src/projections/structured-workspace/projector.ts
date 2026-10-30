@@ -41,6 +41,7 @@ import {
   phantomExitSettlementForProjectEvaluationAssembly,
   rerollSpendAllowanceForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
+  goldLedgerForProjectEvaluationAssembly,
   rerollSurfaceForProjectEvaluationAssembly,
   hubStaysForProjectEvaluationAssembly,
   type ProjectEvaluation,
@@ -369,6 +370,7 @@ export function createStructuredWorkspaceProjection(
             throw error;
           }
         },
+        goldLedgerForProjectEvaluationAssembly(catalog, assembly),
       );
       const routeSource = sources.route;
       const authoredRoute =

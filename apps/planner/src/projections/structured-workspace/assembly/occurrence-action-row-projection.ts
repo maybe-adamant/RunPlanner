@@ -15,6 +15,7 @@ import {
   semanticAddressKey,
   stygianWellGenerationItemKey,
   stygianWellGenerationTwistResultKey,
+  type OccurrenceAddress,
   type RoomOccurrence,
   type RoomActionReference,
   type RoomActionSemanticAddress,
@@ -29,10 +30,12 @@ import {
   appendTranscendentEmbryoTimelineEffects,
   scopeRoomLifecycleTimeline,
 } from '@run-planner/engine/simulation';
+import type { GoldAmount, GoldLedger } from '@run-planner/engine/simulation';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type {
+  WorkspaceGoldAmount,
   WorkspaceRoomActionRow,
   WorkspaceRoomActions,
   WorkspaceFountainRarityControl,
@@ -87,6 +90,7 @@ export interface WorkspaceOccurrenceActionsInput {
   readonly purgingPoolAssessment?: (
     owner: import('@run-planner/engine/authored-project').OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').PurgingPoolCandidateCapability | undefined;
+  readonly gold?: import('@run-planner/engine/simulation').GoldLedger;
   /** Engine-published Timeline rows of the product this room's assessment stops at. */
   readonly blockingRowKeys?: ReadonlySet<string>;
   readonly rerollTargetLabel?: import('./occurrence-action-label').WorkspaceDoorRerollTargetLabel;
@@ -594,6 +598,7 @@ function roomActionsForOccurrence(
             }
           : {}),
         ...purchaseRowProducts(row.reference, address),
+        ...purchasePrice(input.gold, row.owner),
         executable: row.executable,
       });
     }),
@@ -955,7 +960,35 @@ function roomActionsForOccurrence(
     rows: allProjectedRows,
     ...(steadyGrowth.length === 0 ? {} : { steadyGrowth }),
     ...(transcendentEmbryo.length === 0 ? {} : { transcendentEmbryo }),
+    ...roomSpending(input.gold, owner),
   });
+}
+
+function goldAmount(amount: GoldAmount): WorkspaceGoldAmount {
+  return Object.freeze({
+    label: amount.min === amount.max ? `${amount.min}` : `${amount.min}–${amount.max}`,
+  });
+}
+
+function purchasePrice(
+  gold: GoldLedger | undefined,
+  owner: SemanticAddress,
+): Pick<WorkspaceRoomActionRow, 'price'> {
+  const priced = gold?.purchaseAt(owner);
+  return priced?.availability !== 'available' || priced.purchase.venue === 'free'
+    ? {}
+    : { price: goldAmount(priced.purchase.price) };
+}
+
+function roomSpending(
+  gold: GoldLedger | undefined,
+  room: OccurrenceAddress,
+): Pick<WorkspaceRoomActions, 'spending'> {
+  const spent = gold?.roomAt(room);
+  return spent?.availability !== 'available' ||
+    spent.room.purchases.every((purchase) => purchase.venue === 'free')
+    ? {}
+    : { spending: goldAmount(spent.room.spending) };
 }
 
 type PurchaseRowProducts = Pick<WorkspaceRoomActionRow, 'travelDealLine' | 'purchaseRemoval'>;

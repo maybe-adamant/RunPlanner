@@ -145,7 +145,10 @@ describe('Stygian Well room facts', () => {
       TemporaryBoonRarityTrait: { kind: 'charge', charge: 'yarn' },
       TemporaryImprovedExTrait: timed('TemporaryImprovedExTrait', 6, 'encounters'),
       TemporaryImprovedDefenseTrait: timed('TemporaryImprovedDefenseTrait', 5, 'encounters'),
-      TemporaryDiscountTrait: timed('TemporaryDiscountTrait', 6, 'encounters', 'discount'),
+      TemporaryDiscountTrait: {
+        ...timed('TemporaryDiscountTrait', 6, 'encounters', 'discount'),
+        priceMultiplier: 0.7,
+      },
       TemporaryForcedSecretDoorTrait: { kind: 'charge', charge: 'spark' },
       TemporaryEmptySlotDamageTrait: timed(
         'TemporaryEmptySlotDamageTrait',

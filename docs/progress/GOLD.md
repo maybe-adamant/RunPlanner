@@ -89,33 +89,33 @@ and 2 records citations.
 
 ### Fixed and bounded gold
 
-| Source | Gold | Multiplier |
-|---|---|---|
-| Money rewards Tiny / Small / normal / Big / Triple | 20 / 50 / 100 / 200 / 300 | Σ + MRB |
-| Quick Buck pickup | one 100 drop | Σ (incl. itself) + MRB |
-| Buried Treasure pickup | 50 + 2 × 20 | Σ + MRB (incl. itself) |
-| Narcissus | 100 / 100 / 150 / 250 by rarity | Σ |
-| Fallback Gold | 90 | Σ |
-| Boatman Arcana starting gold | 200 / 250 / 300 / 350 | none |
-| Gold Purse at run start | 100 / 125 / 150 / 200 | none |
-| Gold Purse equipped mid-run | same amounts, once per equip | Σ |
-| Time Piece conversion | the reward's `GoldifyValue` (+150 boosted) | Σ |
-| Personal Loan | takes all held gold; after the next non-final boss pays held + 300 / 400 / 500 / 600 | none |
-| Nemesis bet | bet = min(100, held); win +round(bet × Σ), loss −bet, tie 0 | Σ on win |
-| Pool of Purging sale | rarity range floored to 5 (Common 30–50 … Legendary 400–450, Duo 250–270, Elemental 100–130) + 20 per level above the first | none |
-| Price of Midas (Well) | round(U(1.1, 1.8) × U(10, 30)) | Σ + MRB |
+| Source                                             | Gold                                                                                                                        | Multiplier             |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| Money rewards Tiny / Small / normal / Big / Triple | 20 / 50 / 100 / 200 / 300                                                                                                   | Σ + MRB                |
+| Quick Buck pickup                                  | one 100 drop                                                                                                                | Σ (incl. itself) + MRB |
+| Buried Treasure pickup                             | 50 + 2 × 20                                                                                                                 | Σ + MRB (incl. itself) |
+| Narcissus                                          | 100 / 100 / 150 / 250 by rarity                                                                                             | Σ                      |
+| Fallback Gold                                      | 90                                                                                                                          | Σ                      |
+| Boatman Arcana starting gold                       | 200 / 250 / 300 / 350                                                                                                       | none                   |
+| Gold Purse at run start                            | 100 / 125 / 150 / 200                                                                                                       | none                   |
+| Gold Purse equipped mid-run                        | same amounts, once per equip                                                                                                | Σ                      |
+| Time Piece conversion                              | the reward's `GoldifyValue` (+150 boosted)                                                                                  | Σ                      |
+| Personal Loan                                      | takes all held gold; after the next non-final boss pays held + 300 / 400 / 500 / 600                                        | none                   |
+| Nemesis bet                                        | bet = min(100, held); win +round(bet × Σ), loss −bet, tie 0                                                                 | Σ on win               |
+| Pool of Purging sale                               | rarity range floored to 5 (Common 30–50 … Legendary 400–450, Duo 250–270, Elemental 100–130) + 20 per level above the first | none                   |
+| Price of Midas (Well)                              | round(U(1.1, 1.8) × U(10, 30))                                                                                              | Σ + MRB                |
 
 `GoldifyValue` by reward:
 
-| Reward | GoldifyValue |
-|---|---|
-| Boon | 400 |
-| Hammer, Selene | 500 |
-| Pom | 300 / 400 / 500 |
+| Reward                 | GoldifyValue    |
+| ---------------------- | --------------- |
+| Boon                   | 400             |
+| Hammer, Selene         | 500             |
+| Pom                    | 300 / 400 / 500 |
 | Health, magick, talent | 150–400 by size |
-| Resources | 200 |
-| Consolation | 150 |
-| Default | 100 |
+| Resources              | 200             |
+| Consolation            | 150             |
+| Default                | 100             |
 
 The eligible set is confirmed per reward in gate 2.
 
@@ -129,22 +129,22 @@ The eligible set is confirmed per reward in gate 2.
   and spawned sub-encounters generate when they start.
 - Store caps:
 
-| Encounter group | Store caps |
-|---|---|
-| F, Chaos | 10–15, depth ramp +0.5 |
-| G | 15–25 |
-| H | 30–45 |
-| H passive | 10–30 |
-| I | 35–45 |
-| N | 15–25 |
-| O | 20–30 |
-| P | 25–35 |
-| Q | 60–85 |
-| Devotion | 20–30 |
-| Artemis, Athena, Icarus, Nemesis combats | 30 |
-| Heracles P | 100–145 |
-| Minibosses | 15 or 25 (P dragon 15–25; Q brute inherits 60–85) |
-| Bosses, story and unique encounters | no store, and their enemies drop nothing |
+| Encounter group                          | Store caps                                        |
+| ---------------------------------------- | ------------------------------------------------- |
+| F, Chaos                                 | 10–15, depth ramp +0.5                            |
+| G                                        | 15–25                                             |
+| H                                        | 30–45                                             |
+| H passive                                | 10–30                                             |
+| I                                        | 35–45                                             |
+| N                                        | 15–25                                             |
+| O                                        | 20–30                                             |
+| P                                        | 25–35                                             |
+| Q                                        | 60–85                                             |
+| Devotion                                 | 20–30                                             |
+| Artemis, Athena, Icarus, Nemesis combats | 30                                                |
+| Heracles P                               | 100–145                                           |
+| Minibosses                               | 15 or 25 (P dragon 15–25; Q brute inherits 60–85) |
+| Bosses, story and unique encounters      | no store, and their enemies drop nothing          |
 
 - Hard-encounter overrides never touch the caps.
 - Medea (`MoneyOnDeathCurse`):
@@ -252,6 +252,7 @@ consumer.
    - Performance snapshot before and after if rebuild or edit latency moves.
 
 Docs:
+
 - `REWARD_MODEL.md` §deferred prices becomes the price model.
 - `SIMULATION_AND_VALIDATION.md` names the query as non-finding guidance.
 - `ENGINE_CONSUMERS.md` lists the query.

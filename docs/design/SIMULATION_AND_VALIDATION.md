@@ -467,6 +467,12 @@ live Travel Deal item with the values every reached branch can stock there, a
 Hermes Shrine's unbought items to buy or rush with its live refill, and
 whether the Champion item can be collected or why not.
 
+The gold query prices each reached purchase from the price facts its
+settlement published, and sums the purchases of each room reached through its
+exit, per the [price model](REWARD_MODEL.md#prices). It is guidance, never a
+finding, and never refuses an edit; past coverage a price is unavailable, not
+zero.
+
 ### Reroll settlement
 
 Every reroll spend and every hidden draw is settled in the walk at its own

@@ -3,7 +3,9 @@ import type {
   ConcreteAcquisitionDeclaration,
   RewardTypeDeclaration,
   ShopGroupDeclaration,
+  ShopOptionCost,
   ShopOptionEntry,
+  ShopPricing,
   ShopProfileDeclaration,
   ShopSlotDeclaration,
   StygianWellGrant,
@@ -15,6 +17,7 @@ import {
   requireArray,
   requireBoolean,
   requireNonEmpty,
+  requireNonNegativeInteger,
   requirePositiveInteger,
 } from '../common';
 import { fail } from '../errors';
@@ -36,6 +39,57 @@ function requireClosedValue<const Values extends readonly string[]>(
     fail(path, `must be one of ${values.join(', ')}`);
   }
   return value as Values[number];
+}
+
+function requirePositiveFinite(value: number, path: string): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0)
+    fail(path, 'must be a positive finite number');
+  return value;
+}
+
+function normalizeShopOptionCost(raw: ShopOptionCost, path: string): ShopOptionCost {
+  switch (raw.kind) {
+    case 'fixed':
+      return Object.freeze({
+        kind: 'fixed',
+        gold: requireNonNegativeInteger(raw.gold, `${path}.gold`),
+      });
+    case 'uniform': {
+      const min = requirePositiveInteger(raw.min, `${path}.min`);
+      const max = requirePositiveInteger(raw.max, `${path}.max`);
+      const step = requirePositiveInteger(raw.step, `${path}.step`);
+      if (max <= min) fail(`${path}.max`, 'must exceed min');
+      if ((max - min) % step !== 0) fail(`${path}.step`, 'must divide the range');
+      return Object.freeze({ kind: 'uniform', min, max, step });
+    }
+    default:
+      return fail(`${path}.kind`, 'must be fixed or uniform');
+  }
+}
+
+function normalizeShopPricing(raw: ShopPricing, path: string): ShopPricing {
+  switch (raw.kind) {
+    case 'free':
+    case 'gold':
+      return Object.freeze({ kind: raw.kind });
+    case 'delayedDelivery': {
+      const factors = requireArray(raw.delayPriceFactors, `${path}.delayPriceFactors`).map(
+        (factor, index) =>
+          requirePositiveFinite(factor as number, `${path}.delayPriceFactors[${index}]`),
+      );
+      if (factors.length === 0) fail(`${path}.delayPriceFactors`, 'must not be empty');
+      return Object.freeze({
+        kind: 'delayedDelivery',
+        delayPriceFactors: Object.freeze(factors),
+        rushPriceMultiplier: requirePositiveFinite(
+          raw.rushPriceMultiplier,
+          `${path}.rushPriceMultiplier`,
+        ),
+      });
+    }
+    default:
+      return fail(`${path}.kind`, 'must be free, gold or delayedDelivery');
+  }
 }
 
 function normalizeStygianWellGrant(raw: StygianWellGrant, path: string): StygianWellGrant {
@@ -62,6 +116,14 @@ function normalizeStygianWellGrant(raw: StygianWellGrant, path: string): Stygian
                 raw.publishedEffect,
                 ['discount', 'emptySlot'] as const,
                 `${path}.publishedEffect`,
+              ),
+            }),
+        ...(raw.priceMultiplier === undefined
+          ? {}
+          : {
+              priceMultiplier: requirePositiveFinite(
+                raw.priceMultiplier,
+                `${path}.priceMultiplier`,
               ),
             }),
       }) as StygianWellGrant;
@@ -231,6 +293,7 @@ function normalizeShopOption(
       ? {}
       : { boonRarityOverride: Object.freeze({ ...boonRarityOverride }) }),
     ...(stygianWell === undefined ? {} : { stygianWell }),
+    ...(raw.cost === undefined ? {} : { cost: normalizeShopOptionCost(raw.cost, `${path}.cost`) }),
   });
 }
 
@@ -314,6 +377,16 @@ export function normalizeShops(
         (slot) => slot.key,
       );
       const options = groups.values.flatMap((group) => group.options.values);
+      const pricing = normalizeShopPricing(profile.pricing, `${path}.pricing`);
+      for (const option of options) {
+        if (pricing.kind === 'free' ? option.cost !== undefined : option.cost === undefined)
+          fail(
+            `${path}.pricing`,
+            pricing.kind === 'free'
+              ? `free option ${option.key} must not declare a cost`
+              : `option ${option.key} must declare its cost`,
+          );
+      }
       if (key !== 'RoomShop') {
         if (options.some((option) => option.stygianWell !== undefined))
           fail(path, 'Stygian Well metadata is permitted only on RoomShop options');
@@ -328,6 +401,7 @@ export function normalizeShops(
         slots,
         slotCount: slots.values.length,
         screenReroll: requireBoolean(profile.screenReroll, `${path}.screenReroll`),
+        pricing,
       });
     }),
     'shops',

@@ -986,6 +986,63 @@ Possibility simulation validates the authored order and hidden source only in
 that order; it retains reward-source branches but never retries another
 permutation. World Shop rerolls remain outside the plan.
 
+### Prices
+
+Script root is `Content/Scripts`.
+
+- **Multiplier.** `GetShopCostMultiplier` (`StoreLogic.lua:678-686`) is
+  `Vow × V`, or `Vow × (V − (1 − FirstPurchaseDiscount))` while the room's
+  `FirstPurchase` flag is unset and Travel Deal is held. `Vow` is
+  `ShopPricesShrineUpgrade` `ChangeValue` 1.4 / 1.8 by rank
+  (`MetaUpgradeData.lua:1650-1671`, inactive 1.0). `V` is the product of held
+  `StoreCostMultiplier` traits; only the Ferry Voucher declares one, 0.7
+  (`TraitData_Store.lua:323-346`). Travel Deal's `FirstPurchaseDiscount` is
+  `0.95` with `SourceIsMultiplier` rarity scaling 1-4
+  (`TraitData_Hermes.lua:581-618`), held rounded to the percent
+  (`ProcessValue`, `TraitLogic.lua`), so 5/10/15/20% by rarity. Grepping
+  `StoreCostMultiplier`, `FirstPurchaseDiscount`, `ShopPrices`,
+  `CostMultiplier`, `PriceMultiplier`, `Discount` and `CostOverride` finds no
+  other modifier; `IgnoreCostIncrease` and `CostIncreasePerStack` are read but
+  no data sets them.
+- **Rounding.** `round` is `floor(x + 0.5)` (`UtilityLogic.lua:732-735`).
+  World items price `round(cost × M)` once at spawn
+  (`InteractLogic.lua:878-891`). Every store purchase sets `FirstPurchase`
+  (`RemoveStoreItem`, `StoreLogic.lua:353-356`); under Travel Deal the
+  remaining items reprice from `OriginalResourceCosts` (`StoreLogic.lua:385-396`),
+  and acquiring Travel Deal reprices them too (`UpdateStoreItemCostText`).
+- **Base prices.** An option costs its item's `ResourceCosts.Money`
+  (`ConsumableData.lua`, `LootData_Selene.lua:39` for `SpellDrop`) unless its
+  StoreData entry sets `Cost`, passed as `CostOverride`
+  (`StoreLogic.lua:202-204`). Random and boosted Boons take
+  `ConsumableData.RandomLoot`/`BoostedRandomLoot` costs.
+
+| Option                                                       |         Base | Source                                 |
+| ------------------------------------------------------------ | -----------: | -------------------------------------- |
+| `RandomLoot` / `BoostedRandomLoot`                           |    150 / 450 | ConsumableData                         |
+| `BlindBoxLoot`                                               |          125 | ConsumableData                         |
+| `ShopHermesUpgrade`                                          |          150 | ConsumableData; I/Q entry `Cost = 500` |
+| `WeaponUpgradeDrop`                                          |          200 | ConsumableData                         |
+| `RoomRewardHealDrop` / `HealBigDrop`                         |      50 / 90 | ConsumableData                         |
+| `MaxHealthDrop` / `MaxHealthDropBig`                         |    125 / 250 | ConsumableData                         |
+| `MaxManaDrop` / `MaxManaDropBig`                             |    100 / 200 | ConsumableData                         |
+| `ArmorBoost` / `ArmorBigBoost`                               |      40 / 80 | ConsumableData                         |
+| Dream element boosts / `ElementalBoost`                      |      20 / 40 | ConsumableData                         |
+| `MetaCardPointsCommonDrop` / `MetaCurrencyDrop` / `GiftDrop` | 50 / 90 / 75 | ConsumableData                         |
+| `TalentDrop` / `SpellDrop`                                   |     60 / 100 | ConsumableData / LootData_Selene       |
+| `LastStandDrop`                                              |          200 | ConsumableData; I/Q entry `Cost = 200` |
+| `StackUpgrade` / `StackUpgradeBig`                           |    100 / 300 | StoreData entry `Cost`                 |
+| `StoreRewardRandomStack`                                     |           50 | StoreData entry `Cost`                 |
+| `ChaosWeaponUpgrade`                                         |          650 | StoreData entry `Cost`                 |
+| `WeaponPointsRareDrop` / `CardUpgradePointsDrop`             |  1300 / 1000 | StoreData entry `Cost`                 |
+| `CharonPointsDrop`                                           |          600 | ConsumableData                         |
+
+I/Q `ShopHermesUpgrade` also sets `UpgradeChance = 1.0` with
+`UpgradedCost = 500`, so it is always boosted at 500
+(`StoreLogic.lua:213-217`). The Contract pedestal (`ZagPedestalOptions`) and
+the Echo duplicate cost nothing (`EventLogic.lua:1912`). Well and Shrine
+prices are in the
+[room-feature audit](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md).
+
 ### Empty groups and bounded unknowns
 
 `FillInShopOptions` appends a group only when its filtered option list is

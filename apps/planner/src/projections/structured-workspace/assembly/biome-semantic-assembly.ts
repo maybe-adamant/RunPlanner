@@ -579,6 +579,7 @@ export function assembleWorkspaceBiomeSemantics(
       purgingPoolAssessment: source.purgingPoolAssessment,
       hermesShrineAssessment: source.hermesShrineAssessment,
       stygianWellAssessment: source.stygianWellAssessment,
+      ...(source.gold === undefined ? {} : { gold: source.gold }),
       rerollSpendAllowance: source.rerollSpendAllowance,
       screenRerollAllowance: source.screenRerollAllowance,
       roomObjectInteractions: source.roomObjectInteractions,

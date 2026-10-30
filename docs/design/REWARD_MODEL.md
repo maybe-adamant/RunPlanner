@@ -741,11 +741,12 @@ may retain its complete value dormantly. Selecting an unconfigured shop
 occurrence as the picked target atomically installs the profile's recursive
 defaults. Materialization ignores shop state on every unpicked occurrence.
 
-Exact prices, money, health, last-stand inventory, discounts, and affordability
-are deferred. The model authors purchases under a sufficient-resource and
-valid-use assumption. This deliberately admits some purchases that one concrete
-resource state could not make; it does not weaken offer-generation requirements
-or downstream acquisition effects.
+Legality authors purchases under a sufficient-resource and valid-use
+assumption: money, health and last-stand inventory never refuse a purchase.
+This deliberately admits some purchases that one concrete resource state could
+not make; it does not weaken offer-generation requirements or downstream
+acquisition effects. What each purchase costs is guidance, described under
+[Prices](#prices).
 
 ### Purchases and payloads
 
@@ -836,6 +837,38 @@ action.
 Gold Gold Gold is a free pickup under the `roomExit` acquisition site, derived
 from the first accepted paid non-`SpellDrop` purchase while its one-use Echo
 trait is equipped; see [Echo](#echo).
+
+### Prices
+
+Every purchasable option of the Well, the Hermes Shrine and the World Shops
+declares a base gold price: the item's own cost or the shop entry's override,
+or, for a Well item that stocks a rolled amount, a uniform range of prices
+derived from that roll. The Contract pedestal is free, and so is the Echo
+duplicate.
+
+A purchase pays its base price times the shop multiplier, rounded half up
+once. The multiplier is the Vow of Debt's rank multiplier times the price
+multiplier of every held Ferry Voucher; on the room's first paid purchase a
+held Travel Deal's rarity discount is subtracted from the Voucher term, and
+the shop reprices without it afterwards. Nothing else changes a price.
+
+- A Shrine order rounds the shop price, then rounds again after the factor of
+  its delivery delay. A rush pays the impatience multiple of the base price,
+  less what the order cost, at the multiplier after the room's first purchase;
+  a buy-and-rush is one action paying both.
+- A Fateful Twist that grants a Voucher outside the room's Travel Deal
+  purchase multiplies the rounded prices of the Well items still on show and
+  rounds again. After the Travel Deal purchase the Well reprices from base, as
+  it does after a reroll.
+- A rolled item's price is a distribution over its roll; the room spends the
+  sum of its purchases.
+
+Each purchase settlement publishes the price facts its branches held (the
+item, the room's first paid purchase, the Vow rank, the held Vouchers and the
+Travel Deal rarity it discounts). They are outside the branch merge key, and
+prices are a lazy query over them, never chronology. Reached branches must
+agree on them; a divergence is an engine contract failure. The
+[engine guide](SIMULATION_AND_VALIDATION.md#shop-settlement) owns the query.
 
 ## Offer and Acquisition
 

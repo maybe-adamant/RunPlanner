@@ -273,6 +273,19 @@ export {
   type ScreenRerollSpend,
 } from './evaluation/reroll-authoring';
 export { runStateSnapshotForProjectEvaluationAssembly } from './evaluation/run-state-query';
+export {
+  goldLedgerForProjectEvaluationAssembly,
+  type GoldLedger,
+  type GoldPurchaseAvailability,
+  type GoldRoomAvailability,
+  type GoldUnavailableReason,
+} from './evaluation/gold-query';
+export {
+  GoldLedgerContractError,
+  type GoldPurchasePrice,
+  type GoldRoomSpending,
+} from './commerce/gold/ledger';
+export type { GoldAmount } from './commerce/gold/prices';
 export { evaluateBiome, materializedBiomePrefixCoveragePoint } from './evaluation/biome-evaluation';
 export { simulateProject, simulateProjectAssembly } from './evaluation/project';
 export { startInstallationAt } from './start-installation/start-point';

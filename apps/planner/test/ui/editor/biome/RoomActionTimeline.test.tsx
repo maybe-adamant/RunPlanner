@@ -1806,6 +1806,24 @@ describe('OccurrenceRoomActions', () => {
     );
   });
 
+  it('prices each Well purchase on its row and sums the room on its Doors open banner', () => {
+    renderOccurrenceWorkbench(
+      authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint()),
+      'Underworld',
+      'F',
+      occurrenceById('golden-f-preboss-shop:postboss'),
+    );
+    openRoomTab('Room Timeline');
+    const actions = screen.getByRole('region', { name: 'Room Timeline' });
+    const purchases = within(actions)
+      .getAllByText(/^Buy /)
+      .map((label) => label.closest('li')!);
+    expect(purchases.length).toBeGreaterThan(0);
+    for (const row of purchases) expect(row.textContent).toMatch(/\d+ gold/);
+    expect(within(actions).getByLabelText('Doors open').textContent).toMatch(/Spent\s*\d+ gold/);
+    expect(within(actions).getByLabelText('Room entered').textContent).not.toMatch(/Spent/);
+  });
+
   it('removes a Shop purchase atomically when its occurrence is no longer a Shop', () => {
     const entered = enteredShopProject();
     const offer = createShopOfferAddress(goldenFBiome, entered.shopId, 'MajorNonBoon');

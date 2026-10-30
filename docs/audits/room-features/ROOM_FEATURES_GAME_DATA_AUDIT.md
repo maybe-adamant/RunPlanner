@@ -360,6 +360,19 @@ the rushed and visible names first and then using ordinary fallback. A normal
 delayed purchase does not refill. `Gold Gold Gold` and Infernal Contract are
 World Shop mechanisms and do not add Shrine offers.
 
+Shrine prices use the shop multiplier of the
+[reward audit](../rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#prices) on
+each item's ConsumableData or LootData cost, with no entry overrides
+(`SurfaceShopLogic.lua:95-133`). An order costs
+`round(round(base × M) × DelayPriceDiscount[RoomDelay])`; the factors are
+1.3, 1.2 … 0.6 for delays 1-8, and a longer delay takes the last
+(`SurfaceShopData.lua:1-17`). A rush pays `SpeedUpResourceCosts`,
+`round(base × M × ImpatienceMultiplier 1.5)` less the order price, so an
+ordered-then-rushed item totals the impatience price. Every purchase sets
+`FirstPurchase`; under Travel Deal the first one reprices every item,
+including the rush of the item it ordered (`SurfaceShopLogic.lua:353-397`).
+Prices are processed when the screen first opens and kept.
+
 The shared distinction is that Shrine purchase schedules delivery, while the
 later spawned object is an ordinary required pickup. The complete chronology,
 including which checkpoint can host or advance that delivery, remains in the
@@ -446,33 +459,60 @@ Shield**, `RandomStoreItem` / **Fateful Twist**, `TemporaryBoonRarityTrait` /
 `LimitedSwapTraitDrop` / **Sacrificial Hymn**; the catalog regression owns the
 complete 25-name matrix.
 
-| Identity                                  | Exact game effect                                                        | Current planner disposition                                                 |
-| ----------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| `ArmorBoostStore`                         | Grants 20 armor                                                          | Consumable record and item armor, kept under no damage                      |
-| `DamageSelfDrop`                          | Pays gold for 10-30 health damage                                        | Immediate; health/economy deferred                                          |
-| `HealDropRange`                           | Heals 21-39% maximum health                                              | Immediate; health deferred                                                  |
-| `EmptyMaxHealthShopItem`                  | Adds 25 maximum health without healing                                   | Consumable under its own name; health deferred                              |
-| `FirstHitHealTrait`                       | Next hit heals 100% of damage; stacks add uses                           | Ledger only; uses spent by play                                             |
-| `TemporaryDoorHealTrait`                  | Heals 10% maximum health after next three transitions                    | Timed instance, 3 room uses; heal deferred                                  |
-| `TemporaryHealExpirationTrait`            | Heals 50% maximum health after four encounters                           | Timed instance, 4 encounter uses; expiry heal deferred                      |
-| `LastStandShopItem`                       | Adds a Last Stand restoring 40% health and Magick                        | Consumable under its own name; live ineligibility is an execution mismatch  |
-| `TemporaryImprovedSecondaryTrait`         | 1.40 secondary damage for five encounters                                | Timed instance, 5 encounter uses; combat deferred                           |
-| `TemporaryImprovedCastTrait`              | 1.35 Cast damage for five encounters                                     | Timed instance, 5 encounter uses; combat deferred                           |
-| `TemporaryMoveSpeedTrait`                 | 1.20 movement speed for eight encounters                                 | Timed instance, 8 encounter uses; movement deferred                         |
-| `TemporaryBoonRarityTrait` (Yarn)         | Next eligible God offer: +1 Rare, +0.25 Epic, +0.10 Duo, +0.10 Legendary | Consequential rarity ledger                                                 |
-| `TemporaryImprovedExTrait`                | 1.50 Omega damage for six encounters                                     | Timed instance, 6 encounter uses; combat deferred                           |
-| `TemporaryImprovedDefenseTrait`           | 0.90 incoming health damage for five encounters                          | Timed instance, 5 encounter uses; combat deferred                           |
-| `TemporaryDiscountTrait`                  | 0.70 Store costs for six encounters                                      | Timed instance, 6 encounter uses; gates later Well offers; economy deferred |
-| `TemporaryForcedSecretDoorTrait` (Spark)  | Adds one forced secret-door use                                          | Consequential Chaos topology                                                |
-| `TemporaryEmptySlotDamageTrait`           | Triple damage for six encounters while a core slot is empty              | Timed instance, 6 encounter uses; gates later Well offers; combat deferred  |
-| `ExtendedShopTrait`                       | Next whitelisted temporary Well trait lasts for two boss uses            | Charge converting the next eligible direct purchase                         |
-| `MetaCurrencyRange`                       | Grants 20-40 Bones                                                       | Immediate; meta resource deferred                                           |
-| `MetaCardPointsCommonRange`               | Grants 6-12 Ashes                                                        | Immediate; meta resource deferred                                           |
-| `MemPointsCommonRange`                    | Grants 20-30 Psyche                                                      | Immediate; meta resource deferred                                           |
-| `SeedMysteryRange`                        | Grants two Mystery Seeds                                                 | Immediate; meta resource deferred                                           |
-| `RandomStoreItem`                         | Awards one eligible item from a closed nested pool                       | Applies its authored result as that item's grant                            |
-| `LimitedManaRegenDrop`                    | Regenerates 500 Magick over three seconds                                | Ledger only; Magick pool depleted by play                                   |
-| `LimitedSwapTraitDrop` (Sacrificial Hymn) | One forced replacement; replacement gains +2 levels and next rarity tier | Consequential next eligible trait offer                                     |
+| Identity                                  | Exact game effect                                                        | Current planner disposition                                                |
+| ----------------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| `ArmorBoostStore`                         | Grants 20 armor                                                          | Consumable record and item armor, kept under no damage                     |
+| `DamageSelfDrop`                          | Pays gold for 10-30 health damage                                        | Immediate; health and payout deferred                                      |
+| `HealDropRange`                           | Heals 21-39% maximum health                                              | Immediate; health deferred                                                 |
+| `EmptyMaxHealthShopItem`                  | Adds 25 maximum health without healing                                   | Consumable under its own name; health deferred                             |
+| `FirstHitHealTrait`                       | Next hit heals 100% of damage; stacks add uses                           | Ledger only; uses spent by play                                            |
+| `TemporaryDoorHealTrait`                  | Heals 10% maximum health after next three transitions                    | Timed instance, 3 room uses; heal deferred                                 |
+| `TemporaryHealExpirationTrait`            | Heals 50% maximum health after four encounters                           | Timed instance, 4 encounter uses; expiry heal deferred                     |
+| `LastStandShopItem`                       | Adds a Last Stand restoring 40% health and Magick                        | Consumable under its own name; live ineligibility is an execution mismatch |
+| `TemporaryImprovedSecondaryTrait`         | 1.40 secondary damage for five encounters                                | Timed instance, 5 encounter uses; combat deferred                          |
+| `TemporaryImprovedCastTrait`              | 1.35 Cast damage for five encounters                                     | Timed instance, 5 encounter uses; combat deferred                          |
+| `TemporaryMoveSpeedTrait`                 | 1.20 movement speed for eight encounters                                 | Timed instance, 8 encounter uses; movement deferred                        |
+| `TemporaryBoonRarityTrait` (Yarn)         | Next eligible God offer: +1 Rare, +0.25 Epic, +0.10 Duo, +0.10 Legendary | Consequential rarity ledger                                                |
+| `TemporaryImprovedExTrait`                | 1.50 Omega damage for six encounters                                     | Timed instance, 6 encounter uses; combat deferred                          |
+| `TemporaryImprovedDefenseTrait`           | 0.90 incoming health damage for five encounters                          | Timed instance, 5 encounter uses; combat deferred                          |
+| `TemporaryDiscountTrait`                  | 0.70 Store costs for six encounters                                      | Timed instance, 6 encounter uses; gates later Well offers; prices modeled  |
+| `TemporaryForcedSecretDoorTrait` (Spark)  | Adds one forced secret-door use                                          | Consequential Chaos topology                                               |
+| `TemporaryEmptySlotDamageTrait`           | Triple damage for six encounters while a core slot is empty              | Timed instance, 6 encounter uses; gates later Well offers; combat deferred |
+| `ExtendedShopTrait`                       | Next whitelisted temporary Well trait lasts for two boss uses            | Charge converting the next eligible direct purchase                        |
+| `MetaCurrencyRange`                       | Grants 20-40 Bones                                                       | Immediate; meta resource deferred                                          |
+| `MetaCardPointsCommonRange`               | Grants 6-12 Ashes                                                        | Immediate; meta resource deferred                                          |
+| `MemPointsCommonRange`                    | Grants 20-30 Psyche                                                      | Immediate; meta resource deferred                                          |
+| `SeedMysteryRange`                        | Grants two Mystery Seeds                                                 | Immediate; meta resource deferred                                          |
+| `RandomStoreItem`                         | Awards one eligible item from a closed nested pool                       | Applies its authored result as that item's grant                           |
+| `LimitedManaRegenDrop`                    | Regenerates 500 Magick over three seconds                                | Ledger only; Magick pool depleted by play                                  |
+| `LimitedSwapTraitDrop` (Sacrificial Hymn) | One forced replacement; replacement gains +2 levels and next rarity tier | Consequential next eligible trait offer                                    |
+
+Each Well item costs its `ResourceCosts.Money` times the shop multiplier of the
+[reward audit](../rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#prices),
+rounded once when the screen processes it (`StoreLogic.lua:807-835`):
+Splintered Shield 40, Life Essence 21-39, Centaur Soul 110, Breath of Eros 15,
+HydraLite 45, Charity Bottle 115, Kiss of Styx 200, Chimaera Jerky 35, Braid of
+Atlas 30, Ignited Ichor 10, Yarn 70, Witch's Mark 45, Python Scales 30, Ferry
+Voucher 80, Spark 55, Danaid Dagger 10, Archaic Seal 90, Exhumed Remains 40-80
+in steps of 2, Dust Parcel 30-60 in steps of 5, Faint Flicker 20-30, Gaia's
+Gift 30, Fateful Twist 45, Mist Veil 10 and Sacrificial Hymn 25
+(`TraitData_Store.lua`, `ConsumableData.lua:1200-1500`). Price of Midas costs
+health, not gold (`Cost = 0`, `ConsumableData.lua:1329-1340`). The ranged
+items price from the amount rolled when stocked: `HealCostPerPercent`,
+`CostPerMetaCurrency`, `CostPerMetaCardPointsCommon` and
+`CostPerMemPointsCommon` (`InteractLogic.lua:1218-1231`). Every rolled amount
+is a `RandomFloat` between its bounds, rounded by `ProcessValue`: to an integer
+for the `AsInt` resource counts, to the percent for Life Essence's heal
+fraction (`TraitLogic.lua:252, 340-358`). Each end price is therefore half as
+likely as an inner one.
+
+A purchase sets `FirstPurchase`; buying a Voucher, or the room's first purchase
+under Travel Deal, clears every option's processing so it reprices from base
+keeping its rolled amount (`StoreLogic.lua:1165-1240`), as a reroll's fresh
+items do. A Fateful Twist that awards the Voucher instead multiplies each open
+option's current rounded price by 0.7 and rounds again
+(`AwardRandomStoreItem`, `StoreLogic.lua:1386-1393`); after a Travel Deal
+first purchase those options were already cleared and reprice from base.
 
 `RandomStoreItem`'s nested pool includes Yarn, Discount, and Last Stand but
 not Spark, Sacrificial Hymn, Empty Slot, or Extended. `AwardRandomStoreItem`

@@ -218,6 +218,11 @@ export interface FearVowDeclaration {
         /** Per-rank chance that each eligible source spawn request becomes a next-biome enemy. */
         readonly kind: 'substituteNextBiomeEnemy';
         readonly chanceByRank: readonly number[];
+      }
+    | {
+        /** Per-rank multiplier on every shop price. */
+        readonly kind: 'shopPriceMultiplier';
+        readonly multiplierByRank: readonly number[];
       };
 }
 

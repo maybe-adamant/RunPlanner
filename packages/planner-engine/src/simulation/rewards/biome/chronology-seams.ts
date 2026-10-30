@@ -51,6 +51,11 @@ import { applyEncounterSettlementTransition } from './encounter-acquisition/enco
 import { applyGorgonStartedTransition } from './encounter-acquisition/gorgon-started';
 import { applyHermesShrinePurchaseReachedTransition } from './encounter-acquisition/hermes-shrine-purchase';
 import { applyWellPurchaseTransition } from './encounter-acquisition/well-purchase';
+import {
+  withAcquisitionPointPrice,
+  withHermesShrinePurchasePrice,
+  withWellPurchasePrice,
+} from './purchase-price-seams';
 import { rewardFindingChronologyForRoom } from './finding-chronology';
 import { flushHubBoard } from './generation/hub-board';
 import { applyOutgoingGenerationTransition } from './generation/outgoing-generation';
@@ -370,7 +375,8 @@ const encounterEndEffectsApplied: ChronologySeamHandler<'encounterEndEffectsAppl
   };
 };
 
-const wellPurchase: ChronologySeamHandler<'wellPurchase'> = (context, state, event) => {
+const wellPurchase: ChronologySeamHandler<'wellPurchase'> = (context, received, event) => {
+  const state = withWellPurchasePrice(context, received, event);
   const wellRoom = context.rooms.get(semanticAddressKey(event.origin));
   const wellOrigin = wellRoom?.kind === 'authored' ? wellRoom.origin : undefined;
   const rolled = wellPurchaseRoll(context, state, event);
@@ -481,9 +487,10 @@ const hermesShrineDeliveriesScheduled: ChronologySeamHandler<'hermesShrineDelive
 
 const hermesShrinePurchaseReached: ChronologySeamHandler<'hermesShrinePurchaseReached'> = (
   context,
-  state,
+  received,
   event,
 ) => {
+  const state = withHermesShrinePurchasePrice(context, received, event);
   const room = authoredRoom(context, event.origin);
   const key = semanticAddressKey(event.origin);
   const transition = applyHermesShrinePurchaseReachedTransition({
@@ -519,9 +526,10 @@ const hermesShrinePurchaseReached: ChronologySeamHandler<'hermesShrinePurchaseRe
 
 const acquisitionPointReached: ChronologySeamHandler<'acquisitionPointReached'> = (
   context,
-  state,
+  received,
   event,
 ) => {
+  const state = withAcquisitionPointPrice(context, received, event);
   const room = authoredRoom(context, event.origin);
   const emissions: ChronologyEmission[] = [];
   const sale = room === undefined ? undefined : parsePurgingPoolSalePoint(event.point);

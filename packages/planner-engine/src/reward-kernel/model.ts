@@ -206,7 +206,33 @@ export interface ShopOptionEntry {
     readonly offerRequirements?: readonly ('inactive' | 'emptyAttackOrSpecial')[];
     readonly excludedRouteKeys?: readonly string[];
   };
+  /** Base gold price before shop multipliers; every option of a priced profile has one. */
+  readonly cost?: ShopOptionCost;
 }
+
+/**
+ * An option's base gold price: fixed, or derived from an amount rolled when
+ * the item is stocked, drawn evenly over `min..max` and rounded to `step`, so
+ * the two end prices are half as likely as the others.
+ */
+export type ShopOptionCost =
+  | { readonly kind: 'fixed'; readonly gold: number }
+  | { readonly kind: 'uniform'; readonly min: number; readonly max: number; readonly step: number };
+
+/**
+ * How a profile charges for its options. A delayed-delivery profile (the
+ * Hermes Shrine) scales an order's price by its delivery delay and charges the
+ * impatience multiple of the base price for an immediate delivery.
+ */
+export type ShopPricing =
+  | { readonly kind: 'free' }
+  | { readonly kind: 'gold' }
+  | {
+      readonly kind: 'delayedDelivery';
+      /** Price factor by delay, the first for a delay of one; a longer delay takes the last. */
+      readonly delayPriceFactors: readonly number[];
+      readonly rushPriceMultiplier: number;
+    };
 
 /** Native use counter of a Well trait: `UsesAsEncounters`, `UsesAsRooms` or `UsesAsBosses`. */
 export type StygianWellClock = 'encounters' | 'rooms' | 'bosses';
@@ -222,6 +248,8 @@ export type StygianWellGrant =
       readonly initialUses: number;
       readonly clock: StygianWellClock;
       readonly publishedEffect?: 'discount' | 'emptySlot';
+      /** Native `StoreCostMultiplier`: shop prices multiply by it while the trait is held. */
+      readonly priceMultiplier?: number;
     }
   | { readonly kind: 'charge'; readonly charge: 'spark' | 'yarn' | 'hymn' }
   | {
@@ -263,6 +291,7 @@ export interface ShopProfileDeclaration {
   readonly slotCount: number;
   /** The shop screen shows the native reroll button. */
   readonly screenReroll: boolean;
+  readonly pricing: ShopPricing;
 }
 
 export interface ProducerRewardLifecycleDeclaration {
