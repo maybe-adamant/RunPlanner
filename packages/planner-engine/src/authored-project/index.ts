@@ -338,6 +338,7 @@ export {
 export {
   biomeRerolledOwners,
   hubRerolledOwners,
+  hubStayRows,
   rerollAppendIndex,
   rerolledRewardOf,
   rerollSurfaceKey,
@@ -345,6 +346,8 @@ export {
   rerollTargetOwner,
   sourceRerolledOwners,
   type HubSlotRerollTarget,
+  type HubStayRow,
+  type HubStayRows,
   type OwnerRerolls,
   type RerolledRewardOwner,
   type RerollPressTarget,

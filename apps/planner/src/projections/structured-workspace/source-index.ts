@@ -151,6 +151,10 @@ export interface WorkspaceBiomeSource {
   readonly rerollSurface: (
     surface: import('@run-planner/engine/authored-project').RerollSurface,
   ) => import('@run-planner/engine/simulation').RerollSurfaceSettlement | undefined;
+  /** One Hub's reached stays with their boards, and what each door offers onward. */
+  readonly hubStays: (
+    hub: HubDecisionAddress,
+  ) => import('@run-planner/engine/simulation').HubStays | undefined;
   /** Whether a new press or Well or Pool reroll fits the run's reroll pool. */
   readonly rerollSpendAllowance: (
     spend: Exclude<
@@ -714,6 +718,7 @@ function createWorkspaceBiomeSource(
   shopOfferAssessment: WorkspaceBiomeSource['shopOfferAssessment'],
   phantomExitSettlement: WorkspaceBiomeSource['phantomExitSettlement'],
   rerollSurface: WorkspaceBiomeSource['rerollSurface'],
+  hubStays: WorkspaceBiomeSource['hubStays'],
   rerollSpendAllowance: WorkspaceBiomeSource['rerollSpendAllowance'],
   screenRerollAllowance: WorkspaceBiomeSource['screenRerollAllowance'],
   roomObjectInteractions: WorkspaceBiomeSource['roomObjectInteractions'],
@@ -942,6 +947,7 @@ function createWorkspaceBiomeSource(
     shopOfferAssessment,
     phantomExitSettlement,
     rerollSurface,
+    hubStays,
     rerollSpendAllowance,
     screenRerollAllowance,
     roomObjectInteractions,
@@ -1025,6 +1031,7 @@ export function createWorkspaceProjectSourceIndex(
   shopOfferAssessment: WorkspaceBiomeSource['shopOfferAssessment'] = () => undefined,
   phantomExitSettlement: WorkspaceBiomeSource['phantomExitSettlement'] = () => undefined,
   rerollSurface: WorkspaceBiomeSource['rerollSurface'] = () => undefined,
+  hubStays: WorkspaceBiomeSource['hubStays'] = () => undefined,
   rerollSpendAllowance: WorkspaceBiomeSource['rerollSpendAllowance'] = () =>
     Object.freeze({ kind: 'unreached' as const }),
   screenRerollAllowance: WorkspaceBiomeSource['screenRerollAllowance'] = () =>
@@ -1066,6 +1073,7 @@ export function createWorkspaceProjectSourceIndex(
             shopOfferAssessment,
             phantomExitSettlement,
             rerollSurface,
+            hubStays,
             rerollSpendAllowance,
             screenRerollAllowance,
             roomObjectInteractions,

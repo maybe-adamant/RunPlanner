@@ -8,7 +8,9 @@ import {
   type WorkspaceHubActionOrderInteraction,
   type WorkspaceHubBoardDoor,
   type WorkspaceHubDecisionNode,
+  type WorkspaceHubRowMove,
   type WorkspaceHubStay,
+  type WorkspaceHubStayRowReference,
   type WorkspaceHubVisit,
   type WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
@@ -27,6 +29,7 @@ import {
   useFindingAnchor,
   useFindingMark,
   useFindingTarget,
+  type FindingMarkProps,
 } from '@planner/ui/feedback/useFindingTarget';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
@@ -93,91 +96,115 @@ function VisitRow({
   );
 }
 
-function FountainPlacement({
+function stayRowLabel(row: WorkspaceHubStayRowReference): string {
+  return row.kind === 'fountain' ? 'Fountain' : `Reroll ${row.position}`;
+}
+
+function moveLabel(move: WorkspaceHubRowMove): string {
+  switch (move.destination.kind) {
+    case 'before':
+      return `Before ${stayRowLabel(move.destination.row)}`;
+    case 'after':
+      return `After ${stayRowLabel(move.destination.row)}`;
+    case 'stay':
+      return stayLabel(move.destination.precedingVisitCount);
+  }
+}
+
+/** Moves one stay row, or places the unused fountain, as a complete Hub action order. */
+function HubRowPlacement({
+  findingMark,
   label,
   locked,
-  node,
+  moves,
   onApply,
   trigger,
   waiting,
 }: {
+  readonly findingMark?: FindingMarkProps;
   readonly label: string;
   readonly locked: boolean;
-  readonly node: WorkspaceHubDecisionNode;
+  readonly moves: readonly WorkspaceHubRowMove[];
   readonly onApply: (actions: readonly HubAction[]) => void;
   readonly trigger: string;
   readonly waiting: boolean;
 }) {
-  const findingMark = useFindingMark();
-  const choices = node.stays.flatMap((stay) =>
-    stay.fountainActions === undefined
-      ? []
-      : [
-          {
-            key: String(stay.precedingVisitCount),
-            label: stayLabel(stay.precedingVisitCount),
-            structurallyAuthorable: !locked && !waiting,
-            explanations: [],
-            actions: stay.fountainActions,
-          },
-        ],
-  );
+  const choices = moves.map((move) => ({
+    key: move.key,
+    label: moveLabel(move),
+    structurallyAuthorable: !locked && !waiting,
+    explanations: [],
+  }));
   return (
     <RoomActionPlacementPicker
-      findingMark={findingMark(node.fountain.address)}
+      {...(findingMark === undefined ? {} : { findingMark })}
       label={label}
       trigger={trigger}
       choices={choices}
-      {...(waiting ? { disabledHint: candidateWaitingHint } : {})}
+      {...(waiting
+        ? { disabledHint: candidateWaitingHint }
+        : moves.length === 0
+          ? { disabledHint: 'No other position is available.' }
+          : {})}
       onApply={(key) => {
-        const choice = choices.find((candidate) => candidate.key === key);
-        if (choice !== undefined) onApply(choice.actions);
+        const move = moves.find((candidate) => candidate.key === key);
+        if (move !== undefined) onApply(move.actions);
       }}
     />
   );
 }
 
+/** The used fountain, among its stay's rerolls (`inList`) or on its own. */
 function FountainRow({
+  inList,
   interactions,
   locked,
+  moves,
   node,
   onApply,
   waiting,
 }: {
+  readonly inList: boolean;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly locked: boolean;
+  readonly moves: readonly WorkspaceHubRowMove[];
   readonly node: WorkspaceHubDecisionNode;
   readonly onApply: (actions: readonly HubAction[]) => void;
   readonly waiting: boolean;
 }) {
   const findingAnchor = useFindingAnchor();
+  const findingMark = useFindingMark();
   const rarity = node.fountain.rarity;
   return (
     <li
-      className="hub-timeline-row hub-timeline-fountain"
+      className={
+        inList ? 'room-reroll-row hub-timeline-fountain' : 'hub-timeline-row hub-timeline-fountain'
+      }
       {...(rarity === undefined ? findingAnchor(node.fountain.outcomeMarker.address) : {})}
       tabIndex={-1}
     >
-      <span className="hub-timeline-step">
+      <span className={inList ? 'room-reroll-index' : 'hub-timeline-step'}>
         <ArtworkIcon
           className="artwork-label-icon"
           source={hubFountainIcon(node.fountain.address.biomeKey)}
         />
       </span>
-      <strong className="hub-timeline-room">Fountain</strong>
+      <strong className={inList ? 'room-reroll-target' : 'hub-timeline-room'}>Fountain</strong>
       <span className="hub-timeline-fountain-phial">
         {rarity === undefined ? null : (
           <FountainRarityEffectRow control={rarity} interactions={interactions} />
         )}
       </span>
-      <FountainPlacement
+      <HubRowPlacement
+        findingMark={findingMark(node.fountain.address)}
         label="Move Fountain"
         locked={locked}
-        node={node}
+        moves={moves}
         onApply={onApply}
         trigger="Move…"
         waiting={waiting}
       />
+      {inList ? <span aria-hidden="true" className="room-reroll-remove-slot" /> : null}
     </li>
   );
 }
@@ -239,6 +266,7 @@ export function HubTimelineDetails({
     workspaceInteractionKey(node.owner),
   );
   const executeIntent = useCommandIntent();
+  const findingMark = useFindingMark();
   const candidates =
     useWorkspaceInteractionController<
       ReturnType<ReturnType<WorkspaceHubActionOrderInteraction['proposalFor']>['load']>
@@ -250,27 +278,60 @@ export function HubTimelineDetails({
     if (!candidateMayBeAuthored(options?.[0])) return;
     executeIntent(proposal.intent());
   };
-  const fountainRow = (
+  const fountainRow = (moves: readonly WorkspaceHubRowMove[], inList: boolean) => (
     <FountainRow
+      inList={inList}
       interactions={interactions}
+      key="fountain"
       locked={locked}
+      moves={moves}
       node={node}
       onApply={replaceActions}
       waiting={waiting}
     />
   );
-  const stayEntries = (stay: WorkspaceHubStay) => (
-    <>
-      {stay.fountain?.afterRerolls === false ? fountainRow : null}
-      {stay.rerolls === undefined ? null : (
-        <li className="hub-timeline-rerolls">
-          <RoomRerolls interactions={interactions} rerolls={stay.rerolls} />
-        </li>
-      )}
-      {stay.fountain?.afterRerolls === true ? fountainRow : null}
-      <BoardRecap stay={stay} />
-    </>
-  );
+  // The stay's presses and fountain are one ordered list; each row moves within it.
+  const stayEntries = (stay: WorkspaceHubStay) => {
+    const fountain = stay.rows.find((row) => row.kind === 'fountain');
+    return (
+      <>
+        {stay.rerolls === undefined ? (
+          fountain === undefined ? null : (
+            fountainRow(fountain.moves, false)
+          )
+        ) : (
+          <li className="hub-timeline-rerolls">
+            <RoomRerolls
+              interactions={interactions}
+              order={stay.rows.map((row, index) =>
+                row.kind === 'fountain'
+                  ? { kind: 'row' as const, key: 'fountain', row: fountainRow(row.moves, true) }
+                  : {
+                      kind: 'press' as const,
+                      key: row.key,
+                      move: (
+                        <HubRowPlacement
+                          label={`Move reroll ${
+                            stay.rows.slice(0, index + 1).filter((other) => other.kind === 'reroll')
+                              .length
+                          }`}
+                          locked={locked}
+                          moves={row.moves}
+                          onApply={replaceActions}
+                          trigger="Move…"
+                          waiting={waiting}
+                        />
+                      ),
+                    },
+              )}
+              rerolls={stay.rerolls}
+            />
+          </li>
+        )}
+        <BoardRecap stay={stay} />
+      </>
+    );
+  };
   return (
     <section aria-label="Ephyra Hub timeline" className="hub-board hub-timeline-details">
       <header className="hub-board-heading">
@@ -302,10 +363,11 @@ export function HubTimelineDetails({
             />
           </span>
           <strong className="hub-timeline-room">Fountain</strong>
-          <FountainPlacement
+          <HubRowPlacement
+            findingMark={findingMark(node.fountain.address)}
             label="Use Fountain"
             locked={locked}
-            node={node}
+            moves={node.fountain.useIn ?? []}
             onApply={replaceActions}
             trigger="Use…"
             waiting={waiting}

@@ -351,7 +351,10 @@ interface HubDecision {
   fountainRarityResult?: AuthoredFountainRarityResult;
 }
 
-type HubAction = { kind: 'roomVisit'; hubSlotKey: string } | { kind: 'useFountain' };
+type HubAction =
+  | { kind: 'roomVisit'; hubSlotKey: string }
+  | { kind: 'useFountain' }
+  | { kind: 'reroll'; rerollId: string; hubSlotKey: string; reward: ResolvedRewardOffer };
 ```
 
 An `ExitDecision` has at most one semantic source. Occurrence-sourced batches

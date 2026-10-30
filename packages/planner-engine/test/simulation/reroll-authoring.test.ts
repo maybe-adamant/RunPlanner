@@ -8,9 +8,11 @@ import {
   createOccurrenceAddress,
   createRewardWheelAddress,
   createRoomActionAddress,
+  hubStayRows,
   rerollAppendIndex,
   sourceRerolledOwners,
   type ProjectCommand,
+  type HubDecision,
   type ProjectDocument,
   type RerollPressTarget,
   type RerollSurface,
@@ -60,6 +62,13 @@ const door = (exitKey: string, occurrenceId: string): RerollPressTarget => ({
   occurrenceId: occurrenceId as never,
 });
 const slot = (hubSlotKey: string): RerollPressTarget => ({ kind: 'hubSlot', hubSlotKey });
+const hubOf = (project: ProjectDocument): HubDecision => {
+  const decision = project.route.biomes[0]!.topology!.decisions.find(
+    (candidate) => candidate.kind === 'hub',
+  );
+  if (decision?.kind !== 'hub') throw new Error('Surface N has no Hub');
+  return decision;
+};
 
 const ROOM_REWARDS = [
   'RoomMoneyDrop',
@@ -535,18 +544,25 @@ describe('Hub stays', () => {
     expect(kept.kind === 'hubActionOrder' && kept.result).not.toHaveProperty('refusal');
   });
 
-  it('publish each stay with the doors its visits closed', () => {
-    const stays = hubStaysForProjectEvaluationAssembly(evaluate(base()), hub);
-    expect(stays.map((entry) => entry.surface)).toEqual([0, 1, 2, 3, 4, 5, 6].map(stay));
-    expect(
-      stays.map((entry) =>
-        entry.targets.flatMap((target) =>
-          target.unavailable === 'slotEntered' && target.target.kind === 'hubSlot'
-            ? [target.target.hubSlotKey]
-            : [],
-        ),
+  it('publish each stay with the doors its visits closed, off its board', () => {
+    const { stays } = hubStaysForProjectEvaluationAssembly(evaluate(base()), hub);
+    expect(stays.map((entry) => entry.settlement.surface)).toEqual([0, 1, 2, 3, 4, 5, 6].map(stay));
+    const closed = stays.map((entry) =>
+      entry.settlement.targets.flatMap((target) =>
+        target.unavailable === 'slotEntered' && target.target.kind === 'hubSlot'
+          ? [target.target.hubSlotKey]
+          : [],
       ),
-    ).toEqual([
+    );
+    stays.forEach((entry, index) =>
+      expect(entry.board.map((door) => door.hubSlotKey).sort()).toEqual(
+        entry.settlement.targets
+          .flatMap((target) => (target.target.kind === 'hubSlot' ? [target.target.hubSlotKey] : []))
+          .filter((hubSlotKey) => !closed[index]!.includes(hubSlotKey))
+          .sort(),
+      ),
+    );
+    expect(closed).toEqual([
       [],
       ['combat05'],
       ['combat05', 'miniBoss01'],
@@ -560,19 +576,37 @@ describe('Hub stays', () => {
   it("carry a stay's press into the next stays' board and pool", () => {
     // combat03 is never entered.
     const { project, reward } = press(base(), stay(2), slot('combat03'));
-    const stays = hubStaysForProjectEvaluationAssembly(evaluate(project), hub);
+    const { stays, offeredOnward } = hubStaysForProjectEvaluationAssembly(evaluate(project), hub);
     const combat03 = (index: number) =>
-      stays[index]!.targets.find(
+      stays[index]!.settlement.targets.find(
         (target) => target.target.kind === 'hubSlot' && target.target.hubSlotKey === 'combat03',
       )!;
-    expect(combat03(1)).toMatchObject({
-      assigned: { rewardType: 'WeaponUpgrade' },
-      current: { rewardType: 'WeaponUpgrade' },
-    });
-    expect(combat03(2).assigned).toEqual({ rewardType: 'WeaponUpgrade' });
+    const door = (index: number) =>
+      stays[index]!.board.find((entry) => entry.hubSlotKey === 'combat03')!;
+    const first = { rewardType: 'WeaponUpgrade' };
+    expect(combat03(1)).toMatchObject({ assigned: first, current: first });
+    expect(door(1)).toMatchObject({ firstDraw: first, current: first, changed: false });
+    expect(combat03(2).assigned).toEqual(first);
     expect(combat03(2).current).toEqual(reward);
+    expect(door(2)).toMatchObject({ firstDraw: first, current: reward, changed: true });
+    // A restored stay assigns what the earlier press left; the board still reads the first draw.
     expect(combat03(6)).toMatchObject({ assigned: reward, current: reward });
-    expect(stays.map((entry) => [entry.poolRemainingAtStart, entry.poolRemaining])).toEqual([
+    expect(door(6)).toMatchObject({ firstDraw: first, current: reward, changed: true });
+    // Never entered, the door offers onward what the last stay left.
+    expect(offeredOnward.find((entry) => entry.hubSlotKey === 'combat03')).toMatchObject({
+      precedingVisitCount: 6,
+      firstDraw: first,
+      current: reward,
+      changed: true,
+    });
+    // An entered door offers what the stay before its visit left.
+    expect(offeredOnward.find((entry) => entry.hubSlotKey === 'combat05')).toMatchObject({
+      precedingVisitCount: 0,
+      changed: false,
+    });
+    expect(
+      stays.map((entry) => [entry.settlement.poolRemainingAtStart, entry.settlement.poolRemaining]),
+    ).toEqual([
       [3, 3],
       [3, 3],
       [3, 2],
@@ -610,6 +644,48 @@ describe('Hub stays', () => {
   it('append a press before the next visit', () => {
     const project = base();
     expect([0, 1, 6].map((count) => rerollAppendIndex(project, stay(count)))).toEqual([1, 2, 7]);
+  });
+
+  it('settle a stay the same wherever its fountain stands among its presses', () => {
+    // The fixture uses the fountain first, before Visit 1.
+    const first = press(base(), stay(0), slot('combat03'));
+    const pressed = press(first.project, stay(0), slot('combat09')).project;
+    const actions = hubOf(pressed).actions;
+    expect(actions.slice(0, 3).map((action) => action.kind)).toEqual([
+      'useFountain',
+      'reroll',
+      'reroll',
+    ]);
+    const [fountain, r1, r2] = actions;
+    const visits = actions.slice(3);
+    const orders = [
+      [fountain!, r1!, r2!],
+      [r1!, fountain!, r2!],
+      [r1!, r2!, fountain!],
+    ];
+    const settled = orders.map((order) => {
+      const project = applyProjectCommand(pressed, catalog, {
+        kind: 'ReplaceHubActionOrder',
+        hub,
+        actions: [...order, ...visits],
+      });
+      const rows = hubStayRows(hub, hubOf(project))[0]!.rows;
+      expect(rows.map((row) => row.actionIndex)).toEqual([0, 1, 2]);
+      expect(rows.map((row) => row.kind)).toEqual(
+        order.map((action) => (action.kind === 'reroll' ? 'reroll' : 'useFountain')),
+      );
+      const assembly = evaluate(project);
+      return {
+        findings: assembly.evaluation.findings.map((finding) => finding.code),
+        stays: hubStaysForProjectEvaluationAssembly(assembly, hub).stays.map((entry) => ({
+          board: entry.board,
+          pool: [entry.settlement.poolRemainingAtStart, entry.settlement.poolRemaining],
+        })),
+      };
+    });
+    expect(settled[1]).toEqual(settled[0]);
+    expect(settled[2]).toEqual(settled[0]);
+    expect(settled[0]!.stays[0]!.pool).toEqual([3, 1]);
   });
 });
 

@@ -59,6 +59,7 @@ export {
   devotionPairShortfall,
   ORDINARY_SOURCE_CAP,
   ordinarySourceGameNames,
+  sameRewardOffer,
   sourceSupportExclusion,
   supportedPayloads,
   type SourceSupportExclusion,

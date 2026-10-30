@@ -340,6 +340,8 @@ export interface WorkspaceHubFountain {
   readonly actionPosition?: number;
   /** The complete appended order, offered only while the fountain is unused. */
   readonly appendActions?: readonly HubAction[];
+  /** Each stay it can be used in, at the stay's end, offered only while it is unused. */
+  readonly useIn?: readonly WorkspaceHubRowMove[];
   /** The Phial outcome owner; its target control is present whenever the fountain is used. */
   readonly outcomeMarker: WorkspaceMarker;
   readonly rarity?: WorkspaceFountainRarityControl;
@@ -378,13 +380,36 @@ export interface WorkspaceHubBoardDoor {
   readonly offer: ResolvedRewardOffer;
 }
 
+/** A row of a Hub stay a move names: one of its presses, by its 1-based place, or the fountain. */
+export type WorkspaceHubStayRowReference =
+  { readonly kind: 'reroll'; readonly position: number } | { readonly kind: 'fountain' };
+
+/** One place a Hub stay row can move to, as the complete Hub action order it proposes. */
+export interface WorkspaceHubRowMove {
+  readonly key: string;
+  readonly destination:
+    | { readonly kind: 'before'; readonly row: WorkspaceHubStayRowReference }
+    | { readonly kind: 'after'; readonly row: WorkspaceHubStayRowReference }
+    /** The end of another stay. */
+    | { readonly kind: 'stay'; readonly precedingVisitCount: number };
+  readonly actions: readonly HubAction[];
+}
+
+/** One press or the fountain use in a stay, with every place it can move to. */
+export type WorkspaceHubStayRow =
+  | {
+      readonly kind: 'reroll';
+      /** The press's row key in the stay's Rerolls list. */
+      readonly key: string;
+      readonly moves: readonly WorkspaceHubRowMove[];
+    }
+  | { readonly kind: 'fountain'; readonly moves: readonly WorkspaceHubRowMove[] };
+
 /** The Hub between two required visits; 0 precedes the first visit. */
 export interface WorkspaceHubStay {
   readonly precedingVisitCount: number;
-  /** Present when the fountain is used in this stay, after any of its rerolls or before them all. */
-  readonly fountain?: { readonly afterRerolls: boolean };
-  /** The complete order that uses the fountain at the end of this stay instead. */
-  readonly fountainActions?: readonly HubAction[];
+  /** The stay's presses and fountain use in authored order. */
+  readonly rows: readonly WorkspaceHubStayRow[];
   readonly rerolls?: WorkspaceRoomRerolls;
   /** The doors still open as the stay leaves it; absent while unreached. */
   readonly board?: readonly WorkspaceHubBoardDoor[];

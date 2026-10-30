@@ -125,6 +125,13 @@ describe('structured workspace Hub assembly', () => {
       appendActions: hubVisitActions(visits, 2),
       hub,
     });
+    // Unused, it can be used at the end of any stay the authored visits reach.
+    expect(unused.fountain.useIn?.map((move) => move.actions)).toEqual([
+      hubVisitActions(visits, 0),
+      hubVisitActions(visits, 1),
+      hubVisitActions(visits, 2),
+    ]);
+    expect(unused.stays.every((stay) => stay.rows.length === 0)).toBe(true);
     expect(unused.fountain).not.toHaveProperty('actionPosition');
     expect(unused.fountain).not.toHaveProperty('controlsHost');
     expect(unused.fountain).not.toHaveProperty('rarity');
@@ -143,6 +150,21 @@ describe('structured workspace Hub assembly', () => {
       controlsHost: { kind: 'room', occurrenceId: nOccurrenceId(visits[0]!) },
     });
     expect(between.fountain).not.toHaveProperty('appendActions');
+    expect(between.fountain).not.toHaveProperty('useIn');
+    // Its row stands in the stay after the first visit and moves to the end of the others.
+    expect(between.stays.map((stay) => stay.rows.map((row) => row.kind))).toEqual([
+      [],
+      ['fountain'],
+      [],
+      [],
+      [],
+      [],
+      [],
+    ]);
+    expect(between.stays[1]!.rows[0]!.moves.map((move) => move.actions)).toEqual([
+      hubVisitActions(visits, 0),
+      hubVisitActions(visits, 2),
+    ]);
     // Without a rarity assessment the Phial control is still published, waiting.
     expect(between.fountain.rarity).toEqual({
       address: createFountainRarityOutcomeAddress(createHubFountainAddress(nBiome, 'hub')),

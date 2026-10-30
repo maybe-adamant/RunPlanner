@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import {
   requireWorkspaceInteraction,
@@ -34,12 +34,21 @@ const targetNouns = {
   offer: { lower: 'offer' },
 } as const;
 
+/** A Hub stay's list: its presses, each with its Move, among the other rows of the stay. */
+export type RoomRerollsOrder = readonly (
+  | { readonly kind: 'press'; readonly key: string; readonly move: ReactNode }
+  | { readonly kind: 'row'; readonly key: string; readonly row: ReactNode }
+)[];
+
 /** One surface's rerolls in order, with a new press appended at the end. */
 export function RoomRerolls({
   interactions,
+  order,
   rerolls,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
+  /** The list's rows in order, where other rows stand among the presses. */
+  readonly order?: RoomRerollsOrder;
   readonly rerolls: WorkspaceRoomRerolls;
 }) {
   const interaction = requireWorkspaceInteraction(interactions.roomRerolls, rerolls.interactionKey);
@@ -58,8 +67,40 @@ export function RoomRerolls({
       : undefined;
   const targets = interaction.targets(pending);
   const noun = targetNouns[rerolls.targetNoun];
+  const pressRow = (row: WorkspaceRoomRerolls['rows'][number], index: number, move: ReactNode) => (
+    <li className="room-reroll-row" key={row.key}>
+      <span className="room-reroll-index">{index + 1}</span>
+      <span className="room-reroll-target">{row.targetLabel}</span>
+      <RewardOfferPicker
+        ariaLabel={`Reroll ${index + 1} reward`}
+        findingTarget={findingTarget(row.address)}
+        id={semanticOwnerControlElementId(row.address)}
+        label=""
+
+        offer={row.reward}
+        onReplace={(reward) => executeIntent(interaction.replaceRewardIntent(row.key, reward))}
+        resolver={interaction.rowReward(row.key)}
+      />
+      {move}
+      <button
+        {...findingMark(row.address, 'delete')}
+        aria-label={`Remove reroll ${index + 1}`}
+        className="danger-action room-action-delete"
+        onClick={() => executeIntent(interaction.removeIntent(row.key))}
+        type="button"
+      >
+        <svg aria-hidden="true" viewBox="0 0 16 16">
+          <path d="M3.5 4.5h9M6 2.5h4l.5 2h-5l.5-2Zm-1 2 .5 9h5l.5-9M7 7v4M9 7v4" />
+        </svg>
+      </button>
+    </li>
+  );
   return (
-    <section aria-label="Rerolls" className="room-rerolls">
+    <section
+      aria-label="Rerolls"
+      className="room-rerolls"
+      {...(order === undefined ? {} : { 'data-movable': 'true' })}
+    >
       <header className="room-rerolls-heading">
         <h4>Rerolls</h4>
         {rerolls.poolRemaining === undefined ? null : (
@@ -67,35 +108,13 @@ export function RoomRerolls({
         )}
       </header>
       <ol className="room-rerolls-list">
-        {rerolls.rows.map((row, index) => (
-          <li className="room-reroll-row" key={row.key}>
-            <span className="room-reroll-index">{index + 1}</span>
-            <span className="room-reroll-target">{row.targetLabel}</span>
-            <RewardOfferPicker
-              ariaLabel={`Reroll ${index + 1} reward`}
-              findingTarget={findingTarget(row.address)}
-              id={semanticOwnerControlElementId(row.address)}
-              label=""
-
-              offer={row.reward}
-              onReplace={(reward) =>
-                executeIntent(interaction.replaceRewardIntent(row.key, reward))
-              }
-              resolver={interaction.rowReward(row.key)}
-            />
-            <button
-              {...findingMark(row.address, 'delete')}
-              aria-label={`Remove reroll ${index + 1}`}
-              className="danger-action room-action-delete"
-              onClick={() => executeIntent(interaction.removeIntent(row.key))}
-              type="button"
-            >
-              <svg aria-hidden="true" viewBox="0 0 16 16">
-                <path d="M3.5 4.5h9M6 2.5h4l.5 2h-5l.5-2Zm-1 2 .5 9h5l.5-9M7 7v4M9 7v4" />
-              </svg>
-            </button>
-          </li>
-        ))}
+        {order === undefined
+          ? rerolls.rows.map((row, index) => pressRow(row, index, undefined))
+          : order.map((entry) => {
+              if (entry.kind === 'row') return entry.row;
+              const index = rerolls.rows.findIndex((row) => row.key === entry.key);
+              return index < 0 ? null : pressRow(rerolls.rows[index]!, index, entry.move);
+            })}
         <li className="room-reroll-row room-reroll-append">
           <span className="room-reroll-index">{rerolls.rows.length + 1}</span>
           <ContextualPicker<string>
@@ -131,6 +150,9 @@ export function RoomRerolls({
               }}
               resolver={interaction.pendingReward(pending)}
             />
+          )}
+          {order === undefined ? null : (
+            <span aria-hidden="true" className="room-reroll-move-slot" />
           )}
           <span aria-hidden="true" className="room-reroll-remove-slot" />
         </li>

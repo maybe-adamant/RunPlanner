@@ -724,9 +724,11 @@ downstream cleanup; it is disabled while the order holds board-door rerolls.
 **Details** opens the Hub timeline as a list: the visits in order, with each
 gap between them (each Hub stay) holding its Rerolls list for board doors not
 yet entered and a board recap of every door's current reward, first draw →
-final when rerolled. The fountain is a row in its gap, carrying its Phial
-outcome editor and a Move action that places it in any gap; before its use it
-is a Use row at the end. Map and Details send the same Hub action-order
+final when rerolled. A stay's presses and its fountain use are one ordered
+list: the fountain row carries its Phial outcome editor and sits among the
+presses in authored order. Every row has a Move action within its stay, and the
+fountain's also places it at the end of any other gap; a new press appends at
+the end of its stay. Before its use the fountain is a Use row at the end. Map and Details send the same Hub action-order
 command; finding navigation to a reroll or the Phial outcome selects Details.
 
 The existing Hub-owned interaction assesses complete proposals with Hub-level

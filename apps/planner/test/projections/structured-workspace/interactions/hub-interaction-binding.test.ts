@@ -132,4 +132,42 @@ describe('structured workspace interaction binding', () => {
       },
     });
   });
+
+  it("binds a reorder of the fountain among its stay's presses without moving focus", () => {
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const visits = hubVisitActions(nVisitSlotKeys.slice(0, 5), null);
+    const fountain = { kind: 'useFountain' } as const;
+    const press = (rerollId: string) => ({
+      kind: 'reroll' as const,
+      rerollId,
+      hubSlotKey: 'combat03',
+      reward: { rewardType: 'MaxHealthDropBig' },
+    });
+    // Two presses before the fountain used first: r1, r2, Fountain, then the visits.
+    const project = [0, 1].reduce(
+      (current, index) =>
+        applyProjectCommand(current, catalog, {
+          kind: 'InsertHubReroll',
+          hub,
+          hubSlotKey: 'combat03',
+          reward: { rewardType: 'MaxHealthDropBig' },
+          index,
+        }),
+      applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+        hub,
+        actions: [fountain, ...visits],
+        kind: 'ReplaceHubActionOrder',
+      }),
+    );
+    const { interactions } = bind(project, 'Surface', 'N');
+    const order = interactions.hubActionOrders.get(semanticAddressKey(hub))!;
+    expect(order.selectedActions).toEqual([press('r1'), press('r2'), fountain, ...visits]);
+    const between = [press('r1'), fountain, press('r2'), ...visits];
+    const proposal = order.proposalFor(between);
+    expect(proposal).not.toHaveProperty('refusal');
+    // The fountain stays in its stay, so focus stays where the move was made.
+    expect(proposal.intent()).toEqual({
+      command: { hub, actions: between, kind: 'ReplaceHubActionOrder' },
+    });
+  });
 });

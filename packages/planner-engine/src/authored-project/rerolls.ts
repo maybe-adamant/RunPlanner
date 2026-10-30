@@ -1,11 +1,16 @@
 import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import {
+  createBiomeAddress,
+  createHubFountainAddress,
+  createHubRerollAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createRewardWheelOfferAddress,
   semanticAddressKey,
   type BiomeAddress,
   type HubDecisionAddress,
+  type HubFountainAddress,
+  type HubRerollAddress,
   type IncomingRewardAddress,
   type LocalRewardAddress,
   type OccurrenceAddress,
@@ -80,6 +85,78 @@ export function rerollSurfaceKey(surface: RerollSurface): string {
   }
 }
 
+/** One action a Hub stay holds between two visits, at its index in the Hub's actions. */
+export type HubStayRow =
+  | {
+      readonly kind: 'reroll';
+      readonly address: HubRerollAddress;
+      readonly actionIndex: number;
+      readonly action: HubRerollAction;
+    }
+  | {
+      readonly kind: 'useFountain';
+      readonly address: HubFountainAddress;
+      readonly actionIndex: number;
+    };
+
+/** One Hub stay's presses and fountain use in authored order. */
+export interface HubStayRows {
+  /** Room visits returned before the stay; 0 is the Hub's first entry. */
+  readonly precedingVisitCount: number;
+  readonly rows: readonly HubStayRow[];
+  /** Where an action added at the end of the stay goes: before its next visit. */
+  readonly appendIndex: number;
+}
+
+function hubStayAppendIndex(hub: Pick<HubDecision, 'actions'>, precedingVisitCount: number) {
+  const visits = hub.actions.flatMap((action, index) =>
+    action.kind === 'roomVisit' ? [index] : [],
+  );
+  return visits[precedingVisitCount] ?? hub.actions.length;
+}
+
+/**
+ * Every stay the Hub's authored visits delimit, from its first entry to the
+ * return from its last authored visit, each with its rows in authored order.
+ * The fountain use may stand anywhere among a stay's presses.
+ */
+export function hubStayRows(
+  owner: HubDecisionAddress,
+  hub: Pick<HubDecision, 'actions'>,
+): readonly HubStayRows[] {
+  const biome = createBiomeAddress(owner.routeKey, owner.biomeKey);
+  const stays: HubStayRow[][] = [[]];
+  hub.actions.forEach((action, actionIndex) => {
+    if (action.kind === 'roomVisit') {
+      stays.push([]);
+      return;
+    }
+    stays.at(-1)!.push(
+      action.kind === 'reroll'
+        ? Object.freeze({
+            kind: 'reroll' as const,
+            address: createHubRerollAddress(biome, owner.hubKey, action.rerollId),
+            actionIndex,
+            action,
+          })
+        : Object.freeze({
+            kind: 'useFountain' as const,
+            address: createHubFountainAddress(biome, owner.hubKey),
+            actionIndex,
+          }),
+    );
+  });
+  return Object.freeze(
+    stays.map((rows, precedingVisitCount) =>
+      Object.freeze({
+        precedingVisitCount,
+        rows: Object.freeze(rows),
+        appendIndex: hubStayAppendIndex(hub, precedingVisitCount),
+      }),
+    ),
+  );
+}
+
 /**
  * The index of `InsertReroll` or `InsertHubReroll` that appends a press to the
  * surface: the end of the room's action order, after the wheel's last press
@@ -101,10 +178,7 @@ export function rerollAppendIndex(
         decision.kind === 'hub' && decision.hubKey === surface.hub.hubKey,
     );
     if (hub === undefined) return undefined;
-    const visits = hub.actions.flatMap((action, index) =>
-      action.kind === 'roomVisit' ? [index] : [],
-    );
-    return visits[surface.precedingVisitCount] ?? hub.actions.length;
+    return hubStayAppendIndex(hub, surface.precedingVisitCount);
   }
   const occurrenceId =
     surface.kind === 'doors' ? surface.occurrence.occurrenceId : surface.wheel.occurrenceId;

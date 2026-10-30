@@ -540,6 +540,60 @@ describe('BiomeWorkspace', () => {
     );
   });
 
+  it("moves the fountain between a stay's rerolls with its Move control", async () => {
+    const hub = createHubDecisionAddress(nBiome, 'hub');
+    const withCard = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: { kind: 'route', routeKey: 'Surface' },
+      arcanaKeys: ['DoorReroll'],
+    });
+    // The fountain is used first, then two presses before Visit 1.
+    const project = ['combat03', 'combat09'].reduce(
+      (current, hubSlotKey) =>
+        applyProjectCommand(current, catalog, {
+          kind: 'InsertHubReroll',
+          hub,
+          hubSlotKey,
+          reward: { rewardType: 'MaxHealthDropBig' },
+          index: rerollAppendIndex(current, { kind: 'hubStay', hub, precedingVisitCount: 0 })!,
+        }),
+      withCard,
+    );
+    const view = renderWorkspace(project, 'Surface', 'N');
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(createHubFountainAddress(nBiome, 'hub')),
+      ),
+    );
+    if (screen.queryByRole('region', { name: 'Ephyra Hub timeline' }) === null)
+      await view.user.click(await screen.findByRole('button', { name: 'Details →' }));
+    const details = await screen.findByRole('region', { name: 'Ephyra Hub timeline' });
+    const list = within(details).getAllByRole('region', { name: 'Rerolls' })[0]!;
+    await view.user.click(within(list).getByRole('button', { name: 'Move Fountain' }));
+    await view.user.click(await screen.findByRole('option', { name: /Before Reroll 2/ }));
+    const actions = () => {
+      const decision = view.application.store
+        .getState()
+        .projectWorkspace.assembly!.project.route.biomes.find((biome) => biome.biomeKey === 'N')
+        ?.topology?.decisions.find((candidate) => candidate.kind === 'hub');
+      return decision?.kind === 'hub' ? decision.actions.slice(0, 3).map((a) => a.kind) : [];
+    };
+    await waitFor(() => expect(actions()).toEqual(['reroll', 'useFountain', 'reroll']));
+    // The fountain row now stands between the two presses in the same list.
+    const rows = [
+      ...within(details)
+        .getAllByRole('region', { name: 'Rerolls' })[0]!
+        .querySelectorAll('.room-rerolls-list > li'),
+    ].map((row) =>
+      row.classList.contains('hub-timeline-fountain')
+        ? 'Fountain'
+        : row.classList.contains('room-reroll-append')
+          ? 'Append'
+          : 'Reroll',
+    );
+    expect(rows).toEqual(['Reroll', 'Fountain', 'Reroll', 'Append']);
+  });
+
   it('routes a Hub board reroll finding to its stay in the Timeline details', async () => {
     const hub = createHubDecisionAddress(nBiome, 'hub');
     // Without the card, the press after the first visit is refused.

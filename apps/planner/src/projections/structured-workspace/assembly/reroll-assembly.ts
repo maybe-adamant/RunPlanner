@@ -1,6 +1,5 @@
 import {
   biomeRerolledOwners,
-  createHubRerollAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
@@ -12,6 +11,7 @@ import {
   type HubDecision,
   type HubDecisionAddress,
   type HubRerollAddress,
+  type HubStayRow,
   type OccurrenceAddress,
   type OccurrenceId,
   rerollSurfaceKey,
@@ -25,7 +25,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { RerollSurfaceSettlement } from '@run-planner/engine/simulation';
 import type { BiomeLayout, Catalog } from '@run-planner/engine/catalog-schema';
-import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import { sameRewardOffer, type ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
 
 import type { WorkspaceRewardWheelDescriptor } from '../contracts/locals';
@@ -96,10 +96,6 @@ export function rerollMovedOnTimeline(
   );
 }
 
-function sameOffer(left: ResolvedRewardOffer, right: ResolvedRewardOffer): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
 /** What one surface's list reads from the biome: the engine's surface, pool and findings. */
 export type WorkspaceRerollSource = Pick<
   WorkspaceBiomeSource,
@@ -115,28 +111,45 @@ export interface WorkspaceRerolledRewardFacts {
   readonly rerolledRewardRepair?: NonNullable<WorkspaceDoorReward['rerolledRewardRepair']>;
 }
 
+/** What a settled surface says of one rerolled owner. */
+export interface WorkspaceRerolledRewardView {
+  /** Whether a held card enabled rerolls where the owner was assigned. */
+  readonly enabled: boolean;
+  /** Its final draw, where the presses left it a different reward. */
+  readonly rerolled?: ResolvedRewardOffer;
+}
+
+function surfaceRerolledView(
+  settled: RerollSurfaceSettlement | undefined,
+  owner: RerolledRewardOwner,
+): WorkspaceRerolledRewardView | undefined {
+  if (settled === undefined) return undefined;
+  const ownerKey = semanticAddressKey(owner);
+  const target = settled.targets.find(
+    (candidate) => semanticAddressKey(candidate.owner) === ownerKey,
+  );
+  return Object.freeze({
+    enabled: settled.enabled,
+    ...(target === undefined || sameRewardOffer(target.assigned, target.current)
+      ? {}
+      : { rerolled: target.current }),
+  });
+}
+
 function rerolledRewardFacts(
   catalog: Catalog,
   source: WorkspaceRerollSource,
-  settled: RerollSurfaceSettlement | undefined,
   owner: RerolledRewardOwner,
-  firstDraw: RerollSurfaceSettlement | undefined = settled,
+  view: WorkspaceRerolledRewardView | undefined,
 ): WorkspaceRerolledRewardFacts | undefined {
   const ownerKey = semanticAddressKey(owner);
-  const ownerTarget = (surface: RerollSurfaceSettlement | undefined) =>
-    surface?.targets.find((candidate) => semanticAddressKey(candidate.owner) === ownerKey);
-  const target = ownerTarget(settled);
-  const first = ownerTarget(firstDraw)?.assigned ?? target?.assigned;
   const mismatch = source
     .findingsFor(owner)
     .some((finding) => finding.code === 'rerolledRewardMismatch');
-  const rerolled =
-    target === undefined || first === undefined || sameOffer(first, target.current)
-      ? undefined
-      : target.current;
-  const reserved = settled?.enabled === true ? { rerollLineReserved: true as const } : {};
+  const rerolled = view?.rerolled;
+  const reserved = view?.enabled === true ? { rerollLineReserved: true as const } : {};
   if (rerolled === undefined && !mismatch)
-    return settled?.enabled === true ? Object.freeze(reserved) : undefined;
+    return view?.enabled === true ? Object.freeze(reserved) : undefined;
   const rerolledOwners =
     source.plan.topology === null
       ? new Map()
@@ -303,24 +316,19 @@ function doorRewardTypes(
   return types;
 }
 
-/**
- * A door with each rerolled reward's final draw on one settled surface, and
- * its repair; `firstDraw` is the surface that first assigned it, where a Hub
- * stay later restores what an earlier stay's rerolls left.
- */
+/** A door with each rerolled reward's final draw as `viewOf` reads it, and its repair. */
 export function workspaceRerolledDoor(
   catalog: Catalog,
   source: WorkspaceRerollSource,
-  settled: RerollSurfaceSettlement | undefined,
+  viewOf: (owner: RerolledRewardOwner) => WorkspaceRerolledRewardView | undefined,
   door: WorkspaceDoorContract,
-  firstDraw: RerollSurfaceSettlement | undefined = settled,
 ): WorkspaceDoorContract {
   let changed = false;
   const rewards = door.offerRewardSurface.rewards.map((reward): WorkspaceDoorReward => {
     const owner = reward.control?.owner.address;
     if (owner === undefined || (owner.kind !== 'incomingReward' && owner.kind !== 'localReward'))
       return reward;
-    const facts = rerolledRewardFacts(catalog, source, settled, owner, firstDraw);
+    const facts = rerolledRewardFacts(catalog, source, owner, viewOf(owner));
     if (facts === undefined) return reward;
     changed = true;
     return Object.freeze({ ...reward, ...facts });
@@ -342,6 +350,8 @@ export function workspaceRerolledDoor(
  */
 export function assembleHubStayRerolls(input: {
   readonly hub: HubDecision;
+  /** The stay's rows in authored order; its presses are listed. */
+  readonly stayRows: readonly HubStayRow[];
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   /** The Hub node whose timeline holds the list. */
   readonly nodeKey: string;
@@ -372,11 +382,9 @@ export function assembleHubStayRerolls(input: {
         ? target.offerKey
         : target.exitKey;
   const rows: WorkspacePreparedRerollRow[] = [];
-  let visits = 0;
-  for (const action of hub.actions) {
-    if (action.kind === 'roomVisit') visits += 1;
-    if (action.kind !== 'reroll' || visits !== input.precedingVisitCount) continue;
-    const address = createHubRerollAddress(biome, hub.hubKey, action.rerollId);
+  for (const row of input.stayRows) {
+    if (row.kind !== 'reroll') continue;
+    const { action, address } = row;
     const marker = input.markerDestinations.marker(address);
     input.markerDestinations.redirect([marker], input.nodeKey);
     input.markerDestinations.setHubTab([marker], 'timeline');
@@ -435,7 +443,12 @@ export function assembleRoomRerolls(input: {
   const settled = surface === undefined ? undefined : source.rerollSurface(surface);
   const rewardTypesByOwner = doorRewardTypes(input.targets.map((target) => target.door));
   const targets = input.targets.map((target) => {
-    const door = workspaceRerolledDoor(catalog, source, settled, target.door);
+    const door = workspaceRerolledDoor(
+      catalog,
+      source,
+      (owner) => surfaceRerolledView(settled, owner),
+      target.door,
+    );
     return door === target.door ? target : Object.freeze({ ...target, door });
   });
   const list =
@@ -503,7 +516,7 @@ export function assembleWheelRerolls(input: {
     const owner = offer.control.owner.address;
     const facts =
       owner.kind === 'rewardWheelOffer'
-        ? rerolledRewardFacts(catalog, source, settled, owner)
+        ? rerolledRewardFacts(catalog, source, owner, surfaceRerolledView(settled, owner))
         : undefined;
     return facts === undefined ? offer : Object.freeze({ ...offer, ...facts });
   });

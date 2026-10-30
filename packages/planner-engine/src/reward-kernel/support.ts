@@ -12,6 +12,20 @@ import type {
 /** `HeroData.MaxGodsPerRun`: the distinct gods a run can pick up. */
 export const ORDINARY_SOURCE_CAP = 4;
 
+/** Whether two offers name the same reward: its type and its payload's sources. */
+export function sameRewardOffer(left: ResolvedRewardOffer, right: ResolvedRewardOffer): boolean {
+  if (left.rewardType !== right.rewardType) return false;
+  const a = left.payload;
+  const b = right.payload;
+  if (a === undefined || b === undefined) return a === b;
+  if (a.kind === 'BoonSource') return b.kind === 'BoonSource' && a.source === b.source;
+  return (
+    b.kind === 'DevotionPair' &&
+    a.chosenSource === b.chosenSource &&
+    a.spurnedSource === b.spurnedSource
+  );
+}
+
 function payloadSources(payload: RewardPayload): readonly string[] {
   return payload.kind === 'BoonSource'
     ? [payload.source]

@@ -94,11 +94,63 @@ describe('Hub Timeline details', () => {
       .sections.flatMap((section) => section.items.map((item) => item.value));
     expect(targets).not.toContain(slotDoorKey(base, 'combat05'));
     expect(targets).toContain(slotDoorKey(base, 'combat03'));
-    // The fountain moves to any other stay; the stay holding it offers no move.
-    const fountainStays = node.stays.filter((stay) => stay.fountain !== undefined);
-    expect(fountainStays.length).toBeLessThanOrEqual(1);
-    for (const stay of node.stays)
-      expect(stay.fountainActions === undefined).toBe(stay.fountain !== undefined);
+    // The fixture uses the fountain alone before Visit 1; it moves to the end of any other stay.
+    expect(node.stays.map((stay) => stay.rows.map((row) => row.kind))).toEqual([
+      ['fountain'],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+    ]);
+    expect(node.stays[0]!.rows[0]!.moves.map((move) => move.destination)).toEqual(
+      [1, 2, 3, 4, 5, 6].map((precedingVisitCount) => ({ kind: 'stay', precedingVisitCount })),
+    );
+  });
+
+  it("orders the fountain among its stay's presses and moves any row within the stay", async () => {
+    let project = (await append(base, 0, 'combat03')).next;
+    project = (await append(project, 0, 'combat09')).next;
+    const projected = projectStructuredWorkspaceFixture(project);
+    const stay = hubOf(projected).stays[0]!;
+    // New presses append at the end of the stay, after the fountain used first.
+    expect(stay.rows.map((row) => row.kind)).toEqual(['fountain', 'reroll', 'reroll']);
+    const [fountain, first, second] = stay.rows;
+    expect(fountain!.moves.map((move) => move.destination)).toEqual([
+      { kind: 'before', row: { kind: 'reroll', position: 2 } },
+      { kind: 'after', row: { kind: 'reroll', position: 2 } },
+      ...[1, 2, 3, 4, 5, 6].map((precedingVisitCount) => ({
+        kind: 'stay',
+        precedingVisitCount,
+      })),
+    ]);
+    // A press moves only within its stay.
+    expect(second!.moves.map((move) => move.destination)).toEqual([
+      { kind: 'before', row: { kind: 'fountain' } },
+      { kind: 'before', row: { kind: 'reroll', position: 1 } },
+    ]);
+    expect(first!.moves.map((move) => move.destination)).toEqual([
+      { kind: 'before', row: { kind: 'fountain' } },
+      { kind: 'after', row: { kind: 'reroll', position: 2 } },
+    ]);
+    // Placing the fountain between the presses is one complete Hub action order.
+    const between = fountain!.moves[0]!;
+    const orders = projected.workspace.interactions.hubActionOrders.get(semanticAddressKey(hub))!;
+    const proposal = orders.proposalFor(between.actions);
+    expect(proposal).not.toHaveProperty('refusal');
+    const moved = applyProjectCommand(project, catalog, proposal.intent().command);
+    const after = hubOf(projectStructuredWorkspaceFixture(moved)).stays[0]!;
+    expect(after.rows.map((row) => row.kind)).toEqual(['reroll', 'fountain', 'reroll']);
+    // The presses keep their list, pool and board wherever the fountain stands.
+    expect(after.rerolls?.rows).toEqual(stay.rerolls?.rows);
+    expect(after.rerolls?.poolRemaining).toBe(stay.rerolls?.poolRemaining);
+    expect(after.board).toEqual(stay.board);
+    // A new press still appends at the end of the stay.
+    const appended = (await append(moved, 0, 'combat10')).next;
+    expect(
+      hubOf(projectStructuredWorkspaceFixture(appended)).stays[0]!.rows.map((row) => row.kind),
+    ).toEqual(['reroll', 'fountain', 'reroll', 'reroll']);
   });
 
   it("appends, edits and removes a stay's press through its list", async () => {

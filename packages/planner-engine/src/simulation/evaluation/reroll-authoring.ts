@@ -7,8 +7,10 @@ import {
 import {
   rerollSurfaceKey,
   rerollSurfaceOwner,
+  type RerolledRewardOwner,
   type RerollSurface,
 } from '../../authored-project/rerolls';
+import { sameRewardOffer, type ResolvedRewardOffer } from '../../reward-kernel';
 import type { RerollSurfaceSettlement } from '../rewards/model';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import type { RollFeature } from '../../authored-project/feature-rolls';
@@ -40,28 +42,84 @@ export function rerollSurfaceForProjectEvaluationAssembly(
   );
 }
 
-/**
- * Every reached stay of one Hub in visit order, each with its board: every
- * door's reward as the stay assigned it and after the stay's presses, and
- * which doors are closed because their room was entered.
- */
+/** One open Hub board door as a stay shows it. */
+export interface HubBoardDoor {
+  readonly hubSlotKey: string;
+  readonly owner: RerolledRewardOwner;
+  /** Its reward as the Hub's first stay assigned it. */
+  readonly firstDraw: ResolvedRewardOffer;
+  /** Its reward after every press so far. */
+  readonly current: ResolvedRewardOffer;
+  /** Whether the presses so far left it a different reward. */
+  readonly changed: boolean;
+}
+
+/** One reached Hub stay: its settled surface and the doors still open in it. */
+export interface HubStaySettlement {
+  readonly precedingVisitCount: number;
+  readonly settlement: RerollSurfaceSettlement;
+  /** The doors not yet entered, as the stay leaves them. */
+  readonly board: readonly HubBoardDoor[];
+}
+
+export interface HubStays {
+  /** Every reached stay in visit order. */
+  readonly stays: readonly HubStaySettlement[];
+  /**
+   * Each door as the last reached stay before its room was entered left it:
+   * the reward it offers onward, with that stay.
+   */
+  readonly offeredOnward: readonly (HubBoardDoor & { readonly precedingVisitCount: number })[];
+}
+
+/** Every reached stay of one Hub with its board, and what each door offers onward. */
 export function hubStaysForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
   hub: HubDecisionAddress,
-): readonly RerollSurfaceSettlement[] {
+): HubStays {
   const key = semanticAddressKey(hub);
-  return Object.freeze(
-    (rewardsOf(assembly, hub.biomeKey)?.rerollSurfaces ?? [])
-      .filter(
-        (candidate) =>
-          candidate.surface.kind === 'hubStay' && semanticAddressKey(candidate.surface.hub) === key,
-      )
-      .sort(
-        (left, right) =>
-          (left.surface.kind === 'hubStay' ? left.surface.precedingVisitCount : 0) -
-          (right.surface.kind === 'hubStay' ? right.surface.precedingVisitCount : 0),
-      ),
-  );
+  const settlements = (rewardsOf(assembly, hub.biomeKey)?.rerollSurfaces ?? [])
+    .flatMap((candidate) =>
+      candidate.surface.kind === 'hubStay' && semanticAddressKey(candidate.surface.hub) === key
+        ? [{ precedingVisitCount: candidate.surface.precedingVisitCount, settlement: candidate }]
+        : [],
+    )
+    .sort((left, right) => left.precedingVisitCount - right.precedingVisitCount);
+  const firstDraws = new Map<string, ResolvedRewardOffer>();
+  for (const target of settlements[0]?.precedingVisitCount === 0
+    ? settlements[0].settlement.targets
+    : [])
+    if (target.target.kind === 'hubSlot') firstDraws.set(target.target.hubSlotKey, target.assigned);
+  const offeredOnward = new Map<string, HubBoardDoor & { readonly precedingVisitCount: number }>();
+  const entered = new Set<string>();
+  const stays = settlements.map(({ precedingVisitCount, settlement }) => {
+    const board: HubBoardDoor[] = [];
+    for (const target of settlement.targets) {
+      if (target.target.kind !== 'hubSlot') continue;
+      const hubSlotKey = target.target.hubSlotKey;
+      // An entered door is closed for the run.
+      if (target.unavailable === 'slotEntered') {
+        entered.add(hubSlotKey);
+        continue;
+      }
+      const firstDraw = firstDraws.get(hubSlotKey) ?? target.assigned;
+      const door = Object.freeze({
+        hubSlotKey,
+        owner: target.owner,
+        firstDraw,
+        current: target.current,
+        changed: !sameRewardOffer(firstDraw, target.current),
+      });
+      board.push(door);
+      if (!entered.has(hubSlotKey))
+        offeredOnward.set(hubSlotKey, Object.freeze({ ...door, precedingVisitCount }));
+    }
+    return Object.freeze({ precedingVisitCount, settlement, board: Object.freeze(board) });
+  });
+  return Object.freeze({
+    stays: Object.freeze(stays),
+    offeredOnward: Object.freeze([...offeredOnward.values()]),
+  });
 }
 
 /** One more reroll of a screen in this room, from its current count. */

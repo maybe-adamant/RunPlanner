@@ -248,9 +248,11 @@ owns the source facts.
 
 The planner models one Hub-owned fountain action in the same action list:
 initially, after a completed visit and its Hub return, or after the sixth visit
-before the Preboss handoff. It settles in the Hub before the next room's entry,
-reusing ordinary fountain Phial assessment, consumption, rarity mutation and
-offer invalidation. Side-room excursions stay inside their visit.
+before the Preboss handoff. Within that stay it is ordered among the stay's
+board-door rerolls like any of them, before, between or after the presses. It
+settles in the Hub at that position, before the next room's entry, reusing
+ordinary fountain Phial assessment, consumption, rarity mutation and offer
+invalidation. Side-room excursions stay inside their visit.
 
 ### Restoration and departures
 

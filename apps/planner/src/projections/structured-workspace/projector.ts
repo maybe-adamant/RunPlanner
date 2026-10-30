@@ -42,6 +42,7 @@ import {
   rerollSpendAllowanceForProjectEvaluationAssembly,
   roomObjectInteractionsForProjectEvaluationAssembly,
   rerollSurfaceForProjectEvaluationAssembly,
+  hubStaysForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -355,6 +356,7 @@ export function createStructuredWorkspaceProjection(
         (offer) => shopOfferAssessmentForProjectEvaluationAssembly(assembly, offer),
         (exit) => phantomExitSettlementForProjectEvaluationAssembly(assembly, exit),
         (surface) => rerollSurfaceForProjectEvaluationAssembly(assembly, surface),
+        (hub) => hubStaysForProjectEvaluationAssembly(assembly, hub),
         (spend) => rerollSpendAllowanceForProjectEvaluationAssembly(assembly, spend),
         (spend) => rerollSpendAllowanceForProjectEvaluationAssembly(assembly, spend),
         (occurrence) => {

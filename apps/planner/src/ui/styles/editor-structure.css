@@ -1253,6 +1253,11 @@ select {
   gap: 10px;
 }
 
+/* A Hub stay's list also moves its rows: # | target | reward | move | remove. */
+.room-rerolls[data-movable='true'] .room-reroll-row {
+  grid-template-columns: 1.4rem minmax(7rem, 11rem) minmax(0, 24rem) 6.5rem 2rem;
+}
+
 .room-reroll-row .field-control {
   grid-template-columns: minmax(0, 1fr);
 }

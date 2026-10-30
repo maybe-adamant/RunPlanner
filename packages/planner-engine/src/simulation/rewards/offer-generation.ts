@@ -9,6 +9,7 @@ import {
   oldestSupportedRewardPriority,
   isOfferSupportedAtResolutionPoint,
   isPayloadLocallyValid,
+  sameRewardOffer,
   sourceSupportExclusion,
   type CountedOfferTransitionOptions,
   type RewardBagState,
@@ -296,7 +297,7 @@ function processRewardOfferBranches(
     // reward priorities, ChooseLoot and ForceBoonName are consulted.
     const forced = forcedRewardFor(context, originalBranch);
     if (forced !== undefined) {
-      if (!sameOffer(forced.offer, reward.offer)) {
+      if (!sameRewardOffer(forced.offer, reward.offer)) {
         if (forced.offer.rewardType === reward.offer.rewardType) sawSourceFailure = true;
         rejected?.push({ branch: originalBranch, gate: 'forcedReward' });
         continue;
@@ -656,19 +657,6 @@ function forcedRewardFor(
   return forcedRewards.find(
     ({ requirement }) =>
       requirement === undefined || evaluateRequirement(requirement, facts.requirements),
-  );
-}
-
-function sameOffer(left: ResolvedRewardOffer, right: ResolvedRewardOffer): boolean {
-  if (left.rewardType !== right.rewardType) return false;
-  const a = left.payload;
-  const b = right.payload;
-  if (a === undefined || b === undefined) return a === b;
-  if (a.kind === 'BoonSource') return b.kind === 'BoonSource' && a.source === b.source;
-  return (
-    b.kind === 'DevotionPair' &&
-    a.chosenSource === b.chosenSource &&
-    a.spurnedSource === b.spurnedSource
   );
 }
 

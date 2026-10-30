@@ -236,7 +236,8 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(rows.slice(rows.indexOf('Visit 1'), rows.indexOf('Visit 2'))).toEqual(
       expect.arrayContaining(['Visit 1', 'Rerolls', 'Board']),
     );
-    expect(rows.filter((row) => row === 'Fountain')).toHaveLength(1);
+    // The fountain used first stands in the first stay's list, among its rerolls.
+    expect(rows).not.toContain('Fountain');
     // The press sits in its stay, after the first visit, with its own Remove.
     const lists = within(details).getAllByRole('region', { name: 'Rerolls' });
     expect(lists).toHaveLength(7);
@@ -249,7 +250,11 @@ describe('HubDecisionWorkbench interaction', () => {
     // The door the visit entered is closed and no longer listed.
     expect(within(board).queryByText('Combat 05')).toBeNull();
     expect(within(board).getByText(/ → /)).toBeTruthy();
-    expect(within(details).getByRole('button', { name: 'Move Fountain' })).toBeTruthy();
+    const fountains = details.querySelectorAll('.hub-timeline-fountain');
+    expect(fountains).toHaveLength(1);
+    expect(lists[0]!.contains(fountains[0]!)).toBe(true);
+    expect(within(lists[0]!).getByRole('button', { name: 'Move Fountain' })).toBeTruthy();
+    expect(within(lists[1]!).getByRole('button', { name: 'Move reroll 1' })).toBeTruthy();
     // Clearing the order waits on removing its rerolls.
     const reset = within(details).getByRole('button', { name: 'Reset visits' });
     expect(reset).toHaveProperty('disabled', true);
