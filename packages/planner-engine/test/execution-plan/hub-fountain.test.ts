@@ -6,8 +6,6 @@ import {
   createHubDecisionAddress,
   createHubFountainAddress,
   createRouteStartKeepsakeSelectionAddress,
-  encodeProjectDocument,
-  parseProjectDocument,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -23,11 +21,7 @@ import {
   type ExecutionRunStateDiagnostic,
 } from '@run-planner/engine/execution-plan';
 import { fingerprint } from '../../src/execution-plan/fingerprint';
-import {
-  hubVisitActions,
-  legacyRareEpicHexTrees,
-  legacySchema99Body,
-} from '@run-planner/test-fixtures/shared';
+import { hubVisitActions } from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNProject,
   nBiome,
@@ -38,7 +32,6 @@ import {
 import { loadSurfaceNPhialIntermediateFountainCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import phialFountainFixtureFile from './fixtures/surface-n-phial-intermediate-fountain.execution.json';
 import surfaceNFixtureFile from './fixtures/surface-n.execution.json';
-import { migrateProjectDocumentTo } from '../../../../schema/migrate-project.js';
 import underworldFghFixtureFile from './fixtures/underworld-fgh.execution.json';
 import { currentSchemaWire } from './support/current-schema-wire';
 
@@ -49,33 +42,13 @@ const underworldFghFixture = currentSchemaWire(underworldFghFixtureFile);
 const hub = createHubDecisionAddress(nBiome, 'hub');
 const fountain = createHubFountainAddress(nBiome, 'hub');
 
-/** Re-expresses a fountain-first project in its schema-87 room-only shape and migrates it. */
-function migratedPhialProject(): ProjectDocument {
-  const current = applyProjectCommand(loadSurfaceNProject(), catalog, {
+/** Surface N with the Aromatic Phial equipped at the route start. */
+function phialProject(): ProjectDocument {
+  return applyProjectCommand(loadSurfaceNProject(), catalog, {
     kind: 'ReplaceStartingKeepsake',
     selection: createRouteStartKeepsakeSelectionAddress('Surface'),
     keepsakeKey: 'FountainRarityKeepsake',
   });
-  const legacy = legacyRareEpicHexTrees(
-    legacySchema99Body(JSON.parse(encodeProjectDocument(current))),
-  ) as {
-    schemaVersion: number;
-    name?: string;
-    route: { biomes: { topology: { decisions: Record<string, unknown>[] } | null }[] };
-  };
-  legacy.schemaVersion = 87;
-  delete legacy.name;
-  for (const biome of legacy.route.biomes)
-    for (const decision of biome.topology?.decisions ?? []) {
-      if (decision.kind !== 'hub') continue;
-      const actions = decision.actions as { kind: string; hubSlotKey?: string }[];
-      expect(actions[0]).toEqual({ kind: 'useFountain' });
-      decision.visitOrder = actions.flatMap((action) =>
-        action.hubSlotKey === undefined ? [] : [action.hubSlotKey],
-      );
-      delete decision.actions;
-    }
-  return parseProjectDocument(JSON.stringify(migrateProjectDocumentTo(legacy)), catalog);
 }
 
 function placed(project: ProjectDocument, visits: number): ProjectDocument {
@@ -117,7 +90,7 @@ describe('Hub fountain execution export', () => {
   it.each([0, 3, 6])(
     'publishes one ordered Hub fountain use with its Phial target after %i visits',
     (visits) => {
-      const compiled = plan(placed(migratedPhialProject(), visits));
+      const compiled = plan(placed(phialProject(), visits));
       const encoded = encodeExecutionPlan(compiled);
       const decoded = decodeExecutionPlan(JSON.parse(encoded));
       expect(decoded).toEqual(compiled);
@@ -256,7 +229,7 @@ describe('Hub departure conformance', () => {
   it.each([0, 3, 6])(
     'publishes seven ordered departures each matching the next entry, fountain after %i visits',
     (visits) => {
-      const project = placed(migratedPhialProject(), visits);
+      const project = placed(phialProject(), visits);
       const rewards = nRewards(project);
       const departures = publishedHub(plan(project)).departures;
       expect(departures.map((departure) => departure.precedingVisitCount)).toEqual([

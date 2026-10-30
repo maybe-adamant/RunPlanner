@@ -56,8 +56,6 @@ const engineConsumers = ['packages/draft', 'packages/run-import', 'apps/planner'
  * dependency direction or the engine's declared entries.
  */
 const relativeImportRoots = Object.keys(allowedSourcePackages);
-/** Tests may run the repository's offline schema migration tool on legacy documents. */
-const schemaMigrationTool = join(repositoryRoot, 'schema', 'migrate-project.js');
 
 function sourceFiles(directory: string): readonly string[] {
   if (!existsSync(directory)) return [];
@@ -135,10 +133,9 @@ describe('workspace package boundaries', () => {
         .filter(({ specifier }) => specifier.startsWith('.'))
         .map((entry) => ({ ...entry, target: resolve(dirname(entry.path), entry.specifier) }))
         .filter(({ target }) => !target.startsWith(root + sep));
-    const escaping = [
-      ...escapes('src'),
-      ...escapes('test').filter(({ target }) => target !== schemaMigrationTool),
-    ].map(({ file, specifier }) => `${file}: ${specifier}`);
+    const escaping = [...escapes('src'), ...escapes('test')].map(
+      ({ file, specifier }) => `${file}: ${specifier}`,
+    );
 
     expect(escaping).toEqual([]);
   });
