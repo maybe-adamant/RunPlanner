@@ -591,13 +591,13 @@ describe('draftProject', () => {
   });
 
   it.each([
-    ['Underworld', underworld, 1],
-    ['Underworld', underworld, 2],
-    ['Surface', surface, 1],
-    ['Dream', dream, 1],
+    ['Underworld', 1, underworld],
+    ['Underworld', 2, underworld],
+    ['Surface', 1, surface],
+    ['Dream', 1, dream],
   ] as const)(
     "installs the %s draft's own route, resource points included, seed %i",
-    (_route, { base, spec }, seed) => {
+    (_route, seed, { base, spec }) => {
       const result = draftProject(catalog, base, spec, seed);
       if (result.kind !== 'drafted') throw new Error(`draft ${result.kind}`);
       const applied = applyProjectCommand(base, catalog, result.command);
