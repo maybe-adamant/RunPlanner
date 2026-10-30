@@ -1,6 +1,11 @@
-import type { Catalog, TraitRequirementExpression } from '../../catalog-schema';
-import type { TraitElement } from '../../catalog-schema/traits';
-import { BASE_TRAIT_ELEMENTS, highestBaseElementCount } from '../traits/history/fold';
+import {
+  BASE_TRAIT_ELEMENTS,
+  highestBaseElementCount,
+  type Catalog,
+  type TraitElement,
+  type TraitRequirementExpression,
+} from '../../catalog-schema';
+import type { RouteStartTraitRequirements } from '../traits/authoring/route-start-requirements';
 
 type PrerequisiteLeaf = Extract<
   TraitRequirementExpression,
@@ -11,11 +16,7 @@ type PrerequisiteLeaf = Extract<
 >;
 
 /** Traits held, and the element and god boon rarity counts the run has. */
-export interface DraftHeldTraits {
-  readonly traitKeys: ReadonlySet<string>;
-  readonly elementCounts: Readonly<Record<TraitElement, number>>;
-  readonly godBoonRarityCounts: Readonly<Record<string, number>>;
-}
+export type DraftHeldTraits = RouteStartTraitRequirements['held'];
 
 /** One way to meet a need: basket traits whose contributions reach the shortfall. */
 export interface DraftPrerequisiteOption {

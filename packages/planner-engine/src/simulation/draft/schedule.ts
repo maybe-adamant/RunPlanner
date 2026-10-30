@@ -1,7 +1,8 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import { traitGiverForAcquisitionRole } from '../../authored-project/traits/state';
-import { draftSourceQueues, draftStartTraits, draftTraitKind } from './basket';
+import { draftSourceQueues, draftTraitKind } from './basket';
+import { prepareRouteStartTraitRequirements } from '../traits/authoring/route-start-requirements';
 import {
   createDraftPrerequisites,
   prerequisiteDue,
@@ -161,7 +162,7 @@ export function draftGodSchedule(
   const { needs } = createDraftPrerequisites(
     catalog,
     draftBasketTraitKeys(spec),
-    draftStartTraits(catalog, route, spec.loadout),
+    prepareRouteStartTraitRequirements(catalog, route, spec.loadout).held,
   );
   const traitOrder = prerequisiteOrder(interleaved, needs);
   const traitPlaces = spread(traitOrder.length, biomeKeys, capacity);

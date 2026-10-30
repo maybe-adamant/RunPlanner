@@ -16,6 +16,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import {
   assessInitialOfferSupport,
+  initialOfferCoreOnlyKeys,
   initialOfferStartingOptions,
 } from '../../../../src/simulation/traits/authoring/initial-composition';
 import { traitOfferGenerationInput } from '../../../../src/simulation/traits/authoring/assessment';
@@ -254,6 +255,23 @@ describe('native initial offer construction', () => {
         ]),
       ),
     ).toBe(false);
+  });
+
+  it('holds only vacant cores in a fresh offer until a core is held', () => {
+    expect(initialOfferCoreOnlyKeys(catalog, 'Zeus', createTraitHistoryState())).toEqual([
+      'ZeusWeaponBoon',
+      'ZeusSpecialBoon',
+      'ZeusCastBoon',
+      'ZeusSprintBoon',
+      'ZeusManaBoon',
+    ]);
+    expect(
+      initialOfferCoreOnlyKeys(
+        catalog,
+        'Zeus',
+        history([['Apollo', 'ApolloWeaponBoon', 'Common']]),
+      ),
+    ).toBeUndefined();
   });
 
   it('requires one vacant core later, without requiring Attack or Special', () => {

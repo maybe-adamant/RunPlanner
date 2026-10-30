@@ -638,6 +638,12 @@ export {
   type TraitOfferOptionLevelResolution,
   type TraitOfferOptionLevelResolutionInput,
 } from './traits/offer-levels';
+export {
+  prepareRouteStartTraitRequirements,
+  type RouteStartTraitAssessment,
+  type RouteStartTraitRequirements,
+  type TraitRequirementFailure,
+} from './traits/authoring/route-start-requirements';
 export type { AssessmentIssue } from './assessment-issue';
 export { findingsAddedSince } from './finding-regions';
 

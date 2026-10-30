@@ -42,6 +42,7 @@ export type {
   TraitGiverDeclaration,
   TraitOfferContextDeclaration,
   TraitOfferContextKey,
+  TraitEquipmentSlot,
   TraitOrdinaryBoonSlot,
   TraitProviderKind,
   TraitRarity,
@@ -73,6 +74,8 @@ export type {
 } from './traits';
 export {
   acquisitionOrdinalValue,
+  BASE_TRAIT_ELEMENTS,
+  highestBaseElementCount,
   concaveStoneProcGiver,
   resolveTraitAcquisitionOrdinalEffect,
 } from './traits';

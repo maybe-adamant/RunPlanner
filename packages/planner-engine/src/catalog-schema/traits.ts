@@ -154,6 +154,21 @@ export type TraitRarityDomain =
 
 export type TraitElement = 'Aether' | 'Earth' | 'Air' | 'Fire' | 'Water';
 
+/** The elements a highest-count requirement compares; Aether is not one. */
+export const BASE_TRAIT_ELEMENTS: readonly TraitElement[] = Object.freeze([
+  'Earth',
+  'Air',
+  'Fire',
+  'Water',
+]);
+
+/** The largest base-element count, which a `highestBaseElementCount` requirement reads. */
+export function highestBaseElementCount(
+  elementCounts: Readonly<Record<TraitElement, number>>,
+): number {
+  return Math.max(...BASE_TRAIT_ELEMENTS.map((element) => elementCounts[element]));
+}
+
 /**
  * One number for a rarityless trait, one per acquisition ordinal for a
  * rarityless NPC menu trait, else one per equipped rarity.

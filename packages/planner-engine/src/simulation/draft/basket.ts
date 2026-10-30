@@ -1,16 +1,13 @@
-import type { Catalog, TraitDeclaration, TraitRequirementExpression } from '../../catalog-schema';
-import type { TraitEquipmentSlot } from '../../catalog-schema/traits';
-import type { EquippedTrait } from '../../authored-project/traits/state';
-import { resolveRoutePosition } from '../../authored-project/route-context';
-import { createArcanaFearState } from '../arcana-fear';
-import { createRouteStartHistoryView } from '../history/fold';
-import { createInitialSimulationState } from '../state/construction';
-import type { SimulationState } from '../state/model';
-import { replaceSimulationTraitHistory } from '../state/transitions';
-import { createTraitHistoryState } from '../traits/history/fold';
-import { checkRequirement } from '../traits/level-effects';
-import { initialOfferCoreOnlyKeys } from '../traits/authoring/initial-composition';
-import type { TraitHistoryState } from '../traits/history/model';
+import type {
+  Catalog,
+  TraitDeclaration,
+  TraitEquipmentSlot,
+  TraitRequirementExpression,
+} from '../../catalog-schema';
+import {
+  prepareRouteStartTraitRequirements,
+  type RouteStartTraitRequirements,
+} from '../traits/authoring/route-start-requirements';
 import type { TraitFindingCode } from '../model';
 import {
   draftBasketTraitKeys,
@@ -19,11 +16,7 @@ import {
   type DraftRoute,
   type DraftSpec,
 } from './spec';
-import {
-  createDraftPrerequisites,
-  type DraftHeldTraits,
-  type DraftPrerequisites,
-} from './prerequisites';
+import { createDraftPrerequisites, type DraftPrerequisites } from './prerequisites';
 import { draftWorldGiverKeys, draftWorldOptions } from './world';
 import { draftGodBoonBudget, draftPerGodCap } from './budget';
 
@@ -128,7 +121,7 @@ export function assessDraftBasket(
   );
   const basket = draftBasketTraitKeys(spec);
   for (const key of basket) traitKeys.add(key);
-  const routeStart = routeStartState(catalog, route, spec.loadout);
+  const routeStart = prepareRouteStartTraitRequirements(catalog, route, spec.loadout);
   const budget = draftGodBoonBudget(catalog, route, spec);
   const plan: DraftPlanScale = {
     godTotalCap: budget.effectiveTotal,
@@ -139,8 +132,8 @@ export function assessDraftBasket(
   const order: DraftOrderContext = {
     queues,
     firstQueues: withoutDuos(catalog, queues),
-    prerequisites: createDraftPrerequisites(catalog, basket, heldTraits(routeStart)),
-    firstPick: draftFirstPick(catalog, route.routeKey, spec, routeStart.traitHistory),
+    prerequisites: createDraftPrerequisites(catalog, basket, routeStart.held),
+    firstPick: draftFirstPick(catalog, route.routeKey, spec, routeStart),
   };
   return Object.freeze({
     traits: Object.freeze(
@@ -225,7 +218,7 @@ function assessTrait(
   spec: DraftSpec,
   basket: readonly string[],
   worldGivers: readonly string[],
-  routeStart: SimulationState,
+  routeStart: RouteStartTraitRequirements,
   order: DraftOrderContext,
   plan: DraftPlanScale,
   traitKey: string,
@@ -295,13 +288,9 @@ function assessTrait(
         requirementTraitKeys: hammers,
       });
   }
-  const requirements = [...trait.eligibilityRequirements, ...trait.linkedBoonRequirements];
-  if (requirements.length > 0) {
-    const state = withBasket(catalog, routeStart, others);
-    for (const requirement of requirements)
-      for (const failure of checkStatic(catalog, requirement, trait, state, deferred))
-        refusals.push({ kind: 'requirement', ...failure });
-  }
+  const requirements = routeStart.assess(traitKey, others);
+  for (const failure of requirements.failures) refusals.push({ kind: 'requirement', ...failure });
+  for (const kind of requirements.contextual) deferred.add(kind);
   if (inBasket) {
     // A Duo waits on its prerequisites in its host's queue, so its place there never refuses it.
     const later = draftTraitKind(trait) === 'duo' ? [] : prerequisitesQueuedAfter(order, traitKey);
@@ -445,104 +434,6 @@ export function draftExcludingTraitKeys(catalog: Catalog, traitKey: string): rea
   return Object.freeze([...keys]);
 }
 
-/** Loadout facts that cannot change during the run; the rest depend on run context. */
-function isStatic(requirement: TraitRequirementExpression): boolean {
-  switch (requirement.kind) {
-    case 'anyEquippedTrait':
-    case 'notEquippedTrait':
-    case 'routeKeyNot':
-    case 'anyActiveArcana':
-    case 'manualArcanaGraspCost':
-      return true;
-    case 'offerContext':
-      return requirement.context === 'circeRemovableFearVow';
-    default:
-      return false;
-  }
-}
-
-function checkStatic(
-  catalog: Catalog,
-  requirement: TraitRequirementExpression,
-  trait: TraitDeclaration,
-  state: SimulationState,
-  deferred: Set<string>,
-): readonly Omit<Extract<DraftTraitRefusal, { kind: 'requirement' }>, 'kind'>[] {
-  if (requirement.kind === 'all')
-    return requirement.requirements.flatMap((child) =>
-      checkStatic(catalog, child, trait, state, deferred),
-    );
-  if (!isStatic(requirement)) {
-    deferred.add(
-      requirement.kind === 'offerContext'
-        ? `offerContext:${requirement.context}`
-        : requirement.kind,
-    );
-    return [];
-  }
-  const failure = checkRequirement(catalog, requirement, trait, state, {});
-  return failure === undefined ? [] : [failure];
-}
-
-/** What the loadout holds at route start: its traits and their element counts. */
-export function draftStartTraits(
-  catalog: Catalog,
-  route: DraftRoute,
-  loadout: DraftLoadout,
-): DraftHeldTraits {
-  return heldTraits(routeStartState(catalog, route, loadout));
-}
-
-function heldTraits(state: SimulationState): DraftHeldTraits {
-  const history = state.traitHistory;
-  return Object.freeze({
-    traitKeys: new Set(Object.keys(history.equippedTraits)),
-    elementCounts: history.elementCounts,
-    godBoonRarityCounts: history.godBoonRarityCounts,
-  });
-}
-
-/** The reached route-start snapshot of the loadout, before anything is acquired. */
-function routeStartState(
-  catalog: Catalog,
-  route: DraftRoute,
-  loadout: DraftLoadout,
-): SimulationState {
-  return createInitialSimulationState(
-    catalog,
-    loadout,
-    loadout.startingKeepsakeKey,
-    createArcanaFearState(catalog, loadout),
-    Object.freeze({
-      routePosition: resolveRoutePosition(catalog, route, route.itineraryBiomeKeys[0]!),
-      historyView: createRouteStartHistoryView(),
-    }),
-  );
-}
-
-/** The basket as a synthetic equipped set over the route-start state. */
-function withBasket(
-  catalog: Catalog,
-  state: SimulationState,
-  traitKeys: readonly string[],
-): SimulationState {
-  const equippedTraits: Record<string, EquippedTrait> = {};
-  for (const traitKey of traitKeys) {
-    const giver = catalog.traitGivers.values.find((g) => g.traitKeys.includes(traitKey));
-    if (giver === undefined) continue;
-    equippedTraits[traitKey] = Object.freeze({
-      traitKey,
-      giverKey: giver.key,
-      providerKind: giver.providerKind,
-      sourceRole: 'draftBasket',
-    });
-  }
-  return replaceSimulationTraitHistory(
-    state,
-    Object.freeze({ ...createTraitHistoryState(), equippedTraits: Object.freeze(equippedTraits) }),
-  );
-}
-
 /**
  * One acquisition source's basket traits in basket order, the order the draft
  * takes them: a world god's own traits and hosted Duos, Hermes or a Hammer giver.
@@ -613,7 +504,7 @@ function draftFirstPick(
   catalog: Catalog,
   routeKey: string,
   spec: DraftSpec,
-  start: TraitHistoryState,
+  start: Pick<RouteStartTraitRequirements, 'coreFirstOfferTraitKeys'>,
 ): DraftFirstPick | undefined {
   const godKey = spec.world.godKeys[0];
   if (godKey === undefined || catalog.traitGivers.byKey[godKey]?.providerKind !== 'olympian')
@@ -630,7 +521,7 @@ export function draftFirstOfferTraitKeys(
   catalog: Catalog,
   routeKey: string,
   godKey: string,
-  start: TraitHistoryState,
+  start: Pick<RouteStartTraitRequirements, 'coreFirstOfferTraitKeys'>,
 ): readonly string[] | undefined {
   const giverTraits = catalog.traitGivers.byKey[godKey]?.traitKeys ?? [];
   const forced = catalog.rooms.values.find(
@@ -638,7 +529,7 @@ export function draftFirstOfferTraitKeys(
       room.firstRunOffer?.routeKey === routeKey &&
       room.firstRunOffer.traitKeys.some((key) => giverTraits.includes(key)),
   )?.firstRunOffer;
-  return forced !== undefined ? forced.traitKeys : initialOfferCoreOnlyKeys(catalog, godKey, start);
+  return forced !== undefined ? forced.traitKeys : start.coreFirstOfferTraitKeys(godKey);
 }
 
 /**
@@ -654,7 +545,7 @@ export function draftFirstBoonRule(
   route: DraftRoute,
   loadout: DraftLoadout,
 ): DraftFirstBoonRule | undefined {
-  const start = routeStartState(catalog, route, loadout).traitHistory;
+  const start = prepareRouteStartTraitRequirements(catalog, route, loadout);
   const godKey = draftWorldOptions(catalog, route).requiredGodKeys[0];
   if (godKey !== undefined) {
     const traitKeys = draftFirstOfferTraitKeys(catalog, route.routeKey, godKey, start);
@@ -674,10 +565,14 @@ export function draftPendingFirstPick(
   route: DraftRoute,
   spec: DraftSpec,
 ): DraftFirstPick | undefined {
-  const routeStart = routeStartState(catalog, route, spec.loadout);
   return pendingFirstPick({
     firstQueues: withoutDuos(catalog, draftSourceQueues(catalog, spec)),
-    firstPick: draftFirstPick(catalog, route.routeKey, spec, routeStart.traitHistory),
+    firstPick: draftFirstPick(
+      catalog,
+      route.routeKey,
+      spec,
+      prepareRouteStartTraitRequirements(catalog, route, spec.loadout),
+    ),
   });
 }
 

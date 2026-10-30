@@ -13,6 +13,7 @@ import {
   draftRefusals,
   draftWorldGiverKeys,
   draftWorldOptions,
+  prepareRouteStartTraitRequirements,
   type DraftLoadout,
   type DraftRoute,
   type DraftSpec,
@@ -22,7 +23,6 @@ import {
   draftFirstOfferTraitKeys,
   draftStartingKeepsakeConflicts,
 } from '../../../src/simulation/draft/basket';
-import { createTraitHistoryState } from '../../../src/simulation/traits/history/fold';
 import { draftBasket } from '../../support/draft-basket';
 
 function route(
@@ -789,19 +789,11 @@ describe('draft first god pick', () => {
   });
 
   it('is unrestricted when the start already holds a core', () => {
-    const empty = createTraitHistoryState();
-    expect(draftFirstOfferTraitKeys(catalog, 'Underworld', 'Zeus', empty)).toEqual(zeusCores);
-    const held = {
-      traitKey: 'ApolloWeaponBoon',
-      giverKey: 'Apollo',
-      providerKind: 'olympian',
-      sourceRole: 'draftBasket',
-    } as const;
+    const start = prepareRouteStartTraitRequirements(catalog, underworld, underworld);
+    expect(draftFirstOfferTraitKeys(catalog, 'Underworld', 'Zeus', start)).toEqual(zeusCores);
     expect(
       draftFirstOfferTraitKeys(catalog, 'Underworld', 'Zeus', {
-        ...empty,
-        equippedTraits: { ApolloWeaponBoon: held },
-        equippedSlots: { Melee: held },
+        coreFirstOfferTraitKeys: () => undefined,
       }),
     ).toBeUndefined();
   });

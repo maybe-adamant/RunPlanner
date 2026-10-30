@@ -56,7 +56,6 @@ import { countedRewardTypeDomain } from '../evaluation/project-evaluation-assemb
 import type { ProjectEvaluationAssembly } from '../evaluation/evaluation-products';
 import { assessmentRepairOwner } from '../finding-regions';
 import type { SemanticFinding } from '../model';
-import { draftStartTraits } from './basket';
 import { latestRunState } from './report';
 import type { RewardOfferExclusionEvidence } from '../rewards/offer-exclusions';
 import type { RewardProducerCandidateResult } from '../rewards/producer-frontiers';
@@ -66,6 +65,7 @@ import {
   type DraftEncounterChoiceContext,
 } from './encounters';
 import { createDraftPrerequisites } from './prerequisites';
+import { prepareRouteStartTraitRequirements } from '../traits/authoring/route-start-requirements';
 import { shuffleDraft, type DraftRng } from './rng';
 import {
   sampleArcanaChoice,
@@ -153,7 +153,11 @@ export class DraftWalk {
     schedule: DraftGodSchedule,
     world: DraftWorldProduct,
   ) {
-    const held = draftStartTraits(catalog, authoring.current().project.route, spec.loadout);
+    const held = prepareRouteStartTraitRequirements(
+      catalog,
+      authoring.current().project.route,
+      spec.loadout,
+    ).held;
     this.steering = new DraftSteering(
       catalog,
       spec,

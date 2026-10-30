@@ -1,6 +1,11 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import type { ProjectDocument } from '../../src/authored-project';
-import { simulateProjectAssembly, type DraftRoute, type DraftSpec } from '../../src/simulation';
+import {
+  prepareRouteStartTraitRequirements,
+  simulateProjectAssembly,
+  type DraftRoute,
+  type DraftSpec,
+} from '../../src/simulation';
 import type { ProjectEvaluationAssembly } from '../../src/simulation/evaluation/evaluation-products';
 import { createDraftRng } from '../../src/simulation/draft/rng';
 import { draftGodSchedule, type DraftGodSchedule } from '../../src/simulation/draft/schedule';
@@ -9,7 +14,6 @@ import { DraftWalk } from '../../src/simulation/draft/walk';
 import { createAuthoringSession } from '../../src/simulation/authoring/session';
 import { DraftSteering } from '../../src/simulation/draft/steering';
 import { createDraftPrerequisites } from '../../src/simulation/draft/prerequisites';
-import { draftStartTraits } from '../../src/simulation/draft/basket';
 import { draftWorld } from '../../src/simulation/draft/world';
 
 /** The schedule a draft of this route builds from the seed. */
@@ -65,7 +69,7 @@ export function draftSteeringFor(base: ProjectDocument, spec: DraftSpec): DraftS
     catalog,
     draftLoadoutProject(catalog, base, spec.loadout),
   );
-  const held = draftStartTraits(catalog, base.route, spec.loadout);
+  const held = prepareRouteStartTraitRequirements(catalog, base.route, spec.loadout).held;
   return new DraftSteering(
     catalog,
     spec,
