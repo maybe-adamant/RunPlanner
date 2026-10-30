@@ -398,7 +398,11 @@ Pom as a consumable store option, and `SpawnStoreItemInWorld` explicitly sets
 the spawned store object's `CanDuplicate` to false (`StoreLogic.lua`, the
 `itemData.Type == "Consumable"` branch). This is an instance override of the
 Pom declaration's base `CanDuplicate = true`: purchases cannot trigger Sea
-Star, including purchased Poms.
+Star, including purchased Poms. A Shrine of Hermes delivery spawns through the
+same function, whether rushed (`SurfaceShopLogic.lua`) or expired
+(`TraitLogic.lua`), so delivered items cannot trigger Sea Star either. Gold
+Gold Gold's free copy of a purchase (`DuplicateWorldShopItem` in
+`StoreLogic.lua`) also has `CanDuplicate` set to false.
 
 This second object also cannot recursively trigger Sea Star. It can still use
 capabilities owned by its fresh declaration; for example, a fresh Pom remains

@@ -24,6 +24,7 @@ import {
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
   roomActionKey,
+  seaStarDuplicateSourceIsActive,
   semanticAddressKey,
   createDefaultAuthoredHexTree,
   resolveRoutePosition,
@@ -799,6 +800,47 @@ describe('Hermes Shrine delayed deliveries', () => {
       });
     },
   );
+
+  it('never lets Sea Star duplicate a delivered store item', () => {
+    const project = loadSurfaceNOHermesShrineDeliveryCheckpoint();
+    const biome = project.route.biomes.find((candidate) =>
+      candidate.topology?.occurrences.some(
+        (occurrence) => occurrence.acquisitionSites?.hermesShrineDelivery !== undefined,
+      ),
+    )!;
+    const biomeAddress = createBiomeAddress(project.route.routeKey, biome.biomeKey);
+    const host = biome.topology!.occurrences.find(
+      (occurrence) => occurrence.acquisitionSites?.hermesShrineDelivery !== undefined,
+    )!;
+    const entryKey = Object.keys(host.acquisitionSites!.hermesShrineDelivery!.pickupEntries!)[0]!;
+    const acquisition = createAcquisitionRoleAddress(
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(biomeAddress, host.occurrenceId),
+          'hermesShrineDelivery',
+        ),
+        entryKey,
+      ),
+      'self',
+    );
+    const duplicated = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition,
+      procced: true,
+    });
+    const duplicatedHost = duplicated.route.biomes
+      .find((candidate) => candidate.biomeKey === biome.biomeKey)!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === host.occurrenceId)!;
+    const siteKey = Object.keys(duplicatedHost.acquisitionSites!).find((key) =>
+      key.startsWith('seaStarDuplicate:'),
+    )!;
+
+    // The spawned store item has CanDuplicate cleared, so the result stays dormant.
+    expect(seaStarDuplicateSourceIsActive(catalog, biomeAddress, duplicatedHost, siteKey)).toBe(
+      false,
+    );
+    expect(() => simulateProject(catalog, duplicated)).not.toThrow();
+  });
 
   it('keeps a delivery pending past the end of a short itinerary without a finding', () => {
     expect(simulateProjectAssembly(catalog, dreamSingleQProject()).evaluation.status).toBe('valid');

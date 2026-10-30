@@ -24,6 +24,17 @@ export interface AuthoredAcquisitionSource {
   readonly action?: RoomActionReference;
 }
 
+/** A wheel's use acquires only its picked offer; the others never become objects. */
+export function rewardWheelOfferIsPicked(
+  occurrence: RoomOccurrence,
+  wheelKey: string,
+  offerKey: string,
+): boolean {
+  const wheel =
+    occurrence.state.kind === 'shipCombat' ? occurrence.state.wheels[wheelKey] : undefined;
+  return wheel !== undefined && Object.keys(wheel.offers)[wheel.pickedOfferIndex - 1] === offerKey;
+}
+
 function sourceAction(
   occurrence: RoomOccurrence,
   owner: TraitOfferOwnerAddress,
@@ -43,7 +54,11 @@ function sourceAction(
           reference.slotKey === owner.slotKey
         );
       case 'rewardWheelOffer':
-        return reference.kind === 'interactWheelReward' && reference.wheelKey === owner.wheelKey;
+        return (
+          reference.kind === 'interactWheelReward' &&
+          reference.wheelKey === owner.wheelKey &&
+          rewardWheelOfferIsPicked(occurrence, owner.wheelKey, owner.offerKey)
+        );
       case 'shopOffer':
         return owner.offerKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
           ? reference.kind === 'interactAcquisitionEntry' &&

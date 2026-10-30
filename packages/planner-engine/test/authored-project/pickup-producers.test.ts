@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import { loadSurfaceNQuickBuckCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import { loadUnderworldFGCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import { nBiome, nOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOProject,
+  nBiome,
+  nOccurrenceIds,
+  oBiome,
+  oOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 
 import {
   createBiomeAddress,
@@ -113,6 +119,66 @@ describe('authored pickup producers', () => {
       ).map((producer) => producer.traitKey);
     expect(producers(room)).toEqual([]);
     expect(producers(rerolled)).toEqual(['RoomRewardBonusBoon']);
+  });
+
+  it('keeps a producer on an unpicked wheel offer out of acquisition', () => {
+    const room = loadSurfaceNOProject()
+      .route.biomes.find((biome) => biome.biomeKey === 'O')!
+      .topology!.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === oOccurrenceIds.combat04,
+      )!;
+    const ship = room.state;
+    if (ship.kind !== 'shipCombat') throw new Error('combat04 is not a Ship room');
+    const wheel = ship.wheels.wheel1!;
+    const withPick = (pickedOfferIndex: number) =>
+      ({
+        ...room,
+        state: {
+          ...ship,
+          wheels: {
+            ...ship.wheels,
+            wheel1: {
+              ...wheel,
+              offerCount: 2,
+              pickedOfferIndex,
+              offers: {
+                ...wheel.offers,
+                offer2: {
+                  offer: {
+                    rewardType: 'Boon',
+                    payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' },
+                  },
+                  traitOffersByAcquisitionRole: {
+                    source: {
+                      kind: 'traits',
+                      giverKey: 'Poseidon',
+                      options: [
+                        { traitKey: 'RoomRewardBonusBoon', rarity: 'Common' },
+                        { traitKey: 'PoseidonWeaponBoon', rarity: 'Common' },
+                        { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
+                      ],
+                      selectedOptionKey: 'option1',
+                      rarificationActions: [],
+                    },
+                  },
+                  dispositionByAcquisitionRole: { source: { kind: 'normal' } },
+                },
+              },
+            },
+          },
+        },
+      }) as unknown as RoomOccurrence;
+    const buriedTreasureNormal = (occurrence: RoomOccurrence) =>
+      selectedPickupProducers(
+        catalog,
+        oBiome,
+        occurrence,
+        catalog.rooms.byKey[occurrence.gameName]!,
+        1,
+      ).map((producer) => [producer.traitKey, producer.sourceNormal]);
+
+    expect(buriedTreasureNormal(withPick(2))).toEqual([['RoomRewardBonusBoon', true]]);
+    expect(buriedTreasureNormal(withPick(1))).toEqual([['RoomRewardBonusBoon', false]]);
   });
 
   it('discovers and preserves Quick Buck’s selected producer site, entry, and source action', () => {

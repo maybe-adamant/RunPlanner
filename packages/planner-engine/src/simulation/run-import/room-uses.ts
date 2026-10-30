@@ -32,22 +32,12 @@ export function collectedSources(
   occurrence: RoomOccurrence,
 ): readonly AuthoredAcquisitionSource[] {
   const biome = createBiomeAddress(context.assembly().project.route.routeKey, biomeKey);
-  const state = occurrence.state;
-  return authoredAcquisitionSources(biome, occurrence).filter((source) => {
-    const owner = source.acquisition.owner;
-    // A wheel's action collects only its picked offer.
-    if (
-      owner.kind === 'rewardWheelOffer' &&
-      (state.kind !== 'shipCombat' ||
-        owner.offerKey !== `offer${state.wheels[owner.wheelKey]?.pickedOfferIndex}`)
-    )
-      return false;
-    // A converted pickup is no longer its own object.
-    return (
+  // A converted pickup is no longer its own object.
+  return authoredAcquisitionSources(biome, occurrence).filter(
+    (source) =>
       source.reward.dispositionByAcquisitionRole[source.acquisition.acquisitionRole]?.kind ===
-        'normal' && acquisitionSourceIsParticipating(occurrence, source)
-    );
-  });
+        'normal' && acquisitionSourceIsParticipating(occurrence, source),
+  );
 }
 
 /**

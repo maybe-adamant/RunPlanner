@@ -4,6 +4,7 @@ import {
   applyProjectCommand,
   applyProjectHistoryCommand,
   assembleRoomActionDomain,
+  createAcquisitionRoleAddress,
   createBatchRewardStoreAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
@@ -18,8 +19,10 @@ import {
   createTargetAddress,
   createTraitOfferAddress,
   roomActionKey,
+  seaStarDuplicateSourceIsActive,
   semanticAddressKey,
   undoProjectHistory,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
@@ -1056,6 +1059,87 @@ describe('selected O validation', () => {
       { kind: 'rewardWheelOffer', result: { supported: true, findings: [] } },
       { kind: 'rewardWheelPicked', result: { selectedPossible: true, findings: [] } },
     ]);
+  });
+
+  it("leaves an unpicked wheel offer's Sea Star duplicate and Artificer replacement dormant", () => {
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
+    const secondOffer = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat04,
+      'wheel1',
+      'offer2',
+    );
+    const acquisition = createAcquisitionRoleAddress(secondOffer, 'self');
+    let picked = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel,
+      offerCount: 2,
+    });
+    picked = applyProjectCommand(picked, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: secondOffer,
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+    picked = applyProjectCommand(picked, catalog, {
+      kind: 'ReplaceRewardWheelPicked',
+      wheel,
+      pickedOfferIndex: 2,
+    });
+    const duplicated = applyProjectCommand(picked, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition,
+      procced: true,
+    });
+    const converted = applyProjectCommand(picked, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition,
+      value: { kind: 'artificer' },
+    });
+    const combat04 = (project: ProjectDocument) =>
+      project.route.biomes
+        .find((biome) => biome.biomeKey === 'O')!
+        .topology!.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === oOccurrenceIds.combat04,
+        )!;
+    const generatedSiteKeys = (project: ProjectDocument) =>
+      Object.keys(combat04(project).acquisitionSites ?? {});
+    const duplicateSiteKey = generatedSiteKeys(duplicated).find((key) =>
+      key.startsWith('seaStarDuplicate:'),
+    )!;
+    const sourceActive = (project: ProjectDocument) =>
+      seaStarDuplicateSourceIsActive(catalog, oBiome, combat04(project), duplicateSiteKey);
+    const generatedFindings = (project: ProjectDocument) =>
+      JSON.stringify(simulateProject(catalog, project).findings).match(
+        /seaStarDuplicate:|artificer:/g,
+      );
+    expect(sourceActive(duplicated)).toBe(true);
+
+    for (const edit of [
+      { kind: 'ReplaceRewardWheelOfferCount', wheel, offerCount: 1 },
+      { kind: 'ReplaceRewardWheelPicked', wheel, pickedOfferIndex: 1 },
+    ] as const) {
+      // The offer never becomes an object, so its retained children await a repick.
+      const unpicked = applyProjectCommand(duplicated, catalog, edit);
+      expect(generatedSiteKeys(unpicked)).toEqual(generatedSiteKeys(duplicated));
+      expect(combat04(unpicked).roomActions.order).toEqual(combat04(duplicated).roomActions.order);
+      expect(sourceActive(unpicked)).toBe(false);
+      expect(generatedFindings(unpicked)).toBeNull();
+
+      const unconverted = applyProjectCommand(converted, catalog, edit);
+      expect(generatedSiteKeys(unconverted)).toEqual(generatedSiteKeys(converted));
+      expect(generatedFindings(unconverted)).toBeNull();
+    }
+    const repicked = applyProjectCommand(
+      applyProjectCommand(duplicated, catalog, {
+        kind: 'ReplaceRewardWheelPicked',
+        wheel,
+        pickedOfferIndex: 1,
+      }),
+      catalog,
+      { kind: 'ReplaceRewardWheelPicked', wheel, pickedOfferIndex: 2 },
+    );
+    expect(repicked).toEqual(duplicated);
+    expect(sourceActive(repicked)).toBe(true);
   });
 
   it('rejects a stale wheel2 Hammer after the route loadout changes', () => {

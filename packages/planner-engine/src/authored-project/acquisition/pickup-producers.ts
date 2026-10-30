@@ -34,6 +34,7 @@ import {
   type TraitOfferOwnerAddress,
 } from '../addresses';
 import { acquisitionSiteFromStorageKey } from './artificer';
+import { rewardWheelOfferIsPicked } from './acquisition-sources';
 import { roomActionKey } from '../room-actions/key';
 import { ERIS_GIFT_ENTRY_KEY, ERIS_GIFT_SITE_KEY } from './eris-gift';
 import { directEncounterDefinitionKeyForSlot } from '../room-state/encounter-envelope';
@@ -472,7 +473,10 @@ function traitPickupOffers(
                 };
         }
       })();
-      const participates = actionKeys.has(roomActionKey(sourceAction));
+      const participates =
+        actionKeys.has(roomActionKey(sourceAction)) &&
+        (owner.kind !== 'rewardWheelOffer' ||
+          rewardWheelOfferIsPicked(occurrence, owner.wheelKey, owner.offerKey));
       result.push({
         source,
         sourceAction: Object.freeze(sourceAction),

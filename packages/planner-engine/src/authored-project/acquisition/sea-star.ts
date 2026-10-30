@@ -12,6 +12,8 @@ import {
 } from './acquisition-sources';
 import { createUnresolvedAcquisitionRewardState } from '../traits/state';
 import { resolveAcquisitionRole } from '../../reward-kernel/history';
+import { HERMES_SHRINE_DELIVERY_SITE_KEY } from '../hermes-shrine-delivery';
+import { ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY } from '../shop';
 
 export const SEA_STAR_DUPLICATE_ENTRY_KEY = 'seaStarDuplicate';
 
@@ -123,10 +125,16 @@ export function seaStarDuplicateSourceIsActive(
   // StoreLogic clears CanDuplicate for the purchased Shop offer itself. A
   // free acquisition-entry pickup generated within that room is independent
   // of the purchase and retains its own producer lifecycle.
-  // The Contract pedestal's item is a store item too.
+  // The Contract pedestal's item is a store item too; a Shrine delivery
+  // spawns through the same store-item path, and Gold Gold Gold's duplicate
+  // clears CanDuplicate itself.
+  const owner = matched.acquisition.owner;
   if (
-    matched.acquisition.owner.kind === 'shopOffer' ||
-    matched.acquisition.owner.kind === 'infernalContractPedestal'
+    owner.kind === 'shopOffer' ||
+    owner.kind === 'infernalContractPedestal' ||
+    (owner.kind === 'acquisitionEntry' &&
+      (owner.site.pointKey === HERMES_SHRINE_DELIVERY_SITE_KEY ||
+        owner.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY))
   )
     return false;
   return (

@@ -5,6 +5,7 @@ import { createEchoGoldHPrebossProject, goldenHBiome } from '@run-planner/test-f
 import {
   applyProjectCommand,
   createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -12,6 +13,7 @@ import {
   createStartingRewardAddress,
   createRoomActionAddress,
   roomActionKey,
+  seaStarDuplicateSourceIsActive,
   type ProjectDocument,
   type ProjectCommand,
 } from '@run-planner/engine/authored-project';
@@ -102,6 +104,34 @@ describe('required Echo Gold activation', () => {
       value: { rewardType: 'BlindBoxLoot' },
     });
     expect(gold(settle(optional, purchase).project)).toBeUndefined();
+  });
+  it('never lets Sea Star duplicate the Echo Gold copy', () => {
+    const minor = createShopOfferAddress(goldenHBiome, owner.occurrenceId, 'Minor');
+    let duplicated = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopPurchaseParticipation',
+      offer: minor,
+      purchased: true,
+    });
+    duplicated = applyProjectCommand(duplicated, catalog, {
+      kind: 'PlaceEchoGoldPickup',
+      site,
+      entryKey: 'echoDoubleShopReward',
+      sourceOfferKey: 'Minor',
+    });
+    duplicated = applyProjectCommand(duplicated, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition: createAcquisitionRoleAddress(entry, 'self'),
+      procced: true,
+    });
+    const siteKey = Object.keys(shop(duplicated).acquisitionSites ?? {}).find((key) =>
+      key.startsWith('seaStarDuplicate:'),
+    )!;
+
+    // The copy is spawned with CanDuplicate cleared, so the result stays dormant.
+    expect(seaStarDuplicateSourceIsActive(catalog, goldenHBiome, shop(duplicated), siteKey)).toBe(
+      false,
+    );
+    expect(() => evaluate(duplicated)).not.toThrow();
   });
   it('inserts a newly required duplicate when an optional source becomes loot', () => {
     let optional = applyProjectCommand(project, catalog, {
