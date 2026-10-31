@@ -1066,7 +1066,10 @@ required encounter interaction. Quick Buck and Buried Treasure entries are
 optional. Artificer replacements and fresh full-Pom Sea Star duplicates are
 required. A spawned pickup owns its exact authored reward and acquisition-time
 children at the site; the action row references that payload owner and does
-not duplicate its editor.
+not duplicate its editor. Its roster row and derived-entry capability name its
+source family (a trait by key, Echo, Artificer, Sea Star, a Nemesis event, Eris's
+gift, a Hermes Shrine delivery or the Travel Deal restock); consumers never read
+it from entry or site keys.
 
 Narcissus demonstrates the producer/acquisition distinction. The selected
 player-rarityless trait enters equipped history and may emit zero or more

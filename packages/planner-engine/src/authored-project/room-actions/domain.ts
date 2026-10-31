@@ -64,6 +64,10 @@ import {
   selectedPickupProducerForEntry,
 } from '../acquisition/pickup-producers';
 import {
+  acquisitionEntrySourceFamily,
+  type AcquisitionEntrySourceFamily,
+} from '../acquisition/entry-source-family';
+import {
   assembleRoomLifecycleStructure,
   authoredRoomLifecycleProfileKey,
   type RoomActionWindow,
@@ -91,6 +95,8 @@ export interface RoomActionContribution {
   readonly dependencies: readonly RoomActionDependency[];
   /** Usable throughout the visit: the window follows the authored rank and never crosses another. */
   readonly windowFollowsOrder?: true;
+  /** What created an acquisition-entry pickup; absent for every other action. */
+  readonly sourceFamily?: AcquisitionEntrySourceFamily;
 }
 
 export interface RoomActionCheckpointContribution {
@@ -691,7 +697,13 @@ function baseContribution(
         catalog.rooms.byKey[occurrence.gameName],
         routePosition,
       );
-      return contribution(
+      const sourceFamily = acquisitionEntrySourceFamily(
+        catalog,
+        reference.siteKey,
+        reference.entryKey,
+        producer,
+      );
+      const action = contribution(
         biome,
         occurrence,
         reference,
@@ -739,6 +751,7 @@ function baseContribution(
             ? actionOwner(biome, occurrence, reference)
             : createAcquisitionEntryAddress(site, reference.entryKey),
       );
+      return sourceFamily === undefined ? action : frozen({ ...action, sourceFamily });
     }
   }
 }

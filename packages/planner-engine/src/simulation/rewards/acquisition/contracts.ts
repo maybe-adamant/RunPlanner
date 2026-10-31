@@ -93,6 +93,8 @@ export interface DerivedAcquisitionEntryFrontier {
   /** Exact engine-derived state when the source offer is copied without fresh payload resolution. */
   readonly fixedReward?: AuthoredRewardState;
   readonly producerLifecycleKey?: string;
+  /** The trait whose clock matured a clocked pickup. */
+  readonly traitKey?: string;
   /** Exact encounter end that matured a cross-occurrence Shrine delivery. */
   readonly encounterPhaseKey?: string;
   readonly participation?: 'required' | 'optional';

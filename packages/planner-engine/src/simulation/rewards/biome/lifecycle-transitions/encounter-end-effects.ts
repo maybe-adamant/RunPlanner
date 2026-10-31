@@ -608,6 +608,7 @@ export function applyEncounterEndEffectsTransition(
               rewardTypes: Object.freeze([pickup.rewardType]),
               fixedReward,
               producerLifecycleKey: maturity.producerLifecycleKey,
+              traitKey: maturity.traitKey,
               encounterPhaseKey: event.phaseKey,
               participation: 'optional',
               branchesBeforeEntry: Object.freeze([branch]),

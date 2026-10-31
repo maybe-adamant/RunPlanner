@@ -276,6 +276,7 @@ export {
   selectedPickupProducers,
   activeSelectedPickupProducers,
 } from './acquisition/pickup-producers';
+export type { AcquisitionEntrySourceFamily } from './acquisition/entry-source-family';
 export {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,

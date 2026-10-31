@@ -5,6 +5,7 @@ import {
   type AcquisitionSiteAddress,
 } from '../../../authored-project/addresses';
 import type { AuthoredRewardState } from '../../../authored-project/model';
+import type { AcquisitionEntrySourceFamily } from '../../../authored-project/acquisition/entry-source-family';
 import type { Catalog } from '../../../catalog-schema';
 import type { ConcreteAcquisitionEvent } from '../../../reward-kernel';
 import type { FindingEvidence } from '../../model';
@@ -35,6 +36,30 @@ export interface DerivedAcquisitionEntryCandidateCapability {
   readonly participation?: 'required' | 'optional';
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
+  /** What creates a derived pickup; absent for Shop inventory placeholders and resolved items. */
+  readonly sourceFamily?: AcquisitionEntrySourceFamily;
+}
+
+function derivedPickupSourceFamily(
+  frontier: DerivedAcquisitionEntryFrontier,
+): AcquisitionEntrySourceFamily | undefined {
+  switch (frontier.kind) {
+    case 'clockedTraitPickup':
+      return frontier.traitKey === undefined
+        ? undefined
+        : Object.freeze({ kind: 'trait', traitKey: frontier.traitKey });
+    case 'echoDoubleShopReward':
+    case 'echoLastReward':
+      return Object.freeze({ kind: 'echo' });
+    case 'hermesShrineDelivery':
+      return Object.freeze({ kind: 'hermesShrineDelivery' });
+    case 'travelDealRefill':
+      return Object.freeze({ kind: 'shopTravelDealRefill' });
+    case 'echoDoubleShopPlaceholder':
+    case 'travelDealPlaceholder':
+    case 'acquisitionResolvedReward':
+      return undefined;
+  }
 }
 export interface DerivedAcquisitionEntryCandidateArtifacts {
   readonly at: (
@@ -61,6 +86,7 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
         JSON.stringify(frontier.rewardTypes) !== JSON.stringify(first.rewardTypes) ||
         JSON.stringify(frontier.fixedReward) !== JSON.stringify(first.fixedReward) ||
         frontier.producerLifecycleKey !== first.producerLifecycleKey ||
+        frontier.traitKey !== first.traitKey ||
         frontier.encounterPhaseKey !== first.encounterPhaseKey ||
         frontier.participation !== first.participation ||
         frontier.retainedSourceMismatch !== first.retainedSourceMismatch ||
@@ -69,6 +95,7 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
     )
   )
     return undefined;
+  const sourceFamily = derivedPickupSourceFamily(first);
   return Object.freeze({
     kind: first.kind,
     ...(first.sourceOfferKey === undefined ? {} : { sourceOfferKey: first.sourceOfferKey }),
@@ -88,6 +115,7 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
     ...(first.eligibleSourceOfferKeys === undefined
       ? {}
       : { eligibleSourceOfferKeys: first.eligibleSourceOfferKeys }),
+    ...(sourceFamily === undefined ? {} : { sourceFamily }),
   });
 }
 export function createDerivedAcquisitionEntryCandidateArtifacts(

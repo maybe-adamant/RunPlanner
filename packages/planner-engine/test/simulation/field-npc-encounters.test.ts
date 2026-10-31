@@ -2057,6 +2057,7 @@ describe('field NPC encounter requirements', () => {
     const matured = maturedSites[0]!;
     const accepted = matured.entries[0]!;
     const ignored = matured.entries[1]!;
+    expect(accepted.sourceFamily).toEqual({ kind: 'trait', traitKey: 'SupplyDropBoon' });
     const placement = clockedTraitPickupPlacementForProjectEvaluationAssembly(
       assembly,
       accepted.address,

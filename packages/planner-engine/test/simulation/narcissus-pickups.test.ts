@@ -517,6 +517,7 @@ describe('Narcissus pickup producer', () => {
       window: { kind: 'postOutgoing' },
       rank: null,
       stale: false,
+      sourceFamily: { kind: 'trait', traitKey: 'NarcissusD' },
     });
     expect(
       blocked?.roomActionRoster.proposals.some(

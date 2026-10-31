@@ -198,6 +198,7 @@ export function assembleRoomActionRoster(options: {
           ? frozen({ kind: 'postOutgoing' })
           : frozen({ kind: 'standard', phase: 'afterCombat' })),
       dependencies: entry?.dependencies ?? frozen([]),
+      ...(entry?.sourceFamily === undefined ? {} : { sourceFamily: entry.sourceFamily }),
       rank: index + 1,
       stale: entry === undefined,
       executable:
@@ -220,6 +221,7 @@ export function assembleRoomActionRoster(options: {
         participation: action.participation,
         window: action.window,
         dependencies: action.dependencies,
+        ...(action.sourceFamily === undefined ? {} : { sourceFamily: action.sourceFamily }),
         rank: null,
         stale: false,
         executable: false,
