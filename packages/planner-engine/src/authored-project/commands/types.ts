@@ -751,6 +751,12 @@ export type EncounterOccurrenceCommand =
       readonly value: number | null;
     }
   | {
+      /** A Nemesis combat's kill-race outcome; win or null removes the stored value. */
+      readonly kind: 'ReplaceNemesisBetOutcome';
+      readonly phase: EncounterPhaseAddress;
+      readonly value: import('../model').AuthoredNemesisBetOutcome | null;
+    }
+  | {
       /** Null restores the native Default by removing this sparse decision. */
       readonly kind: 'ReplaceEncounterCustomization';
       readonly phase: EncounterPhaseAddress;

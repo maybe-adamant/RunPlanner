@@ -360,6 +360,10 @@ export interface WorkspaceInteractionCatalog {
     string,
     import('./contracts/locals').WorkspaceAetosInteraction
   >;
+  readonly nemesisBets: ReadonlyMap<
+    string,
+    import('./contracts/locals').WorkspaceNemesisBetInteraction
+  >;
   readonly gorgonConditions: ReadonlyMap<string, WorkspaceGorgonConditionInteraction>;
   readonly erisObservations: ReadonlyMap<string, WorkspaceErisObservationInteraction>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;

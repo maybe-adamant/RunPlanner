@@ -1,8 +1,10 @@
 import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../../catalog-schema';
-import type {
-  AuthoredEncounterCustomization,
-  AuthoredNemesisRandomEventOutcome,
-  RoomEncounterState,
+import {
+  NEMESIS_BET_OUTCOMES,
+  type AuthoredEncounterCustomization,
+  type AuthoredNemesisBetOutcome,
+  type AuthoredNemesisRandomEventOutcome,
+  type RoomEncounterState,
 } from '../../model';
 import type { AuthoredTraitOffer } from '../../traits/state';
 import {
@@ -17,6 +19,7 @@ import {
 } from '../../validation';
 import {
   encounterAuthoringProfileForKey,
+  encounterBindingHostsNemesisBet,
   encounterBindingsBySlot,
   directEncounterDefinitionKeyForSlot,
   encounterSetForBinding,
@@ -54,6 +57,7 @@ export function decodeRoomEncounterState(
       ...(state.aetosWaveByPhase === undefined ? [] : ['aetosWaveByPhase']),
       ...(state.traitOffersByPhase === undefined ? [] : ['traitOffersByPhase']),
       ...(state.nemesisRandomEventByPhase === undefined ? [] : ['nemesisRandomEventByPhase']),
+      ...(state.nemesisBetOutcomeByPhase === undefined ? [] : ['nemesisBetOutcomeByPhase']),
       ...(state.customizationByPhase === undefined ? [] : ['customizationByPhase']),
       ...(state.judgmentArcanaKeysByPhase === undefined ? [] : ['judgmentArcanaKeysByPhase']),
       ...(state.figurineArcanaKeysByPhase === undefined ? [] : ['figurineArcanaKeysByPhase']),
@@ -103,6 +107,23 @@ export function decodeRoomEncounterState(
         wave,
         `${path}.aetosWaveByPhase.${phaseKey}`,
       );
+    }
+  }
+  const nemesisBetOutcomeByPhase: Record<string, Exclude<AuthoredNemesisBetOutcome, 'win'>> = {};
+  if (state.nemesisBetOutcomeByPhase !== undefined) {
+    for (const [phaseKey, outcome] of Object.entries(
+      expectRecord(state.nemesisBetOutcomeByPhase, `${path}.nemesisBetOutcomeByPhase`),
+    )) {
+      const label = `${path}.nemesisBetOutcomeByPhase.${phaseKey}`;
+      const binding = bindings.get(phaseKey);
+      if (binding === undefined) failProjectDocument(label, 'unknown encounter phase');
+      if (!encounterBindingHostsNemesisBet(catalog, binding, label))
+        failProjectDocument(label, 'phase cannot host a Nemesis bet combat');
+      const value = expectString(outcome, label);
+      if (value === 'win') failProjectDocument(label, 'must omit the default win');
+      if (!(NEMESIS_BET_OUTCOMES as readonly string[]).includes(value))
+        failProjectDocument(label, 'must be tie or loss');
+      nemesisBetOutcomeByPhase[phaseKey] = value as Exclude<AuthoredNemesisBetOutcome, 'win'>;
     }
   }
   const judgmentArcanaKeysByPhase: Record<string, readonly string[]> = {};
@@ -453,6 +474,9 @@ export function decodeRoomEncounterState(
     ...(Object.keys(nemesisRandomEventByPhase).length === 0
       ? {}
       : { nemesisRandomEventByPhase: Object.freeze(nemesisRandomEventByPhase) }),
+    ...(Object.keys(nemesisBetOutcomeByPhase).length === 0
+      ? {}
+      : { nemesisBetOutcomeByPhase: Object.freeze(nemesisBetOutcomeByPhase) }),
     ...(Object.keys(customizationByPhase).length === 0
       ? {}
       : { customizationByPhase: Object.freeze(customizationByPhase) }),

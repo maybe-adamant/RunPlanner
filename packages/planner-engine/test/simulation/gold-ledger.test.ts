@@ -199,7 +199,7 @@ describe('gold ledger walk', () => {
     });
   });
 
-  it('takes a Nemesis trade’s cost and assumes a won Nemesis bet', () => {
+  it('takes a Nemesis trade’s cost and settles a Nemesis bet by its authored outcome', () => {
     // The checkpoint stops inside the trading room, so read its walk publication.
     const traded = simulateProjectAssembly(catalog, loadNemesisPomSeaStarCheckpoint());
     const trades = traded.evaluation.route.biomes.flatMap((biome) =>
@@ -210,11 +210,30 @@ describe('gold ledger walk', () => {
         : [],
     );
     expect(trades).toContainEqual({ kind: 'nemesisTrade', min: 80, max: 105 });
-    const bet = gains(
-      ledger(fixture('fg-npc-shopping-protection')),
-      createOccurrenceAddress(createBiomeAddress('Underworld', 'G'), 'golden-g-b4-e1' as never),
-    ).find(([kind]) => kind === 'nemesisBet');
-    expect(bet?.[1]).toBeGreaterThan(0);
+    const project = fixture('fg-npc-shopping-protection');
+    const g = createBiomeAddress('Underworld', 'G');
+    const nemesisRoom = createOccurrenceAddress(g, 'golden-g-b4-e1' as never);
+    const betWith = (value: 'win' | 'tie' | 'loss' | null) =>
+      gains(
+        ledger(
+          applyProjectCommand(project, catalog, {
+            kind: 'ReplaceNemesisBetOutcome',
+            phase: createEncounterPhaseAddress(
+              g,
+              { kind: 'occurrence', occurrenceId: 'golden-g-b4-e1' as never },
+              'Encounter',
+            ),
+            value,
+          }),
+        ),
+        nemesisRoom,
+      ).find(([kind]) => kind === 'nemesisBet')?.[1] as number;
+    const unauthored = gains(ledger(project), nemesisRoom).find(([kind]) => kind === 'nemesisBet');
+    expect(unauthored?.[1]).toBeGreaterThan(0);
+    expect(betWith('win')).toBe(unauthored?.[1]);
+    expect(betWith('tie')).toBe(0);
+    expect(betWith('loss')).toBeLessThan(0);
+    expect(betWith('loss')).toBeGreaterThanOrEqual(-100);
   });
 
   it('pays Narcissus’s Precious Metals and a Time Piece conversion', () => {

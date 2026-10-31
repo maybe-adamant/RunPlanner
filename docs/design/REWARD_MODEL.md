@@ -916,15 +916,16 @@ over one (Quick Buck, Chaos Affluence's authored value), at the contact:
   pickup.
 - Personal Loan takes the whole balance at acquisition and pays it back with
   its return at the next non-final boss; a rarity change adjusts the return.
-- A Nemesis trade costs an even roll over its range. A Nemesis combat's bet,
-  whose outcome the plan does not record, is taken as won: it pays the bet,
-  the balance's mean up to the cap, times the money multiplier.
+- A Nemesis trade costs an even roll over its range. A Nemesis combat's bet
+  stakes the balance's mean up to the cap and settles by the phase's authored
+  kill race, a win when unauthored: a win pays the bet times the money
+  multiplier, a tie nothing, and a loss takes the bet.
 - While a held curse blocks gold (Pauper's), every gain the game pays as
   collected coins pays nothing: money pickups, Heracles's bounty, Medea's
   drops, Narcissus's and fallback gold, kill and urn drops, and a loan's
   payback, whose stored gold is lost. The Arcana, Time Piece, Price of Midas,
-  Pool and bet gains pay nothing too. A Gold Purse still pays, and spending is
-  unaffected.
+  Pool and won-bet gains pay nothing too. A Gold Purse still pays, and
+  spending, a lost bet included, is unaffected.
 
 A room reward collected in another room than the one it spawned in, and
 coins whose spawn the walk does not see (Hermes deliveries, Nemesis and Echo

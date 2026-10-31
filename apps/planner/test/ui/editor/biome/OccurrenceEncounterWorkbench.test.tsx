@@ -185,6 +185,41 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.queryByRole('checkbox', { name: 'Aetos appearance' })).toBeNull();
   });
 
+  it('authors a Nemesis combat outcome in Events and undoes it', async () => {
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisCombatF',
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const outcome = () => screen.getByRole('combobox', { name: 'Outcome' }) as HTMLSelectElement;
+    expect(outcome().value).toBe('win');
+    await view.user.selectOptions(outcome(), 'loss');
+    expect(outcome().value).toBe('loss');
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.topology?.occurrences.find((room) => room.occurrenceId === occurrenceId)?.encounters,
+    ).toMatchObject({ nemesisBetOutcomeByPhase: { Encounter: 'loss' } });
+    act(() => {
+      view.application.store.dispatch(authoredProjectUndoRequested());
+    });
+    expect(outcome().value).toBe('win');
+  });
+
   it('hides later unselected Aetos controls but focuses a retained duplicate for repair', async () => {
     const fixture = reachedPOutdoorIcarusFixture();
     const earlier = createEncounterPhaseAddress(

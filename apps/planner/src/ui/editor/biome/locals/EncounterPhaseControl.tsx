@@ -477,7 +477,7 @@ export function EncounterPhaseControl({
   );
 }
 
-/** The events decided when one phase starts (Fig Leaf, Gorgon, Aetos); none renders nothing. */
+/** The events decided in one phase (Fig Leaf, Gorgon, Aetos, Nemesis kill race); none renders nothing. */
 export function EncounterPhaseEvents({
   interactions,
   phase,
@@ -585,7 +585,40 @@ export function EncounterPhaseEvents({
         </span>
       </div>
     );
-  if (figLeafControl === null && gorgonControl === null && aetosControl === null) return null;
+  const nemesisBet = phase.nemesisBet;
+  const nemesisBetInteraction =
+    nemesisBet === undefined
+      ? undefined
+      : requireWorkspaceInteraction(interactions.nemesisBets, nemesisBet.interactionKey);
+  const nemesisBetControl =
+    nemesisBetInteraction === undefined ? null : (
+      <label className="encounter-event-control">
+        <span>Outcome</span>
+        <select
+          className="nemesis-contest-result"
+          onChange={(event) => {
+            const choice = nemesisBetInteraction.choices.find(
+              (option) => option.value === event.target.value,
+            );
+            if (choice !== undefined) executeIntent(nemesisBetInteraction.intentFor(choice.value));
+          }}
+          value={nemesisBetInteraction.outcome}
+        >
+          {nemesisBetInteraction.choices.map((choice) => (
+            <option key={choice.value} value={choice.value}>
+              {choice.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  if (
+    figLeafControl === null &&
+    gorgonControl === null &&
+    aetosControl === null &&
+    nemesisBetControl === null
+  )
+    return null;
   return (
     <div
       aria-label={`${phase.identityLabel} events`}
@@ -595,6 +628,7 @@ export function EncounterPhaseEvents({
       {figLeafControl}
       {gorgonControl}
       {aetosControl}
+      {nemesisBetControl}
     </div>
   );
 }

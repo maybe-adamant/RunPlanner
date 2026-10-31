@@ -145,6 +145,144 @@ function withAssembly(project: ProjectDocument) {
   return simulateProjectAssembly(catalog, project);
 }
 
+describe('Nemesis bet outcome', () => {
+  const phase = createEncounterPhaseAddress(
+    goldenFBiome,
+    { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+    'Encounter',
+  );
+  const bets = (project: ProjectDocument) =>
+    occurrence(project, 'F', goldenFOccurrenceId(5, 1)).encounters.nemesisBetOutcomeByPhase;
+  const roundTrip = (project: ProjectDocument) =>
+    decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
+
+  it('authors a clean combat’s kill race sparsely, keeps it dormant across selection, and clears it', () => {
+    const combat = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisCombatF',
+    });
+    expect(bets(roundTrip(combat))).toBeUndefined();
+    const history = applyProjectHistoryCommand(createProjectHistory(combat), catalog, {
+      kind: 'ReplaceNemesisBetOutcome',
+      phase,
+      value: 'loss',
+    });
+    const lost = roundTrip(history.present);
+    expect(bets(lost)).toEqual({ Encounter: 'loss' });
+    expect(undoProjectHistory(history).present).toBe(combat);
+    expect(
+      applyProjectCommand(lost, catalog, {
+        kind: 'ReplaceNemesisBetOutcome',
+        phase,
+        value: 'loss',
+      }),
+    ).toBe(lost);
+    expect(
+      applyProjectCommand(combat, catalog, {
+        kind: 'ReplaceNemesisBetOutcome',
+        phase,
+        value: 'win',
+      }),
+    ).toBe(combat);
+    const winHistory = applyProjectHistoryCommand(createProjectHistory(combat), catalog, {
+      kind: 'ReplaceNemesisBetOutcome',
+      phase,
+      value: 'win',
+    });
+    expect(winHistory.present).toBe(combat);
+    expect(undoProjectHistory(winHistory).present).toBe(combat);
+    const won = applyProjectCommand(lost, catalog, {
+      kind: 'ReplaceNemesisBetOutcome',
+      phase,
+      value: 'win',
+    });
+    expect(bets(won)).toBeUndefined();
+    expect(
+      'nemesisBetOutcomeByPhase' in occurrence(won, 'F', goldenFOccurrenceId(5, 1)).encounters,
+    ).toBe(false);
+
+    const event = applyProjectCommand(lost, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    expect(bets(roundTrip(event))).toEqual({ Encounter: 'loss' });
+    expect(() =>
+      applyProjectCommand(event, catalog, {
+        kind: 'ReplaceNemesisBetOutcome',
+        phase,
+        value: 'tie',
+      }),
+    ).toThrow(/Nemesis bet combat/);
+    const cleared = applyProjectCommand(event, catalog, {
+      kind: 'ReplaceNemesisBetOutcome',
+      phase,
+      value: null,
+    });
+    expect(bets(cleared)).toBeUndefined();
+    expect(
+      'nemesisBetOutcomeByPhase' in occurrence(cleared, 'F', goldenFOccurrenceId(5, 1)).encounters,
+    ).toBe(false);
+  });
+
+  it('decodes only non-default declared outcomes on phases that can host a bet combat', () => {
+    const combat = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisCombatF',
+    });
+    const withRaw = (project: ProjectDocument, occurrenceId: string, value: unknown) => {
+      const raw = JSON.parse(encodeProjectDocument(project));
+      for (const biome of raw.route.biomes)
+        for (const candidate of biome.topology?.occurrences ?? [])
+          if (candidate.occurrenceId === occurrenceId)
+            candidate.encounters.nemesisBetOutcomeByPhase = value;
+      return raw;
+    };
+    expect(() =>
+      decodeProjectDocument(
+        withRaw(combat, goldenFOccurrenceId(5, 1), { Encounter: 'draw' }),
+        catalog,
+      ),
+    ).toThrow(/tie or loss/);
+    expect(() =>
+      decodeProjectDocument(
+        withRaw(combat, goldenFOccurrenceId(5, 1), { Encounter: 'win' }),
+        catalog,
+      ),
+    ).toThrow(/omit the default win/);
+    expect(
+      bets(
+        decodeProjectDocument(
+          withRaw(combat, goldenFOccurrenceId(5, 1), { Encounter: 'tie' }),
+          catalog,
+        ),
+      ),
+    ).toEqual({ Encounter: 'tie' });
+    expect(() =>
+      decodeProjectDocument(
+        withRaw(combat, goldenFOccurrenceId(5, 1), { Missing: 'win' }),
+        catalog,
+      ),
+    ).toThrow(/unknown encounter phase/);
+    const opening = combat.route.biomes
+      .find((biome) => biome.biomeKey === 'F')!
+      .topology!.occurrences.find(
+        (candidate) =>
+          Object.keys(candidate.encounters.figLeafSkipByPhase).length > 0 &&
+          candidate.occurrenceId !== goldenFOccurrenceId(5, 1),
+      )!;
+    const [openingPhase] = Object.keys(opening.encounters.figLeafSkipByPhase);
+    expect(() =>
+      decodeProjectDocument(
+        withRaw(combat, opening.occurrenceId, { [openingPhase!]: 'loss' }),
+        catalog,
+      ),
+    ).toThrow(/cannot host a Nemesis bet combat/);
+  });
+});
+
 function occurrence(project: ProjectDocument, biomeKey: string, occurrenceId: string) {
   const value = project.route.biomes
     .find((biome) => biome.biomeKey === biomeKey)

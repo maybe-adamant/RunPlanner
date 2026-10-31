@@ -1253,6 +1253,16 @@ export function activeEncounterPhasesForOwner(
               }),
             }
           : {}),
+        ...(!domain.nemesisBetAuthorable
+          ? {}
+          : {
+              nemesisBet: Object.freeze({
+                interactionKey: semanticAddressKey(address),
+                ...(encounters.nemesisBetOutcomeByPhase?.[domain.slotKey] === undefined
+                  ? {}
+                  : { outcome: encounters.nemesisBetOutcomeByPhase[domain.slotKey] }),
+              }),
+            }),
         // Fig Leaf appears where the engine supports a skip or a skip is authored.
         ...(figLeafSupport?.supported === true || authoredFigLeafSkip
           ? {

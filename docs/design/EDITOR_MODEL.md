@@ -380,8 +380,10 @@ Stable layout means a control has a reserved home when it appears, not that
 every control always renders. A timeline control (pickup outcome choices, Sea
 Star, Fig Leaf, Gorgon, Aetos) renders only where the engine product says its
 context applies at that point, or where an authored value exists; a retained
-stale value stays visible and editable with its finding. The application never
-computes applicability itself. Explanatory notes sit beneath their owning
+stale value stays visible and editable with its finding. A Nemesis combat's
+Outcome choice is the exception: it shows only while that combat is selected,
+always with a value (Win when none is stored), and a dormant outcome stays
+hidden. The application never computes applicability itself. Explanatory notes sit beneath their owning
 control, candidate explanations stay inside the picker (its trigger keeps its
 accessible description and invalid state without adding layout space), and placement or
 rejected-drag feedback floats outside the layout.

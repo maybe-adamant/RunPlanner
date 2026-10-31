@@ -2,9 +2,11 @@ import {
   createBiomeAddress,
   createNemesisRandomEventAddress,
   createRoomActionAddress,
+  NEMESIS_BET_OUTCOMES,
   NEMESIS_RANDOM_EVENT_FAMILIES,
   roomActionKey,
   semanticAddressKey,
+  type AuthoredNemesisBetOutcome,
   type AuthoredNemesisRandomEventKind,
   type AuthoredNemesisRandomEventOutcome,
   type AuthoredGeneratedEncounterCustomization,
@@ -100,6 +102,10 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
     string,
     import('../contracts/locals').WorkspaceAetosInteraction
   >;
+  readonly nemesisBets: ReadonlyMap<
+    string,
+    import('../contracts/locals').WorkspaceNemesisBetInteraction
+  >;
   readonly gorgonConditions: ReadonlyMap<
     string,
     import('../contract').WorkspaceGorgonConditionInteraction
@@ -139,6 +145,16 @@ function intersectNemesisBranchValues(
     ),
   );
 }
+
+const nemesisBetLabels: Readonly<Record<AuthoredNemesisBetOutcome, string>> = Object.freeze({
+  win: 'Win',
+  tie: 'Tie',
+  loss: 'Loss',
+});
+
+const nemesisBetChoices = Object.freeze(
+  NEMESIS_BET_OUTCOMES.map((value) => Object.freeze({ label: nemesisBetLabels[value], value })),
+);
 
 export function nemesisFamilyLabel(family: AuthoredNemesisRandomEventKind): string {
   switch (family) {
@@ -258,6 +274,10 @@ export function bindOccurrenceLocalInteractions(
   const aetosAppearances = new Map<
     string,
     import('../contracts/locals').WorkspaceAetosInteraction
+  >();
+  const nemesisBets = new Map<
+    string,
+    import('../contracts/locals').WorkspaceNemesisBetInteraction
   >();
   const gorgonConditions = new Map<
     string,
@@ -753,6 +773,25 @@ export function bindOccurrenceLocalInteractions(
                   Object.freeze({
                     command: Object.freeze({
                       kind: 'ReplaceAetosWave' as const,
+                      phase: phase.owner,
+                      value,
+                    }),
+                  }),
+              }),
+            );
+          }
+          if (phase.nemesisBet !== undefined) {
+            nemesisBets.set(
+              key,
+              Object.freeze({
+                key,
+                owner: phase.owner,
+                outcome: phase.nemesisBet.outcome ?? 'win',
+                choices: nemesisBetChoices,
+                intentFor: (value: AuthoredNemesisBetOutcome | null) =>
+                  Object.freeze({
+                    command: Object.freeze({
+                      kind: 'ReplaceNemesisBetOutcome' as const,
                       phase: phase.owner,
                       value,
                     }),
@@ -1411,6 +1450,7 @@ export function bindOccurrenceLocalInteractions(
     roomActions,
     figLeafSkips,
     aetosAppearances,
+    nemesisBets,
     gorgonConditions,
     rewardWheelOfferCounts,
     rewardWheelPicks,

@@ -155,6 +155,31 @@ export function selectedEncounterAuthoringProfileKey(
   return encounterKey;
 }
 
+/** Whether a phase's binding can field an encounter declaring a Nemesis kill-race bet. */
+export function encounterBindingHostsNemesisBet(
+  catalog: Catalog,
+  binding: EncounterSlotBinding,
+  path: string,
+): boolean {
+  const keys =
+    binding.kind === 'fixed'
+      ? [binding.encounterDefinitionKey]
+      : encounterSetForBinding(catalog, binding, path).encounterDefinitionKeys;
+  return keys.some((key) => catalog.encounterDefinitions.byKey[key]?.goldBet !== undefined);
+}
+
+/** Whether a phase's current direct encounter carries a Nemesis kill-race bet to author. */
+export function encounterPhaseAuthorsNemesisBet(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  encounters: Pick<RoomEncounterState, 'encounterKeyByPhase'>,
+  slotKey: string,
+  path: string,
+): boolean {
+  const selected = directEncounterDefinitionKeyForSlot(catalog, room, encounters, slotKey, path);
+  return catalog.encounterDefinitions.byKey[selected ?? '']?.goldBet !== undefined;
+}
+
 /**
  * Declaration-owned authored metadata may inspect a direct choice only. A
  * contextual choice has no truthful definition until reward authorship exists.

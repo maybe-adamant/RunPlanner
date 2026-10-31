@@ -155,7 +155,7 @@ describe('gold ledger', () => {
       gain({ kind: 'timePiece', gold: 400 }, blocked),
       gain({ kind: 'midasPayout', itemKey: 'DamageSelfDrop' }, blocked),
       gain({ kind: 'poolSale', traitKey: 'ZeusWeaponBoon', rarity: 'Rare', level: 1 }, blocked),
-      gain({ kind: 'nemesisBet', maxBet: 100 }, blocked),
+      gain({ kind: 'nemesisBet', maxBet: 100, outcome: 'win' }, blocked),
     ]);
     expect(result.runStart).toEqual({
       kind: 'priced',
@@ -276,14 +276,32 @@ describe('gold ledger', () => {
   it('bets the mean balance up to the cap and pays Nemesis trades from an even roll', () => {
     const result = ledger([
       gain({ kind: 'moneyPickup', gold: 60, npcDrop: false }),
-      gain({ kind: 'nemesisBet', maxBet: 100 }, { moneyMultiplier: 1.5 }),
+      gain({ kind: 'nemesisBet', maxBet: 100, outcome: 'win' }, { moneyMultiplier: 1.5 }),
       gain({ kind: 'moneyPickup', gold: 100, npcDrop: false }),
-      gain({ kind: 'nemesisBet', maxBet: 100 }),
+      gain({ kind: 'nemesisBet', maxBet: 100, outcome: 'win' }),
       gain({ kind: 'nemesisTrade', min: 105, max: 130 }),
     ]);
     const gains = roomOf(result).gains.map((entry) => entry.amount!);
     expect(gains.map((amount) => amount.mean)).toEqual([60, 90, 100, 100, -117.5]);
     expect(gains[4]).toEqual({ mean: -117.5, variance: (26 * 26 - 1) / 12, min: -130, max: -105 });
+  });
+
+  it('moves nothing on a tied Nemesis bet and takes a lost one even under a gold-blocking curse', () => {
+    const result = ledger([
+      gain({ kind: 'moneyPickup', gold: 160, npcDrop: false }),
+      gain({ kind: 'nemesisBet', maxBet: 100, outcome: 'tie' }, { moneyMultiplier: 1.5 }),
+      gain({ kind: 'nemesisBet', maxBet: 100, outcome: 'loss' }, { moneyMultiplier: 1.5 }),
+      gain({ kind: 'nemesisBet', maxBet: 100, outcome: 'loss' }, { blocksGold: true }),
+      gain({ kind: 'nemesisBet', maxBet: 100, outcome: 'loss' }),
+    ]);
+    expect(roomOf(result).gains.map((entry) => entry.amount)).toEqual([
+      { mean: 160, variance: 0, min: 160, max: 160 },
+      { mean: 0, variance: 0, min: 0, max: 0 },
+      { mean: -100, variance: 0, min: -100, max: -100 },
+      { mean: -60, variance: 0, min: -60, max: -60 },
+      { mean: 0, variance: 0, min: 0, max: 0 },
+    ]);
+    expect(roomOf(result).balanceAfter).toEqual(balance(0));
   });
 
   it('records the balance before each purchase and when the doors open', () => {

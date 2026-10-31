@@ -1,5 +1,6 @@
 import type { Catalog, InRunTraitRarity } from '../../../catalog-schema';
 import type { OccurrenceAddress, SemanticAddress } from '../../../authored-project/addresses';
+import type { AuthoredNemesisBetOutcome } from '../../../authored-project/model';
 import type { SimulationState } from '../../state/model';
 import type { KnownRoster } from './known-roster';
 import type { PurchasePriceUnpriced } from './price-context';
@@ -80,8 +81,12 @@ export type GoldGain =
   | { readonly kind: 'loanCredit'; readonly traitKey: string; readonly returnGold: number }
   /** The next non-final boss pays a loan's stored gold. */
   | { readonly kind: 'loanPayback'; readonly traitKey: string }
-  /** A Nemesis combat's bet, assumed won until its outcome is authored. */
-  | { readonly kind: 'nemesisBet'; readonly maxBet: number }
+  /** A Nemesis combat's bet on its authored kill race; an unauthored race is won. */
+  | {
+      readonly kind: 'nemesisBet';
+      readonly maxBet: number;
+      readonly outcome: AuthoredNemesisBetOutcome;
+    }
   /** Gold paid for a Nemesis trade, an integer drawn evenly from its range. */
   | { readonly kind: 'nemesisTrade'; readonly min: number; readonly max: number }
   /**

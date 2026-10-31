@@ -930,6 +930,7 @@ export function applyOccurrenceCommand(
     case 'ReplaceNemesisRandomEventInteraction':
     case 'ReplaceFigLeafSkip':
     case 'ReplaceAetosWave':
+    case 'ReplaceNemesisBetOutcome':
     case 'ReplaceEncounterCustomization':
     case 'ReplaceGorgonDeathDefianceCondition':
       return applyEncounterOccurrenceCommand(document, catalog, located, command);

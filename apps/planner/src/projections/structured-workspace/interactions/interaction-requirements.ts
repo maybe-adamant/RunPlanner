@@ -198,6 +198,9 @@ export type WorkspaceOccurrenceInteractionRequirement =
           readonly selectedWave?: number;
           readonly waves: readonly number[];
         };
+        readonly nemesisBet?: {
+          readonly outcome?: import('@run-planner/engine/authored-project').AuthoredNemesisBetOutcome;
+        };
         readonly gorgonCondition?: {
           readonly selected: boolean;
           readonly supported: boolean;

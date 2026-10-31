@@ -20,6 +20,7 @@ import {
   encounterAuthoringProfiles,
   encounterBindingsBySlot,
   encounterEnvelopeSlots,
+  encounterPhaseAuthorsNemesisBet,
   encounterSetForBinding,
   fixedEncounterDefinitionKey,
 } from '../../authored-project/room-state/encounter-envelope';
@@ -54,6 +55,8 @@ export interface EncounterPhaseAuthoringDomain {
     readonly directEncounterDefinitionKey?: string;
   }[];
   readonly defaultEncounterKey: string;
+  /** Whether `ReplaceNemesisBetOutcome` may author a tie or loss on this phase now. */
+  readonly nemesisBetAuthorable: boolean;
   /** Concrete declaration domain for the current direct encounter identity. */
   readonly customization?: readonly {
     readonly key: string;
@@ -321,6 +324,13 @@ export function encounterPhaseAuthoringDomainForRoom(
           binding.kind === 'fixed'
             ? selectedEncounterKey
             : encounterSetForBinding(catalog, binding, room.gameName).defaultAuthoringProfileKey,
+        nemesisBetAuthorable: encounterPhaseAuthorsNemesisBet(
+          catalog,
+          room,
+          encounters,
+          binding.slotKey,
+          room.gameName,
+        ),
         ...(customization === undefined ? {} : { customization }),
       }),
     );

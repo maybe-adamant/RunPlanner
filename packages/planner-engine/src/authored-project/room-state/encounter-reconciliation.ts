@@ -4,6 +4,7 @@ import type { AuthoredTraitOffer } from '../traits/state';
 import { failProjectDocument } from '../validation';
 import {
   encounterAuthoringProfiles,
+  encounterBindingHostsNemesisBet,
   encounterBindingsBySlot,
   directEncounterDefinitionKeyForSlot,
   encounterSetForBinding,
@@ -34,12 +35,27 @@ export function reconcileRoomEncounterState(
   const selections: Record<string, string> = {};
   const figLeafSkipByPhase: Record<string, boolean> = {};
   const aetosWaveByPhase: Record<string, number> = {};
+  const nemesisBetOutcomeByPhase: Record<
+    string,
+    Exclude<import('../model').AuthoredNemesisBetOutcome, 'win'>
+  > = {};
   const gorgonResultByPhase: Record<string, import('../model').AuthoredGorgonPhaseResult> = {};
   for (const binding of replacementBindings.values()) {
     figLeafSkipByPhase[binding.slotKey] = previous.figLeafSkipByPhase[binding.slotKey] === true;
     const aetosWave = previous.aetosWaveByPhase?.[binding.slotKey];
     if (previousBindings.has(binding.slotKey) && aetosWave !== undefined)
       aetosWaveByPhase[binding.slotKey] = aetosWave;
+    const betOutcome = previous.nemesisBetOutcomeByPhase?.[binding.slotKey];
+    if (
+      previousBindings.has(binding.slotKey) &&
+      betOutcome !== undefined &&
+      encounterBindingHostsNemesisBet(
+        catalog,
+        binding,
+        `rooms.${replacementRoom.gameName}.encounters.${binding.slotKey}`,
+      )
+    )
+      nemesisBetOutcomeByPhase[binding.slotKey] = betOutcome;
     if (binding.kind !== 'set') continue;
     const fallback = replacement.encounterKeyByPhase[binding.slotKey];
     if (fallback === undefined) {
@@ -185,6 +201,9 @@ export function reconcileRoomEncounterState(
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}
       : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),
+    ...(Object.keys(nemesisBetOutcomeByPhase).length === 0
+      ? {}
+      : { nemesisBetOutcomeByPhase: Object.freeze(nemesisBetOutcomeByPhase) }),
     ...(Object.keys(customizationByPhase).length === 0
       ? {}
       : { customizationByPhase: Object.freeze(customizationByPhase) }),

@@ -325,5 +325,15 @@ wave, enemy budget, reward, counter advancement or automatic end effect, and
 its native runtime outcome is best-effort and is not folded back into planner
 history.
 
+`encounters.nemesisBetOutcomeByPhase[phaseKey]` owns the kill race of a
+Nemesis combat whose declaration carries a bet: `win`, `tie` or `loss`, stored
+only when it differs from the default win. `ReplaceNemesisBetOutcome` authors a
+tie or loss only while the phase resolves to such a combat; a win or a removal
+deletes the value at any time. A phase whose binding can never field one owns
+none. Selecting another encounter, such as a random event, keeps the value
+dormant, and structural phase reconciliation treats it like an Aetos request.
+The outcome feeds only the [gold ledger](REWARD_MODEL.md#gold-ledger): it
+creates no finding, history or execution field.
+
 These event choices share an encounter-local presentation without replacing
 the independent Fig Leaf and Gorgon authored contracts.

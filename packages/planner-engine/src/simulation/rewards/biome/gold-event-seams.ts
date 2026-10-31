@@ -883,7 +883,13 @@ export function withGoldEvents(
               { kind: 'occurrence', occurrenceId: room.occurrenceId },
               event.phaseKey,
             ),
-            { gain: { kind: 'nemesisBet', maxBet: bet.maxBet } },
+            {
+              gain: {
+                kind: 'nemesisBet',
+                maxBet: bet.maxBet,
+                outcome: room.encounters.nemesisBetOutcomeByPhase?.[event.phaseKey] ?? 'win',
+              },
+            },
           );
       }
       if (event.kind === 'encounterInteractionReached' && event.interaction === 'encounter') {

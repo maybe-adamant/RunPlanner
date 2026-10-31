@@ -1,6 +1,7 @@
 import type {
   AuthoredEncounterCustomization,
   AuthoredGeneratedEncounterCustomization,
+  AuthoredNemesisBetOutcome,
   AuthoredNemesisRandomEventKind,
   AuthoredNemesisRandomEventOutcome,
   AetosPhaseAddress,
@@ -352,6 +353,22 @@ export interface WorkspaceAetosInteraction {
   readonly waves: readonly number[];
 }
 
+/** A Nemesis combat's kill race; Win is the unstored outcome. */
+export interface WorkspaceNemesisBetInteraction {
+  readonly choices: readonly {
+    readonly label: string;
+    readonly value: AuthoredNemesisBetOutcome;
+  }[];
+  readonly intentFor: (
+    value: AuthoredNemesisBetOutcome | null,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceNemesisBetOutcome' }>
+  >;
+  readonly key: string;
+  readonly outcome: AuthoredNemesisBetOutcome;
+  readonly owner: EncounterPhaseAddress;
+}
+
 export interface WorkspaceGorgonConditionInteraction {
   readonly intentFor: (
     value: boolean,
@@ -496,6 +513,11 @@ export interface WorkspaceEncounterPhase {
     readonly contextReached: boolean;
     readonly selectedWave?: number;
     readonly waves: readonly number[];
+  };
+  /** Present while the phase resolves to a Nemesis combat with a kill race. */
+  readonly nemesisBet?: {
+    readonly interactionKey: string;
+    readonly outcome?: AuthoredNemesisBetOutcome;
   };
   /** Selected encounter-local trait offer, when this phase owns one. */
   readonly traitOffer?: WorkspaceTraitOfferControl;

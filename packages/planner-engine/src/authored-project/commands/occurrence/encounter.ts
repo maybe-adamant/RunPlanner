@@ -1,18 +1,20 @@
 import { routeRoomDeclaration } from '../../route-profile';
 import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../../catalog-schema';
 import type { EncounterPhaseAddress } from '../../addresses';
-import type {
-  AuthoredEncounterCustomization,
-  AuthoredNemesisRandomEventKind,
-  AuthoredNemesisRandomEventOutcome,
-  ProjectDocument,
-  RoomEncounterState,
+import {
+  NEMESIS_BET_OUTCOMES,
+  type AuthoredEncounterCustomization,
+  type AuthoredNemesisRandomEventKind,
+  type AuthoredNemesisRandomEventOutcome,
+  type ProjectDocument,
+  type RoomEncounterState,
 } from '../../model';
 import {
   encounterAuthoringProfileOnRoute,
   encounterAuthoringProfiles,
   encounterBindingsBySlot,
   directEncounterDefinitionKeyForSlot,
+  encounterPhaseAuthorsNemesisBet,
   encounterSetForBinding,
 } from '../../room-state/encounter-envelope';
 import {
@@ -168,6 +170,7 @@ function updatedSelections(
   if (
     command.kind === 'ReplaceFigLeafSkip' ||
     command.kind === 'ReplaceAetosWave' ||
+    command.kind === 'ReplaceNemesisBetOutcome' ||
     command.kind === 'ReplaceEncounterCustomization' ||
     command.kind === 'ReplaceNemesisRandomEventInteraction' ||
     command.kind === 'ReplaceGorgonDeathDefianceCondition'
@@ -255,6 +258,9 @@ function updatedSelections(
     gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
     ...(traitOffersByPhase === undefined ? {} : { traitOffersByPhase }),
     ...(nemesisRandomEventByPhase === undefined ? {} : { nemesisRandomEventByPhase }),
+    ...(current.nemesisBetOutcomeByPhase === undefined
+      ? {}
+      : { nemesisBetOutcomeByPhase: current.nemesisBetOutcomeByPhase }),
     ...(current.customizationByPhase === undefined
       ? {}
       : { customizationByPhase: current.customizationByPhase }),
@@ -421,6 +427,41 @@ function updatedAetosWave(
   });
 }
 
+function updatedNemesisBetOutcome(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  current: RoomEncounterState,
+  phase: EncounterPhaseAddress,
+  command: EncounterOccurrenceCommand,
+): RoomEncounterState {
+  if (command.kind !== 'ReplaceNemesisBetOutcome') return current;
+  const binding = encounterBindingsBySlot(catalog, room, room.gameName).get(phase.phaseKey);
+  if (binding === undefined)
+    failCommand(command, `${room.gameName} has no encounter phase ${phase.phaseKey}`);
+  if (
+    command.value !== null &&
+    !(NEMESIS_BET_OUTCOMES as readonly string[]).includes(command.value)
+  )
+    failCommand(command, 'Nemesis bet outcome must be win, tie or loss');
+  // The default win is stored by omission.
+  const value = command.value === 'win' ? null : command.value;
+  if (
+    value !== null &&
+    !encounterPhaseAuthorsNemesisBet(catalog, room, current, phase.phaseKey, room.gameName)
+  )
+    failCommand(command, `${phase.phaseKey} has not selected a Nemesis bet combat`);
+  if (current.nemesisBetOutcomeByPhase?.[phase.phaseKey] === (value ?? undefined)) return current;
+  const next = { ...current.nemesisBetOutcomeByPhase };
+  if (value === null) delete next[phase.phaseKey];
+  else next[phase.phaseKey] = value;
+  const { nemesisBetOutcomeByPhase: _previous, ...rest } = current;
+  void _previous;
+  return Object.freeze({
+    ...rest,
+    ...(Object.keys(next).length === 0 ? {} : { nemesisBetOutcomeByPhase: Object.freeze(next) }),
+  });
+}
+
 function updatedCustomization(
   catalog: Catalog,
   room: RoomDeclaration,
@@ -508,7 +549,13 @@ function replaceTopLevel(
       : requireAnomalyRoom(catalog, occurrence.gameName, command);
   const encounters = updatedSelections(catalog, room, occurrence.encounters, phase, command);
   const withFigLeaf = updatedFigLeafSkip(catalog, room, encounters, phase, command);
-  const withAetos = updatedAetosWave(catalog, room, withFigLeaf, phase, command);
+  const withAetos = updatedNemesisBetOutcome(
+    catalog,
+    room,
+    updatedAetosWave(catalog, room, withFigLeaf, phase, command),
+    phase,
+    command,
+  );
   const contextualRoom =
     occurrence.anomalyReplacement === undefined
       ? resolveEntryDeclaration(room, located.routePosition)

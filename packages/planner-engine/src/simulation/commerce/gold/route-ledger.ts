@@ -296,11 +296,13 @@ function applyGain(
     case 'urnGold':
       return pay(urnGoldAmount(catalog, gain, sigma));
     case 'nemesisBet': {
-      if (blocked) return pay(ZERO_GOLD);
+      // A tie moves nothing; a win pays the bet unless gold is blocked; a loss
+      // spends it regardless (InteractLogic.lua:545-590).
+      if (gain.outcome === 'tie' || (gain.outcome === 'win' && blocked)) return pay(ZERO_GOLD);
       if (walk.balance.availability === 'unavailable') return undefined;
-      // GOLD_ESTIMATE_ASSUMPTIONS.md "Nemesis bet won", "Nemesis bet size".
+      // GOLD_ESTIMATE_ASSUMPTIONS.md "Nemesis bet outcome", "Nemesis bet size".
       const bet = Math.min(gain.maxBet, Math.max(0, walk.balance.balance.mean));
-      return pay(fixed(roundGold(bet * sigma)));
+      return pay(fixed(gain.outcome === 'win' ? roundGold(bet * sigma) : 0 - bet));
     }
     case 'loanTake': {
       const held = walk.balance;

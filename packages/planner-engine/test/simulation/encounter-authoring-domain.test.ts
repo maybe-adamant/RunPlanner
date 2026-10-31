@@ -294,6 +294,64 @@ describe('encounter phase authored domains', () => {
     },
   );
 
+  it('publishes a Nemesis bet outcome as authorable only while the phase resolves to a bet combat', () => {
+    const fBiome = createBiomeAddress('Underworld', 'F');
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      fBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const authorable = (encounterKey: string) => {
+      const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey,
+      });
+      const value = occurrence(project, 'Underworld', 'F', occurrenceId);
+      return encounterPhaseAuthoringDomainForRoom(
+        catalog,
+        fBiome,
+        roomFor(value),
+        { kind: 'occurrence', occurrenceId },
+        value.encounters,
+      ).find((domain) => domain.slotKey === 'Encounter')?.nemesisBetAuthorable;
+    };
+    expect(authorable('NemesisCombatF')).toBe(true);
+    expect(authorable('NemesisRandomEvent')).toBe(false);
+  });
+
+  it('publishes a Tartarus Nemesis combat’s bet outcome as authorable', () => {
+    const occurrenceId = createOccurrenceId('golden-i-combat01');
+    const phase = createEncounterPhaseAddress(
+      goldenIBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisCombatI',
+    });
+    const value = occurrence(project, 'Underworld', 'I', occurrenceId);
+    const domain = encounterPhaseAuthoringDomainForRoom(
+      catalog,
+      goldenIBiome,
+      roomFor(value),
+      { kind: 'occurrence', occurrenceId },
+      value.encounters,
+    ).find((candidate) => candidate.slotKey === 'Encounter');
+    expect(domain?.selectedEncounterKey).toBe('NemesisCombatI');
+    expect(domain?.nemesisBetAuthorable).toBe(true);
+    expect(
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceNemesisBetOutcome',
+        phase,
+        value: 'tie',
+      }),
+    ).not.toBe(project);
+  });
+
   it('uses the authored Ship encounter count to withhold Combat2', () => {
     const value = occurrence(loadSurfaceNOPQProject(), 'Surface', 'O', oOccurrenceIds.combat04);
     const phases = encounterPhaseAuthoringDomainForRoom(

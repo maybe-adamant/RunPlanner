@@ -431,6 +431,15 @@ export type AuthoredNemesisRandomEventOutcome =
     }
   | { readonly kind: 'damageContest'; readonly result: 'success' | 'failure' };
 
+/** A Nemesis combat's kill race against the player; omission is a win. */
+export type AuthoredNemesisBetOutcome = 'win' | 'tie' | 'loss';
+
+export const NEMESIS_BET_OUTCOMES = Object.freeze([
+  'win',
+  'tie',
+  'loss',
+] as const satisfies readonly AuthoredNemesisBetOutcome[]);
+
 /** Sparse explicit encounter decisions. Omission is the declaration's native Default. */
 export type AuthoredEncounterCustomization =
   | AuthoredGeneratedEncounterCustomization
@@ -494,6 +503,10 @@ export interface RoomEncounterState {
   /** Sparse phase-owned event detail; null is unresolved. */
   readonly nemesisRandomEventByPhase?: Readonly<
     Record<string, AuthoredNemesisRandomEventOutcome | null>
+  >;
+  /** Sparse kill-race outcomes of phases that can host a Nemesis bet combat; a win is never stored. */
+  readonly nemesisBetOutcomeByPhase?: Readonly<
+    Record<string, Exclude<AuthoredNemesisBetOutcome, 'win'>>
   >;
   /** Sparse explicit decisions keyed by stable phase and declaration decision key. */
   readonly customizationByPhase?: Readonly<

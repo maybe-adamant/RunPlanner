@@ -218,6 +218,7 @@ function commandContractAddress(
     case 'ResetEncounter':
     case 'ReplaceFigLeafSkip':
     case 'ReplaceAetosWave':
+    case 'ReplaceNemesisBetOutcome':
     case 'ReplaceEncounterCustomization':
     case 'ReplaceGorgonDeathDefianceCondition':
       return command.phase;

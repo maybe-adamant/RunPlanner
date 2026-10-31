@@ -10,12 +10,14 @@ const {
   createBiomeAddress,
   createCompleteFGProject,
   createEncounterPhaseAddress,
+  createGoldenFGHIProject,
   createOccurrenceAddress,
   createOccurrenceId,
   createRewardWheelAddress,
   createRouteStartKeepsakeSelectionAddress,
   goldenFBiome,
   goldenFOccurrenceId,
+  goldenIBiome,
   semanticAddressKey,
   loadSurfaceNOPQProject,
   loadSurfaceNOPProject,
@@ -78,6 +80,74 @@ describe('structured workspace interaction binding', () => {
       kind: 'ReplaceGorgonDeathDefianceCondition',
       phase,
       value: true,
+    });
+  });
+
+  it('binds the Nemesis kill-race outcome only while the phase holds a bet combat', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const key = semanticAddressKey(phase);
+    expect(
+      bind(createCompleteFGProject(), 'Underworld', 'F').interactions.nemesisBets.has(key),
+    ).toBe(false);
+    const nemesis = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisCombatF',
+    });
+    const unstored = bind(nemesis, 'Underworld', 'F');
+    expect(
+      [...unstored.assembly.occurrenceInteractionRequirements.values()].some(
+        (requirement) =>
+          requirement.kind === 'encounterPhases' &&
+          requirement.phases.some(
+            (entry) =>
+              semanticAddressKey(entry.owner) === key &&
+              entry.nemesisBet !== undefined &&
+              entry.nemesisBet.outcome === undefined,
+          ),
+      ),
+    ).toBe(true);
+    const interaction = unstored.interactions.nemesisBets.get(key);
+    expect(interaction?.outcome).toBe('win');
+    expect(interaction?.choices.map((choice) => choice.label)).toEqual(['Win', 'Tie', 'Loss']);
+    expect(interaction?.intentFor('loss').command).toEqual({
+      kind: 'ReplaceNemesisBetOutcome',
+      phase,
+      value: 'loss',
+    });
+    const lost = applyProjectCommand(nemesis, catalog, interaction!.intentFor('loss').command);
+    expect(bind(lost, 'Underworld', 'F').interactions.nemesisBets.get(key)?.outcome).toBe('loss');
+    const dormant = applyProjectCommand(lost, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'ArtemisCombatF',
+    });
+    expect(bind(dormant, 'Underworld', 'F').interactions.nemesisBets.has(key)).toBe(false);
+  });
+
+  it('binds the Nemesis kill-race outcome on a Tartarus Nemesis combat', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenIBiome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-i-combat01') },
+      'Encounter',
+    );
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisCombatI',
+    });
+    const interaction = bind(project, 'Underworld', 'I').interactions.nemesisBets.get(
+      semanticAddressKey(phase),
+    );
+    expect(interaction?.outcome).toBe('win');
+    expect(interaction?.intentFor('tie').command).toEqual({
+      kind: 'ReplaceNemesisBetOutcome',
+      phase,
+      value: 'tie',
     });
   });
 

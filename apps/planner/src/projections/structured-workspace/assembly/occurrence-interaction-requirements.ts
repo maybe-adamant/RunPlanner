@@ -17,6 +17,7 @@ function encounterPhaseInteractionRequirement(
       phase.nemesisEvent !== undefined ||
       phase.figLeaf !== undefined ||
       phase.aetos !== undefined ||
+      phase.nemesisBet !== undefined ||
       phase.gorgonCondition !== undefined ||
       phase.customization !== undefined,
   );
@@ -34,6 +35,7 @@ function encounterPhaseInteractionRequirement(
             ? {}
             : { encounterDefinitionKey: phase.selectedEncounter.nativeEncounterDefinitionKey }),
           ...(phase.aetos === undefined ? {} : { aetos: phase.aetos }),
+          ...(phase.nemesisBet === undefined ? {} : { nemesisBet: phase.nemesisBet }),
           selectionEnabled: phase.customizable,
           ...(phase.customization === undefined ? {} : { customization: phase.customization }),
           ...(phase.nemesisFeature === undefined ? {} : { nemesisFeature: phase.nemesisFeature }),

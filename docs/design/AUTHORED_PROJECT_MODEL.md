@@ -926,7 +926,8 @@ encounter-owned offers.
 ### Encounter Choices
 
 `RoomOccurrence.encounters` persists per-phase encounter choices, sparse
-customization, Aetos requests and encounter trait offers.
+customization, Aetos requests, Nemesis kill-race outcomes and encounter trait
+offers.
 [Encounter Preparation](ENCOUNTER_PREPARATION.md) owns their authored shape,
 commands, identity resolution and repair.
 
