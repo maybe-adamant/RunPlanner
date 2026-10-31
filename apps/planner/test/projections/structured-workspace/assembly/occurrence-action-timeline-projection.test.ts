@@ -133,7 +133,7 @@ describe('encounter banner identity', () => {
     const project = loadSurfaceNOPQProject();
     expect(
       startIdentities(roomOf(project, createOccurrenceId('surface-p-6-1-p_combat10'))),
-    ).toEqual(['Opening · Pre-combat', 'Follow-up · Combat']);
+    ).toEqual(['Pre-combat · Random', 'Follow-up · Combat']);
     expect(startIdentities(roomOf(project, createOccurrenceId('surface-o-combat01')))).toEqual([
       'Intro · Ship intro',
       'Combat 1 · Ship combat',

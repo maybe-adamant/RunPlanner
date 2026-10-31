@@ -160,7 +160,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1349.
     key: 'PIntroCombat_SapperGate',
-    label: 'Opening sapper gate combat',
+    label: 'Sapper gate',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -171,7 +171,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1383.
     key: 'PIntroCombat_CrossbowStatues',
-    label: 'Opening crossbow statues combat',
+    label: 'Crossbow statues',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -182,7 +182,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1420.
     key: 'PIntroCombat_SapperOverlook',
-    label: 'Opening sapper overlook combat',
+    label: 'Sapper overlook',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -194,7 +194,7 @@ export const pEncounterDefinitions = [
     key: 'GeneratedP_PreCombat',
     moneyStore: olympusMoneyStore,
     customization: [generatedEncounterChoices.GeneratedP_PreCombat],
-    label: 'Pre-combat',
+    label: 'Random',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -205,7 +205,7 @@ export const pEncounterDefinitions = [
     key: 'GeneratedP_PreCombatChronosForces',
     moneyStore: olympusMoneyStore,
     customization: [generatedEncounterChoices.GeneratedP_PreCombatChronosForces],
-    label: 'Chronos forces pre-combat',
+    label: 'Random (Chronos)',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -219,7 +219,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1527.
     key: 'P_Combat01_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 01 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -231,7 +231,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1559.
     key: 'P_Combat01_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 01 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -243,7 +243,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1606.
     key: 'P_Combat01_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 01 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -255,7 +255,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1630.
     key: 'P_Combat01_PreCombat04',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 01 pre-combat 04',
+    label: 'Preset 04',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -267,7 +267,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1654.
     key: 'P_Combat02_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 02 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -279,7 +279,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1678.
     key: 'P_Combat02_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 02 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -291,7 +291,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1710.
     key: 'P_Combat02_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 02 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -303,7 +303,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1734.
     key: 'P_Combat03_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 03 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -315,7 +315,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1764.
     key: 'P_Combat03_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 03 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -327,7 +327,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1793.
     key: 'P_Combat03_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 03 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -339,7 +339,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1822.
     key: 'P_Combat04_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 04 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -351,7 +351,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1846.
     key: 'P_Combat04_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 04 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -363,7 +363,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1872.
     key: 'P_Combat04_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 04 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -375,7 +375,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1898.
     key: 'P_Combat05_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 05 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -387,7 +387,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1928.
     key: 'P_Combat05_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 05 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -399,7 +399,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1958.
     key: 'P_Combat05_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 05 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -411,7 +411,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:1994.
     key: 'P_Combat06_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 06 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -423,7 +423,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2018.
     key: 'P_Combat06_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 06 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -435,7 +435,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2041.
     key: 'P_Combat06_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 06 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -447,7 +447,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2072.
     key: 'P_Combat06_PreCombat04',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 06 pre-combat 04',
+    label: 'Preset 04',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -459,7 +459,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2096.
     key: 'P_Combat07_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 07 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -473,7 +473,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2125.
     key: 'P_Combat07_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 07 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -485,7 +485,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2149.
     key: 'P_Combat07_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 07 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -497,7 +497,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2172.
     key: 'P_Combat08_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 08 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -509,7 +509,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2195.
     key: 'P_Combat08_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 08 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -521,7 +521,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2218.
     key: 'P_Combat08_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 08 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -533,7 +533,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2242.
     key: 'P_Combat09_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 09 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -545,7 +545,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2266.
     key: 'P_Combat09_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 09 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -557,7 +557,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2289.
     key: 'P_Combat09_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 09 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -569,7 +569,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2312.
     key: 'P_Combat10_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 10 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -581,7 +581,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2344.
     key: 'P_Combat10_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 10 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -593,7 +593,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2368.
     key: 'P_Combat10_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 10 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -605,7 +605,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2392.
     key: 'P_Combat11_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 11 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -617,7 +617,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2422.
     key: 'P_Combat11_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 11 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -629,7 +629,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2445.
     key: 'P_Combat11_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 11 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -643,7 +643,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2474.
     key: 'P_Combat11_PreCombat04',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 11 pre-combat 04',
+    label: 'Preset 04',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -655,7 +655,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2505.
     key: 'P_Combat12_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 12 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -667,7 +667,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2529.
     key: 'P_Combat12_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 12 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -679,7 +679,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2577.
     key: 'P_Combat12_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 12 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -691,7 +691,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2601.
     key: 'P_Combat13_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 13 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -705,7 +705,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2630.
     key: 'P_Combat13_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 13 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -717,7 +717,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2660.
     key: 'P_Combat13_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 13 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -729,7 +729,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2706.
     key: 'P_Combat14_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 14 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -743,7 +743,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2735.
     key: 'P_Combat14_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 14 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -755,7 +755,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2765.
     key: 'P_Combat14_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 14 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -769,7 +769,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2794.
     key: 'P_Combat15_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 15 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -781,7 +781,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2824.
     key: 'P_Combat15_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 15 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -793,7 +793,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2847.
     key: 'P_Combat15_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 15 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -805,7 +805,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2871.
     key: 'P_Combat15_PreCombat04',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 15 pre-combat 04',
+    label: 'Preset 04',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -817,7 +817,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2895.
     key: 'P_Combat16_PreCombat01',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 16 pre-combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -829,7 +829,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2927.
     key: 'P_Combat16_PreCombat02',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 16 pre-combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -841,7 +841,7 @@ export const pEncounterDefinitions = [
     // EncounterData_Opening.lua:2951.
     key: 'P_Combat16_PreCombat03',
     moneyStore: olympusMoneyStore,
-    label: 'Combat 16 pre-combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,

@@ -151,7 +151,7 @@ export const nEncounterDefinitions = [
     key: 'GeneratedNSubRoom_Bigger',
     moneyStore: ephyraMoneyStore,
     customization: [generatedEncounterChoices.GeneratedNSubRoom_Bigger],
-    label: 'Large side-room combat',
+    label: 'Large combat',
     kind: 'combat',
     countsEncounterDepth: false,
     hostsGorgon: true,

@@ -104,7 +104,7 @@ describe('Encounter Timeline banner', () => {
     );
     openRoomTab('Room Timeline');
     expect(bannerIdentities('Encounter')).toEqual([
-      expect.stringMatching(/^Opening · /),
+      expect.stringMatching(/^Pre-combat · /),
       expect.stringMatching(/^Follow-up · /),
     ]);
   });
@@ -279,7 +279,7 @@ describe('Encounter Timeline banner', () => {
     // Two start banners: each names its role, then its encounter.
     const identities = bannerIdentities('Encounter');
     expect(identities).toHaveLength(2);
-    expect(identities[0]).toMatch(/^Opening · .+/);
+    expect(identities[0]).toMatch(/^Pre-combat · .+/);
     expect(identities[1]).toMatch(/^Follow-up · .+/);
     cleanup();
     // One start banner: the encounter alone, even an ordinary combat.

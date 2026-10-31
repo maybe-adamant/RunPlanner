@@ -1894,7 +1894,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       throw new Error('P Combat 02 has no retained Combat selection');
 
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    const introControl = screen.getByLabelText('Opening encounter phase');
+    const introControl = screen.getByLabelText('Pre-combat encounter phase');
     expect(screen.getByLabelText('Follow-up encounter phase')).toBeTruthy();
     expect(
       workspaceProjection(view.application).interactions.encounterPhases.has(
@@ -1902,7 +1902,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     ).toBe(true);
 
-    await view.user.click(within(introControl).getByRole('button', { name: 'Opening' }));
+    await view.user.click(within(introControl).getByRole('button', { name: 'Pre-combat' }));
     await view.user.click(screen.getByRole('option', { name: /Heracles combat/ }));
 
     await waitFor(() => expect(screen.queryByLabelText('Follow-up encounter phase')).toBeNull());
@@ -1926,8 +1926,8 @@ describe('OccurrenceEncounterWorkbench', () => {
       false,
     );
 
-    await view.user.click(within(introControl).getByRole('button', { name: 'Opening' }));
-    await view.user.click(screen.getByRole('option', { name: /Pre-combat/ }));
+    await view.user.click(within(introControl).getByRole('button', { name: 'Pre-combat' }));
+    await view.user.click(screen.getByRole('option', { name: /^Random(?! \(Chronos\))/ }));
 
     await waitFor(() => expect(screen.getByLabelText('Follow-up encounter phase')).toBeTruthy());
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
@@ -1976,18 +1976,18 @@ describe('OccurrenceEncounterWorkbench', () => {
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Overview');
 
-    const introControl = screen.getByLabelText('Opening encounter phase');
+    const introControl = screen.getByLabelText('Pre-combat encounter phase');
     const combatControl = screen.getByLabelText('Follow-up encounter phase');
     expect(
       workspaceProjection(view.application).interactions.encounterPhases.has(
         semanticAddressKey(combat),
       ),
     ).toBe(true);
-    await view.user.click(within(introControl).getByRole('button', { name: 'Opening' }));
+    await view.user.click(within(introControl).getByRole('button', { name: 'Pre-combat' }));
     await waitFor(() =>
       expect(
         within(introControl)
-          .getByRole('button', { name: 'Opening' })
+          .getByRole('button', { name: 'Pre-combat' })
           .getAttribute('data-candidate-state'),
       ).toBe('impossible'),
     );

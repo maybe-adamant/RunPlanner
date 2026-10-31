@@ -2852,8 +2852,8 @@
 /*
  * Room Overview grid: every row is label | picker | secondary, and every
  * picker starts at the same x in every section and room. The picker width
- * fits the longest common name ("Combat 15 pre-combat 04") with its icon and
- * caret; rarer longer names ellipsize. Label and secondary columns are fixed;
+ * fits common encounter names with their icon and caret; rarer longer names
+ * ellipsize. Label and secondary columns are fixed;
  * where the inspector is narrower, the picker alone shrinks to its minimum.
  */
 .room-overview-workbench {
