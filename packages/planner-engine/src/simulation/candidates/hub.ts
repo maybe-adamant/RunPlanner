@@ -33,7 +33,7 @@ import {
   type HubSideRoomGenerationSupportEntry,
 } from '../generation';
 import type { CanonicalHubDecision } from '../materialization';
-import type { SemanticFinding } from '../model';
+import { isRequiredMissingInputFinding, type SemanticFinding } from '../model';
 import type { ProjectEvaluation } from '../evaluation/evaluation-products';
 import { evaluateProgressiveBiome, evaluateSelectedProgressiveBiome } from '../progressive/biome';
 import { ownsOccurrence } from '../progressive/finding-location';
@@ -912,7 +912,11 @@ export function evaluateSideRoomEntryOrderCandidate(
       ),
       generatedSlotKeys,
       findings,
-      selectedPossible: proposal !== undefined && findings.length === 0,
+      // Missing room-local authorship is repair feedback; only invalid
+      // authored values in the replayed region reject the order.
+      selectedPossible:
+        proposal !== undefined &&
+        findings.every((finding) => isRequiredMissingInputFinding(finding)),
     }),
   });
 }

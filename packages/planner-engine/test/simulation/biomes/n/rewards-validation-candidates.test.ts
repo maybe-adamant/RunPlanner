@@ -1080,6 +1080,84 @@ describe('N Hub rewards, validation, and candidates', () => {
     });
   });
 
+  it('keeps generating a side room authorable while its sibling still needs a reward', () => {
+    const source = nOccurrenceId('combat09');
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'SetLocalVisitGeneration',
+      slot: createLocalVisitSlotAddress(nBiome, source, 'sideRooms', 'sideDoor1'),
+      generation: 'generated',
+    });
+    const sideRoom = createLocalVisitSlotAddress(nBiome, source, 'sideRooms', 'sideDoor2');
+
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({ kind: 'sideRoomGeneration', sideRoom, generation: 'generated' }),
+    ).toMatchObject({
+      kind: 'sideRoomGeneration',
+      result: { selectedPossible: true, findings: [] },
+    });
+    expect(
+      simulateProject(
+        catalog,
+        applyProjectCommand(project, catalog, {
+          kind: 'SetLocalVisitGeneration',
+          slot: sideRoom,
+          generation: 'generated',
+        }),
+      ).route?.biomes.find((biome) => biome.biomeKey === 'N')?.findings,
+    ).toContainEqual(expect.objectContaining({ code: 'rewardMissing' }));
+  });
+
+  it('keeps a side-room entry order authorable while its entered rooms still need rewards', () => {
+    const source = nOccurrenceId('combat09');
+    let project = loadSurfaceNProject();
+    for (const localSlotKey of ['sideDoor1', 'sideDoor2']) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'SetLocalVisitGeneration',
+        slot: createLocalVisitSlotAddress(nBiome, source, 'sideRooms', localSlotKey),
+        generation: 'generated',
+      });
+    }
+    const group = createLocalVisitOrderAddress(nBiome, source, 'sideRooms');
+    const occurrenceIds = [
+      nLocalOccurrenceId('combat09', 'sideDoor2'),
+      nLocalOccurrenceId('combat09', 'sideDoor1'),
+    ];
+    const evaluation = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate({ kind: 'sideRoomEntryOrder', group, occurrenceIds });
+
+    expect(evaluation).toMatchObject({
+      kind: 'sideRoomEntryOrder',
+      result: {
+        selectedPossible: true,
+        findings: expect.arrayContaining([
+          expect.objectContaining({
+            code: 'rewardMissing',
+            origin: createIncomingRewardAddress(
+              nBiome,
+              nLocalOccurrenceId('combat09', 'sideDoor2'),
+            ),
+          }),
+        ]),
+      },
+    });
+    const ordered = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalVisitOrder',
+      order: group,
+      occurrenceIds,
+    });
+    const nPlan = ordered.route.biomes.find((biome) => biome.biomeKey === 'N');
+    expect(
+      nPlan?.topology?.decisions.find(
+        (decision) => decision.kind === 'localVisit' && decision.sourceOccurrenceId === source,
+      ),
+    ).toMatchObject({ visitOrder: occurrenceIds });
+  });
+
   it('retains a nested entered-local encounter finding on local and aggregate Hub order candidates', () => {
     const occurrenceId = nLocalOccurrenceId('combat02', 'sideDoor1');
     const phase = createEncounterPhaseAddress(
