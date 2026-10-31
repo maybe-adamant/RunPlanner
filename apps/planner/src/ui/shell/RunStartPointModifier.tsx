@@ -98,9 +98,6 @@ export function RunStartPointModifier({
                   </>
                 )}
               </span>
-              <span className="contextual-picker-trigger-icon" aria-hidden="true">
-                ▾
-              </span>
             </button>
           </Popover.Trigger>
           <Popover.Portal>

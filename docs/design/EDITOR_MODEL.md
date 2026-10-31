@@ -167,8 +167,8 @@ React does not create a decision and then issue a second edit.
 Room replacement dispatches one command against the stable occurrence.
 The engine decides compatible retention, defaults, structural cleanup and
 timed-effect reconciliation before publishing one Undo step. Required Hermes
-deliveries appear automatically at established contacts and expose Move and
-reward controls. Imported missing deliveries retain an explicit Restore delivery
+deliveries appear automatically at established contacts and expose their
+reorder handle and reward controls. Imported missing deliveries retain an explicit Restore delivery
 repair; opening a project does not insert them.
 React renders the returned state without follow-up resets. Changing a selected
 continuation likewise invokes engine-owned reanchoring, not descendant walking
@@ -180,7 +180,8 @@ command runs; neither the projection nor React walks descendants to infer it.
 
 Membership and chronological movement use different contacts. Adding an
 action (an object entry's pick or an optional action) or deleting its row
-adds/removes the participant. Move controls assess its proposed position. Do not require valid chronological settlement merely to toggle the
+adds/removes the participant; an added action lands at its last legal position.
+The reorder handle offers only the positions the engine's proposals assess. Do not require valid chronological settlement merely to toggle the
 action needed for repair.
 
 A purchase row owns the inventory identity; its timeline row owns reached
@@ -343,7 +344,8 @@ maps it to a control:
   each enabled control;
 - a requirement spread across a map marks that map's requirement box;
 - an action that should not exist marks its Delete, a misplaced action its
-  Move, and an unplaced action its Restore or Add; removing the offending
+  reorder handle, and an unplaced action its Restore or its Add area entry
+  (the object or source-family group that offers it); removing the offending
   action is preferred over requiring an unrelated one;
 - a duplicate in an unordered or sequential draw marks the slot that repeats
   an earlier slot;
@@ -370,8 +372,9 @@ ungenerated side-room reward, a door awaiting its room, a hidden or absent
 door reward, a dialog control without a value) keeps that control's label and
 value frame. Room Timeline rows (actions, lifecycle boundaries, checkpoints,
 automatic effects, insertion points, the Travel Deal line) share one set of
-cells, including the placement and delete action slots; action rows keep both
-slots, disabled with a hint when no proposal applies, and the door-exit
+cells: handle, label, decisions, money and delete. An action row keeps its
+handle and delete, quieter and disabled when no proposal applies;
+a banner keeps its controls on a second line under its title; and the door-exit
 continuation says on hover whether a door is unselected or the batch is
 unfinished. Rows or sections created by an authored decision are expected
 changes.
@@ -380,10 +383,12 @@ Stable layout means a control has a reserved home when it appears, not that
 every control always renders. A timeline control (pickup outcome choices, Sea
 Star, Fig Leaf, Gorgon, Aetos) renders only where the engine product says its
 context applies at that point, or where an authored value exists; a retained
-stale value stays visible and editable with its finding. A Nemesis combat's
-Outcome choice is the exception: it shows only while that combat is selected,
-always with a value (Win when none is stored), and a dormant outcome stays
-hidden. The application never computes applicability itself. Explanatory notes sit beneath their owning
+value whose context no longer applies stays visible and editable with its
+finding, quietly marked, with a hint naming the engine-published reason (such
+as a phase skipped with Fig Leaf). A Nemesis combat's Outcome choice is the
+exception: it shows only while that combat is selected, always with a value
+(Win when none is stored), and a dormant outcome stays hidden. The application
+never computes applicability itself. Explanatory notes sit beneath their owning
 control, candidate explanations stay inside the picker (its trigger keeps its
 accessible description and invalid state without adding layout space), and placement or
 rejected-drag feedback floats outside the layout.
@@ -411,17 +416,17 @@ they do not alter command behavior.
 
 Gold is guidance read from the engine's gold ledger, never a finding or a
 reason to disable a control. Each paid purchase on a room timeline shows its
-price beside the item it buys; a rolled price shows its range. A free item, or
+price in the row's money column; a rolled price shows its range. A row that
+gains or loses gold (a pickup, a goldified reward, a Nemesis bet on its
+encounter's end banner) shows that amount there, signed, as the ledger
+attributes it to the row. A free item, or
 a purchase the ledger cannot price, shows nothing rather than zero. When the
 gold held before it is known, the purchase also shows its chance to afford as
 a whole percent in a pill coloured for a high, medium or low chance, which the
 timeline legend explains. Only an exact balance and price make the chance
 certain either way; an estimated one is never shown as certain. The room's
-doors-open boundary summarizes the room's gold: the gold held when its doors
-open, before any of its purchases, and the room's total spending over every
-purchase in the room.
-Either figure is absent when the ledger cannot give it, and a room that pays
-for nothing shows only the gold held. A figure with spread, from a rolled
+doors-open boundary shows the gold held when its doors open, before any of its
+purchases, and nothing when the ledger cannot give it. A figure with spread, from a rolled
 price or an estimated gain, is shown as its rounded mean marked approximate.
 A negative balance is valid advisory information: a plan may go under, and
 the editor shows it rather than clamping or flagging it. The projection

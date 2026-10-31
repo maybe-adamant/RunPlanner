@@ -1,18 +1,9 @@
 import { FeatureRollEntry } from './commerce/FeatureRollInteract';
-import {
-  Fragment,
-  useEffect,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
-} from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import {
   requireWorkspaceInteraction,
-  dropRankedPrefixItem,
-  reconcileRankedPrefix,
   workspaceInteractionKey,
-  type RankedPrefixDropTarget,
+  type WorkspaceEncounterBannerSupplement,
   type WorkspaceEncounterPhase,
   type WorkspaceInteractionCatalog,
   type WorkspaceRoomActions,
@@ -20,7 +11,11 @@ import {
   type WorkspaceRoomLifecycleTimelineEntry,
   type WorkspaceShipPhasePresentation,
 } from '@planner/projections/structured-workspace';
-import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindingTarget';
+import {
+  useFindingAnchor,
+  useFindingMark,
+  type FindingMarkProps,
+} from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 export { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
 import { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
@@ -28,78 +23,199 @@ export { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { LifecycleBoundaryRow } from './RoomLifecycleBoundaryRow';
 import { TimelineRow } from './TimelineRow';
+import { RowRewardName } from './RowRewardName';
 import { FieldsCageOrderControl } from './FieldsCageOrderControl';
 import { RoomActionAcquisitionRow } from './RoomActionAcquisitionRow';
-import { RoomActionInlineEditors } from './RoomActionInlineEditors';
+import {
+  RoomActionInlineEditors,
+  RoomActionInlineReward,
+  RoomActionVerb,
+} from './RoomActionInlineEditors';
 import { RoomActionPlacementControl, RoomActionRemovalControl } from './RoomActionOrderingControls';
-import { roomActionDestinationLabel } from './room-action-placement';
+import { roomActionReorderPositions } from './room-action-placement';
+import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderHandle';
+import {
+  RoomAddArea,
+  RoomAddGroupMenu,
+  type RoomAddAction,
+  type RoomAddGroup,
+} from './RoomAddMenu';
+import { useTimelineReorder } from './useTimelineReorder';
 import { NemesisInteractionEditor, NemesisInteractionPhrase } from './NemesisEventEditor';
 import { RoomObjectEntry } from './commerce/RoomObjectEntry';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
-import { GoldAmount, PurchaseAffordability, RoomGoldSummary } from './commerce/GoldAmount';
+import { GoldAmount, PurchaseCost, RoomGoldSummary } from './commerce/GoldAmount';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomActionIcon } from '@planner/ui/artwork/roomArtwork';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 /** Room-owned boundary additions: editors on the boundary row and rows that follow it. */
 export interface TimelineBoundaryContent {
   readonly editors?: ReactNode;
   readonly rows?: ReactNode;
 }
 
-interface PendingRoomActionPointerDrag {
-  readonly actionKey: string;
-  readonly handle: HTMLElement;
-  readonly originX: number;
-  readonly originY: number;
-  readonly pointerId: number;
+/** A Mystery Boon whose source the row authors: its picker replaces the name after the verb. */
+function inlineMysteryBoonOfferVerb(row: WorkspaceRoomActions['rows'][number]) {
+  const mystery =
+    row.rewardPayload?.showOffer === true &&
+    (row.rewardPayload.control.offer?.rewardType ??
+      row.rewardPayload.control.authoringSeed?.rewardType) === 'BlindBoxLoot';
+  return mystery ? row.labelParts : undefined;
 }
 
-interface RoomActionPointerDrag {
-  readonly actionKey: string;
-  readonly pointerId: number;
-  readonly target: RoomActionDropTarget | undefined;
-  readonly x: number;
-  readonly y: number;
-}
+// The Add area: room objects in game order, then optional actions by source family.
+const objectOrder = ['worldShop', 'hermesShrine', 'stygianWell', 'purgingPool', 'championItem'];
 
-type RoomActionDropTarget =
-  RankedPrefixDropTarget | { readonly kind: 'position'; readonly toIndex: number };
-
-function sameRoomActionDropTarget(
-  left: RoomActionDropTarget | undefined,
-  right: RoomActionDropTarget | undefined,
-): boolean {
-  if (left === right) return true;
-  if (left === undefined || right === undefined || left.kind !== right.kind) return false;
-  if (left.kind === 'position' || right.kind === 'position') {
-    return left.kind === 'position' && right.kind === 'position' && left.toIndex === right.toIndex;
+const objectOfReference = (
+  reference: WorkspaceRoomActions['rows'][number]['reference'],
+): string | undefined => {
+  switch (reference.kind) {
+    case 'interactShopOffer':
+      return 'worldShop';
+    case 'purchaseHermesShrineOffer':
+      return 'hermesShrine';
+    case 'purchaseStygianWellOffer':
+    case 'rerollStygianWell':
+      return 'stygianWell';
+    case 'sellPurgingPoolTrait':
+    case 'rerollPurgingPool':
+      return 'purgingPool';
+    case 'interactInfernalContractPedestal':
+      return 'championItem';
+    default:
+      return undefined;
   }
-  if (left.kind === 'nextVisit' || right.kind === 'nextVisit') return true;
-  return left.slotKey === right.slotKey;
-}
+};
 
-function roomActionDropTargetFromPoint(
-  root: HTMLElement | null,
-  x: number,
-  y: number,
-): RoomActionDropTarget | undefined {
-  const hit = document.elementFromPoint?.(x, y);
-  const boundary = hit?.closest<HTMLElement>('[data-room-action-drop-index]');
-  if (boundary !== null && boundary !== undefined && root?.contains(boundary) === true) {
-    const toIndex = Number(boundary.dataset.roomActionDropIndex);
-    if (Number.isInteger(toIndex) && toIndex >= 0) {
-      return Object.freeze({ kind: 'position' as const, toIndex });
+function WorkbenchAddArea({
+  addAction,
+  featureRolls,
+  interactions,
+  objectEntries,
+  objectRows,
+  optionalRows,
+}: {
+  /** The timeline's rows, whose purchase, sale and reroll findings mark their object. */
+  readonly objectRows: readonly WorkspaceRoomActions['rows'][number][];
+  readonly addAction: (row: WorkspaceRoomActions['rows'][number]) => RoomAddAction;
+  readonly featureRolls: NonNullable<WorkspaceRoomActions['featureRolls']>;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly objectEntries: NonNullable<WorkspaceRoomActions['objectEntries']>;
+  readonly optionalRows: readonly WorkspaceRoomActions['rows'][number][];
+}) {
+  const findingMark = useFindingMark();
+  const objectMark = (object: string): FindingMarkProps | undefined => {
+    const marks = objectRows
+      .filter((row) => objectOfReference(row.reference) === object)
+      .map((row) => findingMark(row.address))
+      .filter((mark) => mark['data-has-findings']);
+    if (marks.length === 0) return undefined;
+    return {
+      'data-semantic-owner': marks[0]!['data-semantic-owner'],
+      'data-has-findings': true,
+      'aria-description': marks.map((mark) => mark['aria-description']).join(' '),
+    };
+  };
+  const withMark = (mark: FindingMarkProps | undefined) =>
+    mark === undefined ? {} : { findingMark: mark };
+  const groups = new Map<
+    string,
+    { label: string; object?: string; rows: (typeof optionalRows)[number][] }
+  >();
+  const rackRows: (typeof optionalRows)[number][] = [];
+  for (const row of optionalRows) {
+    if (row.reference.kind === 'interactKeepsakeRack') {
+      rackRows.push(row);
+      continue;
     }
+    const group = row.addGroup ?? { key: 'other', label: 'Actions' };
+    const entry = groups.get(group.key) ?? {
+      label: group.label,
+      ...(group.object === undefined ? {} : { object: group.object }),
+      rows: [],
+    };
+    entry.rows.push(row);
+    groups.set(group.key, entry);
   }
-  const row = hit?.closest<HTMLElement>('[data-room-action-key][data-in-order="true"]');
-  if (row === null || row === undefined || root?.contains(row) !== true) return undefined;
-  const actionKey = row.dataset.roomActionKey;
-  if (actionKey === undefined) return undefined;
-  const bounds = row.getBoundingClientRect();
-  return Object.freeze({
-    kind: y < bounds.top + bounds.height / 2 ? ('beforeSlot' as const) : ('afterSlot' as const),
-    slotKey: actionKey,
+  const toGroup = (
+    key: string,
+    entry: { label: string; rows: (typeof optionalRows)[number][] },
+  ): RoomAddGroup => ({
+    key,
+    label: entry.label,
+    actions: entry.rows.map(addAction),
   });
+  const objectNodes = [
+    ...objectEntries.map((entry) => ({
+      rank: objectOrder.indexOf(entry.object),
+      node: (
+        <RoomObjectEntry
+          entry={entry}
+          {...withMark(objectMark(entry.object))}
+          interactions={interactions}
+          key={entry.interactionKey}
+        />
+      ),
+    })),
+    ...featureRolls.map((rolls) => ({
+      rank: objectOrder.indexOf(rolls.feature),
+      node: (
+        <FeatureRollEntry
+          actions={rolls}
+          {...withMark(objectMark(rolls.feature))}
+          interactions={interactions}
+          key={rolls.interactionKey}
+        />
+      ),
+    })),
+    // A room object's own optional pickups (a Shrine delivery) sit beside it.
+    ...[...groups.entries()]
+      .filter(([, entry]) => entry.object !== undefined)
+      .map(([key, entry]) => ({
+        rank: objectOrder.indexOf(entry.object!) + 0.5,
+        node: (
+          <li key={key}>
+            <RoomAddGroupMenu group={toGroup(key, entry)} />
+          </li>
+        ),
+      })),
+    ...rackRows.map((row) => {
+      const action = addAction(row);
+      return {
+        rank: objectOrder.length,
+        node: (
+          <li key={row.key}>
+            <button
+              {...action.findingMark}
+              {...hintProps(action.unavailable, action.findingMark?.['aria-description'])}
+              aria-disabled={action.unavailable === undefined ? undefined : true}
+              className="secondary-action action-compact room-add-group"
+              onClick={(event) => {
+                if (action.unavailable === undefined) action.onSelect(event.currentTarget);
+              }}
+              type="button"
+            >
+              {action.icon === undefined ? null : (
+                <ArtworkIcon className="artwork-label-icon" source={action.icon} />
+              )}
+              Keepsake Rack
+            </button>
+          </li>
+        ),
+      };
+    }),
+  ]
+    .sort((left, right) => left.rank - right.rank)
+    .map((entry) => entry.node);
+  return (
+    <RoomAddArea
+      groups={[...groups.entries()]
+        .filter(([, entry]) => entry.object === undefined)
+        .map(([key, entry]) => toGroup(key, entry))}
+      objects={objectNodes}
+    />
+  );
 }
 
 export function RoomActionsWorkbench({
@@ -108,7 +224,7 @@ export function RoomActionsWorkbench({
   encounterPhases,
   idPrefix,
   interactions,
-  renderEncounterPhase,
+  renderEncounterControls,
   renderRowContent,
   renderBoundaryContent,
   mode,
@@ -118,8 +234,8 @@ export function RoomActionsWorkbench({
   readonly encounterPhases?: readonly WorkspaceEncounterPhase[];
   readonly idPrefix?: string;
   readonly interactions: WorkspaceInteractionCatalog;
-  /** Encounter/reward owner supplies these leaves without a reverse import. */
-  readonly renderEncounterPhase?: (phase: WorkspaceEncounterPhase) => ReactNode;
+  /** Encounter/reward owner supplies a banner's encounter controls without a reverse import. */
+  readonly renderEncounterControls?: (controls: WorkspaceEncounterBannerSupplement) => ReactNode;
   /** Consumer-owned leaf editor for one exact shared timeline row. */
   readonly renderRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   readonly renderBoundaryContent?: (
@@ -127,7 +243,12 @@ export function RoomActionsWorkbench({
   ) => TimelineBoundaryContent | undefined;
   readonly mode:
     | { readonly kind: 'roomTimeline' }
-    | { readonly kind: 'shipPhase'; readonly phase: WorkspaceShipPhasePresentation }
+    | {
+        readonly kind: 'shipPhase';
+        readonly phase: WorkspaceShipPhasePresentation;
+        /** Every Ship phase, to name the phase a move crosses into. */
+        readonly phases: readonly WorkspaceShipPhasePresentation[];
+      }
     | {
         readonly kind: 'shipRepairs';
         readonly rows: readonly WorkspaceRoomActions['rows'][number][];
@@ -136,65 +257,9 @@ export function RoomActionsWorkbench({
   const executeIntent = useCommandIntent();
   const findingAnchor = useFindingAnchor();
   const findingMark = useFindingMark();
-  const board = useRef<HTMLOListElement | HTMLDivElement>(null);
-  const pendingPointerDrag = useRef<PendingRoomActionPointerDrag | undefined>(undefined);
-  const activePointerDrag = useRef<RoomActionPointerDrag | undefined>(undefined);
-  const [pointerDrag, setPointerDrag] = useState<RoomActionPointerDrag | undefined>(undefined);
+  const reorder = useTimelineReorder();
+  const { attachRoot } = reorder;
   const [announcement, setAnnouncement] = useState('');
-  const [placementRequest, setPlacementRequest] = useState<{ owner: string; actionKey: string }>();
-  const placementTrigger = useRef<HTMLButtonElement | null>(null);
-  const pendingPlacementFocus = useRef<{ owner: string; actionKey: string } | undefined>(undefined);
-  const placementOwner =
-    actions === undefined
-      ? ''
-      : `${workspaceInteractionKey(actions.owner)}:${mode.kind === 'shipPhase' ? mode.phase.key : mode.kind}`;
-  const placingRow =
-    placementRequest?.owner === placementOwner
-      ? actions?.rows.find(
-          (row) => row.key === placementRequest.actionKey && row.rank === null && !row.stale,
-        )
-      : undefined;
-  useEffect(() => {
-    const pending = pendingPlacementFocus.current;
-    if (pending === undefined) return;
-    if (pending.owner !== placementOwner) {
-      pendingPlacementFocus.current = undefined;
-      return;
-    }
-    const placed = Array.from(
-      board.current?.querySelectorAll<HTMLElement>(
-        '[data-room-action-key][data-in-order="true"]',
-      ) ?? [],
-    ).find((element) => element.dataset.roomActionKey === pending.actionKey);
-    if (placed === undefined) return;
-    pendingPlacementFocus.current = undefined;
-    placed.focus({ preventScroll: true });
-    placed.scrollIntoView?.({ block: 'center' });
-  }, [actions, placementOwner]);
-  const cancelPlacement = (): void => {
-    setPlacementRequest(undefined);
-    placementTrigger.current?.focus({ preventScroll: true });
-  };
-  useEffect(() => {
-    if (placingRow === undefined) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented) return;
-      const overlaySelector =
-        '[role="dialog"], [role="alertdialog"], [role="listbox"], .run-state-sheet';
-      if (
-        event
-          .composedPath()
-          .some((target) => target instanceof Element && target.matches(overlaySelector)) ||
-        document.querySelector(overlaySelector) !== null
-      )
-        return;
-      event.preventDefault();
-      setPlacementRequest(undefined);
-      placementTrigger.current?.focus({ preventScroll: true });
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [placingRow]);
   if (actions === undefined && mode.kind === 'roomTimeline') {
     if (encounterPhases === undefined || idPrefix === undefined) return null;
     return (
@@ -203,7 +268,8 @@ export function RoomActionsWorkbench({
           .filter((phase) => phase.timelineAnchor !== undefined)
           .map((phase) => (
             <Fragment key={workspaceInteractionKey(phase.address)}>
-              {renderEncounterPhase?.(phase)}
+              {renderEncounterControls?.({ kind: 'encounterStart', phase })}
+              {renderEncounterControls?.({ kind: 'encounterEnd', phase })}
             </Fragment>
           ))}
       </section>
@@ -218,95 +284,10 @@ export function RoomActionsWorkbench({
       entry.kind === 'action' ? [entry.actionKey] : [],
     ) ?? [];
   const rankedRows = actions?.rows.filter((row) => rankedKeys.includes(row.key)) ?? [];
-  const ranking = reconcileRankedPrefix({
-    authoredVisitOrder: rankedKeys,
-    declarationOpenSlotKeys: rankedKeys,
-  });
-  const proposalForMove = (actionKey: string, toIndex: number) => {
-    const row = actions?.rows.find((candidate) => candidate.key === actionKey);
-    return actions?.proposals.find(
-      (proposal) =>
-        proposal.kind === 'move' &&
-        row?.proposalKeys.includes(proposal.key) === true &&
-        proposal.toIndex === toIndex,
-    );
-  };
   const apply = (proposalKey: string): void => {
     const proposal = interaction?.proposals.find((candidate) => candidate.key === proposalKey);
     if (interaction === undefined || proposal?.structurallyAuthorable !== true) return;
     executeIntent(interaction.intentFor(proposalKey));
-  };
-  const proposalForDrop = (
-    actionKey: string,
-    target: RoomActionDropTarget,
-  ): WorkspaceRoomActions['proposals'][number] | undefined => {
-    if (target.kind === 'position') return proposalForMove(actionKey, target.toIndex);
-    const result = dropRankedPrefixItem(ranking, rankedRows.length, actionKey, target);
-    const toIndex = result?.proposedVisitOrder?.indexOf(actionKey);
-    return toIndex === undefined || toIndex < 0 ? undefined : proposalForMove(actionKey, toIndex);
-  };
-  const beginPointerDrag = (event: ReactPointerEvent<HTMLSpanElement>, actionKey: string): void => {
-    if (event.button !== 0 || !event.isPrimary) return;
-    event.preventDefault();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-    pendingPointerDrag.current = Object.freeze({
-      actionKey,
-      handle: event.currentTarget,
-      originX: event.clientX,
-      originY: event.clientY,
-      pointerId: event.pointerId,
-    });
-  };
-  const clearPointerDrag = (pointerId?: number): void => {
-    const pending = pendingPointerDrag.current;
-    const active = activePointerDrag.current;
-    if (pointerId !== undefined && (active?.pointerId ?? pending?.pointerId) !== pointerId) return;
-    if (pending?.handle.hasPointerCapture?.(pending.pointerId)) {
-      pending.handle.releasePointerCapture(pending.pointerId);
-    }
-    pendingPointerDrag.current = undefined;
-    activePointerDrag.current = undefined;
-    setPointerDrag(undefined);
-  };
-  const updatePointerDrag = (event: ReactPointerEvent<HTMLElement>): void => {
-    const pending = pendingPointerDrag.current;
-    if (pending === undefined || pending.pointerId !== event.pointerId) return;
-    if (
-      activePointerDrag.current === undefined &&
-      Math.hypot(event.clientX - pending.originX, event.clientY - pending.originY) < 6
-    ) {
-      return;
-    }
-    const next = Object.freeze({
-      actionKey: pending.actionKey,
-      pointerId: pending.pointerId,
-      target: roomActionDropTargetFromPoint(board.current, event.clientX, event.clientY),
-      x: event.clientX,
-      y: event.clientY,
-    });
-    activePointerDrag.current = next;
-    setPointerDrag(next);
-  };
-  const completePointerDrag = (event: ReactPointerEvent<HTMLElement>): void => {
-    const active = activePointerDrag.current;
-    if (active === undefined || active.pointerId !== event.pointerId) {
-      clearPointerDrag(event.pointerId);
-      return;
-    }
-    const target = roomActionDropTargetFromPoint(board.current, event.clientX, event.clientY);
-    clearPointerDrag(event.pointerId);
-    if (target === undefined) return;
-    const proposal = proposalForDrop(active.actionKey, target);
-    if (proposal === undefined) return;
-    if (!proposal.structurallyAuthorable) {
-      setAnnouncement(`Action not moved. ${proposal.explanations.join(' ')}`);
-      return;
-    }
-    const row = actions?.rows.find((candidate) => candidate.key === active.actionKey);
-    setAnnouncement(
-      `${row?.label ?? active.actionKey} moved to position ${(proposal.toIndex ?? 0) + 1}.`,
-    );
-    apply(proposal.key);
   };
   const checkpointRows = (
     afterRank: number,
@@ -332,99 +313,102 @@ export function RoomActionsWorkbench({
     >['supplement'],
   ): ReactNode => {
     if (supplement === undefined) return null;
-    if (supplement.kind === 'encounter') return renderEncounterPhase?.(supplement.phase) ?? null;
+    if (supplement.kind !== 'nemesisInteraction')
+      return renderEncounterControls?.(supplement) ?? null;
     const interaction = interactions.nemesisEvents.get(workspaceInteractionKey(supplement.owner));
     return interaction === undefined ? null : (
       <NemesisInteractionEditor interaction={interaction} />
     );
   };
-  const dropState = (target: RoomActionDropTarget) => {
-    if (!sameRoomActionDropTarget(pointerDrag?.target, target)) return undefined;
-    const proposal = proposalForDrop(pointerDrag!.actionKey, target);
-    if (proposal === undefined) return undefined;
-    return proposal.structurallyAuthorable ? 'available' : 'unavailable';
-  };
-  const renderedInsertions = new Set<string>();
+  const shipPhases = mode.kind === 'shipPhase' ? mode.phases : undefined;
+  const phaseOf =
+    shipPhases === undefined
+      ? undefined
+      : (rowKey: string) =>
+          shipPhases.find((phase) =>
+            phase.timeline.some((entry) => entry.kind === 'action' && entry.actionKey === rowKey),
+          )?.label;
   const visibleTimeline =
     mode.kind === 'roomTimeline'
       ? (actions?.timeline.entries ?? [])
       : mode.kind === 'shipPhase'
         ? mode.phase.timeline
         : [];
-  // A shared action-order position belongs below its Doors open boundary.
-  const doorsOpenInsertion = visibleTimeline.find(
-    (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+  const reorderBanners = visibleTimeline.flatMap((entry) =>
+    entry.kind === 'boundary'
+      ? [
+          {
+            key: entry.boundary.key,
+            label: entry.label,
+            kind: entry.boundary.kind,
+            dropIndex: entry.dropIndex,
+          },
+        ]
+      : [],
   );
-  const renderInsertion = (toIndex: number, key: string): ReactNode => {
-    if (placingRow === undefined) return null;
-    if (
-      doorsOpenInsertion?.kind === 'boundary' &&
-      doorsOpenInsertion.dropIndex === toIndex &&
-      doorsOpenInsertion.boundary.key !== key
-    )
-      return null;
-    const proposal = actions?.proposals.find(
-      (candidate) =>
-        candidate.kind === 'insert' &&
-        candidate.toIndex === toIndex &&
-        placingRow.proposalKeys.includes(candidate.key),
-    );
-    if (proposal === undefined || renderedInsertions.has(proposal.key)) return null;
-    renderedInsertions.add(proposal.key);
-    return (
-      <TimelineRow
-        key={`insert:${key}`}
-        kind="insertion"
-        label={
-          <button
-            aria-label={`Add ${placingRow.label} here: ${roomActionDestinationLabel(actions?.rows ?? [], toIndex)}`}
-            aria-disabled={!proposal.structurallyAuthorable}
-            {...hintProps(
-              proposal.structurallyAuthorable ? undefined : proposal.explanations.join(' '),
-              proposal.explanations.join(' ') || undefined,
-            )}
-            className="contextual-picker-trigger room-action-insertion-button"
-            onClick={() => {
-              if (!proposal.structurallyAuthorable) return;
-              pendingPlacementFocus.current = { owner: placementOwner, actionKey: placingRow.key };
-              apply(proposal.key);
-              setPlacementRequest(undefined);
-              setAnnouncement(`${placingRow.label} added to the timeline.`);
-            }}
-            type="button"
-          >
-            {proposal.structurallyAuthorable ? '+ Add action here' : 'Unavailable here'}
-          </button>
-        }
-      />
-    );
-  };
+  // Each encounter phase groups its Encounter line, its end and the pickups that follow.
+  const phaseByKey = new Map<string, number>();
+  {
+    let phase: number | undefined;
+    let count = 0;
+    for (const entry of visibleTimeline) {
+      if (entry.kind === 'boundary') {
+        if (entry.boundary.kind === 'encounterStart' || entry.boundary.kind === 'roomEntered')
+          phase = count++;
+        else if (entry.boundary.kind !== 'encounterEnd' && entry.boundary.kind !== 'bossDefeated')
+          phase = undefined;
+        if (phase !== undefined) phaseByKey.set(entry.boundary.key, phase);
+      } else if (entry.kind === 'action' && phase !== undefined) {
+        phaseByKey.set(entry.actionKey, phase);
+      }
+    }
+  }
   const renderBoundary = (
     entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>,
   ) => {
-    const target = Object.freeze({ kind: 'position' as const, toIndex: entry.dropIndex });
-    const targetState = dropState(target);
     const content = renderBoundaryContent?.(entry.boundary);
+    const boundary = entry.boundary;
+    const modifiers = [renderSupplement(entry.supplement), content?.editors].filter(
+      (node) => node !== null && node !== undefined && node !== false,
+    );
+    // A Nemesis bet settles as its encounter ends.
+    const phaseBet =
+      boundary.kind === 'encounterEnd'
+        ? actions?.phaseGold?.find((bet) => bet.phaseKey === boundary.phaseKey)
+        : undefined;
     return (
       <Fragment key={entry.boundary.key}>
         <LifecycleBoundaryRow
           boundary={entry.boundary}
-          dropIndex={entry.dropIndex}
+          {...(phaseByKey.get(entry.boundary.key) === undefined
+            ? {}
+            : { phase: phaseByKey.get(entry.boundary.key)! })}
+          {...(modifiers.length === 0
+            ? {}
+            : {
+                controls: modifiers.map((node, index) => <Fragment key={index}>{node}</Fragment>),
+              })}
           editors={
             <>
-              {renderSupplement(entry.supplement)}
-              {content?.editors}
+              {/* A banner's gold keeps the money column. */}
               {entry.boundary.kind === 'cleanup' && actions !== undefined ? (
                 <RoomGoldSummary
                   {...(actions.current === undefined ? {} : { current: actions.current })}
-                  {...(actions.spending === undefined ? {} : { spent: actions.spending })}
                 />
               ) : null}
+              {phaseBet === undefined ? null : (
+                <span className="timeline-banner-gold">
+                  <GoldAmount
+                    amount={phaseBet.gold}
+                    className={`timeline-gold-gained${phaseBet.gold.loss ? ' timeline-gold-lost' : ''}`}
+                  />
+                </span>
+              )}
             </>
           }
           label={entry.label}
           {...(entry.fieldsCage === undefined ? {} : { fieldsCage: entry.fieldsCage })}
-          {...(entry.supplement?.kind === 'encounter' &&
+          {...(entry.supplement?.kind === 'encounterStart' &&
           entry.supplement.identityLabel !== undefined
             ? {
                 identity: {
@@ -433,12 +417,8 @@ export function RoomActionsWorkbench({
                 },
               }
             : {})}
-          {...(targetState === undefined ? {} : { dropState: targetState })}
         />
         {content?.rows}
-        {entry.boundary.kind === 'encounterStart'
-          ? null
-          : renderInsertion(entry.dropIndex, entry.boundary.key)}
       </Fragment>
     );
   };
@@ -459,15 +439,9 @@ export function RoomActionsWorkbench({
       const proposal = actions.proposals.find((candidate) => candidate.key === key);
       return proposal === undefined ? [] : [proposal];
     });
-    const canDrag =
-      row.rank !== null &&
-      rankedRows.length > 1 &&
-      proposals.some((proposal) => proposal.kind === 'move');
+    const icon = roomActionIcon(row.reference, row.address.biomeKey, row.sourceFamily);
+    const mysteryVerb = inlineMysteryBoonOfferVerb(row);
     const placement = row.placement;
-    const inlineMysteryBoonOffer =
-      row.rewardPayload?.showOffer === true &&
-      (row.rewardPayload.control.offer?.rewardType ??
-        row.rewardPayload.control.authoringSeed?.rewardType) === 'BlindBoxLoot';
     const actionAccent = row.stale
       ? undefined
       : row.participation === 'optional'
@@ -488,16 +462,10 @@ export function RoomActionsWorkbench({
     const placementControl =
       placement === undefined ? (
         <RoomActionPlacementControl
-          findingMark={findingMark(row.address, row.rank === null ? 'place' : 'move')}
+          findingMark={findingMark(row.address, 'place')}
           onApply={apply}
-          onBeginAdd={(button) => {
-            placementTrigger.current = button;
-            setPlacementRequest({ owner: placementOwner, actionKey: row.key });
-            setAnnouncement(`Choose where to add ${row.label}.`);
-          }}
           proposals={proposals}
           row={row}
-          rows={actions.rows}
         />
       ) : (
         <button
@@ -521,32 +489,33 @@ export function RoomActionsWorkbench({
         <TimelineRow
           data-action-accent={actionAccent}
           data-blocking-product={row.blockingProduct}
-          data-dragging={pointerDrag?.actionKey === row.key || undefined}
-          data-drop-after={
-            row.rank === null ? undefined : dropState({ kind: 'afterSlot', slotKey: row.key })
-          }
-          data-drop-before={
-            row.rank === null ? undefined : dropState({ kind: 'beforeSlot', slotKey: row.key })
-          }
+          data-reorder-anchor={row.rank === null ? undefined : row.key}
+          data-phase={phaseByKey.get(row.key)}
           data-in-order={row.rank === null ? 'false' : 'true'}
-          data-placing={placingRow?.key === row.key || undefined}
           data-room-action-key={row.key}
           {...findingAnchor(row.address)}
           tabIndex={-1}
           kind="action"
           handle={
-            canDrag ? (
-              <span
-                className="hub-roster-drag-handle"
-                data-dragging={pointerDrag?.actionKey === row.key || undefined}
-                data-room-action-drag-handle
-                onPointerDown={(event) => beginPointerDrag(event, row.key)}
-              >
-                ⠿
-              </span>
+            row.rank !== null ? (
+              <TimelineReorderHandle
+                findingMark={findingMark(row.address, 'move')}
+                item={{
+                  key: row.key,
+                  label: row.label,
+                  positions: roomActionReorderPositions(
+                    actions.rows,
+                    row,
+                    proposals,
+                    phaseOf,
+                    reorderBanners,
+                  ),
+                  onMove: apply,
+                }}
+                session={reorder}
+              />
             ) : null
           }
-          ordinal={row.rank ?? '—'}
           label={
             <>
               {supplement?.kind === 'nemesisInteraction' && supplement.familyLabel !== undefined ? (
@@ -555,22 +524,87 @@ export function RoomActionsWorkbench({
                   <span aria-hidden="true">·</span>
                 </>
               ) : null}
-              {roomActionIcon(row.reference, row.address.biomeKey) === undefined ? null : (
-                <ArtworkIcon
-                  className="artwork-label-icon"
-                  source={roomActionIcon(row.reference, row.address.biomeKey)}
-                />
+              {icon === undefined ? null : (
+                <span className="timeline-row-icon">
+                  <ArtworkIcon className="artwork-label-icon" source={icon} />
+                  {row.travelDeal ? (
+                    <ArtworkIcon
+                      className="timeline-slot-badge timeline-travel-deal-badge"
+                      source={traitIcon('RestockBoon')}
+                    />
+                  ) : row.slot === undefined ? null : (
+                    <span aria-hidden="true" className="timeline-slot-badge">
+                      {row.slot}
+                    </span>
+                  )}
+                </span>
               )}
-              {nemesisInteraction === undefined || nemesisInteraction.value === null ? (
+              {nemesisInteraction !== undefined && nemesisInteraction.value !== null ? (
+                <NemesisInteractionPhrase interaction={nemesisInteraction} />
+              ) : row.labelParts === undefined ? (
                 <strong>{row.label}</strong>
               ) : (
-                <NemesisInteractionPhrase interaction={nemesisInteraction} />
+                <>
+                  {row.labelParts.verb === undefined ? null : (
+                    <RoomActionVerb
+                      interactions={interactions}
+                      row={row}
+                      verb={row.labelParts.verb}
+                    />
+                  )}
+                  {mysteryVerb === undefined ? (
+                    <strong
+                      {...(row.labelParts.origin === undefined ||
+                      row.labelParts.reward !== undefined
+                        ? {}
+                        : {
+                            // A name without an icon carries its origin itself, on hover and focus.
+                            ...hintProps(row.labelParts.origin),
+                            'aria-label': row.labelParts.name,
+                            className: 'timeline-row-origin',
+                            role: 'group',
+                            tabIndex: 0,
+                          })}
+                    >
+                      {row.labelParts.reward === undefined ? (
+                        row.labelParts.name
+                      ) : (
+                        <RowRewardName
+                          boosted={row.labelParts.reward.boosted}
+                          {...(row.labelParts.reward.itemKey === undefined
+                            ? {}
+                            : { itemKey: row.labelParts.reward.itemKey })}
+                          name={row.labelParts.name}
+                          offer={row.labelParts.reward.offer}
+                          {...(row.labelParts.origin === undefined
+                            ? {}
+                            : { origin: row.labelParts.origin })}
+                        />
+                      )}
+                      {row.travelDeal ? (
+                        <span className="visually-hidden"> · Travel Deal offer</span>
+                      ) : null}
+                    </strong>
+                  ) : (
+                    <>
+                      <RowRewardName name="Mystery Boon" offer={{ rewardType: 'BlindBoxLoot' }} />
+                      <span aria-hidden="true" className="row-reward-arrow">
+                        →
+                      </span>
+                      <span className="visually-hidden">resolved to</span>
+                      <RoomActionInlineReward interactions={interactions} row={row} />
+                    </>
+                  )}
+                  {row.labelParts.tag === undefined ||
+                  // A Ship phase tab already names the wheel's phase.
+                  (mode.kind === 'shipPhase' &&
+                    row.reference.kind === 'interactWheelReward') ? null : (
+                    <span className="timeline-row-tag">{row.labelParts.tag}</span>
+                  )}
+                </>
               )}
-              {row.price === undefined ? null : (
-                <span className="timeline-row-price">
-                  <span aria-hidden="true">·</span>
-                  <GoldAmount amount={row.price} />
-                </span>
+              {row.slot === undefined ? null : (
+                <span className="visually-hidden">{` · slot ${row.slot}`}</span>
               )}
               {row.stale ? <span className="neutral-status">stale</span> : null}
               {row.rank === null && row.participation === 'required' ? (
@@ -581,13 +615,9 @@ export function RoomActionsWorkbench({
           editors={
             <>
               {renderRowContent?.(row)}
+              <RoomActionInlineEditors interactions={interactions} row={row} />
               <RoomActionAcquisitionRow
-                hideOffer={inlineMysteryBoonOffer}
-                interactions={interactions}
-                row={row}
-              />
-              <RoomActionInlineEditors
-                inlineRewardOffer={inlineMysteryBoonOffer}
+                hideOffer={mysteryVerb !== undefined}
                 interactions={interactions}
                 row={row}
               />
@@ -599,10 +629,20 @@ export function RoomActionsWorkbench({
                   interaction={nemesisInteraction}
                 />
               )}
-              {row.affordability === undefined ? null : (
-                <PurchaseAffordability affordability={row.affordability} />
-              )}
             </>
+          }
+          money={
+            row.goldGained === undefined || row.price !== undefined ? (
+              <PurchaseCost
+                {...(row.affordability === undefined ? {} : { affordability: row.affordability })}
+                {...(row.price === undefined ? {} : { price: row.price })}
+              />
+            ) : (
+              <GoldAmount
+                amount={row.goldGained}
+                className={`timeline-gold-gained${row.goldGained.loss ? ' timeline-gold-lost' : ''}`}
+              />
+            )
           }
           placement={placementControl}
           removal={
@@ -626,56 +666,41 @@ export function RoomActionsWorkbench({
           <TravelDealLine interactions={interactions} line={row.travelDealLine} />
         )}
         {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}
-        {row.rank === null ? null : renderInsertion(row.rank, row.key)}
       </Fragment>
     );
   };
-  const pointerHandlers = {
-    onLostPointerCapture: (event: ReactPointerEvent<HTMLElement>) =>
-      clearPointerDrag(event.pointerId),
-    onPointerCancel: (event: ReactPointerEvent<HTMLElement>) => clearPointerDrag(event.pointerId),
-    onPointerMove: updatePointerDrag,
-    onPointerUp: completePointerDrag,
+  // An optional action adds in one click where it has one place; otherwise its place is chosen.
+  const addAction = (row: WorkspaceRoomActions['rows'][number]): RoomAddAction => {
+    const icon = roomActionIcon(row.reference, row.address.biomeKey, row.sourceFamily);
+    const base = {
+      key: row.key,
+      label: row.label,
+      address: row.address,
+      ...(icon === undefined ? {} : { icon }),
+      findingMark: findingMark(row.address, 'place'),
+    };
+    const placement = row.placement;
+    if (placement !== undefined) return { ...base, onSelect: () => executeIntent(placement) };
+    const insertions = row.proposalKeys.flatMap((key) => {
+      const proposal = actions?.proposals.find(
+        (candidate) => candidate.key === key && candidate.kind === 'insert',
+      );
+      return proposal?.structurallyAuthorable === true ? [proposal] : [];
+    });
+    if (insertions.length === 0)
+      return { ...base, unavailable: 'No position to add this action.', onSelect: () => undefined };
+    // A new action appends at its last legal place, as a purchase does; it is then dragged.
+    const last = insertions.reduce((latest, proposal) =>
+      (proposal.toIndex ?? 0) > (latest.toIndex ?? 0) ? proposal : latest,
+    );
+    return {
+      ...base,
+      onSelect: () => {
+        apply(last.key);
+        setAnnouncement(`${row.label} added to the timeline.`);
+      },
+    };
   };
-  const hoveredProposal =
-    pointerDrag?.target === undefined
-      ? undefined
-      : proposalForDrop(pointerDrag.actionKey, pointerDrag.target);
-  const dragPreview =
-    pointerDrag === undefined ? null : (
-      <div
-        aria-hidden="true"
-        className="room-action-drag-preview"
-        style={{
-          transform: `translate3d(calc(${pointerDrag.x + 14}px / var(--app-scale, 1)), calc(${pointerDrag.y + 14}px / var(--app-scale, 1)), 0)`,
-        }}
-      >
-        <div className="room-action-drag-header">
-          <span aria-hidden="true">⠿</span>
-          <strong>
-            {actions?.rows.find((row) => row.key === pointerDrag.actionKey)?.label ?? 'Room action'}
-          </strong>
-        </div>
-        {hoveredProposal === undefined ? null : (
-          <span className="room-action-drag-feedback">
-            {hoveredProposal.structurallyAuthorable
-              ? 'Drop here'
-              : `Unavailable: ${hoveredProposal.explanations.join(' ')}`}
-          </span>
-        )}
-      </div>
-    );
-  const placementNotice =
-    placingRow === undefined ? null : (
-      <div className="room-action-placement-notice" role="status">
-        <span>
-          Placing: <strong>{placingRow.label}</strong>
-        </span>
-        <button className="quiet-action action-compact" onClick={cancelPlacement} type="button">
-          Cancel
-        </button>
-      </div>
-    );
   if (mode.kind !== 'roomTimeline') {
     return (
       <section aria-label="Ship combat structure" className="ship-combat-editor">
@@ -688,13 +713,7 @@ export function RoomActionsWorkbench({
           <p aria-live="polite" className="visually-hidden">
             {announcement}
           </p>
-          <div
-            className="ship-phase-list"
-            ref={(element) => {
-              board.current = element;
-            }}
-            {...pointerHandlers}
-          >
+          <div className="ship-phase-list" ref={attachRoot}>
             {(mode.kind === 'shipPhase' ? [mode.phase] : []).map((phase) => {
               const timelineActionRanks = new Set(
                 phase.timeline.flatMap((entry) => (entry.kind === 'action' ? [entry.rank] : [])),
@@ -785,27 +804,14 @@ export function RoomActionsWorkbench({
                       </ol>
                     </section>
                   )}
-                  {phase.optionalRows.length === 0 &&
-                  (phase.objectEntries ?? []).length === 0 ? null : (
-                    <section aria-label="Optional actions" className="room-action-optional-pool">
-                      <div className="local-reward-heading">
-                        <h5>Optional actions</h5>
-                      </div>
-                      <ol
-                        aria-label={`${phase.label} optional actions`}
-                        className="room-action-list"
-                      >
-                        {(phase.objectEntries ?? []).map((entry) => (
-                          <RoomObjectEntry
-                            entry={entry}
-                            interactions={interactions}
-                            key={entry.interactionKey}
-                          />
-                        ))}
-                        {phase.optionalRows.map((row) => renderRow(row, phase.checkpoints))}
-                      </ol>
-                    </section>
-                  )}
+                  <WorkbenchAddArea
+                    addAction={addAction}
+                    featureRolls={[]}
+                    interactions={interactions}
+                    objectEntries={phase.objectEntries ?? []}
+                    objectRows={phase.actionRows}
+                    optionalRows={phase.optionalRows}
+                  />
                 </section>
               );
             })}
@@ -820,8 +826,7 @@ export function RoomActionsWorkbench({
               </section>
             )}
           </div>
-          {dragPreview}
-          {placementNotice}
+          <TimelineReorderStatus session={reorder} />
         </section>
       </section>
     );
@@ -885,44 +890,19 @@ export function RoomActionsWorkbench({
           interaction={interaction}
         />
       )}
-      <ol
-        aria-label="Room timeline"
-        className="room-action-list"
-        {...pointerHandlers}
-        ref={(element) => {
-          board.current = element;
-        }}
-      >
+      <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
         {timelineRows}
         {rankedRows.length === 0 ? checkpointRows(0) : null}
       </ol>
       {children}
-      {actions.optionalRows.length === 0 &&
-      (actions.featureRolls ?? []).length === 0 &&
-      (actions.objectEntries ?? []).length === 0 ? null : (
-        <section aria-label="Optional actions" className="room-action-optional-pool">
-          <div className="local-reward-heading">
-            <h5>Optional actions</h5>
-          </div>
-          <ol aria-label="Optional actions" className="room-action-list">
-            {(actions.objectEntries ?? []).map((entry) => (
-              <RoomObjectEntry
-                entry={entry}
-                interactions={interactions}
-                key={entry.interactionKey}
-              />
-            ))}
-            {(actions.featureRolls ?? []).map((rolls) => (
-              <FeatureRollEntry
-                actions={rolls}
-                interactions={interactions}
-                key={rolls.interactionKey}
-              />
-            ))}
-            {actions.optionalRows.map((row) => renderRow(row))}
-          </ol>
-        </section>
-      )}
+      <WorkbenchAddArea
+        addAction={addAction}
+        featureRolls={actions.featureRolls ?? []}
+        interactions={interactions}
+        objectEntries={actions.objectEntries ?? []}
+        objectRows={actions.rows}
+        optionalRows={actions.optionalRows}
+      />
       {actions.repairRows.length === 0 ? null : (
         <section aria-label="Timeline repairs" className="room-action-repairs">
           <div className="local-reward-heading">
@@ -933,8 +913,7 @@ export function RoomActionsWorkbench({
           </ol>
         </section>
       )}
-      {dragPreview}
-      {placementNotice}
+      <TimelineReorderStatus session={reorder} />
     </section>
   );
 }

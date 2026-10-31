@@ -18,6 +18,7 @@ import { hintProps } from '@planner/ui/controls/hint';
 
 const pendingPhialTitles = {
   unreached: candidateWaitingHint,
+  noPhial: 'No Phial reaches this fountain.',
   noTargetRequired: 'No Phial-eligible boon to target here.',
 } as const satisfies Record<NonNullable<WorkspaceFountainRarityControl['pending']>, string>;
 
@@ -60,6 +61,8 @@ export function FountainRarityEffectRow({
     setManualOpen(nextOpen);
     if (!nextOpen && focused) setClosedAtNavigationRevision(semanticNavigationRevision);
   };
+  // The target shows only where a Phial reaches the fountain or a retained target needs repair.
+  if (control.pending === 'noPhial' && control.targetTraitKey === undefined) return null;
   return (
     <div
       className="fountain-rarity-inline"

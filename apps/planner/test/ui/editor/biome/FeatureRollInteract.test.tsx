@@ -93,7 +93,7 @@ it('rerolls the Well from its Timeline entry and buys a restocked slot with its 
   expect(
     roomOrder(view.application).find((reference) => reference.kind === 'rerollStygianWell'),
   ).toMatchObject({ offerKeyBySlot: { healing: expect.any(String) } });
-  expect(screen.getByRole('button', { name: /^Move Buy .+ · roll 2$/ })).toBeTruthy();
+  expect(screen.getByRole('button', { name: /^Reorder Buy .+ · roll 2$/ })).toBeTruthy();
   expect(
     screen.getByRole('button', { name: /^Remove Reroll Well · roll 2 from timeline$/ }),
   ).not.toHaveProperty('disabled', true);

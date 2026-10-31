@@ -85,6 +85,101 @@ import {
 
 import { hintOf, queryByHint } from '@planner-test/support/hints';
 
+/** An element's text as read aloud: icons by their names, tags after a separator. */
+function spokenText(element: Element): string {
+  const parts: string[] = [];
+  const walk = (node: Node): void => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      parts.push(node.textContent ?? '');
+      return;
+    }
+    if (!(node instanceof Element) || node.getAttribute('aria-hidden') === 'true') return;
+    if (node.getAttribute('role') === 'img') {
+      parts.push(` ${node.getAttribute('aria-label') ?? ''} `);
+      return;
+    }
+    if (node.classList.contains('timeline-row-tag')) {
+      parts.push(` · ${node.textContent ?? ''}`);
+      return;
+    }
+    parts.push(' ');
+    node.childNodes.forEach(walk);
+    parts.push(' ');
+  };
+  walk(element);
+  return parts.join('').replace(/\s+/g, ' ').trim();
+}
+
+/** The Room Timeline action row whose spoken label matches. */
+function actionRow(container: HTMLElement, label: string | RegExp): HTMLElement {
+  const rows = [...container.querySelectorAll<HTMLElement>('li[data-room-action-key]')];
+  const matches = rows.filter((row) => {
+    const text = spokenText(row.querySelector('[data-timeline-cell="label"]') ?? row);
+    return typeof label === 'string' ? text === label : label.test(text);
+  });
+  if (matches.length !== 1)
+    throw new Error(
+      `${matches.length} rows match ${String(label)}: ${rows
+        .map((row) => spokenText(row.querySelector('[data-timeline-cell="label"]') ?? row))
+        .join(' | ')}`,
+    );
+  return matches[0]!;
+}
+
+/** The paid purchase rows of a timeline, by their Buy or Rush verb. */
+function purchaseRows(container: HTMLElement): HTMLElement[] {
+  return [...container.querySelectorAll<HTMLElement>('li[data-room-action-key]')].filter((row) =>
+    /^(Buy|Rush) /.test(spokenText(row.querySelector('[data-timeline-cell="label"]') ?? row)),
+  );
+}
+
+function queryActionRow(container: HTMLElement, label: string | RegExp): HTMLElement | null {
+  try {
+    return actionRow(container, label);
+  } catch {
+    return null;
+  }
+}
+
+/** The handle's list announcements, read from its live regions. */
+function reorderAnnouncement(handle: HTMLElement): string {
+  const scope = handle.closest('.room-actions-workbench') ?? document.body;
+  return [...scope.querySelectorAll('[aria-live="polite"]')]
+    .map((region) => region.textContent ?? '')
+    .join(' ')
+    .replace(/\u00a0/g, '');
+}
+
+/**
+ * Picks a row up by keyboard, steps from the first legal position to the
+ * `nth` one whose announcement matches, and drops it there. Returns the
+ * positions announced on the way.
+ */
+function reorderByKeyboard(handle: HTMLElement, target: RegExp, nth = 0): string[] {
+  const visited: string[] = [];
+  act(() => {
+    fireEvent.click(handle, { detail: 0 });
+  });
+  act(() => {
+    fireEvent.keyDown(handle, { key: 'Home' });
+  });
+  let seen = 0;
+  for (let step = 0; step < 40; step += 1) {
+    const announced = reorderAnnouncement(handle).trim();
+    visited.push(announced);
+    if (target.test(announced) && seen++ === nth) {
+      act(() => {
+        fireEvent.click(handle, { detail: 0 });
+      });
+      return visited;
+    }
+    act(() => {
+      fireEvent.keyDown(handle, { key: 'ArrowDown' });
+    });
+  }
+  throw new Error(`No legal position matches ${String(target)}: ${visited.join(' | ')}`);
+}
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -205,8 +300,9 @@ describe('OccurrenceRoomActions', () => {
     );
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
+    // Where the engine allows a conversion, the row's verb is the pickup-outcome picker.
     const outcome = within(actions).getByRole('button', {
-      name: /^Pickup outcome for /,
+      name: /^How to take .+: Collect$/,
     });
     // Without the Sea Star keepsake the engine supports no proc, so no checkbox renders.
     expect(within(actions).queryByRole('checkbox', { name: /^Double Up for / })).toBeNull();
@@ -216,9 +312,9 @@ describe('OccurrenceRoomActions', () => {
       within(screen.getByRole('listbox'))
         .getAllByRole('option')
         .map((option) => option.getAttribute('aria-label') ?? option.textContent?.replace('✓', '')),
-    ).toEqual(['Pickup', 'Timepiece']);
+    ).toEqual(['Collect', expect.stringMatching(/^Goldify · Time Piece/)]);
     const timePiece = screen.getByRole('option', {
-      name: 'Timepiece',
+      name: /^Goldify · Time Piece/,
     });
 
     expect(timePiece.getAttribute('aria-disabled')).not.toBe('true');
@@ -232,6 +328,10 @@ describe('OccurrenceRoomActions', () => {
         ? authoredChaos.state.reward.dispositionByAcquisitionRole.self
         : undefined,
     ).toEqual({ kind: 'timePiece' });
+    // The verb now reads as the chosen conversion.
+    expect(
+      within(actions).getByRole('button', { name: /^How to take .+: Goldify$/ }),
+    ).not.toBeNull();
   });
 
   it('reopens the shared Steady Growth target picker on exact finding navigation', async () => {
@@ -434,7 +534,7 @@ describe('OccurrenceRoomActions', () => {
       occurrenceById(createOccurrenceId('golden-h-combat02')),
     );
     openRoomTab('Room Overview');
-    expect(screen.queryByRole('list', { name: 'Timeline legend' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Legend' })).toBeNull();
     const fieldsSetup = screen.getByLabelText('Optional Rewards');
     const passiveEncounter = screen.getByLabelText('Passive encounter phase');
     expectBefore(passiveEncounter, fieldsSetup);
@@ -450,14 +550,24 @@ describe('OccurrenceRoomActions', () => {
     );
     openRoomTab('Room Timeline');
     const fieldsActions = screen.getByRole('region', { name: 'Room Timeline' });
-    const legend = screen.getByRole('list', { name: 'Timeline legend' });
-    expect(legend.textContent).toBe('OptionalRequired nowBefore leavingAutomaticAffordable');
-    const sample = within(legend).getByText('Affordable').querySelector('[aria-hidden="true"]');
-    expect([...(sample?.children ?? [])].map((tone) => tone.getAttribute('data-tone'))).toEqual([
-      'high',
-      'medium',
-      'low',
+    // The legend opens from its button on the timeline's tab row.
+    fireEvent.click(screen.getByRole('button', { name: 'Legend' }));
+    const colours = screen.getByRole('list', { name: 'Row colours' });
+    expect(
+      within(colours)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
+      'Optional actions',
+      'Required before this phase ends',
+      'Required before leaving this room',
+      'Actions that trigger automatically',
     ]);
+    const chances = screen.getByRole('list', { name: 'Chance to afford' });
+    expect(
+      [...chances.querySelectorAll('[data-tone]')].map((tone) => tone.getAttribute('data-tone')),
+    ).toEqual(['high', 'medium', 'low']);
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
     expect(within(fieldsActions).queryByRole('heading', { name: 'Room Timeline' })).toBeNull();
     expect(within(fieldsActions).getByLabelText('Room entered')).toBeTruthy();
     expect(within(fieldsActions).queryByLabelText('Passive encounter phase')).toBeNull();
@@ -468,20 +578,16 @@ describe('OccurrenceRoomActions', () => {
     if (fieldsEncounter !== null) expectBefore(fieldsEncounter, fieldsActions);
     const timeline = within(fieldsActions).getByRole('list', { name: 'Room timeline' });
     const optionalPool = within(fieldsActions).getByRole('region', { name: 'Optional actions' });
-    expect(within(timeline).queryByText(/^Collect .+ · Optional 1/)).toBeNull();
-    const optionalAction = within(optionalPool)
-      .getByText(/^Collect .+ · Optional 1/)
-      .closest('li');
-    if (optionalAction === null) throw new Error('Optional reward action is missing');
-    expect(optionalAction.getAttribute('data-action-accent')).toBe('optional');
-    expect(
-      within(timeline)
-        .getByText(/^Collect .+ · Cage 1/)
-        .closest('li')
-        ?.getAttribute('data-action-accent'),
-    ).toBe('room');
-    expect(within(optionalAction).queryByLabelText('Optional 1')).toBeNull();
-    expect(within(optionalAction).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(queryActionRow(timeline, /^Collect .+ · Optional 1$/)).toBeNull();
+    // The unplaced optional reward is offered from the Add area's Optional rewards group.
+    fireEvent.click(within(optionalPool).getByRole('button', { name: 'Optional rewards' }));
+    const menu = screen.getByRole('dialog', { name: 'Add from Optional rewards' });
+    const optionalAction = within(menu).getByRole('button', { name: /^Collect .+ · Optional 1$/ });
+    expect(optionalAction.getAttribute('aria-disabled')).toBeNull();
+    expect(within(menu).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(actionRow(timeline, /^Collect .+ · Cage 1$/).getAttribute('data-action-accent')).toBe(
+      'room',
+    );
     expect(fieldsActions).toBeTruthy();
   });
 
@@ -497,25 +603,33 @@ describe('OccurrenceRoomActions', () => {
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
     const starts = [1, 2, 3].map((ordinal) =>
-      within(timeline).getByLabelText(`Start encounter ${ordinal}`),
+      within(timeline).getByLabelText(`Encounter ${ordinal}`),
     );
     const ends = Array.from(
       timeline.querySelectorAll<HTMLElement>('[data-lifecycle-boundary^="encounterEnd:"]'),
     );
     expect(ends).toHaveLength(3);
-    for (const [index, start] of starts.entries())
-      expect(start.querySelector('.fields-cage-label')?.textContent).toMatch(
-        new RegExp(`^Cage ${index + 1} \\(`),
-      );
-    const cageOrder = within(actions).getByRole('button', { name: 'Combat Order' });
+    // Each cage's end banner carries its cycle's number, as its start banner does.
+    expect(ends.map((end) => end.getAttribute('aria-label'))).toEqual([
+      'Encounter 1 ended',
+      'Encounter 2 ended',
+      'Encounter 3 ended',
+    ]);
+    for (const [index, start] of starts.entries()) {
+      // The cage tag shows the cage; its full name with its reward is its accessible name.
+      const cage = start.querySelector('.fields-cage-label');
+      expect(cage?.textContent).toBe(`Cage ${index + 1}`);
+      expect(cage?.getAttribute('aria-label')).toMatch(new RegExp(`^Cage ${index + 1} \\(`));
+    }
+    const cageOrder = within(actions).getByRole('button', { name: /^Combat order: / });
     expectBefore(cageOrder, within(timeline).getByLabelText('Room entered'));
     expect(within(timeline).queryByText(/^Clear Cage\d+/)).toBeNull();
     for (const row of timeline.querySelectorAll('[data-in-order="true"]')) {
-      expect(within(row as HTMLElement).getByRole('button', { name: /^Move / })).toBeTruthy();
+      expect(within(row as HTMLElement).getByRole('button', { name: /^Reorder / })).toBeTruthy();
     }
 
-    const dropTargetSelector =
-      '[data-room-action-drop-index], [data-room-action-key][data-in-order="true"]';
+    // No movable row stands inside a cage's own encounter.
+    const dropTargetSelector = '[data-room-action-key][data-in-order="true"]';
     const timelineChildren = Array.from(timeline.children);
     for (const [index, start] of starts.entries()) {
       const end = ends[index]!;
@@ -533,20 +647,17 @@ describe('OccurrenceRoomActions', () => {
       expect(insertionTargets).toEqual([]);
     }
 
-    const cagePickup = within(timeline)
-      .getByText(/^Collect .+ · Cage 1/)
-      .closest<HTMLElement>('[data-room-action-key]');
-    if (cagePickup === null) throw new Error('Cage 1 pickup row is missing');
+    const cagePickup = actionRow(timeline, /^Collect .+ · Cage 1$/);
     expectBefore(ends[0]!, cagePickup);
-    expect(cagePickup.querySelector('[data-room-action-drag-handle]')).not.toBeNull();
     const movePickupEarlier = within(cagePickup).getByRole('button', {
-      name: /^Move Collect .* · Cage 1$/,
-    }) as HTMLButtonElement;
-    expect(movePickupEarlier.disabled).toBe(false);
-    await view.user.click(movePickupEarlier);
-    await view.user.click(
-      within(screen.getByRole('listbox')).getByRole('option', { name: 'Before Clear Cage 3' }),
-    );
+      name: /^Reorder Collect .* · Cage 1$/,
+    });
+    expect(movePickupEarlier.getAttribute('aria-disabled')).toBeNull();
+    // After the second cage's end, which is before Cage 3.
+    expect(reorderByKeyboard(movePickupEarlier, /^After Encounter 2 ended$/)).toEqual([
+      'After Encounter 1 ended',
+      'After Encounter 2 ended',
+    ]);
     await waitFor(() => {
       const order = occurrenceRoomActionOrder(
         view.application.store.getState().projectWorkspace.history!.present,
@@ -589,12 +700,12 @@ describe('OccurrenceRoomActions', () => {
       const phase = within(structure).getByLabelText(`${cage} encounter phase`);
       expect(within(phase).getByRole('button', { name: cage })).toBeTruthy();
     }
-    expect(screen.queryByRole('button', { name: 'Combat Order' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Combat order/ })).toBeNull();
     openRoomTab('Room Timeline');
-    expect(screen.getByRole('button', { name: 'Combat Order' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Combat order/ })).toBeTruthy();
     // Each cage start banner names its encounter read-only; identity stays in Overview.
     for (const ordinal of [1, 2, 3]) {
-      const start = screen.getByLabelText(`Start encounter ${ordinal}`);
+      const start = screen.getByLabelText(`Encounter ${ordinal}`);
       expect(start.querySelector('.fields-cage-label')).not.toBeNull();
       expect(start.querySelector('.timeline-banner-identity')?.textContent).not.toMatch(/Cage/);
     }
@@ -617,10 +728,10 @@ describe('OccurrenceRoomActions', () => {
     const choose = async (number: number) =>
       view.user.click(
         within(screen.getByRole('listbox')).getByRole('option', {
-          name: new RegExp(`^Cage ${number} \\(`),
+          name: new RegExp(`^Cage ${number}$`),
         }),
       );
-    await view.user.click(screen.getByRole('button', { name: 'Combat Order' }));
+    await view.user.click(screen.getByRole('button', { name: /^Combat order/ }));
     expect(within(screen.getByRole('listbox')).getAllByRole('option')).toHaveLength(3);
     await choose(3);
     expect(within(screen.getByRole('listbox')).getAllByRole('option')).toHaveLength(2);
@@ -628,12 +739,12 @@ describe('OccurrenceRoomActions', () => {
     await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(view.application.store.getState().projectWorkspace.history!.present).toBe(initial);
 
-    await view.user.click(screen.getByRole('button', { name: 'Combat Order' }));
+    await view.user.click(screen.getByRole('button', { name: /^Combat order/ }));
     for (const number of [1, 2, 3]) await choose(number);
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
-    await view.user.click(screen.getByRole('button', { name: 'Combat Order' }));
+    await view.user.click(screen.getByRole('button', { name: /^Combat order/ }));
     await choose(3);
     await choose(2);
     expect(view.application.store.getState().projectWorkspace.history!.present).toBe(initial);
@@ -654,16 +765,26 @@ describe('OccurrenceRoomActions', () => {
       historyBefore + 1,
     );
     for (const [index, number] of [3, 2, 1].entries())
-      expect(screen.getByLabelText(`Start encounter ${index + 1}`).textContent).toContain(
-        `Cage ${number} (`,
-      );
-    expect(screen.getByRole('button', { name: 'Combat Order' }).textContent).toMatch(
-      /Cage 3 \(.+\) \/ Cage 2 \(.+\) \/ Cage 1 \(.+\)/,
-    );
+      expect(
+        screen
+          .getByLabelText(`Encounter ${index + 1}`)
+          .querySelector('.fields-cage-label')
+          ?.getAttribute('aria-label'),
+      ).toMatch(new RegExp(`^Cage ${number} \\(`));
+    // The order shows the cages in order; its accessible name adds each cage's reward.
+    const order = screen.getByRole('button', {
+      name: /^Combat order: Cage 3 \(.+\) \/ Cage 2 \(.+\) \/ Cage 1 \(.+\)$/,
+    });
+    expect(order.textContent).toBe('Cage 3 / Cage 2 / Cage 1');
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() => expect(cagePermutation()).toEqual(['Cage01', 'Cage02', 'Cage03']));
-    expect(screen.getByLabelText('Start encounter 1').textContent).toContain('Cage 1 (');
+    expect(
+      screen
+        .getByLabelText('Encounter 1')
+        .querySelector('.fields-cage-label')
+        ?.getAttribute('aria-label'),
+    ).toMatch(/^Cage 1 \(/);
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
     await waitFor(() => expect(cagePermutation()).toEqual(['Cage03', 'Cage02', 'Cage01']));
   });
@@ -677,9 +798,9 @@ describe('OccurrenceRoomActions', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Timeline');
-    await view.user.click(screen.getByRole('button', { name: 'Combat Order' }));
+    await view.user.click(screen.getByRole('button', { name: /^Combat order/ }));
     const cageTwoOption = within(screen.getByRole('listbox')).getByRole('option', {
-      name: /^Cage 2 \(/,
+      name: /^Cage 2$/,
     });
     expect(cageTwoOption.getAttribute('aria-disabled')).not.toBe('true');
     await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -715,16 +836,14 @@ describe('OccurrenceRoomActions', () => {
     );
     expect(blockedMove?.explanations).toEqual(['Clear Cage 1 to make Athena available.']);
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    const board = within(actions).getByRole('list', { name: 'Room timeline' });
-    const handle = within(actions)
-      .getByText('Talk to Athena', { selector: 'strong' })
-      .closest<HTMLElement>('[data-room-action-key]')
-      ?.querySelector<HTMLElement>('[data-room-action-drag-handle]');
-    if (!handle) throw new Error('Athena drag handle missing');
-    Object.defineProperty(document, 'elementFromPoint', {
-      configurable: true,
-      value: () => within(actions).getByLabelText('Room entered'),
-    });
+    const handle = within(actions).getByRole('button', { name: 'Reorder Talk to Athena' });
+    const orderBefore = occurrenceRoomActionOrder(
+      view.application.store.getState().projectWorkspace.history!.present,
+      'Underworld',
+      'H',
+      occurrenceId,
+    );
+    // jsdom lays nothing out, so the pointer is nearest the first place: the blocked start.
     fireEvent.pointerDown(handle, {
       button: 0,
       clientX: 12,
@@ -732,25 +851,35 @@ describe('OccurrenceRoomActions', () => {
       isPrimary: true,
       pointerId: 92,
     });
-    fireEvent.pointerMove(board, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 92 });
-    expect(screen.getByText(`Unavailable: ${blockedMove!.explanations.join(' ')}`)).toBeTruthy();
+    fireEvent.pointerMove(handle, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 92 });
     const preview = actions.querySelector('.room-action-drag-preview');
     expect(preview?.querySelector('.room-action-drag-header strong')?.textContent).toBe(
       'Talk to Athena',
     );
-    expect(preview?.querySelector(':scope > .room-action-drag-feedback')).toBeTruthy();
-    expect(preview?.classList.contains('hub-roster-drag-preview')).toBe(false);
-    fireEvent.pointerUp(board, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 92 });
+    // A disallowed place names why, from the proposal's explanation.
+    expect(preview?.querySelector('.room-action-drag-feedback')?.textContent).toBe(
+      `Unavailable: ${blockedMove!.explanations.join(' ')}`,
+    );
+    fireEvent.pointerUp(handle, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 92 });
+    expect(reorderAnnouncement(handle)).toContain(
+      `Not moved. ${blockedMove!.explanations.join(' ')}`,
+    );
+    expect(actions.querySelector('.room-action-drag-preview')).toBeNull();
     expect(
-      screen.getByText(`Action not moved. ${blockedMove!.explanations.join(' ')}`),
-    ).toBeTruthy();
+      occurrenceRoomActionOrder(
+        view.application.store.getState().projectWorkspace.history!.present,
+        'Underworld',
+        'H',
+        occurrenceId,
+      ),
+    ).toEqual(orderBefore);
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.click(screen.getByRole('button', { name: 'Combat Order' }));
+    await view.user.click(screen.getByRole('button', { name: /^Combat order/ }));
     await view.user.click(
-      within(screen.getByRole('listbox')).getByRole('option', { name: /^Cage 2 \(/ }),
+      within(screen.getByRole('listbox')).getByRole('option', { name: /^Cage 2$/ }),
     );
     await view.user.click(
-      within(screen.getByRole('listbox')).getByRole('option', { name: /^Cage 1 \(/ }),
+      within(screen.getByRole('listbox')).getByRole('option', { name: /^Cage 1$/ }),
     );
     await waitFor(() => {
       const order = occurrenceRoomActionOrder(
@@ -881,11 +1010,11 @@ describe('OccurrenceRoomActions', () => {
     expect(within(repairs).getByText('Clear Cage 3')).toBeTruthy();
     expect(within(repairs).queryByText('This required action has not been placed.')).toBeNull();
     const cageOrder = within(actions).getByRole('button', {
-      name: 'Combat Order',
+      name: /^Combat order: Cage \d \(.+\) \/ Cage \d \(.+\)/,
     }) as HTMLButtonElement;
     expect(cageOrder.disabled).toBe(true);
     expect(hintOf(cageOrder)).toBe('Restore missing cage actions before changing their order.');
-    expect(cageOrder.textContent).toMatch(/^Cage \d \(.+\) \/ Cage \d \(.+\)/);
+    expect(cageOrder.textContent).toMatch(/^Cage \d \/ Cage \d/);
   });
 
   it('accepts a Fields optional reward directly on the Room entered checkpoint', async () => {
@@ -899,79 +1028,42 @@ describe('OccurrenceRoomActions', () => {
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const optionalPool = within(actions).getByRole('region', { name: 'Optional actions' });
-    const initialOptional = within(optionalPool)
-      .getByText(/^Collect .+ · Optional 1/)
-      .closest<HTMLElement>('[data-room-action-key]');
-    if (initialOptional === null) throw new Error('Optional 1 action is missing');
-    expect(within(actions).queryByRole('button', { name: / here:/ })).toBeNull();
-    const add = within(initialOptional).getByRole('button', { name: /^Add Collect / });
+    const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
+    expect(queryActionRow(timeline, /^Collect .+ · Optional 1$/)).toBeNull();
     const historyLength = view.application.store.getState().projectWorkspace.history!.past.length;
-    await view.user.click(add);
-    expect(initialOptional.getAttribute('data-placing')).toBe('true');
-    const insertionLabels = within(actions)
-      .getAllByRole('button', { name: / here:/ })
-      .map((button) => button.getAttribute('aria-label'));
-    expect(new Set(insertionLabels).size).toBe(insertionLabels.length);
-    await view.user.click(within(actions).getAllByRole('button', { name: /^Move / })[0]!);
-    expect(screen.getByRole('listbox')).toBeTruthy();
-    await view.user.keyboard('{Escape}');
-    expect(screen.queryByRole('listbox')).toBeNull();
-    expect(initialOptional.getAttribute('data-placing')).toBe('true');
-    await view.user.keyboard('{Escape}');
-    expect(within(actions).queryByRole('button', { name: / here:/ })).toBeNull();
-    expect(document.activeElement).toBe(add);
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      historyLength,
+    // One pick adds the optional reward at its last legal place; nothing asks where.
+    await view.user.click(within(optionalPool).getByRole('button', { name: 'Optional rewards' }));
+    await view.user.click(
+      within(screen.getByRole('dialog', { name: 'Add from Optional rewards' })).getByRole(
+        'button',
+        { name: /^Collect .+ · Optional 1$/ },
+      ),
     );
-    await view.user.click(add);
-    await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(within(actions).queryByRole('button', { name: / here:/ })).toBeNull();
-    await view.user.click(add);
-    const addHere = within(actions)
-      .getAllByRole('button', { name: /^Add Collect .+ · Optional 1 here:/ })
-      .filter((button) => button.getAttribute('aria-disabled') !== 'true')
-      .at(-1);
-    if (addHere === undefined) throw new Error('Timeline has no insertion point');
-    expectBefore(within(actions).getByLabelText('Doors open'), addHere);
-    await view.user.click(addHere);
-    expect(within(actions).queryByRole('button', { name: / here:/ })).toBeNull();
-
-    expect(within(optionalPool).queryByText(/^Collect .+ · Optional 1/)).toBeNull();
-    const orderedOptional = within(actions)
-      .getByText(/^Collect .+ · Optional 1/, { selector: 'strong' })
-      .closest<HTMLElement>('[data-room-action-key]');
-    expect(orderedOptional?.getAttribute('data-action-accent')).toBe('optional');
-    const roomEntered = within(actions).getByLabelText('Room entered');
-    expect(document.activeElement).toBe(orderedOptional);
-    const board = within(actions).getByRole('list', { name: 'Room timeline' });
-    const handle = orderedOptional?.querySelector<HTMLElement>('[data-room-action-drag-handle]');
-    if (orderedOptional === null || handle === null || handle === undefined)
-      throw new Error('Ordered Optional 1 drag handle is missing');
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historyLength + 1,
+    );
+    expect(within(actions).getByText(/ added to the timeline\.$/)).toBeTruthy();
+    const orderedOptional = actionRow(timeline, /^Collect .+ · Optional 1$/);
+    expect(orderedOptional.getAttribute('data-action-accent')).toBe('optional');
+    expectBefore(within(actions).getByLabelText('Doors open'), orderedOptional);
+    const handle = within(orderedOptional).getByRole('button', {
+      name: /^Reorder Collect .+ · Optional 1$/,
+    });
+    // Picking up and dropping in place edits nothing.
     const historyBeforeNoOp =
       view.application.store.getState().projectWorkspace.history!.past.length;
-    Object.defineProperty(document, 'elementFromPoint', {
-      configurable: true,
-      value: () => orderedOptional,
+    act(() => {
+      fireEvent.click(handle, { detail: 0 });
     });
-    fireEvent.pointerDown(handle, {
-      button: 0,
-      clientX: 12,
-      clientY: 12,
-      isPrimary: true,
-      pointerId: 90,
+    expect(reorderAnnouncement(handle)).toContain('Current position');
+    act(() => {
+      fireEvent.click(handle, { detail: 0 });
     });
-    fireEvent.pointerMove(board, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 90 });
-    expect(screen.queryByText('Unavailable: required action order or timing')).toBeNull();
-    expect(orderedOptional.dataset.dropAfter).toBeUndefined();
-    fireEvent.pointerUp(board, { clientX: 24, clientY: 80, isPrimary: true, pointerId: 90 });
+    expect(reorderAnnouncement(handle)).toContain('stays in place.');
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBeforeNoOp,
     );
-    expect(screen.queryByText(/^Action not moved/)).toBeNull();
-    Object.defineProperty(document, 'elementFromPoint', {
-      configurable: true,
-      value: () => roomEntered,
-    });
+    // jsdom lays nothing out, so a pointer drag lands on the first legal place: Room entered.
     fireEvent.pointerDown(handle, {
       button: 0,
       clientX: 12,
@@ -980,15 +1072,17 @@ describe('OccurrenceRoomActions', () => {
       pointerId: 91,
       pointerType: 'mouse',
     });
-    fireEvent.pointerMove(board, {
+    fireEvent.pointerMove(handle, {
       clientX: 24,
       clientY: 80,
       isPrimary: true,
       pointerId: 91,
       pointerType: 'mouse',
     });
-    expect(roomEntered.dataset.dropPosition).toBe('available');
-    fireEvent.pointerUp(board, {
+    expect(
+      actions.querySelector('.room-action-drag-preview .room-action-drag-feedback')?.textContent,
+    ).toBe('After Room entered');
+    fireEvent.pointerUp(handle, {
       clientX: 24,
       clientY: 80,
       isPrimary: true,
@@ -1088,11 +1182,9 @@ describe('OccurrenceRoomActions', () => {
     openRoomTab('Room Timeline');
     const soldRow = screen.getByText(`Sell ${leftTraitLabel}`).closest('li');
     expect(soldRow?.getAttribute('data-action-accent')).toBe('optional');
-    await view.user.click(screen.getByRole('button', { name: `Move Sell ${leftTraitLabel}` }));
-    await view.user.click(
-      within(screen.getByRole('listbox'))
-        .getAllByRole('option')
-        .find((option) => option.getAttribute('aria-disabled') !== 'true')!,
+    reorderByKeyboard(
+      screen.getByRole('button', { name: `Reorder Sell ${leftTraitLabel}` }),
+      /^(?!Current position)/,
     );
     await waitFor(() => expect(poolActionOrder()).not.toEqual(sold));
     const moved = poolActionOrder();
@@ -1147,41 +1239,36 @@ describe('OccurrenceRoomActions', () => {
       occurrenceById(goldenFOccurrenceId(1, 1)),
     );
     openRoomTab('Room Timeline');
-    const disposition = screen.getByRole('button', {
-      name: /^Pickup outcome for /,
-    });
-    const outcomeControl = disposition.closest<HTMLElement>('.pickup-outcome-control');
-    if (outcomeControl === null) throw new Error('Pickup outcome control is missing');
-    expect(within(outcomeControl).getByText('Outcome')).toBeTruthy();
-    expect(disposition.textContent).toContain('Pickup');
+    // The pickup outcome is the row's verb, so it precedes every decision it enables.
+    const disposition = screen.getByRole('button', { name: /^How to take .+: Collect$/ });
+    expect(disposition.textContent).toBe('Collect');
     const pomLauncher = screen.getByRole('button', { name: 'Edit Pom · No eligible traits' });
     const pickupRow = pomLauncher.closest<HTMLElement>('[data-room-action-key]');
     if (pickupRow === null) throw new Error('Nectar pickup row is missing');
-    const column = pickupRow.querySelector<HTMLElement>(':scope > [data-timeline-cell="editors"]');
-    if (column === null) throw new Error('Nectar inline editor column is missing');
-    expect(column.contains(disposition)).toBe(true);
-    expect(column.contains(pomLauncher)).toBe(true);
+    expect(
+      pickupRow.querySelector(':scope > [data-timeline-cell="label"]')?.contains(disposition),
+    ).toBe(true);
+    expect(
+      pickupRow.querySelector(':scope > [data-timeline-cell="editors"]')?.contains(pomLauncher),
+    ).toBe(true);
     expectBefore(disposition, pomLauncher);
 
     await view.user.click(disposition);
-    await view.user.click(screen.getByRole('option', { name: 'Artificer' }));
+    await view.user.click(screen.getByRole('option', { name: 'Transform · Artificer' }));
     await waitFor(() => {
-      const sourceAction = screen
-        .getByText(/^(Collect Nectar|Use Artificer on Nectar)$/)
-        .closest<HTMLElement>('[data-room-action-key]');
+      const outcome = screen.getByRole('button', { name: /^How to take .+: Transform$/ });
+      const sourceAction = outcome.closest<HTMLElement>('[data-room-action-key]');
       if (sourceAction === null) throw new Error('Artificer source action is missing');
       expect(
         within(sourceAction).queryByRole('button', {
           name: 'Edit Pom · No eligible traits',
         }),
       ).toBeNull();
-      const outcome = within(sourceAction).getByRole('button', { name: /^Pickup outcome for / });
-      const output = within(sourceAction).getByRole('button', { name: 'Item' });
-      const sourceColumn = sourceAction.querySelector<HTMLElement>(
-        ':scope > [data-timeline-cell="editors"]',
-      );
-      expect(sourceColumn?.contains(outcome)).toBe(true);
-      expect(sourceColumn?.contains(output)).toBe(true);
+      // The transformed pickup's decision is the Artificer's result.
+      const output = within(sourceAction).getByRole('button', { name: /^Artificer item/ });
+      expect(
+        sourceAction.querySelector(':scope > [data-timeline-cell="editors"]')?.contains(output),
+      ).toBe(true);
       expectBefore(outcome, output);
     });
   });
@@ -1213,14 +1300,12 @@ describe('OccurrenceRoomActions', () => {
     );
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    const row = within(actions)
-      .getByText('Collect Red Onion')
-      .closest<HTMLElement>('[data-room-action-key]');
-    if (row === null) throw new Error('Forfeited pickup row is missing');
-    expect(row.textContent).not.toMatch(/Forfeit|Zeus|boon|\(Red Onion\)/);
-    const outcome = within(row).getByRole('button', { name: /^Pickup outcome for / });
-    expect(outcome.textContent).toContain('Pickup');
-    expect(row.querySelector(':scope > [data-timeline-cell="editors"]')?.contains(outcome)).toBe(
+    const row = actionRow(actions, 'Collect Red Onion');
+    expect(spokenText(row)).not.toMatch(/Forfeit|Zeus|boon|\(Red Onion\)/);
+    // The realized pickup keeps its editable outcome as the row's verb.
+    const outcome = within(row).getByRole('button', { name: /^How to take .+: Collect$/ });
+    expect(outcome.textContent).toBe('Collect');
+    expect(row.querySelector(':scope > [data-timeline-cell="label"]')?.contains(outcome)).toBe(
       true,
     );
     expect(within(row).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
@@ -1249,13 +1334,10 @@ describe('OccurrenceRoomActions', () => {
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const sourceAction = within(actions)
-      .getByText('Use Artificer on Bones')
+      .getByRole('button', { name: /^How to take Bones: Transform$/ })
       .closest<HTMLElement>('[data-room-action-key]');
-    const replacementAction = within(actions)
-      .getByText(/^Collect (.+ · )?Artificer/)
-      .closest<HTMLElement>('[data-room-action-key]');
-    if (sourceAction === null || replacementAction === null)
-      throw new Error('Artificer source/replacement actions are missing');
+    if (sourceAction === null) throw new Error('Artificer source action is missing');
+    const replacementAction = actionRow(actions, /^Collect .*Artificer/);
     expectBefore(sourceAction, replacementAction);
     const projected = workspaceProjection(view.application)
       .route?.biomes.find((biome) => biome.biomeKey === 'F')
@@ -1273,13 +1355,13 @@ describe('OccurrenceRoomActions', () => {
         proposal.toIndex === 0 &&
         replacementRow.proposalKeys.includes(proposal.key),
     );
-    expect(blocked?.explanations).toEqual(['Use Artificer on Bones first to create this reward.']);
-    expect(within(sourceAction).getByRole('button', { name: /^Pickup outcome for / })).toBeTruthy();
-    expect(within(sourceAction).getByRole('button', { name: 'Item' })).toBeTruthy();
-    expect(
-      within(replacementAction).queryByRole('button', { name: /^Pickup outcome for / }),
-    ).toBeNull();
-    expect(within(replacementAction).queryByRole('button', { name: 'Item' })).toBeNull();
+    // The reason names the source action as its row reads.
+    expect(blocked?.explanations).toEqual([
+      `${spokenText(sourceAction.querySelector('[data-timeline-cell="label"]')!)} first to create this reward.`,
+    ]);
+    expect(within(sourceAction).getByRole('button', { name: /^Artificer item/ })).toBeTruthy();
+    expect(within(replacementAction).queryByRole('button', { name: /^How to take / })).toBeNull();
+    expect(within(replacementAction).queryByRole('button', { name: /^Artificer item/ })).toBeNull();
 
     const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
     const site = artificerAcquisitionSite(occurrence, source);
@@ -1343,7 +1425,7 @@ describe('OccurrenceRoomActions', () => {
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(within(actions).queryByText('This required action has not been placed.')).toBeNull();
     expect(within(actions).getByRole('region', { name: 'Timeline repairs' })).toBeTruthy();
-    expect(actions.querySelector('[data-room-action-drag-handle]')).toBeNull();
+    expect(actions.querySelector('[data-reorder-handle]')).toBeNull();
     const repairRow = within(actions)
       .getByRole('button', { name: 'Restore required action' })
       .closest<HTMLElement>('[data-room-action-key]');
@@ -1370,10 +1452,7 @@ describe('OccurrenceRoomActions', () => {
       ),
     );
     await waitFor(() => {
-      const restored = screen
-        .getByText('Collect Bones')
-        .closest<HTMLElement>('[data-room-action-key]');
-      if (restored === null) throw new Error('Restored required row is missing');
+      const restored = actionRow(actions, 'Collect Bones');
       expect(within(restored).queryByText('Position')).toBeNull();
       const requiredDelete = within(restored).getByRole('button', {
         name: /Remove .* from timeline/,
@@ -1486,7 +1565,7 @@ describe('OccurrenceRoomActions', () => {
       );
     }
     openRoomTab('Combat 1 Timeline');
-    const actions = screen.getByRole('region', { name: 'Room Timeline' });
+    expect(screen.getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
     const combatOne = screen.getByLabelText('Combat 1 ship phase');
     const actionOrder = () =>
       occurrenceRoomActionOrder(
@@ -1495,52 +1574,66 @@ describe('OccurrenceRoomActions', () => {
         'O',
         occurrenceId,
       );
-    const rowFor = (label: string) => {
-      const row = within(combatOne)
-        .getByText(
-          (text) => text === label || text.startsWith(`${label} ·`) || text.endsWith(` · ${label}`),
-        )
-        .closest<HTMLElement>('li');
-      if (row === null) throw new Error(`${label} action row is missing`);
-      return row;
-    };
+    const rowFor = (label: string) =>
+      actionRow(
+        combatOne,
+        new RegExp(`(^| )${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}( ·|$)`),
+      );
 
     const icarus = rowFor('Talk to Icarus');
-    const moveIcarus = within(icarus).getByRole('button', { name: 'Move Talk to Icarus' });
+    const moveIcarus = within(icarus).getByRole('button', { name: 'Reorder Talk to Icarus' });
     expect(within(combatOne).queryByText('Choose Combat 2 wheel')).toBeNull();
-    await view.user.click(moveIcarus);
-    await view.user.click(screen.getByRole('button', { name: /Unavailable/ }));
-    expect(
-      within(screen.getByRole('listbox'))
-        .getAllByRole('option')
-        .some((option) => option.getAttribute('aria-disabled') === 'true'),
-    ).toBe(true);
-    await view.user.keyboard('{Escape}');
+    const icarusRow = projected.room.roomActions!.rows.find(
+      (row) => row.key === icarus.dataset.roomActionKey,
+    )!;
+    const icarusMoves = projected.room.roomActions!.proposals.filter(
+      (proposal) => proposal.kind === 'move' && icarusRow.proposalKeys.includes(proposal.key),
+    );
+    expect(icarusMoves.some((proposal) => !proposal.structurallyAuthorable)).toBe(true);
+    // The keyboard steps through the legal places only, its own place included.
+    act(() => {
+      fireEvent.click(moveIcarus, { detail: 0 });
+    });
+    expect(reorderAnnouncement(moveIcarus)).toContain('Picked up Talk to Icarus.');
+    act(() => {
+      fireEvent.keyDown(moveIcarus, { key: 'Home' });
+    });
+    const stepped = [reorderAnnouncement(moveIcarus).trim()];
+    for (let step = 0; step < icarusMoves.length + 1; step += 1) {
+      act(() => {
+        fireEvent.keyDown(moveIcarus, { key: 'ArrowDown' });
+      });
+      stepped.push(reorderAnnouncement(moveIcarus).trim());
+    }
+    expect(stepped.some((text) => /unavailable/i.test(text))).toBe(false);
+    expect(new Set(stepped).size).toBeLessThanOrEqual(
+      icarusMoves.filter((proposal) => proposal.structurallyAuthorable).length + 1,
+    );
+    // Escape cancels and says so.
+    act(() => {
+      fireEvent.keyDown(moveIcarus, { key: 'Escape' });
+    });
+    expect(reorderAnnouncement(moveIcarus)).toContain('Cancelled. Talk to Icarus stays in place.');
+    expect(moveIcarus.getAttribute('aria-pressed')).toBeNull();
 
     const initialOrder = actionOrder();
-    await view.user.click(moveIcarus);
-    await view.user.click(
-      within(screen.getByRole('listbox'))
-        .getAllByRole('option')
-        .find((option) => option.getAttribute('aria-disabled') !== 'true')!,
-    );
+    reorderByKeyboard(moveIcarus, /^(?!Current position)/);
     expect(actionOrder()).not.toEqual(initialOrder);
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(actionOrder()).toEqual(initialOrder);
 
     const restoredIcarus = rowFor('Talk to Icarus');
-    const wheelPick = rowFor('Combat 1 reward');
-    const handle = restoredIcarus.querySelector<HTMLElement>('[data-room-action-drag-handle]');
-    const board = actions.querySelector<HTMLElement>('.ship-phase-list');
-    if (handle === null || board === null) throw new Error('Ship pointer board is missing');
+    const goldPickup = rowFor('Collect Gold');
+    const handle = within(restoredIcarus).getByRole('button', { name: 'Reorder Talk to Icarus' });
+    const board = handle;
     const initialKeys = initialOrder?.map(roomActionKey) ?? [];
     const icarusKey = restoredIcarus.dataset.roomActionKey;
-    const wheelPickKey = wheelPick.dataset.roomActionKey;
+    const goldPickupKey = goldPickup.dataset.roomActionKey;
     const dragAfter =
       icarusKey !== undefined &&
-      wheelPickKey !== undefined &&
-      initialKeys.indexOf(icarusKey) < initialKeys.indexOf(wheelPickKey);
-    vi.spyOn(wheelPick, 'getBoundingClientRect').mockReturnValue({
+      goldPickupKey !== undefined &&
+      initialKeys.indexOf(icarusKey) < initialKeys.indexOf(goldPickupKey);
+    vi.spyOn(goldPickup, 'getBoundingClientRect').mockReturnValue({
       bottom: 180,
       height: 120,
       left: 0,
@@ -1551,10 +1644,6 @@ describe('OccurrenceRoomActions', () => {
       x: 0,
       y: 60,
     } as DOMRect);
-    Object.defineProperty(document, 'elementFromPoint', {
-      configurable: true,
-      value: () => wheelPick,
-    });
     fireEvent.pointerDown(handle, {
       button: 0,
       clientX: 12,
@@ -1610,20 +1699,15 @@ describe('OccurrenceRoomActions', () => {
     expect(within(actions).getByText('Doors open')).toBeTruthy();
     expect(within(actions).queryByText('Outgoing generation')).toBeNull();
     expect(within(actions).queryByText('Exit usable')).toBeNull();
-    expect(within(actions).queryByText('Buy Zeus boon · Slot 1')).toBeNull();
+    expect(queryActionRow(actions, /^Buy Zeus boon/)).toBeNull();
 
-    const minor = within(actions).getByText('Buy Max Magick · Slot 3').closest('li');
-    if (minor === null) throw new Error('Minor Shop action is missing');
+    // The slot bought from is a badge on the row icon and part of the row's spoken label.
+    const minor = actionRow(actions, 'Buy Max Magick · slot 3');
+    expect(minor.querySelector('.timeline-slot-badge')?.textContent).toBe('3');
     expect(minor.getAttribute('data-action-accent')).toBe('optional');
-    await view.user.click(
-      within(minor).getByRole('button', {
-        name: 'Move Buy Max Magick · Slot 3',
-      }),
-    );
-    await view.user.click(
-      within(screen.getByRole('listbox'))
-        .getAllByRole('option')
-        .find((option) => option.getAttribute('aria-disabled') !== 'true')!,
+    reorderByKeyboard(
+      within(minor).getByRole('button', { name: 'Reorder Buy Max Magick' }),
+      /^(?!Current position)/,
     );
     expect(
       occurrenceRoomActionOrder(
@@ -1643,9 +1727,7 @@ describe('OccurrenceRoomActions', () => {
         'F',
         occurrenceId,
       );
-    await view.user.click(
-      screen.getByRole('button', { name: 'Remove Buy Heal · Slot 2 from timeline' }),
-    );
+    await view.user.click(screen.getByRole('button', { name: 'Remove Buy Heal from timeline' }));
     expect(order()).toEqual([{ kind: 'interactShopOffer', offerKey: 'Minor' }]);
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(order()).toEqual([
@@ -1675,12 +1757,9 @@ describe('OccurrenceRoomActions', () => {
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(within(actions).queryByRole('region', { name: 'Timeline repairs' })).toBeNull();
-    const board = within(actions).getByRole('list', { name: 'Room timeline' });
-    const major = within(actions).getByText('Buy Heal · Slot 2').closest<HTMLElement>('li');
-    const minor = within(actions).getByText('Buy Max Magick · Slot 3').closest<HTMLElement>('li');
-    if (major === null || minor === null) throw new Error('Ranked Shop action rows are missing');
-    const handle = major.querySelector<HTMLElement>('[data-room-action-drag-handle]');
-    if (handle === null) throw new Error('Ranked Room Action drag handle is missing');
+    const major = actionRow(actions, 'Buy Heal · slot 2');
+    const minor = actionRow(actions, 'Buy Max Magick · slot 3');
+    const handle = within(major).getByRole('button', { name: 'Reorder Buy Heal' });
     vi.spyOn(minor, 'getBoundingClientRect').mockReturnValue({
       bottom: 180,
       height: 120,
@@ -1692,10 +1771,6 @@ describe('OccurrenceRoomActions', () => {
       x: 0,
       y: 60,
     } as DOMRect);
-    Object.defineProperty(document, 'elementFromPoint', {
-      configurable: true,
-      value: () => minor,
-    });
     fireEvent.pointerDown(handle, {
       button: 0,
       clientX: 12,
@@ -1704,16 +1779,18 @@ describe('OccurrenceRoomActions', () => {
       pointerId: 47,
       pointerType: 'mouse',
     });
-    fireEvent.pointerMove(board, {
+    fireEvent.pointerMove(handle, {
       clientX: 24,
       clientY: 150,
       isPrimary: true,
       pointerId: 47,
       pointerType: 'mouse',
     });
-    expect(major.dataset.dragging).toBe('true');
+    // The lifted row and its target are marked while the preview follows the pointer.
+    expect(major.dataset.reorderLifted).toBe('pointer');
+    expect(minor.dataset.reorderIndicator).toBe('after');
     expect(document.querySelector('.room-action-drag-preview')).not.toBeNull();
-    fireEvent.pointerUp(board, {
+    fireEvent.pointerUp(handle, {
       clientX: 24,
       clientY: 150,
       isPrimary: true,
@@ -1762,13 +1839,13 @@ describe('OccurrenceRoomActions', () => {
       .getAllByRole('option')
       .map((option) => option.textContent);
     expect(options).toContain('Buy Travel Deal item');
-    expect(options.some((label) => label?.startsWith('Buy ') && label.includes('Slot 2'))).toBe(
-      false,
-    );
+    // Each unbought item is offered by the row it appends; the bought Slot 2 item is not.
+    expect(options).toEqual(['Buy Apollo', 'Buy Max Magick', 'Buy Travel Deal item']);
+    expect(options).not.toContain('Buy Heal');
     await view.user.click(screen.getByRole('option', { name: 'Buy Travel Deal item' }));
     expect(order()?.at(-1)).toEqual(reference);
     const stocked = order()?.length ?? 0;
-    await pickRoomObjectAction(view.user, 'World Shop', /^Buy .*Slot 3$/);
+    await pickRoomObjectAction(view.user, 'World Shop', 'Buy Max Magick');
     expect(order()).toHaveLength(stocked + 1);
     expect(order()?.at(-1)).toEqual({ kind: 'interactShopOffer', offerKey: 'Minor' });
   });
@@ -1816,7 +1893,7 @@ describe('OccurrenceRoomActions', () => {
     );
   });
 
-  it('prices each Well purchase on its row and sums the room on its Doors open banner', () => {
+  it('prices each Well purchase in its money cell and shows the gold held on its Doors open banner', () => {
     renderOccurrenceWorkbench(
       authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint()),
       'Underworld',
@@ -1825,21 +1902,24 @@ describe('OccurrenceRoomActions', () => {
     );
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    const purchases = within(actions)
-      .getAllByText(/^Buy /)
-      .map((label) => label.closest('li')!);
+    const purchases = purchaseRows(actions);
     expect(purchases.length).toBeGreaterThan(0);
-    for (const row of purchases)
-      expect(row.querySelector("[data-timeline-cell='label']")?.textContent).toMatch(
-        /^Buy .+·\s*\d+(–\d+)? gold$/,
+    for (const row of purchases) {
+      // The price sits in the money cell, never in the label.
+      const money = row.querySelector("[data-timeline-cell='money']")!;
+      expect(money.querySelector('.purchase-cost-price')?.textContent).toMatch(
+        /^~?\d+(–\d+)? gold$/,
       );
+      expect(row.querySelector("[data-timeline-cell='label']")?.textContent).not.toMatch(/gold/);
+    }
     expect(within(actions).getByLabelText('Doors open').textContent).toMatch(
-      /Current\s*~?\u2212?\d+ gold\s*·\s*Spent\s*~?\d+ gold$/,
+      /Current\s*~?\u2212?\d+ gold$/,
     );
-    expect(within(actions).getByLabelText('Room entered').textContent).not.toMatch(/Spent/);
+    expect(within(actions).getByLabelText('Doors open').textContent).not.toMatch(/Spent/);
+    expect(within(actions).getByLabelText('Room entered').textContent).not.toMatch(/Current/);
   });
 
-  it('marks each purchase with its chance to afford as a toned pill', () => {
+  it('marks each purchase with its chance to afford as a toned pill beside its price', () => {
     renderOccurrenceWorkbench(
       underworldCheckpointArtifacts['underworld-world-shop-travel-deal'].load(),
       'Underworld',
@@ -1847,12 +1927,12 @@ describe('OccurrenceRoomActions', () => {
       occurrenceById('golden-f-preboss-shop:postboss'),
     );
     openRoomTab('Room Timeline');
-    const purchases = within(screen.getByRole('region', { name: 'Room Timeline' }))
-      .getAllByText(/^Buy /)
-      .map((label) => label.closest('li')!);
+    const purchases = purchaseRows(screen.getByRole('region', { name: 'Room Timeline' }));
     expect(purchases.length).toBeGreaterThan(0);
     for (const row of purchases) {
-      const pill = row.querySelector("[data-timeline-cell='editors'] > .purchase-affordability")!;
+      const cost = row.querySelector("[data-timeline-cell='money'] > .purchase-cost")!;
+      const pill = cost.querySelector('.purchase-affordability')!;
+      expectBefore(cost.querySelector('.purchase-cost-price')!, pill);
       const shown = /^(>99%|<1%|(\d+)%) chance to afford$/.exec(pill.textContent ?? '');
       expect(shown).not.toBeNull();
       expect(pill.querySelector('.visually-hidden')?.textContent).toBe(' chance to afford');
@@ -1864,7 +1944,7 @@ describe('OccurrenceRoomActions', () => {
     }
   });
 
-  it('keeps Current in place on the Doors open banner of a room that buys nothing', () => {
+  it('keeps only Current on the Doors open banner of a room that buys nothing', () => {
     renderOccurrenceWorkbench(
       underworldCheckpointArtifacts['underworld-f-pool'].load(),
       'Underworld',
@@ -1876,10 +1956,8 @@ describe('OccurrenceRoomActions', () => {
       'Doors open',
     );
     expect(doorsOpen.textContent).toMatch(/Current\s*~\d+ gold/);
-    // The empty Spent slot holds Current's column and is never announced.
-    const placeholder = doorsOpen.querySelector('[data-placeholder]');
-    expect(placeholder?.getAttribute('aria-hidden')).toBe('true');
-    expect(placeholder?.textContent).not.toMatch(/\d/);
+    expect(doorsOpen.textContent).not.toMatch(/Spent/);
+    expect(doorsOpen.querySelector('[data-placeholder]')).toBeNull();
   });
 
   it('removes a Shop purchase atomically when its occurrence is no longer a Shop', () => {

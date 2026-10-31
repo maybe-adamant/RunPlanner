@@ -171,10 +171,9 @@ describe('OccurrenceRoomFeatures', () => {
     if (pickup === undefined) throw new Error('cleared Anomaly lost its reward pickup');
     expectBefore(encounterEnd, cleared);
     expectBefore(cleared, pickup);
-    // The outcome is an End Encounter event: it sits in that row's editors cell only.
-    expect(cleared.closest('[data-timeline-cell="editors"]')?.parentElement).toBe(
-      within(timeline).getByLabelText('Encounter ended'),
-    );
+    // The outcome is an Encounter ended event: it sits among that banner's controls.
+    expect(cleared.closest('.timeline-banner-modifiers')).not.toBeNull();
+    expect(cleared.closest('li')).toBe(within(timeline).getByLabelText('Encounter ended'));
 
     await view.user.click(cleared);
     expect(
@@ -379,7 +378,7 @@ describe('OccurrenceRoomFeatures', () => {
     );
     expect(screen.queryByRole('listbox')).toBeNull();
     expect(history().past).toHaveLength(pastCount + 1);
-    expect(screen.getByRole('button', { name: 'Encounter' }).textContent).toBe('Nemesis event▾');
+    expect(screen.getByRole('button', { name: 'Encounter' }).textContent).toBe('Nemesis event');
 
     const type = screen.getByRole('button', { name: 'Nemesis event type' });
     await view.user.click(type);
@@ -917,14 +916,12 @@ describe('OccurrenceRoomFeatures', () => {
       ).disabled,
     ).toBe(false);
     const orderBeforeMove = authoredFields()?.roomActions.order;
-    const move = within(optionalRow).getByRole('button', { name: /^Move / });
-    if (move === undefined) throw new Error('optional Nemesis result has no legal move');
-    await view.user.click(move);
-    await view.user.click(
-      within(screen.getByRole('listbox'))
-        .getAllByRole('option')
-        .find((option) => option.getAttribute('aria-disabled') !== 'true')!,
-    );
+    // The result moves by keyboard through its reorder handle: pick up, step, drop.
+    const move = within(optionalRow).getByRole('button', { name: /^Reorder / });
+    move.focus();
+    await view.user.keyboard(' ');
+    await view.user.keyboard('{ArrowUp}');
+    await view.user.keyboard(' ');
     await waitFor(() => expect(authoredFields()?.roomActions.order).not.toEqual(orderBeforeMove));
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() => expect(authoredFields()?.roomActions.order).toEqual(orderBeforeMove));

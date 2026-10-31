@@ -1145,7 +1145,8 @@ describe('planner history interaction', () => {
         `${semanticOwnerControlElementId(owner)}-hex-activation`,
       ),
     );
-    expect(document.activeElement?.textContent).toContain('Edit Path of Stars');
+    // The chip shows only its value; its accessible name keeps the full launcher label.
+    expect(document.activeElement?.getAttribute('aria-label')).toContain('Edit Path of Stars');
   });
 
   it('authors and undoes the exact Sea Star checkbox row in the room timeline', async () => {
@@ -1202,7 +1203,11 @@ describe('planner history interaction', () => {
     expect(childRow?.getAttribute('data-room-action-key')).toBe(
       childDestination.focusAddress.actionKey,
     );
-    expect(childRow?.textContent).toContain('Collect Gold');
+    // The row reads its verb, then the reward as an icon named by the reward.
+    expect(childRow?.textContent).toContain('Collect');
+    expect(
+      childRow?.querySelector('[role="img"].row-reward-icon')?.getAttribute('aria-label'),
+    ).toBe('Gold');
     expect(
       application.store
         .getState()

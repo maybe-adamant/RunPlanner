@@ -133,6 +133,8 @@ export type WorkspaceDerivedAcquisitionEntry = {
   readonly participation?: 'required' | 'optional';
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
+  /** What creates a derived pickup, as the engine publishes it. */
+  readonly sourceFamily?: import('@run-planner/engine/authored-project').AcquisitionEntrySourceFamily;
 };
 
 export interface WorkspaceOccurrenceRewardAssemblyInput {
@@ -926,6 +928,8 @@ export function activeEncounterPhasesForOwner(
         ? { athenaTriggerConditionMet: false as const }
         : authoredGorgonResult;
     const retainedGorgon = gorgonResult?.athenaTriggerConditionMet === true;
+    const skippedByFigLeaf =
+      phaseStatus?.kind === 'active' && phaseStatus.execution === 'skippedByFigLeaf';
     const fieldsPassive =
       room.mode.kind === 'authored' &&
       room.mode.templateKey === 'FieldsCombat' &&
@@ -1253,6 +1257,7 @@ export function activeEncounterPhasesForOwner(
               }),
             }
           : {}),
+        ...(skippedByFigLeaf ? { skippedByFigLeaf: true as const } : {}),
         ...(!domain.nemesisBetAuthorable
           ? {}
           : {

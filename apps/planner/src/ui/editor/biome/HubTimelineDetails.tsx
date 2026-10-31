@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useId, useRef, type ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
 import type { HubAction } from '@run-planner/engine/authored-project';
 import {
@@ -10,6 +10,7 @@ import {
   type WorkspaceHubDecisionNode,
   type WorkspaceHubRowMove,
   type WorkspaceHubStay,
+  type WorkspaceHubStayRow,
   type WorkspaceHubStayRowReference,
   type WorkspaceHubVisit,
   type WorkspaceInteractionCatalog,
@@ -34,6 +35,12 @@ import {
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
 import { RoomRerolls } from './RoomRerolls';
+import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderHandle';
+import {
+  useTimelineReorder,
+  type TimelineReorderPosition,
+  type TimelineReorderSession,
+} from './useTimelineReorder';
 
 function stayLabel(precedingVisitCount: number): string {
   return precedingVisitCount === 0 ? 'Before Visit 1' : `After Visit ${precedingVisitCount}`;
@@ -111,10 +118,9 @@ function moveLabel(move: WorkspaceHubRowMove): string {
   }
 }
 
-/** Moves one stay row, or places the unused fountain, as a complete Hub action order. */
+/** Places the unused fountain as a complete Hub action order. */
 function HubRowPlacement({
   findingMark,
-  id,
   label,
   locked,
   moves,
@@ -123,7 +129,6 @@ function HubRowPlacement({
   waiting,
 }: {
   readonly findingMark?: FindingMarkProps;
-  readonly id?: string;
   readonly label: string;
   readonly locked: boolean;
   readonly moves: readonly WorkspaceHubRowMove[];
@@ -131,8 +136,7 @@ function HubRowPlacement({
   readonly trigger: string;
   readonly waiting: boolean;
 }) {
-  // A row with nowhere to go has no Move; the slot keeps the list's columns.
-  if (moves.length === 0) return <span aria-hidden="true" className="room-reroll-move-slot" />;
+  if (moves.length === 0) return null;
   const choices = moves.map((move) => ({
     key: move.key,
     label: moveLabel(move),
@@ -142,7 +146,6 @@ function HubRowPlacement({
   return (
     <RoomActionPlacementPicker
       {...(findingMark === undefined ? {} : { findingMark })}
-      {...(id === undefined ? {} : { id })}
       label={label}
       trigger={trigger}
       choices={choices}
@@ -155,28 +158,138 @@ function HubRowPlacement({
   );
 }
 
-/** The used fountain, among its stay's rerolls (`inList`) or on its own. */
-function FountainRow({
-  inList,
-  interactions,
+const stayEndAnchor = (precedingVisitCount: number): string => `stay-end:${precedingVisitCount}`;
+const stayRowAnchor = (row: WorkspaceHubStayRow): string =>
+  row.kind === 'fountain' ? 'fountain' : row.key;
+
+/** A stay row's own place and its projected moves, in list order. */
+function hubRowPositions(
+  stay: WorkspaceHubStay,
+  rowIndex: number,
+): readonly TimelineReorderPosition[] {
+  const row = stay.rows[rowIndex]!;
+  const rerollIndexes = stay.rows.flatMap((other, index) =>
+    other.kind === 'reroll' ? [index] : [],
+  );
+  const indexOf = (reference: WorkspaceHubStayRowReference): number =>
+    reference.kind === 'fountain'
+      ? stay.rows.findIndex((other) => other.kind === 'fountain')
+      : (rerollIndexes[reference.position - 1] ?? -1);
+  const own = { stay: stay.precedingVisitCount, slot: rowIndex };
+  type Placed = TimelineReorderPosition & { readonly stay: number; readonly slot: number };
+  const placed = row.moves.flatMap((move): readonly Placed[] => {
+    const label = moveLabel(move);
+    switch (move.destination.kind) {
+      case 'before': {
+        const slot = indexOf(move.destination.row);
+        const other = stay.rows[slot];
+        return other === undefined
+          ? []
+          : [
+              {
+                ...own,
+                slot,
+                move: move.key,
+                label,
+                anchor: stayRowAnchor(other),
+                edge: 'before' as const,
+              },
+            ];
+      }
+      case 'after': {
+        const other = stay.rows[indexOf(move.destination.row)];
+        return other === undefined
+          ? []
+          : [
+              {
+                ...own,
+                slot: stay.rows.length,
+                move: move.key,
+                label,
+                anchor: stayRowAnchor(other),
+                edge: 'after' as const,
+              },
+            ];
+      }
+      case 'stay':
+        return [
+          {
+            stay: move.destination.precedingVisitCount,
+            slot: Number.POSITIVE_INFINITY,
+            move: move.key,
+            label,
+            anchor: stayEndAnchor(move.destination.precedingVisitCount),
+            edge: 'before' as const,
+          },
+        ];
+    }
+  });
+  const current: Placed = {
+    ...own,
+    move: undefined,
+    // The handle names its own place.
+    label: '',
+    anchor: stayRowAnchor(row),
+    edge: 'self',
+  };
+  return [current, ...placed]
+    .sort((left, right) => left.stay - right.stay || left.slot - right.slot)
+    .map(({ move, label, anchor, edge }) => ({ move, label, anchor, edge }));
+}
+
+/** The drag handle of one stay row. */
+function HubRowHandle({
+  findingMark,
+  label,
   locked,
-  moveId,
-  moves,
-  node,
   onApply,
+  reorder,
+  rowIndex,
+  stay,
   waiting,
 }: {
-  readonly inList: boolean;
-  readonly moveId: string;
-  readonly interactions: WorkspaceInteractionCatalog;
+  readonly findingMark?: FindingMarkProps;
+  readonly label: string;
   readonly locked: boolean;
-  readonly moves: readonly WorkspaceHubRowMove[];
-  readonly node: WorkspaceHubDecisionNode;
   readonly onApply: (actions: readonly HubAction[]) => void;
+  readonly reorder: TimelineReorderSession;
+  readonly rowIndex: number;
+  readonly stay: WorkspaceHubStay;
   readonly waiting: boolean;
 }) {
+  const row = stay.rows[rowIndex]!;
+  return (
+    <TimelineReorderHandle
+      disabled={locked}
+      {...(waiting ? { disabledHint: candidateWaitingHint } : {})}
+      {...(findingMark === undefined ? {} : { findingMark })}
+      item={{
+        key: stayRowAnchor(row),
+        label,
+        positions: hubRowPositions(stay, rowIndex),
+        onMove: (key) => {
+          const move = row.moves.find((candidate) => candidate.key === key);
+          if (move !== undefined) onApply(move.actions);
+        },
+      }}
+      session={reorder}
+    />
+  );
+}
+
+/** The used fountain, among its stay's rerolls (`inList`) or on its own. */
+function FountainRow({
+  handle,
+  inList,
+  interactions,
+  node,
+}: {
+  readonly handle: ReactNode;
+  readonly inList: boolean;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly node: WorkspaceHubDecisionNode;
+}) {
   const findingAnchor = useFindingAnchor();
-  const findingMark = useFindingMark();
   const rarity = node.fountain.rarity;
   return (
     <li
@@ -184,9 +297,12 @@ function FountainRow({
         inList ? 'room-reroll-row hub-timeline-fountain' : 'hub-timeline-row hub-timeline-fountain'
       }
       {...(rarity === undefined ? findingAnchor(node.fountain.outcomeMarker.address) : {})}
+      data-reorder-anchor="fountain"
       tabIndex={-1}
     >
+      {inList ? handle : null}
       <span className={inList ? 'room-reroll-index' : 'hub-timeline-step'}>
+        {inList ? null : handle}
         <ArtworkIcon
           className="artwork-label-icon"
           source={hubFountainIcon(node.fountain.address.biomeKey)}
@@ -198,16 +314,6 @@ function FountainRow({
           <FountainRarityEffectRow control={rarity} interactions={interactions} />
         )}
       </span>
-      <HubRowPlacement
-        findingMark={findingMark(node.fountain.address)}
-        id={moveId}
-        label="Move Fountain"
-        locked={locked}
-        moves={moves}
-        onApply={onApply}
-        trigger="Move…"
-        waiting={waiting}
-      />
       {inList ? <span aria-hidden="true" className="room-reroll-remove-slot" /> : null}
     </li>
   );
@@ -276,51 +382,45 @@ export function HubTimelineDetails({
       ReturnType<ReturnType<WorkspaceHubActionOrderInteraction['proposalFor']>['load']>
     >();
   const waiting = !interaction.contextReached;
-  const idPrefix = useId();
-  const moveId = (rowKey: string): string => `${idPrefix}-move-${rowKey}`;
-  // A moved row that changes list is a new element; its Move regains lost focus.
-  const refocus = useRef<string>(undefined);
-  useEffect(() => {
-    const id = refocus.current;
-    refocus.current = undefined;
-    const active = document.activeElement;
-    if (id !== undefined && (active === null || active === document.body)) {
-      document.getElementById(id)?.focus();
-    }
-  });
+  const reorder = useTimelineReorder();
+  const { attachRoot } = reorder;
   const replaceActions = (actions: readonly HubAction[]): void => {
     const proposal = interaction.proposalFor(actions);
     const options = candidates.activate(proposal);
     if (!candidateMayBeAuthored(options?.[0])) return;
     executeIntent(proposal.intent());
   };
-  const moveRow =
-    (rowKey: string) =>
-    (actions: readonly HubAction[]): void => {
-      refocus.current = moveId(rowKey);
-      replaceActions(actions);
-    };
-  const fountainRow = (moves: readonly WorkspaceHubRowMove[], inList: boolean) => (
+  const rowHandle = (stay: WorkspaceHubStay, rowIndex: number, label: string) => (
+    <HubRowHandle
+      {...(stay.rows[rowIndex]?.kind === 'fountain'
+        ? { findingMark: findingMark(node.fountain.address) }
+        : {})}
+      label={label}
+      locked={locked}
+      onApply={replaceActions}
+      reorder={reorder}
+      rowIndex={rowIndex}
+      stay={stay}
+      waiting={waiting}
+    />
+  );
+  const fountainRow = (stay: WorkspaceHubStay, rowIndex: number, inList: boolean) => (
     <FountainRow
+      handle={rowHandle(stay, rowIndex, 'Fountain')}
       inList={inList}
       interactions={interactions}
       key="fountain"
-      locked={locked}
-      moveId={moveId('fountain')}
-      moves={moves}
       node={node}
-      onApply={moveRow('fountain')}
-      waiting={waiting}
     />
   );
   // The stay's presses and fountain are one ordered list; each row moves within it.
   const stayEntries = (stay: WorkspaceHubStay) => {
-    const fountain = stay.rows.find((row) => row.kind === 'fountain');
+    const fountain = stay.rows.findIndex((row) => row.kind === 'fountain');
     return (
       <>
         {stay.rerolls === undefined ? (
-          fountain === undefined ? null : (
-            fountainRow(fountain.moves, false)
+          fountain < 0 ? null : (
+            fountainRow(stay, fountain, false)
           )
         ) : (
           <li className="hub-timeline-rerolls">
@@ -328,23 +428,17 @@ export function HubTimelineDetails({
               interactions={interactions}
               order={stay.rows.map((row, index) =>
                 row.kind === 'fountain'
-                  ? { kind: 'row' as const, key: 'fountain', row: fountainRow(row.moves, true) }
+                  ? { kind: 'row' as const, key: 'fountain', row: fountainRow(stay, index, true) }
                   : {
                       kind: 'press' as const,
                       key: row.key,
-                      move: (
-                        <HubRowPlacement
-                          label={`Move reroll ${
-                            stay.rows.slice(0, index + 1).filter((other) => other.kind === 'reroll')
-                              .length
-                          }`}
-                          id={moveId(row.key)}
-                          locked={locked}
-                          moves={row.moves}
-                          onApply={moveRow(row.key)}
-                          trigger="Move…"
-                          waiting={waiting}
-                        />
+                      move: rowHandle(
+                        stay,
+                        index,
+                        `Reroll ${
+                          stay.rows.slice(0, index + 1).filter((other) => other.kind === 'reroll')
+                            .length
+                        }`,
                       ),
                     },
               )}
@@ -352,12 +446,22 @@ export function HubTimelineDetails({
             />
           </li>
         )}
+        <li
+          aria-hidden="true"
+          className="hub-timeline-stay-end"
+          data-reorder-anchor={stayEndAnchor(stay.precedingVisitCount)}
+        />
         <BoardRecap stay={stay} />
       </>
     );
   };
   return (
-    <section aria-label="Ephyra Hub timeline" className="hub-board hub-timeline-details">
+    <section
+      aria-label="Ephyra Hub timeline"
+      className="hub-board hub-timeline-details"
+      ref={attachRoot}
+    >
+      <TimelineReorderStatus session={reorder} />
       <header className="hub-board-heading">
         <div className="hub-board-heading-row">
           <div className="owner-markers">{requirement}</div>

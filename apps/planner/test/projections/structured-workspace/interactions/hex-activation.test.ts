@@ -68,11 +68,15 @@ describe('Path of Stars screen interaction', () => {
     const { spellDrop, talentDrop } = seleneScreens();
     expect(spellDrop).toMatchObject({
       contextReached: true,
-      launcher: { label: 'Edit Path of Stars' },
+      // The chip shows the chosen talents; the label keeps them in its accessible name.
+      launcher: {
+        label: 'Edit Path of Stars · Growth, Omen, Sting',
+        value: 'Growth, Omen, Sting',
+      },
       selectedNodeKeys: ['1:2', '1:4', '2:2'],
     });
     expect(talentDrop.selectedNodeKeys).toEqual(['2:4', '3:1', '3:2']);
-    expect(talentDrop.launcher.detail).toBeDefined();
+    expect(talentDrop.launcher.label).toBe(`Edit Path of Stars · ${talentDrop.launcher.value}`);
     expect(condensedTalents(['Omen', 'Brilliance', 'Omen', 'Sting', 'Sting'])).toBe(
       'Omen ×2, Brilliance, Sting ×2',
     );

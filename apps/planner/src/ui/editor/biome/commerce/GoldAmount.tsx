@@ -25,47 +25,36 @@ export function GoldAmount({
   );
 }
 
-/**
- * The room's gold when its doors open, before its purchases, and what those
- * purchases cost, on its Doors open banner. Spent keeps its slot when absent so
- * Current stays in one column across rooms.
- */
-export function RoomGoldSummary({
-  current,
-  spent,
-}: {
-  readonly current?: WorkspaceGoldAmount;
-  readonly spent?: WorkspaceGoldAmount;
-}) {
-  if (current === undefined && spent === undefined) return null;
+/** The room's gold when its doors open, before its purchases, on its Doors open banner. */
+export function RoomGoldSummary({ current }: { readonly current?: WorkspaceGoldAmount }) {
+  if (current === undefined) return null;
   return (
     <span className="room-gold-summary">
-      {current === undefined ? null : (
-        <span className="room-gold-figure">
-          Current <GoldAmount amount={current} />
-        </span>
-      )}
-      <span
-        className="room-gold-figure"
-        {...(spent === undefined ? { 'aria-hidden': true, 'data-placeholder': true } : {})}
-      >
-        {current === undefined ? null : <span aria-hidden="true">·</span>}
-        Spent <GoldAmount amount={spent ?? { label: '' }} />
+      <span className="room-gold-figure">
+        Current <GoldAmount amount={current} />
       </span>
     </span>
   );
 }
 
-/** The chance the gold held covers a purchase, at the end of its row. */
-export function PurchaseAffordability({
+/** A purchase's price and the chance the gold held covers it, at the end of its row. */
+export function PurchaseCost({
   affordability,
+  price,
 }: {
-  readonly affordability: WorkspacePurchaseAffordability;
+  readonly affordability?: WorkspacePurchaseAffordability;
+  readonly price?: WorkspaceGoldAmount;
 }) {
+  if (affordability === undefined && price === undefined) return null;
   return (
-    <span className="purchase-affordability" data-tone={affordability.tone}>
-      {affordability.label}
-      <span className="visually-hidden"> chance to afford</span>
+    <span className="purchase-cost">
+      {price === undefined ? null : <GoldAmount amount={price} className="purchase-cost-price" />}
+      {affordability === undefined ? null : (
+        <span className="purchase-affordability" data-tone={affordability.tone}>
+          {affordability.label}
+          <span className="visually-hidden"> chance to afford</span>
+        </span>
+      )}
     </span>
   );
 }

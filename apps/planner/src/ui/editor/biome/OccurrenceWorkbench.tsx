@@ -17,13 +17,12 @@ import {
 import { useFindingAnchor } from '@planner/ui/feedback/useFindingTarget';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { RunStateLauncher } from './RunStateSheet';
-import { AnomalyClearedControl } from './room-features/AnomalyControls';
 import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
 import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRoomWorkbench';
 import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
 import { LocalVisitWorkbench } from './locals/LocalVisitWorkbench';
 import { RewardWheelWorkbench } from './locals/RewardWheelWorkbench';
-import { hintProps } from '@planner/ui/controls/hint';
+import { TimelineLegend } from './TimelineLegend';
 
 interface OccurrenceWorkbenchProps {
   readonly headerActions?: ReactNode;
@@ -123,7 +122,7 @@ export function OccurrenceWorkbench({
     'doors',
   ];
   const activeTab = tabOrder.includes(selectedTab) ? selectedTab : 'overview';
-  const onTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, tab: WorkspaceRoomTab) => {
+  const onTabKeyDown = (event: ReactKeyboardEvent<HTMLElement>, tab: WorkspaceRoomTab) => {
     const currentIndex = tabOrder.indexOf(tab);
     if (currentIndex < 0) return;
     let nextIndex: number | undefined;
@@ -149,15 +148,17 @@ export function OccurrenceWorkbench({
     setActiveTab(nextTab);
     tabRefs.current[nextTab]?.focus();
   };
-  const tabButton = (tab: WorkspaceRoomTab, label: string, key?: string) => (
+  // The tab shows its short name; its accessible name stays the full one.
+  const tabButton = (tab: WorkspaceRoomTab, label: string, key?: string, shown?: string) => (
     <button
+      {...(shown === undefined ? {} : { 'aria-label': label })}
       aria-controls={panelId}
       aria-selected={activeTab === tab}
       className="room-workbench-tab"
       id={tabId(tab)}
       key={key ?? tab}
       onClick={() => setActiveTab(tab)}
-      onKeyDown={(event) => onTabKeyDown(event, tab)}
+      data-room-tab={tab}
       ref={(element) => {
         tabRefs.current[tab] = element;
       }}
@@ -165,7 +166,7 @@ export function OccurrenceWorkbench({
       tabIndex={activeTab === tab ? 0 : -1}
       type="button"
     >
-      {label}
+      {shown ?? label}
     </button>
   );
   const heading = room.label;
@@ -182,42 +183,36 @@ export function OccurrenceWorkbench({
   const shipPhaseView = (): {
     readonly kind: 'shipPhase';
     readonly phase: WorkspaceShipPhasePresentation;
+    readonly phases: readonly WorkspaceShipPhasePresentation[];
   } => {
     const phase =
       room.workbench.kind === 'ship'
         ? room.workbench.phases.find((candidate) => candidate.tab === activeTab)
         : undefined;
     if (phase === undefined) throw new Error(`No Ship phase for timeline tab ${activeTab}`);
-    return { kind: 'shipPhase', phase };
-  };
-  // The Anomaly's capture-point outcome is decided at its encounter end, before the reward.
-  const renderBoundaryContent = (
-    boundary: WorkspaceRoomLifecycleBoundary,
-  ): TimelineBoundaryContent | undefined => {
-    const content = renderLifecycleBoundaryContent?.(boundary);
-    if (boundary.kind !== 'encounterEnd' || room.anomaly === undefined) return content;
     return {
-      editors: (
-        <>
-          <AnomalyClearedControl room={room} />
-          {content?.editors}
-        </>
-      ),
-      rows: content?.rows,
+      kind: 'shipPhase',
+      phase,
+      phases: room.workbench.kind === 'ship' ? room.workbench.phases : [],
     };
   };
   const renderDirectRoomWorkbench = (
     view:
       | 'overview'
       | 'actions'
-      | { readonly kind: 'shipPhase'; readonly phase: WorkspaceShipPhasePresentation },
+      | {
+          readonly kind: 'shipPhase';
+          readonly phase: WorkspaceShipPhasePresentation;
+          /** Every Ship phase, to name the phase a move crosses into. */
+          readonly phases: readonly WorkspaceShipPhasePresentation[];
+        },
   ): ReactNode => (
     <DirectRoomWorkbench
       idPrefix={idPrefix}
       interactions={interactions}
       room={room}
       {...(renderRoomActionRowContent === undefined ? {} : { renderRoomActionRowContent })}
-      renderLifecycleBoundaryContent={renderBoundaryContent}
+      {...(renderLifecycleBoundaryContent === undefined ? {} : { renderLifecycleBoundaryContent })}
       view={view}
     />
   );
@@ -240,50 +235,69 @@ export function OccurrenceWorkbench({
         </div>
       </header>
       <div className="room-workbench-tab-row">
-        <nav aria-label="Room workbench" className="room-workbench-tabs" role="tablist">
-          {tabButton('overview', 'Room Overview')}
+        <nav
+          aria-label="Room workbench"
+          className="room-workbench-tabs"
+          onKeyDown={(event) => {
+            const tab = (event.target as HTMLElement).dataset.roomTab as
+              WorkspaceRoomTab | undefined;
+            if (tab !== undefined) onTabKeyDown(event, tab);
+          }}
+          role="tablist"
+        >
+          {tabButton('overview', 'Room Overview', undefined, 'Overview')}
           {localVisit === undefined ? null : tabButton('sideRooms', 'Side Rooms')}
-          {room.workbench.kind === 'fields' ? tabButton('layout', 'Room Layout') : null}
+          {room.workbench.kind === 'fields'
+            ? tabButton('layout', 'Room Layout', undefined, 'Layout')
+            : null}
           {room.workbench.kind === 'ship'
             ? room.workbench.phases.flatMap((phase) => [
-                tabButton(phase.tab, `${phase.label} Timeline`, phase.key),
+                <span
+                  aria-hidden="true"
+                  className="room-workbench-tab-group"
+                  key={`${phase.key}-group`}
+                >
+                  <span className="room-workbench-tab-divider" />
+                  {`${phase.label}:`}
+                </span>,
+                tabButton(phase.tab, `${phase.label} Timeline`, phase.key, 'Timeline'),
                 ...(phase.wheelTab === undefined
                   ? []
-                  : [tabButton(phase.wheelTab, `${phase.label} Wheels`, `${phase.key}-wheels`)]),
+                  : [
+                      <span
+                        aria-hidden="true"
+                        className="room-workbench-tab-dot"
+                        key={`${phase.key}-dot`}
+                      >
+                        ·
+                      </span>,
+                      tabButton(
+                        phase.wheelTab,
+                        `${phase.label} Wheels`,
+                        `${phase.key}-wheels`,
+                        'Wheels',
+                      ),
+                    ]),
               ])
-            : tabButton('actions', 'Room Timeline')}
-          {room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0
-            ? tabButton('shipInactiveRepair', 'Inactive Actions')
-            : null}
-          {tabButton('doors', 'Room Doors')}
+            : tabButton('actions', 'Room Timeline', undefined, 'Timeline')}
+          {room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0 ? (
+            <>
+              <span aria-hidden="true" className="room-workbench-tab-group">
+                <span className="room-workbench-tab-divider" />
+              </span>
+              {tabButton('shipInactiveRepair', 'Inactive Actions')}
+            </>
+          ) : null}
+          {room.workbench.kind === 'ship' ? (
+            <span aria-hidden="true" className="room-workbench-tab-group">
+              <span className="room-workbench-tab-divider" />
+            </span>
+          ) : null}
+          {tabButton('doors', 'Room Doors', undefined, 'Doors')}
         </nav>
         {!showTimelineLegend && tabRunState === undefined ? null : (
           <div className="room-workbench-tab-utility">
-            {showTimelineLegend ? (
-              <ul aria-label="Timeline legend" className="room-timeline-legend">
-                <li data-action-accent="optional">Optional</li>
-                <li
-                  data-action-accent="phase"
-                  {...hintProps(
-                    'Required in this timeline section, not necessarily as the next action.',
-                  )}
-                >
-                  Required now
-                </li>
-                <li data-action-accent="room" {...hintProps('Required before leaving the room.')}>
-                  Before leaving
-                </li>
-                <li data-action-accent="automatic">Automatic</li>
-                <li className="affordability-legend">
-                  <span aria-hidden="true" className="affordability-sample">
-                    <span data-tone="high" />
-                    <span data-tone="medium" />
-                    <span data-tone="low" />
-                  </span>
-                  Affordable
-                </li>
-              </ul>
-            ) : null}
+            {showTimelineLegend ? <TimelineLegend /> : null}
             {tabRunState === undefined ? null : <RunStateLauncher launcher={tabRunState} />}
           </div>
         )}

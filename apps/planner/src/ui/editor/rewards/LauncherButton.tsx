@@ -2,6 +2,7 @@ import type { WorkspaceLauncherPresentation } from '@planner/projections/structu
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { hintProps } from '@planner/ui/controls/hint';
+import { showTruncatedTitle } from '@planner/ui/controls/truncatedTitle';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
 
@@ -28,6 +29,7 @@ export function LauncherButton({
             candidateWaitingHint,
             [launcher.detail, findings].filter((part) => part !== undefined).join(' ') || undefined,
           ))}
+      {...(launcher.value === undefined ? {} : { 'aria-label': launcher.label })}
       className="dialog-launcher trait-offer-launcher quiet-action action-compact"
       disabled={!contextReached || undefined}
       onClick={onClick}
@@ -36,7 +38,9 @@ export function LauncherButton({
       {launcher.traitKey === undefined ? null : (
         <ArtworkIcon className="artwork-label-icon" source={traitIcon(launcher.traitKey)} />
       )}
-      <span>{launcher.label}</span>
+      <span className="dialog-launcher-text" onMouseEnter={showTruncatedTitle}>
+        {launcher.value ?? launcher.label}
+      </span>
     </button>
   );
 }

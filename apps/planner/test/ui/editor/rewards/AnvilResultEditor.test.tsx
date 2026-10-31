@@ -212,7 +212,7 @@ describe('Anvil result editor', () => {
         </FindingTargetScope>
       </Provider>,
     );
-    const launcher = screen.getByRole('button', { name: 'Edit Anvil' });
+    const launcher = screen.getByRole('button', { name: /^Edit Anvil/ });
     // With no result chosen, the description is only the marked findings.
     const marked = launcher.getAttribute('aria-description') ?? '';
     if (marked === '') throw new Error('the missing Anvil result marks no launcher finding');

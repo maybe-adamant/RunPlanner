@@ -205,7 +205,7 @@ it('renders a Fields cage with an ordering issue as a movable row', async () => 
   const view = renderWorkspace(cageBeforeAthenaProject(), 'Underworld', 'H');
   const row = await openFirstFinding(view);
   expect(row.tagName).toBe('LI');
-  const move = within(row).getByRole('button', { name: /^Move / });
+  const move = within(row).getByRole('button', { name: /^Reorder / });
   expect(paintedFindings()).toEqual([move]);
   await waitFor(() => expect(document.activeElement).toBe(move));
 });

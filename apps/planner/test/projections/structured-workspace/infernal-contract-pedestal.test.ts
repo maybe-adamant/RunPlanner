@@ -106,7 +106,7 @@ describe('Contract pedestal editor', () => {
 
     const chosen = projectStructuredWorkspaceFixture(project);
     const entry = championEntry(room(chosen, peerId));
-    expect(entry?.options).toEqual([{ key: 'collect', label: 'Collect Double Pom · Pedestal' }]);
+    expect(entry?.options).toEqual([{ key: 'collect', label: 'Collect Double Pom' }]);
     const collect = chosen.workspace.interactions.roomObjectEntries.get(entry!.interactionKey);
     if (collect === undefined) throw new Error('pedestal collect missing');
     expect(collect.intentFor('collect').command).toEqual({
@@ -126,7 +126,7 @@ describe('Contract pedestal editor', () => {
       ),
     ).toEqual([]);
     const row = collectRow(room(collected, peerId));
-    expect(row?.label).toBe('Collect Double Pom · Pedestal');
+    expect(row?.label).toBe('Collect Double Pom');
     expect(row?.participationOwnedByOverview).toBe(false);
     expect(championEntry(room(collected, peerId))).toMatchObject({ locked: 'collected' });
   });
@@ -141,7 +141,8 @@ describe('Contract pedestal editor', () => {
     const feature = pedestalFeature(summary);
     if (feature?.kind !== 'infernalContractPedestal') throw new Error('pedestal missing');
     expect(feature.rewardControl.offer).toEqual({ rewardType: 'StackUpgrade' });
-    expect(collectRow(summary)?.label).toBe('Collect Pom · Pedestal');
+    // The Pedestal is the row's icon; its label names the item.
+    expect(collectRow(summary)?.label).toBe('Collect Pom');
     expect(collectRow(summary)?.purchaseRemoval?.command).toEqual({
       kind: 'SetInfernalContractPedestalCollected',
       pedestal: shopPedestal,
@@ -164,7 +165,7 @@ describe('Contract pedestal editor', () => {
       roomTab: 'actions',
     });
     const row = collectRow(room(resolving, shopId));
-    expect(row?.label).toBe('Collect Mystery Boon · Pedestal');
+    expect(row?.label).toBe('Collect Mystery Boon');
     expect(row?.rewardPayload?.showOffer).toBe(true);
     expect(row?.rewardPayload?.control.owner).toEqual({ kind: 'acquisitionEntry', address: entry });
     const source = resolving.workspace.interactions.rewards.get(semanticAddressKey(entry));

@@ -156,7 +156,7 @@ describe('ContextualPicker', () => {
     expect(trigger.getAttribute('aria-invalid')).toBe('true');
     expect(hintOf(trigger)).toBe('Retained choice is unavailable here.');
     expect(trigger).toHaveProperty('disabled', false);
-    expect(trigger.parentElement!.textContent).toBe(`Room${model.selected!.label}▾`);
+    expect(trigger.parentElement!.textContent).toBe(`Room${model.selected!.label}`);
   });
 
   it('keeps an associated label from opening an authoring-locked picker', async () => {

@@ -48,6 +48,12 @@ interface ContextualPickerProps<T> {
   readonly triggerLabel?: string;
   /** Every label the trigger can show; it keeps the widest one's width so it never shifts. */
   readonly triggerSizingLabels?: readonly string[];
+  /** `content` sizes the trigger to its shown text, so it reads inline with a label. */
+  readonly triggerSize?: 'field' | 'content';
+  /** A short fixed list opens without a search field. */
+  readonly searchable?: boolean;
+  /** What separates trigger parts; a middle dot by default. */
+  readonly triggerPartsSeparator?: string;
   /** Hover explanation for the current value of an enabled trigger. */
   readonly triggerHint?: string;
   /** An image shown before the trigger's text. */
@@ -288,6 +294,9 @@ export function ContextualPicker<T>({
   side = 'bottom',
   triggerLabel,
   triggerSizingLabels,
+  triggerSize = 'field',
+  searchable = true,
+  triggerPartsSeparator = ' · ',
   triggerHint,
   triggerIcon,
   triggerParts,
@@ -344,6 +353,7 @@ export function ContextualPicker<T>({
   return (
     <div
       className={`field-control contextual-picker${layout === 'inline' ? ' field-control-inline' : ''}`}
+      {...(triggerSize === 'content' ? { 'data-trigger-size': 'content' } : {})}
     >
       {label === '' ? null : (
         <label htmlFor={id}>
@@ -385,7 +395,9 @@ export function ContextualPicker<T>({
                 {triggerParts.map((part, index) => (
                   <Fragment key={index}>
                     {index === 0 ? null : (
-                      <span className="contextual-picker-trigger-separator"> · </span>
+                      <span className="contextual-picker-trigger-separator">
+                        {triggerPartsSeparator}
+                      </span>
                     )}
                     <ArtworkIcon
                       className="contextual-picker-trigger-part-image"
@@ -403,9 +415,6 @@ export function ContextualPicker<T>({
                 {triggerText}
               </span>
             )}
-            <span className="contextual-picker-trigger-icon" aria-hidden="true">
-              ▾
-            </span>
           </button>
         </Popover.Trigger>
         <Popover.Portal container={portalContainer ?? undefined}>
@@ -426,6 +435,7 @@ export function ContextualPicker<T>({
               model={model}
               onCancel={() => updateOpen(false)}
               onSelect={select}
+              searchable={searchable}
               {...(choiceLabel === undefined ? {} : { stepLabel: choiceLabel })}
             />
           </Popover.Content>

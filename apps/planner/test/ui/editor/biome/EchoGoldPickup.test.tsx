@@ -17,6 +17,7 @@ import {
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { act, cleanup, screen, within } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
+import { openAddGroup, slotRow } from '@planner-test/support/timeline-rows';
 import {
   createEchoGoldHPrebossProject,
   createEchoGoldIAnvilDuplicateProject,
@@ -49,8 +50,20 @@ const site = createAcquisitionSiteAddress(createOccurrenceAddress(biome, shopId)
 const gold = createAcquisitionEntryAddress(site, 'echoDoubleShopReward');
 const shopOffer = createShopOfferAddress(biome, shopId, 'Boon');
 
+const goldActionKey = roomActionKey({
+  kind: 'interactAcquisitionEntry',
+  siteKey: 'roomExit',
+  entryKey: 'echoDoubleShopReward',
+});
+
+function queryGoldRow(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(
+    `li[data-room-action-key="${CSS.escape(goldActionKey)}"]`,
+  );
+}
+
 function goldRow() {
-  const row = screen.getByText(/^Collect .*Gold Gold Gold/).closest('li');
+  const row = queryGoldRow();
   if (row === null) throw new Error('Gold pickup row missing');
   return within(row);
 }
@@ -79,7 +92,7 @@ it('keeps a stale Gold pickup removable after its triggering purchase is cleared
   ).toMatchObject({ focusAddress: { kind: 'roomAction' } });
   openRoomTab('Room Timeline');
   await view.user.click(goldRow().getByRole('button', { name: /Remove .* from timeline/ }));
-  expect(screen.queryByText(/^Collect .*Gold Gold Gold/)).toBeNull();
+  expect(queryGoldRow()).toBeNull();
   expect(
     view.application.store
       .getState()
@@ -93,7 +106,8 @@ it('adds required Gold with the purchase and restores both through one Undo and 
   const project = createEchoGoldHPrebossProject();
   const view = renderOccurrenceWorkbench(project, 'Underworld', 'H', occurrenceById(shopId));
   openRoomTab('Room Timeline');
-  await pickRoomObjectAction(view.user, 'World Shop', /Slot 1$/);
+  // The Boon in slot 1 triggers Gold Gold Gold.
+  await pickRoomObjectAction(view.user, 'World Shop', 'Buy Apollo');
   const history = view.application.store.getState().projectWorkspace.history!;
   expect(history.past).toHaveLength(1);
   expect(goldRow().queryByRole('button', { name: 'Restore pickup' })).toBeNull();
@@ -101,7 +115,8 @@ it('adds required Gold with the purchase and restores both through one Undo and 
     (goldRow().getByRole('button', { name: /Remove .* from timeline/ }) as HTMLButtonElement)
       .disabled,
   ).toBe(true);
-  expect(goldRow().getByRole('button', { name: /Move .*Gold Gold Gold/ })).toBeTruthy();
+  // The required pickup moves only through its reorder handle.
+  expect(goldRow().getByRole('button', { name: /^Reorder / })).toBeTruthy();
   act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
   expect(view.application.store.getState().projectWorkspace.history!.present).toBe(project);
   act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
@@ -198,8 +213,8 @@ it('leaves a Gold Mystery Boon optional and authors its hidden source only after
     await view.user.click(option);
   };
   openRoomTab('Room Timeline');
-  const purchase = screen.getByText('Buy Mystery Boon · Slot 1').closest('li');
-  if (purchase === null) throw new Error('Mystery purchase missing');
+  const purchase = slotRow(1);
+  expect(within(purchase).getByRole('img', { name: 'Mystery Boon' })).toBeTruthy();
   await selectGod(within(purchase));
   settleTrait('Boon');
   const findings = () =>
@@ -209,8 +224,10 @@ it('leaves a Gold Mystery Boon optional and authors its hidden source only after
       semanticAddressKey(finding.origin).includes('echoDoubleShopReward'),
     ),
   ).toBe(false);
-  expect(goldRow().queryByRole('button', { name: 'Reward' })).toBeNull();
-  await view.user.click(goldRow().getByRole('button', { name: 'Take pickup' }));
+  // The optional Gold pickup waits in the Add area, with no reward editor, until taken.
+  expect(queryGoldRow()).toBeNull();
+  const echo = await openAddGroup(view.user, 'Echo');
+  await view.user.click(within(echo).getByRole('button', { name: /Gold Gold Gold/ }));
   await selectGod(goldRow());
   settleTrait('echoDoubleShopReward');
   expect(
@@ -219,7 +236,8 @@ it('leaves a Gold Mystery Boon optional and authors its hidden source only after
     ),
   ).toBe(false);
   await view.user.click(goldRow().getByRole('button', { name: /Remove .* from timeline/ }));
-  expect(goldRow().queryByRole('button', { name: 'Reward' })).toBeNull();
+  // Removed, it returns to the Add area and its reward editor leaves with the row.
+  expect(queryGoldRow()).toBeNull();
   expect(
     workspaceProjection(view.application).interactions.traitOffers.has(
       semanticAddressKey(createTraitOfferAddress(gold, 'hiddenSource')),
@@ -327,7 +345,7 @@ it('authors the Anvil result of a Gold duplicate at its timeline row and lands i
     occurrenceById(echoGoldIPrebossShopId),
   );
   openRoomTab('Room Timeline');
-  const launcher = goldRow().getByRole('button', { name: 'Edit Anvil' });
+  const launcher = goldRow().getByRole('button', { name: /^Edit Anvil/ });
   expect(launcher.getAttribute('data-has-findings')).toBe('true');
   expect((launcher as HTMLButtonElement).disabled).toBe(false);
 

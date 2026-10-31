@@ -10,6 +10,7 @@ import {
   loadSurfaceNQuickBuckCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
+import { addGroupButton, openAddGroup } from '@planner-test/support/timeline-rows';
 
 afterEach(() => {
   cleanup();
@@ -31,23 +32,33 @@ describe('run-impacting trait product loops', () => {
       if (button === undefined) throw new Error(`Ephyra ${label} room is missing`);
       return button;
     };
-    const pickupRow = (entryKey: string) =>
-      document.querySelector<HTMLElement>(`[data-room-action-key*="${entryKey}"]`);
+    // An unplaced optional pickup is offered in the Add area under its source trait.
+    const offeredPickups = async (trait: string) => {
+      const menu = await openAddGroup(view.user, trait);
+      const keys = [...menu.querySelectorAll<HTMLElement>('[data-room-add-action]')].map(
+        (action) => action.dataset.roomAddAction ?? '',
+      );
+      await view.user.keyboard('{Escape}');
+      return keys;
+    };
+    const offers = (keys: readonly string[], entryKey: string) =>
+      keys.some((key) => key.includes(entryKey));
     await view.user.click(roomButton('Opening'));
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    await waitFor(() => expect(pickupRow('quickBuckGold')).not.toBeNull());
+    await waitFor(() => expect(addGroupButton('Quick Buck')).toBeTruthy());
+    expect(offers(await offeredPickups('Quick Buck'), 'quickBuckGold')).toBe(true);
 
     application.store.dispatch(authoredProjectReplaced(loadSurfaceNBuriedTreasureCheckpoint()));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(roomButton('Pre-Hub'));
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    await waitFor(() =>
-      expect(
-        ['smallGold', 'tinyGold1', 'tinyGold2', 'minorHeal1', 'minorHeal2', 'bones'].every(
-          (entryKey) => pickupRow(entryKey) !== null,
-        ),
-      ).toBe(true),
-    );
+    await waitFor(() => expect(addGroupButton('Buried Treasure')).toBeTruthy());
+    const treasure = await offeredPickups('Buried Treasure');
+    expect(
+      ['smallGold', 'tinyGold1', 'tinyGold2', 'minorHeal1', 'minorHeal2', 'bones'].every(
+        (entryKey) => offers(treasure, entryKey),
+      ),
+    ).toBe(true);
     application.dispose();
   });
 });

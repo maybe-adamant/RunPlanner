@@ -4,28 +4,21 @@ import type {
 } from '@planner/projections/structured-workspace';
 import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
 import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
-import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
-import { roomActionDestinationLabel } from './room-action-placement';
 import { hintProps } from '@planner/ui/controls/hint';
 
-/** Placement slot for one already-projected action; it stays mounted and disabled without a proposal. */
+/** Placement slot for one unplaced action: Restore or Add. */
 export function RoomActionPlacementControl({
   findingMark,
   row,
-  rows,
   proposals,
   onApply,
-  onBeginAdd,
 }: {
-  /** Findings repaired by restoring, adding or moving this action. */
+  /** Findings repaired by restoring or adding this action. */
   readonly findingMark?: FindingMarkProps;
   readonly row: WorkspaceRoomActionRow;
-  readonly rows: readonly WorkspaceRoomActionRow[];
   readonly proposals: readonly WorkspaceRoomActionProposal[];
   readonly onApply: (proposalKey: string) => void;
-  readonly onBeginAdd: (button: HTMLButtonElement) => void;
 }) {
-  const moves = proposals.filter((proposal) => proposal.kind === 'move');
   const insertions = proposals.filter((proposal) => proposal.kind === 'insert');
   const restoreDisabled = insertions.length !== 1 || insertions[0]?.structurallyAuthorable !== true;
   if (row.rank === null && row.participation === 'required')
@@ -51,10 +44,23 @@ export function RoomActionPlacementControl({
         {...findingMark}
         aria-label={`Add ${row.label}`}
         className="secondary-action action-compact"
-        disabled={insertions.length === 0}
-        onClick={(event) => onBeginAdd(event.currentTarget)}
+        disabled={!insertions.some((proposal) => proposal.structurallyAuthorable)}
+        // It appends at its last legal place; the author then drags it.
+        onClick={() => {
+          const authorable = insertions.filter((proposal) => proposal.structurallyAuthorable);
+          const last = authorable.reduce<(typeof authorable)[number] | undefined>(
+            (latest, proposal) =>
+              latest === undefined || (proposal.toIndex ?? 0) > (latest.toIndex ?? 0)
+                ? proposal
+                : latest,
+            undefined,
+          );
+          if (last !== undefined) onApply(last.key);
+        }}
         {...hintProps(
-          insertions.length === 0 ? 'No position to add this action.' : undefined,
+          insertions.some((proposal) => proposal.structurallyAuthorable)
+            ? undefined
+            : 'No position to add this action.',
           findingMark?.['aria-description'],
         )}
         type="button"
@@ -62,19 +68,8 @@ export function RoomActionPlacementControl({
         Add…
       </button>
     );
-  return (
-    <RoomActionPlacementPicker
-      {...(findingMark === undefined ? {} : { findingMark })}
-      label={`Move ${row.label}`}
-      trigger="Move…"
-      choices={moves.map((proposal) => ({
-        ...proposal,
-        label: roomActionDestinationLabel(rows, proposal.toIndex ?? 0, row),
-      }))}
-      disabledHint="No other position is available."
-      onApply={onApply}
-    />
-  );
+  // A placed row reorders through its drag handle.
+  return null;
 }
 
 /** Delete slot for one action; a row whose removal is owned elsewhere keeps it disabled. */

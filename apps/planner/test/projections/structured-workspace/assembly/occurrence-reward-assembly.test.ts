@@ -476,14 +476,17 @@ describe('structured workspace reward assembly', () => {
     if (replacement === undefined) throw new Error('Boon Artificer replacement is missing');
     project = authorTestArtificerReplacement(project, catalog, fixture.acquisition, replacement);
 
-    const row = assemble(
-      project,
-      'Underworld',
-      'F',
-      occurrenceId,
-    ).assembly.node.room.roomActions?.rows.find(
+    const rows =
+      assemble(project, 'Underworld', 'F', occurrenceId).assembly.node.room.roomActions?.rows ?? [];
+    const row = rows.find(
       (candidateRow) => candidateRow.reference.kind === 'interactIncomingReward',
     );
+    // The engine names the replacement's source family; its output is edited on the source row.
+    const replacementRow = rows.find(
+      (candidateRow) => candidateRow.sourceFamily?.kind === 'artificer',
+    );
+    expect(replacementRow).toBeDefined();
+    expect(replacementRow?.rewardPayload?.showOffer ?? false).toBe(false);
     expect(row?.artificerOutput?.control).toMatchObject({
       realizedAcquisition: {
         rewardType: 'RoomRewardConsolationPrize',
@@ -551,11 +554,13 @@ describe('structured workspace reward assembly', () => {
         .map((row) => [
           row.reference.kind === 'interactAcquisitionEntry' ? row.reference.entryKey : '',
           row.label,
+          row.labelParts?.origin,
         ])
         .sort(([left], [right]) => left!.localeCompare(right!)),
     ).toEqual([
-      ['maxMana', 'Collect Max Magick · Mystic Secrets'],
-      ['psyche', 'Collect Psyche · Mystic Secrets'],
+      // Each pickup names its reward; its Narcissus trait is told as its origin.
+      ['maxMana', 'Collect Max Magick', 'Created by Mystic Secrets'],
+      ['psyche', 'Collect Psyche', 'Created by Mystic Secrets'],
     ]);
     expect(
       actions?.rows

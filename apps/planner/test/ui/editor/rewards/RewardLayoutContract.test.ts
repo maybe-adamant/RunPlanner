@@ -55,7 +55,8 @@ describe('Reward row layout', () => {
   });
 
   it('keeps placement feedback out of flow and pool results separate from editable columns', () => {
-    expect(cssBlock(workbenches, '.room-action-placement-notice')).toContain('position: fixed;');
+    // Reorder feedback (the target or why it is unavailable) floats with the drag preview.
+    expect(cssBlock(workbenches, '.room-action-drag-preview')).toContain('position: fixed;');
     expect(cssBlock(structure, '.batch-pool-value')).toContain('height: 36px;');
     expect(cssBlock(workbenches, '.effect-repair-action[data-inactive]')).toContain(
       'visibility: hidden;',

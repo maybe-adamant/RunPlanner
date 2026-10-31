@@ -18,7 +18,7 @@ import type {
   WorkspaceOccurrenceInteractionRequirement,
   WorkspaceRoomObjectActionRequirement,
 } from '../interactions/interaction-requirements';
-import { occurrenceActionLabel } from './occurrence-action-label';
+import { occurrenceActionLabel, occurrenceActionLabelParts } from './occurrence-action-label';
 
 type EntryRequirement = Extract<
   WorkspaceOccurrenceInteractionRequirement,
@@ -102,16 +102,33 @@ export function assembleRoomObjectEntries(input: {
     const shop = input.interactions?.worldShop;
     const parts: EntryParts | undefined =
       shop === undefined ? undefined : { options: [], bound: [] };
-    for (const offer of shop?.offers ?? []) {
+    const offerLabels = (shop?.offers ?? []).map((offer) =>
+      occurrenceActionLabelParts(
+        catalog,
+        { kind: 'interactShopOffer', offerKey: offer.offerKey },
+        roomLocal,
+        encounterPhases,
+        undefined,
+        occurrence,
+      ),
+    );
+    (shop?.offers ?? []).forEach((offer, index) => {
       const key = `buy:${offer.offerKey}`;
+      const offerLabel = offerLabels[index]!;
+      // Rows show the slot on their icon; the list names it only to tell like items apart.
+      const repeated =
+        offerLabels.filter((candidate) => candidate.label === offerLabel.label).length > 1;
       parts!.options.push(
         Object.freeze({
           key,
-          label: label({ kind: 'interactShopOffer', offerKey: offer.offerKey }),
+          label:
+            repeated && offerLabel.slot !== undefined
+              ? `${offerLabel.label} · slot ${offerLabel.slot}`
+              : offerLabel.label,
         }),
       );
       parts!.bound.push(Object.freeze({ key, command: offer.command }));
-    }
+    });
     const refill = shop?.travelDealRefill;
     if (refill !== undefined) {
       const key = 'buy:travelDealRefill';

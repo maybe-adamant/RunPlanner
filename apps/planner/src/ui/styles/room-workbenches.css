@@ -821,10 +821,6 @@
   white-space: nowrap;
 }
 
-.encounter-menace-replacement .contextual-picker-trigger-icon {
-  flex-shrink: 0;
-}
-
 .encounter-menace-replacement > .contextual-picker.field-control-inline {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -1133,12 +1129,6 @@
   scroll-margin-block: 24px;
 }
 
-.hub-open-room-card[data-dragging='true'],
-.ephyra-side-visit-list > li[data-dragging='true'] {
-  border-style: dashed;
-  opacity: 0.42;
-}
-
 .hub-open-room-card[data-focused-main-reward='true'] {
   border-color: rgb(174 152 202 / 72%);
   box-shadow: 0 0 0 2px rgb(174 152 202 / 14%);
@@ -1183,23 +1173,6 @@
   display: grid;
   grid-template-rows: minmax(36px, auto);
   align-items: center;
-}
-
-.hub-roster-drag-handle {
-  display: grid;
-  min-inline-size: 28px;
-  min-block-size: 32px;
-  place-items: center;
-  color: #8f8b94;
-  cursor: grab;
-  font-size: 1.05rem;
-  line-height: 1;
-  touch-action: none;
-  user-select: none;
-}
-
-.hub-roster-drag-handle[data-dragging='true'] {
-  cursor: grabbing;
 }
 
 .hub-roster-rank {
@@ -1249,20 +1222,44 @@
   --timeline-title-x: calc(var(--timeline-gutter) + 3px + var(--timeline-row-start));
   gap: 10px;
   margin-top: 6px;
-  padding: 10px;
+  /* The timeline sits on the page: its line and banners are its structure. */
+  padding: 4px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
 }
 
 .room-actions-workbench .reward-wheel-offer-card > .exit-content {
   padding: 6px;
 }
 
-/* Every timeline list shares one column template: handle, ordinal, label, editors, actions. */
-.room-action-list {
-  --timeline-columns: 28px 1.5rem minmax(0, 40fr) minmax(0, 60fr) 8rem;
+/*
+ * Every timeline list shares one column grid that its rows subgrid: handle,
+ * label, decisions, money and trash. The decisions column is as wide as the
+ * list's widest decisions, so they start at one x on every row.
+ */
+:has(> .room-action-list) {
   container: timeline-list / inline-size;
+}
+
+.room-action-list > li {
+  grid-column: 1 / -1;
+}
+
+.room-action-list {
+  --timeline-money-width: 8.2rem;
+  /* Columns fit their content; space left over stays empty at the right. */
+  --timeline-working-width: min(46rem, 100%);
+  /* Label and decisions stay together; a spacer keeps money and trash at one right edge. */
+  --timeline-columns: 28px max-content minmax(0, max-content) 1fr var(--timeline-money-width)
+    var(--timeline-control-height);
+  width: fit-content;
+  min-width: var(--timeline-working-width);
+  max-width: 100%;
   position: relative;
   display: grid;
-  gap: 4px;
+  grid-template-columns: var(--timeline-columns);
+  gap: 2px 8px;
   margin: 0;
   padding: 0 0 0 var(--timeline-gutter);
   list-style: none;
@@ -1294,16 +1291,24 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: var(--timeline-columns);
+  grid-template-columns: subgrid;
   align-items: center;
   gap: 4px 8px;
   min-width: 0;
   padding: 3px 8px 3px var(--timeline-row-start);
-  border: 1px solid var(--timeline-card-border);
+  border: 0;
   border-left: 3px solid var(--timeline-stripe);
-  border-radius: 6px;
-  background: var(--timeline-card);
+  border-radius: 0 4px 4px 0;
+  background: transparent;
   scroll-margin-block: 24px;
+}
+
+/* Rows are plain lines; hover and focus lift them slightly. */
+.timeline-row:not([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']):is(
+    :hover,
+    :focus-within
+  ) {
+  background: rgb(255 255 255 / 3.5%);
 }
 
 /* A card's connector tick runs from the spine to its left edge. */
@@ -1321,142 +1326,196 @@
   grid-column: 1;
 }
 
-.timeline-row > [data-timeline-cell='ordinal'] {
+.timeline-row > [data-timeline-cell='label'] {
   grid-column: 2;
 }
 
-.timeline-row > [data-timeline-cell='label'] {
+.timeline-row > [data-timeline-cell='editors'] {
   grid-column: 3;
 }
 
-.timeline-row > [data-timeline-cell='editors'] {
-  grid-column: 4;
+.timeline-row > [data-timeline-cell='money'] {
+  grid-column: 5;
 }
 
 .timeline-row > [data-timeline-cell='actions'] {
-  grid-column: 5;
+  grid-column: 6;
+}
+
+/* A row without decisions lends its name the decisions column; the slots stay put elsewhere. */
+.timeline-row:not(
+    [data-timeline-row-kind='boundary'],
+    [data-timeline-row-kind='checkpoint'],
+    .room-action-feature-roll
+  ):not(:has(> [data-timeline-cell='editors'] > :not([data-empty='true'])))
+  > [data-timeline-cell='label'] {
+  grid-row: 1;
+  grid-column: 2 / 4;
+}
+
+.timeline-row:not(:has(> [data-timeline-cell='editors'] > :not([data-empty='true'])))
+  > [data-timeline-cell='editors'] {
+  /* Stays rendered so an empty finding anchor can still take focus. */
+  grid-row: 1;
+  grid-column: 3;
 }
 
 /* A banner never has actions, so its editors run to the row's end. */
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='editors'] {
-  grid-column: 4 / -1;
-}
-
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > [data-timeline-cell='actions'] {
-  display: none;
-}
-
-/* Lifecycle banners read as headings: their title starts at the handle column. */
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > :is([data-timeline-cell='handle'], [data-timeline-cell='ordinal']) {
-  display: none;
-}
-
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
   > [data-timeline-cell='label'] {
-  grid-column: 1 / 4;
+  grid-row: 1;
+  grid-column: 1 / 5;
+  /* A banner title spans the row and never widens the label column. */
+  contain: inline-size;
+}
+
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > [data-timeline-cell='editors'] {
+  display: grid;
+  grid-row: 1;
+  grid-column: 3 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+}
+
+/*
+ * A banner's title takes its first line and its controls a second one, so they never
+ * compete; only at very narrow widths does the identity end in an ellipsis.
+ */
+.timeline-banner-title {
+  display: inline-flex;
+  min-width: 0;
+  flex: 1 1 100%;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.timeline-banner-title > :not(.timeline-banner-identity) {
+  flex: 0 0 auto;
+}
+
+/* The identity is the one part of a banner that gives way, ending in an ellipsis. */
+.timeline-banner-title > .timeline-banner-identity {
+  display: block;
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-banner-modifiers {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 14px;
+  white-space: nowrap;
+}
+
+.timeline-banner-modifiers .encounter-event-controls {
+  flex-wrap: nowrap;
+  gap: 14px;
+}
+
+.timeline-banner-modifiers:empty,
+.timeline-banner-modifiers:not(:has(*)) {
+  display: none;
+}
+
+/* A control whose retained value has no effect here stays readable but quiet. */
+[data-inapplicable] {
+  opacity: 0.6;
+}
+
+/* A banner's gold keeps the money column. */
+
+.timeline-cell-editors > :is(.room-gold-summary, .timeline-banner-gold) {
+  grid-column: 3;
+  justify-self: end;
+}
+
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > :is(
+    [data-timeline-cell='handle'],
+    [data-timeline-cell='money'],
+    [data-timeline-cell='actions']
+  ) {
+  display: none;
+}
+
+/* A banner with nothing beside it takes the whole row. */
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']):not(
+    :has(> [data-timeline-cell='editors'] > :not([data-empty='true']))
+  )
+  > [data-timeline-cell='label'] {
+  grid-column: 1 / -1;
 }
 
 /* Object and feature entries start where the Optional actions heading does. */
-.timeline-row.room-action-feature-roll
-  > :is([data-timeline-cell='handle'], [data-timeline-cell='ordinal']) {
+.timeline-row.room-action-feature-roll > [data-timeline-cell='handle'] {
   display: none;
 }
 
 .timeline-row.room-action-feature-roll > [data-timeline-cell='label'] {
-  grid-column: 1 / 4;
+  grid-column: 1 / 3;
 }
 
-/* Narrow lists move editors and actions under the label; handle and ordinal stay aligned. */
-@container timeline-list (max-width: 52rem) {
-  .timeline-row > [data-timeline-cell='label'] {
-    grid-column: 3 / -1;
+/*
+ * Narrow lists keep handle, label, money and trash on the first line and move
+ * the whole decisions zone to a second line under the label.
+ */
+@container timeline-list (max-width: 46rem) {
+  .room-action-list {
+    --timeline-columns: 28px minmax(0, 1fr) 0 0 var(--timeline-money-width)
+      var(--timeline-control-height);
   }
 
-  .timeline-row > [data-timeline-cell='editors'] {
-    grid-row: 2;
-    grid-column: 3 / 5;
-  }
-
-  .timeline-row > [data-timeline-cell='actions'] {
-    grid-row: 2;
-    grid-column: 5;
-  }
-
-  /* A row with no editor (an empty finding anchor or a chance to afford aside) keeps one line. */
   .timeline-row:not(
-      :has(> [data-timeline-cell='editors'] > :not([data-empty='true'], .purchase-affordability))
-    )
+      [data-timeline-row-kind='boundary'],
+      [data-timeline-row-kind='checkpoint'],
+      .room-action-feature-roll
+    ):has(> [data-timeline-cell='editors'] > :not([data-empty='true']))
     > [data-timeline-cell='label'] {
     grid-row: 1;
-    grid-column: 3 / 5;
+    grid-column: 2 / 4;
   }
 
   .timeline-row:not(
-      :has(> [data-timeline-cell='editors'] > :not([data-empty='true'], .purchase-affordability))
-    )
-    > [data-timeline-cell='editors'] {
-    /* Stays rendered so an empty finding anchor can still take focus. */
-    grid-row: 1;
-    grid-column: 4;
-  }
-
-  .timeline-row:not(
-      :has(> [data-timeline-cell='editors'] > :not([data-empty='true'], .purchase-affordability))
-    )
-    > [data-timeline-cell='actions'] {
-    grid-row: 1;
-  }
-
-  /* A banner never has actions, so its heading takes the whole first line. */
-  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-    > [data-timeline-cell='label'],
-  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']):not(
-      :has(> [data-timeline-cell='editors'] > :not([data-empty='true']))
-    )
-    > [data-timeline-cell='label'] {
-    grid-column: 1 / -1;
-  }
-
-  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-    > [data-timeline-cell='actions'] {
-    display: none;
-  }
-
-  /* Banner editors start below the heading like any row's and keep the row's end. */
-  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+      [data-timeline-row-kind='boundary'],
+      [data-timeline-row-kind='checkpoint'],
+      .room-action-feature-roll
+    ):has(> [data-timeline-cell='editors'] > :not([data-empty='true']))
     > [data-timeline-cell='editors'] {
     grid-row: 2;
-    grid-column: 3 / -1;
+    grid-column: 2 / 6;
   }
 
-  .timeline-row.room-action-feature-roll > [data-timeline-cell='label'],
-  .timeline-row.room-action-feature-roll:not(
-      :has(> [data-timeline-cell='editors'] > :not([data-empty='true']))
-    )
-    > [data-timeline-cell='label'],
-  .timeline-row.room-action-feature-roll > [data-timeline-cell='editors'] {
+  .timeline-row > :is([data-timeline-cell='money'], [data-timeline-cell='actions']) {
+    grid-row: 1;
+  }
+
+  /* A banner keeps its gold at the money column; its controls drop to a second line. */
+  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+    > [data-timeline-cell='label'] {
     grid-column: 1 / 5;
   }
+
+  .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+    > [data-timeline-cell='editors'] {
+    display: flex;
+    grid-row: 1;
+    grid-column: 5 / -1;
+    justify-content: flex-end;
+  }
 }
 
-.timeline-cell-handle,
-.timeline-cell-ordinal {
+.timeline-cell-handle {
   display: grid;
   min-block-size: 32px;
   place-items: center;
-}
-
-.timeline-cell-handle > .hub-roster-drag-handle {
-  min-block-size: 0;
-}
-
-.timeline-cell-ordinal {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
 }
 
 .timeline-cell-label {
@@ -1503,73 +1562,171 @@
   white-space: nowrap;
 }
 
-.purchase-affordability[data-tone='high'],
-.affordability-sample > [data-tone='high'] {
+.purchase-affordability[data-tone='high'] {
   --affordability-tone: var(--success);
 }
 
-.purchase-affordability[data-tone='medium'],
-.affordability-sample > [data-tone='medium'] {
+.purchase-affordability[data-tone='medium'] {
   --affordability-tone: var(--warning);
 }
 
-.purchase-affordability[data-tone='low'],
-.affordability-sample > [data-tone='low'] {
+.purchase-affordability[data-tone='low'] {
   --affordability-tone: var(--danger);
 }
 
-/* A priced row keeps its price whole on one line; the name truncates first. */
-.timeline-cell-label:has(> .timeline-row-price) {
-  flex-wrap: nowrap;
+/* Price and chance, or gold gained, end at the trash with the row's gap. */
+.timeline-cell-money {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
 }
 
-.timeline-cell-label:has(> .timeline-row-price) > strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
+.purchase-cost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--muted);
   white-space: nowrap;
 }
 
-/* A purchase's chance keeps the end of its editors cell; the editors wrap before it. */
-.timeline-row {
-  --purchase-affordability-width: 4.2rem;
+.timeline-cell-money > .secondary-action {
+  width: 100%;
+  white-space: nowrap;
 }
 
-.timeline-cell-editors:has(> .purchase-affordability) {
+/* The row's object icon carries its inventory slot as a small number. */
+.timeline-row-icon {
   position: relative;
-  padding-inline-end: var(--purchase-affordability-width);
-}
-
-.timeline-cell-editors > .purchase-affordability {
-  position: absolute;
-  inset-block-start: 50%;
-  inset-inline-end: 0;
-  transform: translateY(-50%);
-}
-
-/* A purchase with no editor lends its name the editors column; its chance keeps the end. */
-.timeline-row:has(> [data-timeline-cell='editors'] > .purchase-affordability):not(
-    :has(> [data-timeline-cell='editors'] > :not([data-empty='true'], .purchase-affordability))
-  )
-  > [data-timeline-cell='label'] {
-  grid-row: 1;
-  grid-column: 3 / 5;
-  padding-inline-end: var(--purchase-affordability-width);
-}
-
-.timeline-row:has(> [data-timeline-cell='editors'] > .purchase-affordability):not(
-    :has(> [data-timeline-cell='editors'] > :not([data-empty='true'], .purchase-affordability))
-  )
-  > [data-timeline-cell='editors'] {
-  grid-row: 1;
-  grid-column: 4;
-}
-
-.timeline-row-price {
   display: inline-flex;
   flex: 0 0 auto;
-  align-items: center;
+}
+
+.timeline-slot-badge {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 2px;
+  border: 1px solid #4a4855;
+  border-radius: 7px;
+  background: #1b1c22;
+  color: #d9d4dc;
+  font-size: 0.6rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 11px;
+  text-align: center;
+}
+
+/* A Travel Deal purchase carries the Travel Deal boon on its icon in place of a slot. */
+.timeline-travel-deal-badge {
+  width: 15px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0;
+  border-radius: 50%;
+  object-fit: contain;
+}
+
+/* Pickers inside a row's label read as its text: each trigger sizes to its choice. */
+.timeline-cell-label > .room-action-inline-reward,
+.timeline-cell-label > .contextual-picker[data-trigger-size='content'] {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.timeline-cell-label > .room-action-inline-reward .contextual-picker,
+.timeline-cell-label > .room-action-inline-reward .field-control {
+  width: auto;
+}
+
+.timeline-cell-label
+  :is(.room-action-inline-reward, .contextual-picker[data-trigger-size='content'])
+  .contextual-picker-trigger {
+  width: auto;
+  min-height: var(--timeline-control-height);
+  padding: 2px 7px;
   gap: 6px;
-  color: var(--muted);
+  font-weight: 600;
+}
+
+/* Where in the room a row happens: a small tag after its name. */
+.timeline-row-tag {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border: 1px solid #44434e;
+  border-radius: 999px;
+  color: #b4afbb;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.4rem;
+  white-space: nowrap;
+}
+
+/* A pickup's origin is told on hover and focus. */
+.timeline-row-origin {
+  cursor: help;
+  text-decoration: underline dotted rgb(180 175 187 / 55%);
+  text-underline-offset: 3px;
+}
+
+/* The pickup outcome is a quick list in its own fixed slot. */
+.pickup-outcome-select {
+  width: 100%;
+  min-height: var(--timeline-control-height);
+  padding: 2px 26px 2px 8px;
+}
+
+/* Decisions flow in order: the trait chip, then any other decision, each its own width. */
+.timeline-row:not(
+    [data-timeline-row-kind='boundary'],
+    [data-timeline-row-kind='checkpoint'],
+    [data-timeline-row-kind='continuation']
+  )
+  > .timeline-cell-editors {
+  position: relative;
+  flex-wrap: wrap;
+}
+
+/* Object pickers in decisions are as wide as their choice. */
+.timeline-cell-editors :is(.room-action-artificer-output, .travel-deal-item) .contextual-picker,
+.timeline-row[data-travel-deal-line] .timeline-cell-editors .contextual-picker {
+  width: auto;
+  grid-template-columns: max-content;
+}
+
+.timeline-cell-editors
+  :is(.room-action-artificer-output, .travel-deal-item)
+  .contextual-picker-trigger,
+.timeline-row[data-travel-deal-line] .timeline-cell-editors .contextual-picker-trigger {
+  width: auto;
+  max-width: none;
+}
+
+.timeline-cell-editors > [data-empty='true'] {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.timeline-gold-gained {
+  color: var(--success);
+}
+
+.timeline-gold-lost {
+  color: var(--danger);
+}
+
+/* Trait-family chips in the timeline fit their name up to a cap, then end in an ellipsis. */
+.timeline-cell-editors .trait-offer-launcher {
+  width: auto;
+  max-width: min(16rem, 100%);
 }
 
 .room-gold-summary,
@@ -1618,27 +1775,7 @@
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 4px;
-}
-
-.timeline-action-slot {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-}
-
-.timeline-action-slot[data-timeline-action-slot='placement'] {
-  flex: 1 1 auto;
-}
-
-.timeline-action-slot[data-timeline-action-slot='delete'] {
-  flex: 0 0 var(--timeline-control-height);
-}
-
-.timeline-action-slot > .secondary-action,
-.timeline-action-slot > .room-action-placement-picker {
-  width: 100%;
-  white-space: nowrap;
+  justify-content: flex-end;
 }
 
 /* One checkbox presentation for every timeline toggle. */
@@ -1659,12 +1796,14 @@
 
 /* Row kinds differ only in border, background and type. */
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']) {
-  min-height: 36px;
+  min-height: 30px;
+  margin-top: 4px;
   padding-block: 1px;
-  border-color: transparent;
-  border-bottom-color: var(--timeline-band-divider);
-  background: var(--timeline-band);
-  color: var(--text);
+  border-left-color: transparent;
+  border-top: 1px solid var(--timeline-band-divider);
+  border-radius: 0;
+  background: transparent;
+  color: #cfcad6;
 }
 
 /* A lifecycle band is a quiet time marker: a node on the spine instead of a tick. */
@@ -1681,13 +1820,8 @@
 }
 
 .timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > :is(.timeline-cell-handle, .timeline-cell-ordinal) {
+  > .timeline-cell-handle {
   min-block-size: 0;
-}
-
-.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
-  > .timeline-cell-ordinal {
-  font-size: 1rem;
 }
 
 .timeline-row[data-timeline-row-kind='effect'] {
@@ -1700,16 +1834,7 @@
   background: transparent;
 }
 
-.timeline-row[data-timeline-row-kind='continuation'] {
-  border-top-style: dashed;
-  border-top-color: rgb(174 152 202 / 24%);
-  background: rgb(18 19 24 / 44%);
-}
-
-.timeline-row:is(
-    [data-timeline-row-kind='insertion'],
-    [data-timeline-row-kind='continuation']
-  )::before {
+.timeline-row[data-timeline-row-kind='insertion']::before {
   content: none;
 }
 
@@ -1717,65 +1842,15 @@
   border-left-color: var(--timeline-accent);
 }
 
-.timeline-row[data-dragging='true'] {
-  border-style: dashed;
-  opacity: 0.42;
-}
-
-.timeline-row[data-placing='true'] {
-  outline: 1px solid #c6c3cd;
-  outline-offset: 2px;
-}
-
 .room-action-placement-picker .contextual-picker > label {
   display: none;
 }
 
-.room-action-placement-picker .contextual-picker-trigger,
-.room-action-insertion-button {
+.room-action-placement-picker .contextual-picker-trigger {
   min-height: 26px;
   width: auto;
   padding: 3px 8px;
   font-size: 0.75rem;
-}
-
-.room-action-insertion-button {
-  opacity: 0.45;
-  transition: opacity 120ms;
-}
-
-.timeline-row:hover .room-action-insertion-button,
-.room-action-insertion-button:focus-visible {
-  opacity: 1;
-}
-
-@media (hover: none) {
-  .room-action-insertion-button {
-    opacity: 1;
-  }
-}
-
-.room-action-insertion-button[aria-disabled='true'] {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.room-action-placement-notice {
-  position: fixed;
-  bottom: 16px;
-  right: 24px;
-  max-width: calc(100% - 48px);
-  z-index: 20;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
-  border: 1px solid #777580;
-  border-radius: 8px;
-  background: #25252d;
-  font-size: 0.8rem;
 }
 
 .room-action-drag-feedback {
@@ -1815,67 +1890,149 @@
   flex: 0 0 auto;
 }
 
-.timeline-row[data-drop-before]::after,
-.timeline-row[data-drop-after]::after,
-.ephyra-side-visit-list > li[data-drop-before]::after,
-.ephyra-side-visit-list > li[data-drop-after]::after {
+/* A reorder handle is a real button that reads as the row's grip. */
+.timeline-reorder-handle {
+  display: grid;
+  min-inline-size: 24px;
+  min-block-size: 28px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: #8f8b94;
+  cursor: grab;
+  font-size: 1.05rem;
+  line-height: 1;
+  touch-action: none;
+  user-select: none;
+}
+
+.timeline-reorder-handle:hover:not([aria-disabled='true']),
+.timeline-reorder-handle[data-lifted] {
+  color: var(--selection-accent);
+}
+
+.timeline-reorder-handle:focus-visible {
+  outline: 2px solid var(--selection-accent);
+  outline-offset: 1px;
+}
+
+.timeline-reorder-handle[data-lifted='pointer'] {
+  cursor: grabbing;
+}
+
+.timeline-reorder-handle[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.22;
+}
+
+/* The lifted row stays in place, highlighted, until it drops. */
+[data-reorder-anchor] {
+  position: relative;
+}
+
+[data-reorder-lifted] {
+  outline: 2px solid var(--selection-accent);
+  outline-offset: 1px;
+  background: color-mix(in srgb, var(--selection-accent) 10%, var(--timeline-card, transparent));
+}
+
+[data-reorder-lifted='pointer'] {
+  opacity: 0.6;
+}
+
+/* The candidate drop line sits in the gap at the row's edge. */
+[data-reorder-indicator]::after {
   position: absolute;
   inset-inline: 0;
+  z-index: 3;
   height: 3px;
   border-radius: 3px;
-  pointer-events: none;
+  background: var(--selection-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--selection-accent) 18%, transparent);
   content: '';
-  background: #c98787;
+  pointer-events: none;
 }
 
-.timeline-row[data-drop-before]::after,
-.ephyra-side-visit-list > li[data-drop-before]::after {
-  top: -5px;
+[data-reorder-indicator='before']::after {
+  top: -4px;
 }
 
-.timeline-row[data-drop-after]::after,
-.ephyra-side-visit-list > li[data-drop-after]::after {
-  bottom: -5px;
-}
-
-.timeline-row[data-drop-before='available']::after,
-.timeline-row[data-drop-after='available']::after,
-.ephyra-side-visit-list > li[data-drop-before='available']::after,
-.ephyra-side-visit-list > li[data-drop-after='available']::after {
-  background: #83b98d;
-}
-
-.timeline-row[data-drop-position]::after {
-  position: absolute;
-  right: 6px;
+[data-reorder-indicator='after']::after {
   bottom: -4px;
-  left: 0;
-  z-index: 2;
-  border-top: 1px dashed rgb(143 139 148 / 60%);
-  content: '';
-  pointer-events: none;
 }
 
-.timeline-row[data-drop-position='available']::after {
-  border-color: var(--selection-accent);
-  border-style: solid;
-  border-width: 2px;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--selection-accent) 12%, transparent);
+[data-reorder-unavailable]::after {
+  background: repeating-linear-gradient(90deg, #b07a7a 0 6px, transparent 6px 10px);
+  box-shadow: none;
 }
 
-.timeline-row[data-drop-position='unavailable']::after {
-  border-color: #8a7478;
+.room-action-drag-feedback[data-unavailable='true'] {
+  color: #e3a7a7;
+}
+
+.timeline-legend-trigger {
+  display: grid;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  place-items: center;
+  border: 1px solid #484954;
+  border-radius: 999px;
+  background: #202128;
+  color: #c9c5cf;
+  cursor: pointer;
+  font-family: Georgia, serif;
+  font-size: 0.85rem;
+  font-style: italic;
+  font-weight: 700;
+}
+
+.timeline-legend-trigger:hover,
+.timeline-legend-trigger[data-state='open'] {
+  border-color: #65636f;
+  background: #25262e;
+}
+
+.timeline-legend {
+  z-index: 50;
+  display: grid;
+  gap: 0.7rem;
+  max-width: min(22rem, calc(100 * var(--app-vw) - 24px));
+  padding: 0.7rem 0.9rem;
+  border: 1px solid #484954;
+  border-radius: 10px;
+  background: #1b1c22;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.timeline-legend h3 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.timeline-legend p {
+  margin: 0 0 0.4rem;
 }
 
 .room-timeline-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 10px;
+  display: grid;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
-  color: #aaa7af;
-  font-size: 0.72rem;
+}
+
+.timeline-legend-chances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 /* Timeline palette: neutral rows and bands; category hue only on stripes and the legend. */
@@ -1910,33 +2067,15 @@
 }
 
 .room-timeline-legend > li {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-}
-
-/* The chance-to-afford entry shows the three pill tones in place of a stripe. */
-.room-timeline-legend > li.affordability-legend::before {
-  content: none;
-}
-
-.room-timeline-legend .affordability-sample {
-  display: inline-flex;
-  gap: 1px;
-  overflow: hidden;
-  border-radius: 999px;
-}
-
-.room-timeline-legend .affordability-sample > span {
-  width: 5px;
-  height: 0.85rem;
-  background: var(--affordability-tone);
+  gap: 8px;
 }
 
 .room-timeline-legend > li::before {
-  width: 8px;
+  width: 4px;
   flex-shrink: 0;
-  height: 0.85rem;
+  height: 1.1rem;
   border-radius: 2px;
   background: var(--timeline-accent);
   content: '';
@@ -2061,6 +2200,13 @@
   opacity: 0.45;
 }
 
+/* A row that cannot be removed keeps a quiet trash so the trailing column never shifts. */
+.timeline-row .room-action-delete:disabled {
+  border-color: transparent;
+  background: transparent;
+  opacity: 0.22;
+}
+
 .timeline-cell-editors > .acquisition-entry-resolution {
   flex: 0 1 auto;
   min-width: 0;
@@ -2116,8 +2262,14 @@
   font-weight: 700;
 }
 
-.fields-cage-order .contextual-picker {
-  width: 100%;
+.fields-cage-order {
+  padding-left: var(--timeline-title-x);
+}
+
+.fields-cage-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* Pools are grouped by a light heading, not another box. */
@@ -2362,7 +2514,7 @@
 
 .ephyra-side-visit-list > li {
   position: relative;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
@@ -2373,8 +2525,7 @@
   gap: 8px;
 }
 
-.ephyra-side-visit-section-heading,
-.ephyra-side-visit-actions {
+.ephyra-side-visit-section-heading {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -2595,6 +2746,18 @@
   grid-column: 4;
 }
 
+.hub-timeline-step:has(> .timeline-reorder-handle, > .room-reroll-move-slot) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: -6px;
+}
+
+/* Zero-height mark where a moved fountain lands at the end of its stay. */
+.hub-timeline-stay-end {
+  height: 0;
+}
+
 .hub-timeline-details > .hub-timeline-fountain {
   border-top: 1px solid #34353e;
 }
@@ -2605,6 +2768,7 @@
 }
 
 .hub-timeline-board {
+  container: hub-board / inline-size;
   display: grid;
   gap: 4px;
   padding: 8px 14px 10px calc(4.5rem + 14px);
@@ -2657,8 +2821,27 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
+  overflow: hidden;
   font-weight: 400;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* A narrow board keeps two door groups per line so names and rewards never overlap. */
+@container hub-board (max-width: 44rem) {
+  .hub-timeline-board ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hub-timeline-board li:nth-child(n) {
+    padding-left: 10px;
+    border-left: 1px solid #2c2d35;
+  }
+
+  .hub-timeline-board li:nth-child(2n + 1) {
+    padding-left: 0;
+    border-left: 0;
+  }
 }
 
 /* A rerolled reward wraps to keep both its first and final draw readable. */
@@ -2886,4 +3069,334 @@
   min-width: 0;
   max-width: none;
   grid-template-columns: var(--overview-secondary-width);
+}
+
+/* The room's one Add… menu: Places open their flows, Actions add in one click. */
+.room-add {
+  margin-top: 8px;
+  padding-left: var(--timeline-gutter);
+}
+
+.room-add-menu {
+  z-index: 50;
+  display: grid;
+  gap: 10px;
+  width: min(24rem, calc(100 * var(--app-vw) - 24px));
+  max-height: min(32rem, calc(100 * var(--app-vh) - 48px));
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid #484954;
+  border-radius: 10px;
+  background: #1b1c22;
+  box-shadow: 0 18px 48px rgb(0 0 0 / 45%);
+}
+
+.room-add-menu h4 {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.room-add-actions {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.room-add-action {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.room-add-action:hover:not([aria-disabled='true']),
+.room-add-action:focus-visible {
+  background: #2a2b34;
+}
+
+.room-add-action[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* The Add area: a line of room objects and a line of action sources. */
+.room-add {
+  display: grid;
+  gap: 6px;
+}
+
+.room-add-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.room-add-line-label {
+  min-width: 4.5rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.room-add .room-add-objects,
+.room-add .room-add-groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.room-add .room-add-objects::before {
+  display: none;
+}
+
+.room-add .room-add-objects > .timeline-row {
+  display: flex;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.room-add .room-add-objects > .timeline-row::before,
+.room-add
+  .room-add-objects
+  > .timeline-row
+  > :is(
+    [data-timeline-cell='handle'],
+    [data-timeline-cell='money'],
+    [data-timeline-cell='actions']
+  ) {
+  display: none;
+}
+
+/* A banner's editors overlap its title's span; only their own controls take the pointer. */
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > [data-timeline-cell='editors'] {
+  pointer-events: none;
+}
+
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > [data-timeline-cell='editors']
+  > * {
+  pointer-events: auto;
+}
+
+/* An encounter phase reads as one light group: its rows share a tint. */
+.timeline-row[data-phase] {
+  background: rgb(255 255 255 / 2%);
+}
+
+/* Every banner shares one band: start, end and lifecycle banners alike. */
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']) {
+  border-top-color: rgb(255 255 255 / 16%);
+  background: rgb(255 255 255 / 4.5%);
+  color: var(--text);
+}
+
+/* A phase starts with a little space above its first banner. */
+.timeline-row[data-phase-start] {
+  margin-top: 8px;
+}
+
+/* The Add area and Timeline repairs share the timeline's width and its content edge. */
+.room-actions-workbench > .room-add,
+.room-actions-workbench .room-action-repairs,
+.ship-phase > .room-add {
+  width: var(--timeline-working-width, min(46rem, 100%));
+  padding-left: var(--timeline-title-x);
+}
+
+.room-actions-workbench .room-action-repairs {
+  padding-left: 0;
+}
+
+.room-actions-workbench .room-action-repairs > .local-reward-heading {
+  padding-left: var(--timeline-title-x);
+}
+
+/* The Objects line is a row of entries, not a timeline-wide list. */
+.room-add .room-add-objects {
+  width: auto;
+  min-width: 0;
+}
+
+/*
+ * Every banner keeps its title, separators, tags and inline items on one centre
+ * line, with symmetric padding; the spine dot sits at the band's centre.
+ */
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']) {
+  align-items: center;
+  padding-block: 4px;
+}
+
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > [data-timeline-cell='label'] {
+  display: flex;
+  min-width: 0;
+  /* A title line is as tall as one control, so every banner title sits alike. */
+  min-height: var(--timeline-control-height, 26px);
+  align-items: center;
+  /* A banner's controls take a second line under its title; none leaves no line. */
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  line-height: 1.25;
+}
+
+.timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > [data-timeline-cell='label']
+  > * {
+  display: inline-flex;
+  align-items: center;
+}
+
+.timeline-row-tag {
+  display: inline-flex;
+  height: 1.3rem;
+  align-items: center;
+  line-height: 1;
+}
+
+/* A reward named by its icon; a Boosted boon carries a small up-arrow on its icon. */
+.row-reward-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.row-reward-icon {
+  position: relative;
+  display: inline-flex;
+}
+
+.row-reward-boosted {
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  display: grid;
+  width: 13px;
+  height: 13px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--selection-accent);
+  color: #1b1c22;
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.row-reward-arrow {
+  color: var(--muted);
+}
+
+/* The Mystery Boon's god picker shows only the god's icon; its name stays for assistive tech. */
+.timeline-cell-label > .room-action-inline-reward .contextual-picker-trigger-value > span,
+.timeline-cell-label > .room-action-inline-reward .contextual-picker-trigger > span:not([class]) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Decisions keep a clear gap from the label. */
+.timeline-row:not([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])
+  > [data-timeline-cell='editors'] {
+  margin-inline-start: 0.5rem;
+}
+
+/* Below the timeline the Add area has no title and hides when there is nothing to add. */
+.room-add-title {
+  display: none;
+  margin: 0;
+  color: #aaa7af;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.room-add[data-empty] {
+  display: none;
+}
+
+.room-add-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.room-workbench-panel {
+  container: room-panel / inline-size;
+}
+
+/*
+ * A panel wide enough for the timeline and a side column puts the optional
+ * actions beside it, always present so the timeline keeps its place; the
+ * column stays in view while a tall timeline scrolls.
+ */
+@container room-panel (min-width: 62rem) {
+  :is(.room-actions-workbench, .ship-phase):has(> .room-add) {
+    grid-template-columns: minmax(46rem, max-content) 16rem;
+    justify-content: start;
+    align-items: start;
+    column-gap: 1.5rem;
+  }
+
+  :is(.room-actions-workbench, .ship-phase):has(> .room-add) > * {
+    grid-column: 1;
+  }
+
+  :is(.room-actions-workbench, .ship-phase) > .room-add,
+  :is(.room-actions-workbench, .ship-phase) > .room-add[data-empty] {
+    position: sticky;
+    top: 52px;
+    display: grid;
+    grid-row: 1 / span 40;
+    grid-column: 2;
+    align-content: start;
+    align-self: start;
+    gap: 12px;
+    width: auto;
+    max-height: calc(100 * var(--app-vh, 1vh) - 72px);
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+  }
+
+  .room-add-title {
+    display: block;
+  }
+
+  .room-add .room-add-line {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .room-add .room-add-objects,
+  .room-add .room-add-groups {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

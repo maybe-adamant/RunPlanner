@@ -82,7 +82,10 @@ import {
   type GoldPurchasePrice,
   type GoldRoomAvailability,
 } from '@run-planner/engine/simulation';
-import { occurrenceActionLabel } from '@planner/projections/structured-workspace/assembly/occurrence-action-label';
+import {
+  occurrenceActionLabel,
+  occurrenceActionLabelParts,
+} from '@planner/projections/structured-workspace/assembly/occurrence-action-label';
 import { purchaseAffordability } from '@planner/projections/structured-workspace/assembly/occurrence-action-row-projection';
 import type { WorkspaceExplicitRewardControl } from '@planner/projections/structured-workspace/contracts/rewards';
 import type { WorkspaceRoomLocal } from '@planner/projections/structured-workspace/contracts/locals';
@@ -110,11 +113,12 @@ function labelRewardControl(offer: ResolvedRewardOffer): WorkspaceExplicitReward
 
 describe('timeline action labels', () => {
   it.each([
-    ['quickBuckGold', 'RoomMoneyDrop', 'Collect Gold · Quick Buck', 'MoneyMultiplierBoon'],
-    ['bones', 'MetaCurrencyDrop', 'Collect Bones · Buried Treasure', 'RoomRewardBonusBoon'],
-  ] as const)('identifies the source of %s', (entryKey, rewardType, expected, traitKey) => {
+    ['quickBuckGold', 'RoomMoneyDrop', 'Gold', 'Quick Buck', 'MoneyMultiplierBoon'],
+    ['bones', 'MetaCurrencyDrop', 'Bones', 'Buried Treasure', 'RoomRewardBonusBoon'],
+  ] as const)('identifies the source of %s', (entryKey, rewardType, name, trait, traitKey) => {
+    // The reward names the row; its source trait is told as its origin, not in the label.
     expect(
-      occurrenceActionLabel(
+      occurrenceActionLabelParts(
         catalog,
         { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey },
         { kind: 'none' },
@@ -122,29 +126,21 @@ describe('timeline action labels', () => {
         labelRewardControl({ rewardType }),
         {},
         undefined,
-        [
-          {
-            traitKey,
-            siteKey: 'roomExit',
-            producerLifecycleKey: 'pickup',
-            placement: 'roomExit',
-            source: createRoomActionAddress(goldenFBiome, goldenFStartId, 'reward'),
-            sourceAction: {
-              kind: 'interactIncomingReward',
-              producerPoint: 'roomReward',
-              acquisitionRole: 'primary',
-            },
-            sourceNormal: true,
-            pickups: [{ key: entryKey, rewardType, required: true }],
-          },
-        ],
+        { kind: 'trait', traitKey },
       ),
-    ).toBe(expected);
+    ).toMatchObject({
+      label: `Collect ${name}`,
+      verb: 'Collect',
+      name,
+      origin: `Created by ${trait}`,
+      reward: { offer: { rewardType } },
+    });
   });
   it.each([
-    ['artificer', 'Use Artificer on Bones'],
-    ['timePiece', 'Use Time Piece on Bones'],
-  ] as const)('describes %s instead of collecting the original reward', (kind, expected) => {
+    ['artificer', 'Collect Bones'],
+    ['timePiece', 'Collect Bones'],
+  ] as const)('keeps the plain verb when %s converts the reward', (kind, expected) => {
+    // The conversion is the row's verb choice, not part of its label.
     const control = labelRewardControl({ rewardType: 'MetaCurrencyDrop' });
     const owner = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(
@@ -183,7 +179,7 @@ describe('timeline action labels', () => {
     [{ rewardType: 'MaxHealthDrop' }, 'Collect Max Health'],
     [
       { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
-      'Collect Demeter boon',
+      'Collect Demeter',
     ],
     [{ rewardType: 'BlindBoxLoot' }, 'Collect Mystery Boon'],
     [
@@ -297,32 +293,45 @@ describe('timeline action labels', () => {
         },
       ],
     };
+    // The slot is a badge and the boosted variant a mark on the reward icon.
     expect(
-      roomLocal.offers.map(({ key }) =>
-        occurrenceActionLabel(
+      roomLocal.offers.map(({ key }) => {
+        const parts = occurrenceActionLabelParts(
           catalog,
           { kind: 'interactShopOffer', offerKey: key },
           roomLocal,
           [],
           undefined,
           {},
-        ),
-      ),
-    ).toEqual(['Buy Demeter boon · Slot 1', 'Buy Demeter boosted boon · Slot 2']);
+        );
+        return [parts.label, parts.slot, parts.reward?.boosted];
+      }),
+    ).toEqual([
+      ['Buy Demeter', 1, false],
+      ['Buy Boosted Demeter', 2, true],
+    ]);
+    // The engine's source family tells a Travel Deal restock from an Echo duplicate.
+    const families = {
+      [TRAVEL_DEAL_REFILL_ENTRY_KEY]: { kind: 'shopTravelDealRefill' },
+      [ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY]: { kind: 'echo' },
+    } as const;
     expect(
-      roomLocal.supplementalOffers.map(({ key }) =>
-        occurrenceActionLabel(
+      roomLocal.supplementalOffers.map(({ key }) => {
+        const parts = occurrenceActionLabelParts(
           catalog,
           { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: key },
           roomLocal,
           [],
           control,
           {},
-        ),
-      ),
+          undefined,
+          families[key as keyof typeof families],
+        );
+        return [parts.shownLabel ?? parts.label, parts.travelDeal ?? false];
+      }),
     ).toEqual([
-      'Buy Demeter boon · Travel Deal Offer',
-      'Collect Demeter boon · Gold Gold Gold duplicate of Offer 1',
+      ['Buy Demeter', true],
+      ['Collect Demeter · Gold Gold Gold duplicate of Offer 1', false],
     ]);
   });
 
@@ -348,36 +357,38 @@ describe('timeline action labels', () => {
           },
         },
       );
-    expect(label({ rewardType: 'StackUpgradeBig' })).toBe('Collect Double Pom · Pedestal');
-    expect(label({ rewardType: 'BlindBoxLoot' })).toBe('Collect Mystery Boon · Pedestal');
-    expect(label()).toBe('Collect Pedestal');
+    // The Pedestal is the row's icon; the label names only its item.
+    expect(label({ rewardType: 'StackUpgradeBig' })).toBe('Collect Double Pom');
+    expect(label({ rewardType: 'BlindBoxLoot' })).toBe('Collect Mystery Boon');
+    expect(label()).toBe('Collect Pedestal item');
   });
 
   it.each([
-    ['initial:healing', 'Buy Splintered Shield · Slot 1'],
-    ['initial:secondLeft', 'Buy Fateful Twist · Slot 2'],
-    ['initial:secondRight', 'Buy Yarn of Ariadne · Slot 3'],
-    ['travelDealRefill', 'Buy Splintered Shield · Travel Deal Offer'],
-  ] as const)('includes the slot and item for Well generation %s', (generationKey, expected) => {
-    expect(
-      occurrenceActionLabel(
-        catalog,
-        { kind: 'purchaseStygianWellOffer', generationKey },
-        { kind: 'none' },
-        [],
-        undefined,
-        {
-          stygianWell: {
-            offerKeyBySlot: {
-              healing: 'ArmorBoostStore',
-              secondLeft: 'RandomStoreItem',
-              secondRight: 'TemporaryBoonRarityTrait',
-            },
-            travelDealRefillKey: 'ArmorBoostStore',
+    ['initial:healing', 'Buy Splintered Shield', { slot: 1 }],
+    ['initial:secondLeft', 'Buy Fateful Twist', { slot: 2 }],
+    ['initial:secondRight', 'Buy Yarn of Ariadne', { slot: 3 }],
+    ['travelDealRefill', 'Buy Splintered Shield', { travelDeal: true }],
+  ] as const)('names the item and slot for Well generation %s', (generationKey, shown, mark) => {
+    const parts = occurrenceActionLabelParts(
+      catalog,
+      { kind: 'purchaseStygianWellOffer', generationKey },
+      { kind: 'none' },
+      [],
+      undefined,
+      {
+        stygianWell: {
+          offerKeyBySlot: {
+            healing: 'ArmorBoostStore',
+            secondLeft: 'RandomStoreItem',
+            secondRight: 'TemporaryBoonRarityTrait',
           },
+          travelDealRefillKey: 'ArmorBoostStore',
         },
-      ),
-    ).toBe(expected);
+      },
+    );
+    // The slot is a badge and a Travel Deal refill a mark on the row icon.
+    expect(parts.shownLabel ?? parts.label).toBe(shown);
+    expect(parts).toMatchObject(mark);
   });
 });
 
@@ -535,7 +546,7 @@ describe('structured workspace actions assembly', () => {
       createAcquisitionSiteAddress(owner, 'roomExit'),
       clockedTraitGeneratedPickupEntryKey('icarus-supply', 'pom2'),
     );
-    const label = occurrenceActionLabel(
+    const parts = occurrenceActionLabelParts(
       catalog,
       {
         kind: 'interactAcquisitionEntry',
@@ -560,10 +571,12 @@ describe('structured workspace actions assembly', () => {
         rewardTypes: Object.freeze([]),
       }),
       {},
+      undefined,
+      { kind: 'trait', traitKey: 'SupplyDropBoon' },
     );
 
-    expect(label).toBe('Collect Pom Slice · Supply Chain');
-    expect(label).not.toContain('clockedTraitGenerated:');
+    expect(parts).toMatchObject({ label: 'Collect Pom Slice', origin: 'Created by Supply Chain' });
+    expect(parts.label).not.toContain('clockedTraitGenerated:');
   });
 
   it('publishes a pending Phial control on a fountain use that lacks a rarity assessment', () => {
@@ -626,10 +639,28 @@ describe('structured workspace actions assembly', () => {
       [],
       undefined,
       {},
+      undefined,
+      { kind: 'hermesShrineDelivery' },
     );
 
     expect(label).toBe('Collect Delivery');
     expect(label).not.toContain('hermesShrineDelivery:');
+    // Without a source family the persisted key still never shows.
+    expect(
+      occurrenceActionLabel(
+        catalog,
+        {
+          kind: 'interactAcquisitionEntry',
+          siteKey: 'hermesShrineDelivery',
+          entryKey,
+          encounterPhaseKey: 'Encounter',
+        },
+        { kind: 'none' },
+        [],
+        undefined,
+        {},
+      ),
+    ).not.toContain('hermesShrineDelivery:');
   });
 
   it('carries a reached O Ship Steady Growth effect in engine timeline order', () => {
@@ -752,7 +783,7 @@ describe('structured workspace actions assembly', () => {
         row.reference.kind === 'interactAcquisitionEntry' && row.reference.entryKey === replayKey,
     );
 
-    expect(replayRepair?.label).toBe('Collect Hera · Echo');
+    expect(replayRepair?.label).toBe('Collect Hera');
     expect(replayRepair?.label).not.toContain('echoLastReward:');
   });
 
@@ -796,7 +827,7 @@ describe('structured workspace actions assembly', () => {
     );
 
     expect(dueRow).toMatchObject({
-      label: 'Collect Max Health · Delivery',
+      label: 'Collect Max Health',
       participation: 'required',
       rank: null,
       reference: { encounterPhaseKey: 'Encounter' },
@@ -820,8 +851,11 @@ describe('structured workspace actions assembly', () => {
         row.reference.siteKey === 'hermesShrineDelivery' &&
         row.reference.entryKey === entryKey,
     );
+    // Placed, the delivery tells its Shrine origin beside its reward name.
     expect(placedRow).toMatchObject({
-      label: 'Collect Max Health · Delivery',
+      label: 'Collect Max Health',
+      sourceFamily: { kind: 'hermesShrineDelivery' },
+      labelParts: { origin: 'Delivered from the Hermes Shrine' },
       participation: 'required',
       window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
     });
@@ -953,8 +987,19 @@ describe('structured workspace actions assembly', () => {
     expect(roomActions.timeline.fieldsCageOrder).toEqual({
       phaseKeys: ['Cage02', 'Cage01'],
       choices: [
-        { phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
-        { phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
+        // The combat order names its cages; each keeps its reward for the banner.
+        {
+          phaseKey: 'Cage01',
+          label: 'Cage 1',
+          fullLabel: expect.stringMatching(/^Cage 1 \(/),
+          offer: expect.objectContaining({ rewardType: expect.any(String) }),
+        },
+        {
+          phaseKey: 'Cage02',
+          label: 'Cage 2',
+          fullLabel: expect.stringMatching(/^Cage 2 \(/),
+          offer: expect.objectContaining({ rewardType: expect.any(String) }),
+        },
       ],
     });
     expect(fields.node.room.localDetailMarkers).toContain(roomActions.rows[0]?.marker);
@@ -1157,8 +1202,19 @@ describe('structured workspace actions assembly', () => {
     expect(roomActions?.timeline.fieldsCageOrder).toEqual({
       phaseKeys: ['Cage01'],
       choices: [
-        { phaseKey: 'Cage01', label: expect.stringMatching(/^Cage 1 \(/) },
-        { phaseKey: 'Cage02', label: expect.stringMatching(/^Cage 2 \(/) },
+        // The combat order names its cages; each keeps its reward for the banner.
+        {
+          phaseKey: 'Cage01',
+          label: 'Cage 1',
+          fullLabel: expect.stringMatching(/^Cage 1 \(/),
+          offer: expect.objectContaining({ rewardType: expect.any(String) }),
+        },
+        {
+          phaseKey: 'Cage02',
+          label: 'Cage 2',
+          fullLabel: expect.stringMatching(/^Cage 2 \(/),
+          offer: expect.objectContaining({ rewardType: expect.any(String) }),
+        },
       ],
       unavailableReason: 'Restore missing cage actions before changing their order.',
     });
@@ -2100,9 +2156,6 @@ describe('purchase gold', () => {
           ]),
         ),
       );
-      // These rooms buy only fixed prices; a rolled total is witnessed with the Doors open gold.
-      expect(spent.room.spending.min).toBe(spent.room.spending.max);
-      expect(node.room.roomActions?.spending).toEqual({ label: label(spent.room.spending) });
     },
   );
 
@@ -2127,7 +2180,6 @@ describe('purchase gold', () => {
       ),
     ).toBe(true);
     expect(priceOf('travelDealRefill')).toBeUndefined();
-    expect(actions.spending).toEqual({ label: '~30' });
     const fixedPrices = wellActions(
       ledger(
         {
@@ -2138,12 +2190,6 @@ describe('purchase gold', () => {
       ),
     );
     expect(fixedPrices.priceOf('initial:secondRight')).toEqual({ label: '45' });
-    expect(fixedPrices.actions.spending).toEqual({ label: '~75' });
-  });
-
-  it('hides the room spending when the room pays for nothing or is not priced', () => {
-    expect(wellActions(ledger({}, spending([fixed(0)], 'free'))).actions.spending).toBeUndefined();
-    expect(wellActions(ledger({}, unreached)).actions.spending).toBeUndefined();
   });
 });
 
@@ -2168,7 +2214,7 @@ describe('Doors open room gold', () => {
     return { actions: node.room.roomActions, room: priced.room };
   }
 
-  it('shows the estimated gold held when the doors open beside exact room spending', () => {
+  it('shows the estimated gold held when the doors open', () => {
     const well = createOccurrenceAddress(
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
@@ -2181,11 +2227,9 @@ describe('Doors open room gold', () => {
     if (balance.availability !== 'available') throw new Error('The Well balance is unavailable');
     expect(balance.balance.variance).toBeGreaterThan(0);
     expect(actions?.current).toEqual({ label: `~${plain(Math.round(balance.balance.mean))}` });
-    expect(room.spending.variance).toBe(0);
-    expect(actions?.spending).toEqual({ label: plain(room.spending.mean) });
   });
 
-  it('marks a spread balance approximate and shows it without spending', () => {
+  it('marks a spread balance approximate', () => {
     const intro = createOccurrenceAddress(goldenGBiome, createOccurrenceId('golden-g-intro'));
     const { actions, room } = roomGoldWitness(
       underworldCheckpointArtifacts['underworld-f-pool'].load(),
@@ -2195,10 +2239,9 @@ describe('Doors open room gold', () => {
     if (balance.availability !== 'available') throw new Error('The G intro balance is unavailable');
     expect(balance.balance.variance).toBeGreaterThan(0);
     expect(actions?.current).toEqual({ label: `~${plain(Math.round(balance.balance.mean))}` });
-    expect(actions?.spending).toBeUndefined();
   });
 
-  it('marks a rolled room spending approximate while its purchase row keeps the range', () => {
+  it('keeps a rolled purchase price as its range', () => {
     const well = createOccurrenceAddress(
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
@@ -2221,7 +2264,6 @@ describe('Doors open room gold', () => {
     });
     const { actions, room } = roomGoldWitness(project, well);
     expect(room.spending.min).toBeLessThan(room.spending.max);
-    expect(actions?.spending).toEqual({ label: `~${plain(Math.round(room.spending.mean))}` });
     expect(
       actions?.rows.find(
         (row) =>

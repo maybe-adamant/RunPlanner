@@ -227,6 +227,22 @@ select {
   cursor: pointer;
 }
 
+/* A content-sized picker's trigger is as wide as the choice it shows. */
+.contextual-picker[data-trigger-size='content'] {
+  width: auto;
+  justify-self: start;
+  grid-template-columns: auto;
+}
+
+.contextual-picker.field-control-inline[data-trigger-size='content'] {
+  grid-template-columns: max-content max-content;
+}
+
+.contextual-picker[data-trigger-size='content'] .contextual-picker-trigger {
+  width: auto;
+  justify-self: start;
+}
+
 .contextual-picker-trigger:hover:not(:disabled),
 .contextual-picker-trigger[data-state='open'] {
   border-color: #65636f;
@@ -294,11 +310,6 @@ select {
   flex: 0 0 auto;
   width: 1.4rem;
   height: 1.4rem;
-}
-
-.contextual-picker-trigger-icon {
-  color: #8f8c96;
-  font-size: 0.75rem;
 }
 
 .contextual-picker-popover {
@@ -635,6 +646,36 @@ select {
   font-size: 0.78rem;
   font-weight: 650;
   white-space: nowrap;
+}
+
+/* A Ship phase names itself once; its Timeline and Wheels tabs follow. */
+.room-workbench-tab-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding-inline-start: 4px;
+  color: #77737f;
+  font-size: 0.74rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.room-workbench-tab-divider {
+  width: 1px;
+  height: 1.1rem;
+  margin-inline-end: 4px;
+  background: #3d3e48;
+}
+
+.room-workbench-tab-dot {
+  align-self: center;
+  color: #5d5a66;
+  font-size: 0.78rem;
+}
+
+.room-workbench-tabs:has(> .room-workbench-tab-group) {
+  align-items: center;
+  gap: 0;
 }
 
 .room-workbench-tab:hover,
@@ -1252,9 +1293,9 @@ select {
   gap: 10px;
 }
 
-/* A Hub stay's list also moves its rows: # | target | reward | move | remove. */
+/* A Hub stay's list also moves its rows: handle | # | target | reward | remove. */
 .room-rerolls[data-movable='true'] .room-reroll-row {
-  grid-template-columns: 1.4rem minmax(7rem, 11rem) minmax(0, 24rem) 6.5rem 2rem;
+  grid-template-columns: 24px 1.4rem minmax(7rem, 11rem) minmax(0, 24rem) 2rem;
 }
 
 .room-reroll-row .field-control {

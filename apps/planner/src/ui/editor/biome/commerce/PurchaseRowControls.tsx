@@ -1,3 +1,5 @@
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import type { ReactNode } from 'react';
 import {
   requireWorkspaceInteraction,
@@ -23,8 +25,14 @@ export function TravelDealLine({
     <TimelineRow
       aria-label="Travel Deal"
       editors={travelDealLineEditor(interactions, line)}
+      data-travel-deal-line=""
       kind="continuation"
-      label={<strong>Travel Deal</strong>}
+      label={
+        <>
+          <ArtworkIcon className="artwork-label-icon" source={traitIcon('RestockBoon')} />
+          <strong>Travel Deal</strong>
+        </>
+      }
     />
   );
 }
@@ -37,7 +45,7 @@ function travelDealLineEditor(
     case 'hermesShrine':
       return (
         <HermesShrineSlotEditor
-          fieldLabel="Item"
+          fieldLabel=""
           label="Travel Deal"
           marker={line.refill.marker}
           rewardType={line.refill.rewardType}
@@ -51,9 +59,7 @@ function travelDealLineEditor(
         />
       );
     case 'stygianWell':
-      return (
-        <StygianWellSlotEditor fieldLabel="Item" interactions={interactions} slot={line.refill} />
-      );
+      return <StygianWellSlotEditor fieldLabel="" interactions={interactions} slot={line.refill} />;
     case 'worldShop':
       return (
         <RewardControlEditor
@@ -61,7 +67,7 @@ function travelDealLineEditor(
           control={line.offer.rewardControl}
           idPrefix={`shop-${line.offer.rewardControl.marker.focusKey}`}
           interactions={interactions}
-          label="Item"
+          label=""
         />
       );
     default: {

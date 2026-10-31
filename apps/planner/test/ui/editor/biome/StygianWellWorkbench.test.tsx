@@ -33,6 +33,7 @@ import {
 import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
+import { slotRow, timelineRow } from '@planner-test/support/timeline-rows';
 
 afterEach(cleanup);
 
@@ -134,7 +135,7 @@ describe('Stygian Well workbench', () => {
 
     openTimeline();
     expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
-    const refillRow = screen.getByText(/· Travel Deal Offer$/).closest('li')!;
+    const refillRow = timelineRow(/Travel Deal Offer$/);
     const remove = within(refillRow).getByRole('button', { name: /^Remove .* from timeline$/ });
     expect(remove).toHaveProperty('disabled', false);
     await view.user.click(remove);
@@ -168,7 +169,8 @@ describe('Stygian Well workbench', () => {
     expect(screen.queryByRole('button', { name: 'Stygian Well Travel Deal Item' })).toBeNull();
     openTimeline();
     const line = screen.getByRole('listitem', { name: 'Travel Deal' });
-    expect(line.previousElementSibling?.textContent).toContain('Slot 2');
+    // The line sits under the purchase of slot 2, named on its icon badge.
+    expect(line.previousElementSibling).toBe(slotRow(2));
     const refillLabel = within(line).getByRole('button', {
       name: 'Stygian Well Travel Deal Item',
     }).textContent;
@@ -177,7 +179,7 @@ describe('Stygian Well workbench', () => {
 
     // The purchase is removed on its row, and bought again from the Well's entry.
     await view.user.click(
-      screen.getByRole('button', { name: /^Remove Buy .* · Slot 2 from timeline$/ }),
+      within(slotRow(2)).getByRole('button', { name: /^Remove Buy .* from timeline$/ }),
     );
     await waitFor(() => expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull());
     expect(
@@ -199,8 +201,8 @@ describe('Stygian Well workbench', () => {
   });
 
   it.each([
-    ['initial:secondLeft', 'Slot 2'],
-    ['travelDealRefill', 'Travel Deal Offer'],
+    ['initial:secondLeft', 'Buy Fateful Twist'],
+    ['travelDealRefill', 'Buy Fateful Twist · Travel Deal Offer'],
   ] as const)(
     'shows and retains the %s Twist result on its Timeline action',
     async (generationKey, label) => {
@@ -234,7 +236,7 @@ describe('Stygian Well workbench', () => {
         screen.queryByRole('button', { name: 'Stygian Well Offer 2 Twist result' }),
       ).toBeNull();
       const picker = screen.getByRole('button', {
-        name: `Buy Fateful Twist · ${label} Twist result`,
+        name: `${label} Twist result`,
       });
       await view.user.click(picker);
       const result = screen

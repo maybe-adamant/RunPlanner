@@ -47,6 +47,7 @@ import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { createMemoryProjectLibrary } from '@planner-test/support/memoryProjectLibrary';
+import { timelineRow } from '@planner-test/support/timeline-rows';
 
 afterEach(() => {
   cleanup();
@@ -208,13 +209,14 @@ describe('underworld product loop', () => {
     const evaluationBefore = currentEvaluation(application);
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    const requiredRow = within(actions)
-      .getByText('Collect Apollo boon')
-      .closest<HTMLElement>('[data-room-action-key]');
-    if (requiredRow === null) throw new Error('required pickup row is missing');
+    const requiredRow = timelineRow('Collect Apollo', actions);
     expect(within(requiredRow).queryByText('Position')).toBeNull();
+    // A required pickup only moves, through its reorder handle.
+    expect(
+      within(requiredRow).getByRole('button', { name: 'Reorder Collect Apollo' }),
+    ).toBeTruthy();
     const deleteButton = within(requiredRow).getByRole('button', {
-      name: 'Remove Collect Apollo boon from timeline',
+      name: 'Remove Collect Apollo from timeline',
     });
     expect((deleteButton as HTMLButtonElement).disabled).toBe(true);
     expect(deleteButton.classList.contains('quiet-action')).toBe(true);
@@ -349,11 +351,16 @@ describe('underworld product loop', () => {
     });
     if (!(replayRow instanceof HTMLElement))
       throw new Error('focused Echo Room Action row is missing');
-    const actionRow = replayRow.closest('[data-room-action-key]');
-    expect(actionRow?.textContent).toContain(
-      rewardInteraction.summary({ rewardType: repairRewardType }),
-    );
-    expect(actionRow?.textContent).not.toMatch(/Set replay reward|Update replay reward/);
+    const actionRow = replayRow.closest<HTMLElement>('[data-room-action-key]');
+    if (actionRow === null) throw new Error('Echo replay row is missing');
+    // The row names the current replay reward by its icon.
+    const replaySummary = rewardInteraction.summary({ rewardType: repairRewardType });
+    expect(
+      within(actionRow)
+        .getAllByRole('img')
+        .some((icon) => icon.getAttribute('aria-label')?.startsWith(replaySummary)),
+    ).toBe(true);
+    expect(actionRow.textContent).not.toMatch(/Set replay reward|Update replay reward/);
 
     const authoredOccurrence = () =>
       currentProject(application)

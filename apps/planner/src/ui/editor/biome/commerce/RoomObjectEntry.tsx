@@ -1,3 +1,4 @@
+import type { FindingMarkProps } from '@planner/ui/feedback/useFindingTarget';
 import { useState } from 'react';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import {
@@ -51,9 +52,12 @@ function roomObjectLockHint(lock: WorkspaceRoomObjectLock): string {
  */
 export function RoomObjectEntry({
   entry,
+  findingMark,
   interactions,
 }: {
   readonly entry: WorkspaceRoomObjectEntry;
+  /** Findings of this object's timeline rows (purchases, sales, rerolls). */
+  readonly findingMark?: FindingMarkProps;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const interaction = requireWorkspaceInteraction(
@@ -107,6 +111,7 @@ export function RoomObjectEntry({
       kind="insertion"
       label={
         <ContextualPicker<string>
+          {...(findingMark === undefined ? {} : { findingMark })}
           ariaLabel={name}
           {...(entry.locked === undefined
             ? {}

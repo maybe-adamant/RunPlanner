@@ -99,6 +99,70 @@ afterEach(() => {
     .elementFromPoint;
 });
 
+/** The ordered timeline row whose reorder handle names it. */
+function timelineRow(label: string | RegExp): HTMLElement {
+  const matches = (name: string) => (typeof label === 'string' ? name === label : label.test(name));
+  const rows = [...document.querySelectorAll<HTMLElement>('li[data-room-action-key]')].filter(
+    (row) => {
+      const name = row
+        .querySelector('[data-reorder-handle]')
+        ?.getAttribute('aria-label')
+        ?.replace(/^Reorder /, '');
+      return name !== undefined && matches(name);
+    },
+  );
+  if (rows.length !== 1)
+    throw new Error(`expected one timeline row ${String(label)}, found ${rows.length}`);
+  return rows[0]!;
+}
+
+function queryTimelineRow(label: string | RegExp): HTMLElement | null {
+  try {
+    return timelineRow(label);
+  } catch {
+    return null;
+  }
+}
+
+/** Adds an optional action from the room's Add area, whichever group offers it. */
+async function addOptionalAction(
+  user: ReturnType<typeof renderOccurrenceWorkbench>['user'],
+  name: string | RegExp,
+): Promise<void> {
+  const area = screen.getByRole('region', { name: 'Optional actions' });
+  for (const group of area.querySelectorAll<HTMLButtonElement>('button.room-add-group')) {
+    await user.click(group);
+    const menu = screen.queryByRole('dialog', { name: /^Add from / });
+    const action = menu === null ? null : within(menu).queryByRole('button', { name });
+    if (action !== null) {
+      await user.click(action);
+      return;
+    }
+    await user.keyboard('{Escape}');
+  }
+  throw new Error(`no optional action ${String(name)}`);
+}
+
+/** The optional actions a group lists, read without adding any. */
+async function optionalActionNames(
+  user: ReturnType<typeof renderOccurrenceWorkbench>['user'],
+): Promise<string[]> {
+  const area = screen.getByRole('region', { name: 'Optional actions' });
+  const names: string[] = [];
+  for (const group of area.querySelectorAll<HTMLButtonElement>('button.room-add-group')) {
+    await user.click(group);
+    const menu = screen.queryByRole('dialog', { name: /^Add from / });
+    if (menu !== null)
+      names.push(
+        ...within(menu)
+          .getAllByRole('button')
+          .map((button) => `${group.textContent ?? ''}: ${button.textContent ?? ''}`),
+      );
+    await user.keyboard('{Escape}');
+  }
+  return names;
+}
+
 describe('OccurrenceEncounterWorkbench', () => {
   it('shows a retained Aetos wave as waiting while its phase context is unreached', () => {
     const occurrenceId = pOccurrenceId('P_Combat03', 1, 1);
@@ -1063,15 +1127,13 @@ describe('OccurrenceEncounterWorkbench', () => {
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     const condition = screen.getByRole('checkbox', {
-      name: 'Gorgon Amulet: no Death Defiance',
+      name: 'No Death Defiance',
     }) as HTMLInputElement;
     expect(condition.disabled).toBe(false);
-    expect(
-      within(screen.getByRole('group', { name: /encounter events$|^Encounter events$/ })).getByRole(
-        'checkbox',
-      ),
-    ).toBe(condition);
-    await view.user.click(screen.getByText('Gorgon Amulet: no Death Defiance'));
+    expect(within(screen.getByRole('group', { name: / start$/ })).getByRole('checkbox')).toBe(
+      condition,
+    );
+    await view.user.click(screen.getByText('No Death Defiance'));
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Edit Trait · Choose trait' })).toBeTruthy();
     });
@@ -1121,7 +1183,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     const condition = screen.getByRole('checkbox', {
-      name: 'Gorgon Amulet: no Death Defiance',
+      name: 'No Death Defiance',
     }) as HTMLInputElement;
     expect(condition.checked).toBe(true);
     expect(condition.disabled).toBe(false);
@@ -1129,9 +1191,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.getByRole('button', { name: 'Edit Trait · Divine Dash' })).toBeTruthy();
     await view.user.click(condition);
     await waitFor(() => {
-      expect(
-        screen.queryByRole('checkbox', { name: 'Gorgon Amulet: no Death Defiance' }),
-      ).toBeNull();
+      expect(screen.queryByRole('checkbox', { name: 'No Death Defiance' })).toBeNull();
     });
     const updatedOccurrence = view.application.store
       .getState()
@@ -1158,15 +1218,13 @@ describe('OccurrenceEncounterWorkbench', () => {
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
     const condition = screen.getByRole('checkbox', {
-      name: 'Gorgon Amulet: no Death Defiance',
+      name: 'No Death Defiance',
     });
     expect(condition.getAttribute('data-has-findings')).toBe('true');
     expect(condition.getAttribute('aria-description')).toContain('Gorgon Amulet cannot trigger');
     await view.user.click(condition);
     await waitFor(() => {
-      expect(
-        screen.queryByRole('checkbox', { name: 'Gorgon Amulet: no Death Defiance' }),
-      ).toBeNull();
+      expect(screen.queryByRole('checkbox', { name: 'No Death Defiance' })).toBeNull();
     });
     expect(screen.queryByText('Talk to Athena')).toBeNull();
     const updatedOccurrence = view.application.store
@@ -1192,13 +1250,9 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(nOccurrenceIds.preHub),
     );
     openRoomTab('Room Timeline');
-    const skip = screen.getByRole('checkbox', { name: 'Skip with Fig Leaf' });
+    const skip = screen.getByRole('checkbox', { name: 'Fig Leaf skip' });
     expect((skip as HTMLInputElement).disabled).toBe(false);
-    expect(
-      within(screen.getByRole('group', { name: /encounter events$|^Encounter events$/ })).getByRole(
-        'checkbox',
-      ),
-    ).toBe(skip);
+    expect(within(screen.getByRole('group', { name: / start$/ })).getByRole('checkbox')).toBe(skip);
     (skip as HTMLInputElement).focus();
     await view.user.keyboard(' ');
     await waitFor(() => {
@@ -1243,7 +1297,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
       );
     });
-    const skip = screen.getByRole('checkbox', { name: 'Skip with Fig Leaf' });
+    const skip = screen.getByRole('checkbox', { name: 'Fig Leaf skip' });
     expect(skip.dataset.hasFindings).toBe('true');
     await waitFor(() => expect(document.activeElement).toBe(skip));
   });
@@ -1272,22 +1326,22 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
-    const events = screen.getByRole('group', { name: /encounter events$|^Encounter events$/ });
-    expect(
-      within(events)
-        .getAllByRole('checkbox')
-        .map((input) => (input as HTMLInputElement).checked),
-    ).toEqual([true, true]);
-    const skip = within(events).getByRole('checkbox', {
-      name: 'Skip with Fig Leaf',
+    // The skip and the retained condition both sit on the start banner.
+    const start = screen.getByRole('group', { name: / start$/ });
+    const skip = within(start).getByRole('checkbox', {
+      name: 'Fig Leaf skip',
     }) as HTMLInputElement;
+    expect(skip.checked).toBe(true);
     expect(skip.disabled).toBe(false);
-    expect(
-      within(events).getByRole('checkbox', { name: 'Gorgon Amulet: no Death Defiance' }),
-    ).toBeTruthy();
+    const condition = within(start).getByRole('checkbox', {
+      name: 'No Death Defiance',
+    }) as HTMLInputElement;
+    expect(condition.checked).toBe(true);
+    // A retained condition owns its finding, so it stays clearable.
+    expect(condition.disabled).toBe(false);
     await view.user.click(skip);
     await waitFor(() => {
-      expect(screen.queryByRole('checkbox', { name: 'Skip with Fig Leaf' })).toBeNull();
+      expect(screen.queryByRole('checkbox', { name: 'Fig Leaf skip' })).toBeNull();
     });
   });
 
@@ -1361,8 +1415,6 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(occurrence.occurrenceId),
     );
     openRoomTab('Room Timeline');
-    const actionRow = screen.getByText(/^Collect Mystery Boon/).closest('li');
-    if (actionRow === null) throw new Error('Narcissus pickup action is missing');
     const authoredOccurrence = () =>
       view.application.store
         .getState()
@@ -1370,23 +1422,14 @@ describe('OccurrenceEncounterWorkbench', () => {
         ?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
         );
-    expect(within(actionRow).queryByRole('button', { name: 'Reward' })).toBeNull();
+    // The optional pickup waits in the Add area; it has no source picker until it is taken.
+    expect(queryTimelineRow(/^Collect Mystery Boon/)).toBeNull();
+    expect(await optionalActionNames(view.user)).toContain('Mixed Blessings: Collect Mystery Boon');
     expect(
       authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.mysteryBoon,
     ).toBeNull();
-    const insert = within(actionRow).getByRole('button', {
-      name: 'Add Collect Mystery Boon · Mixed Blessings',
-    });
-    await view.user.click(insert);
-    const insertion = screen
-      .getAllByRole('button', { name: /^Add Collect Mystery Boon · Mixed Blessings here:/ })
-      .find((button) => button.getAttribute('aria-disabled') !== 'true');
-    if (insertion === undefined) throw new Error('Narcissus pickup has no legal insertion');
-    await view.user.click(insertion);
-    const placedRow = screen
-      .getByText(/^Collect Mystery Boon/, { selector: 'strong' })
-      .closest('li');
-    if (placedRow === null) throw new Error('Narcissus pickup action is missing');
+    await addOptionalAction(view.user, 'Collect Mystery Boon');
+    const placedRow = timelineRow(/^Collect Mystery Boon/);
     await view.user.click(within(placedRow).getByRole('button', { name: 'Reward' }));
     await view.user.click(await within(await screen.findByRole('listbox')).findByText('Hestia'));
     await waitFor(() =>
@@ -1435,18 +1478,15 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(hasAcquiredMysteryBoon()).toBe(true);
     await view.user.click(
       screen.getByRole('button', {
-        name: 'Remove Collect Mystery Boon · Mixed Blessings from timeline',
+        name: 'Remove Collect Mystery Boon from timeline',
       }),
     );
     expect(authoredOccurrence()?.roomActions.order).toEqual([
       { kind: 'interactEncounter', phaseKey: 'Encounter' },
     ]);
     expect(hasAcquiredMysteryBoon()).toBe(false);
-    const optionalRow = screen
-      .getByText(/^Collect Mystery Boon/, { selector: 'strong' })
-      .closest('li');
-    if (optionalRow === null) throw new Error('Narcissus optional pickup is missing');
-    expect(within(optionalRow).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(queryTimelineRow(/^Collect Mystery Boon/)).toBeNull();
+    expect(await optionalActionNames(view.user)).toContain('Mixed Blessings: Collect Mystery Boon');
     expect(
       workspaceProjection(view.application).interactions.traitOffers.has(
         semanticAddressKey(createTraitOfferAddress(mysteryBoon, 'hiddenSource')),
@@ -1461,7 +1501,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(hasAcquiredMysteryBoon()).toBe(true);
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
     expect(hasAcquiredMysteryBoon()).toBe(false);
-    expect(screen.getByText('Collect Mystery Boon · Mixed Blessings')).toBeTruthy();
+    expect(await optionalActionNames(view.user)).toContain('Mixed Blessings: Collect Mystery Boon');
   });
 
   it('activates and retires a Narcissus Pom target with its timeline pickup', async () => {
@@ -1500,21 +1540,11 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(occurrence.occurrenceId),
     );
     openRoomTab('Room Timeline');
-    const pickupRow = () => {
-      const row = screen.getByText('Collect Pom Slice · Verdure Sampler').closest('li');
-      if (row === null) throw new Error('Narcissus Pom row is missing');
-      return row;
-    };
-    expect(within(pickupRow()).queryByRole('button', { name: /^Edit Pom/ })).toBeNull();
-    const insert = within(pickupRow()).getByRole('button', {
-      name: 'Add Collect Pom Slice · Verdure Sampler',
-    });
-    await view.user.click(insert);
-    const position = screen
-      .getAllByRole('button', { name: /^Add Collect Pom Slice · Verdure Sampler here:/ })
-      .find((button) => button.getAttribute('aria-disabled') !== 'true');
-    if (position === undefined) throw new Error('Narcissus Pom has no insertion point');
-    await view.user.click(position);
+    const pickupRow = () => timelineRow('Collect Pom Slice');
+    // The untaken pickup has no Pom editor: it waits in the Add area.
+    expect(queryTimelineRow('Collect Pom Slice')).toBeNull();
+    expect(await optionalActionNames(view.user)).toContain('Verdure Sampler: Collect Pom Slice');
+    await addOptionalAction(view.user, 'Collect Pom Slice');
     await view.user.click(
       within(pickupRow()).getByRole('button', { name: /^Edit Pom · Choose target/ }),
     );
@@ -1531,10 +1561,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toEqual([]);
     await view.user.click(
       screen.getByRole('button', {
-        name: 'Remove Collect Pom Slice · Verdure Sampler from timeline',
+        name: 'Remove Collect Pom Slice from timeline',
       }),
     );
-    expect(within(pickupRow()).queryByRole('button', { name: /^Edit Pom/ })).toBeNull();
+    expect(queryTimelineRow('Collect Pom Slice')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Edit Pom/ })).toBeNull();
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(view.application.store.getState().projectWorkspace.history!.present).toBe(authored);
     expect(within(pickupRow()).getByRole('button', { name: /^Edit Pom · / })).toBeTruthy();
@@ -1595,32 +1626,22 @@ describe('OccurrenceEncounterWorkbench', () => {
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
         );
 
-    const psycheRow = screen.getByText(/^Collect Psyche/).closest('li');
-    if (!(psycheRow instanceof HTMLElement)) throw new Error('Psyche acquisition row is missing');
-    expect(within(psycheRow).queryByRole('button', { name: 'Reward' })).toBeNull();
-    expect(within(psycheRow).queryByLabelText(/Pickup outcome/)).toBeNull();
-    const insert = within(psycheRow).getByRole('button', {
-      name: /^Add Collect Psyche/,
-    });
-    await view.user.click(insert);
-    const insertion = screen
-      .getAllByRole('button', { name: /^Add Collect Psyche.* here:/ })
-      .find((button) => button.getAttribute('aria-disabled') !== 'true');
-    if (insertion === undefined) throw new Error('Psyche has no legal insertion');
-    await view.user.click(insertion);
+    // The untaken pickup has no outcome choice: it waits in the Add area.
+    expect(queryTimelineRow(/^Collect Psyche/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /^How to take Psyche/ })).toBeNull();
+    await addOptionalAction(view.user, /^Collect Psyche/);
     expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual({
       kind: 'interactAcquisitionEntry',
       siteKey: narcissusSite,
       entryKey: 'psyche',
     });
-    const orderedPsycheRow = screen
-      .getByText(/^Collect Psyche/, { selector: 'strong' })
-      .closest('li');
-    if (!(orderedPsycheRow instanceof HTMLElement))
-      throw new Error('Ordered Psyche acquisition row is missing');
+    const orderedPsycheRow = timelineRow(/^Collect Psyche/);
     expect(within(orderedPsycheRow).queryByRole('button', { name: 'Reward' })).toBeNull();
-    await view.user.click(within(orderedPsycheRow).getByRole('button', { name: /Pickup outcome/ }));
-    await view.user.click(screen.getByRole('option', { name: 'Timepiece' }));
+    // The Time Piece conversion is the row's verb choice.
+    await view.user.click(
+      within(orderedPsycheRow).getByRole('button', { name: /^How to take Psyche: Collect/ }),
+    );
+    await view.user.click(screen.getByRole('option', { name: /^Goldify · Time Piece/ }));
     expect(
       authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.psyche
         ?.dispositionByAcquisitionRole.self,
@@ -1701,17 +1722,8 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(occurrence.occurrenceId),
     );
     openRoomTab('Room Timeline');
-    const maxManaRow = screen.getByText(/^Collect Max Magick/).closest('li');
-    if (maxManaRow === null) throw new Error('Max Magick action row is missing');
-    const maxMana = within(maxManaRow).getByRole('button', {
-      name: /^Add Collect Max Magick/,
-    });
-    await view.user.click(maxMana);
-    const insertion = screen
-      .getAllByRole('button', { name: /^Add Collect Max Magick.* here:/ })
-      .findLast((button) => button.getAttribute('aria-disabled') !== 'true');
-    if (insertion === undefined) throw new Error('Max Magick has no legal insertion');
-    await view.user.click(insertion);
+    // Adding appends the pickup at its last legal position.
+    await addOptionalAction(view.user, /^Collect Max Magick/);
 
     expect(
       view.application.store
@@ -2008,7 +2020,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.keyboard('{Escape}');
     openRoomTab('Combat 2 Timeline');
     // The Timeline banner names the phase read-only; its identity is authored in Overview.
-    const start = screen.getByLabelText('Start encounter');
+    const start = screen.getByLabelText('Encounter');
     expect(start.querySelector('.timeline-banner-identity')?.textContent).toMatch(/^Combat 2 · /);
     expect(within(start).queryByRole('button', { name: 'Encounter' })).toBeNull();
     openRoomTab('Room Overview');
@@ -2124,7 +2136,10 @@ describe('OccurrenceEncounterWorkbench', () => {
       within(screen.getByLabelText('Intro ship phase')).getByText('Next encounter available'),
     ).toBeTruthy();
     expect(within(screen.getByLabelText('Intro ship phase')).queryByText('Doors open')).toBeNull();
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+    // Tabs show short names; their accessible names stay the full ones.
+    expect(
+      screen.getAllByRole('tab').map((tab) => tab.getAttribute('aria-label') ?? tab.textContent),
+    ).toEqual([
       'Room Overview',
       'Intro Timeline',
       'Intro Wheels',
@@ -2138,7 +2153,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(combatOne).toBeTruthy();
     expect(within(combatOne).queryByRole('heading', { name: 'Combat 1' })).toBeNull();
     expect(within(combatOne).queryByRole('heading', { name: 'Timeline' })).toBeNull();
-    expect(within(combatOne).getByText('Start encounter')).toBeTruthy();
+    expect(within(combatOne).getByText('Encounter')).toBeTruthy();
     expect(within(combatOne).queryByLabelText('Combat 1 reward')).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Combat 2 Timeline' })).toBeNull();
     expect(within(combatOne).getByText('Doors open')).toBeTruthy();
@@ -2179,7 +2194,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(queryByHint(actions, 'Converted by the Vow of Forfeit.')).toBeNull();
     expect(within(actions).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
-    expect(actions.textContent).toContain('Red Onion');
+    // The row names its converted reward by icon, with the reward as its accessible name.
+    expect(within(actions).getByRole('img', { name: 'Red Onion' })).toBeTruthy();
     expect(actions.textContent).not.toContain('(Red Onion)');
     expect(actions.textContent).not.toContain('Forfeit');
   });
@@ -2345,8 +2361,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     const combatTwo = screen.getByLabelText('Combat 2 ship phase');
     expect(within(combatTwo).queryByRole('heading', { name: 'Combat 2' })).toBeNull();
     expect(within(combatTwo).queryByRole('heading', { name: 'Timeline' })).toBeNull();
-    expect(within(combatTwo).getByText('Start encounter')).toBeTruthy();
-    expect(within(combatTwo).getByText(/^Collect .+ · Combat 2 reward/)).toBeTruthy();
+    expect(within(combatTwo).getByText('Encounter')).toBeTruthy();
+    // The wheel reward row keeps its full name; its phase tab already names the phase.
+    expect(
+      within(combatTwo).getByRole('button', { name: /^Reorder Collect .+ · Combat 2 reward/ }),
+    ).toBeTruthy();
     expect(within(combatTwo).getByText('Doors open')).toBeTruthy();
     expect(within(combatTwo).queryByText('Outgoing generation')).toBeNull();
 
@@ -2363,9 +2382,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Inactive Actions');
     const repairs = screen.getByLabelText('Ship action repairs');
     expect(within(repairs).getByText('Choose Combat 2 wheel')).toBeTruthy();
-    expect(within(repairs).getByText(/^Collect .+ · Combat 2 reward/)).toBeTruthy();
+    const rewardRow = { name: /^Reorder Collect .+ · Combat 2 reward/ };
+    expect(within(repairs).getByRole('button', rewardRow)).toBeTruthy();
     expect(screen.getAllByText('Choose Combat 2 wheel')).toHaveLength(1);
-    expect(screen.getAllByText(/^Collect .+ · Combat 2 reward/)).toHaveLength(1);
+    expect(screen.getAllByRole('button', rewardRow)).toHaveLength(1);
 
     act(() =>
       view.application.store.dispatch(
@@ -2804,17 +2824,16 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.keyboard('{Escape}');
 
     openRoomTab('Room Timeline');
-    await pickRoomObjectAction(view.user, 'World Shop', 'Buy Mystery Boon · Slot 1');
-    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(within(timeline).queryByText(/Collect Mystery Boon/)).toBeNull();
-    const purchase = screen.getByText('Buy Mystery Boon · Slot 1').closest('li');
-    if (purchase === null) throw new Error('purchased Mystery Boon row is missing');
+    await pickRoomObjectAction(view.user, 'World Shop', 'Buy Mystery Boon');
+    expect(queryTimelineRow(/^Collect Mystery Boon/)).toBeNull();
+    const purchase = timelineRow('Buy Mystery Boon');
+    expect(purchase.textContent).toContain('slot 1');
     await view.user.click(within(purchase).getByRole('button', { name: 'Reward' }));
     expect(await screen.findByText('Eventual God')).toBeTruthy();
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
-    const resolvedPurchase = screen.getByText('Buy Mystery Boon · Slot 1').closest('li');
-    if (resolvedPurchase === null) throw new Error('resolved Mystery Boon row is missing');
-    expect(within(resolvedPurchase).getByRole('button', { name: /Trait/ })).toBeTruthy();
+    expect(
+      within(timelineRow('Buy Mystery Boon')).getByRole('button', { name: /Trait/ }),
+    ).toBeTruthy();
   });
 
   it('authors Travel inventory on its source purchase line and preserves repair through Undo and reload', async () => {
@@ -2835,10 +2854,10 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Timeline');
     const line = () => screen.getByRole('listitem', { name: 'Travel Deal' });
     expect(within(line()).queryByRole('checkbox')).toBeNull();
-    expect(line().previousElementSibling?.textContent).toContain('Slot 1');
-    // The line's title names Travel Deal once; its picker reads only "Item".
+    expect(line().previousElementSibling?.textContent).toContain('slot 1');
+    // The line's title names Travel Deal once; its picker shows no label of its own.
     expect(within(line()).getByText('Travel Deal').tagName).toBe('STRONG');
-    expect(within(line()).getByText('Item', { selector: 'label' })).toBeTruthy();
+    expect(within(line()).queryByText('Item', { selector: 'label' })).toBeNull();
     await view.user.click(within(line()).getByRole('button', { name: 'Travel Deal Item' }));
     await view.user.click(
       within(await screen.findByRole('listbox')).getByRole('option', { name: 'Mystery Boon' }),
@@ -2854,7 +2873,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeUndefined();
     expect(screen.queryByText('Eventual God')).toBeNull();
     await pickRoomObjectAction(view.user, 'World Shop', 'Buy Travel Deal item');
-    const purchase = () => screen.getByText('Buy Mystery Boon · Travel Deal Offer').closest('li')!;
+    const purchase = () => timelineRow('Buy Mystery Boon · Travel Deal Offer');
     await view.user.click(within(purchase()).getByRole('button', { name: 'Reward' }));
     const options = within(await screen.findByRole('listbox')).getAllByRole('option');
     await view.user.click(
@@ -2876,7 +2895,9 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill).toBeTruthy();
     const restoredChild = room().acquisitionSites?.roomExit?.pickupEntries?.travelDealRefill;
     await view.user.click(
-      screen.getByRole('button', { name: /^Remove Buy .*· Slot 1 from timeline$/ }),
+      within(timelineRow('Buy Apollo')).getByRole('button', {
+        name: /^Remove Buy .* from timeline$/,
+      }),
     );
     // Without its source purchase the retained refill purchase loses its line and keeps removal.
     expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
@@ -2916,9 +2937,8 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Timeline');
     const line = screen.getByRole('listitem', { name: 'Travel Deal' });
     expect(within(line).queryByRole('button', { name: /^Edit Anvil/ })).toBeNull();
-    const refill = screen.getByText('Buy Anvil of Fates · Travel Deal Offer').closest('li');
-    if (refill === null) throw new Error('Travel Deal refill purchase row is missing');
-    expect(within(refill).getByRole('button', { name: 'Edit Anvil' })).toHaveProperty(
+    const refill = timelineRow('Buy Anvil of Fates · Travel Deal Offer');
+    expect(within(refill).getByRole('button', { name: /^Edit Anvil/ })).toHaveProperty(
       'disabled',
       false,
     );
@@ -2939,11 +2959,12 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(screen.queryByLabelText('Death Defiance condition met')).toBeNull();
     openRoomTab('Room Timeline');
     const before = view.application.store.getState().projectWorkspace.history!.past.length;
-    await pickRoomObjectAction(view.user, 'World Shop', /Slot 3$/);
+    // The World Shop entry names each item; its slot shows on the bought row.
+    await pickRoomObjectAction(view.user, 'World Shop', 'Buy Big Heal');
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
-    expect(screen.getByText(/^Buy .*· Slot 3$/)).toBeTruthy();
+    expect(timelineRow('Buy Big Heal').textContent).toContain('slot 3');
   });
 
   it('renders an unpicked Shop as dormant without inventory controls', () => {

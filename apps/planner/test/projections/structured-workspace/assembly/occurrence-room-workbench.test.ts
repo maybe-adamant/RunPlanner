@@ -17,7 +17,7 @@ describe('occurrence room workbench', () => {
     let project = surfaceShrineTravelDealProject();
     let result = assemble(project, 'Surface', 'O', oOccurrenceIds.combat04);
     const delivery = result.assembly.node.room.workbench.roomActions?.rows.find(
-      (row) => row.reference.kind === 'interactAcquisitionEntry' && row.label.includes('Delivery'),
+      (row) => row.sourceFamily?.kind === 'hermesShrineDelivery',
     );
     if (delivery === undefined) throw new Error('Missing delivery');
     project = applyProjectCommand(project, catalog, {

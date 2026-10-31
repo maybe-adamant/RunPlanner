@@ -4,6 +4,7 @@ import type {
   WorkspaceRoomActionInteraction,
 } from '@planner/projections/structured-workspace';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
+import { offerIcon } from '@planner/ui/artwork/rewardIcon';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 
@@ -24,8 +25,6 @@ export function FieldsCageOrderControl({
     readonly phaseKeys: readonly string[];
   }>();
   const phaseKeys = draft?.source === source ? draft.phaseKeys : undefined;
-  const labelFor = (phaseKey: string) =>
-    control.choices.find((choice) => choice.phaseKey === phaseKey)!.label;
   const choices = control.choices
     .filter((choice) => !phaseKeys?.includes(choice.phaseKey))
     .map((choice) => ({ key: choice.phaseKey, value: choice.phaseKey, label: choice.label }));
@@ -58,9 +57,28 @@ export function FieldsCageOrderControl({
         }}
         open={phaseKeys !== undefined}
         placeholder="Choose combat order"
+        triggerSize="content"
         {...(control.phaseKeys.length === 0
           ? {}
-          : { triggerLabel: control.phaseKeys.map(labelFor).join(' / ') })}
+          : {
+              // The order reads as a legend: each cage's name with its reward's icon.
+              triggerParts: control.phaseKeys.map((phaseKey) => {
+                const choice = control.choices.find(
+                  (candidate) => candidate.phaseKey === phaseKey,
+                )!;
+                return {
+                  label: choice.label,
+                  icon: choice.offer === undefined ? undefined : offerIcon(choice.offer),
+                };
+              }),
+              triggerPartsSeparator: ' / ',
+              ariaLabel: `Combat order: ${control.phaseKeys
+                .map(
+                  (phaseKey) =>
+                    control.choices.find((choice) => choice.phaseKey === phaseKey)!.fullLabel,
+                )
+                .join(' / ')}`,
+            })}
       />
     </div>
   );

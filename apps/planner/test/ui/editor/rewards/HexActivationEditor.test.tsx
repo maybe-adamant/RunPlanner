@@ -87,7 +87,8 @@ function renderScreen(
   return { application, history, owner, rerender, selection, user: userEvent.setup() };
 }
 
-const launcher = () => screen.getByRole('button', { name: 'Edit Path of Stars' });
+// The chip shows the invested talents; its accessible name keeps the launcher's name.
+const launcher = () => screen.getByRole('button', { name: /^Edit Path of Stars/ });
 const dialog = () => screen.getByRole('dialog', { name: 'Choose Path of Stars nodes' });
 const board = () => within(dialog()).getByRole('group', { name: /Hex tree$/ });
 const points = () => within(dialog()).getByText(/ of 3 points$/);

@@ -35,7 +35,7 @@ const targetNouns = {
 } as const;
 
 /**
- * A Hub stay's list: its presses, each with its Move, among the other rows of
+ * A Hub stay's list: its presses, each with its drag handle, among the other rows of
  * the stay. It places every one of the surface's presses exactly once.
  */
 export type RoomRerollsOrder = readonly (
@@ -86,7 +86,8 @@ export function RoomRerolls({
   const targets = interaction.targets(pending);
   const noun = targetNouns[rerolls.targetNoun];
   const pressRow = (row: WorkspaceRoomRerolls['rows'][number], index: number, move: ReactNode) => (
-    <li className="room-reroll-row" key={row.key}>
+    <li className="room-reroll-row" data-reorder-anchor={row.key} key={row.key}>
+      {move}
       <span className="room-reroll-index">{index + 1}</span>
       <span className="room-reroll-target">{row.targetLabel}</span>
       <RewardOfferPicker
@@ -99,7 +100,6 @@ export function RoomRerolls({
         onReplace={(reward) => executeIntent(interaction.replaceRewardIntent(row.key, reward))}
         resolver={interaction.rowReward(row.key)}
       />
-      {move}
       <button
         {...findingMark(row.address, 'delete')}
         aria-label={`Remove reroll ${index + 1}`}
@@ -132,6 +132,9 @@ export function RoomRerolls({
               entry.kind === 'row' ? entry.row : pressRow(entry.press, entry.index, entry.move),
             )}
         <li className="room-reroll-row room-reroll-append">
+          {order === undefined ? null : (
+            <span aria-hidden="true" className="room-reroll-move-slot" />
+          )}
           <span className="room-reroll-index">{rerolls.rows.length + 1}</span>
           <ContextualPicker<string>
             ariaLabel={`New reroll ${noun.lower}`}
@@ -166,9 +169,6 @@ export function RoomRerolls({
               }}
               resolver={interaction.pendingReward(pending)}
             />
-          )}
-          {order === undefined ? null : (
-            <span aria-hidden="true" className="room-reroll-move-slot" />
           )}
           <span aria-hidden="true" className="room-reroll-remove-slot" />
         </li>

@@ -66,6 +66,17 @@ beforeAll(function prepareImmutableRepresentativeProjects() {
   immutableRepresentativeNOPQProject = loadSurfaceNOPQProject();
 });
 
+/** Lays the visited side rooms out 20px apart, in list order, for pointer placement. */
+function mockVisitRowBounds(list: () => HTMLElement): void {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    const index = [...list().querySelectorAll('li')].indexOf(this as HTMLLIElement);
+    const top = Math.max(index, 0) * 20;
+    return DOMRect.fromRect({ x: 0, y: top, width: 100, height: index < 0 ? 0 : 20 });
+  });
+}
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -161,9 +172,9 @@ describe('OccurrenceWorkbench', () => {
       .querySelector('span')!.textContent!;
     openRoomTab('Room Timeline');
     const standardActions = screen.getByRole('region', { name: 'Room Timeline' });
-    const standardStart = within(standardActions).getByLabelText('Start encounter');
+    const standardStart = within(standardActions).getByLabelText('Encounter');
     // A phase without events shows only its banner; identity stays in Overview.
-    expect(within(standardActions).queryByLabelText('Encounter events')).toBeNull();
+    expect(within(standardActions).queryByRole('group', { name: / (start|end)$/ })).toBeNull();
     const standardEncounter = within(standardStart).getByRole('button', {
       name: overviewEncounterLabel,
     });
@@ -195,12 +206,10 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(createOccurrenceId('golden-h-combat02')),
     );
 
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
-      'Room Overview',
-      'Room Layout',
-      'Room Timeline',
-      'Room Doors',
-    ]);
+    // Tabs show short names; their accessible names stay the full ones.
+    expect(
+      screen.getAllByRole('tab').map((tab) => tab.getAttribute('aria-label') ?? tab.textContent),
+    ).toEqual(['Room Overview', 'Room Layout', 'Room Timeline', 'Room Doors']);
     openRoomTab('Room Layout');
     const layout = screen.getByRole('region', { name: 'Fields Layout' });
     expect(within(layout).getByRole('heading', { name: 'Position' })).toBeTruthy();
@@ -420,13 +429,13 @@ describe('OccurrenceWorkbench', () => {
     ['F', () => createGoldenFGHIProject(), 'Underworld', 'F', goldenFStartId],
     ['N', () => loadSurfaceNProject(), 'Surface', 'N', nOccurrenceIds.opening],
   ] as const)(
-    'renders the %s Opening pickup before Start encounter and Encounter ended',
+    'renders the %s Opening pickup before its Encounter and Encounter ended banners',
     (_name, project, routeKey, biomeKey, occurrenceId) => {
       renderStaticOccurrenceWorkbench(project(), routeKey, biomeKey, occurrenceById(occurrenceId));
       openRoomTab('Room Timeline');
       const actions = screen.getByRole('region', { name: 'Room Timeline' });
-      const pickup = within(actions).getByText(/^Collect /);
-      const start = within(actions).getByLabelText('Start encounter');
+      const pickup = within(actions).getByRole('button', { name: /^Reorder Collect / });
+      const start = within(actions).getByLabelText('Encounter');
       const end = within(actions).getByLabelText('Encounter ended');
       expectBefore(pickup, start);
       expectBefore(start, end);
@@ -589,7 +598,7 @@ describe('OccurrenceWorkbench', () => {
     const nActions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(nActions).toBeTruthy();
     expect(
-      within(nActions).getByLabelText('Start encounter').querySelector('.timeline-banner-identity'),
+      within(nActions).getByLabelText('Encounter').querySelector('.timeline-banner-identity'),
     ).not.toBeNull();
   });
 
@@ -667,80 +676,73 @@ describe('OccurrenceWorkbench', () => {
       if (row === undefined) throw new Error(`${label} row is missing`);
       return row;
     };
+    const handleFor = (label: string) =>
+      within(rowFor(visited(), label)).getByRole('button', { name: `Reorder ${label}` });
+    const history = () => view.application.store.getState().projectWorkspace.history!.past.length;
+    // Keyboard: pick up, step through the legal visit positions, drop.
     const keyboardMove = async (
       label: string,
       direction: 'up' | 'down',
       expected: readonly string[],
+      changes = true,
     ) => {
-      const row = rowFor(visited(), label);
-      const button = within(row).getByRole('button', {
-        name: `Move ${label} ${direction}`,
-      }) as HTMLButtonElement;
-      fireEvent.focus(button);
-      await waitFor(() => expect(button.disabled).toBe(false));
-      const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
-      await view.user.click(button);
+      const handle = handleFor(label);
+      act(() => handle.focus());
+      const historyBefore = history();
+      fireEvent.click(handle);
+      fireEvent.keyDown(handle, { key: direction === 'up' ? 'ArrowUp' : 'ArrowDown' });
+      fireEvent.click(handle);
       await waitFor(() => expect(labels()).toEqual(expected));
-      expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-        historyBefore + 1,
-      );
+      expect(history()).toBe(historyBefore + (changes ? 1 : 0));
     };
     const pointer = { pointerId: 1, isPrimary: true, button: 0, clientX: 10, clientY: 10 };
-    const drag = (source: HTMLElement, target: HTMLElement) => {
-      Object.defineProperty(document, 'elementFromPoint', {
-        configurable: true,
-        value: () => target,
-      });
-      const handle = within(source).getByLabelText(
-        `Drag ${source.querySelector('strong')?.textContent}`,
-      );
+    // Each visited row is 20px tall in list order, so the pointer can name a place.
+    mockVisitRowBounds(visited);
+    const drag = (source: string, target: string) => {
+      const order = labels();
+      const handle = handleFor(source);
+      const at =
+        order.indexOf(target) * 20 + (order.indexOf(target) < order.indexOf(source) ? 2 : 18);
       fireEvent.pointerDown(handle, pointer);
-      fireEvent.pointerMove(handle, { ...pointer, clientY: 30 });
-      expect(source.getAttribute('data-dragging')).toBe('true');
+      fireEvent.pointerMove(handle, { ...pointer, clientY: at });
       expect(document.querySelector('.room-action-drag-preview')).not.toBeNull();
-      if (source !== target)
-        expect(
-          target.hasAttribute('data-drop-before') || target.hasAttribute('data-drop-after'),
-        ).toBe(true);
-      fireEvent.pointerUp(handle, { ...pointer, clientY: 30 });
+      fireEvent.pointerUp(handle, { ...pointer, clientY: at });
       expect(document.querySelector('.room-action-drag-preview')).toBeNull();
     };
 
     expect(labels()).toEqual(['Side Room 07', 'Side Room 02']);
+    // Visit order moves only through each room's reorder handle.
+    expect(screen.queryByRole('button', { name: /^Move Side Room/ })).toBeNull();
+    expect(handleFor('Side Room 07')).toBeTruthy();
     await view.user.click(screen.getByRole('checkbox', { name: 'Side Room 03 visit' }));
     await waitFor(() => expect(labels()).toEqual(['Side Room 07', 'Side Room 02', 'Side Room 03']));
-    drag(rowFor(visited(), 'Side Room 03'), rowFor(visited(), 'Side Room 07'));
+    drag('Side Room 03', 'Side Room 07');
     await waitFor(() => expect(labels()).toEqual(['Side Room 03', 'Side Room 07', 'Side Room 02']));
-    drag(rowFor(visited(), 'Side Room 02'), rowFor(visited(), 'Side Room 07'));
+    drag('Side Room 02', 'Side Room 07');
     await waitFor(() => expect(labels()).toEqual(['Side Room 03', 'Side Room 02', 'Side Room 07']));
-    drag(rowFor(visited(), 'Side Room 03'), rowFor(visited(), 'Side Room 07'));
+    drag('Side Room 03', 'Side Room 07');
     await waitFor(() => expect(labels()).toEqual(['Side Room 02', 'Side Room 07', 'Side Room 03']));
-    const noOpHistory = view.application.store.getState().projectWorkspace.history!.past.length;
-    drag(rowFor(visited(), 'Side Room 03'), rowFor(visited(), 'Side Room 03'));
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      noOpHistory,
-    );
-    drag(rowFor(visited(), 'Side Room 02'), rowFor(visited(), 'Side Room 07'));
+    const noOpHistory = history();
+    drag('Side Room 03', 'Side Room 03');
+    expect(history()).toBe(noOpHistory);
+    drag('Side Room 02', 'Side Room 07');
     await waitFor(() => expect(labels()).toEqual(['Side Room 07', 'Side Room 02', 'Side Room 03']));
-    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
-      noOpHistory + 1,
-    );
+    expect(history()).toBe(noOpHistory + 1);
     await keyboardMove('Side Room 03', 'up', ['Side Room 07', 'Side Room 03', 'Side Room 02']);
     await keyboardMove('Side Room 03', 'up', ['Side Room 03', 'Side Room 07', 'Side Room 02']);
-    expect(
-      (
-        within(rowFor(visited(), 'Side Room 03')).getByRole('button', {
-          name: 'Move Side Room 03 up',
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
-    expect(
-      (
-        within(rowFor(visited(), 'Side Room 02')).getByRole('button', {
-          name: 'Move Side Room 02 down',
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+    // The first and last rooms have no place further up or down; the move is a no-op.
+    await keyboardMove(
+      'Side Room 03',
+      'up',
+      ['Side Room 03', 'Side Room 07', 'Side Room 02'],
+      false,
+    );
+    await keyboardMove(
+      'Side Room 02',
+      'down',
+      ['Side Room 03', 'Side Room 07', 'Side Room 02'],
+      false,
+    );
 
     const preserved = occurrenceById(nOccurrenceId('combat05'))(
       workspaceBiome(view.application, 'Surface', 'N'),
@@ -753,18 +755,13 @@ describe('OccurrenceWorkbench', () => {
     const retainedEncounterCount = preserved.room.encounterPhases.length;
     const retainedActionCount = preserved.room.roomActions?.rows.length ?? 0;
 
-    const draggedVisit = rowFor(visited(), 'Side Room 07');
-    const draggedHandle = within(draggedVisit).getByLabelText('Drag Side Room 07');
+    const draggedHandle = handleFor('Side Room 07');
     fireEvent.pointerDown(draggedHandle, pointer);
     fireEvent.pointerMove(draggedHandle, { ...pointer, clientY: 30 });
     await view.user.click(screen.getByRole('checkbox', { name: 'Side Room 07 visit' }));
     await waitFor(() => expect(labels()).toEqual(['Side Room 03', 'Side Room 02']));
     const historyAfterRemoval =
       view.application.store.getState().projectWorkspace.history!.past.length;
-    Object.defineProperty(document, 'elementFromPoint', {
-      configurable: true,
-      value: () => rowFor(visited(), 'Side Room 02'),
-    });
     fireEvent.pointerUp(visited(), { ...pointer, clientY: 30 });
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyAfterRemoval,
@@ -825,26 +822,23 @@ describe('OccurrenceWorkbench', () => {
     const source = rows.find((row) => within(row).queryByText(firstDoor.label));
     const target = rows.find((row) => row !== source);
     if (source === undefined || target === undefined) throw new Error('Rejected move rows missing');
-    Object.defineProperty(document, 'elementFromPoint', {
-      configurable: true,
-      value: () => target,
-    });
+    mockVisitRowBounds(() => visited);
     const pointer = { pointerId: 1, isPrimary: true, button: 0, clientX: 10, clientY: 10 };
-    const handle = within(source).getByLabelText(`Drag ${firstDoor.label}`);
+    const handle = within(source).getByRole('button', { name: `Reorder ${firstDoor.label}` });
+    const targetY =
+      rows.indexOf(target) * 20 + (rows.indexOf(target) < rows.indexOf(source) ? 2 : 18);
     fireEvent.pointerDown(handle, pointer);
-    fireEvent.pointerMove(handle, { ...pointer, clientY: 30 });
+    fireEvent.pointerMove(handle, { ...pointer, clientY: targetY });
+    // Dragging over a disallowed place names why, from the engine candidate.
     await waitFor(() =>
       expect(document.querySelector('.room-action-drag-preview')?.textContent).toContain(
         'Unavailable:',
       ),
     );
-    expect(target.getAttribute('data-drop-before') ?? target.getAttribute('data-drop-after')).toBe(
-      'unavailable',
-    );
     expect(document.querySelector('.room-action-drag-preview')?.textContent).toContain(
       'Reward unavailable from pool',
     );
-    fireEvent.pointerUp(handle, { ...pointer, clientY: 30 });
+    fireEvent.pointerUp(handle, { ...pointer, clientY: targetY });
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );

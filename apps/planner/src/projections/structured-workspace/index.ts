@@ -209,6 +209,7 @@ export type {
 } from './presentation/hub-ranking';
 export { createStructuredWorkspaceProjection } from './projector';
 export type {
+  WorkspaceEncounterBannerSupplement,
   WorkspaceJudgmentArcanaInteraction,
   WorkspaceFigurineArcanaInteraction,
 } from './contracts/timeline';

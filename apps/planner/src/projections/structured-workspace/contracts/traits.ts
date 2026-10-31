@@ -91,6 +91,8 @@ export interface WorkspaceAcquisitionConversionInteraction {
 /** A launcher's one-line label and the full summary behind its hover and description. */
 export interface WorkspaceLauncherPresentation {
   readonly label: string;
+  /** The chosen value the chip shows on its own; the label stays its accessible name. */
+  readonly value?: string;
   readonly detail?: string;
   /** The trait the label names, for its icon. */
   readonly traitKey?: string;

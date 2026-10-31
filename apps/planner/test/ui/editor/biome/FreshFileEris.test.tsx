@@ -51,7 +51,8 @@ describe('Fresh File Eris', () => {
     await openTab('Room Timeline');
     expect(within(timeline()).queryByRole('checkbox', { name: 'Eris has spawned' })).toBeNull();
     expect(within(timeline()).getByText('Talk to Eris')).toBeTruthy();
-    expect(within(timeline()).getByText(/Ashes/)).toBeTruthy();
+    // The gift's reward is named by its icon.
+    expect(within(timeline()).getByRole('img', { name: /Ashes/ })).toBeTruthy();
 
     await openTab('Room Overview');
     await view.user.click(spawned());

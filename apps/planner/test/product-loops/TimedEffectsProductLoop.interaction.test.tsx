@@ -42,6 +42,7 @@ import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwne
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 import { workspaceProjection } from '../support/biome-workbench';
 import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
+import { slotRow, timelineRow } from '@planner-test/support/timeline-rows';
 
 afterEach(cleanup);
 
@@ -78,13 +79,24 @@ it('preserves scheduled timed choices through an equivalent room picker edit and
   act(() => application.store.dispatch(semanticOwnerNavigated(owner)));
   await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
   expect(screen.queryByRole('button', { name: 'Restore delivery' })).toBeNull();
-  expect(screen.getByText(/Collect.*Delivery/)).toBeTruthy();
+  // The delivery keeps its timeline row; its origin is the row's hint.
+  const delivery = document.querySelector<HTMLElement>(
+    '[data-room-action-key*="hermesShrineDelivery"]',
+  );
+  if (delivery === null) throw new Error('delivery row missing');
+  expect(within(delivery).getByRole('button', { name: /^Reorder Collect / })).toBeTruthy();
+  const origin = [...delivery.querySelectorAll<HTMLElement>('[aria-description]')].filter(
+    (element) =>
+      element.getAttribute('aria-description')?.includes('Delivered from the Hermes Shrine'),
+  );
+  expect(origin).toHaveLength(1);
+  expect(origin[0]!.dataset.hint).toContain('Delivered from the Hermes Shrine');
   await view.user.click(screen.getByRole('button', { name: 'Undo' }));
   expect(application.store.getState().projectWorkspace.history!.present).toBe(project);
   application.dispose();
 });
 
-it('inserts a purchased Hermes delivery automatically with Move and one Undo', async () => {
+it('inserts a purchased Hermes delivery automatically with its reorder handle and one Undo', async () => {
   const project = loadSurfaceNOHermesShrineDeliveryCheckpoint();
   const application = createApplication();
   application.store.dispatch(authoredProjectReplaced(project));
@@ -92,9 +104,14 @@ it('inserts a purchased Hermes delivery automatically with Move and one Undo', a
   const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
   act(() => application.store.dispatch(semanticOwnerNavigated(source)));
   await view.user.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
-  await pickRoomObjectAction(view.user, 'Hermes Shrine', /^Buy .*· Slot 3$/);
+  // Slot 3 holds Max Magick.
+  await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Buy Max Magick');
   const history = application.store.getState().projectWorkspace.history!;
   expect(history.past).toHaveLength(1);
+  // The purchase is the slot 3 item, named on its row's slot badge.
+  expect(
+    within(slotRow(3)).getByRole('button', { name: /^Reorder (Buy|Rush) Max Magick/ }),
+  ).toBeTruthy();
   const key = hermesShrineDeliveryEntryKey(source, 'initial:secondRight');
   const host = history.present.route.biomes
     .find((biome) => biome.biomeKey === 'O')!
@@ -117,9 +134,8 @@ it('inserts a purchased Hermes delivery automatically with Move and one Undo', a
       ),
     ),
   );
-  const row = screen.getByText('Collect Max Magick · Delivery').closest('li');
-  if (row === null) throw new Error('Automatic delivery row missing');
-  expect(within(row).getByRole('button', { name: /Move Collect Max Magick/ })).toBeTruthy();
+  const row = timelineRow('Collect Max Magick');
+  expect(within(row).getByRole('button', { name: /Reorder Collect Max Magick/ })).toBeTruthy();
   expect(within(row).queryByRole('button', { name: 'Restore delivery' })).toBeNull();
   expect(within(row).queryByRole('button', { name: 'Remove action' })).toBeNull();
   await view.user.click(screen.getByRole('button', { name: 'Undo' }));

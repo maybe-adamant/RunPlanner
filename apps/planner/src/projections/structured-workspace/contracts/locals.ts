@@ -478,6 +478,8 @@ export interface WorkspaceEncounterPhase {
    * Identity and customization are always authored in the room Overview.
    */
   readonly timelineAnchor?: 'roomEntered' | 'encounterStart';
+  /** The engine settled this phase as skipped with Fig Leaf. */
+  readonly skippedByFigLeaf?: true;
   readonly figLeaf?: {
     readonly address: FigLeafPhaseAddress;
     readonly marker: WorkspaceMarker;

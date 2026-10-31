@@ -151,7 +151,7 @@ observe it.
 | `materializeOfferPoint`                                   | Grouped with preparation at entry  | The operation's current state                            | Resolves room-owned offers—entry-generated shop inventory, O reward wheels—consumes bags and applies offer projections; never an incoming door offer                                                                                                                          |
 | `enterRoom` (editor **Room entered**)                     | Exact                              | Prepared room state                                      | The target is already current and its entry-time preparation exists; emits appearance/current-room facts. Excludes predecessor commit and target generation                                                                                                                   |
 | `spawnRequiredObjects`                                    |                                    | Entered-room state                                       | Emits declaration-owned required-object spawns and activates their exit blockers                                                                                                                                                                                              |
-| `startEncounter(phase)` (editor **Start encounter**)      | Grouped around an exact transition | State before the declared phase                          | Begins the closed mandatory start sequence and ends with the encounter active; emits occurrence/start and increments declared encounter-depth axes. A required pre-combat choice may share the sequence only when no unrelated player action can interleave                   |
+| `startEncounter(phase)` (editor **Encounter**)            | Grouped around an exact transition | State before the declared phase                          | Begins the closed mandatory start sequence and ends with the encounter active; emits occurrence/start and increments declared encounter-depth axes. A required pre-combat choice may share the sequence only when no unrelated player action can interleave                   |
 | `completeEncounter(phase)`                                | Exact internal checkpoint          | State after the phase's combat or noncombat work         | Completion identity, encounter-local offers and phase blockers settle, even for noncombat, Fig Leaf-skipped and end-effect-suppressed phases; releases phase-local blockers. Not a player-facing row                                                                          |
 | `encounterEndEffectsApplied` (editor **Encounter ended**) | Distinct effect checkpoint         | State after completion and any intervening required work | The visible boundary starts the post-combat interval; end effects apply at the profile's declared point, after required rewards in O ship phases. Suppressed phases keep the boundary without the effect event                                                                |
 | `completeRequiredObjects`                                 |                                    | State after the declared required-object work            | Emits paired completion facts and releases the corresponding blockers                                                                                                                                                                                                         |
@@ -266,7 +266,7 @@ and N side-room occurrences without a second encounter engine.
 encounter through `StartEncounter`, but its `EncounterType = NonCombat` skips
 combat start/end effects. The planner preserves the encounter identity,
 history, NPC interaction, trait offer, and any exact pickup timing while
-omitting the player-facing Start encounter and Encounter ended boundaries. The
+omitting the player-facing Encounter and Encounter ended boundaries. The
 same applies to all `nonCombat` phase kinds; only `combat`, `miniboss`, and
 `boss` phase kinds render a combat spine.
 
@@ -513,7 +513,7 @@ The chosen-source decision and acquisition occur before combat, followed
 immediately by the encounter start; the spurned source is created only after
 combat. Both precede outgoing generation. The game exposes no unrelated room
 feature, door, or free room action between the required first choice and
-combat activation, so the player-facing Start encounter boundary groups that
+combat activation, so the player-facing Encounter boundary groups that
 closed mandatory sequence without moving the two roles: chosen remains before
 combat and spurned after Encounter ended. Devotion's spacing projection is an
 offer-time event that occurred when the predecessor generated this room.
@@ -724,7 +724,7 @@ owns a private purchase order or a completion-only settlement path.
 ### Boss and Postboss
 
 The fixed Boss occurrence has the `BossRoom` lifecycle. Its player-facing
-timeline is `Room entered -> Start encounter -> Boss defeated -> Encounter ended
+timeline is `Room entered -> Encounter -> Boss defeated -> Encounter ended
 -> Doors open`. `Boss defeated` is an exact lifecycle seam before generic
 encounter-end effects. When Judgment is active, it is one engine-owned fixed
 effect at that seam, not a Room Action or persisted ordering value. The

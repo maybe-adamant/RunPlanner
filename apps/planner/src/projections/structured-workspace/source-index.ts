@@ -187,7 +187,7 @@ export interface WorkspaceBiomeSource {
   readonly stygianWellAssessment: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
-  /** Purchase prices and room spending of the evaluated project. */
+  /** Purchase prices and the gold held of the evaluated project. */
   readonly gold: import('@run-planner/engine/simulation').GoldLedger | undefined;
   readonly chaosAssessment: (
     owner: OccurrenceAddress,

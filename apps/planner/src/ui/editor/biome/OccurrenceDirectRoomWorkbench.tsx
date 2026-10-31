@@ -1,7 +1,7 @@
 import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { ReactNode } from 'react';
 import type {
-  WorkspaceEncounterPhase,
+  WorkspaceEncounterBannerSupplement,
   WorkspaceDoorContract,
   WorkspaceInteractionCatalog,
   WorkspaceRoomActions,
@@ -14,7 +14,12 @@ import { RoomActionsWorkbench, type TimelineBoundaryContent } from './Occurrence
 import { roomFeatureSections } from './room-features/roomFeatureSections';
 import { RoomOverviewSections, type RoomOverviewSectionContent } from './RoomOverviewSections';
 import { RoomEncounterStructureWorkbench } from './locals/RoomEncounterStructureWorkbench';
-import { EncounterPhaseControl, EncounterPhaseEvents } from './locals/EncounterPhaseControl';
+import {
+  EncounterEndControls,
+  EncounterPhaseControl,
+  EncounterStartControls,
+} from './locals/EncounterPhaseControl';
+import { AnomalyClearedControl } from './room-features/AnomalyControls';
 import { FieldsWorkbench } from './locals/FieldsWorkbench';
 import { ShopWorkbench } from './commerce/ShopWorkbench';
 import { CandidatePicker } from './CandidatePicker';
@@ -141,16 +146,34 @@ export function DirectRoomWorkbench({
   readonly view:
     | 'overview'
     | 'actions'
-    | { readonly kind: 'shipPhase'; readonly phase: WorkspaceShipPhasePresentation };
+    | {
+        readonly kind: 'shipPhase';
+        readonly phase: WorkspaceShipPhasePresentation;
+        /** Every Ship phase, to name the phase a move crosses into. */
+        readonly phases: readonly WorkspaceShipPhasePresentation[];
+      };
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   readonly renderLifecycleBoundaryContent?: (
     boundary: WorkspaceRoomLifecycleBoundary,
   ) => TimelineBoundaryContent | undefined;
 }) {
   const workbench = room.workbench;
-  const renderEncounterPhase = (phase: WorkspaceEncounterPhase): ReactNode => (
-    <EncounterPhaseEvents interactions={interactions} phase={phase} />
-  );
+  const renderEncounterControls = (controls: WorkspaceEncounterBannerSupplement): ReactNode =>
+    controls.kind === 'encounterStart' ? (
+      <>
+        <EncounterStartControls interactions={interactions} phase={controls.phase} />
+        {controls.endControls === true ? (
+          <EncounterEndControls interactions={interactions} phase={controls.phase} />
+        ) : null}
+      </>
+    ) : (
+      <>
+        {controls.phase === undefined ? null : (
+          <EncounterEndControls interactions={interactions} phase={controls.phase} />
+        )}
+        {controls.anomalyCleared === true ? <AnomalyClearedControl room={room} /> : null}
+      </>
+    );
   // Every phase's identity and customization are fixed on entry: the room Overview.
   const renderOverviewEncounterPhases = (): ReactNode =>
     room.encounterPhases.length === 0
@@ -195,7 +218,7 @@ export function DirectRoomWorkbench({
           encounterPhases={workbench.encounterPhases}
           idPrefix={idPrefix}
           interactions={interactions}
-          renderEncounterPhase={renderEncounterPhase}
+          renderEncounterControls={renderEncounterControls}
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
@@ -218,7 +241,7 @@ export function DirectRoomWorkbench({
           encounterPhases={workbench.encounterPhases}
           idPrefix={idPrefix}
           interactions={interactions}
-          renderEncounterPhase={renderEncounterPhase}
+          renderEncounterControls={renderEncounterControls}
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
@@ -240,7 +263,7 @@ export function DirectRoomWorkbench({
           {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
           idPrefix={idPrefix}
           interactions={interactions}
-          renderEncounterPhase={renderEncounterPhase}
+          renderEncounterControls={renderEncounterControls}
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
@@ -272,7 +295,7 @@ export function DirectRoomWorkbench({
           encounterPhases={room.encounterPhases}
           idPrefix={idPrefix}
           interactions={interactions}
-          renderEncounterPhase={renderEncounterPhase}
+          renderEncounterControls={renderEncounterControls}
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}

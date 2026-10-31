@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -445,8 +445,29 @@ export function EncounterPhaseControl({
   );
 }
 
-/** The events decided in one phase (Fig Leaf, Gorgon, Aetos, Nemesis kill race); none renders nothing. */
-export function EncounterPhaseEvents({
+const skippedWithFigLeaf = 'Skipped with Fig Leaf';
+
+function EncounterEventGroup({
+  children,
+  label,
+}: {
+  readonly children: readonly ReactNode[];
+  readonly label: string;
+}) {
+  if (children.every((child) => child === null)) return null;
+  return (
+    <div aria-label={label} className="encounter-event-controls" role="group">
+      {children}
+    </div>
+  );
+}
+
+/**
+ * What is settled as a phase starts: its Fig Leaf skip, Aetos and the Gorgon condition;
+ * none renders nothing. A retained condition its skipped phase cannot use stays shown,
+ * marked with why it has no effect.
+ */
+export function EncounterStartControls({
   interactions,
   phase,
 }: {
@@ -462,7 +483,7 @@ export function EncounterPhaseEvents({
       : requireWorkspaceInteraction(interactions.figLeafSkips, figLeaf.interactionKey);
   const figLeafControl =
     figLeaf === undefined || figLeafInteraction === undefined ? null : (
-      <label className="timeline-checkbox">
+      <label className="timeline-checkbox" key="figLeaf">
         <input
           {...findingTarget(
             figLeaf.address,
@@ -473,28 +494,7 @@ export function EncounterPhaseEvents({
           onChange={(event) => executeIntent(figLeafInteraction.intentFor(event.target.checked))}
           type="checkbox"
         />
-        <span>Skip with Fig Leaf</span>
-      </label>
-    );
-  const gorgon = phase.gorgonCondition;
-  const gorgonInteraction =
-    gorgon === undefined
-      ? undefined
-      : requireWorkspaceInteraction(interactions.gorgonConditions, gorgon.interactionKey);
-  const gorgonControl =
-    gorgon === undefined || gorgonInteraction === undefined ? null : (
-      <label className="timeline-checkbox">
-        <input
-          {...findingTarget(
-            gorgon.address,
-            semanticOwnerControlElementId(gorgon.address),
-            phase.address,
-          )}
-          checked={gorgonInteraction.selected}
-          onChange={(event) => executeIntent(gorgonInteraction.intentFor(event.target.checked))}
-          type="checkbox"
-        />
-        <span>Gorgon Amulet: no Death Defiance</span>
+        <span>Fig Leaf skip</span>
       </label>
     );
   const aetos = phase.aetos;
@@ -504,7 +504,7 @@ export function EncounterPhaseEvents({
       : requireWorkspaceInteraction(interactions.aetosAppearances, aetos.interactionKey);
   const aetosControl =
     aetos === undefined || aetosInteraction === undefined ? null : (
-      <div className="encounter-event-control">
+      <div className="encounter-event-control" key="aetos">
         <label className="timeline-checkbox">
           <input
             {...findingTarget(
@@ -525,8 +525,8 @@ export function EncounterPhaseEvents({
           />
           <span>Aetos appearance</span>
         </label>
-        <span className="encounter-event-wave-slot">
-          {aetosInteraction.selectedWave === undefined ? null : (
+        {aetosInteraction.selectedWave === undefined ? null : (
+          <span className="encounter-event-wave-slot">
             <select
               aria-label="Aetos wave"
               disabled={!aetosInteraction.contextReached || undefined}
@@ -549,10 +549,64 @@ export function EncounterPhaseEvents({
                 </option>
               ))}
             </select>
-          )}
-        </span>
+          </span>
+        )}
       </div>
     );
+  const skippedHint = phase.skippedByFigLeaf === true ? skippedWithFigLeaf : undefined;
+  const gorgon = phase.gorgonCondition;
+  const gorgonInteraction =
+    gorgon === undefined
+      ? undefined
+      : requireWorkspaceInteraction(interactions.gorgonConditions, gorgon.interactionKey);
+  // An unsupported retained condition owns its finding, so it stays clearable.
+  const gorgonControl =
+    gorgon === undefined || gorgonInteraction === undefined
+      ? null
+      : (() => {
+          const target = findingTarget(
+            gorgon.address,
+            semanticOwnerControlElementId(gorgon.address),
+            phase.address,
+          );
+          return (
+            <label
+              className="timeline-checkbox"
+              data-inapplicable={gorgon.supported ? undefined : ''}
+              key="gorgon"
+            >
+              <input
+                {...target}
+                {...hintProps(
+                  gorgon.supported ? undefined : skippedHint,
+                  'aria-description' in target ? target['aria-description'] : undefined,
+                )}
+                checked={gorgonInteraction.selected}
+                onChange={(event) =>
+                  executeIntent(gorgonInteraction.intentFor(event.target.checked))
+                }
+                type="checkbox"
+              />
+              <span>No Death Defiance</span>
+            </label>
+          );
+        })();
+  return (
+    <EncounterEventGroup label={`${phase.identityLabel} start`}>
+      {[figLeafControl, aetosControl, gorgonControl]}
+    </EncounterEventGroup>
+  );
+}
+
+/** What a finished phase settled: its kill-race outcome; none renders nothing. */
+export function EncounterEndControls({
+  interactions,
+  phase,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly phase: WorkspaceEncounterPhase;
+}) {
+  const executeIntent = useCommandIntent();
   const nemesisBet = phase.nemesisBet;
   const nemesisBetInteraction =
     nemesisBet === undefined
@@ -560,7 +614,7 @@ export function EncounterPhaseEvents({
       : requireWorkspaceInteraction(interactions.nemesisBets, nemesisBet.interactionKey);
   const nemesisBetControl =
     nemesisBetInteraction === undefined ? null : (
-      <label className="encounter-event-control">
+      <label className="encounter-event-control" key="nemesisBet">
         <span>Outcome</span>
         <select
           className="nemesis-contest-result"
@@ -580,23 +634,9 @@ export function EncounterPhaseEvents({
         </select>
       </label>
     );
-  if (
-    figLeafControl === null &&
-    gorgonControl === null &&
-    aetosControl === null &&
-    nemesisBetControl === null
-  )
-    return null;
   return (
-    <div
-      aria-label={`${phase.identityLabel} events`}
-      className="encounter-event-controls"
-      role="group"
-    >
-      {figLeafControl}
-      {gorgonControl}
-      {aetosControl}
-      {nemesisBetControl}
-    </div>
+    <EncounterEventGroup label={`${phase.identityLabel} end`}>
+      {[nemesisBetControl]}
+    </EncounterEventGroup>
   );
 }

@@ -28,7 +28,7 @@ import {
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Provider } from 'react-redux';
 
@@ -75,6 +75,26 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
+
+/**
+ * Moves a row by keyboard through its reorder handle: pick up, step until the
+ * live announcement names the place, drop.
+ */
+function keyboardReorder(scope: HTMLElement, row: string, place: RegExp): void {
+  const handle = within(scope).getByRole('button', { name: `Reorder ${row}` });
+  act(() => handle.focus());
+  fireEvent.click(handle);
+  const announced = () =>
+    [...scope.querySelectorAll('[aria-live="polite"]')].map((node) => node.textContent).join(' ');
+  for (const key of ['ArrowDown', 'ArrowUp']) {
+    for (let step = 0; step < 12 && !place.test(announced()); step += 1)
+      fireEvent.keyDown(handle, { key });
+    if (place.test(announced())) break;
+    fireEvent.keyDown(handle, { key: 'Home' });
+  }
+  if (!place.test(announced())) throw new Error(`${row} has no place ${String(place)}`);
+  fireEvent.click(handle);
+}
 
 function renderProjectedBiome(application: PlannerApplication, biome: WorkspaceBiome) {
   const workspace = workspaceProjection(application);
@@ -540,7 +560,7 @@ describe('BiomeWorkspace', () => {
     );
   });
 
-  it("moves the fountain between a stay's rerolls with its Move control", async () => {
+  it("moves the fountain between a stay's rerolls with its reorder handle", async () => {
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const withCard = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceManualArcanaSelection',
@@ -569,8 +589,8 @@ describe('BiomeWorkspace', () => {
       await view.user.click(await screen.findByRole('button', { name: 'Details →' }));
     const details = await screen.findByRole('region', { name: 'Ephyra Hub timeline' });
     const list = within(details).getAllByRole('region', { name: 'Rerolls' })[0]!;
-    await view.user.click(within(list).getByRole('button', { name: 'Move Fountain' }));
-    await view.user.click(await screen.findByRole('option', { name: /Before Reroll 2/ }));
+    expect(within(list).getByRole('button', { name: 'Reorder Fountain' })).toBeTruthy();
+    keyboardReorder(details, 'Fountain', /^Before Reroll 2/);
     const actions = () => {
       const decision = view.application.store
         .getState()
@@ -592,27 +612,25 @@ describe('BiomeWorkspace', () => {
           : 'Reroll',
     );
     expect(rows).toEqual(['Reroll', 'Fountain', 'Reroll', 'Append']);
-    // Keyboard focus stays on the moved row's Move control.
+    // Keyboard focus stays on the moved row's reorder handle.
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        within(details).getByRole('button', { name: 'Move Fountain' }),
+        within(details).getByRole('button', { name: 'Reorder Fountain' }),
       ),
     );
-    await view.user.click(within(details).getByRole('button', { name: 'Move reroll 1' }));
-    await view.user.click(await screen.findByRole('option', { name: /After Reroll 2/ }));
+    keyboardReorder(details, 'Reroll 1', /^After Reroll 2/);
     await waitFor(() => expect(actions()).toEqual(['useFountain', 'reroll', 'reroll']));
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        within(details).getByRole('button', { name: 'Move reroll 2' }),
+        within(details).getByRole('button', { name: 'Reorder Reroll 2' }),
       ),
     );
-    await view.user.click(within(details).getByRole('button', { name: 'Move Fountain' }));
     // Leaving the list for a stay without rerolls, it keeps focus too.
-    await view.user.click(await screen.findByRole('option', { name: /After Visit 1/ }));
+    keyboardReorder(details, 'Fountain', /^After Visit 1/);
     await waitFor(() => expect(actions()).toEqual(['reroll', 'reroll', 'roomVisit']));
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        within(details).getByRole('button', { name: 'Move Fountain' }),
+        within(details).getByRole('button', { name: 'Reorder Fountain' }),
       ),
     );
   });
@@ -738,13 +756,14 @@ describe('BiomeWorkspace', () => {
     expect(screen.queryByRole('region', { name: 'Fountain order' })).toBeNull();
     await view.user.click(await screen.findByRole('button', { name: 'Hub fountain: Step 4.' }));
     expect(screen.getByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
-    // Its Phial target is edited on the fountain row of the Hub Timeline's Details.
+    // The fountain opens as its row in the Hub Timeline's Details; a Phial target
+    // appears there only while the Aromatic Phial is equipped.
     await view.user.click(screen.getByRole('button', { name: 'Open Interaction →' }));
     const details = await screen.findByRole('region', { name: 'Ephyra Hub timeline' });
     const row = details.querySelector<HTMLElement>('.hub-timeline-fountain');
     if (row === null) throw new Error('the Hub Timeline fountain row is missing');
-    expect(within(row).getByRole('button', { name: /^Phial Target/ })).toBeTruthy();
-    expect(within(row).getByRole('button', { name: 'Move Fountain' })).toBeTruthy();
+    expect(within(row).queryByRole('button', { name: /^Phial Target/ })).toBeNull();
+    expect(within(row).getByRole('button', { name: 'Reorder Fountain' })).toBeTruthy();
     await view.user.click(screen.getByRole('button', { name: 'Back to Map' }));
     expect(await screen.findByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();
   });

@@ -6,6 +6,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createStartingRewardAddress,
+  roomActionKey,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -19,9 +20,22 @@ import {
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
 import { occurrenceById } from '@planner-test/support/occurrence-workbench';
-import { hintOf } from '@planner-test/support/hints';
 
 afterEach(cleanup);
+
+/** The stale delivery row's delete; the row names its reward, its origin is a hint. */
+function deliveryRemoval(entryKey: string): HTMLElement | null {
+  const key = roomActionKey({
+    kind: 'interactAcquisitionEntry',
+    siteKey: 'hermesShrineDelivery',
+    entryKey,
+  });
+  return (
+    document
+      .querySelector(`li[data-room-action-key="${CSS.escape(key)}"]`)
+      ?.querySelector<HTMLElement>('button[aria-label$=" from timeline"]') ?? null
+  );
+}
 
 function occurrence(project: ProjectDocument, occurrenceId: string) {
   return project.route.biomes
@@ -41,11 +55,12 @@ it('runs delivery deletion as one exact authored edit and restores it through Un
   );
   const projected = workspaceProjection(view.application);
   expect(projected.authoringReadiness(host)).toBe('editable');
-  const button = screen.getByRole('button', { name: /Remove .*Delivery.* from timeline/i });
+  const button = deliveryRemoval(entryKey)!;
+  expect(button.getAttribute('aria-label')).toMatch(/^Remove .* from timeline$/);
   expect(button.closest('[inert]')).toBeNull();
-  const moveSlot = within(button.closest('li')!).getByRole('button', { name: /^Move / });
-  expect(moveSlot).toHaveProperty('disabled', true);
-  expect(hintOf(moveSlot)).toBe('No other position is available.');
+  // With no other legal position its reorder handle stays, disabled.
+  const moveSlot = within(button.closest('li')!).getByRole('button', { name: /^Reorder / });
+  expect(moveSlot.getAttribute('aria-disabled')).toBe('true');
   expect(button.classList.contains('danger-action')).toBe(true);
   expect(
     screen.queryByText('This delivery is no longer available. Remove it from the timeline.'),
@@ -55,9 +70,7 @@ it('runs delivery deletion as one exact authored edit and restores it through Un
   if (prior.kind !== 'openProject') throw new Error('project missing');
   const sourceShrine = occurrence(prior.history.present, source.occurrenceId).hermesShrine;
   await view.user.click(button);
-  await waitFor(() =>
-    expect(screen.queryByRole('button', { name: /Remove .*Delivery.* from timeline/i })).toBeNull(),
-  );
+  await waitFor(() => expect(deliveryRemoval(entryKey)).toBeNull());
   const repaired = view.application.store.getState().projectWorkspace;
   if (repaired.kind !== 'openProject') throw new Error('project missing');
   expect(repaired.history.past).toHaveLength(prior.history.past.length + 1);
@@ -69,7 +82,7 @@ it('runs delivery deletion as one exact authored edit and restores it through Un
     sourceShrine,
   );
   act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-  await screen.findByRole('button', { name: /Remove .*Delivery.* from timeline/i });
+  await waitFor(() => expect(deliveryRemoval(entryKey)).not.toBeNull());
   const restored = view.application.store.getState().projectWorkspace;
   if (restored.kind !== 'openProject') throw new Error('project missing');
   expect(restored.history.present).toBe(prior.history.present);

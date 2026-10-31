@@ -19,6 +19,7 @@ import { goldenGBiome } from '@run-planner/test-fixtures/underworld';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
 import { hintOf } from '@planner-test/support/hints';
 import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
+import { queryTimelineRow, timelineRow } from '@planner-test/support/timeline-rows';
 
 afterEach(cleanup);
 
@@ -64,14 +65,13 @@ describe('Pedestal panel', () => {
     await view.user.click(within(pedestal()).getByRole('button', { name: /^Pedestal/ }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Big Pom of Power'));
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    await pickRoomObjectAction(view.user, 'Pedestal', 'Collect Double Pom · Pedestal');
-    const row = screen.getAllByText('Collect Double Pom · Pedestal')[0]!.closest('li');
-    if (row === null) throw new Error('Pedestal collect row missing');
+    await pickRoomObjectAction(view.user, 'Pedestal', 'Collect Double Pom');
+    const row = timelineRow('Collect Double Pom');
     // Collected: nothing more to do, and the row deletes the collect.
     expect(screen.getByRole('button', { name: 'Pedestal' })).toHaveProperty('disabled', true);
     expect(hintOf(screen.getByRole('button', { name: 'Pedestal' }))).toBe('Already collected.');
     await view.user.click(within(row).getByRole('button', { name: /^Remove .* from timeline$/ }));
-    expect(screen.queryByText('Collect Double Pom · Pedestal')).toBeNull();
+    expect(queryTimelineRow('Collect Double Pom')).toBeNull();
   });
 
   it('shows the Shop-form pedestal as a room object outside the Shop inventory', () => {
@@ -103,11 +103,10 @@ describe('Pedestal panel', () => {
     await view.user.click(within(pedestal()).getByRole('button', { name: /^Pedestal/ }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const row = screen.getByText('Collect Mystery Boon · Pedestal').closest('li');
-    if (row === null) throw new Error('Mystery collect row missing');
+    const row = timelineRow(/^Collect Mystery Boon/);
     await view.user.click(within(row).getByRole('button', { name: 'Reward' }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Zeus'));
-    const resolved = screen.getByText('Collect Mystery Boon · Pedestal').closest('li');
-    expect(within(resolved!).getByText(/Zeus/)).toBeTruthy();
+    const resolved = timelineRow(/^Collect Mystery Boon/);
+    expect(within(resolved).getByText(/Zeus/)).toBeTruthy();
   });
 });

@@ -244,16 +244,35 @@ retain their declared defaults; generated customization can reset wholly to
 native control. Identity and customization are fixed on entry, so every
 phase's selector and launcher render in Room Overview; finding navigation
 selects Overview and focuses/highlights the launcher without automatically
-opening the dialog. The Room Timeline names a definitional encounter's settled
-identity in its Start encounter banner: the encounter, prefixed by the phase in
-a multi-phase room unless a Fields cage label already names it. A non-combat
-encounter settled on entry (a Nemesis event, Empty) leaves its Room entered
-banner plain; a selected Nemesis family is read-only text on its movable
-interaction row. The banner identity only navigates to its Overview owner. The events decided at that start
-(Fig Leaf, Gorgon, Aetos) render in the banner row's editors only when present;
-a Nemesis response stays on its interaction row, and an Anomaly outcome is an
-Encounter ended event. Event findings have their own phase-child owners and
-navigate to that Timeline control.
+opening the dialog.
+
+On the Room Timeline each encounter phase opens with its Encounter banner and
+closes with its Encounter ended banner; a Fields room numbers both by the
+cage's combat cycle and tags the start with its cage. A definitional encounter's start banner
+names its settled identity: the phase's role, when the room has more than one
+encounter start banner and no Fields cage tag already names the phase, then the
+selected encounter. Phases settled on entry do not count toward that role rule.
+A non-combat encounter settled on entry (a Nemesis event, Empty) leaves its
+Room entered banner plain; a selected Nemesis family is read-only text on its
+movable interaction row. The banner identity only navigates to its Overview
+owner.
+
+A banner hosts the events of its moment. The start banner carries what the
+game settles as the encounter starts: the Fig Leaf skip, the Aetos appearance
+and its wave, and the Gorgon Amulet's Death Defiance condition, whose Athena
+appears in that fight. The end banner carries what the finished encounter
+settled: a Nemesis kill-race outcome, whose bet gold stands in the money
+column like any other gold row, and an Anomaly's capture-point outcome. A
+phase with an end event but no end boundary keeps it on its start banner. A
+banner's controls sit on a second line under its title and add no line when it
+has none. A Nemesis response stays on its interaction row. Event findings have
+their own phase-child owners and navigate to that Timeline control.
+
+An event control holding an authored value never disappears. When the engine
+says the event cannot apply here, a retained value stays shown and editable
+with its finding, quietly marked, with a hint naming the reason when the
+engine publishes one (a phase the engine settled as skipped with Fig Leaf). An
+inapplicable event without a value is not shown.
 
 Opening generated composition is read-only. Edit initializes a complete value
 through the exact engine capability; Reset removes that value. Customized controls
@@ -325,13 +344,36 @@ blocking product, Room Doors and later rooms show their authored values the
 same way. A block at the Overview leaves the Overview as the repair surface and
 the Timeline and Doors read-only.
 
-Timeline action headings name their verb (Buy for paid World Shop, Shrine and
-Well items and refills, Rush for rushed Shrine purchases, Collect for pickups
-including Contract items and Echo-generated pickups, Sell for Pool sales,
-Reroll for rerolls) and keep distinguishing cage, phase, source-role, slot and boosted identities. Pom
-actions use their pickup names (Pom, Double Pom, Triple Pom, Pom Slice)
-without changing catalog names. Headings, drag previews and action controls
-share the projected label; outcome details remain separate.
+Every Room Timeline row has one anatomy: its reorder handle, the icon of the
+object or NPC it uses (badged with the inventory slot it buys from, and marked
+for a Travel Deal restock), its label, its decisions, its money and its delete.
+Money and delete keep one right edge on every row, and each encounter phase's
+rows read as one group. Every banner (encounter start and end, other lifecycle
+boundaries and checkpoints) shares one band style.
+
+A label is the action's verb (Buy for paid World Shop, Shrine and Well items
+and refills, Rush for rushed Shrine purchases, Collect for pickups including
+Contract items and Echo-generated pickups, Sell for Pool sales, Reroll for
+rerolls) followed by what it takes. A reward is shown by its icon, with its
+name as the icon's accessible name and a mark for a Boosted variant; tags name
+where in the room the action happens (a cage, an optional reward). Pom actions
+use their pickup names (Pom, Double Pom, Triple Pom, Pom Slice) without
+changing catalog names. What produced a generated pickup is the engine's
+published source family: the row tells it as an origin hint shown on hover and
+focus and carried in its accessible description, and the Add area groups by
+it. Where the engine lets a pickup be goldified or transformed, the verb itself
+is the choice between collecting and those conversions; a Mystery Boon whose
+source the row authors shows its source picker in place of its name. Headings,
+drag previews and action controls share the projected label.
+
+Decisions follow the label, each as wide as its value, in the order the
+pickup's outcome enables them: trait, Pom, Anvil and Path of Stars chips (each
+showing only its value, up to a capped width past which it ends in an ellipsis
+with the full value on hover and in its accessible name), then Artificer
+output, Fountain and other row decisions. A control appears only where the row
+uses it. The money column carries a purchase's price and chance to afford, or
+the gold the row gains or loses as the engine's gold ledger attributes it to
+that row. Narrow timelines move a row's decisions to a second line.
 
 Purchase and collect rows carry no inner checkbox; their delete control
 removes the action. The purchase row that triggers Travel Deal renders the refill's inventory controls as its second line: for a
@@ -341,10 +383,16 @@ purchase the refill entry names as its source. The line has no placeholder. A
 purchased refill that no line hosts keeps its own purchase row with a bound
 removal, and refill findings route to the line's control or to that row.
 
-Each present Stygian Well, Pool of Purging, World Shop (the Preboss Shop form
-included), Hermes Shrine and Pedestal has an entry at the top of the
-optional actions listing what the engine publishes as possible at the end of
-the room's current actions, each option named by the row it appends. A Well
+Each room has one Add area for optional work: a side column beside a wide
+room panel, below the timeline otherwise, saying so when nothing optional
+remains. Its Objects line holds an entry for each present Stygian Well, Pool
+of Purging, World Shop (the Preboss Shop form included), Hermes Shrine,
+Pedestal and Keepsake Rack, listing what the engine publishes as possible at
+the end of the room's current actions, each option named by the row it
+appends. Its Actions line groups the room's other optional actions by source
+family, each group opening its short list; the optional pickups a room object
+produces sit beside that object. A finding on an action marks its object or
+group entry, and navigating to the action opens its list. A Well
 or Pool offers buy or sell for each offered slot (a blank initial slot takes
 its item or trait in the same pick) and Reroll with its cost, disabled with a
 hint when screen rerolls are not enabled, nothing is left to reroll or the
@@ -355,8 +403,8 @@ item in the same pick; a Pedestal offers its collect. Every entry is
 shown while its object is present and is disabled with the reason when nothing
 can be done there (everything bought or sold, the only option left a reroll
 that cannot be made, the item collected or not yet chosen, the pedestal
-inactive). One pick appends one action at the end, which
-Move repositions. A reroll row carries an optional picker for each restocked
+inactive). One pick appends one action at its last legal position, which its
+reorder handle then moves. A reroll row carries an optional picker for each restocked
 slot, pinned or native.
 
 Room Doors keeps its door layout and lists the room's door and Fields cage
@@ -364,8 +412,8 @@ rerolls below the doors in one ordered **Rerolls** list headed by the rerolls
 left: each row is a target and its new reward with Remove, and a new row is
 appended at the end once its target is chosen. A removal keeps the later rows
 it invalidates, with their findings. The same presses appear as Timeline rows,
-where Move is the only way to change their position among other post-unlock
-actions. A rerolled target reads first draw → final, and the next room's
+where their reorder handle is the only way to change their position among
+other post-unlock actions. A rerolled target reads first draw → final, and the next room's
 header and the rail show the final reward. Reroll findings route to the list
 row, except an out-of-order press, which routes to its Timeline row. An Ephyra
 room's hidden return door sits in Room Doors as one automatic line, in place of
@@ -383,6 +431,17 @@ findings route to the launcher; otherwise they route to the row.
 
 In a Room Timeline action, the pickup-outcome control precedes everything that
 outcome enables: trait, Pom, Anvil, Artificer output and Fountain controls.
+
+A row's position changes only through its reorder handle, by pointer drag or
+by keyboard (pick up, step, drop, cancel), over the positions the engine's
+proposals publish. The keyboard steps through legal positions only; a pointer
+over a disallowed position names why, from that proposal's explanation. The
+start of each banner's section is a drop anchor, and a move announcement names
+the Ship phase it crosses into. A row with no legal move keeps a quieter
+disabled handle, and a row that can never be removed a quieter disabled
+delete, so the trailing columns stay put. The timeline legend explains the
+row accents (optional, required before the phase ends, required before leaving
+the room, automatic) and the chance-to-afford pill.
 
 Required chronology rows arrive ranked from the activating semantic command
 and expose only engine-assessed moves. React renders no Position or generic
@@ -415,7 +474,7 @@ ShipCombat is the deliberate fourth shape. It renders Room Overview, Intro
 Timeline, Intro Wheels, Combat 1 Timeline, then Combat 1 Wheels and Combat 2
 Timeline when Combat 2 is structurally active, and Room Doors. Overview owns
 encounter count, every phase's encounter and room features. Each phase tab
-contains its Start encounter banner and events and its post-combat actions;
+contains its encounter banners and their events and its post-combat actions;
 its following `nextPhase` boundary is a read-only marker. Each active wheel's
 tab follows the timeline tab it closes and holds the wheel's pool, offers, its
 Rerolls list and the pick; final Combat 2 has no wheel. Wheel rerolls also
@@ -733,8 +792,8 @@ gap between them (each Hub stay) holding its Rerolls list for board doors not
 yet entered and a board recap of every door's current reward, first draw →
 final when rerolled. A stay's presses and its fountain use are one ordered
 list: the fountain row carries its Phial outcome editor and sits among the
-presses in authored order. Every row has a Move action within its stay, and the
-fountain's also places it at the end of any other gap; a new press appends at
+presses in authored order. Every row moves within its stay by its reorder
+handle, and the fountain can also be placed at the end of any other gap; a new press appends at
 the end of its stay. Before its use the fountain is a Use row at the end. Map and Details send the same Hub action-order
 command; finding navigation to a reroll or the Phial outcome selects Details.
 

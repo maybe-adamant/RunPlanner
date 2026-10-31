@@ -81,7 +81,7 @@ function launcherFor(
   value: AuthoredHexActivation | undefined,
 ): WorkspaceHexActivationInteraction['launcher'] {
   const keys = value?.selectedNodeKeys ?? [];
-  const unsummarised = Object.freeze({ label: 'Edit Path of Stars' });
+  const unsummarised = Object.freeze({ label: 'Edit Path of Stars', value: 'Choose talents' });
   if (capability === undefined || keys.length === 0) return unsummarised;
   const hex = catalog.hexes.byKey[capability.spellTraitKey];
   const layout = hex?.layouts.byKey[capability.tree.layoutKey];
@@ -92,10 +92,9 @@ function launcherFor(
       node.talentLabel,
     ]),
   );
-  return Object.freeze({
-    label: 'Edit Path of Stars',
-    detail: condensedTalents(keys.map((key) => labels.get(key) ?? key)),
-  });
+  const talents = condensedTalents(keys.map((key) => labels.get(key) ?? key));
+  // The chip shows the talents; the label stays its accessible name.
+  return Object.freeze({ label: `Edit Path of Stars · ${talents}`, value: talents });
 }
 
 /** Talents in first-appearance order, a repeat counted once: "Omen ×2, Sting". */

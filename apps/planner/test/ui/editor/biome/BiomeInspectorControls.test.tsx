@@ -178,6 +178,26 @@ function withoutWorkspaceEntry({ entry, ...biome }: WorkspaceBiome): Omit<Worksp
   return biome;
 }
 
+/**
+ * Moves a row by keyboard through its reorder handle: pick up, step until the
+ * live announcement names the place, drop.
+ */
+function keyboardReorder(scope: HTMLElement, row: string, place: RegExp): void {
+  const handle = within(scope).getByRole('button', { name: `Reorder ${row}` });
+  act(() => handle.focus());
+  fireEvent.click(handle);
+  const announced = () =>
+    [...scope.querySelectorAll('[aria-live="polite"]')].map((node) => node.textContent).join(' ');
+  for (const key of ['ArrowDown', 'ArrowUp']) {
+    for (let step = 0; step < 20 && !place.test(announced()); step += 1)
+      fireEvent.keyDown(handle, { key });
+    if (place.test(announced())) break;
+    fireEvent.keyDown(handle, { key: 'Home' });
+  }
+  if (!place.test(announced())) throw new Error(`${row} has no place ${String(place)}`);
+  fireEvent.click(handle);
+}
+
 describe('Biome inspector controls', () => {
   it('locks the F opening identity behind an incomplete route-start result', async () => {
     const occurrenceId = createOccurrenceId('locked-start-identity');
@@ -520,7 +540,7 @@ describe('Biome inspector controls', () => {
       document.getElementById(semanticOwnerControlElementId(owner)),
     );
     expect(within(inspector).queryByRole('dialog', { name: 'Judgment editor' })).toBeNull();
-    expect(within(inspector).getByText('Start encounter')).toBeTruthy();
+    expect(within(inspector).getByText('Encounter')).toBeTruthy();
     expect(within(inspector).getByText('Boss defeated')).toBeTruthy();
     expect(within(inspector).getByText('Encounter ended')).toBeTruthy();
     const timeline = within(inspector).getByRole('region', { name: 'Room Timeline' });
@@ -716,13 +736,15 @@ describe('Biome inspector controls', () => {
     const unchanged = launcher().textContent!;
     expect(unchanged).toMatch(/ \(Unchanged\)$/);
     const held = unchanged.replace(/ \(Unchanged\)$/, '');
-    expect(within(rackRow()).getByRole('button', { name: 'Move Keepsake Rack' })).toBeTruthy();
+    expect(within(rackRow()).getByRole('button', { name: 'Reorder Keepsake Rack' })).toBeTruthy();
     // Like other mandatory rows, its delete slot holds a disabled removal without a hint.
     const removal = within(rackRow()).getByRole<HTMLButtonElement>('button', {
       name: 'Remove Keepsake Rack from timeline',
     });
     expect(removal.disabled).toBe(true);
-    expect(removal.parentElement?.dataset.timelineActionSlot).toBe('delete');
+    expect(removal.closest('[data-timeline-cell]')?.getAttribute('data-timeline-cell')).toBe(
+      'actions',
+    );
     expect(removal.hasAttribute('data-hint')).toBe(false);
 
     fireEvent.click(launcher());
@@ -799,8 +821,14 @@ describe('Biome inspector controls', () => {
         name: 'Done',
       }),
     );
-    fireEvent.click(await within(timeline).findByRole('button', { name: 'Move Keepsake Rack' }));
-    fireEvent.click(await screen.findByRole('option', { name: /Before Use Fountain/ }));
+    await within(timeline).findByRole('button', { name: 'Reorder Keepsake Rack' });
+    // The fountain is the room's first action, so its place is the section start.
+    expect(
+      within(timeline)
+        .getAllByRole('button', { name: /^Reorder / })[0]
+        ?.getAttribute('aria-label'),
+    ).toBe('Reorder Use Fountain');
+    keyboardReorder(timeline, 'Keepsake Rack', /After Room entered/);
 
     const phialTarget = await within(timeline).findByLabelText('Phial Target');
     fireEvent.click(phialTarget);

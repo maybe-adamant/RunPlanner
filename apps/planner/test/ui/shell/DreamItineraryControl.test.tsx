@@ -55,10 +55,10 @@ describe('DreamItineraryControl', () => {
   it('shows the itinerary as four slots, each opening its own biome picker', () => {
     renderControl();
     expect([1, 2, 3, 4].map(slotText)).toEqual([
-      '1. Summit▾',
-      '2. Erebus▾',
-      '3. Ephyra▾',
-      '4. Fields▾',
+      '1. Summit',
+      '2. Erebus',
+      '3. Ephyra',
+      '4. Fields',
     ]);
     fireEvent.click(screen.getByRole('button', { name: 'Biome 3' }));
     expect(screen.getByText('Biome 3 of 4')).toBeTruthy();
@@ -72,7 +72,7 @@ describe('DreamItineraryControl', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(history().present.route.itineraryBiomeKeys).toEqual(['Q', 'F', 'N', 'I']);
     expect(history().past).toHaveLength(depth + 1);
-    expect(slotText(4)).toBe('4. Tartarus▾');
+    expect(slotText(4)).toBe('4. Tartarus');
   });
 
   it('names the biomes to clear and reverts the slot on cancel', () => {
@@ -88,7 +88,7 @@ describe('DreamItineraryControl', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(history().present).toBe(before);
-    expect(slotText(3)).toBe('3. Ephyra▾');
+    expect(slotText(3)).toBe('3. Ephyra');
   });
 
   it('replaces the itinerary as one undoable step once confirmed', () => {
@@ -106,8 +106,8 @@ describe('DreamItineraryControl', () => {
     const before = history().present;
     const depth = history().past.length;
     pick(3, 'Fields');
-    expect(slotText(3)).toBe('3. Fields▾');
-    expect(slotText(4)).toBe('4. Choose biome▾');
+    expect(slotText(3)).toBe('3. Fields');
+    expect(slotText(4)).toBe('4. Choose biome');
     expect(history().present).toBe(before);
     pick(4, 'Thessaly');
     fireEvent.click(screen.getByRole('button', { name: 'Clear and change' }));
@@ -118,7 +118,7 @@ describe('DreamItineraryControl', () => {
   it('marks slots past the first empty one as waiting on an earlier choice', () => {
     renderControl();
     pick(2, 'Ephyra');
-    expect([3, 4].map(slotText)).toEqual(['3. Choose biome▾', '4. Choose biome▾']);
+    expect([3, 4].map(slotText)).toEqual(['3. Choose biome', '4. Choose biome']);
     expect(screen.getByRole('button', { name: 'Biome 3' }).hasAttribute('disabled')).toBe(false);
     const slot4 = screen.getByRole('button', { name: 'Biome 4' });
     expect(slot4.hasAttribute('disabled')).toBe(true);
@@ -151,7 +151,7 @@ describe('DreamItineraryControl', () => {
   it('discards an unfinished draft when the itinerary changes underneath it', () => {
     const { application } = renderControl();
     pick(3, 'Fields');
-    expect(slotText(4)).toBe('4. Choose biome▾');
+    expect(slotText(4)).toBe('4. Choose biome');
     act(() => {
       application.store.dispatch(
         authoredProjectCommandDispatched({
@@ -161,6 +161,6 @@ describe('DreamItineraryControl', () => {
         }),
       );
     });
-    expect([3, 4].map(slotText)).toEqual(['3. Ephyra▾', '4. Tartarus▾']);
+    expect([3, 4].map(slotText)).toEqual(['3. Ephyra', '4. Tartarus']);
   });
 });

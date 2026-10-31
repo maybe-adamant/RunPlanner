@@ -1,6 +1,5 @@
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
-  artificerReplacementEntryKey,
   createEncounterPhaseAddress,
   createFountainRarityOutcomeAddress,
   createOccurrenceAddress,
@@ -9,8 +8,6 @@ import {
   createRoomActionAddress,
   createInfernalContractPedestalAddress,
   createShopOfferAddress,
-  parseArtificerReplacementEntryKey,
-  TRAVEL_DEAL_REFILL_ENTRY_KEY,
   roomActionKey,
   semanticAddressKey,
   stygianWellGenerationItemKey,
@@ -43,7 +40,11 @@ import type {
 } from '../contracts/timeline';
 import type { WorkspaceRoomFeature } from '../contracts/features';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
-import { occurrenceActionLabel } from './occurrence-action-label';
+import {
+  occurrenceActionAddGroup,
+  occurrenceActionLabel,
+  occurrenceActionLabelParts,
+} from './occurrence-action-label';
 import { assembleFeatureRerollSlots } from './feature-roll-assembly';
 import { projectRoomLifecycleTimeline } from './occurrence-action-timeline-projection';
 import type { WorkspaceRoomTab } from '../contracts/navigation';
@@ -106,11 +107,13 @@ export function projectFountainRarityControl(
 ): WorkspaceFountainRarityControl {
   const evaluated = assess?.(outcome, targetTraitKey);
   const pending =
-    evaluated?.kind !== 'fountainRarityOutcome' || evaluated.result.status !== 'pending'
+    evaluated?.kind !== 'fountainRarityOutcome'
       ? 'unreached'
-      : !evaluated.result.targetRequired || evaluated.result.mutationTargetKeys.length === 0
-        ? 'noTargetRequired'
-        : undefined;
+      : evaluated.result.status !== 'pending'
+        ? 'noPhial'
+        : !evaluated.result.targetRequired || evaluated.result.mutationTargetKeys.length === 0
+          ? 'noTargetRequired'
+          : undefined;
   return Object.freeze<WorkspaceFountainRarityControl>({
     address: outcome,
     marker: markerDestinations.marker(outcome),
@@ -183,6 +186,7 @@ function roomActionsForOccurrence(
       !skippedInteractionKeys.has(row.key) && (!goldNeedsPlacement || !isGoldPickup(row.reference)),
   );
   const presentedActionKeys = new Set(presentedRows.map((row) => row.key));
+  const goldGains = roomGoldGains(input.gold, owner);
   const actionLabel = (reference: RoomActionReference): string =>
     allProjectedRows.find((row) => row.key === roomActionKey(reference))?.label ??
     occurrenceActionLabel(
@@ -193,7 +197,7 @@ function roomActionsForOccurrence(
       undefined,
       input.occurrence,
       input.occurrence.purgingPool?.traitKeyBySlot,
-      input.evaluatedRoom?.pickupProducers,
+      undefined,
       input.rerollTargetLabel,
     );
   const phaseLabel = (key: string) =>
@@ -312,17 +316,13 @@ function roomActionsForOccurrence(
       const prerequisite = blocker.dependency.action;
       const movingDependent = roomActionKey(blocker.reference) === proposedKey;
       const movingPrerequisite = roomActionKey(prerequisite) === proposedKey;
-      const artificerEntry =
-        blocker.reference.kind === 'interactAcquisitionEntry'
-          ? parseArtificerReplacementEntryKey(blocker.reference.entryKey)
-          : undefined;
-      const prerequisiteControl = allProjectedRows.find(
+      // An Artificer replacement depends on the reward it converts.
+      const artificerSource = allProjectedRows.find(
         (row) => row.key === roomActionKey(prerequisite),
-      )?.rewardPayload?.control;
+      );
       const artificer =
-        artificerEntry !== undefined &&
-        prerequisiteControl !== undefined &&
-        semanticAddressKey(prerequisiteControl.owner.address) === artificerEntry.sourceKey;
+        roster.rows.find((row) => row.key === roomActionKey(blocker.reference))?.sourceFamily
+          ?.kind === 'artificer' && artificerSource?.rewardPayload !== undefined;
       const cageReward =
         blocker.reference.kind === 'interactLocalReward' &&
         prerequisite.kind === 'completeFieldsCage';
@@ -337,7 +337,8 @@ function roomActionsForOccurrence(
         blocker.reference.kind === 'interactWheelReward' &&
         prerequisite.kind === 'chooseRewardWheel';
       if (artificer)
-        explanation = `${actionLabel(prerequisite)} first to create ${movingDependent ? 'this reward' : label}.`;
+        // The source reads as the transformation its verb now names.
+        explanation = `${artificerSource?.labelParts === undefined ? actionLabel(prerequisite) : `Transform ${artificerSource.labelParts.name}`} first to create ${movingDependent ? 'this reward' : label}.`;
       else if (cageReward)
         explanation = `${actionLabel(prerequisite)} to unlock ${movingDependent ? 'this reward' : label}.`;
       else if (cageInteraction)
@@ -457,21 +458,20 @@ function roomActionsForOccurrence(
         artificerConversion === undefined
           ? undefined
           : (() => {
-              const entryKey = artificerReplacementEntryKey(
-                artificerConversion.rewardOwner,
-                artificerConversion.address.acquisitionRole,
-              );
+              // The engine names the replacement's family and makes it follow its source.
               const replacementRow = presentedRows.find(
                 (candidate) =>
-                  candidate.reference.kind === 'interactAcquisitionEntry' &&
-                  candidate.reference.entryKey === entryKey,
+                  candidate.sourceFamily?.kind === 'artificer' &&
+                  candidate.dependencies.some(
+                    (dependency) =>
+                      dependency.kind === 'afterAction' &&
+                      roomActionKey(dependency.action) === row.key,
+                  ),
               );
               if (replacementRow === undefined) return undefined;
               return controlAt(replacementRow.owner);
             })();
-      const isArtificerReplacement =
-        row.reference.kind === 'interactAcquisitionEntry' &&
-        parseArtificerReplacementEntryKey(row.reference.entryKey) !== undefined;
+      const isArtificerReplacement = row.sourceFamily?.kind === 'artificer';
       const roleIsAcquired = (acquisitionRole: string): boolean => {
         const conversion = resolvedRewardControl?.conversions?.find(
           (candidate) => candidate.address.acquisitionRole === acquisitionRole,
@@ -522,20 +522,42 @@ function roomActionsForOccurrence(
           interactionKey: `stygianWellTwist:${semanticAddressKey(owner)}:${generationKey}`,
         });
       })();
+      const sourceFamily = row.sourceFamily;
+      const labelParts = occurrenceActionLabelParts(
+        input.catalog,
+        row.reference,
+        roomLocal,
+        encounterPhases,
+        resolvedRewardControl,
+        input.occurrence,
+        input.occurrence.purgingPool?.traitKeyBySlot,
+        sourceFamily,
+        input.rerollTargetLabel,
+      );
       return Object.freeze({
         address,
         key: row.key,
-        label: occurrenceActionLabel(
-          input.catalog,
-          row.reference,
-          roomLocal,
-          encounterPhases,
-          resolvedRewardControl,
-          input.occurrence,
-          input.occurrence.purgingPool?.traitKeyBySlot,
-          input.evaluatedRoom?.pickupProducers,
-          input.rerollTargetLabel,
-        ),
+        label: labelParts.label,
+        addGroup: occurrenceActionAddGroup(input.catalog, row.reference, roomLocal, sourceFamily),
+        ...(sourceFamily === undefined ? {} : { sourceFamily }),
+        ...(labelParts.slot === undefined ? {} : { slot: labelParts.slot }),
+        ...(labelParts.travelDeal === undefined
+          ? {}
+          : {
+              travelDeal: labelParts.travelDeal,
+              shownLabel: labelParts.shownLabel ?? labelParts.label,
+            }),
+        ...(labelParts.name === undefined
+          ? {}
+          : {
+              labelParts: Object.freeze({
+                name: labelParts.name,
+                ...(labelParts.verb === undefined ? {} : { verb: labelParts.verb }),
+                ...(labelParts.suffix === undefined ? {} : { tag: labelParts.suffix }),
+                ...(labelParts.origin === undefined ? {} : { origin: labelParts.origin }),
+                ...(labelParts.reward === undefined ? {} : { reward: labelParts.reward }),
+              }),
+            }),
         marker: input.markerDestinations.marker(address),
         ...(row.requiredScope === undefined ? {} : { requiredScope: row.requiredScope }),
         proposalKeys: Object.freeze(proposalKeysByAction.get(row.key) ?? []),
@@ -571,8 +593,7 @@ function roomActionsForOccurrence(
                       resolvedRewardControl.offerEditVisibility === 'visible') ||
                     (row.reference.kind === 'interactAcquisitionEntry' &&
                       // The Shop's Travel Deal item is authored on its line unless resolved here.
-                      (roomLocal.kind !== 'shop' ||
-                        row.reference.entryKey !== TRAVEL_DEAL_REFILL_ENTRY_KEY ||
+                      (sourceFamily?.kind !== 'shopTravelDealRefill' ||
                         resolvedRewardControl.owner.kind === 'acquisitionEntry') &&
                       resolvedRewardControl.offerEditVisibility === 'visible')),
               }),
@@ -598,8 +619,9 @@ function roomActionsForOccurrence(
               }),
             }
           : {}),
-        ...purchaseRowProducts(row.reference, address),
+        ...purchaseRowProducts(row.reference, address, sourceFamily),
         ...purchaseGold(input.gold, row.owner),
+        ...rowGoldGain(goldGains, address),
         executable: row.executable,
       });
     }),
@@ -640,6 +662,12 @@ function roomActionsForOccurrence(
         Object.freeze({
           address: actionAddress,
           key: roomActionKey(reference),
+          addGroup: occurrenceActionAddGroup(
+            input.catalog,
+            reference,
+            roomLocal,
+            capability.sourceFamily,
+          ),
           label: occurrenceActionLabel(
             input.catalog,
             reference,
@@ -648,13 +676,16 @@ function roomActionsForOccurrence(
             control,
             input.occurrence,
             input.occurrence.purgingPool?.traitKeyBySlot,
-            input.evaluatedRoom?.pickupProducers,
+            capability.sourceFamily,
           ),
           marker: input.markerDestinations.marker(actionAddress),
           proposalKeys: Object.freeze([]),
           reference,
           participation: 'required' as const,
           participationOwnedByOverview: false,
+          ...(capability.sourceFamily === undefined
+            ? {}
+            : { sourceFamily: capability.sourceFamily }),
           placement: Object.freeze({
             command: Object.freeze({
               kind: 'PlaceHermesShrineDelivery' as const,
@@ -715,6 +746,12 @@ function roomActionsForOccurrence(
         Object.freeze({
           address: actionAddress,
           key: roomActionKey(reference),
+          addGroup: occurrenceActionAddGroup(
+            input.catalog,
+            reference,
+            roomLocal,
+            capability.sourceFamily,
+          ),
           label: occurrenceActionLabel(
             input.catalog,
             reference,
@@ -723,13 +760,16 @@ function roomActionsForOccurrence(
             control,
             input.occurrence,
             input.occurrence.purgingPool?.traitKeyBySlot,
-            input.evaluatedRoom?.pickupProducers,
+            capability.sourceFamily,
           ),
           marker: input.markerDestinations.marker(actionAddress),
           proposalKeys: Object.freeze([]),
           reference,
           participation: 'optional' as const,
           participationOwnedByOverview: false,
+          ...(capability.sourceFamily === undefined
+            ? {}
+            : { sourceFamily: capability.sourceFamily }),
           placement: Object.freeze({
             command: Object.freeze({
               kind: 'PlaceClockedTraitPickup' as const,
@@ -770,6 +810,12 @@ function roomActionsForOccurrence(
             Object.freeze({
               address: actionAddress,
               key: roomActionKey(reference),
+              addGroup: occurrenceActionAddGroup(
+                input.catalog,
+                reference,
+                roomLocal,
+                goldCapability.sourceFamily,
+              ),
               label: occurrenceActionLabel(
                 input.catalog,
                 reference,
@@ -778,13 +824,16 @@ function roomActionsForOccurrence(
                 controlAt(goldCapability.address),
                 input.occurrence,
                 input.occurrence.purgingPool?.traitKeyBySlot,
-                input.evaluatedRoom?.pickupProducers,
+                goldCapability.sourceFamily,
               ),
               marker: input.markerDestinations.marker(actionAddress),
               proposalKeys: Object.freeze([]),
               reference,
               participation: required ? ('required' as const) : ('optional' as const),
               participationOwnedByOverview: false,
+              ...(goldCapability.sourceFamily === undefined
+                ? {}
+                : { sourceFamily: goldCapability.sourceFamily }),
               ...(control === undefined
                 ? {}
                 : {
@@ -838,7 +887,7 @@ function roomActionsForOccurrence(
         !row.stale &&
         row.participation === 'optional' &&
         !row.participationOwnedByOverview &&
-        !addedFromEntry(row.reference, roomLocal),
+        !addedFromEntry(row),
     ),
     ...clockedTraitPickupRows,
     ...goldPickupRows.filter((row) => row.participation === 'optional'),
@@ -849,8 +898,7 @@ function roomActionsForOccurrence(
       (row) =>
         !optionalKeys.has(row.key) &&
         (row.stale ||
-          (!row.participationOwnedByOverview &&
-            !(row.rank === null && addedFromEntry(row.reference, roomLocal)))),
+          (!row.participationOwnedByOverview && !(row.rank === null && addedFromEntry(row)))),
     ),
     ...dueShrineRows,
     ...goldPickupRows.filter((row) => row.participation === 'required'),
@@ -962,6 +1010,7 @@ function roomActionsForOccurrence(
     ...(steadyGrowth.length === 0 ? {} : { steadyGrowth }),
     ...(transcendentEmbryo.length === 0 ? {} : { transcendentEmbryo }),
     ...roomGold(input.gold, owner),
+    ...phaseGold(input.gold, owner),
   });
 }
 
@@ -999,6 +1048,68 @@ function purchaseGold(
   };
 }
 
+/** The gold each timeline row in the room gains or loses, summed over its ledger gains. */
+function roomGoldGains(
+  gold: GoldLedger | undefined,
+  room: OccurrenceAddress,
+): ReadonlyMap<string, { readonly mean: number; readonly variance: number }> {
+  const priced = gold?.roomAt(room);
+  if (priced?.availability !== 'available') return new Map();
+  const gains = new Map<string, { mean: number; variance: number }>();
+  for (const gain of priced.room.gains) {
+    if (gain.roomAction === undefined || gain.amount === undefined) continue;
+    const key = semanticAddressKey(gain.roomAction);
+    const sum = gains.get(key) ?? { mean: 0, variance: 0 };
+    gains.set(key, {
+      mean: sum.mean + gain.amount.mean,
+      variance: sum.variance + gain.amount.variance,
+    });
+  }
+  return gains;
+}
+
+/** The Nemesis bet each encounter phase settles, which belongs to no row. */
+function phaseGold(
+  gold: GoldLedger | undefined,
+  room: OccurrenceAddress,
+): Pick<WorkspaceRoomActions, 'phaseGold'> {
+  const priced = gold?.roomAt(room);
+  if (priced?.availability !== 'available') return {};
+  const bets = priced.room.gains.flatMap((gain) =>
+    gain.kind !== 'nemesisBet' ||
+    gain.owner?.kind !== 'encounterPhase' ||
+    gain.amount === undefined ||
+    Math.round(gain.amount.mean) === 0
+      ? []
+      : [Object.freeze({ phaseKey: gain.owner.phaseKey, gold: goldGainLabel(gain.amount) })],
+  );
+  return bets.length === 0 ? {} : { phaseGold: Object.freeze(bets) };
+}
+
+/** "+N" when exact, "+~N" with spread, "−N" for a loss. */
+function goldGainLabel(gain: {
+  readonly mean: number;
+  readonly variance: number;
+}): WorkspaceGoldAmount {
+  const rounded = Math.round(gain.mean);
+  const sign = rounded < 0 ? '\u2212' : '+';
+  return Object.freeze({
+    label: `${sign}${gain.variance === 0 ? '' : '~'}${Math.abs(rounded)}`,
+    ...(rounded < 0 ? { loss: true as const } : {}),
+  });
+}
+
+/** The gold the ledger books against this row. */
+function rowGoldGain(
+  gains: ReadonlyMap<string, { readonly mean: number; readonly variance: number }>,
+  row: SemanticAddress,
+): Pick<WorkspaceRoomActionRow, 'goldGained'> {
+  const gain = gains.get(semanticAddressKey(row));
+  return gain === undefined || Math.round(gain.mean) === 0
+    ? {}
+    : { goldGained: goldGainLabel(gain) };
+}
+
 /**
  * The chance to afford as a whole percent, toned by the percent shown; only an
  * exact balance and price are certain either way.
@@ -1023,28 +1134,22 @@ function roomFigure(moments: GoldMoments, exact: boolean): WorkspaceGoldAmount {
 function roomGold(
   gold: GoldLedger | undefined,
   room: OccurrenceAddress,
-): Pick<WorkspaceRoomActions, 'current' | 'spending'> {
+): Pick<WorkspaceRoomActions, 'current'> {
   const priced = gold?.roomAt(room);
   if (priced?.availability !== 'available') return {};
-  const { doorsOpenBalance, purchases, spending } = priced.room;
-  return {
-    ...(doorsOpenBalance.availability === 'available'
-      ? {
-          current: roomFigure(doorsOpenBalance.balance, doorsOpenBalance.balance.variance === 0),
-        }
-      : {}),
-    ...(purchases.every((purchase) => purchase.venue === 'free')
-      ? {}
-      : {
-          spending: roomFigure(spending, spending.variance === 0 && spending.min === spending.max),
-        }),
-  };
+  const { doorsOpenBalance } = priced.room;
+  return doorsOpenBalance.availability === 'available'
+    ? { current: roomFigure(doorsOpenBalance.balance, doorsOpenBalance.balance.variance === 0) }
+    : {};
 }
 
 type PurchaseRowProducts = Pick<WorkspaceRoomActionRow, 'travelDealLine' | 'purchaseRemoval'>;
 
 /** An action added from a room object's Timeline entry rather than the optional actions. */
-function addedFromEntry(reference: RoomActionReference, roomLocal: WorkspaceRoomLocal): boolean {
+function addedFromEntry({
+  reference,
+  sourceFamily,
+}: Pick<WorkspaceRoomActionRow, 'reference' | 'sourceFamily'>): boolean {
   return (
     reference.kind === 'purchaseStygianWellOffer' ||
     reference.kind === 'sellPurgingPoolTrait' ||
@@ -1053,9 +1158,7 @@ function addedFromEntry(reference: RoomActionReference, roomLocal: WorkspaceRoom
     reference.kind === 'interactShopOffer' ||
     reference.kind === 'interactInfernalContractPedestal' ||
     reference.kind === 'purchaseHermesShrineOffer' ||
-    (roomLocal.kind === 'shop' &&
-      reference.kind === 'interactAcquisitionEntry' &&
-      reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY)
+    sourceFamily?.kind === 'shopTravelDealRefill'
   );
 }
 
@@ -1067,7 +1170,11 @@ function shopPurchaseRowProducts(
   input: WorkspaceOccurrenceActionsInput,
   roomLocal: WorkspaceRoomLocal,
   features: readonly WorkspaceRoomFeature[],
-): (reference: RoomActionReference, address: RoomActionSemanticAddress) => PurchaseRowProducts {
+): (
+  reference: RoomActionReference,
+  address: RoomActionSemanticAddress,
+  sourceFamily: WorkspaceRoomActionRow['sourceFamily'],
+) => PurchaseRowProducts {
   const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const shrineRefill = features.find(
     (feature): feature is Extract<WorkspaceRoomFeature, { readonly kind: 'hermesShrine' }> =>
@@ -1085,7 +1192,7 @@ function shopPurchaseRowProducts(
       : undefined;
   const removal = (command: NonNullable<PurchaseRowProducts['purchaseRemoval']>['command']) =>
     Object.freeze({ purchaseRemoval: Object.freeze({ command: Object.freeze(command) }) });
-  return (reference, address) => {
+  return (reference, address, sourceFamily) => {
     switch (reference.kind) {
       case 'interactShopOffer':
         return {
@@ -1100,9 +1207,7 @@ function shopPurchaseRowProducts(
           }),
         };
       case 'interactAcquisitionEntry':
-        return roomLocal.kind === 'shop' &&
-          reference.siteKey === 'roomExit' &&
-          reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY
+        return sourceFamily?.kind === 'shopTravelDealRefill'
           ? removal({ kind: 'RemoveRoomAction', action: address })
           : {};
       case 'interactInfernalContractPedestal':

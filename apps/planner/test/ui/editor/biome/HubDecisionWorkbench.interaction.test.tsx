@@ -224,7 +224,9 @@ describe('HubDecisionWorkbench interaction', () => {
           ? 'Rerolls'
           : row.classList.contains('hub-timeline-board')
             ? 'Board'
-            : 'Fountain',
+            : row.classList.contains('hub-timeline-stay-end')
+              ? 'Stay end'
+              : 'Fountain',
     );
     // Every stay offers rerolls with the card and recaps its open doors, the entry included.
     expect(rows.filter((row) => row.startsWith('Visit'))).toEqual(
@@ -253,9 +255,13 @@ describe('HubDecisionWorkbench interaction', () => {
     const fountains = details.querySelectorAll('.hub-timeline-fountain');
     expect(fountains).toHaveLength(1);
     expect(lists[0]!.contains(fountains[0]!)).toBe(true);
-    expect(within(lists[0]!).getByRole('button', { name: 'Move Fountain' })).toBeTruthy();
-    // A lone press has nowhere to move, so it has no Move.
-    expect(within(lists[1]!).queryByRole('button', { name: /^Move/ })).toBeNull();
+    expect(within(lists[0]!).getByRole('button', { name: 'Reorder Fountain' })).toBeTruthy();
+    // A lone press has nowhere to move: its handle stays, disabled.
+    expect(
+      within(lists[1]!)
+        .getByRole('button', { name: 'Reorder Reroll 1' })
+        .getAttribute('aria-disabled'),
+    ).toBe('true');
     // Clearing the order waits on removing its rerolls.
     const reset = within(details).getByRole('button', { name: 'Reset visits' });
     expect(reset).toHaveProperty('disabled', true);

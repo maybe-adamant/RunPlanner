@@ -8,14 +8,20 @@ import type { Catalog, TraitGiverDeclaration } from '@run-planner/engine/catalog
 
 import type { WorkspaceLauncherPresentation } from '../contracts/traits';
 
-/** The detail appears only when the label cannot show the chosen value in full. */
+/**
+ * The label names the launcher and its value (`Edit Trait · Ripple Effect`);
+ * the chip shows the value alone. The detail appears only when the label
+ * cannot show the chosen value in full.
+ */
 function presentation(
   label: string,
   detail?: string,
   traitKey?: string,
 ): WorkspaceLauncherPresentation {
+  const separator = label.indexOf(' · ');
   return Object.freeze({
     label,
+    ...(separator < 0 ? {} : { value: label.slice(separator + ' · '.length) }),
     ...(detail === undefined ? {} : { detail }),
     ...(traitKey === undefined ? {} : { traitKey }),
   });
@@ -76,11 +82,11 @@ export function anvilResultLauncherPresentation(
   catalog: Catalog,
   value: AuthoredAnvilResult | null,
 ): WorkspaceLauncherPresentation {
-  if (value === null) return presentation('Edit Anvil');
+  if (value === null) return presentation('Edit Anvil · Choose result');
   const removed =
     value.removedTraitKey === null
       ? 'No removal'
       : `Removes ${traitLabel(catalog, value.removedTraitKey)}`;
   const added = value.addedTraitKeys.map((traitKey) => traitLabel(catalog, traitKey)).join(', ');
-  return presentation('Edit Anvil', `${removed} · adds ${added || 'nothing'}`);
+  return presentation(`Edit Anvil · ${removed} · adds ${added || 'nothing'}`);
 }

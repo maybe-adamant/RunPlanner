@@ -32,7 +32,7 @@ import {
 
 afterEach(cleanup);
 
-const cellOrder = ['handle', 'ordinal', 'label', 'editors', 'actions'];
+const cellOrder = ['handle', 'label', 'editors', 'money', 'actions'];
 const multiLineEditors = [
   '.reward-wheel',
   '.transcendent-embryo-outcome-row',
@@ -41,7 +41,7 @@ const multiLineEditors = [
   '.room-overview-panel',
 ].join(', ');
 
-/** Every timeline list child is one row of the five fixed cells and two action slots. */
+/** Every timeline list child is one row of the five fixed cells; a placement sits in money. */
 function expectTimelineRows(root: HTMLElement, kinds: Set<string>): number {
   let rows = 0;
   for (const list of root.querySelectorAll<HTMLElement>('ol.room-action-list')) {
@@ -52,18 +52,16 @@ function expectTimelineRows(root: HTMLElement, kinds: Set<string>): number {
         [...row.children].map((cell) => cell.getAttribute('data-timeline-cell')),
         where,
       ).toEqual(cellOrder);
+      // The trailing cell holds at most the row's delete, so the right edge never shifts.
       const actions = row.querySelector(':scope > [data-timeline-cell="actions"]')!;
-      expect(
-        [...actions.children].map((slot) => slot.getAttribute('data-timeline-action-slot')),
-        where,
-      ).toEqual(['placement', 'delete']);
+      expect(actions.children.length, where).toBeLessThanOrEqual(1);
       const kind = row.getAttribute('data-timeline-row-kind') ?? '';
       kinds.add(kind);
       // Bands hold only single-line controls; multi-line editors continue below them.
       if (kind === 'boundary' || kind === 'checkpoint')
         expect(row.querySelector(multiLineEditors), where).toBeNull();
-      const restore = actions.querySelector('[aria-label="Restore required action"]');
-      if (restore?.parentElement?.getAttribute('data-timeline-action-slot') === 'placement')
+      const money = row.querySelector(':scope > [data-timeline-cell="money"]')!;
+      if (money.querySelector('[aria-label="Restore required action"]') !== null)
         kinds.add('restore-required');
       rows += 1;
     }
@@ -219,7 +217,7 @@ function targetsTimelineStructure(selector: string): boolean {
       .replace(/\([^()]*\)/g, '')
       .split(/\s*[>+~]\s*|\s+/)
       .pop() ?? '';
-  return /\.room-action-list|\.timeline-row|\.timeline-cell-|\[data-timeline-cell|\.timeline-action-slot/.test(
+  return /\.room-action-list|\.timeline-row(?![-\w])|\.timeline-cell-|\[data-timeline-cell/.test(
     subject,
   );
 }
@@ -229,21 +227,36 @@ describe('Room Timeline layout contract', () => {
     .flatMap(cssRules)
     .filter((rule) => rule.selectors.some(targetsTimelineStructure));
 
-  it('declares the column template only on the list and the shared row', () => {
+  it('declares the column template only on the list; rows and banner cells subgrid it', () => {
     const templates = timelineRules.filter((rule) =>
       /(^|;|\s)grid-template-columns\s*:/.test(rule.declarations),
     );
-    expect(templates.map((rule) => rule.selectors.join(', '))).toEqual(['.timeline-row']);
-    expect(templates[0]!.declarations).toContain('grid-template-columns: var(--timeline-columns);');
-    const list = timelineRules.find((rule) => rule.selectors.includes('.room-action-list'));
-    expect(list?.declarations).toContain(
-      '--timeline-columns: 28px 1.5rem minmax(0, 40fr) minmax(0, 60fr) 8rem;',
+    const own = templates.filter(
+      (rule) => !/grid-template-columns\s*:\s*subgrid\s*;/.test(rule.declarations),
+    );
+    expect(own.map((rule) => rule.selectors.join(', '))).toEqual(['.room-action-list']);
+    expect(own[0]!.declarations).toContain('grid-template-columns: var(--timeline-columns);');
+    expect(
+      templates.find((rule) => rule.selectors.join(', ') === '.timeline-row')?.declarations,
+    ).toContain('grid-template-columns: subgrid;');
+    // Handle, label, decisions, a spacer, money and the delete.
+    expect(own[0]!.declarations.replace(/\s+/g, ' ')).toContain(
+      '--timeline-columns: 28px max-content minmax(0, max-content) 1fr var(--timeline-money-width) var(--timeline-control-height);',
     );
   });
 
   it('never offsets a row or cell with its own inline-start margin or padding', () => {
     for (const rule of timelineRules) {
       if (rule.selectors.includes('.room-action-list')) continue;
+      // The Add area's object entries reuse the row cells as a flex line off the timeline grid.
+      if (rule.selectors.every((selector) => selector.startsWith('.room-add '))) continue;
+      // Every row's decisions keep one shared gap from the label; no row offsets itself alone.
+      if (
+        rule.selectors.join(', ').replace(/\s+/g, ' ') ===
+          ".timeline-row:not([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint']) > [data-timeline-cell='editors']" &&
+        rule.declarations.trim() === 'margin-inline-start: 0.5rem;'
+      )
+        continue;
       expect(rule.declarations, rule.selectors.join(', ')).not.toMatch(
         /(^|;|\s)(margin|padding)-(left|inline-start|inline)\s*:/,
       );
@@ -256,26 +269,32 @@ describe('Room Timeline layout contract', () => {
   });
 
   it('starts lifecycle banner titles at the handle column through a cell span', () => {
-    const source = styles['room-workbenches']!.replace(/\s+/g, ' ');
+    const source = styles['room-workbenches']!.replace(/\/\*[\s\S]*?\*\//g, '').replace(
+      /\s+/g,
+      ' ',
+    );
     const banner =
       ".timeline-row:is([data-timeline-row-kind='boundary'], [data-timeline-row-kind='checkpoint'])";
-    expect(source).toContain(`${banner} > [data-timeline-cell='label'] { grid-column: 1 / 4; }`);
     expect(source).toContain(
-      `${banner} > :is([data-timeline-cell='handle'], [data-timeline-cell='ordinal']) { display: none; }`,
+      `${banner} > [data-timeline-cell='label'] { grid-row: 1; grid-column: 1 / 5;`,
+    );
+    expect(source).toContain(
+      `${banner} > :is( [data-timeline-cell='handle'], [data-timeline-cell='money'], [data-timeline-cell='actions'] ) { display: none; }`,
     );
   });
 
-  it('moves editors and actions below the label in one narrow rule', () => {
+  it("moves a row's decisions below its label in one narrow rule", () => {
     const source = styles['room-workbenches']!;
-    const narrow = source.indexOf('@container timeline-list (max-width: 52rem)');
+    const narrow = source.indexOf('@container timeline-list (max-width: 46rem)');
     expect(narrow).toBeGreaterThan(0);
     expect(source.indexOf('@container timeline-list', narrow + 1)).toBe(-1);
     const block = source.slice(narrow, source.indexOf('\n}\n', narrow));
     expect(block).toContain(
-      "[data-timeline-cell='editors'] {\n    grid-row: 2;\n    grid-column: 3 / 5;",
+      "[data-timeline-cell='editors'] {\n    grid-row: 2;\n    grid-column: 2 / 6;",
     );
+    // Money and the delete stay on the label's line.
     expect(block).toContain(
-      "[data-timeline-cell='actions'] {\n    grid-row: 2;\n    grid-column: 5;",
+      "> :is([data-timeline-cell='money'], [data-timeline-cell='actions']) {\n    grid-row: 1;",
     );
   });
 });

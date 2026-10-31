@@ -1,4 +1,7 @@
-import type { RoomActionReference } from '@run-planner/engine/authored-project';
+import type {
+  AcquisitionEntrySourceFamily,
+  RoomActionReference,
+} from '@run-planner/engine/authored-project';
 import type { ResourceFamily } from '@run-planner/engine/catalog-schema';
 import { keepsakeArtwork } from '@planner/ui/controls/keepsakes/keepsakeArtwork';
 
@@ -6,6 +9,8 @@ import { biomeArtwork } from './biomes/biomeArtwork';
 import { elementArtwork } from './elements/elementArtwork';
 import { fountainArtwork } from './fountains/fountainArtwork';
 import { hubFountainArtwork } from './hub-fountains/hubFountainArtwork';
+import { rewardIcon } from './rewardIcon';
+import { traitIcon } from './traitArtwork';
 import { roomObjectArtwork } from './room-objects/roomObjectArtwork';
 import { gatheringToolArtwork } from './tools/gatheringToolArtwork';
 
@@ -43,8 +48,16 @@ export const erisIcon: string | undefined = keepsakeArtwork.EscalatingKeepsake ?
 export function roomActionIcon(
   reference: RoomActionReference,
   biomeKey: string,
+  sourceFamily?: AcquisitionEntrySourceFamily,
 ): string | undefined {
   switch (reference.kind) {
+    case 'interactShopOffer':
+      return rewardIcon('Shop');
+    case 'interactInfernalContractPedestal':
+      return traitIcon('InfernalContractBoon');
+    case 'interactAcquisitionEntry':
+      // The World Shop's Travel Deal refill is bought like its offers.
+      return sourceFamily?.kind === 'shopTravelDealRefill' ? rewardIcon('Shop') : undefined;
     case 'purchaseStygianWellOffer':
     case 'rerollStygianWell':
       return roomObjectIcon('stygianWell');

@@ -134,7 +134,7 @@ it.each([
         kind === 'delivery' || kind === 'ship'
           ? 'Restore delivery'
           : kind === 'artificer'
-            ? 'Item'
+            ? 'Artificer item'
             : 'Phial Target',
     });
     const selected = view.application.store.getState().editorSession.selectedFinding!;
@@ -171,7 +171,7 @@ it.each([
 
 it.each([
   ['composition', 'Room Overview', 'Customize encounter'],
-  ['figLeaf', 'Room Timeline', 'Skip with Fig Leaf'],
+  ['figLeaf', 'Room Timeline', 'Fig Leaf skip'],
 ] as const)('navigates an encounter %s finding to its %s control', async (kind, tab, control) => {
   const phase = createEncounterPhaseAddress(
     goldenFBiome,
@@ -217,7 +217,7 @@ it.each([
 });
 
 it.each([
-  ['gorgon', 'Gorgon Amulet: no Death Defiance'],
+  ['gorgon', 'No Death Defiance'],
   ['aetos', 'Aetos appearance'],
 ] as const)('navigates a P %s finding to its Timeline checkbox', async (kind, control) => {
   const fixture = reachedPOutdoorIcarusFixture();

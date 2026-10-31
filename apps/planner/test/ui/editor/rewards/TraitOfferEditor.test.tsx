@@ -974,6 +974,9 @@ describe('trait offer editor entry and dialog', () => {
     );
     const initialLauncher = screen.getByRole('button', { name: /Edit Hex/ });
     expect(initialLauncher.textContent).toBe(
+      initialInteraction.traitLabel(initialSelected.traitKey),
+    );
+    expect(initialLauncher.getAttribute('aria-label')).toBe(
       `Edit Hex · ${initialInteraction.traitLabel(initialSelected.traitKey)}`,
     );
     cleanup();
@@ -1085,6 +1088,9 @@ describe('trait offer editor entry and dialog', () => {
     );
     const changedLauncher = screen.getByRole('button', { name: /Edit Hex/ });
     expect(changedLauncher.textContent).toBe(
+      changedInteraction.traitLabel(changedSelected.traitKey),
+    );
+    expect(changedLauncher.getAttribute('aria-label')).toBe(
       `Edit Hex · ${changedInteraction.traitLabel(changedSelected.traitKey)}`,
     );
     application.store.dispatch(authoredProjectUndoRequested());

@@ -61,6 +61,14 @@ import {
 } from '@planner-test/support/biome-workbench';
 import { RouteShrinesPanel } from '@planner/ui/shell/RouteShrinesPanel';
 import { pickRoomObjectAction } from '@planner-test/support/occurrence-workbench';
+import {
+  addGroupButton,
+  findTimelineRow,
+  openAddGroup,
+  queryTimelineRow,
+  slotRow,
+  timelineRow,
+} from '@planner-test/support/timeline-rows';
 
 afterEach(cleanup);
 
@@ -168,9 +176,10 @@ describe('Hermes Shrine workbench', () => {
       screen.getByRole('button', { name: 'Hermes Shrine Offer 1 delivery delay' }).textContent,
     ).toContain('8');
     fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
-    await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Rush Big Heal · Slot 1');
-    const purchaseRow = screen.getByText('Rush Big Heal · Slot 1').closest('li');
-    if (purchaseRow === null) throw new Error('Shrine purchase row is missing');
+    await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Rush Big Heal');
+    const purchaseRow = timelineRow('Rush Big Heal');
+    // The slot is a badge on the row icon; the row's accessible text keeps it.
+    expect(purchaseRow.textContent).toContain('slot 1');
     // The row reads as the rush and deletes the purchase; no inner Rush checkbox.
     expect(within(purchaseRow).queryByRole('checkbox')).toBeNull();
     expect(
@@ -190,21 +199,23 @@ describe('Hermes Shrine workbench', () => {
             'initial:first',
           ),
     );
-    expect(deliveryRow?.label).toBe('Collect Big Heal · Delivery');
+    expect(deliveryRow?.label).toBe('Collect Big Heal');
+    expect(deliveryRow?.labelParts?.origin).toBe('Delivered from the Hermes Shrine');
     expect(deliveryRow?.rewardPayload?.control.offer).toMatchObject({ rewardType: 'HealBigDrop' });
     // A rushed item is optional loot: ranked by default, removable, and re-addable.
     expect(deliveryRow).toMatchObject({ participation: 'optional' });
     fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
-    const timelineRow = screen.getByText('Collect Big Heal · Delivery').closest('li');
-    if (timelineRow === null) throw new Error('rushed delivery timeline row is missing');
-    expect(within(timelineRow).queryByText('required')).toBeNull();
-    const remove = within(timelineRow).getByRole('button', {
-      name: 'Remove Collect Big Heal · Delivery from timeline',
+    const deliveryTimelineRow = timelineRow('Collect Big Heal');
+    expect(within(deliveryTimelineRow).queryByText('required')).toBeNull();
+    const remove = within(deliveryTimelineRow).getByRole('button', {
+      name: 'Remove Collect Big Heal from timeline',
     });
     expect(remove).toHaveProperty('disabled', false);
     await view.user.click(remove);
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Add Collect Big Heal · Delivery' })).toBeTruthy(),
+    // The removed delivery returns to the Add area beside its Shrine.
+    await waitFor(() => expect(addGroupButton('Hermes Shrine')).toBeTruthy());
+    expect((await openAddGroup(view.user, 'Hermes Shrine')).textContent).toContain(
+      'Collect Big Heal',
     );
     expect(
       application.store
@@ -248,7 +259,7 @@ describe('Hermes Shrine workbench', () => {
     expect(screen.queryByText('Eventual God')).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Rush Mystery Boon · Slot 3');
+    await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Rush Mystery Boon');
     const entryKey = hermesShrineDeliveryEntryKey(owner, 'initial:secondRight');
     const entry = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(owner, 'hermesShrineDelivery'),
@@ -269,8 +280,7 @@ describe('Hermes Shrine workbench', () => {
         .find((item) => item.label === 'Apollo'),
     ).toMatchObject({ state: 'possible', disabled: false });
 
-    const deliveryRow = screen.getByText('Collect Mystery Boon · Delivery').closest('li');
-    if (deliveryRow === null) throw new Error('rushed Mystery Boon delivery row is missing');
+    const deliveryRow = timelineRow('Collect Mystery Boon');
     await view.user.click(within(deliveryRow).getByRole('button', { name: 'Reward' }));
     expect(await screen.findByText('Eventual God')).toBeTruthy();
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
@@ -285,29 +295,38 @@ describe('Hermes Shrine workbench', () => {
       }),
     );
 
-    const resolvedDeliveryRow = screen.getByText(/^Collect Mystery Boon/).closest('li');
-    if (resolvedDeliveryRow === null)
-      throw new Error('resolved rushed Mystery Boon delivery row is missing');
+    const resolvedDeliveryRow = timelineRow(/^Collect Mystery Boon/);
     expect(within(resolvedDeliveryRow).queryByText('Collect Mystery Boon · Apollo')).toBeNull();
+    // The god picker stands in the label after the Mystery Boon; decisions follow it.
+    const label = resolvedDeliveryRow.querySelector<HTMLElement>(
+      ':scope > [data-timeline-cell="label"]',
+    );
     const inlineEditors = resolvedDeliveryRow.querySelector<HTMLElement>(
       ':scope > [data-timeline-cell="editors"]',
     );
-    if (inlineEditors === null) throw new Error('Mystery Boon inline editors are missing');
-    const sourcePicker = within(inlineEditors).getByRole('button', { name: 'Reward' });
+    if (label === null || inlineEditors === null)
+      throw new Error('Mystery Boon label or inline editors are missing');
+    expect(within(label).getByRole('img', { name: 'Mystery Boon' })).toBeTruthy();
+    const sourcePicker = within(label).getByRole('button', { name: 'Reward' });
     expect(sourcePicker.textContent).toContain('Apollo');
     expect(sourcePicker.textContent).not.toContain('Mystery Boon');
     expect(within(inlineEditors).getByRole('button', { name: /Trait/ })).toBeTruthy();
-    const ordering = resolvedDeliveryRow.querySelector(':scope > [data-timeline-cell="actions"]');
-    expect(ordering).not.toBeNull();
+    const handle = resolvedDeliveryRow.querySelector<HTMLElement>(
+      ':scope > [data-timeline-cell="handle"]',
+    );
+    const ordering = resolvedDeliveryRow.querySelector<HTMLElement>(
+      ':scope > [data-timeline-cell="actions"]',
+    );
+    if (handle === null || ordering === null) throw new Error('row handle or actions missing');
     expect(
-      within(ordering as HTMLElement).getByRole('button', { name: /^Move Collect Mystery Boon/ }),
+      within(handle).getByRole('button', { name: /^Reorder Collect Mystery Boon/ }),
     ).toBeTruthy();
     expect(
-      within(ordering as HTMLElement).getByRole('button', {
+      within(ordering).getByRole('button', {
         name: /^Remove Collect Mystery Boon.* from timeline$/,
       }),
     ).toBeTruthy();
-    expect(ordering?.contains(sourcePicker)).toBe(false);
+    expect(ordering.contains(sourcePicker)).toBe(false);
     expect(
       resolvedDeliveryRow
         .querySelector('.acquisition-entry-resolution')
@@ -368,12 +387,11 @@ describe('Hermes Shrine workbench', () => {
       occurrence(oOccurrenceIds.devotion),
     );
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const delivery = screen.getByText('Collect Mystery Boon · Delivery').closest('li');
+    const delivery = timelineRow('Collect Mystery Boon');
     if (delivery === null) throw new Error('unplaced Mystery delivery row is missing');
     expect(within(delivery).queryByRole('button', { name: 'Reward' })).toBeNull();
     await view.user.click(within(delivery).getByRole('button', { name: 'Restore delivery' }));
-    const placedDelivery = await screen.findByText('Collect Mystery Boon · Delivery');
-    const placedDeliveryRow = placedDelivery.closest('li');
+    const placedDeliveryRow = await findTimelineRow('Collect Mystery Boon');
     if (placedDeliveryRow === null) throw new Error('placed Mystery delivery row is missing');
 
     const sourceInteraction = workspaceProjection(view.application).interactions.rewards.get(
@@ -443,7 +461,7 @@ describe('Hermes Shrine workbench', () => {
       ),
     );
     fireEvent.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    const delivery = screen.getByText('Collect Mystery Boon · Delivery').closest('li');
+    const delivery = timelineRow('Collect Mystery Boon');
     if (delivery === null) throw new Error('flushed Mystery delivery row is missing');
     await view.user.click(within(delivery).getByRole('button', { name: 'Reward' }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
@@ -586,7 +604,7 @@ describe('Hermes Shrine workbench', () => {
       application,
     );
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const delivery = screen.getByText(/^Collect Mystery Boon/).closest('li');
+    const delivery = timelineRow(/^Collect Mystery Boon/);
     if (delivery === null) throw new Error('reloaded Mystery delivery row is missing');
     await view.user.click(within(delivery).getByRole('button', { name: 'Reward' }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Zeus'));
@@ -622,7 +640,7 @@ describe('Hermes Shrine workbench', () => {
     );
 
     await view.user.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const deliveryRow = screen.getByText('Collect Big Heal · Delivery').closest('li');
+    const deliveryRow = timelineRow('Collect Big Heal');
     if (deliveryRow === null) throw new Error('delayed delivery row is missing');
     expect(within(deliveryRow).queryByRole('button', { name: 'Remove action' })).toBeNull();
     await view.user.click(within(deliveryRow).getByRole('button', { name: 'Restore delivery' }));
@@ -665,7 +683,7 @@ describe('Hermes Shrine workbench', () => {
       application,
     );
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const delivery = screen.getByText('Collect Max Health · Delivery').closest('li');
+    const delivery = timelineRow('Collect Max Health');
     if (delivery === null) throw new Error('N side-room delivery row is missing');
     expect(within(delivery).getByRole('button', { name: 'Restore delivery' })).toBeTruthy();
     expect(
@@ -776,7 +794,7 @@ describe('Hermes Shrine workbench', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Combat 1 Timeline' }));
     expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
-    const refillRow = () => screen.getByText(/· Travel Deal Offer$/).closest('li')!;
+    const refillRow = () => timelineRow(/Travel Deal Offer$/);
     expect(within(refillRow()).queryByRole('checkbox')).toBeNull();
 
     const remove = within(refillRow()).getByRole('button', { name: /^Remove .* from timeline$/ });
@@ -785,7 +803,7 @@ describe('Hermes Shrine workbench', () => {
     expect(shrine().hermesShrine?.travelDealRefill).toEqual({
       offer: { rewardType: 'ArmorBoost', delay: 4 },
     });
-    expect(screen.queryByText(/· Travel Deal Offer$/)).toBeNull();
+    expect(queryTimelineRow(/Travel Deal Offer$/)).toBeNull();
   });
 
   it('authors the refill on the first rushed purchase row only while Travel Deal applies', async () => {
@@ -841,7 +859,8 @@ describe('Hermes Shrine workbench', () => {
     openOverview();
     expect(screen.queryByRole('button', { name: 'Hermes Shrine Travel Deal Item' })).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const sourceRow = () => screen.getByText(/· Slot 1$/).closest('li')!;
+    // The slot shows as a badge on the row icon; the row's accessible text keeps it.
+    const sourceRow = () => slotRow(1);
     const travelDealLine = () => screen.getByRole('listitem', { name: 'Travel Deal' });
     const line = travelDealLine();
     expect(line.previousElementSibling).toBe(sourceRow());
@@ -858,7 +877,7 @@ describe('Hermes Shrine workbench', () => {
     expect(shrine().roomActions.order).toContainEqual(
       expect.objectContaining({ generationKey: 'travelDealRefill' }),
     );
-    const refillRow = screen.getByText(/· Travel Deal Offer$/).closest('li')!;
+    const refillRow = timelineRow(/Travel Deal Offer$/);
     await view.user.click(
       within(refillRow).getByRole('button', { name: /^Remove .* from timeline$/ }),
     );
@@ -867,13 +886,17 @@ describe('Hermes Shrine workbench', () => {
     );
 
     // Without the rushed source purchase Travel Deal does not apply.
+    const sourceAction = within(sourceRow())
+      .getByRole('button', { name: /^Reorder / })
+      .getAttribute('aria-label')!
+      .slice('Reorder '.length);
     await view.user.click(
       within(sourceRow()).getByRole('button', { name: /^Remove .* from timeline$/ }),
     );
     expect(screen.queryByRole('listitem', { name: 'Travel Deal' })).toBeNull();
     expect(stockedRefill?.rewardType).toBe('ArmorBoost');
     expect(shrine().hermesShrine?.travelDealRefill?.offer).toEqual(stockedRefill);
-    await pickRoomObjectAction(view.user, 'Hermes Shrine', /^Rush .*· Slot 1$/);
+    await pickRoomObjectAction(view.user, 'Hermes Shrine', sourceAction);
     expect(travelDealLine().previousElementSibling).toBe(sourceRow());
   });
 

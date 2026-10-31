@@ -78,6 +78,37 @@ export interface WorkspaceRoomActionRow {
   readonly address: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
   readonly key: string;
   readonly label: string;
+  /** Where the room's Add area offers this action while it is optional and unplaced. */
+  readonly addGroup?: {
+    readonly key: string;
+    readonly label: string;
+    readonly object?: 'worldShop' | 'hermesShrine';
+  };
+  /** Engine-published source of a generated pickup; absent for every other action. */
+  readonly sourceFamily?: import('@run-planner/engine/authored-project').AcquisitionEntrySourceFamily;
+  /** The inventory slot bought from, shown as a badge on the row icon. */
+  readonly slot?: number;
+  /** A Travel Deal refill purchase, marked on its icon; `shownLabel` drops the offer name. */
+  readonly travelDeal?: true;
+  readonly shownLabel?: string;
+  /**
+   * The label in parts: its verb, the name an inline source picker can replace,
+   * a tag naming where in the room it happens, and what produced the pickup.
+   */
+  readonly labelParts?: {
+    readonly verb?: string;
+    readonly name: string;
+    readonly tag?: string;
+    readonly origin?: string;
+    /** The reward the name stands for; the row shows it as an icon with the name as its title. */
+    readonly reward?: {
+      readonly offer: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+      /** A quality variant (Boosted), marked on the icon. */
+      readonly boosted: boolean;
+      /** A shop item's own key, whose artwork can differ from its reward type's. */
+      readonly itemKey?: string;
+    };
+  };
   readonly marker: WorkspaceMarker;
   readonly proposalKeys: readonly string[];
   readonly reference: RoomActionReference;
@@ -141,6 +172,8 @@ export interface WorkspaceRoomActionRow {
   readonly travelDealLine?: WorkspaceTravelDealLine;
   /** What this purchase costs; absent for a free item or where the plan is not evaluated. */
   readonly price?: WorkspaceGoldAmount;
+  /** Gold this row gains or loses, from the ledger. */
+  readonly goldGained?: WorkspaceGoldAmount & { readonly loss?: true };
   /** The chance the gold held covers the price; absent where the gold held is unknown. */
   readonly affordability?: WorkspacePurchaseAffordability;
   /** Undoes this purchase or collect with its own command. */
@@ -196,8 +229,11 @@ export interface WorkspaceRoomActions {
   readonly transcendentEmbryo?: readonly WorkspaceTranscendentEmbryoControl[];
   /** Gold held when the doors open; absent when the ledger cannot say. */
   readonly current?: WorkspaceGoldAmount;
-  /** What the room's purchases cost together; absent when it pays for nothing or is not reached. */
-  readonly spending?: WorkspaceGoldAmount;
+  /** Gold an encounter phase itself settles (a Nemesis bet), shown on its encounter line. */
+  readonly phaseGold?: readonly {
+    readonly phaseKey: string;
+    readonly gold: WorkspaceGoldAmount & { readonly loss?: true };
+  }[];
 }
 
 export type WorkspaceRoomLifecycleBoundary =
@@ -207,6 +243,32 @@ export type WorkspaceRoomLifecycleBoundary =
   | { readonly kind: 'encounterEnd'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'nextPhase'; readonly key: string; readonly wheelKey: string }
   | { readonly kind: 'cleanup'; readonly key: 'cleanup' };
+
+/**
+ * The encounter controls of one phase banner. Its start hosts the identity and what
+ * is settled as the encounter starts (Fig Leaf, Aetos, Gorgon); its end hosts what the
+ * finished encounter settled (the kill race, an Anomaly's capture point).
+ */
+export type WorkspaceEncounterBannerSupplement =
+  | {
+      readonly kind: 'encounterStart';
+      readonly phase: WorkspaceEncounterPhase;
+      /**
+       * Phase role (when the room has several and no cage names it) and encounter name
+       * of a definitional encounter start; absent for an encounter settled on entry by
+       * interaction (Nemesis event, Empty).
+       */
+      readonly identityLabel?: string;
+      /** The phase has no end banner, so its start banner also hosts its end controls. */
+      readonly endControls?: true;
+    }
+  | {
+      readonly kind: 'encounterEnd';
+      /** Present when the phase has a kill-race outcome. */
+      readonly phase?: WorkspaceEncounterPhase;
+      /** The Anomaly's capture-point outcome, decided before its reward. */
+      readonly anomalyCleared?: true;
+    };
 
 export type WorkspaceRoomLifecycleTimelineEntry =
   | {
@@ -221,16 +283,8 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly rank: number;
       readonly placement: 'before' | 'after';
       readonly runState?: WorkspaceRunStateLauncher;
-      /** Exact projected child placed at this lifecycle seam. */
-      readonly supplement?: {
-        readonly kind: 'encounter';
-        readonly phase: WorkspaceEncounterPhase;
-        /**
-         * Settled identity named in the banner of a definitional encounter start; absent
-         * for an encounter settled on entry by interaction (Nemesis event, Empty).
-         */
-        readonly identityLabel?: string;
-      };
+      /** Exact projected encounter controls this banner hosts. */
+      readonly supplement?: WorkspaceEncounterBannerSupplement;
       /** Read-only identity of the cage assigned to this encounter cycle. */
       readonly fieldsCage?: WorkspaceFieldsCageLabel;
     }
@@ -321,9 +375,10 @@ export interface WorkspaceFountainRarityControl {
   readonly targetTraitKey?: string;
   /**
    * `unreached` while the engine has not evaluated this fountain use;
-   * `noTargetRequired` when it has and no boon can be targeted. The picker waits.
+   * `noPhial` when no unused Phial reaches it; `noTargetRequired` when one
+   * does and no boon can be targeted. The picker waits.
    */
-  readonly pending?: 'unreached' | 'noTargetRequired';
+  readonly pending?: 'unreached' | 'noPhial' | 'noTargetRequired';
 }
 
 export interface WorkspaceFountainRarityDomain {
@@ -348,12 +403,23 @@ export interface WorkspaceFountainRarityInteraction {
 
 export interface WorkspaceFieldsCageLabel {
   readonly label: string;
+  /** The cage's own name ("Cage 1"), shown as a tag. */
+  readonly cage: string;
+  /** The cage's reward, shown as an icon beside its tag. */
+  readonly offer?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
   /** The cage action the label stands for; absent while that action is its own row. */
   readonly owner?: RoomActionAddress;
 }
 
 export interface WorkspaceFieldsCageOrderControl {
-  readonly choices: readonly { readonly phaseKey: string; readonly label: string }[];
+  readonly choices: readonly {
+    readonly phaseKey: string;
+    /** The cage's name ("Cage 1"); its reward shows as an icon beside it. */
+    readonly label: string;
+    /** The cage with its reward named, for the accessible name. */
+    readonly fullLabel: string;
+    readonly offer?: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
+  }[];
   readonly phaseKeys: readonly string[];
   readonly unavailableReason?: string;
 }
