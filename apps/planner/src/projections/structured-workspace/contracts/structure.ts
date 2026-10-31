@@ -583,10 +583,10 @@ export interface WorkspaceOccurrenceStage {
 export interface WorkspaceHubVisitRailEntry {
   readonly key: string;
   readonly label: string;
-  /** The visited room's one primary reward, never an aggregate of local detail rewards. */
-  readonly mainReward?: WorkspaceRailReward;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceOccurrenceWorkbenchNode;
+  /** The visited room and the rewards its door offers, presented as a decision's selected room. */
+  readonly room: WorkspaceRailSelectedTarget;
   /** Entered local occurrences owned by this main Hub visit. */
   readonly sideVisits: readonly WorkspaceHubSideVisitRailEntry[];
   readonly visitMarker: WorkspaceMarker;

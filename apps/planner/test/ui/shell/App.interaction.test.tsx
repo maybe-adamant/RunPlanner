@@ -1037,7 +1037,7 @@ describe('planner history interaction', () => {
     await view.user.click(hubRailButton);
     await view.user.click(
       screen.getByRole('button', {
-        name: new RegExp(`^Visit ${visit.visitIndex} · ${visit.node.room.label}`),
+        name: new RegExp(`^Visit ${visit.visitIndex}(?!\\d).*${visit.node.room.label}`),
       }),
     );
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));

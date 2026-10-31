@@ -972,9 +972,9 @@ describe('BiomeWorkspace', () => {
     expect(hubHeading?.querySelector('.biome-rail-status')?.textContent).toContain('Evaluated');
     expect(hub.querySelector('.biome-rail-kicker')).toBeNull();
 
-    const visit = screen.getByRole('button', { name: /Visit 3 · Combat 02/ });
+    const visit = screen.getByRole('button', { name: /Visit 3.*Combat 02/ });
     const visitHeading = visit.querySelector('.biome-rail-heading');
-    expect(visitHeading?.querySelector('strong')?.textContent).toBe('Visit 3 · Combat 02');
+    expect(visitHeading?.querySelector('strong')?.textContent).toBe('Visit 3');
     expect(visitHeading?.querySelector('.biome-rail-status')?.textContent).toContain('Evaluated');
     expect(visit.querySelector('.biome-rail-kicker')).toBeNull();
   });
@@ -1014,7 +1014,7 @@ describe('BiomeWorkspace', () => {
       opening.mainReward === undefined ||
       preHubDecision?.kind !== 'node' ||
       preHubDecision.selectedTarget?.reward === undefined ||
-      firstVisit?.mainReward === undefined
+      firstVisit?.room.reward === undefined
     ) {
       throw new Error('Ephyra rail primary-reward entries are missing');
     }
@@ -1033,7 +1033,7 @@ describe('BiomeWorkspace', () => {
       railButtonForMarker(view.container, firstVisit.marker.focusKey).querySelector(
         '.biome-rail-selection',
       )?.textContent,
-    ).toContain(firstVisit.mainReward.label);
+    ).toContain(firstVisit.room.reward.label);
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     expect(
@@ -1095,7 +1095,7 @@ describe('BiomeWorkspace', () => {
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     expect(screen.getByRole('button', { name: 'Combat 02: Visit 3, step 4.' })).toBeTruthy();
 
-    const visit = screen.getByRole('button', { name: /Visit 3 · Combat 02/ });
+    const visit = screen.getByRole('button', { name: /Visit 3.*Combat 02/ });
     act(() => visit.focus());
     await view.user.keyboard('{Enter}');
 
@@ -1173,7 +1173,7 @@ describe('BiomeWorkspace', () => {
   it('summarizes the Hub door reward in Overview without exposing another editor', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
-    await view.user.click(screen.getByRole('button', { name: /Visit 3 · Combat 02/ }));
+    await view.user.click(screen.getByRole('button', { name: /Visit 3.*Combat 02/ }));
 
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
@@ -1191,7 +1191,7 @@ describe('BiomeWorkspace', () => {
   it('keeps Hub visit and board focus represented by the nested rail', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
-    const railVisit = screen.getByRole('button', { name: /Visit 3 · Combat 02/ });
+    const railVisit = screen.getByRole('button', { name: /Visit 3.*Combat 02/ });
 
     act(() =>
       view.application.store.dispatch(
@@ -1213,7 +1213,7 @@ describe('BiomeWorkspace', () => {
       'true',
     );
     expect(hubRailButton().dataset.selected).toBe('true');
-    expect(screen.getByRole('button', { name: /Visit 3 · Combat 02/ }).dataset.selected).toBe(
+    expect(screen.getByRole('button', { name: /Visit 3.*Combat 02/ }).dataset.selected).toBe(
       'false',
     );
 
@@ -1226,7 +1226,7 @@ describe('BiomeWorkspace', () => {
       'true',
     );
     expect(hubRailButton().dataset.selected).toBe('true');
-    expect(screen.getByRole('button', { name: /Visit 3 · Combat 02/ }).dataset.selected).toBe(
+    expect(screen.getByRole('button', { name: /Visit 3.*Combat 02/ }).dataset.selected).toBe(
       'false',
     );
   });

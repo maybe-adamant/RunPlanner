@@ -29,6 +29,7 @@ import {
   createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
   loadSurfaceNProject,
   loadSurfaceNPartialHubProject,
+  loadSurfaceNStoryBoardProject,
   loadSurfaceNOPQProject,
   nBiome,
   nLocalOccurrenceId,
@@ -368,7 +369,7 @@ describe('structured workspace biome presentation', () => {
       throw new Error('first Hub visit has no slot-owned door reward');
     }
     expect(firstVisit.node.incomingDoor).toBe(firstVisitSlot?.door);
-    expect(firstVisit.mainReward).toEqual({
+    expect(firstVisit.room.reward).toEqual({
       label: firstDoorReward.summary,
       offer: firstDoorReward.offer,
     });
@@ -780,11 +781,39 @@ describe('structured workspace biome presentation', () => {
     expect(biome.completionOutline).toEqual([]);
   });
 
+  it('presents a Hub story visit with its NPC like a decision story room', () => {
+    const hub = hubRailEntry(
+      present(loadSurfaceNStoryBoardProject(), 'Surface', 'N').presentation.biome.rail,
+    );
+    const medea = hub.visits.find((visit) => visit.node.room.gameName === 'N_Story01');
+    const circe = fixedRewardBiome.rail.find(
+      (entry) =>
+        entry.kind === 'node' &&
+        entry.node.kind !== 'occurrenceWorkbench' &&
+        entry.selectedTarget?.roomIcon.kind === 'story',
+    );
+    if (medea === undefined || circe?.kind !== 'node' || circe.selectedTarget === undefined) {
+      throw new Error('story rooms are missing from the rail');
+    }
+
+    expect(medea.label).toBe(`Visit ${medea.visitIndex}`);
+    expect(medea.room).toMatchObject({
+      roomIcon: { kind: 'story', npcKey: 'Medea' },
+      roomLabel: 'Medea',
+      reward: { label: 'Story' },
+    });
+    expect(circe.selectedTarget).toMatchObject({
+      roomIcon: { kind: 'story', npcKey: 'Circe' },
+      roomLabel: 'Circe',
+      reward: { label: 'Story' },
+    });
+  });
+
   it('reprojects only authored Hub visit children after replacement and truncation', () => {
     const initial = loadSurfaceNPartialHubProject();
     const labels = (project: ProjectDocument) =>
       hubRailEntry(present(project, 'Surface', 'N').presentation.biome.rail).visits.map(
-        (visit) => visit.label,
+        (visit) => `${visit.label} · ${visit.room.roomLabel}`,
       );
 
     expect(labels(initial)).toEqual([

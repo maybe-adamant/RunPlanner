@@ -299,9 +299,11 @@ function RailFrontier({
 }
 
 function HubRailVisit({
+  biomeKey,
   selectedRailKey,
   visit,
 }: {
+  readonly biomeKey: string;
   readonly selectedRailKey: string | undefined;
   readonly visit: Extract<WorkspaceRailEntry, { readonly kind: 'hubGroup' }>['visits'][number];
 }) {
@@ -316,7 +318,7 @@ function HubRailVisit({
             <FindingCount count={visit.visitMarker.findingCount} label="findings" />
           </span>
         </span>
-        {visit.mainReward === undefined ? null : <RailMainReward reward={visit.mainReward} />}
+        <RailSelectedTarget biomeKey={biomeKey} selectedTarget={visit.room} />
       </FocusButton>
       {visit.sideVisits.length === 0 ? null : (
         <ol aria-label={`${visit.label} side rooms`} className="biome-hub-rail-side-visits">
@@ -347,9 +349,11 @@ function HubRailVisit({
 }
 
 function HubRailGroup({
+  biomeKey,
   entry,
   selectedRailKey,
 }: {
+  readonly biomeKey: string;
   readonly entry: Extract<WorkspaceRailEntry, { readonly kind: 'hubGroup' }>;
   readonly selectedRailKey: string | undefined;
 }) {
@@ -376,7 +380,12 @@ function HubRailGroup({
       {entry.visits.length === 0 ? null : (
         <ol aria-label="Hub visits" className="biome-hub-rail-visits">
           {entry.visits.map((visit) => (
-            <HubRailVisit key={visit.key} selectedRailKey={selectedRailKey} visit={visit} />
+            <HubRailVisit
+              biomeKey={biomeKey}
+              key={visit.key}
+              selectedRailKey={selectedRailKey}
+              visit={visit}
+            />
           ))}
         </ol>
       )}
@@ -397,7 +406,7 @@ function RailEntry({
     case 'node':
       return <RailNode biomeKey={biomeKey} entry={entry} selectedRailKey={selectedRailKey} />;
     case 'hubGroup':
-      return <HubRailGroup entry={entry} selectedRailKey={selectedRailKey} />;
+      return <HubRailGroup biomeKey={biomeKey} entry={entry} selectedRailKey={selectedRailKey} />;
     case 'frontier':
       return <RailFrontier frontier={entry.frontier} selectedRailKey={selectedRailKey} />;
   }

@@ -289,25 +289,24 @@ function railRoomIcon(catalog: Catalog, room: WorkspaceRoomSummary): WorkspaceRa
   }
 }
 
-function selectedTargetRailPresentation(
+/**
+ * One rail room line for every room reached through a door, whether a
+ * decision's selected target or a Hub visit: the room's own icon and label,
+ * then the rewards its door offers. A room without a door shows no reward.
+ */
+function roomRailPresentation(
   catalog: Catalog,
-  node: BatchWithContinuations,
-): WorkspaceRailSelectedTarget | undefined {
-  const door = node.selectedContinuation?.door;
-  if (door === undefined) return undefined;
-  const visible = door.offerRewardSurface;
+  room: WorkspaceRoomSummary,
+  door: WorkspaceDoorContract | undefined,
+  exitTypeKey?: string,
+): WorkspaceRailSelectedTarget {
+  const rewards = door?.offerRewardSurface.rewards ?? [];
   const onlyReward =
-    visible.visibility === 'visible' && visible.rewards.length === 1
-      ? visible.rewards[0]
+    door?.offerRewardSurface.visibility === 'visible' && rewards.length === 1
+      ? rewards[0]
       : undefined;
   const reward = onlyReward === undefined ? undefined : railRewardForDoorReward(onlyReward);
-  const exitTypeKey =
-    node.chaos?.door === door
-      ? node.chaos.exitTypeKey
-      : node.zagreusContract?.door === door
-        ? node.zagreusContract.exitTypeKey
-        : undefined;
-  const clockworkGoalsRemaining = door.offerRewardSurface.rewards.find(
+  const clockworkGoalsRemaining = rewards.find(
     (candidate) => candidate.clockworkGoalsRemaining !== undefined,
   )?.clockworkGoalsRemaining;
   return Object.freeze({
@@ -315,15 +314,30 @@ function selectedTargetRailPresentation(
     ...(clockworkGoalsRemaining === undefined ? {} : { clockworkGoalsRemaining }),
     ...(reward === undefined ? {} : { reward }),
     roomRewards: Object.freeze(
-      door.offerRewardSurface.rewards.flatMap((candidate) => {
+      rewards.flatMap((candidate) => {
         const offer = candidate.rerolledOffer ?? candidate.offer;
         return offer === null ? [] : [offer];
       }),
     ),
-    roomIcon: railRoomIcon(catalog, door.room),
-    roomLabel: door.room.label,
-    ...(door.room.roomLocal.kind === 'shop' ? { shop: true as const } : {}),
+    roomIcon: railRoomIcon(catalog, room),
+    roomLabel: room.label,
+    ...(room.roomLocal.kind === 'shop' ? { shop: true as const } : {}),
   });
+}
+
+function selectedTargetRailPresentation(
+  catalog: Catalog,
+  node: BatchWithContinuations,
+): WorkspaceRailSelectedTarget | undefined {
+  const door = node.selectedContinuation?.door;
+  if (door === undefined) return undefined;
+  const exitTypeKey =
+    node.chaos?.door === door
+      ? node.chaos.exitTypeKey
+      : node.zagreusContract?.door === door
+        ? node.zagreusContract.exitTypeKey
+        : undefined;
+  return roomRailPresentation(catalog, door.room, door, exitTypeKey);
 }
 
 function railFocusMarkerForNode(node: WorkspaceNode, marker: WorkspaceMarker): WorkspaceMarker {
@@ -348,6 +362,7 @@ function railFocusMarkerForNode(node: WorkspaceNode, marker: WorkspaceMarker): W
  * React join visits to occurrences or infer which Hub rooms are shown.
  */
 function projectHubRailEntry(
+  catalog: Catalog,
   node: WorkspaceHubDecisionNode,
   structuralNodes: readonly WorkspaceNode[],
 ): WorkspaceHubRailEntry {
@@ -378,7 +393,6 @@ function projectHubRailEntry(
         `Hub visit ${visit.visitIndex} must use a room-local workbench presentation`,
       );
     }
-    const mainReward = mainRailRewardForDoor(visit.door);
     const localVisit = workbench.localVisit;
     const sideVisits = Object.freeze(
       localVisit === undefined
@@ -421,10 +435,10 @@ function projectHubRailEntry(
     visits.push(
       Object.freeze({
         key: `${node.key}:visit:${visit.visitIndex}`,
-        label: `Visit ${visit.visitIndex} · ${visit.room.label}`,
-        ...(mainReward === undefined ? {} : { mainReward }),
+        label: `Visit ${visit.visitIndex}`,
         marker: workbench.room.marker,
         node: workbench,
+        room: roomRailPresentation(catalog, workbench.room, visit.door),
         sideVisits,
         visitIndex: visit.visitIndex,
         visitMarker: visit.marker,
@@ -522,7 +536,7 @@ export function presentWorkspaceBiome(
       : undefined;
   let decisionIndex = 0;
   const railEntryForNode = (node: WorkspaceNode): WorkspaceRailEntry => {
-    if (node.kind === 'hubDecision') return projectHubRailEntry(node, structuralNodes);
+    if (node.kind === 'hubDecision') return projectHubRailEntry(catalog, node, structuralNodes);
     if (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') {
       decisionIndex += 1;
       const presentation = nodeRailPresentation(node, decisionIndex, node.key === entry?.key);
@@ -562,12 +576,7 @@ export function presentWorkspaceBiome(
         : node.kind === 'occurrenceWorkbench' &&
             mainReward === undefined &&
             node.room.roomLocal.kind === 'shop'
-          ? Object.freeze({
-              roomIcon: railRoomIcon(catalog, node.room),
-              roomLabel: node.room.label,
-              roomRewards: Object.freeze([]),
-              shop: true as const,
-            })
+          ? roomRailPresentation(catalog, node.room, undefined)
           : undefined;
     return Object.freeze({
       kind: 'node' as const,
