@@ -471,6 +471,12 @@ export interface EncounterEnvelopeSlot {
    */
   readonly activationRequirement?: RequirementExpression;
   readonly rewardAttachment?: EncounterSlotRewardAttachment;
+  /**
+   * The slot whose encounter's money store this slot's kills drain. Native
+   * pays kill gold from the room's own encounter, and a slot started beside it
+   * (a Fields cage) never becomes that encounter; absent, a phase drains its own.
+   */
+  readonly moneyStoreSlotKey?: string;
 }
 
 /**
@@ -497,6 +503,11 @@ export interface EncounterMoneyStore {
   readonly capMax: number;
   /** Gold added per run depth before the money multiplier. */
   readonly runDepthRamp: number;
+  /**
+   * A store set in the encounter's data rather than drawn at the door: the
+   * value is `capMin`, with no ramp and no money multiplier.
+   */
+  readonly undrawn?: true;
 }
 
 export interface EncounterDefinition {
@@ -615,6 +626,28 @@ export interface EncounterDefinition {
   readonly customization?: readonly EncounterCustomizationDecision[];
   /** Native SpawnWaves of an all-fixed combat identity, in wave order. */
   readonly fixedRoster?: readonly (readonly EncounterFixedSpawn[])[];
+  /**
+   * A miniboss or boss encounter's own enemies, the boss among them: its
+   * spawn waves and pre-placed units in native order, weapon-spawned adds
+   * excluded. Each of `choices` is one random pick of spawns by weight, fielded
+   * after the waves; `wipedByEnemyKey` names the enemy whose death kills every
+   * other enemy without loot (`WipeEnemiesOnKill`).
+   */
+  readonly bossRoster?: {
+    readonly waves: readonly (readonly BossRosterSpawn[])[];
+    readonly choices?: readonly (readonly {
+      readonly weight: number;
+      readonly spawns: readonly BossRosterSpawn[];
+    }[])[];
+    readonly wipedByEnemyKey?: string;
+  };
+}
+
+/** One spawn of a boss roster; `hatched` spawns from an egg the player may kill first. */
+export interface BossRosterSpawn {
+  readonly enemyKey: string;
+  readonly count: number;
+  readonly hatched?: true;
 }
 
 /** One declaration-owned fixed spawn with its native count. */
@@ -1061,6 +1094,11 @@ export interface RoomDeclaration {
   readonly label: string;
   /** Exact game RoomSet identity; authored topology supplies the host route biome. */
   readonly roomSetKey: string;
+  /**
+   * Breakables on the room's map that native may swap for a golden urn
+   * (obstacles carrying `BreakableValueOptions`); absent when the map has none.
+   */
+  readonly swappableBreakables?: number;
   readonly kind: RoomKind;
   readonly mode: RoomMode;
   /** Optional declaration-owned lifecycle specialization for this room. */

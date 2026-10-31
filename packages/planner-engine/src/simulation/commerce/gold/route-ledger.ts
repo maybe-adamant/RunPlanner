@@ -264,9 +264,19 @@ function applyGain(
     case 'startingGold':
     case 'arcanaGold':
       return pay(fixed(gain.gold));
-    case 'moneyPickup':
-      return pay(fixed(roundGold(gain.gold * (1 + (sigma - 1) + (gain.npcDrop ? 0 : bonus - 1)))));
+    case 'moneyPickup': {
+      // Valued when it spawned, then re-multiplied by each money multiplier
+      // taken while it lay uncollected (TraitLogic.lua:1045-1058).
+      const base = gain.spawn ?? { moneyMultiplier: sigma, moneyRewardBonus: bonus };
+      let gold = roundGold(
+        gain.gold *
+          (1 + (base.moneyMultiplier - 1) + (gain.npcDrop ? 0 : base.moneyRewardBonus - 1)),
+      );
+      for (const multiplier of gain.remultipliers ?? []) gold = roundGold(gold * multiplier);
+      return pay(fixed(gold));
+    }
     case 'currencyPickup':
+      return pay(fixed(roundGold(gain.gold * (gain.spawn?.moneyMultiplier ?? sigma))));
     case 'fallbackGold':
     case 'keepsakeGold':
     case 'timePiece':
@@ -284,10 +294,11 @@ function applyGain(
     case 'medeaGold':
       return pay(medeaGoldAmount(catalog, gain, sigma));
     case 'urnGold':
-      return pay(urnGoldAmount(gain, sigma));
+      return pay(urnGoldAmount(catalog, gain, sigma));
     case 'nemesisBet': {
       if (blocked) return pay(ZERO_GOLD);
       if (walk.balance.availability === 'unavailable') return undefined;
+      // GOLD_ESTIMATE_ASSUMPTIONS.md "Nemesis bet won", "Nemesis bet size".
       const bet = Math.min(gain.maxBet, Math.max(0, walk.balance.balance.mean));
       return pay(fixed(roundGold(bet * sigma)));
     }

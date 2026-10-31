@@ -98,6 +98,44 @@ describe('gold ledger', () => {
     expect(roomOf(result).balanceAfter).toEqual(balance(1723));
   });
 
+  it('values coins at their spawn and re-multiplies a room object per money multiplier taken', () => {
+    const result = ledger([
+      // Spawned under Chaos Affluence 1.4 and Buried Treasure 1.5: round(100 x 1.9) = 190,
+      // then Quick Buck 1.2 taken before collection: round(190 x 1.2) = 228.
+      gain(
+        {
+          kind: 'moneyPickup',
+          gold: 100,
+          npcDrop: false,
+          spawn: { moneyMultiplier: 1.4, moneyRewardBonus: 1.5 },
+          remultipliers: [1.2],
+        },
+        { moneyMultiplier: 1.6, moneyRewardBonus: 1.5 },
+      ),
+      // Each multiplier rounds in turn: round(round(20 x 1.3) x 1.3) = round(33.8) = 34.
+      gain(
+        {
+          kind: 'moneyPickup',
+          gold: 20,
+          npcDrop: false,
+          spawn: { moneyMultiplier: 1, moneyRewardBonus: 1 },
+          remultipliers: [1.3, 1.3],
+        },
+        { moneyMultiplier: 1.6 },
+      ),
+      // A trait's coins keep their spawn value whatever is held at collection.
+      gain(
+        {
+          kind: 'currencyPickup',
+          gold: 100,
+          spawn: { moneyMultiplier: 1.2, moneyRewardBonus: 1 },
+        },
+        { moneyMultiplier: 2 },
+      ),
+    ]);
+    expect(roomOf(result).gains.map((entry) => entry.amount?.mean)).toEqual([228, 34, 120]);
+  });
+
   it('pays run-start and Arcana gold unmultiplied and blocks the blockable sources under a curse', () => {
     const start: GoldEventPublication = {
       kind: 'gain',

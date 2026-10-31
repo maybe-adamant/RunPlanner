@@ -15,16 +15,51 @@ export interface GoldMultipliers {
   readonly blocksGold: boolean;
 }
 
+/** The money multiplier and money-reward bonus a dropped coin object was valued with. */
+export interface GoldSpawnMultipliers {
+  readonly moneyMultiplier: number;
+  readonly moneyRewardBonus: number;
+}
+
+/** One held money multiplier: a Quick Buck or a matured Chaos Affluence, with its value. */
+export interface MoneyMultiplierSource {
+  readonly key: string;
+  readonly value: number;
+}
+
+/**
+ * What a dropped coin object reads when it spawns: the multipliers then, and
+ * the money multipliers then held, so the ones taken later can be told apart.
+ */
+export interface GoldSpawnReading {
+  readonly multipliers: GoldSpawnMultipliers;
+  readonly sources: readonly MoneyMultiplierSource[];
+}
+
 /** What one walked contact pays or takes, before its multipliers. */
 export type GoldGain =
   /** The Boatman Arcana and Gold Purse at run start, unmultiplied. */
   | { readonly kind: 'startingGold'; readonly gold: number }
   /** A Boatman Arcana activated or raised mid-run pays its difference, unmultiplied. */
   | { readonly kind: 'arcanaGold'; readonly gold: number }
-  /** A money pickup; an NPC drop takes no money-reward bonus. */
-  | { readonly kind: 'moneyPickup'; readonly gold: number; readonly npcDrop: boolean }
+  /**
+   * A money pickup; an NPC drop takes no money-reward bonus. `spawn` holds
+   * the multipliers it was valued with when it spawned, and `remultipliers`
+   * each money multiplier taken while it lay uncollected as a room object.
+   */
+  | {
+      readonly kind: 'moneyPickup';
+      readonly gold: number;
+      readonly npcDrop: boolean;
+      readonly spawn?: GoldSpawnMultipliers;
+      readonly remultipliers?: readonly number[];
+    }
   /** A trait-produced `Currency` pickup (Narcissus), times the money multiplier only. */
-  | { readonly kind: 'currencyPickup'; readonly gold: number }
+  | {
+      readonly kind: 'currencyPickup';
+      readonly gold: number;
+      readonly spawn?: GoldSpawnMultipliers;
+    }
   | { readonly kind: 'fallbackGold'; readonly gold: number }
   /** A Gold Purse equipped mid-run or repeated by Echo. */
   | { readonly kind: 'keepsakeGold'; readonly gold: number }
@@ -50,10 +85,11 @@ export type GoldGain =
   /** Gold paid for a Nemesis trade, an integer drawn evenly from its range. */
   | { readonly kind: 'nemesisTrade'; readonly min: number; readonly max: number }
   /**
-   * A completed encounter's kill gold, estimated from its store. Its
-   * multipliers are those held at the door into its room: native chooses and
-   * generates every modelled phase there, Nemesis, god and cage combats
-   * included (RoomLogic.lua:4376-4387, 4423-4427). Stores generated later
+   * A completed encounter's kill gold, estimated from its store; a Fields
+   * room's one Passive store is paid at its first cage. Its multipliers are
+   * those held at the door into its room: native chooses and generates every
+   * modelled phase there, Nemesis, god and cage combats included
+   * (RoomLogic.lua:4376-4387, 4423-4427). Stores generated later
    * (challenge switches, encounter-cost doors, boss spawns) belong to
    * encounters the plan does not model.
    */
@@ -84,8 +120,8 @@ export type GoldGain =
         readonly roster?: KnownRoster;
       }[];
     }
-  /** The room's golden urns, broken before its doors open. */
-  | { readonly kind: 'urnGold'; readonly biomeKey: string; readonly roomGameName: string };
+  /** The room's golden urns, swapped in as it starts. */
+  | { readonly kind: 'urnGold'; readonly roomGameName: string };
 
 export interface GoldEventContext {
   readonly gain: GoldGain;
@@ -148,6 +184,68 @@ export function goldMultipliers(
       (curse) => catalog.chaos.curses.byKey[curse.curseKey]?.blocksGold === true,
     ),
   });
+}
+
+/**
+ * Each held money multiplier in acquisition order; undefined while one has
+ * no authored value.
+ */
+export function moneyMultiplierSources(
+  catalog: Catalog,
+  state: SimulationState,
+): readonly MoneyMultiplierSource[] | undefined {
+  const sources: MoneyMultiplierSource[] = [];
+  for (const equipped of Object.values(state.traitHistory.equippedTraits)) {
+    const gold = catalog.traits.byKey[equipped.traitKey]?.gold;
+    if (gold?.kind !== 'moneyMultiplier') continue;
+    const value =
+      equipped.rarity === undefined
+        ? undefined
+        : gold.byRarity[equipped.rarity as keyof typeof gold.byRarity];
+    if (value === undefined) return undefined;
+    sources.push({ key: `trait:${equipped.traitKey}:${equipped.rarity}`, value });
+  }
+  state.traitHistory.maturedChaosBlessings.forEach((blessing, index) => {
+    const operandKey =
+      catalog.chaos.blessings.byKey[blessing.blessingKey]?.moneyMultiplierOperandKey;
+    if (operandKey === undefined) return;
+    const value = blessing.blessingValues[operandKey];
+    if (value !== undefined)
+      sources.push({ key: `blessing:${blessing.blessingKey}:${index}`, value: 1 + value });
+  });
+  return sources;
+}
+
+/** The spawn reading a state gives a coin object; undefined while a multiplier is unauthored. */
+export function goldSpawnReading(
+  catalog: Catalog,
+  state: SimulationState,
+): GoldSpawnReading | undefined {
+  const multipliers = goldMultipliers(catalog, state);
+  const sources = moneyMultiplierSources(catalog, state);
+  if (multipliers === undefined || sources === undefined) return undefined;
+  return Object.freeze({
+    multipliers: Object.freeze({
+      moneyMultiplier: multipliers.moneyMultiplier,
+      moneyRewardBonus: multipliers.moneyRewardBonus,
+    }),
+    sources: Object.freeze(sources),
+  });
+}
+
+/**
+ * One spawn contact's reading over the reached branches' states: divergent
+ * where they disagree, a gold-input divergence the walk refuses.
+ */
+export function goldSpawnReadingAcross(
+  catalog: Catalog,
+  states: readonly SimulationState[],
+): GoldSpawnReading | 'divergent' | 'unresolved' {
+  const readings = states.map((state) => goldSpawnReading(catalog, state));
+  if (readings.some((reading) => reading === undefined)) return 'unresolved';
+  return new Set(readings.map((reading) => JSON.stringify(reading))).size > 1
+    ? 'divergent'
+    : readings[0]!;
 }
 
 /**

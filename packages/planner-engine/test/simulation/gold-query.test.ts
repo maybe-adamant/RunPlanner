@@ -281,9 +281,10 @@ describe('gold ledger query', () => {
       ),
     ).toEqual([0, 25]);
     // Midas pays round(1.1 x 10) to round(1.8 x 30) at its purchase.
-    expect(gold.roomAt(wellRoom)).toMatchObject({
-      availability: 'available',
-      room: { gains: [{ kind: 'midasPayout', amount: { min: 11, max: 54 } }] },
+    const well = gold.roomAt(wellRoom);
+    if (well.availability !== 'available') throw new Error('the Well room is unpriced');
+    expect(well.room.gains.find((gain) => gain.kind === 'midasPayout')).toMatchObject({
+      amount: { min: 11, max: 54 },
     });
   });
 });

@@ -41,6 +41,7 @@ import {
   surfaceShrineDeliveriesProject,
 } from '@run-planner/test-fixtures/surface';
 import {
+  loadNemesisFieldsCheckpoint,
   loadNemesisPomSeaStarCheckpoint,
   loadUnderworldFPoolCheckpoint,
   loadUnderworldWorldShopTravelDealCheckpoint,
@@ -53,6 +54,7 @@ import {
   createGoldenFGHProject,
   goldenGBiome,
 } from '@run-planner/test-fixtures/underworld';
+import { createFreshFileFProject } from '@run-planner/test-fixtures/fresh-file';
 import { executionFixtures } from '../execution-plan/support/execution-fixtures';
 
 const f = createBiomeAddress('Underworld', 'F');
@@ -117,12 +119,12 @@ function narcissusProject(
   return { project, room, site };
 }
 
-/** Every F room's gains before the Preboss shop, split into fixed and estimated gold. */
+/** Every F room's gains before the Preboss shop's purchases, split into fixed and estimated gold. */
 function fGainsBeforeShop(project: ProjectDocument, gold: GoldLedger) {
   const totals = { fixed: 0, estimated: 0, variance: 0 };
   for (const occurrence of project.route.biomes.find((biome) => biome.biomeKey === 'F')!.topology!
     .occurrences) {
-    if (/^F_(PreBoss|Boss|PostBoss)/.test(occurrence.gameName)) continue;
+    if (/^F_(Boss|PostBoss)/.test(occurrence.gameName)) continue;
     const result = gold.roomAt(createOccurrenceAddress(f, occurrence.occurrenceId));
     if (result.availability !== 'available') continue;
     for (const gain of result.room.gains) {
@@ -191,9 +193,9 @@ describe('gold ledger walk', () => {
       createOccurrenceAddress(f, 'golden-f-preboss-shop:postboss' as never),
     );
     // A level-2 Common: 30-50 floored to five, plus 20.
-    expect(result).toMatchObject({
-      availability: 'available',
-      room: { gains: [{ kind: 'poolSale', amount: { min: 50, max: 70 } }] },
+    if (result.availability !== 'available') throw new Error('the Postboss room is unpriced');
+    expect(result.room.gains.find((gain) => gain.kind === 'poolSale')).toMatchObject({
+      amount: { min: 50, max: 70 },
     });
   });
 
@@ -249,17 +251,75 @@ describe('gold ledger walk', () => {
     const native = ledger(loadUnderworldWorldShopTravelDealCheckpoint()).roomAt(start);
     if (native.availability !== 'available') throw new Error('the opening is unpriced');
     // Run depth 1: RandomInt(10, 15) + 0.5, rounded up to 11..16, plus Erebus's 1.9 overshoot.
-    const [kills, urns] = native.room.gains;
+    const kills = native.room.gains.find((gain) => gain.kind === 'enemyGold');
+    const urns = native.room.gains.find((gain) => gain.kind === 'urnGold');
     expect(kills).toMatchObject({ kind: 'enemyGold' });
     expect(kills!.amount!.mean).toBeCloseTo(13.5 + 1.9, 9);
     expect(kills!.amount!.variance).toBeCloseTo(35 / 12 + 9, 9);
     expect(urns).toMatchObject({ kind: 'urnGold' });
     expect(urns!.amount!.mean).toBeCloseTo(4 * 0.7 * 0.44502, 3);
-    expect(gains(withModifiers({ enemyGoldDropChance: 0 }), start)[0]).toEqual(['enemyGold', 0]);
+    expect(gains(withModifiers({ enemyGoldDropChance: 0 }), start)).toContainEqual([
+      'enemyGold',
+      0,
+    ]);
     // The top of the range fixes the roll at 15: ceil(15.5) = 16.
     const fixed = withModifiers({ encounterGoldRange: 100 }).roomAt(start);
     if (fixed.availability !== 'available') throw new Error('the opening is unpriced');
-    expect(fixed.room.gains[0]!.amount).toMatchObject({ mean: 16 + 1.9, variance: 9 });
+    expect(fixed.room.gains.find((gain) => gain.kind === 'enemyGold')!.amount).toMatchObject({
+      mean: 16 + 1.9,
+      variance: 9,
+    });
+  });
+
+  it('pays a Fields room its Passive store once, through its cages’ kills', () => {
+    const gold = ledger(createGoldenFGHProject());
+    const h = createBiomeAddress('Underworld', 'H');
+    // Two cages, one store: RandomInt(10, 30) plus the crossing overshoot of 9; Fields has no urns.
+    expect(gains(gold, createOccurrenceAddress(h, 'golden-h-combat02' as never))).toEqual([
+      ['enemyGold', 20 + 9],
+    ]);
+  });
+
+  it('pays a boss room its adds’ kill gold, uncapped', () => {
+    const boss = gains(
+      ledger(createGoldenFGHProject()),
+      createOccurrenceAddress(f, 'golden-f-preboss-shop:boss' as never),
+    ).find(([kind]) => kind === 'enemyGold');
+    // Hecate's twelve LightRanged at 70%, 3..4 gold each.
+    expect(boss?.[1]).toBeCloseTo(12 * 0.7 * 3.5, 9);
+  });
+
+  it('pays a Fields room whose Passive slot holds the Nemesis event its undrawn store of 25', () => {
+    const gold = ledger(loadNemesisFieldsCheckpoint());
+    const kills = gains(
+      gold,
+      createOccurrenceAddress(createBiomeAddress('Underworld', 'H'), 'golden-h-combat05' as never),
+    ).filter(([kind]) => kind === 'enemyGold');
+    // Paid once at the first cage: 25 plus the Fields overshoot of 9, no draw.
+    expect(kills).toEqual([['enemyGold', 25 + 9]]);
+  });
+
+  it('swaps golden urns in every room of a mature run and none on a Fresh File', () => {
+    const mature = ledger(createGoldenFGHProject());
+    for (const occurrenceId of ['golden-f-start', 'golden-f-preboss-shop'])
+      expect(gains(mature, createOccurrenceAddress(f, occurrenceId as never))).toContainEqual([
+        'urnGold',
+        4 * 0.7 * (0.01 * 15 + 0.99 * 0.02 * 10 + 0.99 * 0.98 * 0.02 * 5),
+      ]);
+    const fresh = createFreshFileFProject();
+    const freshGold = ledger(fresh);
+    const rooms = fresh.route.biomes.find((biome) => biome.biomeKey === 'F')!.topology!.occurrences;
+    const kinds = rooms.flatMap((occurrence) => {
+      const result = freshGold.roomAt(
+        createOccurrenceAddress(
+          createBiomeAddress(fresh.route.routeKey, 'F'),
+          occurrence.occurrenceId,
+        ),
+      );
+      return result.availability === 'available' ? result.room.gains.map((gain) => gain.kind) : [];
+    });
+    expect(kinds).toContain('enemyGold');
+    expect(kinds).not.toContain('urnGold');
   });
 
   it('pays an authored composition from its roster in place of the biome policy', () => {
@@ -282,7 +342,7 @@ describe('gold ledger walk', () => {
       decisionKey: capability.decisionKey,
       value,
     });
-    const [kills] = gains(ledger(project), start);
+    const kills = gains(ledger(project), start).find(([kind]) => kind === 'enemyGold');
     const roster = knownEncounterRoster(catalog, 'OpeningGeneratedF', operands)!;
     // Run depth 1: the opening's store is RandomInt(10, 15) + 0.5, rounded up.
     const expected = knownRosterPayout(catalog, roster, {
@@ -299,8 +359,7 @@ describe('gold ledger walk', () => {
       createBiomeAddress('Surface', 'Q'),
       'surface-q-foyer' as never,
     );
-    const [kills] = gains(gold, room);
-    expect(kills![0]).toBe('enemyGold');
+    const kills = gains(gold, room).find(([kind]) => kind === 'enemyGold');
     expect(kills![1]).toBeCloseTo(0.73 * 72.5, 9);
   });
 
@@ -430,8 +489,8 @@ describe('gold ledger walk', () => {
       value: { kind: 'timePiece' },
     });
     expect(gains(ledger(project), createOccurrenceAddress(g, 'golden-g-b2-e1' as never))).toEqual([
-      ['enemyGold', 0],
       ['urnGold', 0],
+      ['enemyGold', 0],
       ['timePiece', 0],
     ]);
   });

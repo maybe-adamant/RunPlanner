@@ -877,7 +877,9 @@ balance, a mean and variance, from run start through every reached room. It
 records each room's gains and purchases, the balance before each purchase,
 and the balance when the room's doors open and when it ends. It counts fixed
 and bounded gold exactly and estimates what kills, urns and Medea's curse pay
-(see [Enemy gold](#enemy-gold)).
+(see [Enemy gold](#enemy-gold)). Every assumption and tuning value the estimate
+uses is listed with its evidence in
+[Gold estimate assumptions](GOLD_ESTIMATE_ASSUMPTIONS.md).
 
 The doors open where the room's exit becomes usable: after its encounters and
 reward gold, before the purchases and sales that follow. Where the exit waits
@@ -894,8 +896,14 @@ Gains read the money multiplier, the sum of every held multiplier's excess
 over one (Quick Buck, Chaos Affluence's authored value), at the contact:
 
 - Money pickups pay their base times the money multiplier plus the money-reward
-  bonus excess (Buried Treasure); an NPC's drop takes no bonus. Quick Buck's
-  and Buried Treasure's own drops are ordinary money pickups.
+  bonus excess (Buried Treasure); an NPC's drop takes no bonus. A coin object
+  is valued when it spawns, not when it is collected. A trait's own coins
+  (Quick Buck's, Buried Treasure's, Narcissus's gold) spawn as its screen
+  closes, the trait already held, and keep that value. A room's reward and
+  Fields cage and optional coins spawn with the room's reward (cages and
+  optionals at entry, an incoming reward at its encounter's end); each money
+  multiplier taken in that room before they are collected multiplies their
+  value again, rounding each time, in the order taken.
 - Narcissus's gold, fallback gold, a Gold Purse equipped mid-run or repeated
   by Echo, and a Time Piece conversion pay their base times the money
   multiplier. A conversion pays the reward's conversion value, plus a fixed
@@ -918,9 +926,9 @@ over one (Quick Buck, Chaos Affluence's authored value), at the contact:
   Pool and bet gains pay nothing too. A Gold Purse still pays, and spending is
   unaffected.
 
-The money multiplier is read when the gold is picked up, not when it spawned,
-which differs only when a multiplier is taken between the two in one room.
-Arachne's costume, Selene's per-cast gold and challenge switches are not
+A room reward collected in another room than the one it spawned in, and
+coins whose spawn the walk does not see (Hermes deliveries, Nemesis and Echo
+results), read the multipliers at collection. Arachne's costume, Selene's per-cast gold and challenge switches are not
 counted.
 
 Each walked contact publishes its gain facts the way purchases publish price
@@ -937,17 +945,24 @@ up. Stores the game draws later (challenge switches, encounter-cost doors,
 boss spawns) belong to encounters the plan does not model. An encounter gold range run
 modifier fixes the draw at its point of the range and the store loses its
 spread. Kills drain the store, the last drop overshooting it, or run out before
-it. How much of the store is paid follows from the roster where the plan
-determines it, and is an estimate otherwise:
+it. Kills drain only the room's own encounter's store: a Fields cage never
+becomes it, so a Fields room has one store, its Passive encounter's (the
+Nemesis event's fixed, unmultiplied store when the event takes the Passive
+slot), which its cage and Passive kills always exhaust; it pays that store and
+the crossing overshoot when the first cage completes, and the cages pay
+nothing of their own. How much of the store is paid follows from the roster
+where the plan determines it, and is an estimate otherwise:
 
 - A phase whose roster nothing leaves to native generation (a complete
   authored or imported generated composition, with its Menace conversions
-  spawning their targets, or an all-fixed identity) pays from that roster.
+  spawning their targets, an all-fixed identity, or a miniboss's or boss's
+  own enemies) pays from that roster.
   Each kill drops, at its enemy's chance, one parcel drawn from the enemy's
   value range times the money multiplier, rounded, at least one against a
   store. Against a store, drops are paid while it is positive and the
   crossing parcel in full; waves are killed in order and each wave's kills in
-  random order. The paid gold's mean and spread are exact for that rule,
+  random order; the enemy whose death wipes a miniboss encounter's other
+  enemies dies last. The paid gold's mean and spread are exact for that rule,
   without sampling. Without a store every drop is paid. Unit groups
   drop through their members; summoned and respawned enemies are not counted.
 - Otherwise a tunable engine policy gives each biome's generated combat, and
@@ -960,19 +975,31 @@ determines it, and is an estimate otherwise:
   kill chances, and selects the policy calibrated at that chance, interpolated
   between calibrated chances; at zero kills pay nothing. It affects only drops
   that pay from a store, so an ungenerated encounter's drops stay native.
-- Minibosses, whose adds the plan does not fix, pay a policy constant each;
-  bosses, story encounters and noncombat rooms pay nothing. A drop chance modifier
-  scales a store-bearing constant by its ratio to the common native kill
-  chance, capped at one: an approximation, since the store caps what more
-  drops pay and the paying enemies' native chances differ.
+- A boss pays its encounter-spawned and pre-placed adds, uncapped, since no
+  boss encounter has a store; weapon-spawned adds and those its death wipes
+  pay nothing, and the boss units' own parcels truncate to nothing. Where the
+  game picks the adds at random (Cerberus's spawn encounter, Typhon's egg
+  casts) the gold is the weighted mixture over the picks, and a hatchling
+  counts only at the egg hatch rate. The Vow of Rivals variant is the boss
+  encounter the plan reaches.
+- The one miniboss whose adds spawn without end (the shadow Fog emitter) pays
+  a policy constant; story encounters and noncombat rooms pay nothing.
+  A drop chance modifier scales a store-bearing constant by its ratio to the
+  common native kill chance, capped at one: an approximation, since the store
+  caps what more drops pay and the paying enemies' native chances differ.
 - The money multiplier scales the store and every drop; a curse that blocks
   gold stops every kill, urn, Medea and bounty drop.
 - Heracles's credited bounty is one unmultiplied pickup after his combat.
 - Medea's gold-on-kill curse drops at its chance times the held luck, at most
   its cap per room, over the room's kills: a known roster's count, else the
-  policy's expected kills; golden urns pay a per-biome
-  expectation from their swap attempts. Both are dropped pickups, counted at a
-  collection rate.
+  policy's expected kills.
+- Golden urns pay in every room as it is entered, whatever its kind: one more
+  candidate than the room set's swap limit, or every swappable breakable the
+  room's map places when it has fewer, each at its pots' chances (a few rooms
+  override the limit or the chance). Fields, Thessaly, the Anomaly and the
+  Zagreus contract swap none. Native swaps only with a Crossroads upgrade a
+  mature save is taken to own; a Fresh File route's urns pay nothing.
+- Medea's drops and urns are dropped pickups, counted at a collection rate.
 
 The policy constants are seeded from simulated rosters and recorded runs and
 re-tuned from recorded runs ([when the game updates](../../CONTRIBUTING.md#when-the-game-updates)).

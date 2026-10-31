@@ -1,3 +1,10 @@
+import {
+  crawlerRoster,
+  jellyfishRoster,
+  scyllaRivalsRoster,
+  scyllaRoster,
+  waterUnitRoster,
+} from './boss-rosters';
 import { generatedEncounterChoices } from './generated/policies';
 import { notFreshFileRoute } from '../routes';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
@@ -194,6 +201,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'MiniBossWaterUnit',
+    bossRoster: waterUnitRoster,
     moneyStore: oceanusMinibossMoneyStore,
     label: 'Water unit',
     kind: 'miniboss',
@@ -203,6 +211,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'MiniBossCrawler',
+    bossRoster: crawlerRoster,
     label: 'Crawler',
     kind: 'miniboss',
     countsEncounterDepth: false,
@@ -211,6 +220,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'MiniBossJellyfish',
+    bossRoster: jellyfishRoster,
     moneyStore: oceanusMinibossMoneyStore,
     label: 'Jellyfish',
     kind: 'miniboss',
@@ -220,6 +230,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'BossScylla01',
+    bossRoster: scyllaRoster,
     label: 'Scylla',
     kind: 'boss',
     countsEncounterDepth: false,
@@ -247,6 +258,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'BossScylla02',
+    bossRoster: scyllaRivalsRoster,
     label: 'Scylla',
     kind: 'boss',
     countsEncounterDepth: false,

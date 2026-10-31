@@ -1062,8 +1062,15 @@ purchases, as the gold ledger counts it.
   `MoneyRewardBonus` 1.5 by 1 / 1.5 / 2 / 2.5 is 1.5 / 1.75 / 2 / 2.25
   (`TraitData_Poseidon.lua:2058-2190`). Quick Buck drops one normal and Buried
   Treasure one Small and two Tiny money pickups, multiplied like any other.
-  Re-multiplying already spawned money when a multiplier is taken
-  (`TraitLogic.lua:1045-1058`) is not modeled.
+  The value is fixed when the object spawns. Coins a trait's
+  `GiveRandomConsumables` drops (Quick Buck's, Buried Treasure's, Narcissus's
+  and fallback gold) spawn with `NotRequiredPickup`, outside
+  `MapState.RoomRequiredObjects`, valued at that moment
+  (`RoomLogic.lua:1944-1985`). Acquiring a `MoneyMultiplier` trait multiplies
+  every uncollected object in `MapState.RoomRequiredObjects` and
+  `MapState.OptionalRewards` (room rewards, Fields cages and optionals) by its
+  own value, `round(DropMoney × MoneyMultiplier)` per trait
+  (`TraitLogic.lua:1045-1058`); a later money-reward bonus does not.
 - **Σ-only gold.** Narcissus's Precious Metals `Amount` 100 by 1 / 1 / 1.5 /
   2.5 (`TraitData_Narcissus.lua:208-262`), fallback gold 90
   (`TraitData.lua:1147-1175`, `UpgradeChoiceLogic.lua:149-151`) and a Gold
@@ -1159,9 +1166,9 @@ CostResourceMax)`: heart 105-130 / 230-255, Magick 80-105 / 180-205, Pom
     `EnemyData_ZombieHeavyRanged.lua:66`, `EnemyData_ZombieAssassin.lua:54`,
     `EnemyData_Scimiterror.lua:60`, `EnemyData_WaterElemental.lua:61`); an
     elite inherits its base's table. Treant2 inherits Treant's Chance 0
-    (`EnemyData_Treant.lua:50`); bosses, SuperElites and most minibosses have
-    Chance 0. The FogEmitter miniboss (`FogEmitter_Elite`) pays a fixed 50–70
-    at Chance 1 (`EnemyData_FogEmitter.lua:61-70`).
+    (`EnemyData_Treant.lua:50`); bosses, SuperElites and several minibosses
+    have Chance 0. The FogEmitter miniboss (`FogEmitter_Elite`) pays a fixed
+    50–70 at Chance 1 (`EnemyData_FogEmitter.lua:61-81`).
   - Unit groups (`IsUnitGroup`) spawn their `UnitGroup` members, which drop as
     themselves: FishSwarmerSquad five FishSwarmer, its elite two
     FishSwarmer_Elite, SimpleSquad four Simple, its elite two Simple_Elite
@@ -1172,9 +1179,45 @@ CostResourceMax)`: heart 105-130 / 230-255, Magick 80-105 / 180-205, Pom
     its elite 80, FishSwarmer 5 and its elite 10, Simple 20 and its elite 50
     (`EnemyData_DespairElemental.lua:70`, `EnemyData_LycanSwarmer.lua:61, 87`,
     `EnemyData_FishSwarmer.lua:77, 150`, `EnemyData_Simple.lua:74, 117`).
-  - Minibosses do not have fixed rosters: the FogEmitter's opening wave does
-    not wait for its kill, its Thorn-Weepers follow, and its death cancels the
-    remaining spawns (`EncounterData.lua:828-859`).
+  - Only the room's own encounter's store pays: `CheckMoneyDrop` reads
+    `CurrentRun.CurrentRoom.Encounter` (`RoomLogic.lua:2361-2376`). Rooms with
+    `MultipleEncountersData` (Thessaly's ship, Olympus) make each stage that
+    encounter in turn (`RoomLogic.lua:1319-1325`), as Devotion does
+    (`RewardLogic.lua:263`). A Fields cage starts as
+    `MapState.EncounterOverride` and never becomes it (`StartFieldsEncounter`,
+    `EncounterLogic.lua:2890-2938`), so cage and Passive kills together drain
+    the room's Passive store (10–30, or the Nemesis event's data-set 25,
+    `EncounterData_Story.lua:1915-1924`); the cages' own `GeneratedH` stores,
+    drawn at `LeaveRoom` (`RoomLogic.lua:4384-4387`), are never read. Recorded
+    `H_Combat15` and `H_Combat07` saves: the Passive store fell to −12 and −4,
+    every cage store stayed whole, and each room gained exactly its Passive
+    drain (overshoots 12 and 4). A challenge or boss-spawned encounter likewise
+    never drains its own store.
+  - A weapon `SpawnerOptions` spawn gets `ClearLootDrops` and drops nothing
+    (`EnemyAILogic.lua:4847, 4950`). An encounter's `WipeEnemiesOnKill` enemy
+    drops first, then kills every other enemy with `BlockLoot`
+    (`CombatLogic.lua:3873-3874, 3934`; `RoomLogic.lua:5201-5219`); the
+    FogEmitter's is commented out (`EncounterData.lua:860`). Pre-placed units
+    (`ActivatePrePlaced`) are set up with their `GeneratorData` and drop
+    normally (`EventLogic.lua:124-127`).
+  - Each miniboss encounter's own enemies are fixed: its wave template or
+    SpawnWaves and its pre-placed units, shrine-only shadows aside
+    (`EncounterData.lua:699-909`, `EncounterData_MiniBoss.lua:7-1086`; the maps
+    place two `Stalker_Miniboss` and five `CharybdisTentacle`). Their units
+    rate ZombieAssassin_Miniboss 60 at 0.1; WaterUnitMiniboss 60,
+    Octofish_Miniboss 300 with 24 Jellyfish at 30, CrawlerMiniboss 100,
+    Vampire 80, Lamia_Miniboss 200 with Lamia_Support 110, SatyrCrossbow 100,
+    Boar 100, SatyrRatCatcher_Miniboss 400 and GoldElemental_MiniBoss 200 at
+    0.33; Captain 200 at 0.2 and Chance 0.25; Talos 500 and Dragon_MiniBoss
+    1000 at 0.035; EarthElemental 30 at 0.16 (their `EnemyData_*` entries).
+    Treant, Brute_Miniboss, Stalker_Miniboss, TyphonTail, TyphonEye and
+    Charybdis with its tentacles have Chance 0. `MiniBossCaptain` and
+    `MiniBossStalker` set `Generated = false` (`EncounterData_MiniBoss.lua:601,
+940`), and Crawler, Charybdis, Talos and the Typhon eye inherit no
+    generated base, so their kills pay uncapped. The shadow FogEmitter's
+    Screamers spawn without end (`EncounterData.lua:863-909`). Recorded rooms:
+    Treant, Brute and the Typhon tail drained nothing; Vampire paid 17 of 15,
+    WaterUnit 27 of 25, and SatyrCrossbow 4 of 15 when the boss missed its 70%.
   - Recorded runs drained the store exactly by the enemy gold gained in 140 of
     150 rooms.
 - **Wealth from the Dead** (`MoneyOnDeathCurse`) drops an NPC
@@ -1184,18 +1227,33 @@ CostResourceMax)`: heart 105-130 / 230-255, Magick 80-105 / 180-205, Pom
   Rate's `LuckMultiplier` 1.3 is `SourceIsMultiplier` by 1 / 4⁄3 / 5⁄3 / 2
   (`TraitData_Hermes.lua:620-647`). `BlockMoney` stops its coins when they
   are collected (`RoomLogic.lua:2648-2652`).
-- **Golden urns.** `HandleBreakableSwap` makes `MaxHighValueBreakables` + 1
-  attempts, each trying 15, 10 and 5 gold in order at its chance times the
-  room's `BreakableHighValueChanceMultiplier` (`RoomLogic.lua:2536-2568`): 1 /
-  2 / 2% for the Chronos pot, 5% each for the surface pots
-  (`ObstacleData.lua:756-834`, `ObstacleDataN/P/Q`). The caps are 3 in F, G
-  and N, 6 in I and P, 8 in Q and none in H, O and the Anomaly
-  (`RoomDataF.lua:299`, `RoomDataG.lua:291`, `RoomDataI.lua:306`,
-  `RoomDataN.lua:354`, `RoomDataP.lua:345`, `RoomDataQ.lua:30`,
-  `RoomDataH.lua:503`, `RoomDataO.lua:292`, `RoomDataAnomaly.lua:12`);
-  `I_MiniBoss02` has 12 at 100× (`RoomDataI.lua:2931-2932`), Ephyra's side
-  rooms 1 at 2× (`RoomDataN.lua:3824-3825`) and `Q_Intro` 0.33×
-  (`RoomDataQ.lua:401`). Urn gold ignores the store and pays `round(gold × Σ)`.
+- **Golden urns.** `HandleBreakableSwap` runs as every room starts, revisits
+  included, and only with the Crossroads upgrade `WorldUpgradeBreakableValue1`
+  (`RoomData.lua:29-41`, `RoomLogic.lua:1196`; `WorldUpgradeData.lua:1786`),
+  which a Fresh File lacks. It swaps `MaxHighValueBreakables` + 1 of the map's
+  breakables carrying `BreakableValueOptions`, or all of them when the map has
+  fewer (`RoomLogic.lua:2533-2597`), each trying 15, 10 and 5 gold in order at
+  its chance times the room's `BreakableHighValueChanceMultiplier`: 1 / 2 / 2%
+  for the Chronos pot (`BaseBreakable`, `ObstacleData.lua:756-834`, which the
+  F, G, I, O, Chaos and Anomaly breakables inherit), 5% each for the surface
+  pots (`ObstacleDataN.lua:491`, `ObstacleDataP.lua:118`,
+  `ObstacleDataQ.lua:184`). The limits are 3 in F, G, N and Chaos rooms, 6 in
+  I and P, 8 in Q and none in H, O, the Anomaly and `C_Boss01`
+  (`RoomDataF.lua:299`, `RoomDataG.lua:291`, `RoomDataChaos.lua:165`,
+  `RoomDataI.lua:306`, `RoomDataN.lua:354`, `RoomDataP.lua:345`,
+  `RoomDataQ.lua:30`, `RoomDataH.lua:503` commented out, `RoomDataO.lua:292`,
+  `RoomDataAnomaly.lua:12`, `RoomDataC.lua:16`); `I_MiniBoss02` has 12 at 100×
+  (`RoomDataI.lua:2931-2932`), Ephyra's side rooms (`BaseN_SubRooms`) 1 at 2×
+  (`RoomDataN.lua:3824-3825`) and `Q_Intro` 0.33× (`RoomDataQ.lua:401`).
+  Each room's breakables are the `Breakable_<set>` obstacles its
+  `Content/Maps/bin/<room>.thing_bin` places: none on any Fields map, the
+  Tartarus Preboss, Postboss and boss maps, `I_Combat14`, `G_Combat01`,
+  `G_Shop01`, `G_Story01`, `G_Reprieve01` and the Summit's boss, story and
+  Postboss maps; one on `I_Combat08`; four to eight on several Summit maps,
+  under its nine candidates; 111 on `I_MiniBoss02`. Shops, stories, Prebosses
+  and Postbosses with breakables swap as combats do: recorded surface gains of
+  5–15 in `N_Hub`, `N_PreBoss01`, `P_Story01`, `P_PreBoss01`, `P_PostBoss01`
+  and `Q_Intro`. Urn gold ignores the store and pays `round(gold × Σ)`.
 - **Heracles's bounty.** A Heracles combat marks 2–3 enemies per wave
   (`HeraclesBountyPerWaveMin/Max`, `HeraclesBountyValue` 20,
   `EncounterData_Heracles.lua:8-10`; `CheckHeraclesBounty`,

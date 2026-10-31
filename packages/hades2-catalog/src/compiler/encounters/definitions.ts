@@ -34,7 +34,82 @@ function normalizeMoneyStore(
   if (capMax < capMin) fail(path, 'must have capMin <= capMax');
   if (!Number.isFinite(raw.runDepthRamp) || raw.runDepthRamp < 0)
     fail(`${path}.runDepthRamp`, 'must be non-negative');
-  return Object.freeze({ capMin, capMax, runDepthRamp: raw.runDepthRamp });
+  if (raw.undrawn === true && (capMin !== capMax || raw.runDepthRamp !== 0))
+    fail(path, 'an undrawn store is one fixed value without a ramp');
+  return Object.freeze({
+    capMin,
+    capMax,
+    runDepthRamp: raw.runDepthRamp,
+    ...(raw.undrawn === true ? { undrawn: true as const } : {}),
+  });
+}
+
+/** One boss-roster spawn: a named enemy and a positive count, possibly hatched. */
+function normalizeBossSpawn(
+  spawn: NonNullable<RawEncounterDefinitionDeclaration['bossRoster']>['waves'][number][number],
+  path: string,
+) {
+  return Object.freeze({
+    enemyKey: requireNonEmpty(spawn.enemyKey, `${path}.enemyKey`),
+    count: requirePositiveInteger(spawn.count, `${path}.count`),
+    ...(spawn.hatched === true ? { hatched: true as const } : {}),
+  });
+}
+
+/**
+ * A miniboss's or boss's own enemies: nonempty waves of positive counts, its
+ * wipe enemy among the waves, and random picks only where no store caps them.
+ */
+function normalizeBossRoster(
+  raw: RawEncounterDefinitionDeclaration,
+  path: string,
+): NonNullable<EncounterDefinition['bossRoster']> {
+  const roster = raw.bossRoster!;
+  if (raw.kind !== 'miniboss' && raw.kind !== 'boss')
+    fail(path, 'belongs only to a miniboss or boss identity');
+  if (roster.waves.length === 0) fail(`${path}.waves`, 'must list waves');
+  const waves = roster.waves.map((wave, waveIndex) => {
+    if (wave.length === 0) fail(`${path}.waves[${waveIndex}]`, 'must list spawns');
+    return Object.freeze(
+      wave.map((spawn, spawnIndex) =>
+        normalizeBossSpawn(spawn, `${path}.waves[${waveIndex}][${spawnIndex}]`),
+      ),
+    );
+  });
+  const choices = (roster.choices ?? []).map((choice, choiceIndex) => {
+    const choicePath = `${path}.choices[${choiceIndex}]`;
+    if (choice.length === 0) fail(choicePath, 'must list options');
+    return Object.freeze(
+      choice.map((option, optionIndex) => {
+        const optionPath = `${choicePath}[${optionIndex}]`;
+        if (!(option.weight > 0)) fail(`${optionPath}.weight`, 'must be positive');
+        if (option.spawns.length === 0) fail(`${optionPath}.spawns`, 'must list spawns');
+        return Object.freeze({
+          weight: option.weight,
+          spawns: Object.freeze(
+            option.spawns.map((spawn, spawnIndex) =>
+              normalizeBossSpawn(spawn, `${optionPath}.spawns[${spawnIndex}]`),
+            ),
+          ),
+        });
+      }),
+    );
+  });
+  const random =
+    choices.length > 0 || waves.some((wave) => wave.some((spawn) => spawn.hatched === true));
+  if (random && raw.moneyStore !== undefined)
+    fail(path, 'random picks and hatched spawns only pay uncapped');
+  const wipedBy = roster.wipedByEnemyKey;
+  if (
+    wipedBy !== undefined &&
+    !waves.some((wave) => wave.some((spawn) => spawn.enemyKey === wipedBy))
+  )
+    fail(`${path}.wipedByEnemyKey`, `${wipedBy} is not in the roster`);
+  return Object.freeze({
+    waves: Object.freeze(waves),
+    ...(choices.length === 0 ? {} : { choices: Object.freeze(choices) }),
+    ...(wipedBy === undefined ? {} : { wipedByEnemyKey: wipedBy }),
+  });
 }
 
 export function normalizeEncounterDefinitions(
@@ -645,6 +720,9 @@ export function normalizeEncounterDefinitions(
         ...(traitOfferProducer === undefined ? {} : { traitOfferProducer }),
         ...(customization === undefined ? {} : { customization }),
         ...(fixedRoster === undefined ? {} : { fixedRoster }),
+        ...(raw.bossRoster === undefined
+          ? {}
+          : { bossRoster: normalizeBossRoster(raw, `${path}.bossRoster`) }),
         ...(nemesisRandomEvent === undefined ? {} : { nemesisRandomEvent }),
       });
     }),

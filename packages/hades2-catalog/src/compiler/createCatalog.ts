@@ -121,6 +121,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   const rooms = normalizeRooms(
     input.rooms,
     input.nativeExitDoorOrders,
+    input.swappableBreakables,
     rewards,
     encounterEnvelopes,
     encounterDefinitions,

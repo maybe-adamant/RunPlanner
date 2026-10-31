@@ -165,8 +165,11 @@ belong to [biome authorities](../biomes/) and
 A room declares its game identity and label, authoring mode/template,
 structural tags, physical exits, requirements, force/caps, encounter bindings,
 incoming producer, local slots, realization policy, dormant defaults and
-entered-store-history policy. It does not own occurrence IDs, selected state,
-topology links, authored rewards or UI grouping.
+entered-store-history policy. It also declares how many breakables its map
+places that the game may swap for a golden urn, read from the map's placed
+obstacles and absent when there are none; every named room must be declared.
+It does not own occurrence IDs, selected state, topology links, authored
+rewards or UI grouping.
 
 The room's offer-reward binding is one closed choice:
 
@@ -228,12 +231,15 @@ The four contracts must remain separate:
 
 | Product              | Owns                                                                                  |
 | -------------------- | ------------------------------------------------------------------------------------- |
-| Encounter Envelope   | Ordered stable slots, structural activation and reward/wheel attachments              |
+| Encounter Envelope   | Ordered stable slots, structural activation, reward/wheel attachments and store owner |
 | Room slot binding    | Exactly one fixed definition or selectable set per slot                               |
 | Encounter Definition | Exact identity, kind, requirements, counter/sequence effects and NPC presentation key |
 | Encounter Set        | Ordered unique membership and one complete static default                             |
 
-An envelope does not supply encounter identity, counter effects or timing.
+An envelope does not supply encounter identity, counter effects or timing. A
+slot may name another slot whose encounter's money store its kills drain (each
+Fields cage names the Passive slot); the named slot must exist, be another
+slot and drain its own store.
 A set is not a consumed bag; source weighting is evidence, not normalized
 probability state. Only selectable slots need persisted selections. Empty
 envelopes and fixed slots use the same contract without fake choices.
@@ -329,14 +335,21 @@ cost. Facts with no narrower owner, fallback gold and the Pool of Purging sale
 values, sit in the catalog's gold declaration.
 
 An encounter the game generates declares its money store: the cap range and
-the gold its cap gains per run depth; kill drops pay from that store. An
-encounter the game does not generate declares none, and its kills pay
-uncapped. The enemy drop table gives, by native enemy id, what one kill drops:
+the gold its cap gains per run depth; kill drops pay from that store. A store
+set in the encounter's data instead (the Nemesis event's, for Fields) is
+declared undrawn: one value, no ramp. An encounter the game does not generate
+and sets no store for declares none, and its kills pay uncapped. A miniboss or
+boss encounter declares its own enemies: its spawn waves and pre-placed units
+in native order without weapon-spawned adds, any random spawn picks with their
+weights, which spawns hatch from eggs, and the enemy whose death wipes the
+rest. Only miniboss and boss identities declare it; random picks and hatched
+spawns only where the encounter has no store; the wipe enemy must be in the
+roster's waves. The enemy drop table gives, by native enemy id, what one kill drops:
 a parcel chance and the integer range a parcel is drawn from (the enemy's
 value per difficulty times its difficulty rating, up to the value variance, or
 a fixed value range), a unit group's member and size, or no drop. Its closure
-rule: every enemy a generated composition, a fixed roster or a Menace
-conversion can field, and every unit group's member, has exactly one row; no
+rule: every enemy a generated composition, a fixed or miniboss roster or a
+Menace conversion can field, and every unit group's member, has exactly one row; no
 row is unreachable; a unit group's size matches its enemy choice; a kill drops
 one parcel. Heracles's combats declare the bounty marked on their enemies. Medea's
 gold-on-kill curse declares its drop chance, per-room drop cap and gold by

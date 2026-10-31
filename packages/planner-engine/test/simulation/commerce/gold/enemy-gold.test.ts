@@ -74,9 +74,14 @@ describe('enemy gold payout policy', () => {
     expect(enemyGoldPolicy(definition('P_Combat07_PreCombat02'), 'P')).toBe(
       enemyGoldPolicy(definition('GeneratedP'), 'P'),
     );
-    expect(enemyGoldPolicy(definition('MiniBossFogEmitter'), 'F')).toMatchObject({
+    expect(enemyGoldPolicy(definition('MiniBossFogEmitter_Shrine'), 'F')).toMatchObject({
       kind: 'constant',
-      mean: 60,
+      mean: 38,
+    });
+    // Fields cages drain the room's Passive store and pay nothing of their own.
+    expect(enemyGoldPolicy(definition('GeneratedH'), 'H')).toEqual({
+      kind: 'roomStore',
+      kills: 7.2,
     });
     expect(enemyGoldPolicy(definition('BossHecate01'), 'F')).toEqual({ kind: 'none', kills: 1 });
     expect(enemyGoldPolicy(definition('Empty'), 'F')).toEqual({ kind: 'none', kills: 0 });
@@ -97,15 +102,15 @@ describe('enemy gold payout policy', () => {
       for (const key of keys) {
         const encounter = definition(key);
         if (encounter.kind !== 'combat' && encounter.kind !== 'miniboss') continue;
-        // An all-fixed identity always pays from its roster.
-        if (encounter.fixedRoster !== undefined) continue;
+        // An all-fixed identity or a miniboss always pays from its roster.
+        if (encounter.fixedRoster !== undefined || encounter.bossRoster !== undefined) continue;
         checked.add(key);
         if (enemyGoldPolicy(encounter, biomeKey ?? room.roomSetKey) === undefined)
           missing.push(`${room.gameName}:${key}`);
       }
     }
     expect(missing).toEqual([]);
-    expect(checked.size).toBeGreaterThan(70);
+    expect(checked.size).toBeGreaterThan(50);
   });
 
   it('pays an exhausting biome its store plus the overshoot, a sparse one a fraction', () => {
@@ -139,7 +144,9 @@ describe('enemy gold payout policy', () => {
     expect(at(60)).toBeCloseTo((0.54 + 0.4 * (0.77 - 0.54)) * store, 12);
     expect(at(10)).toBeCloseTo(0.4 * at(25), 12);
     expect(
-      enemyGoldAmount(catalog, enemyGold('MiniBossBoar', 'N'), 1, { enemyGoldDropChance: 0 }).mean,
+      enemyGoldAmount(catalog, enemyGold('MiniBossFogEmitter_Shrine', 'F'), 1, {
+        enemyGoldDropChance: 0,
+      }).mean,
     ).toBe(0);
   });
 
@@ -147,24 +154,24 @@ describe('enemy gold payout policy', () => {
     const at = (enemyGoldDropChance?: number) =>
       enemyGoldAmount(
         catalog,
-        enemyGold('MiniBossBoar', 'N'),
+        enemyGold('MiniBossFogEmitter_Shrine', 'F'),
         1,
         enemyGoldDropChance === undefined ? NATIVE : { enemyGoldDropChance },
       );
-    // MiniBossBoar's constant is 36 with a spread of 5, taken at the native 70%.
-    expect(at().mean).toBe(36);
-    expect(at(35).mean).toBeCloseTo(18, 12);
-    expect(at(35).variance).toBeCloseTo(2.5 ** 2, 12);
-    expect(at(100).mean).toBe(36);
+    // The shadow Fog emitter's constant is 38 with a spread of 21, taken at the native 70%.
+    expect(at().mean).toBe(38);
+    expect(at(35).mean).toBeCloseTo(19, 12);
+    expect(at(35).variance).toBeCloseTo(10.5 ** 2, 12);
+    expect(at(100).mean).toBe(38);
   });
 
   it('leaves only the residual spread when encounterGoldRange fixes the store', () => {
     const fixed = enemyGoldAmount(catalog, enemyGold('GeneratedG', 'G'), 1, {
       encounterGoldRange: 50,
     });
-    // floor((1500 + 50 x 10 + 50) / 100) = 20; G overshoots by 10.4 with a residual SD of 9.9.
+    // floor((1500 + 50 x 10 + 50) / 100) = 20; G overshoots by 10.4 with a residual SD of 14.
     expect(fixed).toMatchObject({ mean: 30.4 });
-    expect(fixed.variance).toBeCloseTo(9.9 ** 2, 12);
+    expect(fixed.variance).toBeCloseTo(14 ** 2, 12);
   });
 
   it('pays Heracles’s bounty flat and unmultiplied beside the store drops', () => {
@@ -229,6 +236,130 @@ describe('known-roster enemy gold', () => {
   });
 });
 
+describe('Fields store and miniboss rosters', () => {
+  it('pays a Fields room’s Passive store in full with the crossing overshoot', () => {
+    const passive = enemyGoldAmount(catalog, enemyGold('GeneratedH_Passive', 'H'), 1, NATIVE);
+    const store = Array.from({ length: 21 }, (_, i) => 10 + i);
+    expect(passive.mean).toBeCloseTo(mean(store) + 9, 12);
+    expect(passive.variance).toBeCloseTo(variance(store) + 7 ** 2, 9);
+    // A Nemesis event in the Passive slot holds an undrawn 25: no ramp, no multiplier.
+    const store25 = definition('NemesisRandomEvent').moneyStore!;
+    expect(encounterStoreValues(store25, 6, 2, 50)).toEqual([25]);
+    expect(
+      enemyGoldAmount(catalog, enemyGold('NemesisRandomEvent', 'H'), 2, NATIVE).mean,
+    ).toBeCloseTo(25 + 2 * 9, 12);
+  });
+
+  it('kills a miniboss’s own enemies, the one whose death wipes the rest last', () => {
+    expect(knownEncounterRoster(catalog, 'MiniBossSatyrCrossbow', undefined)).toEqual([
+      [{ enemyKey: 'Carrion', count: 5 }],
+      [{ enemyKey: 'SatyrCrossbow', count: 1 }],
+    ]);
+    expect(knownEncounterRoster(catalog, 'MiniBossVampire', undefined)).toEqual([
+      [{ enemyKey: 'CorruptedShadeSmall', count: 13 }],
+      [{ enemyKey: 'Vampire', count: 1 }],
+    ]);
+    // The Fog emitter's wipe is commented out: native wave order stands.
+    expect(knownEncounterRoster(catalog, 'MiniBossFogEmitter', undefined)).toEqual([
+      [{ enemyKey: 'FogEmitter_Elite', count: 1 }],
+      [{ enemyKey: 'SiegeVine', count: 3 }],
+    ]);
+  });
+
+  it('pays a miniboss from its roster against its store', () => {
+    const paid = (encounterKey: string, biomeKey: string) =>
+      enemyGoldAmount(
+        catalog,
+        enemyGold(encounterKey, biomeKey, {
+          roster: knownEncounterRoster(catalog, encounterKey, undefined)!,
+        }),
+        1,
+        NATIVE,
+      );
+    // Chance-0 minibosses pay nothing.
+    for (const [key, biome] of [
+      ['MiniBossTreant', 'F'],
+      ['MiniBossBrute', 'Q'],
+      ['MiniBossCharybdis', 'O'],
+      ['BossTyphonTail01', 'Q'],
+    ] as const)
+      expect(paid(key, biome).mean).toBe(0);
+    // The elite's certain 50-70 parcel is paid in full against a store of 15.
+    expect(paid('MiniBossFogEmitter', 'F').mean).toBeCloseTo(60, 9);
+    // Thirteen shades drain the store of 15 before the Vampire falls.
+    const vampire = paid('MiniBossVampire', 'H').mean;
+    expect(vampire).toBeGreaterThan(15);
+    expect(vampire).toBeLessThan(20);
+    // Ungenerated Talos pays its uncapped parcel at 70%: 17..22.
+    expect(paid('MiniBossTalos', 'P').mean).toBeCloseTo(0.7 * 19.5, 9);
+  });
+});
+
+describe('boss rosters', () => {
+  const paid = (encounterKey: string, sigma = 1) => {
+    const roster = knownEncounterRoster(catalog, encounterKey, undefined);
+    return enemyGoldAmount(
+      catalog,
+      enemyGold(encounterKey, 'F', roster === undefined ? {} : { roster }),
+      sigma,
+      NATIVE,
+    );
+  };
+
+  it('pays a boss’s encounter-spawned and pre-placed adds uncapped, the boss itself nothing', () => {
+    // Hecate's 12 LightRanged at 70%, each 3..4 gold; Hecate's rating of 1 truncates to 0.
+    expect(paid('BossHecate01').mean).toBeCloseTo(12 * 0.7 * 3.5, 9);
+    // Six pre-placed cultists at 24..32.
+    expect(paid('BossChronos01').mean).toBeCloseTo(6 * 0.7 * 28, 9);
+    for (const key of ['BossScylla01', 'BossEris01', 'BossPrometheus01', 'BossPolyphemus02'])
+      expect(paid(key).mean).toBe(0);
+    // The money multiplier rounds each parcel: round(28 x 2) per cultist on average.
+    expect(paid('BossChronos01', 2).mean).toBeCloseTo(2 * paid('BossChronos01').mean, 9);
+  });
+
+  it('mixes a boss’s random spawn picks by weight', () => {
+    // One of five Cerberus spawn encounters, each all killed before Cerberus.
+    const parcel = (min: number, max: number) => 0.7 * ((min + max) / 2);
+    const picks = [
+      4 * parcel(54, 70),
+      2 * parcel(69, 90),
+      3 * parcel(52, 68),
+      4 * parcel(39, 51),
+      9 * parcel(8, 10) + parcel(12, 15),
+    ];
+    expect(paid('BossInfestedCerberus01').mean).toBeCloseTo(mean(picks), 9);
+    expect(paid('BossInfestedCerberus01').variance).toBeGreaterThan(variance(picks));
+    // The Rivals list draws its fourth encounter twice in five.
+    expect(paid('BossInfestedCerberus02').mean).toBeCloseTo(
+      (5 * parcel(31, 40) + 6 * parcel(24, 32) + 5 * parcel(26, 34) + 2 * 7 * parcel(18, 23)) / 5,
+      9,
+    );
+  });
+
+  it('pays Typhon’s hatchlings at the egg hatch rate', () => {
+    // Half the time five Simple2 eggs (8..10), half the time two Brute2 eggs (64..83); a quarter hatch.
+    expect(paid('BossTyphonHead01').mean).toBeCloseTo(
+      0.25 * 0.7 * (0.5 * 5 * 9 + 0.5 * 2 * 73.5),
+      9,
+    );
+    expect(paid('BossTyphonHead02').mean).toBeCloseTo(0.25 * 0.7 * 0.5 * 2 * 18, 9);
+    // Medea counts Typhon and the expected hatchlings: 1 + 0.25 x (4 + 3).
+    const medea = (encounterKey: string) =>
+      medeaGoldAmount(
+        catalog,
+        {
+          kind: 'medeaGold',
+          goldPerDrop: 20,
+          chance: 1,
+          dropCap: 10,
+          encounters: [{ encounterKey, biomeKey: 'Q', hordesRank: 0 }],
+        },
+        1,
+      ).mean;
+    expect(medea('BossTyphonHead01')).toBeCloseTo(20 * 0.7 * 2.75, 9);
+  });
+});
+
 describe('Medea and urn gold', () => {
   const binomialCapped = (n: number, p: number, cap: number) => {
     let total = 0;
@@ -246,23 +377,30 @@ describe('Medea and urn gold', () => {
       goldPerDrop: 20,
       chance: 0.1,
       dropCap: 2,
-      // A Boar miniboss alone in its room: 1 + 15 adds.
-      encounters: [{ encounterKey: 'MiniBossBoar', biomeKey: 'N', hordesRank: 0 }],
+      // A Boar miniboss alone in its room: the boar and its 12 zombies.
+      encounters: [
+        {
+          encounterKey: 'MiniBossBoar',
+          biomeKey: 'N',
+          hordesRank: 0,
+          roster: knownEncounterRoster(catalog, 'MiniBossBoar', undefined)!,
+        },
+      ],
     } as const;
     expect(medeaGoldAmount(catalog, gain, 1).mean).toBeCloseTo(
-      20 * 0.7 * binomialCapped(16, 0.1, 2),
+      20 * 0.7 * binomialCapped(13, 0.1, 2),
       9,
     );
     // The multiplier rounds each drop: round(20 x 1.3) = 26.
     expect(medeaGoldAmount(catalog, gain, 1.3).mean).toBeCloseTo(
-      26 * 0.7 * binomialCapped(16, 0.1, 2),
+      26 * 0.7 * binomialCapped(13, 0.1, 2),
       9,
     );
     // A second fight pays only what it adds under the room's cap.
     const boar = gain.encounters[0]!;
     const second = medeaGoldAmount(catalog, { ...gain, encounters: [boar, boar] }, 1).mean;
     expect(medeaGoldAmount(catalog, gain, 1).mean + second).toBeCloseTo(
-      20 * 0.7 * binomialCapped(32, 0.1, 2),
+      20 * 0.7 * binomialCapped(26, 0.1, 2),
       9,
     );
     // Hordes grows a generated roster's kills.
@@ -275,21 +413,27 @@ describe('Medea and urn gold', () => {
     expect(generated(3)).toBeGreaterThan(generated(0));
   });
 
-  it('breaks the biome’s golden urns and the listed rooms’ own', () => {
-    // Four Chronos-pot attempts: 15, 10 or 5 gold at 1%, 2% and 2% tried in order.
+  it('swaps one more urn than the room set’s limit, bounded by the map’s breakables', () => {
+    const urns = (roomGameName: string) =>
+      urnGoldAmount(catalog, { kind: 'urnGold', roomGameName }, 1);
+    // Four Chronos-pot candidates: 15, 10 or 5 gold at 1%, 2% and 2% tried in order.
     const attempt = 0.01 * 15 + 0.99 * 0.02 * 10 + 0.99 * 0.98 * 0.02 * 5;
-    expect(
-      urnGoldAmount({ kind: 'urnGold', biomeKey: 'F', roomGameName: 'F_Combat01' }, 1).mean,
-    ).toBeCloseTo(4 * 0.7 * attempt, 12);
-    expect(
-      urnGoldAmount({ kind: 'urnGold', biomeKey: 'I', roomGameName: 'I_MiniBoss02' }, 1).mean,
-    ).toBeCloseTo(13 * 15 * 0.7, 12);
-    expect(
-      urnGoldAmount({ kind: 'urnGold', biomeKey: 'H', roomGameName: 'H_Combat01' }, 1),
-    ).toEqual({ mean: 0, variance: 0, min: 0, max: 0 });
-    const side = urnGoldAmount({ kind: 'urnGold', biomeKey: 'N', roomGameName: 'N_Sub01' }, 1);
+    expect(urns('F_Combat01').mean).toBeCloseTo(4 * 0.7 * attempt, 12);
+    // A shop or a Chaos room swaps as its set does.
+    expect(urns('F_Shop01').mean).toBeCloseTo(4 * 0.7 * attempt, 12);
+    expect(urns('Chaos_01').mean).toBeCloseTo(4 * 0.7 * attempt, 12);
+    // I_Combat08's map places one breakable, under Tartarus's seven candidates.
+    expect(urns('I_Combat08').mean).toBeCloseTo(0.7 * attempt, 12);
+    expect(urns('I_MiniBoss02').mean).toBeCloseTo(13 * 15 * 0.7, 12);
+    const none = { mean: 0, variance: 0, min: 0, max: 0 };
+    // Fields maps place no breakables; Thessaly's and the Anomaly's swap none; I_PreBoss01 has none.
+    for (const room of ['H_Combat01', 'O_Combat01', 'B_Combat01', 'I_PreBoss01'])
+      expect(urns(room)).toEqual(none);
     const sideAttempt = 0.1 * 15 + 0.9 * 0.1 * 10 + 0.81 * 0.1 * 5;
-    expect(side.mean).toBeCloseTo(2 * 0.7 * sideAttempt, 12);
+    expect(urns('N_Sub01').mean).toBeCloseTo(2 * 0.7 * sideAttempt, 12);
+    // Q_Combat04's map places four, under the Summit's nine.
+    const surfaceAttempt = 0.05 * 15 + 0.95 * 0.05 * 10 + 0.95 * 0.95 * 0.05 * 5;
+    expect(urns('Q_Combat04').mean).toBeCloseTo(4 * 0.7 * surfaceAttempt, 12);
   });
 });
 

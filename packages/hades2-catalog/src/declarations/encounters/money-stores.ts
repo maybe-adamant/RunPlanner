@@ -13,6 +13,16 @@ export const generatedMoneyStore = store(10, 15, 0.5);
 export const oceanusMoneyStore = store(15, 25);
 /** EncounterData_Generated.lua:165-167 `GeneratedH_Passive`. */
 export const fieldsPassiveMoneyStore = store(10, 30);
+/**
+ * EncounterData_Story.lua:1915-1924 `NemesisRandomEvent`: `MoneyDropStore = 25`
+ * set in data "for Fields where this is the room's encounter", never drawn.
+ */
+export const nemesisEventMoneyStore: EncounterMoneyStore = Object.freeze({
+  capMin: 25,
+  capMax: 25,
+  runDepthRamp: 0,
+  undrawn: true,
+});
 /** EncounterData_Generated.lua:247-249 `GeneratedH`. */
 export const fieldsMoneyStore = store(30, 45);
 /** EncounterData_Generated.lua:443-445 `GeneratedI`. */

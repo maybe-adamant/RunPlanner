@@ -115,6 +115,9 @@ function normalizeEnvelopeSlot(
             `${path}.rewardAttachment`,
           ),
         }),
+    ...(raw.moneyStoreSlotKey === undefined
+      ? {}
+      : { moneyStoreSlotKey: requireNonEmpty(raw.moneyStoreSlotKey, `${path}.moneyStoreSlotKey`) }),
   });
 }
 
@@ -145,6 +148,16 @@ export function normalizeEncounterEnvelopes(
           }
           seenWheelKeys.add(slot.rewardAttachment.key);
         }
+      }
+      // A drained store belongs to a slot that drains its own.
+      for (const [slotIndex, slot] of slots.entries()) {
+        if (slot.moneyStoreSlotKey === undefined) continue;
+        const owner = slots.find((candidate) => candidate.key === slot.moneyStoreSlotKey);
+        if (owner === undefined || owner === slot || owner.moneyStoreSlotKey !== undefined)
+          fail(
+            `${path}.slots[${slotIndex}].moneyStoreSlotKey`,
+            `${slot.moneyStoreSlotKey} must be another slot that drains its own store`,
+          );
       }
       return Object.freeze({ key, slots: Object.freeze(slots) });
     }),

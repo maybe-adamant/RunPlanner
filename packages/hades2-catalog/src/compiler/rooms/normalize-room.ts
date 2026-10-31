@@ -45,6 +45,7 @@ export function normalizeRoom(
   encounterSets: CatalogCollection<EncounterSet>,
   exitTypes: CatalogCollection<ExitTypeDeclaration>,
   nativeExitDoorOrder: readonly number[] | undefined,
+  swappableBreakables: number | undefined,
 ): RoomDeclaration {
   const path = `rooms[${roomIndex}]`;
 
@@ -98,6 +99,7 @@ export function normalizeRoom(
       : { cocoonRewardPointIds: encounter.cocoonRewardPointIds }),
     label: identity.label,
     roomSetKey: identity.roomSetKey,
+    ...(swappableBreakables === undefined ? {} : { swappableBreakables }),
     kind: identity.kind,
     mode: identity.mode,
     ...(core.lifecycleProfileKey === undefined
@@ -192,6 +194,7 @@ export function normalizeRoom(
           encounterSets,
           exitTypes,
           nativeExitDoorOrder,
+          swappableBreakables,
         ),
       `${path}.routeOverlays[${overlayIndex}]`,
     ),

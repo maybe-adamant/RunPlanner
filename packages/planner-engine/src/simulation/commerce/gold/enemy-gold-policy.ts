@@ -5,7 +5,8 @@
  * native still draws the roster, so it is estimated per biome from simulated
  * rosters and recorded runs (`scripts/gold-calibration.mjs` re-derives the
  * observed side). A fully determined roster pays in closed form instead
- * (`known-roster.ts`), so an all-fixed identity has no entry here.
+ * (`known-roster.ts`), so an all-fixed identity, a miniboss or a boss has no
+ * entry here. Every value is a row of docs/design/GOLD_ESTIMATE_ASSUMPTIONS.md.
  */
 
 /** Paid gold at the native drop chance, then at an `enemyGoldDropChance` of 25, 50, 75 and 100. */
@@ -39,6 +40,11 @@ export type EnemyGoldPolicy =
       readonly sd: number;
       readonly kills: number;
     }
+  /**
+   * Kills drain the room's own encounter's store (a Fields cage drains the
+   * Passive store, which prices them): they pay nothing of their own.
+   */
+  | { readonly kind: 'roomStore'; readonly kills: number }
   /** Kills pay nothing (bosses, story encounters, noncombat rooms). */
   | { readonly kind: 'none'; readonly kills: number };
 
@@ -52,16 +58,17 @@ const fraction = (
   Object.freeze({ kind: 'storeFraction', fractionByHordesRank: rows, residualSd, kills });
 const constant = (mean: number, sd: number, kills: number): EnemyGoldPolicy =>
   Object.freeze({ kind: 'constant', mean, sd, kills });
+const roomStore = (kills: number): EnemyGoldPolicy => Object.freeze({ kind: 'roomStore', kills });
 
-/**
- * Generated combat by the room's biome. Exhausting biomes take the overshoot
- * form; Fields and Tartarus follow recorded runs (about 1.2 of the store)
- * over the simulation's larger drops.
- */
+/** A Fields room's one store, which its kills always exhaust: see GOLD_ESTIMATE_ASSUMPTIONS.md "Fields store". */
+const fieldsStore = (kills: number) => overshoot([9, 9, 9, 9, 9], 7, kills);
+
+/** Generated combat by the room's biome (GOLD_ESTIMATE_ASSUMPTIONS.md "Enemy gold policy"); Fields combats run only in cages. */
 const biomePolicies: Readonly<Record<string, EnemyGoldPolicy>> = Object.freeze({
   F: overshoot([1.9, -4.0, 1.1, 2.2, 2.3], 3.0, 12.5),
-  G: overshoot([10.4, 4.4, 9.2, 9.8, 9.8], 9.9, 20.8),
-  H: overshoot([7.5, -9.4, 2.3, 7.7, 12.1], 25, 7.2),
+  G: overshoot([10.4, 4.4, 9.2, 9.8, 9.8], 14, 20.8),
+  // GOLD_ESTIMATE_ASSUMPTIONS.md "Fields kills".
+  H: roomStore(7.2),
   I: overshoot([8.0, 0, 7.4, 8.0, 8.0], 20.3, 10.4),
   N: fraction(
     [
@@ -105,10 +112,12 @@ const biomePolicies: Readonly<Record<string, EnemyGoldPolicy>> = Object.freeze({
   ),
 });
 
-/** Encounters whose roster or store differs from their biome's ordinary combat. */
+/** Encounters whose roster or store differs from their biome's ordinary combat (GOLD_ESTIMATE_ASSUMPTIONS.md "Special combats"). */
 const encounterPolicies: Readonly<Record<string, EnemyGoldPolicy>> = Object.freeze({
-  GeneratedH_Passive: overshoot([11.6, 1.6, 8.8, 12.4, 14.0], 9.6, 13.7),
-  GeneratedH_PassiveSmall: overshoot([11.6, 1.6, 8.8, 12.4, 14.0], 9.6, 13.7),
+  GeneratedH_Passive: fieldsStore(13.7),
+  GeneratedH_PassiveSmall: fieldsStore(13.7),
+  // Its store is the Fields room's when it replaces the Passive encounter; it kills nothing.
+  NemesisRandomEvent: fieldsStore(0),
   OpeningGeneratedN: fraction(
     [
       [0.55, 0.26, 0.5, 0.7, 0.85],
@@ -129,14 +138,14 @@ const encounterPolicies: Readonly<Record<string, EnemyGoldPolicy>> = Object.free
     5.6,
     7.0,
   ),
-  // The Anomaly spawns until its capture point fills, so its store is always exhausted.
+  // GOLD_ESTIMATE_ASSUMPTIONS.md "Anomaly".
   GeneratedAnomalyB: overshoot([11, 11, 11, 11, 11], 8, 30),
   ArtemisCombatF: fraction([[1.06, 0.64, 1.01, 1.08, 1.09]], 4.5, 22),
   ArtemisCombatG: fraction([[1.21, 1.08, 1.16, 1.15, 1.14]], 6.3, 40.6),
   ArtemisCombatN: fraction([[0.98, 0.52, 0.92, 1.06, 1.07]], 5.4, 22),
   NemesisCombatF: fraction([[1.06, 0.64, 1.01, 1.08, 1.09]], 4.5, 22),
   NemesisCombatG: fraction([[1.21, 1.03, 1.17, 1.16, 1.15]], 6.9, 33.9),
-  NemesisCombatH: fraction([[1.07, 1.04, 1.08, 1.06, 1.06]], 10.9, 15.4),
+  NemesisCombatH: roomStore(15.4),
   NemesisCombatI: fraction([[1.04, 1.08, 1.07, 1.04, 1.03]], 7.2, 16.4),
   DevotionTestF: fraction([[1.05, 0.57, 0.98, 1.1, 1.11]], 4.4, 14.3),
   DevotionTestG: fraction([[1.29, 0.97, 1.23, 1.26, 1.25]], 7.5, 19.4),
@@ -157,30 +166,9 @@ const encounterPolicies: Readonly<Record<string, EnemyGoldPolicy>> = Object.free
     10.6,
     11.3,
   ),
-  // Minibosses: the miniboss dies last, after its adds drain the store; kills are 1 + adds.
-  MiniBossTreant: constant(0, 0, 1),
-  MiniBossTreant_Shrine: constant(0, 0, 2),
-  MiniBossFogEmitter: constant(60, 6, 1),
-  MiniBossFogEmitter_Shrine: constant(60, 6, 2),
-  MiniBossAssassin: constant(9, 4, 3),
-  MiniBossWaterUnit: constant(30, 7, 6),
-  MiniBossJellyfish: constant(45, 35, 26),
-  MiniBossCrawler: constant(26, 17, 1),
-  MiniBossVampire: constant(17, 4, 15),
-  MiniBossLamia: constant(36, 11, 6),
-  MiniBossRatCatcher: constant(63, 47, 2),
-  MiniBossGoldElemental: constant(30, 13, 3),
-  MiniBossSatyrCrossbow: constant(30, 15, 7),
-  MiniBossBoar: constant(36, 5, 16),
-  MiniBossCaptain: constant(23, 20, 15),
-  MiniBossCharybdis: constant(0, 0, 1),
-  MiniBossTalos: constant(21, 10, 3),
-  MiniBossDragon: constant(35, 19, 2),
-  MiniBossBrute: constant(0, 0, 2),
-  MiniBossStalker: constant(50, 20, 21),
-  BossTyphonTail01: constant(0, 0, 1),
-  BossTyphonEye01: constant(0, 0, 1),
-  // Arachne's cocoon spawns are not modelled.
+  // GOLD_ESTIMATE_ASSUMPTIONS.md "Shadow Fog emitter".
+  MiniBossFogEmitter_Shrine: constant(38, 21, 8),
+  // GOLD_ESTIMATE_ASSUMPTIONS.md "Arachne combat".
   ArachneCombatF: constant(0, 0, 10),
   ArachneCombatG: constant(0, 0, 10),
 });
@@ -207,7 +195,7 @@ export function enemyGoldPolicy(
   return definition.kind === 'combat' || definition.kind === 'miniboss' ? undefined : NONE;
 }
 
-/** Kills per Hordes rank 0–3, relative to rank 0, for a generated roster. */
+/** Kills per Hordes rank 0–3, relative to rank 0 (GOLD_ESTIMATE_ASSUMPTIONS.md "Hordes kills"). */
 const hordesKillFactors: Readonly<Record<string, readonly number[]>> = Object.freeze({
   H: [1, 1.26, 1.53, 1.83],
   default: [1, 1.18, 1.37, 1.56],
@@ -220,44 +208,69 @@ export function enemyGoldKills(policy: EnemyGoldPolicy, biomeKey: string, hordes
   return policy.kills * factors[Math.max(0, Math.min(3, hordesRank))]!;
 }
 
-/**
- * The drop chance, in percent, most paying enemies inherit (`MoneyDropOnDeath`
- * Chance 0.7, EnemyData.lua:166-176), which a constant policy is taken to pay at.
- */
+/** The native drop chance a constant is taken to pay at (GOLD_ESTIMATE_ASSUMPTIONS.md "Drop-chance scaling"). */
 export const NATIVE_ENEMY_GOLD_DROP_CHANCE = 70;
 
-/** Medea and urn gold drop as pickups; a run misses some of them. */
+/** GOLD_ESTIMATE_ASSUMPTIONS.md "Egg hatch rate". */
+export const EGG_HATCH_RATE = 0.25;
+
+/** GOLD_ESTIMATE_ASSUMPTIONS.md "Collection rate". */
 export const DROPPED_GOLD_COLLECTION_RATE = 0.7;
 
-/** Heracles's bounty the player is credited for, out of a 150 marked at most. */
+/** GOLD_ESTIMATE_ASSUMPTIONS.md "Heracles bounty". */
 export const HERACLES_BOUNTY_GOLD = 100;
 
-/** One golden-urn swap attempt's gold options, tried in order (`HandleBreakableSwap`). */
+/** One golden-urn swap candidate's gold options, tried in order (`HandleBreakableSwap`). */
 interface UrnPots {
   readonly options: readonly { readonly gold: number; readonly chance: number }[];
 }
 
-// ObstacleData.lua:756-834 (the Chronos pot) and ObstacleDataN/P/Q (the surface pots).
+// BaseBreakable (ObstacleData.lua:756-834) and the surface pots' own tables
+// (ObstacleDataN.lua:491, ObstacleDataP.lua:118, ObstacleDataQ.lua:184).
 const chronosPot: UrnPots = {
   options: [15, 10, 5].map((gold, i) => ({ gold, chance: [0.01, 0.02, 0.02][i]! })),
 };
 const surfacePot: UrnPots = { options: [15, 10, 5].map((gold) => ({ gold, chance: 0.05 })) };
 
 /**
- * Golden urns by the room's biome: `MaxHighValueBreakables` + 1 attempts
- * (RoomDataF/G/I/N/P/Q); Fields, Thessaly and the Anomaly swap none.
+ * A room set's golden-urn swap: `MaxHighValueBreakables` and its pots
+ * (RoomDataF.lua:299, RoomDataG.lua:291, RoomDataChaos.lua:165,
+ * RoomDataI.lua:306, RoomDataN.lua:354, RoomDataP.lua:345, RoomDataQ.lua:30).
+ * Fields, Thessaly, the Anomaly and the Zagreus contract swap none
+ * (RoomDataH.lua:503 commented out, RoomDataO.lua:292, RoomDataAnomaly.lua:12,
+ * RoomDataC.lua:16).
  */
-const urnRooms: Readonly<Record<string, { readonly attempts: number; readonly pots: UrnPots }>> =
+const urnRoomSets: Readonly<Record<string, { readonly limit: number; readonly pots: UrnPots }>> =
   Object.freeze({
-    F: { attempts: 4, pots: chronosPot },
-    G: { attempts: 4, pots: chronosPot },
-    I: { attempts: 7, pots: chronosPot },
-    N: { attempts: 4, pots: surfacePot },
-    P: { attempts: 7, pots: surfacePot },
-    Q: { attempts: 9, pots: surfacePot },
+    F: { limit: 3, pots: chronosPot },
+    G: { limit: 3, pots: chronosPot },
+    Chaos: { limit: 3, pots: chronosPot },
+    I: { limit: 6, pots: chronosPot },
+    N: { limit: 3, pots: surfacePot },
+    P: { limit: 6, pots: surfacePot },
+    Q: { limit: 8, pots: surfacePot },
   });
 
-/** One attempt's gold as a value distribution, the chance scaled and capped at one. */
+/**
+ * Rooms whose own data overrides their set's swap: `I_MiniBoss02` at limit 12
+ * and a hundredfold chance (RoomDataI.lua:2931-2932), Ephyra's side rooms at
+ * limit 1 and double (BaseN_SubRooms, RoomDataN.lua:3824-3825) and `Q_Intro`
+ * at a third (RoomDataQ.lua:401).
+ */
+const urnRoomOverrides: Readonly<
+  Record<string, { readonly limit?: number; readonly chanceMultiplier: number }>
+> = Object.freeze({
+  I_MiniBoss02: { limit: 12, chanceMultiplier: 100 },
+  ...Object.fromEntries(
+    Array.from({ length: 15 }, (_, index) => [
+      `N_Sub${String(index + 1).padStart(2, '0')}`,
+      { limit: 1, chanceMultiplier: 2 },
+    ]),
+  ),
+  Q_Intro: { chanceMultiplier: 0.33 },
+});
+
+/** One candidate's gold as a value distribution, the chance scaled and capped at one. */
 function urnAttempt(pots: UrnPots, chanceMultiplier: number) {
   let remaining = 1;
   const values: { readonly gold: number; readonly probability: number }[] = [];
@@ -270,22 +283,20 @@ function urnAttempt(pots: UrnPots, chanceMultiplier: number) {
 }
 
 /**
- * A room's golden-urn gold before the money multiplier and collection: the
- * mean and variance of its attempts. `I_MiniBoss02` swaps 13 pots at a
- * hundredfold chance, Ephyra's side rooms two at double and `Q_Intro` its
- * nine at a third (RoomDataI.lua:2931, RoomDataN.lua:3824, RoomDataQ.lua:401).
+ * A room's golden urns before the money multiplier and collection: native
+ * swaps `limit + 1` of the map's swappable breakables, or every one when
+ * the map has fewer (RoomLogic.lua:2533-2568). Undefined where none swap.
  */
-export function urnAttempts(
-  biomeKey: string,
-  roomGameName: string,
-):
+export function urnAttempts(room: {
+  readonly gameName: string;
+  readonly roomSetKey: string;
+  readonly swappableBreakables?: number;
+}):
   | { readonly values: readonly { gold: number; probability: number }[]; readonly attempts: number }
   | undefined {
-  if (roomGameName === 'I_MiniBoss02') return { values: urnAttempt(chronosPot, 100), attempts: 13 };
-  const room = urnRooms[biomeKey];
-  if (room === undefined) return undefined;
-  if (roomGameName.startsWith('N_Sub')) return { values: urnAttempt(room.pots, 2), attempts: 2 };
-  if (roomGameName === 'Q_Intro')
-    return { values: urnAttempt(room.pots, 0.33), attempts: room.attempts };
-  return { values: urnAttempt(room.pots, 1), attempts: room.attempts };
+  const set = urnRoomSets[room.roomSetKey];
+  if (set === undefined || room.swappableBreakables === undefined) return undefined;
+  const override = urnRoomOverrides[room.gameName];
+  const attempts = Math.min((override?.limit ?? set.limit) + 1, room.swappableBreakables);
+  return { values: urnAttempt(set.pots, override?.chanceMultiplier ?? 1), attempts };
 }

@@ -19,6 +19,7 @@ import { validateRoomTemplateContracts } from './template-contracts';
 export function normalizeRooms(
   rawRooms: readonly RawRoomDeclaration[],
   rawNativeExitDoorOrders: Readonly<Record<string, readonly number[]>>,
+  rawSwappableBreakables: Readonly<Record<string, number>>,
   rewards: RewardKernelCatalog,
   encounterEnvelopes: CatalogCollection<EncounterEnvelope>,
   encounterDefinitions: CatalogCollection<EncounterDefinition>,
@@ -29,6 +30,12 @@ export function normalizeRooms(
   for (const gameName of Object.keys(rawNativeExitDoorOrders))
     if (!declaredGameNames.has(gameName))
       fail(`nativeExitDoorOrders.${gameName}`, 'is not a declared room');
+  for (const [gameName, count] of Object.entries(rawSwappableBreakables)) {
+    if (!declaredGameNames.has(gameName))
+      fail(`swappableBreakables.${gameName}`, 'is not a declared room');
+    if (!Number.isInteger(count) || count <= 0)
+      fail(`swappableBreakables.${gameName}`, 'must be a positive integer');
+  }
   const rooms = rawRooms.map((room, roomIndex) =>
     normalizeRoom(
       room,
@@ -40,6 +47,9 @@ export function normalizeRooms(
       exitTypes,
       Object.hasOwn(rawNativeExitDoorOrders, room.gameName)
         ? rawNativeExitDoorOrders[room.gameName]
+        : undefined,
+      Object.hasOwn(rawSwappableBreakables, room.gameName)
+        ? rawSwappableBreakables[room.gameName]
         : undefined,
     ),
   );

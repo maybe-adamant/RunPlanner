@@ -1,3 +1,4 @@
+import { boarRoster, polyphemusRoster, satyrCrossbowRoster } from './boss-rosters';
 import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
@@ -159,6 +160,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'MiniBossSatyrCrossbow',
+    bossRoster: satyrCrossbowRoster,
     moneyStore: minibossMoneyStore,
     label: 'Satyr crossbow',
     kind: 'miniboss',
@@ -168,6 +170,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'MiniBossBoar',
+    bossRoster: boarRoster,
     moneyStore: minibossMoneyStore,
     label: 'Boar',
     kind: 'miniboss',
@@ -185,6 +188,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'BossPolyphemus01',
+    bossRoster: polyphemusRoster,
     label: 'Polyphemus',
     kind: 'boss',
     countsEncounterDepth: false,
@@ -192,6 +196,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'BossPolyphemus02',
+    bossRoster: polyphemusRoster,
     label: 'Polyphemus',
     kind: 'boss',
     countsEncounterDepth: false,

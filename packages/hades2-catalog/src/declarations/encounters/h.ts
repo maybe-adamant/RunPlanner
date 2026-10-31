@@ -1,3 +1,4 @@
+import { cerberusRivalsRoster, cerberusRoster, lamiaRoster, vampireRoster } from './boss-rosters';
 import { generatedEncounterChoices } from './generated/policies';
 import { notFreshFileRoute } from '../routes';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
@@ -218,6 +219,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'MiniBossVampire',
+    bossRoster: vampireRoster,
     moneyStore: minibossMoneyStore,
     label: 'Vampire',
     kind: 'miniboss',
@@ -229,6 +231,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'MiniBossLamia',
+    bossRoster: lamiaRoster,
     moneyStore: minibossMoneyStore,
     label: 'Lamia',
     kind: 'miniboss',
@@ -256,6 +259,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'BossInfestedCerberus01',
+    bossRoster: cerberusRoster,
     label: 'Cerberus',
     kind: 'boss',
     countsEncounterDepth: false,
@@ -307,6 +311,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'BossInfestedCerberus02',
+    bossRoster: cerberusRivalsRoster,
     label: 'Cerberus',
     kind: 'boss',
     countsEncounterDepth: false,

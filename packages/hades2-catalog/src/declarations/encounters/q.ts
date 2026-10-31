@@ -1,3 +1,11 @@
+import {
+  bruteRoster,
+  stalkerRoster,
+  typhonEyeRoster,
+  typhonRivalsRoster,
+  typhonRoster,
+  typhonTailRoster,
+} from './boss-rosters';
 import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import { summitMoneyStore } from './money-stores';
@@ -42,6 +50,7 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'MiniBossBrute',
+    bossRoster: bruteRoster,
     moneyStore: summitMoneyStore,
     label: 'Brute',
     kind: 'miniboss',
@@ -52,6 +61,7 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'MiniBossStalker',
+    bossRoster: stalkerRoster,
     label: 'Stalker',
     kind: 'miniboss',
     countsEncounterDepth: true,
@@ -61,6 +71,7 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'BossTyphonTail01',
+    bossRoster: typhonTailRoster,
     moneyStore: summitMoneyStore,
     label: 'Typhon tail',
     kind: 'miniboss',
@@ -71,6 +82,7 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'BossTyphonEye01',
+    bossRoster: typhonEyeRoster,
     label: 'Typhon eye',
     kind: 'miniboss',
     countsEncounterDepth: false,
@@ -79,6 +91,7 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'BossTyphonHead01',
+    bossRoster: typhonRoster,
     label: 'Typhon',
     kind: 'boss',
     countsEncounterDepth: false,
@@ -110,6 +123,7 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'BossTyphonHead02',
+    bossRoster: typhonRivalsRoster,
     label: 'Typhon',
     kind: 'boss',
     countsEncounterDepth: false,

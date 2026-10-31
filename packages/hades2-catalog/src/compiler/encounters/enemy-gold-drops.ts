@@ -64,7 +64,11 @@ function rosterEnemyKeys(definition: EncounterDefinition): readonly {
   readonly unitGroupSize?: number;
 }[] {
   const keys: { key: string; unitGroupSize?: number }[] = [];
-  for (const wave of definition.fixedRoster ?? [])
+  for (const wave of [
+    ...(definition.fixedRoster ?? []),
+    ...(definition.bossRoster?.waves ?? []),
+    ...(definition.bossRoster?.choices ?? []).flat().map((option) => option.spawns),
+  ])
     for (const spawn of wave) keys.push({ key: spawn.enemyKey });
   for (const decision of definition.customization ?? []) {
     if (decision.selection.kind !== 'generated') continue;

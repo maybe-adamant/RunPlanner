@@ -14,7 +14,11 @@ import type {
 import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
 import type { StygianWellCandidateContext } from '../../commerce/stygian-well';
 import type { PurchasePriceContextPublication } from '../../commerce/gold/price-context';
-import type { GoldEventPublication, GoldMultipliers } from '../../commerce/gold/gain-context';
+import type {
+  GoldEventPublication,
+  GoldMultipliers,
+  GoldSpawnReading,
+} from '../../commerce/gold/gain-context';
 import type { KnownRoster } from '../../commerce/gold/known-roster';
 import type { FeatureRollWalk } from '../../commerce/feature-rolls';
 import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from '../../history';
@@ -119,6 +123,15 @@ export interface ChronologyWalkState {
     string,
     GoldMultipliers | 'divergent' | 'unresolved'
   >;
+  /**
+   * What a coin object spawning now would read, at each spawn contact: a
+   * room's entry and latest encounter end (`room::entry`, `room::encounterEnd`)
+   * and a trait screen's close (`trait::<offer>`). Reached branches that
+   * disagree, or hold an unauthored multiplier, keep that reason instead.
+   */
+  readonly goldSpawnReadings: ReadonlyMap<string, GoldSpawnReading | 'divergent' | 'unresolved'>;
+  /** Shared stores already paid by a phase that drains them; by `room::slot`. */
+  readonly goldPaidSharedStores: ReadonlySet<string>;
   /** The fully determined roster each recorded phase fields, with its identity; by `room::phase`. */
   readonly goldEncounterRosters: ReadonlyMap<string, GoldRecordedRoster>;
   /**
@@ -212,6 +225,8 @@ export function createChronologyWalkState(
     goldEvents: Object.freeze([]),
     goldEncounterKeys: new Map(),
     goldRoomEntryMultipliers: new Map(),
+    goldSpawnReadings: new Map(),
+    goldPaidSharedStores: new Set<string>(),
     goldEncounterRosters: new Map(),
     goldCompletedEncounters: new Map(),
     purgingPoolAssessments: new Map(),

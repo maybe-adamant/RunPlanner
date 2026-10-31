@@ -196,9 +196,110 @@ describe('gold catalog facts', () => {
         'Empty_Chaos',
       ].map(store),
     ).toEqual(Array(10).fill(undefined));
+    // The Nemesis event's data-set store, beside the generated ones.
+    expect(store('NemesisRandomEvent')).toEqual({
+      capMin: 25,
+      capMax: 25,
+      runDepthRamp: 0,
+      undrawn: true,
+    });
     expect(
       catalog.encounterDefinitions.values.filter((definition) => definition.moneyStore).length,
-    ).toBe(124);
+    ).toBe(125);
+  });
+
+  it('drains a Fields room’s Passive store from its cages', () => {
+    expect(
+      catalog.encounterEnvelopes.byKey.FieldsEncounter!.slots.map((slot) => [
+        slot.key,
+        slot.moneyStoreSlotKey,
+      ]),
+    ).toEqual([
+      ['Passive', undefined],
+      ['Cage01', 'Passive'],
+      ['Cage02', 'Passive'],
+      ['Cage03', 'Passive'],
+    ]);
+    const withSlot = (moneyStoreSlotKey: string) => () =>
+      createCatalog({
+        ...declarations,
+        encounterEnvelopes: declarations.encounterEnvelopes.map((envelope) =>
+          envelope.key === 'FieldsEncounter'
+            ? {
+                ...envelope,
+                slots: envelope.slots.map((slot) =>
+                  slot.key === 'Cage01' ? { ...slot, moneyStoreSlotKey } : slot,
+                ),
+              }
+            : envelope,
+        ),
+      });
+    // A cage cannot drain itself, another cage or a missing slot.
+    for (const key of ['Cage01', 'Cage02', 'Missing'])
+      expect(withSlot(key)).toThrow(CatalogContractError);
+  });
+
+  it('counts each room map’s swappable breakables', () => {
+    const breakables = (gameName: string) => catalog.rooms.byKey[gameName]?.swappableBreakables;
+    expect(
+      ['F_Combat01', 'F_Shop01', 'I_Combat08', 'I_MiniBoss02', 'N_Sub05', 'Q_Combat04'].map(
+        breakables,
+      ),
+    ).toEqual([15, 24, 1, 111, 4, 4]);
+    // Fields maps and these rooms place none.
+    expect(
+      ['H_Combat01', 'I_Combat14', 'I_PreBoss01', 'G_Shop01', 'Q_Boss01'].map(breakables),
+    ).toEqual(Array(5).fill(undefined));
+    expect(() =>
+      createCatalog({ ...declarations, swappableBreakables: { NoSuchRoom: 3 } }),
+    ).toThrow(CatalogContractError);
+  });
+
+  it('declares each fixed miniboss roster and its wipe', () => {
+    expect(catalog.encounterDefinitions.byKey.MiniBossSatyrCrossbow?.bossRoster).toEqual({
+      waves: [[{ enemyKey: 'SatyrCrossbow', count: 1 }], [{ enemyKey: 'Carrion', count: 5 }]],
+      wipedByEnemyKey: 'SatyrCrossbow',
+    });
+    const minibosses = catalog.encounterDefinitions.values.filter(
+      (definition) => definition.kind === 'miniboss',
+    );
+    // Only the shadow Fog emitter's endless Screamers leave its roster open.
+    expect(
+      minibosses
+        .filter((definition) => definition.bossRoster === undefined)
+        .map((definition) => definition.key),
+    ).toEqual(['MiniBossFogEmitter_Shrine']);
+    const withRoster =
+      (bossRoster: {
+        readonly waves: readonly (readonly { enemyKey: string; count: number; hatched?: true }[])[];
+        readonly wipedByEnemyKey?: string;
+      }) =>
+      () =>
+        createCatalog({
+          ...declarations,
+          encounterDefinitions: declarations.encounterDefinitions.map((definition) =>
+            definition.key === 'MiniBossBoar' ? { ...definition, bossRoster } : definition,
+          ) as Parameters<typeof createCatalog>[0]['encounterDefinitions'],
+        });
+    expect(
+      withRoster({ waves: [[{ enemyKey: 'Boar', count: 1 }]], wipedByEnemyKey: 'Zombie' }),
+    ).toThrow(CatalogContractError);
+    expect(withRoster({ waves: [] })).toThrow(CatalogContractError);
+    // A store-capped encounter cannot leave its roster to random picks or hatching.
+    expect(withRoster({ waves: [[{ enemyKey: 'Boar', count: 1, hatched: true }]] })).toThrow(
+      CatalogContractError,
+    );
+    // Every boss declares its roster; Cerberus draws one spawn encounter by weight.
+    expect(
+      catalog.encounterDefinitions.values
+        .filter((definition) => definition.kind === 'boss' && definition.bossRoster === undefined)
+        .map((definition) => definition.key),
+    ).toEqual(['BossZagreus01']);
+    expect(
+      catalog.encounterDefinitions.byKey.BossInfestedCerberus02?.bossRoster?.choices?.[0]?.map(
+        (option) => option.weight,
+      ),
+    ).toEqual([1, 1, 1, 2]);
   });
 
   it('declares the Heracles bounty, Wealth from the Dead and Success Rate luck', () => {
@@ -297,6 +398,12 @@ describe('enemy gold drops', () => {
     });
     expect(drop('SimpleSquad_Elite')).toMatchObject({ unitKey: 'Simple_Elite', size: 2 });
     expect(drop('Simple_Elite')).toMatchObject({ value: { min: 8, max: 10 } });
+    // Miniboss units: their own ratings, a static parcel and the chance-0 ones.
+    expect(drop('SatyrRatCatcher_Miniboss')).toMatchObject({ value: { min: 132, max: 171 } });
+    expect(drop('Talos')).toMatchObject({ chance: 0.7, value: { min: 17, max: 22 } });
+    expect(drop('Captain')).toMatchObject({ chance: 0.25, value: { min: 40, max: 52 } });
+    expect(drop('FogEmitter_Elite')).toMatchObject({ chance: 1, value: { min: 50, max: 70 } });
+    expect(drop('Brute_Miniboss')).toEqual({ key: 'Brute_Miniboss', kind: 'none' });
   });
 
   it('rates every generated enemy as its generator facts do', () => {

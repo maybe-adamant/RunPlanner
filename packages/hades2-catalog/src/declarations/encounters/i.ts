@@ -1,3 +1,9 @@
+import {
+  chronosRivalsRoster,
+  chronosRoster,
+  goldElementalRoster,
+  ratCatcherRoster,
+} from './boss-rosters';
 import { generatedEncounterChoices } from './generated/policies';
 import { notFreshFileRoute } from '../routes';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
@@ -145,6 +151,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'MiniBossRatCatcher',
+    bossRoster: ratCatcherRoster,
     moneyStore: minibossMoneyStore,
     label: 'Rat catcher',
     kind: 'miniboss',
@@ -154,6 +161,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'MiniBossGoldElemental',
+    bossRoster: goldElementalRoster,
     moneyStore: minibossMoneyStore,
     label: 'Gold elemental',
     kind: 'miniboss',
@@ -163,6 +171,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'BossChronos01',
+    bossRoster: chronosRoster,
     label: 'Chronos',
     kind: 'boss',
     countsEncounterDepth: false,
@@ -188,6 +197,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'BossChronos02',
+    bossRoster: chronosRivalsRoster,
     label: 'Chronos',
     kind: 'boss',
     countsEncounterDepth: false,

@@ -1,3 +1,4 @@
+import { captainRoster, charybdisRoster, erisRoster } from './boss-rosters';
 import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
 import {
@@ -107,6 +108,7 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'MiniBossCharybdis',
+    bossRoster: charybdisRoster,
     label: 'Charybdis',
     kind: 'miniboss',
     countsEncounterDepth: false,
@@ -115,6 +117,7 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'MiniBossCaptain',
+    bossRoster: captainRoster,
     label: 'Captain',
     kind: 'miniboss',
     countsEncounterDepth: true,
@@ -140,6 +143,7 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'BossEris01',
+    bossRoster: erisRoster,
     label: 'Eris',
     kind: 'boss',
     countsEncounterDepth: false,
@@ -173,6 +177,7 @@ export const oEncounterDefinitions = [
   },
   {
     key: 'BossEris02',
+    bossRoster: erisRoster,
     label: 'Eris',
     kind: 'boss',
     countsEncounterDepth: false,

@@ -13,6 +13,9 @@ import {
   goldGainPublication,
   goldMultipliers,
   goldOnKillFacts,
+  goldSpawnReadingAcross,
+  moneyMultiplierSources,
+  type GoldSpawnReading,
   type GoldEventPublication,
   type GoldGain,
   type GoldMultipliers,
@@ -26,13 +29,14 @@ import type { CanonicalAuthoredRoom } from '../../materialization';
 import type { RoomActionRow } from '../../room-actions';
 import type { SimulationState } from '../../state/model';
 import type { RewardBranchState } from '../branch-primitives';
+import type { RewardEvent } from '../model';
 import type {
   ChronologyWalkContext,
   ChronologyWalkState,
   GoldRecordedRoster,
 } from './chronology-walk';
 import { wellOccurrenceView } from './encounter-acquisition/well-purchase';
-import { routeRoomDeclaration } from '../../../authored-project/route-profile';
+import { routeInitialProfile, routeRoomDeclaration } from '../../../authored-project/route-profile';
 
 /** One gold contact a branch settled, or why it has no gold reading. */
 type Detection =
@@ -270,6 +274,9 @@ function currencyGold(
   return undefined;
 }
 
+/** Native spawns a selected trait's coins (`GiveRandomConsumables`) as its screen closes. */
+const SCREEN_SPAWNED_COIN_PRODUCERS = new Set(['GeneratedTraitPickup', 'NarcissusPickup']);
+
 /** Run-start gold: the starting Arcana and keepsake pay their gold, unmultiplied. */
 export function withRunStartGold(
   context: ChronologyWalkContext,
@@ -343,7 +350,11 @@ export function withGoldEvents(
   const room = authoredRoom(context, event.origin);
   const roomOrigin: OccurrenceAddress | undefined = room?.origin;
   let state = next;
-  if (event.kind === 'encounterStarted' && room !== undefined)
+  // Recorded too: a Fields Passive encounter is prepared but never run as a phase.
+  if (
+    (event.kind === 'encounterStarted' || event.kind === 'encounterRecorded') &&
+    room !== undefined
+  )
     state = Object.freeze({
       ...state,
       goldEncounterKeys: new Map(state.goldEncounterKeys).set(
@@ -397,6 +408,41 @@ export function withGoldEvents(
     });
   }
   const roomKey = room === undefined ? undefined : semanticAddressKey(room.origin);
+  // Spawn contacts a room object's coins are valued at: the room's entry
+  // (Fields cages and optionals) and each encounter end (its reward).
+  if (
+    (event.kind === 'roomEntered' ||
+      (event.kind === 'encounterCompleted' && event.execution === 'normal')) &&
+    roomKey !== undefined &&
+    next.branches.length > 0
+  )
+    state = Object.freeze({
+      ...state,
+      goldSpawnReadings: new Map(state.goldSpawnReadings).set(
+        `${roomKey}::${event.kind === 'roomEntered' ? 'entry' : 'encounterEnd'}`,
+        goldSpawnReadingAcross(
+          catalog,
+          next.branches.map((branch) => branch.state),
+        ),
+      ),
+    });
+  if (next.branches.length > 0) {
+    // A selected trait's own coins spawn as its screen closes, after it is equipped.
+    const screens = new Map<string, SimulationState[]>();
+    for (const branch of next.branches)
+      for (const evaluation of branch.traitEvaluations ?? []) {
+        if (received.branches.some((prior) => prior.traitEvaluations?.includes(evaluation)))
+          continue;
+        const key = `trait::${semanticAddressKey(evaluation.address)}::${evaluation.acquisitionRole}`;
+        screens.set(key, [...(screens.get(key) ?? []), branch.state]);
+      }
+    if (screens.size > 0) {
+      const readings = new Map(state.goldSpawnReadings);
+      for (const [key, states] of screens)
+        readings.set(key, goldSpawnReadingAcross(catalog, states));
+      state = Object.freeze({ ...state, goldSpawnReadings: readings });
+    }
+  }
   const completedKey =
     event.kind === 'encounterCompleted' && event.execution === 'normal' && roomKey !== undefined
       ? state.goldEncounterKeys.get(`${roomKey}::${event.phaseKey}`)
@@ -414,6 +460,23 @@ export function withGoldEvents(
         ...(state.goldCompletedEncounters.get(roomKey!) ?? []),
         completedRecord ?? Object.freeze({ encounterKey: completedKey }),
       ]),
+    });
+  // The first completed phase that drains another slot's store pays that store, once.
+  const drainedSlotKey =
+    completedKey === undefined || event.kind !== 'encounterCompleted'
+      ? undefined
+      : catalog.encounterEnvelopes.byKey[room!.encounterEnvelopeKey]?.slots.find(
+          (slot) => slot.key === event.phaseKey,
+        )?.moneyStoreSlotKey;
+  const firstDrain =
+    drainedSlotKey !== undefined &&
+    !state.goldPaidSharedStores.has(`${roomKey}::${drainedSlotKey}`);
+  if (firstDrain)
+    state = Object.freeze({
+      ...state,
+      goldPaidSharedStores: new Set(state.goldPaidSharedStores).add(
+        `${roomKey}::${drainedSlotKey}`,
+      ),
     });
   if (event.kind === 'roomEntered' && enteredRoom?.origin.kind === 'occurrence')
     state = withGoldPublications(state, [
@@ -467,6 +530,56 @@ export function withGoldEvents(
     ].flatMap(([family, count]) => ((count as number) > 1 ? [family as string] : [])),
   );
 
+  /**
+   * How a collected coin object was valued: a trait's coins at its screen's
+   * close, never re-multiplied (`NotRequiredPickup`, RoomLogic.lua:1944-1985);
+   * a room reward at its spawn, re-multiplied by each money multiplier taken
+   * before collection (`MapState.RoomRequiredObjects` and `OptionalRewards`,
+   * TraitLogic.lua:1045-1058; GOLD_ESTIMATE_ASSUMPTIONS.md "Coin spawn contacts").
+   * Undefined where it is valued at collection.
+   */
+  const coinSpawn = (
+    rewardEvent: Extract<RewardEvent, { readonly kind: 'concreteAcquisition' }>,
+    after: SimulationState,
+  ):
+    | { readonly multipliers: GoldSpawnReading['multipliers']; readonly remultipliers: number[] }
+    | 'divergent'
+    | 'unresolved'
+    | undefined => {
+    if (room === undefined || roomKey === undefined) return undefined;
+    const producerKey = rewardEvent.source.producerLifecycleKey;
+    let reading: GoldSpawnReading | 'divergent' | 'unresolved' | undefined;
+    let roomObject = false;
+    if (SCREEN_SPAWNED_COIN_PRODUCERS.has(producerKey)) {
+      const pointKey = rewardEvent.settlement?.site.pointKey;
+      const producer = room.pickupProducers?.find((candidate) => candidate.siteKey === pointKey);
+      if (producer?.source.kind !== 'traitOffer') return undefined;
+      reading = state.goldSpawnReadings.get(
+        `trait::${semanticAddressKey(producer.source.owner)}::${producer.source.acquisitionRole}`,
+      );
+    } else if (producerKey === 'RoomReward') {
+      // Only an object spawned in the room it is collected in lies among its objects.
+      const origin = rewardEvent.origin as { readonly occurrenceId?: string };
+      if (origin.occurrenceId !== room.occurrenceId) return undefined;
+      roomObject = true;
+      reading =
+        rewardEvent.origin.kind === 'incomingReward' || rewardEvent.origin.kind === 'rewardWheel'
+          ? (state.goldSpawnReadings.get(`${roomKey}::encounterEnd`) ??
+            state.goldSpawnReadings.get(`${roomKey}::entry`))
+          : state.goldSpawnReadings.get(`${roomKey}::entry`);
+    }
+    if (reading === undefined || reading === 'divergent' || reading === 'unresolved')
+      return reading;
+    if (!roomObject) return { multipliers: reading.multipliers, remultipliers: [] };
+    const now = moneyMultiplierSources(catalog, after);
+    if (now === undefined) return 'unresolved';
+    const held = new Set(reading.sources.map((source) => source.key));
+    return {
+      multipliers: reading.multipliers,
+      remultipliers: now.filter((source) => !held.has(source.key)).map((source) => source.value),
+    };
+  };
+
   next.branches.forEach((branch: RewardBranchState, index) => {
     const after = branch.state;
     for (const rewardEvent of branch.events) {
@@ -497,16 +610,34 @@ export function withGoldEvents(
         );
         continue;
       }
+      const spawned = coinSpawn(rewardEvent, after);
       if (declaration?.goldGrant !== undefined) {
         const producer =
           catalog.rewards.producerLifecycles.byKey[rewardEvent.source.producerLifecycleKey];
-        detect(index, key, owner, {
-          gain: {
-            kind: 'moneyPickup',
-            gold: declaration.goldGrant,
-            npcDrop: producer?.resourceBonusExempt === true,
-          },
-        });
+        detect(
+          index,
+          key,
+          owner,
+          spawned === 'divergent'
+            ? { unpriced: { kind: 'contractFailure', detail: `${key} spawned divergently` } }
+            : spawned === 'unresolved'
+              ? { unpriced: { kind: 'itemUnresolved' } }
+              : {
+                  gain: {
+                    kind: 'moneyPickup',
+                    gold: declaration.goldGrant,
+                    npcDrop: producer?.resourceBonusExempt === true,
+                    ...(spawned === undefined
+                      ? {}
+                      : {
+                          spawn: spawned.multipliers,
+                          ...(spawned.remultipliers.length === 0
+                            ? {}
+                            : { remultipliers: spawned.remultipliers }),
+                        }),
+                  },
+                },
+        );
       } else if (gameName === 'Currency') {
         const gold = currencyGold(
           catalog,
@@ -522,7 +653,17 @@ export function withGoldEvents(
             ? {
                 unpriced: { kind: 'contractFailure', detail: 'a Currency pickup declares no gold' },
               }
-            : { gain: { kind: 'currencyPickup', gold } },
+            : spawned === 'divergent'
+              ? { unpriced: { kind: 'contractFailure', detail: `${key} spawned divergently` } }
+              : spawned === 'unresolved'
+                ? { unpriced: { kind: 'itemUnresolved' } }
+                : {
+                    gain: {
+                      kind: 'currencyPickup',
+                      gold,
+                      ...(spawned === undefined ? {} : { spawn: spawned.multipliers }),
+                    },
+                  },
         );
       }
     }
@@ -591,52 +732,87 @@ export function withGoldEvents(
         );
         // Room entry attests the Hordes rank every phase of the room reads.
         const hordesRank = state.encounterEntryVowRanks.get(roomKey!)?.hordes;
+        // A phase whose kills drain another slot's store (a Fields cage) pays
+        // nothing itself; the room's first such fight pays that store, by its
+        // policy rather than a roster, since every draining phase feeds it.
+        const slots = catalog.encounterEnvelopes.byKey[room.encounterEnvelopeKey]?.slots ?? [];
+        const storeSlotKey = slots.find((slot) => slot.key === event.phaseKey)?.moneyStoreSlotKey;
+        const sharedStore = slots.some((slot) => slot.moneyStoreSlotKey === event.phaseKey);
+        const paid =
+          storeSlotKey !== undefined
+            ? firstDrain
+              ? {
+                  phaseKey: storeSlotKey,
+                  encounterKey: state.goldEncounterKeys.get(`${roomKey}::${storeSlotKey}`),
+                  record: undefined,
+                }
+              : undefined
+            : !sharedStore &&
+                (definition?.kind === 'combat' ||
+                  definition?.kind === 'miniboss' ||
+                  (definition?.kind === 'boss' && definition.bossRoster !== undefined))
+              ? { phaseKey: event.phaseKey, encounterKey: completedKey, record: completedRecord }
+              : undefined;
         const missingHordes: Detection = {
           unpriced: {
             kind: 'contractFailure',
             detail: `${completedKey} has no Hordes rank attested at its room's entry`,
           },
         };
-        if (definition?.kind === 'combat' || definition?.kind === 'miniboss') {
+        if (paid !== undefined) {
           const entry = state.goldRoomEntryMultipliers.get(roomKey!);
           const runDepth = runDepthAt(context, roomKey!);
+          const paidKey = paid.encounterKey;
           detect(
             index,
-            `enemyGold:${event.phaseKey}`,
-            phase,
-            completedRecord !== undefined && 'fault' in completedRecord
-              ? { unpriced: { kind: 'contractFailure', detail: completedRecord.fault } }
-              : entry === undefined || entry === 'divergent'
-                ? {
-                    unpriced: {
-                      kind: 'contractFailure',
-                      detail: `${completedKey} has no agreed gold multiplier at its room's door`,
-                    },
-                  }
-                : entry === 'unresolved'
-                  ? { unpriced: { kind: 'itemUnresolved' } }
-                  : runDepth === undefined
-                    ? {
-                        unpriced: {
-                          kind: 'contractFailure',
-                          detail: `${completedKey} has no run depth at its room's door`,
-                        },
-                      }
-                    : hordesRank === undefined
-                      ? missingHordes
-                      : {
-                          gain: {
-                            kind: 'enemyGold',
-                            encounterKey: completedKey,
-                            biomeKey: room.origin.biomeKey,
-                            runDepth,
-                            hordesRank,
-                            ...(completedRecord !== undefined && 'roster' in completedRecord
-                              ? { roster: completedRecord.roster }
-                              : {}),
+            `enemyGold:${paid.phaseKey}`,
+            createEncounterPhaseAddress(
+              biome,
+              { kind: 'occurrence', occurrenceId: room.occurrenceId },
+              paid.phaseKey,
+            ),
+            paidKey === undefined ||
+              (storeSlotKey !== undefined &&
+                catalog.encounterDefinitions.byKey[paidKey]?.moneyStore === undefined)
+              ? {
+                  unpriced: {
+                    kind: 'contractFailure',
+                    detail: `${room.gameName} ${paid.phaseKey} has no recorded store`,
+                  },
+                }
+              : paid.record !== undefined && 'fault' in paid.record
+                ? { unpriced: { kind: 'contractFailure', detail: paid.record.fault } }
+                : entry === undefined || entry === 'divergent'
+                  ? {
+                      unpriced: {
+                        kind: 'contractFailure',
+                        detail: `${paidKey} has no agreed gold multiplier at its room's door`,
+                      },
+                    }
+                  : entry === 'unresolved'
+                    ? { unpriced: { kind: 'itemUnresolved' } }
+                    : runDepth === undefined
+                      ? {
+                          unpriced: {
+                            kind: 'contractFailure',
+                            detail: `${paidKey} has no run depth at its room's door`,
                           },
-                          multipliers: entry,
-                        },
+                        }
+                      : hordesRank === undefined
+                        ? missingHordes
+                        : {
+                            gain: {
+                              kind: 'enemyGold',
+                              encounterKey: paidKey,
+                              biomeKey: room.origin.biomeKey,
+                              runDepth,
+                              hordesRank,
+                              ...(paid.record !== undefined && 'roster' in paid.record
+                                ? { roster: paid.record.roster }
+                                : {}),
+                            },
+                            multipliers: entry,
+                          },
           );
         }
         if (definition?.killBounty !== undefined)
@@ -677,21 +853,19 @@ export function withGoldEvents(
                     multipliers: goldMultipliers(catalog, after),
                   },
           );
-        // The room's golden urns break during its first fight.
-        if (
-          (definition?.kind === 'combat' || definition?.kind === 'miniboss') &&
-          completed.filter(fights).length === 1 &&
-          urnAttempts(room.origin.biomeKey, room.gameName) !== undefined
-        )
-          detect(index, 'urnGold', undefined, {
-            gain: {
-              kind: 'urnGold',
-              biomeKey: room.origin.biomeKey,
-              roomGameName: room.gameName,
-            },
-            multipliers: goldMultipliers(catalog, after),
-          });
       }
+      // GOLD_ESTIMATE_ASSUMPTIONS.md "Urn upgrade owned", "Urns per occurrence".
+      const declaration = catalog.rooms.byKey[room.gameName];
+      if (
+        event.kind === 'roomEntered' &&
+        declaration !== undefined &&
+        routeInitialProfile(catalog, room.origin.routeKey).kind !== 'freshFile' &&
+        urnAttempts(declaration) !== undefined
+      )
+        detect(index, 'urnGold', undefined, {
+          gain: { kind: 'urnGold', roomGameName: room.gameName },
+          multipliers: goldMultipliers(catalog, after),
+        });
       if (event.kind === 'encounterCompleted' && event.execution === 'normal') {
         const encounterKey = state.goldEncounterKeys.get(
           `${semanticAddressKey(room.origin)}::${event.phaseKey}`,

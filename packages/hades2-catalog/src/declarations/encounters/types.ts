@@ -34,6 +34,8 @@ export interface RawEncounterEnvelopeSlotDeclaration {
   readonly activation: EncounterSlotActivation;
   readonly activationRequirement?: RequirementExpression;
   readonly rewardAttachment?: RawEncounterLocalRewardAttachment | RawEncounterRewardWheelAttachment;
+  /** The slot whose encounter's money store this slot's kills drain; absent, its own. */
+  readonly moneyStoreSlotKey?: string;
 }
 
 export interface RawEncounterEnvelopeDeclaration {
@@ -137,6 +139,27 @@ export interface RawEncounterDefinitionDeclaration {
   readonly customization?: readonly RawEncounterCustomizationDecisionDeclaration[];
   /** Native SpawnWaves of an all-fixed combat identity, in wave order. */
   readonly fixedRoster?: readonly (readonly RawEncounterFixedSpawn[])[];
+  /** A miniboss or boss encounter's own enemies, the boss among them. */
+  readonly bossRoster?: RawBossRosterDeclaration;
+}
+
+/** A miniboss or boss encounter's spawned and pre-placed enemies in native order. */
+export interface RawBossRosterDeclaration {
+  readonly waves: readonly (readonly RawBossRosterSpawn[])[];
+  /** Random spawn picks, each one option by weight, fielded after the waves. */
+  readonly choices?: readonly (readonly {
+    readonly weight: number;
+    readonly spawns: readonly RawBossRosterSpawn[];
+  }[])[];
+  /** The encounter's `WipeEnemiesOnKill` enemy. */
+  readonly wipedByEnemyKey?: string;
+}
+
+export interface RawBossRosterSpawn {
+  readonly enemyKey: string;
+  readonly count: number;
+  /** Spawns from an egg the player may kill before it hatches. */
+  readonly hatched?: true;
 }
 
 /** One native fixed spawn: an enemy identity declared by a generated pool and its count. */

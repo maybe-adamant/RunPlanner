@@ -1,3 +1,11 @@
+import {
+  assassinRoster,
+  fogEmitterRoster,
+  treantRoster,
+  treantShrineRoster,
+  hecateRivalsRoster,
+  hecateRoster,
+} from './boss-rosters';
 import { generatedEncounterChoices } from './generated/policies';
 import { notFreshFileRoute } from '../routes';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
@@ -16,6 +24,7 @@ import {
 import {
   devotionMoneyStore,
   generatedMoneyStore,
+  nemesisEventMoneyStore,
   godCombatMoneyStore,
   minibossMoneyStore,
 } from './money-stores';
@@ -191,6 +200,8 @@ export const fEncounterDefinitions = [
   {
     key: 'NemesisRandomEvent',
     label: 'Nemesis event',
+    // Fields cage kills drain it when the event is the room's Passive encounter.
+    moneyStore: nemesisEventMoneyStore,
     kind: 'nonCombat',
     countsEncounterDepth: false,
     blocksGorgon: true,
@@ -364,6 +375,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'MiniBossTreant',
+    bossRoster: treantRoster,
     moneyStore: minibossMoneyStore,
     label: 'Treant',
     kind: 'miniboss',
@@ -373,6 +385,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'MiniBossFogEmitter',
+    bossRoster: fogEmitterRoster,
     moneyStore: minibossMoneyStore,
     label: 'Fog emitter',
     kind: 'miniboss',
@@ -382,6 +395,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'MiniBossAssassin',
+    bossRoster: assassinRoster,
     moneyStore: minibossMoneyStore,
     label: 'Assassin',
     kind: 'miniboss',
@@ -391,6 +405,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'MiniBossTreant_Shrine',
+    bossRoster: treantShrineRoster,
     moneyStore: minibossMoneyStore,
     label: 'Treant',
     kind: 'miniboss',
@@ -409,6 +424,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'BossHecate01',
+    bossRoster: hecateRoster,
     label: 'Hecate',
     kind: 'boss',
     countsEncounterDepth: false,
@@ -459,6 +475,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'BossHecate02',
+    bossRoster: hecateRivalsRoster,
     label: 'Hecate',
     kind: 'boss',
     countsEncounterDepth: false,

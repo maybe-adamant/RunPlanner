@@ -67,22 +67,29 @@ export const sharedEncounterEnvelopes = [
   },
   {
     key: 'FieldsEncounter',
+    // StartFieldsEncounter (EncounterLogic.lua:2890-2938) starts a cage as
+    // MapState.EncounterOverride and never makes it CurrentRoom.Encounter, whose
+    // store CheckMoneyDrop drains (RoomLogic.lua:2361-2376): cage kills drain the
+    // room's Passive encounter store.
     slots: [
       { key: 'Passive', activation: 'always' },
       {
         key: 'Cage01',
         activation: 'templateControlled',
         rewardAttachment: { kind: 'localReward', groupKey: 'cages', slotKey: 'cage1' },
+        moneyStoreSlotKey: 'Passive',
       },
       {
         key: 'Cage02',
         activation: 'templateControlled',
         rewardAttachment: { kind: 'localReward', groupKey: 'cages', slotKey: 'cage2' },
+        moneyStoreSlotKey: 'Passive',
       },
       {
         key: 'Cage03',
         activation: 'templateControlled',
         rewardAttachment: { kind: 'localReward', groupKey: 'cages', slotKey: 'cage3' },
+        moneyStoreSlotKey: 'Passive',
       },
     ],
   },

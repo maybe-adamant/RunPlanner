@@ -61,6 +61,8 @@ Planner engine:
   door, batch, cap and store contract the biome rules build on.
 - [Reward model](docs/design/REWARD_MODEL.md): reward declarations, stores,
   shops, offers and acquisitions.
+- [Gold estimate assumptions](docs/design/GOLD_ESTIMATE_ASSUMPTIONS.md): every
+  assumption and tuning value of the gold estimate, with its evidence.
 - [Trait offers](docs/design/TRAIT_OFFERS.md): trait-bearing offers, their
   assessment and settlement.
 - [Room lifecycle model](docs/design/ROOM_LIFECYCLE_MODEL.md): the ordered

@@ -1,3 +1,4 @@
+import { dragonRoster, prometheusRoster, talosRoster } from './boss-rosters';
 import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration } from './types';
 import {
@@ -996,6 +997,7 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'MiniBossTalos',
+    bossRoster: talosRoster,
     label: 'Talos',
     kind: 'miniboss',
     countsEncounterDepth: false,
@@ -1003,6 +1005,7 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'MiniBossDragon',
+    bossRoster: dragonRoster,
     moneyStore: dragonMinibossMoneyStore,
     label: 'Dragon',
     kind: 'miniboss',
@@ -1013,6 +1016,7 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'BossPrometheus01',
+    bossRoster: prometheusRoster,
     label: 'Prometheus',
     kind: 'boss',
     countsEncounterDepth: false,
@@ -1020,6 +1024,7 @@ export const pEncounterDefinitions = [
   },
   {
     key: 'BossPrometheus02',
+    bossRoster: prometheusRoster,
     label: 'Prometheus',
     kind: 'boss',
     countsEncounterDepth: false,

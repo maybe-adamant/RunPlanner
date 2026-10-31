@@ -46,6 +46,8 @@ export interface RawCatalogInput {
   readonly rooms: readonly RawRoomDeclaration[];
   /** Map door ids in native processing order, by room game name. */
   readonly nativeExitDoorOrders: Readonly<Record<string, readonly number[]>>;
+  /** Golden-urn swap candidates on each room's map, by room game name. */
+  readonly swappableBreakables: Readonly<Record<string, number>>;
   readonly biomeLayouts: readonly RawBiomeLayoutDeclaration[];
   readonly traitCatalog: RawTraitCatalogInput;
 }

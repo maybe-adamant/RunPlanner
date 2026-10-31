@@ -2,6 +2,7 @@ import type { Catalog, EncounterMoneyStore } from '../../../catalog-schema';
 import type { RunModifiers } from '../../../authored-project/run-modifiers';
 import {
   DROPPED_GOLD_COLLECTION_RATE,
+  EGG_HATCH_RATE,
   HERACLES_BOUNTY_GOLD,
   NATIVE_ENEMY_GOLD_DROP_CHANCE,
   enemyGoldKills,
@@ -11,7 +12,12 @@ import {
   type EnemyGoldPolicy,
 } from './enemy-gold-policy';
 import type { GoldGain } from './gain-context';
-import { knownRosterKills, knownRosterPayout } from './known-roster';
+import {
+  bossRosterExpectation,
+  knownRosterKills,
+  knownRosterPayout,
+  randomBossRoster,
+} from './known-roster';
 import { GoldLedgerContractError } from './ledger';
 import { roundGold, ZERO_GOLD, type GoldAmount } from './prices';
 
@@ -20,10 +26,7 @@ interface Moments {
   readonly variance: number;
 }
 
-/**
- * An estimated amount: its moments, with bounds three standard deviations
- * either side of the mean, floored at zero.
- */
+/** An estimated amount: its moments and bounds (GOLD_ESTIMATE_ASSUMPTIONS.md "Estimate bounds"). */
 export function estimatedGold({ mean, variance }: Moments): GoldAmount {
   const spread = 3 * Math.sqrt(Math.max(0, variance));
   return Object.freeze({
@@ -45,6 +48,7 @@ export function encounterStoreValues(
   moneyMultiplier: number,
   encounterGoldRange: number | undefined,
 ): readonly number[] {
+  if (store.undrawn === true) return [store.capMin];
   const rolls =
     encounterGoldRange === undefined
       ? Array.from({ length: store.capMax - store.capMin + 1 }, (_, index) => store.capMin + index)
@@ -150,15 +154,20 @@ export function enemyGoldAmount(
       }),
     );
   }
+  const bossRoster = catalog.encounterDefinitions.byKey[gain.encounterKey]?.bossRoster;
+  if (bossRoster !== undefined && randomBossRoster(bossRoster))
+    return estimatedGold(
+      bossRosterExpectation(catalog, bossRoster, moneyMultiplier, EGG_HATCH_RATE),
+    );
   const { policy, store } = policyFor(catalog, gain.encounterKey, gain.biomeKey);
   const dropChance = store === undefined ? undefined : modifiers.enemyGoldDropChance;
   const sigma = moneyMultiplier;
   switch (policy.kind) {
     case 'none':
+    case 'roomStore':
       return ZERO_GOLD;
     case 'constant': {
-      // Approximation: the override rewrites every kill's chance, so the
-      // constant scales with it up to the native chance and the store caps it above.
+      // GOLD_ESTIMATE_ASSUMPTIONS.md "Drop-chance scaling".
       const scale =
         dropChance === undefined
           ? 1
@@ -243,6 +252,9 @@ export function medeaGoldAmount(
     encounters.reduce((total, encounter) => {
       if (encounter.roster !== undefined)
         return total + knownRosterKills(catalog, encounter.roster);
+      const bossRoster = catalog.encounterDefinitions.byKey[encounter.encounterKey]?.bossRoster;
+      if (bossRoster !== undefined && randomBossRoster(bossRoster))
+        return total + bossRosterExpectation(catalog, bossRoster, 1, EGG_HATCH_RATE).kills;
       const { policy } = policyFor(catalog, encounter.encounterKey, encounter.biomeKey);
       return total + enemyGoldKills(policy, encounter.biomeKey, encounter.hordesRank);
     }, 0);
@@ -270,10 +282,14 @@ export function medeaGoldAmount(
 
 /** A room's golden urns, each drop times the money multiplier and collected at the dropped-gold rate. */
 export function urnGoldAmount(
+  catalog: Catalog,
   gain: Extract<GoldGain, { readonly kind: 'urnGold' }>,
   moneyMultiplier: number,
 ): GoldAmount {
-  const room = urnAttempts(gain.biomeKey, gain.roomGameName);
+  const declaration = catalog.rooms.byKey[gain.roomGameName];
+  if (declaration === undefined)
+    throw new GoldLedgerContractError(`${gain.roomGameName} is not a declared room`);
+  const room = urnAttempts(declaration);
   if (room === undefined) return ZERO_GOLD;
   const rate = DROPPED_GOLD_COLLECTION_RATE;
   let mean = 0;
@@ -303,8 +319,8 @@ function normalCdf(z: number): number {
 }
 
 /**
- * The chance a balance covers a price under the normal approximation:
- * P(balance − price ≥ 0), gold being whole, with both spreads.
+ * The chance a balance covers a price, P(balance − price ≥ 0), with both
+ * spreads (GOLD_ESTIMATE_ASSUMPTIONS.md "Normal approximation", "Continuity correction").
  */
 export function affordableProbability(balance: Moments, price: Moments): number {
   const mean = balance.mean - price.mean;

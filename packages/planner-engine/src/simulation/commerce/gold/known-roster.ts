@@ -1,4 +1,9 @@
-import type { Catalog, EnemyGoldDrop } from '../../../catalog-schema';
+import type {
+  BossRosterSpawn,
+  Catalog,
+  EncounterDefinition,
+  EnemyGoldDrop,
+} from '../../../catalog-schema';
 import type { GeneratedEncounterOperands } from '../../encounters/generation';
 import { GoldLedgerContractError } from './ledger';
 import { roundGold } from './prices';
@@ -14,9 +19,10 @@ export type KnownRoster = readonly (readonly {
 
 /**
  * The roster a completed phase fielded when nothing about it is left to
- * native: an all-fixed identity's declared waves, or a complete generated
- * customization's exact counts with its Menace conversions spawning their
- * targets. Undefined while native generation still draws any of it.
+ * native: an all-fixed identity's declared waves, a miniboss's own enemies,
+ * or a complete generated customization's exact counts with its Menace
+ * conversions spawning their targets. Undefined while native generation
+ * still draws any of it.
  */
 export function knownEncounterRoster(
   catalog: Catalog,
@@ -32,6 +38,28 @@ export function knownEncounterRoster(
         ),
       ),
     );
+  if (definition?.bossRoster !== undefined) {
+    // Random picks and hatching leave it to native: `bossRosterExpectation` pays those.
+    if (randomBossRoster(definition.bossRoster)) return undefined;
+    // GOLD_ESTIMATE_ASSUMPTIONS.md "Kill everything": the enemy whose death wipes the rest dies last.
+    const { waves, wipedByEnemyKey } = definition.bossRoster;
+    const last = waves
+      .flat()
+      .filter((spawn) => spawn.enemyKey === wipedByEnemyKey)
+      .reduce((total, spawn) => total + spawn.count, 0);
+    return Object.freeze(
+      [
+        ...waves.map((wave) => wave.filter((spawn) => spawn.enemyKey !== wipedByEnemyKey)),
+        ...(last === 0 ? [] : [[{ enemyKey: wipedByEnemyKey!, count: last }]]),
+      ]
+        .filter((wave) => wave.length > 0)
+        .map((wave) =>
+          Object.freeze(
+            wave.map((spawn) => Object.freeze({ enemyKey: spawn.enemyKey, count: spawn.count })),
+          ),
+        ),
+    );
+  }
   if (operands === undefined) return undefined;
   const selection = definition?.customization?.find(
     (decision) => decision.selection.kind === 'generated',
@@ -332,4 +360,68 @@ function rosterPayout(
     second += squared / stores.length;
   }
   return { mean, variance: Math.max(0, second - mean * mean) };
+}
+
+type BossRoster = NonNullable<EncounterDefinition['bossRoster']>;
+
+/** Whether a boss roster leaves a spawn pick or an egg's hatching to native. */
+export function randomBossRoster(roster: BossRoster): boolean {
+  return (
+    (roster.choices?.length ?? 0) > 0 ||
+    roster.waves.some((wave) => wave.some((spawn) => spawn.hatched === true))
+  );
+}
+
+/**
+ * What a boss roster with random picks or hatching pays and kills, uncapped:
+ * every combination of picks by its weight, each hatched spawn present at
+ * the hatch rate, and the mixture's mean and spread over the combinations.
+ */
+export function bossRosterExpectation(
+  catalog: Catalog,
+  roster: BossRoster,
+  moneyMultiplier: number,
+  hatchRate: number,
+): { readonly mean: number; readonly variance: number; readonly kills: number } {
+  let combinations: { weight: number; spawns: readonly BossRosterSpawn[] }[] = [
+    { weight: 1, spawns: roster.waves.flat() },
+  ];
+  for (const choice of roster.choices ?? []) {
+    const total = choice.reduce((sum, option) => sum + option.weight, 0);
+    combinations = combinations.flatMap((combination) =>
+      choice.map((option) => ({
+        weight: (combination.weight * option.weight) / total,
+        spawns: [...combination.spawns, ...option.spawns],
+      })),
+    );
+  }
+  let mean = 0;
+  let second = 0;
+  let kills = 0;
+  for (const combination of combinations) {
+    let m = 0;
+    let v = 0;
+    let k = 0;
+    for (const spawn of combination.spawns) {
+      const present = spawn.hatched === true ? hatchRate : 1;
+      for (const kill of waveKills(catalog, [
+        [{ enemyKey: spawn.enemyKey, count: spawn.count }],
+      ]).flat()) {
+        const chance = kill.drop.kind === 'parcel' ? kill.drop.chance : 0;
+        let first = 0;
+        let squared = 0;
+        for (const [value, probability] of killStep(kill, moneyMultiplier, chance, false)) {
+          first += present * value * probability;
+          squared += present * value * value * probability;
+        }
+        m += kill.count * first;
+        v += kill.count * (squared - first * first);
+        k += kill.count * present;
+      }
+    }
+    mean += combination.weight * m;
+    second += combination.weight * (v + m * m);
+    kills += combination.weight * k;
+  }
+  return { mean, variance: Math.max(0, second - mean * mean), kills };
 }
