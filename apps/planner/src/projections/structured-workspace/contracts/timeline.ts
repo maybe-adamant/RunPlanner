@@ -190,7 +190,7 @@ export interface WorkspaceRoomActions {
   readonly repairRows: readonly WorkspaceRoomActionRow[];
   /** Each present Well and Pool's next purchase, sale or reroll, opened above the optional actions. */
   readonly featureRolls?: readonly import('./features').WorkspaceFeatureRollActions[];
-  /** Each present World Shop, Hermes Shrine and Champion item's next action, opened above the optional actions. */
+  /** Each present World Shop, Hermes Shrine and Pedestal's next action, opened above the optional actions. */
   readonly objectEntries?: readonly import('./features').WorkspaceRoomObjectEntry[];
   readonly steadyGrowth?: readonly WorkspaceSteadyGrowthControl[];
   readonly transcendentEmbryo?: readonly WorkspaceTranscendentEmbryoControl[];

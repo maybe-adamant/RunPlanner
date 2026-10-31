@@ -8,7 +8,7 @@ import { RoomInventoryPanel } from '../commerce/RoomInventoryPanel';
 import { ChaosSpawnWorkbench, ZagreusSpawnWorkbench } from './AdditionalExitControls';
 import { InfernalContractPedestalPanel } from './InfernalContractPedestalPanel';
 
-export type RoomFeaturePresence = Exclude<WorkspaceRoomFeature, { readonly kind: 'nemesisEvent' }>;
+export type RoomFeaturePresence = WorkspaceRoomFeature;
 
 type RoomFeatureEntry =
   | { readonly kind: 'content'; readonly key: string; readonly content: ReactNode }

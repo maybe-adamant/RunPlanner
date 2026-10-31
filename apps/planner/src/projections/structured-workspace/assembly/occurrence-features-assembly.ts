@@ -20,11 +20,7 @@ import type {
   StygianWellCandidateCapability,
   ZagreusContractCandidateCapability,
 } from '@run-planner/engine/simulation';
-import {
-  type WorkspaceFeatureAssessment,
-  type WorkspaceRoomSummary,
-  workspaceInteractionKey,
-} from '../contract';
+import { type WorkspaceFeatureAssessment, type WorkspaceRoomSummary } from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceRoomFeature } from '../contracts/features';
 import type { WorkspaceExplicitRewardControl, WorkspaceRewardControl } from '../contracts/rewards';
@@ -184,7 +180,6 @@ function roomFeatures(
     authoredChaos !== undefined && (positionChoices.length > 1 || invalidPosition)
       ? Object.freeze({ value: positionValue, choices: positionChoices, invalid: invalidPosition })
       : undefined;
-  const passive = encounterPhases.find((phase) => phase.nemesisFeature !== undefined);
   const poolOwner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const featureAddress = (
     target: import('@run-planner/engine/authored-project').RoomFeatureTarget,
@@ -517,17 +512,6 @@ function roomFeatures(
             });
           })(),
         ]),
-    ...(room.mode.kind === 'authored' &&
-    room.mode.templateKey === 'FieldsCombat' &&
-    passive?.nemesisFeature !== undefined
-      ? [
-          Object.freeze({
-            kind: 'nemesisEvent' as const,
-            action: (passive.nemesisFeature.selected ? 'remove' : 'add') as 'add' | 'remove',
-            interactionKey: workspaceInteractionKey(passive.address),
-          }),
-        ]
-      : []),
     ...(zagreusSpawn?.materialized === true
       ? [
           Object.freeze({

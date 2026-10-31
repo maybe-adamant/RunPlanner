@@ -105,7 +105,7 @@ export interface WorkspaceRoomObjectActionChoice {
 
 export type WorkspaceOccurrenceInteractionRequirement =
   | {
-      /** A World Shop, Hermes Shrine or Champion item entry. */
+      /** A World Shop, Hermes Shrine or Pedestal entry. */
       readonly kind: 'roomObjectActions';
       readonly owner: OccurrenceAddress;
       readonly interactionKey: string;
@@ -180,10 +180,6 @@ export type WorkspaceOccurrenceInteractionRequirement =
         readonly encounterDefinitionKey?: string;
         readonly selectionEnabled: boolean;
         readonly customization?: WorkspaceEncounterPhase['customization'];
-        readonly nemesisFeature?: {
-          readonly encounterKey: string;
-          readonly selected: boolean;
-        };
         readonly nemesisEvent?: {
           readonly owner: NemesisRandomEventAddress;
           readonly reward: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer | null;

@@ -723,9 +723,13 @@ describe('Hermes Shrine workbench', () => {
     const postbossId = `surface-o-preboss:postboss`;
     renderOccurrenceWorkbench(loadSurfaceNOProject(), 'Surface', 'O', occurrence(postbossId));
     openOverview();
-    const presence = screen.getByRole('checkbox', { name: 'Hermes Shrine present' });
-    expect(presence).toHaveProperty('checked', true);
-    expect(presence).toHaveProperty('disabled', true);
+    // An always-present Shrine is named without a presence toggle.
+    expect(screen.queryByRole('checkbox', { name: 'Hermes Shrine present' })).toBeNull();
+    expect(
+      within(screen.getByRole('group', { name: 'Hermes Shrine configuration' })).getByText(
+        'Hermes Shrine',
+      ),
+    ).toBeTruthy();
     expect(
       screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
     ).toHaveLength(3);

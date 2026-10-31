@@ -307,7 +307,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
   readonly gold?: import('@run-planner/engine/simulation').GoldLedger;
-  /** What can be done with the room's Shop, Shrine and Champion item; undefined while unreached. */
+  /** What can be done with the room's Shop, Shrine and Pedestal; undefined while unreached. */
   readonly roomObjectInteractions?: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomObjectInteractions | undefined;
@@ -484,7 +484,7 @@ export function assembleWorkspaceOccurrence(
     featureRollRequirements.push(rolls.requirement);
     featureRollActions.push(rolls.actions);
   }
-  // A present Shop, Shrine or Champion item appends its next action from its Timeline entry.
+  // A present Shop, Shrine or Pedestal appends its next action from its Timeline entry.
   const objectEntries = assembleRoomObjectEntries({
     catalog: input.catalog,
     owner: createOccurrenceAddress(input.biome, input.occurrence.occurrenceId),
@@ -965,9 +965,6 @@ export function assembleWorkspaceOccurrence(
         'encounterSlotActivationUnavailable',
         roomSummary.marker,
       );
-    if (phase.customizable && phase.nemesisEvent !== undefined) {
-      input.markerDestinations.redirectTo(phase.nemesisEvent.marker, phase.marker, node.key);
-    }
     const phaseTab = roomTabForPhase(roomLocal, phase.address.phaseKey);
     // Identity, customization and the Nemesis family are fixed on entry: authored in Overview.
     input.markerDestinations.setRoomTab(
@@ -1072,7 +1069,7 @@ export function assembleWorkspaceOccurrence(
                 : [],
             )
           : [];
-      // A Shop purchase or Champion item collect is repaired by deleting its row.
+      // A Shop purchase or Pedestal collect is repaired by deleting its row.
       const shopOfferKey =
         row.reference.kind === 'interactShopOffer' ? row.reference.offerKey : undefined;
       const objectPurchaseMarkers = [

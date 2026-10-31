@@ -84,7 +84,7 @@ async function open(project: ProjectDocument, owner = phase) {
   );
   openRoomTab('Room Overview');
   const trigger = screen
-    .getAllByRole('button', { name: 'Customize encounter' })
+    .getAllByRole('button', { name: /^Customize .*encounter$/ })
     .find((button) => button.dataset.semanticOwner === semanticAddressKey(owner))!;
   await view.user.click(trigger);
   return { ...view, dialog: await screen.findByRole('dialog', { name: /\(.+\)$/ }) };
@@ -98,7 +98,7 @@ function customizeTrigger(project: ProjectDocument, owner = phase): HTMLButtonEl
   );
   openRoomTab('Room Overview');
   return screen
-    .getAllByRole('button', { name: 'Customize encounter' })
+    .getAllByRole('button', { name: /^Customize .*encounter$/ })
     .find(
       (button) => button.dataset.semanticOwner === semanticAddressKey(owner),
     )! as HTMLButtonElement;
@@ -606,7 +606,7 @@ describe('generated encounter customization workflows', () => {
     openRoomTab('Room Overview');
     const encounters = screen.getByRole('region', { name: 'Encounter structure' });
     const passive = within(encounters).getByRole('region', { name: 'Passive encounter phase' });
-    const trigger = within(passive).getByRole('button', { name: 'Customize encounter' });
+    const trigger = within(passive).getByRole('button', { name: 'Customize passive encounter' });
     expect(current(view, owner)).toBeUndefined();
     expect(trigger.dataset.hasFindings).toBe('false');
     await view.user.click(trigger);
@@ -822,8 +822,10 @@ describe('generated encounter customization workflows', () => {
       occurrenceById(owner.owner.occurrenceId),
     );
     openRoomTab('Room Overview');
-    expect(screen.queryByRole('button', { name: 'Customize encounter' })).toBeNull();
-    await view.user.click(screen.getByRole('button', { name: 'Inspect encounter' }));
+    expect(screen.queryByRole('button', { name: /^Customize / })).toBeNull();
+    const viewRoster = screen.getByRole('button', { name: /^View roster for .*encounter$/ });
+    expect(viewRoster.textContent).toBe('View roster');
+    await view.user.click(viewRoster);
     const dialog = await screen.findByRole('dialog', { name: 'Intro combat (FIntroFight)' });
     expect(within(dialog).getByText('This encounter is fixed')).toBeTruthy();
     expect(within(dialog).queryByRole('button', { name: 'Reset to default' })).toBeNull();

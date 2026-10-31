@@ -48,7 +48,6 @@ export type {
   WorkspaceLocalVisitSlot,
   WorkspaceNemesisEventDomain,
   WorkspaceNemesisEventInteraction,
-  WorkspaceNemesisFeatureInteraction,
   WorkspaceRewardWheelDescriptor,
   WorkspaceRewardWheelOfferDescriptor,
   WorkspaceRoomLocal,
@@ -154,7 +153,6 @@ import type {
   WorkspaceLocalVisitGenerationInteraction,
   WorkspaceLocalVisitOrderInteraction,
   WorkspaceNemesisEventInteraction,
-  WorkspaceNemesisFeatureInteraction,
   WorkspaceRewardWheelDescriptor,
   WorkspaceRoomLocal,
 } from './contracts/locals';
@@ -354,7 +352,6 @@ export interface WorkspaceInteractionCatalog {
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
   readonly encounterCustomizations: ReadonlyMap<string, WorkspaceEncounterCustomizationInteraction>;
   readonly nemesisEvents: ReadonlyMap<string, WorkspaceNemesisEventInteraction>;
-  readonly nemesisFeatures: ReadonlyMap<string, WorkspaceNemesisFeatureInteraction>;
   readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
   readonly aetosAppearances: ReadonlyMap<
     string,
@@ -398,7 +395,7 @@ export interface WorkspaceInteractionCatalog {
     string,
     import('./contracts/features').WorkspaceFeatureRollActionsInteraction
   >;
-  /** Each World Shop, Hermes Shrine and Champion item entry. */
+  /** Each World Shop, Hermes Shrine and Pedestal entry. */
   readonly roomObjectEntries: ReadonlyMap<
     string,
     import('./contracts/features').WorkspaceRoomObjectEntryInteraction

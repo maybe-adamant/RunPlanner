@@ -7,6 +7,7 @@ import {
   type WorkspaceRewardControl,
 } from '@planner/projections/structured-workspace';
 import { shopItemIcon } from '@planner/ui/artwork/rewardIcon';
+import type { ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
@@ -21,11 +22,13 @@ export function ShopOfferEditor({
   control,
   interactions,
   label,
+  labelIcon,
 }: {
   readonly ariaLabel?: string;
   readonly control: WorkspaceRewardControl;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
+  readonly labelIcon?: ArtworkSource | undefined;
 }) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
@@ -44,6 +47,7 @@ export function ShopOfferEditor({
       findingTarget={findingTarget(control.owner.address)}
       id={semanticOwnerControlElementId(control.owner.address)}
       label={label}
+      labelIcon={labelIcon}
       layout="inline"
       loading={domain.pending}
       model={domain.result ?? emptyModel}

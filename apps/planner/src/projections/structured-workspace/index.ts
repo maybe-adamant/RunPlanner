@@ -84,7 +84,6 @@ export type {
   WorkspaceInfiniteRosterDraftChoice,
   WorkspaceNemesisEventInteraction,
   WorkspaceNemesisEventDomain,
-  WorkspaceNemesisFeatureInteraction,
   WorkspaceEncounterPhase,
   WorkspaceLocalVisitDecision,
   WorkspaceLocalVisitGenerationInteraction,

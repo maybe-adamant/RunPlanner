@@ -406,8 +406,9 @@ describe('OccurrenceWorkbench', () => {
     const overview = screen.getByRole('tab', { name: 'Room Overview' });
     openRoomTab('Room Overview');
     expect(
-      within(screen.getByLabelText('Encounter structure')).getByText('Nemesis Event'),
-    ).toBeTruthy();
+      within(screen.getByLabelText('Encounter structure')).getByRole('button', { name: 'Passive' })
+        .textContent,
+    ).toContain('Nemesis event');
     openRoomTab('Room Layout');
     const layout = screen.getByRole('region', { name: 'Fields Layout' });
     expect(within(layout).getByRole('heading', { name: 'Nemesis' })).toBeTruthy();

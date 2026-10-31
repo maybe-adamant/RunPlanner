@@ -18,11 +18,6 @@ import type { WorkspaceExplicitRewardControl } from './rewards';
 
 export type WorkspaceRoomFeature =
   | {
-      readonly kind: 'nemesisEvent';
-      readonly action: 'add' | 'remove';
-      readonly interactionKey: string;
-    }
-  | {
       readonly kind: 'zagreusContract';
       readonly action: 'add';
       readonly presence: Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalAbsent' }>;
@@ -349,7 +344,7 @@ export type WorkspaceRoomObject = 'worldShop' | 'hermesShrine' | 'championItem';
 export type WorkspaceRoomObjectLock =
   'unreached' | 'allBought' | 'collected' | 'itemUnchosen' | 'inactive';
 
-/** One thing a Shop, Shrine or Champion item can do next, named as its timeline row. */
+/** One thing a Shop, Shrine or Pedestal can do next, named as its timeline row. */
 export interface WorkspaceRoomObjectOption {
   readonly key: string;
   readonly label: string;

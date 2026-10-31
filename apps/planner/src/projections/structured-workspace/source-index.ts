@@ -166,7 +166,7 @@ export interface WorkspaceBiomeSource {
   readonly screenRerollAllowance: (
     spend: import('@run-planner/engine/simulation').ScreenRerollSpend,
   ) => import('@run-planner/engine/simulation').ScreenRerollAllowance;
-  /** What can be done with a room's Shop, Shrine and Champion item; undefined while unreached. */
+  /** What can be done with a room's Shop, Shrine and Pedestal; undefined while unreached. */
   readonly roomObjectInteractions: (
     occurrence: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').RoomObjectInteractions | undefined;

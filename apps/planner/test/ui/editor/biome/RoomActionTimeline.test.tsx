@@ -439,13 +439,15 @@ describe('OccurrenceRoomActions', () => {
     const passiveEncounter = screen.getByLabelText('Passive encounter phase');
     expectBefore(passiveEncounter, fieldsSetup);
     expect(
-      within(passiveEncounter).getByRole('button', { name: 'Customize encounter' }),
+      within(passiveEncounter).getByRole('button', { name: 'Customize passive encounter' }),
     ).toBeTruthy();
     expect(fieldsSetup).toBeTruthy();
     expect(within(fieldsSetup).queryByText('Cage reward identities')).toBeNull();
     expect(within(fieldsSetup).queryByLabelText('Cage 1')).toBeNull();
     expect(within(fieldsSetup).getByRole('radiogroup', { name: 'Optional pickups' })).toBeTruthy();
-    expect(within(fieldsSetup).getByLabelText('Optional 1')).toBeTruthy();
+    expect(within(fieldsSetup).getByRole('button', { name: 'Optional 1 reward' })).toBe(
+      within(fieldsSetup).getByLabelText('Reward 1'),
+    );
     openRoomTab('Room Timeline');
     const fieldsActions = screen.getByRole('region', { name: 'Room Timeline' });
     const legend = screen.getByRole('list', { name: 'Timeline legend' });
@@ -585,7 +587,7 @@ describe('OccurrenceRoomActions', () => {
     const structure = screen.getByRole('region', { name: 'Encounter structure' });
     for (const cage of ['Cage 1', 'Cage 2', 'Cage 3']) {
       const phase = within(structure).getByLabelText(`${cage} encounter phase`);
-      expect(within(phase).getByRole('button', { name: `${cage} encounter` })).toBeTruthy();
+      expect(within(phase).getByRole('button', { name: cage })).toBeTruthy();
     }
     expect(screen.queryByRole('button', { name: 'Combat Order' })).toBeNull();
     openRoomTab('Room Timeline');
@@ -597,7 +599,7 @@ describe('OccurrenceRoomActions', () => {
       expect(start.querySelector('.timeline-banner-identity')?.textContent).not.toMatch(/Cage/);
     }
     for (const cage of ['Cage 1', 'Cage 2', 'Cage 3'])
-      expect(screen.queryByRole('button', { name: `${cage} encounter` })).toBeNull();
+      expect(screen.queryByRole('button', { name: cage })).toBeNull();
     expect(screen.queryByLabelText('Cage 1 encounter phase')).toBeNull();
   });
 

@@ -33,7 +33,8 @@ export function ShopWorkbench({
                 control={offer.rewardControl}
                 idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
                 interactions={interactions}
-                label={`${offer.label} Item`}
+                ariaLabel={`${offer.label} Item`}
+                label={offer.label}
               />
             </div>
           </div>

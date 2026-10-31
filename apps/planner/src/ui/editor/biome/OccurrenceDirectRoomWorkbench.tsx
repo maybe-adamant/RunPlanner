@@ -50,7 +50,7 @@ export function ShipCombatPhaseCountWorkbench({
       <CandidatePicker
         id={`room-${occurrence.occurrenceId}-combat-phase-count`}
         interaction={interaction}
-        label="Combat phases"
+        label={nested ? 'Phases' : 'Combat phases'}
         placeholder="Choose combat phases"
         onReplace={(encounterCount) =>
           dispatch(
@@ -179,9 +179,7 @@ export function DirectRoomWorkbench({
     />
   );
   const renderEncounterStructure = (children?: ReactNode): ReactNode => (
-    <RoomEncounterStructureWorkbench features={workbench.features} interactions={interactions}>
-      {children}
-    </RoomEncounterStructureWorkbench>
+    <RoomEncounterStructureWorkbench>{children}</RoomEncounterStructureWorkbench>
   );
   switch (workbench.kind) {
     case 'standard':

@@ -39,18 +39,28 @@ export function RoomResourceControls({
               }
               type="checkbox"
             />
-            <ArtworkIcon
-              className="artwork-label-icon"
-              source={gatheringToolIcon(resource.family)}
-            />
-            <span>{resource.label}</span>
-            {resource.element === undefined ? null : (
-              <ArtworkIcon className="artwork-label-icon" source={elementIcon(resource.element)} />
+            {resource.element === undefined ? (
+              <>
+                <ArtworkIcon
+                  className="artwork-label-icon"
+                  source={gatheringToolIcon(resource.family)}
+                />
+                <span>{resource.label}</span>
+              </>
+            ) : (
+              <>
+                <span>Collect</span>{' '}
+                <ArtworkIcon
+                  className="artwork-label-icon"
+                  source={elementIcon(resource.element)}
+                />{' '}
+                <span>{resource.element}</span>
+              </>
             )}
           </label>
           {resource.action === 'move' && resource.currentPlacement !== undefined ? (
             <span className="resource-placement-disclosure">
-              Currently placed at{' '}
+              Placed at{' '}
               <button
                 className="semantic-focus-link"
                 onClick={() => dispatch(semanticOwnerNavigated(resource.currentPlacement!.address))}

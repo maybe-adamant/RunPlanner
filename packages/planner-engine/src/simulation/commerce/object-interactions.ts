@@ -53,7 +53,7 @@ export interface HermesShrineInteraction {
   };
 }
 
-/** Why the Champion item cannot be collected there. */
+/** Why the Pedestal cannot be collected there. */
 export type ChampionItemCollectLock =
   /** The pedestal holds no item yet. */
   | 'itemUnchosen'

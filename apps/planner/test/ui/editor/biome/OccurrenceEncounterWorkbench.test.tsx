@@ -1890,7 +1890,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     ).toBe(true);
 
-    await view.user.click(within(introControl).getByRole('button', { name: 'Opening encounter' }));
+    await view.user.click(within(introControl).getByRole('button', { name: 'Opening' }));
     await view.user.click(screen.getByRole('option', { name: /Heracles combat/ }));
 
     await waitFor(() => expect(screen.queryByLabelText('Follow-up encounter phase')).toBeNull());
@@ -1914,7 +1914,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       false,
     );
 
-    await view.user.click(within(introControl).getByRole('button', { name: 'Opening encounter' }));
+    await view.user.click(within(introControl).getByRole('button', { name: 'Opening' }));
     await view.user.click(screen.getByRole('option', { name: /Pre-combat/ }));
 
     await waitFor(() => expect(screen.getByLabelText('Follow-up encounter phase')).toBeTruthy());
@@ -1971,16 +1971,16 @@ describe('OccurrenceEncounterWorkbench', () => {
         semanticAddressKey(combat),
       ),
     ).toBe(true);
-    await view.user.click(within(introControl).getByRole('button', { name: 'Opening encounter' }));
+    await view.user.click(within(introControl).getByRole('button', { name: 'Opening' }));
     await waitFor(() =>
       expect(
         within(introControl)
-          .getByRole('button', { name: 'Opening encounter' })
+          .getByRole('button', { name: 'Opening' })
           .getAttribute('data-candidate-state'),
       ).toBe('impossible'),
     );
 
-    const combatPicker = within(combatControl).getByRole('button', { name: 'Follow-up encounter' });
+    const combatPicker = within(combatControl).getByRole('button', { name: 'Follow-up' });
     expect((combatPicker as HTMLButtonElement).disabled).toBe(false);
     await view.user.click(combatPicker);
     await waitFor(() =>
@@ -2002,7 +2002,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat04),
     );
     openRoomTab('Room Overview');
-    const count = screen.getByRole('button', { name: 'Combat phases' });
+    const count = screen.getByRole('button', { name: 'Phases' });
     await view.user.click(count);
     await waitFor(() => expect(count.dataset.candidateState).toBe('impossible'));
     await view.user.keyboard('{Escape}');
@@ -2034,7 +2034,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       historyLength,
     );
     expect(phase.dataset.readOnly).toBeUndefined();
-    const encounter = within(phase).getByRole('button', { name: 'Combat 2 encounter' });
+    const encounter = within(phase).getByRole('button', { name: 'Combat 2' });
     await view.user.click(encounter);
     await waitFor(() => {
       expect(encounter.getAttribute('data-candidate-state')).toBe('impossible');
@@ -2088,7 +2088,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat04),
     );
     openRoomTab('Room Overview');
-    const count = screen.getByRole('button', { name: 'Combat phases' });
+    const count = screen.getByRole('button', { name: 'Phases' });
     await view.user.click(count);
     await waitFor(() => {
       expect(count.dataset.candidateState).toBe('forced');
@@ -2492,7 +2492,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat07),
     );
     openRoomTab('Room Overview');
-    const count = screen.getByRole('button', { name: 'Combat phases' });
+    const count = screen.getByRole('button', { name: 'Phases' });
 
     await view.user.click(count);
     await waitFor(() => {

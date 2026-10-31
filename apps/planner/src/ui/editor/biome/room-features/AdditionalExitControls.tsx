@@ -7,6 +7,8 @@ import {
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { hintProps } from '@planner/ui/controls/hint';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
 
 /** The selected Midshop owns only the available spawn affordance. */
 export function ZagreusSpawnWorkbench({
@@ -41,6 +43,7 @@ export function ZagreusSpawnWorkbench({
         }
         type="checkbox"
       />
+      <ArtworkIcon className="artwork-label-icon" source={doorArtwork.ZagContract ?? undefined} />
       <span>Zagreus Contract</span>
     </label>
   );
@@ -62,38 +65,42 @@ export function ChaosSpawnWorkbench({
   return (
     <div className="room-feature-presence-row room-resource-row chaos-feature-row">
       <label className="room-resource-selection chaos-gate-presence">
-        <input
-          {...(position === undefined
-            ? findingTarget(owner)
-            : findingTarget(
-                owner,
-                `chaos-presence-${workspaceInteractionKey(owner)}`,
-                owner,
-                () => false,
-              ))}
-          checked={feature.action === 'remove'}
-          data-command={feature.action === 'add' ? 'AddChaos' : 'RemoveChaos'}
-          disabled={
-            feature.presence.kind === 'forcedPresent' ||
-            (feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled)
-          }
-          onChange={() => {
-            if (feature.action === 'add') {
-              executeIntent(
-                requireWorkspaceInteraction(
-                  interactions.chaosSpawns,
-                  workspaceInteractionKey(owner),
-                ).spawnIntent(),
-              );
-              return;
-            }
-            const removeIntent = requireWorkspaceInteraction(
-              interactions.chaosExits,
-              workspaceInteractionKey(owner),
-            ).removeIntent;
-            if (removeIntent !== undefined) executeIntent(removeIntent);
-          }}
-          type="checkbox"
+        {/* A Chaos Gate the room always has is named, with nothing to toggle. */}
+        {feature.presence.kind === 'forcedPresent' ? null : (
+          <input
+            {...(position === undefined
+              ? findingTarget(owner)
+              : findingTarget(
+                  owner,
+                  `chaos-presence-${workspaceInteractionKey(owner)}`,
+                  owner,
+                  () => false,
+                ))}
+            checked={feature.action === 'remove'}
+            data-command={feature.action === 'add' ? 'AddChaos' : 'RemoveChaos'}
+            disabled={feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled}
+            onChange={() => {
+              if (feature.action === 'add') {
+                executeIntent(
+                  requireWorkspaceInteraction(
+                    interactions.chaosSpawns,
+                    workspaceInteractionKey(owner),
+                  ).spawnIntent(),
+                );
+                return;
+              }
+              const removeIntent = requireWorkspaceInteraction(
+                interactions.chaosExits,
+                workspaceInteractionKey(owner),
+              ).removeIntent;
+              if (removeIntent !== undefined) executeIntent(removeIntent);
+            }}
+            type="checkbox"
+          />
+        )}
+        <ArtworkIcon
+          className="artwork-label-icon"
+          source={doorArtwork.ChaosExitDoor ?? undefined}
         />
         <span>Chaos Gate</span>
       </label>

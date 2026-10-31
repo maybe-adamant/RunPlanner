@@ -578,20 +578,17 @@ describe('DecisionWorkbench', () => {
     );
 
     fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    const addChaos = within(screen.getByRole('tabpanel', { name: 'Room Overview' })).getByRole(
-      'checkbox',
-      {
-        name: 'Chaos Gate',
-      },
-    );
-    expect(addChaos).toHaveProperty('checked', true);
-    expect(addChaos).toHaveProperty('disabled', true);
+    // A gate the room always has is named without a toggle.
+    const overviewPanel = screen.getByRole('tabpanel', { name: 'Room Overview' });
+    expect(within(overviewPanel).queryByRole('checkbox', { name: 'Chaos Gate' })).toBeNull();
+    expect(within(overviewPanel).getByText('Chaos Gate')).toBeTruthy();
     const position = screen.getByRole('radiogroup', { name: 'Position' });
     expect(within(position).getByRole('radio', { name: 'Any' })).toHaveProperty('disabled', false);
     expect(position.hasAttribute('inert')).toBe(false);
     await view.user.click(within(position).getByRole('radio', { name: 'Any' }));
     expect(screen.queryByRole('radiogroup', { name: 'Position' })).toBeNull();
-    expect(screen.getByRole('checkbox', { name: 'Chaos Gate' })).toHaveProperty('checked', true);
+    expect(within(overviewPanel).getByText('Chaos Gate')).toBeTruthy();
+    expect(within(overviewPanel).queryByRole('checkbox', { name: 'Chaos Gate' })).toBeNull();
 
     cleanup();
     renderDecisionWorkbench(

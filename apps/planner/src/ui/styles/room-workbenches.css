@@ -2665,3 +2665,225 @@
 .hub-timeline-board-reward[data-rerolled='true'] {
   white-space: normal;
 }
+
+/*
+ * Room Overview grid: every row is label | picker | secondary, and every
+ * picker starts at the same x in every section and room. The picker width
+ * fits the longest common name ("Combat 15 pre-combat 04") with its icon and
+ * caret; rarer longer names ellipsize. Label and secondary columns are fixed;
+ * where the inspector is narrower, the picker alone shrinks to its minimum.
+ */
+.room-overview-workbench {
+  --overview-label-width: 5.6rem;
+  --overview-picker-width: 17rem;
+  --overview-picker-min-width: 10rem;
+  --overview-secondary-width: 7.5rem;
+  --overview-column-gap: 10px;
+  --overview-subrow-indent: 1.35rem;
+  --overview-main-width: calc(
+    var(--overview-label-width) + var(--overview-column-gap) + var(--overview-picker-width)
+  );
+  --overview-main-min-width: calc(
+    var(--overview-label-width) + var(--overview-column-gap) + var(--overview-picker-min-width)
+  );
+  /* This row's label column and label-plus-picker span; sub-rows shorten them by their indent. */
+  --overview-row-label-width: var(--overview-label-width);
+  --overview-row-main-width: var(--overview-main-width);
+  --overview-row-main-min-width: var(--overview-main-min-width);
+}
+
+/*
+ * Sub-rows sit under their section or object header. Their label column gives
+ * up the indent, so every picker and secondary keeps the same x.
+ */
+.room-overview-workbench :is(.room-purging-pool, .shop-family-offer-list) > .shop-family-offer-row,
+.room-overview-workbench
+  :is(.room-structure-workbench, .fields-room-editor)
+  > .room-overview-panel
+  > * {
+  --overview-row-label-width: calc(var(--overview-label-width) - var(--overview-subrow-indent));
+  --overview-row-main-width: calc(var(--overview-main-width) - var(--overview-subrow-indent));
+  --overview-row-main-min-width: calc(
+    var(--overview-main-min-width) - var(--overview-subrow-indent)
+  );
+  padding-left: var(--overview-subrow-indent);
+}
+
+.room-overview-workbench .room-overview-panel {
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.room-overview-workbench .room-feature-category-heading {
+  margin-top: 6px;
+}
+
+.room-overview-workbench .encounter-phase-control,
+.room-overview-workbench .room-feature-presence-row {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.room-overview-workbench .encounter-phase-control,
+.room-overview-workbench :is(.room-purging-pool, .room-contract-pedestal),
+.room-overview-workbench .shop-family-offer-list {
+  gap: 6px;
+}
+
+.room-overview-workbench
+  :is(
+    .encounter-phase-settings,
+    .shop-family-offer-row,
+    .hermes-shrine-slot,
+    .shop-family-item-control
+  ) {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--overview-column-gap);
+  min-width: 0;
+}
+
+.room-overview-workbench .field-control-inline,
+.room-overview-workbench .encounter-phase-settings > .field-control-inline,
+.room-overview-workbench .hermes-shrine-slot > .field-control,
+.room-overview-workbench .shop-family-item-control > .field-control,
+.room-overview-workbench .shop-family-item-control > .reward-value-editor {
+  flex: 0 1 var(--overview-row-main-width);
+  width: auto;
+  min-width: var(--overview-row-main-min-width);
+  max-width: var(--overview-row-main-width);
+}
+
+.room-overview-workbench .field-control-inline {
+  grid-template-columns:
+    var(--overview-row-label-width)
+    minmax(var(--overview-picker-min-width), var(--overview-picker-width));
+  column-gap: var(--overview-column-gap);
+}
+
+/* Field labels sit one level below the section titles: normal case, muted. */
+.room-overview-workbench .field-control-inline > :is(label, span:first-child) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  color: #9d99a4;
+  font-size: 0.84rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.room-overview-workbench .field-control-inline > label > .artwork-label-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.room-overview-workbench .contextual-picker-trigger > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-overview-workbench .dialog-launcher {
+  width: var(--overview-secondary-width);
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* Delay follows its item directly, compact. */
+.room-overview-workbench .hermes-shrine-purchase-details {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+.room-overview-workbench .hermes-shrine-purchase-details > .field-control-inline {
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: none;
+  grid-template-columns: auto 4rem;
+  column-gap: 6px;
+}
+
+/* Object header rows (checkbox, icon, name) carry no card of their own. */
+.room-overview-workbench .room-feature-presence-row {
+  min-height: 30px;
+}
+
+.room-overview-workbench .ship-combat-editor {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.room-overview-workbench .room-feature-interaction-header {
+  grid-template-columns: var(--overview-main-width) auto;
+  column-gap: var(--overview-column-gap);
+}
+
+/*
+ * Additional exits and resources: the name spans label and picker and its
+ * detail sits beside it. As room runs out the detail first moves closer to the
+ * name, then drops onto its own line under it; a placement link ellipsizes only
+ * when even that line is narrower than its text.
+ */
+.room-overview-workbench .room-resource-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--overview-column-gap);
+}
+
+.room-overview-workbench .room-resource-row > .room-resource-selection {
+  flex: 1 0 auto;
+  max-width: calc(var(--overview-main-width) - var(--overview-subrow-indent));
+}
+
+.room-overview-workbench .room-resource-row > :not(.room-resource-selection) {
+  flex: 0 1 auto;
+  min-width: 0;
+  padding-left: var(--overview-subrow-indent);
+}
+
+.room-overview-workbench .resource-placement-disclosure {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-overview-workbench .fields-reward-identities {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.room-overview-workbench .fields-reward-identity > .reward-value-editor {
+  display: block;
+}
+
+/* An encounter fixed on entry reads as plain text in the picker column. */
+.room-overview-workbench .encounter-fixed-value {
+  border-color: transparent;
+  background: none;
+}
+
+/* The Nemesis event type takes the secondary column. */
+.room-overview-workbench .nemesis-event-family {
+  flex: 0 0 auto;
+}
+
+.room-overview-workbench .nemesis-event-family > .field-control-inline {
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: none;
+  grid-template-columns: var(--overview-secondary-width);
+}

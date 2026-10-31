@@ -66,25 +66,29 @@ export function RoomInventoryPanel({
           <fieldset className="room-purging-pool" key="stygian-well">
             <legend className="visually-hidden">Stygian Well configuration</legend>
             <div className="room-feature-interaction-header">
-              <label className="room-feature-presence-row">
-                <input
-                  {...findingTarget(feature.presenceAddress)}
-                  aria-label="Stygian Well present"
-                  checked={feature.presence.kind !== 'optionalAbsent'}
-                  disabled={presence === undefined}
-                  onChange={(event) =>
-                    presence === undefined
-                      ? undefined
-                      : executeIntent(presence.intentFor(event.target.checked))
-                  }
-                  type="checkbox"
-                />
-                <ArtworkIcon
-                  className="artwork-label-icon"
-                  source={roomObjectIcon('stygianWell')}
-                />
-                <span>Stygian Well</span>
-              </label>
+              {presence === undefined && feature.presence.kind !== 'optionalAbsent' ? (
+                <FixedObjectHeader object="stygianWell" title="Stygian Well" />
+              ) : (
+                <label className="room-feature-presence-row">
+                  <input
+                    {...findingTarget(feature.presenceAddress)}
+                    aria-label="Stygian Well present"
+                    checked={feature.presence.kind !== 'optionalAbsent'}
+                    disabled={presence === undefined}
+                    onChange={(event) =>
+                      presence === undefined
+                        ? undefined
+                        : executeIntent(presence.intentFor(event.target.checked))
+                    }
+                    type="checkbox"
+                  />
+                  <ArtworkIcon
+                    className="artwork-label-icon"
+                    source={roomObjectIcon('stygianWell')}
+                  />
+                  <span>Stygian Well</span>
+                </label>
+              )}
             </div>
             {feature.presence.kind === 'optionalAbsent'
               ? null
@@ -104,14 +108,7 @@ export function RoomInventoryPanel({
           <fieldset className="room-purging-pool" key="purging-pool">
             <legend className="visually-hidden">Pool of Purging configuration</legend>
             <div className="room-feature-interaction-header">
-              <label className="room-feature-presence-row">
-                <input aria-label="Pool of Purging" checked disabled type="checkbox" />
-                <ArtworkIcon
-                  className="artwork-label-icon"
-                  source={roomObjectIcon('purgingPool')}
-                />
-                <span>Pool of Purging</span>
-              </label>
+              <FixedObjectHeader object="purgingPool" title="Pool of Purging" />
             </div>
             {feature.slots.map((slot) => {
               const interaction = requireWorkspaceInteraction(
@@ -153,22 +150,29 @@ export function RoomInventoryPanel({
             key="hermes-shrine"
           >
             <legend className="visually-hidden">Hermes Shrine configuration</legend>
-            <label className="room-feature-presence-row">
-              <input
-                {...findingTarget(feature.presenceAddress)}
-                aria-label="Hermes Shrine present"
-                checked={feature.presence.kind !== 'optionalAbsent'}
-                disabled={presence === undefined}
-                onChange={(event) =>
-                  presence === undefined
-                    ? undefined
-                    : executeIntent(presence.intentFor(event.target.checked))
-                }
-                type="checkbox"
-              />
-              <ArtworkIcon className="artwork-label-icon" source={roomObjectIcon('hermesShrine')} />
-              <span>Hermes Shrine</span>
-            </label>
+            {presence === undefined && feature.presence.kind !== 'optionalAbsent' ? (
+              <FixedObjectHeader object="hermesShrine" title="Hermes Shrine" />
+            ) : (
+              <label className="room-feature-presence-row">
+                <input
+                  {...findingTarget(feature.presenceAddress)}
+                  aria-label="Hermes Shrine present"
+                  checked={feature.presence.kind !== 'optionalAbsent'}
+                  disabled={presence === undefined}
+                  onChange={(event) =>
+                    presence === undefined
+                      ? undefined
+                      : executeIntent(presence.intentFor(event.target.checked))
+                  }
+                  type="checkbox"
+                />
+                <ArtworkIcon
+                  className="artwork-label-icon"
+                  source={roomObjectIcon('hermesShrine')}
+                />
+                <span>Hermes Shrine</span>
+              </label>
+            )}
             {feature.slots.map((slot) => {
               const offer = requireWorkspaceInteraction(
                 interactions.hermesShrineOffers,
@@ -189,6 +193,22 @@ export function RoomInventoryPanel({
         );
       })();
   }
+}
+
+/** A room object the room always has here: its name, with nothing to toggle. */
+function FixedObjectHeader({
+  object,
+  title,
+}: {
+  readonly object: 'hermesShrine' | 'purgingPool' | 'stygianWell';
+  readonly title: string;
+}) {
+  return (
+    <div className="room-feature-presence-row">
+      <ArtworkIcon className="artwork-label-icon" source={roomObjectIcon(object)} />
+      <span>{title}</span>
+    </div>
+  );
 }
 
 function PurgingPoolTraitPicker({
@@ -213,7 +233,7 @@ function PurgingPoolTraitPicker({
       findingTarget={findingTarget(address)}
       ariaLabel={`Pool of Purging ${label} Item`}
       id={`${interaction.key}-picker`}
-      label={`${label} Item`}
+      label={label}
       layout="inline"
       loading={picker.pending}
       model={picker.result ?? emptyNullablePicker}
@@ -253,7 +273,7 @@ export function StygianWellSlotEditor({
         findingTarget={findingTarget(slot.address)}
         ariaLabel={`Stygian Well ${slot.label} Item`}
         id={`${offer.key}-picker`}
-        label={fieldLabel ?? `${slot.label} Item`}
+        label={fieldLabel ?? slot.label}
         layout="inline"
         loading={offerPicker.pending}
         model={offerPicker.result ?? emptyNullablePicker}
@@ -296,7 +316,7 @@ export function HermesShrineSlotEditor({
         findingTarget={findingTarget(marker.address)}
         ariaLabel={`Hermes Shrine ${label} Item`}
         id={`${offer.key}-picker`}
-        label={fieldLabel ?? `${label} Item`}
+        label={fieldLabel ?? label}
         layout="inline"
         loading={offerPicker.pending}
         model={offerPicker.result ?? emptyStringPicker}

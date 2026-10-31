@@ -465,7 +465,7 @@ each with the command that appends it: a Stygian Well's or Pool of Purging's
 offered slots and reroll with its cost, a World Shop's unbought items and its
 live Travel Deal item with the values every reached branch can stock there, a
 Hermes Shrine's unbought items to buy or rush with its live refill, and
-whether the Champion item can be collected or why not.
+whether the Pedestal can be collected or why not.
 
 The gold query prices each reached purchase from the price facts its
 settlement published and walks the [gold ledger](REWARD_MODEL.md#gold-ledger)

@@ -676,7 +676,7 @@ describe('workspace inspector destinations', () => {
     });
   });
 
-  it('routes Nemesis family findings to Encounter and interaction detail to its action', () => {
+  it('routes Nemesis family findings to the type picker and interaction detail to its action', () => {
     const occurrenceId = createOccurrenceId('golden-f-b5-e1');
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -697,7 +697,7 @@ describe('workspace inspector destinations', () => {
     const f = biome(familyWorkspace, 'F');
     const workbench = occurrenceWorkbenchFor(f, occurrenceId);
     expect(destination(familyWorkspace, missingFamily.origin)).toMatchObject({
-      focusAddress: phase,
+      focusAddress: event,
       inspectorSubject: { kind: 'node', nodeKey: workbench.key },
       roomTab: 'overview',
     });

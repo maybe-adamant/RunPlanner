@@ -95,9 +95,13 @@ describe('Stygian Well workbench', () => {
   it('keeps forced presence fixed with its slots always editable', () => {
     renderOccurrenceWorkbench(loadUnderworldFGProject(), 'Underworld', 'F', occurrence);
     openOverview();
-    const presence = screen.getByRole('checkbox', { name: 'Stygian Well present' });
-    expect(presence).toHaveProperty('checked', true);
-    expect(presence).toHaveProperty('disabled', true);
+    // An always-present Well is named without a presence toggle.
+    expect(screen.queryByRole('checkbox', { name: 'Stygian Well present' })).toBeNull();
+    expect(
+      within(screen.getByRole('group', { name: 'Stygian Well configuration' })).getByText(
+        'Stygian Well',
+      ),
+    ).toBeTruthy();
     expect(screen.queryByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeNull();
     expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);
   });

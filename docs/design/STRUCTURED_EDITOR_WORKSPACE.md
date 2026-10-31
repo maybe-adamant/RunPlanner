@@ -67,8 +67,11 @@ The primary authoring surface uses three conceptual regions:
 +----------------+-----------------------------+---------------------------+
 ```
 
-These are presentation regions, not persisted panels; narrow layouts may stack
-them.
+These are presentation regions, not persisted panels. The desktop layout is
+designed for windows of at least half a 1080p screen. The details region
+stacks under the route structure once side by side it can no longer hold the
+room Overview's row grid; narrower browser windows stay usable without being
+designed for.
 
 ### Route Rail
 
@@ -296,7 +299,7 @@ Nemesis beside the room map. Overview contains read-only
 incoming context and meaningful room-local setup: Fields identities, World
 Shop inventory, and Room features, whose Shrine and Well inventories likewise
 hold only their fixed slots (a Shrine slot shows its item and the delay rolled
-with it) and whose Champion Item holds the Contract pedestal's item. Overview
+with it) and whose Pedestal holds the Contract pedestal's item. Overview
 authors content only: buying, rushing, collecting and every Travel Deal refill
 are authored on the Room Timeline. A Stygian Well or Pool of Purging Overview
 shows only its presence and initial stock, whose slots are always editable and
@@ -304,7 +307,10 @@ optional; using it starts on the Timeline. Ephyra parents with declared
 side-room groups add a dedicated Side Rooms workbench.
 Every Overview renders its sections in one order, showing only those the room
 has: Encounters, room contents (Shop inventory, Fields optional rewards),
-Additional Exits, Objects, Resources, NPCs.
+Additional Exits, Objects, Resources, NPCs. Its rows share one column grid of
+label, value picker and secondary action, so each picker starts at the same
+place in every section and room. A room object or Chaos Gate the room always
+has is named without a presence toggle.
 Room Timeline consumes the engine lifecycle timeline plus the one
 occurrence-owned chronology. Doors consumes the unchanged total outgoing-stage
 product. A section is omitted when its projected product is empty.
@@ -336,7 +342,7 @@ purchased refill that no line hosts keeps its own purchase row with a bound
 removal, and refill findings route to the line's control or to that row.
 
 Each present Stygian Well, Pool of Purging, World Shop (the Preboss Shop form
-included), Hermes Shrine and Champion Item has an entry at the top of the
+included), Hermes Shrine and Pedestal has an entry at the top of the
 optional actions listing what the engine publishes as possible at the end of
 the room's current actions, each option named by the row it appends. A Well
 or Pool offers buy or sell for each offered slot (a blank initial slot takes
@@ -345,7 +351,7 @@ hint when screen rerolls are not enabled, nothing is left to reroll or the
 pool cannot pay. A World Shop offers each unbought item; a Shrine offers Buy
 or Rush for each unbought item, one pick and one Undo step either way; once
 its Travel Deal item is live, either offers to buy it, a blank one taking its
-item in the same pick; a Champion Item offers its collect. Every entry is
+item in the same pick; a Pedestal offers its collect. Every entry is
 shown while its object is present and is disabled with the reason when nothing
 can be done there (everything bought or sold, the only option left a reroll
 that cannot be made, the item collected or not yet chosen, the pedestal
@@ -428,10 +434,11 @@ resources, exits, objects and the observed Eris spawn; room-inherent
 Fields/Nemesis and side-room setup retain their own sections. The resulting exit
 card owns only decision selection, room
 navigation, and its remaining door-specific identity controls; Anomaly
-identity/revert remains on its door. A selected F/G Nemesis event's family is
-chosen in the phase's Overview identity picker and its outcome on the Timeline
-interaction row; the H Passive event's family is chosen beside its phase in the
-Overview, and H projects the outcome editor at the required Passive event
+identity/revert remains on its door. The Nemesis random event is an encounter
+choice of its phase's identity picker, the H Passive phase included, where it
+replaces the passive encounter as in the game. Once selected, its family is
+chosen beside that picker in the Overview and its outcome on the Timeline
+interaction row; H projects the outcome editor at the required Passive event
 row and uses the engine-derived optional-count maximum. Incoming room identity
 and door-visible reward are read-only context in an entered occurrence; their
 editor remains the predecessor's outgoing door.

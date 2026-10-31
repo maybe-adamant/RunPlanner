@@ -336,11 +336,7 @@ describe('Biome inspector controls', () => {
       }),
     ).toBeNull();
     const resources = screen.getByRole('region', { name: 'Resources' });
-    expect(
-      screen.getByRole('heading', {
-        name: /Resources\s*\(Each successful element outcome can be placed once across the route\)/,
-      }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Resources' })).toBeTruthy();
     const resourceActions = within(resources).getAllByRole('checkbox');
     expect(resourceActions.length).toBeGreaterThan(1);
     expect(
@@ -350,7 +346,7 @@ describe('Biome inspector controls', () => {
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
 
     const removeMining = within(resources).getByRole('checkbox', {
-      name: 'Successful Mining — Fire',
+      name: 'Collect Fire',
     });
     expect(removeMining).toHaveProperty('checked', true);
     await view.user.click(removeMining);
@@ -372,7 +368,7 @@ describe('Biome inspector controls', () => {
     await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     const resources = screen.getByRole('region', { name: 'Resources' });
     const fishing = within(resources).getByRole('checkbox', {
-      name: 'Successful Fishing — Water',
+      name: 'Collect Water',
     });
     expect(fishing).toHaveProperty('checked', false);
     expect(fishing).toHaveProperty('disabled', false);
@@ -413,22 +409,19 @@ describe('Biome inspector controls', () => {
     if (illegalMove === undefined) throw new Error('resource illegal-target witness is missing');
 
     const disclosure = resources.querySelector('.resource-placement-disclosure');
-    expect(disclosure?.textContent).toContain('Currently placed at');
+    expect(disclosure?.textContent).toBe(
+      `Placed at ${moved.currentPlacement.biomeKey} · ${moved.currentPlacement.locationLabel}.`,
+    );
     expect(disclosure?.textContent).not.toContain('Selecting this room moves it here.');
     const placementLink = within(resources).getByRole('button', {
       name: `${moved.currentPlacement.biomeKey} · ${moved.currentPlacement.locationLabel}`,
     });
     expect(placementLink.classList.contains('semantic-focus-link')).toBe(true);
-    for (const label of [
-      'Successful Mining — Fire',
-      'Successful Spirit — Air',
-      'Successful Seed — Earth',
-      'Successful Fishing — Water',
-    ]) {
+    for (const label of ['Collect Fire', 'Collect Air', 'Collect Earth', 'Collect Water']) {
       expect(within(resources).getByRole('checkbox', { name: label })).toBeTruthy();
     }
     const historyBeforeMove = view.application.store.getState().projectWorkspace.history!;
-    const legalMove = within(resources).getByRole('checkbox', { name: moved.label });
+    const legalMove = within(resources).getByRole('checkbox', { name: `Collect ${moved.element}` });
     await view.user.click(legalMove);
     const movedPlacement = () =>
       view.application.store.getState().projectWorkspace.history!.present.route?.resourcePlacements[
@@ -452,7 +445,7 @@ describe('Biome inspector controls', () => {
 
     const historyBeforeNavigation = view.application.store.getState().projectWorkspace.history!;
     const illegalCheckbox = within(resources).getByRole('checkbox', {
-      name: 'Successful Seed — Earth',
+      name: 'Collect Earth',
     });
     expect(illegalCheckbox).toHaveProperty('disabled', true);
     await view.user.click(illegalCheckbox);
@@ -705,7 +698,7 @@ describe('Biome inspector controls', () => {
         );
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
     const timeline = screen.getByRole('region', { name: 'Room Timeline' });
-    // The rack is a ranked row, never an optional action; the Champion Item's entry is.
+    // The rack is a ranked row, never an optional action; the Pedestal's entry is.
     expect(
       within(timeline).queryByRole('region', { name: 'Optional actions' })?.textContent ?? '',
     ).not.toContain('Keepsake Rack');

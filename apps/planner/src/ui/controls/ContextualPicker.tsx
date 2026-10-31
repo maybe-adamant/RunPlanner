@@ -35,6 +35,8 @@ interface ContextualPickerProps<T> {
   readonly locked?: boolean;
   readonly id: string;
   readonly label: string;
+  /** An image shown before the field label. */
+  readonly labelIcon?: ArtworkSource | undefined;
   readonly layout?: 'inline' | 'stacked';
   readonly loading?: boolean;
   readonly model: ContextualPickerModel<T>;
@@ -275,6 +277,7 @@ export function ContextualPicker<T>({
   locked = false,
   id,
   label,
+  labelIcon,
   layout = 'stacked',
   loading = false,
   model,
@@ -342,7 +345,14 @@ export function ContextualPicker<T>({
     <div
       className={`field-control contextual-picker${layout === 'inline' ? ' field-control-inline' : ''}`}
     >
-      {label === '' ? null : <label htmlFor={id}>{label}</label>}
+      {label === '' ? null : (
+        <label htmlFor={id}>
+          {labelIcon === undefined ? null : (
+            <ArtworkIcon className="artwork-label-icon" source={labelIcon} />
+          )}
+          {label}
+        </label>
+      )}
       <Popover.Root open={open} onOpenChange={updateOpen}>
         <Popover.Trigger asChild>
           <button

@@ -88,7 +88,6 @@ export function workspaceRoomFeatureMarkers(
         case 'chaos':
           return feature.action === 'remove' ? [feature.marker] : [];
         case 'zagreusContract':
-        case 'nemesisEvent':
           return [];
       }
     }),

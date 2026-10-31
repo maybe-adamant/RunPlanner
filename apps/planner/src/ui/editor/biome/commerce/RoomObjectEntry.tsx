@@ -19,7 +19,7 @@ import { TimelineRow } from '../TimelineRow';
 const objectName: Readonly<Record<WorkspaceRoomObject, string>> = {
   worldShop: 'World Shop',
   hermesShrine: 'Hermes Shrine',
-  championItem: 'Champion Item',
+  championItem: 'Pedestal',
 };
 
 const objectIcon: Readonly<Record<WorkspaceRoomObject, string | undefined>> = {
@@ -38,14 +38,14 @@ function roomObjectLockHint(lock: WorkspaceRoomObjectLock): string {
     case 'collected':
       return 'Already collected.';
     case 'itemUnchosen':
-      return 'Choose the Champion item first.';
+      return 'Choose the Pedestal item first.';
     case 'inactive':
       return 'Needs Champion of Elysium.';
   }
 }
 
 /**
- * A World Shop, Hermes Shrine or Champion item's entry above the optional
+ * A World Shop, Hermes Shrine or Pedestal's entry above the optional
  * actions: what can be done where the room's actions end, each pick
  * appending one action there.
  */

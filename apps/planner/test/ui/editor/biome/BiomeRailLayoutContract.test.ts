@@ -14,7 +14,7 @@ const responsiveStyles = readFileSync(
 describe('biome rail layout contract', () => {
   it('stacks the room editor with shared scrolling before switching the app to mobile navigation', () => {
     const stacked = responsiveStyles
-      .split('@container app-viewport (max-width: 1000px) {')[1]
+      .split('@container app-viewport (max-width: 1080px) {')[1]
       ?.split('@container app-viewport (max-width: 700px) {')[0];
     expect(stacked).toBeDefined();
     expect(stacked).toContain(".editor-panel-content[data-editor-layout='biome'] {");

@@ -81,7 +81,7 @@ export function openRoomTab(name: string): void {
 
 /**
  * Picks one action from a room object's Timeline entry (World Shop, Hermes
- * Shrine, Champion Item, Stygian Well…); the Room Timeline tab must be open.
+ * Shrine, Pedestal, Stygian Well…); the Room Timeline tab must be open.
  */
 export async function pickRoomObjectAction(
   user: UserEvent,

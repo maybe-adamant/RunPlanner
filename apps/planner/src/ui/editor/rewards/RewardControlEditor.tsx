@@ -9,6 +9,7 @@ import { CountedRewardEditor, RewardValueEditor } from './RewardEditors';
 import { ShopOfferEditor } from './ShopOfferEditor';
 import type { RewardPickerStep } from '@planner/projections/rewards/rewardPicker';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import type { ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 
 /** Complete intent-bound editor for every authored reward leaf. */
 export function RewardControlEditor({
@@ -17,16 +18,19 @@ export function RewardControlEditor({
   idPrefix,
   interactions,
   label = 'Reward',
+  labelIcon,
   showOffer = true,
   offerStartStep,
   offerSummaryMode = 'offer',
 }: {
-  /** A Shop item picker's accessible name where its visible label is shortened. */
+  /** The accessible name where the visible label is shortened. */
   readonly ariaLabel?: string;
   readonly control: WorkspaceRewardControl;
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label?: string;
+  /** An image shown before the field label. */
+  readonly labelIcon?: ArtworkSource | undefined;
   readonly showOffer?: boolean;
   /** A fixed-type producer can expose its payload directly without a redundant type step. */
   readonly offerStartStep?: RewardPickerStep;
@@ -58,13 +62,16 @@ export function RewardControlEditor({
           control={control}
           interactions={interactions}
           label={label}
+          {...(labelIcon === undefined ? {} : { labelIcon })}
         />
       ) : control.kind === 'countedReward' ? (
         <CountedRewardEditor
+          {...(ariaLabel === undefined ? {} : { ariaLabel })}
           candidateOwner={control.owner}
           idPrefix={idPrefix}
           interactions={interactions}
           label={label}
+          {...(labelIcon === undefined ? {} : { labelIcon })}
           offer={control.offer}
           onReplace={onReplace}
           {...realized}
@@ -78,10 +85,12 @@ export function RewardControlEditor({
         />
       ) : (
         <RewardValueEditor
+          {...(ariaLabel === undefined ? {} : { ariaLabel })}
           candidateOwner={control.owner}
           idPrefix={idPrefix}
           interactions={interactions}
           label={label}
+          {...(labelIcon === undefined ? {} : { labelIcon })}
           offer={control.offer}
           onReplace={onReplace}
           {...realized}

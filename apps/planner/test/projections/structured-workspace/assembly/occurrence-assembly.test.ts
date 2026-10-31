@@ -188,6 +188,31 @@ describe('structured workspace composer assembly', () => {
     expect(passiveTab(createGoldenFGHIProject())).toBe('overview');
   });
 
+  it('offers the Fields Passive Nemesis event as an encounter choice, not a room feature', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat05');
+    for (const project of [createGoldenFGHIProject(), loadNemesisFieldsCheckpoint()]) {
+      const { node } = assemble(project, 'Underworld', 'H', occurrenceId).assembly;
+      const passive = node.room.encounterPhases.find(
+        (phase) => phase.address.phaseKey === 'Passive',
+      )!;
+      expect(passive.customizable).toBe(true);
+      expect(
+        passive.candidateChoices.map((choice) => choice.nativeEncounterDefinitionKey),
+      ).toContain('NemesisRandomEvent');
+      expect(node.room.workbench.features.map((feature) => feature.kind)).not.toContain(
+        'nemesisEvent',
+      );
+    }
+    const selected = assemble(
+      loadNemesisFieldsCheckpoint(),
+      'Underworld',
+      'H',
+      occurrenceId,
+    ).assembly.node.room.encounterPhases.find((phase) => phase.address.phaseKey === 'Passive')!;
+    expect(selected.selectedEncounter.key).toBe('NemesisRandomEvent');
+    expect(selected.nemesisEvent).toBeDefined();
+  });
+
   it('routes every Ship phase identity to Overview and its Fig Leaf to its phase Timeline', () => {
     const occurrenceId = createOccurrenceId('surface-o-combat04');
     let project = loadSurfaceNOPQProject();

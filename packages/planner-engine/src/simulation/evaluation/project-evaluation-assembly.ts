@@ -268,7 +268,7 @@ export function stygianWellCandidateForProjectEvaluationAssembly(
 }
 
 /**
- * What can be done with a room's World Shop, Hermes Shrine and Champion item
+ * What can be done with a room's World Shop, Hermes Shrine and Pedestal
  * at the end of its reached sequence; an object without one is unreached.
  */
 export function roomObjectInteractionsForProjectEvaluationAssembly(

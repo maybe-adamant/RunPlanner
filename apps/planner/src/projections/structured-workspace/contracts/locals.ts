@@ -85,7 +85,6 @@ export interface WorkspaceEncounterInteraction {
    * picker model rather than exposing raw encounter evidence to React.
    */
   readonly load: () => ContextualPickerModel<string>;
-  readonly nemesisEvent?: WorkspaceNemesisEventSelection;
   /** The story or field NPC an encounter choice presents, when it presents one. */
   readonly npcKeyFor: (encounterKey: string) => string | undefined;
   /** The native encounter declaration an encounter choice resolves to. */
@@ -302,21 +301,6 @@ export interface WorkspaceNemesisEventDomain {
   readonly traitPicker?: ContextualPickerModel<string>;
 }
 
-/** Complete application-owned mapping for H's binary Passive-slot feature. */
-export interface WorkspaceNemesisFeatureInteraction {
-  readonly key: string;
-  readonly owner: EncounterPhaseAddress;
-  readonly disabledReason?: string;
-  readonly intent: WorkspaceCommandIntent<
-    Extract<
-      ProjectCommand,
-      {
-        readonly kind: 'SelectEncounter' | 'ResetEncounter';
-      }
-    >
-  >;
-}
-
 /** Phase-local Fig Leaf choice; eligibility is supplied by the engine. */
 export interface WorkspaceFigLeafInteraction {
   readonly intentFor: (
@@ -484,11 +468,6 @@ export interface WorkspaceEncounterPhase {
   readonly customization?: readonly WorkspaceEncounterCustomizationDecision[];
   /** Per-wave composition of a combat identity, before any generated assessment. */
   readonly composition?: WorkspaceEncounterComposition;
-  /** H Passive selection is presented by the room-feature control, not a second picker. */
-  readonly nemesisFeature?: {
-    readonly encounterKey: string;
-    readonly selected: boolean;
-  };
   readonly label: string;
   /** The phase's encounter name, labelling its identity picker. */
   readonly identityLabel: string;

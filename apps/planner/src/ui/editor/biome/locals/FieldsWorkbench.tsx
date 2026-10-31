@@ -36,7 +36,7 @@ export function FieldsWorkbench({
       {nested ? null : <h5 className="room-feature-category-heading">Optional Rewards</h5>}
       <div className="room-overview-panel">
         <div className="field-control field-control-inline">
-          <span>Optional pickups</span>
+          <span>Rewards</span>
           <div
             {...findingTarget(room.optionalRewardCountAddress)}
             aria-label="Optional pickups"
@@ -66,13 +66,14 @@ export function FieldsWorkbench({
           </div>
         </div>
         <div className="fields-reward-identities">
-          {room.optionalRewards.map((reward) => (
+          {room.optionalRewards.map((reward, index) => (
             <div className="fields-reward-identity" key={reward.key}>
               <RewardControlEditor
+                ariaLabel={`${reward.label} reward`}
                 control={reward.control}
                 idPrefix={`fields-${room.owner.occurrenceId}-optional-${reward.key}`}
                 interactions={interactions}
-                label={reward.label}
+                label={`Reward ${index + 1}`}
               />
             </div>
           ))}

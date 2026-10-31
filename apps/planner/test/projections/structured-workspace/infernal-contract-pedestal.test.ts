@@ -79,7 +79,7 @@ describe('Contract pedestal editor', () => {
         semanticAddressKey(candidate.origin) === semanticAddressKey(peerPedestal),
     );
     expect(finding).toBeDefined();
-    expect(presentFinding(finding!).title).toBe('Choose the Champion item');
+    expect(presentFinding(finding!).title).toBe('Choose the Pedestal item');
     expect(missing.workspace.focusByOwner.get(semanticAddressKey(peerPedestal))).toMatchObject({
       roomTab: 'overview',
     });
@@ -106,9 +106,7 @@ describe('Contract pedestal editor', () => {
 
     const chosen = projectStructuredWorkspaceFixture(project);
     const entry = championEntry(room(chosen, peerId));
-    expect(entry?.options).toEqual([
-      { key: 'collect', label: 'Collect Double Pom · Champion Item' },
-    ]);
+    expect(entry?.options).toEqual([{ key: 'collect', label: 'Collect Double Pom · Pedestal' }]);
     const collect = chosen.workspace.interactions.roomObjectEntries.get(entry!.interactionKey);
     if (collect === undefined) throw new Error('pedestal collect missing');
     expect(collect.intentFor('collect').command).toEqual({
@@ -128,7 +126,7 @@ describe('Contract pedestal editor', () => {
       ),
     ).toEqual([]);
     const row = collectRow(room(collected, peerId));
-    expect(row?.label).toBe('Collect Double Pom · Champion Item');
+    expect(row?.label).toBe('Collect Double Pom · Pedestal');
     expect(row?.participationOwnedByOverview).toBe(false);
     expect(championEntry(room(collected, peerId))).toMatchObject({ locked: 'collected' });
   });
@@ -143,7 +141,7 @@ describe('Contract pedestal editor', () => {
     const feature = pedestalFeature(summary);
     if (feature?.kind !== 'infernalContractPedestal') throw new Error('pedestal missing');
     expect(feature.rewardControl.offer).toEqual({ rewardType: 'StackUpgrade' });
-    expect(collectRow(summary)?.label).toBe('Collect Pom · Champion Item');
+    expect(collectRow(summary)?.label).toBe('Collect Pom · Pedestal');
     expect(collectRow(summary)?.purchaseRemoval?.command).toEqual({
       kind: 'SetInfernalContractPedestalCollected',
       pedestal: shopPedestal,
@@ -166,7 +164,7 @@ describe('Contract pedestal editor', () => {
       roomTab: 'actions',
     });
     const row = collectRow(room(resolving, shopId));
-    expect(row?.label).toBe('Collect Mystery Boon · Champion Item');
+    expect(row?.label).toBe('Collect Mystery Boon · Pedestal');
     expect(row?.rewardPayload?.showOffer).toBe(true);
     expect(row?.rewardPayload?.control.owner).toEqual({ kind: 'acquisitionEntry', address: entry });
     const source = resolving.workspace.interactions.rewards.get(semanticAddressKey(entry));
@@ -210,7 +208,7 @@ describe('Contract pedestal editor', () => {
         semanticAddressKey(candidate.origin) === semanticAddressKey(entry),
     );
     expect(finding).toBeDefined();
-    expect(presentFinding(finding!).title).toBe('No Champion item without Champion of Elysium');
+    expect(presentFinding(finding!).title).toBe('No Pedestal without Champion of Elysium');
     const feature = pedestalFeature(room(stale, fPreboss));
     if (feature?.kind !== 'infernalContractPedestal') throw new Error('stale pedestal missing');
     expect(feature.collect.address).toEqual(entry);

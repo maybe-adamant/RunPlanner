@@ -1,5 +1,18 @@
-/* Sidebar (148px), rail (280px), and gutters take about half the app at this width. */
-@container app-viewport (max-width: 1000px) {
+/*
+ * The rail stacks above the inspector once side by side would squeeze the room
+ * Overview grid: the sidebar, rail and gutters take about 611px, and the grid
+ * needs about 470px (label 5.6rem, picker 17rem, secondary 7.5rem, gaps).
+ */
+@container app-viewport (max-width: 1080px) {
+  /* Space held for a hidden Discard or an absent save failure goes to the plan name. */
+  .editor-title > .editor-discard[data-hidden] {
+    display: none;
+  }
+
+  .editor-save-slot {
+    flex-basis: 0;
+  }
+
   .editor-panel-content[data-editor-layout='biome'] {
     display: block;
     overflow-y: auto;
@@ -61,6 +74,11 @@
   .app-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .app-header.editor-header {
+    align-items: center;
+    flex-direction: row;
   }
 
   .project-profile-feedback {

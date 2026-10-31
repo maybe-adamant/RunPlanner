@@ -18,6 +18,15 @@ const interactionPhrases: Record<AuthoredNemesisRandomEventOutcome['kind'], stri
   damageContest: 'at Nemesis’s damage challenge →',
 };
 
+/** The closed trigger names the chosen type in one word; the list keeps full names. */
+const shortFamilyLabels: Record<AuthoredNemesisRandomEventOutcome['kind'], string> = {
+  freeItem: 'Item',
+  goldTrade: 'Gold',
+  damageTrade: 'Damage',
+  traitTrade: 'Boon',
+  damageContest: 'Contest',
+};
+
 /** Phase configuration: selecting an Event never settles its interaction. */
 export function NemesisEventSelector({
   interaction,
@@ -27,15 +36,26 @@ export function NemesisEventSelector({
   const executeIntent = useCommandIntent();
   const findingTarget = useFindingTarget();
   return (
-    <ContextualPicker
-      findingTarget={findingTarget(interaction.owner)}
-      id={semanticOwnerControlElementId(interaction.owner)}
-      label="Event"
-      layout="inline"
-      model={interaction.familyPicker}
-      onSelect={(family) => executeIntent(interaction.familyIntentFor(family))}
-      placeholder="Choose an event"
-    />
+    <div className="nemesis-event-family">
+      <ContextualPicker
+        ariaLabel={
+          interaction.familyPicker.selected === undefined
+            ? 'Nemesis event type'
+            : `Nemesis event type: ${interaction.familyPicker.selected.label}`
+        }
+        findingTarget={findingTarget(interaction.owner)}
+        id={semanticOwnerControlElementId(interaction.owner)}
+        label=""
+        choiceLabel="Event type"
+        layout="inline"
+        model={interaction.familyPicker}
+        onSelect={(family) => executeIntent(interaction.familyIntentFor(family))}
+        placeholder="Type"
+        {...(interaction.familyPicker.selected === undefined
+          ? {}
+          : { triggerLabel: shortFamilyLabels[interaction.familyPicker.selected.value] })}
+      />
+    </div>
   );
 }
 

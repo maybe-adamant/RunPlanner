@@ -13,7 +13,6 @@ function encounterPhaseInteractionRequirement(
   const interactivePhases = phases.filter(
     (phase) =>
       phase.customizable ||
-      phase.nemesisFeature !== undefined ||
       phase.nemesisEvent !== undefined ||
       phase.figLeaf !== undefined ||
       phase.aetos !== undefined ||
@@ -38,7 +37,6 @@ function encounterPhaseInteractionRequirement(
           ...(phase.nemesisBet === undefined ? {} : { nemesisBet: phase.nemesisBet }),
           selectionEnabled: phase.customizable,
           ...(phase.customization === undefined ? {} : { customization: phase.customization }),
-          ...(phase.nemesisFeature === undefined ? {} : { nemesisFeature: phase.nemesisFeature }),
           ...(phase.nemesisEvent === undefined ? {} : { nemesisEvent: phase.nemesisEvent }),
           ...(phase.figLeaf === undefined
             ? {}

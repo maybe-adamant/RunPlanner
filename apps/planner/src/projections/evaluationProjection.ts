@@ -663,14 +663,14 @@ export function presentFinding(finding: SemanticFinding): FindingPresentation {
   }
   if (finding.origin.kind === 'infernalContractPedestal') {
     if (finding.code === 'rewardMissing')
-      return Object.freeze({ title: 'Choose the Champion item' });
+      return Object.freeze({ title: 'Choose the Pedestal item' });
     if (finding.code === 'shopOfferUnavailable')
-      return Object.freeze({ title: 'Champion item not available here' });
+      return Object.freeze({ title: 'Pedestal item not available here' });
   }
   if (finding.code === 'rewardSourceUnavailable') {
     if (finding.evidence.reason === 'infernalContractNotHeld') {
       return Object.freeze({
-        title: 'No Champion item without Champion of Elysium',
+        title: 'No Pedestal without Champion of Elysium',
         description: 'Remove the Collect row, or take Champion of Elysium earlier.',
       });
     }

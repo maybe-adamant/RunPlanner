@@ -3,6 +3,7 @@ import {
   type WorkspaceRoomFeature,
 } from '@planner/projections/structured-workspace';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
+import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 
 type PedestalFeature = Extract<WorkspaceRoomFeature, { readonly kind: 'infernalContractPedestal' }>;
 
@@ -16,14 +17,15 @@ export function InfernalContractPedestalPanel({
 }) {
   return (
     <fieldset className="room-contract-pedestal">
-      <legend className="visually-hidden">Champion Item configuration</legend>
+      <legend className="visually-hidden">Pedestal configuration</legend>
       <div className="shop-family-offer-row">
         <div className="shop-family-item-control">
           <RewardControlEditor
             control={feature.rewardControl}
             idPrefix={`pedestal-${feature.rewardControl.marker.focusKey}`}
             interactions={interactions}
-            label="Champion Item"
+            label="Pedestal"
+            labelIcon={traitIcon('InfernalContractBoon')}
           />
         </div>
       </div>

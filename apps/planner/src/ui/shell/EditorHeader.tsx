@@ -98,15 +98,17 @@ export function EditorHeader({
           <ProjectFileFeedback result={failure} session={librarySession} />
         </span>
       </div>
-      <span className="editor-header-spacer" />
-      <StatusBadge status={readiness} />
-      <ProjectHistoryControls hasProject />
-      <GameSendControls
-        gameStatus={gameStatus}
-        onShowFindings={onShowFindings}
-        operations={operations}
-        {...(startPointBlock === undefined ? {} : { startPointBlock })}
-      />
+      {/* Readiness, history and send wrap together, kept to the right. */}
+      <div className="editor-header-actions">
+        <StatusBadge status={readiness} />
+        <ProjectHistoryControls hasProject />
+        <GameSendControls
+          gameStatus={gameStatus}
+          onShowFindings={onShowFindings}
+          operations={operations}
+          {...(startPointBlock === undefined ? {} : { startPointBlock })}
+        />
+      </div>
     </header>
   );
 }

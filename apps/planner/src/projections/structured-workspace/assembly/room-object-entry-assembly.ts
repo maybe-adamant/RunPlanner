@@ -31,7 +31,7 @@ interface EntryParts {
 }
 
 /**
- * Each present World Shop, Hermes Shrine and Champion item's entry: what can
+ * Each present World Shop, Hermes Shrine and Pedestal's entry: what can
  * be done where the room's actions end, each pick appending one action there.
  * Options read as the row they append.
  */

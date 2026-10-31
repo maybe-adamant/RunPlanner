@@ -119,10 +119,6 @@
   padding-bottom: 8px;
 }
 
-.editor-header-spacer {
-  flex: 1;
-}
-
 /* A panel's context after its name: " · 12 plans · 3 in game". */
 .home-context {
   color: var(--muted);
@@ -723,9 +719,18 @@ button.home-slot-name {
   margin-left: 8px;
 }
 
-/* Editor header */
+/* Editor header: Home and the title keep one line; the actions wrap as one group. */
 .editor-header {
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.editor-header-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
   gap: 16px;
+  margin-left: auto;
 }
 
 .editor-home-button {
@@ -892,11 +897,27 @@ button.home-slot-name {
   margin-top: 10px;
 }
 
+/* The title takes the line's spare room; its empty reserved slots give way first, then the name ellipsizes. */
 .editor-title {
   display: flex;
-  min-width: 0;
+  min-width: 12rem;
+  flex: 1 1 0;
   align-items: baseline;
   gap: 12px;
+  /* The clip keeps room for the name field's left margin and focus outlines. */
+  padding: 6px;
+  margin: -6px;
+  overflow: hidden;
+}
+
+.editor-title > .text-action {
+  flex: none;
+}
+
+.editor-title > .editor-discard[data-hidden] {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
 }
 
 .editor-title .app-plan-name {
@@ -919,7 +940,8 @@ button.home-slot-name {
 /* Reserved for "Not saved · Details", so a write failure never moves the header. */
 .editor-save-slot {
   display: inline-flex;
-  min-width: 11rem;
+  min-width: 0;
+  flex: 0 1 11rem;
   font-size: 0.82rem;
 }
 

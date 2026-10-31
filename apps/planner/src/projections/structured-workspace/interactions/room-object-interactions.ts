@@ -76,7 +76,7 @@ function bindEntry(requirement: EntryRequirement): WorkspaceRoomObjectEntryInter
   });
 }
 
-/** Binds each World Shop, Hermes Shrine and Champion item entry. */
+/** Binds each World Shop, Hermes Shrine and Pedestal entry. */
 export function bindRoomObjectInteractions(
   requirements: Iterable<WorkspaceOccurrenceInteractionRequirement>,
 ): {

@@ -21,10 +21,12 @@ import { useFindingTarget, type FindingTargetProps } from '@planner/ui/feedback/
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 
 interface RewardValueEditorProps {
+  readonly ariaLabel?: string;
   readonly candidateOwner: RewardCandidateOwner;
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label?: string;
+  readonly labelIcon?: ArtworkSource | undefined;
   readonly offer: ResolvedRewardOffer | null;
   readonly onReplace: (offer: ResolvedRewardOffer) => void;
   readonly initialStep?: RewardPickerStep;
@@ -74,9 +76,11 @@ function offerKey(offer: ResolvedRewardOffer): string {
 }
 
 export function RewardValueEditor({
+  ariaLabel,
   candidateOwner,
   interactions,
   label = 'Reward',
+  labelIcon,
   offer,
   onReplace,
   initialStep = 'type',
@@ -91,10 +95,12 @@ export function RewardValueEditor({
   );
   return (
     <RewardOfferPicker
+      {...(ariaLabel === undefined ? {} : { ariaLabel })}
       findingTarget={findingTarget(candidateOwner.address)}
       id={semanticOwnerControlElementId(candidateOwner.address)}
       initialStep={initialStep}
       label={label}
+      {...(labelIcon === undefined ? {} : { labelIcon })}
       offer={offer}
       onReplace={onReplace}
       {...(realizedLabel === undefined ? {} : { realizedLabel })}
@@ -112,6 +118,7 @@ export function RewardOfferPicker({
   findingTarget,
   id,
   label,
+  labelIcon,
   offer,
   onReplace,
   initialStep = 'type',
@@ -126,6 +133,7 @@ export function RewardOfferPicker({
   readonly findingTarget?: FindingTargetProps;
   readonly id: string;
   readonly label: string;
+  readonly labelIcon?: ArtworkSource | undefined;
   readonly offer: ResolvedRewardOffer | null;
   readonly onReplace: (offer: ResolvedRewardOffer) => void;
   readonly initialStep?: RewardPickerStep;
@@ -226,6 +234,7 @@ export function RewardOfferPicker({
         closeOnSelect={false}
         id={id}
         label={label}
+        labelIcon={labelIcon}
         layout="inline"
         loading={active !== undefined && domain.result === undefined}
         model={model}
@@ -251,11 +260,13 @@ export function RewardOfferPicker({
 }
 
 export function CountedRewardEditor({
+  ariaLabel,
   candidateOwner,
   offer,
   idPrefix,
   interactions,
   label,
+  labelIcon,
   onReplace,
   initialStep,
   realizedLabel,
@@ -264,10 +275,12 @@ export function CountedRewardEditor({
 }: CountedRewardEditorProps) {
   return (
     <RewardValueEditor
+      {...(ariaLabel === undefined ? {} : { ariaLabel })}
       candidateOwner={candidateOwner}
       idPrefix={idPrefix}
       interactions={interactions}
       {...(label === undefined ? {} : { label })}
+      {...(labelIcon === undefined ? {} : { labelIcon })}
       offer={offer}
       onReplace={onReplace}
       {...(initialStep === undefined ? {} : { initialStep })}

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { AuthoredNemesisRandomEventKind } from '@run-planner/engine/authored-project';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -130,9 +129,10 @@ function EncounterCustomizationControl({
           contextUnreached ? candidateWaitingHint : undefined,
           'aria-description' in triggerTarget ? triggerTarget['aria-description'] : undefined,
         )}
+        aria-label={`${editable ? 'Customize' : 'View roster for'} ${phase.identityLabel.toLowerCase()}`}
         type="button"
       >
-        {editable ? 'Customize encounter' : 'Inspect encounter'}
+        {editable ? 'Customize' : 'View roster'}
       </button>
       {manualOpen ? (
         <EditorDialog
@@ -345,19 +345,11 @@ export function CustomizableEncounterPhaseControl({
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
   const candidates = useWorkspaceInteraction(interaction);
-  const [selection, setSelection] = useState<{
-    readonly interaction: WorkspaceEncounterInteraction;
-    readonly step: 'encounter' | 'event';
-  }>();
-  const step = selection?.interaction === interaction ? selection.step : undefined;
-  const event = interaction.nemesisEvent;
-  const selectedFamily =
-    phase.nemesisEvent === undefined ? undefined : event?.familyPicker.selected;
+  const [open, setOpen] = useState(false);
   return (
     <ContextualPicker
       cancelLabel="Cancel"
-      choiceLabel={step === 'event' ? 'Nemesis event' : 'Encounter'}
-      closeOnSelect={false}
+      choiceLabel="Encounter"
       findingTarget={findingTarget(
         phase.address,
         semanticOwnerControlElementId(phase.address),
@@ -365,50 +357,28 @@ export function CustomizableEncounterPhaseControl({
         isIdentityFinding,
       )}
       id={semanticOwnerControlElementId(phase.address)}
-      label={phase.identityLabel}
+      label={phase.label}
       layout="inline"
-      loading={step === 'encounter' && candidates.pending}
-      model={
-        step === 'event' && event !== undefined
-          ? event.familyPicker
-          : (candidates.result ?? emptyEncounterPicker)
-      }
-      onOpenChange={(open) => {
-        if (open) {
-          candidates.activate();
-          setSelection({ interaction, step: 'encounter' });
-        } else {
-          setSelection(undefined);
-        }
+      loading={open && candidates.pending}
+      model={candidates.result ?? emptyEncounterPicker}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) candidates.activate();
+        setOpen(nextOpen);
       }}
       onSelect={(value) => {
-        if (step === 'event' && event !== undefined) {
-          executeIntent(event.familyIntentFor(value as AuthoredNemesisRandomEventKind));
-        } else if (value === event?.encounterKey && event !== undefined) {
-          setSelection({ interaction, step: 'event' });
-          return;
-        } else {
-          executeIntent(interaction.intentFor(value));
-        }
-        setSelection(undefined);
+        executeIntent(interaction.intentFor(value));
+        setOpen(false);
       }}
-      {...(step === 'event'
-        ? {}
-        : {
-            itemIcon: (item: { readonly value: string }) =>
-              encounterChoiceIcon(
-                interaction.definitionKeyFor(item.value),
-                interaction.npcKeyFor(item.value),
-              ),
-          })}
-      triggerIcon={selectedEncounterIcon(phase.selectedEncounter)}
-      open={step !== undefined}
-      placeholder="Choose an encounter"
-      triggerLabel={
-        selectedFamily === undefined
-          ? phase.selectedEncounter.label
-          : `${phase.selectedEncounter.label} · ${selectedFamily.label}`
+      itemIcon={(item: { readonly value: string }) =>
+        encounterChoiceIcon(
+          interaction.definitionKeyFor(item.value),
+          interaction.npcKeyFor(item.value),
+        )
       }
+      triggerIcon={selectedEncounterIcon(phase.selectedEncounter)}
+      open={open}
+      placeholder="Choose an encounter"
+      triggerLabel={phase.selectedEncounter.label}
     />
   );
 }
@@ -429,14 +399,12 @@ export function EncounterPhaseControl({
     );
   // A fixed phase's Nemesis family is fixed when Nemesis spawns on entry.
   const nemesisInteraction =
-    phase.customizable || phase.nemesisEvent === undefined
+    phase.nemesisEvent === undefined
       ? undefined
       : interactions.nemesisEvents.get(workspaceInteractionKey(phase.nemesisEvent.owner));
   return (
     <section
-      {...(!phase.customizable &&
-      phase.customization === undefined &&
-      phase.nemesisFeature === undefined
+      {...(!phase.customizable && phase.customization === undefined
         ? {
             ...findingAnchor(phase.address),
             tabIndex: -1,
@@ -456,7 +424,7 @@ export function EncounterPhaseControl({
           />
         ) : (
           <div className="field-control field-control-inline">
-            <span>{phase.identityLabel}</span>
+            <span>{phase.label}</span>
             <div className="encounter-fixed-value">
               {selectedEncounterIcon(phase.selectedEncounter) === undefined ? null : (
                 <ArtworkIcon

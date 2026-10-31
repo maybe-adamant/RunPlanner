@@ -193,7 +193,7 @@ describe('Hermes Shrine interaction', () => {
   });
 });
 
-describe('Champion item interaction', () => {
+describe('Pedestal interaction', () => {
   const gShop = createOccurrenceId('zagreus-contract-preboss-shop');
   const fShop = createOccurrenceId('golden-f-preboss-shop');
 

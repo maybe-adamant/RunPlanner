@@ -930,7 +930,7 @@ export function activeEncounterPhasesForOwner(
       room.mode.kind === 'authored' &&
       room.mode.templateKey === 'FieldsCombat' &&
       domain.slotKey === 'Passive';
-    const customizable = domain.declaredEncounterKeys.length > 1 && !fieldsPassive;
+    const customizable = domain.declaredEncounterKeys.length > 1;
     const selectedDefinition =
       input.catalog.encounterDefinitions.byKey[domain.selectedEncounterDefinitionKey ?? ''];
     const customization =
@@ -1296,19 +1296,6 @@ export function activeEncounterPhasesForOwner(
             : { nativeEncounterDefinitionKey: domain.selectedEncounterDefinitionKey }),
           ...(selectedNpcKey === undefined ? {} : { npcKey: selectedNpcKey }),
         }),
-        ...(fieldsPassive &&
-        domain.choices.some(
-          (choice) => choice.directEncounterDefinitionKey === 'NemesisRandomEvent',
-        )
-          ? {
-              nemesisFeature: Object.freeze({
-                encounterKey: domain.choices.find(
-                  (choice) => choice.directEncounterDefinitionKey === 'NemesisRandomEvent',
-                )!.key,
-                selected: selectedDefinition?.key === 'NemesisRandomEvent',
-              }),
-            }
-          : {}),
         ...(nemesisEvent === undefined ? {} : { nemesisEvent }),
       }),
     );

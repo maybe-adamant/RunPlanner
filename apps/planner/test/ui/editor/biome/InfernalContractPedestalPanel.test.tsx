@@ -47,33 +47,31 @@ function boonForm(): ProjectDocument {
 
 function pedestal(): HTMLElement {
   fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
-  return screen.getByRole('group', { name: 'Champion Item configuration' });
+  return screen.getByRole('group', { name: 'Pedestal configuration' });
 }
 
-describe('Champion Item panel', () => {
+describe('Pedestal panel', () => {
   it('picks the boon-form pedestal item, then collects it from its Timeline entry', async () => {
     const view = renderOccurrenceWorkbench(boonForm(), 'Underworld', 'G', select(peerId));
     const panel = pedestal();
     // The Overview authors the item only.
     expect(within(panel).queryByRole('checkbox')).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const entry = screen.getByRole('button', { name: 'Champion Item' });
+    const entry = screen.getByRole('button', { name: 'Pedestal' });
     expect(entry).toHaveProperty('disabled', true);
-    expect(hintOf(entry)).toBe('Choose the Champion item first.');
+    expect(hintOf(entry)).toBe('Choose the Pedestal item first.');
 
-    await view.user.click(within(pedestal()).getByRole('button', { name: /^Champion Item/ }));
+    await view.user.click(within(pedestal()).getByRole('button', { name: /^Pedestal/ }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Big Pom of Power'));
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    await pickRoomObjectAction(view.user, 'Champion Item', 'Collect Double Pom · Champion Item');
-    const row = screen.getAllByText('Collect Double Pom · Champion Item')[0]!.closest('li');
-    if (row === null) throw new Error('Champion Item collect row missing');
+    await pickRoomObjectAction(view.user, 'Pedestal', 'Collect Double Pom · Pedestal');
+    const row = screen.getAllByText('Collect Double Pom · Pedestal')[0]!.closest('li');
+    if (row === null) throw new Error('Pedestal collect row missing');
     // Collected: nothing more to do, and the row deletes the collect.
-    expect(screen.getByRole('button', { name: 'Champion Item' })).toHaveProperty('disabled', true);
-    expect(hintOf(screen.getByRole('button', { name: 'Champion Item' }))).toBe(
-      'Already collected.',
-    );
+    expect(screen.getByRole('button', { name: 'Pedestal' })).toHaveProperty('disabled', true);
+    expect(hintOf(screen.getByRole('button', { name: 'Pedestal' }))).toBe('Already collected.');
     await view.user.click(within(row).getByRole('button', { name: /^Remove .* from timeline$/ }));
-    expect(screen.queryByText('Collect Double Pom · Champion Item')).toBeNull();
+    expect(screen.queryByText('Collect Double Pom · Pedestal')).toBeNull();
   });
 
   it('shows the Shop-form pedestal as a room object outside the Shop inventory', () => {
@@ -87,7 +85,11 @@ describe('Champion Item panel', () => {
     expect(
       within(screen.getByRole('region', { name: 'Shop inventory' })).queryByText(/Contract/),
     ).toBeNull();
-    expect(within(panel).getByRole('button', { name: /^Champion Item/ })).toBeTruthy();
+    const picker = within(panel).getByRole('button', { name: /^Pedestal/ });
+    // The Overview names the pedestal by its Champion of Elysium icon and label.
+    const label = panel.querySelector(`label[for="${picker.id}"]`);
+    expect(label?.textContent).toBe('Pedestal');
+    expect(label?.querySelector('img')).not.toBeNull();
     expect(within(panel).queryByRole('checkbox')).toBeNull();
   });
 
@@ -98,14 +100,14 @@ describe('Champion Item panel', () => {
       'G',
       select(shopId),
     );
-    await view.user.click(within(pedestal()).getByRole('button', { name: /^Champion Item/ }));
+    await view.user.click(within(pedestal()).getByRole('button', { name: /^Pedestal/ }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
     fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
-    const row = screen.getByText('Collect Mystery Boon · Champion Item').closest('li');
+    const row = screen.getByText('Collect Mystery Boon · Pedestal').closest('li');
     if (row === null) throw new Error('Mystery collect row missing');
     await view.user.click(within(row).getByRole('button', { name: 'Reward' }));
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Zeus'));
-    const resolved = screen.getByText('Collect Mystery Boon · Champion Item').closest('li');
+    const resolved = screen.getByText('Collect Mystery Boon · Pedestal').closest('li');
     expect(within(resolved!).getByText(/Zeus/)).toBeTruthy();
   });
 });

@@ -26,7 +26,6 @@ import {
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import {
-  encounterCandidateExplanations,
   encounterNpcKey,
   projectEncounterPicker,
 } from '@planner/projections/encounterPickerProjection';
@@ -38,7 +37,6 @@ import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 import {
   StructuredWorkspaceProjectionContractError,
-  workspaceInteractionKey,
   type StructuredWorkspaceContextualServices,
 } from '../contract';
 import type {
@@ -50,7 +48,6 @@ import type {
   WorkspaceEncounterInteraction,
   WorkspaceEncounterCustomizationInteraction,
   WorkspaceNemesisEventDomain,
-  WorkspaceNemesisFeatureInteraction,
   WorkspaceFigLeafInteraction,
   WorkspaceLocalVisitGenerationInteraction,
   WorkspaceLocalVisitOrderInteraction,
@@ -96,7 +93,6 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
     string,
     import('../contract').WorkspaceNemesisEventInteraction
   >;
-  readonly nemesisFeatures: ReadonlyMap<string, WorkspaceNemesisFeatureInteraction>;
   readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
   readonly aetosAppearances: ReadonlyMap<
     string,
@@ -269,7 +265,6 @@ export function bindOccurrenceLocalInteractions(
   const encounterPhases = new Map<string, WorkspaceEncounterInteraction>();
   const encounterCustomizations = new Map<string, WorkspaceEncounterCustomizationInteraction>();
   const nemesisEvents = new Map<string, import('../contract').WorkspaceNemesisEventInteraction>();
-  const nemesisFeatures = new Map<string, WorkspaceNemesisFeatureInteraction>();
   const figLeafSkips = new Map<string, WorkspaceFigLeafInteraction>();
   const aetosAppearances = new Map<
     string,
@@ -513,7 +508,6 @@ export function bindOccurrenceLocalInteractions(
                 npcKeyFor: (encounterKey: string) =>
                   encounterNpcKey(catalog, definitionKeyFor(encounterKey)),
                 owner: phase.owner,
-                ...(nemesisSelection === undefined ? {} : { nemesisEvent: nemesisSelection }),
                 selected: phase.selectedEncounterKey,
               }),
             );
@@ -887,36 +881,6 @@ export function bindOccurrenceLocalInteractions(
                         event.value,
                         event.reward,
                       ),
-              }),
-            );
-          }
-          if (phase.nemesisFeature !== undefined) {
-            const key = workspaceInteractionKey(phase.owner);
-            // This projects already-evaluated encounter support, without replaying candidates.
-            const candidate = candidates.encounterPhases(phase.owner, [
-              phase.nemesisFeature.encounterKey,
-            ])[0]!;
-            const disabledReason = phase.nemesisFeature.selected
-              ? undefined
-              : encounterCandidateExplanations(catalog, candidate.evaluation)
-                  .map((reason) => reason.message)
-                  .join(' ') || undefined;
-            nemesisFeatures.set(
-              key,
-              Object.freeze({
-                key,
-                owner: phase.owner,
-                ...(disabledReason === undefined ? {} : { disabledReason }),
-                intent: Object.freeze({
-                  command: phase.nemesisFeature.selected
-                    ? Object.freeze({ kind: 'ResetEncounter' as const, phase: phase.owner })
-                    : Object.freeze({
-                        kind: 'SelectEncounter' as const,
-                        phase: phase.owner,
-                        encounterKey: phase.nemesisFeature.encounterKey,
-                      }),
-                  focus: Object.freeze({ owner: phase.owner, timing: 'after' as const }),
-                }),
               }),
             );
           }
@@ -1446,7 +1410,6 @@ export function bindOccurrenceLocalInteractions(
     encounterPhases,
     encounterCustomizations,
     nemesisEvents,
-    nemesisFeatures,
     roomActions,
     figLeafSkips,
     aetosAppearances,

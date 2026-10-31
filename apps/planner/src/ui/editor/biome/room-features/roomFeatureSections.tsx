@@ -80,12 +80,7 @@ export function roomFeatureSections({
         : section(
             contentGroup(
               'Resources',
-              <>
-                <span>Resources</span>{' '}
-                <span className="room-feature-heading-note">
-                  (Each successful element outcome can be placed once across the route)
-                </span>
-              </>,
+              'Resources',
               <RoomResourceControls interactions={interactions} room={room} />,
             ),
           ),
