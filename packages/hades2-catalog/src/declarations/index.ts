@@ -5,6 +5,7 @@ import {
   encounterSets,
   fieldNpcEncounterKeys,
 } from './encounters';
+import { enemyGoldDrops } from './encounters/generated/enemy-gold-drops';
 import { exitCompatibilityPolicies, exitTypes } from './exits';
 import { biomeLayouts } from './layouts';
 import { roomLifecycleProfiles } from './lifecycles';
@@ -69,6 +70,7 @@ export const declarations = {
   encounterEnvelopes,
   encounterDefinitions,
   encounterSets,
+  enemyGoldDrops,
   fieldNpcEncounterKeys,
   roomLifecycleProfiles,
   exitCompatibilityPolicies,
@@ -87,6 +89,7 @@ export type {
   RawEncounterEnvelopeSlotDeclaration,
   RawEncounterSetDeclaration,
   RawEncounterSlotBinding,
+  RawEnemyGoldDropDeclaration,
 } from './encounters/types';
 export type { RawExitTypeDeclaration } from './exits-types';
 export type { RawFamiliarDeclaration } from './familiars-types';

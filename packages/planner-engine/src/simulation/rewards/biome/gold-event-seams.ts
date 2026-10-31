@@ -17,6 +17,8 @@ import {
   type GoldGain,
   type GoldMultipliers,
 } from '../../commerce/gold/gain-context';
+import { knownEncounterRoster } from '../../commerce/gold/known-roster';
+import { GoldLedgerContractError } from '../../commerce/gold/ledger';
 import type { PurchasePriceUnpriced } from '../../commerce/gold/price-context';
 import type { HistoryEvent } from '../../history';
 import { keepsakeRankForEquip } from '../../keepsakes/state';
@@ -24,7 +26,11 @@ import type { CanonicalAuthoredRoom } from '../../materialization';
 import type { RoomActionRow } from '../../room-actions';
 import type { SimulationState } from '../../state/model';
 import type { RewardBranchState } from '../branch-primitives';
-import type { ChronologyWalkContext, ChronologyWalkState } from './chronology-walk';
+import type {
+  ChronologyWalkContext,
+  ChronologyWalkState,
+  GoldRecordedRoster,
+} from './chronology-walk';
 import { wellOccurrenceView } from './encounter-acquisition/well-purchase';
 import { routeRoomDeclaration } from '../../../authored-project/route-profile';
 
@@ -345,6 +351,30 @@ export function withGoldEvents(
         event.encounterKey,
       ),
     });
+  if (event.kind === 'encounterRecorded' && room !== undefined) {
+    // A phase whose roster nothing leaves to native pays from that roster; a
+    // broken roster contract faults its gold, never the walk.
+    let recorded: GoldRecordedRoster | undefined;
+    try {
+      const roster = knownEncounterRoster(
+        catalog,
+        event.encounterKey,
+        event.generatedCustomization?.operands,
+      );
+      if (roster !== undefined) recorded = { encounterKey: event.encounterKey, roster };
+    } catch (error) {
+      if (!(error instanceof GoldLedgerContractError)) throw error;
+      recorded = { encounterKey: event.encounterKey, fault: error.message };
+    }
+    if (recorded !== undefined)
+      state = Object.freeze({
+        ...state,
+        goldEncounterRosters: new Map(state.goldEncounterRosters).set(
+          `${semanticAddressKey(room.origin)}::${event.phaseKey}`,
+          Object.freeze(recorded),
+        ),
+      });
+  }
   const enteredRoom = context.rooms.get(semanticAddressKey(event.origin));
   if (
     event.kind === 'roomEntered' &&
@@ -371,12 +401,18 @@ export function withGoldEvents(
     event.kind === 'encounterCompleted' && event.execution === 'normal' && roomKey !== undefined
       ? state.goldEncounterKeys.get(`${roomKey}::${event.phaseKey}`)
       : undefined;
+  const recorded =
+    event.kind === 'encounterCompleted' && roomKey !== undefined
+      ? state.goldEncounterRosters.get(`${roomKey}::${event.phaseKey}`)
+      : undefined;
+  const completedRecord =
+    recorded !== undefined && recorded.encounterKey === completedKey ? recorded : undefined;
   if (completedKey !== undefined)
     state = Object.freeze({
       ...state,
       goldCompletedEncounters: new Map(state.goldCompletedEncounters).set(roomKey!, [
         ...(state.goldCompletedEncounters.get(roomKey!) ?? []),
-        completedKey,
+        completedRecord ?? Object.freeze({ encounterKey: completedKey }),
       ]),
     });
   if (event.kind === 'roomEntered' && enteredRoom?.origin.kind === 'occurrence')
@@ -568,66 +604,78 @@ export function withGoldEvents(
             index,
             `enemyGold:${event.phaseKey}`,
             phase,
-            entry === undefined || entry === 'divergent'
-              ? {
-                  unpriced: {
-                    kind: 'contractFailure',
-                    detail: `${completedKey} has no agreed gold multiplier at its room's door`,
-                  },
-                }
-              : entry === 'unresolved'
-                ? { unpriced: { kind: 'itemUnresolved' } }
-                : runDepth === undefined
-                  ? {
-                      unpriced: {
-                        kind: 'contractFailure',
-                        detail: `${completedKey} has no run depth at its room's door`,
-                      },
-                    }
-                  : hordesRank === undefined
-                    ? missingHordes
-                    : {
-                        gain: {
-                          kind: 'enemyGold',
-                          encounterKey: completedKey,
-                          biomeKey: room.origin.biomeKey,
-                          runDepth,
-                          hordesRank,
+            completedRecord !== undefined && 'fault' in completedRecord
+              ? { unpriced: { kind: 'contractFailure', detail: completedRecord.fault } }
+              : entry === undefined || entry === 'divergent'
+                ? {
+                    unpriced: {
+                      kind: 'contractFailure',
+                      detail: `${completedKey} has no agreed gold multiplier at its room's door`,
+                    },
+                  }
+                : entry === 'unresolved'
+                  ? { unpriced: { kind: 'itemUnresolved' } }
+                  : runDepth === undefined
+                    ? {
+                        unpriced: {
+                          kind: 'contractFailure',
+                          detail: `${completedKey} has no run depth at its room's door`,
                         },
-                        multipliers: entry,
-                      },
+                      }
+                    : hordesRank === undefined
+                      ? missingHordes
+                      : {
+                          gain: {
+                            kind: 'enemyGold',
+                            encounterKey: completedKey,
+                            biomeKey: room.origin.biomeKey,
+                            runDepth,
+                            hordesRank,
+                            ...(completedRecord !== undefined && 'roster' in completedRecord
+                              ? { roster: completedRecord.roster }
+                              : {}),
+                          },
+                          multipliers: entry,
+                        },
           );
         }
         if (definition?.killBounty !== undefined)
           detect(index, `heraclesBounty:${event.phaseKey}`, phase, {
             gain: { kind: 'heraclesBounty', encounterKey: completedKey },
           });
-        const fights = (key: string) => {
-          const kind = catalog.encounterDefinitions.byKey[key]?.kind;
+        const fights = ({ encounterKey }: { readonly encounterKey: string }) => {
+          const kind = catalog.encounterDefinitions.byKey[encounterKey]?.kind;
           return kind === 'combat' || kind === 'miniboss' || kind === 'boss';
         };
         const completed = state.goldCompletedEncounters.get(roomKey!) ?? [];
+        const rosterFault = completed.find(
+          (encounter): encounter is Extract<GoldRecordedRoster, { readonly fault: string }> =>
+            'fault' in encounter,
+        );
         const medea = goldOnKillFacts(catalog, after);
         // Each fight adds its kills to the room's capped drops; the ledger pays the increase.
-        if (medea !== undefined && fights(completedKey))
+        if (medea !== undefined && fights({ encounterKey: completedKey }))
           detect(
             index,
             `medeaGold:${event.phaseKey}`,
             phase,
             hordesRank === undefined
               ? missingHordes
-              : {
-                  gain: {
-                    kind: 'medeaGold',
-                    ...medea,
-                    encounters: completed.filter(fights).map((encounterKey) => ({
-                      encounterKey,
-                      biomeKey: room.origin.biomeKey,
-                      hordesRank,
-                    })),
+              : rosterFault !== undefined
+                ? { unpriced: { kind: 'contractFailure', detail: rosterFault.fault } }
+                : {
+                    gain: {
+                      kind: 'medeaGold',
+                      ...medea,
+                      encounters: completed.filter(fights).map((encounter) => ({
+                        encounterKey: encounter.encounterKey,
+                        biomeKey: room.origin.biomeKey,
+                        hordesRank,
+                        ...('roster' in encounter ? { roster: encounter.roster } : {}),
+                      })),
+                    },
+                    multipliers: goldMultipliers(catalog, after),
                   },
-                  multipliers: goldMultipliers(catalog, after),
-                },
           );
         // The room's golden urns break during its first fight.
         if (

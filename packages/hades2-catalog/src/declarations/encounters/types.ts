@@ -236,3 +236,33 @@ export type RawEncounterSlotBinding =
       readonly rivalsEncounterDefinitionKey?: string;
       readonly shadowEncounterDefinitionKey?: string;
     };
+
+/**
+ * One enemy's native `MoneyDropOnDeath` as its `InheritFrom` chain resolves
+ * it: a parcel's value is either `ValuePerDifficulty` times the enemy's
+ * `DifficultyRating` up to that times `ValuePerDifficultyMaxValueVariance`, or
+ * a fixed `MinValue`..`MaxValue`.
+ */
+export type RawEnemyGoldDropDeclaration =
+  | {
+      readonly key: string;
+      readonly kind: 'parcel';
+      readonly chance: number;
+      readonly minParcels: number;
+      readonly maxParcels: number;
+      readonly value:
+        | {
+            readonly kind: 'perDifficulty';
+            readonly valuePerDifficulty: number;
+            readonly maxValueVariance: number;
+            readonly difficultyRating: number;
+          }
+        | { readonly kind: 'fixed'; readonly min: number; readonly max: number };
+    }
+  | {
+      readonly key: string;
+      readonly kind: 'unitGroup';
+      readonly unitKey: string;
+      readonly size: number;
+    }
+  | { readonly key: string; readonly kind: 'none' };

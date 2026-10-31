@@ -9,6 +9,7 @@ import type {
   RawEncounterDefinitionDeclaration,
   RawEncounterEnvelopeDeclaration,
   RawEncounterSetDeclaration,
+  RawEnemyGoldDropDeclaration,
 } from './encounters/types';
 import type { RawExitTypeDeclaration } from './exits-types';
 import type { RawFamiliarDeclaration } from './familiars-types';
@@ -35,6 +36,8 @@ export interface RawCatalogInput {
   readonly encounterEnvelopes: readonly RawEncounterEnvelopeDeclaration[];
   readonly encounterDefinitions: readonly RawEncounterDefinitionDeclaration[];
   readonly encounterSets: readonly RawEncounterSetDeclaration[];
+  /** Native kill drops of every enemy a known roster can field. */
+  readonly enemyGoldDrops: readonly RawEnemyGoldDropDeclaration[];
   /** RequirementsData.lua `NoRecentFieldNPCEncounter`: the field-NPC spacing set. */
   readonly fieldNpcEncounterKeys: readonly string[];
   readonly roomLifecycleProfiles: readonly RawRoomLifecycleProfileDeclaration[];

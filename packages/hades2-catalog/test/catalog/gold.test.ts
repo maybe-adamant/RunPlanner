@@ -267,3 +267,93 @@ describe('gold catalog facts', () => {
     ).toThrow(CatalogContractError);
   });
 });
+
+describe('enemy gold drops', () => {
+  const drop = (key: string) => catalog.enemyGoldDrops.byKey[key];
+
+  it('resolves each enemy’s inherited kill drop into a chance and a truncated parcel range', () => {
+    // BaseVulnerableEnemy 0.33 × 18 = 5.94 up to × 1.3 = 7.722.
+    expect(drop('Brawler')).toEqual({
+      key: 'Brawler',
+      kind: 'parcel',
+      chance: 0.7,
+      value: { min: 5, max: 7 },
+    });
+    // Guard2 inherits Guard's 25% chance; Lycaon's elite its own 0.225.
+    expect(drop('Guard2')).toMatchObject({ chance: 0.25, value: { min: 3, max: 5 } });
+    expect(drop('Lycanthrope_Elite')).toMatchObject({ chance: 0.7, value: { min: 69, max: 90 } });
+    // Biome bases: Thessaly 0.125, Olympus 0.035, the Summit 0.16.
+    expect(drop('Swab')).toMatchObject({ value: { min: 8, max: 10 } });
+    expect(drop('SentryBot')).toMatchObject({ value: { min: 1, max: 2 } });
+    expect(drop('Brute_Elite')).toMatchObject({ value: { min: 64, max: 83 } });
+    // A truncated lower bound can be zero (0.075 × 13 = 0.975).
+    expect(drop('WaterElemental')).toMatchObject({ chance: 0.2, value: { min: 0, max: 1 } });
+    expect(drop('Treant2')).toEqual({ key: 'Treant2', kind: 'none' });
+    expect(drop('FishSwarmerSquad')).toEqual({
+      key: 'FishSwarmerSquad',
+      kind: 'unitGroup',
+      unitKey: 'FishSwarmer',
+      size: 5,
+    });
+    expect(drop('SimpleSquad_Elite')).toMatchObject({ unitKey: 'Simple_Elite', size: 2 });
+    expect(drop('Simple_Elite')).toMatchObject({ value: { min: 8, max: 10 } });
+  });
+
+  it('rates every generated enemy as its generator facts do', () => {
+    const rated = new Map(
+      declarations.enemyGoldDrops.flatMap((entry) =>
+        entry.kind === 'parcel' && entry.value.kind === 'perDifficulty'
+          ? [[entry.key, entry.value.difficultyRating] as const]
+          : [],
+      ),
+    );
+    const mismatches: string[] = [];
+    let checked = 0;
+    for (const definition of catalog.encounterDefinitions.values)
+      for (const decision of definition.customization ?? []) {
+        if (decision.selection.kind !== 'generated') continue;
+        const { choices, fixedEnemies, generatedSeeds, fixedWaves } = decision.selection;
+        for (const choice of [
+          ...choices,
+          ...fixedEnemies,
+          ...(generatedSeeds ?? []),
+          ...(fixedWaves ?? []).flat(),
+        ]) {
+          const rating = rated.get(choice.nativeId);
+          if (rating === undefined) continue;
+          checked += 1;
+          if (rating !== choice.difficultyRating)
+            mismatches.push(
+              `${definition.key}:${choice.nativeId} ${rating}≠${choice.difficultyRating}`,
+            );
+        }
+      }
+    expect(mismatches).toEqual([]);
+    expect(checked).toBeGreaterThan(500);
+  });
+
+  it('refuses a missing, unreachable, multi-parcel or mis-sized drop', () => {
+    const withDrops = (enemyGoldDrops: typeof declarations.enemyGoldDrops) => () =>
+      createCatalog({ ...declarations, enemyGoldDrops });
+    expect(
+      withDrops(declarations.enemyGoldDrops.filter((entry) => entry.key !== 'Mati_Elite')),
+    ).toThrow(CatalogContractError);
+    expect(
+      withDrops([...declarations.enemyGoldDrops, { key: 'FogEmitter', kind: 'none' }]),
+    ).toThrow(CatalogContractError);
+    expect(
+      withDrops(
+        declarations.enemyGoldDrops.map((entry) =>
+          entry.key === 'Mati' && entry.kind === 'parcel' ? { ...entry, maxParcels: 2 } : entry,
+        ),
+      ),
+    ).toThrow(CatalogContractError);
+    expect(
+      withDrops(
+        declarations.enemyGoldDrops.map((entry) =>
+          entry.key === 'SimpleSquad' && entry.kind === 'unitGroup' ? { ...entry, size: 3 } : entry,
+        ),
+      ),
+    ).toThrow(CatalogContractError);
+  });
+});

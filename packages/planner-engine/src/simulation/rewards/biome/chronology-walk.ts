@@ -15,6 +15,7 @@ import type { PurgingPoolAssessment } from '../../commerce/purging-pool';
 import type { StygianWellCandidateContext } from '../../commerce/stygian-well';
 import type { PurchasePriceContextPublication } from '../../commerce/gold/price-context';
 import type { GoldEventPublication, GoldMultipliers } from '../../commerce/gold/gain-context';
+import type { KnownRoster } from '../../commerce/gold/known-roster';
 import type { FeatureRollWalk } from '../../commerce/feature-rolls';
 import type { HistoryEvent, HistoryStateView, ProgressiveRoomHistoryViews } from '../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../materialization';
@@ -89,6 +90,11 @@ export interface StygianWellRoomAssessment {
   readonly assessments: readonly StygianWellCandidateContext[];
 }
 
+/** A recorded phase's known roster, or why deriving it broke a contract. */
+export type GoldRecordedRoster =
+  | { readonly encounterKey: string; readonly roster: KnownRoster }
+  | { readonly encounterKey: string; readonly fault: string };
+
 /** The walk state carried between seams; replaced, never mutated. */
 export interface ChronologyWalkState {
   readonly branches: readonly RewardBranchState[];
@@ -113,8 +119,16 @@ export interface ChronologyWalkState {
     string,
     GoldMultipliers | 'divergent' | 'unresolved'
   >;
-  /** Each room's normally completed encounters in order, for its Medea and urn gold; by room. */
-  readonly goldCompletedEncounters: ReadonlyMap<string, readonly string[]>;
+  /** The fully determined roster each recorded phase fields, with its identity; by `room::phase`. */
+  readonly goldEncounterRosters: ReadonlyMap<string, GoldRecordedRoster>;
+  /**
+   * Each room's normally completed encounters in order, with a known roster,
+   * for its Medea and urn gold; by room.
+   */
+  readonly goldCompletedEncounters: ReadonlyMap<
+    string,
+    readonly (GoldRecordedRoster | { readonly encounterKey: string })[]
+  >;
   readonly purgingPoolAssessments: ReadonlyMap<string, PurgingPoolRoomAssessment>;
   /** Each Well's and Pool's roll state as its room's actions settle, by room and feature. */
   readonly featureRolls: ReadonlyMap<string, FeatureRollWalk>;
@@ -198,6 +212,7 @@ export function createChronologyWalkState(
     goldEvents: Object.freeze([]),
     goldEncounterKeys: new Map(),
     goldRoomEntryMultipliers: new Map(),
+    goldEncounterRosters: new Map(),
     goldCompletedEncounters: new Map(),
     purgingPoolAssessments: new Map(),
     featureRolls: new Map(),

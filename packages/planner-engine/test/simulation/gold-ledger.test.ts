@@ -20,10 +20,15 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  generatedEncounterSupportForProjectEvaluationAssembly,
   goldLedgerForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type GoldLedger,
 } from '@run-planner/engine/simulation';
+import {
+  knownEncounterRoster,
+  knownRosterPayout,
+} from '../../src/simulation/commerce/gold/known-roster';
 import {
   loadSurfaceNOPQCheckpoint,
   loadSurfaceNQuickBuckCheckpoint,
@@ -255,6 +260,37 @@ describe('gold ledger walk', () => {
     const fixed = withModifiers({ encounterGoldRange: 100 }).roomAt(start);
     if (fixed.availability !== 'available') throw new Error('the opening is unpriced');
     expect(fixed.room.gains[0]!.amount).toMatchObject({ mean: 16 + 1.9, variance: 9 });
+  });
+
+  it('pays an authored composition from its roster in place of the biome policy', () => {
+    const start = createOccurrenceAddress(f, 'golden-f-start' as never);
+    const phase = createEncounterPhaseAddress(
+      f,
+      { kind: 'occurrence', occurrenceId: start.occurrenceId },
+      'Encounter',
+    );
+    const native = loadUnderworldWorldShopTravelDealCheckpoint();
+    const capability = generatedEncounterSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, native),
+      phase,
+    )!;
+    const value = capability.initialize()!;
+    const operands = capability.assess(value).operands!;
+    const project = applyProjectCommand(native, catalog, {
+      kind: 'ReplaceEncounterCustomization',
+      phase,
+      decisionKey: capability.decisionKey,
+      value,
+    });
+    const [kills] = gains(ledger(project), start);
+    const roster = knownEncounterRoster(catalog, 'OpeningGeneratedF', operands)!;
+    // Run depth 1: the opening's store is RandomInt(10, 15) + 0.5, rounded up.
+    const expected = knownRosterPayout(catalog, roster, {
+      moneyMultiplier: 1,
+      stores: [11, 12, 13, 14, 15, 16],
+    });
+    expect(kills).toEqual(['enemyGold', expected.mean]);
+    expect(expected.mean).not.toBeCloseTo(13.5 + 1.9, 1);
   });
 
   it('pays a Summit combat its biome’s fraction of the store', () => {

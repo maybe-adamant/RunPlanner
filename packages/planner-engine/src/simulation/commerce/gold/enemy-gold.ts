@@ -11,6 +11,7 @@ import {
   type EnemyGoldPolicy,
 } from './enemy-gold-policy';
 import type { GoldGain } from './gain-context';
+import { knownRosterKills, knownRosterPayout } from './known-roster';
 import { GoldLedgerContractError } from './ledger';
 import { roundGold, ZERO_GOLD, type GoldAmount } from './prices';
 
@@ -34,16 +35,16 @@ export function estimatedGold({ mean, variance }: Moments): GoldAmount {
 }
 
 /**
- * The store native draws (RunLogic.lua:1186-1190): an integer cap roll plus
- * the run-depth ramp, times the money multiplier, rounded up. An
- * `encounterGoldRange` fixes the roll at that point of the cap range.
+ * The store values native draws, equally likely (RunLogic.lua:1186-1190): an
+ * integer cap roll plus the run-depth ramp, times the money multiplier,
+ * rounded up. An `encounterGoldRange` fixes the roll at that point of the cap range.
  */
-export function encounterStoreMoments(
+export function encounterStoreValues(
   store: EncounterMoneyStore,
   runDepth: number,
   moneyMultiplier: number,
   encounterGoldRange: number | undefined,
-): Moments {
+): readonly number[] {
   const rolls =
     encounterGoldRange === undefined
       ? Array.from({ length: store.capMax - store.capMin + 1 }, (_, index) => store.capMin + index)
@@ -53,9 +54,17 @@ export function encounterStoreMoments(
           ),
         ];
   // Plain double arithmetic as native: 25 × 2.2 is 55.00000000000001 and rounds up to 56.
-  const values = rolls.map((roll) =>
-    Math.ceil((roll + runDepth * store.runDepthRamp) * moneyMultiplier),
-  );
+  return rolls.map((roll) => Math.ceil((roll + runDepth * store.runDepthRamp) * moneyMultiplier));
+}
+
+/** The moments of the store native draws. */
+export function encounterStoreMoments(
+  store: EncounterMoneyStore,
+  runDepth: number,
+  moneyMultiplier: number,
+  encounterGoldRange: number | undefined,
+): Moments {
+  const values = encounterStoreValues(store, runDepth, moneyMultiplier, encounterGoldRange);
   const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
   return {
     mean,
@@ -109,9 +118,10 @@ function policyFor(
 }
 
 /**
- * What a completed encounter's kills pay. A store-paying policy reads the
- * exact store; `enemyGoldDropChance` overrides only drops that pay from a
- * store, so it leaves an ungenerated encounter native.
+ * What a completed encounter's kills pay: from its known roster where one
+ * is, else by the payout policy. Either reads the exact store;
+ * `enemyGoldDropChance` overrides only drops that pay from a store, so it
+ * leaves an ungenerated encounter native.
  */
 export function enemyGoldAmount(
   catalog: Catalog,
@@ -119,6 +129,27 @@ export function enemyGoldAmount(
   moneyMultiplier: number,
   modifiers: Pick<RunModifiers, 'enemyGoldDropChance' | 'encounterGoldRange'>,
 ): GoldAmount {
+  if (gain.roster !== undefined) {
+    const store = catalog.encounterDefinitions.byKey[gain.encounterKey]?.moneyStore;
+    return estimatedGold(
+      knownRosterPayout(catalog, gain.roster, {
+        moneyMultiplier,
+        ...(store === undefined
+          ? {}
+          : {
+              stores: encounterStoreValues(
+                store,
+                gain.runDepth,
+                moneyMultiplier,
+                modifiers.encounterGoldRange,
+              ),
+              ...(modifiers.enemyGoldDropChance === undefined
+                ? {}
+                : { dropChance: modifiers.enemyGoldDropChance }),
+            }),
+      }),
+    );
+  }
   const { policy, store } = policyFor(catalog, gain.encounterKey, gain.biomeKey);
   const dropChance = store === undefined ? undefined : modifiers.enemyGoldDropChance;
   const sigma = moneyMultiplier;
@@ -210,6 +241,8 @@ export function medeaGoldAmount(
 ): GoldAmount {
   const killsOf = (encounters: typeof gain.encounters) =>
     encounters.reduce((total, encounter) => {
+      if (encounter.roster !== undefined)
+        return total + knownRosterKills(catalog, encounter.roster);
       const { policy } = policyFor(catalog, encounter.encounterKey, encounter.biomeKey);
       return total + enemyGoldKills(policy, encounter.biomeKey, encounter.hordesRank);
     }, 0);

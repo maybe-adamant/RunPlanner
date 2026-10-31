@@ -7,9 +7,14 @@ import type { RewardKernelCatalog } from '../reward-kernel/model';
 import type { CounterAxis, RequirementExpression, RoomStructuralTag } from '../requirements/model';
 import type { ProducerLifecyclePointKey } from '../reward-kernel/model';
 import type { CatalogCollection } from '../normalized/collection';
-import type { GeneratedEncounterSelection, InfiniteRosterSelection } from './encounter-generation';
+import type {
+  EnemyGoldDrop,
+  GeneratedEncounterSelection,
+  InfiniteRosterSelection,
+} from './encounter-generation';
 export type {
   EncounterEnemyChoice,
+  EnemyGoldDrop,
   GeneratedEncounterSelection,
   InfiniteRosterEnemyChoice,
   InfiniteRosterSelection,
@@ -1504,6 +1509,8 @@ export interface Catalog {
   readonly encounterEnvelopes: CatalogCollection<EncounterEnvelope>;
   readonly encounterDefinitions: CatalogCollection<EncounterDefinition>;
   readonly encounterSets: CatalogCollection<EncounterSet>;
+  /** What one kill of each enemy a known roster can field drops, by native enemy id. */
+  readonly enemyGoldDrops: CatalogCollection<EnemyGoldDrop>;
   /** Source `NoRecentFieldNPCEncounter`: the encounters that host a field NPC. */
   readonly fieldNpcEncounterKeys: readonly string[];
   readonly roomLifecycleProfiles: CatalogCollection<RoomLifecycleProfile>;

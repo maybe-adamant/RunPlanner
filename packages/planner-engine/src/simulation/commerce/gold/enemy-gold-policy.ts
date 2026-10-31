@@ -1,9 +1,11 @@
 /**
  * The engine's enemy-gold estimate policy: tunable approximations of what a
  * room's kills, Wealth from the Dead and golden urns pay. The money store is
- * exact catalog data; how much of it the kills pay is not plannable, so it is
- * estimated per biome from simulated rosters and recorded runs
- * (`scripts/gold-calibration.mjs` re-derives the observed side).
+ * exact catalog data; how much of it the kills pay is not plannable while
+ * native still draws the roster, so it is estimated per biome from simulated
+ * rosters and recorded runs (`scripts/gold-calibration.mjs` re-derives the
+ * observed side). A fully determined roster pays in closed form instead
+ * (`known-roster.ts`), so an all-fixed identity has no entry here.
  */
 
 /** Paid gold at the native drop chance, then at an `enemyGoldDropChance` of 25, 50, 75 and 100. */
@@ -178,25 +180,6 @@ const encounterPolicies: Readonly<Record<string, EnemyGoldPolicy>> = Object.free
   MiniBossStalker: constant(50, 20, 21),
   BossTyphonTail01: constant(0, 0, 1),
   BossTyphonEye01: constant(0, 0, 1),
-  // Ungenerated fixed rosters pay every drop uncapped (no store).
-  FIntroFight: constant(22, 6, 13),
-  FishmanIntro: constant(108, 23, 10),
-  ClockworkIntro: constant(315, 56, 16),
-  PIntroCombat01: constant(4, 1.5, 4),
-  PIntroCombat02: constant(15, 6, 5),
-  PIntroCombat03: constant(10, 5, 2),
-  PIntroCombat04: constant(8, 2.4, 8),
-  PIntroCombat05: constant(15, 4.6, 5),
-  PIntroCombat06: constant(18, 8.8, 6),
-  PIntroCombat07: constant(24.5, 8.2, 4),
-  PIntroCombat08: constant(18, 8.5, 2),
-  PIntroCombat09: constant(20, 6.5, 6),
-  PIntroCombat_DragonQuad: constant(13, 6.3, 2),
-  PIntroCombat_ZombieFishing: constant(0.7, 0.5, 1),
-  PIntroCombat_ZombieQuad: constant(3.5, 1, 5),
-  PIntroCombat_SapperGate: constant(9.4, 3.6, 3),
-  PIntroCombat_CrossbowStatues: constant(19, 7.2, 3),
-  PIntroCombat_SapperOverlook: constant(9.4, 3.6, 3),
   // Arachne's cocoon spawns are not modelled.
   ArachneCombatF: constant(0, 0, 10),
   ArachneCombatG: constant(0, 0, 10),

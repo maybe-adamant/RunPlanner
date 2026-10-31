@@ -81,6 +81,7 @@ describe('summarizeCatalog', () => {
       encounterEnvelopes: emptyCollection(),
       encounterDefinitions: emptyCollection(),
       encounterSets: emptyCollection(),
+      enemyGoldDrops: emptyCollection(),
       fieldNpcEncounterKeys: [],
       roomLifecycleProfiles: emptyCollection(),
       exitCompatibilityPolicies: emptyCollection(),

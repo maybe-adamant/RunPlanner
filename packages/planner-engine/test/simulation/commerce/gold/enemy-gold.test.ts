@@ -4,12 +4,17 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   affordableProbability,
   encounterStoreMoments,
+  encounterStoreValues,
   enemyGoldAmount,
   heraclesBountyAmount,
   medeaGoldAmount,
   urnGoldAmount,
 } from '../../../../src/simulation/commerce/gold/enemy-gold';
 import { enemyGoldPolicy } from '../../../../src/simulation/commerce/gold/enemy-gold-policy';
+import {
+  knownEncounterRoster,
+  knownRosterPayout,
+} from '../../../../src/simulation/commerce/gold/known-roster';
 import type { GoldGain } from '../../../../src/simulation/commerce/gold/gain-context';
 
 type EnemyGold = Extract<GoldGain, { readonly kind: 'enemyGold' }>;
@@ -77,7 +82,7 @@ describe('enemy gold payout policy', () => {
     expect(enemyGoldPolicy(definition('Empty'), 'F')).toEqual({ kind: 'none', kills: 0 });
   });
 
-  it('covers every combat and miniboss in the biomes whose rooms bind it', () => {
+  it('covers every combat and miniboss without a fixed roster in the biomes whose rooms bind it', () => {
     const missing: string[] = [];
     const checked = new Set<string>();
     for (const room of catalog.rooms.values) {
@@ -92,13 +97,15 @@ describe('enemy gold payout policy', () => {
       for (const key of keys) {
         const encounter = definition(key);
         if (encounter.kind !== 'combat' && encounter.kind !== 'miniboss') continue;
+        // An all-fixed identity always pays from its roster.
+        if (encounter.fixedRoster !== undefined) continue;
         checked.add(key);
         if (enemyGoldPolicy(encounter, biomeKey ?? room.roomSetKey) === undefined)
           missing.push(`${room.gameName}:${key}`);
       }
     }
     expect(missing).toEqual([]);
-    expect(checked.size).toBeGreaterThan(140);
+    expect(checked.size).toBeGreaterThan(70);
   });
 
   it('pays an exhausting biome its store plus the overshoot, a sparse one a fraction', () => {
@@ -131,11 +138,6 @@ describe('enemy gold payout policy', () => {
     expect(at(50)).toBeCloseTo(0.54 * store, 12);
     expect(at(60)).toBeCloseTo((0.54 + 0.4 * (0.77 - 0.54)) * store, 12);
     expect(at(10)).toBeCloseTo(0.4 * at(25), 12);
-    // A fixed-roster ungenerated encounter keeps its native drops: the override needs a store.
-    expect(
-      enemyGoldAmount(catalog, enemyGold('PIntroCombat07', 'P'), 1, { enemyGoldDropChance: 0 })
-        .mean,
-    ).toBe(24.5);
     expect(
       enemyGoldAmount(catalog, enemyGold('MiniBossBoar', 'N'), 1, { enemyGoldDropChance: 0 }).mean,
     ).toBe(0);
@@ -169,6 +171,61 @@ describe('enemy gold payout policy', () => {
     expect(heraclesBountyAmount()).toEqual({ mean: 100, variance: 0, min: 100, max: 100 });
     const p = enemyGoldAmount(catalog, enemyGold('HeraclesCombatP', 'P'), 1, NATIVE);
     expect(p.mean).toBeCloseTo(0.27 * 122.5, 12);
+  });
+});
+
+describe('known-roster enemy gold', () => {
+  const roster = [
+    [
+      { enemyKey: 'Brawler', count: 2 },
+      { enemyKey: 'Guard', count: 4 },
+    ],
+  ];
+
+  it('pays a known roster against the encounter’s exact store in place of the policy', () => {
+    const gain = enemyGold('GeneratedF', 'F', { runDepth: 3, roster });
+    const sigma = 1.3;
+    const paid = enemyGoldAmount(catalog, gain, sigma, NATIVE);
+    const expected = knownRosterPayout(catalog, roster, {
+      moneyMultiplier: sigma,
+      stores: encounterStoreValues(definition('GeneratedF').moneyStore!, 3, sigma, undefined),
+    });
+    expect(paid).toMatchObject({ mean: expected.mean, variance: expected.variance });
+    // encounterGoldRange fixes the store; enemyGoldDropChance rewrites every kill's chance.
+    expect(
+      enemyGoldAmount(catalog, gain, 1, { encounterGoldRange: 0, enemyGoldDropChance: 100 }).mean,
+    ).toBeCloseTo(
+      knownRosterPayout(catalog, roster, { moneyMultiplier: 1, stores: [12], dropChance: 100 })
+        .mean,
+      12,
+    );
+    expect(enemyGoldAmount(catalog, gain, 1, { enemyGoldDropChance: 0 }).mean).toBe(0);
+  });
+
+  it('pays an ungenerated fixed roster every drop, untouched by the drop chance', () => {
+    const fishman = knownEncounterRoster(catalog, 'FishmanIntro', undefined)!;
+    const gain = enemyGold('FishmanIntro', 'G', { roster: fishman });
+    expect(enemyGoldAmount(catalog, gain, 1, { enemyGoldDropChance: 0 }).mean).toBeCloseTo(
+      knownRosterPayout(catalog, fishman, { moneyMultiplier: 1 }).mean,
+      12,
+    );
+  });
+
+  it('counts a known roster’s kills for Wealth from the Dead', () => {
+    const gain = {
+      kind: 'medeaGold',
+      goldPerDrop: 20,
+      chance: 0.1,
+      dropCap: 2,
+      encounters: [{ encounterKey: 'GeneratedF', biomeKey: 'F', hordesRank: 0, roster }],
+    } as const;
+    // Six kills, not Erebus's 12.5 expected: E[min(Binomial(6, 0.1), 2)].
+    const none = 0.9 ** 6;
+    const one = 6 * 0.1 * 0.9 ** 5;
+    expect(medeaGoldAmount(catalog, gain, 1).mean).toBeCloseTo(
+      20 * 0.7 * (one + 2 * (1 - none - one)),
+      9,
+    );
   });
 });
 

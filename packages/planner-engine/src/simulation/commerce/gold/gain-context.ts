@@ -1,6 +1,7 @@
 import type { Catalog, InRunTraitRarity } from '../../../catalog-schema';
 import type { OccurrenceAddress, SemanticAddress } from '../../../authored-project/addresses';
 import type { SimulationState } from '../../state/model';
+import type { KnownRoster } from './known-roster';
 import type { PurchasePriceUnpriced } from './price-context';
 
 /**
@@ -63,6 +64,8 @@ export type GoldGain =
       readonly biomeKey: string;
       readonly runDepth: number;
       readonly hordesRank: number;
+      /** The phase's fully determined roster, which pays in place of the biome policy. */
+      readonly roster?: KnownRoster;
     }
   /** Heracles's bounty for the encounter's credited kills, unmultiplied. */
   | { readonly kind: 'heraclesBounty'; readonly encounterKey: string }
@@ -77,6 +80,8 @@ export type GoldGain =
         readonly encounterKey: string;
         readonly biomeKey: string;
         readonly hordesRank: number;
+        /** A fully determined roster, whose kills replace the policy's expected kills. */
+        readonly roster?: KnownRoster;
       }[];
     }
   /** The room's golden urns, broken before its doors open. */

@@ -311,8 +311,15 @@ const budgetFacts: Readonly<Record<string, readonly [number, number?]>> = {
   Screamer2: [405],
 };
 
+/** A generated enemy identity's native `GeneratorData.DifficultyRating`. */
+export function generatedEnemyDifficultyRating(key: string): number {
+  const budget = budgetFacts[key];
+  if (budget === undefined) throw new Error(`Missing generated enemy budget fact for ${key}`);
+  return budget[0];
+}
+
 // EnemyData_FishSwarmer / EnemyData_Simple: native UnitGroup array lengths.
-const unitGroupSizes: Readonly<Record<string, number>> = {
+export const unitGroupSizes: Readonly<Record<string, number>> = {
   FishSwarmerSquad: 5,
   FishSwarmerSquad_Elite: 2,
   SimpleSquad: 4,

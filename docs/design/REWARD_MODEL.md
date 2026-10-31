@@ -937,19 +937,31 @@ up. Stores the game draws later (challenge switches, encounter-cost doors,
 boss spawns) belong to encounters the plan does not model. An encounter gold range run
 modifier fixes the draw at its point of the range and the store loses its
 spread. Kills drain the store, the last drop overshooting it, or run out before
-it; neither is plannable, so how much of the store is paid is an estimate:
+it. How much of the store is paid follows from the roster where the plan
+determines it, and is an estimate otherwise:
 
-- A tunable engine policy gives each biome's generated combat, and each special
-  combat (god, Nemesis, Devotion and Heracles combats, the Anomaly), the gold
+- A phase whose roster nothing leaves to native generation (a complete
+  authored or imported generated composition, with its Menace conversions
+  spawning their targets, or an all-fixed identity) pays from that roster.
+  Each kill drops, at its enemy's chance, one parcel drawn from the enemy's
+  value range times the money multiplier, rounded, at least one against a
+  store. Against a store, drops are paid while it is positive and the
+  crossing parcel in full; waves are killed in order and each wave's kills in
+  random order. The paid gold's mean and spread are exact for that rule,
+  without sampling. Without a store every drop is paid. Unit groups
+  drop through their members; summoned and respawned enemies are not counted.
+- Otherwise a tunable engine policy gives each biome's generated combat, and
+  each special combat (god, Nemesis, Devotion and Heracles combats, the
+  Anomaly), the gold
   paid given the store: the store plus an overshoot where kills exhaust it, a
   fraction of it where they often do not, and a residual spread. Hordes, which
   enlarges rosters, has its own row where it changes the outcome.
-- An enemy gold drop chance run modifier selects the policy calibrated at that
-  chance, interpolated between calibrated chances; at zero kills pay nothing.
-  It affects only drops that pay from a store, so an ungenerated encounter's
-  drops stay native.
-- Minibosses and ungenerated fixed rosters pay a policy constant each; bosses,
-  story encounters and noncombat rooms pay nothing. A drop chance modifier
+- An enemy gold drop chance run modifier replaces a known roster's positive
+  kill chances, and selects the policy calibrated at that chance, interpolated
+  between calibrated chances; at zero kills pay nothing. It affects only drops
+  that pay from a store, so an ungenerated encounter's drops stay native.
+- Minibosses, whose adds the plan does not fix, pay a policy constant each;
+  bosses, story encounters and noncombat rooms pay nothing. A drop chance modifier
   scales a store-bearing constant by its ratio to the common native kill
   chance, capped at one: an approximation, since the store caps what more
   drops pay and the paying enemies' native chances differ.
@@ -957,14 +969,14 @@ it; neither is plannable, so how much of the store is paid is an estimate:
   gold stops every kill, urn, Medea and bounty drop.
 - Heracles's credited bounty is one unmultiplied pickup after his combat.
 - Medea's gold-on-kill curse drops at its chance times the held luck, at most
-  its cap per room, over the room's expected kills; golden urns pay a per-biome
+  its cap per room, over the room's kills: a known roster's count, else the
+  policy's expected kills; golden urns pay a per-biome
   expectation from their swap attempts. Both are dropped pickups, counted at a
   collection rate.
 
 The policy constants are seeded from simulated rosters and recorded runs and
-re-tuned from recorded runs ([when the game updates](../../CONTRIBUTING.md#when-the-game-updates)). An authored or
-imported roster does not change the estimate; a known-roster payout replaces
-the biome policy there later.
+re-tuned from recorded runs ([when the game updates](../../CONTRIBUTING.md#when-the-game-updates)).
+The drop data a known roster reads is catalog data.
 
 ## Offer and Acquisition
 

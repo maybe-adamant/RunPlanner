@@ -331,7 +331,14 @@ values, sit in the catalog's gold declaration.
 An encounter the game generates declares its money store: the cap range and
 the gold its cap gains per run depth; kill drops pay from that store. An
 encounter the game does not generate declares none, and its kills pay
-uncapped. Heracles's combats declare the bounty marked on their enemies. Medea's
+uncapped. The enemy drop table gives, by native enemy id, what one kill drops:
+a parcel chance and the integer range a parcel is drawn from (the enemy's
+value per difficulty times its difficulty rating, up to the value variance, or
+a fixed value range), a unit group's member and size, or no drop. Its closure
+rule: every enemy a generated composition, a fixed roster or a Menace
+conversion can field, and every unit group's member, has exactly one row; no
+row is unreachable; a unit group's size matches its enemy choice; a kill drops
+one parcel. Heracles's combats declare the bounty marked on their enemies. Medea's
 gold-on-kill curse declares its drop chance, per-room drop cap and gold by
 acquisition ordinal, and Hermes's luck boon its luck multiplier by rarity.
 

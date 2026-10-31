@@ -14,6 +14,7 @@ import {
   normalizeEncounterDefinitions,
   normalizeFieldNpcEncounterKeys,
 } from './encounters/definitions';
+import { normalizeEnemyGoldDrops } from './encounters/enemy-gold-drops';
 import { normalizeEncounterEnvelopes } from './encounters/envelopes';
 import { normalizeEncounterSets } from './encounters/sets';
 import { normalizeExitCompatibilityPolicies, normalizeExitTypes } from './exits';
@@ -101,6 +102,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     encounters: encounterDefinitions,
   });
   const encounterSets = normalizeEncounterSets(input.encounterSets, encounterDefinitions);
+  const enemyGoldDrops = normalizeEnemyGoldDrops(input.enemyGoldDrops, encounterDefinitions);
   validateEncounterSetClosure(encounterSets, encounterDefinitions, rewards);
   validateNemesisRandomEventContract(encounterDefinitions, encounterSets, rewards);
   const fieldNpcEncounterKeys = normalizeFieldNpcEncounterKeys(
@@ -169,6 +171,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     encounterEnvelopes,
     encounterDefinitions,
     encounterSets,
+    enemyGoldDrops,
     fieldNpcEncounterKeys,
     roomLifecycleProfiles,
     exitCompatibilityPolicies,

@@ -1128,14 +1128,55 @@ CostResourceMax)`: heart 105-130 / 230-255, Magick 80-105 / 180-205, Pom
   Nemesis trade, a lost bet) is unaffected.
 
 - **Enemy kills.** A kill with a positive `MoneyDropOnDeath.Chance` pays one
-  parcel of `RandomInt(ValuePerDifficulty × rating, × ValuePerDifficultyMaxValueVariance)`
-  times `(enemy MoneyMultiplier) + (Σ − 1)`, at least 1, while the encounter's
+  parcel of `RandomInt(MinValue, MaxValue)` times
+  `(enemy MoneyMultiplier) + (Σ − 1)`, rounded, at least 1, while the encounter's
   [store](../loadout-and-progression/RUN_MODIFIERS_GAME_DATA_AUDIT.md#encounter-gold-budget)
-  is positive, deducting it (`RoomLogic.lua:2340-2395, 3440-3447`). Most enemies
-  inherit Chance 0.7 and value per difficulty 0.33 (Erebus to Tartarus), 0.125
-  (Thessaly), 0.035 (Olympus) or 0.16 (the Summit); bosses, SuperElites and
-  most minibosses have Chance 0 (`EnemyData.lua:166-176, 895-1030`). Recorded
-  runs drained the store exactly by the enemy gold gained in 140 of 150 rooms.
+  is positive, deducting it; without a store, a parcel rounding to 0 drops
+  nothing (`RoomLogic.lua:2340-2395`). Unit setup replaces a positive
+  `ValuePerDifficulty`'s bounds with `ValuePerDifficulty × DifficultyRating`
+  and that times `ValuePerDifficultyMaxValueVariance` (1.3), from the unit's
+  own `GeneratorData` (`RoomLogic.lua:3440-3447`). The products are rarely
+  whole; the planner takes the engine binding's integer conversion to
+  truncate them (a bounded unknown of at most one gold per parcel). The
+  parcel loop spends a parcel budget of `RandomInt(MinParcels, MaxParcels)`
+  gold, not parcels, so with both 1 every kill drops one parcel. No modelled
+  enemy sets `MoneyMultiplier` outside Dream-run overrides.
+  - `MoneyDropOnDeath` resolves through `InheritFrom` like any enemy field: an
+    enemy's own table replaces the inherited one whole, parents in listed
+    order (`RunData.lua:1363-1405`). `BaseVulnerableEnemy` gives Chance 0.7
+    and value per difficulty 0.33 (`EnemyData.lua:166-176`); `BaseOEnemy`
+    0.125, `BasePEnemy` 0.035 and `BaseQEnemy` 0.16
+    (`EnemyData.lua:895-905, 960-970, 1025-1035`). Own tables: Guard (0.25,
+    which Guard2 inherits; `EnemyData_Guard.lua:47`), Turtle (0.2;
+    `EnemyData_Turtle.lua:55`), FogEmitter2 (0.15;
+    `EnemyData_FogEmitter.lua:180`), Lycanthrope_Elite (0.225;
+    `EnemyData_Lycanthrope.lua:126`), FishSwarmer (0.25, 0.33;
+    `EnemyData_FishSwarmer.lua:59`), Carrion (0.25, 0.2), Mudman (0.125),
+    Zombie (0.25, 0.17), ZombieSpawner (0.1), ZombieHeavyRanged (0.125),
+    ZombieAssassin (0.1), Scimiterror (0.4, 0.05) and WaterElemental (0.2,
+    0.075) (`EnemyData_Carrion.lua:68`, `EnemyData_Mudman.lua:67`,
+    `EnemyData_Zombie.lua:60`, `EnemyData_ZombieSpawner.lua:56`,
+    `EnemyData_ZombieHeavyRanged.lua:66`, `EnemyData_ZombieAssassin.lua:54`,
+    `EnemyData_Scimiterror.lua:60`, `EnemyData_WaterElemental.lua:61`); an
+    elite inherits its base's table. Treant2 inherits Treant's Chance 0
+    (`EnemyData_Treant.lua:50`); bosses, SuperElites and most minibosses have
+    Chance 0. The FogEmitter miniboss (`FogEmitter_Elite`) pays a fixed 50–70
+    at Chance 1 (`EnemyData_FogEmitter.lua:61-70`).
+  - Unit groups (`IsUnitGroup`) spawn their `UnitGroup` members, which drop as
+    themselves: FishSwarmerSquad five FishSwarmer, its elite two
+    FishSwarmer_Elite, SimpleSquad four Simple, its elite two Simple_Elite
+    (`EnemyData_FishSwarmer.lua:155-199`, `EnemyData_Simple.lua:122-160`;
+    `EncounterLogic.lua:836-840`). A Menace conversion spawns its target
+    identity with the target's own drop (`EncounterLogic.lua:784-810`); the
+    targets outside every pool rate DespairElemental 50, LycanSwarmer 40 and
+    its elite 80, FishSwarmer 5 and its elite 10, Simple 20 and its elite 50
+    (`EnemyData_DespairElemental.lua:70`, `EnemyData_LycanSwarmer.lua:61, 87`,
+    `EnemyData_FishSwarmer.lua:77, 150`, `EnemyData_Simple.lua:74, 117`).
+  - Minibosses do not have fixed rosters: the FogEmitter's opening wave does
+    not wait for its kill, its Thorn-Weepers follow, and its death cancels the
+    remaining spawns (`EncounterData.lua:828-859`).
+  - Recorded runs drained the store exactly by the enemy gold gained in 140 of
+    150 rooms.
 - **Wealth from the Dead** (`MoneyOnDeathCurse`) drops an NPC
   `MedeaMoneyTinyDrop` of 20 / 30 / 40 / 60 gold × Σ at `0.1 × LuckMultiplier`
   per kill, at most two per room (`TraitData_Medea.lua:98-155`,

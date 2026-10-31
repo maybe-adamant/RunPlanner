@@ -43,6 +43,28 @@ export interface EncounterEnemyChoice {
   readonly admission?: RequirementExpression;
 }
 
+/**
+ * One enemy's native kill drop (`MoneyDropOnDeath`, resolved through
+ * `InheritFrom`), keyed by native enemy id. A `parcel` enemy drops, at
+ * `chance`, one parcel of an integer drawn evenly from `value` before the
+ * money multiplier; a unit group drops nothing itself, each of its `size`
+ * units dropping as `unitKey`; a `none` enemy never drops.
+ */
+export type EnemyGoldDrop =
+  | {
+      readonly key: string;
+      readonly kind: 'parcel';
+      readonly chance: number;
+      readonly value: { readonly min: number; readonly max: number };
+    }
+  | {
+      readonly key: string;
+      readonly kind: 'unitGroup';
+      readonly unitKey: string;
+      readonly size: number;
+    }
+  | { readonly key: string; readonly kind: 'none' };
+
 export interface GeneratedEncounterSelection {
   readonly kind: 'generated';
   readonly preparation: 'roomEntry' | 'rewardGeneration';
