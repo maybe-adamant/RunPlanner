@@ -14,6 +14,12 @@ import {
   spawn,
   supportedFieldNpcEncounterKeys,
 } from './shared';
+import {
+  devotionMoneyStore,
+  godCombatMoneyStore,
+  oceanusMinibossMoneyStore,
+  oceanusMoneyStore,
+} from './money-stores';
 
 export const gEncounterDefinitions = [
   {
@@ -32,6 +38,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'GeneratedG',
+    moneyStore: oceanusMoneyStore,
     customization: [generatedEncounterChoices.GeneratedG],
     label: 'Combat',
     kind: 'combat',
@@ -43,6 +50,7 @@ export const gEncounterDefinitions = [
     // FishSwarmerSquad and its elite introduce through FishSwarmerIntro
     // (EnemyData_FishSwarmer.lua:157): four fixed squads, then a squad-seeded wave.
     key: 'FishSwarmerIntro',
+    moneyStore: oceanusMoneyStore,
     customization: [generatedEncounterChoices.FishSwarmerIntro],
     label: 'Pinhead introduction',
     kind: 'combat',
@@ -56,6 +64,7 @@ export const gEncounterDefinitions = [
     // Turtle_Elite triggers TurtleIntro (EnemyData_Turtle.lua:100-102): two
     // fixed Turtles, then two Turtle-seeded generated waves.
     key: 'TurtleIntro',
+    moneyStore: oceanusMoneyStore,
     customization: [generatedEncounterChoices.TurtleIntro],
     label: 'Shellback introduction',
     kind: 'combat',
@@ -67,6 +76,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'DevotionTestG',
+    moneyStore: devotionMoneyStore,
     customization: [generatedEncounterChoices.DevotionTestG],
     label: 'Devotion combat',
     kind: 'combat',
@@ -75,6 +85,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'ArtemisCombatG',
+    moneyStore: godCombatMoneyStore,
     customization: [generatedEncounterChoices.ArtemisCombatG],
     label: 'Artemis combat',
     kind: 'combat',
@@ -139,6 +150,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'NemesisCombatG',
+    moneyStore: godCombatMoneyStore,
     // BaseNemesisCombat: NemesisChallenge objective, HandleNemesisEncounterReward MaxBetAmount 100
     // (EncounterData_Nemesis.lua:3-53, InteractLogic.lua:545-590).
     goldBet: { maxBet: 100 },
@@ -182,6 +194,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'MiniBossWaterUnit',
+    moneyStore: oceanusMinibossMoneyStore,
     label: 'Water unit',
     kind: 'miniboss',
     countsEncounterDepth: true,
@@ -198,6 +211,7 @@ export const gEncounterDefinitions = [
   },
   {
     key: 'MiniBossJellyfish',
+    moneyStore: oceanusMinibossMoneyStore,
     label: 'Jellyfish',
     kind: 'miniboss',
     countsEncounterDepth: true,

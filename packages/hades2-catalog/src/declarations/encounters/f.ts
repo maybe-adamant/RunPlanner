@@ -13,10 +13,17 @@ import {
   spawn,
   supportedFieldNpcEncounterKeys,
 } from './shared';
+import {
+  devotionMoneyStore,
+  generatedMoneyStore,
+  godCombatMoneyStore,
+  minibossMoneyStore,
+} from './money-stores';
 
 export const fEncounterDefinitions = [
   {
     key: 'OpeningGeneratedF',
+    moneyStore: generatedMoneyStore,
     customization: [generatedEncounterChoices.OpeningGeneratedF],
     label: 'Opening combat',
     kind: 'combat',
@@ -25,6 +32,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'GeneratedF',
+    moneyStore: generatedMoneyStore,
     customization: [generatedEncounterChoices.GeneratedF],
     label: 'Combat',
     kind: 'combat',
@@ -51,6 +59,7 @@ export const fEncounterDefinitions = [
     // Radiator and its elite introduce through RadiatorIntro (EnemyData_Radiator.lua:6):
     // a fixed wave of five Radiators, then a generated wave seeded with Radiator.
     key: 'RadiatorIntro',
+    moneyStore: generatedMoneyStore,
     customization: [generatedEncounterChoices.RadiatorIntro],
     label: 'Spindle introduction',
     kind: 'combat',
@@ -63,6 +72,7 @@ export const fEncounterDefinitions = [
   {
     // EnemyData_Screamer.lua:7; two fixed Screamers, then a Screamer-seeded wave.
     key: 'ScreamerIntro',
+    moneyStore: generatedMoneyStore,
     customization: [generatedEncounterChoices.ScreamerIntro],
     label: 'Wailer introduction',
     kind: 'combat',
@@ -74,6 +84,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'DevotionTestF',
+    moneyStore: devotionMoneyStore,
     customization: [generatedEncounterChoices.DevotionTestF],
     label: 'Devotion combat',
     kind: 'combat',
@@ -82,6 +93,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'ArtemisCombatF',
+    moneyStore: godCombatMoneyStore,
     customization: [generatedEncounterChoices.ArtemisCombatF],
     label: 'Artemis combat',
     kind: 'combat',
@@ -141,6 +153,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'NemesisCombatF',
+    moneyStore: godCombatMoneyStore,
     // BaseNemesisCombat: NemesisChallenge objective, HandleNemesisEncounterReward MaxBetAmount 100
     // (EncounterData_Nemesis.lua:3-53, InteractLogic.lua:545-590).
     goldBet: { maxBet: 100 },
@@ -351,6 +364,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'MiniBossTreant',
+    moneyStore: minibossMoneyStore,
     label: 'Treant',
     kind: 'miniboss',
     countsEncounterDepth: true,
@@ -359,6 +373,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'MiniBossFogEmitter',
+    moneyStore: minibossMoneyStore,
     label: 'Fog emitter',
     kind: 'miniboss',
     countsEncounterDepth: true,
@@ -367,6 +382,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'MiniBossAssassin',
+    moneyStore: minibossMoneyStore,
     label: 'Assassin',
     kind: 'miniboss',
     countsEncounterDepth: true,
@@ -375,6 +391,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'MiniBossTreant_Shrine',
+    moneyStore: minibossMoneyStore,
     label: 'Treant',
     kind: 'miniboss',
     countsEncounterDepth: true,
@@ -383,6 +400,7 @@ export const fEncounterDefinitions = [
   },
   {
     key: 'MiniBossFogEmitter_Shrine',
+    moneyStore: minibossMoneyStore,
     label: 'Fog emitter',
     kind: 'miniboss',
     countsEncounterDepth: true,

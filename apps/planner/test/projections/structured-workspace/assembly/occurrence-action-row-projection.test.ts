@@ -83,6 +83,7 @@ import {
   type GoldRoomAvailability,
 } from '@run-planner/engine/simulation';
 import { occurrenceActionLabel } from '@planner/projections/structured-workspace/assembly/occurrence-action-label';
+import { purchaseAffordability } from '@planner/projections/structured-workspace/assembly/occurrence-action-row-projection';
 import type { WorkspaceExplicitRewardControl } from '@planner/projections/structured-workspace/contracts/rewards';
 import type { WorkspaceRoomLocal } from '@planner/projections/structured-workspace/contracts/locals';
 
@@ -2167,7 +2168,7 @@ describe('Doors open room gold', () => {
     return { actions: node.room.roomActions, room: priced.room };
   }
 
-  it('shows the exact gold held when the doors open beside the room spending', () => {
+  it('shows the estimated gold held when the doors open beside exact room spending', () => {
     const well = createOccurrenceAddress(
       goldenFBiome,
       createOccurrenceId('golden-f-preboss-shop:postboss'),
@@ -2178,9 +2179,10 @@ describe('Doors open room gold', () => {
     );
     const balance = room.doorsOpenBalance;
     if (balance.availability !== 'available') throw new Error('The Well balance is unavailable');
-    expect(balance.balance.variance).toBe(0);
-    expect(actions?.current).toEqual({ label: plain(Math.round(balance.balance.mean)) });
-    expect(actions?.spending?.label).not.toMatch(/^~/);
+    expect(balance.balance.variance).toBeGreaterThan(0);
+    expect(actions?.current).toEqual({ label: `~${plain(Math.round(balance.balance.mean))}` });
+    expect(room.spending.variance).toBe(0);
+    expect(actions?.spending).toEqual({ label: plain(room.spending.mean) });
   });
 
   it('marks a spread balance approximate and shows it without spending', () => {
@@ -2227,5 +2229,104 @@ describe('Doors open room gold', () => {
           row.reference.generationKey === 'initial:healing',
       )?.price,
     ).toEqual({ label: '21–39' });
+  });
+});
+
+describe('Purchase affordability', () => {
+  /** Each paid purchase's chance from the ledger beside its projected row, in room order. */
+  function affordabilityWitness(
+    project: ProjectDocument,
+    room: ReturnType<typeof createOccurrenceAddress>,
+  ) {
+    const { assembly, workspace } = projectStructuredWorkspaceFixture(project);
+    const node = workspace.route.biomes
+      .flatMap((biome) => biome.nodes)
+      .find(
+        (candidate) =>
+          candidate.kind === 'occurrenceWorkbench' &&
+          candidate.room.occurrenceId === room.occurrenceId,
+      );
+    if (node?.kind !== 'occurrenceWorkbench') throw new Error(`${room.occurrenceId} is missing`);
+    const ledger = goldLedgerForProjectEvaluationAssembly(catalog, assembly);
+    const priced = ledger.roomAt(room);
+    if (priced.availability !== 'available') throw new Error('The room is not priced');
+    const purchases = priced.room.purchases
+      .filter((purchase) => purchase.venue !== 'free')
+      .map((purchase) => {
+        const quote = ledger.purchaseAt(purchase.owner);
+        if (quote.availability !== 'available') throw new Error('The purchase is not priced');
+        const { affordableProbability, balanceBefore, price } = quote.purchase;
+        if (affordableProbability === undefined || balanceBefore.availability !== 'available')
+          throw new Error('The purchase has no chance to afford');
+        return {
+          probability: affordableProbability,
+          exact: balanceBefore.balance.variance === 0 && price.variance === 0,
+        };
+      });
+    const rows = (node.room.roomActions?.rows ?? []).filter((row) => row.price !== undefined);
+    expect(rows).toHaveLength(purchases.length);
+    return rows.map((row, index) => ({ ...purchases[index]!, affordability: row.affordability }));
+  }
+
+  /** The percent a chance reads as: whole, and never certain unless exact. */
+  function expectedAffordability(probability: number, exact: boolean) {
+    const percent = Math.round(probability * 100);
+    const label = exact
+      ? `${percent}%`
+      : percent === 100
+        ? '>99%'
+        : percent === 0
+          ? '<1%'
+          : `${percent}%`;
+    const tone = percent < 50 ? 'low' : percent < 90 ? 'medium' : 'high';
+    return { label, tone };
+  }
+
+  it('grades each purchase by its chance to afford from the ledger', () => {
+    const rooms = [
+      {
+        project: underworldCheckpointArtifacts['underworld-world-shop-travel-deal'].load(),
+        room: createOccurrenceAddress(
+          goldenFBiome,
+          createOccurrenceId('golden-f-preboss-shop:postboss'),
+        ),
+      },
+      {
+        project: surfaceCheckpointArtifacts['surface-scheduled-lifecycle'].load(),
+        room: createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-preboss:postboss')),
+      },
+      {
+        project: underworldCheckpointArtifacts['underworld-f-trait-order-checks'].load(),
+        room: createOccurrenceAddress(
+          goldenFBiome,
+          createOccurrenceId('e157e3cb-37ae-40d9-92b0-f22621b672c3'),
+        ),
+      },
+    ];
+    const witnessed = rooms.flatMap(({ project, room }) => affordabilityWitness(project, room));
+    expect(witnessed.length).toBeGreaterThan(0);
+    for (const { probability, exact, affordability } of witnessed) {
+      expect(affordability).toEqual(expectedAffordability(probability, exact));
+      expect(affordability!.label).toMatch(/^(>99%|<1%|\d{1,3}%)$/);
+    }
+  });
+
+  it('tones by the whole percent shown and is certain only for an exact balance and price', () => {
+    const cases: readonly [number, boolean, string, string][] = [
+      [1, true, '100%', 'high'],
+      [0, true, '0%', 'low'],
+      [1, false, '>99%', 'high'],
+      [0.997, false, '>99%', 'high'],
+      [0.993, false, '99%', 'high'],
+      [0.897, false, '90%', 'high'],
+      [0.893, false, '89%', 'medium'],
+      [0.497, false, '50%', 'medium'],
+      [0.493, false, '49%', 'low'],
+      [0.007, false, '1%', 'low'],
+      [0.003, false, '<1%', 'low'],
+      [0, false, '<1%', 'low'],
+    ];
+    for (const [probability, exact, label, tone] of cases)
+      expect(purchaseAffordability(probability, exact)).toEqual({ label, tone });
   });
 });

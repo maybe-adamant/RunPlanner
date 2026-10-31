@@ -1,4 +1,5 @@
 import type {
+  EncounterDefinition,
   EncounterSlotActivation,
   EncounterPhaseKind,
   GeneratedEncounterSelection,
@@ -75,6 +76,9 @@ export interface RawEncounterDefinitionDeclaration {
    * `maxBet`; a win pays it times the money multiplier, a loss takes it.
    */
   readonly goldBet?: { readonly maxBet: number };
+  /** Native money store, drawn when native generates the encounter (RunLogic.lua:1186-1190). */
+  readonly moneyStore?: EncounterDefinition['moneyStore'];
+  readonly killBounty?: EncounterDefinition['killBounty'];
   /** Closed policy owned by the one ordinary Nemesis random-event identity. */
   readonly nemesisRandomEvent?: {
     readonly freeItem: {

@@ -391,12 +391,20 @@ export type TraitAcquisitionOrdinalValues = readonly [number, number, number, nu
  * A held trait's gold effect: a money multiplier term (`MoneyMultiplier`), a
  * money-reward bonus term on non-NPC money pickups (`MoneyRewardBonus`), or a
  * loan that takes the held gold at acquisition and returns it with interest at
- * the next non-final boss (`ReturnGold`).
+ * the next non-final boss (`ReturnGold`), or a chance per kill to drop an NPC
+ * money pickup, at most `dropCap` per room (`DropOnKill`, Wealth from the Dead).
  */
 export type TraitGoldEffect =
   | {
       readonly kind: 'moneyMultiplier' | 'moneyRewardBonus';
       readonly byRarity: Readonly<Record<InRunTraitRarity, number>>;
+    }
+  | {
+      readonly kind: 'goldOnKill';
+      /** Per kill, before the luck multiplier. */
+      readonly chance: number;
+      readonly dropCap: number;
+      readonly goldByAcquisitionOrdinal: TraitAcquisitionOrdinalValues;
     }
   | { readonly kind: 'loan'; readonly returnByRarity: Readonly<Record<InRunTraitRarity, number>> };
 
@@ -711,6 +719,8 @@ export interface TraitDeclaration {
   >;
   /** What holding this trait does to gold, by its equipped rarity. */
   readonly gold?: TraitGoldEffect;
+  /** Source `LuckMultiplier` by equipped rarity: it scales chance-on-kill drops. */
+  readonly luckMultiplierByRarity?: Readonly<Record<InRunTraitRarity, number>>;
   /** Source `RoomsPerUpgrade` max Magick growth at every `interval` qualifying encounter ends. */
   readonly roomsPerUpgradeGrowth?: {
     readonly interval: number;

@@ -372,6 +372,13 @@ models decisions and their legality, not damage or timing values.
   `game-module/src/execution-compatibility.json` and the decoder together, and
   needs a persistence transition (the loader identifies a project by catalog
   and schema), so treat it like a schema change.
+- **Gold estimate:** after a patch that touches enemy drops or money stores,
+  or when new recorded runs are available, compare the engine's enemy-gold
+  policy with recorded runs: `node scripts/gold-calibration.mjs <folder>...`
+  reads dev-build Record mode raw save folders and prints, per payout group,
+  the generated combat rooms counted, the mean store and gold paid, the paid
+  fraction and overshoot with their residual spread, and the other gold the
+  rooms paid. Retune the policy constants from it.
 - Then the usual gate, a module release, and fresh plans sent to the game.
 
 ## Release process

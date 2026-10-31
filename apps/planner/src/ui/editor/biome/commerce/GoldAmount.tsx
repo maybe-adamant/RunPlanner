@@ -1,4 +1,7 @@
-import type { WorkspaceGoldAmount } from '@planner/projections/structured-workspace';
+import type {
+  WorkspaceGoldAmount,
+  WorkspacePurchaseAffordability,
+} from '@planner/projections/structured-workspace';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { rewardArtwork } from '@planner/ui/artwork/rewards/rewardArtwork';
 
@@ -49,6 +52,20 @@ export function RoomGoldSummary({
         {current === undefined ? null : <span aria-hidden="true">·</span>}
         Spent <GoldAmount amount={spent ?? { label: '' }} />
       </span>
+    </span>
+  );
+}
+
+/** The chance the gold held covers a purchase, at the end of its row. */
+export function PurchaseAffordability({
+  affordability,
+}: {
+  readonly affordability: WorkspacePurchaseAffordability;
+}) {
+  return (
+    <span className="purchase-affordability" data-tone={affordability.tone}>
+      {affordability.label}
+      <span className="visually-hidden"> chance to afford</span>
     </span>
   );
 }

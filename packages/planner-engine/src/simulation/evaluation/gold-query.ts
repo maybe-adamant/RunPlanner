@@ -16,6 +16,7 @@ import {
 import type { BiomeRewardSimulation } from '../rewards/model';
 import type { ProjectEvaluationAssembly } from './evaluation-products';
 import { ZERO_GOLD } from '../commerce/gold/prices';
+import { routeRunModifiers } from '../../authored-project/run-modifiers';
 import { runStateSnapshotForProjectEvaluationAssembly } from './run-state-query';
 
 /**
@@ -33,10 +34,11 @@ export type GoldRoomAvailability =
   | { readonly availability: 'unavailable'; readonly reason: GoldUnavailableReason };
 
 /**
- * Gold guidance over one evaluated project: what each reached purchase costs
- * and the gold held before it, and what each fully reached room gains and
- * spends with its balances. Never a finding; past coverage a value is
- * unavailable, never zero.
+ * Gold guidance over one evaluated project: what each reached purchase costs,
+ * the gold held before it and the chance that gold covers it, and what each
+ * fully reached room gains and spends with its balances. Enemy, urn and Medea
+ * gold are estimates under the run modifiers. Never a finding; past coverage
+ * a value is unavailable, never zero.
  */
 export interface GoldLedger {
   /** Gold the run starts with, before its first room. */
@@ -106,6 +108,7 @@ export function goldLedgerForProjectEvaluationAssembly(
               ]
             : [],
         ),
+        routeRunModifiers(assembly.project.route.loadout),
       ));
     const sameRoute = (owner: { readonly routeKey: string }) =>
       owner.routeKey === assembly.project.route.routeKey;

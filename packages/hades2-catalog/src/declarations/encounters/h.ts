@@ -9,6 +9,12 @@ import {
   spawn,
   supportedFieldNpcEncounterKeys,
 } from './shared';
+import {
+  fieldsMoneyStore,
+  fieldsPassiveMoneyStore,
+  godCombatMoneyStore,
+  minibossMoneyStore,
+} from './money-stores';
 
 /** H introductions also require no earlier occurrence this run (EncounterData_Intro.lua). */
 const notOccurred = (encounterKey: string): RequirementExpression => ({
@@ -35,6 +41,8 @@ function hIntroduction(
   return {
     key,
     label,
+    // BaseIntroEncounter with GeneratedH (EncounterData_Intro.lua): the GeneratedH store.
+    moneyStore: fieldsMoneyStore,
     fixedRoster,
     kind: 'combat',
     countsEncounterDepth: true,
@@ -48,6 +56,7 @@ function hIntroduction(
 export const hEncounterDefinitions = [
   {
     key: 'GeneratedH_Passive',
+    moneyStore: fieldsPassiveMoneyStore,
     customization: [generatedEncounterChoices.GeneratedH_Passive],
     label: 'Passive combat',
     kind: 'combat',
@@ -56,6 +65,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH_PassiveSmall',
+    moneyStore: fieldsPassiveMoneyStore,
     customization: [generatedEncounterChoices.GeneratedH_PassiveSmall],
     label: 'Small passive combat',
     kind: 'combat',
@@ -64,6 +74,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH',
+    moneyStore: fieldsMoneyStore,
     customization: [generatedEncounterChoices.GeneratedH],
     label: 'Combat',
     kind: 'combat',
@@ -73,6 +84,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH_Treant2',
+    moneyStore: fieldsMoneyStore,
     requirements: {
       kind: 'all',
       requirements: [
@@ -94,6 +106,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'GeneratedH_Screamer2',
+    moneyStore: fieldsMoneyStore,
     requirements: {
       kind: 'all',
       requirements: [
@@ -168,6 +181,7 @@ export const hEncounterDefinitions = [
   ),
   {
     key: 'NemesisCombatH',
+    moneyStore: godCombatMoneyStore,
     // BaseNemesisCombat: NemesisChallenge objective, HandleNemesisEncounterReward MaxBetAmount 100
     // (EncounterData_Nemesis.lua:3-53, InteractLogic.lua:545-590).
     goldBet: { maxBet: 100 },
@@ -204,6 +218,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'MiniBossVampire',
+    moneyStore: minibossMoneyStore,
     label: 'Vampire',
     kind: 'miniboss',
     countsEncounterDepth: true,
@@ -214,6 +229,7 @@ export const hEncounterDefinitions = [
   },
   {
     key: 'MiniBossLamia',
+    moneyStore: minibossMoneyStore,
     label: 'Lamia',
     kind: 'miniboss',
     countsEncounterDepth: true,

@@ -328,6 +328,13 @@ health-for-gold payout; a Nemesis combat's bet and each Nemesis trade's gold
 cost. Facts with no narrower owner, fallback gold and the Pool of Purging sale
 values, sit in the catalog's gold declaration.
 
+An encounter the game generates declares its money store: the cap range and
+the gold its cap gains per run depth; kill drops pay from that store. An
+encounter the game does not generate declares none, and its kills pay
+uncapped. Heracles's combats declare the bounty marked on their enemies. Medea's
+gold-on-kill curse declares its drop chance, per-room drop cap and gold by
+acquisition ordinal, and Hermes's luck boon its luck multiplier by rarity.
+
 A producer lifecycle enumerates supported reward types and binds every role
 exactly once, with explicit per-type overrides. Producer bindings choose
 stores, fixed sources, Shop profiles and filters. Positive and negative filters

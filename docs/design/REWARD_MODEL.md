@@ -876,7 +876,8 @@ The ledger walks the route's gold in chronological order and carries the
 balance, a mean and variance, from run start through every reached room. It
 records each room's gains and purchases, the balance before each purchase,
 and the balance when the room's doors open and when it ends. It counts fixed
-and bounded gold; enemy kill gold is outside it.
+and bounded gold exactly and estimates what kills, urns and Medea's curse pay
+(see [Enemy gold](#enemy-gold)).
 
 The doors open where the room's exit becomes usable: after its encounters and
 reward gold, before the purchases and sales that follow. Where the exit waits
@@ -884,7 +885,10 @@ on a required action ranked after purchases (the deliveries the fourth biome's
 Preboss flushes), the doors open after those purchases.
 
 A balance is advisory. It may go negative: a plan can spend more than it holds,
-and gold never refuses an edit or raises a finding.
+and gold never refuses an edit or raises a finding. Each purchase also carries
+the chance its balance covers its price: the normal approximation of the
+balance less the price, both with their spread. It is unavailable wherever the
+balance is.
 
 Gains read the money multiplier, the sum of every held multiplier's excess
 over one (Quick Buck, Chaos Affluence's authored value), at the contact:
@@ -907,8 +911,12 @@ over one (Quick Buck, Chaos Affluence's authored value), at the contact:
 - A Nemesis trade costs an even roll over its range. A Nemesis combat's bet,
   whose outcome the plan does not record, is taken as won: it pays the bet,
   the balance's mean up to the cap, times the money multiplier.
-- While a held curse blocks gold (Pauper's), the Arcana, Time Piece, Price of
-  Midas, Pool and bet gains pay nothing.
+- While a held curse blocks gold (Pauper's), every gain the game pays as
+  collected coins pays nothing: money pickups, Heracles's bounty, Medea's
+  drops, Narcissus's and fallback gold, kill and urn drops, and a loan's
+  payback, whose stored gold is lost. The Arcana, Time Piece, Price of Midas,
+  Pool and bet gains pay nothing too. A Gold Purse still pays, and spending is
+  unaffected.
 
 The money multiplier is read when the gold is picked up, not when it spawned,
 which differs only when a multiplier is taken between the two in one room.
@@ -918,6 +926,45 @@ counted.
 Each walked contact publishes its gain facts the way purchases publish price
 facts, with the same agreement rule. A later balance is unavailable after an
 entry whose item the plan leaves unresolved or whose facts broke a contract.
+
+#### Enemy gold
+
+A generated encounter's kill drops pay from its money store. The store is exact
+catalog data: the game draws an integer from the cap range, adds the run-depth
+ramp, multiplies by the money multiplier held at the door into the room (where
+it draws every store of the room, Nemesis and god combats included) and rounds
+up. Stores the game draws later (challenge switches, encounter-cost doors,
+boss spawns) belong to encounters the plan does not model. An encounter gold range run
+modifier fixes the draw at its point of the range and the store loses its
+spread. Kills drain the store, the last drop overshooting it, or run out before
+it; neither is plannable, so how much of the store is paid is an estimate:
+
+- A tunable engine policy gives each biome's generated combat, and each special
+  combat (god, Nemesis, Devotion and Heracles combats, the Anomaly), the gold
+  paid given the store: the store plus an overshoot where kills exhaust it, a
+  fraction of it where they often do not, and a residual spread. Hordes, which
+  enlarges rosters, has its own row where it changes the outcome.
+- An enemy gold drop chance run modifier selects the policy calibrated at that
+  chance, interpolated between calibrated chances; at zero kills pay nothing.
+  It affects only drops that pay from a store, so an ungenerated encounter's
+  drops stay native.
+- Minibosses and ungenerated fixed rosters pay a policy constant each; bosses,
+  story encounters and noncombat rooms pay nothing. A drop chance modifier
+  scales a store-bearing constant by its ratio to the common native kill
+  chance, capped at one: an approximation, since the store caps what more
+  drops pay and the paying enemies' native chances differ.
+- The money multiplier scales the store and every drop; a curse that blocks
+  gold stops every kill, urn, Medea and bounty drop.
+- Heracles's credited bounty is one unmultiplied pickup after his combat.
+- Medea's gold-on-kill curse drops at its chance times the held luck, at most
+  its cap per room, over the room's expected kills; golden urns pay a per-biome
+  expectation from their swap attempts. Both are dropped pickups, counted at a
+  collection rate.
+
+The policy constants are seeded from simulated rosters and recorded runs and
+re-tuned from recorded runs ([when the game updates](../../CONTRIBUTING.md#when-the-game-updates)). An authored or
+imported roster does not change the estimate; a known-roster payout replaces
+the biome policy there later.
 
 ## Offer and Acquisition
 

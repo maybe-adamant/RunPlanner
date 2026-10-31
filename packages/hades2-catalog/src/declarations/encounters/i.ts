@@ -7,6 +7,12 @@ import {
   spawn,
   supportedFieldNpcEncounterKeys,
 } from './shared';
+import {
+  devotionMoneyStore,
+  godCombatMoneyStore,
+  minibossMoneyStore,
+  tartarusMoneyStore,
+} from './money-stores';
 
 export const iEncounterDefinitions = [
   {
@@ -25,6 +31,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'GeneratedIChronosIntro',
+    moneyStore: tartarusMoneyStore,
     customization: [generatedEncounterChoices.GeneratedIChronosIntro],
     label: 'Combat',
     kind: 'combat',
@@ -34,6 +41,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'GeneratedI_SmallChronosIntro',
+    moneyStore: tartarusMoneyStore,
     customization: [generatedEncounterChoices.GeneratedI_SmallChronosIntro],
     label: 'Combat',
     kind: 'combat',
@@ -43,6 +51,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'GeneratedI',
+    moneyStore: tartarusMoneyStore,
     customization: [generatedEncounterChoices.GeneratedI],
     label: 'Combat',
     kind: 'combat',
@@ -52,6 +61,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'GeneratedI_GoalReward',
+    moneyStore: tartarusMoneyStore,
     customization: [generatedEncounterChoices.GeneratedI_GoalReward],
     label: 'Combat',
     kind: 'combat',
@@ -61,6 +71,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'GeneratedI_Small',
+    moneyStore: tartarusMoneyStore,
     customization: [generatedEncounterChoices.GeneratedI_Small],
     label: 'Combat',
     kind: 'combat',
@@ -70,6 +81,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'GeneratedI_Small_GoalReward',
+    moneyStore: tartarusMoneyStore,
     customization: [generatedEncounterChoices.GeneratedI_Small_GoalReward],
     label: 'Combat',
     kind: 'combat',
@@ -79,6 +91,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'DevotionTestI',
+    moneyStore: devotionMoneyStore,
     customization: [generatedEncounterChoices.DevotionTestI],
     label: 'Devotion combat',
     kind: 'combat',
@@ -87,6 +100,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'NemesisCombatI',
+    moneyStore: godCombatMoneyStore,
     // BaseNemesisCombat: NemesisChallenge objective, HandleNemesisEncounterReward MaxBetAmount 100
     // (EncounterData_Nemesis.lua:3-53, InteractLogic.lua:545-590).
     goldBet: { maxBet: 100 },
@@ -131,6 +145,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'MiniBossRatCatcher',
+    moneyStore: minibossMoneyStore,
     label: 'Rat catcher',
     kind: 'miniboss',
     countsEncounterDepth: true,
@@ -139,6 +154,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'MiniBossGoldElemental',
+    moneyStore: minibossMoneyStore,
     label: 'Gold elemental',
     kind: 'miniboss',
     countsEncounterDepth: true,

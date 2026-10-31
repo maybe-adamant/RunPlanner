@@ -8,9 +8,11 @@ import {
 } from '../../../authored-project/addresses';
 import type { RouteLoadout } from '../../../authored-project/model';
 import { stygianWellGenerationItemKey } from '../../../authored-project/feature-rolls';
+import { urnAttempts } from '../../commerce/gold/enemy-gold-policy';
 import {
   goldGainPublication,
   goldMultipliers,
+  goldOnKillFacts,
   type GoldEventPublication,
   type GoldGain,
   type GoldMultipliers,
@@ -103,6 +105,15 @@ function doorsOpenAt(room: CanonicalAuthoredRoom, event: HistoryEvent): boolean 
   const exit = exitUsableRow(room);
   const atExitRow = exit !== undefined && (!generates || exit.window.kind === 'postOutgoing');
   return atExitRow ? settlesRow(event, exit) : event.kind === 'outgoingGenerationCheckpoint';
+}
+
+/**
+ * Native `RunDepthCache` when the room's door was taken: the room's own run
+ * depth; undefined when the walked room has no preparation view.
+ */
+function runDepthAt(context: ChronologyWalkContext, roomKey: string): number | undefined {
+  const view = context.views.get(roomKey)?.preparation;
+  return view === undefined ? undefined : view.ledgers.counters.roomHistoryOrdinal + 1;
 }
 
 /** Loot spawned in a room with a boon rarity override is boosted (`AddBoostedAnimation`). */
@@ -335,6 +346,39 @@ export function withGoldEvents(
       ),
     });
   const enteredRoom = context.rooms.get(semanticAddressKey(event.origin));
+  if (
+    event.kind === 'roomEntered' &&
+    enteredRoom?.origin.kind === 'occurrence' &&
+    received.branches.length > 0
+  ) {
+    // Native draws every store of the room at the door into it, before entry.
+    const readings = received.branches.map((branch) => goldMultipliers(catalog, branch.state));
+    const entry = readings.some((reading) => reading === undefined)
+      ? ('unresolved' as const)
+      : new Set(readings.map((reading) => JSON.stringify(reading))).size > 1
+        ? ('divergent' as const)
+        : readings[0]!;
+    state = Object.freeze({
+      ...state,
+      goldRoomEntryMultipliers: new Map(state.goldRoomEntryMultipliers).set(
+        semanticAddressKey(enteredRoom.origin),
+        entry,
+      ),
+    });
+  }
+  const roomKey = room === undefined ? undefined : semanticAddressKey(room.origin);
+  const completedKey =
+    event.kind === 'encounterCompleted' && event.execution === 'normal' && roomKey !== undefined
+      ? state.goldEncounterKeys.get(`${roomKey}::${event.phaseKey}`)
+      : undefined;
+  if (completedKey !== undefined)
+    state = Object.freeze({
+      ...state,
+      goldCompletedEncounters: new Map(state.goldCompletedEncounters).set(roomKey!, [
+        ...(state.goldCompletedEncounters.get(roomKey!) ?? []),
+        completedKey,
+      ]),
+    });
   if (event.kind === 'roomEntered' && enteredRoom?.origin.kind === 'occurrence')
     state = withGoldPublications(state, [
       Object.freeze({
@@ -500,6 +544,104 @@ export function withGoldEvents(
         if (itemKey !== undefined && itemKey !== null && option?.goldPayout !== undefined)
           detect(index, `midas:${event.generationKey}`, undefined, {
             gain: { kind: 'midasPayout', itemKey },
+          });
+      }
+      if (completedKey !== undefined && event.kind === 'encounterCompleted') {
+        const definition = catalog.encounterDefinitions.byKey[completedKey];
+        const phase = createEncounterPhaseAddress(
+          biome,
+          { kind: 'occurrence', occurrenceId: room.occurrenceId },
+          event.phaseKey,
+        );
+        // Room entry attests the Hordes rank every phase of the room reads.
+        const hordesRank = state.encounterEntryVowRanks.get(roomKey!)?.hordes;
+        const missingHordes: Detection = {
+          unpriced: {
+            kind: 'contractFailure',
+            detail: `${completedKey} has no Hordes rank attested at its room's entry`,
+          },
+        };
+        if (definition?.kind === 'combat' || definition?.kind === 'miniboss') {
+          const entry = state.goldRoomEntryMultipliers.get(roomKey!);
+          const runDepth = runDepthAt(context, roomKey!);
+          detect(
+            index,
+            `enemyGold:${event.phaseKey}`,
+            phase,
+            entry === undefined || entry === 'divergent'
+              ? {
+                  unpriced: {
+                    kind: 'contractFailure',
+                    detail: `${completedKey} has no agreed gold multiplier at its room's door`,
+                  },
+                }
+              : entry === 'unresolved'
+                ? { unpriced: { kind: 'itemUnresolved' } }
+                : runDepth === undefined
+                  ? {
+                      unpriced: {
+                        kind: 'contractFailure',
+                        detail: `${completedKey} has no run depth at its room's door`,
+                      },
+                    }
+                  : hordesRank === undefined
+                    ? missingHordes
+                    : {
+                        gain: {
+                          kind: 'enemyGold',
+                          encounterKey: completedKey,
+                          biomeKey: room.origin.biomeKey,
+                          runDepth,
+                          hordesRank,
+                        },
+                        multipliers: entry,
+                      },
+          );
+        }
+        if (definition?.killBounty !== undefined)
+          detect(index, `heraclesBounty:${event.phaseKey}`, phase, {
+            gain: { kind: 'heraclesBounty', encounterKey: completedKey },
+          });
+        const fights = (key: string) => {
+          const kind = catalog.encounterDefinitions.byKey[key]?.kind;
+          return kind === 'combat' || kind === 'miniboss' || kind === 'boss';
+        };
+        const completed = state.goldCompletedEncounters.get(roomKey!) ?? [];
+        const medea = goldOnKillFacts(catalog, after);
+        // Each fight adds its kills to the room's capped drops; the ledger pays the increase.
+        if (medea !== undefined && fights(completedKey))
+          detect(
+            index,
+            `medeaGold:${event.phaseKey}`,
+            phase,
+            hordesRank === undefined
+              ? missingHordes
+              : {
+                  gain: {
+                    kind: 'medeaGold',
+                    ...medea,
+                    encounters: completed.filter(fights).map((encounterKey) => ({
+                      encounterKey,
+                      biomeKey: room.origin.biomeKey,
+                      hordesRank,
+                    })),
+                  },
+                  multipliers: goldMultipliers(catalog, after),
+                },
+          );
+        // The room's golden urns break during its first fight.
+        if (
+          (definition?.kind === 'combat' || definition?.kind === 'miniboss') &&
+          completed.filter(fights).length === 1 &&
+          urnAttempts(room.origin.biomeKey, room.gameName) !== undefined
+        )
+          detect(index, 'urnGold', undefined, {
+            gain: {
+              kind: 'urnGold',
+              biomeKey: room.origin.biomeKey,
+              roomGameName: room.gameName,
+            },
+            multipliers: goldMultipliers(catalog, after),
           });
       }
       if (event.kind === 'encounterCompleted' && event.execution === 'normal') {

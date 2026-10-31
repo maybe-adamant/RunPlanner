@@ -136,13 +136,14 @@ The eligible set is confirmed per reward in gate 2.
   kill drop drains the multiplied store, so the payout is about the store (no
   double count).
 - Σ and depth are those at the door into the room: all encounters of a room
-  are generated when the previous room's door is taken. Challenge, Nemesis
-  and spawned sub-encounters generate when they start.
+  are generated when the previous room's door is taken, including Nemesis
+  and god combats. Only challenge switches, encounter-cost doors and
+  boss-spawned encounters generate later; the planner models none of them.
 - Store caps:
 
 | Encounter group                          | Store caps                                        |
 | ---------------------------------------- | ------------------------------------------------- |
-| F, Chaos                                 | 10–15, depth ramp +0.5                            |
+| F, Anomaly (Chaos rooms have no store)   | 10–15, depth ramp +0.5                            |
 | G                                        | 15–25                                             |
 | H                                        | 30–45                                             |
 | H passive                                | 10–30                                             |
@@ -163,7 +164,7 @@ The eligible set is confirmed per reward in gate 2.
   - cap 2 per room, shared by the room's encounters;
   - 20 / 30 / 40 / 60 by rarity × Σ.
 - Urns, per room, × Σ:
-  - expected about 1.8 gold in F, G and Chaos; 3 in I; 6 in N; 10 in P;
+  - expected about 1.8 gold in F, G and the Anomaly; 3 in I; 6 in N; 10 in P;
     13 in Q; 0 in H and O;
   - I_MiniBoss02 about 190.
 

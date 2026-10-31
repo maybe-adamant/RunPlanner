@@ -448,9 +448,14 @@ describe('OccurrenceRoomActions', () => {
     expect(within(fieldsSetup).getByLabelText('Optional 1')).toBeTruthy();
     openRoomTab('Room Timeline');
     const fieldsActions = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(screen.getByRole('list', { name: 'Timeline legend' }).textContent).toBe(
-      'OptionalRequired nowBefore leavingAutomatic',
-    );
+    const legend = screen.getByRole('list', { name: 'Timeline legend' });
+    expect(legend.textContent).toBe('OptionalRequired nowBefore leavingAutomaticAffordable');
+    const sample = within(legend).getByText('Affordable').querySelector('[aria-hidden="true"]');
+    expect([...(sample?.children ?? [])].map((tone) => tone.getAttribute('data-tone'))).toEqual([
+      'high',
+      'medium',
+      'low',
+    ]);
     expect(within(fieldsActions).queryByRole('heading', { name: 'Room Timeline' })).toBeNull();
     expect(within(fieldsActions).getByLabelText('Room entered')).toBeTruthy();
     expect(within(fieldsActions).queryByLabelText('Passive encounter phase')).toBeNull();
@@ -1822,11 +1827,39 @@ describe('OccurrenceRoomActions', () => {
       .getAllByText(/^Buy /)
       .map((label) => label.closest('li')!);
     expect(purchases.length).toBeGreaterThan(0);
-    for (const row of purchases) expect(row.textContent).toMatch(/\d+ gold/);
+    for (const row of purchases)
+      expect(row.querySelector("[data-timeline-cell='label']")?.textContent).toMatch(
+        /^Buy .+·\s*\d+(–\d+)? gold$/,
+      );
     expect(within(actions).getByLabelText('Doors open').textContent).toMatch(
       /Current\s*~?\u2212?\d+ gold\s*·\s*Spent\s*~?\d+ gold$/,
     );
     expect(within(actions).getByLabelText('Room entered').textContent).not.toMatch(/Spent/);
+  });
+
+  it('marks each purchase with its chance to afford as a toned pill', () => {
+    renderOccurrenceWorkbench(
+      underworldCheckpointArtifacts['underworld-world-shop-travel-deal'].load(),
+      'Underworld',
+      'F',
+      occurrenceById('golden-f-preboss-shop:postboss'),
+    );
+    openRoomTab('Room Timeline');
+    const purchases = within(screen.getByRole('region', { name: 'Room Timeline' }))
+      .getAllByText(/^Buy /)
+      .map((label) => label.closest('li')!);
+    expect(purchases.length).toBeGreaterThan(0);
+    for (const row of purchases) {
+      const pill = row.querySelector("[data-timeline-cell='editors'] > .purchase-affordability")!;
+      const shown = /^(>99%|<1%|(\d+)%) chance to afford$/.exec(pill.textContent ?? '');
+      expect(shown).not.toBeNull();
+      expect(pill.querySelector('.visually-hidden')?.textContent).toBe(' chance to afford');
+      // The tone follows the percent the pill shows.
+      const percent = shown![1] === '>99%' ? 100 : shown![1] === '<1%' ? 0 : Number(shown![2]);
+      expect(pill.getAttribute('data-tone')).toBe(
+        percent >= 90 ? 'high' : percent >= 50 ? 'medium' : 'low',
+      );
+    }
   });
 
   it('keeps Current in place on the Doors open banner of a room that buys nothing', () => {

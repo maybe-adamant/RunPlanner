@@ -274,6 +274,14 @@ export function OccurrenceWorkbench({
                   Before leaving
                 </li>
                 <li data-action-accent="automatic">Automatic</li>
+                <li className="affordability-legend">
+                  <span aria-hidden="true" className="affordability-sample">
+                    <span data-tone="high" />
+                    <span data-tone="medium" />
+                    <span data-tone="low" />
+                  </span>
+                  Affordable
+                </li>
               </ul>
             ) : null}
             {tabRunState === undefined ? null : <RunStateLauncher launcher={tabRunState} />}

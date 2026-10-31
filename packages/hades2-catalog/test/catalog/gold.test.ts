@@ -134,6 +134,98 @@ describe('gold catalog facts', () => {
     ]);
   });
 
+  it('declares the money store of every generated encounter and none of the rest', () => {
+    const store = (key: string) => catalog.encounterDefinitions.byKey[key]?.moneyStore;
+    expect(
+      Object.fromEntries(
+        [
+          'GeneratedF',
+          'GeneratedAnomalyB',
+          'GeneratedG',
+          'GeneratedH_Passive',
+          'GeneratedH',
+          'MournerIntro',
+          'GeneratedI_GoalReward',
+          'GeneratedNSubRoom_Bigger',
+          'GeneratedO',
+          'P_Combat07_PreCombat02',
+          'GeneratedQ_Islands',
+          'DevotionTestO',
+          'ArtemisCombatN',
+          'NemesisCombatI',
+          'HeraclesCombatP',
+          'MiniBossTreant',
+          'MiniBossJellyfish',
+          'MiniBossDragon',
+          'MiniBossBrute',
+        ].map((key) => [key, store(key)]),
+      ),
+    ).toEqual({
+      GeneratedF: { capMin: 10, capMax: 15, runDepthRamp: 0.5 },
+      GeneratedAnomalyB: { capMin: 10, capMax: 15, runDepthRamp: 0.5 },
+      GeneratedG: { capMin: 15, capMax: 25, runDepthRamp: 0 },
+      GeneratedH_Passive: { capMin: 10, capMax: 30, runDepthRamp: 0 },
+      GeneratedH: { capMin: 30, capMax: 45, runDepthRamp: 0 },
+      MournerIntro: { capMin: 30, capMax: 45, runDepthRamp: 0 },
+      GeneratedI_GoalReward: { capMin: 35, capMax: 45, runDepthRamp: 0 },
+      GeneratedNSubRoom_Bigger: { capMin: 15, capMax: 25, runDepthRamp: 0 },
+      GeneratedO: { capMin: 20, capMax: 30, runDepthRamp: 0 },
+      P_Combat07_PreCombat02: { capMin: 25, capMax: 35, runDepthRamp: 0 },
+      GeneratedQ_Islands: { capMin: 60, capMax: 85, runDepthRamp: 0 },
+      DevotionTestO: { capMin: 20, capMax: 30, runDepthRamp: 0 },
+      ArtemisCombatN: { capMin: 30, capMax: 30, runDepthRamp: 0 },
+      NemesisCombatI: { capMin: 30, capMax: 30, runDepthRamp: 0 },
+      HeraclesCombatP: { capMin: 100, capMax: 145, runDepthRamp: 0 },
+      MiniBossTreant: { capMin: 15, capMax: 15, runDepthRamp: 0 },
+      MiniBossJellyfish: { capMin: 25, capMax: 25, runDepthRamp: 0 },
+      MiniBossDragon: { capMin: 15, capMax: 25, runDepthRamp: 0 },
+      MiniBossBrute: { capMin: 60, capMax: 85, runDepthRamp: 0 },
+    });
+    // Native generates only these combats; the others pay their kill drops uncapped.
+    expect(
+      [
+        'FIntroFight',
+        'FishmanIntro',
+        'ClockworkIntro',
+        'PIntroCombat01',
+        'ArachneCombatF',
+        'MiniBossCaptain',
+        'MiniBossStalker',
+        'MiniBossCrawler',
+        'BossHecate01',
+        'Empty_Chaos',
+      ].map(store),
+    ).toEqual(Array(10).fill(undefined));
+    expect(
+      catalog.encounterDefinitions.values.filter((definition) => definition.moneyStore).length,
+    ).toBe(124);
+  });
+
+  it('declares the Heracles bounty, Wealth from the Dead and Success Rate luck', () => {
+    expect(
+      catalog.encounterDefinitions.values
+        .filter((definition) => definition.killBounty !== undefined)
+        .map((definition) => [definition.key, definition.killBounty]),
+    ).toEqual(
+      ['HeraclesCombatN', 'HeraclesCombatO', 'HeraclesCombatP'].map((key) => [
+        key,
+        { goldPerMark: 20, marksPerWave: { min: 2, max: 3 }, waves: 3 },
+      ]),
+    );
+    expect(catalog.traits.byKey.MoneyOnDeathCurse?.gold).toEqual({
+      kind: 'goldOnKill',
+      chance: 0.1,
+      dropCap: 2,
+      goldByAcquisitionOrdinal: [20, 30, 40, 60],
+    });
+    expect(catalog.traits.byKey.LuckyBoon?.luckMultiplierByRarity).toEqual({
+      Common: 1.3,
+      Rare: 1.4,
+      Epic: 1.5,
+      Heroic: 1.6,
+    });
+  });
+
   it('rejects a convertible reward without a GoldifyValue and a malformed loan', () => {
     expect(() =>
       createCatalog({
@@ -161,6 +253,16 @@ describe('gold catalog facts', () => {
               : trait,
           ) as typeof declarations.traitCatalog.traits,
         },
+      }),
+    ).toThrow(CatalogContractError);
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        encounterDefinitions: declarations.encounterDefinitions.map((definition) =>
+          definition.key === 'GeneratedG'
+            ? { ...definition, moneyStore: { capMin: 25, capMax: 15, runDepthRamp: 0 } }
+            : definition,
+        ) as unknown as typeof declarations.encounterDefinitions,
       }),
     ).toThrow(CatalogContractError);
   });

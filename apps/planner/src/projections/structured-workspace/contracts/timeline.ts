@@ -67,6 +67,13 @@ export interface WorkspaceGoldAmount {
   readonly label: string;
 }
 
+/** The chance the gold held covers a purchase, as a whole percent. */
+export interface WorkspacePurchaseAffordability {
+  readonly label: string;
+  /** How likely the gold held covers the price, by the percent shown. */
+  readonly tone: 'high' | 'medium' | 'low';
+}
+
 export interface WorkspaceRoomActionRow {
   readonly address: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
   readonly key: string;
@@ -134,6 +141,8 @@ export interface WorkspaceRoomActionRow {
   readonly travelDealLine?: WorkspaceTravelDealLine;
   /** What this purchase costs; absent for a free item or where the plan is not evaluated. */
   readonly price?: WorkspaceGoldAmount;
+  /** The chance the gold held covers the price; absent where the gold held is unknown. */
+  readonly affordability?: WorkspacePurchaseAffordability;
   /** Undoes this purchase or collect with its own command. */
   readonly purchaseRemoval?: WorkspaceCommandIntent<
     Extract<

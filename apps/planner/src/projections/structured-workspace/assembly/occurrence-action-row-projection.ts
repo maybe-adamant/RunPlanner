@@ -36,6 +36,7 @@ import type { WorkspaceEncounterPhase, WorkspaceRoomLocal } from '../contracts/l
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type {
   WorkspaceGoldAmount,
+  WorkspacePurchaseAffordability,
   WorkspaceRoomActionRow,
   WorkspaceRoomActions,
   WorkspaceFountainRarityControl,
@@ -598,7 +599,7 @@ function roomActionsForOccurrence(
             }
           : {}),
         ...purchaseRowProducts(row.reference, address),
-        ...purchasePrice(input.gold, row.owner),
+        ...purchaseGold(input.gold, row.owner),
         executable: row.executable,
       });
     }),
@@ -978,14 +979,39 @@ function goldAmount(amount: GoldAmount): WorkspaceGoldAmount {
   });
 }
 
-function purchasePrice(
+function purchaseGold(
   gold: GoldLedger | undefined,
   owner: SemanticAddress,
-): Pick<WorkspaceRoomActionRow, 'price'> {
+): Pick<WorkspaceRoomActionRow, 'price' | 'affordability'> {
   const priced = gold?.purchaseAt(owner);
-  return priced?.availability !== 'available' || priced.purchase.venue === 'free'
-    ? {}
-    : { price: goldAmount(priced.purchase.price) };
+  if (priced?.availability !== 'available' || priced.purchase.venue === 'free') return {};
+  const { affordableProbability, balanceBefore, price } = priced.purchase;
+  return {
+    price: goldAmount(price),
+    ...(affordableProbability === undefined || balanceBefore.availability !== 'available'
+      ? {}
+      : {
+          affordability: purchaseAffordability(
+            affordableProbability,
+            balanceBefore.balance.variance === 0 && price.variance === 0,
+          ),
+        }),
+  };
+}
+
+/**
+ * The chance to afford as a whole percent, toned by the percent shown; only an
+ * exact balance and price are certain either way.
+ */
+export function purchaseAffordability(
+  probability: number,
+  exact: boolean,
+): WorkspacePurchaseAffordability {
+  const percent = Math.round(probability * 100);
+  const label =
+    exact || (percent > 0 && percent < 100) ? `${percent}%` : percent >= 100 ? '>99%' : '<1%';
+  const tone = percent >= 90 ? 'high' : percent >= 50 ? 'medium' : 'low';
+  return Object.freeze({ label, tone });
 }
 
 /** A room figure: the whole amount when exact, else its rounded mean marked approximate. */

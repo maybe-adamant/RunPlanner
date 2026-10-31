@@ -100,7 +100,14 @@ Ordinary generated ranges, `EncounterData.lua` and
 `GeneratedH_Passive` 10–30, `HeraclesCombatP` 100–145
 (`EncounterData_Heracles.lua:176-177`), `BaseDevotion` 20–30, Artemis, Athena,
 Icarus and Nemesis combat a fixed 30, and minibosses a fixed 15 or 25
-(`MiniBossDragon` 15–25). The Fields Nemesis random event's fixed store rolls
+(`MiniBossDragon` 15–25). `GeneratedAnomalyB` inherits the `Generated` bounds
+and ramp (`EncounterData_Challenge.lua:92, 192`); Chaos rooms run `Empty_Chaos`
+and fight nothing. `SetupEncounter` generates, and so draws a store, only for a
+`Generated` encounter (`RunLogic.lua:1117-1119`); an ungenerated one (the fixed
+F, G and I introductions, Olympus's `PIntroCombat` rooms, `MiniBossCaptain`,
+`MiniBossStalker`, `MiniBossCrawler`, `MiniBossTalos`, `MiniBossCharybdis`,
+bosses) keeps a nil store and its kills pay every parcel uncapped
+(`RoomLogic.lua:2380-2395`). The Fields Nemesis random event's fixed store rolls
 no budget and is unaffected
 ([H Fields capacity and chronology](../rooms-and-routes/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md#h-fields-capacity-and-chronology)).
 

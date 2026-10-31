@@ -118,8 +118,6 @@ describe('gold ledger', () => {
       gain({ kind: 'midasPayout', itemKey: 'DamageSelfDrop' }, blocked),
       gain({ kind: 'poolSale', traitKey: 'ZeusWeaponBoon', rarity: 'Rare', level: 1 }, blocked),
       gain({ kind: 'nemesisBet', maxBet: 100 }, blocked),
-      // Money pickups are not blocked.
-      gain({ kind: 'moneyPickup', gold: 100, npcDrop: false }, blocked),
     ]);
     expect(result.runStart).toEqual({
       kind: 'priced',
@@ -128,9 +126,72 @@ describe('gold ledger', () => {
         balance: balance(450),
       },
     });
-    expect(roomOf(result).gains.map((entry) => entry.amount?.mean)).toEqual([
-      300, 0, 0, 0, 0, 0, 100,
+    expect(roomOf(result).gains.map((entry) => entry.amount?.mean)).toEqual([300, 0, 0, 0, 0, 0]);
+  });
+
+  it('blocks every coin collected under a curse but a Gold Purse and spending', () => {
+    const blocked = { blocksGold: true };
+    const result = ledger([
+      gain({ kind: 'moneyPickup', gold: 200, npcDrop: false }),
+      gain({ kind: 'loanTake', traitKey: 'BankBoon', returnGold: 300 }),
+      gain({ kind: 'moneyPickup', gold: 100, npcDrop: false }, blocked),
+      gain({ kind: 'moneyPickup', gold: 100, npcDrop: true }, blocked),
+      gain({ kind: 'currencyPickup', gold: 100 }, blocked),
+      gain({ kind: 'fallbackGold', gold: 90 }, blocked),
+      gain({ kind: 'heraclesBounty', encounterKey: 'HeraclesCombatN' }, blocked),
+      gain(
+        {
+          kind: 'medeaGold',
+          goldPerDrop: 20,
+          chance: 0.1,
+          dropCap: 2,
+          encounters: [{ encounterKey: 'GeneratedN', biomeKey: 'N', hordesRank: 0 }],
+        },
+        blocked,
+      ),
+      gain({ kind: 'keepsakeGold', gold: 100 }, blocked),
+      gain({ kind: 'nemesisTrade', min: 80, max: 80 }, blocked),
+      // The payback gushes its coins, so the stored gold is lost.
+      gain({ kind: 'loanPayback', traitKey: 'BankBoon' }, blocked),
+      gain({ kind: 'loanPayback', traitKey: 'BankBoon' }),
     ]);
+    expect(result.rooms.get(semanticAddressKey(room))).toMatchObject({ kind: 'fault' });
+    const kept = ledger([
+      gain({ kind: 'moneyPickup', gold: 200, npcDrop: false }),
+      gain({ kind: 'loanTake', traitKey: 'BankBoon', returnGold: 300 }),
+      gain({ kind: 'moneyPickup', gold: 100, npcDrop: false }, blocked),
+      gain({ kind: 'moneyPickup', gold: 100, npcDrop: true }, blocked),
+      gain({ kind: 'currencyPickup', gold: 100 }, blocked),
+      gain({ kind: 'fallbackGold', gold: 90 }, blocked),
+      gain({ kind: 'heraclesBounty', encounterKey: 'HeraclesCombatN' }, blocked),
+      gain(
+        {
+          kind: 'medeaGold',
+          goldPerDrop: 20,
+          chance: 0.1,
+          dropCap: 2,
+          encounters: [{ encounterKey: 'GeneratedN', biomeKey: 'N', hordesRank: 0 }],
+        },
+        blocked,
+      ),
+      gain({ kind: 'keepsakeGold', gold: 100 }, blocked),
+      gain({ kind: 'nemesisTrade', min: 80, max: 80 }, blocked),
+      gain({ kind: 'loanPayback', traitKey: 'BankBoon' }, blocked),
+    ]);
+    expect(roomOf(kept).gains.map((entry) => [entry.kind, entry.amount?.mean])).toEqual([
+      ['moneyPickup', 200],
+      ['loanTake', -200],
+      ['moneyPickup', 0],
+      ['moneyPickup', 0],
+      ['currencyPickup', 0],
+      ['fallbackGold', 0],
+      ['heraclesBounty', 0],
+      ['medeaGold', 0],
+      ['keepsakeGold', 100],
+      ['nemesisTrade', -80],
+      ['loanPayback', 0],
+    ]);
+    expect(roomOf(kept).balanceAfter).toEqual(balance(20));
   });
 
   it('prices a Pool sale from its floored rarity roll plus its levels', () => {

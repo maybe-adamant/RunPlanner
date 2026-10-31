@@ -1104,10 +1104,66 @@ CostResourceMax)`: heart 105-130 / 230-255, Magick 80-105 / 180-205, Pom
   (`InteractLogic.lua:545-590`). The outcome is not authored; the ledger
   assumes a win.
 - **Pauper's** (`ChaosNoMoneyCurse`, `TraitData_Chaos.lua:756-760`) sets
-  `BlockMoney`, which zeroes the Midas payout (`InteractLogic.lua:1234`),
-  Time Piece (`PowersLogic.lua:6741`), the bet win (`InteractLogic.lua:578`), a
-  Pool sale (`GetTraitValue`), Arcana gold (`MetaUpgradeLogic.lua:599-606`)
-  and enemy drops (`RoomLogic.lua:2354`); money pickups still pay.
+  `BlockMoney`. Every coin collected through `DropMoney` → `UseMoneyDrop`
+  pays nothing (`RoomLogic.lua:2602-2652`). That covers every gushed amount
+  (`GushMoney`, `InteractLogic.lua:1154-1174`):
+  - a money pickup, whose `DropMoney` gushes unless its `DropMoneyDelay` is 0
+    (`InteractLogic.lua:1075-1084`; only `DamageSelfDrop` sets 0), Heracles's
+    bounty `RoomMoneyDrop` (`EnemyAILogic.lua:5332-5336`) and an NPC's drop
+    (`InteractLogic.lua:529-530`);
+  - Wealth from the Dead's `MedeaMoneyTinyDrop` (`CombatLogic.lua:4263-4275`);
+  - the `Currency` coins of Narcissus and fallback gold
+    (`GiveRandomConsumables`, `RoomLogic.lua:2002-2007`);
+  - a Personal Loan's payback, whose stored gold is cleared all the same
+    (`CombatLogic.lua:3956-3965`).
+
+  Kill and urn drops stop in `CheckMoneyDrop` (`RoomLogic.lua:2354`). The
+  Midas payout is zeroed when its Well item is ramped
+  (`InteractLogic.lua:1233-1235`), Time Piece in `GetRewardGoldifyValue`
+  (`PowersLogic.lua:6741`), the bet win (`InteractLogic.lua:578`), a Pool sale
+  in `GetTraitValue` (`SellTraitLogic.lua:457`) and Arcana gold
+  (`MetaUpgradeLogic.lua:599-606`). A Gold Purse equipped or repeated by Echo
+  pays through `AddResource`, which does not check it
+  (`KeepsakeLogic.lua:1209-1210, 1365-1366`). Spending (a loan's take, a
+  Nemesis trade, a lost bet) is unaffected.
+
+- **Enemy kills.** A kill with a positive `MoneyDropOnDeath.Chance` pays one
+  parcel of `RandomInt(ValuePerDifficulty × rating, × ValuePerDifficultyMaxValueVariance)`
+  times `(enemy MoneyMultiplier) + (Σ − 1)`, at least 1, while the encounter's
+  [store](../loadout-and-progression/RUN_MODIFIERS_GAME_DATA_AUDIT.md#encounter-gold-budget)
+  is positive, deducting it (`RoomLogic.lua:2340-2395, 3440-3447`). Most enemies
+  inherit Chance 0.7 and value per difficulty 0.33 (Erebus to Tartarus), 0.125
+  (Thessaly), 0.035 (Olympus) or 0.16 (the Summit); bosses, SuperElites and
+  most minibosses have Chance 0 (`EnemyData.lua:166-176, 895-1030`). Recorded
+  runs drained the store exactly by the enemy gold gained in 140 of 150 rooms.
+- **Wealth from the Dead** (`MoneyOnDeathCurse`) drops an NPC
+  `MedeaMoneyTinyDrop` of 20 / 30 / 40 / 60 gold × Σ at `0.1 × LuckMultiplier`
+  per kill, at most two per room (`TraitData_Medea.lua:98-155`,
+  `CombatLogic.lua:4225-4285`, `SessionMapState.LifeOnKillRecord`). Success
+  Rate's `LuckMultiplier` 1.3 is `SourceIsMultiplier` by 1 / 4⁄3 / 5⁄3 / 2
+  (`TraitData_Hermes.lua:620-647`). `BlockMoney` stops its coins when they
+  are collected (`RoomLogic.lua:2648-2652`).
+- **Golden urns.** `HandleBreakableSwap` makes `MaxHighValueBreakables` + 1
+  attempts, each trying 15, 10 and 5 gold in order at its chance times the
+  room's `BreakableHighValueChanceMultiplier` (`RoomLogic.lua:2536-2568`): 1 /
+  2 / 2% for the Chronos pot, 5% each for the surface pots
+  (`ObstacleData.lua:756-834`, `ObstacleDataN/P/Q`). The caps are 3 in F, G
+  and N, 6 in I and P, 8 in Q and none in H, O and the Anomaly
+  (`RoomDataF.lua:299`, `RoomDataG.lua:291`, `RoomDataI.lua:306`,
+  `RoomDataN.lua:354`, `RoomDataP.lua:345`, `RoomDataQ.lua:30`,
+  `RoomDataH.lua:503`, `RoomDataO.lua:292`, `RoomDataAnomaly.lua:12`);
+  `I_MiniBoss02` has 12 at 100× (`RoomDataI.lua:2931-2932`), Ephyra's side
+  rooms 1 at 2× (`RoomDataN.lua:3824-3825`) and `Q_Intro` 0.33×
+  (`RoomDataQ.lua:401`). Urn gold ignores the store and pays `round(gold × Σ)`.
+- **Heracles's bounty.** A Heracles combat marks 2–3 enemies per wave
+  (`HeraclesBountyPerWaveMin/Max`, `HeraclesBountyValue` 20,
+  `EncounterData_Heracles.lua:8-10`; `CheckHeraclesBounty`,
+  `EncounterLogic.lua:2314-2339`) over its three waves. A marked kill credits
+  the player unless Heracles lands it without recent player damage
+  (`TrackHeraclesChallengeProgress`, `EncounterLogic.lua:2342-2378`); the
+  credited total drops after combat as one `RoomMoneyDrop` whose `DropMoney`
+  is set after creation, so unmultiplied (`EnemyAILogic.lua:5332-5336`).
+  `HeraclesCombatMoneyValue` on enemies is unread.
 - **Not counted.** Arachne's `DoorCash` (`CostumeLogic.lua:36-46`), Selene's
   `MoneyOnSpell` (`SpellLogic.lua:1728`) and challenge switches
   (`EncounterLogic.lua:2138-2141`) are outside planner authorship.

@@ -36,7 +36,7 @@ import { roomActionDestinationLabel } from './room-action-placement';
 import { NemesisInteractionEditor, NemesisInteractionPhrase } from './NemesisEventEditor';
 import { RoomObjectEntry } from './commerce/RoomObjectEntry';
 import { TravelDealLine } from './commerce/PurchaseRowControls';
-import { GoldAmount, RoomGoldSummary } from './commerce/GoldAmount';
+import { GoldAmount, PurchaseAffordability, RoomGoldSummary } from './commerce/GoldAmount';
 import { hintProps } from '@planner/ui/controls/hint';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { roomActionIcon } from '@planner/ui/artwork/roomArtwork';
@@ -566,6 +566,12 @@ export function RoomActionsWorkbench({
               ) : (
                 <NemesisInteractionPhrase interaction={nemesisInteraction} />
               )}
+              {row.price === undefined ? null : (
+                <span className="timeline-row-price">
+                  <span aria-hidden="true">·</span>
+                  <GoldAmount amount={row.price} />
+                </span>
+              )}
               {row.stale ? <span className="neutral-status">stale</span> : null}
               {row.rank === null && row.participation === 'required' ? (
                 <span className="neutral-status">required</span>
@@ -593,8 +599,8 @@ export function RoomActionsWorkbench({
                   interaction={nemesisInteraction}
                 />
               )}
-              {row.price === undefined ? null : (
-                <GoldAmount amount={row.price} className="timeline-row-price" />
+              {row.affordability === undefined ? null : (
+                <PurchaseAffordability affordability={row.affordability} />
               )}
             </>
           }

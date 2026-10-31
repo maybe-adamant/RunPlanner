@@ -1,9 +1,11 @@
 import { generatedEncounterChoices } from './generated/policies';
 import type { RawEncounterDefinitionDeclaration, RawEncounterSetDeclaration } from './types';
+import { summitMoneyStore } from './money-stores';
 
 export const qEncounterDefinitions = [
   {
     key: 'GeneratedQ',
+    moneyStore: summitMoneyStore,
     customization: [generatedEncounterChoices.GeneratedQ],
     label: 'Combat',
     kind: 'combat',
@@ -13,6 +15,7 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'GeneratedQ_Islands',
+    moneyStore: summitMoneyStore,
     customization: [generatedEncounterChoices.GeneratedQ_Islands],
     label: 'Islands combat',
     kind: 'combat',
@@ -22,6 +25,7 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'GeneratedQ_Large',
+    moneyStore: summitMoneyStore,
     customization: [generatedEncounterChoices.GeneratedQ_Large],
     label: 'Preboss combat',
     kind: 'combat',
@@ -38,6 +42,7 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'MiniBossBrute',
+    moneyStore: summitMoneyStore,
     label: 'Brute',
     kind: 'miniboss',
     countsEncounterDepth: true,
@@ -56,6 +61,7 @@ export const qEncounterDefinitions = [
   },
   {
     key: 'BossTyphonTail01',
+    moneyStore: summitMoneyStore,
     label: 'Typhon tail',
     kind: 'miniboss',
     countsEncounterDepth: true,

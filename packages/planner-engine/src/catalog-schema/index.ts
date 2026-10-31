@@ -486,6 +486,14 @@ export interface NpcShoppingProtection {
 }
 
 /** One concrete normalized game encounter selected by a fixed or pool slot. */
+/** Native `MoneyDropCapMin`, `MoneyDropCapMax` and `MoneyDropCapDepthRamp`. */
+export interface EncounterMoneyStore {
+  readonly capMin: number;
+  readonly capMax: number;
+  /** Gold added per run depth before the money multiplier. */
+  readonly runDepthRamp: number;
+}
+
 export interface EncounterDefinition {
   readonly key: string;
   readonly label: string;
@@ -533,6 +541,18 @@ export interface EncounterDefinition {
    * `maxBet`; a win pays it times the money multiplier, a loss takes it.
    */
   readonly goldBet?: { readonly maxBet: number };
+  /**
+   * Native money store: generation draws `MoneyDropCapMin..Max` plus
+   * `MoneyDropCapDepthRamp` × run depth, times the money multiplier, and enemy
+   * kill drops pay from it. Absent where native does not generate the encounter.
+   */
+  readonly moneyStore?: EncounterMoneyStore;
+  /** Heracles marks enemies whose kill the player is credited for, paid as one pickup. */
+  readonly killBounty?: {
+    readonly goldPerMark: number;
+    readonly marksPerWave: { readonly min: number; readonly max: number };
+    readonly waves: number;
+  };
   readonly nemesisRandomEvent?: {
     readonly freeItem: {
       readonly resultRewardTypes: readonly [

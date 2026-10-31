@@ -95,6 +95,7 @@ export type {
   WorkspaceExitSelectionInteraction,
   WorkspaceRoomActionInteraction,
   WorkspaceGoldAmount,
+  WorkspacePurchaseAffordability,
   WorkspaceRoomActionProposal,
   WorkspaceRoomActionRow,
   WorkspaceRoomFeature,

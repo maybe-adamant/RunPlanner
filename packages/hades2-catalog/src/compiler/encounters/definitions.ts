@@ -24,6 +24,19 @@ const encounterPhaseKinds = new Set<EncounterPhaseKind>([
   'story',
 ]);
 
+/** A store's integer bounds are ordered and its ramp is a non-negative per-depth amount. */
+function normalizeMoneyStore(
+  raw: NonNullable<RawEncounterDefinitionDeclaration['moneyStore']>,
+  path: string,
+): NonNullable<EncounterDefinition['moneyStore']> {
+  const capMin = requirePositiveInteger(raw.capMin, `${path}.capMin`);
+  const capMax = requirePositiveInteger(raw.capMax, `${path}.capMax`);
+  if (capMax < capMin) fail(path, 'must have capMin <= capMax');
+  if (!Number.isFinite(raw.runDepthRamp) || raw.runDepthRamp < 0)
+    fail(`${path}.runDepthRamp`, 'must be non-negative');
+  return Object.freeze({ capMin, capMax, runDepthRamp: raw.runDepthRamp });
+}
+
 export function normalizeEncounterDefinitions(
   rawDefinitions: readonly RawEncounterDefinitionDeclaration[],
 ): CatalogCollection<EncounterDefinition> {
@@ -593,6 +606,30 @@ export function normalizeEncounterDefinitions(
           : {
               goldBet: Object.freeze({
                 maxBet: requirePositiveInteger(raw.goldBet.maxBet, `${path}.goldBet.maxBet`),
+              }),
+            }),
+        ...(raw.moneyStore === undefined
+          ? {}
+          : { moneyStore: normalizeMoneyStore(raw.moneyStore, `${path}.moneyStore`) }),
+        ...(raw.killBounty === undefined
+          ? {}
+          : {
+              killBounty: Object.freeze({
+                goldPerMark: requirePositiveInteger(
+                  raw.killBounty.goldPerMark,
+                  `${path}.killBounty.goldPerMark`,
+                ),
+                marksPerWave: Object.freeze({
+                  min: requirePositiveInteger(
+                    raw.killBounty.marksPerWave.min,
+                    `${path}.killBounty.marksPerWave.min`,
+                  ),
+                  max: requirePositiveInteger(
+                    raw.killBounty.marksPerWave.max,
+                    `${path}.killBounty.marksPerWave.max`,
+                  ),
+                }),
+                waves: requirePositiveInteger(raw.killBounty.waves, `${path}.killBounty.waves`),
               }),
             }),
         ...(blocksKeepsakeSelectionKeys === undefined ? {} : { blocksKeepsakeSelectionKeys }),

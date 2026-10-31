@@ -78,8 +78,26 @@ function normalizeTraitGold(
   path: string,
 ): NonNullable<TraitDeclaration['gold']> {
   const kind = raw.kind;
+  if (kind === 'goldOnKill') {
+    if (
+      !(raw.chance > 0 && raw.chance <= 1) ||
+      !Number.isInteger(raw.dropCap) ||
+      raw.dropCap <= 0 ||
+      raw.goldByAcquisitionOrdinal.length !== 4 ||
+      raw.goldByAcquisitionOrdinal.some((gold) => !Number.isInteger(gold) || gold <= 0)
+    )
+      fail(path, 'must give a chance, a positive drop cap and four positive integer golds');
+    return Object.freeze({
+      kind,
+      chance: raw.chance,
+      dropCap: raw.dropCap,
+      goldByAcquisitionOrdinal: Object.freeze([
+        ...raw.goldByAcquisitionOrdinal,
+      ]) as unknown as typeof raw.goldByAcquisitionOrdinal,
+    });
+  }
   if (kind !== 'moneyMultiplier' && kind !== 'moneyRewardBonus' && kind !== 'loan')
-    fail(`${path}.kind`, 'must be moneyMultiplier, moneyRewardBonus or loan');
+    fail(`${path}.kind`, 'must be moneyMultiplier, moneyRewardBonus, loan or goldOnKill');
   const values = requireObject(
     kind === 'loan' ? raw.returnByRarity : raw.byRarity,
     `${path}.${kind === 'loan' ? 'returnByRarity' : 'byRarity'}`,
@@ -104,6 +122,26 @@ function normalizeTraitGold(
   return kind === 'loan'
     ? Object.freeze({ kind, returnByRarity: byRarity })
     : Object.freeze({ kind, byRarity });
+}
+
+/** A luck multiplier gives a value above one for exactly the trait's equipped ranked rarities. */
+function normalizeLuckMultiplier(
+  raw: NonNullable<RawTraitDeclaration['luckMultiplierByRarity']>,
+  equippedRarities: readonly TraitRarity[],
+  path: string,
+): NonNullable<TraitDeclaration['luckMultiplierByRarity']> {
+  const values = requireObject(raw, path);
+  const rarities = IN_RUN_RARITIES.filter((rarity) => equippedRarities.includes(rarity));
+  if (
+    rarities.length !== equippedRarities.length ||
+    Object.keys(values).length !== rarities.length ||
+    rarities.some((rarity) => {
+      const value = values[rarity];
+      return typeof value !== 'number' || !Number.isFinite(value) || value <= 1;
+    })
+  )
+    fail(path, 'must give every equipped ranked rarity a multiplier above one');
+  return Object.freeze({ ...values }) as NonNullable<TraitDeclaration['luckMultiplierByRarity']>;
 }
 
 /** Scales each roll bound by its rarity multiplier; every bound must land on an integer. */
@@ -802,6 +840,14 @@ export function normalizeTraits(
       trait.gold === undefined
         ? undefined
         : normalizeTraitGold(trait.gold, equippedRarities, `${path}.gold`);
+    const luckMultiplierByRarity =
+      trait.luckMultiplierByRarity === undefined
+        ? undefined
+        : normalizeLuckMultiplier(
+            trait.luckMultiplierByRarity,
+            equippedRarities,
+            `${path}.luckMultiplierByRarity`,
+          );
     const resourceRewardBonus =
       trait.resourceRewardBonus === undefined
         ? undefined
@@ -929,6 +975,7 @@ export function normalizeTraits(
       ...(hammerCompatibility === undefined ? {} : { hammerCompatibility }),
       ...(resourceRewardBonus === undefined ? {} : { resourceRewardBonus }),
       ...(gold === undefined ? {} : { gold }),
+      ...(luckMultiplierByRarity === undefined ? {} : { luckMultiplierByRarity }),
       ...(roomsPerUpgradeGrowth === undefined ? {} : { roomsPerUpgradeGrowth }),
       ...(rerollPickupByAcquisitionOrdinal === undefined
         ? {}

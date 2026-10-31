@@ -13,6 +13,14 @@ import type {
 import { GoldLedgerContractError, type BiomeGoldPrices, type GoldPurchaseQuote } from './ledger';
 import type { PurchasePriceContextPublication } from './price-context';
 import { roundGold, sumGold, ZERO_GOLD, type GoldAmount } from './prices';
+import type { RunModifiers } from '../../../authored-project/run-modifiers';
+import {
+  affordableProbability,
+  enemyGoldAmount,
+  heraclesBountyAmount,
+  medeaGoldAmount,
+  urnGoldAmount,
+} from './enemy-gold';
 
 /** A balance as the mean and variance of its normal approximation. */
 export interface GoldMoments {
@@ -35,7 +43,17 @@ export type GoldBalance =
 /** One reached purchase's price and the gold held just before it. */
 export interface GoldPurchasePrice extends GoldPurchaseQuote {
   readonly balanceBefore: GoldBalance;
+  /**
+   * The chance the gold held covers the price, P(balance − price ≥ 0) under
+   * the normal approximation; absent while the balance before it is unavailable.
+   */
+  readonly affordableProbability?: number;
 }
+
+/** The run modifiers that adjust the enemy gold estimate. */
+export type GoldRunModifiers = Pick<RunModifiers, 'enemyGoldDropChance' | 'encounterGoldRange'>;
+
+const NATIVE_GOLD_MODIFIERS: GoldRunModifiers = Object.freeze({});
 
 /** One reached gold gain (or loss) in chronological order. */
 export interface GoldGainEntry {
@@ -99,7 +117,27 @@ export interface BiomeGoldInputs {
   readonly events: readonly GoldEventPublication[];
 }
 
+/**
+ * Gold a held `BlockMoney` curse stops. Every coin collected through
+ * `UseMoneyDrop` pays nothing (RoomLogic.lua:2648-2652): money pickups, whose
+ * `DropMoney` gushes coins (InteractLogic.lua:1075-1084, 1154-1174), Heracles's
+ * bounty pickup, Wealth from the Dead's drops, the `Currency` coins of
+ * Narcissus and fallback gold (`GiveRandomConsumables`, RoomLogic.lua:2002-2007)
+ * and a loan's payback (CombatLogic.lua:3956-3965). Kill drops stop at
+ * RoomLogic.lua:2354, urn drops being kill drops of their breakable; the bet
+ * win, Time Piece, Price of Midas, Pool sale and Arcana gold check it
+ * themselves. A Gold Purse's `AddResource` does not (KeepsakeLogic.lua:1209-1210,
+ * 1365-1366), and run-start gold precedes any curse.
+ */
 const BLOCKABLE: ReadonlySet<GoldGain['kind']> = new Set([
+  'moneyPickup',
+  'currencyPickup',
+  'fallbackGold',
+  'heraclesBounty',
+  'medeaGold',
+  'loanPayback',
+  'enemyGold',
+  'urnGold',
   'arcanaGold',
   'timePiece',
   'midasPayout',
@@ -209,6 +247,7 @@ function worse(balance: GoldBalance, reason: 'itemUnresolved' | 'priorFault'): G
 /** Applies one priced gain to the walk and returns what it pays (negative when it takes). */
 function applyGain(
   catalog: Catalog,
+  modifiers: GoldRunModifiers,
   walk: LedgerWalk,
   { gain, multipliers }: GoldEventContext,
 ): GoldAmount | undefined {
@@ -219,7 +258,8 @@ function applyGain(
     walk.balance = addTo(walk.balance, amount);
     return amount;
   };
-  if (blocked && gain.kind !== 'nemesisBet') return pay(ZERO_GOLD);
+  // A blocked bet and payback still settle: the bet pays nothing, the stored loan gold is lost.
+  if (blocked && gain.kind !== 'nemesisBet' && gain.kind !== 'loanPayback') return pay(ZERO_GOLD);
   switch (gain.kind) {
     case 'startingGold':
     case 'arcanaGold':
@@ -237,6 +277,14 @@ function applyGain(
       return pay(poolSale(catalog, gain));
     case 'nemesisTrade':
       return pay(negate(evenInteger(gain.min, gain.max)));
+    case 'enemyGold':
+      return pay(enemyGoldAmount(catalog, gain, sigma, modifiers));
+    case 'heraclesBounty':
+      return pay(heraclesBountyAmount());
+    case 'medeaGold':
+      return pay(medeaGoldAmount(catalog, gain, sigma));
+    case 'urnGold':
+      return pay(urnGoldAmount(gain, sigma));
     case 'nemesisBet': {
       if (blocked) return pay(ZERO_GOLD);
       if (walk.balance.availability === 'unavailable') return undefined;
@@ -269,6 +317,7 @@ function applyGain(
       walk.loans.delete(gain.traitKey);
       if (stored === undefined)
         throw new GoldLedgerContractError(`${gain.traitKey} pays back no loan`);
+      if (blocked) return pay(ZERO_GOLD);
       if (stored.availability === 'unavailable') {
         walk.balance = worse(
           walk.balance,
@@ -328,6 +377,7 @@ function contextOf(publication: GoldGainPublication): GoldEventContext {
 export function routeGoldLedger(
   catalog: Catalog,
   biomes: readonly BiomeGoldInputs[],
+  modifiers: GoldRunModifiers = NATIVE_GOLD_MODIFIERS,
 ): RouteGoldLedger {
   const walk: LedgerWalk = {
     balance: START_BALANCE,
@@ -392,9 +442,18 @@ export function routeGoldLedger(
           block(room, { kind: 'itemUnresolved' });
           walk.balance = worse(walk.balance, 'itemUnresolved');
         } else {
+          const before = walk.balance;
           const purchase: GoldPurchasePrice = Object.freeze({
             ...quote.purchase,
-            balanceBefore: walk.balance,
+            balanceBefore: before,
+            ...(before.availability === 'available'
+              ? {
+                  affordableProbability: affordableProbability(
+                    before.balance,
+                    quote.purchase.price,
+                  ),
+                }
+              : {}),
           });
           purchases.set(
             semanticAddressKey(quote.purchase.owner),
@@ -426,7 +485,7 @@ export function routeGoldLedger(
           const context = contextOf(publication);
           if (room !== undefined && context.gain.kind === 'poolSale')
             room.beforeFirstTrade ??= walk.balance;
-          const amount = applyGain(catalog, walk, context);
+          const amount = applyGain(catalog, modifiers, walk, context);
           if (context.gain.kind !== 'loanCredit') {
             const gainEntry: GoldGainEntry = Object.freeze({
               kind: context.gain.kind,

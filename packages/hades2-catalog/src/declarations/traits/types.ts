@@ -57,6 +57,7 @@ export interface RawTraitDeclaration {
    * base's excess over one by that rarity's `RarityLevels` multiplier.
    */
   readonly gold?: TraitGoldEffect;
+  readonly luckMultiplierByRarity?: TraitDeclaration['luckMultiplierByRarity'];
   readonly resourceRewardBonus?: {
     readonly resources: readonly string[];
     readonly baseValue: number;

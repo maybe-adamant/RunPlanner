@@ -409,16 +409,21 @@ they do not alter command behavior.
 
 Gold is guidance read from the engine's gold ledger, never a finding or a
 reason to disable a control. Each paid purchase on a room timeline shows its
-price; a rolled price shows its range. A free item, or a purchase the ledger
-cannot price, shows nothing rather than zero. The room's doors-open boundary
-summarizes the room's gold: the gold held when its doors open, before any of
-its purchases, and the room's total spending over every purchase in the room.
+price beside the item it buys; a rolled price shows its range. A free item, or
+a purchase the ledger cannot price, shows nothing rather than zero. When the
+gold held before it is known, the purchase also shows its chance to afford as
+a whole percent in a pill coloured for a high, medium or low chance, which the
+timeline legend explains. Only an exact balance and price make the chance
+certain either way; an estimated one is never shown as certain. The room's
+doors-open boundary summarizes the room's gold: the gold held when its doors
+open, before any of its purchases, and the room's total spending over every
+purchase in the room.
 Either figure is absent when the ledger cannot give it, and a room that pays
 for nothing shows only the gold held. A figure with spread, from a rolled
 price or an estimated gain, is shown as its rounded mean marked approximate.
 A negative balance is valid advisory information: a plan may go under, and
 the editor shows it rather than clamping or flagging it. The projection
-formats amounts; React only places them.
+formats amounts and grades the chance; React only places them.
 
 ## Extending and Verifying
 

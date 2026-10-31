@@ -1,4 +1,4 @@
-import type { Catalog } from '../../../catalog-schema';
+import type { Catalog, InRunTraitRarity } from '../../../catalog-schema';
 import type { OccurrenceAddress, SemanticAddress } from '../../../authored-project/addresses';
 import type { SimulationState } from '../../state/model';
 import type { PurchasePriceUnpriced } from './price-context';
@@ -47,7 +47,40 @@ export type GoldGain =
   /** A Nemesis combat's bet, assumed won until its outcome is authored. */
   | { readonly kind: 'nemesisBet'; readonly maxBet: number }
   /** Gold paid for a Nemesis trade, an integer drawn evenly from its range. */
-  | { readonly kind: 'nemesisTrade'; readonly min: number; readonly max: number };
+  | { readonly kind: 'nemesisTrade'; readonly min: number; readonly max: number }
+  /**
+   * A completed encounter's kill gold, estimated from its store. Its
+   * multipliers are those held at the door into its room: native chooses and
+   * generates every modelled phase there, Nemesis, god and cage combats
+   * included (RoomLogic.lua:4376-4387, 4423-4427). Stores generated later
+   * (challenge switches, encounter-cost doors, boss spawns) belong to
+   * encounters the plan does not model.
+   */
+  | {
+      readonly kind: 'enemyGold';
+      readonly encounterKey: string;
+      /** The room's biome, whose payout policy a generated combat reads. */
+      readonly biomeKey: string;
+      readonly runDepth: number;
+      readonly hordesRank: number;
+    }
+  /** Heracles's bounty for the encounter's credited kills, unmultiplied. */
+  | { readonly kind: 'heraclesBounty'; readonly encounterKey: string }
+  /** Wealth from the Dead over the room's completed encounters when its doors open. */
+  | {
+      readonly kind: 'medeaGold';
+      readonly goldPerDrop: number;
+      /** The per-kill chance times the held luck multiplier. */
+      readonly chance: number;
+      readonly dropCap: number;
+      readonly encounters: readonly {
+        readonly encounterKey: string;
+        readonly biomeKey: string;
+        readonly hordesRank: number;
+      }[];
+    }
+  /** The room's golden urns, broken before its doors open. */
+  | { readonly kind: 'urnGold'; readonly biomeKey: string; readonly roomGameName: string };
 
 export interface GoldEventContext {
   readonly gain: GoldGain;
@@ -86,7 +119,7 @@ export function goldMultipliers(
   let moneyRewardBonus = 1;
   for (const equipped of Object.values(state.traitHistory.equippedTraits)) {
     const gold = catalog.traits.byKey[equipped.traitKey]?.gold;
-    if (gold === undefined || gold.kind === 'loan') continue;
+    if (gold === undefined || gold.kind === 'loan' || gold.kind === 'goldOnKill') continue;
     const value =
       equipped.rarity === undefined
         ? undefined
@@ -110,6 +143,37 @@ export function goldMultipliers(
       (curse) => catalog.chaos.curses.byKey[curse.curseKey]?.blocksGold === true,
     ),
   });
+}
+
+/**
+ * Wealth from the Dead as a held trait pays it: gold per drop at its
+ * acquisition ordinal, the per-kill chance times the summed luck multipliers
+ * (`LuckMultiplier`, additive like every `IsMultiplier` total), and its cap.
+ */
+export function goldOnKillFacts(
+  catalog: Catalog,
+  state: SimulationState,
+): { readonly goldPerDrop: number; readonly chance: number; readonly dropCap: number } | undefined {
+  let luck = 1;
+  let held: { goldPerDrop: number; chance: number; dropCap: number } | undefined;
+  for (const equipped of Object.values(state.traitHistory.equippedTraits)) {
+    const trait = catalog.traits.byKey[equipped.traitKey];
+    const luckValue =
+      equipped.rarity === undefined
+        ? undefined
+        : trait?.luckMultiplierByRarity?.[equipped.rarity as InRunTraitRarity];
+    if (luckValue !== undefined) luck += luckValue - 1;
+    const gold = trait?.gold;
+    if (gold?.kind === 'goldOnKill') {
+      const ordinal = Math.min(Math.max(equipped.acquisitionOrdinal ?? 1, 1), 4);
+      held = {
+        goldPerDrop: gold.goldByAcquisitionOrdinal[ordinal - 1]!,
+        chance: gold.chance,
+        dropCap: gold.dropCap,
+      };
+    }
+  }
+  return held === undefined ? undefined : Object.freeze({ ...held, chance: held.chance * luck });
 }
 
 /**

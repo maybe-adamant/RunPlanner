@@ -173,6 +173,8 @@ export const hermesTraits = [
   {
     key: 'LuckyBoon',
     label: 'Success Rate',
+    // TraitData_Hermes.lua:620-647 LuckMultiplier 1.3, SourceIsMultiplier by 1 / 4/3 / 5/3 / 2.
+    luckMultiplierByRarity: { Common: 1.3, Rare: 1.4, Epic: 1.5, Heroic: 1.6 },
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
     eligibilityRequirements: [],

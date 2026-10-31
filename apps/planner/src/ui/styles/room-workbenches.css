@@ -1385,21 +1385,27 @@
     grid-column: 5;
   }
 
-  /* A row without editors, or with only an empty finding anchor, keeps its actions on one line. */
-  .timeline-row:not(:has(> [data-timeline-cell='editors'] > :not([data-empty='true'])))
+  /* A row with no editor (an empty finding anchor or a chance to afford aside) keeps one line. */
+  .timeline-row:not(
+      :has(> [data-timeline-cell='editors'] > :not([data-empty='true'], .purchase-affordability))
+    )
     > [data-timeline-cell='label'] {
     grid-row: 1;
     grid-column: 3 / 5;
   }
 
-  .timeline-row:not(:has(> [data-timeline-cell='editors'] > :not([data-empty='true'])))
+  .timeline-row:not(
+      :has(> [data-timeline-cell='editors'] > :not([data-empty='true'], .purchase-affordability))
+    )
     > [data-timeline-cell='editors'] {
     /* Stays rendered so an empty finding anchor can still take focus. */
     grid-row: 1;
     grid-column: 4;
   }
 
-  .timeline-row:not(:has(> [data-timeline-cell='editors'] > :not([data-empty='true'])))
+  .timeline-row:not(
+      :has(> [data-timeline-cell='editors'] > :not([data-empty='true'], .purchase-affordability))
+    )
     > [data-timeline-cell='actions'] {
     grid-row: 1;
   }
@@ -1476,10 +1482,94 @@
 }
 
 /* Gold figures fill the rest of the editors cell and sit at its end. */
-.timeline-row-price,
 .room-gold-summary {
   flex: 1 0 auto;
   justify-content: flex-end;
+}
+
+/* The chance to afford a purchase: a pill toned by how likely, never the currency gold. */
+.purchase-affordability {
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--affordability-tone) 42%, transparent);
+  border-radius: 999px;
+  color: var(--affordability-tone);
+  background: color-mix(in srgb, var(--affordability-tone) 12%, transparent);
+  display: block;
+  min-width: 3.4rem;
+  padding: 1px 7px;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.purchase-affordability[data-tone='high'],
+.affordability-sample > [data-tone='high'] {
+  --affordability-tone: var(--success);
+}
+
+.purchase-affordability[data-tone='medium'],
+.affordability-sample > [data-tone='medium'] {
+  --affordability-tone: var(--warning);
+}
+
+.purchase-affordability[data-tone='low'],
+.affordability-sample > [data-tone='low'] {
+  --affordability-tone: var(--danger);
+}
+
+/* A priced row keeps its price whole on one line; the name truncates first. */
+.timeline-cell-label:has(> .timeline-row-price) {
+  flex-wrap: nowrap;
+}
+
+.timeline-cell-label:has(> .timeline-row-price) > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A purchase's chance keeps the end of its editors cell; the editors wrap before it. */
+.timeline-row {
+  --purchase-affordability-width: 4.2rem;
+}
+
+.timeline-cell-editors:has(> .purchase-affordability) {
+  position: relative;
+  padding-inline-end: var(--purchase-affordability-width);
+}
+
+.timeline-cell-editors > .purchase-affordability {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 0;
+  transform: translateY(-50%);
+}
+
+/* A purchase with no editor lends its name the editors column; its chance keeps the end. */
+.timeline-row:has(> [data-timeline-cell='editors'] > .purchase-affordability):not(
+    :has(> [data-timeline-cell='editors'] > :not([data-empty='true'], .purchase-affordability))
+  )
+  > [data-timeline-cell='label'] {
+  grid-row: 1;
+  grid-column: 3 / 5;
+  padding-inline-end: var(--purchase-affordability-width);
+}
+
+.timeline-row:has(> [data-timeline-cell='editors'] > .purchase-affordability):not(
+    :has(> [data-timeline-cell='editors'] > :not([data-empty='true'], .purchase-affordability))
+  )
+  > [data-timeline-cell='editors'] {
+  grid-row: 1;
+  grid-column: 4;
+}
+
+.timeline-row-price {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
 }
 
 .room-gold-summary,
@@ -1491,10 +1581,10 @@
   white-space: nowrap;
 }
 
-/* Each figure keeps its icon beside a six-character number column so the banner never shifts. */
+/* Each figure sits beside its label in a five-character column so the banner never shifts. */
 .room-gold-figure .gold-amount {
-  min-width: calc(1.15rem + 2px + 6ch);
-  justify-content: flex-end;
+  min-width: calc(1.15rem + 2px + 5ch);
+  justify-content: flex-start;
 }
 
 .room-gold-figure[data-placeholder] {
@@ -1780,7 +1870,7 @@
 .room-timeline-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
+  gap: 6px 10px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1823,6 +1913,24 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+/* The chance-to-afford entry shows the three pill tones in place of a stripe. */
+.room-timeline-legend > li.affordability-legend::before {
+  content: none;
+}
+
+.room-timeline-legend .affordability-sample {
+  display: inline-flex;
+  gap: 1px;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.room-timeline-legend .affordability-sample > span {
+  width: 5px;
+  height: 0.85rem;
+  background: var(--affordability-tone);
 }
 
 .room-timeline-legend > li::before {

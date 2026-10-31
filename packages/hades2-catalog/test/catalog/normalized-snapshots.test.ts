@@ -3,14 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', 'ec591c786e9fe45b'],
-  ['G', '6f97dc2bc997dece'],
-  ['H', '176dfcb492e1d02e'],
-  ['I', '336efb8854318673'],
-  ['N', '7ddb35d3250744cb'],
-  ['O', 'f83602fe82dc6221'],
-  ['P', 'cf574a4a0d65f8f5'],
-  ['Q', '99112c6486a14558'],
+  ['F', 'b0bbcf79d9974e4e'],
+  ['G', '5a5560938d838a64'],
+  ['H', '9e12ad5d41c6d770'],
+  ['I', '1cf389761c19cb0e'],
+  ['N', 'f848ba3c66ea948d'],
+  ['O', '8bae2df0ec0df1db'],
+  ['P', '336d942fb5d0c39a'],
+  ['Q', '8e466b2592a532c8'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {

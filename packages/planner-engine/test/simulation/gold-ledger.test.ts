@@ -12,7 +12,9 @@ import {
   createBiomeAddress,
   createEncounterPhaseAddress,
   createOccurrenceAddress,
+  createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
+  NATIVE_RUN_MODIFIERS,
   createShopOfferAddress,
   createTraitOfferAddress,
   type ProjectDocument,
@@ -22,7 +24,11 @@ import {
   simulateProjectAssembly,
   type GoldLedger,
 } from '@run-planner/engine/simulation';
-import { loadSurfaceNQuickBuckCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
+import {
+  loadSurfaceNOPQCheckpoint,
+  loadSurfaceNQuickBuckCheckpoint,
+  loadSurfacePSteadyGrowthShrineFrontierCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/surface';
 import {
   loadSurfaceNOPQProject,
   pBiome,
@@ -106,18 +112,47 @@ function narcissusProject(
   return { project, room, site };
 }
 
+/** Every F room's gains before the Preboss shop, split into fixed and estimated gold. */
+function fGainsBeforeShop(project: ProjectDocument, gold: GoldLedger) {
+  const totals = { fixed: 0, estimated: 0, variance: 0 };
+  for (const occurrence of project.route.biomes.find((biome) => biome.biomeKey === 'F')!.topology!
+    .occurrences) {
+    if (/^F_(PreBoss|Boss|PostBoss)/.test(occurrence.gameName)) continue;
+    const result = gold.roomAt(createOccurrenceAddress(f, occurrence.occurrenceId));
+    if (result.availability !== 'available') continue;
+    for (const gain of result.room.gains) {
+      const estimated = ['enemyGold', 'urnGold', 'medeaGold'].includes(gain.kind);
+      if (estimated) totals.estimated += gain.amount!.mean;
+      else totals.fixed += gain.amount!.mean;
+      totals.variance += gain.amount!.variance;
+    }
+  }
+  return totals;
+}
+
 describe('gold ledger walk', () => {
-  it('pays room-reward money before a later shop purchase', () => {
-    const gold = ledger(loadUnderworldWorldShopTravelDealCheckpoint());
-    expect(
-      gold.purchaseAt(createShopOfferAddress(f, 'golden-f-preboss-shop' as never, 'MajorNonBoon')),
-    ).toMatchObject({
+  it('pays room-reward money and enemy gold before a later shop purchase', () => {
+    const project = loadUnderworldWorldShopTravelDealCheckpoint();
+    const gold = ledger(project);
+    const before = fGainsBeforeShop(project, gold);
+    expect(before.fixed).toBe(100);
+    const purchase = gold.purchaseAt(
+      createShopOfferAddress(f, 'golden-f-preboss-shop' as never, 'MajorNonBoon'),
+    );
+    expect(purchase).toMatchObject({
       availability: 'available',
-      purchase: {
-        price: { mean: 106 },
-        balanceBefore: { availability: 'available', balance: { mean: 100, variance: 0 } },
-      },
+      purchase: { price: { mean: 106 } },
     });
+    if (
+      purchase.availability !== 'available' ||
+      purchase.purchase.balanceBefore.availability !== 'available'
+    )
+      throw new Error('the shop purchase is unpriced');
+    const { balance } = purchase.purchase.balanceBefore;
+    expect(balance.mean).toBeCloseTo(100 + before.estimated, 9);
+    expect(balance.variance).toBeCloseTo(before.variance, 9);
+    // About 290 gold held for a 106 price: affordable with near certainty.
+    expect(purchase.purchase.affordableProbability).toBeGreaterThan(0.999);
   });
 
   it('multiplies later money by a held Quick Buck', () => {
@@ -196,14 +231,96 @@ describe('gold ledger walk', () => {
     expect(gains(ledger(converted), room)).toContainEqual(['timePiece', 400]);
   });
 
-  it('opens a shop room’s doors before its purchases', () => {
-    const gold = ledger(loadUnderworldWorldShopTravelDealCheckpoint());
-    expect(gold.roomAt(createOccurrenceAddress(f, 'golden-f-preboss-shop' as never))).toMatchObject(
-      {
-        availability: 'available',
-        room: { doorsOpenBalance: { availability: 'available', balance: { mean: 100 } } },
-      },
+  it('estimates an Erebus room’s kill gold from its store and its urns from the biome', () => {
+    const start = createOccurrenceAddress(f, 'golden-f-start' as never);
+    const withModifiers = (value: Partial<typeof NATIVE_RUN_MODIFIERS>) =>
+      ledger(
+        applyProjectCommand(loadUnderworldWorldShopTravelDealCheckpoint(), catalog, {
+          kind: 'ReplaceRunModifiers',
+          route: createRouteAddress('Underworld'),
+          value: { ...NATIVE_RUN_MODIFIERS, ...value },
+        }),
+      );
+    const native = ledger(loadUnderworldWorldShopTravelDealCheckpoint()).roomAt(start);
+    if (native.availability !== 'available') throw new Error('the opening is unpriced');
+    // Run depth 1: RandomInt(10, 15) + 0.5, rounded up to 11..16, plus Erebus's 1.9 overshoot.
+    const [kills, urns] = native.room.gains;
+    expect(kills).toMatchObject({ kind: 'enemyGold' });
+    expect(kills!.amount!.mean).toBeCloseTo(13.5 + 1.9, 9);
+    expect(kills!.amount!.variance).toBeCloseTo(35 / 12 + 9, 9);
+    expect(urns).toMatchObject({ kind: 'urnGold' });
+    expect(urns!.amount!.mean).toBeCloseTo(4 * 0.7 * 0.44502, 3);
+    expect(gains(withModifiers({ enemyGoldDropChance: 0 }), start)[0]).toEqual(['enemyGold', 0]);
+    // The top of the range fixes the roll at 15: ceil(15.5) = 16.
+    const fixed = withModifiers({ encounterGoldRange: 100 }).roomAt(start);
+    if (fixed.availability !== 'available') throw new Error('the opening is unpriced');
+    expect(fixed.room.gains[0]!.amount).toMatchObject({ mean: 16 + 1.9, variance: 9 });
+  });
+
+  it('pays a Summit combat its biome’s fraction of the store', () => {
+    const gold = ledger(loadSurfaceNOPQCheckpoint());
+    const room = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'Q'),
+      'surface-q-foyer' as never,
     );
+    const [kills] = gains(gold, room);
+    expect(kills![0]).toBe('enemyGold');
+    expect(kills![1]).toBeCloseTo(0.73 * 72.5, 9);
+  });
+
+  it('pays Wealth from the Dead in the fights after Medea’s curse is taken', () => {
+    let project = loadSurfacePSteadyGrowthShrineFrontierCheckpoint();
+    const n = createBiomeAddress('Surface', 'N');
+    const occurrences = project.route.biomes.find((biome) => biome.biomeKey === 'N')!.topology!
+      .occurrences;
+    const story = occurrences.find((occurrence) => occurrence.gameName === 'N_Story01')!;
+    const offer = story.encounters.traitOffersByPhase?.Encounter?.Story_Medea_01;
+    if (offer?.kind !== 'traits') throw new Error('the fixture offers no Medea curse');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createEncounterPhaseAddress(
+          n,
+          { kind: 'occurrence', occurrenceId: story.occurrenceId },
+          'Encounter',
+        ),
+        'selection',
+      ),
+      value: { ...offer, selectedOptionKey: 'option2' },
+    });
+    const gold = ledger(project);
+    const kinds = (gameName: string) =>
+      gains(
+        gold,
+        createOccurrenceAddress(
+          n,
+          occurrences.find((occurrence) => occurrence.gameName === gameName)!.occurrenceId,
+        ),
+      ).map(([kind]) => kind);
+    expect(kinds('N_Opening01')).not.toContain('medeaGold');
+    expect(kinds('N_Story01')).toEqual([]);
+    const later = gains(
+      gold,
+      createOccurrenceAddress(
+        n,
+        occurrences.find((occurrence) => occurrence.gameName === 'N_Combat11')!.occurrenceId,
+      ),
+    );
+    expect(later.find(([kind]) => kind === 'medeaGold')?.[1]).toBeGreaterThan(0);
+  });
+
+  it('opens a shop room’s doors before its purchases', () => {
+    const project = loadUnderworldWorldShopTravelDealCheckpoint();
+    const gold = ledger(project);
+    const room = gold.roomAt(createOccurrenceAddress(f, 'golden-f-preboss-shop' as never));
+    if (
+      room.availability !== 'available' ||
+      room.room.doorsOpenBalance.availability !== 'available'
+    )
+      throw new Error('the shop room is unpriced');
+    const before = fGainsBeforeShop(project, gold);
+    expect(room.room.doorsOpenBalance.balance.mean).toBeCloseTo(before.fixed + before.estimated, 9);
+    expect(room.room.purchases.length).toBeGreaterThan(0);
   });
 
   it('opens the fourth biome’s Preboss doors after its flushed deliveries and earlier purchases', () => {
@@ -261,7 +378,7 @@ describe('gold ledger walk', () => {
     ).toContainEqual(['timePiece', 550]);
   });
 
-  it('pays no Time Piece gold while Pauper’s blocks gold', () => {
+  it('pays no Time Piece, kill or urn gold while Pauper’s blocks gold', () => {
     const g = createBiomeAddress('Underworld', 'G');
     let project = applyProjectCommand(createCompleteFGIxionChaosProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
@@ -277,6 +394,8 @@ describe('gold ledger walk', () => {
       value: { kind: 'timePiece' },
     });
     expect(gains(ledger(project), createOccurrenceAddress(g, 'golden-g-b2-e1' as never))).toEqual([
+      ['enemyGold', 0],
+      ['urnGold', 0],
       ['timePiece', 0],
     ]);
   });

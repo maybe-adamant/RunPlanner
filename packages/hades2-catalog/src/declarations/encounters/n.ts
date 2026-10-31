@@ -7,10 +7,12 @@ import {
   heraclesIncomingRewardExclusions,
   supportedFieldNpcEncounterKeys,
 } from './shared';
+import { ephyraMoneyStore, godCombatMoneyStore, minibossMoneyStore } from './money-stores';
 
 export const nEncounterDefinitions = [
   {
     key: 'OpeningGeneratedN',
+    moneyStore: ephyraMoneyStore,
     customization: [generatedEncounterChoices.OpeningGeneratedN],
     label: 'Opening combat',
     kind: 'combat',
@@ -20,6 +22,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'PreHubGeneratedN',
+    moneyStore: ephyraMoneyStore,
     customization: [generatedEncounterChoices.PreHubGeneratedN],
     label: 'Pre-Hub combat',
     kind: 'combat',
@@ -29,6 +32,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'GeneratedN',
+    moneyStore: ephyraMoneyStore,
     customization: [generatedEncounterChoices.GeneratedN],
     label: 'Combat',
     kind: 'combat',
@@ -38,6 +42,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'ArtemisCombatN',
+    moneyStore: godCombatMoneyStore,
     customization: [generatedEncounterChoices.ArtemisCombatN],
     label: 'Artemis combat',
     kind: 'combat',
@@ -70,6 +75,11 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'HeraclesCombatN',
+    // BaseHeraclesCombat HeraclesBountyValue 20, HeraclesBountyPerWaveMin/Max 2/3
+    // (EncounterData_Heracles.lua:8-10) over its three waves; a credited mark pays one
+    // RoomMoneyDrop after combat (EncounterLogic.lua:2314-2378, EnemyAILogic.lua:5332-5336).
+    killBounty: { goldPerMark: 20, marksPerWave: { min: 2, max: 3 }, waves: 3 },
+    moneyStore: ephyraMoneyStore,
     customization: [generatedEncounterChoices.HeraclesCombatN],
     label: 'Heracles combat',
     kind: 'combat',
@@ -107,6 +117,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'GeneratedN_Smaller',
+    moneyStore: ephyraMoneyStore,
     customization: [generatedEncounterChoices.GeneratedN_Smaller],
     label: 'Small combat',
     kind: 'combat',
@@ -116,6 +127,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'GeneratedN_Bigger',
+    moneyStore: ephyraMoneyStore,
     customization: [generatedEncounterChoices.GeneratedN_Bigger],
     label: 'Large combat',
     kind: 'combat',
@@ -125,6 +137,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'GeneratedNSubRoom',
+    moneyStore: ephyraMoneyStore,
     customization: [generatedEncounterChoices.GeneratedNSubRoom],
     label: 'Side-room combat',
     kind: 'combat',
@@ -135,6 +148,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'GeneratedNSubRoom_Bigger',
+    moneyStore: ephyraMoneyStore,
     customization: [generatedEncounterChoices.GeneratedNSubRoom_Bigger],
     label: 'Large side-room combat',
     kind: 'combat',
@@ -145,6 +159,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'MiniBossSatyrCrossbow',
+    moneyStore: minibossMoneyStore,
     label: 'Satyr crossbow',
     kind: 'miniboss',
     countsEncounterDepth: true,
@@ -153,6 +168,7 @@ export const nEncounterDefinitions = [
   },
   {
     key: 'MiniBossBoar',
+    moneyStore: minibossMoneyStore,
     label: 'Boar',
     kind: 'miniboss',
     countsEncounterDepth: true,

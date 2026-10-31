@@ -22,6 +22,14 @@ export const medeaTraits = [
     key: 'MoneyOnDeathCurse',
     label: 'Wealth from the Dead',
     ...raritylessNpcTrait,
+    // TraitData_Medea.lua:98-155 DropOnKill Chance 0.1, DropCap 2, DropMoney BaseValue 20 x the
+    // RarityLevels multiplier 1 / 1.5 / 2 / 3; the cap is per room (CombatLogic.lua:4225-4285).
+    gold: {
+      kind: 'goldOnKill',
+      chance: 0.1,
+      dropCap: 2,
+      goldByAcquisitionOrdinal: [20, 30, 40, 60],
+    },
     linkedBoonRequirements: [],
     eligibilityRequirements: [],
   },

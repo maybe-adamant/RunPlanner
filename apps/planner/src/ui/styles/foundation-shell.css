@@ -13,6 +13,9 @@
   /* The compact button size, for secondary in-panel and toolbar actions. */
   --action-compact-height: 32px;
   --danger: #e7a1a1;
+  --success: #9bd7af;
+  /* Amber kept clear of the currency and selection gold. */
+  --warning: #ec9a62;
   --text: #ede8df;
   /* Gold of chosen values: selected radios and checkboxes, focus and selected offer cards. */
   --selection-accent: #e2b971;
