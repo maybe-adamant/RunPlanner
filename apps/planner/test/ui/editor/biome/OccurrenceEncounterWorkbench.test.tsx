@@ -1861,12 +1861,12 @@ describe('OccurrenceEncounterWorkbench', () => {
 
     const retainedControl = screen.getByLabelText('Encounter phase');
     await view.user.click(within(retainedControl).getByRole('button', { name: 'Encounter' }));
-    await view.user.click(screen.getByRole('option', { name: 'Opening combat 01' }));
+    await view.user.click(screen.getByRole('option', { name: 'Preset 01' }));
 
     await waitFor(() => {
       expect(screen.getByLabelText('Encounter phase')).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Encounter' }).textContent).toContain(
-        'Opening combat 01',
+        'Preset 01',
       );
     });
   });
@@ -1927,7 +1927,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
 
     await view.user.click(within(introControl).getByRole('button', { name: 'Pre-combat' }));
-    await view.user.click(screen.getByRole('option', { name: /^Random(?! \(Chronos\))/ }));
+    await view.user.click(screen.getByRole('option', { name: /^Combat(?! \(Chronos\))/ }));
 
     await waitFor(() => expect(screen.getByLabelText('Follow-up encounter phase')).toBeTruthy());
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(

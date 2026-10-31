@@ -21,7 +21,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:982.
     key: 'PIntroCombat01',
-    label: 'Opening combat 01',
+    label: 'Preset 01',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -32,7 +32,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1011.
     key: 'PIntroCombat02',
-    label: 'Opening combat 02',
+    label: 'Preset 02',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -43,7 +43,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1035.
     key: 'PIntroCombat03',
-    label: 'Opening combat 03',
+    label: 'Preset 03',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -54,7 +54,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1064.
     key: 'PIntroCombat04',
-    label: 'Opening combat 04',
+    label: 'Preset 04',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -65,7 +65,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1093.
     key: 'PIntroCombat05',
-    label: 'Opening combat 05',
+    label: 'Preset 05',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -76,7 +76,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1122.
     key: 'PIntroCombat06',
-    label: 'Opening combat 06',
+    label: 'Preset 06',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -87,7 +87,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1152.
     key: 'PIntroCombat07',
-    label: 'Opening combat 07',
+    label: 'Preset 07',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -98,7 +98,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1181.
     key: 'PIntroCombat08',
-    label: 'Opening combat 08',
+    label: 'Preset 08',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -109,7 +109,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1204.
     key: 'PIntroCombat09',
-    label: 'Opening combat 09',
+    label: 'Preset 09',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -127,7 +127,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1287.
     key: 'PIntroCombat_DragonQuad',
-    label: 'Opening dragon combat',
+    label: 'Preset (Dragon)',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -138,7 +138,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1243.
     key: 'PIntroCombat_ZombieFishing',
-    label: 'Opening fishing combat',
+    label: 'Preset (Fishing)',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -149,7 +149,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1265.
     key: 'PIntroCombat_ZombieQuad',
-    label: 'Opening zombie combat',
+    label: 'Preset (Zombie)',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -160,7 +160,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1349.
     key: 'PIntroCombat_SapperGate',
-    label: 'Sapper gate',
+    label: 'Preset (Sapper gate)',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -171,7 +171,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1383.
     key: 'PIntroCombat_CrossbowStatues',
-    label: 'Crossbow statues',
+    label: 'Preset (Crossbow statues)',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -182,7 +182,7 @@ export const pEncounterDefinitions = [
   {
     // EncounterData_Opening.lua:1420.
     key: 'PIntroCombat_SapperOverlook',
-    label: 'Sapper overlook',
+    label: 'Preset (Sapper overlook)',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: false,
@@ -194,7 +194,7 @@ export const pEncounterDefinitions = [
     key: 'GeneratedP_PreCombat',
     moneyStore: olympusMoneyStore,
     customization: [generatedEncounterChoices.GeneratedP_PreCombat],
-    label: 'Random',
+    label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
@@ -205,7 +205,7 @@ export const pEncounterDefinitions = [
     key: 'GeneratedP_PreCombatChronosForces',
     moneyStore: olympusMoneyStore,
     customization: [generatedEncounterChoices.GeneratedP_PreCombatChronosForces],
-    label: 'Random (Chronos)',
+    label: 'Combat (Chronos)',
     kind: 'combat',
     countsEncounterDepth: false,
     canEncounterSkip: true,
