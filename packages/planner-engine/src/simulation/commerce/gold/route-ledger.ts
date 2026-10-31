@@ -2,6 +2,7 @@ import type { Catalog } from '../../../catalog-schema';
 import {
   semanticAddressKey,
   type OccurrenceAddress,
+  type RoomActionAddress,
   type SemanticAddress,
 } from '../../../authored-project/addresses';
 import type {
@@ -59,6 +60,13 @@ const NATIVE_GOLD_MODIFIERS: GoldRunModifiers = Object.freeze({});
 export interface GoldGainEntry {
   readonly kind: Exclude<GoldGain['kind'], 'loanCredit'>;
   readonly owner?: SemanticAddress;
+  /**
+   * The room's timeline action whose settlement paid it: the pickup, sale,
+   * purchase or interaction the player ranked. Absent for gold no ranked
+   * action pays: kills, urns, Medea's drops, a Nemesis bet, a loan's payback
+   * and run-start gold.
+   */
+  readonly roomAction?: RoomActionAddress;
   /**
    * Absent when it follows an unavailable balance; bounds equal the mean
    * where the amount follows the balance (a loan, a bet).
@@ -503,6 +511,9 @@ export function routeGoldLedger(
             const gainEntry: GoldGainEntry = Object.freeze({
               kind: context.gain.kind,
               ...(publication.owner === undefined ? {} : { owner: publication.owner }),
+              ...(publication.roomAction === undefined
+                ? {}
+                : { roomAction: publication.roomAction }),
               ...(amount === undefined ? {} : { amount }),
             });
             if (room === undefined) runStartGains.push(gainEntry);

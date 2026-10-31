@@ -2,10 +2,14 @@ import type { Catalog, InRunTraitRarity } from '../../../catalog-schema';
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createRoomActionAddress,
   semanticAddressKey,
   type OccurrenceAddress,
+  type RoomActionAddress,
   type SemanticAddress,
 } from '../../../authored-project/addresses';
+import { INFERNAL_CONTRACT_PEDESTAL_SITE_KEY } from '../../../authored-project/infernal-contract-pedestal';
+import { purgingPoolSalePoint } from '../../commerce/feature-rolls';
 import type { RouteLoadout } from '../../../authored-project/model';
 import { stygianWellGenerationItemKey } from '../../../authored-project/feature-rolls';
 import { urnAttempts } from '../../commerce/gold/enemy-gold-policy';
@@ -70,8 +74,8 @@ function exitUsableRow(room: CanonicalAuthoredRoom): RoomActionRow | undefined {
   );
 }
 
-/** Whether a walked event settles one ranked action row. */
-function settlesRow(event: HistoryEvent, row: RoomActionRow): boolean {
+/** Whether a walked event is the one a ranked row's player action emits. */
+function rowSettledBy(event: HistoryEvent, row: RoomActionRow): boolean {
   const reference = row.reference;
   switch (reference.kind) {
     case 'interactAcquisitionEntry':
@@ -90,18 +94,84 @@ function settlesRow(event: HistoryEvent, row: RoomActionRow): boolean {
         event.kind === 'acquisitionPointReached' &&
         event.point === `localReward:${reference.groupKey}:${reference.slotKey}`
       );
+    case 'interactInfernalContractPedestal':
+      return (
+        event.kind === 'acquisitionPointReached' &&
+        event.point === INFERNAL_CONTRACT_PEDESTAL_SITE_KEY
+      );
+    case 'sellPurgingPoolTrait':
+      return (
+        event.kind === 'acquisitionPointReached' && event.point === purgingPoolSalePoint(reference)
+      );
+    case 'interactIncomingReward':
+      return (
+        event.kind === 'producerRoleAdvanced' &&
+        event.lifecyclePoint === reference.producerPoint &&
+        event.role === reference.acquisitionRole
+      );
+    case 'interactWheelReward':
+      return event.kind === 'offerPointAcquired' && event.offerPoint === reference.wheelKey;
     case 'interactEncounter':
+    case 'interactGorgon':
       return (
         event.kind === 'encounterInteractionReached' &&
-        event.interaction === 'encounter' &&
+        event.interaction === (reference.kind === 'interactEncounter' ? 'encounter' : 'gorgon') &&
         event.phaseKey === reference.phaseKey
       );
     case 'purchaseStygianWellOffer':
       return event.kind === 'wellPurchase' && event.generationKey === reference.generationKey;
-    default:
+    case 'purchaseHermesShrineOffer':
+      return (
+        event.kind === 'hermesShrinePurchaseReached' &&
+        event.generationKey === reference.generationKey
+      );
+    case 'useFountain':
+    case 'interactKeepsakeRack':
+    case 'interactEris':
+    case 'reroll':
+    case 'rerollStygianWell':
+    case 'rerollPurgingPool':
+      return (
+        (event.kind === 'fountainUsed' ||
+          event.kind === 'keepsakeRackUsed' ||
+          event.kind === 'erisInteracted' ||
+          event.kind === 'rewardRerolled' ||
+          event.kind === 'featureRerolled') &&
+        semanticAddressKey(event.owner) === semanticAddressKey(row.owner)
+      );
+    // Native room completion, a cage's fight and a wheel's choice emit no player action.
+    case 'collectRequiredReward':
+    case 'completeFieldsCage':
+    case 'chooseRewardWheel':
       return false;
   }
 }
+
+/** The ranked action the walked event settles: the timeline row whose gold it pays. */
+function walkedRoomAction(
+  room: CanonicalAuthoredRoom,
+  event: HistoryEvent,
+): RoomActionAddress | undefined {
+  const row = room.roomActionRoster.rows.find(
+    (candidate) => candidate.rank !== null && rowSettledBy(event, candidate),
+  );
+  return row === undefined
+    ? undefined
+    : createRoomActionAddress(
+        createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+        room.occurrenceId,
+        row.key,
+      );
+}
+
+/** The exit rows whose settlement the doors-open marker reads. */
+const DOOR_EXIT_ACTIONS: ReadonlySet<RoomActionRow['reference']['kind']> = new Set([
+  'interactAcquisitionEntry',
+  'interactShopOffer',
+  'interactLocalReward',
+  'interactEncounter',
+  'purchaseStygianWellOffer',
+]);
 
 /**
  * Whether the doors open at this walked event: at outgoing generation, unless
@@ -114,7 +184,9 @@ function doorsOpenAt(room: CanonicalAuthoredRoom, event: HistoryEvent): boolean 
   );
   const exit = exitUsableRow(room);
   const atExitRow = exit !== undefined && (!generates || exit.window.kind === 'postOutgoing');
-  return atExitRow ? settlesRow(event, exit) : event.kind === 'outgoingGenerationCheckpoint';
+  return atExitRow
+    ? DOOR_EXIT_ACTIONS.has(exit.reference.kind) && rowSettledBy(event, exit)
+    : event.kind === 'outgoingGenerationCheckpoint';
 }
 
 /**
@@ -197,6 +269,12 @@ export function withEchoKeepsakeGold(
           }),
     }),
   ]);
+}
+
+function optionalRoomAction(roomAction: RoomActionAddress | undefined): {
+  readonly roomAction?: RoomActionAddress;
+} {
+  return roomAction === undefined ? {} : { roomAction };
 }
 
 function withGoldPublications(
@@ -330,6 +408,7 @@ export function withPoolSaleGold(
       sequence: event.sequence,
       room: room.origin,
       owner: sold.owner,
+      ...optionalRoomAction(walkedRoomAction(room, event)),
       readings,
     }),
   ]);
@@ -487,6 +566,7 @@ export function withGoldEvents(
       }),
     ]);
   const doorsOpenHere = room !== undefined && doorsOpenAt(room, event);
+  const roomAction = room === undefined ? undefined : walkedRoomAction(room, event);
   const doorsOpen: readonly GoldEventPublication[] = doorsOpenHere
     ? [Object.freeze({ kind: 'doorsOpen' as const, sequence: event.sequence, room: roomOrigin! })]
     : [];
@@ -932,6 +1012,7 @@ export function withGoldEvents(
       sequence: event.sequence,
       ...(roomOrigin === undefined ? {} : { room: roomOrigin }),
       ...(entry.owner === undefined ? {} : { owner: entry.owner }),
+      ...optionalRoomAction(roomAction),
     };
     const family = key.split(':')[0]!;
     const missing =

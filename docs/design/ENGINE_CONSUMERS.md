@@ -94,8 +94,8 @@ A consumer asks the engine what is possible; it never decides it.
   screen's guess at the screens a reroll replaced, and the gold ledger's
   run-start gold, purchase prices with the balance before each and the
   chance that balance covers the price, and each room's gains (estimated enemy,
-  urn and Medea gold among them), spending and balances (unavailable past
-  coverage).
+  urn and Medea gold among them, each named by the room action that paid it
+  where one did), spending and balances (unavailable past coverage).
 - Hypothetical questions are engine-owned queries; the consumer supplies only
   its choice policy or its observation:
   - **Carrier-child completion** authors every selected-outcome child an offer

@@ -875,7 +875,11 @@ agree on them; a divergence is an engine contract failure. The
 The ledger walks the route's gold in chronological order and carries the
 balance, a mean and variance, from run start through every reached room. It
 records each room's gains and purchases, the balance before each purchase,
-and the balance when the room's doors open and when it ends. It counts fixed
+and the balance when the room's doors open and when it ends. A gain names the
+room's ranked action whose settlement paid it (a pickup, a Fields cage
+reward, a Time Piece conversion at the converted pickup, a sale, a purchase's
+payout, a keepsake rack); gold no ranked action pays (kills, urns, Medea's
+drops, Heracles's bounty, a Nemesis bet, a loan's payback) names none. It counts fixed
 and bounded gold exactly and estimates what kills, urns and Medea's curse pay
 (see [Enemy gold](#enemy-gold)). Every assumption and tuning value the estimate
 uses is listed with its evidence in

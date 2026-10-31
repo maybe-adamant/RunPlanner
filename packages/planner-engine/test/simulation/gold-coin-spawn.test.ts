@@ -6,6 +6,7 @@ import {
   createLocalRewardAddress,
   createOccurrenceId,
   createTraitOfferAddress,
+  roomActionKey,
   traitGeneratedPickupSiteKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -174,6 +175,21 @@ describe('coin spawn valuation', () => {
         expect(of(50)).toMatchObject({ spawn: expected.small });
         expect(gains.every((gain) => gain.remultipliers === undefined)).toBe(true);
       }
+  });
+
+  it('publishes each coin’s gold with the pickup action that collects it', () => {
+    const qb = coin(quickBuckScreen, 'quickBuckGold');
+    const events = combat09GoldEvents(withQuickBuck('money'), [...openCage(1), qb, ...openCage(2)]);
+    const byAction = events.flatMap((event) =>
+      event.kind === 'gain' && event.contexts[0]?.gain.kind === 'moneyPickup'
+        ? [event.roomAction?.actionKey]
+        : [],
+    );
+    // Quick Buck's own coins, then the second cage's money reward.
+    expect(byAction).toEqual([
+      roomActionKey(qb),
+      roomActionKey({ kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage2' }),
+    ]);
   });
 
   it('re-multiplies a cage’s gold by a Quick Buck taken before it is collected', () => {

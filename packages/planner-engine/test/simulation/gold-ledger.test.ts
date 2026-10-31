@@ -5,6 +5,7 @@ import {
   acquisitionSiteStorageKey,
   createIncomingRewardAddress,
   createPostbossKeepsakeSelectionAddress,
+  createRoomActionAddress,
   applyProjectCommand,
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
@@ -17,7 +18,9 @@ import {
   NATIVE_RUN_MODIFIERS,
   createShopOfferAddress,
   createTraitOfferAddress,
+  roomActionKey,
   type ProjectDocument,
+  type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
   generatedEncounterSupportForProjectEvaluationAssembly,
@@ -64,6 +67,22 @@ const gains = (gold: GoldLedger, room: ReturnType<typeof createOccurrenceAddress
   const result = gold.roomAt(room);
   if (result.availability !== 'available') throw new Error(`room is ${result.reason}`);
   return result.room.gains.map((gain) => [gain.kind, gain.amount?.mean]);
+};
+/** Each gain of the room's with its kind and the key of the timeline action that paid it. */
+const actionGains = (gold: GoldLedger, room: ReturnType<typeof createOccurrenceAddress>) => {
+  const result = gold.roomAt(room);
+  if (result.availability !== 'available') throw new Error(`room is ${result.reason}`);
+  return result.room.gains.map((gain) => {
+    if (gain.roomAction !== undefined)
+      expect(gain.roomAction).toEqual(
+        createRoomActionAddress(
+          createBiomeAddress(room.routeKey, room.biomeKey),
+          room.occurrenceId,
+          gain.roomAction.actionKey,
+        ),
+      );
+    return [gain.kind, gain.roomAction?.actionKey];
+  });
 };
 const fixture = (name: string) => {
   const found = executionFixtures.find((candidate) => candidate.name === name);
@@ -558,5 +577,81 @@ describe('gold ledger walk', () => {
     expect(
       gains(ledger(project), createOccurrenceAddress(f, 'golden-f-preboss-shop:postboss' as never)),
     ).toContainEqual(['keepsakeGold', 150]);
+  });
+});
+
+describe('gold by timeline action', () => {
+  const key = (reference: RoomActionReference) => roomActionKey(reference);
+
+  it('pays a room’s money reward to its incoming reward pickup', () => {
+    expect(
+      actionGains(
+        ledger(createGoldenFGHProject()),
+        createOccurrenceAddress(f, 'golden-f-b10-e1' as never),
+      ),
+    ).toContainEqual([
+      'moneyPickup',
+      key({
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'self',
+      }),
+    ]);
+  });
+
+  it('pays a Fields cage’s money to the cage reward’s pickup, not its fight', () => {
+    const cageGains = actionGains(
+      ledger(createGoldenFGHProject()),
+      createOccurrenceAddress(createBiomeAddress('Underworld', 'H'), 'golden-h-combat05' as never),
+    );
+    expect(cageGains).toContainEqual([
+      'moneyPickup',
+      key({ kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' }),
+    ]);
+    expect(cageGains).toContainEqual(['enemyGold', undefined]);
+  });
+
+  it('pays a Pool sale to the sale', () => {
+    expect(
+      actionGains(
+        ledger(loadUnderworldFPoolCheckpoint()),
+        createOccurrenceAddress(f, 'golden-f-preboss-shop:postboss' as never),
+      ),
+    ).toContainEqual(['poolSale', key({ kind: 'sellPurgingPoolTrait', slotKey: 'left' })]);
+  });
+
+  it('pays a Time Piece conversion to the pickup it converts', () => {
+    const { project, room, site } = narcissusProject('NarcissusH', 'lastStand');
+    let converted = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    converted = applyProjectCommand(converted, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(
+        createAcquisitionEntryAddress(site, 'lastStand'),
+        'self',
+      ),
+      value: { kind: 'timePiece' },
+    });
+    expect(actionGains(ledger(converted), room)).toContainEqual([
+      'timePiece',
+      key({
+        kind: 'interactAcquisitionEntry',
+        siteKey: acquisitionSiteStorageKey(site),
+        entryKey: 'lastStand',
+      }),
+    ]);
+  });
+
+  it('leaves kill, urn and Nemesis bet gold without an action', () => {
+    const nemesisRoom = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'G'),
+      'golden-g-b4-e1' as never,
+    );
+    const nemesisGains = actionGains(ledger(fixture('fg-npc-shopping-protection')), nemesisRoom);
+    for (const kind of ['nemesisBet', 'enemyGold', 'urnGold'])
+      expect(nemesisGains).toContainEqual([kind, undefined]);
   });
 });

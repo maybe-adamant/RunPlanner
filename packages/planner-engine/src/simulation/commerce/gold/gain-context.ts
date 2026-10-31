@@ -1,5 +1,9 @@
 import type { Catalog, InRunTraitRarity } from '../../../catalog-schema';
-import type { OccurrenceAddress, SemanticAddress } from '../../../authored-project/addresses';
+import type {
+  OccurrenceAddress,
+  RoomActionAddress,
+  SemanticAddress,
+} from '../../../authored-project/addresses';
 import type { AuthoredNemesisBetOutcome } from '../../../authored-project/model';
 import type { SimulationState } from '../../state/model';
 import type { KnownRoster } from './known-roster';
@@ -140,6 +144,8 @@ export interface GoldGainPublication {
   /** Absent for run-start gold, which precedes every room. */
   readonly room?: OccurrenceAddress;
   readonly owner?: SemanticAddress;
+  /** The room's ranked action whose settlement paid it; absent for gold no action pays. */
+  readonly roomAction?: RoomActionAddress;
   readonly contexts: readonly GoldEventContext[];
   readonly unpriced?: PurchasePriceUnpriced;
 }
@@ -293,6 +299,7 @@ export function goldGainPublication(inputs: {
   readonly sequence: number;
   readonly room?: OccurrenceAddress;
   readonly owner?: SemanticAddress;
+  readonly roomAction?: RoomActionAddress;
   readonly readings: readonly {
     readonly gain: GoldGain;
     readonly multipliers: GoldMultipliers | undefined;
@@ -320,6 +327,7 @@ export function goldGainPublication(inputs: {
     sequence: inputs.sequence,
     ...(inputs.room === undefined ? {} : { room: inputs.room }),
     ...(inputs.owner === undefined ? {} : { owner: inputs.owner }),
+    ...(inputs.roomAction === undefined ? {} : { roomAction: inputs.roomAction }),
     contexts: Object.freeze([...distinct.values()]),
     ...(unpriced === undefined ? {} : { unpriced }),
   });
