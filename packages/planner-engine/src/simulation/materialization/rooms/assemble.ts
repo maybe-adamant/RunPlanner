@@ -391,6 +391,7 @@ export function materializeAuthoredRoom(
     owner: base.origin,
     order: base.roomActions.order,
     contributions: roomActionDomain.contributions,
+    retainedSourceFamilies: roomActionDomain.retainedSourceFamilies,
     lifecycleStructure: roomActionDomain.lifecycleStructure,
     canonicalRequiredInsertions: roomActionDomain.contributions.flatMap((entry) => {
       if (

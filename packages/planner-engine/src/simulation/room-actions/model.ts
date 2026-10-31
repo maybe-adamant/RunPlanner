@@ -53,7 +53,10 @@ export interface RoomActionRow {
   readonly dependencies: readonly RoomActionDependency[];
   readonly rank: number | null;
   readonly placementAssessment?: import('../../authored-project/generated-pickup-placement').GeneratedPickupPlacementAssessment;
-  /** What created an active acquisition-entry pickup; absent for every other action. */
+  /**
+   * What created an acquisition-entry pickup, active, stale or retained, when the
+   * engine can name it; absent for every other action.
+   */
   readonly sourceFamily?: import('../../authored-project/acquisition/entry-source-family').AcquisitionEntrySourceFamily;
   readonly stale: boolean;
   readonly executable: boolean;

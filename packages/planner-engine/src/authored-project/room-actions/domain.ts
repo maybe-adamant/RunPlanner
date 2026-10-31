@@ -126,6 +126,11 @@ export interface RoomActionDomain {
   readonly lifecycleStructure: RoomLifecycleStructure;
   readonly activeReferences: readonly RoomActionReference[];
   readonly contributions: readonly RoomActionDomainContribution[];
+  /**
+   * What created each authored acquisition-entry pickup with no active
+   * contribution here, keyed by action key; only sources the engine can name.
+   */
+  readonly retainedSourceFamilies: ReadonlyMap<string, AcquisitionEntrySourceFamily>;
   /** Present only for a Fields combat room. */
   readonly fieldsCageOrder?: FieldsCageOrderState;
 }
@@ -1103,6 +1108,29 @@ export function assembleRoomActionDomain(options: {
     ...checkpoints(options.catalog, declaration, options.occurrence, lifecycleStructure),
   ]);
   const activeReferences = frozen(actions.map((action) => action.reference));
+  const activeKeys = new Set(activeReferences.map(roomActionKey));
+  const retainedSourceFamilies = new Map<string, AcquisitionEntrySourceFamily>();
+  for (const reference of options.occurrence.roomActions.order) {
+    if (reference.kind !== 'interactAcquisitionEntry') continue;
+    const key = roomActionKey(reference);
+    if (activeKeys.has(key)) continue;
+    const sourceFamily = acquisitionEntrySourceFamily(
+      options.catalog,
+      reference.siteKey,
+      reference.entryKey,
+      selectedPickupProducerForEntry(
+        options.catalog,
+        options.biome,
+        options.occurrence,
+        declaration,
+        reference.siteKey,
+        reference.entryKey,
+        options.routePosition.ordinal,
+        options.incomingRewardState ?? undefined,
+      ),
+    );
+    if (sourceFamily !== undefined) retainedSourceFamilies.set(key, sourceFamily);
+  }
   return frozen({
     owner: createOccurrenceAddress(options.biome, options.occurrence.occurrenceId),
     declaration,
@@ -1110,6 +1138,7 @@ export function assembleRoomActionDomain(options: {
     lifecycleStructure,
     activeReferences,
     contributions,
+    retainedSourceFamilies,
     ...(lifecycleProfileKey === 'FieldsCombatRoom'
       ? {
           fieldsCageOrder: fieldsCageOrderState(

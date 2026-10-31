@@ -7,6 +7,7 @@ import {
 } from '../../authored-project/addresses';
 import { roomActionKey } from '../../authored-project/room-actions/state';
 import type { RoomActionReference } from '../../authored-project/model';
+import type { AcquisitionEntrySourceFamily } from '../../authored-project/acquisition/entry-source-family';
 import {
   roomLifecycleWindowOrdinal,
   scopeRoomLifecycleStructure,
@@ -143,6 +144,8 @@ export function assembleRoomActionRoster(options: {
   readonly owner: OccurrenceAddress;
   readonly order: readonly RoomActionReference[];
   readonly contributions: readonly RoomActionRosterContribution[];
+  /** What created each authored pickup without an active contribution, by action key. */
+  readonly retainedSourceFamilies?: ReadonlyMap<string, AcquisitionEntrySourceFamily>;
   readonly lifecycleStructure: RoomLifecycleStructure;
   readonly canonicalRequiredInsertions?: readonly {
     readonly actionKey: string;
@@ -181,6 +184,10 @@ export function assembleRoomActionRoster(options: {
     // dropping the action.
     const retainedPurgingPoolSale =
       entry === undefined && reference.kind === 'sellPurgingPoolTrait';
+    const sourceFamily =
+      entry === undefined
+        ? options.retainedSourceFamilies?.get(roomActionKey(reference))
+        : entry.sourceFamily;
     return frozen({
       reference,
       key: roomActionKey(reference),
@@ -198,7 +205,7 @@ export function assembleRoomActionRoster(options: {
           ? frozen({ kind: 'postOutgoing' })
           : frozen({ kind: 'standard', phase: 'afterCombat' })),
       dependencies: entry?.dependencies ?? frozen([]),
-      ...(entry?.sourceFamily === undefined ? {} : { sourceFamily: entry.sourceFamily }),
+      ...(sourceFamily === undefined ? {} : { sourceFamily }),
       rank: index + 1,
       stale: entry === undefined,
       executable:
