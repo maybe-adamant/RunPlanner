@@ -278,17 +278,20 @@ describe('boss-door reward pool row selection', () => {
     expect(f.map((row) => row.gameName)).toEqual(['F_PreBoss01']);
     expect(f[0]?.control).toEqual({
       kind: 'ignored',
-      summary: 'Ignored for this boss',
+      effective: { label: 'None' },
+      notes: [{ target: 'effective', text: 'Ignored for this boss' }],
     });
 
     // H and I pin their entered store at spawn, so the row reports it.
     expect(byBiome.get('H')?.[0]?.control).toEqual({
       kind: 'fixed',
-      summary: 'Major Reward · Fixed',
+      label: 'Major Reward',
+      notes: [{ target: 'pool', text: 'Fixed for this boss' }],
     });
     expect(byBiome.get('I')?.[0]?.control).toEqual({
       kind: 'fixed',
-      summary: 'Tartarus Reward · Fixed',
+      label: 'Tartarus Reward',
+      notes: [{ target: 'pool', text: 'Fixed for this boss' }],
     });
 
     // G resolves its entered store from the chosen offer, so it stays editable.

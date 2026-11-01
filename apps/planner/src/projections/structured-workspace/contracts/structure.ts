@@ -153,19 +153,32 @@ export interface WorkspaceFieldsBatchContext {
 
 /**
  * A batch store already decided by its ShipCombat source's last active reward
- * wheel. Read-only: the wheel owns the choice, so the value links to it.
+ * wheel. Read-only: the wheel owns the choice.
  */
 export interface WorkspaceInheritedRewardStore {
   readonly label: string;
   readonly storeKey: string;
-  /** Navigation to the owning wheel; the ship occurrence owns this marker. */
-  readonly wheel: WorkspaceMarker;
+}
+
+/** What the selected exit counts for the store ratio; why it differs is a door note. */
+export interface WorkspaceEffectiveRewardPool {
+  /** A store's name, or None where the entered room records no store. */
+  readonly label: string;
+}
+
+/**
+ * A fact beside the doors, with the value it explains: the carried pool, the
+ * pool the selected exit counts, or the batch as a whole.
+ */
+export interface WorkspaceDoorNote {
+  readonly target: 'pool' | 'effective' | 'batch';
+  readonly text: string;
 }
 
 /** The pool row of a batch that has a pool. */
 export interface WorkspaceBatchRewardPool {
   /** What the selected exit counts, only where it differs from the carried pool. */
-  readonly effective?: string;
+  readonly effective?: WorkspaceEffectiveRewardPool;
   /** Present where the source's wheel decided the pool instead of the batch picker. */
   readonly inherited?: WorkspaceInheritedRewardStore;
 }
@@ -180,6 +193,8 @@ interface WorkspaceBatchNodeBase {
   readonly key: string;
   readonly marker: WorkspaceMarker;
   readonly missingTargets: readonly WorkspaceMissingPhysicalTarget[];
+  /** Batch facts in reading order: the pool's notes, then the Fields notes. */
+  readonly notes: readonly WorkspaceDoorNote[];
   readonly owner: ExitDecisionAddress;
   readonly persistence: 'authored' | 'uncommitted';
   readonly repairIntent?: WorkspaceBatchRepairIntent;

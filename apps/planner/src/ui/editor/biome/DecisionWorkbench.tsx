@@ -8,8 +8,7 @@ import {
   workspaceInteractionKey,
   type WorkspaceAuthoringFrontier,
   type WorkspaceBatchRepairIntent,
-  type WorkspaceBatchRewardPool,
-  type WorkspaceInheritedRewardStore,
+  type WorkspaceEffectiveRewardPool,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
   type WorkspaceMissingPhysicalTarget,
@@ -32,16 +31,25 @@ import {
 } from '@planner/ui/feedback/useFindingTarget';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
-import { useId, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { CandidatePicker } from './CandidatePicker';
 import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
 import { RoomSelector } from './RoomSelector';
 import { RunStateLauncher } from './RunStateSheet';
 import { DoorRewardEditor } from './DoorRewardEditor';
+import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { RoomRerolls } from './RoomRerolls';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { BiomeEntryPicker } from './BiomeEntryPicker';
+import {
+  useDoorNotes,
+  type DoorNoteItem,
+  type DoorNoteMark,
+  type DoorNoteTarget,
+} from './doorNotes';
 import { hintProps } from '@planner/ui/controls/hint';
 
 type BatchNode = WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
@@ -66,12 +74,14 @@ function TargetRoomSelector({
   interactionKey,
   interactions,
   label,
+  placeholder,
 }: {
   readonly ariaLabel?: string;
   readonly idPrefix: string;
   readonly interactionKey: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label: string;
+  readonly placeholder?: string;
 }) {
   const interaction = requireWorkspaceInteraction(interactions.rooms, interactionKey);
   const findingTarget = useFindingTarget();
@@ -91,33 +101,35 @@ function TargetRoomSelector({
       interaction={interaction}
       label={label}
       onSelect={(gameName) => executeIntent(interaction.intentFor(gameName))}
+      {...(placeholder === undefined ? {} : { placeholder })}
     />
   );
 }
 
-/** One door offer card: selection slot, identity heading, then room and reward rows. */
-function ExitCard({
+/**
+ * One exit as a row of the shared door grid: selection, door number or exit
+ * art, room, reward, map and a secondary action. A cell the exit lacks stays
+ * empty so every row keeps the grid's columns.
+ */
+export function DoorRow({
   anchor,
   ariaLabel,
-  children,
-  className,
-  icon,
-  kicker,
+  identity,
   map,
+  reward,
+  room,
+  secondary,
   selection,
   state,
-  title,
 }: {
   readonly anchor?: FindingAnchorProps;
   readonly ariaLabel: string;
-  readonly children: ReactNode;
-  /** Distinguishes physical door targets from additional exits. */
-  readonly className?: string;
-  /** The exit's door art, for exits that have one. */
-  readonly icon?: string;
-  readonly kicker: string;
+  readonly identity: ReactNode;
   readonly map?: { readonly gameName: string; readonly hostId: string; readonly title: string };
-  /** The selection radio; absent when the card is not individually selectable. */
+  readonly reward?: ReactNode;
+  readonly room: ReactNode;
+  readonly secondary?: ReactNode;
+  /** The selection radio; absent when the exit is not individually selectable. */
   readonly selection?: ReactNode;
   readonly state: {
     readonly available: boolean;
@@ -125,12 +137,11 @@ function ExitCard({
     readonly picked?: boolean;
     readonly retained?: boolean;
   };
-  readonly title: string;
 }) {
   return (
     <article
       aria-label={ariaLabel}
-      className={className === undefined ? 'exit-row' : `exit-row ${className}`}
+      className="door-row"
       data-available={state.available}
       {...(state.missing === undefined ? {} : { 'data-missing': state.missing })}
       {...(state.picked === undefined ? {} : { 'data-picked': state.picked })}
@@ -138,62 +149,80 @@ function ExitCard({
       {...anchor}
       tabIndex={-1}
     >
-      {selection ?? <div className="exit-marker" aria-hidden="true" />}
-      <div className="exit-content">
-        <div className="exit-heading">
-          {icon === undefined ? null : <img alt="" className="exit-door-icon" src={icon} />}
-          <div>
-            <p className="card-kicker">{kicker}</p>
-            <h4>{title}</h4>
-          </div>
-          {map === undefined ? null : (
-            <RoomMapLauncher gameName={map.gameName} hostId={map.hostId} title={map.title} />
-          )}
-        </div>
-        {children}
-      </div>
+      <span className="door-row-select">{selection}</span>
+      <span className="door-row-identity">{identity}</span>
+      <span className="door-row-room">{room}</span>
+      <span className="door-row-reward">{reward}</span>
+      <span className="door-row-map">
+        {map === undefined ? null : (
+          <RoomMapLauncher gameName={map.gameName} hostId={map.hostId} title={map.title} />
+        )}
+      </span>
+      <span className="door-row-secondary">{secondary}</span>
     </article>
   );
 }
 
-/** A declaration-fixed value shown in a control row's place. */
-function FixedFieldRow({
-  className,
-  label,
-  value,
-}: {
-  readonly className?: string;
-  readonly label: string;
-  readonly value: string;
-}) {
+/** The doors table's column names; each row names its own cells for assistive technology. */
+export function DoorRowsHeader() {
   return (
-    <div className={`field-control field-control-inline${className ? ` ${className}` : ''}`}>
-      <span>{label}</span>
-      <span className="fixed-room-state">{value}</span>
+    <div aria-hidden="true" className="door-rows-header">
+      <span />
+      <span>Door</span>
+      <span>Room</span>
+      <span>Reward</span>
+      <span />
+      <span />
     </div>
   );
 }
 
-function doorKicker(index: number, exitTypeLabel: string | undefined): string {
-  return exitTypeLabel === undefined ? `Door ${index}` : `Door ${index} · ${exitTypeLabel}`;
+/** A physical door's number, with its Olympus exit type where it has one. */
+export function DoorNumber({
+  index,
+  exitTypeLabel,
+}: {
+  readonly index: number;
+  readonly exitTypeLabel?: string | undefined;
+}) {
+  return (
+    <span className="door-row-number">
+      {exitTypeLabel === undefined ? `Door ${index}` : `Door ${index} · ${exitTypeLabel}`}
+    </span>
+  );
+}
+
+/** A message standing where a picker will appear once its prerequisite is chosen. */
+function DoorRowWaiting({ children }: { readonly children: string }) {
+  return (
+    <span aria-live="polite" className="door-row-waiting">
+      {children}
+    </span>
+  );
 }
 
 /** The repair's projected effect names and styles it; a projected mark owner carries the batch's mark. */
 function ExactRepairAction({
   intent,
+  onFocusedUse,
 }: {
   readonly intent: WorkspaceBatchRepairIntent | undefined;
+  /** The repair removes its own button, so a focused use hands focus on. */
+  readonly onFocusedUse: () => void;
 }) {
   const findingTarget = useFindingTarget();
   const executeIntent = useCommandIntent();
-  const adds = intent?.effect === 'addMissing';
+  if (intent === undefined) return null;
+  const adds = intent.effect === 'addMissing';
   return (
     <button
-      {...(intent?.markOwner === undefined ? {} : findingTarget(intent.markOwner))}
+      {...(intent.markOwner === undefined ? {} : findingTarget(intent.markOwner))}
       className={adds ? 'secondary-action' : 'danger-action'}
-      {...(intent === undefined ? {} : { 'data-command': intent.command.kind })}
-      disabled={intent === undefined}
-      onClick={() => intent === undefined || executeIntent(intent)}
+      data-command={intent.command.kind}
+      onClick={(event) => {
+        if (document.activeElement === event.currentTarget) onFocusedUse();
+        executeIntent(intent);
+      }}
       type="button"
     >
       {adds ? 'Add missing Preboss doors' : 'Remove unavailable doors'}
@@ -259,47 +288,90 @@ function TargetRow({
   );
   const selection = exitSelectionAddress(node.selection);
   const door = target.door;
-  const reservesAnomalyAction = node.targets.some(
-    (candidate) =>
-      candidate.anomalyTakeover !== undefined || candidate.door.room.anomaly !== undefined,
-  );
   const authorsRoom =
     node.targetInteraction === 'replaceable' &&
     door.room.roomPicker !== undefined &&
     door.room.anomaly === undefined;
+  const replaceWithAnomaly =
+    !target.selected || target.anomalyTakeover === undefined ? null : (
+      <button
+        aria-label={`Replace Door ${target.index} with Anomaly`}
+        className="quiet-action action-compact"
+        data-command="SwitchTargetToAnomaly"
+        onClick={() =>
+          dispatch(
+            authoredProjectCommandDispatched({
+              kind: 'SwitchTargetToAnomaly',
+              target: targetAddress(target.marker),
+            }),
+          )
+        }
+        type="button"
+      >
+        {target.anomalyTakeover.label}
+      </button>
+    );
   return (
-    <ExitCard
+    <DoorRow
       {...(authorsRoom ? {} : { anchor: findingAnchor(target.marker.address) })}
       ariaLabel={`${door.room.label} room offer`}
-      className="biome-target-row"
-      kicker={doorKicker(target.index, target.exitTypeLabel)}
+      identity={<DoorNumber exitTypeLabel={target.exitTypeLabel} index={target.index} />}
       map={{ gameName: door.room.gameName, hostId: target.marker.focusKey, title: door.room.label }}
+      reward={
+        <DoorRewardEditor
+          door={door}
+          focusOwner={target.marker.address}
+          idPrefix={`door-${target.marker.focusKey}`}
+          interactions={interactions}
+          layout="row"
+        />
+      }
+      room={
+        authorsRoom && door.room.roomPicker !== undefined ? (
+          <TargetRoomSelector
+            ariaLabel={`Door ${target.index} room`}
+            idPrefix={`target-${target.marker.focusKey}`}
+            interactionKey={workspaceInteractionKey(door.room.roomPicker.address)}
+            interactions={interactions}
+            label=""
+          />
+        ) : door.room.anomaly !== undefined ? (
+          <AnomalyRoomControl ariaLabel={`Door ${target.index} room`} room={door.room} />
+        ) : (
+          <FixedValueChip label={door.room.label} />
+        )
+      }
+      secondary={
+        replaceWithAnomaly === null && door.room.anomaly === undefined ? undefined : (
+          <>
+            {replaceWithAnomaly}
+            <RevertAnomalyAction doorIndex={target.index} room={door.room} />
+          </>
+        )
+      }
       {...(selectionChoice === undefined
         ? {}
         : {
             selection: (
-              <label className="picked-control">
-                <span className="visually-hidden">{`Pick ${door.room.label} from Door ${target.index}`}</span>
-                <input
-                  {...(target.physicalState === 'unavailable'
-                    ? hintProps('This saved room is no longer offered here.')
-                    : findingMark(selection))}
-                  aria-label={`Pick ${door.room.label} from Door ${target.index}`}
-                  checked={selectionInteraction?.selectedExitKey === target.exitKey}
-                  disabled={target.physicalState === 'unavailable'}
-                  name={`selection-${node.key}`}
-                  onChange={() =>
-                    dispatch(
-                      authoredProjectCommandDispatched({
-                        kind: 'SetExitSelection',
-                        selection,
-                        value: { kind: 'normal', exitKey: target.exitKey },
-                      }),
-                    )
-                  }
-                  type="radio"
-                />
-              </label>
+              <input
+                {...(target.physicalState === 'unavailable'
+                  ? hintProps('This saved room is no longer offered here.')
+                  : findingMark(selection))}
+                aria-label={`Pick ${door.room.label} from Door ${target.index}`}
+                checked={selectionInteraction?.selectedExitKey === target.exitKey}
+                disabled={target.physicalState === 'unavailable'}
+                name={`selection-${node.key}`}
+                onChange={() =>
+                  dispatch(
+                    authoredProjectCommandDispatched({
+                      kind: 'SetExitSelection',
+                      selection,
+                      value: { kind: 'normal', exitKey: target.exitKey },
+                    }),
+                  )
+                }
+                type="radio"
+              />
             ),
           })}
       state={{
@@ -307,51 +379,16 @@ function TargetRow({
         picked: target.selected,
         retained: target.retained,
       }}
-      title={door.room.label}
-    >
-      {authorsRoom && door.room.roomPicker !== undefined ? (
-        <TargetRoomSelector
-          ariaLabel={`Door ${target.index} room`}
-          idPrefix={`target-${target.marker.focusKey}`}
-          interactionKey={workspaceInteractionKey(door.room.roomPicker.address)}
-          interactions={interactions}
-          label="Room"
-        />
-      ) : null}
-      <AnomalyRoomControl room={door.room} />
-      <div className="door-reward-slot">
-        <DoorRewardEditor
-          door={door}
-          focusOwner={target.marker.address}
-          idPrefix={`door-${target.marker.focusKey}`}
-          interactions={interactions}
-        />
-      </div>
-      {reservesAnomalyAction ? (
-        <div className="anomaly-door-action-slot">
-          {!target.selected || target.anomalyTakeover === undefined ? null : (
-            <button
-              className="quiet-action action-compact"
-              data-command="SwitchTargetToAnomaly"
-              onClick={() =>
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'SwitchTargetToAnomaly',
-                    target: targetAddress(target.marker),
-                  }),
-                )
-              }
-              type="button"
-            >
-              {target.anomalyTakeover.label}
-            </button>
-          )}
-          <RevertAnomalyAction room={door.room} />
-        </div>
-      ) : null}
-    </ExitCard>
+    />
   );
 }
+
+/** What a door without a room waits on before its room can be chosen. */
+const missingTargetWaits = {
+  awaitingPriorExit: "Select the earlier door's room first",
+  awaitingBatchRewardStore: 'Select the reward pool first',
+  awaitingFieldsCageOutcome: 'Select the Fields door roll first',
+} as const;
 
 function MissingTargetRow({
   interactions,
@@ -365,49 +402,34 @@ function MissingTargetRow({
   const canEnterDecision = interaction?.kind === 'decisionEntryRoom';
   const canAuthorRoom = target.authoring.kind === 'ready' || canEnterDecision;
   return (
-    <ExitCard
+    <DoorRow
       {...(canAuthorRoom ? {} : { anchor: findingAnchor(target.marker.address) })}
       ariaLabel={`Door ${target.index} unspecified room offer`}
-      className="biome-target-row"
-      kicker={doorKicker(target.index, target.exitTypeLabel)}
+      identity={<DoorNumber exitTypeLabel={target.exitTypeLabel} index={target.index} />}
+      room={
+        canAuthorRoom ? (
+          <TargetRoomSelector
+            ariaLabel={`Door ${target.index} room`}
+            idPrefix={`target-${target.marker.focusKey}`}
+            interactionKey={target.marker.focusKey}
+            interactions={interactions}
+            label=""
+            placeholder="Choose room"
+          />
+        ) : (
+          <DoorRowWaiting>{missingTargetWaits[target.authoring.kind]}</DoorRowWaiting>
+        )
+      }
       state={{ available: true, missing: true }}
-      title="Choose room"
-    >
-      {canAuthorRoom ? (
-        <TargetRoomSelector
-          ariaLabel={`Door ${target.index} room`}
-          idPrefix={`target-${target.marker.focusKey}`}
-          interactionKey={target.marker.focusKey}
-          interactions={interactions}
-          label="Room"
-        />
-      ) : target.authoring.kind === 'awaitingPriorExit' ? (
-        <div
-          aria-live="polite"
-          className="field-control field-control-inline pending-room-status control-placeholder"
-        >
-          <span>Room</span>
-          <span className="fixed-room-state">Select the earlier door's room first</span>
-        </div>
-      ) : null}
-      {canAuthorRoom ? (
-        <div
-          aria-live="polite"
-          className="field-control field-control-inline pending-reward-status door-reward-slot control-placeholder"
-        >
-          <span>Reward</span>
-          <span className="fixed-room-state">Choose room to show reward</span>
-        </div>
-      ) : null}
-    </ExitCard>
+    />
   );
 }
 
 /**
  * An authored additional exit beside the normal doors. Presence lives on the
- * source room; the card owns selection, the destination room, and its fixed reward.
+ * source room; the row owns selection, the destination room, and its fixed reward.
  */
-function AdditionalExitCard({
+function AdditionalExitRow({
   control,
   interactions,
   selection,
@@ -427,53 +449,67 @@ function AdditionalExitCard({
     chaos?.selectIntent ??
     requireWorkspaceInteraction(interactions.zagreusContracts, key).selectIntent;
   const room = control.door.room;
+  const art = doorArtwork[control.exitTypeKey];
   return (
-    <ExitCard
+    <DoorRow
       ariaLabel={`${control.exitTypeLabel} exit`}
-      {...(doorArtwork[control.exitTypeKey] == null
-        ? {}
-        : { icon: doorArtwork[control.exitTypeKey]! })}
-      kicker={control.exitTypeLabel}
+      identity={
+        art == null ? (
+          <span className="door-row-number">{control.exitTypeLabel}</span>
+        ) : (
+          <span
+            {...hintProps(control.exitTypeLabel, undefined, control.exitTypeLabel)}
+            aria-label={control.exitTypeLabel}
+            className="door-row-art"
+            role="img"
+            tabIndex={0}
+          >
+            <img alt="" src={art} />
+          </span>
+        )
+      }
       map={{ gameName: room.gameName, hostId: key, title: room.label }}
-      selection={
-        <label className="picked-control">
-          <span className="visually-hidden">{`Take ${control.exitTypeLabel}`}</span>
-          <input
-            {...findingMark(selection)}
-            aria-label={`Take ${control.exitTypeLabel}`}
-            checked={control.selected}
-            name={selectionName}
-            onChange={() => executeIntent(selectIntent)}
-            type="radio"
+      reward={
+        <span className="door-row-rewards">
+          <span className="row-reward-value">
+            <FixedValueChip
+              icon={rewardIcon(control.fixedRewardType)}
+              label={control.fixedRewardLabel}
+            />
+          </span>
+        </span>
+      }
+      room={
+        'kind' in control && chaos !== undefined ? (
+          <ContextualPicker
+            ariaLabel={`${control.exitTypeLabel} room`}
+            id={`chaos-room-${room.occurrenceId}`}
+            label=""
+            layout="inline"
+            model={declaredChoicesPicker(
+              control.mapChoices.map((choice) => ({ ...choice, key: choice.value })),
+              room.gameName,
+            )}
+            onSelect={(gameName) => executeIntent(chaos.mapIntent(gameName))}
+            placeholder="Choose a room"
+            triggerSize="content"
           />
-        </label>
+        ) : (
+          <FixedValueChip label={room.label} />
+        )
+      }
+      selection={
+        <input
+          {...findingMark(selection)}
+          aria-label={`Take ${control.exitTypeLabel}`}
+          checked={control.selected}
+          name={selectionName}
+          onChange={() => executeIntent(selectIntent)}
+          type="radio"
+        />
       }
       state={{ available: true, picked: control.selected }}
-      title={room.label}
-    >
-      {'kind' in control && chaos !== undefined ? (
-        <ContextualPicker
-          id={`chaos-room-${room.occurrenceId}`}
-          label="Room"
-          layout="inline"
-          model={declaredChoicesPicker(
-            control.mapChoices.map((choice) => ({ ...choice, key: choice.value })),
-            room.gameName,
-          )}
-          onSelect={(gameName) => executeIntent(chaos.mapIntent(gameName))}
-          placeholder="Choose a room"
-        />
-      ) : (
-        <FixedFieldRow className="door-fixed-room" label="Room" value={room.label} />
-      )}
-      <div className="door-reward-slot">
-        <FixedFieldRow
-          className="door-fixed-reward"
-          label="Reward"
-          value={control.fixedRewardLabel}
-        />
-      </div>
-    </ExitCard>
+    />
   );
 }
 
@@ -512,73 +548,140 @@ export function SelectedContinuationAction({
   );
 }
 
-/** The ship-decided pool: a fixed value at the picker's height, linking to its wheel. */
-function InheritedRewardStoreField({
-  inherited,
-  nodeKey,
+/**
+ * A value a note explains: its footnote symbol follows it, it is named by its
+ * label and value and described by the note, and hovering or focusing either
+ * highlights both.
+ */
+function NoteMarked({
+  children,
+  labelledBy,
+  mark,
 }: {
-  readonly inherited: WorkspaceInheritedRewardStore;
-  readonly nodeKey: string;
+  readonly children: ReactNode;
+  /** The ids of the value's label and of its text, which together name it. */
+  readonly labelledBy: string;
+  readonly mark: DoorNoteMark | undefined;
 }) {
-  const dispatch = useAppDispatch();
-  const labelId = useId();
+  if (mark === undefined) return children;
   return (
-    <div className="field-control field-control-inline batch-inherited-pool">
-      <span id={labelId}>Reward Pool</span>
-      <span aria-labelledby={labelId} className="batch-pool-value" role="group">
-        <strong>{inherited.label}</strong>
-        <span className="batch-pool-value-tag">from ship combat</span>
-        <button
-          className="semantic-focus-link"
-          data-workspace-node={inherited.wheel.focusKey}
-          id={`${nodeKey}-inherited-reward-store-wheel`}
-          onClick={() => dispatch(semanticOwnerFocused(inherited.wheel.address))}
-          type="button"
-        >
-          Open wheel
-        </button>
-      </span>
+    <span
+      aria-describedby={mark.noteId}
+      aria-labelledby={labelledBy}
+      className="door-note-marked"
+      data-note-active={mark.active || undefined}
+      onBlur={() => mark.setActive(false)}
+      onFocus={() => mark.setActive(true)}
+      onMouseEnter={() => mark.setActive(true)}
+      onMouseLeave={() => mark.setActive(false)}
+      role="group"
+      tabIndex={0}
+    >
+      {children}
+      <sup aria-hidden="true" className="door-note-symbol">
+        {mark.symbol}
+      </sup>
+    </span>
+  );
+}
+
+/** The pool line: the batch's pool, then what the selected exit counts where that differs. */
+export function RewardPoolLine({
+  effective,
+  effectiveMark,
+  fixedLabel,
+  label,
+  picker,
+  poolMark,
+}: {
+  readonly effective?: WorkspaceEffectiveRewardPool | undefined;
+  readonly effectiveMark?: DoorNoteMark | undefined;
+  /** A pool decided elsewhere, shown as a plain value. */
+  readonly fixedLabel?: string | undefined;
+  readonly label: string;
+  readonly picker?: ReactNode;
+  readonly poolMark?: DoorNoteMark | undefined;
+}) {
+  const labelId = useId();
+  const valueId = useId();
+  const effectiveLabelId = useId();
+  const effectiveValueId = useId();
+  return (
+    <div className="door-pool-line">
+      {picker ?? (
+        <span aria-labelledby={labelId} className="door-pool-value" role="group">
+          <span className="door-pool-label" id={labelId}>
+            {label}
+          </span>
+          {fixedLabel === undefined ? null : (
+            <NoteMarked labelledBy={`${labelId} ${valueId}`} mark={poolMark}>
+              <FixedValueChip label={fixedLabel} textId={valueId} />
+            </NoteMarked>
+          )}
+        </span>
+      )}
+      {effective === undefined ? null : (
+        <span className="door-pool-effective">
+          <span aria-hidden="true" className="row-reward-arrow">
+            →
+          </span>
+          <span className="visually-hidden" id={effectiveLabelId}>
+            Effective Pool
+          </span>
+          <NoteMarked labelledBy={`${effectiveLabelId} ${effectiveValueId}`} mark={effectiveMark}>
+            <span aria-labelledby={effectiveLabelId} role="status">
+              <span id={effectiveValueId}>{effective.label}</span>
+            </span>
+          </NoteMarked>
+        </span>
+      )}
     </div>
   );
 }
 
-/** The pool row: the batch's pool beside what the selected exit counts, both always in place. */
-function RewardPoolRow({
-  nodeKey,
-  pool,
-  picker,
-}: {
-  readonly nodeKey: string;
-  readonly pool: WorkspaceBatchRewardPool;
-  readonly picker: ReactNode;
-}) {
-  const effectiveLabelId = useId();
+/** The doors tab's side column of batch facts; absent when there are none. */
+export function DoorNotes({ items }: { readonly items: readonly DoorNoteItem[] }) {
+  const titleId = useId();
+  if (items.length === 0) return null;
   return (
-    <div className="batch-reward-pool">
-      {picker ??
-        (pool.inherited === undefined ? (
-          <div aria-hidden="true" className="field-control field-control-inline">
-            <span>Reward Pool</span>
-            <span className="batch-pool-value" />
-          </div>
-        ) : (
-          <InheritedRewardStoreField inherited={pool.inherited} nodeKey={nodeKey} />
-        ))}
-      <div className="field-control field-control-inline batch-effective-pool">
-        <span id={effectiveLabelId}>Effective Pool</span>
-        <span aria-labelledby={effectiveLabelId} className="batch-pool-value" role="status">
-          {pool.effective ?? ''}
-        </span>
-      </div>
-    </div>
+    <aside aria-labelledby={titleId} className="door-notes">
+      <h4 className="door-notes-title" id={titleId}>
+        Notes
+      </h4>
+      <ul>
+        {items.map(({ key, mark, text }) =>
+          mark === undefined ? (
+            <li key={key}>{text}</li>
+          ) : (
+            <li
+              aria-labelledby={mark.noteId}
+              data-note-active={mark.active || undefined}
+              key={key}
+              onBlur={() => mark.setActive(false)}
+              onFocus={() => mark.setActive(true)}
+              onMouseEnter={() => mark.setActive(true)}
+              onMouseLeave={() => mark.setActive(false)}
+              tabIndex={0}
+            >
+              <span aria-hidden="true" className="door-note-symbol">
+                {mark.symbol}
+              </span>
+              <span id={mark.noteId}>{text}</span>
+            </li>
+          ),
+        )}
+      </ul>
+    </aside>
   );
 }
 
 function BatchSettings({
   interactions,
+  markFor,
   node,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
   readonly node: BatchNode;
 }) {
   const executeIntent = useCommandIntent();
@@ -599,8 +702,12 @@ function BatchSettings({
   return (
     <>
       {node.rewardPool === undefined ? null : (
-        <RewardPoolRow
-          nodeKey={node.key}
+        <RewardPoolLine
+          effective={node.rewardPool.effective}
+          effectiveMark={markFor('effective')}
+          fixedLabel={node.rewardPool.inherited?.label}
+          poolMark={markFor('pool')}
+          label={node.rewardStoreLabel ?? 'Reward Pool'}
           picker={
             store === undefined ? undefined : (
               <CandidatePicker
@@ -612,7 +719,6 @@ function BatchSettings({
               />
             )
           }
-          pool={node.rewardPool}
         />
       )}
       {fields === undefined && node.fields === undefined ? null : (
@@ -642,11 +748,6 @@ function BatchSettings({
                   </dd>
                 </div>
               </dl>
-              <p className="door-information-note">
-                {node.fields.cageTargetCount === 0
-                  ? 'No offered room uses the Fields multi-cage count; Max still affects later Fields rolls.'
-                  : 'Cage rewards appear bottom to top on the door'}
-              </p>
             </>
           )}
         </div>
@@ -666,6 +767,7 @@ export function BatchWorkbench({
   readonly node: BatchNode;
 }) {
   const findingAnchor = useFindingAnchor();
+  const notes = useDoorNotes(node.notes);
   const removal =
     node.persistence === 'authored' && node.source.kind === 'occurrence'
       ? requireWorkspaceInteraction(
@@ -673,68 +775,85 @@ export function BatchWorkbench({
           workspaceInteractionKey(node.owner),
         )
       : undefined;
-  const exitSelection =
-    (node.persistence === 'uncommitted' && node.targets.length === 0) ||
-    (node.targets.length === 1 && node.zagreusContract === undefined && node.chaos === undefined)
-      ? undefined
-      : requireWorkspaceInteraction(
-          interactions.exitSelections,
-          workspaceInteractionKey(node.selection.address),
-        );
+  const doorsId = semanticOwnerControlElementId(exitSelectionAddress(node.selection));
+  const refocusDoors = useRef(false);
+  useEffect(() => {
+    if (!refocusDoors.current || node.repairIntent !== undefined) return;
+    refocusDoors.current = false;
+    document.getElementById(doorsId)?.focus();
+  });
   return (
     <section
-      className="decision-card biome-batch-workbench"
+      aria-label={`${label} room offers`}
+      className="biome-batch-workbench door-workbench"
       data-batch-kind={node.kind}
       data-topology-state={node.topologyState}
       {...(node.repairIntent?.markOwner === undefined ? findingAnchor(node.owner) : {})}
       tabIndex={-1}
     >
-      <header className="decision-heading">
-        <div>
-          <p className="card-kicker">{label}</p>
-          <h3>Configure door offer</h3>
+      {node.runState === undefined ? null : (
+        <div className="owner-markers door-workbench-markers">
+          <RunStateLauncher launcher={node.runState} />
         </div>
-        <div className="owner-markers">
-          {node.runState === undefined ? null : <RunStateLauncher launcher={node.runState} />}
+      )}
+      <div className="door-body">
+        <div className="door-batch">
+          <BatchSettings interactions={interactions} markFor={notes.markFor} node={node} />
         </div>
-      </header>
-      <BatchSettings interactions={interactions} node={node} />
-      <div
-        aria-label={`${label} room offers`}
-        className="exit-list"
-        {...findingAnchor(exitSelectionAddress(node.selection), {
-          // Navigation lands on the first door that can still be picked.
-          focusTarget: (list) =>
-            list.querySelector<HTMLElement>('input[type="radio"]:not(:disabled)'),
-        })}
-        tabIndex={-1}
-        role={exitSelection === undefined ? 'group' : 'radiogroup'}
-      >
-        {node.targets.map((target) => (
-          <TargetRow interactions={interactions} key={target.exitKey} node={node} target={target} />
-        ))}
-        {node.kind === 'takeoverBatch'
-          ? null
-          : node.missingTargets.map((target) => (
-              <MissingTargetRow interactions={interactions} key={target.exitKey} target={target} />
-            ))}
-        {[node.zagreusContract, node.chaos].map((control) =>
-          control === undefined ? null : (
-            <AdditionalExitCard
-              control={control}
+        <DoorNotes items={notes.items} />
+        <div
+          aria-label="Doors"
+          className="door-rows"
+          {...findingAnchor(exitSelectionAddress(node.selection), {
+            // Navigation lands on the first door that can still be picked.
+            focusTarget: (list) =>
+              list.querySelector<HTMLElement>('input[type="radio"]:not(:disabled)'),
+          })}
+          tabIndex={-1}
+          // The rows stay named articles; their radios group natively by name.
+          role="group"
+        >
+          <DoorRowsHeader />
+          {node.targets.map((target) => (
+            <TargetRow
               interactions={interactions}
-              key={workspaceInteractionKey(control.owner)}
-              selection={exitSelectionAddress(node.selection)}
-              selectionName={`selection-${node.key}`}
+              key={target.exitKey}
+              node={node}
+              target={target}
             />
-          ),
+          ))}
+          {node.kind === 'takeoverBatch'
+            ? null
+            : node.missingTargets.map((target) => (
+                <MissingTargetRow
+                  interactions={interactions}
+                  key={target.exitKey}
+                  target={target}
+                />
+              ))}
+          {[node.zagreusContract, node.chaos].map((control) =>
+            control === undefined ? null : (
+              <AdditionalExitRow
+                control={control}
+                interactions={interactions}
+                key={workspaceInteractionKey(control.owner)}
+                selection={exitSelectionAddress(node.selection)}
+                selectionName={`selection-${node.key}`}
+              />
+            ),
+          )}
+        </div>
+        {node.rerolls === undefined ? null : (
+          <RoomRerolls interactions={interactions} rerolls={node.rerolls} />
         )}
       </div>
-      {node.rerolls === undefined ? null : (
-        <RoomRerolls interactions={interactions} rerolls={node.rerolls} />
-      )}
       <div className="workbench-action-row">
-        <ExactRepairAction intent={node.repairIntent} />
+        <ExactRepairAction
+          intent={node.repairIntent}
+          onFocusedUse={() => {
+            refocusDoors.current = true;
+          }}
+        />
         <SelectedContinuationAction
           continuation={node.selectedContinuation}
           disabledHint={batchContinuationHint(node)}

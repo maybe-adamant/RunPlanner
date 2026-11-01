@@ -343,12 +343,13 @@ describe('DecisionWorkbench', () => {
 
     const gate = screen.getByRole('article', { name: 'Chaos gate exit' });
     const normalDoor = screen.getByRole('article', { name: 'Combat 02 room offer' });
-    expect(within(normalDoor).getByText('Room', { selector: 'label' })).toBeTruthy();
+    expect(within(normalDoor).getByRole('button', { name: /^Door \d+ room$/ })).toBeTruthy();
     expect(within(normalDoor).queryByText('Door 1 room', { selector: 'label' })).toBeNull();
     expect(gate.dataset.picked).toBe('false');
-    expect(within(gate).getByText('Chaos gate', { selector: '.card-kicker' })).toBeTruthy();
-    expect(within(gate).getByRole('heading', { level: 4, name: 'Chaos 01' })).toBeTruthy();
-    expect(within(gate).getByLabelText('Room').textContent).toContain('Chaos 01');
+    expect(within(gate).getByRole('img', { name: 'Chaos gate' })).toBeTruthy();
+    expect(within(gate).getByRole('button', { name: 'Chaos gate room' }).textContent).toContain(
+      'Chaos 01',
+    );
     expect(within(gate).getByText('Chaos Blessing')).toBeTruthy();
     expect(within(gate).queryByRole('button', { name: /^Open .* room$/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Open next room' })).toHaveProperty(
@@ -603,7 +604,7 @@ describe('DecisionWorkbench', () => {
       ),
     );
     const gate = screen.getByRole('article', { name: 'Chaos gate exit' });
-    expect(within(gate).getByLabelText('Room')).toBeTruthy();
+    expect(within(gate).getByRole('button', { name: 'Chaos gate room' })).toBeTruthy();
     expect(within(gate).getByLabelText('Take Chaos gate')).toBeTruthy();
   });
 
@@ -635,10 +636,8 @@ describe('DecisionWorkbench', () => {
 
     const contract = screen.getByRole('article', { name: 'Infernal Contract exit' });
     expect(contract.dataset.picked).toBe('false');
-    expect(
-      within(contract).getByText('Infernal Contract', { selector: '.card-kicker' }),
-    ).toBeTruthy();
-    expect(within(contract).getByRole('heading', { level: 4, name: 'Zagreus' })).toBeTruthy();
+    expect(within(contract).getByRole('img', { name: 'Infernal Contract' })).toBeTruthy();
+    expect(within(contract).getByText('Zagreus')).toBeTruthy();
     expect(within(contract).getByText('Champion of Elysium')).toBeTruthy();
     expect(within(contract).queryByRole('button', { name: /Remove/ })).toBeNull();
     expect(screen.getByLabelText('Take Infernal Contract')).toBeTruthy();
@@ -852,7 +851,6 @@ describe('DecisionWorkbench', () => {
     const blockedDoor = screen.getByRole('article', {
       name: 'Door 2 unspecified room offer',
     });
-    expect(within(blockedDoor).getByText('Room')).toBeTruthy();
     expect(within(blockedDoor).getByText("Select the earlier door's room first")).toBeTruthy();
     expect(within(blockedDoor).queryByText('Reward')).toBeNull();
 
@@ -866,10 +864,9 @@ describe('DecisionWorkbench', () => {
       expect(screen.getByRole('button', { name: 'Door 2 room' })).toHaveProperty('disabled', false),
     );
     const readyDoor = screen.getByRole('article', { name: 'Door 2 unspecified room offer' });
-    expect(within(readyDoor).getByText('Reward')).toBeTruthy();
-    expect(within(readyDoor).getByText('Choose room to show reward')).toBeTruthy();
+    expect(within(readyDoor).queryByRole('button', { name: 'Reward' })).toBeNull();
     const rewardTarget = document.querySelector<HTMLElement>(
-      '.biome-target-row:not([data-missing="true"]) .door-reward-list [data-semantic-owner]',
+      'article:not([data-missing="true"]) [aria-label$="door rewards"] [data-semantic-owner]',
     );
     if (rewardTarget === null) throw new Error('F selected offer reward target is missing');
     await waitFor(() => expect(document.activeElement).toBe(rewardTarget));
@@ -880,7 +877,7 @@ describe('DecisionWorkbench', () => {
       targetOwner,
     );
     const authoredOffer = document.querySelector<HTMLElement>(
-      '.biome-target-row:not([data-missing="true"])',
+      'article[aria-label$="room offer"]:not([data-missing="true"])',
     );
     if (authoredOffer === null) throw new Error('F authored room offer is missing');
     expect(within(authoredOffer).queryByRole('button', { name: /^Open .+ room$/ })).toBeNull();
@@ -959,10 +956,10 @@ describe('DecisionWorkbench', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
     const indoorRooms = within(await screen.findByRole('group', { name: 'Indoor' }));
-    await view.user.type(screen.getByRole('combobox', { name: 'Room choices' }), 'Indoor');
+    await view.user.type(screen.getByRole('combobox', { name: 'Door 1 room choices' }), 'Indoor');
     await view.user.click(indoorRooms.getByRole('option', { name: /Combat 04 \(2I\)/ }));
 
-    expect(screen.getByRole('heading', { name: 'Combat 04' })).toBeTruthy();
+    expect(screen.getByRole('article', { name: 'Combat 04 room offer' })).toBeTruthy();
     expect(screen.getByText('Door 1 · Indoor')).toBeTruthy();
     expect(screen.getByText('Door 2 · Outdoor')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Door 1 room' }).textContent).toContain('Combat 04');
@@ -1055,7 +1052,7 @@ describe('DecisionWorkbench', () => {
     const unpicked = screen
       .getAllByRole('radio')
       .find((radio) => !(radio as HTMLInputElement).checked);
-    const offer = unpicked?.closest<HTMLElement>('.biome-target-row');
+    const offer = unpicked?.closest<HTMLElement>('article');
     if (unpicked === undefined || offer === null || offer === undefined) {
       throw new Error('P Decision 1 has no unpicked room offer');
     }
@@ -1117,7 +1114,7 @@ describe('DecisionWorkbench', () => {
     const focusBefore = view.application.store.getState().editorSession.focusedSemanticOwner;
 
     await view.user.click(
-      within(card).getByRole('button', { name: `View map for ${target.room.label}` }),
+      within(card).getByRole('button', { name: `View map of ${target.room.label}` }),
     );
 
     expect(screen.getByRole('heading', { name: `${target.room.label} map` })).toBeTruthy();
@@ -1351,7 +1348,7 @@ describe('DecisionWorkbench', () => {
     );
 
     expect(screen.getByText('Cage rewards appear bottom to top on the door')).toBeTruthy();
-    expect(screen.queryByText(/No offered room uses the Fields multi-cage count/)).toBeNull();
+    expect(screen.queryByText('No room here uses the cage count')).toBeNull();
 
     for (const roomLabel of ['Combat 05', 'Combat 04']) {
       const card = screen.getByRole('article', { name: `${roomLabel} room offer` });
@@ -1376,15 +1373,9 @@ describe('DecisionWorkbench', () => {
       return node === undefined ? undefined : { kind: 'node', node };
     });
 
-    expect(
-      screen.getByText(
-        'No offered room uses the Fields multi-cage count; Max still affects later Fields rolls.',
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByText('Cage rewards appear bottom to top on the door')).toBeNull();
-    expect(document.querySelectorAll('.fields-batch-editor > .door-information-note')).toHaveLength(
-      1,
-    );
+    const notes = within(screen.getByRole('complementary', { name: 'Notes' }));
+    expect(notes.getByText('No room here uses the cage count')).toBeTruthy();
+    expect(notes.queryByText('Cage rewards appear bottom to top on the door')).toBeNull();
   });
 
   it('authors multi-door G and P Prebosses through their required Door 1 choices', async () => {
@@ -1617,9 +1608,16 @@ describe('DecisionWorkbench', () => {
 
     expect(screen.getByLabelText('Reward Pool')).toBeTruthy();
     expect(screen.getByRole('status', { name: 'Effective Pool' }).textContent).toBe('Major Reward');
+    // The counted pool is described by the note saying why it differs.
+    expect(
+      screen.getByRole('group', {
+        name: 'Effective Pool Major Reward',
+        description: 'Forced by Combat 01',
+      }),
+    ).toBeTruthy();
   });
 
-  it('keeps one fixed two-half pool row across editable, inherited and discarded pools', () => {
+  it('names the effective pool only where it differs across editable, inherited and discarded pools', () => {
     const fOwner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
@@ -1651,15 +1649,11 @@ describe('DecisionWorkbench', () => {
     ];
     const effective: string[] = [];
     for (const render of cases) {
-      const { container } = render();
-      const rows = container.querySelectorAll('.batch-reward-pool');
-      expect(rows).toHaveLength(1);
-      expect(rows[0]!.children).toHaveLength(2);
-      expect(rows[0]!.lastElementChild?.classList.contains('batch-effective-pool')).toBe(true);
-      effective.push(screen.getByRole('status', { name: 'Effective Pool' }).textContent ?? '');
+      render();
+      effective.push(screen.queryByRole('status', { name: 'Effective Pool' })?.textContent ?? '');
       cleanup();
     }
-    expect(effective).toEqual(['', '', 'Discarded by Combat 07']);
+    expect(effective).toEqual(['', '', 'None']);
   });
 
   it('states the batch pool before a room is picked on both kinds of O source', () => {
@@ -1679,11 +1673,17 @@ describe('DecisionWorkbench', () => {
     const ship = rebuild(oOccurrenceIds.combat01);
     renderStaticDecisionWorkbench(ship.project, 'Surface', 'O', subjectForOwner(ship.decision));
     // The door is still waiting for its room; the pool already reads.
-    expect(screen.getByRole('button', { name: 'Door 1 room' }).textContent).toMatch(/Select/);
+    expect(screen.getByRole('button', { name: 'Door 1 room' }).textContent).toMatch(/Choose room/);
     const inherited = screen.getByRole('group', { name: 'Reward Pool' });
-    expect(within(inherited).getByText('Major Reward')).toBeTruthy();
-    expect(within(inherited).getByText('from ship combat')).toBeTruthy();
-    expect(within(inherited).getByRole('button', { name: 'Open wheel' })).toBeTruthy();
+    expect(within(inherited).getByText(/Major Reward/)).toBeTruthy();
+    // The wheel chose it, so it is a fixed value with no link, described by its note.
+    expect(within(inherited).queryByRole('button')).toBeNull();
+    expect(
+      within(inherited).getByRole('group', {
+        name: 'Reward Pool Major Reward',
+        description: "Chosen at this room's last reward wheel",
+      }),
+    ).toBeTruthy();
     cleanup();
 
     // An ordinary door publishes its pool picker just as early.
@@ -1694,7 +1694,7 @@ describe('DecisionWorkbench', () => {
       'O',
       subjectForOwner(ordinary.decision),
     );
-    expect(screen.getByRole('button', { name: 'Door 1 room' }).textContent).toMatch(/Select/);
+    expect(screen.getByRole('button', { name: 'Door 1 room' }).textContent).toMatch(/Choose room/);
     expect(screen.getByLabelText('Reward Pool')).toBeTruthy();
   });
 
@@ -1707,7 +1707,8 @@ describe('DecisionWorkbench', () => {
     renderStaticDecisionWorkbench(project, 'Surface', 'O', subjectForOwner(shipOwner));
 
     // The ship decided the pool: a fixed value under the same label, never a picker.
-    expect(screen.getByLabelText('Reward Pool').getAttribute('role')).toBe('group');
+    expect(screen.getByRole('group', { name: 'Reward Pool' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Reward Pool' })).toBeNull();
     cleanup();
 
     const ordinaryOwner = createExitDecisionAddress(oBiome, {
@@ -1836,7 +1837,6 @@ describe('DecisionWorkbench', () => {
       await view.user.click(preboss);
       if (fixture.biomeKey === 'O') {
         const offer = screen.getByRole('article', { name: / room offer$/ });
-        expect(offer.querySelector('.door-reward-slot')).toBeTruthy();
         expect(within(offer).queryByRole('button', { name: 'Reward' })).toBeNull();
       }
       expect(work.filter((event) => event.kind === 'queryBatch')).toHaveLength(2);
@@ -1978,10 +1978,7 @@ describe('DecisionWorkbench', () => {
     expect(retainedRepair.dataset.command).toBe('ReconcileBatchExitCapacity');
     expect(retainedRepair.classList.contains('danger-action')).toBe(true);
     await retained.user.click(retainedRepair);
-    expect(
-      (screen.getByRole('button', { name: 'Remove unavailable doors' }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Remove unavailable doors' })).toBeNull();
     expect(
       workspaceBiome(retained.application, 'Underworld', 'G').nodes.find(
         (node) => node.kind === 'takeoverBatch' && ownerMatches(node, retainedOwner),
@@ -2053,6 +2050,35 @@ describe('DecisionWorkbench', () => {
     ).toMatchObject({ targets: [{ exitKey: 'exit1' }] });
   });
 
+  it('hands focus to the doors once a keyboard repair removes its own button', async () => {
+    const owner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFOccurrenceId(1, 1),
+    });
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+      gameName: 'F_Combat01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, {
+        kind: 'occurrence',
+        occurrenceId: goldenFStartId,
+      }),
+      storeKey: 'RunProgress',
+    });
+    const view = renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
+    act(() => screen.getByRole('button', { name: 'Remove unavailable doors' }).focus());
+    await view.user.keyboard('{Enter}');
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Remove unavailable doors' })).toBeNull(),
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('group', { name: 'Doors' })),
+    );
+  });
+
   it('renders mixed Preboss decisions through the shared batch workbench', () => {
     renderStaticDecisionWorkbench(
       createGoldenFGHIProject(),
@@ -2061,7 +2087,7 @@ describe('DecisionWorkbench', () => {
       firstNodeOfKind('mixedBatch'),
     );
     expect(document.querySelector('[data-batch-kind="mixedBatch"]')).not.toBeNull();
-    expect(screen.getByRole('heading', { level: 3, name: 'Configure door offer' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Doors' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open next room' })).not.toHaveProperty(
       'disabled',
       true,
@@ -2169,7 +2195,9 @@ describe('DecisionWorkbench', () => {
         within(targetCard).getByLabelText(`Pick ${target.room.label} from Door ${target.index}`),
       );
       await waitFor(() =>
-        expect(screen.getAllByRole('button', { name: 'Replace with Anomaly' })).toHaveLength(1),
+        expect(
+          screen.getAllByRole('button', { name: /^Replace Door \d+ with Anomaly$/ }),
+        ).toHaveLength(1),
       );
       targetCard = screen
         .getAllByLabelText(`${target.room.label} room offer`)
@@ -2178,19 +2206,17 @@ describe('DecisionWorkbench', () => {
         );
       if (targetCard === undefined) throw new Error('Selected Anomaly-capable target is missing');
     }
-    expect(screen.getAllByRole('button', { name: 'Replace with Anomaly' })).toHaveLength(1);
-    expect(
-      screen
-        .getAllByLabelText(/ room offer$/)
-        .every((card) => card.querySelector('.anomaly-door-action-slot') !== null),
-    ).toBe(true);
-    await view.user.click(within(targetCard).getByRole('button', { name: 'Replace with Anomaly' }));
-    expect(screen.queryByLabelText(`Door ${target.index} room`)).toBeNull();
+    expect(screen.getAllByRole('button', { name: /^Replace Door \d+ with Anomaly$/ })).toHaveLength(
+      1,
+    );
+    await view.user.click(
+      within(targetCard).getByRole('button', { name: /^Replace Door \d+ with Anomaly$/ }),
+    );
     const anomalyCard = screen
       .getAllByLabelText(/ room offer$/)
       .find((card) => within(card).queryByRole('button', { name: /^Restore / }));
     if (anomalyCard === undefined) throw new Error('Authored Anomaly target card is missing');
-    expect(within(anomalyCard).getByLabelText('Room')).toBeTruthy();
+    expect(within(anomalyCard).getByRole('button', { name: /^Door \d+ room$/ })).toBeTruthy();
     const commands = dispatch.mock.calls
       .map(([action]) => action)
       .filter(authoredProjectCommandDispatched.match)

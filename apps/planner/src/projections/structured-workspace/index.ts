@@ -36,6 +36,8 @@ export type {
   WorkspaceAuthoringFrontier,
   WorkspaceBatchRepairIntent,
   WorkspaceBatchRewardPool,
+  WorkspaceDoorNote,
+  WorkspaceEffectiveRewardPool,
   WorkspaceBiome,
   WorkspaceBiomeField,
   WorkspaceDoorContract,

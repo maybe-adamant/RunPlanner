@@ -11,8 +11,10 @@ import { clockworkCountdownArtwork } from '@planner/ui/artwork/clockwork/clockwo
 import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
-import { useEffect } from 'react';
+import { offerIcon } from '@planner/ui/artwork/rewardIcon';
+import { useEffect, type ReactNode } from 'react';
 
 /** Shared editor for any complete room-owned offer reward surface. */
 export function RewardSurfaceEditor({
@@ -20,6 +22,7 @@ export function RewardSurfaceEditor({
   idPrefix,
   interactions,
   focusOwner,
+  layout = 'field',
   rewards,
   visibility,
 }: {
@@ -27,6 +30,8 @@ export function RewardSurfaceEditor({
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly focusOwner?: SemanticAddress;
+  /** `row` is a door row's reward cell: values as chips, a reroll inline after an arrow. */
+  readonly layout?: 'field' | 'row';
   readonly rewards: readonly WorkspaceDoorReward[];
   readonly visibility: 'hidden' | 'visible';
 }) {
@@ -50,6 +55,17 @@ export function RewardSurfaceEditor({
     target?.focus({ preventScroll: true });
     target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   }, [firstEditableReward, focusOwner, focusedOwner, idPrefix]);
+  if (layout === 'row') {
+    return (
+      <RowRewardSurface
+        ariaLabel={ariaLabel}
+        idPrefix={idPrefix}
+        interactions={interactions}
+        rewards={rewards}
+        visibility={visibility}
+      />
+    );
+  }
   if (rewards.length === 0) {
     return (
       <div aria-label={ariaLabel} className="door-reward-list">
@@ -111,6 +127,130 @@ export function RewardSurfaceEditor({
   );
 }
 
+/** Adopts the last reroll's reward into a kept reward that no longer matches, or drops it. */
+function RerolledRewardRepair({
+  repair,
+}: {
+  readonly repair: NonNullable<WorkspaceDoorReward['rerolledRewardRepair']>;
+}) {
+  const executeIntent = useCommandIntent();
+  const findingMark = useFindingMark();
+  return (
+    <button
+      {...findingMark(repair.owner, 'rerolledReward')}
+      className="secondary-action action-compact"
+      onClick={() =>
+        executeIntent({
+          command:
+            repair.repair === 'adopt'
+              ? { kind: 'AdoptRerolledReward', owner: repair.owner }
+              : { kind: 'DropRerolledReward', owner: repair.owner },
+        })
+      }
+      type="button"
+    >
+      {repair.repair === 'adopt' ? 'Use last reroll' : 'Drop rerolled reward'}
+    </button>
+  );
+}
+
+/** A reward's first draw, then its final one after an arrow where rerolls changed it. */
+function RowReward({
+  first,
+  reward,
+}: {
+  readonly first: ReactNode;
+  readonly reward: WorkspaceDoorReward;
+}) {
+  const repair = reward.rerolledRewardRepair;
+  return (
+    <span className="row-reward-value">
+      {first}
+      {reward.rerolledSummary === undefined ? null : (
+        <>
+          <span aria-hidden="true" className="row-reward-arrow">
+            →
+          </span>
+          <span className="visually-hidden">Rerolled to </span>
+          <FixedValueChip
+            icon={reward.rerolledOffer === undefined ? undefined : offerIcon(reward.rerolledOffer)}
+            label={reward.rerolledSummary}
+          />
+        </>
+      )}
+      {repair === undefined ? null : <RerolledRewardRepair repair={repair} />}
+    </span>
+  );
+}
+
+function RowRewardSurface({
+  ariaLabel,
+  idPrefix,
+  interactions,
+  rewards,
+  visibility,
+}: {
+  readonly ariaLabel: string;
+  readonly idPrefix: string;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly rewards: readonly WorkspaceDoorReward[];
+  readonly visibility: 'hidden' | 'visible';
+}) {
+  const findingAnchor = useFindingAnchor();
+  const firstEditable = rewards.findIndex((reward) => reward.control !== undefined);
+  const hidden =
+    visibility === 'hidden' ? <span className="timeline-row-tag">Hidden on door</span> : null;
+  if (rewards.length === 0) {
+    return (
+      <div aria-label={ariaLabel} className="door-row-rewards">
+        <span aria-live="polite" className="row-reward-value">
+          <FixedValueChip id={`${idPrefix}-status`} label="No reward" />
+        </span>
+      </div>
+    );
+  }
+  const labelled = rewards.length > 1;
+  return (
+    <div aria-label={ariaLabel} className="door-row-rewards" data-multiple={labelled || undefined}>
+      {rewards.map((reward, index) => {
+        const status = firstEditable < 0 && index === 0;
+        const first =
+          reward.control === undefined ? (
+            <span
+              {...findingAnchor(reward.marker.address)}
+              aria-live={status ? 'polite' : undefined}
+              className="row-reward-fixed"
+              {...(status ? { id: `${idPrefix}-status`, tabIndex: -1 } : {})}
+            >
+              {labelled ? <span className="row-reward-label">{reward.label}</span> : null}
+              <FixedValueChip
+                icon={
+                  reward.clockworkGoalsRemaining !== undefined
+                    ? (clockworkCountdownArtwork[String(reward.clockworkGoalsRemaining)] ??
+                      undefined)
+                    : reward.offer === null
+                      ? undefined
+                      : offerIcon(reward.offer)
+                }
+                label={reward.summary}
+              />
+            </span>
+          ) : (
+            <RewardControlEditor
+              {...(labelled ? {} : { ariaLabel: 'Reward' })}
+              control={reward.control}
+              idPrefix={`${idPrefix}-${reward.key}`}
+              interactions={interactions}
+              label={labelled ? reward.label : ''}
+            />
+          );
+        return <RowReward first={first} key={reward.key} reward={reward} />;
+      })}
+      {hidden}
+    </div>
+  );
+}
+
 /** A rerolled reward's final draw, and the repair of a kept reward that no longer matches. */
 export function RerolledRewardLine({
   reward,
@@ -120,8 +260,6 @@ export function RerolledRewardLine({
     'rerollLineReserved' | 'rerolledRewardRepair' | 'rerolledSummary'
   >;
 }) {
-  const executeIntent = useCommandIntent();
-  const findingMark = useFindingMark();
   const repair = reward.rerolledRewardRepair;
   // Where rerolls are enabled the line keeps its place, so rerolling shifts nothing.
   if (reward.rerolledSummary === undefined && repair === undefined)
@@ -137,23 +275,7 @@ export function RerolledRewardLine({
           {reward.rerolledSummary}
         </span>
       )}
-      {repair === undefined ? null : (
-        <button
-          {...findingMark(repair.owner, 'rerolledReward')}
-          className="secondary-action action-compact"
-          onClick={() =>
-            executeIntent({
-              command:
-                repair.repair === 'adopt'
-                  ? { kind: 'AdoptRerolledReward', owner: repair.owner }
-                  : { kind: 'DropRerolledReward', owner: repair.owner },
-            })
-          }
-          type="button"
-        >
-          {repair.repair === 'adopt' ? 'Use last reroll' : 'Drop rerolled reward'}
-        </button>
-      )}
+      {repair === undefined ? null : <RerolledRewardRepair repair={repair} />}
     </div>
   );
 }
@@ -164,17 +286,20 @@ export function DoorRewardEditor({
   focusOwner,
   idPrefix,
   interactions,
+  layout = 'field',
 }: {
   readonly door: WorkspaceDoorContract;
   readonly focusOwner?: SemanticAddress;
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly layout?: 'field' | 'row';
 }) {
   return (
     <RewardSurfaceEditor
       ariaLabel={`${door.room.label} door rewards`}
       idPrefix={idPrefix}
       interactions={interactions}
+      layout={layout}
       {...(focusOwner === undefined ? {} : { focusOwner })}
       rewards={door.offerRewardSurface.rewards}
       visibility={door.offerRewardSurface.visibility}

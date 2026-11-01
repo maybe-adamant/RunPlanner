@@ -5,6 +5,7 @@ export type ActionIconName =
   | 'duplicate'
   | 'edit'
   | 'load'
+  | 'map'
   | 'move'
   | 'openInEditor'
   | 'redo'
@@ -75,6 +76,13 @@ export function ActionIcon({ name }: { readonly name: ActionIconName }) {
         );
       case 'rename':
         return <path d="M10.5 2.5 13.5 5.5 6 13H3v-3zM9 4l3 3" />;
+      case 'map':
+        return (
+          <>
+            <path d="M2.5 4 6 2.5l4 1.5 3.5-1.5V12L10 13.5 6 12l-3.5 1.5z" />
+            <path d="M6 2.5V12M10 4v9.5" />
+          </>
+        );
       case 'trash':
         return <path d="M3.5 4.5h9M6 2.5h4l.5 2h-5l.5-2Zm-1 2 .5 9h5l.5-9M7 7v4M9 7v4" />;
       case 'openInEditor':

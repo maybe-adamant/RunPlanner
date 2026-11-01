@@ -41,7 +41,7 @@ describe('HubRoomCards', () => {
     const historyBeforeMap =
       view.application.store.getState().projectWorkspace.history!.past.length;
     await view.user.click(
-      within(closedCard).getByRole('button', { name: 'View map for Combat 04' }),
+      within(closedCard).getByRole('button', { name: 'View map of Combat 04' }),
     );
     expect(screen.getByRole('heading', { name: 'Combat 04 map' })).toBeTruthy();
     expect(screen.getByText('N_Combat04')).toBeTruthy();
@@ -63,7 +63,7 @@ describe('HubRoomCards', () => {
     expect(overviewSlotOrder()).toEqual(slotOrderBefore);
     expect(openedCard.querySelector('.room-kind')).toBeNull();
     await view.user.click(
-      within(openedCard).getByRole('button', { name: 'View map for Combat 04' }),
+      within(openedCard).getByRole('button', { name: 'View map of Combat 04' }),
     );
     expect(screen.getByRole('heading', { name: 'Combat 04 map' })).toBeTruthy();
     await view.user.click(screen.getByRole('button', { name: 'Close map' }));

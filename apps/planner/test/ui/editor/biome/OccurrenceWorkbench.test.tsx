@@ -98,7 +98,7 @@ describe('OccurrenceWorkbench', () => {
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     const focusBefore = view.application.store.getState().editorSession.focusedSemanticOwner;
 
-    await view.user.click(screen.getByRole('button', { name: `View map for ${node.room.label}` }));
+    await view.user.click(screen.getByRole('button', { name: `View map of ${node.room.label}` }));
 
     expect(screen.getByRole('heading', { name: `${node.room.label} map` })).toBeTruthy();
     expect(screen.getByText(node.room.gameName)).toBeTruthy();

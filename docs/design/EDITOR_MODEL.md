@@ -389,7 +389,8 @@ as a phase skipped with Fig Leaf). A Nemesis combat's Outcome choice is the
 exception: it shows only while that combat is selected, always with a value
 (Win when none is stored), and a dormant outcome stays hidden. The application
 never computes applicability itself. Explanatory notes sit beneath their owning
-control, candidate explanations stay inside the picker (its trigger keeps its
+control, except a door batch's batch-wide facts, which sit in Room Doors' Notes
+column, candidate explanations stay inside the picker (its trigger keeps its
 accessible description and invalid state without adding layout space), and placement or
 rejected-drag feedback floats outside the layout.
 
@@ -407,6 +408,17 @@ terms such as frontier or canonical remain implementation vocabulary. An
 authored continuation is selected; only evaluated history proves it entered.
 Explain unavailable evidence without inventing a local error. Reason text
 never depends on color alone.
+
+A picker reads as an editable value everywhere in the app: a faint tint with
+an accent underline, as wide as its choice, strengthened on hover and while
+open, with a focus ring, a muted disabled form that still shows its value, and
+candidate and finding states layered on top. A value the user cannot change
+here is plain text at a picker's height and inset, with no editable signal.
+Dialog openers (trait chips and other launchers) keep their own treatment, so
+opening an editor never reads as choosing a value. The dotted underline is
+reserved for origin hints. Icon-only actions (the room map button, the reroll
+die) carry the full action and subject as their accessible name and a short
+hint.
 
 Commands use Primary, Secondary, Quiet or Danger treatment, or a named
 specialized surface. At most one local Primary marks the forward/commit

@@ -1,5 +1,5 @@
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type {
   CountedRewardCandidateOwner,
@@ -115,11 +115,13 @@ export function RewardValueEditor({
 /** A staged reward picker over one resolver: type first, then a Boon or Trial god. */
 export function RewardOfferPicker({
   ariaLabel,
+  defaultOpen = false,
   findingTarget,
   id,
   label,
   labelIcon,
   offer,
+  onDismiss,
   onReplace,
   initialStep = 'type',
   placeholder = 'Choose reward',
@@ -130,11 +132,15 @@ export function RewardOfferPicker({
   unresolvedSeed,
 }: {
   readonly ariaLabel?: string;
+  /** Opens on mount, continuing a pick that started in another picker. */
+  readonly defaultOpen?: boolean;
   readonly findingTarget?: FindingTargetProps;
   readonly id: string;
   readonly label: string;
   readonly labelIcon?: ArtworkSource | undefined;
   readonly offer: ResolvedRewardOffer | null;
+  /** Called when the planner closes the picker without choosing. */
+  readonly onDismiss?: () => void;
   readonly onReplace: (offer: ResolvedRewardOffer) => void;
   readonly initialStep?: RewardPickerStep;
   readonly placeholder?: string;
@@ -151,7 +157,12 @@ export function RewardOfferPicker({
     () => Object.freeze({ authoredOfferKey, resolver }),
     [authoredOfferKey, resolver],
   );
-  const [interaction, setInteraction] = useState<RewardInteraction>();
+  const [interaction, setInteraction] = useState<RewardInteraction | undefined>(() => {
+    const seed = offer ?? unresolvedSeed;
+    return defaultOpen
+      ? Object.freeze({ context, ...(seed === undefined ? {} : { seed }), step: initialStep })
+      : undefined;
+  });
   const interactionMatchesContext = interaction === undefined || interaction.context === context;
   const active = interactionMatchesContext ? interaction : undefined;
 
@@ -169,6 +180,12 @@ export function RewardOfferPicker({
   const startInteraction = (): void => {
     begin(offer ?? unresolvedSeed, initialStep);
   };
+
+  useEffect(() => {
+    if (defaultOpen) domain.activate();
+    // A picker that opens on mount loads its choices once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const cancelInteraction = (): void => {
     setInteraction(undefined);
@@ -243,6 +260,7 @@ export function RewardOfferPicker({
             startInteraction();
           } else {
             cancelInteraction();
+            onDismiss?.();
           }
         }}
         onSelect={select}

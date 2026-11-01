@@ -217,7 +217,11 @@ describe('O door-store pair relation', () => {
     const effectiveAt = (source: string) => batchNode(workspace, source).rewardPool?.effective;
 
     // A ship combat records no entered store, so the carried pool is discarded.
-    expect(effectiveAt('surface-o-combat04')).toBe('Discarded by Combat 07');
+    expect(effectiveAt('surface-o-combat04')).toEqual({ label: 'None' });
+    expect(batchNode(workspace, 'surface-o-combat04').notes).toEqual([
+      { target: 'pool', text: "Chosen at this room's last reward wheel" },
+      { target: 'effective', text: 'Discarded by Combat 07' },
+    ]);
 
     // Devotion forces RunProgress, which this ship also rolled: nothing differs.
     expect(batchNode(workspace, 'surface-o-combat01').rewardPool?.inherited?.storeKey).toBe(
@@ -239,7 +243,8 @@ describe('O door-store pair relation', () => {
     });
     const node = batchNode(project(flipped), 'surface-o-combat01');
     expect(node.rewardPool?.inherited?.storeKey).toBe('MetaProgress');
-    expect(node.rewardPool?.effective).toBe('Major Reward');
+    expect(node.rewardPool?.effective).toEqual({ label: 'Major Reward' });
+    expect(node.notes).toContainEqual({ target: 'effective', text: 'Forced by Trial' });
   });
 
   it('reads the selected exit of O_Combat01 -> O_Shop01, contract included', () => {
@@ -261,20 +266,22 @@ describe('O door-store pair relation', () => {
       kind: 'additional',
       additionalExitKey: 'zagreusContract',
     });
-    expect(batchNode(project(differing), 'o-pair-relation-shop').rewardPool?.effective).toBe(
-      'Major Reward · Infernal Contract',
-    );
+    const differingNode = batchNode(project(differing), 'o-pair-relation-shop');
+    expect(differingNode.rewardPool?.effective).toEqual({ label: 'Major Reward' });
+    expect(differingNode.notes).toEqual([
+      { target: 'effective', text: 'Counted by the Infernal Contract' },
+    ]);
 
     const door = selectAt(contractShop('RunProgress'), 'o-pair-relation-shop', {
       kind: 'normal',
       exitKey: 'exit1',
     });
-    expect(batchNode(project(door), 'o-pair-relation-shop').rewardPool?.effective).toBe(
-      'Discarded by Combat 02',
-    );
+    const doorNode = batchNode(project(door), 'o-pair-relation-shop');
+    expect(doorNode.rewardPool?.effective).toEqual({ label: 'None' });
+    expect(doorNode.notes).toEqual([{ target: 'effective', text: 'Discarded by Combat 02' }]);
   });
 
-  it('reports the ship-decided store on a Fountain and links to the deciding wheel', () => {
+  it('reports the ship-decided store on a Fountain', () => {
     const workspace = project(fountainBehind('surface-o-combat07'));
     const node = batchNode(workspace, 'surface-o-combat07');
     expect(node.targets.map((target) => target.room.gameName)).toEqual(['O_Reprieve01']);
@@ -284,18 +291,6 @@ describe('O door-store pair relation', () => {
     // A two-phase ship settles on wheel1, which this fixture rolled MetaProgress.
     expect(inherited.storeKey).toBe('MetaProgress');
     expect(inherited.label).toBe('Minor Reward');
-    expect(inherited.wheel.address).toEqual(
-      createRewardWheelAddress(oBiome, occurrence('surface-o-combat07'), 'wheel1'),
-    );
-
-    // The link is navigable: the wheel marker resolves to the ship's own workbench.
-    const destination = workspace.focusByOwner.get(inherited.wheel.focusKey);
-    expect(destination).toBeDefined();
-    const ship = workspace.route.biomes
-      .find((biome) => biome.biomeKey === destination?.biomeKey)
-      ?.nodes.find((candidate) => candidate.key === destination?.nodeKey);
-    if (ship?.kind !== 'occurrenceWorkbench') throw new Error('the wheel link is not a ship');
-    expect(ship.room.occurrenceId).toBe(occurrence('surface-o-combat07'));
 
     expect(node.rewardStore).toBeUndefined();
     expect(storeSelector(workspace, 'surface-o-combat07')).toBeUndefined();
@@ -307,9 +302,7 @@ describe('O door-store pair relation', () => {
     const workspace = project(fountainBehind('surface-o-combat07', { encounterCount: 3 }));
     const inherited = batchNode(workspace, 'surface-o-combat07').rewardPool?.inherited;
     if (inherited === undefined) throw new Error('the Fountain lost its inherited store');
-    expect(inherited.wheel.address).toEqual(
-      createRewardWheelAddress(oBiome, occurrence('surface-o-combat07'), 'wheel2'),
-    );
+    // wheel2 rolled RunProgress where wheel1 rolled MetaProgress.
     expect(inherited.storeKey).toBe('RunProgress');
   });
 

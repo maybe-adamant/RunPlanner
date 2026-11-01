@@ -1,3 +1,5 @@
+import { hintProps } from '@planner/ui/controls/hint';
+import { ActionIcon } from '@planner/ui/controls/ActionIcon';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 
 import { roomMapAssetFor } from './roomMapAssets';
@@ -99,14 +101,11 @@ export function RoomMapDialog({
 export function RoomMapLauncher({
   gameName,
   hostId,
-  label = 'View Map',
   title,
 }: {
   readonly gameName: string;
   /** Changes of the containing owner close an inherited inspection dialog. */
   readonly hostId: string;
-  /** Dense room identities keep the accessible action name while using a short label. */
-  readonly label?: string;
   readonly title: string;
 }) {
   const launcherRef = useRef<HTMLButtonElement>(null);
@@ -124,13 +123,14 @@ export function RoomMapLauncher({
   return (
     <>
       <button
-        aria-label={`View map for ${title}`}
-        className="room-map-launcher quiet-action action-compact"
+        aria-label={`View map of ${title}`}
+        className="room-map-launcher icon-action"
         onClick={() => setOpen(true)}
         ref={launcherRef}
         type="button"
+        {...hintProps('View map', undefined, `View map of ${title}`)}
       >
-        {label}
+        <ActionIcon name="map" />
       </button>
       {open ? (
         <RoomMapDialog

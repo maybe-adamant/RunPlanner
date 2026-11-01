@@ -248,6 +248,7 @@ export interface WorkspaceZagreusContractControl {
   readonly exitTypeLabel: string;
   /** The destination room's declared fixed reward. */
   readonly fixedRewardLabel: string;
+  readonly fixedRewardType: string;
   readonly marker: WorkspaceMarker;
   readonly owner: AdditionalExitAddress;
   readonly selected: boolean;
@@ -266,6 +267,7 @@ export interface WorkspaceChaosExitControl {
   readonly exitTypeLabel: string;
   /** The destination room's declared fixed reward. */
   readonly fixedRewardLabel: string;
+  readonly fixedRewardType: string;
   readonly forced: boolean;
   readonly kind: 'chaos';
   readonly mapChoices: readonly WorkspaceInteractionChoice<string>[];

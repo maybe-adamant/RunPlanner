@@ -110,6 +110,7 @@ import {
   type SemanticAddress,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
+import type { WorkspaceDoorNote, WorkspaceEffectiveRewardPool } from './contracts/structure';
 import type { RoomDeclaration, TraitRarity } from '@run-planner/engine/catalog-schema';
 import type {
   CandidateOptionProjection,
@@ -575,13 +576,19 @@ export type WorkspaceBossDoorRewardStoreControl =
       readonly selected?: string;
       readonly storeChoices: readonly WorkspaceInteractionChoice<string>[];
     }
+  /** The boss pins its entered store: the pool is fixed, for the reason told. */
   | {
       readonly kind: 'fixed';
-      readonly summary: string;
+      readonly label: string;
+      readonly notes: readonly WorkspaceDoorNote[];
     }
+  /** The boss records no entered store: whatever the door carries counts as none. */
   | {
       readonly kind: 'ignored';
-      readonly summary: string;
+      /** The pool the door carries, where one is authored. */
+      readonly label?: string;
+      readonly effective: WorkspaceEffectiveRewardPool;
+      readonly notes: readonly WorkspaceDoorNote[];
     };
 
 export interface WorkspaceRoomSummary {

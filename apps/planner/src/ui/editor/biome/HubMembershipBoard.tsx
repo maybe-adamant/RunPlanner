@@ -285,7 +285,6 @@ export function ClosedHubRoomOption({
             <RoomMapLauncher
               gameName={slot.gameName}
               hostId={slot.marker.focusKey}
-              label="Map"
               title={slot.label}
             />
           </div>

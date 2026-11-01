@@ -37,7 +37,7 @@ import {
   artemisSourceAnomalyProject,
   cageBeforeAthenaProject,
 } from '@planner-test/support/finding-states';
-import { cleanup, render, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, expect, it } from 'vitest';
 import { renderWorkspace, workspaceProjection } from '@planner-test/support/biome-workbench';
@@ -160,10 +160,11 @@ it('rings every pickable door of a missing selection and focuses the first', asy
     </Provider>,
   );
   await view.user.click(findings.container.querySelector('button')!);
-  const radios = [...document.querySelectorAll<HTMLInputElement>('.exit-list input[type="radio"]')];
+  const doors = screen.getByRole('group', { name: 'Doors' });
+  const radios = within(doors).getAllByRole<HTMLInputElement>('radio');
   expect(radios.length).toBeGreaterThan(1);
   expect(paintedFindings()).toEqual(radios.filter((radio) => !radio.disabled));
-  expect(document.querySelector('.exit-list')?.hasAttribute('data-has-findings')).toBe(false);
+  expect(doors.hasAttribute('data-has-findings')).toBe(false);
   await waitFor(() => expect(document.activeElement).toBe(radios.find((radio) => !radio.disabled)));
 });
 

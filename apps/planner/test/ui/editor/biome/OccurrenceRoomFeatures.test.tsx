@@ -111,7 +111,7 @@ describe('OccurrenceRoomFeatures', () => {
     expect(screen.getByRole('heading', { level: 3 })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Incoming reward' })).toBeTruthy();
     expect(screen.queryByLabelText('Room')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Restore Combat 01' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Restore Combat 01/ })).toBeNull();
     view.unmount();
     cleanup();
 
@@ -123,8 +123,12 @@ describe('OccurrenceRoomFeatures', () => {
       application,
     );
     expect(screen.getByLabelText('Reward')).toBeTruthy();
-    const map = screen.getByLabelText('Room');
-    const restore = screen.getByRole('button', { name: 'Restore Combat 01' });
+    const map = screen.getByRole('button', { name: /^Door \d+ room$/ });
+    // Restore names the door it acts on, as Replace with Anomaly does.
+    const doorNumber = /^Door (\d+) room$/.exec(map.getAttribute('aria-label') ?? '')?.[1];
+    const restore = screen.getByRole('button', {
+      name: `Restore Combat 01 on Door ${doorNumber}`,
+    });
     expect(map.textContent).toContain('Anomaly 01');
     expect(screen.queryByRole('checkbox', { name: 'Cleared' })).toBeNull();
     await door.user.click(map);
@@ -206,11 +210,11 @@ describe('OccurrenceRoomFeatures', () => {
     });
     renderOccurrenceWorkbench(invalid, 'Underworld', 'G', occurrenceById(occurrenceId));
     expect(screen.queryByLabelText('Room')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Restore Combat 01' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Restore Combat 01/ })).toBeNull();
     cleanup();
     renderDecisionWorkbench(invalid, 'Underworld', 'G', decisionContainingOccurrence(occurrenceId));
-    expect(screen.getByLabelText('Room')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Restore Combat 01' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Door \d+ room$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Restore Combat 01 on Door \d+$/ })).toBeTruthy();
   });
   it('authors a Gold trade immediately from Event through its action-row interaction and Undo', async () => {
     const occurrenceId = goldenFOccurrenceId(5, 1);

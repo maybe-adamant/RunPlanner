@@ -1,3 +1,5 @@
+import { RewardPoolLine } from './DecisionWorkbench';
+import type { DoorNoteMark, DoorNoteTarget } from './doorNotes';
 import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
 import type { ReactNode } from 'react';
 import type {
@@ -112,24 +114,42 @@ function BossDoorRewardStoreEditor({
 export function BossDoorRewardPoolRow({
   idPrefix,
   interactions,
+  markFor,
   store,
 }: {
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly markFor: (target: DoorNoteTarget) => DoorNoteMark | undefined;
   readonly store: WorkspaceBossDoorRewardStoreControl;
 }) {
-  return (
-    <div className="door-reward-list">
-      {store.kind === 'editor' ? (
-        <BossDoorRewardStoreEditor idPrefix={idPrefix} interactions={interactions} store={store} />
-      ) : (
-        <div className="field-control field-control-inline door-fixed-reward">
-          <span>Reward Pool</span>
-          <span className="fixed-room-state">{store.summary}</span>
-        </div>
-      )}
-    </div>
-  );
+  switch (store.kind) {
+    case 'editor':
+      return (
+        <RewardPoolLine
+          label={store.label}
+          picker={
+            <BossDoorRewardStoreEditor
+              idPrefix={idPrefix}
+              interactions={interactions}
+              store={store}
+            />
+          }
+        />
+      );
+    case 'fixed':
+      return (
+        <RewardPoolLine fixedLabel={store.label} label="Reward Pool" poolMark={markFor('pool')} />
+      );
+    case 'ignored':
+      return (
+        <RewardPoolLine
+          effective={store.effective}
+          effectiveMark={markFor('effective')}
+          fixedLabel={store.label}
+          label="Reward Pool"
+        />
+      );
+  }
 }
 
 export function DirectRoomWorkbench({

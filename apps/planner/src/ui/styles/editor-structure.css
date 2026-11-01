@@ -207,29 +207,98 @@ select {
   background: #202128;
 }
 
-.contextual-picker-trigger,
-.encounter-fixed-value {
+/*
+ * A picker reads as an editable value: a faint tint with an accent underline,
+ * as wide as its choice. Hover and an open list strengthen both.
+ */
+.contextual-picker-trigger {
   display: flex;
-  width: 100%;
-  min-height: 36px;
+  width: auto;
+  max-width: 100%;
+  min-height: 30px;
+  justify-self: start;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 6px 9px;
-  border: 1px solid #42434d;
-  border-radius: 8px;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 3px 7px;
+  border: 0;
+  border-radius: 4px 4px 0 0;
   color: #f2ede5;
-  background: #202128;
+  background: rgb(255 255 255 / 4%);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--selection-accent) 45%, transparent);
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  /* A press that ends on a trigger never leaves its text selected. */
+  user-select: none;
+  transition:
+    box-shadow 120ms,
+    background-color 120ms,
+    color 120ms;
+}
+
+.contextual-picker-trigger:hover:not(:disabled),
+.contextual-picker-trigger[data-state='open'] {
+  color: #fff;
+  background: color-mix(in srgb, var(--selection-accent) 12%, transparent);
+  box-shadow: inset 0 -2px 0 var(--selection-accent);
+}
+
+.contextual-picker-trigger:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--selection-accent) 80%, transparent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* A disabled picker still shows its value, without the editable signal. */
+.contextual-picker-trigger:disabled {
+  color: #b9b4bf;
+  background: rgb(255 255 255 / 2%);
+  box-shadow: inset 0 -1px 0 #3d3c46;
+  cursor: not-allowed;
+}
+
+.contextual-picker-trigger[data-candidate-state='forced'] {
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--attention) 70%, transparent);
+}
+
+.contextual-picker-trigger[data-candidate-state='impossible'] {
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--finding) 80%, transparent);
+  color: #f0b0b0;
+}
+
+.contextual-picker-trigger[data-candidate-state='unassessed'] {
+  color: #c4becb;
+}
+
+/* A fixed value: plain text at a picker's height and text inset, with no signal. */
+.encounter-fixed-value,
+.fixed-value-chip {
+  display: flex;
+  width: auto;
+  min-height: 30px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 3px 7px;
+  color: #f2ede5;
   text-align: left;
 }
 
-.contextual-picker-trigger {
-  cursor: pointer;
-  /* A press that ends on a trigger never leaves its text selected. */
-  user-select: none;
+.fixed-value-chip {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
 }
 
-/* A content-sized picker's trigger is as wide as the choice it shows. */
+.fixed-value-chip-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A content-sized picker's field is as wide as the choice it shows. */
 .contextual-picker[data-trigger-size='content'] {
   width: auto;
   justify-self: start;
@@ -238,31 +307,6 @@ select {
 
 .contextual-picker.field-control-inline[data-trigger-size='content'] {
   grid-template-columns: max-content max-content;
-}
-
-.contextual-picker[data-trigger-size='content'] .contextual-picker-trigger {
-  width: auto;
-  justify-self: start;
-}
-
-.contextual-picker-trigger:hover:not(:disabled),
-.contextual-picker-trigger[data-state='open'] {
-  border-color: #65636f;
-  background: #25262e;
-}
-
-.contextual-picker-trigger[data-candidate-state='forced'] {
-  border-color: color-mix(in srgb, var(--attention) 55%, transparent);
-}
-
-.contextual-picker-trigger[data-candidate-state='impossible'] {
-  border-color: color-mix(in srgb, var(--finding) 62%, transparent);
-  color: #f0b0b0;
-}
-
-.contextual-picker-trigger[data-candidate-state='unassessed'] {
-  border-style: dashed;
-  color: #c4becb;
 }
 
 /* Every label the trigger can show shares one cell; only the current one is visible. */
@@ -730,7 +774,6 @@ select {
 }
 
 .door-fixed-reward > .fixed-room-state,
-.door-fixed-room > .fixed-room-state,
 .door-reward-list > .fixed-room-state,
 .pending-room-status > .fixed-room-state,
 .pending-reward-status > .fixed-room-state {
@@ -740,8 +783,7 @@ select {
 }
 
 /* Door card fixed values take a control's height and text inset so rows line up across cards. */
-.door-fixed-reward > .fixed-room-state,
-.door-fixed-room > .fixed-room-state {
+.door-fixed-reward > .fixed-room-state {
   display: flex;
   min-height: 36px;
   align-items: center;
@@ -763,17 +805,6 @@ select {
   margin: 0;
   padding: 0;
   border: 0;
-}
-
-.anomaly-revert-action {
-  margin: 0;
-}
-
-.anomaly-door-action-slot {
-  display: flex;
-  min-height: 28px;
-  align-items: flex-start;
-  margin-top: 10px;
 }
 
 .room-selector {
@@ -842,46 +873,6 @@ select {
   gap: 14px;
   padding: 14px 16px;
   border-bottom: 1px solid #34353e;
-}
-
-.batch-reward-pool {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
-  padding: 12px 14px 0;
-}
-
-/* Pool values take a picker's height so the row never moves as they change. */
-.batch-pool-value {
-  display: flex;
-  height: 36px;
-  min-width: 0;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 9px;
-  overflow: hidden;
-  border: 1px solid #353640;
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 0.95rem;
-  white-space: nowrap;
-}
-
-.batch-pool-value:empty {
-  border-style: dashed;
-}
-
-.batch-pool-value > strong {
-  font-weight: 600;
-}
-
-.batch-pool-value-tag {
-  color: #aaa5af;
-  font-size: 0.78rem;
-}
-
-.batch-pool-value > .semantic-focus-link {
-  margin-left: auto;
 }
 
 .decision-heading h3,
@@ -956,11 +947,6 @@ select {
   padding: 14px;
 }
 
-.door-reward-slot {
-  min-height: 36px;
-}
-
-.door-reward-slot,
 .start-room-entry-reward {
   margin-top: 12px;
 }
@@ -983,16 +969,6 @@ select {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
-}
-
-.exit-door-icon {
-  flex: 0 0 auto;
-  width: 2.4rem;
-  height: 2.4rem;
-}
-
-.exit-door-icon + div {
-  margin-right: auto;
 }
 
 /* The map action keeps one line beside the title. */
@@ -1264,7 +1240,7 @@ select {
 
 .room-rerolls-heading {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
 }
 
@@ -1274,55 +1250,12 @@ select {
   font-size: 0.92rem;
 }
 
-.room-rerolls-pool {
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
 .room-rerolls-list {
   display: grid;
   gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-/* Every row: # | target | reward | remove, so the reward column never shifts. */
-.room-reroll-row {
-  display: grid;
-  grid-template-columns: 1.4rem minmax(7rem, 11rem) minmax(0, 24rem) 2rem;
-  align-items: center;
-  gap: 10px;
-}
-
-/* A Hub stay's list also moves its rows: handle | # | target | reward | remove. */
-.room-rerolls[data-movable='true'] .room-reroll-row {
-  grid-template-columns: 24px 1.4rem minmax(7rem, 11rem) minmax(0, 24rem) 2rem;
-}
-
-.room-reroll-row .field-control {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.room-reroll-row .field-control > label {
-  display: none;
-}
-
-.room-reroll-target {
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.room-reroll-index {
-  color: var(--muted);
-  font-size: 0.8rem;
-  text-align: right;
 }
 
 /* The final draw sits under the first, in the picker's column. */
@@ -1336,4 +1269,455 @@ select {
   padding-left: calc(7.5rem + 10px);
   color: var(--text);
   font-size: 0.88rem;
+}
+
+/*
+ * Room Doors: the pool line, then one row per exit in a shared grid of
+ * select | door number or exit art | room | reward | map | secondary. Every
+ * column is as wide as its widest value, and pickers size to their choice.
+ */
+.door-workbench {
+  container: door-workbench / inline-size;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.door-workbench > .workbench-action-row {
+  padding-top: 12px;
+  border-top: 1px solid #34353e;
+}
+
+.door-workbench-markers {
+  justify-content: flex-end;
+}
+
+.door-pool-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+}
+
+.door-pool-value {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.door-pool-label,
+:is(.door-pool-line, .door-workbench .fields-batch-editor) > .contextual-picker > label,
+.door-pool-line .field-control-inline > span:first-child {
+  color: #9d99a4;
+  font-size: 0.84rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.door-pool-effective {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.door-rows {
+  --door-select-track: 36px;
+  display: grid;
+  /* A working width like the timeline's, so room, reward and map read as one row. */
+  width: min(46rem, 100%);
+  grid-template-columns:
+    var(--door-select-track) minmax(4.5rem, 0.8fr) minmax(8rem, 1.6fr)
+    minmax(10rem, 2.6fr) 2.5rem minmax(0, auto);
+  align-items: center;
+  min-width: 0;
+}
+
+/* A lone door has no radio, and its column keeps only the row's inset. */
+.door-rows:not(:has(.door-row-select > *)) {
+  --door-select-track: 8px;
+}
+
+.door-rows-header,
+.door-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+}
+
+/* The table's quiet header: small, muted column names. */
+.door-rows-header {
+  padding: 0 8px 4px 0;
+  border-bottom: 1px solid #2c2d35;
+  color: #8f8a96;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.door-row {
+  min-height: 44px;
+  padding: 4px 8px 4px 0;
+  border-bottom: 1px solid #26272e;
+  outline: none;
+}
+
+.door-row[data-available='false'] {
+  background: rgb(78 70 70 / 18%);
+}
+
+.door-row[data-available='false'] .door-row-room,
+.door-row[data-available='false'] .door-row-identity {
+  opacity: 0.6;
+}
+
+.door-row[data-picked='true'] {
+  background: color-mix(in srgb, var(--selection-accent) 6%, transparent);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--selection-accent) 70%, transparent);
+}
+
+.door-row[data-focused='true'] {
+  box-shadow: inset 0 0 0 2px rgb(174 152 202 / 40%);
+}
+
+.door-row > span,
+.door-rows-header > span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Cells space themselves, so the empty radio column of a lone door takes no room. */
+:is(.door-row, .door-rows-header) > span:not(:empty, :last-child) {
+  padding-right: 12px;
+}
+
+/* The first column carries the row's leading inset. */
+:is(.door-row, .door-rows-header) > span:first-child {
+  padding-left: 8px;
+}
+
+.door-row-select > input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--selection-accent);
+}
+
+.door-row-number {
+  color: #c8c3cc;
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.door-row-art {
+  display: inline-flex;
+  border-radius: 6px;
+}
+
+.door-row-art > img {
+  width: 2rem;
+  height: 2rem;
+}
+
+.door-row-waiting {
+  color: var(--muted);
+  font-size: 0.86rem;
+  white-space: nowrap;
+}
+
+/* Pickers in door, pool and reroll rows read inline: each trigger sizes to its choice. */
+:is(.door-row, .door-pool-line, .room-reroll-row, .door-workbench .fields-batch-editor)
+  .contextual-picker {
+  width: auto;
+  justify-self: start;
+}
+
+:is(.door-row, .door-pool-line, .room-reroll-row, .door-workbench .fields-batch-editor)
+  .contextual-picker.field-control-inline {
+  grid-template-columns: max-content max-content;
+}
+
+:is(.door-row, .room-reroll-row) .reward-value-editor {
+  display: inline-grid;
+}
+
+.door-row-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.door-row-rewards[data-multiple='true'] {
+  display: grid;
+  justify-items: start;
+}
+
+.row-reward-value,
+.row-reward-fixed {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.row-reward-label {
+  color: #9d99a4;
+  font-size: 0.84rem;
+}
+
+.row-reward-arrow {
+  color: var(--muted);
+}
+
+.fixed-value-chip-icon {
+  flex: 0 0 auto;
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+/* Narrow panels give each exit two lines: identity and room, then reward and actions. */
+@container door-workbench (max-width: 40rem) {
+  .door-rows {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .door-rows-header {
+    display: none;
+  }
+
+  .door-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    row-gap: 6px;
+  }
+
+  .door-row-select {
+    grid-row: 1 / span 2;
+  }
+
+  .door-row > span:not(.door-row-select) {
+    grid-column: 2;
+    flex-wrap: wrap;
+  }
+}
+
+/* Each press: Reroll | target | arrow | reward | remove, aligned across presses. */
+.room-rerolls:not([data-movable='true']) .room-rerolls-list {
+  grid-template-columns: repeat(5, auto);
+  justify-content: start;
+  column-gap: 8px;
+}
+
+.room-rerolls:not([data-movable='true']) .room-reroll-row {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+}
+
+.room-rerolls:not([data-movable='true']) .room-reroll-append {
+  grid-column: 1 / -1;
+}
+
+.room-reroll-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.room-reroll-verb,
+.room-rerolls-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.room-reroll-verb > img,
+.room-rerolls-count > img {
+  width: 1.5rem;
+  height: 1.5rem;
+  /* A faint rim lifts the dark die off the dark panel. */
+  filter: drop-shadow(0 0 0.5px rgb(255 255 255 / 85%)) drop-shadow(0 0 2px rgb(255 255 255 / 25%));
+}
+
+.room-rerolls-count {
+  color: #e3dde8;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.room-reroll-index {
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.room-reroll-target {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* The Fields roll and its facts read as one compact line under the pool. */
+.door-workbench .fields-batch-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  padding: 0;
+}
+
+.door-workbench .fields-batch-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}
+
+.door-workbench .fields-batch-summary div {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.door-workbench .fields-batch-summary :is(dt, dd) {
+  margin: 0;
+  font-size: 0.84rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.door-workbench .fields-batch-editor > .door-information-note {
+  flex-basis: 100%;
+}
+
+/*
+ * Doors and their batch notes: beside the table where the panel is wide; on
+ * narrow panels between the batch line and the table. No notes, no room.
+ */
+.door-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px 1.5rem;
+  min-width: 0;
+}
+
+.door-batch {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.door-batch:empty {
+  display: none;
+}
+
+.door-body > .room-rerolls {
+  padding: 12px 0 0;
+}
+
+@container door-workbench (min-width: 62rem) {
+  .door-body:has(> .door-notes) {
+    grid-template-columns: minmax(0, 46rem) minmax(12rem, 18rem);
+    align-items: start;
+  }
+
+  .door-body:has(> .door-notes) > :not(.door-notes) {
+    grid-column: 1;
+  }
+
+  /* The notes start level with the table and run beside the rest. */
+  .door-body > .door-notes {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+  }
+
+  .door-body:has(> .door-batch:empty) > .door-notes {
+    grid-row: 1 / span 2;
+  }
+}
+
+.door-notes {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.door-notes-title {
+  margin: 0;
+  color: #aaa7af;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.door-notes ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #d8c9a6;
+  font-size: 0.84rem;
+}
+
+/* A note's footnote symbol: after the value it explains, and leading the note. */
+.door-note-symbol {
+  margin-inline-start: 2px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.door-notes li > .door-note-symbol {
+  margin-inline: 0 6px;
+  vertical-align: super;
+}
+
+/* One box for every marked value, so a fixed chip and plain text highlight alike. */
+.door-note-marked {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: 4px;
+  outline: none;
+}
+
+.door-note-marked > .fixed-value-chip {
+  min-height: 0;
+  padding: 0;
+}
+
+.door-note-marked > .door-note-symbol {
+  align-self: flex-start;
+  margin-top: 3px;
+}
+
+.door-notes li[tabindex] {
+  border-radius: 4px;
+  outline: none;
+}
+
+/* Hovering or focusing a value or its note highlights both. */
+:is(.door-note-marked, .door-notes li)[data-note-active] {
+  background: color-mix(in srgb, var(--selection-accent) 14%, transparent);
+}
+
+:is(.door-note-marked, .door-notes li[tabindex]):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--selection-accent) 80%, transparent);
+  outline-offset: 2px;
 }

@@ -56,7 +56,6 @@ export function OpenHubRoomCard({
             <RoomMapLauncher
               gameName={slot.gameName}
               hostId={slot.marker.focusKey}
-              label="Map"
               title={slot.label}
             />
           </div>

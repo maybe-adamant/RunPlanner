@@ -125,7 +125,7 @@ second canonical or finding-order cut. The
 Only two decision-generation launchers remain public: the `HubDecisionAddress`
 before the Hub board is generated and the Hub-sourced `ExitDecisionAddress`
 before Preboss generation. Ordinary occurrence-sourced decisions do not retain
-a `beforeTargetGeneration` launcher on their door cards. Room-local lifecycle
+a `beforeTargetGeneration` launcher on their door rows. Room-local lifecycle
 launchers keep their exact engine owners while the application projects one
 consistent utility slot at the top of each tab panel. Ordinary/H/Shop Overview
 and Timeline reuse the same Room-entered launcher. O Overview and Intro Timeline
@@ -190,7 +190,7 @@ inspector never searches for a rendered room label or decision number.
 Room maps are application-owned reference images keyed by the declared game
 room name. Inspection is available from room headings, authored outgoing
 targets, Hub cards/visits and side-room rows, including unpicked, closed and
-ungenerated destinations. Viewing a map never edits participation, changes
+ungenerated destinations, through one icon-only map button named for its room. Viewing a map never edits participation, changes
 semantic focus, adds history or requires complete authoring. The route rail
 remains the navigation to room details.
 
@@ -416,15 +416,16 @@ inactive). One pick appends one action at its last legal position, which its
 reorder handle then moves. A reroll row carries an optional picker for each restocked
 slot, pinned or native.
 
-Room Doors keeps its door layout and lists the room's door and Fields cage
-rerolls below the doors in one ordered **Rerolls** list headed by the rerolls
-left: each row is a target and its new reward with Remove, and a new row is
-appended at the end once its target is chosen. A removal keeps the later rows
-it invalidates, with their findings. The same presses appear as Timeline rows,
-where their reorder handle is the only way to change their position among
-other post-unlock actions. A rerolled target reads first draw → final, and the next room's
-header and the rail show the final reward. Reroll findings route to the list
-row, except an out-of-order press, which routes to its Timeline row. An Ephyra
+Room Doors lists the room's door and Fields cage rerolls below the doors in
+one ordered list headed by the reroll die and the rerolls left. Each row is
+the die, its target and its new reward with Remove; one add control on the die
+asks for the target and then its reward, appending the press at the end. A
+removal keeps the later rows it invalidates, with their findings. The same
+presses appear as Timeline rows, where their reorder handle is the only way to
+change their position among other post-unlock actions. A rerolled target reads
+first draw → final on its door row, and the next room's header and the rail
+show the final reward. Reroll findings route to the list row, except an
+out-of-order press, which routes to its Timeline row. An Ephyra
 room's hidden return door sits in Room Doors as one automatic line, in place of
 a continuation note, until its placeholder room or reward is pinned; a reward
 picker waits for the room. Reroll lists and counts are hidden without a card
@@ -500,7 +501,7 @@ focus, and explicit removal proposal.
 Room features consume closed application presence products for supported
 resources, exits, objects and the observed Eris spawn; room-inherent
 Fields/Nemesis and side-room setup retain their own sections. The resulting exit
-card owns only decision selection, room
+row owns only decision selection, room
 navigation, and its remaining door-specific identity controls; Anomaly
 identity/revert remains on its door. The Nemesis random event is an encounter
 choice of its phase's identity picker, the H Passive phase included, where it
@@ -651,30 +652,56 @@ projected.
 
 ### Decision Offers and Picked State
 
-Selecting a decision shows all of its physical offers together. Every authored
-offer keeps its Room and Reward rows at the same visual level, because the
-selected room owns the complete reward surface for that offered door. An
-unresolved offer keeps its pending Reward row, while a resolved room publishes
-`No reward`, one editor, or all active sibling editors. Fixed and empty rewards
-use the same labeled inline row as editable rewards. The door contract keeps
-game preview visibility separate from planner authorship. An Anomaly or
-Zagreus automatic return remains hidden in game, but
-its freshly generated host reward still consumes the ordinary reward store and
-therefore retains its reward editor and finding destination in the decision.
-Single-choice controls live on those cards, and the picked card receives the
-strongest emphasis because it is the authored selected route. Evaluated entry
-is shown separately when materialization has actually reached that room.
-A decision with a reward pool shows one pool row. Its Reward Pool half is the
-editable picker for an authored RunProgress/MetaProgress batch or, where an O
-ShipCombat wheel already decided the pool, a fixed value marked as from ship
-combat with a link to that wheel. Its Effective Pool half is what the selected
-exit records for the store ratio, read from the engine's entered-store
-product: blank while no exit is selected or when the counted store equals the
-pool; otherwise it names the different store (a forced sibling's flip), the
-discarding room for a room that records no entered store, or an additional
-exit's own store with its room. React derives none of these values. A decision
-without a pool renders no pool row. Batch-wide rules stay with the batch;
-reward visibility stays with the individual door.
+Selecting a decision shows all of its exits together as one table with a
+row per exit: its selection, its door number or exit art, its room, its
+reward, its map and its secondary action (an Anomaly replacement or
+restoration). Normal doors, takeover doors and additional exits (Chaos Gate,
+Infernal Contract) share these columns, and the table keeps a working width
+rather than stretching across the panel. Each row names its room once; a value
+the declaration fixes (a takeover room, an additional exit's room or reward,
+`No reward`, a fixed reward) is shown plain, and only authorable values are
+pickers. A door awaiting its room shows the room picker alone, or what it waits
+for, and reserves no reward slot. Because the selected room owns the complete
+reward surface of its door, a room with several reward owners (Fields cages)
+lists each in the reward cell. The door contract keeps game preview visibility
+separate from planner authorship: a hidden reward is marked on its row, and an
+Anomaly or Zagreus automatic return, hidden in game, still keeps its reward
+editor and finding destination because its fresh host reward consumes the
+ordinary store. A lone exit has no selection control. The picked row receives
+the strongest emphasis because it is the authored selected route; an
+unavailable retained door is dimmed with its selection disabled and explained
+on hover. Evaluated entry is shown separately when materialization has
+actually reached that room.
+
+A decision with a reward pool shows one pool line above the table: the pool,
+then, only where the selected exit counts a different store for the ratio, an
+arrow to that store or to none. The pool is the editable picker for an
+authored RunProgress/MetaProgress batch or, where an O ShipCombat wheel already
+decided it, a plain value. The effective store is read from the engine's
+entered-store product, including which room forced a shared store; it names
+the forced store, none for a room that records no entered store, or an
+additional exit's own store. A Fields batch states its door roll and its cage
+facts on the same line. React derives none of these values. A decision without
+a pool renders no pool line.
+
+Batch-wide facts sit in a Notes column beside the table where the panel is
+wide, and between the pool line and the table where it is narrow: where an
+inherited pool was chosen, why the effective store differs (the forcing room,
+the discarding room, the counting exit), and how Fields cages read. Notes are
+absent, with no reserved space, when a batch has none, and a reason shown there
+is not repeated on hover. The projection supplies each batch's notes in order,
+each naming what it explains: the pool, the store after the arrow, or the batch
+as a whole. A note that explains one value is linked to it by a footnote symbol
+after the value and before the note, assigned in order of appearance; the
+value is described by its note for assistive technology, and hovering or
+focusing either highlights both. Notes about the whole batch carry no symbol. Row state stays on its row
+and findings stay on their controls.
+
+A boss door uses the same pool line and Notes. A boss that resolves its entered
+store from the chosen offer authors the pool there; one that pins its store
+shows that store as a fixed value with the reason in Notes; one that records no
+entered store shows the carried pool, if any, with an arrow to none and the
+reason in Notes. The projection supplies these values and notes.
 
 Unpicked targets remain fully visible in the decision workbench because they
 still affect reward bags, sibling conflicts, source support, and possibility
@@ -714,7 +741,7 @@ not include Hub interactions or UI labels. The decision footer consumes that
 same product through one `Open next room` action immediately before
 `Remove these doors`. The action remains disabled until the product exists,
 then focuses the selected occurrence's Room Overview without creating authored
-history. Individual decision cards do not publish room-opening actions.
+history. Individual door rows do not publish room-opening actions.
 
 The one-stop-per-decision rule applies only to rail presentation. It does not
 collapse, delete, or coarsen the decision's target, occurrence, reward,
@@ -788,7 +815,7 @@ visited; the fountain's distinct marker appends its one use regardless of room
 capacity. Once all six visits and the fountain are placed, visited doors show
 a room/reward popup with an explicit Open Room action; the fountain shows its
 timing and an Open Interaction action. Clicking outside or Escape dismisses
-the popup without leaving the map. Visited room banners offer a Hub Timeline return beside View Map, regardless of navigation
+the popup without leaving the map. Visited room banners offer a Hub Timeline return beside the map button, regardless of navigation
 entry point. Markers do not reorder
 or open a second reward preview. Overview shows the labeled fountain diamond
 without interaction or board membership. **Reset visits** submits the empty

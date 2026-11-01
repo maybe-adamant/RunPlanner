@@ -12,12 +12,20 @@ import {
   type WorkspacePhantomExitControl,
   type WorkspaceRoomTab,
 } from '@planner/projections/structured-workspace';
-import { AuthoringFrontier, BatchWorkbench } from './DecisionWorkbench';
+import {
+  AuthoringFrontier,
+  BatchWorkbench,
+  DoorNotes,
+  DoorNumber,
+  DoorRow,
+  DoorRowsHeader,
+} from './DecisionWorkbench';
+import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { PhantomExitDoor } from './PhantomExitDoor';
 import { BossDoorRewardPoolRow } from './OccurrenceDirectRoomWorkbench';
-import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
+import { useDoorNotes } from './doorNotes';
 import {
   inspectorLifecycleBoundaryContent,
   inspectorRoomActionContent,
@@ -58,6 +66,11 @@ function OccurrenceOutgoing({
   /** The room's only door it authors itself; the Hub or its side visits own the rest. */
   readonly phantomExit?: WorkspacePhantomExitControl;
 }): ReactNode {
+  const notes = useDoorNotes(
+    bossDoorRewardStore === undefined || bossDoorRewardStore.kind === 'editor'
+      ? []
+      : bossDoorRewardStore.notes,
+  );
   switch (outgoing.kind) {
     case 'authoredDecision':
       throw new BiomeWorkspaceContractError(
@@ -79,41 +92,37 @@ function OccurrenceOutgoing({
           </section>
         );
       return (
-        <section aria-label="Outgoing doors" className="decision-card outgoing-occurrence-state">
-          <header className="decision-heading">
-            <div>
-              <p className="card-kicker">Outgoing doors</p>
-              <h3>Door offer</h3>
+        <section aria-label="Outgoing doors" className="door-workbench outgoing-occurrence-state">
+          <div className="door-body">
+            <div className="door-batch">
+              {bossDoorRewardStore === undefined ? null : (
+                <BossDoorRewardPoolRow
+                  idPrefix={idPrefix}
+                  interactions={interactions}
+                  markFor={notes.markFor}
+                  store={bossDoorRewardStore}
+                />
+              )}
             </div>
-          </header>
-          <div className="exit-list">
-            <article aria-label={`${destination.label} room offer`} className="exit-row">
-              <div className="exit-marker" aria-hidden="true" />
-              <div className="exit-content">
-                <div className="exit-heading">
-                  <div>
-                    <p className="card-kicker">Door 1</p>
-                    <h4>{destination.label}</h4>
-                  </div>
-                  {destination.kind === 'room' && destination.gameName !== undefined ? (
-                    <RoomMapLauncher
-                      gameName={destination.gameName}
-                      hostId={outgoing.marker.focusKey}
-                      title={destination.label}
-                    />
-                  ) : null}
-                </div>
-                {bossDoorRewardStore === undefined ? null : (
-                  <div className="door-reward-slot">
-                    <BossDoorRewardPoolRow
-                      idPrefix={idPrefix}
-                      interactions={interactions}
-                      store={bossDoorRewardStore}
-                    />
-                  </div>
-                )}
-              </div>
-            </article>
+            <DoorNotes items={notes.items} />
+            <div className="door-rows">
+              <DoorRowsHeader />
+              <DoorRow
+                ariaLabel={`${destination.label} room offer`}
+                identity={<DoorNumber index={1} />}
+                {...(destination.kind === 'room' && destination.gameName !== undefined
+                  ? {
+                      map: {
+                        gameName: destination.gameName,
+                        hostId: outgoing.marker.focusKey,
+                        title: destination.label,
+                      },
+                    }
+                  : {})}
+                room={<FixedValueChip label={destination.label} />}
+                state={{ available: true }}
+              />
+            </div>
           </div>
         </section>
       );
@@ -130,9 +139,11 @@ function OccurrenceOutgoing({
             <BossDoorRewardPoolRow
               idPrefix={idPrefix}
               interactions={interactions}
+              markFor={notes.markFor}
               store={bossDoorRewardStore}
             />
           )}
+          <DoorNotes items={notes.items} />
           {outgoing.kind === 'topologyOwned' && phantomExit !== undefined ? (
             <PhantomExitDoor
               control={phantomExit}

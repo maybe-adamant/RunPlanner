@@ -50,7 +50,7 @@ describe('Fresh File product loop', () => {
     expect(decisions()).toHaveLength(1);
     expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(1);
 
-    await user.click(screen.getByText('Select a room'));
+    await user.click(screen.getByText('Choose room'));
     await user.click(within(screen.getByRole('listbox')).getAllByRole('option')[0]!);
     const occurrences = () => project().route.biomes[0]!.topology!.occurrences;
     expect(occurrences()).toHaveLength(2);

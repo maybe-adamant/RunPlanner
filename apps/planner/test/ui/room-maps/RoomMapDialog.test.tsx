@@ -13,7 +13,7 @@ describe('RoomMapLauncher', () => {
   it('views a room image, reports a local load failure, and supports zoom and Fit', () => {
     render(<RoomMapLauncher gameName="F_Combat01" hostId="occurrence-a" title="Combat 01" />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'View map for Combat 01' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View map of Combat 01' }));
     expect(screen.getByRole('heading', { name: 'Combat 01 map' })).toBeTruthy();
     expect(screen.getByRole('img', { name: 'Map of Combat 01' })).toBeTruthy();
     expect(screen.getByText('100%')).toBeTruthy();
@@ -32,7 +32,7 @@ describe('RoomMapLauncher', () => {
       <RoomMapLauncher gameName="H_Combat01" hostId="occurrence-a" title="Combat 01" />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'View map for Combat 01' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View map of Combat 01' }));
     expect(screen.getByRole('img', { name: 'Map of Combat 01' }).getAttribute('src')).toBe(
       roomMapAssetFor('H_Combat01')?.src,
     );
@@ -49,7 +49,7 @@ describe('RoomMapLauncher', () => {
   it('keeps the Hub quality categories visible beside its live readonly annotations', () => {
     render(<RoomMapLauncher gameName="N_Hub" hostId="hub-a" title="Ephyra Hub" />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'View map for Ephyra Hub' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View map of Ephyra Hub' }));
     const legend = screen.getByLabelText('Hub room quality legend');
     expect(legend.textContent).toContain('Perfect');
     expect(legend.textContent).toContain('Good');
@@ -59,7 +59,7 @@ describe('RoomMapLauncher', () => {
 
   it('closes with Close or Escape and returns focus to its launcher', () => {
     render(<RoomMapLauncher gameName="F_Combat01" hostId="occurrence-a" title="Combat 01" />);
-    const launcher = screen.getByRole('button', { name: 'View map for Combat 01' });
+    const launcher = screen.getByRole('button', { name: 'View map of Combat 01' });
 
     fireEvent.click(launcher);
     fireEvent.click(screen.getByRole('button', { name: 'Close map' }));

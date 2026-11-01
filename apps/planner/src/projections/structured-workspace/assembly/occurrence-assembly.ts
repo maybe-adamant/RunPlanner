@@ -71,7 +71,7 @@ export type WorkspaceBossDoorRewardStoreInput =
       readonly storeChoices: readonly WorkspaceInteractionChoice<string>[];
     }
   | { readonly kind: 'fixed'; readonly storeKey: string }
-  | { readonly kind: 'ignored' };
+  | { readonly kind: 'ignored'; readonly storeKey?: string };
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import type { WorkspaceRoomLocal } from '../contracts/locals';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
@@ -711,12 +711,21 @@ export function assembleWorkspaceOccurrence(
       case 'ignored':
         return Object.freeze({
           kind: 'ignored' as const,
-          summary: 'Ignored for this boss',
+          ...(admitted.storeKey === undefined
+            ? {}
+            : { label: workspaceRewardStoreLabel(admitted.storeKey) }),
+          effective: Object.freeze({ label: 'None' }),
+          notes: Object.freeze([
+            Object.freeze({ target: 'effective' as const, text: 'Ignored for this boss' }),
+          ]),
         });
       case 'fixed':
         return Object.freeze({
           kind: 'fixed' as const,
-          summary: `${workspaceRewardStoreLabel(admitted.storeKey)} · Fixed`,
+          label: workspaceRewardStoreLabel(admitted.storeKey),
+          notes: Object.freeze([
+            Object.freeze({ target: 'pool' as const, text: 'Fixed for this boss' }),
+          ]),
         });
       case 'editor':
         return Object.freeze({

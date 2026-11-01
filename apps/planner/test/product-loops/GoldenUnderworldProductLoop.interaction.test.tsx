@@ -550,12 +550,16 @@ describe('underworld product loop', () => {
     );
 
     const gate = await screen.findByRole('article', { name: 'Chaos gate exit' });
-    await view.user.click(within(gate).getByRole('button', { name: 'Room' }));
+    await view.user.click(within(gate).getByRole('button', { name: 'Chaos gate room' }));
     await view.user.click(screen.getByRole('option', { name: 'Chaos 06' }));
-    expect(within(gate).getByLabelText('Room').textContent).toContain('Chaos 06');
+    expect(within(gate).getByRole('button', { name: 'Chaos gate room' }).textContent).toContain(
+      'Chaos 06',
+    );
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(within(gate).getByLabelText('Room').textContent).toContain('Chaos 01');
-    await view.user.click(within(gate).getByRole('button', { name: 'Room' }));
+    expect(within(gate).getByRole('button', { name: 'Chaos gate room' }).textContent).toContain(
+      'Chaos 01',
+    );
+    await view.user.click(within(gate).getByRole('button', { name: 'Chaos gate room' }));
     await view.user.click(screen.getByRole('option', { name: 'Chaos 06' }));
     await view.user.click(within(gate).getByLabelText('Take Chaos gate'));
     await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
@@ -877,15 +881,11 @@ describe('underworld product loop', () => {
         ),
       ),
     );
-    const automaticReturn = screen.getByRole('group', {
-      name: 'Outgoing doors room offers',
-    });
+    const automaticReturn = screen.getByRole('group', { name: 'Doors' });
     expect(within(automaticReturn).getAllByRole('article')).toHaveLength(1);
     expect(within(automaticReturn).queryByRole('radio')).toBeNull();
-    const hiddenNote = within(automaticReturn).getByText('Reward hidden on this door.');
-    expect(hiddenNote.classList.contains('door-information-note')).toBe(true);
-    expect(hiddenNote.parentElement?.lastElementChild).toBe(hiddenNote);
-    expect(hiddenNote.parentElement?.querySelector('button')).not.toBeNull();
+    expect(within(automaticReturn).getByText('Hidden on door')).toBeTruthy();
+    expect(within(automaticReturn).getByRole('button', { name: 'Reward' })).toBeTruthy();
     const returnReward = createIncomingRewardAddress(goldenGBiome, returned);
     const returnRewardOffer = () => {
       const state = currentProject(application)

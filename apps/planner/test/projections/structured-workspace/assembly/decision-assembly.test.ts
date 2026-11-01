@@ -329,6 +329,9 @@ describe('structured workspace decision assembly', () => {
       cageTargetCount: 1,
       doorCageRewardCount: 2,
     });
+    expect(assembly.batch.notes).toEqual([
+      { target: 'batch', text: 'Cage rewards appear bottom to top on the door' },
+    ]);
     expect(fieldsWorkbench.room.roomLocal.cages.map((cage) => cage.key)).toEqual([
       'cage1',
       'cage2',
@@ -365,7 +368,8 @@ describe('structured workspace decision assembly', () => {
         source,
       });
       if (assembly.kind !== 'batch') throw new Error('F reward-store decision is not a batch');
-      expect(assembly.batch.rewardPool).toEqual({ effective: 'Major Reward' });
+      expect(assembly.batch.rewardPool).toEqual({ effective: { label: 'Major Reward' } });
+      expect(assembly.batch.notes).toEqual([{ target: 'effective', text: 'Forced by Combat 01' }]);
     }
   });
 

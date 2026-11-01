@@ -313,7 +313,8 @@ export function ContextualPicker<T>({
   }, []);
   const open = controlledOpen ?? internalOpen;
   const selected = model.selected;
-  const choicesLabel = choiceLabel ?? label;
+  // A picker without a visible label names its choices after its accessible name.
+  const choicesLabel = choiceLabel ?? (label === '' ? (ariaLabel ?? placeholder) : label);
   const authoringLocked = findingTarget?.['data-authoring-locked'] === true;
   const interactionDisabled = disabled || locked || disabledHint !== undefined || authoringLocked;
   const shownLabel = disabled ? placeholder : (triggerLabel ?? selected?.label ?? placeholder);

@@ -10,13 +10,20 @@ import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
  * supplied its closed declaration map domain. These controls intentionally do
  * not ask React to re-evaluate replacement eligibility or reward legality.
  */
-export function AnomalyRoomControl({ room }: { readonly room: WorkspaceRoomSummary }) {
+export function AnomalyRoomControl({
+  ariaLabel,
+  room,
+}: {
+  readonly ariaLabel: string;
+  readonly room: WorkspaceRoomSummary;
+}) {
   const dispatch = useAppDispatch();
   const anomaly = room.anomaly;
   if (anomaly === undefined) return null;
   return (
     <ContextualPicker
-      label="Room"
+      ariaLabel={ariaLabel}
+      label=""
       layout="inline"
       placeholder="Choose a room"
       model={declaredChoicesPicker(
@@ -61,29 +68,35 @@ export function AnomalyClearedControl({ room }: { readonly room: WorkspaceRoomSu
   );
 }
 
-export function RevertAnomalyAction({ room }: { readonly room: WorkspaceRoomSummary }) {
+export function RevertAnomalyAction({
+  doorIndex,
+  room,
+}: {
+  /** The door the restored room stands behind, which names the action. */
+  readonly doorIndex: number;
+  readonly room: WorkspaceRoomSummary;
+}) {
   const dispatch = useAppDispatch();
   const findingMark = useFindingMark();
   const anomaly = room.anomaly;
   if (anomaly === undefined) return null;
   return (
-    <div className="anomaly-revert-action">
-      <button
-        {...findingMark(room.address, 'revertAnomaly')}
-        className="danger-action action-compact"
-        data-command="RevertAnomaly"
-        onClick={() =>
-          dispatch(
-            authoredProjectCommandDispatched({
-              kind: 'RevertAnomaly',
-              occurrence: room.address,
-            }),
-          )
-        }
-        type="button"
-      >
-        Restore {anomaly.rememberedRoomLabel}
-      </button>
-    </div>
+    <button
+      {...findingMark(room.address, 'revertAnomaly')}
+      aria-label={`Restore ${anomaly.rememberedRoomLabel} on Door ${doorIndex}`}
+      className="danger-action action-compact"
+      data-command="RevertAnomaly"
+      onClick={() =>
+        dispatch(
+          authoredProjectCommandDispatched({
+            kind: 'RevertAnomaly',
+            occurrence: room.address,
+          }),
+        )
+      }
+      type="button"
+    >
+      Restore {anomaly.rememberedRoomLabel}
+    </button>
   );
 }

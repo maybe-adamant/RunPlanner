@@ -248,7 +248,7 @@ describe('HubDecisionWorkbench interaction', () => {
       'disabled',
       true,
     );
-    expect(within(lists[1]!).getByText('2 left')).toBeTruthy();
+    expect(within(lists[1]!).getByRole('img', { name: '2 rerolls left' })).toBeTruthy();
     const board = within(details).getByRole('list', { name: 'Board After Visit 1' });
     // The door the visit entered is closed and no longer listed.
     expect(within(board).queryByText('Combat 05')).toBeNull();

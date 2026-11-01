@@ -5,7 +5,6 @@ import {
   createExitSelectionAddress,
   createHubDecisionAddress,
   createOccurrenceAddress,
-  createRewardWheelAddress,
   createTargetAddress,
   sourceOfferPointStoreResolution,
   ordinaryTargetGameNames,
@@ -63,6 +62,8 @@ import { assembleRoomRerolls } from './reroll-assembly';
 import type {
   WorkspaceBatchRepairIntent,
   WorkspaceBatchRewardPool,
+  WorkspaceDoorNote,
+  WorkspaceEffectiveRewardPool,
   WorkspaceFieldsBatchContext,
   WorkspaceInheritedRewardStore,
   WorkspaceMissingPhysicalTarget,
@@ -108,18 +109,19 @@ const additionalExitTypeLabels = Object.freeze({
 } as const satisfies Record<'chaos' | 'zagreusContract', string>);
 
 /** An additional exit's destination room declares its one fixed reward. */
-function additionalExitFixedRewardLabel(catalog: Catalog, roomGameName: string): string {
-  const room = requireWorkspaceRoom(catalog, roomGameName);
+function additionalExitFixedReward(
+  catalog: Catalog,
+  roomGameName: string,
+): { readonly fixedRewardLabel: string; readonly fixedRewardType: string } {
+  const incoming = requireWorkspaceRoom(catalog, roomGameName).incomingReward;
   const rewardType =
-    room.incomingReward.kind === 'fixed'
-      ? catalog.rewards.rewardTypes.byKey[room.incomingReward.rewardType]
-      : undefined;
-  if (rewardType === undefined) {
+    incoming.kind === 'fixed' ? catalog.rewards.rewardTypes.byKey[incoming.rewardType] : undefined;
+  if (incoming.kind !== 'fixed' || rewardType === undefined) {
     throw new StructuredWorkspaceProjectionContractError(
       `${roomGameName} is an additional exit destination without a fixed reward`,
     );
   }
-  return rewardType.label;
+  return { fixedRewardLabel: rewardType.label, fixedRewardType: incoming.rewardType };
 }
 
 type WorkspaceMissingTargetSetupPrerequisite = Extract<
@@ -285,7 +287,7 @@ function fieldsContextForAuthoredBatch(
 /**
  * The ship-decided pool. A `sourceOfferPoint` batch carries no authored store:
  * its ShipCombat source's last active reward wheel already fixed it, so the row
- * reports that resolution and links to the wheel.
+ * reports that resolution.
  */
 function inheritedRewardStoreForBatch(
   input: WorkspaceDecisionAssemblyBaseInput,
@@ -295,20 +297,17 @@ function inheritedRewardStoreForBatch(
   const topology = input.source.plan.topology;
   if (topology === null) return undefined;
   const resolution = sourceOfferPointStoreResolution(topology, decision.source);
-  // The resolution already rejects a non-occurrence source; the check here only
-  // narrows the type for the wheel address below.
-  if (resolution === undefined || decision.source.kind !== 'occurrence') return undefined;
+  if (resolution === undefined) return undefined;
   return Object.freeze({
     label: workspaceRewardStoreLabel(resolution.storeKey),
     storeKey: resolution.storeKey,
-    wheel: input.markerDestinations.marker(
-      createRewardWheelAddress(
-        input.source.biome,
-        decision.source.occurrenceId,
-        resolution.wheelKey,
-      ),
-    ),
   });
+}
+
+/** A counted pool with why it differs from the carried one, where that needs saying. */
+interface CountedRewardPool {
+  readonly pool: WorkspaceEffectiveRewardPool;
+  readonly reason?: string;
 }
 
 /**
@@ -321,7 +320,7 @@ function effectiveRewardPool(
   decision: AuthoredBatchDecision,
   evaluated: WorkspaceEvaluatedBatchOverlay | undefined,
   carriedStoreKey: string | undefined,
-): string | undefined {
+): CountedRewardPool | undefined {
   const topology = input.source.plan.topology;
   const stores =
     evaluated !== undefined
@@ -339,12 +338,20 @@ function effectiveRewardPool(
     case 'unresolved':
       return undefined;
     case 'none':
-      return `Discarded by ${exitLabel}`;
+      return { pool: Object.freeze({ label: 'None' }), reason: `Discarded by ${exitLabel}` };
     case 'store': {
       const { storeKey } = selected.entered;
       if (storeKey === carriedStoreKey) return undefined;
-      const label = workspaceRewardStoreLabel(storeKey);
-      return selected.exit.kind === 'additional' ? `${label} · ${exitLabel}` : label;
+      const pool = Object.freeze({ label: workspaceRewardStoreLabel(storeKey) });
+      if (selected.exit.kind === 'additional')
+        return { pool, reason: `Counted by the ${exitLabel}` };
+      const forcedBy = stores?.sharedRewardStoreForcedBy;
+      return forcedBy === undefined
+        ? { pool }
+        : {
+            pool,
+            reason: `Forced by ${requireWorkspaceRoom(input.catalog, forcedBy.gameName).label}`,
+          };
     }
   }
 }
@@ -358,7 +365,9 @@ function rewardPoolForBatch(
   decision: AuthoredBatchDecision,
   evaluated: WorkspaceEvaluatedBatchOverlay | undefined,
   editable: boolean,
-): WorkspaceBatchRewardPool | undefined {
+):
+  | { readonly pool: WorkspaceBatchRewardPool; readonly notes: readonly WorkspaceDoorNote[] }
+  | undefined {
   const inherited = inheritedRewardStoreForBatch(input, decision);
   if (!editable && inherited === undefined) return undefined;
   const rewardStore = decision.normal.rewardStore;
@@ -368,10 +377,28 @@ function rewardPoolForBatch(
       ? (rewardStore.baseRewardStoreKey ?? undefined)
       : undefined);
   const effective = effectiveRewardPool(input, decision, evaluated, carried);
-  return Object.freeze({
-    ...(effective === undefined ? {} : { effective }),
-    ...(inherited === undefined ? {} : { inherited }),
-  });
+  const notes: WorkspaceDoorNote[] = [];
+  if (inherited !== undefined)
+    notes.push(Object.freeze({ target: 'pool', text: "Chosen at this room's last reward wheel" }));
+  if (effective?.reason !== undefined)
+    notes.push(Object.freeze({ target: 'effective', text: effective.reason }));
+  return {
+    pool: Object.freeze({
+      ...(effective === undefined ? {} : { effective: effective.pool }),
+      ...(inherited === undefined ? {} : { inherited }),
+    }),
+    notes,
+  };
+}
+
+/** How a Fields batch's cages read beside its doors. */
+function fieldsDoorNotes(fields: WorkspaceFieldsBatchContext): readonly WorkspaceDoorNote[] {
+  return fields.cageTargetCount === 0
+    ? [
+        Object.freeze({ target: 'batch', text: 'No room here uses the cage count' }),
+        Object.freeze({ target: 'batch', text: 'Max still affects later Fields rolls' }),
+      ]
+    : [Object.freeze({ target: 'batch', text: 'Cage rewards appear bottom to top on the door' })];
 }
 
 function missingTargetPrerequisite(
@@ -540,7 +567,7 @@ function projectAuthoredTargetWithOverlay(
       ...(occurrence.state.kind === 'counted' &&
       occurrence.anomalyReplacement === undefined &&
       anomalyTakeoverAvailable
-        ? { anomalyTakeover: Object.freeze({ label: 'Replace with Anomaly' }) }
+        ? { anomalyTakeover: Object.freeze({ label: 'Anomaly' }) }
         : {}),
     }),
   });
@@ -934,7 +961,12 @@ function assembleBatchDecision(
   const hasEditableAuthoredRewardStore =
     decision.normal.rewardStore.kind === 'authoredBaseStore' &&
     (kind !== 'takeoverBatch' || decision.normal.rewardStore.baseRewardStoreKey !== null);
-  const rewardPool = rewardPoolForBatch(input, decision, evaluated, hasEditableAuthoredRewardStore);
+  const pooled = rewardPoolForBatch(input, decision, evaluated, hasEditableAuthoredRewardStore);
+  const rewardPool = pooled?.pool;
+  const notes = Object.freeze([
+    ...(pooled?.notes ?? []),
+    ...(fields === undefined ? [] : fieldsDoorNotes(fields)),
+  ]);
   const zagreusAdditional = authoredAdditional.find(
     (additional) => additional.kind === 'zagreusContract',
   );
@@ -1053,10 +1085,7 @@ function assembleBatchDecision(
             ),
             exitTypeKey: zagreusContract.physicalExit.type,
             exitTypeLabel: additionalExitTypeLabels.zagreusContract,
-            fixedRewardLabel: additionalExitFixedRewardLabel(
-              input.catalog,
-              zagreusContract.contractRoom.gameName,
-            ),
+            ...additionalExitFixedReward(input.catalog, zagreusContract.contractRoom.gameName),
             marker: zagreusContract.marker,
             owner: zagreusContract.owner,
             selected: zagreusContract.selected,
@@ -1072,10 +1101,7 @@ function assembleBatchDecision(
             ),
             exitTypeKey: chaos.physicalExit.type,
             exitTypeLabel: additionalExitTypeLabels[chaos.kind],
-            fixedRewardLabel: additionalExitFixedRewardLabel(
-              input.catalog,
-              chaos.chaosRoom.gameName,
-            ),
+            ...additionalExitFixedReward(input.catalog, chaos.chaosRoom.gameName),
             forced: chaos.forced,
             kind: chaos.kind,
             mapChoices: chaos.mapChoices,
@@ -1087,6 +1113,7 @@ function assembleBatchDecision(
     key: `batch:${semanticAddressKey(owner)}`,
     marker: input.markerDestinations.marker(owner),
     missingTargets: visibleMissingTargets,
+    notes,
     owner,
     persistence: input.persistence,
     ...(repairIntent === undefined ? {} : { repairIntent }),

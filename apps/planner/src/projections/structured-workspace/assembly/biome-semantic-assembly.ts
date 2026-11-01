@@ -507,7 +507,10 @@ export function assembleWorkspaceBiomeSemantics(
     const history = door.bossRoom.enteredRewardStoreHistory;
     switch (history.kind) {
       case 'none':
-        return Object.freeze({ kind: 'ignored' as const });
+        return Object.freeze({
+          kind: 'ignored' as const,
+          ...(door.link.rewardStoreKey === undefined ? {} : { storeKey: door.link.rewardStoreKey }),
+        });
       case 'fixed':
         return Object.freeze({ kind: 'fixed' as const, storeKey: history.storeKey });
       case 'resolvedOffer': {
