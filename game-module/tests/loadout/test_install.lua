@@ -319,6 +319,17 @@ function TestLoadoutInstall.testRackSwappedKeepsakeReadsAtTheMatureRank()
         end, "ReincarnationKeepsake")
         lu.assertEquals(chambers, 75)
         lu.assertEquals(world.gameState.KeepsakeChambers.ReincarnationKeepsake, 10)
+        -- The rack's progress readers see the same rank, even for a keepsake
+        -- the profile never equipped.
+        world.bindings.TraitData.ShieldAfterHitKeepsake = { ChamberThresholds = { 25, 50 } }
+        for _, name in ipairs({ "IsKeepsakeMaxed", "GetKeepsakeProgress", "GetKeepsakeChambersToNextLevel" }) do
+            chambers = nil
+            callbacks[name](nil, {}, function(trait)
+                chambers = world.gameState.KeepsakeChambers[trait]
+            end, "ShieldAfterHitKeepsake")
+            lu.assertEquals(chambers, 75, name)
+            lu.assertNil(world.gameState.KeepsakeChambers.ShieldAfterHitKeepsake)
+        end
         run[install.marker] = nil
         callbacks.GetKeepsakeLevel(nil, {}, function(name)
             chambers = world.gameState.KeepsakeChambers[name]
