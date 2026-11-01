@@ -91,7 +91,10 @@ function requireRoom(
   return room;
 }
 
-function requireCatalogRoom(catalog: Catalog, occurrence: RoomOccurrence): RoomDeclaration {
+function requireCatalogRoom(
+  catalog: Catalog,
+  occurrence: Pick<RoomOccurrence, 'gameName'>,
+): RoomDeclaration {
   const room = catalog.rooms.byKey[occurrence.gameName];
   if (room === undefined) fail(`trusted topology lost room ${occurrence.gameName}`);
   return room;
@@ -184,18 +187,34 @@ function batchStoreKey(
   return undefined;
 }
 
+/** The batch target whose declared forced store decided the batch's shared store. */
+export interface ForcedSharedRewardStore {
+  readonly occurrenceId: OccurrenceId;
+  readonly gameName: string;
+  readonly storeKey: string;
+}
+
+/** Each forced target writes its store over the batch in physical order, so the last one wins. */
+export function lastForcedSharedRewardStore(
+  catalog: Catalog,
+  rooms: readonly Pick<RoomOccurrence, 'occurrenceId' | 'gameName'>[],
+): ForcedSharedRewardStore | undefined {
+  let forced: ForcedSharedRewardStore | undefined;
+  for (const { occurrenceId, gameName } of rooms) {
+    const storeKey = requireCatalogRoom(catalog, { gameName }).forcedRewardStoreKey;
+    if (storeKey !== undefined) forced = Object.freeze({ occurrenceId, gameName, storeKey });
+  }
+  return forced;
+}
+
 export function finalSharedBatchStoreKey(
   catalog: Catalog,
   occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
   targets: readonly ExitTargetReference[],
   initialStoreKey: string | undefined,
 ): string | undefined {
-  let storeKey = initialStoreKey;
-  for (const target of targets) {
-    const room = requireCatalogRoom(catalog, requireOccurrence(occurrences, target.occurrenceId));
-    if (room.forcedRewardStoreKey !== undefined) storeKey = room.forcedRewardStoreKey;
-  }
-  return storeKey;
+  const rooms = targets.map((target) => requireOccurrence(occurrences, target.occurrenceId));
+  return lastForcedSharedRewardStore(catalog, rooms)?.storeKey ?? initialStoreKey;
 }
 
 export interface ClockworkState {

@@ -211,6 +211,7 @@ export {
   canonicalBatchEnteredRewardStores,
   clockworkDoorGoalsRemaining,
   type BatchEnteredRewardStores,
+  type SharedRewardStoreForcedBy,
   fieldsBatchFacts,
   fieldsBatchOwnsCageOutcome,
   type MaterializedBiomePrefix,

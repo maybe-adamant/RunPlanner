@@ -174,6 +174,35 @@ describe('authored batch entered reward stores', () => {
     });
   });
 
+  it('names the last forced target as the cause of the shared store', () => {
+    const product = stores({
+      sourceGameName: 'F_Opening01',
+      baseStore: 'MetaProgress',
+      targets: [
+        { exitKey: 'exit1', gameName: 'F_Combat01' },
+        { exitKey: 'exit2', gameName: 'F_Combat02' },
+        { exitKey: 'exit3', gameName: 'F_MiniBoss01' },
+      ],
+      selection: { kind: 'normal', exitKey: 'exit2' },
+    });
+    expect(product.sharedRewardStoreForcedBy).toEqual({
+      occurrenceId: createOccurrenceId('entered-store-exit3'),
+      gameName: 'F_MiniBoss01',
+    });
+    expect(product.selected?.entered).toEqual({ kind: 'store', storeKey: 'RunProgress' });
+  });
+
+  it('names no cause when no target forces the shared store', () => {
+    const product = stores({
+      sourceGameName: 'F_Opening01',
+      baseStore: 'MetaProgress',
+      targets: [{ exitKey: 'exit1', gameName: 'F_Combat02' }],
+      additional: [{ key: 'chaos', gameName: 'Chaos_01' }],
+      selection: { kind: 'normal', exitKey: 'exit1' },
+    });
+    expect(product).not.toHaveProperty('sharedRewardStoreForcedBy');
+  });
+
   it('keeps the ship-decided store at a single unpinned door', () => {
     const alone = stores({
       sourceGameName: 'O_Combat07',
@@ -294,12 +323,16 @@ describe('canonical batch entered reward stores', () => {
   });
 
   it('agrees with the authored reading for a takeover batch', () => {
-    expectAuthoredMatchesCanonical(createCompleteFTakeoverProject(), fBiome, (batches) =>
-      expect(
-        batches.some((batch) =>
-          batch.targets.some((target) => target.room.gameName === 'F_PreBoss01'),
-        ),
-      ).toBe(true),
-    );
+    expectAuthoredMatchesCanonical(createCompleteFTakeoverProject(), fBiome, (batches) => {
+      const takeover = batches.find((batch) =>
+        batch.targets.some((target) => target.room.gameName === 'F_PreBoss01'),
+      );
+      expect(takeover).toBeDefined();
+      const forcedBy = canonicalBatchEnteredRewardStores(
+        catalog,
+        takeover!,
+      ).sharedRewardStoreForcedBy;
+      expect(forcedBy?.gameName).toBe('F_PreBoss01');
+    });
   });
 });

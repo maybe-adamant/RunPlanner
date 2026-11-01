@@ -5,7 +5,7 @@ import {
   additionalExitsForDecision,
   selectedExitContinuation,
 } from '../../authored-project/topology/query';
-import { finalSharedBatchStoreKey, orderedTargets } from './batch';
+import { lastForcedSharedRewardStore, orderedTargets } from './batch';
 import { enteredRewardStore, type EnteredRewardStore } from './rooms/templates';
 import type { CanonicalBatch } from './model';
 
@@ -23,10 +23,18 @@ export interface BatchExitEnteredRewardStore {
   readonly entered: EnteredRewardStore;
 }
 
+/** The normal target whose room's forced store decided the batch's shared store. */
+export interface SharedRewardStoreForcedBy {
+  readonly occurrenceId: OccurrenceId;
+  readonly gameName: string;
+}
+
 export interface BatchEnteredRewardStores {
   /** Normal targets in physical order, then additional exits. */
   readonly exits: readonly BatchExitEnteredRewardStore[];
   readonly selected?: BatchExitEnteredRewardStore;
+  /** Present exactly when a target's forced store, not the carried one, set the shared store. */
+  readonly sharedRewardStoreForcedBy?: SharedRewardStoreForcedBy;
 }
 
 export class BatchEnteredRewardStoreContractError extends Error {
@@ -47,10 +55,19 @@ function requireDeclaration(catalog: Catalog, gameName: string) {
 function product(
   exits: readonly BatchExitEnteredRewardStore[],
   selected: BatchExitEnteredRewardStore | undefined,
+  forced: SharedRewardStoreForcedBy | undefined,
 ): BatchEnteredRewardStores {
   return Object.freeze({
     exits: Object.freeze(exits),
     ...(selected === undefined ? {} : { selected }),
+    ...(forced === undefined
+      ? {}
+      : {
+          sharedRewardStoreForcedBy: Object.freeze({
+            occurrenceId: forced.occurrenceId,
+            gameName: forced.gameName,
+          }),
+        }),
   });
 }
 
@@ -76,7 +93,7 @@ export function authoredBatchEnteredRewardStores(
   topology: BiomeTopology,
   decision: ExitDecision,
 ): BatchEnteredRewardStores {
-  if (decision.normal.kind !== 'batch') return product([], undefined);
+  if (decision.normal.kind !== 'batch') return product([], undefined, undefined);
   const occurrences = new Map(
     topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence] as const),
   );
@@ -90,12 +107,14 @@ export function authoredBatchEnteredRewardStores(
     return occurrence.gameName;
   };
   const targets = orderedTargets(decision.normal.targets);
-  const shared = finalSharedBatchStoreKey(
+  const forced = lastForcedSharedRewardStore(
     catalog,
-    occurrences,
-    targets,
-    carriedStoreKey(topology, decision),
+    targets.map((target) => ({
+      occurrenceId: target.occurrenceId,
+      gameName: occurrenceGameName(target.occurrenceId),
+    })),
   );
+  const shared = forced?.storeKey ?? carriedStoreKey(topology, decision);
   const normal = targets.map((target) => {
     const gameName = occurrenceGameName(target.occurrenceId);
     return Object.freeze({
@@ -123,7 +142,7 @@ export function authoredBatchEnteredRewardStores(
       : selection.kind === 'normal'
         ? normal.find((exit) => exit.occurrenceId === selection.target.occurrenceId)
         : additional.find((exit) => exit.occurrenceId === selection.exit.occurrenceId);
-  return product([...normal, ...additional], selected);
+  return product([...normal, ...additional], selected, forced);
 }
 
 /** The evaluated reading: each materialized room's own entered store. */
@@ -163,5 +182,10 @@ export function canonicalBatchEnteredRewardStores(
       return exit;
     }),
   ];
-  return product(exits, selected);
+  // Canonical targets are already in physical order.
+  const forced = lastForcedSharedRewardStore(
+    catalog,
+    batch.targets.map((target) => target.room),
+  );
+  return product(exits, selected, forced);
 }

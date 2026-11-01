@@ -20,6 +20,7 @@ export {
   type BatchExitEnteredRewardStore,
   type BatchExitKey,
   type EnteredRewardStore,
+  type SharedRewardStoreForcedBy,
 } from './entered-reward-stores';
 export { materializeShipCombatState, type MaterializedShipCombatState } from './rooms/templates';
 export { forGeneration } from './model';
