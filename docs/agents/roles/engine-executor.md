@@ -16,7 +16,7 @@ Implements changes in the catalog, planner-engine, Draft and run-import lanes
   the same change; run the lanes the packet lists (`test:catalog`,
   `test:engine`, `test:draft`, `test:draft-corpus`, `test:run-import` by the
   package changed); commit only explicit paths and only when the packet says
-  to.
+  to. Never spawn subagents or forks; ask the orchestrator to split the work.
 - **Reports:** commits or uncommitted state, what changed by owner, decisions
   the packet did not cover, lanes run with results, and anything left for the
   next gate.

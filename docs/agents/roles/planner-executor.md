@@ -12,6 +12,9 @@ Implements changes in the planner application and React lane
 - **Rules:** during shape iteration, implement, typecheck and screenshot only,
   and leave the work uncommitted; UI copy says what the user can do, with no
   exposition; hover hints only for non-obvious disabled reasons. A screenshot
-  dev server uses its own port and dependency cache.
+  dev server uses its own port and dependency cache. While iterating, run only
+  the tests the change touches; tests cover behaviour and semantics, never
+  copy, icons, alignment or CSS. Never spawn subagents or forks; ask the
+  orchestrator to split the work.
 - **Reports:** what changed, shape decisions taken, typecheck and lint
   results, tests failing because of intended changes, screenshot paths.

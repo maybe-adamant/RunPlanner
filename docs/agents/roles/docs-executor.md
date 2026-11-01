@@ -9,7 +9,8 @@ Restructures or updates documentation under a plan.
 - **Rules:** no fact is lost — a removed statement is a duplicate, history, a
   code mirror or moves to a named home in the same change; rewrite in place;
   update every inbound link; `npm run format:check` and a relative-link sweep
-  pass; stop uncommitted for an independent review.
+  pass; stop uncommitted for an independent review. Never spawn subagents or
+  forks; ask the orchestrator to split the work.
 - **Reports:** line counts before and after, moved sections and their new
   homes, deletions by category, links updated, anything that could not be
   placed.
