@@ -205,10 +205,7 @@ it.each([
   );
   await view.user.click(findings.container.querySelector('button')!);
   expect(screen.getByRole('tab', { name: tab }).getAttribute('aria-selected')).toBe('true');
-  const target =
-    kind === 'figLeaf'
-      ? screen.getByRole('checkbox', { name: control })
-      : screen.getByRole('button', { name: control });
+  const target = screen.getByRole('button', { name: control });
   expect(target.dataset.hasFindings).toBe('true');
   expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
     workspace.focusByOwner.get(semanticAddressKey(issue!.owner))!.focusAddress,
@@ -219,7 +216,7 @@ it.each([
 it.each([
   ['gorgon', 'No Death Defiance'],
   ['aetos', 'Aetos appearance'],
-] as const)('navigates a P %s finding to its Timeline checkbox', async (kind, control) => {
+] as const)('navigates a P %s finding to its Timeline control', async (kind, control) => {
   const fixture = reachedPOutdoorIcarusFixture();
   const project =
     kind === 'gorgon'
@@ -258,7 +255,7 @@ it.each([
   expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
     'true',
   );
-  const target = screen.getByRole('checkbox', { name: control });
+  const target = screen.getByRole('button', { name: control });
   expect(target.dataset.hasFindings).toBe('true');
   await waitFor(() => expect(document.activeElement).toBe(target));
 });

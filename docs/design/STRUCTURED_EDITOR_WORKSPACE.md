@@ -263,16 +263,25 @@ and its wave, and the Gorgon Amulet's Death Defiance condition, whose Athena
 appears in that fight. The end banner carries what the finished encounter
 settled: a Nemesis kill-race outcome, whose bet gold stands in the money
 column like any other gold row, and an Anomaly's capture-point outcome. A
-phase with an end event but no end boundary keeps it on its start banner. A
-banner's controls sit on a second line under its title and add no line when it
-has none. A Nemesis response stays on its interaction row. Event findings have
-their own phase-child owners and navigate to that Timeline control.
+phase with an end event but no end boundary keeps it on its start banner. An
+encounter's end hosts at most one outcome: a Nemesis kill race and an Anomaly
+never share a phase. A banner is one line: its title, then its controls at the
+line's end. The start banner keeps one fixed slot per event, in the order Aetos,
+Death Defiance condition, Fig Leaf skip, so each event lines up across banners
+and an absent event leaves its slot empty. The Fig Leaf skip and the Death
+Defiance condition are icon toggles named by their meaning, which their hint
+also tells; the Aetos appearance is one compact choice of no appearance or the
+wave it joins. The title gives way first; only a line that still cannot fit
+wraps its controls. A Nemesis response stays on its interaction row. Event
+findings have their own phase-child owners and navigate to that Timeline
+control.
 
 An event control holding an authored value never disappears. When the engine
 says the event cannot apply here, a retained value stays shown and editable
 with its finding, quietly marked, with a hint naming the reason when the
 engine publishes one (a phase the engine settled as skipped with Fig Leaf). An
-inapplicable event without a value is not shown.
+inapplicable event without a value is not shown. A retained Aetos wave whose
+context waits on an earlier choice can still be cleared.
 
 Opening generated composition is read-only. Edit initializes a complete value
 through the exact engine capability; Reset removes that value. Customized controls

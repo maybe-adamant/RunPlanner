@@ -325,9 +325,6 @@ export interface WorkspaceErisObservationInteraction {
 export interface WorkspaceAetosInteraction {
   /** Whether the phase's Aetos context is reached; a retained wave otherwise waits. */
   readonly contextReached: boolean;
-  readonly enableIntent?: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceAetosWave' }>
-  >;
   readonly intentFor: (
     value: number | null,
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceAetosWave' }>>;

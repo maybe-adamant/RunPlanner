@@ -374,7 +374,7 @@ value frame. Room Timeline rows (actions, lifecycle boundaries, checkpoints,
 automatic effects, insertion points, the Travel Deal line) share one set of
 cells: handle, label, decisions, money and delete. An action row keeps its
 handle and delete, quieter and disabled when no proposal applies;
-a banner keeps its controls on a second line under its title; and the door-exit
+a banner keeps its controls on its own line, after its title; and the door-exit
 continuation says on hover whether a door is unselected or the batch is
 unfinished. Rows or sections created by an authored decision are expected
 changes.
@@ -426,8 +426,11 @@ a whole percent in a pill coloured for a high, medium or low chance, which the
 timeline legend explains. Only an exact balance and price make the chance
 certain either way; an estimated one is never shown as certain. The room's
 doors-open boundary shows the gold held when its doors open, before any of its
-purchases, and nothing when the ledger cannot give it. A figure with spread, from a rolled
-price or an estimated gain, is shown as its rounded mean marked approximate.
+purchases, and nothing when the ledger cannot give it. A balance with spread is
+shown as its rounded mean and its one-deviation spread, the spread rounded to a
+coarse step and never shown as none; an exact balance is its plain value. Any
+other figure with spread, from a rolled price or an estimated gain, is shown as
+its rounded mean marked approximate.
 A negative balance is valid advisory information: a plan may go under, and
 the editor shows it rather than clamping or flagging it. The projection
 formats amounts and grades the chance; React only places them.

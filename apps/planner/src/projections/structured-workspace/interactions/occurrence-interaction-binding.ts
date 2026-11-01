@@ -752,17 +752,6 @@ export function bindOccurrenceLocalInteractions(
                 key,
                 owner: phase.owner,
                 ...phase.aetos,
-                ...(phase.aetos.waves[0] === undefined
-                  ? {}
-                  : {
-                      enableIntent: Object.freeze({
-                        command: Object.freeze({
-                          kind: 'ReplaceAetosWave' as const,
-                          phase: phase.owner,
-                          value: phase.aetos.waves[0],
-                        }),
-                      }),
-                    }),
                 intentFor: (value: number | null) =>
                   Object.freeze({
                     command: Object.freeze({

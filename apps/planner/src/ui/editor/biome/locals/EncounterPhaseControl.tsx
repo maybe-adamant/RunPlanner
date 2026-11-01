@@ -27,7 +27,8 @@ import { isCompositionFinding, isIdentityFinding } from './encounterPhaseFinding
 import { hintProps } from '@planner/ui/controls/hint';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
-import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
+import { aetosIcon, npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
+import { keepsakeArtwork } from '@planner/ui/controls/keepsakes/keepsakeArtwork';
 import { encounterIcon, minibossIcon } from '@planner/ui/artwork/encounterArtwork';
 
 const emptyEncounterPicker: import('@planner/projections/contextual/contextualPicker').ContextualPickerModel<string> =
@@ -450,22 +451,74 @@ const skippedWithFigLeaf = 'Skipped with Fig Leaf';
 function EncounterEventGroup({
   children,
   label,
+  slotted = false,
 }: {
   readonly children: readonly ReactNode[];
   readonly label: string;
+  /** Start events keep fixed slots, so each one lines up across banners. */
+  readonly slotted?: boolean;
 }) {
   if (children.every((child) => child === null)) return null;
   return (
-    <div aria-label={label} className="encounter-event-controls" role="group">
+    <div
+      aria-label={label}
+      className="encounter-event-controls"
+      data-slotted={slotted ? '' : undefined}
+      role="group"
+    >
       {children}
     </div>
   );
 }
 
 /**
- * What is settled as a phase starts: its Fig Leaf skip, Aetos and the Gorgon condition;
- * none renders nothing. A retained condition its skipped phase cannot use stays shown,
- * marked with why it has no effect.
+ * One encounter event as an icon toggle: dim when off, lit when on. Its icon alone
+ * does not say what it means, so its name is also its hint on hover and focus.
+ */
+function EncounterEventToggle({
+  icon,
+  inapplicable,
+  inapplicableHint,
+  name,
+  onToggle,
+  pressed,
+  slot,
+  target,
+}: {
+  readonly icon: string | undefined;
+  /** A retained value with no effect here: still clearable, but quiet. */
+  readonly inapplicable?: boolean;
+  readonly inapplicableHint?: string;
+  readonly name: string;
+  /** The fixed banner slot this toggle keeps, so icons line up across banners. */
+  readonly slot: 'gorgon' | 'figLeaf';
+  readonly onToggle: (next: boolean) => void;
+  readonly pressed: boolean;
+  readonly target: ReturnType<ReturnType<typeof useFindingTarget>>;
+}) {
+  const description = 'aria-description' in target ? target['aria-description'] : undefined;
+  const hint = inapplicableHint === undefined ? name : `${name} · ${inapplicableHint}`;
+  return (
+    <button
+      {...target}
+      {...hintProps(hint, description, name)}
+      aria-label={name}
+      aria-pressed={pressed}
+      className="encounter-event-toggle"
+      data-inapplicable={inapplicable === true ? '' : undefined}
+      data-slot={slot}
+      onClick={() => onToggle(!pressed)}
+      type="button"
+    >
+      <ArtworkIcon className="artwork-label-icon" source={icon} />
+    </button>
+  );
+}
+
+/**
+ * What is settled as a phase starts, on its banner's line: the Fig Leaf skip and
+ * Gorgon condition toggles and the Aetos wave; none renders nothing. A retained
+ * condition its skipped phase cannot use stays shown and clearable, marked quiet.
  */
 export function EncounterStartControls({
   interactions,
@@ -483,77 +536,20 @@ export function EncounterStartControls({
       : requireWorkspaceInteraction(interactions.figLeafSkips, figLeaf.interactionKey);
   const figLeafControl =
     figLeaf === undefined || figLeafInteraction === undefined ? null : (
-      <label className="timeline-checkbox" key="figLeaf">
-        <input
-          {...findingTarget(
-            figLeaf.address,
-            semanticOwnerControlElementId(figLeaf.address),
-            phase.address,
-          )}
-          checked={figLeafInteraction.selected}
-          onChange={(event) => executeIntent(figLeafInteraction.intentFor(event.target.checked))}
-          type="checkbox"
-        />
-        <span>Fig Leaf skip</span>
-      </label>
-    );
-  const aetos = phase.aetos;
-  const aetosInteraction =
-    aetos === undefined
-      ? undefined
-      : requireWorkspaceInteraction(interactions.aetosAppearances, aetos.interactionKey);
-  const aetosControl =
-    aetos === undefined || aetosInteraction === undefined ? null : (
-      <div className="encounter-event-control" key="aetos">
-        <label className="timeline-checkbox">
-          <input
-            {...findingTarget(
-              aetos.address,
-              semanticOwnerControlElementId(aetos.address),
-              phase.address,
-            )}
-            checked={aetosInteraction.selectedWave !== undefined}
-            disabled={
-              aetosInteraction.selectedWave === undefined && aetosInteraction.waves.length === 0
-            }
-            onChange={(event) => {
-              if (!event.target.checked) executeIntent(aetosInteraction.intentFor(null));
-              else if (aetosInteraction.enableIntent !== undefined)
-                executeIntent(aetosInteraction.enableIntent);
-            }}
-            type="checkbox"
-          />
-          <span>Aetos appearance</span>
-        </label>
-        {aetosInteraction.selectedWave === undefined ? null : (
-          <span className="encounter-event-wave-slot">
-            <select
-              aria-label="Aetos wave"
-              disabled={!aetosInteraction.contextReached || undefined}
-              {...hintProps(aetosInteraction.contextReached ? undefined : candidateWaitingHint)}
-              value={aetosInteraction.selectedWave}
-              onChange={(event) =>
-                executeIntent(aetosInteraction.intentFor(Number(event.target.value)))
-              }
-            >
-              {!aetosInteraction.waves.includes(aetosInteraction.selectedWave) ? (
-                <option disabled value={aetosInteraction.selectedWave}>
-                  {aetosInteraction.contextReached
-                    ? `Wave ${aetosInteraction.selectedWave} (unavailable)`
-                    : `Wave ${aetosInteraction.selectedWave}`}
-                </option>
-              ) : null}
-              {aetosInteraction.waves.map((wave) => (
-                <option key={wave} value={wave}>
-                  Wave {wave}
-                </option>
-              ))}
-            </select>
-          </span>
+      <EncounterEventToggle
+        icon={keepsakeArtwork.SkipEncounterKeepsake ?? undefined}
+        key="figLeaf"
+        name="Fig Leaf skip"
+        slot="figLeaf"
+        onToggle={(next) => executeIntent(figLeafInteraction.intentFor(next))}
+        pressed={figLeafInteraction.selected}
+        target={findingTarget(
+          figLeaf.address,
+          semanticOwnerControlElementId(figLeaf.address),
+          phase.address,
         )}
-      </div>
+      />
     );
-  const skippedHint = phase.skippedByFigLeaf === true ? skippedWithFigLeaf : undefined;
   const gorgon = phase.gorgonCondition;
   const gorgonInteraction =
     gorgon === undefined
@@ -561,39 +557,94 @@ export function EncounterStartControls({
       : requireWorkspaceInteraction(interactions.gorgonConditions, gorgon.interactionKey);
   // An unsupported retained condition owns its finding, so it stays clearable.
   const gorgonControl =
-    gorgon === undefined || gorgonInteraction === undefined
+    gorgon === undefined || gorgonInteraction === undefined ? null : (
+      <EncounterEventToggle
+        icon={keepsakeArtwork.AthenaEncounterKeepsake ?? undefined}
+        inapplicable={!gorgon.supported}
+        {...(!gorgon.supported && phase.skippedByFigLeaf === true
+          ? { inapplicableHint: skippedWithFigLeaf }
+          : {})}
+        key="gorgon"
+        name="No Death Defiance"
+        slot="gorgon"
+        onToggle={(next) => executeIntent(gorgonInteraction.intentFor(next))}
+        pressed={gorgonInteraction.selected}
+        target={findingTarget(
+          gorgon.address,
+          semanticOwnerControlElementId(gorgon.address),
+          phase.address,
+        )}
+      />
+    );
+  const aetos = phase.aetos;
+  const aetosInteraction =
+    aetos === undefined
+      ? undefined
+      : requireWorkspaceInteraction(interactions.aetosAppearances, aetos.interactionKey);
+  // One picker: no appearance, or the wave Aetos joins; each pick is one command. A
+  // stored wave stays clearable while its context waits on an earlier choice.
+  const aetosControl =
+    aetos === undefined || aetosInteraction === undefined
       ? null
       : (() => {
-          const target = findingTarget(
-            gorgon.address,
-            semanticOwnerControlElementId(gorgon.address),
-            phase.address,
-          );
+          const selected = aetosInteraction.selectedWave;
+          const reached = aetosInteraction.contextReached;
+          const waveLabel = (wave: number) => `Wave ${wave}`;
+          const id = semanticOwnerControlElementId(aetos.address);
+          const retainedUnavailable =
+            selected !== undefined && !aetosInteraction.waves.includes(selected);
           return (
-            <label
-              className="timeline-checkbox"
-              data-inapplicable={gorgon.supported ? undefined : ''}
-              key="gorgon"
-            >
-              <input
-                {...target}
-                {...hintProps(
-                  gorgon.supported ? undefined : skippedHint,
-                  'aria-description' in target ? target['aria-description'] : undefined,
+            <span className="encounter-aetos-picker" data-slot="aetos" key="aetos">
+              <ContextualPicker<string>
+                ariaLabel="Aetos appearance"
+                findingTarget={findingTarget(aetos.address, id, phase.address)}
+                id={id}
+                {...(!reached && selected === undefined
+                  ? { disabledHint: candidateWaitingHint }
+                  : {})}
+                {...(retainedUnavailable && reached ? { invalid: true } : {})}
+                label=""
+                layout="inline"
+                model={declaredChoicesPicker(
+                  [
+                    { key: 'none', value: '', label: 'No' },
+                    ...(retainedUnavailable
+                      ? [
+                          {
+                            key: `retained-${selected}`,
+                            value: String(selected),
+                            label: reached
+                              ? `${waveLabel(selected)} (unavailable)`
+                              : waveLabel(selected),
+                            disabled: true,
+                          },
+                        ]
+                      : []),
+                    ...aetosInteraction.waves.map((wave) => ({
+                      key: String(wave),
+                      value: String(wave),
+                      label: waveLabel(wave),
+                      ...(reached ? {} : { disabled: true, explanation: candidateWaitingHint }),
+                    })),
+                  ],
+                  selected === undefined ? '' : String(selected),
                 )}
-                checked={gorgonInteraction.selected}
-                onChange={(event) =>
-                  executeIntent(gorgonInteraction.intentFor(event.target.checked))
+                onSelect={(value) =>
+                  executeIntent(aetosInteraction.intentFor(value === '' ? null : Number(value)))
                 }
-                type="checkbox"
+                placeholder="No"
+                searchable={false}
+                triggerHint="Aetos appearance"
+                triggerIcon={aetosIcon}
+                triggerLabel={selected === undefined ? 'No' : waveLabel(selected)}
+                triggerSize="content"
               />
-              <span>No Death Defiance</span>
-            </label>
+            </span>
           );
         })();
   return (
-    <EncounterEventGroup label={`${phase.identityLabel} start`}>
-      {[figLeafControl, aetosControl, gorgonControl]}
+    <EncounterEventGroup label={`${phase.identityLabel} start`} slotted>
+      {[aetosControl, gorgonControl, figLeafControl]}
     </EncounterEventGroup>
   );
 }

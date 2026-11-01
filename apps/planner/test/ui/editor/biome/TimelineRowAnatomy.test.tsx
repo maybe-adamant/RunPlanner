@@ -7,7 +7,8 @@ import {
   createOccurrenceId,
   roomActionKey,
 } from '@run-planner/engine/authored-project';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { authoredProjectUndoRequested } from '@planner/state/projectWorkspaceSlice';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceLauncherPresentation } from '@planner/projections/structured-workspace';
 import { LauncherButton } from '@planner/ui/editor/rewards/LauncherButton';
@@ -122,7 +123,7 @@ describe('Room Timeline row anatomy', () => {
 describe('Encounter banners', () => {
   const skipped = createOccurrenceId('golden-f-b2-e1');
 
-  it('puts the start events in a group on the line under the start banner’s title', () => {
+  it('puts the start events in a group on the start banner’s line, after its title', () => {
     renderOccurrenceWorkbench(
       loadUnderworldFigLeafCheckpoint(),
       'Underworld',
@@ -135,12 +136,48 @@ describe('Encounter banners', () => {
     const events = within(start).getByRole('group', { name: 'Encounter start' });
     expect(title.contains(events)).toBe(false);
     expect(title.compareDocumentPosition(events) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Title and events share the banner's one label cell.
+    expect(events.closest('[data-timeline-cell="label"]')).toBe(title.parentElement);
     expect(
-      (within(events).getByRole('checkbox', { name: 'Fig Leaf skip' }) as HTMLInputElement).checked,
-    ).toBe(true);
+      within(events).getByRole('button', { name: 'Fig Leaf skip' }).getAttribute('aria-pressed'),
+    ).toBe('true');
     // A banner without events has no control group at all.
     for (const label of ['Room entered', 'Encounter ended', 'Doors open'])
       expect(within(timeline()).getByLabelText(label).querySelector('[role="group"]')).toBeNull();
+  });
+
+  it('shows each start event as an icon toggle named by its meaning', () => {
+    const view = renderOccurrenceWorkbench(
+      loadUnderworldFigLeafCheckpoint(),
+      'Underworld',
+      'F',
+      occurrenceById(skipped),
+    );
+    openRoomTab('Room Timeline');
+    const skip = () =>
+      within(within(timeline()).getByLabelText('Encounter')).getByRole('button', {
+        name: 'Fig Leaf skip',
+      });
+    const authored = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.topology?.occurrences.find((room) => room.occurrenceId === skipped)?.encounters
+        .figLeafSkipByPhase?.Encounter;
+    // The icon alone does not say what it means: its name is its hint on hover and focus.
+    expect(skip().textContent).toBe('');
+    expect(skip().getAttribute('aria-pressed')).toBe('true');
+    skip().focus();
+    expect(document.activeElement).toBe(skip());
+    expect(hintOf(skip())).toBe('Fig Leaf skip');
+    fireEvent.click(skip());
+    expect(skip().getAttribute('aria-pressed')).toBe('false');
+    expect(authored()).not.toBe(true);
+    act(() => {
+      view.application.store.dispatch(authoredProjectUndoRequested());
+    });
+    expect(skip().getAttribute('aria-pressed')).toBe('true');
+    expect(authored()).toBe(true);
   });
 
   it('keeps a retained Death Defiance condition on a skipped start, clearable and marked', () => {
@@ -158,10 +195,10 @@ describe('Encounter banners', () => {
     const events = within(within(timeline()).getByLabelText('Encounter')).getByRole('group', {
       name: 'Encounter start',
     });
-    const condition = within(events).getByRole('checkbox', {
+    const condition = within(events).getByRole('button', {
       name: 'No Death Defiance',
-    }) as HTMLInputElement;
-    expect(condition.checked).toBe(true);
+    }) as HTMLButtonElement;
+    expect(condition.getAttribute('aria-pressed')).toBe('true');
     // Its own finding keeps it clearable and quietly marks it as having no effect.
     expect(condition.disabled).toBe(false);
     expect(condition.dataset.hasFindings).toBe('true');

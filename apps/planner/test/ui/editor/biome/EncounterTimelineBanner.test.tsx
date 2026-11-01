@@ -148,9 +148,9 @@ describe('Encounter Timeline banner', () => {
     });
     renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceIds.preHub));
     openRoomTab('Room Timeline');
-    const skip = screen.getByRole('checkbox', { name: 'Fig Leaf skip' });
+    const skip = screen.getByRole('button', { name: 'Fig Leaf skip' });
     expect(skip.closest('li')).toBe(banner('Encounter'));
-    // Banner controls take the banner's control line, after its title.
+    // Banner controls sit on the banner's line, after its title.
     expect(skip.closest('.timeline-banner-modifiers')).not.toBeNull();
     expect(skip.hasAttribute('data-semantic-owner')).toBe(true);
   });
@@ -173,13 +173,13 @@ describe('Encounter Timeline banner', () => {
     // The skip already spent in N leaves later N phases without Fig Leaf support.
     renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceId('combat05')));
     openRoomTab('Room Timeline');
-    expect(screen.queryByRole('checkbox', { name: 'Fig Leaf skip' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Fig Leaf skip' })).toBeNull();
     cleanup();
     renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceIds.preHub));
     openRoomTab('Room Timeline');
-    expect(
-      (screen.getByRole('checkbox', { name: 'Fig Leaf skip' }) as HTMLInputElement).checked,
-    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'Fig Leaf skip' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
   });
 
   it('keeps the Fields Passive Nemesis family off the Room entered banner', () => {
@@ -228,12 +228,17 @@ describe('Encounter Timeline banner', () => {
     openRoomTab('Room Timeline');
     // What the game settles as the encounter starts sits on its start banner.
     const start = within(banner('Encounter')).getByRole('group', { name: / start$/ });
-    expect(within(start).getByRole('checkbox', { name: 'No Death Defiance' })).toBeTruthy();
+    expect(within(start).getByRole('button', { name: 'No Death Defiance' })).toBeTruthy();
     expect(within(start).queryByRole('combobox', { name: 'Outcome' })).toBeNull();
+    // A lone Gorgon condition still takes its own fixed slot.
+    expect(within(start).getByRole('button', { name: 'No Death Defiance' }).dataset.slot).toBe(
+      'gorgon',
+    );
     // The kill race is settled when the encounter ends.
     const end = within(banner('Encounter ended')).getByRole('group', { name: / end$/ });
+    // Its one outcome control is the end banner's only control.
     expect(within(end).getByRole('combobox', { name: 'Outcome' })).toBeTruthy();
-    expect(within(end).queryByRole('checkbox')).toBeNull();
+    expect(end.querySelectorAll('button, input, select')).toHaveLength(1);
   });
 
   it('hosts the Anomaly capture outcome on its Encounter ended banner', () => {
@@ -242,10 +247,16 @@ describe('Encounter Timeline banner', () => {
     openRoomTab('Room Timeline');
     const cleared = screen.getByRole('checkbox', { name: 'Cleared' });
     expect(cleared.closest('li')).toBe(banner('Encounter ended'));
+    // An Anomaly's capture point is its end banner's one control.
+    expect(
+      banner('Encounter ended').querySelectorAll(
+        '.timeline-banner-modifiers :is(button, input, select)',
+      ),
+    ).toHaveLength(1);
     expect(within(banner('Encounter')).queryByRole('checkbox', { name: 'Cleared' })).toBeNull();
   });
 
-  it('puts banner controls on their own line and adds none to a banner without events', () => {
+  it('keeps banner controls on the title line and adds none to a banner without events', () => {
     const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
@@ -254,14 +265,13 @@ describe('Encounter Timeline banner', () => {
     renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceIds.preHub));
     openRoomTab('Room Timeline');
     const label = banner('Encounter').querySelector<HTMLElement>('[data-timeline-cell="label"]')!;
-    // The title and the controls are separate parts of the banner, in that order.
+    // One line: the title, then the controls, both parts of the banner's label cell.
     const parts = [...label.children].map((part) => part.className);
     expect(parts).toEqual(['timeline-banner-title', 'timeline-banner-modifiers']);
     expect(
-      within(label.querySelector<HTMLElement>('.timeline-banner-modifiers')!).getByRole(
-        'checkbox',
-        { name: 'Fig Leaf skip' },
-      ),
+      within(label.querySelector<HTMLElement>('.timeline-banner-modifiers')!).getByRole('button', {
+        name: 'Fig Leaf skip',
+      }),
     ).toBeTruthy();
     // A banner with nothing to decide carries no control part with content.
     const ended = banner('Encounter ended');
@@ -323,16 +333,23 @@ describe('Encounter Timeline banner', () => {
     });
     renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceIds.preHub));
     openRoomTab('Room Timeline');
-    const condition = screen.getByRole('checkbox', {
+    const condition = screen.getByRole('button', {
       name: 'No Death Defiance',
-    }) as HTMLInputElement;
+    }) as HTMLButtonElement;
     // The retained value never hides; it owns its finding, so it stays clearable.
-    expect(condition.checked).toBe(true);
+    expect(condition.getAttribute('aria-pressed')).toBe('true');
     expect(condition.disabled).toBe(false);
     expect(condition.dataset.hasFindings).toBe('true');
+    expect(condition.hasAttribute('data-inapplicable')).toBe(true);
     // Its finding stops evaluation before the skip settles, so the engine publishes no
-    // skipped phase and the control invents no reason of its own.
-    expect(hintOf(condition)).toBeNull();
+    // skipped phase and the hint names only the toggle, inventing no reason.
+    expect(hintOf(condition)).toBe('No Death Defiance');
     expect(condition.closest('li')).toBe(banner('Encounter'));
+    // Both toggles keep their fixed slots, Gorgon before Fig Leaf.
+    const start = condition.closest<HTMLElement>('[role="group"]')!;
+    expect([...start.children].map((child) => child.getAttribute('data-slot'))).toEqual([
+      'gorgon',
+      'figLeaf',
+    ]);
   });
 });

@@ -86,7 +86,10 @@ import {
   occurrenceActionLabel,
   occurrenceActionLabelParts,
 } from '@planner/projections/structured-workspace/assembly/occurrence-action-label';
-import { purchaseAffordability } from '@planner/projections/structured-workspace/assembly/occurrence-action-row-projection';
+import {
+  goldBalanceLabel,
+  purchaseAffordability,
+} from '@planner/projections/structured-workspace/assembly/occurrence-action-row-projection';
 import type { WorkspaceExplicitRewardControl } from '@planner/projections/structured-workspace/contracts/rewards';
 import type { WorkspaceRoomLocal } from '@planner/projections/structured-workspace/contracts/locals';
 
@@ -2226,7 +2229,11 @@ describe('Doors open room gold', () => {
     const balance = room.doorsOpenBalance;
     if (balance.availability !== 'available') throw new Error('The Well balance is unavailable');
     expect(balance.balance.variance).toBeGreaterThan(0);
-    expect(actions?.current).toEqual({ label: `~${plain(Math.round(balance.balance.mean))}` });
+    // A spread balance reads as its rounded mean and its one-deviation spread.
+    expect(actions?.current?.label).toMatch(
+      new RegExp(`^${plain(Math.round(balance.balance.mean))} ±\\d+$`),
+    );
+    expect(actions?.current).toEqual(goldBalanceLabel(balance.balance));
   });
 
   it('marks a spread balance approximate', () => {
@@ -2238,7 +2245,11 @@ describe('Doors open room gold', () => {
     const balance = room.doorsOpenBalance;
     if (balance.availability !== 'available') throw new Error('The G intro balance is unavailable');
     expect(balance.balance.variance).toBeGreaterThan(0);
-    expect(actions?.current).toEqual({ label: `~${plain(Math.round(balance.balance.mean))}` });
+    // A spread balance reads as its rounded mean and its one-deviation spread.
+    expect(actions?.current?.label).toMatch(
+      new RegExp(`^${plain(Math.round(balance.balance.mean))} ±\\d+$`),
+    );
+    expect(actions?.current).toEqual(goldBalanceLabel(balance.balance));
   });
 
   it('keeps a rolled purchase price as its range', () => {
@@ -2370,5 +2381,27 @@ describe('Purchase affordability', () => {
     ];
     for (const [probability, exact, label, tone] of cases)
       expect(purchaseAffordability(probability, exact)).toEqual({ label, tone });
+  });
+
+  it('shows a balance as its mean with a rounded one-deviation spread', () => {
+    const cases: readonly [mean: number, variance: number, label: string][] = [
+      // An exact balance is its plain value.
+      [323, 0, '323'],
+      [-12, 0, '\u221212'],
+      // Below 50 the spread rounds to the nearest 5.
+      [323.4, 17 ** 2, '323 ±15'],
+      [323, 18 ** 2, '323 ±20'],
+      [100, 47 ** 2, '100 ±45'],
+      // From 50 up it rounds to the nearest 10.
+      [100, 50 ** 2, '100 ±50'],
+      [100, 64 ** 2, '100 ±60'],
+      [100, 66 ** 2, '100 ±70'],
+      // A balance below zero keeps the typographic minus.
+      [-40.6, 30 ** 2, '\u221241 ±30'],
+      // A spread never rounds away: it shows at least one step.
+      [323, 2 ** 2, '323 ±5'],
+    ];
+    for (const [mean, variance, label] of cases)
+      expect(goldBalanceLabel({ mean, variance })).toEqual({ label });
   });
 });

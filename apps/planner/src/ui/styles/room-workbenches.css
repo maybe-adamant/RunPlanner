@@ -458,19 +458,64 @@
   white-space: nowrap;
 }
 
-.encounter-event-wave-slot {
-  display: inline-flex;
-  flex: 0 0 7rem;
-  width: 7rem;
-  height: 1.9rem;
+/* An encounter event toggle is its icon alone: dim when off, lit when on. */
+.encounter-event-toggle {
+  display: inline-grid;
+  width: var(--timeline-control-height, 26px);
+  height: var(--timeline-control-height, 26px);
+  padding: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
 }
 
-.encounter-event-wave-slot > select {
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  padding: 2px 22px 2px 7px;
-  font-size: inherit;
+.encounter-event-toggle > .artwork-label-icon {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.encounter-event-toggle[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--selection-accent) 70%, transparent);
+  background: color-mix(in srgb, var(--selection-accent) 16%, transparent);
+}
+
+.encounter-event-toggle[aria-pressed='true'] > .artwork-label-icon {
+  opacity: 1;
+  filter: none;
+}
+
+/*
+ * Start events keep fixed slots at the end of the banner line, Aetos then the
+ * Gorgon condition then the Fig Leaf skip, so each icon lines up across banners;
+ * an absent event leaves its slot empty. The Aetos slot fits its widest wave.
+ */
+.encounter-event-controls[data-slotted] {
+  display: grid;
+  grid-template-columns:
+    calc(var(--timeline-control-height, 26px) + 8ch) var(--timeline-control-height, 26px)
+    var(--timeline-control-height, 26px);
+  align-items: center;
+  justify-items: end;
+}
+
+.encounter-event-controls[data-slotted] > [data-slot='aetos'] {
+  grid-column: 1;
+}
+
+.encounter-event-controls[data-slotted] > [data-slot='gorgon'] {
+  grid-column: 2;
+}
+
+.encounter-event-controls[data-slotted] > [data-slot='figLeaf'] {
+  grid-column: 3;
+}
+
+/* Aetos is one compact picker: his icon, the wave and the caret. */
+.encounter-aetos-picker {
+  display: inline-flex;
+  align-items: center;
 }
 
 .encounter-customization-fields {
@@ -1238,8 +1283,18 @@
  * label, decisions, money and trash. The decisions column is as wide as the
  * list's widest decisions, so they start at one x on every row.
  */
-:has(> .room-action-list) {
+/* The timeline column measures against its whole workbench, beside the Add area or not. */
+:has(> .room-action-list):not(.room-timeline-main),
+:is(.room-actions-workbench, .ship-phase):has(> .room-timeline-main) {
   container: timeline-list / inline-size;
+}
+
+/* The timeline column stacks the timeline, its repairs and their status. */
+.room-timeline-main {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  row-gap: 10px;
 }
 
 .room-action-list > li {
@@ -1379,13 +1434,15 @@
 }
 
 /*
- * A banner's title takes its first line and its controls a second one, so they never
- * compete; only at very narrow widths does the identity end in an ellipsis.
+ * A banner is one line: its title, then its controls. The title gives way first,
+ * ending its identity in an ellipsis; only a line that still cannot fit wraps the
+ * controls under it.
  */
 .timeline-banner-title {
   display: inline-flex;
-  min-width: 0;
-  flex: 1 1 100%;
+  min-width: 4rem;
+  max-width: max-content;
+  flex: 1 1 0;
   align-items: center;
   gap: 6px;
   overflow: hidden;
@@ -1409,6 +1466,8 @@
 .timeline-banner-modifiers {
   display: flex;
   flex: 0 0 auto;
+  /* A banner's controls sit at the end of its line, before money and delete. */
+  margin-inline-start: auto;
   align-items: center;
   flex-wrap: nowrap;
   gap: 14px;
@@ -1417,7 +1476,7 @@
 
 .timeline-banner-modifiers .encounter-event-controls {
   flex-wrap: nowrap;
-  gap: 14px;
+  gap: 6px;
 }
 
 .timeline-banner-modifiers:empty,
@@ -2101,10 +2160,6 @@
   min-height: var(--timeline-control-height);
   padding-block: 3px;
   line-height: 1.2;
-}
-
-.room-actions-workbench .encounter-event-wave-slot {
-  height: var(--timeline-control-height);
 }
 
 /* The banner's identity is navigation to its Overview picker, styled as text. */
@@ -3256,7 +3311,7 @@
   /* A title line is as tall as one control, so every banner title sits alike. */
   min-height: var(--timeline-control-height, 26px);
   align-items: center;
-  /* A banner's controls take a second line under its title; none leaves no line. */
+  /* The controls wrap under the title only as a last resort. */
   flex-wrap: wrap;
   gap: 4px 14px;
   line-height: 1.25;
@@ -3367,12 +3422,16 @@
     grid-column: 1;
   }
 
+  /*
+   * One row: the timeline column beside the Add area, so the panel is only as tall
+   * as the taller of the two and the column sticks while the timeline scrolls.
+   */
   :is(.room-actions-workbench, .ship-phase) > .room-add,
   :is(.room-actions-workbench, .ship-phase) > .room-add[data-empty] {
     position: sticky;
     top: 52px;
     display: grid;
-    grid-row: 1 / span 40;
+    grid-row: 1;
     grid-column: 2;
     align-content: start;
     align-self: start;

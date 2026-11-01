@@ -1125,10 +1125,17 @@ export function purchaseAffordability(
   return Object.freeze({ label, tone });
 }
 
-/** A room figure: the whole amount when exact, else its rounded mean marked approximate. */
-function roomFigure(moments: GoldMoments, exact: boolean): WorkspaceGoldAmount {
-  const rounded = goldNumber(Math.round(moments.mean));
-  return Object.freeze({ label: exact ? rounded : `~${rounded}` });
+/**
+ * A balance: its rounded mean, followed by its spread (one standard deviation,
+ * to the nearest 5, or the nearest 10 from 50 up, never below one step) unless exact.
+ */
+export function goldBalanceLabel(moments: GoldMoments): WorkspaceGoldAmount {
+  const mean = goldNumber(Math.round(moments.mean));
+  if (moments.variance === 0) return Object.freeze({ label: mean });
+  const deviation = Math.sqrt(moments.variance);
+  const step = deviation < 50 ? 5 : 10;
+  const spread = Math.max(step, Math.round(deviation / step) * step);
+  return Object.freeze({ label: `${mean} ±${spread}` });
 }
 
 function roomGold(
@@ -1139,7 +1146,7 @@ function roomGold(
   if (priced?.availability !== 'available') return {};
   const { doorsOpenBalance } = priced.room;
   return doorsOpenBalance.availability === 'available'
-    ? { current: roomFigure(doorsOpenBalance.balance, doorsOpenBalance.balance.variance === 0) }
+    ? { current: goldBalanceLabel(doorsOpenBalance.balance) }
     : {};
 }
 

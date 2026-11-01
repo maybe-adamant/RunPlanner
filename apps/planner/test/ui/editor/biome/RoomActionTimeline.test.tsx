@@ -1913,7 +1913,7 @@ describe('OccurrenceRoomActions', () => {
       expect(row.querySelector("[data-timeline-cell='label']")?.textContent).not.toMatch(/gold/);
     }
     expect(within(actions).getByLabelText('Doors open').textContent).toMatch(
-      /Current\s*~?\u2212?\d+ gold$/,
+      /Current\s*\u2212?\d+(?: ±\d+)? gold$/,
     );
     expect(within(actions).getByLabelText('Doors open').textContent).not.toMatch(/Spent/);
     expect(within(actions).getByLabelText('Room entered').textContent).not.toMatch(/Current/);
@@ -1955,7 +1955,7 @@ describe('OccurrenceRoomActions', () => {
     const doorsOpen = within(screen.getByRole('region', { name: 'Room Timeline' })).getByLabelText(
       'Doors open',
     );
-    expect(doorsOpen.textContent).toMatch(/Current\s*~\d+ gold/);
+    expect(doorsOpen.textContent).toMatch(/Current\s*\d+ ±\d+ gold/);
     expect(doorsOpen.textContent).not.toMatch(/Spent/);
     expect(doorsOpen.querySelector('[data-placeholder]')).toBeNull();
   });

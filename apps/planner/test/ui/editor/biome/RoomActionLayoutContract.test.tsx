@@ -112,6 +112,12 @@ function witnessBiome(project: ProjectDocument, biomeKey: string, kinds: Set<str
     for (const tab of tabs) {
       fireEvent.click(tab);
       rows += expectTimelineRows(view.container, kinds);
+      // The Add area sits beside one timeline column, never beside each timeline part.
+      for (const add of view.container.querySelectorAll('.room-add')) {
+        expect(
+          [...add.parentElement!.children].map((child) => child.className.split(' ')[0]),
+        ).toEqual(['room-timeline-main', 'room-add']);
+      }
       const add = within(view.container).queryAllByRole('button', { name: /^Add / })[0];
       if (add !== undefined && !(add as HTMLButtonElement).disabled) {
         fireEvent.click(add);
@@ -281,6 +287,17 @@ describe('Room Timeline layout contract', () => {
     expect(source).toContain(
       `${banner} > :is( [data-timeline-cell='handle'], [data-timeline-cell='money'], [data-timeline-cell='actions'] ) { display: none; }`,
     );
+  });
+
+  it('places the optional actions column in the one row beside the timeline column', () => {
+    const source = styles['room-workbenches']!;
+    const wide = source.indexOf('@container room-panel (min-width: 62rem)');
+    expect(wide).toBeGreaterThan(0);
+    const block = source.slice(wide, source.indexOf('\n}\n', wide));
+    const side = block.slice(block.indexOf('> .room-add[data-empty]'));
+    // Spanning extra rows would add their gaps to the panel and make it scroll for nothing.
+    expect(side.slice(0, side.indexOf('}'))).toMatch(/grid-row: 1;/);
+    expect(block).not.toMatch(/grid-row:[^;]*span/);
   });
 
   it("moves a row's decisions below its label in one narrow rule", () => {

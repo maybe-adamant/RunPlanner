@@ -164,7 +164,7 @@ async function optionalActionNames(
 }
 
 describe('OccurrenceEncounterWorkbench', () => {
-  it('shows a retained Aetos wave as waiting while its phase context is unreached', () => {
+  it('shows a retained Aetos wave as waiting while its phase context is unreached', async () => {
     const occurrenceId = pOccurrenceId('P_Combat03', 1, 1);
     let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceAetosWave',
@@ -180,17 +180,25 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
       encounterKey: 'ArtemisCombatN',
     });
-    renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
+    const { user } = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'P',
+      occurrenceById(occurrenceId),
+    );
     openRoomTab('Room Timeline');
-    const wave = screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement;
-    expect(wave.value).toBe('2');
-    expect(wave.disabled).toBe(true);
-    expect(hintOf(wave)).toBe('Waits on an earlier choice.');
-    expect(within(wave).getByRole('option', { name: 'Wave 2' })).toBeDefined();
-    expect(within(wave).queryByRole('option', { name: /unavailable/ })).toBeNull();
+    const wave = screen.getByRole('button', { name: 'Aetos appearance' });
+    expect(wave.textContent).toBe('Wave 2');
+    // The stored wave stays clearable; only other waves wait on the earlier choice.
+    expect((wave as HTMLButtonElement).disabled).toBe(false);
+    await user.click(wave);
+    expect(screen.getByRole('option', { name: 'No' }).getAttribute('aria-disabled')).not.toBe(
+      'true',
+    );
+    expect(screen.queryByRole('option', { name: /unavailable/ })).toBeNull();
   });
 
-  it('authors a native Aetos wave in Events, retains an unavailable choice, and repairs it directly', async () => {
+  it('authors a native Aetos wave from one picker, retains an unavailable choice, and repairs it directly', async () => {
     const occurrenceId = pOccurrenceId('P_Combat03', 1, 1);
     const phase = createEncounterPhaseAddress(
       pBiome,
@@ -204,35 +212,56 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Timeline');
-    expect(screen.queryByRole('combobox', { name: 'Aetos wave' })).toBeNull();
-    await view.user.click(screen.getByRole('checkbox', { name: 'Aetos appearance' }));
-    expect((screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement).value).toBe(
-      '2',
-    );
-    const selected = view.application.store.getState().projectWorkspace.history!.present;
+    const aetos = () => screen.getByRole('button', { name: 'Aetos appearance' });
+    const pick = async (option: string) => {
+      await view.user.click(aetos());
+      await view.user.click(await screen.findByRole('option', { name: option }));
+    };
+    const aetosWave = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'P')
+        ?.topology?.occurrences.find((room) => room.occurrenceId === occurrenceId)?.encounters
+        .aetosWaveByPhase?.Combat;
+    // No appearance, then each wave the phase supports.
+    expect(aetos().textContent).toBe('No');
+    await view.user.click(aetos());
     expect(
-      selected.route.biomes
-        .find((biome) => biome.biomeKey === 'P')
-        ?.topology?.occurrences.find((room) => room.occurrenceId === occurrenceId)?.encounters,
-    ).toMatchObject({ aetosWaveByPhase: { Combat: 2 } });
+      screen.getAllByRole('option').map((option) => option.textContent?.replace('✓', '')),
+    ).toEqual(['No', 'Wave 2']);
+    await view.user.keyboard('{Escape}');
+    const before = view.application.store.getState().projectWorkspace.history!.past.length;
+    await pick('Wave 2');
+    expect(aetos().textContent).toBe('Wave 2');
+    expect(aetosWave()).toBe(2);
+    // One pick is one command and one Undo step.
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      before + 1,
+    );
+    act(() => {
+      view.application.store.dispatch(authoredProjectUndoRequested());
+    });
+    expect(aetos().textContent).toBe('No');
+    expect(aetosWave()).toBeUndefined();
+    await pick('Wave 2');
     act(() => {
       view.application.store.dispatch(
         authoredProjectCommandDispatched({ kind: 'ReplaceAetosWave', phase, value: 3 }),
       );
     });
-    expect((screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement).value).toBe(
-      '3',
-    );
+    expect(aetos().textContent).toBe('Wave 3');
+    await view.user.click(aetos());
     expect(screen.getByRole('option', { name: 'Wave 3 (unavailable)' })).toBeDefined();
-    await view.user.selectOptions(screen.getByRole('combobox', { name: 'Aetos wave' }), '2');
-    await view.user.click(screen.getByRole('checkbox', { name: 'Aetos appearance' }));
-    expect(screen.queryByRole('combobox', { name: 'Aetos wave' })).toBeNull();
+    await view.user.click(screen.getByRole('option', { name: 'Wave 2' }));
+    expect(aetosWave()).toBe(2);
+    // "No" clears the appearance.
+    await pick('No');
+    expect(aetos().textContent).toBe('No');
+    expect(aetosWave()).toBeUndefined();
     act(() => {
       view.application.store.dispatch(authoredProjectUndoRequested());
     });
-    expect((screen.getByRole('combobox', { name: 'Aetos wave' }) as HTMLSelectElement).value).toBe(
-      '2',
-    );
+    expect(aetos().textContent).toBe('Wave 2');
     act(() => {
       view.application.store.dispatch(
         authoredProjectCommandDispatched({
@@ -242,11 +271,11 @@ describe('OccurrenceEncounterWorkbench', () => {
         }),
       );
     });
-    expect(
-      (screen.getByRole('checkbox', { name: 'Aetos appearance' }) as HTMLInputElement).checked,
-    ).toBe(true);
-    await view.user.click(screen.getByRole('checkbox', { name: 'Aetos appearance' }));
-    expect(screen.queryByRole('checkbox', { name: 'Aetos appearance' })).toBeNull();
+    expect(aetos().textContent).toBe('Wave 2');
+    // A retained wave whose phase context is not yet reached can still be cleared.
+    await pick('No');
+    expect(aetosWave()).toBeUndefined();
+    expect(screen.queryByRole('button', { name: 'Aetos appearance' })).toBeNull();
   });
 
   it('authors a Nemesis combat outcome in Events and undoes it', async () => {
@@ -303,7 +332,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(fixture.occurrenceId),
     );
     openRoomTab('Room Timeline');
-    expect(screen.queryByRole('checkbox', { name: 'Aetos appearance' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Aetos appearance' })).toBeNull();
     act(() => {
       view.application.store.dispatch(
         authoredProjectCommandDispatched({
@@ -323,11 +352,12 @@ describe('OccurrenceEncounterWorkbench', () => {
         findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
       );
     });
-    const checkbox = screen.getByRole('checkbox', { name: 'Aetos appearance' });
-    expect((checkbox as HTMLInputElement).checked).toBe(true);
-    await waitFor(() => expect(document.activeElement).toBe(checkbox));
-    await view.user.click(checkbox);
-    expect(screen.queryByRole('checkbox', { name: 'Aetos appearance' })).toBeNull();
+    const picker = screen.getByRole('button', { name: 'Aetos appearance' });
+    expect(picker.textContent).toBe('Wave 2');
+    await waitFor(() => expect(document.activeElement).toBe(picker));
+    await view.user.click(picker);
+    await view.user.click(await screen.findByRole('option', { name: 'No' }));
+    expect(screen.queryByRole('button', { name: 'Aetos appearance' })).toBeNull();
   });
 
   it('exposes generated customization on a fixed opening encounter', async () => {
@@ -1126,14 +1156,17 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
-    const condition = screen.getByRole('checkbox', {
+    const condition = screen.getByRole('button', {
       name: 'No Death Defiance',
-    }) as HTMLInputElement;
+    }) as HTMLButtonElement;
     expect(condition.disabled).toBe(false);
-    expect(within(screen.getByRole('group', { name: / start$/ })).getByRole('checkbox')).toBe(
-      condition,
-    );
-    await view.user.click(screen.getByText('No Death Defiance'));
+    expect(condition.getAttribute('aria-pressed')).toBe('false');
+    expect(
+      within(screen.getByRole('group', { name: / start$/ })).getByRole('button', {
+        name: 'No Death Defiance',
+      }),
+    ).toBe(condition);
+    await view.user.click(condition);
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Edit Trait · Choose trait' })).toBeTruthy();
     });
@@ -1182,16 +1215,16 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
-    const condition = screen.getByRole('checkbox', {
+    const condition = screen.getByRole('button', {
       name: 'No Death Defiance',
-    }) as HTMLInputElement;
-    expect(condition.checked).toBe(true);
+    }) as HTMLButtonElement;
+    expect(condition.getAttribute('aria-pressed')).toBe('true');
     expect(condition.disabled).toBe(false);
     // The Combat phase starts before the blocked Athena offer: its reached Gorgon support is unsupported.
     expect(screen.getByRole('button', { name: 'Edit Trait · Divine Dash' })).toBeTruthy();
     await view.user.click(condition);
     await waitFor(() => {
-      expect(screen.queryByRole('checkbox', { name: 'No Death Defiance' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'No Death Defiance' })).toBeNull();
     });
     const updatedOccurrence = view.application.store
       .getState()
@@ -1203,7 +1236,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
   });
 
-  it('targets an unavailable Gorgon condition on its checkbox and clears its action', async () => {
+  it('targets an unavailable Gorgon condition on its toggle and clears its action', async () => {
     const occurrenceId = pOccurrenceId('P_Combat12', 8, 1);
     const phase = createEncounterPhaseAddress(
       pBiome,
@@ -1217,14 +1250,14 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
-    const condition = screen.getByRole('checkbox', {
+    const condition = screen.getByRole('button', {
       name: 'No Death Defiance',
     });
     expect(condition.getAttribute('data-has-findings')).toBe('true');
     expect(condition.getAttribute('aria-description')).toContain('Gorgon Amulet cannot trigger');
     await view.user.click(condition);
     await waitFor(() => {
-      expect(screen.queryByRole('checkbox', { name: 'No Death Defiance' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'No Death Defiance' })).toBeNull();
     });
     expect(screen.queryByText('Talk to Athena')).toBeNull();
     const updatedOccurrence = view.application.store
@@ -1237,7 +1270,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
   });
 
-  it('renders and dispatches the phase-local Fig Leaf checkbox on a supported fixed phase', async () => {
+  it('renders and dispatches the phase-local Fig Leaf toggle on a supported fixed phase', async () => {
     const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
@@ -1250,10 +1283,14 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(nOccurrenceIds.preHub),
     );
     openRoomTab('Room Timeline');
-    const skip = screen.getByRole('checkbox', { name: 'Fig Leaf skip' });
-    expect((skip as HTMLInputElement).disabled).toBe(false);
-    expect(within(screen.getByRole('group', { name: / start$/ })).getByRole('checkbox')).toBe(skip);
-    (skip as HTMLInputElement).focus();
+    const skip = screen.getByRole('button', { name: 'Fig Leaf skip' });
+    expect((skip as HTMLButtonElement).disabled).toBe(false);
+    expect(
+      within(screen.getByRole('group', { name: / start$/ })).getByRole('button', {
+        name: 'Fig Leaf skip',
+      }),
+    ).toBe(skip);
+    (skip as HTMLButtonElement).focus();
     await view.user.keyboard(' ');
     await waitFor(() => {
       const occurrence = view.application.store
@@ -1266,7 +1303,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     });
   });
 
-  it('targets an unavailable Fig Leaf skip on its Timeline checkbox, not the Overview identity', async () => {
+  it('targets an unavailable Fig Leaf skip on its Timeline toggle, not the Overview identity', async () => {
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
       { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
@@ -1297,7 +1334,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
       );
     });
-    const skip = screen.getByRole('checkbox', { name: 'Fig Leaf skip' });
+    const skip = screen.getByRole('button', { name: 'Fig Leaf skip' });
     expect(skip.dataset.hasFindings).toBe('true');
     await waitFor(() => expect(document.activeElement).toBe(skip));
   });
@@ -1328,20 +1365,20 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Room Timeline');
     // The skip and the retained condition both sit on the start banner.
     const start = screen.getByRole('group', { name: / start$/ });
-    const skip = within(start).getByRole('checkbox', {
+    const skip = within(start).getByRole('button', {
       name: 'Fig Leaf skip',
-    }) as HTMLInputElement;
-    expect(skip.checked).toBe(true);
+    }) as HTMLButtonElement;
+    expect(skip.getAttribute('aria-pressed')).toBe('true');
     expect(skip.disabled).toBe(false);
-    const condition = within(start).getByRole('checkbox', {
+    const condition = within(start).getByRole('button', {
       name: 'No Death Defiance',
-    }) as HTMLInputElement;
-    expect(condition.checked).toBe(true);
+    }) as HTMLButtonElement;
+    expect(condition.getAttribute('aria-pressed')).toBe('true');
     // A retained condition owns its finding, so it stays clearable.
     expect(condition.disabled).toBe(false);
     await view.user.click(skip);
     await waitFor(() => {
-      expect(screen.queryByRole('checkbox', { name: 'Fig Leaf skip' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Fig Leaf skip' })).toBeNull();
     });
   });
 
@@ -1865,9 +1902,7 @@ describe('OccurrenceEncounterWorkbench', () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText('Encounter phase')).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'Encounter' }).textContent).toContain(
-        'Preset 01',
-      );
+      expect(screen.getByRole('button', { name: 'Encounter' }).textContent).toContain('Preset 01');
     });
   });
 

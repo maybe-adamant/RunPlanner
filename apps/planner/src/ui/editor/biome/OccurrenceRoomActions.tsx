@@ -776,34 +776,36 @@ export function RoomActionsWorkbench({
                   className="ship-phase"
                   key={phase.key}
                 >
-                  {phase.actionRows.length === 0 &&
-                  phase.checkpoints.length === 0 &&
-                  phase.timeline.length === 0 ? null : (
-                    <ol aria-label={`${phase.label} timeline`} className="room-action-list">
-                      {checkpointRows(0, phase.checkpoints)}
-                      {phase.timeline.flatMap(renderPhaseTimelineEntry)}
-                      {trailingCheckpoints.map((checkpoint) => (
-                        <TimelineRow
-                          key={`checkpoint:${checkpoint.key}`}
-                          kind="checkpoint"
-                          label={<strong>{checkpoint.label}</strong>}
-                        />
-                      ))}
-                    </ol>
-                  )}
-                  {phase.unplacedRows.length === 0 ? null : (
-                    <section aria-label="Required actions" className="room-action-optional-pool">
-                      <div className="local-reward-heading">
-                        <h5>Required actions</h5>
-                      </div>
-                      <ol
-                        aria-label={`${phase.label} required actions`}
-                        className="room-action-list"
-                      >
-                        {phase.unplacedRows.map((row) => renderRow(row, phase.checkpoints))}
+                  <div className="room-timeline-main">
+                    {phase.actionRows.length === 0 &&
+                    phase.checkpoints.length === 0 &&
+                    phase.timeline.length === 0 ? null : (
+                      <ol aria-label={`${phase.label} timeline`} className="room-action-list">
+                        {checkpointRows(0, phase.checkpoints)}
+                        {phase.timeline.flatMap(renderPhaseTimelineEntry)}
+                        {trailingCheckpoints.map((checkpoint) => (
+                          <TimelineRow
+                            key={`checkpoint:${checkpoint.key}`}
+                            kind="checkpoint"
+                            label={<strong>{checkpoint.label}</strong>}
+                          />
+                        ))}
                       </ol>
-                    </section>
-                  )}
+                    )}
+                    {phase.unplacedRows.length === 0 ? null : (
+                      <section aria-label="Required actions" className="room-action-optional-pool">
+                        <div className="local-reward-heading">
+                          <h5>Required actions</h5>
+                        </div>
+                        <ol
+                          aria-label={`${phase.label} required actions`}
+                          className="room-action-list"
+                        >
+                          {phase.unplacedRows.map((row) => renderRow(row, phase.checkpoints))}
+                        </ol>
+                      </section>
+                    )}
+                  </div>
                   <WorkbenchAddArea
                     addAction={addAction}
                     featureRolls={[]}
@@ -880,21 +882,35 @@ export function RoomActionsWorkbench({
       {...findingAnchor(actions.owner)}
       tabIndex={-1}
     >
-      <p aria-live="polite" className="visually-hidden">
-        {announcement}
-      </p>
-      {actions.timeline.fieldsCageOrder === undefined || interaction === undefined ? null : (
-        <FieldsCageOrderControl
-          control={actions.timeline.fieldsCageOrder}
-          id={`${idPrefix ?? 'room-actions'}-cage-order`}
-          interaction={interaction}
-        />
-      )}
-      <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
-        {timelineRows}
-        {rankedRows.length === 0 ? checkpointRows(0) : null}
-      </ol>
-      {children}
+      {/* The timeline and its repairs form one column; the Add area sits beside or below it. */}
+      <div className="room-timeline-main">
+        <p aria-live="polite" className="visually-hidden">
+          {announcement}
+        </p>
+        {actions.timeline.fieldsCageOrder === undefined || interaction === undefined ? null : (
+          <FieldsCageOrderControl
+            control={actions.timeline.fieldsCageOrder}
+            id={`${idPrefix ?? 'room-actions'}-cage-order`}
+            interaction={interaction}
+          />
+        )}
+        <ol aria-label="Room timeline" className="room-action-list" ref={attachRoot}>
+          {timelineRows}
+          {rankedRows.length === 0 ? checkpointRows(0) : null}
+        </ol>
+        {children}
+        {actions.repairRows.length === 0 ? null : (
+          <section aria-label="Timeline repairs" className="room-action-repairs">
+            <div className="local-reward-heading">
+              <h5>Timeline repairs</h5>
+            </div>
+            <ol aria-label="Timeline repairs" className="room-action-list">
+              {actions.repairRows.map((row) => renderRow(row))}
+            </ol>
+          </section>
+        )}
+        <TimelineReorderStatus session={reorder} />
+      </div>
       <WorkbenchAddArea
         addAction={addAction}
         featureRolls={actions.featureRolls ?? []}
@@ -903,17 +919,6 @@ export function RoomActionsWorkbench({
         objectRows={actions.rows}
         optionalRows={actions.optionalRows}
       />
-      {actions.repairRows.length === 0 ? null : (
-        <section aria-label="Timeline repairs" className="room-action-repairs">
-          <div className="local-reward-heading">
-            <h5>Timeline repairs</h5>
-          </div>
-          <ol aria-label="Timeline repairs" className="room-action-list">
-            {actions.repairRows.map((row) => renderRow(row))}
-          </ol>
-        </section>
-      )}
-      <TimelineReorderStatus session={reorder} />
     </section>
   );
 }

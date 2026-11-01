@@ -1,3 +1,4 @@
+import iconAetos from './assets/Aetos.webp';
 import iconArachne from './assets/Arachne.webp';
 import iconArtemis from './assets/Artemis.webp';
 import iconAthena from './assets/Athena.webp';
@@ -26,3 +27,6 @@ export const npcArtwork: Readonly<Record<string, string | null>> = {
   Narcissus: iconNarcissus,
   Nemesis: iconNemesis,
 };
+
+/** Aetos, the eagle that may join an encounter; no catalog NPC key names him. */
+export const aetosIcon: string = iconAetos;
