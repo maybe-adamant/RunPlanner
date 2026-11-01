@@ -332,7 +332,7 @@
     0 2px 8px rgb(0 0 0 / 48%);
 }
 
-.hub-map-marker:disabled {
+.hub-map-marker:is(:disabled, [aria-disabled='true']) {
   cursor: not-allowed;
 }
 

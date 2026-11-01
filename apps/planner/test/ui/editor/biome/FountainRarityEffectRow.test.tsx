@@ -107,7 +107,7 @@ describe('FountainRarityEffectRow', () => {
         <FountainRarityEffectRow control={control} interactions={interactions} />
       </Provider>,
     );
-    expect(await screen.findByLabelText('Phial Target')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Aromatic Phial target' })).toBeTruthy();
     expect(screen.queryByText('Needs repair')).toBeNull();
     await act(async () => {
       screen.getByRole('button', { name: 'Clear Phial target' }).click();
@@ -153,7 +153,7 @@ describe('FountainRarityEffectRow', () => {
         />
       </Provider>,
     );
-    const picker = await screen.findByLabelText('Phial Target');
+    const picker = await screen.findByRole('button', { name: 'Aromatic Phial target' });
     expect(picker).toHaveProperty('disabled', true);
     expect(hintOf(picker)).toBe('Waits on an earlier choice.');
     expect(screen.queryByRole('button', { name: 'Clear Phial target' })).toBeNull();
@@ -199,7 +199,7 @@ describe('FountainRarityEffectRow', () => {
         />
       </Provider>,
     );
-    const picker = await screen.findByLabelText('Phial Target');
+    const picker = await screen.findByRole('button', { name: 'Aromatic Phial target' });
     expect(picker).toHaveProperty('disabled', true);
     expect(hintOf(picker)).toBe('No Phial-eligible boon to target here.');
     application.dispose();
@@ -273,7 +273,7 @@ describe('FountainRarityEffectRow', () => {
         />
       </Provider>,
     );
-    await user.click(screen.getByLabelText('Phial Target'));
+    await user.click(screen.getByRole('button', { name: 'Aromatic Phial target' }));
     await user.click(screen.getByText('Apollo Attack'));
     expect(authorIntent).toHaveBeenCalledWith('ApolloWeaponBoon');
     application.dispose();
@@ -344,7 +344,7 @@ describe('FountainRarityEffectRow', () => {
       </Provider>,
     );
     const historyBefore = application.store.getState().projectWorkspace.history!.past.length;
-    await user.click(screen.getByLabelText('Phial Target'));
+    await user.click(screen.getByRole('button', { name: 'Aromatic Phial target' }));
     await user.click(screen.getByText('Apollo Attack'));
     const selected = application.store.getState().projectWorkspace.history!.present;
     const selectedPostboss = selected.route?.biomes[0]?.topology?.occurrences.find(

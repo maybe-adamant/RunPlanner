@@ -248,11 +248,33 @@ describe('HubDecisionWorkbench interaction', () => {
       'disabled',
       true,
     );
-    expect(within(lists[1]!).getByRole('img', { name: '2 rerolls left' })).toBeTruthy();
+    // One count stands for the Hub: what its last stay leaves.
+    expect(within(lists[1]!).queryByRole('img', { name: /rerolls left/ })).toBeNull();
+    expect(
+      within(details.querySelector('.hub-board-heading')!).getByRole('img', {
+        name: '2 rerolls left',
+      }),
+    ).toBeTruthy();
+    // Each board recap is one collapsed line; the stay whose press changed it carries the die.
+    const recaps = within(details).getAllByRole('button', { name: /^Board · \d+ open/ });
+    expect(recaps).toHaveLength(7);
+    expect(recaps.every((recap) => recap.getAttribute('aria-expanded') === 'false')).toBe(true);
+    expect(within(details).queryByRole('list', { name: /^Board / })).toBeNull();
+    expect(
+      recaps.map((recap) => within(recap).queryByRole('img', { name: 'Rerolled' }) !== null),
+    ).toEqual([false, true, false, false, false, false, false]);
+    fireEvent.click(recaps[1]!);
+    expect(recaps[1]!.getAttribute('aria-expanded')).toBe('true');
     const board = within(details).getByRole('list', { name: 'Board After Visit 1' });
+    expect(recaps[1]!.getAttribute('aria-controls')).toBe(board.id);
     // The door the visit entered is closed and no longer listed.
     expect(within(board).queryByText('Combat 05')).toBeNull();
     expect(within(board).getByText(/ → /)).toBeTruthy();
+    // Show boards opens every stay at once; Hide boards closes them.
+    fireEvent.click(within(details).getByRole('button', { name: 'Show boards' }));
+    expect(within(details).getAllByRole('list', { name: /^Board / })).toHaveLength(7);
+    fireEvent.click(within(details).getByRole('button', { name: 'Hide boards' }));
+    expect(within(details).queryByRole('list', { name: /^Board / })).toBeNull();
     const fountains = details.querySelectorAll('.hub-timeline-fountain');
     expect(fountains).toHaveLength(1);
     expect(lists[0]!.contains(fountains[0]!)).toBe(true);

@@ -1433,28 +1433,33 @@ select {
   }
 }
 
-/* Each press: Reroll | target | arrow | reward | remove, aligned across presses. */
-.room-rerolls:not([data-movable='true']) .room-rerolls-list {
+/*
+ * Each press: Reroll | target | arrow | reward | remove, aligned across presses.
+ * A movable list leads with each row's drag handle.
+ */
+.room-rerolls-list {
   grid-template-columns: repeat(5, auto);
   justify-content: start;
   column-gap: 8px;
 }
 
-.room-rerolls:not([data-movable='true']) .room-reroll-row {
+.room-rerolls[data-movable='true'] .room-rerolls-list {
+  grid-template-columns: 24px repeat(5, auto);
+}
+
+.room-reroll-row {
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
   align-items: center;
 }
 
-.room-rerolls:not([data-movable='true']) .room-reroll-append {
+.room-reroll-append {
   grid-column: 1 / -1;
 }
 
-.room-reroll-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.room-rerolls[data-movable='true'] .room-reroll-append {
+  grid-column: 2 / -1;
 }
 
 .room-reroll-verb,
@@ -1476,19 +1481,6 @@ select {
   color: #e3dde8;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-}
-
-.room-reroll-index {
-  color: var(--muted);
-  font-size: 0.8rem;
-  text-align: right;
-}
-
-.room-reroll-target {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
 }
 
 /* The Fields roll and its facts read as one compact line under the pool. */

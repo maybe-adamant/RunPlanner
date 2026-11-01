@@ -27,6 +27,7 @@ import { useHubSlotMembership } from '../HubMembershipBoard';
 import { HubMapFountainContent, HubMapMarkerContent } from './HubMapMarkerContent';
 import { hubMapReward } from './hubMapReward';
 import { hintProps } from '@planner/ui/controls/hint';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 
 interface HubMapOverviewProps {
   readonly hubIdentity: string;
@@ -74,6 +75,14 @@ function HubMapMarker({
   // An open marker launches the existing reward surface. Its separate Close
   // action may be unavailable without making that surface unreachable.
   const disabled = open ? false : membership.disabled;
+  // An unavailable marker stays focusable so its reason is reachable from the keyboard.
+  const reason = !disabled
+    ? undefined
+    : membership.waiting
+      ? candidateWaitingHint
+      : !slot.canOpen
+        ? 'The board is full.'
+        : "This room can't open now.";
   const suppressDragClick = (event: PointerEvent<HTMLButtonElement>): void => {
     const start = pointerStart.current;
     if (start !== undefined && Math.hypot(start.x - event.clientX, start.y - event.clientY) > 6) {
@@ -88,6 +97,7 @@ function HubMapMarker({
     }
     // A canceled pointer sequence must not lock out the next keyboard action.
     dragged.current = false;
+    if (disabled) return;
     if (open) {
       onOpen(slot.hubSlotKey);
     } else {
@@ -116,7 +126,7 @@ function HubMapMarker({
           data-open={open}
           data-room-map-overlay-control
           data-selected={selected || undefined}
-          disabled={disabled}
+          aria-disabled={disabled || undefined}
           onClick={activate}
           onPointerCancel={() => {
             pointerStart.current = undefined;
@@ -126,7 +136,7 @@ function HubMapMarker({
             event.stopPropagation();
             dragged.current = false;
             pointerStart.current = { x: event.clientX, y: event.clientY };
-            if (!open) membership.prepare();
+            if (!open && !disabled) membership.prepare();
           }}
           onPointerMove={suppressDragClick}
           onPointerUp={(event) => {
@@ -135,7 +145,11 @@ function HubMapMarker({
           }}
           ref={marker}
           style={hubMapPosition({ x, y })}
-          {...hintProps(slot.label, open ? `Reward: ${reward.summary}` : undefined, markerLabel)}
+          {...hintProps(
+            reason ?? slot.label,
+            open ? `Reward: ${reward.summary}` : undefined,
+            markerLabel,
+          )}
           type="button"
         >
           <HubMapMarkerContent label={annotation.mapLabel} open={open} reward={reward} />
@@ -215,7 +229,7 @@ function HubMapMarkerLayer({
     return () => window.clearTimeout(reset);
   }, [selectedSlot?.open, selectedSlotKey]);
   return (
-    <div aria-label="Ephyra Hub room map controls" className="hub-map-marker-layer">
+    <div aria-label="Ephyra Hub room map controls" className="hub-map-marker-layer" role="group">
       {hubMapAnnotations.map((annotation) => {
         const slot = node.slots.find((candidate) => candidate.hubSlotKey === annotation.hubSlotKey);
         if (slot === undefined || slot.gameName !== annotation.gameName) {

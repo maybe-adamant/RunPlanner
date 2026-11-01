@@ -176,6 +176,17 @@ describe('Hub Timeline details', () => {
       node.stays[1]!.board!.find((entry) => entry.hubSlotKey === 'combat03'),
     ).not.toHaveProperty('rerolledSummary');
     expect(slot.door?.offerRewardSurface.rewards[0]?.rerolledOffer).toEqual(reward);
+    // Only the stay that holds a press marks its board; the Hub counts what is left.
+    expect(node.stays.map((stay) => stay.boardRerolled === true)).toEqual([
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+    ]);
+    expect(node.rerollsRemaining).toBe(2);
     // Visit steps count the visits and the fountain the map shows, not rerolls.
     expect(node.visits.map((visit) => visit.actionPosition)).toEqual(
       before.visits.map((visit) => visit.actionPosition),
@@ -205,6 +216,7 @@ describe('Hub Timeline details', () => {
   it('shows a list without the card only while the Hub holds presses', async () => {
     const projected = projectStructuredWorkspaceFixture(loadSurfaceNProject());
     expect(hubOf(projected).stays.every((stay) => stay.rerolls === undefined)).toBe(true);
+    expect(hubOf(projected)).not.toHaveProperty('rerollsRemaining');
     const { next } = await append(base, 0, 'combat03');
     const withoutCard = projectStructuredWorkspaceFixture(withArcana(next, []));
     const node = hubOf(withoutCard);

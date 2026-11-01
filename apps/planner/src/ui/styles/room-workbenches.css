@@ -2152,14 +2152,33 @@
   gap: 6px;
 }
 
-.fountain-rarity-inline > .field-control {
-  flex: 1 1 13rem;
+/* The Aromatic Phial icon labels its target picker on one centre line. */
+.fountain-rarity-target {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
-.fountain-rarity-inline > .field-control-inline {
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 6px;
+.fountain-rarity-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  border-radius: 4px;
+}
+
+.fountain-rarity-icon > img {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.fountain-rarity-target > .field-control {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.fountain-rarity-target > .field-control-inline {
+  grid-template-columns: minmax(0, auto);
 }
 
 .room-action-delete {
@@ -2669,7 +2688,7 @@
   grid-column: 4;
 }
 
-.hub-timeline-step:has(> .timeline-reorder-handle, > .room-reroll-move-slot) {
+.hub-timeline-step:has(> .timeline-reorder-handle) {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2685,24 +2704,81 @@
   border-top: 1px solid #34353e;
 }
 
+/* Handles sit in the step column, so each row's icon lines up with the room names. */
 .hub-timeline-rerolls .room-rerolls {
-  padding-left: calc(4.5rem + 14px);
+  padding-left: calc(4.5rem + 24px - 32px);
   border-top-color: #2c2d35;
+}
+
+/* The fountain's arrow shows only before its Phial target. */
+.hub-timeline-fountain > .row-reward-arrow:last-child {
+  display: none;
+}
+
+/* One count stands for the Hub: a stay's list keeps only its hidden heading. */
+.hub-timeline-rerolls .room-rerolls-heading:not(:has(.room-rerolls-count)) {
+  display: contents;
+}
+
+.hub-timeline-reward {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.hub-timeline-reward-draw {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .hub-timeline-board {
   container: hub-board / inline-size;
   display: grid;
   gap: 4px;
-  padding: 8px 14px 10px calc(4.5rem + 14px);
+  padding: 4px 14px 4px calc(4.5rem + 24px);
   border-top: 1px solid #2c2d35;
 }
 
-.hub-timeline-board h5 {
-  margin: 0;
+.hub-timeline-board[data-expanded='true'] {
+  padding-bottom: 10px;
+}
+
+/* The collapsed recap is one quiet line: Board · N open, with the die where a press changed it. */
+.hub-timeline-board-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 6px;
+  min-height: 1.75rem;
+  /* The caret hangs in the step column so "Board" lines up with the room names. */
+  margin-left: calc(-0.7rem - 12px);
+  padding: 0 6px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
   color: var(--muted);
-  font-size: 0.8rem;
+  font: inherit;
+  font-size: 0.82rem;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.hub-timeline-board-toggle:hover {
+  color: var(--text);
+  background: rgb(255 255 255 / 4%);
+}
+
+.hub-timeline-board-caret {
+  width: 0.7rem;
+  font-size: 0.7rem;
+}
+
+.hub-timeline-board-die {
+  width: 1.1rem;
+  height: 1.1rem;
+  filter: drop-shadow(0 0 0.5px rgb(255 255 255 / 85%));
 }
 
 .hub-timeline-board ul {

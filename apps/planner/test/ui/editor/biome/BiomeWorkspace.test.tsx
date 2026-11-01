@@ -761,7 +761,7 @@ describe('BiomeWorkspace', () => {
     const details = await screen.findByRole('region', { name: 'Ephyra Hub timeline' });
     const row = details.querySelector<HTMLElement>('.hub-timeline-fountain');
     if (row === null) throw new Error('the Hub Timeline fountain row is missing');
-    expect(within(row).queryByRole('button', { name: /^Phial Target/ })).toBeNull();
+    expect(within(row).queryByRole('button', { name: /^Aromatic Phial target/ })).toBeNull();
     expect(within(row).getByRole('button', { name: 'Reorder Fountain' })).toBeTruthy();
     await view.user.click(screen.getByRole('button', { name: 'Back to Map' }));
     expect(await screen.findByRole('region', { name: 'Ephyra Hub timeline map' })).toBeTruthy();

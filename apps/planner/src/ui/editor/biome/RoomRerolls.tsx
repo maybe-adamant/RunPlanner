@@ -61,16 +61,35 @@ function orderedRows(order: RoomRerollsOrder, rows: WorkspaceRoomRerolls['rows']
   return resolved;
 }
 
+/** The run's rerolls left, as the reroll die and its count. */
+export function RerollCount({ remaining }: { readonly remaining: number }) {
+  return (
+    <span
+      {...hintProps('Rerolls left', undefined, `${remaining} rerolls left`)}
+      aria-label={`${remaining} rerolls left`}
+      className="room-rerolls-count"
+      role="img"
+      tabIndex={0}
+    >
+      <img alt="" src={rerollDieArtwork} />
+      <span aria-hidden="true">{remaining}</span>
+    </span>
+  );
+}
+
 /** One surface's rerolls in order, with a new press appended at the end. */
 export function RoomRerolls({
   interactions,
   order,
   rerolls,
+  showCount = true,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   /** The list's rows in order, where other rows stand among the presses. */
   readonly order?: RoomRerollsOrder;
   readonly rerolls: WorkspaceRoomRerolls;
+  /** False where one count stands for several lists. */
+  readonly showCount?: boolean;
 }) {
   const interaction = requireWorkspaceInteraction(interactions.roomRerolls, rerolls.interactionKey);
   const executeIntent = useCommandIntent();
@@ -147,17 +166,8 @@ export function RoomRerolls({
     >
       <header className="room-rerolls-heading">
         <h4 className="visually-hidden">Rerolls</h4>
-        {rerolls.poolRemaining === undefined ? null : (
-          <span
-            {...hintProps('Rerolls left', undefined, `${rerolls.poolRemaining} rerolls left`)}
-            aria-label={`${rerolls.poolRemaining} rerolls left`}
-            className="room-rerolls-count"
-            role="img"
-            tabIndex={0}
-          >
-            <img alt="" src={rerollDieArtwork} />
-            <span aria-hidden="true">{rerolls.poolRemaining}</span>
-          </span>
+        {rerolls.poolRemaining === undefined || !showCount ? null : (
+          <RerollCount remaining={rerolls.poolRemaining} />
         )}
       </header>
       <ol className="room-rerolls-list">

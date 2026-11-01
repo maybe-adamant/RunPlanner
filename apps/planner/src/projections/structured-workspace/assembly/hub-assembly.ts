@@ -758,6 +758,8 @@ function projectHubNode(
           offer: door.current,
         }),
       );
+      // The stay's own presses are what reroll its board.
+      const boardRerolled = (list.rerolls?.rows.length ?? 0) > 0;
       const rows = (authored?.rows ?? []).map((row): WorkspaceHubStayRow =>
         row.kind === 'reroll'
           ? Object.freeze({
@@ -775,14 +777,18 @@ function projectHubNode(
         rows: Object.freeze(rows),
         ...(list.rerolls === undefined ? {} : { rerolls: list.rerolls }),
         ...(board === undefined ? {} : { board: Object.freeze(board) }),
+        ...(boardRerolled ? { boardRerolled: true as const } : {}),
       });
     },
   );
+  const rerollsRemaining = stays.findLast((stay) => stay.rerolls?.poolRemaining !== undefined)
+    ?.rerolls?.poolRemaining;
   const node = Object.freeze({
     authoring: 'authored' as const,
     kind: 'hubDecision' as const,
     fountain,
     stays: Object.freeze(stays),
+    ...(rerollsRemaining === undefined ? {} : { rerollsRemaining }),
     key: nodeKey,
     hubKey: descriptor.hubKey,
     gameName: descriptor.terminal.roomGameName,

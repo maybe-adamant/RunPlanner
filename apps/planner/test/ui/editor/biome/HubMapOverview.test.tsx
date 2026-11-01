@@ -155,4 +155,39 @@ describe('HubMapOverview', () => {
       ).toBe(true),
     );
   });
+
+  it('keeps a closed marker that cannot open focusable with its reason, and inert to Enter', async () => {
+    const view = renderHubDecisionWorkbench(loadSurfaceNProject());
+    const map = screen.getByRole('group', { name: 'Ephyra Hub room map controls' });
+    const closed = () => within(map).getAllByRole('button', { name: /: Closed\. Open room\.$/ });
+    // Fill the board so no closed door can open.
+    for (let guard = 0; guard < 26; guard += 1) {
+      const blocked = closed().find((marker) => marker.getAttribute('aria-disabled') === 'true');
+      if (blocked !== undefined) break;
+      const before = nHubState(view.application).decision.openTargets.length;
+      fireEvent.click(closed()[0]!, { detail: 0 });
+      await waitFor(() =>
+        expect(nHubState(view.application).decision.openTargets.length).toBe(before + 1),
+      );
+    }
+    const marker = closed().find(
+      (candidate) => candidate.getAttribute('aria-disabled') === 'true',
+    )!;
+    expect(marker).toBeDefined();
+    expect(marker).not.toHaveProperty('disabled', true);
+    marker.focus();
+    expect(document.activeElement).toBe(marker);
+    expect(marker.getAttribute('aria-description')).toBe('The board is full.');
+    expect(marker.getAttribute('data-hint')).toBe('The board is full.');
+
+    const decision = nHubState(view.application).decision;
+    const historySize = view.application.store.getState().projectWorkspace.history!.past.length;
+    fireEvent.keyDown(marker, { key: 'Enter' });
+    fireEvent.click(marker, { detail: 0 });
+    expect(nHubState(view.application).decision).toBe(decision);
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      historySize,
+    );
+    expect(marker.getAttribute('aria-label')).toMatch(/Closed\. Open room\.$/);
+  });
 });

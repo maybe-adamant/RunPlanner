@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useId, useState, type ReactNode } from 'react';
 
 import type { HubAction } from '@run-planner/engine/authored-project';
 import {
@@ -32,9 +32,12 @@ import {
   useFindingTarget,
   type FindingMarkProps,
 } from '@planner/ui/feedback/useFindingTarget';
+import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
+import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 import { RoomActionPlacementPicker } from './RoomActionPlacementPicker';
-import { RoomRerolls } from './RoomRerolls';
+import { RerollCount, RoomRerolls } from './RoomRerolls';
+import { RowRewardName } from './RowRewardName';
 import { TimelineReorderHandle, TimelineReorderStatus } from './TimelineReorderHandle';
 import {
   useTimelineReorder,
@@ -46,15 +49,33 @@ function stayLabel(precedingVisitCount: number): string {
   return precedingVisitCount === 0 ? 'Before Visit 1' : `After Visit ${precedingVisitCount}`;
 }
 
-function doorRewardLine(door: WorkspaceDoorContract | undefined): string | undefined {
-  if (door?.offerRewardSurface.visibility !== 'visible') return undefined;
-  return door.offerRewardSurface.rewards
-    .map((reward) =>
-      reward.rerolledSummary === undefined
-        ? reward.summary
-        : `${reward.summary} → ${reward.rerolledSummary}`,
-    )
-    .join(', ');
+/** The door's visible rewards as icons, first draw → final where rerolled. */
+function VisitReward({ door }: { readonly door: WorkspaceDoorContract | undefined }) {
+  if (door?.offerRewardSurface.visibility !== 'visible') return null;
+  return (
+    <span className="hub-timeline-reward">
+      {door.offerRewardSurface.rewards.map((reward) => (
+        <span className="hub-timeline-reward-draw" key={reward.key}>
+          {reward.offer === null ? (
+            reward.summary
+          ) : (
+            <RowRewardName name={reward.summary} offer={reward.offer} />
+          )}
+          {reward.rerolledOffer === undefined ? null : (
+            <>
+              <span aria-hidden="true" className="row-reward-arrow">
+                →
+              </span>
+              <RowRewardName
+                name={reward.rerolledSummary ?? reward.summary}
+                offer={reward.rerolledOffer}
+              />
+            </>
+          )}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 function VisitRow({
@@ -70,7 +91,6 @@ function VisitRow({
     visit.hubSlotKey === undefined
       ? undefined
       : node.slots.find((candidate) => candidate.hubSlotKey === visit.hubSlotKey);
-  const reward = doorRewardLine(visit.door);
   const room = visit.room;
   return (
     <li
@@ -87,7 +107,7 @@ function VisitRow({
       ) : (
         <>
           <strong className="hub-timeline-room">{slot.label}</strong>
-          {reward === undefined ? null : <span className="hub-timeline-reward">{reward}</span>}
+          <VisitReward door={visit.door} />
           {room === undefined ? null : (
             <button
               className="quiet-action action-compact"
@@ -291,30 +311,47 @@ function FountainRow({
 }) {
   const findingAnchor = useFindingAnchor();
   const rarity = node.fountain.rarity;
-  return (
-    <li
-      className={
-        inList ? 'room-reroll-row hub-timeline-fountain' : 'hub-timeline-row hub-timeline-fountain'
-      }
-      {...(rarity === undefined ? findingAnchor(node.fountain.outcomeMarker.address) : {})}
-      data-reorder-anchor="fountain"
-      tabIndex={-1}
-    >
-      {inList ? handle : null}
-      <span className={inList ? 'room-reroll-index' : 'hub-timeline-step'}>
-        {inList ? null : handle}
-        <ArtworkIcon
-          className="artwork-label-icon"
-          source={hubFountainIcon(node.fountain.address.biomeKey)}
-        />
-      </span>
-      <strong className={inList ? 'room-reroll-target' : 'hub-timeline-room'}>Fountain</strong>
-      <span className="hub-timeline-fountain-phial">
-        {rarity === undefined ? null : (
-          <FountainRarityEffectRow control={rarity} interactions={interactions} />
+  const icon = (
+    <ArtworkIcon
+      className="artwork-label-icon"
+      source={hubFountainIcon(node.fountain.address.biomeKey)}
+    />
+  );
+  const phial =
+    rarity === undefined ? null : (
+      <FountainRarityEffectRow control={rarity} interactions={interactions} />
+    );
+  const anchor = {
+    ...(rarity === undefined ? findingAnchor(node.fountain.outcomeMarker.address) : {}),
+    'data-reorder-anchor': 'fountain',
+    tabIndex: -1,
+  };
+  // In a list it reads like a press: icon, target, arrow and its Phial target.
+  if (inList)
+    return (
+      <li className="room-reroll-row hub-timeline-fountain" {...anchor}>
+        {handle}
+        <span className="room-reroll-verb">{icon}</span>
+        <FixedValueChip label="Fountain" />
+        {phial === null ? null : (
+          <>
+            {/* Hidden by style when no Phial target follows it. */}
+            <span aria-hidden="true" className="row-reward-arrow">
+              →
+            </span>
+            {phial}
+          </>
         )}
+      </li>
+    );
+  return (
+    <li className="hub-timeline-row hub-timeline-fountain" {...anchor}>
+      <span className="hub-timeline-step">
+        {handle}
+        {icon}
       </span>
-      {inList ? <span aria-hidden="true" className="room-reroll-remove-slot" /> : null}
+      <strong className="hub-timeline-room">Fountain</strong>
+      <span className="hub-timeline-fountain-phial">{phial}</span>
     </li>
   );
 }
@@ -327,27 +364,53 @@ function boardRewardIcon(offer: WorkspaceHubBoardDoor['offer']): string | undefi
   return rewardIcon(identity);
 }
 
-function BoardRecap({ stay }: { readonly stay: WorkspaceHubStay }) {
+function BoardRecap({
+  expanded,
+  onToggle,
+  stay,
+}: {
+  readonly expanded: boolean;
+  readonly onToggle: () => void;
+  readonly stay: WorkspaceHubStay;
+}) {
+  const listId = useId();
   if (stay.board === undefined) return null;
+  const label = `Board ${stayLabel(stay.precedingVisitCount)}`;
   return (
-    <li className="hub-timeline-board">
-      <h5>Board</h5>
-      <ul aria-label={`Board ${stayLabel(stay.precedingVisitCount)}`}>
-        {stay.board.map((door) => (
-          <li key={door.hubSlotKey}>
-            <span className="hub-timeline-board-room">{door.label}</span>
-            <span
-              className="hub-timeline-board-reward"
-              data-rerolled={door.rerolledSummary !== undefined}
-            >
-              <ArtworkIcon className="artwork-label-icon" source={boardRewardIcon(door.offer)} />
-              {door.rerolledSummary === undefined
-                ? door.summary
-                : `${door.summary} → ${door.rerolledSummary}`}
-            </span>
-          </li>
-        ))}
-      </ul>
+    <li className="hub-timeline-board" data-expanded={expanded}>
+      <button
+        aria-controls={expanded ? listId : undefined}
+        aria-expanded={expanded}
+        className="hub-timeline-board-toggle"
+        onClick={onToggle}
+        type="button"
+      >
+        <span aria-hidden="true" className="hub-timeline-board-caret">
+          {expanded ? '▾' : '▸'}
+        </span>
+        <span>{`Board · ${stay.board.length} open`}</span>
+        {stay.boardRerolled ? (
+          <img alt="Rerolled" className="hub-timeline-board-die" src={rerollDieArtwork} />
+        ) : null}
+      </button>
+      {expanded ? (
+        <ul aria-label={label} id={listId}>
+          {stay.board.map((door) => (
+            <li key={door.hubSlotKey}>
+              <span className="hub-timeline-board-room">{door.label}</span>
+              <span
+                className="hub-timeline-board-reward"
+                data-rerolled={door.rerolledSummary !== undefined}
+              >
+                <ArtworkIcon className="artwork-label-icon" source={boardRewardIcon(door.offer)} />
+                {door.rerolledSummary === undefined
+                  ? door.summary
+                  : `${door.summary} → ${door.rerolledSummary}`}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </li>
   );
 }
@@ -382,6 +445,18 @@ export function HubTimelineDetails({
       ReturnType<ReturnType<WorkspaceHubActionOrderInteraction['proposalFor']>['load']>
     >();
   const waiting = !interaction.contextReached;
+  // Which stays show their board: presentation only, never authored.
+  const [shownBoards, setShownBoards] = useState<ReadonlySet<number>>(() => new Set());
+  const boardStays = node.stays.flatMap((stay) =>
+    stay.board === undefined ? [] : [stay.precedingVisitCount],
+  );
+  const allBoardsShown = boardStays.length > 0 && boardStays.every((stay) => shownBoards.has(stay));
+  const toggleBoard = (precedingVisitCount: number): void =>
+    setShownBoards((shown) => {
+      const next = new Set(shown);
+      if (!next.delete(precedingVisitCount)) next.add(precedingVisitCount);
+      return next;
+    });
   const reorder = useTimelineReorder();
   const { attachRoot } = reorder;
   const replaceActions = (actions: readonly HubAction[]): void => {
@@ -443,6 +518,7 @@ export function HubTimelineDetails({
                     },
               )}
               rerolls={stay.rerolls}
+              showCount={false}
             />
           </li>
         )}
@@ -451,7 +527,11 @@ export function HubTimelineDetails({
           className="hub-timeline-stay-end"
           data-reorder-anchor={stayEndAnchor(stay.precedingVisitCount)}
         />
-        <BoardRecap stay={stay} />
+        <BoardRecap
+          expanded={shownBoards.has(stay.precedingVisitCount)}
+          onToggle={() => toggleBoard(stay.precedingVisitCount)}
+          stay={stay}
+        />
       </>
     );
   };
@@ -464,8 +544,22 @@ export function HubTimelineDetails({
       <TimelineReorderStatus session={reorder} />
       <header className="hub-board-heading">
         <div className="hub-board-heading-row">
-          <div className="owner-markers">{requirement}</div>
+          <div className="owner-markers">
+            {requirement}
+            {node.rerollsRemaining === undefined ? null : (
+              <RerollCount remaining={node.rerollsRemaining} />
+            )}
+          </div>
           <div className="hub-board-heading-actions">
+            {boardStays.length === 0 ? null : (
+              <button
+                className="quiet-action action-compact"
+                onClick={() => setShownBoards(new Set(allBoardsShown ? [] : boardStays))}
+                type="button"
+              >
+                {allBoardsShown ? 'Hide boards' : 'Show boards'}
+              </button>
+            )}
             {mapControl}
             {resetVisitsControl}
           </div>

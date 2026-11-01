@@ -15,12 +15,15 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
 import { hintProps } from '@planner/ui/controls/hint';
+import { keepsakeArtwork } from '@planner/ui/controls/keepsakes/keepsakeArtwork';
 
 const pendingPhialTitles = {
   unreached: candidateWaitingHint,
   noPhial: 'No Phial reaches this fountain.',
   noTargetRequired: 'No Phial-eligible boon to target here.',
 } as const satisfies Record<NonNullable<WorkspaceFountainRarityControl['pending']>, string>;
+
+const phialTargetName = 'Aromatic Phial target';
 
 /** Inline editor for the exact target nested under one fountain action row. */
 export function FountainRarityEffectRow({
@@ -73,22 +76,34 @@ export function FountainRarityEffectRow({
           : semanticAddressKey(control.address.action)
       }
     >
-      <RandomTraitTargetPicker
-        findingTarget={findingTarget(control.address)}
-        ariaLabel="Phial Target"
-        {...(control.pending === undefined
-          ? {}
-          : { disabledHint: pendingPhialTitles[control.pending] })}
-        id={semanticOwnerControlElementId(control.address)}
-        interaction={interaction}
-        label="Phial Target"
-        layout="inline"
-        model={domain?.picker ?? { sections: Object.freeze([]) }}
-        onSelect={(target) => executeIntent(interaction.intentFor(target))}
-        onOpenChange={onOpenChange}
-        open={open}
-        selected={selected === '' ? null : selected}
-      />
+      {/* The icon labels the picker, so the two never wrap apart. */}
+      <span className="fountain-rarity-target">
+        <span
+          {...hintProps(phialTargetName, undefined, phialTargetName)}
+          aria-label={phialTargetName}
+          className="fountain-rarity-icon"
+          role="img"
+          tabIndex={0}
+        >
+          <img alt="" src={keepsakeArtwork.FountainRarityKeepsake} />
+        </span>
+        <RandomTraitTargetPicker
+          findingTarget={findingTarget(control.address)}
+          ariaLabel={phialTargetName}
+          {...(control.pending === undefined
+            ? {}
+            : { disabledHint: pendingPhialTitles[control.pending] })}
+          id={semanticOwnerControlElementId(control.address)}
+          interaction={interaction}
+          label=""
+          layout="inline"
+          model={domain?.picker ?? { sections: Object.freeze([]) }}
+          onSelect={(target) => executeIntent(interaction.intentFor(target))}
+          onOpenChange={onOpenChange}
+          open={open}
+          selected={selected === '' ? null : selected}
+        />
+      </span>
       {selected !== '' ? (
         <button
           className="quiet-action effect-repair-action"

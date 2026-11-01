@@ -808,7 +808,9 @@ map position or unvisited ordering.
 
 Overview opens in Map. Clicking a closed door lazily invokes its bound opening
 attempt and opens the existing reward editor on success; rendering markers does
-not allocate occurrences or eagerly prepare every candidate. Open doors expose
+not allocate occurrences or eagerly prepare every candidate. A closed door that
+cannot open stays focusable, states why on hover and focus, and does nothing
+when activated. Open doors expose
 that same editor. **Details** opens the fixed-slot List, which remains the stable
 repair home for membership and reward findings; **Back to Map** returns to the
 visual editor. Finding navigation selects Details even when Map was open. The List shows
@@ -832,15 +834,23 @@ action prefix, clearing the
 fountain use and its Phial outcome, as one undoable edit, including normal
 downstream cleanup; it is disabled while the order holds board-door rerolls.
 
-**Details** opens the Hub timeline as a list: the visits in order, with each
+**Details** opens the Hub timeline as a list: the visits in order, each named
+by its room and its reward icons (first draw → final when rerolled), with each
 gap between them (each Hub stay) holding its Rerolls list for board doors not
 yet entered and a board recap of every door's current reward, first draw →
-final when rerolled. A stay's presses and its fountain use are one ordered
-list: the fountain row carries its Phial outcome editor and sits among the
-presses in authored order. Every row moves within its stay by its reorder
-handle, and the fountain can also be placed at the end of any other gap; a new press appends at
-the end of its stay. Before its use the fountain is a Use row at the end. Map and Details send the same Hub action-order
-command; finding navigation to a reroll or the Phial outcome selects Details.
+final when rerolled. Each recap is collapsed to one line naming how many doors
+are open, marked with the reroll die when the stay holds a press; each stay expands on its own and Show boards expands them all.
+Which recaps are expanded is presentation state, outside authored history. The
+Hub shows one reroll count, on the timeline header: the run's rerolls left
+after its last reached stay; the stays' lists carry none. A stay's presses and
+its fountain use are one ordered list in the reroll row style, each row led by
+its reorder handle: the fountain row is its icon, Fountain as its target and,
+where a Phial reaches it, an arrow and the Phial target. Every row moves within
+its stay by its reorder handle, and the fountain can also be placed at the end
+of any other gap; the stay's die add control appends a press at the end of its
+stay. Before its use the fountain is a Use row at the end. Map and Details send
+the same Hub action-order command; finding navigation to a reroll or the Phial
+outcome selects Details.
 
 The existing Hub-owned interaction assesses complete proposals with Hub-level
 readiness, not the interior readiness of each visited room. Exact visit markers

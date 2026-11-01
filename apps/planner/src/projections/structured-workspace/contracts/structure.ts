@@ -427,6 +427,8 @@ export interface WorkspaceHubStay {
   readonly rerolls?: WorkspaceRoomRerolls;
   /** The doors still open as the stay leaves it; absent while unreached. */
   readonly board?: readonly WorkspaceHubBoardDoor[];
+  /** The stay holds at least one reroll press. */
+  readonly boardRerolled?: true;
 }
 
 export interface WorkspaceHubDecisionNode {
@@ -455,6 +457,8 @@ export interface WorkspaceHubDecisionNode {
   readonly visits: readonly WorkspaceHubVisit[];
   /** Each stay before and between the required visits, in order. */
   readonly stays: readonly WorkspaceHubStay[];
+  /** The run's rerolls left after the Hub's last reached stay, where any stay lists rerolls. */
+  readonly rerollsRemaining?: number;
   readonly fountain: WorkspaceHubFountain;
   readonly runState?: WorkspaceRunStateLauncher;
 }

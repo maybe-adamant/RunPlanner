@@ -830,7 +830,9 @@ describe('Biome inspector controls', () => {
     ).toBe('Reorder Use Fountain');
     keyboardReorder(timeline, 'Keepsake Rack', /After Room entered/);
 
-    const phialTarget = await within(timeline).findByLabelText('Phial Target');
+    const phialTarget = await within(timeline).findByRole('button', {
+      name: 'Aromatic Phial target',
+    });
     fireEvent.click(phialTarget);
     const target = within(await screen.findByRole('listbox'))
       .getAllByRole('option')

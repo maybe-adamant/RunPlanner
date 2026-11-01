@@ -135,7 +135,7 @@ it.each([
           ? 'Restore delivery'
           : kind === 'artificer'
             ? 'Artificer item'
-            : 'Phial Target',
+            : 'Aromatic Phial target',
     });
     const selected = view.application.store.getState().editorSession.selectedFinding!;
     const target = document.getElementById(
