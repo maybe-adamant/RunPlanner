@@ -64,7 +64,10 @@ function rewards(project: ReturnType<typeof projectWithCallingCard>) {
   return f.rewards;
 }
 
-function callingCardCandidate(before = createTraitHistoryState()) {
+function callingCardCandidate(
+  before = createTraitHistoryState(),
+  keepsakes = createKeepsakeState(catalog, 'RarifyKeepsake'),
+) {
   return createTraitOfferCandidateArtifacts(
     catalog,
     openTimeTraitOfferContexts(
@@ -73,9 +76,7 @@ function callingCardCandidate(before = createTraitHistoryState()) {
           semanticAddressKey(trait),
           Object.freeze([
             Object.freeze({
-              state: traitFrontierState(before, {
-                keepsakes: createKeepsakeState(catalog, 'RarifyKeepsake'),
-              }),
+              state: traitFrontierState(before, { keepsakes }),
               source: Object.freeze({ resolvedProviderKey: 'Apollo' }),
             }),
           ]),
@@ -254,6 +255,42 @@ describe('Calling Card offer settlement', () => {
         optionKey: 'option1',
       }),
     );
+  });
+
+  it('names the one Rarify source, Olympian before Calling Card, with uses after the clicks', () => {
+    const value = (
+      actions: readonly ('option1' | 'option2' | 'option3')[],
+    ): AuthoredTraitOfferTraits => ({
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+      rarificationActions: actions,
+    });
+    expect(callingCardCandidate().callingCard(value(['option2']))[0]?.rarifySource).toEqual({
+      keepsakeKey: 'RarifyKeepsake',
+      remainingUses: 5,
+    });
+
+    const both = {
+      ...createKeepsakeState(catalog, 'ForceApolloBoonKeepsake'),
+      callingCard: { remainingCharges: 6 },
+    };
+    const olympian = callingCardCandidate(createTraitHistoryState(), both);
+    expect(olympian.callingCard(value([]))[0]?.rarifySource).toEqual({
+      keepsakeKey: 'ForceApolloBoonKeepsake',
+      remainingUses: 1,
+    });
+    const spent = olympian.callingCard(value(['option1']))[0]!;
+    expect(spent.rarifySource).toEqual({
+      keepsakeKey: 'ForceApolloBoonKeepsake',
+      remainingUses: 0,
+    });
+    expect(spent.remainingCharges).toBe(6);
   });
 
   it('keeps a Calling Card-derived Heroic row candidate-legal through its base offer', () => {

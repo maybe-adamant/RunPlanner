@@ -13,26 +13,46 @@ export interface PersephoneLevelRoll {
   /** Stable authored encoding: zero is native zero; positive values encode roll minus one. */
   readonly levelBonus: number;
   readonly roll: number;
+  /** Final installed level this roll yields for the option's base level. */
+  readonly level: number;
 }
 
 function persephoneRollFromLevelBonus(levelBonus: number): number {
   return levelBonus === 0 ? 0 : levelBonus + 1;
 }
 
-/** Native outcomes paired with the existing authored encoding, not probability weights. */
-export function persephoneLevelRolls(maximumBonus: number): readonly PersephoneLevelRoll[] {
+/** Jeweled Pom adds its levels on top of the roll plus one; a bare roll floors at level 1. */
+function levelFromPersephoneRoll(roll: number, pomLevels: number): number {
+  return pomLevels > 0 ? roll + pomLevels + 1 : Math.max(1, roll);
+}
+
+/**
+ * Native outcomes paired with the existing authored encoding, not probability
+ * weights. `baseLevel` is the option's published `persephoneBaseLevel`.
+ */
+export function persephoneLevelRolls(
+  maximumBonus: number,
+  baseLevel: number,
+): readonly PersephoneLevelRoll[] {
+  // The roll-zero level is 1 without Jeweled Pom and 1 + its levels with it.
+  const pomLevels = baseLevel - 1;
   return Object.freeze(
-    Array.from({ length: maximumBonus + 1 }, (_, levelBonus) =>
-      Object.freeze({ levelBonus, roll: persephoneRollFromLevelBonus(levelBonus) }),
-    ),
+    Array.from({ length: maximumBonus + 1 }, (_, levelBonus) => {
+      const roll = persephoneRollFromLevelBonus(levelBonus);
+      return Object.freeze({ levelBonus, roll, level: levelFromPersephoneRoll(roll, pomLevels) });
+    }),
   );
 }
 
 export interface TraitOfferOptionLevelResolution {
   /** The active authored Persephone contribution domain, when applicable. */
   readonly persephoneLevelBonusMaximum?: number;
+  /** Installed level at Persephone roll zero; present with the maximum. */
+  readonly persephoneBaseLevel?: number;
   /** Final installed level for a level-bearing option, when one exists. */
   readonly effectiveLevel?: number;
+  /** Levels Jeweled Pom adds to a fresh level-bearing row; omitted when it adds none. */
+  readonly jeweledPomLevels?: number;
   readonly findings: readonly TraitAssessmentFinding[];
 }
 
@@ -85,10 +105,14 @@ export function resolveTraitOfferOptionLevel(
     const maximum = aspectIsPerfect(catalog, before)
       ? aspectEffect.upgradedMaximumBonus
       : aspectEffect.maximumBonus;
+    const persephoneBaseLevel = levelFromPersephoneRoll(0, pomLevels);
+    const pomContribution = pomLevels > 0 ? { jeweledPomLevels: pomLevels } : {};
     const bonus = option.persephoneLevelBonus ?? 0;
     if (!Number.isInteger(bonus) || bonus < 0 || bonus > maximum) {
       return Object.freeze({
         persephoneLevelBonusMaximum: maximum,
+        persephoneBaseLevel,
+        ...pomContribution,
         findings: Object.freeze([
           {
             code: 'persephoneLevelBonusUnavailable' as const,
@@ -98,15 +122,17 @@ export function resolveTraitOfferOptionLevel(
         ]),
       });
     }
-    const roll = persephoneRollFromLevelBonus(bonus);
     return Object.freeze({
       persephoneLevelBonusMaximum: maximum,
-      effectiveLevel: pomLevels > 0 ? roll + pomLevels + 1 : Math.max(1, roll),
+      persephoneBaseLevel,
+      effectiveLevel: levelFromPersephoneRoll(persephoneRollFromLevelBonus(bonus), pomLevels),
+      ...pomContribution,
       findings: Object.freeze([]),
     });
   }
   return Object.freeze({
     effectiveLevel: 1 + pomLevels,
+    ...(pomLevels > 0 ? { jeweledPomLevels: pomLevels } : {}),
     findings: Object.freeze([]),
   });
 }

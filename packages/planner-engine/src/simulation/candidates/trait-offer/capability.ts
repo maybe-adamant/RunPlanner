@@ -63,7 +63,11 @@ import {
   concaveStoneProcSupport,
   concaveStoneResidualOptionKeys,
 } from '../../keepsakes/trait-effects';
-import { evaluateCallingCardOffer } from '../../keepsakes/reward-effects';
+import {
+  evaluateCallingCardOffer,
+  rarifySourceAfterOffer,
+  type RarifySource,
+} from '../../keepsakes/reward-effects';
 import type { AuthoredConcaveStoneResult } from '../../../authored-project/traits/state';
 import { resolveTraitOfferOptionLevel } from '../../traits/offer-levels';
 import { deriveBoonRarityValues } from '../../traits/rarity';
@@ -121,6 +125,7 @@ export interface TraitOfferCandidateCapability {
   readonly callingCard: (value: AuthoredTraitOffer) => readonly {
     readonly effectiveOffer: AuthoredTraitOffer;
     readonly remainingCharges: number | undefined;
+    readonly rarifySource: RarifySource | undefined;
     readonly invalidActions: readonly number[];
     readonly rarifiableOptionKeys: readonly TraitOptionKey[];
     /** Each earlier screen's clicks, oldest first; empty without earlier screens. */
@@ -582,6 +587,12 @@ export function createTraitOfferCandidateArtifacts(
                 persephoneLevelBonusMaximums: Object.freeze(
                   levelResolutions.map((resolution) => resolution?.persephoneLevelBonusMaximum),
                 ),
+                persephoneBaseLevels: Object.freeze(
+                  levelResolutions.map((resolution) => resolution?.persephoneBaseLevel),
+                ),
+                jeweledPomLevels: Object.freeze(
+                  levelResolutions.map((resolution) => resolution?.jeweledPomLevels),
+                ),
                 effectiveLevels: Object.freeze(
                   levelResolutions.map((resolution) => resolution?.effectiveLevel),
                 ),
@@ -632,6 +643,10 @@ export function createTraitOfferCandidateArtifacts(
               return Object.freeze({
                 effectiveOffer: result.offer,
                 remainingCharges: result.state.callingCard?.remainingCharges,
+                rarifySource:
+                  value.kind === 'chaos'
+                    ? undefined
+                    : rarifySourceAfterOffer(catalog, keepsakes, result.state, value.giverKey),
                 invalidActions: result.invalidActions,
                 rarifiableOptionKeys:
                   value.kind !== 'traits'

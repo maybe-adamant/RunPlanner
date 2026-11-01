@@ -348,6 +348,8 @@ export interface TraitOfferBranchAssessment {
   readonly composition: TraitOfferCompositionAssessment;
   readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
   readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
+  readonly persephoneBaseLevels: readonly (number | undefined)[];
+  readonly jeweledPomLevels: readonly (number | undefined)[];
   readonly effectiveLevels: readonly (number | undefined)[];
   readonly settledHexTree?: ReachedTraitOfferEvaluation['settledHexTree'];
   /** The screens rerolled away before the final one, oldest first. */

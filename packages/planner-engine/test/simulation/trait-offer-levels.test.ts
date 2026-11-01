@@ -218,7 +218,7 @@ describe('Persephone effective offer levels', () => {
             },
           ])
         : createTraitHistoryState();
-      const choices = persephoneLevelRolls(premium ? 8 : 5);
+      const choices = persephoneLevelRolls(premium ? 8 : 5, pom === 0 ? 1 : pom + 1);
       expect(choices.map(({ roll }) => roll)).toEqual(
         premium ? [0, 2, 3, 4, 5, 6, 7, 8, 9] : [0, 2, 3, 4, 5, 6],
       );
@@ -233,6 +233,7 @@ describe('Persephone effective offer levels', () => {
             }).effectiveLevel,
         ),
       ).toEqual(expected);
+      expect(choices.map(({ level }) => level)).toEqual(expected);
     },
   );
 
@@ -256,6 +257,7 @@ describe('Persephone effective offer levels', () => {
 
     expect(candidate).toMatchObject({
       persephoneLevelBonusMaximums: [5, 5, 5],
+      persephoneBaseLevels: [1, 1, 1],
       effectiveLevels: [1, 1, 1],
     });
     expect(candidate.assessments.every((assessment) => assessment.legal)).toBe(true);
@@ -276,13 +278,18 @@ describe('Persephone effective offer levels', () => {
         }).effectiveLevel,
     );
     expect(values).toEqual([4, 6, 7, 8, 9, 10]);
-    expect(persephoneLevelRolls(5)).toEqual([
-      { levelBonus: 0, roll: 0 },
-      { levelBonus: 1, roll: 2 },
-      { levelBonus: 2, roll: 3 },
-      { levelBonus: 3, roll: 4 },
-      { levelBonus: 4, roll: 5 },
-      { levelBonus: 5, roll: 6 },
+    expect(persephoneLevelRolls(5, 1)).toEqual([
+      { levelBonus: 0, roll: 0, level: 1 },
+      { levelBonus: 1, roll: 2, level: 2 },
+      { levelBonus: 2, roll: 3, level: 3 },
+      { levelBonus: 3, roll: 4, level: 4 },
+      { levelBonus: 4, roll: 5, level: 5 },
+      { levelBonus: 5, roll: 6, level: 6 },
+    ]);
+    expect(persephoneLevelRolls(2, 3)).toEqual([
+      { levelBonus: 0, roll: 0, level: 3 },
+      { levelBonus: 1, roll: 2, level: 5 },
+      { levelBonus: 2, roll: 3, level: 6 },
     ]);
   });
 
@@ -317,11 +324,52 @@ describe('Persephone effective offer levels', () => {
       source: context().source,
       option,
     });
-    expect(standard).toMatchObject({ persephoneLevelBonusMaximum: 5 });
+    expect(standard).toMatchObject({ persephoneLevelBonusMaximum: 5, persephoneBaseLevel: 1 });
     expect(standard.findings).toContainEqual(
       expect.objectContaining({ code: 'persephoneLevelBonusUnavailable' }),
     );
-    expect(upgraded).toMatchObject({ persephoneLevelBonusMaximum: 8, effectiveLevel: 13 });
+    expect(upgraded).toMatchObject({
+      persephoneLevelBonusMaximum: 8,
+      persephoneBaseLevel: 4,
+      effectiveLevel: 13,
+    });
+  });
+
+  it("publishes Jeweled Pom's own contribution only on fresh level-bearing rows", () => {
+    const fresh = (pom: number, suppressed = false) =>
+      resolveTraitOfferOptionLevel({
+        catalog,
+        state: pomBranch(pom).state,
+        source: context(suppressed).source,
+        option: offer(2).options[0]!,
+      });
+    expect(fresh(0)).not.toHaveProperty('jeweledPomLevels');
+    expect(fresh(3)).toMatchObject({ jeweledPomLevels: 3, effectiveLevel: 7 });
+    expect(fresh(3, true)).not.toHaveProperty('jeweledPomLevels');
+
+    const candidate = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([[semanticAddressKey(address), Object.freeze([context()])]]),
+    )
+      .at(address)
+      ?.evaluateOffer(offer(5))[0];
+    expect(candidate?.jeweledPomLevels).toEqual([3, 3, 3]);
+
+    const replacement = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'self',
+      hymnReplacementOffer(),
+      traitFrontierState(replacementHistory(), {
+        loadout: persephoneLoadout,
+        keepsakes: pomBranch().state.keepsakes,
+        stygianWell: { hymnUses: 1 },
+      }),
+      {},
+      1,
+    );
+    expect(replacement.levelResolutions[0]).toEqual({ effectiveLevel: 6, findings: [] });
+    expect(replacement.levelResolutions[1]).toMatchObject({ jeweledPomLevels: 3 });
   });
 
   it('checks and levels the Persephone roll of each rerolled-away row', () => {

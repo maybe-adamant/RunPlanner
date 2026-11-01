@@ -30,12 +30,17 @@ export interface TraitOfferOptionFeedback {
   /** Engine-published row products; omitted when branches do not agree. */
   readonly effectiveLevel?: number;
   readonly persephoneLevelRolls?: readonly PersephoneLevelRoll[];
+  /** Installed level at Persephone roll zero; present with the rolls. */
+  readonly persephoneBaseLevel?: number;
+  /** Levels Jeweled Pom adds to this row; omitted when it adds none. */
+  readonly jeweledPomLevels?: number;
   readonly replacement?: TraitReplacementPresentation;
 }
 
 /** Presentation-only replacement evidence resolved through the catalog. */
 export interface TraitReplacementPresentation {
   readonly slot: string;
+  readonly replacedTraitKey: string;
   readonly replacedTraitLabel: string;
   readonly oldRarity: TraitReplacementTransition['oldRarity'];
   readonly newTraitKey: TraitReplacementTransition['newTraitKey'];
@@ -252,7 +257,11 @@ export function projectTraitOfferFeedback(
         );
         // An earlier screen's row values are published only when every branch agrees.
         const screenLevel = (
-          field: 'effectiveLevel' | 'persephoneLevelBonusMaximum',
+          field:
+            | 'effectiveLevel'
+            | 'persephoneLevelBonusMaximum'
+            | 'persephoneBaseLevel'
+            | 'jeweledPomLevels',
         ): number | undefined => {
           const values = evaluation.result.branches.map(
             (branch) =>
@@ -271,19 +280,33 @@ export function projectTraitOfferFeedback(
         const persephoneLevelBonusMaximum = final
           ? evaluation.result.persephoneLevelBonusMaximums[index]
           : screenLevel('persephoneLevelBonusMaximum');
+        const persephoneBaseLevel = final
+          ? evaluation.result.persephoneBaseLevels[index]
+          : screenLevel('persephoneBaseLevel');
+        const jeweledPomLevels = final
+          ? evaluation.result.jeweledPomLevels[index]
+          : screenLevel('jeweledPomLevels');
         return Object.freeze({
           legal: reasons.length === 0,
           reasons: Object.freeze([...reasons]),
           traitKey: option.traitKey,
           ...(effectiveLevel === undefined ? {} : { effectiveLevel }),
-          ...(persephoneLevelBonusMaximum === undefined
+          ...(jeweledPomLevels === undefined ? {} : { jeweledPomLevels }),
+          ...(persephoneLevelBonusMaximum === undefined || persephoneBaseLevel === undefined
             ? {}
-            : { persephoneLevelRolls: persephoneLevelRolls(persephoneLevelBonusMaximum) }),
+            : {
+                persephoneLevelRolls: persephoneLevelRolls(
+                  persephoneLevelBonusMaximum,
+                  persephoneBaseLevel,
+                ),
+                persephoneBaseLevel,
+              }),
           ...(replacement === undefined
             ? {}
             : {
                 replacement: Object.freeze({
                   slot: replacement.slot,
+                  replacedTraitKey: replacement.replacedTraitKey,
                   replacedTraitLabel: traitLabel(replacement.replacedTraitKey),
                   oldRarity: replacement.oldRarity,
                   newTraitKey: replacement.newTraitKey,
@@ -435,6 +458,7 @@ function presentReplacement(
 ): TraitReplacementPresentation {
   return Object.freeze({
     slot: replacement.slot,
+    replacedTraitKey: replacement.replacedTraitKey,
     replacedTraitLabel:
       catalog.traits.byKey[replacement.replacedTraitKey]?.label ?? replacement.replacedTraitKey,
     oldRarity: replacement.oldRarity,

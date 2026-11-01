@@ -96,23 +96,78 @@ export function consumeTimePieceCharge(state: KeepsakeState): KeepsakeState {
   return Object.freeze({ ...state, timePiece: Object.freeze({ remainingCharges: remaining - 1 }) });
 }
 
+/** The one keepsake that powers an offer's Rarify, with its uses. */
+export interface RarifySource {
+  readonly keepsakeKey: string;
+  readonly remainingUses: number;
+}
+
 /**
- * Rarify uses this giver's menu reads at open: a live matching Olympian source
- * first, then Calling Card (spendable only while Fated), as offer actions resolve.
+ * The keepsake this giver's Rarify menu reads at open: a live matching Olympian
+ * source first, then Calling Card (spendable only while Fated); they never stack.
  */
+export function rarifySourceForGiver(
+  catalog: Catalog,
+  state: KeepsakeState,
+  giverKey: string,
+): RarifySource | undefined {
+  const providerSources = state.olympianSources.filter((source) => source.providerKey === giverKey);
+  const live = providerSources.find((source) => source.remainingRarificationUses === 1);
+  if (live !== undefined) return Object.freeze({ keepsakeKey: live.keepsakeKey, remainingUses: 1 });
+  const callingCardKey = catalog.keepsakes.values.find(
+    (keepsake) => keepsake.effect?.kind === 'callingCard',
+  )?.key;
+  if (
+    catalog.traitGivers.byKey[giverKey]?.callingCardMenu === true &&
+    state.callingCard !== undefined &&
+    callingCardKey !== undefined
+  )
+    return Object.freeze({
+      keepsakeKey: callingCardKey,
+      remainingUses: state.fatedStatus === 'Fated' ? state.callingCard.remainingCharges : 0,
+    });
+  const spent = providerSources[0];
+  return spent === undefined
+    ? undefined
+    : Object.freeze({ keepsakeKey: spent.keepsakeKey, remainingUses: 0 });
+}
+
+/** Rarify uses this giver's menu reads at open, as offer actions resolve. */
 export function rarificationUsesForGiver(
   catalog: Catalog,
   state: KeepsakeState,
   giverKey: string,
 ): number | undefined {
-  const providerSources = state.olympianSources.filter((source) => source.providerKey === giverKey);
-  if (providerSources.some((source) => source.remainingRarificationUses === 1)) return 1;
-  if (
-    catalog.traitGivers.byKey[giverKey]?.callingCardMenu === true &&
-    state.callingCard !== undefined
-  )
-    return state.fatedStatus === 'Fated' ? state.callingCard.remainingCharges : 0;
-  return providerSources.length > 0 ? 0 : undefined;
+  return rarifySourceForGiver(catalog, state, giverKey)?.remainingUses;
+}
+
+/**
+ * The source chosen at an offer's open, with the uses it keeps after that
+ * offer's own clicks.
+ */
+export function rarifySourceAfterOffer(
+  catalog: Catalog,
+  atOpen: KeepsakeState,
+  afterOffer: KeepsakeState,
+  giverKey: string,
+): RarifySource | undefined {
+  const source = rarifySourceForGiver(catalog, atOpen, giverKey);
+  if (source === undefined || source.remainingUses === 0) return source;
+  const olympian = atOpen.olympianSources.find(
+    (candidate) => candidate.providerKey === giverKey && candidate.remainingRarificationUses === 1,
+  );
+  const remainingUses =
+    olympian !== undefined
+      ? (afterOffer.olympianSources.find(
+          (candidate) =>
+            candidate.providerKey === giverKey &&
+            candidate.keepsakeKey === olympian.keepsakeKey &&
+            candidate.acquisitionOrder === olympian.acquisitionOrder,
+        )?.remainingRarificationUses ?? 0)
+      : afterOffer.fatedStatus === 'Fated'
+        ? (afterOffer.callingCard?.remainingCharges ?? 0)
+        : 0;
+  return Object.freeze({ keepsakeKey: source.keepsakeKey, remainingUses });
 }
 
 /** One offer's Rarify ledger replayed over its screens, with the keepsake state it leaves. */

@@ -327,6 +327,8 @@ export interface TraitOfferCandidateBranch {
   readonly offerGenerationState?: TraitOfferGenerationState;
   readonly targetedAcquisition?: TraitTargetedAcquisitionAssessment;
   readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
+  readonly persephoneBaseLevels: readonly (number | undefined)[];
+  readonly jeweledPomLevels: readonly (number | undefined)[];
   readonly effectiveLevels: readonly (number | undefined)[];
   /** The rerolled-away screens' assessments, oldest first; absent when none. */
   readonly rerolledScreens?: readonly RerolledScreenAssessment[];
@@ -338,6 +340,11 @@ export interface CallingCardOfferCandidateBranch {
     import('../../../catalog-schema').TraitRarity | undefined
   )[];
   readonly remainingCharges?: number;
+  /**
+   * The one keepsake powering this offer's Rarify (a matching Olympian source,
+   * else Calling Card), chosen at open, with its uses left after this offer's clicks.
+   */
+  readonly rarifySource?: { readonly keepsakeKey: string; readonly remainingUses: number };
   readonly invalidActionIndexes: readonly number[];
   readonly rarifiableOptionKeys: readonly TraitOptionKey[];
   /** Each earlier screen's replay, oldest first; absent without earlier screens. */
@@ -369,6 +376,8 @@ export interface EvaluatedTraitOfferCandidate {
     }[];
     /** Published only when every surviving branch agrees for each option. */
     readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
+    readonly persephoneBaseLevels: readonly (number | undefined)[];
+    readonly jeweledPomLevels: readonly (number | undefined)[];
     readonly effectiveLevels: readonly (number | undefined)[];
     readonly findings: readonly TraitOfferCandidateFinding[];
   };
@@ -506,6 +515,8 @@ function assessTraitOfferCandidate(
     readonly offerGenerationState?: TraitOfferGenerationState;
     readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
     readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
+    readonly persephoneBaseLevels: readonly (number | undefined)[];
+    readonly jeweledPomLevels: readonly (number | undefined)[];
     readonly effectiveLevels: readonly (number | undefined)[];
     readonly rerolledScreens?: readonly RerolledScreenAssessment[];
   }[],
@@ -526,6 +537,8 @@ function assessTraitOfferCandidate(
           ? { targetedAcquisition: branch.targetedAcquisition }
           : {}),
         persephoneLevelBonusMaximums: branch.persephoneLevelBonusMaximums,
+        persephoneBaseLevels: branch.persephoneBaseLevels,
+        jeweledPomLevels: branch.jeweledPomLevels,
         effectiveLevels: branch.effectiveLevels,
         ...(branch.rerolledScreens === undefined
           ? {}
@@ -604,7 +617,11 @@ function evaluatedTraitOfferCandidate(
   }[] = Object.freeze([]),
 ): EvaluatedTraitOfferCandidate {
   const agreeingBranchValues = (
-    key: 'persephoneLevelBonusMaximums' | 'effectiveLevels',
+    key:
+      | 'persephoneLevelBonusMaximums'
+      | 'persephoneBaseLevels'
+      | 'jeweledPomLevels'
+      | 'effectiveLevels',
   ): readonly (number | undefined)[] => {
     const width = assessment.branches[0]?.[key].length ?? 0;
     return Object.freeze(
@@ -627,6 +644,8 @@ function evaluatedTraitOfferCandidate(
       concaveStone: Object.freeze(concaveStone),
       chaosOfferRules: Object.freeze(chaosOfferRules),
       persephoneLevelBonusMaximums: agreeingBranchValues('persephoneLevelBonusMaximums'),
+      persephoneBaseLevels: agreeingBranchValues('persephoneBaseLevels'),
+      jeweledPomLevels: agreeingBranchValues('jeweledPomLevels'),
       effectiveLevels: agreeingBranchValues('effectiveLevels'),
     }),
   });
@@ -730,6 +749,7 @@ export function evaluateTraitOfferCandidate(
         ...(branch.remainingCharges === undefined
           ? {}
           : { remainingCharges: branch.remainingCharges }),
+        ...(branch.rarifySource === undefined ? {} : { rarifySource: branch.rarifySource }),
         invalidActionIndexes: branch.invalidActions,
         rarifiableOptionKeys: branch.rarifiableOptionKeys,
         ...(branch.rerolledScreens.length === 0

@@ -120,6 +120,12 @@ export function selectedTraitOfferProducts(
                     (resolution) => resolution.persephoneLevelBonusMaximum,
                   ),
                 ),
+                persephoneBaseLevels: Object.freeze(
+                  trace.levelResolutions.map((resolution) => resolution.persephoneBaseLevel),
+                ),
+                jeweledPomLevels: Object.freeze(
+                  trace.levelResolutions.map((resolution) => resolution.jeweledPomLevels),
+                ),
                 effectiveLevels: Object.freeze(
                   trace.levelResolutions.map((resolution) => resolution.effectiveLevel),
                 ),

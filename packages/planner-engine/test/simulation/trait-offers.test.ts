@@ -1211,6 +1211,7 @@ describe('reached trait offer chronology', () => {
       ],
       composition: { applies: false, legal: true, findings: [] },
       persephoneLevelBonusMaximums: [undefined, undefined, undefined],
+      persephoneBaseLevels: [undefined, undefined, undefined],
       effectiveLevels: [1, 1, 1],
     });
     expect(result.result.branches[1]).toMatchObject({
@@ -1225,6 +1226,7 @@ describe('reached trait offer chronology', () => {
         findings: [{ code: 'traitOfferGenerationUnavailable' }],
       },
       persephoneLevelBonusMaximums: [undefined, undefined, undefined],
+      persephoneBaseLevels: [undefined, undefined, undefined],
       effectiveLevels: [1, 1, 1],
     });
     expect(result.result.findings).toContainEqual({ code: 'traitOfferGenerationUnavailable' });
