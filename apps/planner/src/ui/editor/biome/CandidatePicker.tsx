@@ -14,6 +14,10 @@ interface CandidatePickerProps<T extends number | string> {
   readonly label: string;
   readonly onReplace: (value: T) => void;
   readonly placeholder: string;
+  /** A short fixed list opens without a search field. */
+  readonly searchable?: boolean;
+  /** `content` sizes the trigger to its choice, so it reads inline with its label. */
+  readonly triggerSize?: 'field' | 'content';
 }
 
 /**
@@ -29,6 +33,8 @@ export function CandidatePicker<T extends number | string>({
   label,
   onReplace,
   placeholder,
+  searchable,
+  triggerSize,
 }: CandidatePickerProps<T>) {
   const findingTarget = useFindingTarget();
   const projection = useWorkspaceInteraction(interaction.picker);
@@ -49,6 +55,8 @@ export function CandidatePicker<T extends number | string>({
       }}
       onSelect={onReplace}
       placeholder={placeholder}
+      {...(searchable === undefined ? {} : { searchable })}
+      {...(triggerSize === undefined ? {} : { triggerSize })}
       {...(selected === undefined ? {} : { triggerLabel: selected.label })}
     />
   );

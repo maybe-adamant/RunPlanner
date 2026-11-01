@@ -1031,56 +1031,6 @@
   gap: 10px;
 }
 
-.reward-wheel {
-  container-type: inline-size;
-  padding: 10px;
-  border: 1px solid #3a3b45;
-  border-radius: 10px;
-  background: rgb(126 101 154 / 5%);
-}
-
-.reward-wheel-settings {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 24px;
-  margin-bottom: 8px;
-}
-
-.reward-wheel-settings > .field-control-inline {
-  grid-template-columns: max-content minmax(0, 1fr);
-  column-gap: 10px;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.reward-wheel-settings > .contextual-picker {
-  flex: 0 1 22rem;
-}
-
-.reward-wheel-offers {
-  display: grid;
-  gap: 8px;
-}
-
-.reward-wheel-offers[data-active-offer-count='1'] {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.reward-wheel-offers[data-active-offer-count='2'] {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.reward-wheel-offer-card > .exit-content {
-  padding: 10px;
-}
-
-@container (max-width: 34rem) {
-  .reward-wheel-offers[data-active-offer-count='2'] {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 .local-reward-heading h5 {
   margin: 0;
   color: #f2ede5;
@@ -1272,10 +1222,6 @@
   border: 0;
   border-radius: 0;
   background: none;
-}
-
-.room-actions-workbench .reward-wheel-offer-card > .exit-content {
-  padding: 6px;
 }
 
 /*
@@ -2183,15 +2129,6 @@
 /* Sized or wrapping editor groups fill their editors cell instead of their widest item. */
 .timeline-cell-editors > :is(.transcendent-embryo-outcome-row, .shop-family-offer-row) {
   flex: 1 1 auto;
-}
-
-/* The wheel is its card: no second panel inside the row. */
-.timeline-cell-label > .reward-wheel {
-  flex: 1 1 100%;
-  min-width: 0;
-  padding: 4px 0;
-  border: 0;
-  background: none;
 }
 
 .room-action-inline-reward {

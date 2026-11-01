@@ -30,6 +30,7 @@ import {
   projectEncounterPicker,
 } from '@planner/projections/encounterPickerProjection';
 import {
+  projectRewardWheelOfferCountPicker,
   projectRewardWheelStorePicker,
   projectShipCombatPhaseCountPicker,
 } from '@planner/projections/choicePickerProjection';
@@ -106,7 +107,7 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
     string,
     import('../contract').WorkspaceGorgonConditionInteraction
   >;
-  readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<number>>;
+  readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspacePickerCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspacePickerCandidateInteraction<string>>;
   readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspacePickerCandidateInteraction<2 | 3>>;
@@ -278,7 +279,7 @@ export function bindOccurrenceLocalInteractions(
     string,
     import('../contract').WorkspaceGorgonConditionInteraction
   >();
-  const rewardWheelOfferCounts = new Map<string, WorkspaceNativeCandidateInteraction<number>>();
+  const rewardWheelOfferCounts = new Map<string, WorkspacePickerCandidateInteraction<number>>();
   const rewardWheelPicks = new Map<string, WorkspaceNativeCandidateInteraction<number>>();
   const rewardWheelStores = new Map<string, WorkspacePickerCandidateInteraction<string>>();
   const shipCombatPhaseCounts = new Map<string, WorkspacePickerCandidateInteraction<2 | 3>>();
@@ -1335,16 +1336,27 @@ export function bindOccurrenceLocalInteractions(
           const offerCountValues = Object.freeze(
             wheel.offerCountChoices.map((choice) => choice.value),
           );
+          const countCandidates = candidateInteraction(
+            wheel.address,
+            wheel.offerCountChoices,
+            wheel.offerCount,
+            () => candidates.rewardWheelOfferCounts(wheel.address, offerCountValues),
+          );
+          let countPicker: ContextualPickerModel<number> | undefined;
           set(
             rewardWheelOfferCounts,
             key,
             Object.freeze({
-              ...candidateInteraction(
-                wheel.address,
-                wheel.offerCountChoices,
-                wheel.offerCount,
-                () => candidates.rewardWheelOfferCounts(wheel.address, offerCountValues),
-              ),
+              ...countCandidates,
+              picker: Object.freeze({
+                load: () =>
+                  (countPicker ??= projectRewardWheelOfferCountPicker(
+                    contextualPicker,
+                    wheel.offerCountChoices,
+                    wheel.offerCount,
+                    countCandidates.load(),
+                  )),
+              }),
               contextReached: wheelReached,
             }),
             'reward-wheel offer-count',

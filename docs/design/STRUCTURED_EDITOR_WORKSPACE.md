@@ -529,13 +529,17 @@ location column identifies and links to the current room. Removing or moving
 uses normal Undo, not an additional confirmation workflow. Neither the local
 control nor the Resources index displays the occurrence ID as its room label.
 
-### Wheel offer cards
+### Wheel offers
 
-Active offers within one wheel use equal sibling cards, collapsing vertically
-in narrow space. Two offers use the shared exit-card selection shell and its
-radio treatment; one offer needs no false choice control. They remain rewards,
-not doors: no room selector, door number or topology interaction is introduced.
-Wheel 1 and Wheel 2 stay in their separate phase sections.
+A wheel tab reads like Room Doors, without repeating the tab's name: the
+wheel's pool line (its pool picker, with no arrow, since a wheel has no
+separate counted store) beside its offer count, then its active offers as rows
+of the door table: selection, offer, and reward, with a rerolled offer reading
+first draw → final on its row. One offer needs no false choice control. They
+remain rewards, not doors: no room selector, door number, map or topology
+interaction is introduced. Wheel 1 and Wheel 2 stay in their separate phase
+tabs, and the next room's doors show the last active wheel's pool as a plain
+value.
 
 The chronological Choose action does not duplicate card selection with another
 picker. Its engine-bound choice assesses the generated cohort without demanding

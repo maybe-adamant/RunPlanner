@@ -155,12 +155,15 @@ function RerolledRewardRepair({
 }
 
 /** A reward's first draw, then its final one after an arrow where rerolls changed it. */
-function RowReward({
+export function RowReward({
   first,
   reward,
 }: {
   readonly first: ReactNode;
-  readonly reward: WorkspaceDoorReward;
+  readonly reward: Pick<
+    WorkspaceDoorReward,
+    'rerolledOffer' | 'rerolledRewardRepair' | 'rerolledSummary'
+  >;
 }) {
   const repair = reward.rerolledRewardRepair;
   return (

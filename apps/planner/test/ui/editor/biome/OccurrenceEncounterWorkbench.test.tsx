@@ -2394,16 +2394,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Combat 1 Wheels');
     const restoredWheel = screen.getByLabelText('Combat 2 reward');
     expect(
-      within(restoredWheel).getByRole('button', { name: 'Reward pool' }).textContent,
+      within(restoredWheel).getByRole('button', { name: /^Reward pool$/i }).textContent,
     ).toContain('Major Reward');
-    expect(
-      (
-        within(within(restoredWheel).getByRole('radiogroup', { name: 'Offers' })).getByRole(
-          'radio',
-          { name: '2' },
-        ) as HTMLInputElement
-      ).checked,
-    ).toBe(true);
+    expect(within(restoredWheel).getByRole('button', { name: 'Offers' }).textContent).toContain(
+      '2',
+    );
     openRoomTab('Combat 2 Timeline');
     const combatTwo = screen.getByLabelText('Combat 2 ship phase');
     expect(within(combatTwo).queryByRole('heading', { name: 'Combat 2' })).toBeNull();
@@ -2627,11 +2622,10 @@ describe('OccurrenceEncounterWorkbench', () => {
 
     openRoomTab('Intro Wheels');
     let rewardWheel = screen.getByLabelText('Combat 1 reward');
-    const offerGrid = rewardWheel.querySelector<HTMLElement>('.reward-wheel-offers');
-    if (offerGrid === null) throw new Error('Reward wheel offer grid is missing');
-    expect(offerGrid.getAttribute('data-active-offer-count')).toBe('1');
-    expect(offerGrid.children).toHaveLength(1);
-    expect(offerGrid.firstElementChild?.getAttribute('data-picked')).toBe('true');
+    const offerGrid = within(rewardWheel).getByRole('group', { name: 'Wheel offers' });
+    const offerRows = () => within(offerGrid).getAllByRole('article');
+    expect(offerRows()).toHaveLength(1);
+    expect(offerRows()[0]?.getAttribute('data-picked')).toBe('true');
     expect(within(offerGrid).queryByRole('radio')).toBeNull();
     expect(within(rewardWheel).queryByLabelText('Offer 2')).toBeNull();
 
@@ -2645,9 +2639,8 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     );
     await waitFor(() => expect(within(rewardWheel).getByLabelText('Offer 2')).toBeTruthy());
-    expect(offerGrid.getAttribute('data-active-offer-count')).toBe('2');
-    expect(offerGrid.children).toHaveLength(2);
-    expect(offerGrid.lastElementChild?.getAttribute('data-picked')).toBeNull();
+    expect(offerRows()).toHaveLength(2);
+    expect(offerRows()[1]?.getAttribute('data-picked')).not.toBe('true');
     expect(within(offerGrid).getAllByRole('radio')).toHaveLength(2);
 
     act(() =>
@@ -2725,7 +2718,7 @@ describe('OccurrenceEncounterWorkbench', () => {
 
     openRoomTab('Intro Wheels');
     const wheel = screen.getByLabelText('Combat 1 reward');
-    const pool = within(wheel).getByRole('button', { name: 'Reward pool' });
+    const pool = within(wheel).getByRole('button', { name: /^Reward pool$/i });
     await view.user.click(pool);
     await view.user.click(await screen.findByRole('button', { name: 'Unavailable (1)' }));
     const excluded = within(screen.getByRole('listbox')).getByText('Major Reward');
@@ -2745,10 +2738,10 @@ describe('OccurrenceEncounterWorkbench', () => {
         .storeKey,
     ).toBe('MetaProgress');
 
-    const count = within(wheel).getByRole('radiogroup', { name: 'Offers' });
-    const twoOffers = within(count).getByRole('radio', { name: '2' }) as HTMLInputElement;
-    await view.user.click(twoOffers);
-    await waitFor(() => expect(twoOffers.checked).toBe(true));
+    const count = within(wheel).getByRole('button', { name: 'Offers' });
+    await view.user.click(count);
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('2'));
+    await waitFor(() => expect(count.textContent).toContain('2'));
     expect(
       shipWheel(view.application.store.getState().projectWorkspace.history!.present, 'wheel1')
         .offerCount,

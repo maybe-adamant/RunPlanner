@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
@@ -151,12 +151,8 @@ describe('native settings whose candidate context is unreached, on first render'
     })();
     renderOccurrenceWorkbench(frontier, 'Surface', 'O', occurrenceById(occurrenceId));
     openRoomTab('Intro Wheels');
-    const count = screen.getByRole('radiogroup', { name: 'Offers' });
-    expect(
-      within(count)
-        .getAllByRole('radio')
-        .every((radio) => !(radio as HTMLInputElement).disabled),
-    ).toBe(true);
+    const count = screen.getByRole('button', { name: 'Offers' }) as HTMLButtonElement;
+    expect(count.disabled).toBe(false);
     const upstream = withInvalidEncounter(
       loadSurfaceNOPQProject(),
       'Surface',

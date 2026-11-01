@@ -382,7 +382,7 @@ export interface WorkspaceInteractionCatalog {
   readonly figurineArcana: ReadonlyMap<string, WorkspaceFigurineArcanaInteraction>;
   readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
-  readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<number>>;
+  readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspacePickerCandidateInteraction<number>>;
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceNativeCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspacePickerCandidateInteraction<string>>;
   readonly rooms: ReadonlyMap<string, WorkspaceRoomInteraction>;

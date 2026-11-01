@@ -1308,7 +1308,9 @@ select {
 }
 
 .door-pool-label,
-:is(.door-pool-line, .door-workbench .fields-batch-editor) > .contextual-picker > label,
+:is(.door-pool-line, .door-workbench .fields-batch-editor, .reward-wheel-settings)
+  > .contextual-picker
+  > label,
 .door-pool-line .field-control-inline > span:first-child {
   color: #9d99a4;
   font-size: 0.84rem;
@@ -1334,6 +1336,22 @@ select {
     var(--door-select-track) minmax(4.5rem, 0.8fr) minmax(8rem, 1.6fr)
     minmax(10rem, 2.6fr) 2.5rem minmax(0, auto);
   align-items: center;
+  min-width: 0;
+}
+
+/* A wheel's offers: select | offer | reward; the door-only columns take no room. */
+.door-rows[data-columns='offer'] {
+  grid-template-columns:
+    var(--door-select-track) minmax(4.5rem, max-content) 0 minmax(10rem, 1fr)
+    0 0;
+}
+
+/* The pool and the offer count read as one line. */
+.reward-wheel-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 24px;
   min-width: 0;
 }
 
@@ -1434,13 +1452,25 @@ select {
 }
 
 /* Pickers in door, pool and reroll rows read inline: each trigger sizes to its choice. */
-:is(.door-row, .door-pool-line, .room-reroll-row, .door-workbench .fields-batch-editor)
+:is(
+    .door-row,
+    .door-pool-line,
+    .room-reroll-row,
+    .door-workbench .fields-batch-editor,
+    .reward-wheel-settings
+  )
   .contextual-picker {
   width: auto;
   justify-self: start;
 }
 
-:is(.door-row, .door-pool-line, .room-reroll-row, .door-workbench .fields-batch-editor)
+:is(
+    .door-row,
+    .door-pool-line,
+    .room-reroll-row,
+    .door-workbench .fields-batch-editor,
+    .reward-wheel-settings
+  )
   .contextual-picker.field-control-inline {
   grid-template-columns: max-content max-content;
 }
@@ -1487,7 +1517,8 @@ select {
 
 /* Narrow panels give each exit two lines: identity and room, then reward and actions. */
 @container door-workbench (max-width: 40rem) {
-  .door-rows {
+  .door-rows,
+  .door-rows[data-columns='offer'] {
     grid-template-columns: auto minmax(0, 1fr);
   }
 
@@ -1507,6 +1538,10 @@ select {
   .door-row > span:not(.door-row-select) {
     grid-column: 2;
     flex-wrap: wrap;
+  }
+
+  .door-rows[data-columns='offer'] .door-row > span:empty:not(.door-row-select) {
+    display: none;
   }
 }
 

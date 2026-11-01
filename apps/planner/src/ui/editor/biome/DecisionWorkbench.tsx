@@ -164,12 +164,19 @@ export function DoorRow({
 }
 
 /** The doors table's column names; each row names its own cells for assistive technology. */
-export function DoorRowsHeader() {
+export function DoorRowsHeader({
+  identity = 'Door',
+  room = 'Room',
+}: {
+  readonly identity?: string;
+  /** Empty where the rows have no room column, such as a reward wheel's offers. */
+  readonly room?: string;
+} = {}) {
   return (
     <div aria-hidden="true" className="door-rows-header">
       <span />
-      <span>Door</span>
-      <span>Room</span>
+      <span>{identity}</span>
+      <span>{room}</span>
       <span>Reward</span>
       <span />
       <span />

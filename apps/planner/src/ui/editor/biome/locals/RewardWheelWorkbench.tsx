@@ -1,5 +1,4 @@
 import { type OccurrenceAddress } from '@run-planner/engine/authored-project';
-import { formatFindingSentence, presentFinding } from '@planner/projections/evaluationProjection';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -12,17 +11,21 @@ import { useAppDispatch } from '@planner/state/store';
 import { useFindingAnchor, useFindingMark } from '@planner/ui/feedback/useFindingTarget';
 import {
   candidateMayBeAuthored,
-  candidateSelectState,
   candidateWaitingHint,
   candidateWaits,
 } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { CandidatePicker } from '../CandidatePicker';
-import { RerolledRewardLine } from '../DoorRewardEditor';
+import { DoorRow, DoorRowsHeader, RewardPoolLine } from '../DecisionWorkbench';
+import { RowReward } from '../DoorRewardEditor';
 import { RoomRerolls } from '../RoomRerolls';
 import { hintProps } from '@planner/ui/controls/hint';
 
+/**
+ * One wheel in the doors' language: its pool line and offer count, then its
+ * offers as rows of the door table, then its rerolls. The tab names the wheel.
+ */
 export function RewardWheelWorkbench({
   interactions,
   occurrence,
@@ -51,7 +54,6 @@ export function RewardWheelWorkbench({
     workspaceInteractionKey(wheel.address),
   );
   const pickCandidates = useWorkspaceInteraction(pick);
-  const countCandidates = useWorkspaceInteraction(count);
   const idPrefix = `room-${occurrence.occurrenceId}-${wheel.key}`;
   const replacePick = (pickedOfferIndex: number): void => {
     const candidateResults = pickCandidates.result ?? pickCandidates.activate();
@@ -66,141 +68,124 @@ export function RewardWheelWorkbench({
       }),
     );
   };
+  const choosesOffer = wheel.offerCount > 1;
 
   return (
     <section
       {...findingAnchor(wheel.marker.address)}
       tabIndex={-1}
       aria-label={wheel.label}
-      className="reward-wheel"
+      className="door-workbench"
     >
-      <div className="local-reward-heading">
-        <h5>{wheel.label}</h5>
-      </div>
-      <div className="reward-wheel-settings">
-        <CandidatePicker
-          id={`${idPrefix}-store`}
-          interaction={store}
-          label="Reward pool"
-          placeholder="Select pool"
-          onReplace={(storeKey) =>
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceRewardWheelStore',
-                wheel: wheel.address,
-                storeKey,
-              }),
-            )
-          }
-        />
-        <div className="field-control field-control-inline">
-          <span id={`${idPrefix}-count-label`}>Offers</span>
-          <div
-            className="biome-field-radios"
-            role="radiogroup"
-            aria-labelledby={`${idPrefix}-count-label`}
-          >
-            {count.choices.map((choice) => {
-              const candidate = countCandidates.result?.find(
-                (option) => option.value === choice.value,
-              );
-              const waiting = !count.contextReached || candidateWaits(candidate);
-              const unavailable = candidate !== undefined && !candidateMayBeAuthored(candidate);
-              const reason =
-                candidate?.evaluation.kind === 'rewardWheelOfferCount'
-                  ? candidate.evaluation.result.findings
-                      .map((finding) => formatFindingSentence(presentFinding(finding)))
-                      .join(' ')
-                  : '';
-              return (
-                <label key={choice.value}>
-                  <input
-                    {...candidateSelectState(candidate)}
-                    type="radio"
-                    name={`${idPrefix}-count`}
-                    checked={count.selected === choice.value}
-                    disabled={waiting || unavailable}
-                    {...hintProps(
-                      waiting
-                        ? candidateWaitingHint
-                        : unavailable
-                          ? reason || 'This offer count is unavailable.'
-                          : undefined,
-                    )}
-                    onFocus={countCandidates.activate}
-                    onPointerDown={countCandidates.activate}
-                    onChange={() => {
-                      const results = countCandidates.result ?? countCandidates.activate();
-                      const option = results?.find((entry) => entry.value === choice.value);
-                      if (results === undefined || !candidateMayBeAuthored(option)) return;
-                      dispatch(
-                        authoredProjectCommandDispatched({
-                          kind: 'ReplaceRewardWheelOfferCount',
-                          wheel: wheel.address,
-                          offerCount: choice.value,
-                        }),
-                      );
-                    }}
-                  />
-                  {choice.value}
-                </label>
-              );
-            })}
+      <div className="door-body">
+        <div className="door-batch">
+          <div className="reward-wheel-settings">
+            <RewardPoolLine
+              label="Reward Pool"
+              picker={
+                <CandidatePicker
+                  id={`${idPrefix}-store`}
+                  interaction={store}
+                  label="Reward Pool"
+                  placeholder="Select pool"
+                  onReplace={(storeKey) =>
+                    dispatch(
+                      authoredProjectCommandDispatched({
+                        kind: 'ReplaceRewardWheelStore',
+                        wheel: wheel.address,
+                        storeKey,
+                      }),
+                    )
+                  }
+                />
+              }
+            />
+            <CandidatePicker
+              id={`${idPrefix}-count`}
+              interaction={count}
+              label="Offers"
+              placeholder="Choose"
+              searchable={false}
+              triggerSize="content"
+              onReplace={(offerCount) =>
+                dispatch(
+                  authoredProjectCommandDispatched({
+                    kind: 'ReplaceRewardWheelOfferCount',
+                    wheel: wheel.address,
+                    offerCount,
+                  }),
+                )
+              }
+            />
           </div>
         </div>
+        <div
+          aria-label="Wheel offers"
+          className="door-rows"
+          data-columns="offer"
+          // The rows stay named articles; their radios group natively by name.
+          role="group"
+        >
+          <DoorRowsHeader identity="Offer" room="" />
+          {wheel.offers
+            .filter((offer) => offer.active)
+            .map((offer, index) => {
+              const offerIndex = index + 1;
+              const picked = offerIndex === wheel.pickedOfferIndex;
+              const pickWaits =
+                !pick.contextReached ||
+                candidateWaits(
+                  pickCandidates.result?.find((option) => option.value === offerIndex),
+                );
+              return (
+                <DoorRow
+                  ariaLabel={offer.label}
+                  identity={<span className="door-row-number">{offer.label}</span>}
+                  key={offer.key}
+                  reward={
+                    <span className="door-row-rewards">
+                      <RowReward
+                        first={
+                          <RewardControlEditor
+                            ariaLabel="Reward"
+                            control={offer.control}
+                            idPrefix={`${idPrefix}-${offer.key}`}
+                            interactions={interactions}
+                            label=""
+                          />
+                        }
+                        reward={offer}
+                      />
+                    </span>
+                  }
+                  room={null}
+                  {...(choosesOffer
+                    ? {
+                        selection: (
+                          <input
+                            {...(pickWaits ? {} : findingMark(wheel.marker.address, 'wheelChoice'))}
+                            aria-label={`Pick ${offer.label} from ${wheel.label}`}
+                            checked={picked}
+                            disabled={pickWaits || undefined}
+                            name={`${idPrefix}-picked-offer`}
+                            onChange={() => replacePick(offerIndex)}
+                            onFocus={pickCandidates.activate}
+                            onPointerDown={pickCandidates.activate}
+                            {...hintProps(pickWaits ? candidateWaitingHint : undefined)}
+                            type="radio"
+                          />
+                        ),
+                      }
+                    : {})}
+                  state={{ available: true, picked }}
+                />
+              );
+            })}
+        </div>
+        {rerolls === undefined ? null : (
+          <RoomRerolls interactions={interactions} rerolls={rerolls} />
+        )}
       </div>
-      <div className="reward-wheel-offers" data-active-offer-count={wheel.offerCount}>
-        {wheel.offers
-          .filter((offer) => offer.active)
-          .map((offer, index) => {
-            const offerIndex = index + 1;
-            const picked = offerIndex === wheel.pickedOfferIndex;
-            const pickWaits =
-              !pick.contextReached ||
-              candidateWaits(pickCandidates.result?.find((option) => option.value === offerIndex));
-            return (
-              <section
-                aria-label={offer.label}
-                className="exit-row reward-wheel-offer-card"
-                data-available="true"
-                data-picked={picked || undefined}
-                key={offer.key}
-              >
-                {wheel.offerCount === 1 ? (
-                  <div aria-hidden="true" className="exit-marker" />
-                ) : (
-                  <label className="picked-control">
-                    <span className="visually-hidden">{`Pick ${offer.label} from ${wheel.label}`}</span>
-                    <input
-                      {...(pickWaits ? {} : findingMark(wheel.marker.address, 'wheelChoice'))}
-                      aria-label={`Pick ${offer.label} from ${wheel.label}`}
-                      checked={picked}
-                      disabled={pickWaits || undefined}
-                      name={`${idPrefix}-picked-offer`}
-                      onChange={() => replacePick(offerIndex)}
-                      onFocus={pickCandidates.activate}
-                      onPointerDown={pickCandidates.activate}
-                      {...hintProps(pickWaits ? candidateWaitingHint : undefined)}
-                      type="radio"
-                    />
-                  </label>
-                )}
-                <div className="exit-content">
-                  <div className="local-reward-heading">
-                    <h6>{offer.label}</h6>
-                  </div>
-                  <RewardControlEditor
-                    control={offer.control}
-                    idPrefix={`${idPrefix}-${offer.key}`}
-                    interactions={interactions}
-                  />
-                  <RerolledRewardLine reward={offer} />
-                </div>
-              </section>
-            );
-          })}
-      </div>
-      {rerolls === undefined ? null : <RoomRerolls interactions={interactions} rerolls={rerolls} />}
     </section>
   );
 }

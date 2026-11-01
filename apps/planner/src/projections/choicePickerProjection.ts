@@ -168,6 +168,16 @@ export function projectRewardWheelStorePicker(
   );
 }
 
+/** An offer count the wheel cannot show is explained by the engine's findings. */
+export function projectRewardWheelOfferCountPicker(
+  contextualPicker: ContextualPickerProjectionService,
+  choices: readonly ChoicePickerChoice<number>[],
+  selected: number,
+  candidates: readonly CandidateOptionProjection<number, CandidateProjectionEvaluation>[],
+): ContextualPickerModel<number> {
+  return projectChoicePicker(contextualPicker, choices, selected, candidates, () => undefined);
+}
+
 export function projectFieldsCageOutcomePicker(
   contextualPicker: ContextualPickerProjectionService,
   choices: readonly ChoicePickerChoice<'min' | 'max'>[],
