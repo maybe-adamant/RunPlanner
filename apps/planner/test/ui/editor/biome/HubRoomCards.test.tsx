@@ -35,9 +35,7 @@ describe('HubRoomCards', () => {
     const slotOrderBefore = overviewSlotOrder();
     expect(closedCard.querySelector('[data-assessment]')).toBeNull();
     expect(closedCard.querySelector('.room-kind')).toBeNull();
-    const closedRewardShell = within(closedCard)
-      .getByText('Open this room to edit its reward.')
-      .closest('.control-placeholder');
+    const closedRewardShell = closedCard.querySelector('.hub-main-reward .control-placeholder');
     expect(closedRewardShell?.classList.contains('field-control-inline')).toBe(true);
     expect(within(closedRewardShell as HTMLElement).getByText('Reward')).toBeTruthy();
     const historyBeforeMap =
@@ -70,7 +68,7 @@ describe('HubRoomCards', () => {
     expect(screen.getByRole('heading', { name: 'Combat 04 map' })).toBeTruthy();
     await view.user.click(screen.getByRole('button', { name: 'Close map' }));
     expect(within(openedCard).getByLabelText('Reward')).toBeTruthy();
-    expect(within(openedCard).queryByText('Open this room to edit its reward.')).toBeNull();
+    expect(openedCard.querySelector('.hub-main-reward .control-placeholder')).toBeNull();
     expect(within(openedCard).queryByText(/Closing this slot removes/)).toBeNull();
     expect(document.activeElement).not.toBe(openedCard);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
@@ -138,10 +136,10 @@ describe('HubRoomCards', () => {
     ).toBe(true);
     expect(screen.getByText('9 rooms open')).toBeTruthy();
     expect(
-      within(screen.getByRole('article', { name: 'Combat 04 Hub room' })).getByText(
-        'Open this room to edit its reward.',
-      ),
-    ).toBeTruthy();
+      screen
+        .getByRole('article', { name: 'Combat 04 Hub room' })
+        .querySelector('.hub-main-reward .control-placeholder'),
+    ).not.toBeNull();
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
       expect(

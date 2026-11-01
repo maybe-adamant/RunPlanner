@@ -17,8 +17,8 @@ describe('launcher presentation', () => {
   // The label names the launcher with its value; the chip shows the value alone.
   it('values trait, Hex and Chaos launchers by their chosen outcome', () => {
     expect(traitOfferLauncherPresentation(catalog, giver('Apollo'), null)).toEqual({
-      label: 'Edit Trait · Choose trait',
-      value: 'Choose trait',
+      label: 'Edit Trait · Pick trait',
+      value: 'Pick',
     });
     expect(
       traitOfferLauncherPresentation(catalog, giver('Apollo'), {
@@ -42,10 +42,10 @@ describe('launcher presentation', () => {
       }),
     ).toMatchObject({ label: 'Edit Trait · Fallback Gold' });
     expect(traitOfferLauncherPresentation(catalog, giver('SpellDrop'), null).label).toBe(
-      'Edit Hex · Choose Hex',
+      'Edit Hex · Pick Hex',
     );
     expect(traitOfferLauncherPresentation(catalog, giver('Chaos'), null).label).toBe(
-      'Edit Chaos · Choose outcome',
+      'Edit Chaos · Pick outcome',
     );
     const chaos = traitOfferLauncherPresentation(catalog, giver('Chaos'), {
       kind: 'chaos',
@@ -73,8 +73,8 @@ describe('launcher presentation', () => {
   it('values a Pom launcher by its target and levels', () => {
     const random = (targetTraitKey: string | null) => ({ kind: 'random', targetTraitKey }) as const;
     expect(levelResolutionLauncherPresentation(catalog, random(null), 1, false)).toEqual({
-      label: 'Edit Pom · Choose target +1',
-      value: 'Choose target +1',
+      label: 'Edit Pom · Pick target +1',
+      value: 'Pick +1',
     });
     expect(
       levelResolutionLauncherPresentation(catalog, random('ApolloWeaponBoon'), 2, false),
@@ -90,8 +90,8 @@ describe('launcher presentation', () => {
 
   it('values the Anvil launcher by its result', () => {
     expect(anvilResultLauncherPresentation(catalog, null)).toEqual({
-      label: 'Edit Anvil · Choose result',
-      value: 'Choose result',
+      label: 'Edit Anvil · Pick result',
+      value: 'Pick',
     });
     expect(
       anvilResultLauncherPresentation(catalog, {

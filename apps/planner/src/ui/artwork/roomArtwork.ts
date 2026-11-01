@@ -13,6 +13,7 @@ import { rewardIcon } from './rewardIcon';
 import { traitIcon } from './traitArtwork';
 import { roomObjectArtwork } from './room-objects/roomObjectArtwork';
 import { gatheringToolArtwork } from './tools/gatheringToolArtwork';
+import { wellArtwork } from './well/wellArtwork';
 
 export type RoomObjectKey = 'stygianWell' | 'purgingPool' | 'hermesShrine' | 'keepsakeRack';
 
@@ -80,4 +81,9 @@ export function roomActionIcon(
 /** A biome's icon by catalog biome key. */
 export function biomeIcon(biomeKey: string): string | undefined {
   return biomeArtwork[biomeKey] ?? undefined;
+}
+
+/** A Stygian Well item's own icon; an item without artwork shows the Well itself. */
+export function wellItemIcon(itemKey: string): string | undefined {
+  return wellArtwork[itemKey] ?? roomObjectIcon('stygianWell');
 }

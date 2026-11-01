@@ -118,7 +118,7 @@ export function bindShopOfferInteractions(input: {
     );
     const summary =
       selected === null
-        ? 'Choose item'
+        ? 'Pick'
         : selectionLabel(
             input.catalog,
             optionLabelByKey.get(selected.optionKey) ?? selected.optionKey,

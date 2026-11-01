@@ -596,12 +596,16 @@ export function EncounterStartControls({
           return (
             <span className="encounter-aetos-picker" data-slot="aetos" key="aetos">
               <ContextualPicker<string>
-                ariaLabel="Aetos appearance"
+                ariaLabel={`Aetos appearance: ${selected === undefined ? 'No' : waveLabel(selected)}`}
                 findingTarget={findingTarget(aetos.address, id, phase.address)}
                 id={id}
-                {...(!reached && selected === undefined
-                  ? { disabledHint: candidateWaitingHint }
-                  : {})}
+                {...(selected !== undefined
+                  ? {}
+                  : !reached
+                    ? { disabledHint: candidateWaitingHint }
+                    : aetosInteraction.waves.length === 0
+                      ? { locked: true }
+                      : {})}
                 {...(retainedUnavailable && reached ? { invalid: true } : {})}
                 label=""
                 layout="inline"
@@ -617,6 +621,7 @@ export function EncounterStartControls({
                               ? `${waveLabel(selected)} (unavailable)`
                               : waveLabel(selected),
                             disabled: true,
+                            ...(reached ? {} : { explanation: candidateWaitingHint }),
                           },
                         ]
                       : []),
@@ -629,9 +634,12 @@ export function EncounterStartControls({
                   ],
                   selected === undefined ? '' : String(selected),
                 )}
-                onSelect={(value) =>
-                  executeIntent(aetosInteraction.intentFor(value === '' ? null : Number(value)))
-                }
+                onSelect={(value) => {
+                  const next = value === '' ? undefined : Number(value);
+                  // Picking the current choice is no edit.
+                  if (next === selected) return;
+                  executeIntent(aetosInteraction.intentFor(next ?? null));
+                }}
                 placeholder="No"
                 searchable={false}
                 triggerHint="Aetos appearance"

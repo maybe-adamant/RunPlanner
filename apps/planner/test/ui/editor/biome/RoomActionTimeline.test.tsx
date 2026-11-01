@@ -1874,7 +1874,7 @@ describe('OccurrenceRoomActions', () => {
         .topology!.occurrences.find((candidate) => candidate.occurrenceId === shopId)!;
     const before = room().roomActions.order.length;
     await pickRoomObjectAction(view.user, 'World Shop', 'Buy Travel Deal item…');
-    await view.user.click(screen.getByRole('button', { name: 'Travel Deal item' }));
+    await view.user.click(screen.getByRole('button', { name: 'Pick item for Travel Deal' }));
     const choices = within(await screen.findByRole('listbox'))
       .getAllByRole('option')
       .map((option) => option.textContent);

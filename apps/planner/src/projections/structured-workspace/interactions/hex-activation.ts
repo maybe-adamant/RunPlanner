@@ -81,7 +81,10 @@ function launcherFor(
   value: AuthoredHexActivation | undefined,
 ): WorkspaceHexActivationInteraction['launcher'] {
   const keys = value?.selectedNodeKeys ?? [];
-  const unsummarised = Object.freeze({ label: 'Edit Path of Stars', value: 'Choose talents' });
+  const unsummarised = Object.freeze({
+    label: 'Edit Path of Stars · Pick talents',
+    value: 'Pick',
+  });
   if (capability === undefined || keys.length === 0) return unsummarised;
   const hex = catalog.hexes.byKey[capability.spellTraitKey];
   const layout = hex?.layouts.byKey[capability.tree.layoutKey];

@@ -46,6 +46,7 @@ function travelDealLineEditor(
       return (
         <HermesShrineSlotEditor
           fieldLabel=""
+          placeholder="Pick"
           label="Travel Deal"
           marker={line.refill.marker}
           rewardType={line.refill.rewardType}
@@ -59,7 +60,14 @@ function travelDealLineEditor(
         />
       );
     case 'stygianWell':
-      return <StygianWellSlotEditor fieldLabel="" interactions={interactions} slot={line.refill} />;
+      return (
+        <StygianWellSlotEditor
+          fieldLabel=""
+          interactions={interactions}
+          placeholder="Pick"
+          slot={line.refill}
+        />
+      );
     case 'worldShop':
       return (
         <RewardControlEditor

@@ -225,6 +225,8 @@ select {
 
 .contextual-picker-trigger {
   cursor: pointer;
+  /* A press that ends on a trigger never leaves its text selected. */
+  user-select: none;
 }
 
 /* A content-sized picker's trigger is as wide as the choice it shows. */

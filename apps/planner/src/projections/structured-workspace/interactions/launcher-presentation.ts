@@ -19,9 +19,11 @@ function presentation(
   traitKey?: string,
 ): WorkspaceLauncherPresentation {
   const separator = label.indexOf(' · ');
+  const value = separator < 0 ? undefined : label.slice(separator + ' · '.length);
   return Object.freeze({
     label,
-    ...(separator < 0 ? {} : { value: label.slice(separator + ' · '.length) }),
+    // An empty launcher's chip reads Pick; its name says what is picked.
+    ...(value === undefined ? {} : { value: value.replace(/^Pick \S+/, 'Pick') }),
     ...(detail === undefined ? {} : { detail }),
     ...(traitKey === undefined ? {} : { traitKey }),
   });
@@ -38,7 +40,7 @@ export function traitOfferLauncherPresentation(
   offer: AuthoredTraitOffer | null,
 ): WorkspaceLauncherPresentation {
   if (giver.providerKind === 'chaos') {
-    if (offer?.kind !== 'chaos') return presentation('Edit Chaos · Choose outcome');
+    if (offer?.kind !== 'chaos') return presentation('Edit Chaos · Pick outcome');
     const curseKey = offer.curseOptions[optionIndex(offer.selectedOptionKey)]?.curseKey;
     const curse =
       curseKey === undefined
@@ -52,7 +54,7 @@ export function traitOfferLauncherPresentation(
   const selected =
     offer?.kind === 'traits' ? offer.options[optionIndex(offer.selectedOptionKey)] : undefined;
   if (selected === undefined)
-    return presentation(`Edit ${kind} · Choose ${kind === 'Hex' ? 'Hex' : 'trait'}`);
+    return presentation(`Edit ${kind} · Pick ${kind === 'Hex' ? 'Hex' : 'trait'}`);
   const label = traitLabel(catalog, selected.traitKey);
   return presentation(
     `Edit ${kind} · ${label}`,
@@ -73,7 +75,7 @@ export function levelResolutionLauncherPresentation(
   if (settledEmptyNoOp) return presentation('Edit Pom · No eligible traits');
   const target = value.kind === 'choice' ? value.selectedTraitKey : value.targetTraitKey;
   const levels = levelCount === undefined ? '' : ` +${levelCount}`;
-  if (target === null) return presentation(`Edit Pom · Choose target${levels}`);
+  if (target === null) return presentation(`Edit Pom · Pick target${levels}`);
   return presentation(`Edit Pom · ${traitLabel(catalog, target)}${levels}`, undefined, target);
 }
 
@@ -82,7 +84,7 @@ export function anvilResultLauncherPresentation(
   catalog: Catalog,
   value: AuthoredAnvilResult | null,
 ): WorkspaceLauncherPresentation {
-  if (value === null) return presentation('Edit Anvil · Choose result');
+  if (value === null) return presentation('Edit Anvil · Pick result');
   const removed =
     value.removedTraitKey === null
       ? 'No removal'

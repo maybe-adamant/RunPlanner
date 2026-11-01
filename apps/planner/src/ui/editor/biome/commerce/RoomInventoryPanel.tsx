@@ -252,11 +252,14 @@ function PurgingPoolTraitPicker({
 /** One Well inventory slot's item. */
 export function StygianWellSlotEditor({
   fieldLabel,
+  placeholder = 'Unresolved',
   slot,
   interactions,
 }: {
   /** The visible label where the line already names the slot; the accessible name keeps it. */
   readonly fieldLabel?: string;
+  /** The empty slot's text; a timeline row asks to pick its item. */
+  readonly placeholder?: string;
   readonly slot: Omit<StygianWellFeature['slots'][number], 'key'>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
@@ -281,7 +284,7 @@ export function StygianWellSlotEditor({
           if (open) offerPicker.activate();
         }}
         onSelect={(itemKey) => executeIntent(offer.intentFor(itemKey))}
-        placeholder="Unresolved"
+        placeholder={placeholder}
         itemIcon={(item) => wellIcon(item.value)}
         triggerIcon={wellIcon(slot.itemKey)}
         {...(slot.itemLabel === undefined ? {} : { triggerLabel: slot.itemLabel })}
@@ -293,6 +296,7 @@ export function StygianWellSlotEditor({
 /** One Shrine inventory slot: its item and the delay rolled with it. */
 export function HermesShrineSlotEditor({
   fieldLabel,
+  placeholder = 'Unresolved',
   label,
   marker,
   rewardLabel,
@@ -301,6 +305,8 @@ export function HermesShrineSlotEditor({
 }: {
   /** The visible label where the line already names the slot; the accessible name keeps it. */
   readonly fieldLabel?: string;
+  /** The empty slot's text; a timeline row asks to pick its item. */
+  readonly placeholder?: string;
   readonly label: string;
   readonly marker: import('@planner/projections/structured-workspace').WorkspaceMarker;
   readonly rewardLabel?: string;
@@ -324,7 +330,7 @@ export function HermesShrineSlotEditor({
           if (open) offerPicker.activate();
         }}
         onSelect={(selected) => executeIntent(offer.intentFor(selected))}
-        placeholder="Unresolved"
+        placeholder={placeholder}
         itemIcon={(item) => rewardIcon(item.value)}
         triggerIcon={rewardType === null ? undefined : rewardIcon(rewardType)}
         {...(rewardLabel === undefined ? {} : { triggerLabel: rewardLabel })}

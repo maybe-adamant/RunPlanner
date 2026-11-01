@@ -17,6 +17,7 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { TimelineRow } from '../TimelineRow';
+import { pickSubject } from './pickSubject';
 
 const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
   sections: Object.freeze([]),
@@ -141,11 +142,12 @@ export function FeatureRollEntry({
       editors={
         pending === undefined ? null : (
           <ContextualPicker<string>
-            ariaLabel={actions.feature === 'stygianWell' ? 'Item bought' : 'Trait sold'}
+            ariaLabel={`Pick ${actions.feature === 'stygianWell' ? 'item' : 'trait'} for ${pickSubject(actions.options.find((option) => option.key === pending)?.label ?? pending)}`}
             id={`${idPrefix}-choice`}
             itemIcon={(item) => rollIcon(actions.feature, item.value)}
             key={pending}
             label=""
+            layout="inline"
             model={interaction.choices(pending)}
             onOpenChange={(open) => {
               // Closing the list without a choice abandons the pick.
@@ -155,7 +157,8 @@ export function FeatureRollEntry({
               setChoosing(undefined);
               executeIntent(interaction.choiceIntentFor(pending, value));
             }}
-            placeholder={actions.feature === 'stygianWell' ? 'Choose item' : 'Choose trait'}
+            placeholder="Pick"
+            triggerSize="content"
           />
         )
       }

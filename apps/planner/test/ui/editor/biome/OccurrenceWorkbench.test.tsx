@@ -563,8 +563,8 @@ describe('OccurrenceWorkbench', () => {
     );
     const sideRow = generation.closest('li');
     if (sideRow === null) throw new Error('Side Room 03 row is missing');
-    const placeholder = within(sideRow).getByText('Generate this door to set its reward.');
-    expect(placeholder.closest('.control-placeholder')).not.toBeNull();
+    // An ungenerated door's reward stands in for its editor.
+    expect(sideRow.querySelector('.control-placeholder')).not.toBeNull();
     expect(within(sideRow).queryByRole('button', { name: 'Reward' })).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,

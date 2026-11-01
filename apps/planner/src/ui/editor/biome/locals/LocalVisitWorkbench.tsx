@@ -423,9 +423,9 @@ export function LocalVisitWorkbench({
                   <VisitControl interactions={interactions} localVisit={localVisit} slot={slot} />
                 </div>
                 {slot.generation !== 'generated' ? (
-                  <div className="field-control field-control-inline control-placeholder">
+                  <div className="field-control field-control-inline control-placeholder door-closed">
                     <span>Reward</span>
-                    <span className="fixed-room-state">Generate this door to set its reward.</span>
+                    <span className="fixed-room-state">Door closed</span>
                   </div>
                 ) : (
                   <DoorRewardEditor

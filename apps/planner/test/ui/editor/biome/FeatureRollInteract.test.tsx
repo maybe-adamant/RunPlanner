@@ -79,7 +79,8 @@ it('rerolls the Well from its Timeline entry and buys a restocked slot with its 
   await view.user.click(
     within(await screen.findByRole('listbox')).getByRole('option', { name: /^Buy Offer 1…/ }),
   );
-  await view.user.click(screen.getByRole('button', { name: 'Item bought' }));
+  // The empty item picker's name says what it picks for.
+  await view.user.click(screen.getByRole('button', { name: 'Pick item for Offer 1' }));
   const [item] = within(await screen.findByRole('listbox')).getAllByRole('option');
   await view.user.click(item!);
   await waitFor(() =>
@@ -117,10 +118,12 @@ it('drops an abandoned blank-slot pick and disables the entry once everything is
     within(await screen.findByRole('listbox')).getByRole('option', { name: /^Buy Offer 1…/ }),
   );
   expect(interact().textContent).toContain('Buy Offer 1…');
-  await view.user.click(screen.getByRole('button', { name: 'Item bought' }));
+  await view.user.click(screen.getByRole('button', { name: 'Pick item for Offer 1' }));
   await screen.findByRole('listbox');
   await view.user.keyboard('{Escape}');
-  await waitFor(() => expect(screen.queryByRole('button', { name: 'Item bought' })).toBeNull());
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: 'Pick item for Offer 1' })).toBeNull(),
+  );
   expect(interact().textContent).toContain('Stygian Well ▸');
   cleanup();
 

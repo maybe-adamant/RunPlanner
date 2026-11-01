@@ -34,6 +34,7 @@ import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
 import { slotRow, timelineRow } from '@planner-test/support/timeline-rows';
+import { wellArtwork } from '@planner/ui/artwork/well/wellArtwork';
 
 afterEach(cleanup);
 
@@ -290,6 +291,28 @@ describe('Stygian Well workbench', () => {
           (room) => room.occurrenceId === postbossId,
         )?.stygianWell?.twistResultKeyBySlot?.secondLeft,
     ).toBeUndefined();
+  });
+
+  it("shows each Well purchase row with its item's own icon", () => {
+    const project = authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint());
+    renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrence);
+    openTimeline();
+    const well = project.route.biomes
+      .find((biome) => biome.biomeKey === 'F')!
+      .topology!.occurrences.find((room) => room.occurrenceId === postbossId)!.stygianWell!;
+    const slots = ['healing', 'secondLeft', 'secondRight'] as const;
+    let checked = 0;
+    slots.forEach((slotKey, index) => {
+      const itemKey = well.offerKeyBySlot[slotKey];
+      const row = [...document.querySelectorAll<HTMLElement>('li[data-room-action-key]')].find(
+        (candidate) => candidate.textContent?.includes(` · slot ${index + 1}`),
+      );
+      if (itemKey === null || itemKey === undefined || row === undefined) return;
+      const icon = row.querySelector<HTMLImageElement>('[role="img"] img');
+      expect(icon?.getAttribute('src'), slotKey).toBe(wellArtwork[itemKey]);
+      checked += 1;
+    });
+    expect(checked).toBeGreaterThan(0);
   });
 
   it('indexes present Wells and navigates to the owning room', async () => {

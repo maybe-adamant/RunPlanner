@@ -105,7 +105,7 @@ export interface WorkspaceRoomActionRow {
       readonly offer: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer;
       /** A quality variant (Boosted), marked on the icon. */
       readonly boosted: boolean;
-      /** A shop item's own key, whose artwork can differ from its reward type's. */
+      /** A Stygian Well item's own key: the row shows that item, not its reward type. */
       readonly itemKey?: string;
     };
   };

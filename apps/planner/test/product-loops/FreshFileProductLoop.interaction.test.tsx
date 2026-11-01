@@ -78,7 +78,7 @@ describe('Fresh File product loop', () => {
     expect(screen.getByRole('region', { name: 'Room Timeline' }).textContent).toContain(
       'Intro combat',
     );
-    await user.click(screen.getByRole('button', { name: 'Edit Trait · Choose trait' }));
+    await user.click(screen.getByRole('button', { name: 'Edit Trait · Pick trait' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Offer state' }));
     expect(screen.getByRole('region', { name: 'Offer generation state' }).textContent).toContain(

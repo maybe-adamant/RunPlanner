@@ -1440,7 +1440,8 @@
  */
 .timeline-banner-title {
   display: inline-flex;
-  min-width: 4rem;
+  /* A long title keeps a readable start before the controls wrap under it. */
+  min-width: min(12rem, 100%);
   max-width: max-content;
   flex: 1 1 0;
   align-items: center;
@@ -2389,6 +2390,19 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 8px;
+}
+
+/* A fixed or closed door's reward stands where an open door's picker does, at its size. */
+.hub-main-reward > :is(.control-placeholder, .door-fixed-reward),
+.hub-main-reward .door-fixed-reward {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.door-closed > .fixed-room-state {
+  border-color: transparent;
+  color: var(--muted);
 }
 
 .hub-main-reward .contextual-picker > label {

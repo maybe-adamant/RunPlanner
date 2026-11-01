@@ -140,7 +140,8 @@ describe('HubDecisionWorkbench interaction', () => {
     expect(screen.getByRole('checkbox', { name: 'Combat 01 open' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Move Combat 01 later' })).toBeNull();
     expect(screen.getAllByLabelText('Reward').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Open this room to edit its reward.')).toHaveLength(17);
+    // A closed room's reward stands in for its editor until the room is opened.
+    expect(document.querySelectorAll('.hub-main-reward .control-placeholder')).toHaveLength(17);
     fireEvent.click(back);
     expect(screen.getByRole('region', { name: 'Hub room participation' })).toBe(panel);
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Details →' }));

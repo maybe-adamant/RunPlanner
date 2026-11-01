@@ -16,6 +16,7 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { TimelineRow } from '../TimelineRow';
+import { pickSubject } from './pickSubject';
 
 const objectName: Readonly<Record<WorkspaceRoomObject, string>> = {
   worldShop: 'World Shop',
@@ -142,11 +143,12 @@ export function RoomObjectEntry({
       editors={
         pending === undefined ? null : (
           <ContextualPicker<WorkspaceRoomObjectChoice>
-            ariaLabel="Travel Deal item"
+            ariaLabel={`Pick item for ${pickSubject(entry.options.find((option) => option.key === pending)?.label ?? pending)}`}
             id={`${idPrefix}-choice`}
             itemIcon={(item) => rewardIcon(item.value.rewardType)}
             key={pending}
             label=""
+            layout="inline"
             model={interaction.choices(pending)}
             onOpenChange={(open) => {
               // Closing the list without a choice abandons the pick.
@@ -156,7 +158,8 @@ export function RoomObjectEntry({
               setChoosing(undefined);
               executeIntent(interaction.choiceIntentFor(pending, choice.key));
             }}
-            placeholder="Choose item"
+            placeholder="Pick"
+            triggerSize="content"
           />
         )
       }

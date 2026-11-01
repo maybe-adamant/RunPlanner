@@ -180,22 +180,29 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
       encounterKey: 'ArtemisCombatN',
     });
-    const { user } = renderOccurrenceWorkbench(
-      project,
-      'Surface',
-      'P',
-      occurrenceById(occurrenceId),
-    );
+    const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
-    const wave = screen.getByRole('button', { name: 'Aetos appearance' });
+    // Its accessible name carries the stored value.
+    const wave = screen.getByRole('button', { name: 'Aetos appearance: Wave 2' });
     expect(wave.textContent).toBe('Wave 2');
-    // The stored wave stays clearable; only other waves wait on the earlier choice.
+    // The stored wave stays clearable; the waves themselves wait on the earlier choice.
     expect((wave as HTMLButtonElement).disabled).toBe(false);
-    await user.click(wave);
-    expect(screen.getByRole('option', { name: 'No' }).getAttribute('aria-disabled')).not.toBe(
-      'true',
-    );
+    await view.user.click(wave);
+    const stored = screen.getByRole('option', { name: /^Wave 2/ });
+    expect(stored.getAttribute('aria-disabled')).toBe('true');
+    expect(stored.textContent).toContain('Waits on an earlier choice.');
     expect(screen.queryByRole('option', { name: /unavailable/ })).toBeNull();
+    const before = view.application.store.getState().projectWorkspace.history!.past.length;
+    await view.user.click(screen.getByRole('option', { name: 'No' }));
+    // Clearing it is one ReplaceAetosWave(null).
+    const history = view.application.store.getState().projectWorkspace.history!;
+    expect(history.past).toHaveLength(before + 1);
+    expect(
+      history.present.route.biomes
+        .find((biome) => biome.biomeKey === 'P')
+        ?.topology?.occurrences.find((room) => room.occurrenceId === occurrenceId)?.encounters
+        .aetosWaveByPhase?.Combat,
+    ).toBeUndefined();
   });
 
   it('authors a native Aetos wave from one picker, retains an unavailable choice, and repairs it directly', async () => {
@@ -212,7 +219,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(occurrenceId),
     );
     openRoomTab('Room Timeline');
-    const aetos = () => screen.getByRole('button', { name: 'Aetos appearance' });
+    const aetos = () => screen.getByRole('button', { name: /^Aetos appearance: / });
     const pick = async (option: string) => {
       await view.user.click(aetos());
       await view.user.click(await screen.findByRole('option', { name: option }));
@@ -235,6 +242,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(aetos().textContent).toBe('Wave 2');
     expect(aetosWave()).toBe(2);
     // One pick is one command and one Undo step.
+    expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
+      before + 1,
+    );
+    // Picking the current wave again is no edit.
+    await pick('Wave 2');
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       before + 1,
     );
@@ -275,7 +287,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     // A retained wave whose phase context is not yet reached can still be cleared.
     await pick('No');
     expect(aetosWave()).toBeUndefined();
-    expect(screen.queryByRole('button', { name: 'Aetos appearance' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Aetos appearance: / })).toBeNull();
   });
 
   it('authors a Nemesis combat outcome in Events and undoes it', async () => {
@@ -332,7 +344,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       occurrenceById(fixture.occurrenceId),
     );
     openRoomTab('Room Timeline');
-    expect(screen.queryByRole('button', { name: 'Aetos appearance' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Aetos appearance: / })).toBeNull();
     act(() => {
       view.application.store.dispatch(
         authoredProjectCommandDispatched({
@@ -352,12 +364,12 @@ describe('OccurrenceEncounterWorkbench', () => {
         findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
       );
     });
-    const picker = screen.getByRole('button', { name: 'Aetos appearance' });
+    const picker = screen.getByRole('button', { name: /^Aetos appearance: / });
     expect(picker.textContent).toBe('Wave 2');
     await waitFor(() => expect(document.activeElement).toBe(picker));
     await view.user.click(picker);
     await view.user.click(await screen.findByRole('option', { name: 'No' }));
-    expect(screen.queryByRole('button', { name: 'Aetos appearance' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Aetos appearance: / })).toBeNull();
   });
 
   it('exposes generated customization on a fixed opening encounter', async () => {
@@ -1168,7 +1180,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe(condition);
     await view.user.click(condition);
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Edit Trait · Choose trait' })).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Edit Trait · Pick trait' })).toBeTruthy();
     });
     expect(
       view.application.store
@@ -1583,7 +1595,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(await optionalActionNames(view.user)).toContain('Verdure Sampler: Collect Pom Slice');
     await addOptionalAction(view.user, 'Collect Pom Slice');
     await view.user.click(
-      within(pickupRow()).getByRole('button', { name: /^Edit Pom · Choose target/ }),
+      within(pickupRow()).getByRole('button', { name: /^Edit Pom · Pick target/ }),
     );
     await view.user.click(screen.getByRole('button', { name: 'Recorded random Pom target' }));
     const options = within(await screen.findByRole('listbox')).getAllByRole('option');
@@ -2660,7 +2672,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     openRoomTab('Combat 1 Timeline');
     expect(
       within(screen.getByRole('region', { name: 'Room Timeline' })).getByRole('button', {
-        name: 'Edit Trait · Choose trait',
+        name: 'Edit Trait · Pick trait',
       }),
     ).toBeTruthy();
     openRoomTab('Intro Wheels');

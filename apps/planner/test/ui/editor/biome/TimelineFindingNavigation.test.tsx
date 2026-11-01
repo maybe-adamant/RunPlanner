@@ -215,7 +215,7 @@ it.each([
 
 it.each([
   ['gorgon', 'No Death Defiance'],
-  ['aetos', 'Aetos appearance'],
+  ['aetos', /^Aetos appearance: /],
 ] as const)('navigates a P %s finding to its Timeline control', async (kind, control) => {
   const fixture = reachedPOutdoorIcarusFixture();
   const project =

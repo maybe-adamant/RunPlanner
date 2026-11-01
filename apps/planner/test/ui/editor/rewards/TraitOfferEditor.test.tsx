@@ -1232,7 +1232,7 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
     // The finding ring is the launcher's only state mark; with no Hex chosen it has no summary.
-    const launcher = screen.getByRole('button', { name: 'Edit Hex · Choose Hex' });
+    const launcher = screen.getByRole('button', { name: 'Edit Hex · Pick Hex' });
     expect(launcher.getAttribute('data-has-findings')).toBe('true');
     expect(hintOf(launcher)).toBeNull();
     expect(launcher.getAttribute('aria-description')).toMatch(/\S/);

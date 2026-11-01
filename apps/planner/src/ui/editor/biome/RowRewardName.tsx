@@ -1,6 +1,7 @@
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
-import { offerIcon, shopItemIcon } from '@planner/ui/artwork/rewardIcon';
+import { offerIcon } from '@planner/ui/artwork/rewardIcon';
+import { wellItemIcon } from '@planner/ui/artwork/roomArtwork';
 import { hintProps } from '@planner/ui/controls/hint';
 
 /**
@@ -38,7 +39,7 @@ export function RowRewardName({
       >
         <ArtworkIcon
           className="artwork-label-icon"
-          source={itemKey === undefined ? offerIcon(offer) : shopItemIcon(itemKey, offer)}
+          source={itemKey === undefined ? offerIcon(offer) : wellItemIcon(itemKey)}
         />
         {boosted ? (
           <span aria-hidden="true" className="row-reward-boosted">

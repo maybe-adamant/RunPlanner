@@ -110,7 +110,8 @@ function wellPurchaseLabel(
           .find((option) => option.key === itemKey);
   const itemLabel = itemOption?.label;
   // The bought item names the row by its reward's icon.
-  const reward = itemOption === undefined ? {} : { rewardType: itemOption.rewardType };
+  const reward =
+    itemOption === undefined ? {} : { rewardType: itemOption.rewardType, itemKey: itemOption.key };
   const slot = slotIndex < 0 ? {} : { slot: slotIndex + 1 };
   if (rollNumber !== undefined)
     return { name: itemLabel ?? subject, suffix: `roll ${rollNumber}`, ...slot, ...reward };
