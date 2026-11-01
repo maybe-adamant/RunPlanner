@@ -6,5 +6,6 @@ export const chaosEncounterDefinitions = [
     label: 'Chaos',
     kind: 'nonCombat',
     countsEncounterDepth: false,
+    npcPresentationKey: 'Chaos',
   },
 ] as const satisfies readonly RawEncounterDefinitionDeclaration[];

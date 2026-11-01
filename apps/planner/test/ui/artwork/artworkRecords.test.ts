@@ -128,7 +128,8 @@ const records: [string, Readonly<Record<string, string | null>>, readonly string
     (roomShop?.groups.values ?? []).flatMap((g) => g.options.values.map((o) => o.key)),
   ],
   ['elements', elementArtwork, [...catalog.traitElements]],
-  ['npcs', npcArtwork, npcKeys],
+  // Chaos, Eris and Zagreus are NPCs no encounter keys; their rows and rooms name them.
+  ['npcs', npcArtwork, [...npcKeys, 'Chaos', 'Eris', 'Zagreus']],
   ['no-reward', noRewardArtwork, catalog.biomes.values.map((b) => b.key)],
   ['bosses', bossArtwork, catalog.biomes.values.map((b) => b.key)],
   ['biomes', biomeArtwork, catalog.biomes.values.map((b) => b.key)],

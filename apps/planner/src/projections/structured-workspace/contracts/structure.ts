@@ -676,8 +676,6 @@ export type WorkspaceRoomIcon =
 
 export interface WorkspaceRailSelectedTarget {
   readonly roomIcon: WorkspaceRoomIcon;
-  /** The additional exit taken, such as a Chaos gate; absent for a physical door. */
-  readonly exitTypeKey?: string;
   /** Goals remaining shown on the selected Clockwork Goal door. */
   readonly clockworkGoalsRemaining?: number;
   readonly reward?: WorkspaceRailReward;

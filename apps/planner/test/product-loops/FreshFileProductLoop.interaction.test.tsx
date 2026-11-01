@@ -136,12 +136,12 @@ describe('Fresh File product loop', () => {
     await user.click(screen.getByRole('button', { name: /^Entrance/ }));
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const timeline = () => screen.getByRole('region', { name: 'Room Timeline' });
-    expect(within(timeline()).getByText('Talk to Eris')).toBeTruthy();
+    expect(within(timeline()).getByRole('img', { name: 'Eris' })).toBeTruthy();
     await user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     await user.click(screen.getByRole('checkbox', { name: 'Eris has spawned' }));
     expect(intro().eris).toBeUndefined();
     await user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
-    expect(within(timeline()).queryByText('Talk to Eris')).toBeNull();
+    expect(within(timeline()).queryByRole('img', { name: 'Eris' })).toBeNull();
 
     application.store.dispatch(authoredProjectUndoRequested());
     expect(intro().roomActions.order.map((reference) => reference.kind)).toEqual([

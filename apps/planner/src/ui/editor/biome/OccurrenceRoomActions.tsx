@@ -24,6 +24,8 @@ import { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { LifecycleBoundaryRow } from './RoomLifecycleBoundaryRow';
 import { TimelineRow } from './TimelineRow';
 import { RowRewardName } from './RowRewardName';
+import { RowNpcName } from './RowNpcName';
+import { npcPortrait } from '@planner/ui/artwork/npcs/npcArtwork';
 import { FieldsCageOrderControl } from './FieldsCageOrderControl';
 import { RoomActionAcquisitionRow } from './RoomActionAcquisitionRow';
 import {
@@ -439,7 +441,12 @@ export function RoomActionsWorkbench({
       const proposal = actions.proposals.find((candidate) => candidate.key === key);
       return proposal === undefined ? [] : [proposal];
     });
-    const icon = roomActionIcon(row.reference, row.address.biomeKey, row.sourceFamily);
+    const portrait = npcPortrait(row.labelParts?.npcKey);
+    // A Talk row's portrait names the NPC, so the row leads with no second icon.
+    const icon =
+      portrait === undefined
+        ? roomActionIcon(row.reference, row.address.biomeKey, row.sourceFamily)
+        : undefined;
     const mysteryVerb = inlineMysteryBoonOfferVerb(row);
     const placement = row.placement;
     const actionAccent = row.stale
@@ -567,7 +574,11 @@ export function RoomActionsWorkbench({
                           })}
                     >
                       {row.labelParts.reward === undefined ? (
-                        row.labelParts.name
+                        portrait === undefined ? (
+                          row.labelParts.name
+                        ) : (
+                          <RowNpcName name={row.labelParts.name} portrait={portrait} />
+                        )
                       ) : (
                         <RowRewardName
                           boosted={row.labelParts.reward.boosted}

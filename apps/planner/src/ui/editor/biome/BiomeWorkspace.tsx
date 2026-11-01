@@ -194,7 +194,7 @@ function RailSelectedTarget({
     <span className="biome-rail-selection">
       <ArtworkIcon
         className="biome-rail-reward-icon"
-        source={roomKindIcon(selectedTarget.roomIcon, selectedTarget.exitTypeKey)}
+        source={roomKindIcon(selectedTarget.roomIcon)}
       />
       {selectedTarget.roomLabel}
       {selectedTarget.reward === undefined ? (

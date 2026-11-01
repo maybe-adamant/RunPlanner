@@ -3,7 +3,6 @@ import type {
   RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import type { ResourceFamily } from '@run-planner/engine/catalog-schema';
-import { keepsakeArtwork } from '@planner/ui/controls/keepsakes/keepsakeArtwork';
 
 import { biomeArtwork } from './biomes/biomeArtwork';
 import { elementArtwork } from './elements/elementArtwork';
@@ -12,6 +11,7 @@ import { hubFountainArtwork } from './hub-fountains/hubFountainArtwork';
 import { rewardIcon } from './rewardIcon';
 import { traitIcon } from './traitArtwork';
 import { roomObjectArtwork } from './room-objects/roomObjectArtwork';
+import { npcArtwork } from './npcs/npcArtwork';
 import { gatheringToolArtwork } from './tools/gatheringToolArtwork';
 import { wellArtwork } from './well/wellArtwork';
 
@@ -42,8 +42,8 @@ export function elementIcon(element: string | undefined): string | undefined {
   return element === undefined ? undefined : (elementArtwork[element] ?? undefined);
 }
 
-/** Eris is shown by her keepsake, the Discordant Bell, like the other NPC portraits. */
-export const erisIcon: string | undefined = keepsakeArtwork.EscalatingKeepsake ?? undefined;
+/** Eris's portrait; her keepsake, the Discordant Bell, stands only for the keepsake. */
+export const erisIcon: string | undefined = npcArtwork.Eris ?? undefined;
 
 /** The object or NPC a room action uses; undefined for actions without one. */
 export function roomActionIcon(

@@ -20,7 +20,6 @@ import {
   type WorkspaceTopologyRemovalInteraction,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -503,8 +502,7 @@ function AdditionalExitRow({
     chaos?.selectIntent ??
     requireWorkspaceInteraction(interactions.zagreusContracts, key).selectIntent;
   const room = control.door.room;
-  // The exit's door art stands for the room it leads to.
-  const art = doorArtwork[control.exitTypeKey] ?? undefined;
+  const art = roomKindIcon(room.roomIcon);
   return (
     <DoorRow
       ariaLabel={`${control.exitTypeLabel} exit`}

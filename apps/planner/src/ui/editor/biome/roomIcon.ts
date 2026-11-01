@@ -4,22 +4,17 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { bossArtwork } from '@planner/ui/artwork/bosses/bossArtwork';
 import { combatRoomArtwork } from '@planner/ui/artwork/combat-rooms/combatRoomArtwork';
-import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
 import { emptyRoomArtwork } from '@planner/ui/artwork/empty-rooms/emptyRoomArtwork';
 import { minibossIcon } from '@planner/ui/artwork/encounterArtwork';
 import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { fountainIcon } from '@planner/ui/artwork/roomArtwork';
-import { traitGiverArtwork } from '@planner/ui/artwork/trait-givers/traitGiverArtwork';
 
 export const bossIcon = (biomeKey: string): string | undefined =>
   bossArtwork[biomeKey] ?? undefined;
 
-/**
- * The room's own icon: its enemies, empty scene, object, miniboss, NPC or
- * contract door, the last only when the exit taken is known.
- */
-export function roomKindIcon(room: WorkspaceRoomIcon, exitTypeKey?: string): string | undefined {
+/** The room's own icon: its enemies, empty scene, object, miniboss or NPC. */
+export function roomKindIcon(room: WorkspaceRoomIcon): string | undefined {
   switch (room.kind) {
     case 'combat':
       return combatRoomArtwork[room.biomeKey] ?? undefined;
@@ -32,9 +27,9 @@ export function roomKindIcon(room: WorkspaceRoomIcon, exitTypeKey?: string): str
     case 'shop':
       return rewardIcon('Shop');
     case 'chaos':
-      return traitGiverArtwork.Chaos ?? undefined;
+      return npcArtwork.Chaos ?? undefined;
     case 'contract':
-      return exitTypeKey === undefined ? undefined : (doorArtwork[exitTypeKey] ?? undefined);
+      return npcArtwork.Zagreus ?? undefined;
     case 'miniboss':
       return room.encounterDefinitionKey === undefined
         ? undefined

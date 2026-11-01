@@ -253,7 +253,6 @@ function roomRailPresentation(
   catalog: Catalog,
   room: WorkspaceRoomSummary,
   door: WorkspaceDoorContract | undefined,
-  exitTypeKey?: string,
 ): WorkspaceRailSelectedTarget {
   const rewards = door?.offerRewardSurface.rewards ?? [];
   const onlyReward =
@@ -265,7 +264,6 @@ function roomRailPresentation(
     (candidate) => candidate.clockworkGoalsRemaining !== undefined,
   )?.clockworkGoalsRemaining;
   return Object.freeze({
-    ...(exitTypeKey === undefined ? {} : { exitTypeKey }),
     ...(clockworkGoalsRemaining === undefined ? {} : { clockworkGoalsRemaining }),
     ...(reward === undefined ? {} : { reward }),
     roomRewards: Object.freeze(
@@ -286,13 +284,7 @@ function selectedTargetRailPresentation(
 ): WorkspaceRailSelectedTarget | undefined {
   const door = node.selectedContinuation?.door;
   if (door === undefined) return undefined;
-  const exitTypeKey =
-    node.chaos?.door === door
-      ? node.chaos.exitTypeKey
-      : node.zagreusContract?.door === door
-        ? node.zagreusContract.exitTypeKey
-        : undefined;
-  return roomRailPresentation(catalog, door.room, door, exitTypeKey);
+  return roomRailPresentation(catalog, door.room, door);
 }
 
 function railFocusMarkerForNode(node: WorkspaceNode, marker: WorkspaceMarker): WorkspaceMarker {

@@ -13,6 +13,7 @@ import {
   stygianWellGenerationItemKey,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
+import { encounterNpcKey } from '@planner/projections/encounterPickerProjection';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
 import { featureRollCatalog, featureRollNumber } from './feature-roll-assembly';
 import { workspaceAcquisitionRoleLabel } from './occurrence-reward-assembly';
@@ -140,6 +141,8 @@ export interface OccurrenceActionLabelParts {
     /** A shop item's own key, whose artwork can differ from its reward type's. */
     readonly itemKey?: string;
   };
+  /** The NPC a Talk row names, by NPC key; the row can show the NPC's portrait for the name. */
+  readonly npcKey?: string;
   /** The inventory slot the action buys from, shown as a badge rather than in the label. */
   readonly slot?: number;
   /** A Travel Deal refill purchase, marked on its icon; `shownLabel` omits the offer name. */
@@ -168,6 +171,10 @@ function labelParts(
     ...(origin === undefined ? {} : { origin }),
     ...(travelDeal ? { travelDeal: true as const, shownLabel: head } : {}),
   });
+}
+
+function talkTo(npcKey: string): OccurrenceActionLabelParts {
+  return Object.freeze({ ...labelParts('Talk to', npcKey), npcKey });
 }
 
 function withReward(
@@ -429,8 +436,8 @@ export function occurrenceActionLabelParts(
       const key =
         phase?.selectedEncounter.nativeEncounterDefinitionKey ?? phase?.selectedEncounter.key;
       const definition = key === undefined ? undefined : catalog.encounterDefinitions.byKey[key];
-      if (definition?.npcPresentationKey !== undefined)
-        return plain(`Talk to ${definition.npcPresentationKey}`);
+      const npcKey = key === undefined ? undefined : encounterNpcKey(catalog, key);
+      if (npcKey !== undefined) return talkTo(npcKey);
       const verb =
         definition === undefined
           ? 'Resolve'
@@ -442,7 +449,7 @@ export function occurrenceActionLabelParts(
       );
     }
     case 'interactGorgon':
-      return plain('Talk to Athena');
+      return talkTo('Athena');
     case 'interactAcquisitionEntry': {
       const supplemental =
         roomLocal.kind === 'shop'
@@ -499,7 +506,7 @@ export function occurrenceActionLabelParts(
     case 'interactKeepsakeRack':
       return plain('Keepsake Rack');
     case 'interactEris':
-      return plain('Talk to Eris');
+      return talkTo('Eris');
     case 'reroll': {
       const target = reference.target;
       const subject =

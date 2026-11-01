@@ -50,7 +50,7 @@ describe('Fresh File Eris', () => {
     expect(spawned()).toHaveProperty('checked', true);
     await openTab('Room Timeline');
     expect(within(timeline()).queryByRole('checkbox', { name: 'Eris has spawned' })).toBeNull();
-    expect(within(timeline()).getByText('Talk to Eris')).toBeTruthy();
+    expect(within(timeline()).getByRole('img', { name: 'Eris' })).toBeTruthy();
     // The gift's reward is named by its icon.
     expect(within(timeline()).getByRole('img', { name: /Ashes/ })).toBeTruthy();
 
@@ -60,11 +60,11 @@ describe('Fresh File Eris', () => {
     expect(gIntro(view.application)?.roomActions.order).toEqual([]);
     expect(spawned()).toHaveProperty('checked', false);
     await openTab('Room Timeline');
-    expect(within(timeline()).queryByText('Talk to Eris')).toBeNull();
+    expect(within(timeline()).queryByRole('img', { name: 'Eris' })).toBeNull();
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(gIntro(view.application)?.eris).toEqual({ spawned: true });
-    expect(within(timeline()).getByText('Talk to Eris')).toBeTruthy();
+    expect(within(timeline()).getByRole('img', { name: 'Eris' })).toBeTruthy();
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
     expect(gIntro(view.application)?.eris).toBeUndefined();
     await openTab('Room Overview');
