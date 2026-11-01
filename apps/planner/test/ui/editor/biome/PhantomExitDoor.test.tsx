@@ -55,18 +55,20 @@ describe('PhantomExitDoor', () => {
   it('collapses an automatic door to its settled room and reward', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     let door = await openDoors(view, combat05);
-    expect(door.textContent).toContain('Preboss · no reward');
+    expect(within(door).getByText('Preboss')).toBeTruthy();
+    expect(within(door).getByText('No reward')).toBeTruthy();
     expect(door.textContent).toContain('Automatic');
-    expect(
-      within(screen.getByRole('region', { name: 'Outgoing doors' })).queryByText(
-        /Continuation is owned/,
-      ),
-    ).toBeNull();
     expect(within(door).queryByRole('button', { name: 'Room' })).toBeNull();
-    expect(within(door).getByRole('heading', { name: 'Hidden return door' })).toBeTruthy();
 
     door = await openDoors(view, nLocalOccurrenceId('combat05', 'sideDoor1'));
-    expect(door.textContent).toMatch(/Side Room 01 · (?!no reward)\S/);
+    expect(within(door).getByText('Side Room 01')).toBeTruthy();
+    expect(
+      within(door).queryByText(/^(Automatic|No reward)$/, { selector: '.fixed-value-chip-text' }),
+    ).toBeNull();
+    // A side room's notes say it returns to its main room and explain the hidden door.
+    const notes = within(screen.getByRole('complementary', { name: 'Notes' }));
+    expect(notes.getByText('Returns to Combat 05.')).toBeTruthy();
+    expect(door.querySelector('[aria-describedby]')).not.toBeNull();
     expect(within(door).getByRole('button', { name: 'Choose' })).toBeTruthy();
     expect(within(door).queryByRole('button', { name: 'Reward' })).toBeNull();
   });

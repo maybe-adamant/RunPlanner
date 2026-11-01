@@ -21,7 +21,9 @@ import {
 } from '@planner/ui/room-maps/EphyraSideRoomAnnotations';
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
+import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { DoorRewardEditor } from '../DoorRewardEditor';
+import { DoorRow, DoorRowsHeader } from '../DecisionWorkbench';
 import { hintProps } from '@planner/ui/controls/hint';
 import { TimelineReorderHandle, TimelineReorderStatus } from '../TimelineReorderHandle';
 import { useTimelineReorder, type TimelineReorderSession } from '../useTimelineReorder';
@@ -57,7 +59,7 @@ function GenerationControl({
   return (
     <div
       aria-disabled={disabled || undefined}
-      aria-label={`${slot.label} generation control`}
+      aria-label={`Open ${slot.label} control`}
       className="ephyra-side-generation-control"
       inert={target.inert}
       role="group"
@@ -66,7 +68,7 @@ function GenerationControl({
         <input
           {...target}
           aria-busy={candidates.pending || undefined}
-          aria-label={`${slot.label} generation`}
+          aria-label={`Open ${slot.label}`}
           checked={slot.generation === 'generated'}
           data-candidate-support={candidateSupport(candidate)}
           disabled={disabled || waiting}
@@ -87,7 +89,6 @@ function GenerationControl({
           )}
           type="checkbox"
         />
-        <span>Generated</span>
       </label>
     </div>
   );
@@ -150,33 +151,28 @@ function VisitControl({
   const state = orderActionState(interaction, candidate);
   const unavailable = slot.generation !== 'generated';
   return (
-    <div className="ephyra-side-visit-control">
-      <label>
-        <input
-          aria-busy={candidates.pending || undefined}
-          aria-label={`${slot.label} visit`}
-          checked={slot.entered}
-          data-candidate-support={candidateSupport(candidate)}
-          disabled={unavailable || state.disabled}
-          onChange={() => {
-            if (unavailable) return;
-            const assessed = (candidates.result ?? candidates.activate())?.[index];
-            if (candidateMayBeAuthored(assessed))
-              executeIntent(interaction.intentFor(option.proposedOccurrenceIds));
-          }}
-          onFocus={candidates.activate}
-          onPointerDown={candidates.activate}
-          {...hintProps(
-            unavailable
-              ? 'Generate this door before adding it to the visit order.'
-              : (state.rejection ?? (state.waiting ? candidateWaitingHint : undefined)),
-            state.rejection,
-          )}
-          type="checkbox"
-        />
-        <span>Visited</span>
-      </label>
-    </div>
+    <input
+      aria-busy={candidates.pending || undefined}
+      aria-label={`${slot.label} visit`}
+      checked={slot.entered}
+      data-candidate-support={candidateSupport(candidate)}
+      disabled={unavailable || state.disabled}
+      onChange={() => {
+        if (unavailable) return;
+        const assessed = (candidates.result ?? candidates.activate())?.[index];
+        if (candidateMayBeAuthored(assessed))
+          executeIntent(interaction.intentFor(option.proposedOccurrenceIds));
+      }}
+      onFocus={candidates.activate}
+      onPointerDown={candidates.activate}
+      {...hintProps(
+        unavailable
+          ? 'Open this door before adding it to the visit order.'
+          : (state.rejection ?? (state.waiting ? candidateWaitingHint : undefined)),
+        state.rejection,
+      )}
+      type="checkbox"
+    />
   );
 }
 
@@ -362,8 +358,50 @@ function VisitOrder({
   );
 }
 
-/** Parent-owned Ephyra traversal editor with an illustrative parent-room map. */
-export function LocalVisitWorkbench({
+/** One side-room door as a row of the doors table: generation, visit, priority, room, reward and map. */
+function SideRoomDoorRow({
+  focusGeneration,
+  interactions,
+  localVisit,
+  slot,
+}: {
+  readonly focusGeneration: (element: HTMLInputElement | null) => void;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly localVisit: WorkspaceLocalVisitDecision;
+  readonly slot: LocalSlot;
+}) {
+  const generated = slot.generation === 'generated';
+  return (
+    <DoorRow
+      ariaLabel={`${slot.label} door`}
+      identity={<span className="door-row-number">{slot.availabilityRank}</span>}
+      map={{ gameName: slot.gameName, hostId: slot.marker.focusKey, title: slot.label }}
+      reward={
+        generated ? (
+          <DoorRewardEditor
+            door={slot.door}
+            idPrefix={`local-door-${slot.marker.focusKey}`}
+            interactions={interactions}
+            layout="row"
+          />
+        ) : (
+          <span className="door-row-waiting">Door closed</span>
+        )
+      }
+      room={<FixedValueChip label={slot.label} />}
+      selection={
+        <span className="side-room-toggles">
+          <GenerationControl controlRef={focusGeneration} interactions={interactions} slot={slot} />
+          <VisitControl interactions={interactions} localVisit={localVisit} slot={slot} />
+        </span>
+      }
+      state={{ available: generated, picked: slot.entered }}
+    />
+  );
+}
+
+/** Parent-owned Ephyra traversal: the side-room doors, the visit order and an illustrative parent-room map. */
+export function SideRoomsWorkbench({
   findingNavigationRevision,
   interactions,
   localVisit,
@@ -398,71 +436,56 @@ export function LocalVisitWorkbench({
       className="ephyra-side-editor"
       tabIndex={-1}
     >
-      <header className="ephyra-side-heading">
-        <h4>Side Rooms</h4>
-        <p>
-          {localVisit.visitOrder.length} visited · {localVisit.slots.length} possible
-        </p>
-      </header>
-      <div className="ephyra-side-reference-layout">
-        <div className="ephyra-side-controls">
-          <ol aria-label="Side-room doors by generation priority" className="ephyra-side-door-list">
-            {localVisit.slots.map((slot) => (
-              <li key={slot.key}>
-                <div className="ephyra-side-door-heading">
-                  <strong>{slot.label}</strong>
-                  <span aria-hidden="true">·</span>
-                  <span className="ephyra-side-priority">Priority {slot.availabilityRank}</span>
-                </div>
-                <div className="ephyra-side-door-toggles">
-                  <GenerationControl
-                    controlRef={(element) => focusGeneration(element, slot.key)}
-                    interactions={interactions}
-                    slot={slot}
-                  />
-                  <VisitControl interactions={interactions} localVisit={localVisit} slot={slot} />
-                </div>
-                {slot.generation !== 'generated' ? (
-                  <div className="field-control field-control-inline control-placeholder door-closed">
-                    <span>Reward</span>
-                    <span className="fixed-room-state">Door closed</span>
-                  </div>
-                ) : (
-                  <DoorRewardEditor
-                    door={slot.door}
-                    idPrefix={`local-door-${slot.marker.focusKey}`}
-                    interactions={interactions}
-                  />
-                )}
-              </li>
-            ))}
-          </ol>
-          <VisitOrder interactions={interactions} localVisit={localVisit} />
-        </div>
-        <aside aria-label={`${title} side-room map`} className="ephyra-side-map-reference">
-          <RoomMapViewport
-            asset={roomMapAssetFor(parentGameName)}
-            overlay={
-              <div aria-label="Side-room map status" className="ephyra-side-map-marker-layer">
-                {ephyraSideRoomAnnotationsFor(parentGameName).map((annotation) => {
-                  const slot = localVisit.slots.find(
-                    (candidate) => candidate.key === annotation.slotKey,
-                  );
-                  if (slot === undefined)
-                    throw new Error(
-                      `${parentGameName} map annotation ${annotation.slotKey} has no local slot`,
-                    );
-                  return (
-                    <SideRoomMarker annotation={annotation} key={annotation.slotKey} slot={slot} />
-                  );
-                })}
-              </div>
+      <div className="door-workbench">
+        <div
+          aria-label="Side-room doors by generation priority"
+          className="door-rows side-room-doors"
+          role="group"
+        >
+          <DoorRowsHeader
+            identity="Priority"
+            select={
+              <span className="side-room-toggles">
+                <span>Open</span>
+                <span>Visit</span>
+              </span>
             }
-            title={title}
-            controlsPlacement="collapsible-overlay"
           />
-        </aside>
+          {localVisit.slots.map((slot) => (
+            <SideRoomDoorRow
+              focusGeneration={(element) => focusGeneration(element, slot.key)}
+              interactions={interactions}
+              key={slot.key}
+              localVisit={localVisit}
+              slot={slot}
+            />
+          ))}
+        </div>
       </div>
+      <VisitOrder interactions={interactions} localVisit={localVisit} />
+      <aside aria-label={`${title} side-room map`} className="ephyra-side-map-reference">
+        <RoomMapViewport
+          asset={roomMapAssetFor(parentGameName)}
+          overlay={
+            <div aria-label="Side-room map status" className="ephyra-side-map-marker-layer">
+              {ephyraSideRoomAnnotationsFor(parentGameName).map((annotation) => {
+                const slot = localVisit.slots.find(
+                  (candidate) => candidate.key === annotation.slotKey,
+                );
+                if (slot === undefined)
+                  throw new Error(
+                    `${parentGameName} map annotation ${annotation.slotKey} has no local slot`,
+                  );
+                return (
+                  <SideRoomMarker annotation={annotation} key={annotation.slotKey} slot={slot} />
+                );
+              })}
+            </div>
+          }
+          title={title}
+          controlsPlacement="collapsible-overlay"
+        />
+      </aside>
     </section>
   );
 }

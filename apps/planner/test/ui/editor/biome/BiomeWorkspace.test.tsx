@@ -1077,13 +1077,11 @@ describe('BiomeWorkspace', () => {
     expect(screen.queryByText('Door 558353')).toBeNull();
     await view.user.click(screen.getByRole('tab', { name: 'Side Rooms' }));
     expect(screen.getByRole('region', { name: 'Side Rooms' })).toBeTruthy();
-    expect(screen.getByLabelText('Side Room 01 generation')).toBeTruthy();
+    expect(screen.getByLabelText('Open Side Room 01')).toBeTruthy();
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-inspector-heading')).toBeNull();
     expect(within(inspector).getAllByRole('button', { name: 'Reward' })).toHaveLength(2);
-    await view.user.click(
-      within(inspector).getByRole('checkbox', { name: 'Side Room 03 generation' }),
-    );
+    await view.user.click(within(inspector).getByRole('checkbox', { name: 'Open Side Room 03' }));
     const localVisit = view.application.store
       .getState()
       .projectWorkspace.history!.present.route?.biomes.find(
@@ -1433,9 +1431,9 @@ describe('BiomeWorkspace', () => {
       'region',
       { name: 'Outgoing doors' },
     );
-    // Its local visits own every door but the hidden return door, which stands in for that note.
-    expect(within(outgoing).getByRole('heading', { name: 'Hidden return door' })).toBeTruthy();
-    expect(within(outgoing).queryByText(/Continuation is owned/)).toBeNull();
+    // Its side rooms are edited apart; Doors keeps the hidden return door and where it leads.
+    expect(within(outgoing).getByRole('article', { name: 'Hidden return door' })).toBeTruthy();
+    expect(within(outgoing).getByText('Returns to the Hub.')).toBeTruthy();
 
     act(() =>
       view.application.store.dispatch(

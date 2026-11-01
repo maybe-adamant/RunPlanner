@@ -515,13 +515,12 @@
   border-bottom: 1px solid #30313a;
 }
 
-.biome-inspector > .decision-card,
 .biome-inspector > .room-card,
 .biome-inspector > .frontier-actions {
   margin-top: 12px;
 }
 
-.biome-inspector > :is(.decision-card, .room-card, .frontier-actions):first-child {
+.biome-inspector > :is(.room-card, .frontier-actions):first-child {
   margin-top: 0;
 }
 

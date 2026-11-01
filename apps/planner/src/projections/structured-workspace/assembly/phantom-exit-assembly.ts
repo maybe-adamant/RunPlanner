@@ -36,7 +36,7 @@ function rewardTypeLabel(catalog: Catalog, rewardType: string): string {
 
 /**
  * The hidden door a room's first doors unlock fills. Unpinned fields show the
- * engine settlement, and the summary names the settled door; the placeholder candidates and their exclusions are the
+ * engine settlement; the placeholder candidates and their exclusions are the
  * engine's, and the reward domain is the pinned placeholder's declared store.
  */
 export function assemblePhantomExit(input: {
@@ -85,13 +85,6 @@ export function assemblePhantomExit(input: {
     interactionKey,
     marker: input.markerDestinations.marker(address),
     pinned: pinnedRoom !== null || value.rewardType !== null,
-    ...(settled === undefined
-      ? {}
-      : {
-          summary: `${roomLabel(settled.placeholderRoomGameName)} · ${
-            settledReward === undefined ? 'no reward' : rewardTypeLabel(catalog, settledReward)
-          }`,
-        }),
     room: Object.freeze({
       summary: effectiveRoom === undefined ? 'Automatic' : roomLabel(effectiveRoom),
       ...(settled === undefined ? { locked: 'unreached' as const } : {}),

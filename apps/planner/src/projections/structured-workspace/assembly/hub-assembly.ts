@@ -633,6 +633,7 @@ function projectHubNode(
   const completedExit = Object.freeze({
     marker: markerDestinations.marker(completedExitOwner),
     target: Object.freeze({
+      gameName: descriptor.completedExit.roomGameName,
       label: completedExitRoom.label,
       marker: markerDestinations.marker(
         createOccurrenceAddress(biome, completedExitTarget.occurrenceId),

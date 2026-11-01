@@ -332,7 +332,10 @@ authors content only: buying, rushing, collecting and every Travel Deal refill
 are authored on the Room Timeline. A Stygian Well or Pool of Purging Overview
 shows only its presence and initial stock, whose slots are always editable and
 optional; using it starts on the Timeline. Ephyra parents with declared
-side-room groups add a dedicated Side Rooms workbench.
+side-room groups add a dedicated Side Rooms workbench beside Room Doors: its
+doors table has a row per side-room door (generation, visit, generation
+priority, room, reward and map), then the visit order, then the illustrative
+parent map.
 Every Overview renders its sections in one order, showing only those the room
 has: Encounters, room contents (Shop inventory, Fields optional rewards),
 Additional Exits, Objects, Resources, NPCs. Its rows share one column grid of
@@ -425,10 +428,12 @@ presses appear as Timeline rows, where their reorder handle is the only way to
 change their position among other post-unlock actions. A rerolled target reads
 first draw → final on its door row, and the next room's header and the rail
 show the final reward. Reroll findings route to the list row, except an
-out-of-order press, which routes to its Timeline row. An Ephyra
-room's hidden return door sits in Room Doors as one automatic line, in place of
-a continuation note, until its placeholder room or reward is pinned; a reward
-picker waits for the room. Reroll lists and counts are hidden without a card
+out-of-order press, which routes to its Timeline row. A room whose
+continuation the Hub or a side-room visit decides states where it returns as
+a Note. An Ephyra room's hidden return door is a row of its Room Doors table
+whose name is footnote-linked to the Note explaining the door; it shows its
+automatic room and reward as plain values until its placeholder room or reward
+is pinned, and a reward picker waits for the room. Reroll lists and counts are hidden without a card
 that enables them unless the plan already holds rerolls.
 
 An Anvil of Fates result launcher sits on the Timeline row of the reward that
@@ -694,8 +699,8 @@ inherited pool was chosen, why the effective store differs (the forcing room,
 the discarding room, the counting exit), and how Fields cages read. Notes are
 absent, with no reserved space, when a batch has none, and a reason shown there
 is not repeated on hover. The projection supplies each batch's notes in order,
-each naming what it explains: the pool, the store after the arrow, or the batch
-as a whole. A note that explains one value is linked to it by a footnote symbol
+each naming what it explains: the pool, the store after the arrow, a room's
+hidden return door, or the batch as a whole. A note that explains one value is linked to it by a footnote symbol
 after the value and before the note, assigned in order of appearance; the
 value is described by its note for assistive technology, and hovering or
 focusing either highlights both. Notes about the whole batch carry no symbol. Row state stays on its row

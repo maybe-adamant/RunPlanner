@@ -737,11 +737,6 @@ button.home-slot-name {
   flex: none;
 }
 
-.icon-action {
-  min-width: 30px;
-  padding: 4px 7px;
-}
-
 .editor-header .history-controls {
   display: flex;
   gap: 6px;

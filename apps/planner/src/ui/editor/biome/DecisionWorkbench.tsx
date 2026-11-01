@@ -163,18 +163,45 @@ export function DoorRow({
   );
 }
 
+/** A lone exit the declaration fixes: Door 1 and its room as a plain value, with no selection. */
+export function FixedExitRow({
+  available = true,
+  gameName,
+  hostId,
+  label,
+}: {
+  /** False while the exit cannot be taken yet. */
+  readonly available?: boolean;
+  readonly gameName?: string | undefined;
+  readonly hostId: string;
+  readonly label: string;
+}) {
+  return (
+    <DoorRow
+      ariaLabel={`${label} room offer`}
+      identity={<DoorNumber index={1} />}
+      {...(gameName === undefined ? {} : { map: { gameName, hostId, title: label } })}
+      room={<FixedValueChip label={label} />}
+      state={{ available }}
+    />
+  );
+}
+
 /** The doors table's column names; each row names its own cells for assistive technology. */
 export function DoorRowsHeader({
   identity = 'Door',
   room = 'Room',
+  select,
 }: {
   readonly identity?: string;
   /** Empty where the rows have no room column, such as a reward wheel's offers. */
   readonly room?: string;
+  /** Names the selection column where it is not a pick between exits. */
+  readonly select?: ReactNode;
 } = {}) {
   return (
     <div aria-hidden="true" className="door-rows-header">
-      <span />
+      <span>{select}</span>
       <span>{identity}</span>
       <span>{room}</span>
       <span>Reward</span>
@@ -560,7 +587,7 @@ export function SelectedContinuationAction({
  * label and value and described by the note, and hovering or focusing either
  * highlights both.
  */
-function NoteMarked({
+export function NoteMarked({
   children,
   labelledBy,
   mark,

@@ -130,10 +130,6 @@
     width: auto;
   }
 
-  .exit-list {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .panel-navigation {
     position: static;
     height: auto;
@@ -163,7 +159,6 @@
   }
 
   .panel-heading,
-  .decision-heading,
   .frontier-actions {
     align-items: stretch;
     flex-direction: column;

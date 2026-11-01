@@ -1843,7 +1843,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     ).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Side rooms' })).toBeNull();
-    expect(screen.queryByLabelText('Side Room 01 generation')).toBeNull();
+    expect(screen.queryByLabelText('Open Side Room 01')).toBeNull();
     cleanup();
 
     renderStaticOccurrenceWorkbench(

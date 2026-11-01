@@ -16,11 +16,9 @@ import {
   AuthoringFrontier,
   BatchWorkbench,
   DoorNotes,
-  DoorNumber,
-  DoorRow,
   DoorRowsHeader,
+  FixedExitRow,
 } from './DecisionWorkbench';
-import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
 import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { PhantomExitDoor } from './PhantomExitDoor';
@@ -67,10 +65,34 @@ function OccurrenceOutgoing({
   readonly phantomExit?: WorkspacePhantomExitControl;
 }): ReactNode {
   const notes = useDoorNotes(
-    bossDoorRewardStore === undefined || bossDoorRewardStore.kind === 'editor'
-      ? []
-      : bossDoorRewardStore.notes,
+    outgoing.kind === 'topologyOwned'
+      ? outgoing.notes
+      : bossDoorRewardStore === undefined || bossDoorRewardStore.kind === 'editor'
+        ? []
+        : bossDoorRewardStore.notes,
   );
+  // The Hub or a side-room visit decides where such a room leads; its notes
+  // say where, beside its hidden return door when it has one.
+  if (outgoing.kind === 'topologyOwned')
+    return (
+      <section aria-label="Outgoing doors" className="door-workbench outgoing-occurrence-state">
+        <div className="door-body">
+          <div className="door-batch" />
+          <DoorNotes items={notes.items} />
+          {phantomExit === undefined ? null : (
+            <div className="door-rows">
+              <DoorRowsHeader />
+              <PhantomExitDoor
+                control={phantomExit}
+                idPrefix={idPrefix}
+                interactions={interactions}
+                mark={notes.markFor('hiddenDoor')}
+              />
+            </div>
+          )}
+        </div>
+      </section>
+    );
   switch (outgoing.kind) {
     case 'authoredDecision':
       throw new BiomeWorkspaceContractError(
@@ -87,7 +109,6 @@ function OccurrenceOutgoing({
       if (destination.kind === 'complete')
         return (
           <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
-            <h3>Outgoing doors</h3>
             <p className="fixed-room-state">{destination.message}</p>
           </section>
         );
@@ -107,20 +128,10 @@ function OccurrenceOutgoing({
             <DoorNotes items={notes.items} />
             <div className="door-rows">
               <DoorRowsHeader />
-              <DoorRow
-                ariaLabel={`${destination.label} room offer`}
-                identity={<DoorNumber index={1} />}
-                {...(destination.kind === 'room' && destination.gameName !== undefined
-                  ? {
-                      map: {
-                        gameName: destination.gameName,
-                        hostId: outgoing.marker.focusKey,
-                        title: destination.label,
-                      },
-                    }
-                  : {})}
-                room={<FixedValueChip label={destination.label} />}
-                state={{ available: true }}
+              <FixedExitRow
+                gameName={destination.kind === 'room' ? destination.gameName : undefined}
+                hostId={outgoing.marker.focusKey}
+                label={destination.label}
               />
             </div>
           </div>
@@ -128,13 +139,9 @@ function OccurrenceOutgoing({
       );
     }
     case 'blockedOrUnentered':
-    case 'topologyOwned':
     case 'terminal':
       return (
         <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
-          <div className="owner-markers">
-            <h3>Outgoing doors</h3>
-          </div>
           {bossDoorRewardStore === undefined ? null : (
             <BossDoorRewardPoolRow
               idPrefix={idPrefix}
@@ -144,17 +151,9 @@ function OccurrenceOutgoing({
             />
           )}
           <DoorNotes items={notes.items} />
-          {outgoing.kind === 'topologyOwned' && phantomExit !== undefined ? (
-            <PhantomExitDoor
-              control={phantomExit}
-              idPrefix={idPrefix}
-              interactions={interactions}
-            />
-          ) : (
-            <p className="fixed-room-state">
-              {outgoing.kind === 'blockedOrUnentered' ? outgoing.message : outgoing.label}
-            </p>
-          )}
+          <p className="fixed-room-state">
+            {outgoing.kind === 'blockedOrUnentered' ? outgoing.message : outgoing.label}
+          </p>
         </section>
       );
   }

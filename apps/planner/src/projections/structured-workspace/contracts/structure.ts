@@ -171,7 +171,8 @@ export interface WorkspaceEffectiveRewardPool {
  * pool the selected exit counts, or the batch as a whole.
  */
 export interface WorkspaceDoorNote {
-  readonly target: 'pool' | 'effective' | 'batch';
+  /** `hiddenDoor` explains a room's hidden return door; `batch` the doors as a whole. */
+  readonly target: 'pool' | 'effective' | 'hiddenDoor' | 'batch';
   readonly text: string;
 }
 
@@ -444,7 +445,11 @@ export interface WorkspaceHubDecisionNode {
   /** The completed-Hub exit and the Preboss it always owns. */
   readonly completedExit: {
     readonly marker: WorkspaceMarker;
-    readonly target: { readonly label: string; readonly marker: WorkspaceMarker };
+    readonly target: {
+      readonly gameName: string;
+      readonly label: string;
+      readonly marker: WorkspaceMarker;
+    };
   };
   readonly slots: readonly WorkspaceHubSlot[];
   readonly visits: readonly WorkspaceHubVisit[];
@@ -525,8 +530,6 @@ export interface WorkspacePhantomExitControl {
   readonly marker: WorkspaceMarker;
   /** Whether either field is authored rather than left to the simulation. */
   readonly pinned: boolean;
-  /** The settled room and reward, once the room's doors unlock is reached. */
-  readonly summary?: string;
   readonly room: {
     readonly summary: string;
     readonly locked?: 'unreached';
@@ -570,9 +573,10 @@ export type WorkspaceOccurrenceStageOutgoing =
       readonly message: string;
     }
   | {
+      /** The Hub or a side-room visit decides where the room leads; its notes say so. */
       readonly kind: 'topologyOwned';
-      readonly label: string;
       readonly marker: WorkspaceMarker;
+      readonly notes: readonly WorkspaceDoorNote[];
     }
   | {
       readonly kind: 'terminal';

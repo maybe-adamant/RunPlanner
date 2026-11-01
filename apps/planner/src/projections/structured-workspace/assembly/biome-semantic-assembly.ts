@@ -829,19 +829,44 @@ export function assembleWorkspaceBiomeSemantics(
           }),
         );
         break;
-      case 'topologyOwned':
+      case 'topologyOwned': {
+        // A side room returns to the main room it opened from; a main room to the Hub.
+        const mainOccurrenceId =
+          status.owner.kind === 'localVisitDecision' &&
+          status.owner.sourceOccurrenceId !== occurrence.occurrenceId
+            ? status.owner.sourceOccurrenceId
+            : undefined;
+        const main =
+          mainOccurrenceId === undefined
+            ? undefined
+            : plan.topology?.occurrences.find(
+                (candidate) => candidate.occurrenceId === mainOccurrenceId,
+              );
+        const returnsTo =
+          main === undefined
+            ? 'the Hub'
+            : routeRoomDeclaration(requireWorkspaceRoom(catalog, main.gameName), biome.routeKey)
+                .label;
         occurrenceOutgoing.set(
           occurrence.occurrenceId,
           Object.freeze({
             kind: 'topologyOwned' as const,
-            label:
-              status.topology === 'hub'
-                ? 'Continuation is owned by the Hub.'
-                : 'Continuation is owned by this room’s local visits.',
             marker: markerDestinations.marker(status.owner),
+            notes: Object.freeze([
+              ...(occurrence.phantomExit === undefined
+                ? []
+                : [
+                    Object.freeze({
+                      target: 'hiddenDoor' as const,
+                      text: 'Its room and reward are drawn when the doors first unlock, before any side door.',
+                    }),
+                  ]),
+              Object.freeze({ target: 'batch' as const, text: `Returns to ${returnsTo}.` }),
+            ]),
           }),
         );
         break;
+      }
       case 'terminal':
         occurrenceOutgoing.set(
           occurrence.occurrenceId,

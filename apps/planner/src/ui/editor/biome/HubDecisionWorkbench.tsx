@@ -484,11 +484,7 @@ export function HubDecisionWorkbench({
             )}
           </div>
         )}
-        {activeTab === 'exit' ? (
-          <section className="hub-board" aria-label="Hub exit">
-            <HubCompletionHandoff node={node} />
-          </section>
-        ) : null}
+        {activeTab === 'exit' ? <HubCompletionHandoff node={node} /> : null}
       </section>
     </section>
   );

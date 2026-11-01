@@ -43,7 +43,7 @@ export function ProjectHistoryControls({ hasProject = true }: { readonly hasProj
       <button
         aria-keyshortcuts="Control+Z Meta+Z"
         aria-label="Undo"
-        className="quiet-action action-compact icon-action"
+        className="quiet-action action-compact"
         disabled={!canUndo}
         onClick={() => dispatch(authoredProjectUndoRequested())}
         {...hintProps('Undo (Ctrl/Cmd+Z)')}
@@ -54,7 +54,7 @@ export function ProjectHistoryControls({ hasProject = true }: { readonly hasProj
       <button
         aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
         aria-label="Redo"
-        className="quiet-action action-compact icon-action"
+        className="quiet-action action-compact"
         disabled={!canRedo}
         onClick={() => dispatch(authoredProjectRedoRequested())}
         {...hintProps('Redo (Ctrl/Cmd+Shift+Z or Ctrl+Y)')}

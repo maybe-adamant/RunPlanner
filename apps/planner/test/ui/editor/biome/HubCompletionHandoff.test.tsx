@@ -12,7 +12,7 @@ describe('HubCompletionHandoff', () => {
     renderStaticHubDecisionWorkbench(twoVisitHubProject());
     selectHubTab('Hub Exit');
 
-    const door = screen.getByRole('article', { name: 'Preboss room' });
+    const door = screen.getByRole('article', { name: 'Preboss room offer' });
     expect(door.dataset.available).toBe('false');
     expect(door.querySelector('.door-status-note')).toBeNull();
     expect(screen.getByRole('button', { name: 'Open next room' })).toHaveProperty('disabled', true);
@@ -22,7 +22,7 @@ describe('HubCompletionHandoff', () => {
     renderStaticHubDecisionWorkbench(loadSurfaceNProject());
     selectHubTab('Hub Exit');
 
-    const door = screen.getByRole('article', { name: 'Preboss room' });
+    const door = screen.getByRole('article', { name: 'Preboss room offer' });
     expect(door.dataset.available).toBe('true');
     expect(screen.getByRole('button', { name: 'Open next room' })).toHaveProperty(
       'disabled',

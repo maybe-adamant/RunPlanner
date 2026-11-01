@@ -67,7 +67,7 @@ describe('hidden return door', () => {
   it('shows a main room the settled exit, with no reward for a no-draw room', () => {
     const projected = projectStructuredWorkspaceFixture(loadSurfaceNOPQProject());
     const { control, interaction } = hiddenDoor(projected, combat05);
-    expect(control).toMatchObject({ pinned: false, summary: 'Preboss · no reward' });
+    expect(control.pinned).toBe(false);
     expect(control.room).toEqual({ summary: 'Preboss' });
     expect(control.reward).toEqual({ summary: 'No reward', locked: 'noDraw' });
     expect(
@@ -92,7 +92,9 @@ describe('hidden return door', () => {
 
   it('gives a Mini-Boss without side doors the same door', () => {
     const projected = projectStructuredWorkspaceFixture(loadSurfaceNOPQProject());
-    expect(hiddenDoor(projected, miniBoss01).control.summary).toBe('Preboss · no reward');
+    const { control } = hiddenDoor(projected, miniBoss01);
+    expect(control.room.summary).toBe('Preboss');
+    expect(control.reward.summary).toBe('No reward');
   });
 
   it('shows a side room its settled draw and waits on a pinned room for the reward', () => {
@@ -102,7 +104,6 @@ describe('hidden return door', () => {
     expect(control.room.summary).toBe('Side Room 01');
     expect(control.reward).toMatchObject({ locked: 'autoRoom' });
     expect(control.reward.summary).not.toMatch(/Auto|No reward/);
-    expect(control.summary).toBe(`Side Room 01 · ${control.reward.summary}`);
   });
 
   it('pins the room, then a reward from its own store, and resets both', async () => {
@@ -151,8 +152,7 @@ describe('hidden return door', () => {
     project = applyProjectCommand(project, catalog, reset);
     expect(hiddenDoor(projectStructuredWorkspaceFixture(project), combat05).control).toMatchObject({
       pinned: false,
-      summary: 'Preboss · no reward',
-      reward: { locked: 'noDraw' },
+      reward: { summary: 'No reward', locked: 'noDraw' },
     });
   });
 

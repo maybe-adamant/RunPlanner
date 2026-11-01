@@ -504,10 +504,13 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(nOccurrenceId('combat05')),
     );
     expect(screen.getByRole('tab', { name: 'Side Rooms' })).toBeTruthy();
-    expect(screen.queryByRole('checkbox', { name: 'Side Room 03 generation' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Open Side Room 03' })).toBeNull();
     openRoomTab('Side Rooms');
     const sideRooms = screen.getByRole('region', { name: 'Side Rooms' });
     expect(within(sideRooms).queryByRole('tab', { name: 'Doors' })).toBeNull();
+    // Leaving the room stays on Doors, where its hidden return door sits.
+    expect(screen.getByRole('tab', { name: 'Room Doors' })).toBeTruthy();
+    expect(within(sideRooms).queryByRole('article', { name: 'Hidden return door' })).toBeNull();
     const parentMap = screen.getByRole('img', { name: 'Map of Combat 05' });
     expect(parentMap.getAttribute('src')).toBe(roomMapAssetFor('N_Combat05')?.src);
     expect(within(sideRooms).queryByText('Parent room map')).toBeNull();
@@ -516,7 +519,7 @@ describe('OccurrenceWorkbench', () => {
     expect(within(sideRooms).getByRole('button', { name: 'Fit' })).toBeTruthy();
     await view.user.click(within(sideRooms).getByRole('button', { name: 'Zoom in' }));
     expect(within(sideRooms).getByText('125%')).toBeTruthy();
-    let generation = screen.getByRole('checkbox', { name: 'Side Room 03 generation' });
+    let generation = screen.getByRole('checkbox', { name: 'Open Side Room 03' });
     expect((generation as HTMLInputElement).checked).toBe(true);
     const historyBefore = view.application.store.getState().projectWorkspace.history!.past.length;
     const mapStatus = screen.getByLabelText('Side-room map status');
@@ -526,18 +529,15 @@ describe('OccurrenceWorkbench', () => {
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore,
     );
-    generation = screen.getByRole('checkbox', { name: 'Side Room 03 generation' });
+    generation = screen.getByRole('checkbox', { name: 'Open Side Room 03' });
 
     await view.user.click(generation);
     await waitFor(() =>
-      expect((screen.getByLabelText('Side Room 03 generation') as HTMLInputElement).checked).toBe(
-        false,
-      ),
+      expect((screen.getByLabelText('Open Side Room 03') as HTMLInputElement).checked).toBe(false),
     );
-    const sideRow = generation.closest('li');
-    if (sideRow === null) throw new Error('Side Room 03 row is missing');
-    // An ungenerated door's reward stands in for its editor.
-    expect(sideRow.querySelector('.control-placeholder')).not.toBeNull();
+    const sideRow = screen.getByRole('article', { name: 'Side Room 03 door' });
+    // An ungenerated door has no reward editor.
+    expect(within(sideRow).getByText('Door closed')).toBeTruthy();
     expect(within(sideRow).queryByRole('button', { name: 'Reward' })).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
@@ -545,17 +545,15 @@ describe('OccurrenceWorkbench', () => {
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 1,
     );
-    act(() => screen.getByRole('checkbox', { name: 'Side Room 03 generation' }).focus());
+    act(() => screen.getByRole('checkbox', { name: 'Open Side Room 03' }).focus());
     await view.user.keyboard(' ');
     await waitFor(() =>
-      expect((screen.getByLabelText('Side Room 03 generation') as HTMLInputElement).checked).toBe(
-        true,
-      ),
+      expect((screen.getByLabelText('Open Side Room 03') as HTMLInputElement).checked).toBe(true),
     );
     expect(
-      within(
-        screen.getByRole('checkbox', { name: 'Side Room 03 generation' }).closest('li')!,
-      ).getByRole('button', { name: 'Reward' }),
+      within(screen.getByRole('article', { name: 'Side Room 03 door' })).getByRole('button', {
+        name: 'Reward',
+      }),
     ).toBeTruthy();
     expect(view.application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyBefore + 2,
@@ -563,9 +561,7 @@ describe('OccurrenceWorkbench', () => {
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
-      expect((screen.getByLabelText('Side Room 03 generation') as HTMLInputElement).checked).toBe(
-        true,
-      ),
+      expect((screen.getByLabelText('Open Side Room 03') as HTMLInputElement).checked).toBe(true),
     );
     openRoomTab('Room Timeline');
     const nActions = screen.getByRole('region', { name: 'Room Timeline' });
@@ -600,12 +596,12 @@ describe('OccurrenceWorkbench', () => {
       ),
     );
     for (const side of localVisit.slots) {
-      const control = screen.getByRole('checkbox', { name: `${side.label} generation` });
+      const control = screen.getByRole('checkbox', { name: `Open ${side.label}` });
       expect((control as HTMLInputElement).disabled).toBe(false);
       await view.user.click(control);
       expect((control as HTMLInputElement).checked).toBe(false);
     }
-    const checkbox = screen.getByRole('checkbox', { name: `${slot.label} generation` });
+    const checkbox = screen.getByRole('checkbox', { name: `Open ${slot.label}` });
     expect(checkbox.getAttribute('data-has-findings')).toBe('true');
     expect(checkbox.getAttribute('aria-description')).toContain('Side room');
     const currentVisit = () =>
@@ -843,9 +839,9 @@ describe('OccurrenceWorkbench', () => {
       ),
     );
     for (const side of localVisit.slots) {
-      await view.user.click(screen.getByRole('checkbox', { name: `${side.label} generation` }));
+      await view.user.click(screen.getByRole('checkbox', { name: `Open ${side.label}` }));
     }
-    const generation = screen.getByRole('checkbox', { name: `${slot.label} generation` });
+    const generation = screen.getByRole('checkbox', { name: `Open ${slot.label}` });
     // Focus styling on a flagged checkbox is CSS-only (finding-overrides.css); jsdom cannot observe it.
     expect(generation.getAttribute('data-has-findings')).toBe('true');
 
@@ -855,7 +851,7 @@ describe('OccurrenceWorkbench', () => {
       initialTab: 'sideRooms',
     });
     expect(document.activeElement).toBe(
-      screen.getByRole('checkbox', { name: `${slot.label} generation` }),
+      screen.getByRole('checkbox', { name: `Open ${slot.label}` }),
     );
     expect(screen.getByLabelText(`${slot.label}: Not generated`)).toBeTruthy();
 
@@ -865,7 +861,7 @@ describe('OccurrenceWorkbench', () => {
       initialTab: 'sideRooms',
     });
     expect(document.activeElement).toBe(
-      screen.getByRole('checkbox', { name: `${slot.label} generation` }),
+      screen.getByRole('checkbox', { name: `Open ${slot.label}` }),
     );
   });
 
@@ -877,8 +873,8 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(nOccurrenceId('combat05')),
     );
     openRoomTab('Side Rooms');
-    const checkbox = screen.getByRole('checkbox', { name: 'Side Room 02 generation' });
-    const control = screen.getByRole('group', { name: 'Side Room 02 generation control' });
+    const checkbox = screen.getByRole('checkbox', { name: 'Open Side Room 02' });
+    const control = screen.getByRole('group', { name: 'Open Side Room 02 control' });
     const before = view.application.store.getState().projectWorkspace.history!.present;
     expect((checkbox as HTMLInputElement).disabled).toBe(true);
     expect(hintOf(checkbox)).toBe('Uncheck Visited first.');
@@ -890,8 +886,8 @@ describe('OccurrenceWorkbench', () => {
     await view.user.click(checkbox);
     expect(view.application.store.getState().projectWorkspace.history!.present).toBe(before);
     await view.user.click(screen.getByRole('checkbox', { name: 'Side Room 02 visit' }));
-    const repairedCheckbox = screen.getByRole('checkbox', { name: 'Side Room 02 generation' });
-    const repairedControl = screen.getByRole('group', { name: 'Side Room 02 generation control' });
+    const repairedCheckbox = screen.getByRole('checkbox', { name: 'Open Side Room 02' });
+    const repairedControl = screen.getByRole('group', { name: 'Open Side Room 02 control' });
     expect((repairedCheckbox as HTMLInputElement).disabled).toBe(false);
     expect(hintOf(repairedCheckbox)).toBeNull();
     expect(repairedCheckbox.getAttribute('aria-description')).toBeNull();

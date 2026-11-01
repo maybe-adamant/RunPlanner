@@ -20,7 +20,7 @@ import { RunStateLauncher } from './RunStateSheet';
 import { RoomActionsWorkbench, type TimelineBoundaryContent } from './OccurrenceRoomActions';
 import { DirectRoomWorkbench, IncomingRewardSummary } from './OccurrenceDirectRoomWorkbench';
 import { FieldsLayoutWorkbench } from './locals/FieldsWorkbench';
-import { LocalVisitWorkbench } from './locals/LocalVisitWorkbench';
+import { SideRoomsWorkbench } from './locals/SideRoomsWorkbench';
 import { RewardWheelWorkbench } from './locals/RewardWheelWorkbench';
 import { TimelineLegend } from './TimelineLegend';
 
@@ -315,7 +315,7 @@ export function OccurrenceWorkbench({
             {renderDirectRoomWorkbench('overview')}
           </div>
         ) : activeTab === 'sideRooms' && localVisit !== undefined ? (
-          <LocalVisitWorkbench
+          <SideRoomsWorkbench
             interactions={interactions}
             localVisit={localVisit}
             parentGameName={room.gameName}
