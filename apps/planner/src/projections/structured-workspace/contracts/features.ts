@@ -2,7 +2,7 @@ import type {
   WorkspaceCommandIntent,
   WorkspaceFeatureAssessment,
   WorkspaceFeaturePresence,
-  WorkspaceRoomChoice,
+  WorkspaceInteractionChoice,
 } from '@planner/projections/structured-workspace/contract';
 import type {
   AcquisitionEntryAddress,
@@ -270,7 +270,7 @@ export interface WorkspaceChaosExitControl {
   readonly fixedRewardType: string;
   readonly forced: boolean;
   readonly kind: 'chaos';
-  readonly mapChoices: readonly WorkspaceRoomChoice[];
+  readonly mapChoices: readonly WorkspaceInteractionChoice<string>[];
   readonly marker: WorkspaceMarker;
   readonly owner: AdditionalExitAddress;
   readonly selected: boolean;

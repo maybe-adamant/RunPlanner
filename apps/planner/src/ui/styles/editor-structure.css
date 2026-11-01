@@ -1343,16 +1343,6 @@ select {
   font-weight: 500;
 }
 
-.door-row-art {
-  display: inline-flex;
-  border-radius: 6px;
-}
-
-.door-row-art > img {
-  width: 2rem;
-  height: 2rem;
-}
-
 .door-row-waiting {
   color: var(--muted);
   font-size: 0.86rem;

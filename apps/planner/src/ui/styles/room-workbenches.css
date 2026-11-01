@@ -2725,11 +2725,6 @@
   border-top-color: #2c2d35;
 }
 
-/* The fountain's arrow shows only before its Phial target. */
-.hub-timeline-fountain > .row-reward-arrow:last-child {
-  display: none;
-}
-
 /* One count stands for the Hub: a stay's list keeps only its hidden heading. */
 .hub-timeline-rerolls .room-rerolls-heading:not(:has(.room-rerolls-count)) {
   display: contents;

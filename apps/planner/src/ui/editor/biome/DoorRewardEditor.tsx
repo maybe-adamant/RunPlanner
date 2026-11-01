@@ -200,10 +200,6 @@ export function RowReward({
   );
 }
 
-/**
- * A door-table row's repairs of kept rerolled rewards that no longer match,
- * shown in the row's secondary column; null when none needs one.
- */
 /** A door row's notice that the game hides this door's reward, shown beside the reward. */
 export function DoorRewardHiddenTag({ door }: { readonly door: WorkspaceDoorContract }) {
   return door.offerRewardSurface.visibility === 'hidden' ? (
@@ -211,6 +207,10 @@ export function DoorRewardHiddenTag({ door }: { readonly door: WorkspaceDoorCont
   ) : null;
 }
 
+/**
+ * A door-table row's repairs of kept rerolled rewards that no longer match,
+ * shown in the row's secondary column; null when none needs one.
+ */
 export function RerolledRewardRepairs({
   rewards,
   target,

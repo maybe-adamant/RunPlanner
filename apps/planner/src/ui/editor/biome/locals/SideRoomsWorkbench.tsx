@@ -378,7 +378,12 @@ function SideRoomDoorRow({
   return (
     <DoorRow
       ariaLabel={`${slot.label} door`}
-      identity={<span className="door-row-number">{slot.availabilityRank}</span>}
+      identity={
+        <span className="door-row-number">
+          <span className="visually-hidden">Priority </span>
+          {slot.availabilityRank}
+        </span>
+      }
       map={{ gameName: slot.gameName, hostId: slot.marker.focusKey, title: slot.label }}
       reward={
         generated ? (

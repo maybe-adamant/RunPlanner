@@ -358,6 +358,10 @@ function projectHubNode(
           );
         }
         const enteredOrdinal = decision.visitOrder.indexOf(localOccurrence.occurrenceId);
+        const room = routeRoomDeclaration(
+          requireWorkspaceRoom(catalog, localOccurrence.gameName),
+          address.routeKey,
+        );
         const descriptor = {
           address,
           availabilityRank: slot.availabilityRank,
@@ -365,18 +369,8 @@ function projectHubNode(
           enteredOrdinal: enteredOrdinal < 0 ? null : enteredOrdinal + 1,
           gameName: slot.roomGameName,
           key: slot.slotKey,
-          label: routeRoomDeclaration(
-            requireWorkspaceRoom(catalog, localOccurrence.gameName),
-            address.routeKey,
-          ).label,
-          roomIcon: candidateRoomIcon(
-            catalog,
-            address.biomeKey,
-            routeRoomDeclaration(
-              requireWorkspaceRoom(catalog, localOccurrence.gameName),
-              address.routeKey,
-            ),
-          ),
+          label: room.label,
+          roomIcon: candidateRoomIcon(catalog, address.biomeKey, room),
           marker: markerDestinations.marker(address),
           occurrenceId: localOccurrence.occurrenceId,
           order: localVisitOrderControl(address, decision.visitOrder, localOccurrence.occurrenceId),

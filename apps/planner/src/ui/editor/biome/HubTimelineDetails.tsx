@@ -335,7 +335,6 @@ function FountainRow({
         <FixedValueChip label="Fountain" />
         {phial === null ? null : (
           <>
-            {/* Hidden by style when no Phial target follows it. */}
             <span aria-hidden="true" className="row-reward-arrow">
               →
             </span>

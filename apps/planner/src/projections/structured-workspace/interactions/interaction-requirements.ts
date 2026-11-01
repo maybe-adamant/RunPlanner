@@ -25,11 +25,7 @@ import {
   type FieldsSpatialTarget,
 } from '@run-planner/engine/authored-project';
 
-import type {
-  WorkspaceFeatureAssessment,
-  WorkspaceInteractionChoice,
-  WorkspaceRoomChoice,
-} from '../contract';
+import type { WorkspaceFeatureAssessment, WorkspaceInteractionChoice } from '../contract';
 import type { WorkspaceEncounterPhase, WorkspaceLocalVisitOrderControl } from '../contracts/locals';
 import type { WorkspaceRoomActionProposal } from '../contracts/timeline';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
@@ -374,7 +370,7 @@ export interface WorkspaceBatchControlsInteractionRequirement {
     readonly kind: 'chaos';
     readonly owner: AdditionalExitAddress;
     readonly occurrence: OccurrenceAddress;
-    readonly mapChoices: readonly WorkspaceRoomChoice[];
+    readonly mapChoices: readonly WorkspaceInteractionChoice<string>[];
   };
 }
 
