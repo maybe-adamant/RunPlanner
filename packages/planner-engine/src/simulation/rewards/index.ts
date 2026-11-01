@@ -6,6 +6,7 @@ export {
 export { rewardStoreCandidateSupport } from './biome/reward-store-support';
 export {
   RewardAuthoringDomainContractError,
+  type CountedRewardDraw,
   type CountedRewardOwnerAddress,
 } from './authoring-domain';
 export type {

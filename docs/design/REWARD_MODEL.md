@@ -370,10 +370,13 @@ fallback on an exhausted bag reports `rewardBagSupportEmpty`.
 
 The reward audit's [refill
 proof](../audits/rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#refill-reachability-proof)
-establishes that a mature-save route always finds an eligible entry after the
-first refill, so mature bags never reach the fallback and their counted-reward
-domains omit it. A fresh profile's MetaProgress bag can exhaust, and its
-domains list the fallback. The normalized `MetaProgress` store is the game's
+establishes that a mature-save offer at generation always finds an eligible
+entry after the first refill, so a mature producer's offer never reaches the
+fallback and its counted-reward domain omits it. A fresh profile's MetaProgress
+bag can exhaust, and its domains list the fallback. A reroll press's peers also
+hold its target's original reward and every target's current reward, so a
+mature MetaProgress reroll can exhaust too, and every reroll domain lists the
+fallback. The normalized `MetaProgress` store is the game's
 complete 19-entry store with its lifetime-resource tiers expressed through
 `resourceGains`; a mature bag holds the thirteen route-filtered entries it can
 draw, and the [audit](../audits/rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md#metaprogress)

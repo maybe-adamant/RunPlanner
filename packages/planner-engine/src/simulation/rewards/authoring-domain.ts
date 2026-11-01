@@ -22,6 +22,9 @@ import type { RewardProducerCandidateCapability } from './producer-frontiers';
 export type CountedRewardOwnerAddress =
   IncomingRewardAddress | LocalRewardAddress | RewardWheelOfferAddress;
 
+/** The draw a counted domain lists rewards for: the producer's own offer, or a reroll press of it. */
+export type CountedRewardDraw = 'offer' | 'reroll';
+
 export class RewardAuthoringDomainContractError extends Error {
   constructor(detail: string) {
     super(detail);
@@ -193,8 +196,8 @@ function authoredStoreKey(
 
 /**
  * Returns the declaration-ordered reward-type domain for one exact counted
- * producer. This is a synchronous authoring fact and never evaluates reward
- * candidates.
+ * producer, or for a reroll press redrawing it from the same store. This is a
+ * synchronous authoring fact and never evaluates reward candidates.
  */
 export function resolveCountedRewardTypeDomain(
   catalog: Catalog,
@@ -202,6 +205,7 @@ export function resolveCountedRewardTypeDomain(
   owner: CountedRewardOwnerAddress,
   binding: CountedRewardBinding,
   evaluatedProducer: RewardProducerCandidateCapability | undefined,
+  draw: CountedRewardDraw = 'offer',
 ): readonly string[] {
   const storeKey =
     evaluatedProducer === undefined
@@ -226,10 +230,11 @@ export function resolveCountedRewardTypeDomain(
   if (rewardTypes.length === 0) {
     fail(`reward producer store ${storeKey} has no selectable reward types`);
   }
-  // Mature bags provably never exhaust both appended copies; a fresh profile's can.
+  // A mature bag never exhausts both appended copies at generation; a fresh
+  // profile's can, and so can a reroll, whose peers add every target's current reward.
   const fallback = catalog.rewards.countedStoreFallbackRewardType;
   if (
-    routeInitialProfile(catalog, owner.routeKey).kind === 'freshFile' &&
+    (draw === 'reroll' || routeInitialProfile(catalog, owner.routeKey).kind === 'freshFile') &&
     binding.allowedRewardTypes.includes(fallback) &&
     !seen.has(fallback)
   )

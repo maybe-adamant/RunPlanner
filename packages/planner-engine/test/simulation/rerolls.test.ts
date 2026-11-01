@@ -21,6 +21,7 @@ import {
   type RerollTarget,
 } from '@run-planner/engine/authored-project';
 import {
+  countedRewardTypeDomain,
   createPreparedProjectCandidateSession,
   rerollSettlementForProjectEvaluationAssembly,
   settleProjectEdit,
@@ -28,6 +29,7 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   locallyValidRewardOffers,
+  storeEntryOnRoute,
   type ResolvedRewardOffer,
 } from '@run-planner/engine/reward-kernel';
 import {
@@ -188,10 +190,11 @@ function snapshotAt(
   return snapshot;
 }
 
-function runProgress(snapshot: ReturnType<typeof snapshotAt>): readonly number[] {
-  return snapshot.rewardStores.find((store) => store.storeKey === 'RunProgress')!
-    .remainingEntryCounts;
+function remaining(snapshot: ReturnType<typeof snapshotAt>, storeKey: string): readonly number[] {
+  return snapshot.rewardStores.find((store) => store.storeKey === storeKey)!.remainingEntryCounts;
 }
+
+const runProgress = (snapshot: ReturnType<typeof snapshotAt>) => remaining(snapshot, 'RunProgress');
 
 describe('door rerolls', () => {
   it('keep the first draw and enter the reward of the last reroll', () => {
@@ -321,6 +324,54 @@ describe('reroll settlement', () => {
     const store = catalog.rewards.stores.byKey.RunProgress!;
     expect(after.reduce((sum, count) => sum + count, 0)).toBe(
       before.reduce((sum, count) => sum + count, 0) + store.entries.length - 1,
+    );
+  });
+
+  it('falls back to the Heal drop when both refills leave nothing eligible', () => {
+    // exit1 first drew Ashes and exit2 Bones; a press to Gift leaves the target's
+    // original and the doors' current rewards blocking all three mature Meta identities.
+    const from = 'golden-f-b4-e1';
+    const targetId = 'golden-f-b5-e1';
+    const exit1 = door('exit1', targetId);
+    const gift = rerolledTo(from, exit1, 'GiftDrop');
+    expect(rerollFindings(gift)).toEqual([]);
+
+    const owner = createIncomingRewardAddress(f, targetId as never);
+    const binding = catalog.rooms.byKey[occurrence(gift, targetId).gameName]?.incomingReward;
+    if (binding?.kind !== 'countedChoice') throw new Error('the target reward is not counted');
+    const fallback = { rewardType: 'RoomRewardHealDrop' };
+    const assembly = evaluate(gift);
+    const surface = {
+      kind: 'doors',
+      occurrence: createOccurrenceAddress(f, from as never),
+    } as const;
+    // The refill proof still holds at generation, so the door's own domain omits it.
+    expect(countedRewardTypeDomain(catalog, assembly, owner, binding)).not.toContain(
+      fallback.rewardType,
+    );
+    const session = createPreparedProjectCandidateSession(catalog, assembly);
+    const pendingSupported = countedRewardTypeDomain(catalog, assembly, owner, binding, 'reroll')
+      .flatMap((type) => locallyValidRewardOffers(catalog.rewards, type))
+      .filter((value) => {
+        const result = session.evaluate({
+          kind: 'pendingRerollReward',
+          surface,
+          target: exit1,
+          value,
+        });
+        return result.kind === 'rerollReward' && result.result.supported;
+      });
+    expect(pendingSupported).toEqual([fallback]);
+
+    const pressed = settle(gift, insertReroll(gift, exit1, fallback, from));
+    expect(rerollFindings(pressed)).toEqual([]);
+    expect(occurrence(pressed, targetId).rerolledIncomingReward?.offer).toEqual(fallback);
+    // The fallback draws nothing, so both appended sets stay in the bag.
+    const store = catalog.rewards.stores.byKey.MetaProgress!;
+    const appended = store.entries.filter((entry) => storeEntryOnRoute(entry, 'Underworld')).length;
+    const sum = (counts: readonly number[]) => counts.reduce((total, count) => total + count, 0);
+    expect(sum(remaining(snapshotAt(pressed, from, 'beforeRoomExit'), 'MetaProgress'))).toBe(
+      sum(remaining(snapshotAt(gift, from, 'beforeRoomExit'), 'MetaProgress')) + 2 * appended,
     );
   });
 

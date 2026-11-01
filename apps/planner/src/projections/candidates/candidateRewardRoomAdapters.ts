@@ -1,5 +1,6 @@
 import {
   countedRewardTypeDomain,
+  type CountedRewardDraw,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   type ProjectCandidateQuery,
   type ProjectEvaluationAssembly,
@@ -109,13 +110,20 @@ function countedRewardTypesFor(
   owner: CountedRewardCandidateOwner,
   binding: CountedRewardBinding,
   selectedRewardType?: string,
+  draw?: CountedRewardDraw,
 ): readonly string[] {
   let projectCache = cache.rewardTypeDomainCache.get(core.assembly);
   if (projectCache === undefined) {
     projectCache = new Map();
     cache.rewardTypeDomainCache.set(core.assembly, projectCache);
   }
-  const selectable = countedRewardTypeDomain(core.catalog, core.assembly, owner.address, binding);
+  const selectable = countedRewardTypeDomain(
+    core.catalog,
+    core.assembly,
+    owner.address,
+    binding,
+    draw,
+  );
   const key = `reward-types:${semanticAddressKey(owner.address)}:${domainKey(selectable)}:${selectedRewardType ?? '__unresolved__'}`;
   const existing = projectCache.get(key);
   if (existing !== undefined) return existing;
@@ -275,8 +283,8 @@ export function createRewardRoomCandidateAdapters(
   return {
     prepareRewardDomain: (rewardTypes, selected) =>
       prepareCachedRewardDomain(core, cache, rewardTypes, selected),
-    countedRewardTypes: (owner, binding, selectedRewardType) =>
-      countedRewardTypesFor(core, cache, owner, binding, selectedRewardType),
+    countedRewardTypes: (owner, binding, selectedRewardType, draw) =>
+      countedRewardTypesFor(core, cache, owner, binding, selectedRewardType, draw),
     rewardDomain: (owner, rewardTypes, selected) =>
       rewardDomainFor(core, cache, owner, rewardTypes, selected),
     shopOfferOptions: (owner, values: readonly ShopOptionSelection[]) =>

@@ -15,6 +15,7 @@ import {
   type ChaosOfferDomain,
   type EncounterRequirementEvidence,
   type EncounterCandidateExclusion,
+  type CountedRewardDraw,
 } from '@run-planner/engine/simulation';
 import {
   type AcquisitionEntryAddress,
@@ -189,6 +190,7 @@ export interface CandidateProjectionSession {
     owner: CountedRewardCandidateOwner,
     binding: CountedRewardBinding,
     selectedRewardType?: string,
+    draw?: CountedRewardDraw,
   ) => readonly string[];
   readonly rewardDomain: (
     owner: RewardDomainCandidateOwner,

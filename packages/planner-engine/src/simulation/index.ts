@@ -176,6 +176,7 @@ export {
   type GorgonPhaseCandidateSupport,
   type NemesisRandomEventBranchAssessment,
   type NemesisRandomEventCandidateSupport,
+  type CountedRewardDraw,
   type CountedRewardOwnerAddress,
   type RewardBranch,
   type TargetRewardHistoryCheckpoint,

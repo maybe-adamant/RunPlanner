@@ -31,6 +31,7 @@ import type {
 } from '../rewards/model';
 import {
   resolveCountedRewardTypeDomain,
+  type CountedRewardDraw,
   type CountedRewardOwnerAddress,
 } from '../rewards/authoring-domain';
 import { occurrenceOwnerAddress } from '../progressive/finding-location';
@@ -543,12 +544,16 @@ export function blockedOccurrenceRoomForProjectEvaluationAssembly(
   );
 }
 
-/** Exact-assembly entry point for one synchronous counted-reward authoring domain. */
+/**
+ * Exact-assembly entry point for one synchronous counted-reward authoring
+ * domain; a `reroll` draw is a press redrawing the owner from its store.
+ */
 export function countedRewardTypeDomain(
   catalog: Catalog,
   assembly: ProjectEvaluationAssembly,
   owner: CountedRewardOwnerAddress,
   binding: CountedRewardBinding,
+  draw: CountedRewardDraw = 'offer',
 ): readonly string[] {
   const candidateArtifacts = candidateArtifactsForProjectEvaluationAssembly(assembly);
   const evaluatedProducer = candidateArtifacts
@@ -560,5 +565,6 @@ export function countedRewardTypeDomain(
     owner,
     binding,
     evaluatedProducer,
+    draw,
   );
 }

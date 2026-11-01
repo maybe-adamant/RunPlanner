@@ -38,7 +38,7 @@ function bindRoomRerolls(
   const { candidates, rewardPicker } = input;
   const rewardTypes = (types: WorkspaceRerollRewardTypes, selected?: ResolvedRewardOffer) =>
     types.kind === 'counted'
-      ? candidates.countedRewardTypes(types.owner, types.binding, selected?.rewardType)
+      ? candidates.countedRewardTypes(types.owner, types.binding, selected?.rewardType, 'reroll')
       : Object.freeze(selected === undefined ? [] : [selected.rewardType]);
   const resolver = (
     key: string,
