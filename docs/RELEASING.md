@@ -30,8 +30,15 @@ Run `npm run check` locally on the commit being released before dispatching;
 packaging does not repeat that repository gate. Each published version
 identifies one build; choose a new version for a new build.
 
+Releases are dispatched from `main`, or from a `release/*` branch cut from a
+published tag to ship a patch on that line (for example `release/0.24.x` for
+0.24.8). The version rule still holds: a patch publishes only while it is newer
+than every published stable release, so a maintenance line closes once `main`
+publishes past it. A branch runs its own copy of the workflows, so a
+maintenance branch builds with the release workflow it was cut with.
+
 The manually dispatched **Release** workflow (`release.yml`) validates the
-version and the `main` commit once, then calls the reusable **Build Windows**
+version and the commit once, then calls the reusable **Build Windows**
 and **Build Linux** workflows (the AppImage builds on Ubuntu 22.04). Each build
 refuses to start while `plugins.updater.pubkey` in
 `apps/planner/src-tauri/tauri.conf.json` is the placeholder or the

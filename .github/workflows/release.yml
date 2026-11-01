@@ -49,9 +49,16 @@ jobs:
             exit 1
           fi
 
-          comparison="$(gh api "repos/${GITHUB_REPOSITORY}/compare/main...${GITHUB_SHA}" --jq .status)"
+          # Releases come from main, or from a release/* maintenance branch for
+          # a patch to an already published line.
+          branch="${GITHUB_REF#refs/heads/}"
+          if [ "${GITHUB_REF}" = "${branch}" ] || { [ "${branch}" != 'main' ] && [[ "${branch}" != release/* ]]; }; then
+            echo "Official releases must be dispatched from main or a release/* branch (ref: ${GITHUB_REF})." >&2
+            exit 1
+          fi
+          comparison="$(gh api "repos/${GITHUB_REPOSITORY}/compare/${branch}...${GITHUB_SHA}" --jq .status)"
           if [ "${comparison}" != 'identical' ] && [ "${comparison}" != 'behind' ]; then
-            echo "Official releases must be dispatched from a commit on main (comparison: ${comparison})." >&2
+            echo "Official releases must be dispatched from a commit on ${branch} (comparison: ${comparison})." >&2
             exit 1
           fi
 

@@ -74,14 +74,16 @@ describe('desktop release build metadata', () => {
     }
   });
 
-  it('validates the version and main commit once before either build', () => {
+  it('validates the version and the dispatched branch commit once before either build', () => {
     const workflow = release();
     const validate = job(workflow, 'validate');
     expect(validate).toContain('GH_TOKEN: ${{ github.token }}');
     expect(validate).toContain('node scripts/assert-release-version.mjs "${RELEASE_VERSION}"');
     expect(validate).toContain(
-      'gh api "repos/${GITHUB_REPOSITORY}/compare/main...${GITHUB_SHA}" --jq .status',
+      'gh api "repos/${GITHUB_REPOSITORY}/compare/${branch}...${GITHUB_SHA}" --jq .status',
     );
+    // Only main or a release/* maintenance branch may publish.
+    expect(validate).toContain(`[ "\${branch}" != 'main' ] && [[ "\${branch}" != release/* ]]`);
     expect(validate).toContain('git ls-remote --tags origin');
     // A directly dispatched build still refuses a version that is not releasable.
     for (const build of Object.values(builds())) {
