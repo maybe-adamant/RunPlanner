@@ -351,4 +351,30 @@ describe('trait option domain projection', () => {
     expect(targetPicker.selected?.explanations?.join(' ')).not.toContain('ZeusWeaponBoon');
     expect(projection.preferredOptionFor('HeraWeaponBoon')).not.toHaveProperty('targetTraitKey');
   });
+  it('offers each rarity once for a targeted trait whose authored row carries its target', () => {
+    const hera = giver('Hera');
+    const draft = offer('Hera', [
+      Object.freeze({
+        traitKey: 'BoonDecayBoon',
+        rarity: 'Epic',
+        targetTraitKey: 'ZeusWeaponBoon',
+      }),
+      rankedOption('HeraWeaponBoon', 'Common'),
+      rankedOption('HeraSpecialBoon', 'Common'),
+    ]);
+    const picker = createContextualPickerProjection(createContextualOptionResolver(catalog));
+    const service = createTraitDomainProjection(catalog, picker);
+    const prepared = service.prepare(hera, draft, 'option1');
+    const projection = service.project(
+      hera,
+      draft,
+      prepared,
+      Object.freeze(prepared.variants.map((option) => candidate(option, focused(true)))),
+    );
+
+    const rarity = projection.rarityPickerFor('BoonDecayBoon');
+    if (rarity === undefined) throw new Error('ranked trait has no rarity picker');
+    expect(itemValues(rarity)).toEqual(['Common', 'Rare', 'Epic', 'Heroic']);
+    expect(rarity.selected?.value).toBe('Epic');
+  });
 });

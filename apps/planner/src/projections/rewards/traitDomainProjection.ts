@@ -296,17 +296,19 @@ export function createTraitDomainProjection(
           return undefined;
         }
         const options = visible.filter((candidate) => candidate.value.traitKey === traitKey);
+        // A targeted trait's authored row is its own variant beside the bare
+        // rarity one; the picker offers each rarity once, as the authored row.
+        const rarities = [...new Set(options.flatMap((candidate) => candidate.value.rarity ?? []))];
         const rarityCandidates = Object.freeze(
-          options.flatMap((candidate) =>
-            candidate.value.rarity === undefined
+          rarities.flatMap((rarity) => {
+            const sameRarity = options.filter((candidate) => candidate.value.rarity === rarity);
+            const chosen =
+              sameRarity.find((candidate) => sameOption(candidate.value, selected)) ??
+              representativeCandidate(sameRarity);
+            return chosen === undefined
               ? []
-              : [
-                  Object.freeze({
-                    value: candidate.value.rarity,
-                    evaluation: candidate.evaluation,
-                  }),
-                ],
-          ),
+              : [Object.freeze({ value: rarity, evaluation: chosen.evaluation })];
+          }),
         ) as readonly CandidateOptionProjection<TraitRarity, CandidateProjectionEvaluation>[];
         const model = contextualPicker.project<TraitRarity>(
           rarityCandidates,
