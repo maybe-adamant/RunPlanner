@@ -199,12 +199,17 @@ function hooks.attach(module, loadoutRuntime, getState, report, room, hexTree)
         if stacks ~= nil then return stacks end
         return base(traitName)
     end)
-    module.hooks.wrap("GetKeepsakeLevel", "run-planner-installed-keepsake", function(_, _, base, traitName,
-        unmodified)
-        return install.withKeepsakeChambers(_G.CurrentRun, traitName, function()
-            return base(traitName, unmodified)
+    -- The rack's progress text also reads the chambers outside GetKeepsakeLevel
+    -- (KeepsakeLogic.lua:44-101); every reader must see the same rank.
+    for _, name in ipairs({ "GetKeepsakeLevel", "IsKeepsakeMaxed", "GetKeepsakeProgress",
+        "GetKeepsakeChambersToNextLevel" }) do
+        module.hooks.wrap(name, "run-planner-installed-keepsake", function(_, _, base, traitName, ...)
+            local args = table.pack(...)
+            return install.withKeepsakeChambers(_G.CurrentRun, traitName, function()
+                return base(traitName, table.unpack(args, 1, args.n))
+            end)
         end)
-    end)
+    end
     module.hooks.wrap("AddRandomMetaUpgrades", "run-planner-installed-arcana-draw", function(_, _, base, count,
         args)
         return install.withUnlockedCards(_G.CurrentRun, function() return base(count, args) end)
