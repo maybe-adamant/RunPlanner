@@ -16,6 +16,8 @@ export function useCommonItemWidth<Container extends HTMLElement>() {
         '.route-loadout-row > :not(dialog), .route-loadout-weapon-cell > .field-control:first-child',
       ),
     ];
+    // Measure without the last published width, or a cell sized by it grows on every render.
+    container.style.removeProperty('--route-loadout-item-width');
     for (const item of items) item.style.width = 'max-content';
     const widest = Math.max(0, ...items.map((item) => item.getBoundingClientRect().width));
     for (const item of items) item.style.width = '';
