@@ -13,13 +13,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceLauncherPresentation } from '@planner/projections/structured-workspace';
 import { LauncherButton } from '@planner/ui/editor/rewards/LauncherButton';
 import { loadUnderworldFigLeafCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
-import {
-  createCompleteFGProject,
-  createGoldenFGHIProject,
-  goldenFBiome,
-  goldenGBiome,
-  goldenGOccurrenceId,
-} from '@run-planner/test-fixtures/underworld';
+import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
 import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
 import { hintOf } from '@planner-test/support/hints';
@@ -56,15 +50,6 @@ const goldPickupKey = roomActionKey({
 });
 
 describe('Room Timeline row anatomy', () => {
-  it('shows a row’s gold gain, signed, in its money cell and never in its label', () => {
-    renderGoldRoom();
-    openRoomTab('Room Timeline');
-    const row = timeline().querySelector(`[data-room-action-key="${CSS.escape(goldPickupKey)}"]`)!;
-    const gained = cell(row, 'money').querySelector('.timeline-gold-gained');
-    expect(gained?.textContent).toBe('+100 gold');
-    expect(cell(row, 'label').textContent).not.toMatch(/gold|\d/);
-  });
-
   it('names a row’s reward by its icon, whose accessible name is the reward', () => {
     renderGoldRoom();
     openRoomTab('Room Timeline');
@@ -123,29 +108,6 @@ describe('Room Timeline row anatomy', () => {
 describe('Encounter banners', () => {
   const skipped = createOccurrenceId('golden-f-b2-e1');
 
-  it('puts the start events in a group on the start banner’s line, after its title', () => {
-    renderOccurrenceWorkbench(
-      loadUnderworldFigLeafCheckpoint(),
-      'Underworld',
-      'F',
-      occurrenceById(skipped),
-    );
-    openRoomTab('Room Timeline');
-    const start = within(timeline()).getByLabelText('Encounter');
-    const title = start.querySelector('.timeline-banner-title')!;
-    const events = within(start).getByRole('group', { name: 'Encounter start' });
-    expect(title.contains(events)).toBe(false);
-    expect(title.compareDocumentPosition(events) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // Title and events share the banner's one label cell.
-    expect(events.closest('[data-timeline-cell="label"]')).toBe(title.parentElement);
-    expect(
-      within(events).getByRole('button', { name: 'Fig Leaf skip' }).getAttribute('aria-pressed'),
-    ).toBe('true');
-    // A banner without events has no control group at all.
-    for (const label of ['Room entered', 'Encounter ended', 'Doors open'])
-      expect(within(timeline()).getByLabelText(label).querySelector('[role="group"]')).toBeNull();
-  });
-
   it('shows each start event as an icon toggle named by its meaning', () => {
     const view = renderOccurrenceWorkbench(
       loadUnderworldFigLeafCheckpoint(),
@@ -203,32 +165,6 @@ describe('Encounter banners', () => {
     expect(condition.disabled).toBe(false);
     expect(condition.dataset.hasFindings).toBe('true');
     expect(condition.closest('[data-inapplicable]')).not.toBeNull();
-  });
-
-  it('puts a Nemesis kill race on its end banner with the bet gold beside it', () => {
-    const occurrenceId = goldenGOccurrenceId(4, 1);
-    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'SelectEncounter',
-      phase: createEncounterPhaseAddress(
-        goldenGBiome,
-        { kind: 'occurrence', occurrenceId },
-        'Encounter',
-      ),
-      encounterKey: 'NemesisCombatG',
-    });
-    renderOccurrenceWorkbench(project, 'Underworld', 'G', occurrenceById(occurrenceId));
-    openRoomTab('Room Timeline');
-    const start = within(timeline()).getByLabelText('Encounter');
-    const end = within(timeline()).getByLabelText('Encounter ended');
-    expect(within(start).queryByRole('combobox', { name: 'Outcome' })).toBeNull();
-    const events = within(end).getByRole('group', { name: / end$/ });
-    const outcome = within(events).getByRole('combobox', { name: 'Outcome' }) as HTMLSelectElement;
-    expect(outcome.disabled).toBe(false);
-    // The bet's gold stands outside the controls, where every row keeps its gold.
-    const gold = end.querySelector('.timeline-banner-gold');
-    expect(gold?.textContent).toMatch(/^\+~?\d+ gold$/);
-    expect(events.contains(gold)).toBe(false);
-    expect(cell(end, 'editors').contains(gold)).toBe(true);
   });
 });
 

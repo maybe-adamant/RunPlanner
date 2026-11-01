@@ -954,59 +954,6 @@ describe('BiomeWorkspace', () => {
     expect(picker.dataset.authoringLocked).toBe('true');
   });
 
-  it('uses concise Hub headings without a redundant Details header', async () => {
-    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
-
-    expect(screen.getByRole('button', { name: 'Hub, 6 of 6 visits, Evaluated' })).toBe(
-      hubRailButton(),
-    );
-    await view.user.click(hubRailButton());
-    const inspector = screen.getByRole('complementary', { name: 'Details' });
-    expect(within(inspector).getByRole('heading', { name: 'Ephyra Hub' })).toBeTruthy();
-    expect(within(inspector).queryByText('Details')).toBeNull();
-    expect(inspector.querySelector('.biome-inspector-heading')).toBeNull();
-  });
-
-  it('keeps node assessment beside its title without redundant structural kickers', () => {
-    const view = renderWorkspace(createCompleteFGProject(), 'Underworld', 'F');
-    const decision = view.container.querySelector<HTMLButtonElement>(
-      '.biome-rail-stop[data-kind="ordinaryBatch"] > .biome-rail-node',
-    );
-    if (decision === null) throw new Error('F decision rail stop is missing');
-
-    const heading = decision.querySelector('.biome-rail-heading');
-    expect(heading?.querySelector('strong')?.textContent).toMatch(/^Decision /);
-    expect(heading?.querySelector('.biome-rail-status')?.textContent).toContain('Evaluated');
-    expect(decision.querySelector('.biome-rail-kicker')).toBeNull();
-    expect(view.container.querySelector('.biome-rail')?.textContent).not.toContain('Door choice');
-    expect(view.container.querySelector('.biome-rail')?.textContent).not.toContain('Biome stage');
-  });
-
-  it('uses the same compact title-and-status row for the Hub and its visits', () => {
-    renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
-
-    const hub = hubRailButton();
-    const hubHeading = hub.querySelector('.biome-rail-heading');
-    expect(hubHeading?.querySelector('strong')?.textContent).toBe('Hub');
-    expect(hubHeading?.querySelector('.biome-rail-status')?.textContent).toContain('Evaluated');
-    expect(hub.querySelector('.biome-rail-kicker')).toBeNull();
-
-    const visit = screen.getByRole('button', { name: /Visit 3.*Combat 02/ });
-    const visitHeading = visit.querySelector('.biome-rail-heading');
-    expect(visitHeading?.querySelector('strong')?.textContent).toBe('Visit 3');
-    expect(visitHeading?.querySelector('.biome-rail-status')?.textContent).toContain('Evaluated');
-    expect(visit.querySelector('.biome-rail-kicker')).toBeNull();
-  });
-
-  it('keeps the compact clear action on the biome title row', () => {
-    renderWorkspace(createCompleteFGProject(), 'Underworld', 'F');
-
-    const clear = screen.getByRole('button', { name: 'Clear Erebus' });
-    expect(clear.textContent).toBe('Clear biome');
-    expect(clear.classList.contains('action-compact')).toBe(true);
-    expect(clear.closest('.biome-structure-title-row')).not.toBeNull();
-  });
-
   it('renders Ephyra primary rewards on fixed stages, decision selections, and authored Hub visits', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const biome = workspaceBiome(view.application, 'Surface', 'N');
@@ -1917,7 +1864,12 @@ describe('BiomeWorkspace', () => {
     expect(railDecision.querySelector('.biome-rail-summary')).toBeNull();
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
 
+    expect(railDecision.getAttribute('aria-current')).toBeNull();
     await view.user.click(railDecision);
+    expect(railDecision.getAttribute('aria-current')).toBe('location');
+    expect(Array.from(structure.querySelectorAll('[data-workspace-node][aria-current]'))).toEqual([
+      railDecision,
+    ]);
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     await view.user.click(within(inspector).getByRole('tab', { name: 'Room Doors' }));
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();

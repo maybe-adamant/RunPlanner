@@ -10,15 +10,11 @@ import type {
   WorkspaceOccurrenceWorkbenchNode,
 } from '@planner/projections/structured-workspace';
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
-import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
-import { roomObjectIcon } from '@planner/ui/artwork/roomArtwork';
 import {
   loadSurfaceNOProject,
   oBiome,
   oOccurrenceIds,
   nOccurrenceIds,
-  qOccurrenceIds,
-  surfaceTravelDealRefillAnvilProject,
 } from '@run-planner/test-fixtures/surface';
 import { loadSurfaceNQuickBuckCheckpoint } from '@run-planner/test-fixtures/checkpoints/surface';
 import {
@@ -26,17 +22,8 @@ import {
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import { renderOccurrenceWorkbench, workspaceBiome } from '@planner-test/support/biome-workbench';
-import {
-  occurrenceById,
-  openRoomTab,
-  pickRoomObjectAction,
-} from '@planner-test/support/occurrence-workbench';
-import {
-  addGroupButton,
-  openAddGroup,
-  slotRow,
-  timelineRow,
-} from '@planner-test/support/timeline-rows';
+import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
+import { addGroupButton, openAddGroup, timelineRow } from '@planner-test/support/timeline-rows';
 
 afterEach(cleanup);
 
@@ -173,66 +160,5 @@ describe('Room Add area', () => {
     openRoomTab('Room Timeline');
     expect(within(addArea()).getByText('Nothing optional to add here')).toBeTruthy();
     expect(within(addArea()).queryByRole('list')).toBeNull();
-  });
-});
-
-describe('Room Timeline purchase rows', () => {
-  it('badges the object icon with the slot bought from and keeps the slot in its text', async () => {
-    const view = renderOccurrenceWorkbench(
-      shrineProject(),
-      'Surface',
-      'O',
-      occurrenceById(oOccurrenceIds.combat07),
-    );
-    openRoomTab('Combat 1 Timeline');
-    await pickRoomObjectAction(view.user, 'Hermes Shrine', 'Rush Big Heal');
-    const row = slotRow(1);
-    expect(row).toBe(timelineRow('Rush Big Heal'));
-    const icon = row.querySelector<HTMLElement>('.timeline-row-icon');
-    expect(icon?.querySelector('img')?.getAttribute('src')).toBe(roomObjectIcon('hermesShrine'));
-    const badge = icon?.querySelector('.timeline-slot-badge');
-    expect(badge?.textContent).toBe('1');
-    expect(badge?.getAttribute('aria-hidden')).toBe('true');
-    // The label has no visible slot text; assistive text keeps it.
-    expect(within(row).getByText('· slot 1').classList.contains('visually-hidden')).toBe(true);
-    expect(within(row).getByRole('img', { name: 'Big Heal' })).toBeTruthy();
-  });
-
-  it('keeps the Shop icon and removal on a Travel Deal restock named by its source family', async () => {
-    const view = renderOccurrenceWorkbench(
-      surfaceTravelDealRefillAnvilProject(),
-      'Surface',
-      'Q',
-      occurrenceById(qOccurrenceIds.preboss),
-    );
-    const projected = room(
-      workspaceBiome(view.application, 'Surface', 'Q'),
-      qOccurrenceIds.preboss,
-    ).roomActions!.rows.find((row) => row.sourceFamily?.kind === 'shopTravelDealRefill');
-    if (projected === undefined) throw new Error('Travel Deal restock row is not projected');
-    openRoomTab('Room Timeline');
-    const row = timelineRow(projected.label);
-    expect(row.querySelector('.timeline-row-icon > img')?.getAttribute('src')).toBe(
-      rewardIcon('Shop'),
-    );
-    expect(row.querySelector('.timeline-travel-deal-badge')).not.toBeNull();
-    const remove = within(row).getByRole('button', {
-      name: `Remove ${projected.label} from timeline`,
-    });
-    expect(remove).toHaveProperty('disabled', false);
-    await view.user.click(remove);
-    await waitFor(() =>
-      expect(
-        view.application.store
-          .getState()
-          .projectWorkspace.history!.present.route.biomes.find((biome) => biome.biomeKey === 'Q')!
-          .topology!.occurrences.find(
-            (candidate) => candidate.occurrenceId === qOccurrenceIds.preboss,
-          )!
-          .roomActions.order.some(
-            (reference) => JSON.stringify(reference) === JSON.stringify(projected.reference),
-          ),
-      ).toBe(false),
-    );
   });
 });

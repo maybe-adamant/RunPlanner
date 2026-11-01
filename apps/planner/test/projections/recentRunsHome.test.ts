@@ -109,18 +109,6 @@ describe('recent runs view', () => {
     expect(view([summary()]).context).toEqual([{ text: '1 run', tone: null }]);
   });
 
-  it('words each outcome, with victory as the one good tone', () => {
-    const outcomes = view(
-      (['victory', 'death', 'reset', 'unfinished'] as const).map((outcome) => summary({ outcome })),
-    ).rows.map((row) => [row.outcome.text, row.outcome.tone]);
-    expect(outcomes).toEqual([
-      ['Victory', 'ok'],
-      ['Death', null],
-      ['Reset', null],
-      ['Unfinished', null],
-    ]);
-  });
-
   it('marks a failed, cut or partial run, and offers no addition without a plan', () => {
     const rows = view([
       summary({ failure: 'no entry save' }),

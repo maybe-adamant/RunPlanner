@@ -2,8 +2,10 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
+  createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRouteStartKeepsakeSelectionAddress,
   roomActionKey,
   type OccurrenceId,
   type ProjectDocument,
@@ -12,6 +14,7 @@ import { goldLedgerForProjectEvaluationAssembly } from '@run-planner/engine/simu
 import {
   loadUnderworldFigLeafCheckpoint,
   loadUnderworldGAnomalyRosterCheckpoint,
+  loadNemesisFieldsCheckpoint,
   loadUnderworldGorgonAthenaCheckpoint,
   loadUnderworldWorldShopTravelDealCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/underworld';
@@ -19,24 +22,40 @@ import {
   createCompleteFGProject,
   createGoldenFGHIProject,
   goldenFBiome,
+  goldenFOccurrenceId,
   goldenGBiome,
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
-import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOPQProject,
+  nBiome,
+  nOccurrenceId,
+  nOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 import { describe, expect, it } from 'vitest';
-import type { WorkspaceRoomLifecycleTimelineEntry } from '@planner/projections/structured-workspace';
+import type {
+  WorkspaceOccurrenceWorkbenchNode,
+  WorkspaceRoomLifecycleTimelineEntry,
+} from '@planner/projections/structured-workspace';
 import { projectStructuredWorkspaceFixture } from '@planner-test/fixtures/structuredWorkspace';
 
-function projected(project: ProjectDocument, occurrenceId: OccurrenceId) {
+function projectedWhere(
+  project: ProjectDocument,
+  matches: (room: WorkspaceOccurrenceWorkbenchNode['room']) => boolean,
+) {
   const result = projectStructuredWorkspaceFixture(project);
   const node = result.workspace.route.biomes
     .flatMap((biome) => biome.nodes)
     .find(
-      (candidate) =>
-        candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === occurrenceId,
+      (candidate): candidate is WorkspaceOccurrenceWorkbenchNode =>
+        candidate.kind === 'occurrenceWorkbench' && matches(candidate.room),
     );
-  if (node?.kind !== 'occurrenceWorkbench') throw new Error(`${occurrenceId} is missing`);
+  if (node === undefined) throw new Error('The room is missing');
   return { room: node.room, assembly: result.assembly };
+}
+
+function projected(project: ProjectDocument, occurrenceId: OccurrenceId) {
+  return projectedWhere(project, (room) => room.occurrenceId === occurrenceId);
 }
 
 function roomOf(project: ProjectDocument, occurrenceId: OccurrenceId) {
@@ -122,6 +141,66 @@ describe('encounter banner supplements', () => {
   });
 });
 
+describe('Nemesis interaction family', () => {
+  function interactionRows(room: ReturnType<typeof roomOf>) {
+    return (room.roomActions?.timeline.entries ?? []).flatMap((entry) =>
+      entry.kind === 'action' && entry.supplement?.kind === 'nemesisInteraction' ? [entry] : [],
+    );
+  }
+
+  function identityLabels(room: ReturnType<typeof roomOf>) {
+    return (room.roomActions?.timeline.entries ?? []).flatMap((entry) =>
+      entry.kind === 'boundary' && entry.supplement?.kind === 'encounterStart'
+        ? [entry.supplement.identityLabel]
+        : [],
+    );
+  }
+
+  it('carries the selected family on its movable row and names nothing on a banner', () => {
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectNemesisRandomEventFamily',
+      event: createNemesisRandomEventAddress(phase),
+      family: 'goldTrade',
+    });
+    const room = roomOf(project, occurrenceId);
+    expect(identityLabels(room).every((label) => label === undefined)).toBe(true);
+    expect(interactionRows(room)).toEqual([
+      expect.objectContaining({
+        actionKey: roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
+        supplement: expect.objectContaining({ familyLabel: expect.any(String) }),
+      }),
+    ]);
+  });
+
+  it('keeps the Fields Passive family on its row, off the Room entered banner', () => {
+    const { room } = projectedWhere(loadNemesisFieldsCheckpoint(), (candidate) =>
+      candidate.encounterPhases.some(
+        (phase) => phase.address.phaseKey === 'Passive' && phase.nemesisEvent !== undefined,
+      ),
+    );
+    const [entered] = banners(room, 'roomEntered');
+    expect(
+      entered?.supplement?.kind === 'encounterStart' ? entered.supplement.identityLabel : undefined,
+    ).toBeUndefined();
+    expect(interactionRows(room)).toEqual([
+      expect.objectContaining({
+        supplement: expect.objectContaining({ familyLabel: expect.any(String) }),
+      }),
+    ]);
+  });
+});
+
 describe('encounter banner identity', () => {
   it('always names the encounter and omits the role in a single-phase room', () => {
     expect(
@@ -158,6 +237,30 @@ describe('retained encounter events', () => {
     const phase = phaseOf(loadUnderworldFigLeafCheckpoint());
     expect(phase).toMatchObject({ skippedByFigLeaf: true, figLeaf: { selected: true } });
     expect(phase?.gorgonCondition).toBeUndefined();
+  });
+
+  it('publishes no Fig Leaf on a later phase once the skip is spent', () => {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    const spentPhase = (occurrenceId: OccurrenceId) =>
+      roomOf(project, occurrenceId).encounterPhases.find(
+        (phase) => phase.address.phaseKey === 'Encounter',
+      );
+    expect(spentPhase(nOccurrenceId('combat05'))?.figLeaf).toBeDefined();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: createEncounterPhaseAddress(
+        nBiome,
+        { kind: 'occurrence', occurrenceId: nOccurrenceIds.preHub },
+        'Encounter',
+      ),
+      value: true,
+    });
+    expect(spentPhase(nOccurrenceIds.preHub)?.figLeaf).toMatchObject({ selected: true });
+    expect(spentPhase(nOccurrenceId('combat05'))?.figLeaf).toBeUndefined();
   });
 
   it('keeps a retained Gorgon condition on a skipped phase as unsupported', () => {

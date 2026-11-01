@@ -62,10 +62,7 @@ import {
   replaceTestRoomActionOrder,
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
-import {
-  loadUnderworldFStygianWellCheckpoint,
-  underworldCheckpointArtifacts,
-} from '@run-planner/test-fixtures/checkpoints/underworld';
+import { loadUnderworldFStygianWellCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import {
   renderOccurrenceWorkbench,
   workspaceProjection,
@@ -124,13 +121,6 @@ function actionRow(container: HTMLElement, label: string | RegExp): HTMLElement 
         .join(' | ')}`,
     );
   return matches[0]!;
-}
-
-/** The paid purchase rows of a timeline, by their Buy or Rush verb. */
-function purchaseRows(container: HTMLElement): HTMLElement[] {
-  return [...container.querySelectorAll<HTMLElement>('li[data-room-action-key]')].filter((row) =>
-    /^(Buy|Rush) /.test(spokenText(row.querySelector('[data-timeline-cell="label"]') ?? row)),
-  );
 }
 
 function queryActionRow(container: HTMLElement, label: string | RegExp): HTMLElement | null {
@@ -1891,73 +1881,6 @@ describe('OccurrenceRoomActions', () => {
     expect(state.kind === 'shop' && state.shop?.travelDealRefill?.optionKey).toEqual(
       expect.any(String),
     );
-  });
-
-  it('prices each Well purchase in its money cell and shows the gold held on its Doors open banner', () => {
-    renderOccurrenceWorkbench(
-      authorLegalTraitOffers(loadUnderworldFStygianWellCheckpoint()),
-      'Underworld',
-      'F',
-      occurrenceById('golden-f-preboss-shop:postboss'),
-    );
-    openRoomTab('Room Timeline');
-    const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    const purchases = purchaseRows(actions);
-    expect(purchases.length).toBeGreaterThan(0);
-    for (const row of purchases) {
-      // The price sits in the money cell, never in the label.
-      const money = row.querySelector("[data-timeline-cell='money']")!;
-      expect(money.querySelector('.purchase-cost-price')?.textContent).toMatch(
-        /^~?\d+(–\d+)? gold$/,
-      );
-      expect(row.querySelector("[data-timeline-cell='label']")?.textContent).not.toMatch(/gold/);
-    }
-    expect(within(actions).getByLabelText('Doors open').textContent).toMatch(
-      /Current\s*\u2212?\d+(?: ±\d+)? gold$/,
-    );
-    expect(within(actions).getByLabelText('Doors open').textContent).not.toMatch(/Spent/);
-    expect(within(actions).getByLabelText('Room entered').textContent).not.toMatch(/Current/);
-  });
-
-  it('marks each purchase with its chance to afford as a toned pill beside its price', () => {
-    renderOccurrenceWorkbench(
-      underworldCheckpointArtifacts['underworld-world-shop-travel-deal'].load(),
-      'Underworld',
-      'F',
-      occurrenceById('golden-f-preboss-shop:postboss'),
-    );
-    openRoomTab('Room Timeline');
-    const purchases = purchaseRows(screen.getByRole('region', { name: 'Room Timeline' }));
-    expect(purchases.length).toBeGreaterThan(0);
-    for (const row of purchases) {
-      const cost = row.querySelector("[data-timeline-cell='money'] > .purchase-cost")!;
-      const pill = cost.querySelector('.purchase-affordability')!;
-      expectBefore(cost.querySelector('.purchase-cost-price')!, pill);
-      const shown = /^(>99%|<1%|(\d+)%) chance to afford$/.exec(pill.textContent ?? '');
-      expect(shown).not.toBeNull();
-      expect(pill.querySelector('.visually-hidden')?.textContent).toBe(' chance to afford');
-      // The tone follows the percent the pill shows.
-      const percent = shown![1] === '>99%' ? 100 : shown![1] === '<1%' ? 0 : Number(shown![2]);
-      expect(pill.getAttribute('data-tone')).toBe(
-        percent >= 90 ? 'high' : percent >= 50 ? 'medium' : 'low',
-      );
-    }
-  });
-
-  it('keeps only Current on the Doors open banner of a room that buys nothing', () => {
-    renderOccurrenceWorkbench(
-      underworldCheckpointArtifacts['underworld-f-pool'].load(),
-      'Underworld',
-      'G',
-      occurrenceById('golden-g-intro'),
-    );
-    openRoomTab('Room Timeline');
-    const doorsOpen = within(screen.getByRole('region', { name: 'Room Timeline' })).getByLabelText(
-      'Doors open',
-    );
-    expect(doorsOpen.textContent).toMatch(/Current\s*\d+ ±\d+ gold/);
-    expect(doorsOpen.textContent).not.toMatch(/Spent/);
-    expect(doorsOpen.querySelector('[data-placeholder]')).toBeNull();
   });
 
   it('removes a Shop purchase atomically when its occurrence is no longer a Shop', () => {

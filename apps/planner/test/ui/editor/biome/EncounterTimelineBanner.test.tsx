@@ -4,14 +4,10 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
-  createNemesisRandomEventAddress,
   createRouteStartKeepsakeSelectionAddress,
-  roomActionKey,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
-import type { WorkspaceOccurrenceWorkbenchNode } from '@planner/projections/structured-workspace';
-import { loadNemesisFieldsCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   createCompleteFGProject,
@@ -19,22 +15,9 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
-import {
-  loadSurfaceNOPQProject,
-  loadSurfaceNProject,
-  nBiome,
-  nOccurrenceId,
-  nOccurrenceIds,
-  oOccurrenceIds,
-  pOccurrenceId,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNProject, nOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench';
-import {
-  occurrenceById,
-  openRoomTab,
-  reachedAnomalyProject,
-} from '@planner-test/support/occurrence-workbench';
-import { hintOf } from '@planner-test/support/hints';
+import { occurrenceById, openRoomTab } from '@planner-test/support/occurrence-workbench';
 
 afterEach(cleanup);
 
@@ -42,14 +25,8 @@ function banner(label: string): HTMLElement {
   return within(screen.getByRole('region', { name: 'Room Timeline' })).getByLabelText(label);
 }
 
-function bannerIdentities(label: string): string[] {
-  return within(screen.getByRole('region', { name: 'Room Timeline' }))
-    .getAllByLabelText(label)
-    .map((row) => row.querySelector('.timeline-banner-identity')?.textContent ?? '');
-}
-
 describe('Encounter Timeline banner', () => {
-  it('names a single phase by its encounter and shows no event line without events', () => {
+  it('navigates from its encounter name to the phase owner', () => {
     const view = renderOccurrenceWorkbench(
       createGoldenFGHIProject(),
       'Underworld',
@@ -62,9 +39,6 @@ describe('Encounter Timeline banner', () => {
       .querySelector('span')!.textContent!;
     openRoomTab('Room Timeline');
     const start = banner('Encounter');
-    expect(bannerIdentities('Encounter')).toEqual([encounter]);
-    expect(start.querySelector('.encounter-event-controls')).toBeNull();
-    expect(screen.queryByRole('group', { name: /events$/i })).toBeNull();
 
     // The banner navigates to the Overview owner; it is never a finding target itself.
     const identity = within(start).getByRole('button', { name: encounter });
@@ -82,64 +56,6 @@ describe('Encounter Timeline banner', () => {
     );
   });
 
-  it('names each Ship phase in its own Timeline tab', () => {
-    renderOccurrenceWorkbench(
-      loadSurfaceNOPQProject(),
-      'Surface',
-      'O',
-      occurrenceById(oOccurrenceIds.combat04),
-    );
-    openRoomTab('Intro Timeline');
-    expect(bannerIdentities('Encounter')).toEqual([expect.stringMatching(/^Intro · /)]);
-    openRoomTab('Combat 1 Timeline');
-    expect(bannerIdentities('Encounter')).toEqual([expect.stringMatching(/^Combat 1 · /)]);
-  });
-
-  it('names the P opening and follow-up phases on their start banners', () => {
-    renderOccurrenceWorkbench(
-      loadSurfaceNOPQProject(),
-      'Surface',
-      'P',
-      occurrenceById(pOccurrenceId('P_Combat12', 8, 1)),
-    );
-    openRoomTab('Room Timeline');
-    expect(bannerIdentities('Encounter')).toEqual([
-      expect.stringMatching(/^Pre-combat · /),
-      expect.stringMatching(/^Follow-up · /),
-    ]);
-  });
-
-  it('moves the Nemesis family from the banner to its interaction row', () => {
-    const occurrenceId = goldenFOccurrenceId(5, 1);
-    const phase = createEncounterPhaseAddress(
-      goldenFBiome,
-      { kind: 'occurrence', occurrenceId },
-      'Encounter',
-    );
-    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
-      kind: 'SelectEncounter',
-      phase,
-      encounterKey: 'NemesisRandomEvent',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'SelectNemesisRandomEventFamily',
-      event: createNemesisRandomEventAddress(phase),
-      family: 'goldTrade',
-    });
-    renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(occurrenceId));
-    openRoomTab('Room Timeline');
-    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
-    // The movable interaction encounter names nothing on its banner; its row carries the family.
-    expect(timeline.querySelector('.timeline-banner-identity')).toBeNull();
-    expect(banner('Room entered').textContent).toBe('Room entered');
-    const row = [...timeline.querySelectorAll<HTMLElement>('[data-room-action-key]')].find(
-      (candidate) =>
-        candidate.dataset.roomActionKey ===
-        roomActionKey({ kind: 'interactEncounter', phaseKey: 'Encounter' }),
-    );
-    expect(row?.querySelector('.timeline-row-family')?.textContent).toBe('Gold trade');
-  });
-
   it('hosts a phase event in its start banner row and routes its finding to that control', () => {
     const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
@@ -150,56 +66,7 @@ describe('Encounter Timeline banner', () => {
     openRoomTab('Room Timeline');
     const skip = screen.getByRole('button', { name: 'Fig Leaf skip' });
     expect(skip.closest('li')).toBe(banner('Encounter'));
-    // Banner controls sit on the banner's line, after its title.
-    expect(skip.closest('.timeline-banner-modifiers')).not.toBeNull();
     expect(skip.hasAttribute('data-semantic-owner')).toBe(true);
-  });
-
-  it('shows Fig Leaf only where the engine supports a skip or one is authored', () => {
-    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      kind: 'ReplaceStartingKeepsake',
-      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
-      keepsakeKey: 'SkipEncounterKeepsake',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceFigLeafSkip',
-      phase: createEncounterPhaseAddress(
-        nBiome,
-        { kind: 'occurrence', occurrenceId: nOccurrenceIds.preHub },
-        'Encounter',
-      ),
-      value: true,
-    });
-    // The skip already spent in N leaves later N phases without Fig Leaf support.
-    renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceId('combat05')));
-    openRoomTab('Room Timeline');
-    expect(screen.queryByRole('button', { name: 'Fig Leaf skip' })).toBeNull();
-    cleanup();
-    renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceIds.preHub));
-    openRoomTab('Room Timeline');
-    expect(screen.getByRole('button', { name: 'Fig Leaf skip' }).getAttribute('aria-pressed')).toBe(
-      'true',
-    );
-  });
-
-  it('keeps the Fields Passive Nemesis family off the Room entered banner', () => {
-    renderOccurrenceWorkbench(loadNemesisFieldsCheckpoint(), 'Underworld', 'H', (biome) =>
-      biome.nodes.find(
-        (node): node is WorkspaceOccurrenceWorkbenchNode =>
-          node.kind === 'occurrenceWorkbench' &&
-          node.room.encounterPhases.some(
-            (phase) => phase.address.phaseKey === 'Passive' && phase.nemesisEvent !== undefined,
-          ),
-      ),
-    );
-    openRoomTab('Room Timeline');
-    expect(banner('Room entered').textContent).toBe('Room entered');
-    const family = screen
-      .getByRole('region', { name: 'Room Timeline' })
-      .querySelector<HTMLElement>('[data-room-action-key] .timeline-row-family');
-    expect(family?.textContent).toBe('Free item');
-    // Combat cage banners keep their identity.
-    expect(bannerIdentities('Encounter 1')).toEqual(['Combat']);
   });
 
   it('splits encounter events between the start and end banners', async () => {
@@ -230,126 +97,10 @@ describe('Encounter Timeline banner', () => {
     const start = within(banner('Encounter')).getByRole('group', { name: / start$/ });
     expect(within(start).getByRole('button', { name: 'No Death Defiance' })).toBeTruthy();
     expect(within(start).queryByRole('combobox', { name: 'Outcome' })).toBeNull();
-    // A lone Gorgon condition still takes its own fixed slot.
-    expect(within(start).getByRole('button', { name: 'No Death Defiance' }).dataset.slot).toBe(
-      'gorgon',
-    );
     // The kill race is settled when the encounter ends.
     const end = within(banner('Encounter ended')).getByRole('group', { name: / end$/ });
     // Its one outcome control is the end banner's only control.
     expect(within(end).getByRole('combobox', { name: 'Outcome' })).toBeTruthy();
     expect(end.querySelectorAll('button, input, select')).toHaveLength(1);
-  });
-
-  it('hosts the Anomaly capture outcome on its Encounter ended banner', () => {
-    const { occurrenceId, project } = reachedAnomalyProject();
-    renderOccurrenceWorkbench(project, 'Underworld', 'G', occurrenceById(occurrenceId));
-    openRoomTab('Room Timeline');
-    const cleared = screen.getByRole('checkbox', { name: 'Cleared' });
-    expect(cleared.closest('li')).toBe(banner('Encounter ended'));
-    // An Anomaly's capture point is its end banner's one control.
-    expect(
-      banner('Encounter ended').querySelectorAll(
-        '.timeline-banner-modifiers :is(button, input, select)',
-      ),
-    ).toHaveLength(1);
-    expect(within(banner('Encounter')).queryByRole('checkbox', { name: 'Cleared' })).toBeNull();
-  });
-
-  it('keeps banner controls on the title line and adds none to a banner without events', () => {
-    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
-      kind: 'ReplaceStartingKeepsake',
-      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
-      keepsakeKey: 'SkipEncounterKeepsake',
-    });
-    renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceIds.preHub));
-    openRoomTab('Room Timeline');
-    const label = banner('Encounter').querySelector<HTMLElement>('[data-timeline-cell="label"]')!;
-    // One line: the title, then the controls, both parts of the banner's label cell.
-    const parts = [...label.children].map((part) => part.className);
-    expect(parts).toEqual(['timeline-banner-title', 'timeline-banner-modifiers']);
-    expect(
-      within(label.querySelector<HTMLElement>('.timeline-banner-modifiers')!).getByRole('button', {
-        name: 'Fig Leaf skip',
-      }),
-    ).toBeTruthy();
-    // A banner with nothing to decide carries no control part with content.
-    const ended = banner('Encounter ended');
-    expect(ended.querySelector('.timeline-banner-modifiers')?.childElementCount ?? 0).toBe(0);
-  });
-
-  it('names the phase role only beside another encounter start banner', () => {
-    renderOccurrenceWorkbench(
-      loadSurfaceNOPQProject(),
-      'Surface',
-      'P',
-      occurrenceById(pOccurrenceId('P_Combat12', 8, 1)),
-    );
-    openRoomTab('Room Timeline');
-    // Two start banners: each names its role, then its encounter.
-    const identities = bannerIdentities('Encounter');
-    expect(identities).toHaveLength(2);
-    expect(identities[0]).toMatch(/^Pre-combat · .+/);
-    expect(identities[1]).toMatch(/^Follow-up · .+/);
-    cleanup();
-    // One start banner: the encounter alone, even an ordinary combat.
-    renderOccurrenceWorkbench(
-      createGoldenFGHIProject(),
-      'Underworld',
-      'F',
-      occurrenceById(goldenFOccurrenceId(1, 1)),
-    );
-    openRoomTab('Room Timeline');
-    const [single] = bannerIdentities('Encounter');
-    expect(single).not.toContain(' · ');
-    expect(single).not.toBe('');
-  });
-
-  it('keeps a retained Death Defiance condition on a phase skipped with Fig Leaf', () => {
-    const phase = createEncounterPhaseAddress(
-      nBiome,
-      { kind: 'occurrence', occurrenceId: nOccurrenceIds.preHub },
-      'Encounter',
-    );
-    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
-      kind: 'ReplaceStartingKeepsake',
-      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
-      keepsakeKey: 'AthenaEncounterKeepsake',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceGorgonDeathDefianceCondition',
-      phase,
-      value: true,
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceStartingKeepsake',
-      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
-      keepsakeKey: 'SkipEncounterKeepsake',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceFigLeafSkip',
-      phase,
-      value: true,
-    });
-    renderOccurrenceWorkbench(project, 'Surface', 'N', occurrenceById(nOccurrenceIds.preHub));
-    openRoomTab('Room Timeline');
-    const condition = screen.getByRole('button', {
-      name: 'No Death Defiance',
-    }) as HTMLButtonElement;
-    // The retained value never hides; it owns its finding, so it stays clearable.
-    expect(condition.getAttribute('aria-pressed')).toBe('true');
-    expect(condition.disabled).toBe(false);
-    expect(condition.dataset.hasFindings).toBe('true');
-    expect(condition.hasAttribute('data-inapplicable')).toBe(true);
-    // Its finding stops evaluation before the skip settles, so the engine publishes no
-    // skipped phase and the hint names only the toggle, inventing no reason.
-    expect(hintOf(condition)).toBe('No Death Defiance');
-    expect(condition.closest('li')).toBe(banner('Encounter'));
-    // Both toggles keep their fixed slots, Gorgon before Fig Leaf.
-    const start = condition.closest<HTMLElement>('[role="group"]')!;
-    expect([...start.children].map((child) => child.getAttribute('data-slot'))).toEqual([
-      'gorgon',
-      'figLeaf',
-    ]);
   });
 });

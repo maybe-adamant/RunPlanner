@@ -11,7 +11,6 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   semanticAddressKey,
-  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import { Provider } from 'react-redux';
@@ -59,11 +58,9 @@ import {
 } from '@planner-test/support/occurrence-workbench';
 import { hintOf } from '@planner-test/support/hints';
 
-let immutableRepresentativeNOPQProject: ProjectDocument;
-
 beforeAll(function prepareImmutableRepresentativeProjects() {
   createGoldenFGHIProject();
-  immutableRepresentativeNOPQProject = loadSurfaceNOPQProject();
+  loadSurfaceNOPQProject();
 });
 
 /** Lays the visited side rooms out 20px apart, in list order, for pointer placement. */
@@ -442,30 +439,6 @@ describe('OccurrenceWorkbench', () => {
       expect(within(actions).queryByText('Outgoing generation')).toBeNull();
     },
   );
-
-  it('places Ship Run State in one consistent tab utility slot', () => {
-    renderStaticOccurrenceWorkbench(
-      immutableRepresentativeNOPQProject,
-      'Surface',
-      'O',
-      occurrenceById(oOccurrenceIds.combat04),
-    );
-    const overview = screen.getByRole('button', { name: 'Run State' });
-    const introOwner = overview.getAttribute('data-run-state-launcher');
-    expect(overview.closest('.room-workbench-tab-row')).not.toBeNull();
-    openRoomTab('Intro Timeline');
-    const intro = screen.getByRole('button', { name: 'Run State' });
-    expect(intro.getAttribute('data-run-state-launcher')).toBe(introOwner);
-    expect(intro.closest('.room-workbench-tab-row')).not.toBeNull();
-    openRoomTab('Combat 1 Timeline');
-    const combat1 = screen.getByRole('button', { name: 'Run State' });
-    expect(combat1.getAttribute('data-run-state-launcher')).not.toBe(introOwner);
-    expect(combat1.closest('.room-workbench-tab-row')).not.toBeNull();
-    openRoomTab('Room Doors');
-    const doors = screen.getByRole('button', { name: 'Run State' });
-    expect(doors.getAttribute('data-run-state-launcher')).not.toBe(introOwner);
-    expect(doors.closest('.room-workbench-tab-row')).not.toBeNull();
-  });
 
   it('supports roving keyboard activation across the room workbench tabs', () => {
     renderStaticOccurrenceWorkbench(

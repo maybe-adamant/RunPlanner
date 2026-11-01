@@ -145,7 +145,7 @@ function FocusButton({
   return (
     <button
       aria-label={accessibleLabel}
-      aria-pressed={selected}
+      aria-current={selected ? 'location' : undefined}
       className="biome-rail-node"
       data-assessment={presentationMarker.assessment}
       data-findings={presentationMarker.findingCount > 0}
