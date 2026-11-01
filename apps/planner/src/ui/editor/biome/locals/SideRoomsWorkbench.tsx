@@ -22,7 +22,8 @@ import {
 import { RoomMapViewport } from '@planner/ui/room-maps/RoomMapViewport';
 import { roomMapAssetFor } from '@planner/ui/room-maps/roomMapAssets';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
-import { DoorRewardEditor } from '../DoorRewardEditor';
+import { roomKindIcon } from '../roomIcon';
+import { DoorRewardEditor, DoorRewardHiddenTag, RerolledRewardRepairs } from '../DoorRewardEditor';
 import { DoorRow, DoorRowsHeader } from '../DecisionWorkbench';
 import { hintProps } from '@planner/ui/controls/hint';
 import { TimelineReorderHandle, TimelineReorderStatus } from '../TimelineReorderHandle';
@@ -298,17 +299,19 @@ function VisitOrderRow({
   readonly visited: readonly GeneratedLocalSlot[];
 }) {
   return (
-    <li data-reorder-anchor={slot.key} data-side-visit-key={slot.key}>
-      <div className="ephyra-side-visit-heading">
-        <VisitOrderHandle
-          interactions={interactions}
-          reorder={reorder}
-          slot={slot}
-          visited={visited}
-        />
-        <span className="ephyra-side-visit-ordinal">{`Visit ${slot.enteredOrdinal}`}</span>
-        <strong>{slot.label}</strong>
-      </div>
+    <li
+      className="ephyra-side-visit-row"
+      data-reorder-anchor={slot.key}
+      data-side-visit-key={slot.key}
+    >
+      <VisitOrderHandle
+        interactions={interactions}
+        reorder={reorder}
+        slot={slot}
+        visited={visited}
+      />
+      <span className="ephyra-side-visit-ordinal">{`Visit ${slot.enteredOrdinal}`}</span>
+      <span className="ephyra-side-visit-room">{slot.label}</span>
     </li>
   );
 }
@@ -334,28 +337,29 @@ function VisitOrder({
   });
   return (
     <div {...findingAnchor(localVisit.order)} className="ephyra-side-controls" tabIndex={-1}>
-      <div className="ephyra-side-visit-section">
-        <div className="ephyra-side-visit-section-heading">
-          <h5>Visit order</h5>
-        </div>
-        {visited.length === 0 ? (
-          <p className="ephyra-side-empty">No side rooms are visited.</p>
-        ) : null}
-        <ol aria-label="Visited side rooms" className="ephyra-side-visit-list" ref={attachRoot}>
-          {visited.map((slot) => (
-            <VisitOrderRow
-              interactions={interactions}
-              key={slot.key}
-              reorder={reorder}
-              slot={slot}
-              visited={visited}
-            />
-          ))}
-        </ol>
-        <TimelineReorderStatus session={reorder} />
-      </div>
+      <h5 className="ephyra-side-visit-title">Visit order</h5>
+      {visited.length === 0 ? (
+        <p className="ephyra-side-empty">No side rooms are visited.</p>
+      ) : null}
+      <ol aria-label="Visited side rooms" className="ephyra-side-visit-list" ref={attachRoot}>
+        {visited.map((slot) => (
+          <VisitOrderRow
+            interactions={interactions}
+            key={slot.key}
+            reorder={reorder}
+            slot={slot}
+            visited={visited}
+          />
+        ))}
+      </ol>
+      <TimelineReorderStatus session={reorder} />
     </div>
   );
+}
+
+/** The doors table names a side room by its number alone, as SR 10. */
+function sideRoomShortLabel(label: string): string {
+  return label.replace(/^Side Room /, 'SR ');
 }
 
 /** One side-room door as a row of the doors table: generation, visit, priority, room, reward and map. */
@@ -388,7 +392,28 @@ function SideRoomDoorRow({
           <span className="door-row-waiting">Door closed</span>
         )
       }
-      room={<FixedValueChip label={slot.label} />}
+      room={
+        <>
+          <span aria-hidden="true">
+            <FixedValueChip
+              icon={roomKindIcon(slot.roomIcon)}
+              label={sideRoomShortLabel(slot.label)}
+            />
+          </span>
+          <span className="visually-hidden">{slot.label}</span>
+        </>
+      }
+      secondary={
+        generated ? (
+          <>
+            <RerolledRewardRepairs
+              rewards={slot.door.offerRewardSurface.rewards}
+              target={slot.label}
+            />
+            <DoorRewardHiddenTag door={slot.door} />
+          </>
+        ) : null
+      }
       selection={
         <span className="side-room-toggles">
           <GenerationControl controlRef={focusGeneration} interactions={interactions} slot={slot} />
@@ -436,56 +461,58 @@ export function SideRoomsWorkbench({
       className="ephyra-side-editor"
       tabIndex={-1}
     >
-      <div className="door-workbench">
-        <div
-          aria-label="Side-room doors by generation priority"
-          className="door-rows side-room-doors"
-          role="group"
-        >
-          <DoorRowsHeader
-            identity="Priority"
-            select={
-              <span className="side-room-toggles">
-                <span>Open</span>
-                <span>Visit</span>
-              </span>
-            }
-          />
-          {localVisit.slots.map((slot) => (
-            <SideRoomDoorRow
-              focusGeneration={(element) => focusGeneration(element, slot.key)}
-              interactions={interactions}
-              key={slot.key}
-              localVisit={localVisit}
-              slot={slot}
+      <div className="ephyra-side-layout">
+        <div className="door-workbench">
+          <div
+            aria-label="Side-room doors by generation priority"
+            className="door-rows side-room-doors"
+            role="group"
+          >
+            <DoorRowsHeader
+              identity="Priority"
+              select={
+                <span className="side-room-toggles">
+                  <span>Open</span>
+                  <span>Visit</span>
+                </span>
+              }
             />
-          ))}
+            {localVisit.slots.map((slot) => (
+              <SideRoomDoorRow
+                focusGeneration={(element) => focusGeneration(element, slot.key)}
+                interactions={interactions}
+                key={slot.key}
+                localVisit={localVisit}
+                slot={slot}
+              />
+            ))}
+          </div>
         </div>
-      </div>
-      <VisitOrder interactions={interactions} localVisit={localVisit} />
-      <aside aria-label={`${title} side-room map`} className="ephyra-side-map-reference">
-        <RoomMapViewport
-          asset={roomMapAssetFor(parentGameName)}
-          overlay={
-            <div aria-label="Side-room map status" className="ephyra-side-map-marker-layer">
-              {ephyraSideRoomAnnotationsFor(parentGameName).map((annotation) => {
-                const slot = localVisit.slots.find(
-                  (candidate) => candidate.key === annotation.slotKey,
-                );
-                if (slot === undefined)
-                  throw new Error(
-                    `${parentGameName} map annotation ${annotation.slotKey} has no local slot`,
+        <VisitOrder interactions={interactions} localVisit={localVisit} />
+        <aside aria-label={`${title} side-room map`} className="ephyra-side-map-reference">
+          <RoomMapViewport
+            asset={roomMapAssetFor(parentGameName)}
+            overlay={
+              <div aria-label="Side-room map status" className="ephyra-side-map-marker-layer">
+                {ephyraSideRoomAnnotationsFor(parentGameName).map((annotation) => {
+                  const slot = localVisit.slots.find(
+                    (candidate) => candidate.key === annotation.slotKey,
                   );
-                return (
-                  <SideRoomMarker annotation={annotation} key={annotation.slotKey} slot={slot} />
-                );
-              })}
-            </div>
-          }
-          title={title}
-          controlsPlacement="collapsible-overlay"
-        />
-      </aside>
+                  if (slot === undefined)
+                    throw new Error(
+                      `${parentGameName} map annotation ${annotation.slotKey} has no local slot`,
+                    );
+                  return (
+                    <SideRoomMarker annotation={annotation} key={annotation.slotKey} slot={slot} />
+                  );
+                })}
+              </div>
+            }
+            title={title}
+            controlsPlacement="collapsible-overlay"
+          />
+        </aside>
+      </div>
     </section>
   );
 }

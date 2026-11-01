@@ -50,6 +50,7 @@ import type {
 } from '@run-planner/engine/simulation';
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
+import { candidateRoomIcon, occurrenceRoomIcon } from '../presentation/room-icon';
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceBossDoorRewardStoreControl,
@@ -749,6 +750,12 @@ export function assembleWorkspaceOccurrence(
   });
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
+    roomIcon: occurrenceRoomIcon({
+      biomeKey: address.biomeKey,
+      declaration: requireRoom(input.catalog, occurrence.gameName),
+      encounterPhases,
+      roomLocal,
+    }),
     ...(bossDoorRewardStore === undefined ? {} : { bossDoorRewardStore }),
     ...(phantomExit === undefined ? {} : { phantomExit: phantomExit.control }),
     detailsActive: input.facts.detailsActive,
@@ -791,7 +798,11 @@ export function assembleWorkspaceOccurrence(
               mapChoices: Object.freeze(
                 input.anomalyReplacementRoomGameNames.map((gameName) => {
                   const map = requireRoom(input.catalog, gameName);
-                  return Object.freeze({ label: map.label, value: map.gameName });
+                  return Object.freeze({
+                    label: map.label,
+                    roomIcon: candidateRoomIcon(input.catalog, address.biomeKey, map),
+                    value: map.gameName,
+                  });
                 }),
               ),
               rememberedRoomLabel: remembered.label,

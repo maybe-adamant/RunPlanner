@@ -613,6 +613,8 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+  /* One header height whether or not the heading carries actions. */
+  min-height: 50px;
   margin: -4px -4px 14px;
   padding: 10px 12px;
   border: 1px solid rgb(145 119 174 / 32%);
@@ -1200,20 +1202,24 @@ select {
 .door-rows {
   --door-select-track: 36px;
   display: grid;
-  /* A working width like the timeline's, so room, reward and map read as one row. */
+  /*
+   * A working width like the timeline's, so room, reward and map read as one
+   * row. Between the reward and the map, pinned last, a flexible zone holds
+   * the row's actions and notices, so neither moves when a row has some.
+   */
   width: min(46rem, 100%);
   grid-template-columns:
     var(--door-select-track) minmax(4.5rem, 0.8fr) minmax(8rem, 1.6fr)
-    minmax(10rem, 2.6fr) 2.5rem minmax(0, auto);
+    minmax(10rem, 2.6fr) minmax(max-content, 1fr) 2.5rem;
   align-items: center;
   min-width: 0;
 }
 
-/* A wheel's offers: select | offer | reward; the door-only columns take no room. */
+/* A wheel's offers: select | offer | reward | actions; the room and map columns take no room. */
 .door-rows[data-columns='offer'] {
   grid-template-columns:
     var(--door-select-track) minmax(4.5rem, max-content) 0 minmax(10rem, 1fr)
-    0 0;
+    minmax(0, auto) 0;
 }
 
 /* The pool and the offer count read as one line. */
@@ -1309,6 +1315,11 @@ select {
   padding-left: 8px;
 }
 
+/* Actions and notices keep one line each; the zone grows to the widest. */
+.door-row-secondary > * {
+  white-space: nowrap;
+}
+
 .door-row-select > input {
   width: 16px;
   height: 16px;
@@ -1317,10 +1328,19 @@ select {
 }
 
 .door-row-number {
+  display: inline-grid;
   color: #c8c3cc;
   font-size: 0.86rem;
   font-weight: 600;
+  line-height: 1.2;
   white-space: nowrap;
+}
+
+/* A door's sub-label, such as Indoor, sits muted under its number. */
+.door-row-sublabel {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 500;
 }
 
 .door-row-art {
@@ -1395,6 +1415,69 @@ select {
 
 .row-reward-arrow {
   color: var(--muted);
+}
+
+/* A kept-reward repair in a door row: the reroll die marked with its action. */
+.rerolled-repair-action {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.rerolled-repair-die {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.rerolled-repair-mark {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  display: grid;
+  width: 12px;
+  height: 12px;
+  place-items: center;
+  border-radius: 50%;
+  background: #1b1c22;
+  color: var(--text);
+}
+
+.rerolled-repair-mark > svg {
+  width: 10px;
+  height: 10px;
+}
+
+.rerolled-repair-action[data-repair='drop'] .rerolled-repair-mark {
+  color: #e0a0a0;
+}
+
+/* A rerolled reward's final draw: its icon, badged with the reroll die like a timeline slot. */
+.row-reward-rerolled {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  border-radius: 4px;
+}
+
+.row-reward-rerolled:focus-visible {
+  outline: 2px solid #e2b971;
+  outline-offset: 2px;
+}
+
+.row-reward-rerolled-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.row-reward-rerolled-die {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  background: #1b1c22;
+  object-fit: contain;
 }
 
 .fixed-value-chip-icon {

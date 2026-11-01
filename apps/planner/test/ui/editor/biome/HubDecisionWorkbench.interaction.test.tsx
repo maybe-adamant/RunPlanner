@@ -25,7 +25,7 @@ describe('HubDecisionWorkbench interaction', () => {
       'N',
       { initialTab: 'timeline' },
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Hub Exit' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Hub Doors' }));
     view.rerenderHub({ initialTab: 'timeline', findingNavigationRevision: 1 });
     expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
       'true',
@@ -35,9 +35,9 @@ describe('HubDecisionWorkbench interaction', () => {
       'true',
     );
     view.rerenderHub({ initialTab: 'timeline', findingNavigationRevision: 2 });
-    fireEvent.click(screen.getByRole('tab', { name: 'Hub Exit' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Hub Doors' }));
     view.rerenderHub({ initialTab: 'timeline' });
-    expect(screen.getByRole('tab', { name: 'Hub Exit' }).getAttribute('aria-selected')).toBe(
+    expect(screen.getByRole('tab', { name: 'Hub Doors' }).getAttribute('aria-selected')).toBe(
       'true',
     );
     view.rerenderHub({ initialTab: 'timeline', findingNavigationRevision: 3 });
@@ -112,7 +112,7 @@ describe('HubDecisionWorkbench interaction', () => {
 
     const overview = screen.getByRole('tab', { name: 'Hub Overview' });
     const timeline = screen.getByRole('tab', { name: 'Hub Timeline' });
-    const exit = screen.getByRole('tab', { name: 'Hub Exit' });
+    const exit = screen.getByRole('tab', { name: 'Hub Doors' });
     const removal = screen.getByRole('button', { name: 'Remove Hub' });
     const hubPanel = screen.getByRole('region', { name: 'Ephyra Hub' });
     expect(hubPanel.classList.contains('room-card')).toBe(true);

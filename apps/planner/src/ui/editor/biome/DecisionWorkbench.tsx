@@ -16,6 +16,7 @@ import {
   type WorkspaceTakeoverBatchNode,
   type WorkspaceOrdinaryBatchNode,
   type WorkspaceMixedBatchNode,
+  type WorkspaceRoomIcon,
   type WorkspaceTopologyRemovalInteraction,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
@@ -37,8 +38,9 @@ import { RoomMapLauncher } from '@planner/ui/room-maps/RoomMapDialog';
 import { CandidatePicker } from './CandidatePicker';
 import { AnomalyRoomControl, RevertAnomalyAction } from './room-features/AnomalyControls';
 import { RoomSelector } from './RoomSelector';
+import { roomKindIcon } from './roomIcon';
 import { RunStateLauncher } from './RunStateSheet';
-import { DoorRewardEditor } from './DoorRewardEditor';
+import { DoorRewardEditor, DoorRewardHiddenTag, RerolledRewardRepairs } from './DoorRewardEditor';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { RoomRerolls } from './RoomRerolls';
@@ -153,12 +155,12 @@ export function DoorRow({
       <span className="door-row-identity">{identity}</span>
       <span className="door-row-room">{room}</span>
       <span className="door-row-reward">{reward}</span>
+      <span className="door-row-secondary">{secondary}</span>
       <span className="door-row-map">
         {map === undefined ? null : (
           <RoomMapLauncher gameName={map.gameName} hostId={map.hostId} title={map.title} />
         )}
       </span>
-      <span className="door-row-secondary">{secondary}</span>
     </article>
   );
 }
@@ -169,19 +171,26 @@ export function FixedExitRow({
   gameName,
   hostId,
   label,
+  roomIcon,
 }: {
   /** False while the exit cannot be taken yet. */
   readonly available?: boolean;
   readonly gameName?: string | undefined;
   readonly hostId: string;
   readonly label: string;
+  readonly roomIcon?: WorkspaceRoomIcon | undefined;
 }) {
   return (
     <DoorRow
       ariaLabel={`${label} room offer`}
       identity={<DoorNumber index={1} />}
       {...(gameName === undefined ? {} : { map: { gameName, hostId, title: label } })}
-      room={<FixedValueChip label={label} />}
+      room={
+        <FixedValueChip
+          icon={roomIcon === undefined ? undefined : roomKindIcon(roomIcon)}
+          label={label}
+        />
+      }
       state={{ available }}
     />
   );
@@ -221,7 +230,13 @@ export function DoorNumber({
 }) {
   return (
     <span className="door-row-number">
-      {exitTypeLabel === undefined ? `Door ${index}` : `Door ${index} · ${exitTypeLabel}`}
+      {`Door ${index}`}
+      {exitTypeLabel === undefined ? null : (
+        <span className="door-row-sublabel">
+          <span className="visually-hidden"> · </span>
+          {exitTypeLabel}
+        </span>
+      )}
     </span>
   );
 }
@@ -372,16 +387,21 @@ function TargetRow({
         ) : door.room.anomaly !== undefined ? (
           <AnomalyRoomControl ariaLabel={`Door ${target.index} room`} room={door.room} />
         ) : (
-          <FixedValueChip label={door.room.label} />
+          <FixedValueChip icon={roomKindIcon(door.room.roomIcon)} label={door.room.label} />
         )
       }
       secondary={
-        replaceWithAnomaly === null && door.room.anomaly === undefined ? undefined : (
-          <>
-            {replaceWithAnomaly}
+        <>
+          <RerolledRewardRepairs
+            rewards={door.offerRewardSurface.rewards}
+            target={`Door ${target.index}`}
+          />
+          <DoorRewardHiddenTag door={door} />
+          {replaceWithAnomaly}
+          {door.room.anomaly === undefined ? null : (
             <RevertAnomalyAction doorIndex={target.index} room={door.room} />
-          </>
-        )
+          )}
+        </>
       }
       {...(selectionChoice === undefined
         ? {}
@@ -483,24 +503,13 @@ function AdditionalExitRow({
     chaos?.selectIntent ??
     requireWorkspaceInteraction(interactions.zagreusContracts, key).selectIntent;
   const room = control.door.room;
-  const art = doorArtwork[control.exitTypeKey];
+  // The exit's door art stands for the room it leads to.
+  const art = doorArtwork[control.exitTypeKey] ?? undefined;
   return (
     <DoorRow
       ariaLabel={`${control.exitTypeLabel} exit`}
       identity={
-        art == null ? (
-          <span className="door-row-number">{control.exitTypeLabel}</span>
-        ) : (
-          <span
-            {...hintProps(control.exitTypeLabel, undefined, control.exitTypeLabel)}
-            aria-label={control.exitTypeLabel}
-            className="door-row-art"
-            role="img"
-            tabIndex={0}
-          >
-            <img alt="" src={art} />
-          </span>
-        )
+        <span className="door-row-number">{chaos === undefined ? 'Contract' : 'Chaos Gate'}</span>
       }
       map={{ gameName: room.gameName, hostId: key, title: room.label }}
       reward={
@@ -518,6 +527,7 @@ function AdditionalExitRow({
           <ContextualPicker
             ariaLabel={`${control.exitTypeLabel} room`}
             id={`chaos-room-${room.occurrenceId}`}
+            itemIcon={() => art}
             label=""
             layout="inline"
             model={declaredChoicesPicker(
@@ -526,10 +536,11 @@ function AdditionalExitRow({
             )}
             onSelect={(gameName) => executeIntent(chaos.mapIntent(gameName))}
             placeholder="Choose a room"
+            triggerIcon={art}
             triggerSize="content"
           />
         ) : (
-          <FixedValueChip label={room.label} />
+          <FixedValueChip icon={art} label={room.label} />
         )
       }
       selection={

@@ -14,6 +14,9 @@ import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwne
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { offerIcon } from '@planner/ui/artwork/rewardIcon';
+import { rerollDieArtwork } from '@planner/ui/artwork/rerolls/rerollArtwork';
+import { hintProps } from '@planner/ui/controls/hint';
+import { ActionIcon } from '@planner/ui/controls/ActionIcon';
 import { useEffect, type ReactNode } from 'react';
 
 /** Shared editor for any complete room-owned offer reward surface. */
@@ -30,7 +33,7 @@ export function RewardSurfaceEditor({
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly focusOwner?: SemanticAddress;
-  /** `row` is a door row's reward cell: values as chips, a reroll inline after an arrow. */
+  /** `row` is a door row's reward cell; the row shows a hidden reward's notice itself. */
   readonly layout?: 'field' | 'row';
   readonly rewards: readonly WorkspaceDoorReward[];
   readonly visibility: 'hidden' | 'visible';
@@ -62,7 +65,6 @@ export function RewardSurfaceEditor({
         idPrefix={idPrefix}
         interactions={interactions}
         rewards={rewards}
-        visibility={visibility}
       />
     );
   }
@@ -127,6 +129,17 @@ export function RewardSurfaceEditor({
   );
 }
 
+function rerolledRewardRepairIntent(
+  repair: NonNullable<WorkspaceDoorReward['rerolledRewardRepair']>,
+) {
+  return {
+    command:
+      repair.repair === 'adopt'
+        ? ({ kind: 'AdoptRerolledReward', owner: repair.owner } as const)
+        : ({ kind: 'DropRerolledReward', owner: repair.owner } as const),
+  };
+}
+
 /** Adopts the last reroll's reward into a kept reward that no longer matches, or drops it. */
 function RerolledRewardRepair({
   repair,
@@ -139,14 +152,7 @@ function RerolledRewardRepair({
     <button
       {...findingMark(repair.owner, 'rerolledReward')}
       className="secondary-action action-compact"
-      onClick={() =>
-        executeIntent({
-          command:
-            repair.repair === 'adopt'
-              ? { kind: 'AdoptRerolledReward', owner: repair.owner }
-              : { kind: 'DropRerolledReward', owner: repair.owner },
-        })
-      }
+      onClick={() => executeIntent(rerolledRewardRepairIntent(repair))}
       type="button"
     >
       {repair.repair === 'adopt' ? 'Use last reroll' : 'Drop rerolled reward'}
@@ -154,18 +160,17 @@ function RerolledRewardRepair({
   );
 }
 
-/** A reward's first draw, then its final one after an arrow where rerolls changed it. */
+/**
+ * A door-table reward: its first draw, then where rerolls changed it, the
+ * final reward as its icon carrying the reroll die.
+ */
 export function RowReward({
   first,
   reward,
 }: {
   readonly first: ReactNode;
-  readonly reward: Pick<
-    WorkspaceDoorReward,
-    'rerolledOffer' | 'rerolledRewardRepair' | 'rerolledSummary'
-  >;
+  readonly reward: Pick<WorkspaceDoorReward, 'rerolledOffer' | 'rerolledSummary'>;
 }) {
-  const repair = reward.rerolledRewardRepair;
   return (
     <span className="row-reward-value">
       {first}
@@ -174,15 +179,88 @@ export function RowReward({
           <span aria-hidden="true" className="row-reward-arrow">
             →
           </span>
-          <span className="visually-hidden">Rerolled to </span>
-          <FixedValueChip
-            icon={reward.rerolledOffer === undefined ? undefined : offerIcon(reward.rerolledOffer)}
-            label={reward.rerolledSummary}
-          />
+          <span
+            aria-label={`Rerolled into ${reward.rerolledSummary}`}
+            className="row-reward-rerolled"
+            role="img"
+            tabIndex={0}
+            {...hintProps(`Rerolled into ${reward.rerolledSummary}`)}
+          >
+            <ArtworkIcon
+              className="row-reward-rerolled-icon"
+              source={
+                reward.rerolledOffer === undefined ? undefined : offerIcon(reward.rerolledOffer)
+              }
+            />
+            <img alt="" className="row-reward-rerolled-die" src={rerollDieArtwork} />
+          </span>
         </>
       )}
-      {repair === undefined ? null : <RerolledRewardRepair repair={repair} />}
     </span>
+  );
+}
+
+/**
+ * A door-table row's repairs of kept rerolled rewards that no longer match,
+ * shown in the row's secondary column; null when none needs one.
+ */
+/** A door row's notice that the game hides this door's reward, shown beside the reward. */
+export function DoorRewardHiddenTag({ door }: { readonly door: WorkspaceDoorContract }) {
+  return door.offerRewardSurface.visibility === 'hidden' ? (
+    <span className="timeline-row-tag">Hidden on door</span>
+  ) : null;
+}
+
+export function RerolledRewardRepairs({
+  rewards,
+  target,
+}: {
+  readonly rewards: readonly Pick<WorkspaceDoorReward, 'key' | 'label' | 'rerolledRewardRepair'>[];
+  /** The row's name, such as Door 1, which completes each repair's name. */
+  readonly target: string;
+}) {
+  const repairs = rewards.flatMap((reward) =>
+    reward.rerolledRewardRepair === undefined
+      ? []
+      : [
+          <RerolledRewardRepairIcon
+            key={reward.key}
+            repair={reward.rerolledRewardRepair}
+            target={rewards.length > 1 ? `${target} ${reward.label}` : target}
+          />,
+        ],
+  );
+  return repairs.length === 0 ? null : <>{repairs}</>;
+}
+
+/** The row-sized repair: the reroll die marked with its action, named in full. */
+function RerolledRewardRepairIcon({
+  repair,
+  target,
+}: {
+  readonly repair: NonNullable<WorkspaceDoorReward['rerolledRewardRepair']>;
+  readonly target: string;
+}) {
+  const executeIntent = useCommandIntent();
+  const findingMark = useFindingMark();
+  const action = repair.repair === 'adopt' ? 'Use last reroll' : 'Drop rerolled reward';
+  const name = `${action} for ${target}`;
+  return (
+    <button
+      {...findingMark(repair.owner, 'rerolledReward')}
+      aria-label={name}
+      className="icon-action rerolled-repair-action"
+      data-repair={repair.repair}
+      {...(repair.repair === 'drop' ? { 'data-tone': 'danger' } : {})}
+      onClick={() => executeIntent(rerolledRewardRepairIntent(repair))}
+      type="button"
+      {...hintProps(action, undefined, name)}
+    >
+      <img alt="" className="rerolled-repair-die" src={rerollDieArtwork} />
+      <span className="rerolled-repair-mark">
+        <ActionIcon name={repair.repair === 'adopt' ? 'reset' : 'close'} />
+      </span>
+    </button>
   );
 }
 
@@ -191,18 +269,14 @@ function RowRewardSurface({
   idPrefix,
   interactions,
   rewards,
-  visibility,
 }: {
   readonly ariaLabel: string;
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly rewards: readonly WorkspaceDoorReward[];
-  readonly visibility: 'hidden' | 'visible';
 }) {
   const findingAnchor = useFindingAnchor();
   const firstEditable = rewards.findIndex((reward) => reward.control !== undefined);
-  const hidden =
-    visibility === 'hidden' ? <span className="timeline-row-tag">Hidden on door</span> : null;
   if (rewards.length === 0) {
     return (
       <div aria-label={ariaLabel} className="door-row-rewards">
@@ -249,7 +323,6 @@ function RowRewardSurface({
           );
         return <RowReward first={first} key={reward.key} reward={reward} />;
       })}
-      {hidden}
     </div>
   );
 }

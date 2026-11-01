@@ -1052,16 +1052,8 @@
   min-width: 0;
 }
 
-.hub-map-overview {
-  padding: 12px;
-}
-
-.hub-map-overview > .room-map-viewport > .room-map-canvas > .room-map-scroll {
-  height: min(720px, calc(100 * var(--app-vh) - 280px));
-  min-height: 340px;
-}
-
-.hub-board > .hub-map-overview .room-map-scroll {
+/* The board's own border frames the Hub map. */
+.hub-map-overview .room-map-scroll {
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -2450,9 +2442,52 @@
 }
 
 .ephyra-side-editor {
+  container: side-rooms / inline-size;
+  min-width: 0;
+}
+
+/* Narrow: map, then the doors, then the visit order. */
+.ephyra-side-layout {
   display: grid;
+  grid-template-areas: 'map' 'doors' 'visits';
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
+}
+
+.ephyra-side-layout > .door-workbench {
+  grid-area: doors;
+}
+
+.ephyra-side-layout > .ephyra-side-controls {
+  grid-area: visits;
+}
+
+.ephyra-side-layout > .ephyra-side-map-reference {
+  grid-area: map;
+}
+
+/* Wide: the doors and visit order in a left column, the map beside them. */
+@container side-rooms (min-width: 60rem) {
+  .ephyra-side-layout {
+    grid-template-areas: 'doors map' 'visits map';
+    grid-template-columns: minmax(0, 30rem) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    gap: 12px 20px;
+    align-items: start;
+  }
+
+  /* The column is narrower than the doors' two-line threshold, yet keeps the table. */
+  .ephyra-side-layout > .door-workbench {
+    container-type: normal;
+  }
+
+  .ephyra-side-layout .door-rows.side-room-doors {
+    width: 100%;
+    grid-template-columns:
+      var(--door-select-track) minmax(3.75rem, auto) max-content
+      minmax(8rem, 1fr) minmax(0, auto) 2.5rem;
+  }
 }
 
 .ephyra-side-controls,
@@ -2463,82 +2498,58 @@
 .ephyra-side-controls {
   display: grid;
   align-content: start;
-  gap: 8px;
-}
-
-.ephyra-side-visit-list {
-  display: grid;
-  gap: 8px;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.ephyra-side-visit-list > li {
-  display: grid;
-  gap: 8px;
-  padding: 9px;
-  border: 1px solid #34353e;
-  border-radius: 8px;
-  background: rgb(255 255 255 / 2%);
-}
-
-.ephyra-side-visit-heading {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  font-size: 0.78rem;
-}
-
-.ephyra-side-visit-heading > strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.ephyra-side-visit-ordinal {
-  color: #d5c897;
-  white-space: nowrap;
-}
-
-.ephyra-side-visit-list > li {
-  position: relative;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-}
-
-.ephyra-side-visit-section {
-  display: grid;
-  gap: 8px;
-}
-
-.ephyra-side-visit-section-heading {
-  display: flex;
-  align-items: center;
   gap: 4px;
 }
 
-.ephyra-side-visit-section-heading {
-  margin-top: 4px;
-  padding-block: 8px;
-  border-block: 1px solid #353640;
+.ephyra-side-visit-title {
+  margin: 0 0 2px;
+  color: #aaa7af;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-.ephyra-side-visit-section-heading h5,
+/* Light timeline rows: handle, Visit n, room. */
+.ephyra-side-visit-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ephyra-side-visit-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 4.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-height: 2.25rem;
+  padding: 4px 6px 4px 0;
+  border-top: 1px solid #2c2d35;
+}
+
+.ephyra-side-visit-row:last-child {
+  border-bottom: 1px solid #2c2d35;
+}
+
+.ephyra-side-visit-ordinal {
+  color: var(--muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.ephyra-side-visit-room {
+  min-width: 0;
+  color: #f2ede5;
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
 .ephyra-side-empty {
   margin: 0;
-}
-
-.ephyra-side-visit-section-heading h5 {
-  color: #e1d7e9;
-  font-size: 0.82rem;
-}
-
-.ephyra-side-empty {
   color: #99939f;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
 }
 
 .ephyra-side-generation-control {
@@ -2558,11 +2569,15 @@
   opacity: 0.6;
 }
 
-.ephyra-side-map-reference > .room-map-viewport > .room-map-canvas {
+/* The map fills its frame, so overlays pinned to the frame sit on the image. */
+:is(.ephyra-side-map-reference, .hub-map-overview) > .room-map-viewport > .room-map-canvas {
   aspect-ratio: 16 / 9;
 }
 
-.ephyra-side-map-reference > .room-map-viewport > .room-map-canvas > .room-map-scroll {
+:is(.ephyra-side-map-reference, .hub-map-overview)
+  > .room-map-viewport
+  > .room-map-canvas
+  > .room-map-scroll {
   position: absolute;
   inset: 0;
   height: 100%;

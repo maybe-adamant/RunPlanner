@@ -1742,7 +1742,7 @@ describe('BiomeWorkspace', () => {
     nApplication.dispose();
   });
 
-  it('routes the Hub Exit Preboss to its stage, with no removal of its own', async () => {
+  it('routes the Hub Doors Preboss to its stage, with no removal of its own', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const handoff = createExitDecisionAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' });
     const preboss = createOccurrenceAddress(nBiome, nOccurrenceIds.preboss);
@@ -1752,7 +1752,7 @@ describe('BiomeWorkspace', () => {
         semanticOwnerFocused(createHubDecisionAddress(nBiome, 'hub')),
       ),
     );
-    await view.user.click(screen.getByRole('tab', { name: 'Hub Exit' }));
+    await view.user.click(screen.getByRole('tab', { name: 'Hub Doors' }));
     expect(screen.getByRole('button', { name: 'Open next room' })).toHaveProperty(
       'disabled',
       false,

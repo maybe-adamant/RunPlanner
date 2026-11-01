@@ -2,15 +2,8 @@ import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/au
 import { type ReactNode } from 'react';
 import { ArtworkIcon, type ArtworkSource } from '@planner/ui/artwork/ArtworkIcon';
 import { offerIcon, rewardIcon } from '@planner/ui/artwork/rewardIcon';
-import { bossArtwork } from '@planner/ui/artwork/bosses/bossArtwork';
 import { clockworkCountdownArtwork } from '@planner/ui/artwork/clockwork/clockworkCountdownArtwork';
-import { doorArtwork } from '@planner/ui/artwork/doors/doorArtwork';
-import { biomeIcon, fountainIcon } from '@planner/ui/artwork/roomArtwork';
-import { combatRoomArtwork } from '@planner/ui/artwork/combat-rooms/combatRoomArtwork';
-import { emptyRoomArtwork } from '@planner/ui/artwork/empty-rooms/emptyRoomArtwork';
-import { minibossIcon } from '@planner/ui/artwork/encounterArtwork';
-import { npcArtwork } from '@planner/ui/artwork/npcs/npcArtwork';
-import { traitGiverArtwork } from '@planner/ui/artwork/trait-givers/traitGiverArtwork';
+import { biomeIcon } from '@planner/ui/artwork/roomArtwork';
 import { noRewardArtwork } from '@planner/ui/artwork/no-reward/noRewardArtwork';
 
 import {
@@ -36,6 +29,7 @@ import { BiomeFieldControls } from './BiomeFieldControls';
 import { RunStateSheet } from './RunStateSheet';
 import { EchoKeepsakeReplayControl } from './BiomeInspectorControls';
 import { BiomeInspectorNode } from './BiomeInspectorNode';
+import { bossIcon, roomKindIcon } from './roomIcon';
 
 interface BiomeWorkspaceProps {
   readonly biome: WorkspaceBiome;
@@ -159,8 +153,6 @@ function FocusButton({
   );
 }
 
-const bossIcon = (biomeKey: string): string | undefined => bossArtwork[biomeKey] ?? undefined;
-
 function RailMainReward({ reward }: { readonly reward: WorkspaceRailReward }) {
   return (
     <span className="biome-rail-selection">
@@ -187,35 +179,6 @@ function railRewardIcons(
   return target.roomRewards.map(offerIcon);
 }
 
-/** The room's own icon: its enemies, empty scene, object, miniboss, NPC or contract door. */
-function railRoomIcon(target: WorkspaceRailSelectedTarget): string | undefined {
-  const room = target.roomIcon;
-  switch (room.kind) {
-    case 'combat':
-      return combatRoomArtwork[room.biomeKey] ?? undefined;
-    case 'empty':
-      return emptyRoomArtwork[room.biomeKey] ?? undefined;
-    case 'fountain':
-      return fountainIcon(room.biomeKey);
-    case 'boss':
-      return bossIcon(room.biomeKey);
-    case 'shop':
-      return rewardIcon('Shop');
-    case 'chaos':
-      return traitGiverArtwork.Chaos ?? undefined;
-    case 'contract':
-      return target.exitTypeKey === undefined
-        ? undefined
-        : (doorArtwork[target.exitTypeKey] ?? undefined);
-    case 'miniboss':
-      return room.encounterDefinitionKey === undefined
-        ? undefined
-        : minibossIcon(room.encounterDefinitionKey);
-    case 'story':
-      return room.npcKey === undefined ? undefined : (npcArtwork[room.npcKey] ?? undefined);
-  }
-}
-
 /** `[room] Room · [reward] Reward`: each icon sits before the thing it describes. */
 function RailSelectedTarget({
   biomeKey,
@@ -229,7 +192,10 @@ function RailSelectedTarget({
   ));
   return (
     <span className="biome-rail-selection">
-      <ArtworkIcon className="biome-rail-reward-icon" source={railRoomIcon(selectedTarget)} />
+      <ArtworkIcon
+        className="biome-rail-reward-icon"
+        source={roomKindIcon(selectedTarget.roomIcon, selectedTarget.exitTypeKey)}
+      />
       {selectedTarget.roomLabel}
       {selectedTarget.reward === undefined ? (
         rewardIcons.length === 0 ? null : (

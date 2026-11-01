@@ -297,6 +297,11 @@ function requiredTakeoverOwner(
   };
 }
 
+/** A door's number reads with its type sub-label for assistive technology. */
+function doorLabelled(door: string, type: string): boolean {
+  return screen.getAllByText(door).some((element) => element.textContent === `${door} · ${type}`);
+}
+
 describe('DecisionWorkbench', () => {
   it('disables picker and button authoring after the same incomplete horizon', () => {
     const biome = createBiomeAddress('Underworld', 'F');
@@ -346,7 +351,7 @@ describe('DecisionWorkbench', () => {
     expect(within(normalDoor).getByRole('button', { name: /^Door \d+ room$/ })).toBeTruthy();
     expect(within(normalDoor).queryByText('Door 1 room', { selector: 'label' })).toBeNull();
     expect(gate.dataset.picked).toBe('false');
-    expect(within(gate).getByRole('img', { name: 'Chaos gate' })).toBeTruthy();
+    expect(within(gate).getByText('Chaos Gate')).toBeTruthy();
     expect(within(gate).getByRole('button', { name: 'Chaos gate room' }).textContent).toContain(
       'Chaos 01',
     );
@@ -636,7 +641,7 @@ describe('DecisionWorkbench', () => {
 
     const contract = screen.getByRole('article', { name: 'Infernal Contract exit' });
     expect(contract.dataset.picked).toBe('false');
-    expect(within(contract).getByRole('img', { name: 'Infernal Contract' })).toBeTruthy();
+    expect(within(contract).getByText('Contract')).toBeTruthy();
     expect(within(contract).getByText('Zagreus')).toBeTruthy();
     expect(within(contract).getByText('Champion of Elysium')).toBeTruthy();
     expect(within(contract).queryByRole('button', { name: /Remove/ })).toBeNull();
@@ -951,8 +956,8 @@ describe('DecisionWorkbench', () => {
       storeKey: 'RunProgress',
     });
     const view = renderDecisionWorkbench(project, 'Surface', 'P', subjectForOwner(owner));
-    expect(screen.getByText('Door 1 · Indoor')).toBeTruthy();
-    expect(screen.getByText('Door 2 · Outdoor')).toBeTruthy();
+    expect(doorLabelled('Door 1', 'Indoor')).toBe(true);
+    expect(doorLabelled('Door 2', 'Outdoor')).toBe(true);
 
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
     const indoorRooms = within(await screen.findByRole('group', { name: 'Indoor' }));
@@ -960,8 +965,8 @@ describe('DecisionWorkbench', () => {
     await view.user.click(indoorRooms.getByRole('option', { name: /Combat 04 \(2I\)/ }));
 
     expect(screen.getByRole('article', { name: 'Combat 04 room offer' })).toBeTruthy();
-    expect(screen.getByText('Door 1 · Indoor')).toBeTruthy();
-    expect(screen.getByText('Door 2 · Outdoor')).toBeTruthy();
+    expect(doorLabelled('Door 1', 'Indoor')).toBe(true);
+    expect(doorLabelled('Door 2', 'Outdoor')).toBe(true);
     expect(screen.getByRole('button', { name: 'Door 1 room' }).textContent).toContain('Combat 04');
 
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));

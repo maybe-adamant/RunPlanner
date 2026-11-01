@@ -280,15 +280,13 @@ export function HubMapOverview({
         key={hubIdentity}
         overlay={<HubMapMarkerLayer interactions={interactions} node={node} />}
         title="Ephyra Hub"
+        viewportLegend={<HubMapQualityLegend />}
         viewportOverlay={
           <>
             {requirement}
-            <div className="hub-map-corner-actions">
-              <div className="hub-map-board-actions">
-                {resetBoardControl}
-                {detailsControl}
-              </div>
-              <HubMapQualityLegend />
+            <div className="hub-map-board-actions">
+              {resetBoardControl}
+              {detailsControl}
             </div>
           </>
         }

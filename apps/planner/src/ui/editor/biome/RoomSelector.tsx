@@ -5,6 +5,7 @@ import type { WorkspaceRoomInteraction } from '@planner/projections/structured-w
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import type { FindingTargetProps } from '@planner/ui/feedback/useFindingTarget';
+import { roomKindIcon } from './roomIcon';
 
 interface RoomSelectorProps {
   readonly findingTarget?: FindingTargetProps;
@@ -46,6 +47,7 @@ export function RoomSelector({
       {...(ariaLabel === undefined ? {} : { ariaLabel })}
       disabled={disabled}
       id={`${idPrefix}-room`}
+      itemIcon={(item) => roomKindIcon(interaction.roomIcon(item.value))}
       label={label}
       layout="inline"
       loading={projection.pending}
@@ -55,7 +57,12 @@ export function RoomSelector({
       }}
       onSelect={(room) => onSelect(room.gameName)}
       placeholder={disabled ? disabledPlaceholder : placeholder}
-      {...(interaction.selected === undefined ? {} : { triggerLabel: interaction.selected.label })}
+      {...(interaction.selected === undefined
+        ? {}
+        : {
+            triggerIcon: roomKindIcon(interaction.roomIcon(interaction.selected)),
+            triggerLabel: interaction.selected.label,
+          })}
     />
   );
 }

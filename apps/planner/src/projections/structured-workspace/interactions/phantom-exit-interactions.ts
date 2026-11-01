@@ -1,4 +1,7 @@
-import { phantomPlaceholderRewardTypes } from '@run-planner/engine/authored-project';
+import {
+  phantomPlaceholderRewardTypes,
+  routeRoomDeclaration,
+} from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { PhantomPlaceholderExclusion } from '@run-planner/engine/simulation';
 import type { CandidateProjectionSession } from '@planner/projections/candidates/candidateProjection';
@@ -8,7 +11,9 @@ import {
   type ContextualPickerProjectionService,
 } from '@planner/projections/contextual/contextualPicker';
 
+import { requireWorkspaceRoom } from '../assembly/catalog-room';
 import type { WorkspacePhantomExitInteraction } from '../contracts/structure';
+import { candidateRoomIcon } from '../presentation/room-icon';
 import type { WorkspaceOccurrenceInteractionRequirement } from './interaction-requirements';
 
 type PhantomExitRequirement = Extract<
@@ -61,6 +66,12 @@ export function bindPhantomExitInteraction(input: {
           ),
           requirement.effectiveRoomGameName,
         )),
+      roomIcon: (gameName: string) =>
+        candidateRoomIcon(
+          input.catalog,
+          owner.biomeKey,
+          routeRoomDeclaration(requireWorkspaceRoom(input.catalog, gameName), owner.routeKey),
+        ),
     }),
     rewards: Object.freeze({
       load: async () => {

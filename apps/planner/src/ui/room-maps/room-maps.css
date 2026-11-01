@@ -107,6 +107,8 @@
 }
 
 .room-map-canvas {
+  /* Every overlay sits this far from the map frame's edges, in each corner. */
+  --room-map-overlay-inset: 10px;
   position: relative;
   min-width: 0;
 }
@@ -114,7 +116,7 @@
 .room-map-viewport-overlay {
   position: absolute;
   z-index: 4;
-  inset: 12px 12px auto;
+  inset: var(--room-map-overlay-inset) var(--room-map-overlay-inset) auto;
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
@@ -127,31 +129,35 @@
 }
 
 .room-map-viewport-overlay > .room-map-controls {
-  padding: 6px;
+  padding: 3px;
   border: 1px solid #344352;
   border-radius: 6px;
   background: rgb(17 25 35 / 92%);
 }
 
-.hub-map-corner-actions {
+.room-map-viewport-legend {
+  position: absolute;
+  z-index: 4;
+  right: var(--room-map-overlay-inset);
+  bottom: var(--room-map-overlay-inset);
+  pointer-events: none;
+}
+
+.room-map-viewport-legend > .hub-map-legend {
+  position: static;
+  /* Scales with the Hub workbench so it never crowds a narrow map. */
+  font-size: clamp(0.6rem, 1.15cqi, 0.8rem);
+}
+
+/* Board actions take the top-right corner. */
+.hub-map-board-actions {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
   margin-left: auto;
 }
 
-.hub-map-corner-actions > .hub-map-legend {
-  position: static;
-  font-size: 0.8rem;
-}
-
-.hub-map-board-actions {
-  display: grid;
-  gap: 6px;
-}
-
-.hub-map-corner-actions .danger-action,
-.hub-map-board-actions .quiet-action {
+.hub-map-board-actions :is(.danger-action, .quiet-action) {
   background: rgb(17 25 35 / 92%);
 }
 

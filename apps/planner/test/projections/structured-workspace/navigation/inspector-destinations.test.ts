@@ -1507,7 +1507,7 @@ describe('workspace inspector destinations', () => {
     );
     if (handoffPreboss === undefined) throw new Error('completed N Hub Preboss stage is missing');
     const handoffDestination = destination(handoff, handoffOwner);
-    expect(handoffDestination.hubTab).toBe('exit');
+    expect(handoffDestination.hubTab).toBe('doors');
     expect(handoffDestination.inspectorSubject).toEqual({
       kind: 'node',
       nodeKey: handoffPreboss.key,

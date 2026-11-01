@@ -64,7 +64,7 @@ export function twoVisitHubProject(): ProjectDocument {
   });
 }
 
-export function selectHubTab(name: 'Hub Overview' | 'Hub Timeline' | 'Hub Exit'): void {
+export function selectHubTab(name: 'Hub Overview' | 'Hub Timeline' | 'Hub Doors'): void {
   const tab = screen.getByRole('tab', { name });
   if (tab.getAttribute('aria-selected') !== 'true') fireEvent.click(tab);
 }

@@ -39,6 +39,7 @@ import type {
 import { summarizeRewardOffer } from '@planner/projections/rewards/rewardOfferSummary';
 
 import { requireWorkspaceRoom } from './catalog-room';
+import { candidateRoomIcon } from '../presentation/room-icon';
 import {
   StructuredWorkspaceProjectionContractError,
   workspaceLocalVisitOrderKey,
@@ -368,6 +369,14 @@ function projectHubNode(
             requireWorkspaceRoom(catalog, localOccurrence.gameName),
             address.routeKey,
           ).label,
+          roomIcon: candidateRoomIcon(
+            catalog,
+            address.biomeKey,
+            routeRoomDeclaration(
+              requireWorkspaceRoom(catalog, localOccurrence.gameName),
+              address.routeKey,
+            ),
+          ),
           marker: markerDestinations.marker(address),
           occurrenceId: localOccurrence.occurrenceId,
           order: localVisitOrderControl(address, decision.visitOrder, localOccurrence.occurrenceId),
@@ -635,6 +644,7 @@ function projectHubNode(
     target: Object.freeze({
       gameName: descriptor.completedExit.roomGameName,
       label: completedExitRoom.label,
+      roomIcon: candidateRoomIcon(catalog, biome.biomeKey, completedExitRoom),
       marker: markerDestinations.marker(
         createOccurrenceAddress(biome, completedExitTarget.occurrenceId),
       ),
@@ -881,7 +891,7 @@ function projectHubNode(
   );
   markerDestinations.setHubTab(Object.freeze(node.visits.map((visit) => visit.marker)), 'timeline');
   markerDestinations.redirect([completedExit.marker], node.key);
-  markerDestinations.setHubTab([completedExit.marker], 'exit');
+  markerDestinations.setHubTab([completedExit.marker], 'doors');
   // Placement and the Phial target both repair on the Hub Timeline's fountain row.
   markerDestinations.redirect([fountain.marker, fountain.outcomeMarker], node.key);
   markerDestinations.setHubTab([fountain.marker, fountain.outcomeMarker], 'timeline');

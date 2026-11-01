@@ -22,6 +22,7 @@ export function RoomMapViewport({
   toolbarActions,
   toolbarEnd,
   controlsPlacement = 'toolbar',
+  viewportLegend,
   viewportOverlay,
 }: {
   readonly asset: RoomMapAsset | undefined;
@@ -34,6 +35,8 @@ export function RoomMapViewport({
   readonly controlsPlacement?: 'toolbar' | 'overlay' | 'collapsible-overlay';
   /** Fixed beside overlaid controls, outside the image's pan/zoom space. */
   readonly viewportOverlay?: ReactNode;
+  /** Fixed in the frame's bottom-right corner, outside the image's pan/zoom space. */
+  readonly viewportLegend?: ReactNode;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<
@@ -305,6 +308,9 @@ export function RoomMapViewport({
             {controls}
             {viewportOverlay}
           </div>
+          {viewportLegend === undefined ? null : (
+            <div className="room-map-viewport-legend">{viewportLegend}</div>
+          )}
           {map}
         </div>
       ) : (

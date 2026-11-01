@@ -44,12 +44,15 @@ interface HubDecisionWorkbenchProps {
   readonly node: WorkspaceHubDecisionNode;
 }
 
-const hubWorkbenchTabs: readonly { readonly key: WorkspaceHubTab; readonly label: string }[] =
-  Object.freeze([
-    Object.freeze({ key: 'overview', label: 'Hub Overview' }),
-    Object.freeze({ key: 'timeline', label: 'Hub Timeline' }),
-    Object.freeze({ key: 'exit', label: 'Hub Exit' }),
-  ]);
+const hubWorkbenchTabs: readonly {
+  readonly key: WorkspaceHubTab;
+  readonly label: string;
+  readonly shown: string;
+}[] = Object.freeze([
+  Object.freeze({ key: 'overview', label: 'Hub Overview', shown: 'Overview' }),
+  Object.freeze({ key: 'timeline', label: 'Hub Timeline', shown: 'Timeline' }),
+  Object.freeze({ key: 'doors', label: 'Hub Doors', shown: 'Doors' }),
+]);
 
 /** Why a proposed Hub action order cannot replace the current one. */
 function hubActionOrderRefusalHint(refusal: HubActionOrderRefusal): string {
@@ -369,6 +372,7 @@ export function HubDecisionWorkbench({
           {hubWorkbenchTabs.map((tab) => (
             <button
               aria-controls={`${titleId}-tabpanel`}
+              aria-label={tab.label}
               aria-selected={activeTab === tab.key}
               className="room-workbench-tab"
               data-hub-workbench-tab={tab.key}
@@ -379,7 +383,7 @@ export function HubDecisionWorkbench({
               tabIndex={activeTab === tab.key ? 0 : -1}
               type="button"
             >
-              {tab.label}
+              {tab.shown}
             </button>
           ))}
         </nav>
@@ -402,7 +406,7 @@ export function HubDecisionWorkbench({
         id={`${titleId}-tabpanel`}
         role="tabpanel"
       >
-        {activeTab === 'exit' ? null : (
+        {activeTab === 'doors' ? null : (
           <div className="hub-workbench-view">
             {activeTab === 'overview' ? (
               <section className="hub-board" aria-label="Hub room participation">
@@ -484,7 +488,7 @@ export function HubDecisionWorkbench({
             )}
           </div>
         )}
-        {activeTab === 'exit' ? <HubCompletionHandoff node={node} /> : null}
+        {activeTab === 'doors' ? <HubCompletionHandoff node={node} /> : null}
       </section>
     </section>
   );

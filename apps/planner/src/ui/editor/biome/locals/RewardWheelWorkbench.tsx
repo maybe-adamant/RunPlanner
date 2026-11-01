@@ -18,7 +18,7 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { RewardControlEditor } from '@planner/ui/editor/rewards/RewardControlEditor';
 import { CandidatePicker } from '../CandidatePicker';
 import { DoorRow, DoorRowsHeader, RewardPoolLine } from '../DecisionWorkbench';
-import { RowReward } from '../DoorRewardEditor';
+import { RerolledRewardRepairs, RowReward } from '../DoorRewardEditor';
 import { RoomRerolls } from '../RoomRerolls';
 import { hintProps } from '@planner/ui/controls/hint';
 
@@ -159,6 +159,7 @@ export function RewardWheelWorkbench({
                     </span>
                   }
                   room={null}
+                  secondary={<RerolledRewardRepairs rewards={[offer]} target={offer.label} />}
                   {...(choosesOffer
                     ? {
                         selection: (

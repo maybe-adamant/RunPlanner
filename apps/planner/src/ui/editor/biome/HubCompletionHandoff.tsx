@@ -15,6 +15,7 @@ export function HubCompletionHandoff({ node }: { readonly node: WorkspaceHubDeci
           gameName={target.gameName}
           hostId={target.marker.focusKey}
           label={target.label}
+          roomIcon={target.roomIcon}
         />
       </div>
       <div className="workbench-action-row">

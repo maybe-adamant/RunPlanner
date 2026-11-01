@@ -68,7 +68,10 @@ describe('hidden return door', () => {
     const projected = projectStructuredWorkspaceFixture(loadSurfaceNOPQProject());
     const { control, interaction } = hiddenDoor(projected, combat05);
     expect(control.pinned).toBe(false);
-    expect(control.room).toEqual({ summary: 'Preboss' });
+    expect(control.room).toEqual({
+      icon: { kind: 'shop' },
+      summary: 'Preboss',
+    });
     expect(control.reward).toEqual({ summary: 'No reward', locked: 'noDraw' });
     expect(
       projected.workspace.focusByOwner.get(semanticAddressKey(exitOf(combat05))),
@@ -119,7 +122,10 @@ describe('hidden return door', () => {
 
     const roomPinned = hiddenDoor(projectStructuredWorkspaceFixture(project), combat05);
     expect(roomPinned.control.pinned).toBe(true);
-    expect(roomPinned.control.room).toEqual({ summary: 'Combat 13' });
+    expect(roomPinned.control.room).toEqual({
+      icon: { biomeKey: 'N', kind: 'combat' },
+      summary: 'Combat 13',
+    });
     expect(roomPinned.control.reward.locked).toBeUndefined();
     const rewards = (await roomPinned.interaction.rewards.load()).sections.flatMap(
       (section) => section.items,
@@ -137,7 +143,7 @@ describe('hidden return door', () => {
     );
 
     const bothPinned = hiddenDoor(projectStructuredWorkspaceFixture(project), combat05);
-    expect(bothPinned.control.reward).toEqual({ summary: 'Boon' });
+    expect(bothPinned.control.reward).toEqual({ summary: 'Boon', rewardType: 'Boon' });
     // A room whose store offers the pinned reward keeps it; reset clears both.
     expect(bothPinned.interaction.roomIntent('N_Combat01').command.value).toEqual({
       placeholderRoomGameName: 'N_Combat01',

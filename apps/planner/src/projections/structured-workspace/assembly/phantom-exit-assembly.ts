@@ -16,6 +16,7 @@ import type { WorkspacePhantomExitControl } from '../contracts/structure';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import { requireWorkspaceRoom } from './catalog-room';
+import { candidateRoomIcon } from '../presentation/room-icon';
 
 export interface WorkspacePhantomExitAssembly {
   readonly control: WorkspacePhantomExitControl;
@@ -52,6 +53,12 @@ export function assemblePhantomExit(input: {
   const address = createPhantomExitAddress(input.biome, input.occurrence.occurrenceId);
   const roomLabel = (gameName: string) =>
     routeRoomDeclaration(requireWorkspaceRoom(catalog, gameName), input.biome.routeKey).label;
+  const roomIcon = (gameName: string) =>
+    candidateRoomIcon(
+      catalog,
+      input.biome.biomeKey,
+      routeRoomDeclaration(requireWorkspaceRoom(catalog, gameName), input.biome.routeKey),
+    );
   const settled = input.settlement(address);
   const pinnedRoom = value.placeholderRoomGameName;
   const draws =
@@ -87,10 +94,12 @@ export function assemblePhantomExit(input: {
     pinned: pinnedRoom !== null || value.rewardType !== null,
     room: Object.freeze({
       summary: effectiveRoom === undefined ? 'Automatic' : roomLabel(effectiveRoom),
+      ...(effectiveRoom === undefined ? {} : { icon: roomIcon(effectiveRoom) }),
       ...(settled === undefined ? { locked: 'unreached' as const } : {}),
     }),
     reward: Object.freeze({
       summary: rewardSummary,
+      ...(effectiveReward === undefined ? {} : { rewardType: effectiveReward }),
       ...(rewardLocked === undefined ? {} : { locked: rewardLocked }),
     }),
   });

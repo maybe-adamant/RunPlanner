@@ -82,7 +82,7 @@ describe('RoomRerolls', () => {
     await waitFor(() => expect(presses(view.application)).toHaveLength(1));
     expect(rerolls().getByRole('img', { name: '2 rerolls left' })).toBeTruthy();
     expect(rerolls().getByRole('button', { name: 'Reroll 1 reward' })).toBeTruthy();
-    expect(screen.getAllByText('Rerolled to', { exact: false })).toHaveLength(1);
+    expect(screen.getAllByRole('img', { name: /^Rerolled into / })).toHaveLength(1);
 
     await appendPress(view, /^Door 1$/);
     await waitFor(() => expect(presses(view.application)).toHaveLength(2));

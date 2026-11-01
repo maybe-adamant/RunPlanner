@@ -36,6 +36,7 @@ import type {
   WorkspacePickerCandidateInteraction,
   WorkspaceInteractionCatalog,
   WorkspaceInteractionChoice,
+  WorkspaceRoomChoice,
   WorkspaceProjectionSource,
   WorkspaceRoomSummary,
   WorkspaceStatus,
@@ -49,7 +50,7 @@ import type { WorkspaceRunStateLauncher } from './run-state';
 import type { WorkspaceFountainRarityControl } from './timeline';
 
 export interface WorkspaceAnomalyControl {
-  readonly mapChoices: readonly WorkspaceInteractionChoice<string>[];
+  readonly mapChoices: readonly WorkspaceRoomChoice[];
   readonly rememberedRoomLabel: string;
   readonly success: boolean;
 }
@@ -451,6 +452,7 @@ export interface WorkspaceHubDecisionNode {
       readonly gameName: string;
       readonly label: string;
       readonly marker: WorkspaceMarker;
+      readonly roomIcon: WorkspaceRoomIcon;
     };
   };
   readonly slots: readonly WorkspaceHubSlot[];
@@ -536,10 +538,14 @@ export interface WorkspacePhantomExitControl {
   readonly pinned: boolean;
   readonly room: {
     readonly summary: string;
+    /** The effective room's icon; absent while the room is automatic and unsettled. */
+    readonly icon?: WorkspaceRoomIcon;
     readonly locked?: 'unreached';
   };
   readonly reward: {
     readonly summary: string;
+    /** The effective reward's type; absent while no reward is settled or chosen. */
+    readonly rewardType?: string;
     /** `autoRoom`: the room is unpinned; `noDraw`: the room draws no reward. */
     readonly locked?: 'unreached' | 'autoRoom' | 'noDraw';
   };
@@ -549,7 +555,11 @@ export interface WorkspacePhantomExitControl {
 export interface WorkspacePhantomExitInteraction {
   readonly key: string;
   readonly owner: PhantomExitAddress;
-  readonly rooms: { readonly load: () => ContextualPickerModel<string> };
+  readonly rooms: {
+    readonly load: () => ContextualPickerModel<string>;
+    /** The icon of an offered placeholder room, by game name. */
+    readonly roomIcon: (gameName: string) => WorkspaceRoomIcon;
+  };
   readonly rewards: { readonly load: () => Promise<ContextualPickerModel<string>> };
   readonly roomIntent: (
     placeholderRoomGameName: string,
@@ -591,7 +601,12 @@ export type WorkspaceOccurrenceStageOutgoing =
       /** Engine-declared fixed completion continuation, rendered as a fixed exit. */
       readonly kind: 'fixedRoom';
       readonly destination:
-        | { readonly kind: 'room'; readonly label: string; readonly gameName?: string }
+        | {
+            readonly kind: 'room';
+            readonly label: string;
+            readonly gameName?: string;
+            readonly roomIcon?: WorkspaceRoomIcon;
+          }
         | { readonly kind: 'biome'; readonly label: string }
         | { readonly kind: 'complete'; readonly message: string };
       readonly marker: WorkspaceMarker;
@@ -649,8 +664,8 @@ export interface WorkspaceRailReward {
  * useful independently of whether its reward surface can be represented as
  * one unambiguous compact reward.
  */
-/** What a rail room line's leading icon depicts, from the room's catalog declaration. */
-export type WorkspaceRailRoomIcon =
+/** What a room's icon depicts, on the rail and in room pickers, from its catalog declaration. */
+export type WorkspaceRoomIcon =
   | {
       readonly kind: 'combat' | 'empty' | 'fountain' | 'boss';
       readonly biomeKey: string;
@@ -660,7 +675,7 @@ export type WorkspaceRailRoomIcon =
   | { readonly kind: 'story'; readonly npcKey?: string };
 
 export interface WorkspaceRailSelectedTarget {
-  readonly roomIcon: WorkspaceRailRoomIcon;
+  readonly roomIcon: WorkspaceRoomIcon;
   /** The additional exit taken, such as a Chaos gate; absent for a physical door. */
   readonly exitTypeKey?: string;
   /** Goals remaining shown on the selected Clockwork Goal door. */

@@ -39,6 +39,7 @@ import {
   appendUniqueWorkspaceNodes,
 } from './assembly-products';
 import { requireWorkspaceRoom } from './catalog-room';
+import { candidateRoomIcon } from '../presentation/room-icon';
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceAssessment,
@@ -738,7 +739,7 @@ export function assembleWorkspaceBiomeSemantics(
   }
   attachHubRoomPresentation(nodes);
   if (frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision') {
-    markerDestinations.setHubTab([frontier.marker], 'exit');
+    markerDestinations.setHubTab([frontier.marker], 'doors');
   }
   const frontierSeed = enrichFrontierPredecessor(frontier, Object.freeze([...nodes]));
   let resolvedFrontier: WorkspaceAuthoringFrontier | null;
@@ -885,16 +886,22 @@ export function assembleWorkspaceBiomeSemantics(
               const target = plan.topology?.occurrences.find(
                 (candidate) => candidate.occurrenceId === targetStatus.occurrenceId,
               );
+              const declaration =
+                target === undefined
+                  ? undefined
+                  : routeRoomDeclaration(
+                      requireWorkspaceRoom(catalog, target.gameName),
+                      biome.routeKey,
+                    );
               return Object.freeze({
                 kind: 'room' as const,
-                label:
-                  target === undefined
-                    ? 'Fixed room'
-                    : routeRoomDeclaration(
-                        requireWorkspaceRoom(catalog, target.gameName),
-                        biome.routeKey,
-                      ).label,
-                ...(target === undefined ? {} : { gameName: target.gameName }),
+                label: declaration?.label ?? 'Fixed room',
+                ...(target === undefined || declaration === undefined
+                  ? {}
+                  : {
+                      gameName: target.gameName,
+                      roomIcon: candidateRoomIcon(catalog, biome.biomeKey, declaration),
+                    }),
               });
             }
             case 'nextBiomeIntro':

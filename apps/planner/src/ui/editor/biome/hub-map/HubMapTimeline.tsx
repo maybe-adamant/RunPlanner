@@ -417,15 +417,13 @@ export function HubMapTimeline({
           </div>
         }
         title="Ephyra Hub timeline"
+        viewportLegend={<HubMapQualityLegend />}
         viewportOverlay={
           <>
             {requirement}
-            <div className="hub-map-corner-actions">
-              <div className="hub-map-board-actions">
-                {resetVisitsControl}
-                {detailsControl}
-              </div>
-              <HubMapQualityLegend />
+            <div className="hub-map-board-actions">
+              {resetVisitsControl}
+              {detailsControl}
             </div>
           </>
         }

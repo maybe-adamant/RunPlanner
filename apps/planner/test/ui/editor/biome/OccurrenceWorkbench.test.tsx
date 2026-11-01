@@ -637,7 +637,12 @@ describe('OccurrenceWorkbench', () => {
     openRoomTab('Side Rooms');
     const visited = () => screen.getByRole('list', { name: 'Visited side rooms' });
     const labels = () =>
-      [...visited().querySelectorAll('li')].map((row) => row.querySelector('strong')?.textContent);
+      [...visited().querySelectorAll('li')].map((row) =>
+        within(row)
+          .getByRole('button', { name: /^Reorder / })
+          .getAttribute('aria-label')
+          ?.replace(/^Reorder /, ''),
+      );
     const rowFor = (list: HTMLElement, label: string) => {
       const row = [...list.querySelectorAll('li')].find((candidate) =>
         within(candidate).queryByText(label),

@@ -196,7 +196,11 @@ remains the navigation to room details.
 
 One image viewer serves inspection dialogs and inline references. Fields Room
 Layout and Ephyra Side Rooms keep controls beside a larger reference;
-individual main/side-room dialogs remain independent of the Hub editor. Side
+individual main/side-room dialogs remain independent of the Hub editor. A
+map's controls, status chips and legend are overlays pinned to its frame at
+one inset from its edges in every corner: zoom and status at the top left,
+actions at the top right, the legend at the bottom right. The Hub and Side
+Rooms maps fill their frames, so the overlays sit on the image. Side
 Rooms uses an illustrative parent map with declared local slot status;
 generation and traversal are edited in the controls. Images support zoom and
 pan, and Close/Escape returns focus to the invoking control when it still
@@ -334,8 +338,13 @@ shows only its presence and initial stock, whose slots are always editable and
 optional; using it starts on the Timeline. Ephyra parents with declared
 side-room groups add a dedicated Side Rooms workbench beside Room Doors: its
 doors table has a row per side-room door (generation, visit, generation
-priority, room, reward and map), then the visit order, then the illustrative
-parent map.
+priority, room by its short number such as SR 10, reward and map) with the
+visit order under it, and the
+illustrative parent map. Where the panel is wide the table, at a narrowed
+working width, and the visit order form a column beside the map; where it is
+narrow the map comes first, then the table, then the visit order. The visit
+order is light timeline rows, each its reorder handle, its visit number and
+its room.
 Every Overview renders its sections in one order, showing only those the room
 has: Encounters, room contents (Shop inventory, Fields optional rewards),
 Additional Exits, Objects, Resources, NPCs. Its rows share one column grid of
@@ -425,8 +434,12 @@ the die, its target and its new reward with Remove; one add control on the die
 asks for the target and then its reward, appending the press at the end. A
 removal keeps the later rows it invalidates, with their findings. The same
 presses appear as Timeline rows, where their reorder handle is the only way to
-change their position among other post-unlock actions. A rerolled target reads
-first draw → final on its door row, and the next room's header and the rail
+change their position among other post-unlock actions. A rerolled target's door
+row keeps its first draw on one line, followed by the final reward as its icon
+alone, badged with the reroll die and named and hinted as rerolled into that
+reward, with any kept-reward repair as a die button in the row's action
+zone; the
+timeline, Hub and reroll rows keep the full first draw → final reading. The next room's header and the rail
 show the final reward. Reroll findings route to the list row, except an
 out-of-order press, which routes to its Timeline row. A room whose
 continuation the Hub or a side-room visit decides states where it returns as
@@ -539,8 +552,8 @@ control nor the Resources index displays the occurrence ID as its room label.
 A wheel tab reads like Room Doors, without repeating the tab's name: the
 wheel's pool line (its pool picker, with no arrow, since a wheel has no
 separate counted store) beside its offer count, then its active offers as rows
-of the door table: selection, offer, and reward, with a rerolled offer reading
-first draw → final on its row. One offer needs no false choice control. They
+of the door table: selection, offer, and reward, with a rerolled offer read
+like a rerolled door. One offer needs no false choice control. They
 remain rewards, not doors: no room selector, door number, map or topology
 interaction is introduced. Wheel 1 and Wheel 2 stay in their separate phase
 tabs, and the next room's doors show the last active wheel's pool as a plain
@@ -662,14 +675,21 @@ projected.
 ### Decision Offers and Picked State
 
 Selecting a decision shows all of its exits together as one table with a
-row per exit: its selection, its door number or exit art, its room, its
-reward, its map and its secondary action (an Anomaly replacement or
-restoration). Normal doors, takeover doors and additional exits (Chaos Gate,
+row per exit: its selection, its door name (a door number, with any door
+type such as Indoor muted beneath it, or Contract or Chaos Gate), its room, its
+reward, an action zone, and its map, pinned last at the table's right edge.
+The zone holds the row's actions and notices (an Anomaly replacement or
+restoration, a reroll repair, a hidden reward's tag) without moving the reward
+or the map. Normal doors, takeover doors and additional exits (Chaos Gate,
 Infernal Contract) share these columns, and the table keeps a working width
 rather than stretching across the panel. Each row names its room once; a value
 the declaration fixes (a takeover room, an additional exit's room or reward,
 `No reward`, a fixed reward) is shown plain, and only authorable values are
-pickers. A door awaiting its room shows the room picker alone, or what it waits
+pickers. Every room, picked or fixed (a door's room, a Chaos Gate or Anomaly
+room, a hidden door's placeholder, a boss or other fixed destination, a side
+room), shows its kind icon, the one the rail shows; the projection supplies
+that kind. An additional exit's room shows its exit's door art instead. A door
+awaiting its room shows the room picker alone, or what it waits
 for, and reserves no reward slot. Because the selected room owns the complete
 reward surface of its door, a room with several reward owners (Fields cages)
 lists each in the reward cell. The door contract keeps game preview visibility
@@ -778,14 +798,15 @@ language, but its center is not an ordinary decision spine. The
 - Hub Overview for the complete fixed-slot set, open/closed membership, and
   each open room's reward editor; Hub Timeline for the exact authored action
   prefix (up to six room visits, one fountain use and board-door rerolls) on
-  the map or in its Details timeline; and Hub Exit's fixed Preboss door for the Hub's
-  completed-Hub exit;
+  the map or in its Details timeline; and Hub Doors' fixed Preboss door for the
+  Hub's completed-Hub exit. The tabs read Overview, Timeline and Doors, so the
+  leaving tab has the same name in every room;
 - side-room generation and entry state under visited parents;
 - derived Hub returns and parent restores;
 - the fixed completed-Hub exit to the width-one Preboss Shop and its derived
   completion sequence, authored with the Hub.
 
-Hub Exit shows the Preboss as Door 1 with the shared `Open next room`
+Hub Doors shows the Preboss as Door 1 with the shared `Open next room`
 continuation; it has no create or remove action. While the Hub is incomplete
 the chain is unreached: the continuation is disabled with a hint and the
 Preboss rooms follow the unreached-context policy.
@@ -798,7 +819,7 @@ parent-owned side generation, side reward identity, and side entry order open
 the parent main occurrence Side Rooms workbench;
 entered side occurrences and their acquisition
 children open the side occurrence Timeline; the completed-Hub exit opens
-Exit; Hub fountain placement opens Hub Timeline; and its Phial
+Doors; Hub fountain placement opens Hub Timeline; and its Phial
 outcome and board-door rerolls open the Hub Timeline's Details. React consumes that explicit destination and
 does not infer tab ownership from semantic-address shapes or rendered ancestry.
 

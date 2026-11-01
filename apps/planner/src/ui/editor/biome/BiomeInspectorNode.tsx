@@ -132,6 +132,7 @@ function OccurrenceOutgoing({
                 gameName={destination.kind === 'room' ? destination.gameName : undefined}
                 hostId={outgoing.marker.focusKey}
                 label={destination.label}
+                roomIcon={destination.kind === 'room' ? destination.roomIcon : undefined}
               />
             </div>
           </div>

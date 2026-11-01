@@ -22,6 +22,8 @@ import { createTakeoverBatchCommand } from '@planner/workspace/takeoverBatchInte
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 import { requireWorkspaceRoom } from '../assembly/catalog-room';
+import type { WorkspaceRoomIcon } from '../contracts/structure';
+import { candidateRoomIcon } from '../presentation/room-icon';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceRoomInteraction, WorkspaceRoomPickerControl } from '../contract';
 import type {
@@ -265,6 +267,8 @@ export function bindTopologyInteractions(input: {
   } = input;
   const rooms = new Map<string, WorkspaceRoomInteraction>();
   for (const [key, control] of roomControls) {
+    const roomIcon = (room: RoomDeclaration): WorkspaceRoomIcon =>
+      candidateRoomIcon(catalog, control.address.biomeKey, room);
     if (control.kind === 'startRoomPicker') {
       const candidateRooms = Object.freeze(
         control.candidateGameNames.map((gameName) =>
@@ -301,6 +305,7 @@ export function bindTopologyInteractions(input: {
             return model;
           },
           owner: control.address,
+          roomIcon,
           selected: routeRoomDeclaration(
             requireWorkspaceRoom(catalog, control.selectedGameName),
             control.address.routeKey,
@@ -531,6 +536,7 @@ export function bindTopologyInteractions(input: {
             return model;
           },
           owner: control.address,
+          roomIcon,
         }),
       );
       continue;
@@ -596,6 +602,7 @@ export function bindTopologyInteractions(input: {
           return model;
         },
         owner: control.address,
+        roomIcon,
         ...(selectedGameName === undefined
           ? {}
           : {

@@ -6,7 +6,6 @@ import {
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 
 import { StructuredWorkspaceProjectionContractError, type WorkspaceRoomSummary } from '../contract';
-import { requireWorkspaceRoom } from '../assembly/catalog-room';
 import type { WorkspaceRewardControl } from '../contracts/rewards';
 import { bindWorkspaceInspectorDestinations } from '../navigation/inspector-destinations';
 import { defaultInspectorDestination } from '../navigation/inspector-defaults';
@@ -25,7 +24,6 @@ import type {
   WorkspaceOrdinaryBatchNode,
   WorkspaceRailEntry,
   WorkspaceRailReward,
-  WorkspaceRailRoomIcon,
   WorkspaceRailSelectedTarget,
   WorkspaceSelectedContinuationNavigation,
   WorkspaceTakeoverBatchNode,
@@ -246,49 +244,6 @@ function withSelectedContinuationNavigation(node: WorkspaceNode): WorkspaceNode 
   });
 }
 
-/** Classifies a room by its declaration: enemies, no enemies, or its own object or NPC. */
-function railRoomIcon(catalog: Catalog, room: WorkspaceRoomSummary): WorkspaceRailRoomIcon {
-  const declaration = requireWorkspaceRoom(catalog, room.gameName);
-  const biomeKey = room.address.biomeKey;
-  const encounter = room.encounterPhases[0]?.selectedEncounter;
-  if (room.roomLocal.kind === 'shop') return Object.freeze({ kind: 'shop' as const });
-  if (declaration.mode.kind === 'authored') {
-    if (declaration.mode.templateKey === 'Chaos') return Object.freeze({ kind: 'chaos' as const });
-    if (declaration.mode.templateKey === 'ContractBoss')
-      return Object.freeze({ kind: 'contract' as const });
-  }
-  switch (declaration.kind) {
-    case 'Shop':
-      return Object.freeze({ kind: 'shop' as const });
-    case 'Reprieve':
-      return Object.freeze({ kind: 'fountain' as const, biomeKey });
-    case 'Boss':
-      return Object.freeze({ kind: 'boss' as const, biomeKey });
-    case 'Miniboss':
-      return Object.freeze({
-        kind: 'miniboss' as const,
-        ...(encounter === undefined
-          ? {}
-          : { encounterDefinitionKey: encounter.nativeEncounterDefinitionKey ?? encounter.key }),
-      });
-    case 'Story':
-      return Object.freeze({
-        kind: 'story' as const,
-        ...(encounter?.npcKey === undefined ? {} : { npcKey: encounter.npcKey }),
-      });
-    case 'Combat':
-    case 'Opening':
-    case 'Devotion':
-      return Object.freeze({ kind: 'combat' as const, biomeKey });
-    case 'Intro':
-    case 'PreHub':
-    case 'Hub':
-    case 'Preboss':
-    case 'PostBoss':
-      return Object.freeze({ kind: 'empty' as const, biomeKey });
-  }
-}
-
 /**
  * One rail room line for every room reached through a door, whether a
  * decision's selected target or a Hub visit: the room's own icon and label,
@@ -319,7 +274,7 @@ function roomRailPresentation(
         return offer === null ? [] : [offer];
       }),
     ),
-    roomIcon: railRoomIcon(catalog, room),
+    roomIcon: room.roomIcon,
     roomLabel: room.label,
     ...(room.roomLocal.kind === 'shop' ? { shop: true as const } : {}),
   });

@@ -110,7 +110,11 @@ import {
   type SemanticAddress,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
-import type { WorkspaceDoorNote, WorkspaceEffectiveRewardPool } from './contracts/structure';
+import type {
+  WorkspaceDoorNote,
+  WorkspaceEffectiveRewardPool,
+  WorkspaceRoomIcon,
+} from './contracts/structure';
 import type { RoomDeclaration, TraitRarity } from '@run-planner/engine/catalog-schema';
 import type {
   CandidateOptionProjection,
@@ -252,6 +256,11 @@ export interface WorkspaceInteractionChoice<T> {
   readonly value: T;
 }
 
+/** A room offered by game name, with the icon the rail shows for it. */
+export interface WorkspaceRoomChoice extends WorkspaceInteractionChoice<string> {
+  readonly roomIcon: WorkspaceRoomIcon;
+}
+
 export interface WorkspaceCandidateInteraction<T> {
   readonly choices: readonly WorkspaceInteractionChoice<T>[];
   readonly key: string;
@@ -289,6 +298,8 @@ interface WorkspaceRoomInteractionBase {
   readonly key: string;
   readonly owner: TargetAddress | OccurrenceAddress;
   readonly load: () => ContextualPickerModel<RoomDeclaration>;
+  /** The icon of a room this picker offers or holds, as the rail shows it. */
+  readonly roomIcon: (room: RoomDeclaration) => WorkspaceRoomIcon;
   readonly selected?: RoomDeclaration;
 }
 
@@ -611,6 +622,8 @@ export interface WorkspaceRoomSummary {
   readonly marker: WorkspaceMarker;
   readonly occurrenceId: OccurrenceId;
   readonly roomLocal: WorkspaceRoomLocal;
+  /** The room's kind icon, as the rail and room pickers show it. */
+  readonly roomIcon: WorkspaceRoomIcon;
   readonly workbench: WorkspaceRoomWorkbenchPresentation;
   /** Closed tab placement for engine-owned lifecycle snapshots. */
   readonly runStateByTab: Readonly<Partial<Record<WorkspaceRoomTab, WorkspaceRunStateLauncher>>>;

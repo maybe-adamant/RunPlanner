@@ -4,6 +4,7 @@ import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { useFindingMark } from '@planner/ui/feedback/useFindingTarget';
+import { roomChoiceIcon } from '../roomIcon';
 
 /**
  * The workspace has already established this is an authored Anomaly and has
@@ -31,6 +32,8 @@ export function AnomalyRoomControl({
         room.gameName,
       )}
       id={`anomaly-map-${room.occurrenceId}`}
+      itemIcon={(item) => roomChoiceIcon(anomaly.mapChoices, item.value)}
+      triggerIcon={roomChoiceIcon(anomaly.mapChoices, room.gameName)}
       onSelect={(gameName) =>
         dispatch(
           authoredProjectCommandDispatched({
@@ -96,7 +99,7 @@ export function RevertAnomalyAction({
       }
       type="button"
     >
-      Restore {anomaly.rememberedRoomLabel}
+      Restore
     </button>
   );
 }

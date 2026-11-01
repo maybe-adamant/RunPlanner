@@ -22,7 +22,7 @@ export type WorkspaceRoomTab =
   | 'shipInactiveRepair';
 
 /** Transient destination for one presentation surface of the persistent Hub board. */
-export type WorkspaceHubTab = 'overview' | 'timeline' | 'exit';
+export type WorkspaceHubTab = 'overview' | 'timeline' | 'doors';
 
 export interface WorkspaceMarker {
   readonly address: SemanticAddress;

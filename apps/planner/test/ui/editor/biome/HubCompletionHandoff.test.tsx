@@ -10,7 +10,7 @@ import { renderStaticHubDecisionWorkbench } from '@planner-test/support/biome-wo
 describe('HubCompletionHandoff', () => {
   it('holds the shared continuation while the Hub is incomplete', () => {
     renderStaticHubDecisionWorkbench(twoVisitHubProject());
-    selectHubTab('Hub Exit');
+    selectHubTab('Hub Doors');
 
     const door = screen.getByRole('article', { name: 'Preboss room offer' });
     expect(door.dataset.available).toBe('false');
@@ -20,7 +20,7 @@ describe('HubCompletionHandoff', () => {
 
   it('opens the shared continuation once the Hub is complete', () => {
     renderStaticHubDecisionWorkbench(loadSurfaceNProject());
-    selectHubTab('Hub Exit');
+    selectHubTab('Hub Doors');
 
     const door = screen.getByRole('article', { name: 'Preboss room offer' });
     expect(door.dataset.available).toBe('true');

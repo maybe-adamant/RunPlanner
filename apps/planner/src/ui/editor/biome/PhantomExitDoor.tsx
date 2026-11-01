@@ -6,6 +6,7 @@ import {
   type WorkspacePhantomExitControl,
 } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { FixedValueChip } from '@planner/ui/controls/FixedValueChip';
 import { hintProps } from '@planner/ui/controls/hint';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -14,6 +15,7 @@ import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation
 import { useFindingMark, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { DoorRow, NoteMarked } from './DecisionWorkbench';
 import type { DoorNoteMark } from './doorNotes';
+import { roomKindIcon } from './roomIcon';
 
 const emptyModel: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
@@ -54,6 +56,8 @@ export function PhantomExitDoor({
   const roomId = `${idPrefix}-hidden-door-room`;
   const rewardId = `${idPrefix}-hidden-door-reward`;
   const rewardLocked = control.reward.locked;
+  const rewardTypeIcon =
+    control.reward.rewardType === undefined ? undefined : rewardIcon(control.reward.rewardType);
   return (
     <DoorRow
       ariaLabel="Hidden return door"
@@ -75,6 +79,7 @@ export function PhantomExitDoor({
               (finding) => !rewardFinding(finding),
             )}
             id={roomId}
+            itemIcon={(item) => roomKindIcon(interaction.rooms.roomIcon(item.value))}
             label=""
             layout="inline"
             {...(control.room.locked === 'unreached' ? { disabledHint: candidateWaitingHint } : {})}
@@ -85,10 +90,16 @@ export function PhantomExitDoor({
             }}
             onSelect={(value) => executeIntent(interaction.roomIntent(value))}
             placeholder={control.room.summary}
+            triggerIcon={
+              control.room.icon === undefined ? undefined : roomKindIcon(control.room.icon)
+            }
             triggerLabel={control.room.summary}
           />
         ) : (
-          <FixedValueChip label={control.room.summary} />
+          <FixedValueChip
+            icon={control.room.icon === undefined ? undefined : roomKindIcon(control.room.icon)}
+            label={control.room.summary}
+          />
         )
       }
       reward={
@@ -113,10 +124,11 @@ export function PhantomExitDoor({
             }}
             onSelect={(value) => executeIntent(interaction.rewardIntent(value))}
             placeholder={control.reward.summary}
+            triggerIcon={rewardTypeIcon}
             triggerLabel={control.reward.summary}
           />
         ) : (
-          <FixedValueChip label={control.reward.summary} />
+          <FixedValueChip icon={rewardTypeIcon} label={control.reward.summary} />
         )
       }
       secondary={
