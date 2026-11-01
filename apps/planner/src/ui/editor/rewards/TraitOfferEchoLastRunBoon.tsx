@@ -9,7 +9,6 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 
-import { EditorDialogFeedback } from '@planner/ui/controls/EditorDialog';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
 import {
   echoLastRunOptionControl,
@@ -241,8 +240,7 @@ function EchoLastRunBoonChoiceEditor({
     selectedKind === undefined || carrier !== undefined
       ? undefined
       : 'Complete the other Echo rows before editing this outcome. Existing targets are retained.';
-  // The nested form is the visible dialog body, so it owns its own fixed feedback region.
-  // At rest the region matches the choice launcher; an edited draft shows its own messages.
+  // At rest the header matches the choice launcher; an edited draft shows its own messages.
   const atRest = draftValueIdentity({ rows, selectedIndex }) === draftValueIdentity(initialDraft);
   const feedbackEntries: readonly FeedbackEntry[] =
     atRest && routeEntries !== undefined
@@ -258,7 +256,6 @@ function EchoLastRunBoonChoiceEditor({
       className="echo-last-run-choice trait-choice-region"
       aria-label="Boon Boon Boon choice"
     >
-      <h3>Boon Boon Boon choice</h3>
       <TraitOfferForm
         options={rows.map((row, index) => {
           const traitPicker = domain.traitPickerFor(
@@ -323,7 +320,6 @@ function EchoLastRunBoonChoiceEditor({
               {...(row.rarity === undefined ? {} : { rarityValue: row.rarity })}
               {...(effectiveRarity === undefined ? {} : { effectiveRarity })}
               {...(effectiveLevel === undefined ? {} : { effectiveLevel })}
-              showEffectiveValues
               selected={selectedIndex === index}
               selectedDisabled={false}
               selectedName={`${controlId}-selected`}
@@ -333,7 +329,11 @@ function EchoLastRunBoonChoiceEditor({
           );
         })}
         selectedOutcome={selectedPayload}
-        feedback={<EditorDialogFeedback entries={feedbackEntries} name="Choice feedback" />}
+        issues={
+          feedbackEntries.length > 0 || (draftSupport.complete && carrierComplete)
+            ? feedbackEntries
+            : [['incomplete', 'Finish the choice']]
+        }
         shapeActions={
           <TraitOfferShapeActions
             {...(nextDraft === undefined ? {} : { onAdd: () => applySize(nextDraft) })}

@@ -19,7 +19,7 @@ export function SelectedOutcomeBlock({
     <section aria-label={name} className="trait-selected-outcome">
       <h3 className="artwork-label">
         <ArtworkIcon className="artwork-label-icon" source={icon} />
-        Selected outcome · {traitLabel}
+        {traitLabel}
       </h3>
       {children}
     </section>

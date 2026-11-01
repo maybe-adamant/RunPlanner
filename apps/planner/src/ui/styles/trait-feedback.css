@@ -255,6 +255,12 @@
   min-height: 36px;
 }
 
+/* A column, so rows keep their height and Selected sits at the card's foot. */
+.trait-offer-ordinary-option {
+  display: flex;
+  flex-direction: column;
+}
+
 .trait-offer-ordinary-option > .trait-option-selected {
   align-items: center;
   display: flex;
@@ -275,6 +281,12 @@
 .trait-selected-outcome h3,
 .trait-selected-outcome p {
   margin: 0;
+}
+
+/* The outcome heading reads at the option legends' scale. */
+.trait-selected-outcome h3 {
+  font-size: 1em;
+  font-weight: 600;
 }
 
 .trait-outcome-draft {
@@ -570,17 +582,9 @@ button.hex-tree-node[data-has-findings='true'] {
   min-width: 0;
 }
 
-.trait-offer-fixed-rarity > strong {
-  align-items: center;
-  background: #202128;
-  border: 1px solid #42434d;
-  border-radius: 8px;
-  color: #f2ede5;
+.trait-offer-fixed-rarity-value {
   display: flex;
-  font-size: 0.9rem;
-  font-weight: 400;
-  min-height: 36px;
-  padding: 6px 9px;
+  min-width: 0;
 }
 
 .trait-offer-shape-actions {
@@ -847,4 +851,206 @@ button.hex-tree-node[data-has-findings='true'] {
   display: grid;
   gap: 0.75rem;
   min-width: 0;
+}
+
+/* Option rows read label-left: every row shares one narrow label column; Final labels wrap. */
+.trait-offer-option .field-control-inline {
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+}
+
+.trait-option-final-values {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.trait-option-final-values dd {
+  display: flex;
+  margin: 0;
+  min-width: 0;
+}
+
+/* Shape and recovery actions share one row; recovery sits at its right end. */
+.trait-offer-action-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.trait-offer-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+/* Start over is the way back to a workable offer, so it stands apart from shape edits. */
+.trait-offer-start-over.quiet-action {
+  border-color: color-mix(in srgb, var(--warning) 55%, transparent);
+  color: var(--warning);
+}
+
+.trait-offer-start-over.quiet-action:hover:not(:disabled) {
+  border-color: var(--warning);
+  color: #fffaf2;
+}
+
+.trait-option-rarity-line {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  /* The Rarify buttons' height, so a row without them keeps its height. */
+  min-height: 2.25rem;
+  min-width: 0;
+}
+
+.trait-option-rarity-line:empty {
+  display: none;
+}
+
+.trait-option-rarity-line > .field-control {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.trait-option-rarify {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  height: 2.25rem;
+  justify-content: center;
+  padding: 0;
+  position: relative;
+  width: 2.25rem;
+}
+
+.trait-option-rarify img {
+  height: 1.75rem;
+  object-fit: contain;
+  width: 1.75rem;
+}
+
+.trait-option-rarify:hover:not(:disabled) {
+  border-color: var(--selection-accent);
+}
+
+.trait-option-rarify:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.trait-option-rarify-charges {
+  background: #202128;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  bottom: -0.35rem;
+  color: var(--text);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+  min-width: 1rem;
+  padding: 2px 4px;
+  position: absolute;
+  right: -0.35rem;
+}
+
+.trait-option-rarify-arrow {
+  font-size: 0.6rem;
+  left: -0.3rem;
+  line-height: 1;
+  position: absolute;
+  top: -0.3rem;
+}
+
+.trait-option-rarify-arrow[data-direction='up'] {
+  color: #7fd39a;
+}
+
+.trait-option-rarify-arrow[data-direction='down'] {
+  color: var(--finding);
+}
+
+/* The roll is an icon button whose chosen roll is its badge. */
+.trait-option-roll .contextual-picker-trigger {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  height: 2.25rem;
+  justify-content: center;
+  min-width: 0;
+  padding: 0;
+  position: relative;
+  width: 2.25rem;
+}
+
+.trait-option-roll .contextual-picker-trigger-value {
+  display: contents;
+}
+
+.trait-option-roll .contextual-picker-trigger-image {
+  height: 1.6rem;
+  width: 1.6rem;
+}
+
+.trait-option-roll .contextual-picker-trigger-value > :not(.contextual-picker-trigger-image) {
+  background: var(--selection-accent);
+  border-radius: 999px;
+  bottom: -0.3rem;
+  color: var(--surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  min-width: 1rem;
+  padding: 0.15rem 0.25rem;
+  position: absolute;
+  right: -0.3rem;
+  text-align: center;
+}
+
+/* The Level line: each level source as an icon with its levels as a badge. */
+.trait-option-level-sources {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  min-width: 0;
+}
+
+.trait-option-level-source {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: inline-flex;
+  height: 2.25rem;
+  justify-content: center;
+  position: relative;
+  width: 2.25rem;
+}
+
+.trait-option-level-source > img,
+.trait-option-level-source > .trait-option-level-image {
+  height: 1.6rem;
+  width: 1.6rem;
+}
+
+.trait-option-level-badge {
+  background: var(--selection-accent);
+  border-radius: 999px;
+  bottom: -0.3rem;
+  color: var(--surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  min-width: 1rem;
+  padding: 0.15rem 0.25rem;
+  position: absolute;
+  right: -0.3rem;
+  text-align: center;
 }

@@ -154,3 +154,131 @@
 .editor-dialog-footer-primary .primary-action {
   min-width: 7rem;
 }
+
+/* Header layout: icon, title and help, then the first finding, Cancel and Save on one bar. */
+.editor-dialog-header[data-layout='header'] {
+  align-items: center;
+  container-type: inline-size;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+
+.editor-dialog-header[data-layout='header'] .editor-dialog-title-line {
+  flex: 1 1 0;
+  justify-content: flex-start;
+  min-width: 3rem;
+}
+
+.editor-dialog-header[data-layout='header'] .editor-dialog-title-line > img,
+.editor-dialog-header[data-layout='header'] .editor-dialog-title-line > .artwork-label-icon {
+  flex: none;
+  height: 2rem;
+  object-fit: contain;
+  width: 2rem;
+}
+
+.editor-dialog-header[data-layout='header'] h2 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-dialog-header[data-layout='header'] .editor-dialog-title-action:empty {
+  display: none;
+}
+
+.editor-dialog-header-actions {
+  align-items: center;
+  display: flex;
+  flex: 0 1 auto;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.editor-dialog-header-actions > button {
+  flex: none;
+  white-space: nowrap;
+}
+
+.editor-dialog-header-actions .primary-action {
+  min-width: 6rem;
+}
+
+/* The finding slot keeps its width whether or not a finding shows. */
+.editor-dialog-finding-slot {
+  display: flex;
+  flex: 0 1 26rem;
+  justify-content: flex-end;
+  min-width: 2.75rem;
+}
+
+.assessment-issue-button.editor-dialog-finding {
+  align-items: center;
+  box-shadow: none;
+  display: flex;
+  gap: 0.45rem;
+  max-width: 100%;
+  min-width: 0;
+  padding: 4px 8px;
+  width: auto;
+}
+
+.editor-dialog-finding .finding-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-dialog-finding-more {
+  color: var(--muted);
+  flex: none;
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.assessment-issue-button.editor-dialog-finding[data-tone='incomplete'] {
+  background: color-mix(in srgb, var(--attention) 8%, transparent);
+  border-color: color-mix(in srgb, var(--attention) 40%, transparent);
+}
+
+.assessment-issue-button.editor-dialog-finding[data-tone='incomplete']:hover {
+  border-color: color-mix(in srgb, var(--attention) 70%, transparent);
+}
+
+@container (max-width: 34rem) {
+  .editor-dialog-finding-slot {
+    flex: none;
+  }
+
+  .editor-dialog-finding .finding-title {
+    display: none;
+  }
+}
+
+.editor-dialog-header[data-layout='header'] + .editor-dialog-body {
+  padding-bottom: 1rem;
+}
+
+.editor-dialog-secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Every dialog choice uses the app's selection accent and one label gap. */
+.editor-dialog input[type='radio'],
+.editor-dialog input[type='checkbox'] {
+  accent-color: var(--selection-accent);
+  margin: 0;
+}
+
+.editor-dialog label:has(> input[type='radio']),
+.editor-dialog label:has(> input[type='checkbox']) {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.4rem;
+}

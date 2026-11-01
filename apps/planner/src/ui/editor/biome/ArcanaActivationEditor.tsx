@@ -9,11 +9,7 @@ import {
   semanticFindingKey,
 } from '@planner/projections/evaluationProjection';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
-import {
-  EditorDialog,
-  EditorDialogDraftActions,
-  EditorDialogFeedback,
-} from '@planner/ui/controls/EditorDialog';
+import { EditorDialog, EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import {
@@ -90,28 +86,35 @@ export function ArcanaActivationEditor({
       : [];
   return (
     <EditorDialog
-      eyebrow="Arcana"
-      feedback={<EditorDialogFeedback name="Arcana feedback" entries={feedbackEntries} />}
-      footer={
-        <EditorDialogDraftActions
-          onCancel={onClose}
-          onSave={() => {
-            executeIntent(control.intentFor(draft));
-            onClose();
-          }}
-          saveDisabled={domain === undefined}
-          secondary={
-            <button className="quiet-action" onClick={() => setDraft([])} type="button">
-              Clear
-            </button>
-          }
-        />
-      }
+      layout="header"
       model={{ kind: 'draft', onCancel: onClose }}
       {...(returnFocusId === undefined ? {} : { returnFocusId })}
       size="cards"
       title={title}
     >
+      <EditorDialogDraftActions
+        issues={
+          feedbackEntries.length > 0 || draft.length >= requiredCount
+            ? feedbackEntries
+            : [['incomplete', `Choose ${requiredCount - draft.length} more`] as const]
+        }
+        onCancel={onClose}
+        onSave={() => {
+          executeIntent(control.intentFor(draft));
+          onClose();
+        }}
+        // An incomplete draw or a finding this draft introduced blocks Save; inherited findings do not.
+        saveDisabled={
+          domain === undefined ||
+          draft.length < requiredCount ||
+          (!atRest && feedbackEntries.length > 0)
+        }
+        secondary={
+          <button className="quiet-action" onClick={() => setDraft([])} type="button">
+            Clear
+          </button>
+        }
+      />
       <p className="route-loadout-summary">
         Choose {requiredCount} inactive Arcana cards in order.
       </p>

@@ -12,7 +12,7 @@ import type { WorkspaceTraitOfferInteraction } from '@planner/projections/struct
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { spellOfferSlotPresentation } from './spellOfferPresentation';
-import { TraitOfferOption } from './TraitOfferOption';
+import { TraitOfferOption, type TraitOfferRarifySource } from './TraitOfferOption';
 import { replaceTraitOfferOption } from './traitOfferOptions';
 
 const emptyTraitPicker: ContextualPickerModel<string> = Object.freeze({
@@ -27,9 +27,11 @@ export function TraitOfferOrdinaryOption({
   effectiveRarity,
   effectiveLevel,
   persephoneLevelRolls,
-  showEffectiveValues = false,
+  jeweledPomLevels,
+  replacedTraitKey,
   spellOffer = false,
   rarifySupported,
+  rarifySource,
   pickless = false,
   readOnly = false,
   headerAction,
@@ -45,9 +47,12 @@ export function TraitOfferOrdinaryOption({
   readonly effectiveRarity?: TraitRarity;
   readonly effectiveLevel?: number;
   readonly persephoneLevelRolls?: TraitOfferOptionFeedback['persephoneLevelRolls'];
-  readonly showEffectiveValues?: boolean;
+  readonly jeweledPomLevels?: number;
+  /** The trait this row replaces, whose level it carries. */
+  readonly replacedTraitKey?: string;
   readonly spellOffer?: boolean;
   readonly rarifySupported: boolean;
+  readonly rarifySource?: TraitOfferRarifySource;
   /** A screen rerolled away: its rows and Rarify clicks, with no pick or Persephone roll. */
   readonly pickless?: boolean;
   /** Shows the row's values without editing them. */
@@ -75,6 +80,8 @@ export function TraitOfferOrdinaryOption({
     interaction.giver.rarityPolicy.kind === 'selectable' &&
     interaction.rarityEditableFor(option.traitKey);
   const idPrefix = `${semanticAddressKey(interaction.owner)}-${optionKey}`;
+  // Rarify is the Calling Card's offer-menu action; only its declared menus take it.
+  const rarifiable = !spellOffer && interaction.giver.callingCardMenu;
   const spellSlot = spellOffer ? spellOfferSlotPresentation(interaction.giver, index) : undefined;
   const withSelectedHexDefault = (
     nextValue: AuthoredTraitOfferTraits,
@@ -132,7 +139,7 @@ export function TraitOfferOrdinaryOption({
         : {})}
       legend={optionKey.replace('option', spellOffer ? 'Spell ' : 'Option ')}
       loading={loaded.pending}
-      {...(spellOffer || (pickless && readOnly)
+      {...(!rarifiable || (pickless && readOnly)
         ? {}
         : {
             onRarify: () =>
@@ -145,6 +152,22 @@ export function TraitOfferOrdinaryOption({
                   ]),
                 }),
               ),
+            ...(!(value.rarificationActions ?? []).includes(optionKey)
+              ? {}
+              : {
+                  onUnrarify: () => {
+                    const actions = value.rarificationActions ?? [];
+                    const last = actions.lastIndexOf(optionKey);
+                    onUpdate(
+                      Object.freeze({
+                        ...value,
+                        rarificationActions: Object.freeze(
+                          actions.filter((_, index) => index !== last),
+                        ),
+                      }),
+                    );
+                  },
+                }),
           })}
       {...(!hasEditableRarity
         ? {}
@@ -167,14 +190,22 @@ export function TraitOfferOrdinaryOption({
       persephoneAriaLabel={`${optionKey} Persephone roll`}
       pickable={!pickless}
       readOnly={readOnly}
-      reserveRarify={!spellOffer}
+      reserveRarify={rarifiable}
+      {...(rarifySource === undefined ? {} : { rarifySource })}
       {...(headerAction === undefined ? {} : { headerAction })}
-      showEffectiveValues={showEffectiveValues}
       showPersephoneBonus={interaction.showPersephoneBonus}
       {...(option.persephoneLevelBonus === undefined
         ? {}
         : { persephoneLevelBonus: option.persephoneLevelBonus })}
       {...(persephoneLevelRolls === undefined ? {} : { persephoneLevelRolls })}
+      {...(jeweledPomLevels === undefined ? {} : { jeweledPomLevels })}
+      {...(replacedTraitKey === undefined
+        ? {}
+        : {
+            replacedTraitIcon: traitIcon(replacedTraitKey),
+            replacedTraitLabel: interaction.traitLabel(replacedTraitKey),
+          })}
+      levelLine={!spellOffer && interaction.giver.providerKind === 'olympian'}
       selected={value.selectedOptionKey === optionKey}
       selectedDisabled={rejected}
       selectedLabel={rejected ? 'Blocked by Rejected' : 'Selected'}

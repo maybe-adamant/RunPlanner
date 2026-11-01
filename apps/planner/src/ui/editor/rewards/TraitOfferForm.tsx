@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
-import { EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
-import { useGrowOnlyHeight } from './useGrowOnlyHeight';
+import {
+  EditorDialogDraftActions,
+  type EditorDialogIssue,
+} from '@planner/ui/controls/EditorDialog';
 
 /** Draft feedback from a sub-editor, keyed for the dialog's one fixed feedback region. */
 export type OutcomeFeedbackReporter = (key: string, message: string | undefined) => void;
@@ -86,7 +88,8 @@ export function TraitOfferShapeActions({
 export function TraitOfferForm({
   cancel,
   content,
-  feedback,
+  issues,
+  notes,
   options,
   recovery,
   reset,
@@ -99,7 +102,10 @@ export function TraitOfferForm({
   /** Discards the draft; absent outside a dialog. */
   readonly cancel?: () => void;
   readonly content?: ReactNode;
-  readonly feedback?: ReactNode;
+  /** The draft's findings for the dialog header; blocking while Save is disabled. */
+  readonly issues: readonly EditorDialogIssue[];
+  /** Display-only notes after the form, never findings. */
+  readonly notes?: ReactNode;
   readonly options: ReactNode;
   readonly recovery?: ReactNode;
   readonly reset?: ReactNode;
@@ -115,7 +121,18 @@ export function TraitOfferForm({
   readonly shapeActions?: ReactNode;
   readonly state?: ReactNode;
 }) {
-  const holdFeedback = useGrowOnlyHeight(screenTabs !== undefined);
+  const actionRow =
+    shapeActions === undefined && recovery === undefined && reset === undefined ? undefined : (
+      <div className="trait-offer-action-row">
+        {shapeActions}
+        {recovery === undefined && reset === undefined ? null : (
+          <div className="trait-offer-recovery-actions">
+            {recovery}
+            {reset}
+          </div>
+        )}
+      </div>
+    );
   return (
     <div className="trait-offer-editor">
       {(screenTabs ?? ((panel: ReactNode) => panel))(
@@ -124,37 +141,23 @@ export function TraitOfferForm({
             {state}
             <div className="trait-offer-options">{options}</div>
             {selectedOutcome}
-            {shapeActions}
+            {actionRow}
           </>
         ) : (
           <>
             {state}
             {content}
-            {shapeActions}
+            {actionRow}
           </>
         ),
       )}
-      {screenTabs === undefined ? (
-        feedback
-      ) : (
-        // Every screen's feedback keeps the tallest height any screen reached.
-        <div className="screen-reroll-feedback" ref={holdFeedback}>
-          {feedback}
-        </div>
-      )}
+      {notes}
       <EditorDialogDraftActions
+        issues={issues}
         {...(cancel === undefined ? {} : { onCancel: cancel })}
         onSave={save.onClick}
         saveDisabled={save.disabled}
         saveName={save.label}
-        secondary={
-          recovery === undefined && reset === undefined ? undefined : (
-            <>
-              {recovery}
-              {reset}
-            </>
-          )
-        }
       />
     </div>
   );

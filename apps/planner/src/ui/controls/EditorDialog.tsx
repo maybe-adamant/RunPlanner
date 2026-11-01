@@ -12,6 +12,7 @@ import { createPortal } from 'react-dom';
 import { draftEditorClosed, draftEditorOpened } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { ModalDialog, type ModalSurfaceProps } from './ModalDialog';
+import { showTruncatedTitle } from './truncatedTitle';
 
 /**
  * A draft editor saves once and Cancel discards; a live editor commits per
@@ -34,10 +35,17 @@ export function EditorDialogTitleAction({ children }: { readonly children: React
   return slot === null ? null : createPortal(children, slot);
 }
 
+/** The header bar's action slot; undefined outside a header-layout dialog. */
+const actionsSlot = createContext<HTMLElement | null | undefined>(undefined);
+
 const focusableControls =
   'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-/** The shared popup editor: header, scrolling body, findings region and the sticky footer that is its only visible exit. */
+/**
+ * The shared popup editor. The footer layout pins findings and actions under a
+ * scrolling body; the header layout carries the first finding, Cancel and Save
+ * on one sticky title bar.
+ */
 export function EditorDialog({
   anchorProps,
   children,
@@ -46,7 +54,9 @@ export function EditorDialog({
   footer,
   headerAction,
   headerBelow,
+  icon,
   initialFocusId,
+  layout = 'footer',
   model,
   returnFocusId,
   size = 'standard',
@@ -65,8 +75,11 @@ export function EditorDialog({
   readonly headerAction?: ReactNode;
   /** Controls pinned under the title, such as tabs. */
   readonly headerBelow?: ReactNode;
+  /** The portrait or icon before the title. */
+  readonly icon?: ReactNode;
   /** The exact repair control a navigation targets. */
   readonly initialFocusId?: string;
+  readonly layout?: 'footer' | 'header';
   readonly model: EditorDialogModel;
   /** The launcher that regains focus after the dialog unmounts. */
   readonly returnFocusId?: string;
@@ -77,6 +90,8 @@ export function EditorDialog({
   const titleId = useId();
   const bodyRef = useRef<HTMLDivElement>(null);
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
+  const [actionsElement, setActionsElement] = useState<HTMLElement | null>(null);
+  const bar = layout === 'header';
   const close = model.kind === 'draft' ? model.onCancel : model.onDone;
   const draft = model.kind === 'draft';
   useEffect(() => {
@@ -96,7 +111,9 @@ export function EditorDialog({
     const first = Array.from(body.querySelectorAll<HTMLElement>(focusableControls)).find(
       (control) => control.closest('.editor-dialog-footer') === null,
     );
-    const dismiss = body.querySelector<HTMLElement>('[data-editor-dismiss]');
+    const dismiss = (body.parentElement ?? body).querySelector<HTMLElement>(
+      '[data-editor-dismiss]',
+    );
     (exact !== null && body.contains(exact) ? exact : (first ?? dismiss))?.focus();
   }, []);
   return (
@@ -108,19 +125,37 @@ export function EditorDialog({
       {...(returnFocusId === undefined ? {} : { returnFocusId })}
       {...(anchorProps === undefined ? {} : { surfaceProps: anchorProps })}
     >
-      <header className="editor-dialog-header">
-        <div>
-          {eyebrow === undefined ? null : <p className="eyebrow">{eyebrow}</p>}
+      {bar ? (
+        <header className="editor-dialog-header" data-layout="header">
           <div className="editor-dialog-title-line">
-            <h2 id={titleId}>{title}</h2>
+            {icon}
+            <h2 id={titleId} onMouseEnter={showTruncatedTitle}>
+              {title}
+            </h2>
             <span className="editor-dialog-title-action" ref={setTitleSlot} />
+            {headerAction}
           </div>
-          {headerBelow}
-        </div>
-        {headerAction}
-      </header>
+          <div className="editor-dialog-header-actions" ref={setActionsElement} />
+        </header>
+      ) : (
+        <header className="editor-dialog-header">
+          <div>
+            {eyebrow === undefined ? null : <p className="eyebrow">{eyebrow}</p>}
+            <div className="editor-dialog-title-line">
+              <h2 id={titleId}>{title}</h2>
+              <span className="editor-dialog-title-action" ref={setTitleSlot} />
+            </div>
+            {headerBelow}
+          </div>
+          {headerAction}
+        </header>
+      )}
       <div className="editor-dialog-body" ref={bodyRef}>
-        <headerSlot.Provider value={titleSlot}>{children}</headerSlot.Provider>
+        <headerSlot.Provider value={titleSlot}>
+          <actionsSlot.Provider value={bar ? actionsElement : undefined}>
+            {children}
+          </actionsSlot.Provider>
+        </headerSlot.Provider>
         {feedback}
         {model.kind === 'live' ? (
           <EditorDialogFooter>
@@ -191,14 +226,76 @@ export function EditorDialogFooter({
   );
 }
 
-/** The draft footer: Cancel discards and Save commits the complete draft once. */
+/** One dialog finding: a stable key and its one-line title. */
+export type EditorDialogIssue = readonly [key: string, message: string];
+
+/** Focuses the first marked or invalid control in the dialog body. */
+function focusFirstIssue(from: HTMLElement): void {
+  const body = from.closest('.editor-dialog')?.querySelector('.editor-dialog-body');
+  const marked = body?.querySelector<HTMLElement>(
+    '[data-has-findings="true"], [aria-invalid="true"]',
+  );
+  if (marked === null || marked === undefined) return;
+  const control = marked.matches(focusableControls)
+    ? marked
+    : (marked.querySelector<HTMLElement>(focusableControls) ?? marked);
+  control.focus({ preventScroll: true, focusVisible: true } as FocusOptions);
+  marked.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+}
+
+/**
+ * The header's finding button: the first issue and how many more. Its slot
+ * stays mounted when there is none, so the title never shifts.
+ */
+function EditorDialogFinding({
+  blocking,
+  issues,
+}: {
+  readonly blocking: boolean;
+  readonly issues: readonly EditorDialogIssue[];
+}) {
+  const first = issues[0];
+  const tone = blocking ? 'invalid' : 'incomplete';
+  return (
+    <span className="editor-dialog-finding-slot">
+      {first === undefined ? null : (
+        <button
+          aria-label={issues.length > 1 ? `${first[1]} (${issues.length - 1} more)` : first[1]}
+          className="assessment-issue-button editor-dialog-finding"
+          data-tone={tone}
+          onClick={(event) => focusFirstIssue(event.currentTarget)}
+          type="button"
+        >
+          <span aria-hidden="true" className="navigation-status-marker" data-tone={tone}>
+            !
+          </span>
+          <span className="finding-title" onMouseEnter={showTruncatedTitle}>
+            {first[1]}
+          </span>
+          {issues.length > 1 ? (
+            <span className="editor-dialog-finding-more">+{issues.length - 1}</span>
+          ) : null}
+        </button>
+      )}
+    </span>
+  );
+}
+
+/**
+ * The draft actions: Cancel discards and Save commits the complete draft once.
+ * In a header-layout dialog they join the title bar after the first finding,
+ * and secondary actions stay in the body; otherwise they form the footer.
+ */
 export function EditorDialogDraftActions({
+  issues = [],
   onCancel,
   onSave,
   saveDisabled,
   saveName,
   secondary,
 }: {
+  /** The draft's findings, first one shown; blocking while Save is disabled. */
+  readonly issues?: readonly EditorDialogIssue[];
   readonly onCancel?: () => void;
   readonly onSave: () => void;
   readonly saveDisabled: boolean;
@@ -206,22 +303,46 @@ export function EditorDialogDraftActions({
   readonly saveName?: string;
   readonly secondary?: ReactNode;
 }) {
+  const slot = useContext(actionsSlot);
+  const cancel =
+    onCancel === undefined ? null : (
+      <button className="quiet-action" data-editor-dismiss onClick={onCancel} type="button">
+        Cancel
+      </button>
+    );
+  const save = (
+    <button
+      {...(saveName === undefined ? {} : { 'aria-label': saveName })}
+      className="primary-action"
+      disabled={saveDisabled}
+      onClick={onSave}
+      type="button"
+    >
+      Save
+    </button>
+  );
+  if (slot !== undefined)
+    return (
+      <>
+        {slot === null
+          ? null
+          : createPortal(
+              <>
+                <EditorDialogFinding blocking={saveDisabled} issues={issues} />
+                {cancel}
+                {save}
+              </>,
+              slot,
+            )}
+        {secondary === undefined ? null : (
+          <div className="editor-dialog-secondary-actions">{secondary}</div>
+        )}
+      </>
+    );
   return (
     <EditorDialogFooter secondary={secondary}>
-      {onCancel === undefined ? null : (
-        <button className="quiet-action" data-editor-dismiss onClick={onCancel} type="button">
-          Cancel
-        </button>
-      )}
-      <button
-        {...(saveName === undefined ? {} : { 'aria-label': saveName })}
-        className="primary-action"
-        disabled={saveDisabled}
-        onClick={onSave}
-        type="button"
-      >
-        Save
-      </button>
+      {cancel}
+      {save}
     </EditorDialogFooter>
   );
 }

@@ -15,6 +15,8 @@ import {
 } from '@planner/projections/structured-workspace';
 import { traitOfferDialogClosed, traitOfferDialogOpened } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { traitGiverArtwork } from '@planner/ui/artwork/trait-givers/traitGiverArtwork';
 import { EditorDialog } from '@planner/ui/controls/EditorDialog';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -138,7 +140,13 @@ export function TraitOfferDialog({
     <EditorDialog
       // The feedback region lists the dialog's findings; its launcher carries the mark.
       anchorProps={{ ...findingAnchor(target), tabIndex: -1 }}
-      eyebrow="Trait offer"
+      icon={
+        <ArtworkIcon
+          className="artwork-label-icon"
+          source={traitGiverArtwork[interaction.giver.key] ?? undefined}
+        />
+      }
+      layout="header"
       {...(interaction.giver.providerKind === 'spell'
         ? { headerAction: <HexTreeRulesHelp />, size: 'hexTree' as const }
         : {})}

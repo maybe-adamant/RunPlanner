@@ -19,13 +19,11 @@ import {
   anvilResultDialogOpened,
 } from '@planner/state/editorSessionSlice';
 import { useAppDispatch, useAppSelector } from '@planner/state/store';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import {
-  EditorDialog,
-  EditorDialogDraftActions,
-  EditorDialogFeedback,
-} from '@planner/ui/controls/EditorDialog';
+import { EditorDialog, EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useFindingFeedbackEntries, useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
@@ -77,10 +75,13 @@ function AnvilResultDialog({
   const findingEntries = useFindingFeedbackEntries(owner);
   return (
     <EditorDialog
-      eyebrow="Anvil of Fates"
+      icon={
+        <ArtworkIcon className="artwork-label-icon" source={rewardIcon('ChaosWeaponUpgrade')} />
+      }
+      layout="header"
       model={{ kind: 'draft', onCancel: onClose }}
       returnFocusId={launcherId}
-      title="Choose Hammer result"
+      title="Anvil of Fates"
     >
       <AnvilResultEditor
         findingEntries={findingEntries}
@@ -199,8 +200,21 @@ export function AnvilResultEditor({
               })}
         />
       </div>
-      <EditorDialogFeedback name="Anvil feedback" entries={feedbackEntries} />
       <EditorDialogDraftActions
+        issues={
+          feedbackEntries.length > 0 || result !== undefined
+            ? feedbackEntries
+            : [
+                [
+                  'incomplete',
+                  draft.removedTraitKey === undefined
+                    ? 'Choose the removed Hammer'
+                    : draft.firstAddedTraitKey === undefined
+                      ? 'Choose the first Hammer'
+                      : 'Choose the second Hammer',
+                ] as const,
+              ]
+        }
         {...(onCancel === undefined ? {} : { onCancel })}
         onSave={() => {
           if (result !== undefined) onCommit(result);

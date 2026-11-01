@@ -20,12 +20,15 @@ import {
 import {
   projectTraitOfferFeedback,
   projectTraitOfferState,
+  type TraitOfferOptionFeedback,
 } from '@planner/projections/rewards/traitProjection';
 import { type WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
-import { EditorDialogFeedback } from '@planner/ui/controls/EditorDialog';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useDialogFindingEntries } from '@planner/ui/feedback/useFindingTarget';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
+import { EditorDialog } from '@planner/ui/controls/EditorDialog';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { traitGiverArtwork } from '@planner/ui/artwork/trait-givers/traitGiverArtwork';
 import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
 import { TraitOfferSelectedOutcome } from './TraitOfferSelectedOutcome';
@@ -73,6 +76,21 @@ function traitOfferLoadable(
   return Object.freeze({ load: () => loadInteraction(value) });
 }
 
+/** The sources a row's Level line shows: Jeweled Pom's levels and a replaced trait's carried level. */
+function levelSourceProps(option: TraitOfferOptionFeedback | undefined): {
+  readonly jeweledPomLevels?: number;
+  readonly replacedTraitKey?: string;
+} {
+  return {
+    ...(option?.jeweledPomLevels === undefined
+      ? {}
+      : { jeweledPomLevels: option.jeweledPomLevels }),
+    ...(option?.replacement === undefined
+      ? {}
+      : { replacedTraitKey: option.replacement.replacedTraitKey }),
+  };
+}
+
 export function TraitOfferEditorShell({
   initialValue,
   initialView,
@@ -88,7 +106,13 @@ export function TraitOfferEditorShell({
   readonly onCommit?: (value: AuthoredTraitOffer) => void;
   readonly onReset?: () => void;
 }) {
-  const [view, setView] = useState(initialView);
+  // A stacked view opens after mount so its dialog stacks above the outer one.
+  const [view, setView] = useState<'outer' | 'echoLastRunBoon'>('outer');
+  useEffect(() => {
+    if (initialView === 'outer') return;
+    const frame = requestAnimationFrame(() => setView(initialView));
+    return () => cancelAnimationFrame(frame);
+  }, [initialView]);
   type TraitOfferCandidates = ReturnType<WorkspaceTraitOfferInteraction['load']>;
   const controller = useWorkspaceInteractionController<TraitOfferCandidates>();
   const [draft, setDraft] = useState(() => {
@@ -182,6 +206,21 @@ export function TraitOfferEditorShell({
       branches.every((branch) => branch?.rarifiableOptionKeys.includes(optionKey) === true)
     );
   };
+  // The keepsake Rarify draws on and its uses left after the draft's clicks, when every branch agrees.
+  const rarifySource = (() => {
+    const sources =
+      candidate?.evaluation.kind !== 'traitOffer'
+        ? []
+        : (candidate.evaluation.result.callingCard ?? []).map((branch) => branch.rarifySource);
+    const first = sources[0];
+    return first !== undefined &&
+      sources.every(
+        (source) =>
+          source?.keepsakeKey === first.keepsakeKey && source.remainingUses === first.remainingUses,
+      )
+      ? first
+      : undefined;
+  })();
   const effectiveRarity = (
     optionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
     screen: ScreenTab = 'final',
@@ -228,30 +267,45 @@ export function TraitOfferEditorShell({
     setDraft(Object.freeze({ interaction, loadable: nextLoadable, value: nextValue }));
     controller.activate(nextLoadable);
   };
-  if (view === 'echoLastRunBoon' && value.kind === 'traits') {
-    const child = interaction
-      .optionDomain(value, value.selectedOptionKey)
-      .children.find(
-        (
-          entry,
-        ): entry is Extract<
-          typeof entry,
-          { readonly child: { readonly kind: 'echoLastRunBoon' } }
-        > => entry.child.kind === 'echoLastRunBoon',
-      );
-    return (
-      <LoadedEchoLastRunBoonChoice
-        interaction={interaction}
-        offer={value}
-        onBack={() => setView('outer')}
-        onComplete={(outcome) => {
-          if (child === undefined) return;
-          updateValue(child.update(value, outcome));
-          setView('outer');
-        }}
-      />
+  // The Echo choice opens as a dialog stacked over this one.
+  const echoChild =
+    view === 'echoLastRunBoon' && value.kind === 'traits'
+      ? interaction
+          .optionDomain(value, value.selectedOptionKey)
+          .children.find(
+            (
+              entry,
+            ): entry is Extract<
+              typeof entry,
+              { readonly child: { readonly kind: 'echoLastRunBoon' } }
+            > => entry.child.kind === 'echoLastRunBoon',
+          )
+      : undefined;
+  const echoDialog =
+    view !== 'echoLastRunBoon' || value.kind !== 'traits' ? null : (
+      <EditorDialog
+        icon={
+          <ArtworkIcon
+            className="artwork-label-icon"
+            source={traitGiverArtwork[interaction.giver.key] ?? undefined}
+          />
+        }
+        layout="header"
+        model={{ kind: 'draft', onCancel: () => setView('outer') }}
+        title={`${interaction.giver.label} › Boon Boon Boon`}
+      >
+        <LoadedEchoLastRunBoonChoice
+          interaction={interaction}
+          offer={value}
+          onBack={() => setView('outer')}
+          onComplete={(outcome) => {
+            if (echoChild === undefined) return;
+            updateValue(echoChild.update(value, outcome));
+            setView('outer');
+          }}
+        />
+      </EditorDialog>
     );
-  }
   // At rest the region matches the launcher; an edited draft shows its own assessment.
   const routeFixLine =
     tabbed && activeScreen === 'final' ? earlierScreenFixLine(markedScreens) : undefined;
@@ -267,56 +321,47 @@ export function TraitOfferEditorShell({
     atRestEntries === undefined
       ? feedback.options
       : feedback.options.map((option) => ({ ...option, reasons: [] }));
-  const hasOptionFeedback = optionFeedback.some(
-    (option) => option.reasons.length > 0 || option.replacement !== undefined,
-  );
-  const optionFeedbackRows = optionFeedback.map((option, index) =>
-    option.reasons.length === 0 && option.replacement === undefined ? null : (
-      <div className="trait-offer-feedback-item" key={OPTION_KEYS[index]}>
-        <strong>Option {index + 1}</strong>
-        {option.reasons.length === 0 ? null : (
-          <ul className="trait-option-feedback" aria-label={`${OPTION_KEYS[index]} feedback`}>
-            {option.reasons.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-        )}
-        {option.replacement === undefined ? null : (
-          <p className="trait-option-replacement">
-            Replaces {option.replacement.replacedTraitLabel} · {option.replacement.oldRarity} to{' '}
-            {option.replacement.requiredRarity}
-          </p>
-        )}
-      </div>
+  const optionIssues = optionFeedback.flatMap((option, index) =>
+    option.reasons.map(
+      (reason) => [`${OPTION_KEYS[index]}:${reason}`, `Option ${index + 1}: ${reason}`] as const,
     ),
   );
-  const offerNotes = interaction.offerNotes(value);
-  const feedbackSection = (
-    <EditorDialogFeedback
-      name="Offer feedback"
-      entries={
-        atRestEntries ??
-        (offerMessage === undefined ? outcomeEntries : [['offer', offerMessage], ...outcomeEntries])
-      }
-      notes={offerNotes.map((note) => (
-        <div className="trait-offer-note" key={note.traitKey}>
-          <strong>{note.title}</strong>
-          <p>{note.description}</p>
-        </div>
-      ))}
-    >
-      {hasOptionFeedback ? optionFeedbackRows : undefined}
-    </EditorDialogFeedback>
+  const replacements = optionFeedback.flatMap((option, index) =>
+    option.replacement === undefined
+      ? []
+      : [
+          <p className="trait-option-replacement" key={OPTION_KEYS[index]}>
+            Option {index + 1} replaces {option.replacement.replacedTraitLabel} ·{' '}
+            {option.replacement.oldRarity} to {option.replacement.requiredRarity}
+          </p>,
+        ],
   );
+  const offerNotes = interaction.offerNotes(value);
+  const notes =
+    replacements.length === 0 && offerNotes.length === 0 ? undefined : (
+      <div className="trait-offer-feedback-item">
+        {replacements}
+        {offerNotes.map((note) => (
+          <div className="trait-offer-note" key={note.traitKey}>
+            <strong>{note.title}</strong>
+            <p>{note.description}</p>
+          </div>
+        ))}
+      </div>
+    );
   const recoveryAction =
     recoveryDraft === undefined ? undefined : (
-      <button className="quiet-action" onClick={() => updateValue(recoveryDraft)} type="button">
+      <button
+        className="quiet-action action-compact trait-offer-start-over"
+        onClick={() => updateValue(recoveryDraft)}
+        type="button"
+      >
         Start over
       </button>
     );
   const resetAction =
     onReset === undefined ? undefined : (
-      <button className="quiet-action" onClick={onReset} type="button">
+      <button className="quiet-action action-compact" onClick={onReset} type="button">
         Reset to unresolved
       </button>
     );
@@ -371,6 +416,20 @@ export function TraitOfferEditorShell({
     label: value.kind === 'chaos' ? 'Save Chaos outcome' : 'Save trait offer',
     onClick: () => onCommit?.(value),
   };
+  const draftIssues = [
+    ...(atRestEntries ??
+      (offerMessage === undefined ? outcomeEntries : [['offer', offerMessage], ...outcomeEntries])),
+    ...optionIssues,
+  ];
+  const issues: readonly (readonly [string, string])[] =
+    draftIssues.length > 0 || !save.disabled
+      ? draftIssues
+      : [
+          [
+            'incomplete',
+            selectedOutcomeComplete ? 'Unavailable here' : 'Finish the selected outcome',
+          ],
+        ];
   // Rejected marks one blockable row while the curse acts on this offer.
   const rejectToggle = (
     screen: AuthoredTraitOfferTraits,
@@ -449,168 +508,182 @@ export function TraitOfferEditorShell({
         ? shapeDraft(interaction.removeTraitOfferDraft?.(screenValue))
         : undefined;
     return (
-      <TraitOfferForm
-        state={stateInspector}
-        content={
-          screenValue === undefined ? (
-            <UnsetScreen
-              onCopy={() => {
-                replaceScreen(earlierIndex, finalRowsSnapshot());
-                setEditingScreen(earlierIndex);
-              }}
-            />
-          ) : goldScreen ? (
-            <section className="trait-offer-fallback">
-              <p>Fallback Gold</p>
-            </section>
-          ) : (
-            <>
-              <div className="trait-offer-options">
-                {screenValue.options.map((_, index) => {
-                  const rowEffectiveRarity =
-                    effectiveRarity(OPTION_KEYS[index]!, earlierIndex) ??
-                    screenValue.options[index]?.rarity;
-                  return (
-                    <div
-                      data-has-findings={(feedback.options[index]?.reasons.length ?? 0) > 0}
-                      key={OPTION_KEYS[index]}
-                    >
-                      <TraitOfferOrdinaryOption
-                        domainValue={value.kind === 'traits' ? value : screenValue}
-                        headerAction={rejectToggle(
-                          screenValue,
-                          updateScreen,
-                          OPTION_KEYS[index]!,
-                          earlierReadOnly,
-                        )}
-                        index={index}
-                        interaction={interaction}
-                        onUpdate={updateScreen}
-                        optionKey={OPTION_KEYS[index]!}
-                        pickless
-                        rarifySupported={rarifySupported(OPTION_KEYS[index]!, earlierIndex)}
-                        readOnly={earlierReadOnly}
-                        {...(rowEffectiveRarity === undefined
-                          ? {}
-                          : { effectiveRarity: rowEffectiveRarity })}
-                        {...(feedback.options[index]?.effectiveLevel === undefined
-                          ? {}
-                          : { effectiveLevel: feedback.options[index]!.effectiveLevel! })}
-                        {...(feedback.options[index]?.persephoneLevelRolls === undefined
-                          ? {}
-                          : {
-                              persephoneLevelRolls: feedback.options[index]!.persephoneLevelRolls!,
-                            })}
-                        showEffectiveValues
-                        rejected={screenValue.rejectedOptionKey === OPTION_KEYS[index]}
-                        spellOffer={spellOffer}
-                        value={screenValue}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )
-        }
-        feedback={feedbackSection}
-        options={null}
-        shapeActions={
-          ordinary && screenValue !== undefined ? (
-            <TraitOfferShapeActions
-              addDisabled={screenAppended === undefined}
-              onAdd={() => {
-                if (screenAppended !== undefined) updateScreen(screenAppended);
-              }}
-              onRemove={() => {
-                if (screenRemoved !== undefined) updateScreen(screenRemoved);
-              }}
-              removeDisabled={screenRemoved === undefined}
-            />
-          ) : undefined
-        }
-        recovery={recoveryAction}
-        reset={resetAction}
-        save={save}
-        {...(screenTabs === undefined ? {} : { screenTabs })}
-        {...(onCancel === undefined ? {} : { cancel: onCancel })}
-      />
+      <>
+        <TraitOfferForm
+          state={stateInspector}
+          content={
+            screenValue === undefined ? (
+              <UnsetScreen
+                onCopy={() => {
+                  replaceScreen(earlierIndex, finalRowsSnapshot());
+                  setEditingScreen(earlierIndex);
+                }}
+              />
+            ) : goldScreen ? (
+              <section className="trait-offer-fallback">
+                <p>Fallback Gold</p>
+              </section>
+            ) : (
+              <>
+                <div className="trait-offer-options">
+                  {screenValue.options.map((_, index) => {
+                    const rowEffectiveRarity =
+                      effectiveRarity(OPTION_KEYS[index]!, earlierIndex) ??
+                      screenValue.options[index]?.rarity;
+                    return (
+                      <div
+                        data-has-findings={(feedback.options[index]?.reasons.length ?? 0) > 0}
+                        key={OPTION_KEYS[index]}
+                      >
+                        <TraitOfferOrdinaryOption
+                          domainValue={value.kind === 'traits' ? value : screenValue}
+                          headerAction={rejectToggle(
+                            screenValue,
+                            updateScreen,
+                            OPTION_KEYS[index]!,
+                            earlierReadOnly,
+                          )}
+                          index={index}
+                          interaction={interaction}
+                          onUpdate={updateScreen}
+                          optionKey={OPTION_KEYS[index]!}
+                          pickless
+                          rarifySupported={rarifySupported(OPTION_KEYS[index]!, earlierIndex)}
+                          {...(rarifySource === undefined ? {} : { rarifySource })}
+                          readOnly={earlierReadOnly}
+                          {...(rowEffectiveRarity === undefined
+                            ? {}
+                            : { effectiveRarity: rowEffectiveRarity })}
+                          {...(feedback.options[index]?.effectiveLevel === undefined
+                            ? {}
+                            : { effectiveLevel: feedback.options[index]!.effectiveLevel! })}
+                          {...(feedback.options[index]?.persephoneLevelRolls === undefined
+                            ? {}
+                            : {
+                                persephoneLevelRolls:
+                                  feedback.options[index]!.persephoneLevelRolls!,
+                              })}
+                          {...levelSourceProps(feedback.options[index])}
+                          rejected={screenValue.rejectedOptionKey === OPTION_KEYS[index]}
+                          spellOffer={spellOffer}
+                          value={screenValue}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )
+          }
+          issues={issues}
+          notes={notes}
+          options={null}
+          shapeActions={
+            ordinary && screenValue !== undefined ? (
+              <TraitOfferShapeActions
+                addDisabled={screenAppended === undefined}
+                onAdd={() => {
+                  if (screenAppended !== undefined) updateScreen(screenAppended);
+                }}
+                onRemove={() => {
+                  if (screenRemoved !== undefined) updateScreen(screenRemoved);
+                }}
+                removeDisabled={screenRemoved === undefined}
+              />
+            ) : undefined
+          }
+          recovery={recoveryAction}
+          reset={resetAction}
+          save={save}
+          {...(screenTabs === undefined ? {} : { screenTabs })}
+          {...(onCancel === undefined ? {} : { cancel: onCancel })}
+        />
+        {echoDialog}
+      </>
     );
   }
   if (value.kind === 'traits') {
     return (
-      <TraitOfferForm
-        state={stateInspector}
-        options={
-          <>
-            {value.options.map((_, index) => {
-              const optionKey = OPTION_KEYS[index]!;
-              const optionFeedback = feedback.options[index];
-              const rowEffectiveRarity = effectiveRarity(optionKey);
-              const rowEffectiveLevel = optionFeedback?.effectiveLevel;
-              const rowPersephoneLevelRolls = optionFeedback?.persephoneLevelRolls;
-              return (
-                <div data-has-findings={(optionFeedback?.reasons.length ?? 0) > 0} key={optionKey}>
-                  <TraitOfferOrdinaryOption
-                    {...(rowEffectiveRarity === undefined
-                      ? {}
-                      : { effectiveRarity: rowEffectiveRarity })}
-                    {...(rowEffectiveLevel === undefined
-                      ? {}
-                      : { effectiveLevel: rowEffectiveLevel })}
-                    headerAction={rejectToggle(value, updateValue, optionKey, false)}
-                    index={index}
-                    interaction={interaction}
-                    onUpdate={updateValue}
-                    optionKey={optionKey}
-                    rejected={value.rejectedOptionKey === optionKey}
-                    {...(rowPersephoneLevelRolls === undefined
-                      ? {}
-                      : { persephoneLevelRolls: rowPersephoneLevelRolls })}
-                    rarifySupported={rarifySupported(optionKey)}
-                    showEffectiveValues
-                    spellOffer={spellOffer}
-                    value={value}
-                  />
-                </div>
-              );
-            })}
-          </>
-        }
-        selectedOutcome={
-          <TraitOfferSelectedOutcome
-            {...(() => {
-              const acquiredRarity = effectiveRarity(value.selectedOptionKey);
-              return acquiredRarity === undefined ? {} : { acquiredRarity };
-            })()}
-            interaction={interaction}
-            onFeedback={reportOutcomeFeedback}
-            onOpenEchoLastRunBoon={() => setView('echoLastRunBoon')}
-            onUpdate={updateValue}
-            value={value}
-          />
-        }
-        shapeActions={
-          ordinary ? (
-            <TraitOfferShapeActions
-              addDisabled={appendedDraft === undefined}
-              onAdd={() => {
-                if (appendedDraft !== undefined) updateValue(appendedDraft);
-              }}
-              onRemove={() => {
-                if (removedDraft !== undefined) updateValue(removedDraft);
-              }}
-              removeDisabled={removedDraft === undefined}
+      <>
+        <TraitOfferForm
+          state={stateInspector}
+          options={
+            <>
+              {value.options.map((_, index) => {
+                const optionKey = OPTION_KEYS[index]!;
+                const optionFeedback = feedback.options[index];
+                const rowEffectiveRarity = effectiveRarity(optionKey);
+                const rowEffectiveLevel = optionFeedback?.effectiveLevel;
+                const rowPersephoneLevelRolls = optionFeedback?.persephoneLevelRolls;
+                return (
+                  <div
+                    data-has-findings={(optionFeedback?.reasons.length ?? 0) > 0}
+                    key={optionKey}
+                  >
+                    <TraitOfferOrdinaryOption
+                      {...(rowEffectiveRarity === undefined
+                        ? {}
+                        : { effectiveRarity: rowEffectiveRarity })}
+                      {...(rowEffectiveLevel === undefined
+                        ? {}
+                        : { effectiveLevel: rowEffectiveLevel })}
+                      headerAction={rejectToggle(value, updateValue, optionKey, false)}
+                      index={index}
+                      interaction={interaction}
+                      onUpdate={updateValue}
+                      optionKey={optionKey}
+                      rejected={value.rejectedOptionKey === optionKey}
+                      {...(rowPersephoneLevelRolls === undefined
+                        ? {}
+                        : { persephoneLevelRolls: rowPersephoneLevelRolls })}
+                      {...levelSourceProps(optionFeedback)}
+                      rarifySupported={rarifySupported(optionKey)}
+                      {...(rarifySource === undefined ? {} : { rarifySource })}
+                      spellOffer={spellOffer}
+                      value={value}
+                    />
+                  </div>
+                );
+              })}
+            </>
+          }
+          selectedOutcome={
+            <TraitOfferSelectedOutcome
+              {...(() => {
+                const acquiredRarity = effectiveRarity(value.selectedOptionKey);
+                return acquiredRarity === undefined ? {} : { acquiredRarity };
+              })()}
+              interaction={interaction}
+              onFeedback={reportOutcomeFeedback}
+              onOpenEchoLastRunBoon={() => setView('echoLastRunBoon')}
+              onUpdate={updateValue}
+              value={value}
             />
-          ) : undefined
-        }
-        feedback={feedbackSection}
-        recovery={recoveryAction}
-        reset={resetAction}
-        save={save}
-        {...(screenTabs === undefined ? {} : { screenTabs })}
-        {...(onCancel === undefined ? {} : { cancel: onCancel })}
-      />
+          }
+          shapeActions={
+            ordinary ? (
+              <TraitOfferShapeActions
+                addDisabled={appendedDraft === undefined}
+                onAdd={() => {
+                  if (appendedDraft !== undefined) updateValue(appendedDraft);
+                }}
+                onRemove={() => {
+                  if (removedDraft !== undefined) updateValue(removedDraft);
+                }}
+                removeDisabled={removedDraft === undefined}
+              />
+            ) : undefined
+          }
+          issues={issues}
+          notes={notes}
+          recovery={recoveryAction}
+          reset={resetAction}
+          save={save}
+          {...(screenTabs === undefined ? {} : { screenTabs })}
+          {...(onCancel === undefined ? {} : { cancel: onCancel })}
+        />
+        {echoDialog}
+      </>
     );
   }
   return (
@@ -649,7 +722,8 @@ export function TraitOfferEditorShell({
           )
         ) : null
       }
-      feedback={feedbackSection}
+      issues={issues}
+      notes={notes}
       options={null}
       {...(screenTabs === undefined ? {} : { screenTabs })}
       recovery={recoveryAction}

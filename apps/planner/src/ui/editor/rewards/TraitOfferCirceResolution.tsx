@@ -8,11 +8,9 @@ import { useState } from 'react';
 import type { WorkspaceCirceResolutionDomain } from '@planner/projections/structured-workspace';
 import { ArcanaCard } from '@planner/ui/controls/arcana-fear/ArcanaCard';
 import { FearCard } from '@planner/ui/controls/arcana-fear/FearCard';
-import {
-  EditorDialog,
-  EditorDialogDraftActions,
-  EditorDialogFeedback,
-} from '@planner/ui/controls/EditorDialog';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { traitGiverArtwork } from '@planner/ui/artwork/trait-givers/traitGiverArtwork';
+import { EditorDialog, EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import {
   circeResolutionDialogClosed,
@@ -129,46 +127,43 @@ export function TraitOfferCirceResolution({
       </SelectedOutcomeRow>
       {draft === null ? null : (
         <EditorDialog
-          eyebrow="Circe"
-          feedback={
-            <EditorDialogFeedback
-              name="Circe feedback"
-              entries={
-                unavailable === undefined
-                  ? findingEntries
-                  : [['unavailable', unavailable], ...findingEntries]
-              }
+          icon={
+            <ArtworkIcon
+              className="artwork-label-icon"
+              source={traitGiverArtwork.Circe ?? undefined}
             />
           }
-          footer={
-            <EditorDialogDraftActions
-              onCancel={() => close()}
-              onSave={() => {
-                if (domain === undefined) return;
-                onSelect(
-                  domain.effect === 'disableFear'
-                    ? { kind: 'disableFear', vowKeys: draft.keys }
-                    : { kind: domain.effect, arcanaKeys: draft.keys },
-                );
-                close();
-              }}
-              saveDisabled={disabled || !complete}
-              secondary={
-                <button
-                  className="quiet-action"
-                  onClick={() => setDraft({ ...draft, keys: [] })}
-                  type="button"
-                >
-                  Clear
-                </button>
-              }
-            />
-          }
+          layout="header"
           model={{ kind: 'draft', onCancel: () => close() }}
           returnFocusId={controlId}
           size="cards"
-          title={draft.title}
+          title={`Circe › ${draft.title}`}
         >
+          <EditorDialogDraftActions
+            issues={[
+              ...(unavailable === undefined ? [] : [['unavailable', unavailable] as const]),
+              ...findingEntries,
+              ...(complete || domain === undefined || unavailable !== undefined
+                ? []
+                : [
+                    [
+                      'incomplete',
+                      `Choose ${domain.requiredCount - draft.keys.length} more`,
+                    ] as const,
+                  ]),
+            ]}
+            onCancel={() => close()}
+            onSave={() => {
+              if (domain === undefined) return;
+              onSelect(
+                domain.effect === 'disableFear'
+                  ? { kind: 'disableFear', vowKeys: draft.keys }
+                  : { kind: domain.effect, arcanaKeys: draft.keys },
+              );
+              close();
+            }}
+            saveDisabled={disabled || !complete}
+          />
           <div className="trait-choice-region">
             {domain === undefined ? (
               <p>Loading choices…</p>
@@ -177,7 +172,15 @@ export function TraitOfferCirceResolution({
                 <p className="route-loadout-summary">
                   Choose {domain.requiredCount}{' '}
                   {fear ? 'Vows to suppress' : 'Arcana cards in order'}. {draft.keys.length}{' '}
-                  selected.
+                  selected.{' '}
+                  <button
+                    className="quiet-action action-compact"
+                    disabled={draft.keys.length === 0}
+                    onClick={() => setDraft({ ...draft, keys: [] })}
+                    type="button"
+                  >
+                    Clear
+                  </button>
                 </p>
                 <div
                   role="group"

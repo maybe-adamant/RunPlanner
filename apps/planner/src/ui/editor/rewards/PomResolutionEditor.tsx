@@ -9,7 +9,6 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 
 import type { LevelResolutionCandidateGroup } from '@planner/projections/candidates/candidateProjection';
 import type { ContextualPickerModel } from '@planner/projections/contextual/contextualPicker';
-import { declaredChoicesPicker } from '@planner/projections/contextual/contextualPicker';
 import { projectLevelResolutionTargetPicker } from '@planner/projections/contextual/levelResolutionTargetPicker';
 import {
   formatFindingExplanation,
@@ -33,15 +32,12 @@ import {
   levelResolutionDialogOpened,
 } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
+import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { rewardIcon } from '@planner/ui/artwork/rewardIcon';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import {
-  EditorDialog,
-  EditorDialogDraftActions,
-  EditorDialogFeedback,
-} from '@planner/ui/controls/EditorDialog';
+import { EditorDialog, EditorDialogDraftActions } from '@planner/ui/controls/EditorDialog';
 import { ScreenRerollTabs, UnsetScreen } from './ScreenRerollTabs';
-import { useGrowOnlyHeight } from './useGrowOnlyHeight';
 import { useScreenTab } from './useScreenTab';
 import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -174,7 +170,6 @@ export function PomResolutionEditor({
   const [earlierSlotPlacements, setEarlierSlotPlacements] = useState<
     Readonly<Record<number, readonly (string | null)[]>>
   >({});
-  const holdFeedback = useGrowOnlyHeight(interaction.screenRerolls !== undefined);
   const [activeGroupKey, setActiveGroupKey] = useState<string | null>(null);
   const [seededGroupKey, setSeededGroupKey] = useState<string | null>(null);
   const draft: AuthoredLevelResolution =
@@ -233,7 +228,6 @@ export function PomResolutionEditor({
   const rows = Array.from({ length: count }, (_, index) => index);
   const domKey = pomDomKey(interaction.owner);
   const authoredChoice = interaction.value.kind === 'choice' ? interaction.value : undefined;
-  const authoredRandom = interaction.value.kind === 'random' ? interaction.value : undefined;
   const authoredChoiceUnresolved =
     authoredChoice !== undefined &&
     authoredChoice.offeredTraitKeys.length === 0 &&
@@ -249,32 +243,6 @@ export function PomResolutionEditor({
   };
   if (authoredChoiceUnresolved && activeGroup !== undefined && seededGroupKey !== activeGroup.key)
     seedChoice(activeGroup);
-  const selectGroup = (key: string): void => {
-    const group = groups.find((candidate) => candidate.key === key);
-    if (group === undefined) return;
-    setActiveGroupKey(group.key);
-    if (authoredChoiceUnresolved) seedChoice(group);
-    else if (authoredChoice !== undefined) {
-      const slots = Array.from(
-        { length: group.surface.requiredOfferCount ?? 0 },
-        (_, index) => authoredChoice.offeredTraitKeys[index] ?? null,
-      );
-      setChoiceSlots(slots);
-      setSelectedChoice(authoredChoice.selectedTraitKey);
-      evaluateDraft(
-        Object.freeze({
-          kind: 'choice',
-          offeredTraitKeys: Object.freeze(
-            slots.filter((target): target is string => target !== null),
-          ),
-          selectedTraitKey: authoredChoice.selectedTraitKey,
-        }),
-      );
-    } else if (authoredRandom !== undefined) {
-      setRandomTarget(authoredRandom.targetTraitKey);
-      evaluateDraft(authoredRandom);
-    }
-  };
   const targetPicker = (current: string | null): ContextualPickerModel<string> =>
     projectLevelResolutionTargetPicker({
       group: activeGroup,
@@ -447,25 +415,12 @@ export function PomResolutionEditor({
     );
   return (
     <div className="trait-offer-editor pom-resolution-editor">
-      <ContextualPicker
-        label="Route state"
-        placeholder={groups.length === 0 ? 'Evaluating route state…' : 'Choose a route state'}
-        {...(groups.length === 0
-          ? { disabled: true }
-          : groups.length === 1
-            ? { disabledHint: 'One route state applies to this Pom.' }
-            : {})}
-        model={declaredChoicesPicker(
-          groups.map((group, index) => ({
-            key: group.key,
-            value: group.key,
-            label: `Route state ${index + 1}${group.branchIndices.length > 1 ? ` (${group.branchIndices.length} branches)` : ''}`,
-          })),
-          activeGroup?.key ?? '',
-        )}
-        id={`${domKey}-pom-branch`}
-        onSelect={selectGroup}
-      />
+      {groups.length > 1 ? (
+        // A pick resolves against one settled state; diverging Pom contexts are an engine fault.
+        <p className="pom-resolution-fault" role="alert">
+          The planner reached this Pom in more than one state. Report this plan.
+        </p>
+      ) : null}
       {interaction.value.kind === 'choice' ? (
         withScreenTabs(
           earlierIndex === undefined ? (
@@ -551,10 +506,9 @@ export function PomResolutionEditor({
           selected={randomTarget}
         />
       )}
-      <div className="screen-reroll-feedback" ref={holdFeedback}>
-        <EditorDialogFeedback
-          name="Pom feedback"
-          entries={[
+      <EditorDialogDraftActions
+        issues={(() => {
+          const entries = [
             ...new Set(
               feedbackMessages.length === 0 && activeScreen === 'final' && !supported
                 ? [earlierScreenFixLine(markedScreens)].filter(
@@ -562,10 +516,11 @@ export function PomResolutionEditor({
                   )
                 : feedbackMessages,
             ),
-          ].map((message) => [message, message] as const)}
-        />
-      </div>
-      <EditorDialogDraftActions
+          ].map((message) => [message, message] as const);
+          return entries.length > 0 || supported
+            ? entries
+            : [['incomplete', 'Choose a target'] as const];
+        })()}
         {...(onCancel === undefined ? {} : { onCancel })}
         onSave={() => onCommit(draft)}
         saveDisabled={!supported}
@@ -600,10 +555,18 @@ export function PomResolutionDialog({
     <EditorDialog
       // The feedback region lists the dialog's findings; its launcher carries the mark.
       anchorProps={{ ...findingAnchor(target), tabIndex: -1 }}
-      eyebrow={interaction.value.kind === 'random' ? 'Random Pom' : 'Pom choice'}
+      icon={
+        <ArtworkIcon
+          className="artwork-label-icon"
+          source={rewardIcon(
+            interaction.value.kind === 'random' ? 'StoreRewardRandomStack' : 'StackUpgrade',
+          )}
+        />
+      }
+      layout="header"
       model={{ kind: 'draft', onCancel: close }}
       returnFocusId={launcherId(target)}
-      title="Pom target"
+      title={interaction.value.kind === 'random' ? 'Random Pom' : 'Pom of Power'}
     >
       <PomResolutionEditor
         interaction={interaction}

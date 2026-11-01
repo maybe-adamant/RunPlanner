@@ -8,8 +8,8 @@
 }
 
 /* Five rows share the height left by the dialog chrome (17.5rem) and card text (2.1rem each);
-   below 5rem of artwork the dialog scrolls. */
-.route-loadout-section > .arcana-board {
+   below 5rem of artwork the dialog scrolls. Every Arcana board in a dialog sizes the same way. */
+.editor-dialog .arcana-board {
   --arcana-art-height: clamp(5rem, calc((100 * var(--app-vh) - 17.5rem) / 5 - 2.1rem), 9rem);
 }
 

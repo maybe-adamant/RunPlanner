@@ -189,6 +189,8 @@
 .route-run-modifier-toggle > span,
 .route-run-modifier-switch > span,
 .draft-row-label,
+.trait-option-final-values dt,
+.trait-option-level-label,
 .contextual-picker > label {
   color: #aaa7af;
   font-size: 0.78rem;
