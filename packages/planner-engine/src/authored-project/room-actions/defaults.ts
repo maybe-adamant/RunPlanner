@@ -1,8 +1,9 @@
 import type { Catalog } from '../../catalog-schema';
 import { createBiomeAddress, type BiomeAddress } from '../addresses';
 import { resolveRoutePosition } from '../route-context';
-import { resolveEntryRoom } from '../room-state/entry-resolution';
-import { composeStartingReward } from '../room-state/starting-reward';
+import { resolveEntryDeclaration, resolveEntryRoom } from '../room-state/entry-resolution';
+import { composeStartingReward, routeStartIncomingReward } from '../room-state/starting-reward';
+import { activeSelectedPickupProducers } from '../acquisition/pickup-producers';
 import type {
   AuthoredBiomePlan,
   BiomeTopology,
@@ -353,6 +354,13 @@ export function reconcileNewRequiredRoomActions(
     if (order !== owner.roomActions.order) replacements.set(ownerKey, order);
   }
   if (replacements.size === 0) return proposed;
+  return replaceOccurrenceOrders(proposed, replacements);
+}
+
+function replaceOccurrenceOrders(
+  proposed: ProjectDocument,
+  replacements: ReadonlyMap<string, readonly RoomActionReference[]>,
+): ProjectDocument {
   const route = proposed.route;
   return frozen({
     ...proposed,
@@ -377,6 +385,143 @@ export function reconcileNewRequiredRoomActions(
       ),
     }),
   });
+}
+
+interface TraitDroppedPickups {
+  readonly placement: 'afterSource' | 'roomExit';
+  readonly sourceAction: RoomActionReference;
+  readonly pickups: readonly RoomActionReference[];
+}
+
+/**
+ * Same-room pickups each active trait acquisition drops (Quick Buck, Buried
+ * Treasure, Narcissus), per occurrence. Clocked drops and non-trait producers
+ * keep their own closure.
+ */
+function activeTraitDroppedPickups(
+  document: ProjectDocument,
+  catalog: Catalog,
+  biomeKeys: ReadonlySet<string>,
+): ReadonlyMap<string, readonly TraitDroppedPickups[]> {
+  const result = new Map<string, readonly TraitDroppedPickups[]>();
+  const route = document.route;
+  for (const plan of route.biomes) {
+    if (!biomeKeys.has(JSON.stringify([route.routeKey, plan.biomeKey]))) continue;
+    if (plan.topology === null) continue;
+    const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+    const routePosition = resolveRoutePosition(catalog, route, plan.biomeKey);
+    const active = structurallyActiveOccurrenceIds(plan.topology);
+    for (const occurrence of plan.topology.occurrences) {
+      if (!active.has(occurrence.occurrenceId)) continue;
+      const rawRoom = catalog.rooms.byKey[occurrence.gameName];
+      if (rawRoom === undefined) continue;
+      const drops = activeSelectedPickupProducers(
+        catalog,
+        biome,
+        occurrence,
+        resolveEntryDeclaration(rawRoom, routePosition),
+        routePosition.ordinal,
+        routeStartIncomingReward(document, routePosition, occurrence) ?? undefined,
+      ).flatMap((producer): TraitDroppedPickups[] =>
+        producer.traitKey === undefined || !producer.siteKey.startsWith('traitGenerated:')
+          ? []
+          : [
+              frozen({
+                placement: producer.placement,
+                sourceAction: producer.sourceAction,
+                pickups: frozen(
+                  producer.pickups
+                    .filter((pickup) => !pickup.required)
+                    .map((pickup) =>
+                      frozen({
+                        kind: 'interactAcquisitionEntry' as const,
+                        siteKey: producer.siteKey,
+                        entryKey: pickup.key,
+                      }),
+                    ),
+                ),
+              }),
+            ],
+      );
+      if (drops.length > 0)
+        result.set(
+          JSON.stringify([route.routeKey, plan.biomeKey, occurrence.occurrenceId]),
+          frozen(drops),
+        );
+    }
+  }
+  return result;
+}
+
+/**
+ * Taking a trait whose acquisition drops same-room pickups also takes those
+ * optional pickups in the same command: right after the source acquisition, or
+ * at the room-exit window for a drop that settles there. Only pickups the
+ * command newly drops are added; earlier drops keep their authored choice.
+ */
+export function reconcileNewTraitDroppedPickupActions(
+  before: ProjectDocument,
+  proposed: ProjectDocument,
+  catalog: Catalog,
+): ProjectDocument {
+  const changedBiomes = changedBiomeKeys(before, proposed);
+  if (changedBiomes.size === 0) return proposed;
+  const afterDrops = activeTraitDroppedPickups(proposed, catalog, changedBiomes);
+  if (afterDrops.size === 0) return proposed;
+  const beforeDrops = activeTraitDroppedPickups(before, catalog, changedBiomes);
+  const replacements = new Map<string, readonly RoomActionReference[]>();
+  const route = proposed.route;
+  for (const [ownerKey, drops] of afterDrops) {
+    const previous = new Set(
+      (beforeDrops.get(ownerKey) ?? []).flatMap((drop) => drop.pickups.map(roomActionKey)),
+    );
+    const [, biomeKey, occurrenceId] = JSON.parse(ownerKey) as [string, string, OccurrenceId];
+    const host = roomActionDomainForOccurrence(
+      proposed,
+      catalog,
+      createBiomeAddress(route.routeKey, biomeKey),
+      occurrenceId,
+    );
+    if (host === undefined) throw new Error(`active Room Action owner ${ownerKey} disappeared`);
+    const domainKeys = new Set(host.domain.activeReferences.map(roomActionKey));
+    let order = host.occurrence.roomActions.order;
+    const exitDrops = new Set<string>();
+    for (const drop of drops) {
+      const added = drop.pickups.filter((pickup) => {
+        const key = roomActionKey(pickup);
+        return (
+          !previous.has(key) &&
+          domainKeys.has(key) &&
+          !order.some((reference) => roomActionKey(reference) === key)
+        );
+      });
+      if (added.length === 0) continue;
+      if (drop.placement === 'roomExit') {
+        for (const pickup of added) exitDrops.add(roomActionKey(pickup));
+        continue;
+      }
+      // The game drops these at the source acquisition, after any of its pickups already taken.
+      const owned = new Set(drop.pickups.map(roomActionKey));
+      let index = order.findIndex(
+        (reference) => roomActionKey(reference) === roomActionKey(drop.sourceAction),
+      );
+      if (index < 0) continue;
+      index += 1;
+      while (index < order.length && owned.has(roomActionKey(order[index]!))) index += 1;
+      order = frozen([...order.slice(0, index), ...added, ...order.slice(index)]);
+    }
+    if (exitDrops.size > 0)
+      order = scheduleRequiredRoomActions({
+        catalog,
+        domain: host.domain,
+        order,
+        requiredKeys: exitDrops,
+        participation: 'any',
+      });
+    if (order !== host.occurrence.roomActions.order) replacements.set(ownerKey, order);
+  }
+  if (replacements.size === 0) return proposed;
+  return replaceOccurrenceOrders(proposed, replacements);
 }
 
 export function roomActionDomainForOccurrence(

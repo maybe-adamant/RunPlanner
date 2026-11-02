@@ -30,6 +30,14 @@ const producers = [
     options: ['RoomRewardBonusBoon', 'PoseidonManaBoon', 'EncounterStartOffenseBuffBoon'],
     entryKey: 'smallGold',
     goldRewardType: 'RoomMoneySmallDrop',
+    drops: [
+      ['smallGold', 'RoomMoneySmallDrop'],
+      ['tinyGold1', 'RoomMoneyTinyDrop'],
+      ['tinyGold2', 'RoomMoneyTinyDrop'],
+      ['minorHeal1', 'HealDropMinor'],
+      ['minorHeal2', 'HealDropMinor'],
+      ['bones', 'MetaCurrencyDrop'],
+    ],
   },
   {
     trait: 'MoneyMultiplierBoon',
@@ -39,6 +47,7 @@ const producers = [
     options: ['MoneyMultiplierBoon', 'DodgeChanceBoon', 'SlowProjectileBoon'],
     entryKey: 'quickBuckGold',
     goldRewardType: 'RoomMoneyDrop',
+    drops: [['quickBuckGold', 'RoomMoneyDrop']],
   },
 ] as const;
 
@@ -85,9 +94,21 @@ function shopWithProducer(shop: Shop, producer: (typeof producers)[number]) {
       rarificationActions: [],
     },
   });
+  const taken = project;
+  // Taking the trait takes its drops; the placements below start without them.
+  const siteKey = traitGeneratedPickupSiteKey(trait, 'option1');
+  for (const [entryKey] of producer.drops)
+    project = applyProjectCommand(project, catalog, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(
+        biome,
+        id,
+        roomActionKey({ kind: 'interactAcquisitionEntry', siteKey, entryKey }),
+      ),
+    });
   const pickup = {
     kind: 'interactAcquisitionEntry' as const,
-    siteKey: traitGeneratedPickupSiteKey(trait, 'option1'),
+    siteKey,
     entryKey: producer.entryKey,
   };
   const place = (before: RoomActionReference | undefined) => {
@@ -103,7 +124,7 @@ function shopWithProducer(shop: Shop, producer: (typeof producers)[number]) {
       index,
     });
   };
-  return { project, place };
+  return { taken, project, place };
 }
 
 /** Each branch's settled acquisitions in the Shop room, as offer or entry key and reward type. */
@@ -134,13 +155,15 @@ function shopAcquisitions(project: ProjectDocument, shop: Shop) {
 describe('trait-generated pickups in a Shop room', () => {
   for (const shop of shops)
     for (const producer of producers)
-      it(`settles ${producer.trait}'s gold in a ${shop.label} before or after a later purchase`, () => {
-        const { project, place } = shopWithProducer(shop, producer);
+      it(`takes ${producer.trait}'s drops in a ${shop.label} and settles its gold before or after a later purchase`, () => {
+        const { taken, project, place } = shopWithProducer(shop, producer);
         const minorOffer = shopOccurrence(project, shop).state;
         if (minorOffer.kind !== 'shop') throw new Error('expected Shop state');
         const boonPurchase = ['Boon', producer.offer.rewardType];
         const minorPurchase = ['Minor', minorOffer.shop?.offers.Minor?.reward?.offer.rewardType];
         const gold = [producer.entryKey, producer.goldRewardType];
+        for (const order of shopAcquisitions(taken, shop))
+          expect(order).toEqual([boonPurchase, ...producer.drops, minorPurchase]);
         for (const order of shopAcquisitions(project, shop))
           expect(order).toEqual([boonPurchase, minorPurchase]);
         const minor = { kind: 'interactShopOffer' as const, offerKey: 'Minor' };

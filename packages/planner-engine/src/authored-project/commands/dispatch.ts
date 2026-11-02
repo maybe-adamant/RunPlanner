@@ -23,7 +23,10 @@ import type { ProjectCommand } from './types';
 import { semanticAddressKey } from '../addresses';
 import { applyRoomActionCommand } from './room-actions';
 import { applyRerollCommand } from './rerolls';
-import { reconcileNewRequiredRoomActions } from '../room-actions/defaults';
+import {
+  reconcileNewRequiredRoomActions,
+  reconcileNewTraitDroppedPickupActions,
+} from '../room-actions/defaults';
 import {
   parseEchoLastRewardPickupEntryKey,
   reconcileGeneratedPickupProducerState,
@@ -376,8 +379,9 @@ export function applyProjectCommand(
   try {
     const proposal = applyUnchecked(document, catalog, command);
     if (proposal === document) return document;
-    // Close source actions, derive generated pickup sites, then close newly generated actions;
-    // the two required-action passes stay separate, since one early pass misses generated pickups.
+    // Close source actions, derive generated pickup sites, take newly dropped trait pickups, then
+    // close newly generated actions; the two required-action passes stay separate, since one early
+    // pass misses generated pickups.
     const withClearTopologyPlacements =
       command.kind === 'ClearTopology'
         ? retractResourcePlacementsForClearedBiome(proposal, command.biome.biomeKey)
@@ -401,9 +405,14 @@ export function applyProjectCommand(
       withRetractedClockedPickups,
       catalog,
     );
+    // An installed route keeps exactly the pickups it was authored with.
+    const withTraitDroppedPickups =
+      command.kind === 'ReplaceRoute'
+        ? withGeneratedPickupState
+        : reconcileNewTraitDroppedPickupActions(document, withGeneratedPickupState, catalog);
     const withRequiredActions = reconcileNewRequiredRoomActions(
       withRetractedClockedPickups,
-      withGeneratedPickupState,
+      withTraitDroppedPickups,
       catalog,
     );
     const reconciled = reconcileChaosTopology(withRequiredActions, catalog);

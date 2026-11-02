@@ -198,6 +198,33 @@ export function insertRoomAction(
   });
 }
 
+/** Puts back the pickups taking a trait took, so a test can take them from the Add area. */
+export function withoutTraitDrops(
+  project: ProjectDocument,
+  biome: ReturnType<typeof createBiomeAddress>,
+  occurrenceId: OccurrenceId,
+): ProjectDocument {
+  const order =
+    project.route.biomes
+      .find((candidate) => candidate.biomeKey === biome.biomeKey)
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+      ?.roomActions.order ?? [];
+  return order
+    .filter(
+      (reference) =>
+        reference.kind === 'interactAcquisitionEntry' &&
+        reference.siteKey.startsWith('traitGenerated:'),
+    )
+    .reduce(
+      (document, reference) =>
+        applyProjectCommand(document, catalog, {
+          kind: 'RemoveRoomAction',
+          action: createRoomActionAddress(biome, occurrenceId, roomActionKey(reference)),
+        }),
+      project,
+    );
+}
+
 export function occurrenceRoomActionOrder(
   project: ProjectDocument,
   routeKey: string,

@@ -88,6 +88,7 @@ import {
   pickRoomObjectAction,
   selectedNarcissusPickupSite,
   shipWheel,
+  withoutTraitDrops,
   shipWheel2,
 } from '@planner-test/support/occurrence-workbench';
 
@@ -1480,6 +1481,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       { kind: 'interactEncounter', phaseKey: 'Encounter' },
       0,
     );
+    project = withoutTraitDrops(project, goldenGBiome, occurrence.occurrenceId);
     const narcissusSite = selectedNarcissusPickupSite(project, occurrence.occurrenceId);
     const mysteryBoon = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(
@@ -1613,6 +1615,7 @@ describe('OccurrenceEncounterWorkbench', () => {
         },
       });
     }
+    project = withoutTraitDrops(project, goldenGBiome, occurrence.occurrenceId);
     const view = renderOccurrenceWorkbench(
       project,
       'Underworld',
@@ -1690,6 +1693,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       { kind: 'interactEncounter', phaseKey: 'Encounter' },
       0,
     );
+    project = withoutTraitDrops(project, goldenGBiome, occurrence.occurrenceId);
     const narcissusSite = selectedNarcissusPickupSite(project, occurrence.occurrenceId);
     const view = renderOccurrenceWorkbench(
       project,
@@ -1788,6 +1792,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       { kind: 'interactEncounter', phaseKey: 'Encounter' },
       0,
     );
+    project = withoutTraitDrops(project, goldenGBiome, occurrence.occurrenceId);
     project = insertRoomAction(
       project,
       goldenGBiome,

@@ -853,8 +853,10 @@ function placeSeaStarDuplicate(
 }
 
 /**
- * Collects the optional pickups a selected trait drops (Narcissus's gifts,
- * Buried Treasure's gold) while the room's uses leave their object unexplained.
+ * Keeps the optional pickups a selected trait drops (Narcissus's gifts, Buried
+ * Treasure's gold) only while the room's uses explain their object. Taking the
+ * trait already took its drops: the last ones past the room's uses are put
+ * back, and a drop not taken is collected for a use nothing else explains.
  */
 function importTraitPickups(
   context: RunImportContext,
@@ -870,39 +872,50 @@ function importTraitPickups(
     occurrence.occurrenceId,
   );
   if (host === undefined) return;
-  let unexplained: Map<string, number> | undefined;
-  for (const contribution of host.domain.contributions) {
+  const taken = new Set(host.occurrence.roomActions.order.map(roomActionKey));
+  const drops = host.domain.contributions.flatMap((contribution) => {
     if (
       contribution.kind !== 'action' ||
       contribution.participation !== 'optional' ||
       contribution.reference.kind !== 'interactAcquisitionEntry' ||
       !contribution.reference.siteKey.startsWith('traitGenerated:')
     )
-      continue;
+      return [];
     const reference = contribution.reference;
     const used = `traitPickup:${occurrence.occurrenceId}:${reference.siteKey}:${reference.entryKey}`;
-    if (context.used.has(used)) continue;
+    if (context.used.has(used)) return [];
     const entry =
-      occurrence.acquisitionSites?.[reference.siteKey]?.pickupEntries?.[reference.entryKey];
+      host.occurrence.acquisitionSites?.[reference.siteKey]?.pickupEntries?.[reference.entryKey];
     const role =
       entry === undefined || entry === null
         ? undefined
         : Object.keys(entry.dispositionByAcquisitionRole)[0];
     const name = role === undefined ? undefined : pickupObjectName(context, entry!, role);
-    if (name === undefined) continue;
-    context.used.add(used);
-    unexplained ??= unexplainedRoomUses(context, biomeKey, host.occurrence, roomIndex);
-    const left = unexplained.get(name) ?? 0;
+    return [{ owner: contribution.owner, reference, used, name }];
+  });
+  if (drops.length === 0) return;
+  const refused = (owner: SemanticAddress) =>
+    context.note({ area: 'reward', reason: 'refused', address: owner, record: record(roomIndex) });
+  // Taken drops already count against the room's uses.
+  const unexplained = unexplainedRoomUses(context, biomeKey, host.occurrence, roomIndex);
+  for (const drop of drops
+    .filter((candidate) => taken.has(roomActionKey(candidate.reference)))
+    .reverse()) {
+    context.used.add(drop.used);
+    const left = drop.name === undefined ? undefined : unexplained.get(drop.name);
+    if (left !== undefined && left >= 0) continue;
+    if (!removeRoomAction(context, biomeKey, occurrence.occurrenceId, drop.reference))
+      refused(drop.owner);
+    else if (left !== undefined) unexplained.set(drop.name!, left + 1);
+  }
+  for (const drop of drops) {
+    if (taken.has(roomActionKey(drop.reference)) || drop.name === undefined) continue;
+    context.used.add(drop.used);
+    const left = unexplained.get(drop.name) ?? 0;
     if (left <= 0) continue;
-    if (insertRoomAction(context, biomeKey, occurrence.occurrenceId, reference))
-      unexplained.set(name, left - 1);
-    else
-      context.note({
-        area: 'reward',
-        reason: 'refused',
-        address: contribution.owner,
-        record: record(roomIndex),
-      });
+    if (insertRoomAction(context, biomeKey, occurrence.occurrenceId, drop.reference))
+      unexplained.set(drop.name, left - 1);
+    else refused(drop.owner);
   }
 }
 

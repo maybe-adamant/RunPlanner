@@ -127,14 +127,16 @@ function narcissusProject(
     Object.hasOwn(site.pickupEntries ?? {}, entryKey),
   )![0];
   const site = createAcquisitionSiteAddress(room, siteKey);
-  project = editTestRoomActionOrder(project, catalog, room, (order) => [
-    ...order,
-    {
-      kind: 'interactAcquisitionEntry' as const,
-      siteKey: site.pointKey === 'roomExit' ? 'roomExit' : acquisitionSiteStorageKey(site),
-      entryKey,
-    },
-  ]);
+  const storageKey = site.pointKey === 'roomExit' ? 'roomExit' : acquisitionSiteStorageKey(site);
+  // Taking the trait takes every drop; keep only the one under test.
+  project = editTestRoomActionOrder(project, catalog, room, (order) =>
+    order.filter(
+      (reference) =>
+        reference.kind !== 'interactAcquisitionEntry' ||
+        reference.siteKey !== storageKey ||
+        reference.entryKey === entryKey,
+    ),
+  );
   return { project, room, site };
 }
 

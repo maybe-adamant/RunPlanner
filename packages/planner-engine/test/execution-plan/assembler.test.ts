@@ -252,21 +252,20 @@ function narcissusMysteryBoonProject(includePickup = true) {
       payload: { kind: 'BoonSource', source: 'HeraUpgrade' },
     },
   });
-  if (includePickup) {
+  // Taking Mixed Blessings takes its Mystery Boon pickup.
+  if (!includePickup) {
     const reference = {
       kind: 'interactAcquisitionEntry' as const,
       siteKey: generated[0],
       entryKey: 'mysteryBoon',
     };
     project = applyProjectCommand(project, catalog, {
-      kind: 'InsertRoomAction',
+      kind: 'RemoveRoomAction',
       action: createRoomActionAddress(
         goldenGBiome,
         occurrence.occurrenceId,
         roomActionKey(reference),
       ),
-      reference,
-      index: updated?.roomActions.order.length ?? 0,
     });
   }
   return authorLegalTraitOffers(project);

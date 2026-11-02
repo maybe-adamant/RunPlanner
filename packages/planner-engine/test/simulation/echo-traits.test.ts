@@ -2809,15 +2809,16 @@ describe('Echo Gate C Reward Reward Reward', () => {
       siteKey,
       entryKey: 'quickBuckGold',
     };
-    const bridge = project
+    // Taking the replayed Quick Buck takes its gold right after the replay.
+    const bridgeOrder = project
       .route!.biomes.find((biome) => biome.biomeKey === 'H')!
-      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
-    project = applyProjectCommand(project, catalog, {
-      kind: 'InsertRoomAction',
-      action: createRoomActionAddress(goldenHBiome, bridgeId, roomActionKey(reference)),
-      reference,
-      index: bridge.roomActions.order.length,
-    });
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!.roomActions
+      .order;
+    const replayIndex = bridgeOrder.findIndex(
+      (candidate) =>
+        candidate.kind === 'interactAcquisitionEntry' && candidate.entryKey === echoReplayEntryKey,
+    );
+    expect(bridgeOrder[replayIndex + 1]).toEqual(reference);
     expect(
       project
         .route!.biomes.find((biome) => biome.biomeKey === 'H')!

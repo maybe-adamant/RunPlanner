@@ -92,7 +92,27 @@ function replacePickupActions(
   ]);
 }
 
+/** Takes the Narcissus trait; its drops are authored explicitly by each test, so none are taken. */
 function selectNarcissus(project: ProjectDocument, traitKeys: readonly [string, string, string]) {
+  return withoutTraitDrops(takeNarcissus(project, traitKeys));
+}
+
+function withoutTraitDrops(project: ProjectDocument): ProjectDocument {
+  const occurrence = narcissusOccurrence(project);
+  return editTestRoomActionOrder(
+    project,
+    catalog,
+    createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+    (order) =>
+      order.filter(
+        (reference) =>
+          reference.kind !== 'interactAcquisitionEntry' ||
+          !reference.siteKey.startsWith('traitGenerated:'),
+      ),
+  );
+}
+
+function takeNarcissus(project: ProjectDocument, traitKeys: readonly [string, string, string]) {
   const occurrence = narcissusOccurrence(project);
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceTraitOffer',
