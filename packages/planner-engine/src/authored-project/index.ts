@@ -268,6 +268,7 @@ export {
   type AuthoredHexTreeEdit,
 } from './traits/hex-tree';
 export {
+  type HexCappedTalent,
   type HexCommonColumnDealSegment,
   type HexCommonColumnDeckSegment,
   type HexCommonDecks,

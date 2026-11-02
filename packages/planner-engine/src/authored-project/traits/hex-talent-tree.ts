@@ -466,6 +466,16 @@ export interface HexCommonColumnDeckSegment {
   readonly talentKeys: readonly string[];
   /** All of them, except possibly in the column's last segment. */
   readonly draws: number;
+  /**
+   * On a refill, the talents of the previous deck it leaves out because they
+   * reached `MaxCount`; empty for the remainder of an already started deck.
+   */
+  readonly cappedOut: readonly HexCappedTalent[];
+}
+
+export interface HexCappedTalent {
+  readonly talentKey: string;
+  readonly maxCount: number;
 }
 
 /** One talent a Common column slot can take, and the column it yields. */
@@ -500,8 +510,26 @@ function mapOrder(nodes: readonly HexLayoutNodeDeclaration[]): readonly HexLayou
   return [...nodes].sort((a, b) => y(a) - y(b) || x(a) - x(b) || a.slot - b.slot);
 }
 
+/** Talents of cycle `index - 1` that cycle `index` leaves out at their `MaxCount`. */
+function cappedAtRefill(
+  hex: HexDeclaration,
+  cycles: readonly HexRepeatableCycle[],
+  index: number,
+): readonly HexCappedTalent[] {
+  const previous = cycles[index - 1]!.talentKeys;
+  const refill = cycles[index]!.talentKeys;
+  return Object.freeze(
+    hex.repeatableCandidates.values.flatMap((talent) =>
+      talent.maxCount !== undefined && previous.includes(talent.key) && !refill.includes(talent.key)
+        ? [Object.freeze({ talentKey: talent.key, maxCount: talent.maxCount })]
+        : [],
+    ),
+  );
+}
+
 /** The decks a column of `need` draws reaches from `state`. */
 function columnDeck(
+  hex: HexDeclaration,
   cycles: readonly HexRepeatableCycle[],
   state: DrawState,
   need: number,
@@ -509,7 +537,8 @@ function columnDeck(
   const segments: HexCommonColumnDeckSegment[] = [];
   let current = state;
   while (need > 0) {
-    if (current.left.length === 0)
+    const refill = current.left.length === 0;
+    if (refill)
       current = { cycle: current.cycle + 1, left: cycles[current.cycle + 1]?.talentKeys ?? [] };
     if (current.left.length === 0) throw new Error('Hex repeatable draws exceed the tree');
     const draws = Math.min(need, current.left.length);
@@ -518,6 +547,7 @@ function columnDeck(
         deckIndex: current.cycle,
         talentKeys: Object.freeze([...current.left]),
         draws,
+        cappedOut: refill ? cappedAtRefill(hex, cycles, current.cycle) : Object.freeze([]),
       }),
     );
     need -= draws;
@@ -626,7 +656,7 @@ export function hexCommonColumns(
     repeatableDepths(layoutFor(hex, layoutKey)).map((group) => {
       const nodes = mapOrder(group.nodes);
       const talents = nodes.map((node) => tree[node.key]!);
-      const deck = state === undefined ? undefined : columnDeck(cycles, state, nodes.length);
+      const deck = state === undefined ? undefined : columnDeck(hex, cycles, state, nodes.length);
       const next = state === undefined ? undefined : drawColumn(cycles, state, talents);
       const drawable = next !== undefined;
       const slots = columnSlotOptions(

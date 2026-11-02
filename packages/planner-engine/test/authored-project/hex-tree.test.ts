@@ -339,6 +339,46 @@ describe('Common columns', () => {
     expect(assessAuthoredHexTree(catalog, nightBloom, twice)).not.toEqual([]);
   });
 
+  it('names the talents a refill leaves out at their MaxCount', () => {
+    const nightBloom = 'SpellSummonTrait';
+    const tree = createDefaultAuthoredHexTree(catalog, nightBloom, 'Lung');
+    const projected = columns(tree, nightBloom);
+    // A segment whose deck an earlier column already reached is that deck's remainder.
+    const seen = new Set<number>();
+    const segments = projected.flatMap((column) => {
+      const read = column.deck!.map((segment) => ({
+        segment,
+        remainder: seen.has(segment.deckIndex),
+      }));
+      for (const segment of column.deck!) seen.add(segment.deckIndex);
+      return read;
+    });
+    const refills = segments.filter(({ remainder }) => !remainder);
+    expect(refills.map(({ segment }) => [segment.deckIndex, segment.cappedOut])).toEqual(
+      refills.map(({ segment }) => [
+        segment.deckIndex,
+        segment.deckIndex === 1
+          ? [{ talentKey: GROWTH, maxCount: 1 }]
+          : segment.deckIndex === 2
+            ? [{ talentKey: 'PreChargeTalent', maxCount: 2 }]
+            : [],
+      ]),
+    );
+    expect(refills.map(({ segment }) => segment.deckIndex)).toEqual(
+      expect.arrayContaining([0, 1, 2, 3]),
+    );
+    const remainders = segments.filter(({ remainder }) => remainder);
+    expect(remainders.length).toBeGreaterThan(0);
+    for (const { segment } of remainders) expect(segment.cappedOut).toEqual([]);
+    // The deal carries the same segments.
+    for (const column of projected)
+      expect(
+        authoredHexColumnDeal(catalog, nightBloom, tree, column.depth, [])!.segments.map(
+          (segment) => segment.cappedOut,
+        ),
+      ).toEqual(column.deck!.map((segment) => segment.cappedOut));
+  });
+
   it('sets a column atomically and keeps later columns as authored', () => {
     const kept = setColumn(1, [DAMAGE, GROWTH]);
     expect(kept.nodes).toEqual({ ...lung.nodes, '1:2': DAMAGE, '1:4': GROWTH });
