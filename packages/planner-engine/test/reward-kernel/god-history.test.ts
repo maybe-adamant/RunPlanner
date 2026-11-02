@@ -154,13 +154,13 @@ describe('Hestia and Aphrodite loot requirement', () => {
     };
     const closed = createRewardHistoryState(rewards, 'closed');
     const bag = createRewardBagState(runProgress, 'Underworld');
-    expect(consumeCountedOffer(rewards, runProgress, bag, hestiaDoor, factsFor(closed))).toEqual(
-      [],
-    );
+    expect(
+      consumeCountedOffer(rewards, runProgress, bag, hestiaDoor, factsFor(closed)),
+    ).toBeUndefined();
     const used = applyConcreteAcquisition(rewards, closed, loot('DemeterUpgrade'));
     expect(
-      consumeCountedOffer(rewards, runProgress, bag, hestiaDoor, factsFor(used)).length,
-    ).toBeGreaterThan(0);
+      consumeCountedOffer(rewards, runProgress, bag, hestiaDoor, factsFor(used)),
+    ).toBeDefined();
 
     // The four-god cap still counts this run's gods, not the file's history.
     const capped = ['ApolloUpgrade', 'AresUpgrade', 'HeraUpgrade', 'ZeusUpgrade'].reduce(

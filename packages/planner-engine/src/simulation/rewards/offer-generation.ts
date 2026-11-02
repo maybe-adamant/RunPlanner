@@ -406,7 +406,7 @@ function processRewardOfferBranches(
         .filter((peer) => peer.offer.rewardType === effectiveOffer.rewardType)
         .forEach(recordSiblingConflict);
     }
-    const transitions: readonly RewardBagState[] = consumeCountedOffer(
+    const bag = consumeCountedOffer(
       catalog.rewards,
       store,
       prepared.bag,
@@ -414,47 +414,45 @@ function processRewardOfferBranches(
       facts,
       bagOptions,
     );
-    if (transitions.length === 0) {
+    if (bag === undefined) {
       if (countedStoreExhausted(store, prepared.bag, facts, bagOptions)) {
         sawBagSupportEmpty = true;
         rejected?.push({ branch: originalBranch, gate: 'storeExhausted' });
         continue;
       }
       rejected?.push({ branch: originalBranch, gate: 'bag' });
+      continue;
     }
-    for (const bag of transitions) {
-      const history = applyOfferProjection(
-        catalog.rewards,
-        prepared.branch.state.rewardHistory,
-        effectiveOffer,
-        facts,
-      );
-      next.push(
-        appendRewardEvent(
-          Object.freeze({
-            ...prepared.branch,
-            state: Object.freeze({
-              ...prepared.branch.state,
-              bags: freezeRecord({ ...prepared.branch.state.bags, [storeKey]: bag }),
-              rewardPriorities:
-                requiredPriority === undefined
-                  ? prepared.branch.state.rewardPriorities
-                  : Object.freeze(
-                      prepared.branch.state.rewardPriorities.filter(
-                        (priority, index) =>
-                          priority !== requiredPriority ||
-                          index !==
-                            prepared.branch.state.rewardPriorities.indexOf(requiredPriority),
-                      ),
+    const history = applyOfferProjection(
+      catalog.rewards,
+      prepared.branch.state.rewardHistory,
+      effectiveOffer,
+      facts,
+    );
+    next.push(
+      appendRewardEvent(
+        Object.freeze({
+          ...prepared.branch,
+          state: Object.freeze({
+            ...prepared.branch.state,
+            bags: freezeRecord({ ...prepared.branch.state.bags, [storeKey]: bag }),
+            rewardPriorities:
+              requiredPriority === undefined
+                ? prepared.branch.state.rewardPriorities
+                : Object.freeze(
+                    prepared.branch.state.rewardPriorities.filter(
+                      (priority, index) =>
+                        priority !== requiredPriority ||
+                        index !== prepared.branch.state.rewardPriorities.indexOf(requiredPriority),
                     ),
-              rewardHistory: history,
-            }),
+                  ),
+            rewardHistory: history,
           }),
-          historySequence,
-          { kind: 'rewardOffered', origin: reward.origin, offer: effectiveOffer, storeKey },
-        ),
-      );
-    }
+        }),
+        historySequence,
+        { kind: 'rewardOffered', origin: reward.origin, offer: effectiveOffer, storeKey },
+      ),
+    );
   }
 
   if (next.length === 0) {

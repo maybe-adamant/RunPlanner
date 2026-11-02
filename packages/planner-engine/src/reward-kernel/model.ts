@@ -189,9 +189,8 @@ export interface RewardStoreEntry {
 
 export interface RewardStoreDeclaration {
   readonly key: string;
+  /** Same-item entries never both eligible and later divergent; the catalog compiler guards it. */
   readonly entries: readonly RewardStoreEntry[];
-  /** Same-name entries whose exact identity has no distinct future once both are eligible. */
-  readonly interchangeableRewardTypes?: readonly string[];
 }
 
 export interface ShopOptionEntry {

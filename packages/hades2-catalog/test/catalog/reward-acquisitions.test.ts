@@ -306,15 +306,6 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
         (entry) => entry.allowDuplicates,
       ),
     ).toHaveLength(4);
-    expect(rewardKernelCatalog.stores.byKey.RunProgress?.interchangeableRewardTypes).toEqual([
-      'MaxHealthDrop',
-      'MaxManaDrop',
-      'RoomMoneyDrop',
-      'StackUpgrade',
-    ]);
-    expect(rewardKernelCatalog.stores.byKey.TartarusRewards?.interchangeableRewardTypes).toBe(
-      undefined,
-    );
     expect(
       Object.fromEntries(
         rewardKernelCatalog.stores.values.map((store) => [

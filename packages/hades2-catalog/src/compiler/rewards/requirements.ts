@@ -144,13 +144,7 @@ export function normalizeStores(
           fail(rewardTypePath, `requires matching allowDuplicates values for ${rewardType}`);
         }
       });
-      return Object.freeze({
-        key: store.key,
-        entries: Object.freeze(entries),
-        ...(interchangeableRewardTypes.length === 0
-          ? {}
-          : { interchangeableRewardTypes: Object.freeze([...interchangeableRewardTypes]) }),
-      });
+      return Object.freeze({ key: store.key, entries: Object.freeze(entries) });
     }),
     'stores',
     (store) => store.key,

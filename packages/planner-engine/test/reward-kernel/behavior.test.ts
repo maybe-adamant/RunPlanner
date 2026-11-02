@@ -400,7 +400,7 @@ describe('counted reward bags', () => {
   const runProgress = rewardKernelCatalog.stores.byKey.RunProgress!;
 
   it.each(['MaxHealthDrop', 'MaxManaDrop', 'RoomMoneyDrop', 'StackUpgrade'])(
-    'collapses declaration-certified interchangeable %s entries after ordinary loot is acquired',
+    'draws one canonical %s entry once both of its entries are eligible',
     (rewardType) => {
       const next = consumeCountedOffer(
         rewardKernelCatalog,
@@ -414,36 +414,22 @@ describe('counted reward bags', () => {
       const matchingIndexes = runProgress.entries.flatMap((entry, index) =>
         entry.rewardType === rewardType ? [index] : [],
       );
-      expect(next).toHaveLength(1);
-      expect(
-        matchingIndexes.reduce(
-          (total, index) => total + (next[0]?.remainingEntryCounts[index] ?? 0),
-          0,
-        ),
-      ).toBe(1);
+      expect(matchingIndexes.map((index) => next?.remainingEntryCounts[index])).toEqual([1, 0]);
     },
   );
 
-  it('retains latent branches for differing requirements without declared interchangeability', () => {
-    const futureDistinct = Object.freeze({
-      key: runProgress.key,
-      entries: runProgress.entries,
-    });
+  it('draws the only eligible same-item entry before its gated copy opens', () => {
     const next = consumeCountedOffer(
       rewardKernelCatalog,
-      futureDistinct,
-      createRewardBagState(futureDistinct, 'Underworld'),
+      runProgress,
+      createRewardBagState(runProgress, 'Underworld'),
       { rewardType: 'MaxHealthDrop' },
-      facts(['ApolloUpgrade']),
+      facts(),
     );
-    expect(next).toHaveLength(2);
-    expect(next.map((state) => state.remainingEntryCounts.slice(0, 2))).toEqual([
-      [0, 1],
-      [1, 0],
-    ]);
+    expect(next?.remainingEntryCounts.slice(0, 2)).toEqual([0, 1]);
   });
 
-  it('deduplicates equivalent latent states from duplicate Boon entries', () => {
+  it('draws one Boon entry from duplicate Boon entries', () => {
     const next = consumeCountedOffer(
       rewardKernelCatalog,
       runProgress,
@@ -451,8 +437,7 @@ describe('counted reward bags', () => {
       { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
       facts(),
     );
-    expect(next).toHaveLength(1);
-    expect(next[0]?.remainingEntryCounts.slice(14).reduce((sum, count) => sum + count, 0)).toBe(3);
+    expect(next?.remainingEntryCounts.slice(14).reduce((sum, count) => sum + count, 0)).toBe(3);
   });
 
   it('blocks non-duplicate peer reward types while allowing a different-source Boon peer', () => {
@@ -466,7 +451,7 @@ describe('counted reward bags', () => {
         facts(),
         { peers: { priorOffers: [{ rewardType: 'MaxHealthDrop' }] } },
       ),
-    ).toEqual([]);
+    ).toBeUndefined();
     expect(
       consumeCountedOffer(
         rewardKernelCatalog,
@@ -485,7 +470,7 @@ describe('counted reward bags', () => {
           },
         },
       ),
-    ).toHaveLength(1);
+    ).toBeDefined();
   });
 
   it('retains ineligible leftovers while appending one complete base set', () => {
@@ -506,9 +491,8 @@ describe('counted reward bags', () => {
         },
       }),
     );
-    expect(next).toHaveLength(1);
-    expect(next[0]?.remainingEntryCounts[12]).toBe(2);
-    expect(next[0]?.remainingEntryCounts.slice(14).reduce((sum, count) => sum + count, 0)).toBe(3);
+    expect(next?.remainingEntryCounts[12]).toBe(2);
+    expect(next?.remainingEntryCounts.slice(14).reduce((sum, count) => sum + count, 0)).toBe(3);
   });
 
   it('appends two store copies and then resolves only the Heal fallback when nothing is eligible', () => {
@@ -532,8 +516,8 @@ describe('counted reward bags', () => {
         spellUsed,
         onlySpell,
       );
-    expect(offer('SpellDrop')).toEqual([]);
-    const [fallback] = offer('RoomRewardHealDrop');
+    expect(offer('SpellDrop')).toBeUndefined();
+    const fallback = offer('RoomRewardHealDrop');
     expect(fallback?.remainingEntryCounts).toEqual(runProgress.entries.map(() => 2));
     expect(countedStoreExhausted(runProgress, empty, spellUsed, onlySpell)).toBe(true);
     expect(countedStoreExhausted(runProgress, empty, spellUsed)).toBe(false);

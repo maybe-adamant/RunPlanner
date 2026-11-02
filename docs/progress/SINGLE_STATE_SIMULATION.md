@@ -46,6 +46,14 @@ happen", never as alternative states carried forward or offered as a choice.
    (`reward-kernel/bag.ts` `consumeCountedOffer`), and the latent-bag merge
    that exists only to fold those branches goes with it. Wheel cohort order
    search remains as existence lookahead.
+   _Status: done._ `consumeCountedOffer` returns one bag (the last eligible
+   entry of the drawn type, matching the state the old dedupe kept), the
+   per-draw `bagSemanticKey` merge and the normalized
+   `interchangeableRewardTypes` field are gone; `mergeEquivalentRewardBranches`
+   stays (cohort orders, Shop cohorts, site settlement, biome start). Wheel
+   cohorts already collapse every valid order to one bag in every engine
+   witness (probe: 18 two-order cohorts, all one state out); the equivalence
+   corpus reaches no multi-offer wheel. Equivalence 157/157 unchanged.
 2. **Catalog build-time guard.** Collapsing is only sound while no store holds
    two same-item entries whose conditions can both hold and later diverge.
    Today only a hand-maintained interchangeable list prevents that. The catalog

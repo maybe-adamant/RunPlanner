@@ -154,31 +154,7 @@ function refill(
   });
 }
 
-function entrySemanticKey(store: RewardStoreDeclaration, index: number): string {
-  const entry = store.entries[index];
-  const interchangeable =
-    entry !== undefined && store.interchangeableRewardTypes?.includes(entry.rewardType) === true;
-  return JSON.stringify({
-    rewardType: entry?.rewardType,
-    allowDuplicates: entry?.allowDuplicates,
-    requirement: interchangeable ? undefined : entry?.requirement,
-  });
-}
-
-function bagSemanticKey(store: RewardStoreDeclaration, state: RewardBagState): string {
-  const totals = new Map<string, number>();
-  store.entries.forEach((_, index) => {
-    const count = state.remainingEntryCounts[index] ?? 0;
-    if (count > 0) {
-      const key = entrySemanticKey(store, index);
-      totals.set(key, (totals.get(key) ?? 0) + count);
-    }
-  });
-  return JSON.stringify({
-    entries: [...totals.entries()].sort(([left], [right]) => left.localeCompare(right)),
-  });
-}
-
+/** The bag after drawing `offer`, or undefined when no eligible entry supports it. */
 export function consumeCountedOffer(
   catalog: RewardKernelCatalog,
   store: RewardStoreDeclaration,
@@ -186,14 +162,14 @@ export function consumeCountedOffer(
   offer: ResolvedRewardOffer,
   facts: RewardKernelFacts,
   options: CountedOfferTransitionOptions = {},
-): readonly RewardBagState[] {
+): RewardBagState | undefined {
   const { bag: current, eligible } = refilledFrontier(store, state, facts, options);
   if (eligible.length === 0) {
     // The final fallback offers its reward without drawing from the refilled bag.
     return offer.rewardType === catalog.countedStoreFallbackRewardType &&
       isOfferSupportedAtResolutionPoint(catalog, offer, facts, 'offer')
-      ? [current]
-      : [];
+      ? current
+      : undefined;
   }
 
   const forced =
@@ -202,27 +178,17 @@ export function consumeCountedOffer(
     !forced &&
     !isOfferSupportedAtResolutionPoint(catalog, offer, facts, 'offer', options.peers)
   ) {
-    return [];
+    return undefined;
   }
 
-  const states = eligible.flatMap((entryIndex) => {
-    if (store.entries[entryIndex]?.rewardType !== offer.rewardType) {
-      return [];
-    }
-    const counts = [...current.remainingEntryCounts];
-    counts[entryIndex] = (counts[entryIndex] ?? 0) - 1;
-    return [
-      Object.freeze({
-        remainingEntryCounts: Object.freeze(counts),
-      }),
-    ];
-  });
-
-  const unique = new Map<string, RewardBagState>();
-  for (const next of states) {
-    unique.set(bagSemanticKey(store, next), next);
-  }
-  return [...unique.values()];
+  // Same-item entries eligible together never diverge (a catalog-compiler guard), so the last is canonical.
+  const entryIndex = eligible.findLast(
+    (index) => store.entries[index]?.rewardType === offer.rewardType,
+  );
+  if (entryIndex === undefined) return undefined;
+  const counts = [...current.remainingEntryCounts];
+  counts[entryIndex] = (counts[entryIndex] ?? 0) - 1;
+  return Object.freeze({ remainingEntryCounts: Object.freeze(counts) });
 }
 
 /** Why a counted offer has no draw while its store still has eligible entries. */

@@ -837,7 +837,7 @@ export function applyProducerRoleHistory(
                         offer,
                         facts(prepared.branch.state),
                         ARTIFICER_REDRAW_OPTIONS,
-                      ).length > 0
+                      ) !== undefined
                     );
                   } catch {
                     return false;

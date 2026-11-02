@@ -10,7 +10,6 @@ import {
   consumeCountedOffer,
   resolveAcquisitionRole,
   type ConcreteAcquisitionEvent,
-  type RewardBagState,
 } from '../../../reward-kernel';
 import { consumeArtificerUse } from '../../arcana-fear';
 import {
@@ -256,7 +255,7 @@ export function generateArtificerReplacement(
     runProgress !== undefined &&
     prepared !== undefined
   ) {
-    const bags: readonly RewardBagState[] = consumeCountedOffer(
+    const bag = consumeCountedOffer(
       catalog.rewards,
       runProgress,
       prepared.bag,
@@ -264,7 +263,7 @@ export function generateArtificerReplacement(
       facts(prepared.branch.state),
       { ineligibleRewardTypes: new Set(['Devotion', 'SpellDrop']) },
     );
-    for (const bag of bags) {
+    if (bag !== undefined) {
       const generatedHistory = applyOfferProjection(
         catalog.rewards,
         prepared.branch.state.rewardHistory,
@@ -343,8 +342,8 @@ export function generateArtificerReplacement(
           roles: replacementLifecycle.acquisitionLifecycle,
         }),
       );
+      return result('converted');
     }
-    if (bags.length > 0) return result('converted');
   }
   addRewardFinding(
     findingEmissions,

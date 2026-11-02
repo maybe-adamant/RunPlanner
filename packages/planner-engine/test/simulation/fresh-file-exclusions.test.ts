@@ -302,7 +302,7 @@ describe('Fresh File blanket exclusions', () => {
 
     const mature = createRewardHistoryState(catalog.rewards, 'mature');
     const exhausted = { remainingEntryCounts: store.entries.map(() => 0) };
-    const [refilled] = consumeCountedOffer(
+    const refilled = consumeCountedOffer(
       catalog.rewards,
       store,
       exhausted,
@@ -317,7 +317,7 @@ describe('Fresh File blanket exclusions', () => {
         createRewardBagState(store, 'Underworld'),
         { rewardType },
         rewardFacts('Underworld', mature, enteredBiomes),
-      ).length > 0;
+      ) !== undefined;
     expect(offers('GiftDrop', 1)).toBe(true);
     expect(offers('MetaCurrencyDrop', 1)).toBe(true);
     expect(offers('MetaCurrencyDrop', 2)).toBe(false);
@@ -335,7 +335,7 @@ describe('Fresh File blanket exclusions', () => {
         bag,
         { rewardType },
         rewardFacts('FreshFile', history, enteredBiomes),
-      ).length > 0;
+      ) !== undefined;
     const closed = createRewardHistoryState(catalog.rewards, 'closed');
     expect(offers(closed, 'GiftDrop', 1)).toBe(false);
     expect(offers(closed, 'MetaCardPointsCommonDrop', 1)).toBe(true);
@@ -465,10 +465,10 @@ describe('exhausted counted-store fallback', () => {
     expect(countedStoreExhausted(store, bag, facts, { peers })).toBe(true);
     const offer = (rewardType: string) =>
       consumeCountedOffer(catalog.rewards, store, bag, { rewardType }, facts, { peers });
-    expect(offer('MetaCurrencyDrop')).toEqual([]);
-    expect(offer('RoomRewardHealDrop')).toEqual([
-      { remainingEntryCounts: store.entries.map(() => 3) },
-    ]);
+    expect(offer('MetaCurrencyDrop')).toBeUndefined();
+    expect(offer('RoomRewardHealDrop')).toEqual({
+      remainingEntryCounts: store.entries.map(() => 3),
+    });
   });
 
   it('falls back on the third late Fresh MetaProgress peer below the high tier', () => {
@@ -484,10 +484,10 @@ describe('exhausted counted-store fallback', () => {
     expect(countedStoreExhausted(store, bag, facts, { peers })).toBe(true);
     const offer = (rewardType: string) =>
       consumeCountedOffer(catalog.rewards, store, bag, { rewardType }, facts, { peers });
-    expect(offer('MetaCurrencyBigDrop')).toEqual([]);
-    expect(offer('RoomRewardHealDrop')).toEqual([
-      { remainingEntryCounts: store.entries.map(() => 3) },
-    ]);
+    expect(offer('MetaCurrencyBigDrop')).toBeUndefined();
+    expect(offer('RoomRewardHealDrop')).toEqual({
+      remainingEntryCounts: store.entries.map(() => 3),
+    });
   });
 
   it('never reaches the fallback on a mature MetaProgress bag', () => {
@@ -511,7 +511,7 @@ describe('exhausted counted-store fallback', () => {
             peers: { priorOffers },
           },
         ),
-      ).toEqual([]);
+      ).toBeUndefined();
     }
   });
 });
