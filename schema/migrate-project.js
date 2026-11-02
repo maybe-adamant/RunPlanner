@@ -5,7 +5,7 @@
 
 import { access, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { PROJECT_TRANSITION_STEPS } from '../apps/planner/src/persistence/project-transitions.js';
 
 const PROJECT_SUFFIX = '.runplanner.json';
@@ -73,6 +73,27 @@ export function migrateProjectDocumentTo(
   return migrated;
 }
 
+/** The engine's catalog-aware completion of a schema-100 document (`current-schema.js`). */
+export async function loadSchema100Completion() {
+  const { runnerImport } = await import('vite');
+  const { module } = await runnerImport(
+    fileURLToPath(new URL('./current-schema.js', import.meta.url)),
+    { configFile: false, logLevel: 'silent' },
+  );
+  return module.completeSchema100Document;
+}
+
+/**
+ * Migrates like `migrateProjectDocumentTo` and, when the result is schema 100, completes it
+ * as the application loader does, so strict decoding accepts the written file.
+ */
+export async function migrateProjectDocumentToComplete(document, options = {}) {
+  const migrated = migrateProjectDocumentTo(document, options);
+  if (migrated.schemaVersion !== 100) return migrated;
+  const complete = await loadSchema100Completion();
+  return complete(migrated, document.schemaVersion);
+}
+
 function parseArguments(argv) {
   let target = CURRENT_SCHEMA_VERSION;
   const files = [];
@@ -102,7 +123,7 @@ async function main(argv) {
     if (error?.code !== 'ENOENT') throw error;
   }
   const source = JSON.parse(await readFile(inputPath, 'utf8'));
-  const migrated = migrateProjectDocumentTo(source, {
+  const migrated = await migrateProjectDocumentToComplete(source, {
     target,
     context: { name: planNameFromPath(inputPath) },
   });

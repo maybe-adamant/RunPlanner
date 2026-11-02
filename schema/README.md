@@ -61,9 +61,11 @@ keeping an interacted feature's slots and clearing an uninteracted one's. The tr
 Each phase whose binding can field a Nemesis bet combat owns a complete
 `nemesisBetOutcomeByPhase` entry (`win`, `tie` or `loss`). A schema 100
 document saved before this entry was required stored a win by omission. The
-application loader fills those wins before strict parsing, both for such a
-file and for a document it migrated from an earlier schema; the offline
-transitions do not write them.
+application loader and the offline tool fill those wins before strict parsing,
+both for such a file and for a document migrated from an earlier schema,
+through the engine's catalog-aware fill; the transitions themselves do not
+write them. The tool loads the engine and catalog through Vite's module runner
+(`current-schema.js`).
 
 The migration moves a Shop-owned pedestal item, its collect action and its
 source entry to the room unchanged, and gives every other pedestal-declaring

@@ -12,3 +12,10 @@ export function migrateProjectDocumentTo(
   document: unknown,
   options?: { readonly target?: number; readonly context?: { readonly name?: string } },
 ): unknown;
+export function loadSchema100Completion(): Promise<
+  (document: unknown, sourceSchemaVersion: number) => unknown
+>;
+export function migrateProjectDocumentToComplete(
+  document: unknown,
+  options?: { readonly target?: number; readonly context?: { readonly name?: string } },
+): Promise<unknown>;
