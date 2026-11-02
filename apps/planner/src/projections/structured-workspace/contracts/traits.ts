@@ -175,10 +175,10 @@ export interface WorkspaceTraitOptionDomainInteraction {
   readonly load: () => TraitOptionDomainProjection | Promise<TraitOptionDomainProjection>;
 }
 
-/** One node's picker: its grouped edits and the nodes each relates to. */
+/** A Rare or Epic node's picker: its pool and the nodes each choice relates to. */
 export interface WorkspaceHexNodeEditor {
   readonly model: ContextualPickerModel<AuthoredHexTreeEdit>;
-  /** Kind and talent, such as "Common · Omen". */
+  /** Kind and talent, such as "Rare · Omen". */
   readonly heading: string;
   /** The nodes each picker item involves, by item key. */
   readonly relatedNodeKeys: Readonly<Record<string, readonly string[]>>;
@@ -203,53 +203,66 @@ export interface WorkspaceHexBoardNode {
 
 /** One node of the Hex tree board. */
 export interface WorkspaceHexTreeNode extends WorkspaceHexBoardNode {
-  /** Absent for the God Sent nodes. */
+  /** Rare and Epic nodes only; Common nodes are dealt by column. */
   readonly editor?: WorkspaceHexNodeEditor;
   /** A tree-wide conflict names this node. */
   readonly conflict: boolean;
-  /** A Common node's column among the Common columns, from 0. */
-  readonly commonColumn?: number;
 }
 
-/** One talent in a Common deck's cell; it opens its node's picker. */
-export interface WorkspaceHexDeckTalent {
-  readonly key: string;
+export interface WorkspaceHexColumnChip {
+  readonly talentKey: string;
   readonly label: string;
-  /** Deck, column and talent, such as "Deck 2, column 1: Omen". */
-  readonly name: string;
-  /** The board node holding it. */
+}
+
+/** One deck a column's deal still holds cards from. */
+export interface WorkspaceHexColumnDeckSegment {
+  readonly key: string;
+  /** The column reaches this deck as a refill, after the one before it emptied. */
+  readonly refill: boolean;
+  /** The cards not yet dealt; `pick` when the next slot can take it. */
+  readonly cards: readonly (WorkspaceHexColumnChip & { readonly pick: boolean })[];
+}
+
+/** One Common slot of a column, top to bottom on the map. */
+export interface WorkspaceHexColumnSlot {
   readonly nodeKey: string;
+  /** Absent for a slot a deal has not reached. */
+  readonly talent?: WorkspaceHexColumnChip;
 }
 
-export interface WorkspaceHexDeckRow {
-  readonly key: string;
-  /** Such as "Deck 1". */
+/** A Common column's deal so far. */
+export interface WorkspaceHexColumnDeal {
+  readonly dealt: readonly string[];
+  readonly slots: readonly WorkspaceHexColumnSlot[];
+  /** The decks' cards left to deal, in deal order. */
+  readonly deck: readonly WorkspaceHexColumnDeckSegment[];
+  /** The tree edit of the complete deal. */
+  readonly edit?: AuthoredHexTreeEdit;
+}
+
+/** One Common column in draw order. */
+export interface WorkspaceHexColumnRow {
+  readonly depth: number;
+  /** Such as "Column 2", by draw order. */
   readonly label: string;
-  /** One cell per table column. */
-  readonly cells: readonly (readonly WorkspaceHexDeckTalent[])[];
+  readonly slots: readonly WorkspaceHexColumnSlot[];
+  /** Absent past the first column its deck cannot deal: such a column waits on earlier ones. */
+  readonly draw?: {
+    /** The column's talents are not a deal from its deck. */
+    readonly undrawable: boolean;
+    /** The column dealt with `dealt`, card by card from the top slot. */
+    readonly deal: (dealt: readonly string[]) => WorkspaceHexColumnDeal;
+  };
 }
-
-/** Which deck dealt each Common talent, one column per Common column. */
-export type WorkspaceHexDeckTable = {
-  readonly columns: readonly {
-    readonly key: string;
-    readonly label: string;
-    /** Matches the board nodes' `commonColumn`. */
-    readonly commonColumn: number;
-  }[];
-  /** Characters in the catalog's longest Common talent label; every chip takes that width. */
-  readonly chipLength: number;
-} & (
-  | { readonly rows: readonly WorkspaceHexDeckRow[]; readonly unreadable?: never }
-  | { readonly unreadable: string; readonly rows?: never }
-);
 
 export interface WorkspaceHexTreeDomain {
   readonly value: AuthoredHexTreeConfiguration;
   readonly address: HexTreeAddress;
   readonly layoutPicker: ContextualPickerModel<HexLayoutKey>;
   readonly nodes: readonly WorkspaceHexTreeNode[];
-  readonly decks: WorkspaceHexDeckTable;
+  /** The Common talents in declared order, each with its per-tree cap, such as "Growth ×1". */
+  readonly deckLegend: readonly string[];
+  readonly columns: readonly WorkspaceHexColumnRow[];
   /** Why the nodes cannot form one tree together, one keyed entry per conflict. */
   readonly treeIssues: readonly (readonly [key: string, message: string])[];
   /** The engine's transition of this tree under one edit. */

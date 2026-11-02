@@ -332,11 +332,16 @@
   min-width: 0;
 }
 
-.hex-tree-toolbar {
+/* A heading the tree's layout continues: "Dark Side · Lung". */
+.trait-selected-outcome-heading {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 0.85rem;
+  gap: 0.35rem 0.5rem;
+}
+
+.hex-tree-layout-separator {
+  color: var(--muted);
 }
 
 .hex-tree-scroll {
@@ -425,36 +430,6 @@ button.hex-tree-node {
   border-style: dashed;
 }
 
-/* Common nodes and their table columns share one colour per Common column. */
-:is(.hex-tree-node, .hex-deck-table th)[data-common-column='0'] {
-  --hex-column: var(--hex-column-1);
-}
-
-:is(.hex-tree-node, .hex-deck-table th)[data-common-column='1'] {
-  --hex-column: var(--hex-column-2);
-}
-
-:is(.hex-tree-node, .hex-deck-table th)[data-common-column='2'] {
-  --hex-column: var(--hex-column-3);
-}
-
-:is(.hex-tree-node, .hex-deck-table th)[data-common-column='3'] {
-  --hex-column: var(--hex-column-4);
-}
-
-:is(.hex-tree-node, .hex-deck-table th)[data-common-column='4'] {
-  --hex-column: var(--hex-column-5);
-}
-
-:is(.hex-tree-node, .hex-deck-table th)[data-common-column='5'] {
-  --hex-column: var(--hex-column-6);
-}
-
-.hex-tree-node[data-common-column] {
-  background: color-mix(in srgb, var(--hex-column) 14%, var(--surface));
-  border-color: var(--hex-column);
-}
-
 /* A tree-wide conflict names the node; the tree's finding owns the address. */
 button.hex-tree-node[data-has-findings='true'] {
   box-shadow: inset 0 0 0 2px var(--finding);
@@ -465,100 +440,228 @@ button.hex-tree-node[data-has-findings='true'] {
   outline-offset: 2px;
 }
 
+/* While a column is dealt, its nodes stand out and its next slot most of all. */
+.hex-tree-node[data-dealing='false'] {
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+.hex-tree-node[data-dealing='false'] .hex-tree-node-icon {
+  opacity: 0.35;
+}
+
+.hex-tree-node[data-dealing='true'] {
+  border-color: var(--selection-accent);
+}
+
+.hex-tree-node[data-next-card] {
+  background: color-mix(in srgb, var(--selection-accent) 28%, var(--surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--selection-accent) 40%, transparent);
+}
+
 .hex-tree-node:focus-visible,
 .hex-tree-node[data-editing] {
   outline: 2px solid var(--selection-accent);
   outline-offset: 2px;
 }
 
-/* Common decks: which deck dealt each talent, one cell per column. */
-.hex-deck-scroll {
+/* Common columns: one row per column, its deck beside the talents it was dealt. */
+.hex-column-scroll {
   overflow-x: auto;
 }
 
-/*
- * Chips share one width sized to the longest Common label, so a cell wraps by
- * chip count alone; a narrow dialog stacks a column's chips rather than scrolling.
- */
-.hex-deck-table {
-  /* A character width per label character covers the chip's padding and border too. */
-  --hex-chip-width: calc(var(--hex-chip-length) * 1ch);
-  --hex-deck-label-width: 3.75rem;
+.hex-column-table {
   border-collapse: collapse;
   font-size: 0.78rem;
-  min-width: calc(
-    var(--hex-deck-label-width) + var(--hex-column-count) * (var(--hex-chip-width) + 0.85rem)
-  );
+  min-width: 40rem;
+  /* Fixed widths keep each row's Deal in one line. */
   table-layout: fixed;
   width: 100%;
 }
 
-.hex-deck-table caption {
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding-bottom: 0.35rem;
-  text-align: start;
+.hex-column-table tbody th {
+  width: 5.5rem;
 }
 
-.hex-deck-table :is(th, td) {
+.hex-column-table :is(th, td) {
   border-top: 1px solid var(--border);
-  padding: 0.3rem;
+  padding: 0.35rem 0.4rem;
   text-align: start;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
-.hex-deck-table thead :is(th, td) {
-  border-top: none;
+/* The deck's talents, capped ones with their per-tree count. */
+.hex-column-legend {
+  color: var(--text);
+  font-size: 0.78rem;
+  margin: 0;
+}
+
+.hex-column-legend-label {
+  color: var(--muted);
+  display: inline-block;
+  padding-left: 0.4rem;
+  width: 5.5rem;
+}
+
+.hex-column-table tbody th {
   color: var(--muted);
   font-weight: 500;
+  white-space: nowrap;
 }
 
-.hex-deck-table thead th[data-common-column] {
-  box-shadow: inset 0 -3px 0 var(--hex-column);
+.hex-column-table tbody th:focus-visible {
+  outline: 2px solid var(--selection-accent);
+  outline-offset: -2px;
 }
 
-.hex-deck-table thead td,
-.hex-deck-table tbody th {
-  width: var(--hex-deck-label-width);
-}
-
-.hex-deck-table tbody th {
-  color: var(--muted);
-  font-weight: 500;
-}
-
-.hex-deck-cell {
-  align-items: flex-start;
+.hex-column-slots {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
 }
 
-.hex-deck-talent {
+/* Where the deck empties and refills inside a column. */
+.hex-column-refill {
+  align-items: center;
+  border-left: 1px solid var(--border);
+  color: var(--muted);
+  display: inline-flex;
+  padding-left: 0.35rem;
+}
+
+.hex-column-refill .action-icon {
+  height: 1.1rem;
+  width: 1.1rem;
+}
+
+/* A card left in the deck that the next slot cannot take. */
+.hex-column-chip[data-unavailable] {
+  color: var(--muted);
+  opacity: 0.55;
+}
+
+/* Deal leads every row in one line; the column's talents and a deal's choices wrap after it. */
+.hex-column-cell {
+  align-items: start;
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.hex-column-dealt {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
+}
+
+.hex-column-chip {
+  align-items: center;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
   color: var(--text);
-  font: inherit;
+  display: inline-flex;
+  gap: 0.2rem;
   line-height: 1.15;
-  overflow: hidden;
-  cursor: pointer;
-  padding: 0.15rem 0.4rem;
-  text-align: center;
-  text-overflow: ellipsis;
+  min-height: 1.45rem;
+  padding: 0.1rem 0.45rem;
   white-space: nowrap;
-  width: var(--hex-chip-width);
 }
 
-.hex-deck-talent:focus-visible,
-.hex-deck-talent[data-state='open'] {
-  outline: 2px solid var(--selection-accent);
-  outline-offset: 1px;
+.hex-column-chip-icon {
+  height: 1rem;
+  margin-left: -0.25rem;
+  width: 1rem;
 }
 
-.hex-deck-table td.hex-deck-unreadable {
+.hex-column-chip[data-empty] {
+  border-style: dashed;
+  min-width: 4.5rem;
+}
+
+.hex-column-chip[data-involved] {
+  border-color: var(--text);
+}
+
+.hex-column-deal {
+  background: rgb(255 255 255 / 4%);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.15rem 0.7rem;
+}
+
+.hex-column-deal:hover:not(:disabled) {
+  border-color: var(--selection-accent);
+}
+
+.hex-column-deal[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--selection-accent) 20%, transparent);
+  border-color: var(--selection-accent);
+}
+
+.hex-column-deal:disabled {
   color: var(--muted);
+  cursor: not-allowed;
+}
+
+button.hex-column-deal[data-has-findings='true'] {
+  box-shadow: inset 0 0 0 2px var(--finding);
+}
+
+.hex-column-chip[data-next-card] {
+  border-color: var(--selection-accent);
+  border-style: solid;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--selection-accent) 35%, transparent);
+}
+
+/* The next card's choices, set off from the column's slots. */
+.hex-column-next {
+  align-items: center;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding-left: 0.6rem;
+}
+
+.hex-column-option {
+  cursor: pointer;
+  font: inherit;
+}
+
+.hex-column-option:hover,
+.hex-column-option:focus-visible {
+  border-color: var(--selection-accent);
+  outline: none;
+}
+
+.hex-column-option:focus-visible {
+  box-shadow: 0 0 0 2px var(--selection-accent);
+}
+
+.hex-column-count {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.hex-column-cancel {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.1rem 0.25rem;
+  text-decoration: underline;
+}
+
+.hex-column-cancel:hover {
+  color: var(--text);
 }
 
 .echo-last-run-choice h3,
@@ -724,12 +827,8 @@ button.hex-tree-node[data-has-findings='true'] {
   padding: 0.6rem 0.9rem;
 }
 
-.hex-tree-help :is(h4, p) {
+.hex-tree-help p {
   margin: 0;
-}
-
-.hex-tree-help h4 {
-  font-size: 0.9rem;
 }
 
 /* Path of Stars screen: earlier investments filled, this screen's nodes highlighted. */

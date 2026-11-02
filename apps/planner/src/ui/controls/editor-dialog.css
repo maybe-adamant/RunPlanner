@@ -78,6 +78,15 @@
   display: none;
 }
 
+/* A control continuing the title, such as "· Lung". */
+.editor-dialog-title-extra {
+  align-items: center;
+  color: var(--muted, #667085);
+  display: flex;
+  flex: none;
+  gap: 0.4rem;
+}
+
 .editor-dialog .editor-dialog-header h2 {
   color: #f2ede5;
   font-family: inherit;

@@ -1039,7 +1039,7 @@ describe('trait offer editor entry and dialog', () => {
     await user.click(option2);
     await user.click(screen.getByRole('button', { name: 'Hex talent layout' }));
     await user.click(screen.getByRole('option', { name: 'Maze' }));
-    const board = screen.getByRole('group', { name: 'Maze Hex tree' });
+    expect(screen.getByRole('group', { name: 'Maze Hex tree' })).toBeTruthy();
     // The Spell Drop dialog explains common nodes like the Aspect dialog.
     await user.click(screen.getByRole('button', { name: 'Hex tree help' }));
     expect(await screen.findByRole('dialog', { name: 'Hex tree help' })).toBeTruthy();
@@ -1050,13 +1050,30 @@ describe('trait offer editor entry and dialog', () => {
       'SpellTransformTrait',
       'Maze',
     ).nodes['4:3']!;
-    await user.click(
-      within(board).getByRole('button', {
-        name: `Rare ${transform.rareCandidates.byKey[mazeRare]!.label}, depth 4`,
-      }),
-    );
-    await user.click(screen.getByRole('option', { name: 'Splendor' }));
-    expect(await screen.findByRole('button', { name: 'Rare Splendor, depth 4' })).toBeTruthy();
+    // The layout continues the selected Spell's heading; the header Reset restores its default tree.
+    const outcome = screen.getByRole('region', { name: 'Selected trait outcome' });
+    expect(
+      within(outcome)
+        .getByRole('button', { name: 'Hex talent layout' })
+        .closest('.trait-selected-outcome-heading'),
+    ).toBeTruthy();
+    const reset = () => screen.getByRole('button', { name: 'Reset' }) as HTMLButtonElement;
+    expect(reset().disabled).toBe(true);
+    const pickSplendor = async () => {
+      await user.click(
+        within(screen.getByRole('group', { name: 'Maze Hex tree' })).getByRole('button', {
+          name: `Rare ${transform.rareCandidates.byKey[mazeRare]!.label}, depth 4`,
+        }),
+      );
+      await user.click(screen.getByRole('option', { name: 'Splendor' }));
+      expect(await screen.findByRole('button', { name: 'Rare Splendor, depth 4' })).toBeTruthy();
+    };
+    await pickSplendor();
+    expect(reset().disabled).toBe(false);
+    await user.click(reset());
+    expect(screen.queryByRole('button', { name: 'Rare Splendor, depth 4' })).toBeNull();
+    expect(reset().disabled).toBe(true);
+    await pickSplendor();
     // The draft edit has not touched history.
     expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(historyDepth);
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));

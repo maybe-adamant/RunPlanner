@@ -1,18 +1,23 @@
-import type { AuthoredHexTreeEdit } from '@run-planner/engine/authored-project';
-import { useState } from 'react';
-
-import type { CSSProperties, ReactElement } from 'react';
+import type {
+  AuthoredHexTreeConfiguration,
+  AuthoredHexTreeEdit,
+} from '@run-planner/engine/authored-project';
+import { Fragment, useEffect, useRef, useState } from 'react';
 
 import type {
-  WorkspaceHexDeckTable,
+  WorkspaceHexColumnDeal,
+  WorkspaceHexColumnRow,
+  WorkspaceHexColumnSlot,
   WorkspaceHexTreeDomain,
   WorkspaceHexTreeNode,
 } from '@planner/projections/structured-workspace';
 import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
+import { ActionIcon } from '@planner/ui/controls/ActionIcon';
 import { hexNodeArtwork } from '@planner/ui/artwork/hex-nodes/hexNodeArtwork';
 import { ContextualPicker, ContextualPickerPopover } from '@planner/ui/controls/ContextualPicker';
 import { hintProps } from '@planner/ui/controls/hint';
 import { showTruncatedTitle } from '@planner/ui/controls/truncatedTitle';
+import { candidateWaitingHint } from '@planner/ui/feedback/candidatePresentation';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useFindingTarget } from '@planner/ui/feedback/useFindingTarget';
 import { HexBoard } from './HexBoard';
@@ -24,88 +29,100 @@ const SEARCH_THRESHOLD = 8;
 const hexNodeIcon = (talentKey: string | undefined): string | undefined =>
   talentKey === undefined ? undefined : (hexNodeArtwork[talentKey] ?? undefined);
 
-/** The open node picker and the trigger it was opened from: the board node or a table talent. */
-interface OpenPicker {
-  readonly nodeKey: string;
-  readonly anchor: string;
+/** A column being dealt, for the tree it was started on. */
+interface Dealing {
+  readonly tree: AuthoredHexTreeConfiguration;
+  readonly depth: number;
+  readonly dealt: readonly string[];
 }
 
-/** The planner-owned Hex tree on its native grid; each node edits by its own kind. */
-export function HexTreeBoard({
+const columnControlId = (idBase: string, depth: number) => `${idBase}-column-${depth}`;
+
+/** The tree's layout, chosen from the heading that names the tree; " · " leads it. */
+export function HexTreeLayoutPicker({
   domain,
   onEdit,
-  resettable = true,
 }: {
   readonly domain: WorkspaceHexTreeDomain;
   readonly onEdit: (edit: AuthoredHexTreeEdit) => void;
-  /** Whether the board offers its own Reset; a dialog whose draft is the tree resets from its header. */
-  readonly resettable?: boolean;
+}) {
+  return (
+    <>
+      <span aria-hidden="true" className="hex-tree-layout-separator">
+        ·
+      </span>
+      <ContextualPicker
+        ariaLabel="Hex talent layout"
+        id={`${semanticOwnerControlElementId(domain.address)}-layout`}
+        label=""
+        model={domain.layoutPicker}
+        onSelect={(layoutKey) => {
+          onEdit({ kind: 'changeLayout', layoutKey });
+        }}
+        placeholder="Choose a layout"
+        searchable={false}
+        triggerSize="content"
+      />
+    </>
+  );
+}
+
+/**
+ * The planner-owned Hex tree on its native grid: Rare and Epic nodes pick from
+ * their pool; Common columns are dealt card by card in their rows.
+ */
+export function HexTreeBoard({
+  domain,
+  onEdit,
+}: {
+  readonly domain: WorkspaceHexTreeDomain;
+  readonly onEdit: (edit: AuthoredHexTreeEdit) => void;
 }) {
   const findingTarget = useFindingTarget();
-  const [open, setOpen] = useState<OpenPicker>();
+  const [openNodeKey, setOpenNodeKey] = useState<string>();
   const [activeItemKey, setActiveItemKey] = useState<string>();
   const [hoveredNodeKey, setHoveredNodeKey] = useState<string>();
+  const [dealingState, setDealing] = useState<Dealing>();
+  // A deal belongs to the tree it started on.
+  const dealing = dealingState?.tree === domain.value ? dealingState : undefined;
   // Pickers stay within the editor rather than overflowing its dialog.
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const idBase = semanticOwnerControlElementId(domain.address);
   const byKey = new Map(domain.nodes.map((node) => [node.nodeKey, node]));
-  // The nodes the open node's active choice or the decks table involves.
-  const openEditor = open === undefined ? undefined : byKey.get(open.nodeKey)?.editor;
+  const columnOf = new Map(
+    domain.columns.flatMap((row) => row.slots.map((slot) => [slot.nodeKey, row] as const)),
+  );
+  const dealView = (row: WorkspaceHexColumnRow) =>
+    dealing?.depth === row.depth ? row.draw?.deal(dealing.dealt) : undefined;
+  const dealtRow = domain.columns.find((row) => row.depth === dealing?.depth);
+  const dealtSlots = dealtRow === undefined ? undefined : dealView(dealtRow)?.slots;
+  const dealtNodeKeys = new Set(dealtSlots?.map((slot) => slot.nodeKey));
+  const nextSlot = dealtSlots?.[dealing!.dealt.length];
+  const openEditor = openNodeKey === undefined ? undefined : byKey.get(openNodeKey)?.editor;
+  // The nodes the open picker's active choice or the hovered talent involves.
   const involved = new Set([
     ...(activeItemKey === undefined ? [] : (openEditor?.relatedNodeKeys[activeItemKey] ?? [])),
     ...(hoveredNodeKey === undefined ? [] : [hoveredNodeKey]),
   ]);
-  // One picker per node, opened from its board node or its table talent.
-  const picker = (node: WorkspaceHexTreeNode, anchor: string, trigger: ReactElement) => {
-    const editor = node.editor!;
-    const count = editor.model.sections.reduce((sum, section) => sum + section.items.length, 0);
-    return (
-      <ContextualPickerPopover
-        choiceLabel="talent"
-        heading={editor.heading}
-        itemIcon={(item) => hexNodeIcon(editor.talentKeys[item.key])}
-        key={`${node.nodeKey}-${anchor}`}
-        model={editor.model}
-        onActiveChange={(item) => setActiveItemKey(item?.key)}
-        onOpenChange={(next) => {
-          setActiveItemKey(undefined);
-          setOpen(next ? { nodeKey: node.nodeKey, anchor } : undefined);
-        }}
-        onSelect={onEdit}
-        open={open?.nodeKey === node.nodeKey && open.anchor === anchor}
-        collisionBoundary={root}
-        searchable={count > SEARCH_THRESHOLD}
-      >
-        {trigger}
-      </ContextualPickerPopover>
-    );
+  const focusColumn = (row: WorkspaceHexColumnRow) => {
+    const control = document.getElementById(columnControlId(idBase, row.depth));
+    const target =
+      control instanceof HTMLButtonElement && !control.disabled
+        ? control
+        : document.getElementById(`${columnControlId(idBase, row.depth)}-row`);
+    target?.focus();
   };
+  const nodeContent = (node: WorkspaceHexTreeNode) => (
+    <>
+      <ArtworkIcon className="hex-tree-node-icon" source={hexNodeIcon(node.talentKey)} />
+      <span className="hex-tree-node-label" onMouseEnter={showTruncatedTitle}>
+        {node.talentLabel}
+      </span>
+    </>
+  );
   return (
     <div className="hex-tree-editor" ref={setRoot}>
-      <div className="hex-tree-toolbar">
-        <ContextualPicker
-          ariaLabel="Hex talent layout"
-          id={`${idBase}-layout`}
-          label="Layout"
-          layout="inline"
-          model={domain.layoutPicker}
-          onSelect={(layoutKey) => {
-            onEdit({ kind: 'changeLayout', layoutKey });
-          }}
-          placeholder="Choose a layout"
-        />
-        {resettable ? (
-          <button
-            aria-label="Reset tree"
-            className="quiet-action"
-            onClick={() => onEdit({ kind: 'reset' })}
-            type="button"
-          >
-            Reset
-          </button>
-        ) : null}
-        <HexTreeRulesHelp />
-      </div>
+      <HexTreeRulesHelp />
       <HexBoard
         boardProps={{
           'aria-label': `${domain.layoutPicker.selected?.label ?? domain.value.layoutKey} Hex tree`,
@@ -117,10 +134,33 @@ export function HexTreeBoard({
         nodes={domain.nodes}
         renderNode={(node, style) => {
           const marks = {
-            'data-common-column': node.commonColumn,
             'data-involved': involved.has(node.nodeKey) || undefined,
+            // The column being dealt, and the slot its next card fills.
+            'data-dealing': dealtSlots === undefined ? undefined : dealtNodeKeys.has(node.nodeKey),
+            'data-next-card': nextSlot?.nodeKey === node.nodeKey || undefined,
           };
-          if (node.editor === undefined)
+          const row = columnOf.get(node.nodeKey);
+          if (row !== undefined)
+            return (
+              <button
+                aria-label={node.name}
+                className="hex-tree-node"
+                data-has-findings={node.conflict}
+                data-kind={node.kind}
+                id={`${idBase}-${node.nodeKey}`}
+                key={node.nodeKey}
+                onClick={() => focusColumn(row)}
+                onMouseEnter={() => setHoveredNodeKey(node.nodeKey)}
+                onMouseLeave={() => setHoveredNodeKey(undefined)}
+                style={style}
+                type="button"
+                {...marks}
+              >
+                {nodeContent(node)}
+              </button>
+            );
+          const editor = node.editor;
+          if (editor === undefined)
             return (
               <span
                 aria-label={node.name}
@@ -133,117 +173,263 @@ export function HexTreeBoard({
                 {...marks}
                 {...hintProps(`${node.talentLabel} appears once God Sent is eligible.`)}
               >
-                <ArtworkIcon className="hex-tree-node-icon" source={hexNodeIcon(node.talentKey)} />
-                <span className="hex-tree-node-label" onMouseEnter={showTruncatedTitle}>
-                  {node.talentLabel}
-                </span>
+                {nodeContent(node)}
               </span>
             );
-          return picker(
-            node,
-            'board',
-            <button
-              aria-label={node.name}
-              className="hex-tree-node"
-              data-editing={open?.nodeKey === node.nodeKey || undefined}
-              data-has-findings={node.conflict}
-              data-kind={node.kind}
-              id={`${idBase}-${node.nodeKey}`}
-              style={style}
-              type="button"
-              {...marks}
+          const count = editor.model.sections.reduce(
+            (sum, section) => sum + section.items.length,
+            0,
+          );
+          return (
+            <ContextualPickerPopover
+              choiceLabel="talent"
+              heading={editor.heading}
+              itemIcon={(item) => hexNodeIcon(editor.talentKeys[item.key])}
+              key={node.nodeKey}
+              model={editor.model}
+              onActiveChange={(item) => setActiveItemKey(item?.key)}
+              onOpenChange={(next) => {
+                setActiveItemKey(undefined);
+                setOpenNodeKey(next ? node.nodeKey : undefined);
+              }}
+              onSelect={onEdit}
+              open={openNodeKey === node.nodeKey}
+              collisionBoundary={root}
+              searchable={count > SEARCH_THRESHOLD}
             >
-              <ArtworkIcon className="hex-tree-node-icon" source={hexNodeIcon(node.talentKey)} />
-              <span className="hex-tree-node-label" onMouseEnter={showTruncatedTitle}>
-                {node.talentLabel}
-              </span>
-            </button>,
+              <button
+                aria-label={node.name}
+                className="hex-tree-node"
+                data-editing={openNodeKey === node.nodeKey || undefined}
+                data-has-findings={node.conflict}
+                data-kind={node.kind}
+                id={`${idBase}-${node.nodeKey}`}
+                style={style}
+                type="button"
+                {...marks}
+              >
+                {nodeContent(node)}
+              </button>
+            </ContextualPickerPopover>
           );
         }}
       />
-      <HexDeckTable
-        decks={domain.decks}
-        onHover={setHoveredNodeKey}
-        picker={(nodeKey, anchor, trigger) => {
-          const node = byKey.get(nodeKey);
-          return node?.editor === undefined ? trigger : picker(node, anchor, trigger);
-        }}
-      />
+      <p className="hex-column-legend">
+        <span className="hex-column-legend-label">Deck</span>
+        {domain.deckLegend.join(' · ')}
+      </p>
+      <div className="hex-column-scroll">
+        <table aria-label="Common columns" className="hex-column-table">
+          <tbody>
+            {domain.columns.map((row) => {
+              const view = dealView(row);
+              const id = columnControlId(idBase, row.depth);
+              return (
+                <tr key={row.depth}>
+                  <th id={`${id}-row`} scope="row" tabIndex={-1}>
+                    {row.label}
+                  </th>
+                  <td>
+                    <HexColumnDealCell
+                      id={id}
+                      involved={involved}
+                      label={row.label}
+                      onCancel={() => setDealing(undefined)}
+                      onHover={setHoveredNodeKey}
+                      onPick={(talentKey) => {
+                        const next = row.draw!.deal([...(view?.dealt ?? []), talentKey]);
+                        if (next.edit === undefined)
+                          setDealing({ tree: domain.value, depth: row.depth, dealt: next.dealt });
+                        else {
+                          setDealing(undefined);
+                          onEdit(next.edit);
+                        }
+                      }}
+                      onStart={() =>
+                        setDealing({ tree: domain.value, depth: row.depth, dealt: [] })
+                      }
+                      row={row}
+                      slots={view?.slots ?? row.slots}
+                      view={view}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
-/** Which deck dealt each Common talent; each talent opens its node's picker. */
-function HexDeckTable({
-  decks,
+/**
+ * A column's talents and its deal: at rest, Deal; while dealing, the next
+ * card's choices in the row until the column is full. Escape or Cancel
+ * leaves the column as it was.
+ */
+function HexColumnDealCell({
+  id,
+  involved,
+  label,
+  onCancel,
   onHover,
-  picker,
+  onPick,
+  onStart,
+  row,
+  slots,
+  view,
 }: {
-  readonly decks: WorkspaceHexDeckTable;
+  readonly id: string;
+  readonly involved: ReadonlySet<string>;
+  readonly label: string;
+  readonly onCancel: () => void;
   readonly onHover: (nodeKey: string | undefined) => void;
-  readonly picker: (nodeKey: string, anchor: string, trigger: ReactElement) => ReactElement;
+  readonly onPick: (talentKey: string) => void;
+  readonly onStart: () => void;
+  readonly row: WorkspaceHexColumnRow;
+  readonly slots: readonly WorkspaceHexColumnSlot[];
+  readonly view: WorkspaceHexColumnDeal | undefined;
+}) {
+  const cell = useRef<HTMLDivElement>(null);
+  const dealing = view !== undefined;
+  const dealtCount = view?.dealt.length;
+  const wasDealing = useRef(false);
+  useEffect(() => {
+    const element = cell.current;
+    if (element === null) return;
+    if (dealing) element.querySelector<HTMLElement>('.hex-column-next button')?.focus();
+    else if (wasDealing.current) document.getElementById(id)?.focus();
+    wasDealing.current = dealing;
+  }, [dealing, dealtCount, id]);
+  useEffect(() => {
+    const element = cell.current;
+    if (!dealing || element === null) return;
+    // Escape ends the deal before the dialog sees it.
+    const keyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      onCancel();
+    };
+    element.addEventListener('keydown', keyDown);
+    return () => element.removeEventListener('keydown', keyDown);
+  }, [dealing, onCancel]);
+  const nextNodeKey = view === undefined ? undefined : slots[view.dealt.length]?.nodeKey;
+  return (
+    <div className="hex-column-cell" data-dealing={dealing || undefined} ref={cell}>
+      <button
+        aria-label={`Deal ${label}`}
+        aria-pressed={dealing}
+        className="hex-column-deal"
+        data-has-findings={row.draw?.undrawable === true || undefined}
+        disabled={row.draw === undefined}
+        id={id}
+        onClick={onStart}
+        type="button"
+        {...hintProps(row.draw === undefined ? candidateWaitingHint : undefined)}
+      >
+        Deal
+      </button>
+      <span className="hex-column-dealt">
+        <span className="hex-column-slots">
+          {slots.map((slot) => (
+            <HexColumnSlotChip
+              involved={involved.has(slot.nodeKey)}
+              key={slot.nodeKey}
+              next={slot.nodeKey === nextNodeKey}
+              onHover={onHover}
+              slot={slot}
+            />
+          ))}
+        </span>
+        {view === undefined ? null : (
+          <>
+            <span aria-label={`Next card for ${label}`} className="hex-column-next" role="group">
+              {view.deck.map((segment) => (
+                <Fragment key={segment.key}>
+                  {segment.refill ? (
+                    <span
+                      aria-label="Deck refills"
+                      className="hex-column-refill"
+                      role="img"
+                      {...hintProps('Deck refills')}
+                    >
+                      <ActionIcon name="shuffle" />
+                    </span>
+                  ) : null}
+                  {segment.cards.map((card, index) =>
+                    card.pick ? (
+                      <button
+                        className="hex-column-chip hex-column-option"
+                        key={card.talentKey}
+                        onClick={() => onPick(card.talentKey)}
+                        type="button"
+                      >
+                        <ArtworkIcon
+                          className="hex-column-chip-icon"
+                          source={hexNodeIcon(card.talentKey)}
+                        />
+                        {card.label}
+                      </button>
+                    ) : (
+                      <span
+                        className="hex-column-chip"
+                        data-unavailable
+                        key={`${card.talentKey}-${index}`}
+                      >
+                        {card.label}
+                      </span>
+                    ),
+                  )}
+                </Fragment>
+              ))}
+            </span>
+            <span className="hex-column-count" role="status">
+              Dealt {view.dealt.length} of {slots.length}
+            </span>
+            <button className="hex-column-cancel" onClick={onCancel} type="button">
+              Cancel
+            </button>
+          </>
+        )}
+      </span>
+    </div>
+  );
+}
+
+/** A column's talent in one slot, or the slot a deal has yet to fill; it marks its node. */
+function HexColumnSlotChip({
+  involved,
+  next,
+  onHover,
+  slot,
+}: {
+  readonly involved: boolean;
+  /** The slot the deal's next card fills. */
+  readonly next: boolean;
+  readonly onHover: (nodeKey: string | undefined) => void;
+  readonly slot: WorkspaceHexColumnSlot;
 }) {
   return (
-    <div className="hex-deck-scroll">
-      <table
-        className="hex-deck-table"
-        style={
-          {
-            '--hex-chip-length': decks.chipLength,
-            '--hex-column-count': decks.columns.length,
-          } as CSSProperties
-        }
-      >
-        <caption>Common decks</caption>
-        <thead>
-          <tr>
-            <td />
-            {decks.columns.map((column) => (
-              <th data-common-column={column.commonColumn} key={column.key} scope="col">
-                {column.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {decks.rows === undefined ? (
-            <tr>
-              <td className="hex-deck-unreadable" colSpan={decks.columns.length + 1}>
-                {decks.unreadable}
-              </td>
-            </tr>
-          ) : (
-            decks.rows.map((row) => (
-              <tr key={row.key}>
-                <th scope="row">{row.label}</th>
-                {row.cells.map((cell, index) => (
-                  <td key={decks.columns[index]!.key}>
-                    <div className="hex-deck-cell">
-                      {cell.map((talent) =>
-                        picker(
-                          talent.nodeKey,
-                          `deck-${row.key}-${talent.key}`,
-                          <button
-                            aria-label={talent.name}
-                            className="hex-deck-talent"
-                            onBlur={() => onHover(undefined)}
-                            onFocus={() => onHover(talent.nodeKey)}
-                            onMouseEnter={() => onHover(talent.nodeKey)}
-                            onMouseLeave={() => onHover(undefined)}
-                            type="button"
-                          >
-                            {talent.label}
-                          </button>,
-                        ),
-                      )}
-                    </div>
-                  </td>
-                ))}
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+    <span
+      className="hex-column-chip"
+      data-empty={slot.talent === undefined || undefined}
+      data-next-card={next || undefined}
+      data-involved={involved || undefined}
+      data-node-key={slot.nodeKey}
+      onMouseEnter={() => onHover(slot.nodeKey)}
+      onMouseLeave={() => onHover(undefined)}
+    >
+      {slot.talent === undefined ? null : (
+        <>
+          <ArtworkIcon
+            className="hex-column-chip-icon"
+            source={hexNodeIcon(slot.talent.talentKey)}
+          />
+          {slot.talent.label}
+        </>
+      )}
+    </span>
   );
 }

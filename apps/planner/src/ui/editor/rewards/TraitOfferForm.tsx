@@ -88,6 +88,7 @@ export function TraitOfferShapeActions({
 export function TraitOfferForm({
   cancel,
   content,
+  headerReset,
   issues,
   notes,
   options,
@@ -102,6 +103,8 @@ export function TraitOfferForm({
   /** Discards the draft; absent outside a dialog. */
   readonly cancel?: () => void;
   readonly content?: ReactNode;
+  /** A part of the draft the dialog header's Reset restores, such as a Spell's Hex tree. */
+  readonly headerReset?: { readonly disabled: boolean; readonly onReset: () => void };
   /** The draft's findings for the dialog header; blocking while Save is disabled. */
   readonly issues: readonly EditorDialogIssue[];
   /** Display-only notes after the form, never findings. */
@@ -155,6 +158,9 @@ export function TraitOfferForm({
       <EditorDialogDraftActions
         issues={issues}
         {...(cancel === undefined ? {} : { onCancel: cancel })}
+        {...(headerReset === undefined
+          ? {}
+          : { onReset: headerReset.onReset, resetDisabled: headerReset.disabled })}
         onSave={save.onClick}
         saveDisabled={save.disabled}
         saveName={save.label}

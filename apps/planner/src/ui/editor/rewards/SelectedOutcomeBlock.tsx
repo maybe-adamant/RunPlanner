@@ -5,11 +5,14 @@ import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 /** The one selected-outcome block: its trait in the heading, then one row per choice. */
 export function SelectedOutcomeBlock({
   children,
+  headingExtra,
   icon,
   name,
   traitLabel,
 }: {
   readonly children: ReactNode;
+  /** A control continuing the heading, such as the Hex tree's layout. */
+  readonly headingExtra?: ReactNode;
   readonly icon: string | undefined;
   /** Accessible region name. */
   readonly name: string;
@@ -17,10 +20,20 @@ export function SelectedOutcomeBlock({
 }) {
   return (
     <section aria-label={name} className="trait-selected-outcome">
-      <h3 className="artwork-label">
-        <ArtworkIcon className="artwork-label-icon" source={icon} />
-        {traitLabel}
-      </h3>
+      {headingExtra === undefined ? (
+        <h3 className="artwork-label">
+          <ArtworkIcon className="artwork-label-icon" source={icon} />
+          {traitLabel}
+        </h3>
+      ) : (
+        <div className="trait-selected-outcome-heading">
+          <h3 className="artwork-label">
+            <ArtworkIcon className="artwork-label-icon" source={icon} />
+            {traitLabel}
+          </h3>
+          {headingExtra}
+        </div>
+      )}
       {children}
     </section>
   );

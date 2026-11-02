@@ -200,15 +200,15 @@ describe('trait-offers/bind', () => {
     const domain = hex.forOffer(interaction.value).load();
     if (domain === undefined) throw new Error('selected Spell Hex domain is missing');
     expect(domain.layoutPicker.sections.flatMap((section) => section.items)).toHaveLength(4);
-    // The reached offer holds the complete default tree; God Sent nodes take no picker.
+    // The reached offer holds the complete default tree; God Sent and Common nodes take no picker.
     expect(domain.value).toEqual(createDefaultAuthoredHexTree(catalog, declaration.spellTraitKey));
     const keystone = domain.nodes.find((node) => node.kind === 'keystone')!;
     expect(keystone.editor?.model.sections.flatMap((section) => section.items)).toHaveLength(
       declaration.rareCandidates.values.length,
     );
     expect(
-      domain.nodes.filter((node) => node.editor === undefined).map((node) => node.kind),
-    ).toEqual(['olympianSpell', 'olympianCount']);
+      new Set(domain.nodes.filter((node) => node.editor === undefined).map((node) => node.kind)),
+    ).toEqual(new Set(['repeatable', 'olympianSpell', 'olympianCount']));
     const otherKeystone = domain.nodes.filter((node) => node.kind === 'keystone')[1]!;
     const conflicting = hex
       .forOffer(
@@ -249,65 +249,13 @@ describe('trait-offers/bind', () => {
         talentKey: domain.value.nodes[keystone.nodeKey],
       },
     });
-    // The Common picker maps the engine's groups to labelled sections and related nodes.
-    const common = domain.nodes.find((node) => node.nodeKey === '1:4')!;
-    const first = domain.nodes.find((node) => node.nodeKey === '1:2')!;
-    expect(common.editor?.heading).toBe(`Common · ${common.talentLabel}`);
-    expect(common.commonColumn).toBe(0);
-    expect(keystone.commonColumn).toBeUndefined();
-    const decks = domain.decks;
-    const partners = decks.rows![0]!.cells[1]!;
-    expect(
-      common.editor?.model.sections.map((section) => [
-        section.label,
-        section.items.map((item) => [item.label, common.editor?.relatedNodeKeys[item.key]]),
-      ]),
-    ).toEqual([
-      [
-        'Swap in this column',
-        [
-          [first.talentLabel, ['1:2']],
-          [common.talentLabel, []],
-        ],
-      ],
-      [
-        'Trade with another column',
-        partners.map((partner) => [`${partner.label} — column 2`, [partner.nodeKey]]),
-      ],
-    ]);
-    expect(
-      domain.nodes.find((node) => node.nodeKey === '5:2')?.editor?.model.sections.at(-1)?.label,
-    ).toBe('Swap for an unused talent');
-    // The table labels Common columns and deck talents; chips share the catalog's longest label.
-    expect(decks.columns.map((column) => column.label)).toEqual([
+    expect(domain.columns.map((row) => row.label)).toEqual([
       'Column 1',
       'Column 2',
       'Column 3',
       'Column 4',
       'Column 5',
     ]);
-    expect(decks.chipLength).toBe('Steadfastness'.length);
-    expect(decks.rows![0]!.cells[0]!.find((talent) => talent.nodeKey === '1:4')?.name).toBe(
-      `Deck 1, column 1: ${common.talentLabel}`,
-    );
-    // A tree no deck sequence deals leaves the table one line.
-    const unreadable = hex
-      .forOffer(
-        hex.update(
-          interaction.value,
-          domain.edit({
-            kind: 'setNode',
-            nodeKey: '1:4',
-            talentKey: domain.value.nodes[partners[0]!.nodeKey!]!,
-          }),
-        ),
-      )
-      .load()!;
-    expect(unreadable.decks).toEqual({
-      columns: decks.columns,
-      chipLength: decks.chipLength,
-      unreadable: 'Fix the marked nodes to see which deck dealt each talent.',
-    });
     expect(domain.edit({ kind: 'changeLayout', layoutKey: domain.value.layoutKey })).toBe(
       domain.value,
     );

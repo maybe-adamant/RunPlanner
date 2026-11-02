@@ -1,4 +1,8 @@
-import { optionIndex, type AuthoredTraitOfferTraits } from '@run-planner/engine/authored-project';
+import {
+  optionIndex,
+  type AuthoredHexTreeEdit,
+  type AuthoredTraitOfferTraits,
+} from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 import { useEffect, useMemo } from 'react';
 
@@ -16,6 +20,7 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { traitIcon } from '@planner/ui/artwork/traitArtwork';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { draftValueIdentity } from '@planner/ui/controls/draftValueIdentity';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import {
@@ -29,7 +34,7 @@ import {
   TraitOfferSelectedSpecialOutcomes,
 } from './TraitOfferSelectedSpecialOutcomes';
 import { MaxHealthRollRow } from './MaxHealthRollRow';
-import { HexTreeBoard } from './HexTreeBoard';
+import { HexTreeBoard, HexTreeLayoutPicker } from './HexTreeBoard';
 import { SelectedOutcomeBlock, SelectedOutcomeRow } from './SelectedOutcomeBlock';
 import {
   ignoreOutcomeFeedback,
@@ -186,6 +191,14 @@ function LatestModelTargetsOutcome({
   );
 }
 
+/** The selected Spell's Hex tree Reset, offered on the dialog header: the offer it restores. */
+export interface TraitOfferTreeReset {
+  readonly disabled: boolean;
+  readonly value: AuthoredTraitOfferTraits;
+}
+
+const ignoreTreeReset = (): void => undefined;
+
 export function TraitOfferSelectedOutcome({
   acquiredRarity,
   interaction,
@@ -193,6 +206,7 @@ export function TraitOfferSelectedOutcome({
   onFeedback = ignoreOutcomeFeedback,
   echoLastRunBoonOpen = false,
   onOpenEchoLastRunBoon,
+  onTreeReset = ignoreTreeReset,
   onUpdate,
 }: {
   /** The selected row's effective rarity when every route branch agrees. */
@@ -203,6 +217,8 @@ export function TraitOfferSelectedOutcome({
   /** The nested Boon Boon Boon dialog is open and owns the choice's control id. */
   readonly echoLastRunBoonOpen?: boolean;
   readonly onOpenEchoLastRunBoon: () => void;
+  /** Receives the selected Spell's tree Reset for the dialog header, or none. */
+  readonly onTreeReset?: (reset: TraitOfferTreeReset | undefined) => void;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
 }) {
   const findingTarget = useFindingTarget();
@@ -299,6 +315,24 @@ export function TraitOfferSelectedOutcome({
   const hexTreeLoadable = useMemo(() => hexTreeChild?.forOffer(value), [hexTreeChild, value]);
   const hexTreeController = useWorkspaceInteractionController<WorkspaceHexTreeDomain | undefined>();
   const hexTreeDomain = hexTreeController.observe(hexTreeLoadable);
+  const editTree = (edit: AuthoredHexTreeEdit) => {
+    if (hexTreeChild !== undefined && hexTreeDomain.result !== undefined)
+      onUpdate(hexTreeChild.update(value, hexTreeDomain.result.edit(edit)));
+  };
+  // The dialog header's Reset restores the chosen layout's default tree.
+  const treeReset = useMemo(() => {
+    const domain = hexTreeDomain.result;
+    if (hexTreeChild === undefined || domain === undefined) return undefined;
+    const reset = domain.edit({ kind: 'reset' });
+    return Object.freeze({
+      disabled: draftValueIdentity(reset) === draftValueIdentity(domain.value),
+      value: hexTreeChild.update(value, reset),
+    });
+  }, [hexTreeChild, hexTreeDomain.result, value]);
+  useEffect(() => {
+    onTreeReset(treeReset);
+  }, [onTreeReset, treeReset]);
+  useEffect(() => () => onTreeReset(undefined), [onTreeReset]);
   useEffect(() => {
     if (circeLoadable !== undefined) circeController.activate(circeLoadable);
     if (echoPomLoadable !== undefined) echoPomController.activate(echoPomLoadable);
@@ -352,6 +386,11 @@ export function TraitOfferSelectedOutcome({
   if (!pickHasOutcome && !stoneHasOutcome) return null;
   const pickBlock = (
     <SelectedOutcomeBlock
+      {...(hexTreeDomain.result === undefined
+        ? {}
+        : {
+            headingExtra: <HexTreeLayoutPicker domain={hexTreeDomain.result} onEdit={editTree} />,
+          })}
       icon={traitIcon(option.traitKey)}
       name="Selected trait outcome"
       traitLabel={selectedTraitLabel}
@@ -366,10 +405,7 @@ export function TraitOfferSelectedOutcome({
         />
       )}
       {hexTreeChild === undefined || hexTreeDomain.result === undefined ? null : (
-        <HexTreeBoard
-          domain={hexTreeDomain.result}
-          onEdit={(edit) => onUpdate(hexTreeChild.update(value, hexTreeDomain.result!.edit(edit)))}
-        />
+        <HexTreeBoard domain={hexTreeDomain.result} onEdit={editTree} />
       )}
       {targetChildren
         .filter((child) => primaryChildren.includes(child))

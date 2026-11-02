@@ -2,6 +2,7 @@
 
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
+  authoredHexColumns,
   createDefaultAuthoredHexTree,
   createProjectDocument,
   createRouteAddress,
@@ -10,6 +11,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   authoredProjectCommandDispatched,
+  authoredProjectUndoRequested,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
 import { routePanelSelected } from '@planner/state/editorSessionSlice';
@@ -46,7 +48,7 @@ function seleneApplication() {
 afterEach(cleanup);
 
 describe('Hex tree board', () => {
-  it('edits the Aspect tree as a draft that Save commits as one history step', async () => {
+  it('edits Rare nodes and the layout as a draft that Save commits as one history step', async () => {
     const { application, user } = renderPlannerForInteraction({ application: seleneApplication() });
     const history = () => application.store.getState().projectWorkspace.history!;
     const tree = () => history().present.route.loadout.aspectHexTree!;
@@ -59,6 +61,7 @@ describe('Hex tree board', () => {
     const board = () => within(dialog()).getByRole('group', { name: /Hex tree$/ });
     const node = (name: string) => within(board()).getByRole('button', { name });
     const save = () => within(dialog()).getByRole('button', { name: 'Save' }) as HTMLButtonElement;
+    const layout = () => within(dialog()).getByRole('button', { name: 'Hex talent layout' });
     const before = history().past.length;
 
     await user.click(launcher());
@@ -66,7 +69,9 @@ describe('Hex tree board', () => {
     // Sixteen authored nodes; the God Sent pair is shown but not authored.
     expect(within(board()).getAllByRole('button')).toHaveLength(16);
     expect(within(board()).getAllByRole('note')).toHaveLength(2);
-    expect(within(dialog()).queryByRole('button', { name: 'Rebalance' })).toBeNull();
+    // The layout continues the title rather than the dialog's name, and takes initial focus.
+    expect(dialog().querySelector('header')!.contains(layout())).toBe(true);
+    expect(document.activeElement).toBe(layout());
 
     // A Rare picker marks the talent on the other Rare node; choosing it draws a conflict that blocks Save.
     const rare2 = label(lung.nodes['4:5']!);
@@ -99,168 +104,175 @@ describe('Hex tree board', () => {
     await user.click(launcher());
     expect(dialogFinding(dialog())).toBe(`${rare2} on two Rare nodes`);
 
-    // A Common node swaps in its column or trades with its deck; nodes are coloured by column.
-    const common = node(`Common ${label(lung.nodes['1:4']!)}, depth 1`);
-    await user.click(common);
-    const listbox = screen.getByRole('listbox');
-    expect(within(listbox).getByText('Swap in this column')).toBeTruthy();
-    expect(within(listbox).getByText('Trade with another column')).toBeTruthy();
-    expect(node(`Common ${label(lung.nodes['1:2']!)}, depth 1`).dataset.commonColumn).toBe('0');
-    expect(node(`Common ${label(lung.nodes['2:2']!)}, depth 2`).dataset.commonColumn).toBe('1');
-    const swap = within(listbox).getByRole('option', {
-      name: new RegExp(`^${label(lung.nodes['1:2']!)}`),
-    });
-    await user.click(swap);
-    expect(history().past).toHaveLength(before + 1);
-    expect(save().disabled).toBe(false);
-    await user.click(save());
-    expect(history().past).toHaveLength(before + 2);
-    expect(tree().nodes).toEqual({
-      ...conflicted.nodes,
-      '1:2': lung.nodes['1:4'],
-      '1:4': lung.nodes['1:2'],
-    });
-
     // Cancel discards a draft.
-    await user.click(launcher());
     await user.click(within(dialog()).getByRole('button', { name: 'Reset' }));
     await user.click(within(dialog()).getByRole('button', { name: 'Cancel' }));
-    expect(history().past).toHaveLength(before + 2);
+    expect(history().past).toHaveLength(before + 1);
 
     // Choosing the current layout keeps the edits; another layout regenerates its default.
     await user.click(launcher());
-    await user.click(within(dialog()).getByRole('button', { name: 'Hex talent layout' }));
+    await user.click(layout());
     await user.click(screen.getByRole('option', { name: 'Lung' }));
     expect(node(`Rare ${rare2}, depth 4, first`)).toBeTruthy();
     expect(save().disabled).toBe(true);
-    await user.click(within(dialog()).getByRole('button', { name: 'Hex talent layout' }));
+    await user.click(layout());
     await user.click(screen.getByRole('option', { name: 'Nacelle' }));
     expect(within(board()).getAllByRole('button')).toHaveLength(18);
     await user.click(save());
-    expect(history().past).toHaveLength(before + 3);
+    expect(history().past).toHaveLength(before + 2);
     expect(tree()).toEqual(
       createDefaultAuthoredHexTree(application.catalog, 'SpellMoonBeamTrait', 'Nacelle'),
     );
     await waitFor(() => expect(launcher().dataset.hasFindings).toBe('false'));
   });
 
-  it('opens each node picker at the node by keyboard and returns focus on Escape', async () => {
+  it('deals a Common column card by card into the draft that Save commits and one Undo restores', async () => {
     const { application, user } = renderPlannerForInteraction({ application: seleneApplication() });
-    const lung = createDefaultAuthoredHexTree(application.catalog, 'SpellMoonBeamTrait');
-    const hex = application.catalog.hexes.byKey['SpellMoonBeamTrait']!;
-    const omen = hex.repeatableCandidates.byKey[lung.nodes['1:4']!]!.label;
-    await user.click(screen.getByRole('button', { name: 'Edit Sky Fall Hex tree' }));
-    const dialog = screen.getByRole('dialog', { name: 'Sky Fall Hex tree' });
-    const board = within(dialog).getByRole('group', { name: /Hex tree$/ });
-    const node = within(board).getByRole('button', { name: `Common ${omen}, depth 1` });
-    node.focus();
-    await user.keyboard('{Enter}');
-    const listbox = await screen.findByRole('listbox');
-    // The popover is headed by the node's kind and talent; a short list has no search box.
-    const popover = screen.getByRole('dialog', { name: `Common · ${omen}` });
-    expect(within(listbox).getByText('Swap in this column')).toBeTruthy();
-    expect(within(popover).queryByRole('combobox')).toBeNull();
-    expect(popover.contains(document.activeElement)).toBe(true);
-    expect(node.dataset.editing).toBe('true');
-    // The highlighted swap option marks its partner; the node's own talent marks none.
-    const growth = hex.repeatableCandidates.byKey[lung.nodes['1:2']!]!.label;
-    const partner = within(board).getByRole('button', { name: `Common ${growth}, depth 1` });
-    await user.keyboard('{ArrowDown}');
-    await waitFor(() => expect(partner.dataset.involved).toBe(undefined));
-    await user.keyboard('{ArrowUp}');
-    await waitFor(() => expect(partner.dataset.involved).toBe('true'));
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
-    expect(document.activeElement).toBe(node);
-    expect(node.dataset.editing).toBe(undefined);
-    // God Sent nodes are fixed but reachable for their hint.
-    const godSent = within(board).getAllByRole('note');
-    godSent[0]!.focus();
-    expect(document.activeElement).toBe(godSent[0]);
-    expect(godSent[0]!.getAttribute('aria-description')).toContain(
-      'appears once God Sent is eligible',
-    );
-  });
-
-  it('opens each node picker from its talent in the decks table too', async () => {
-    const { application, user } = renderPlannerForInteraction({ application: seleneApplication() });
-    const lung = createDefaultAuthoredHexTree(application.catalog, 'SpellMoonBeamTrait');
+    const history = () => application.store.getState().projectWorkspace.history!;
+    const tree = () => history().present.route.loadout.aspectHexTree;
     const hex = application.catalog.hexes.byKey['SpellMoonBeamTrait']!;
     const label = (key: string) => hex.repeatableCandidates.byKey[key]!.label;
-    const omen = label(lung.nodes['1:4']!);
-    const damage = label(lung.nodes['2:2']!);
+    const lung = createDefaultAuthoredHexTree(application.catalog, 'SpellMoonBeamTrait');
+    const [first] = authoredHexColumns(application.catalog, 'SpellMoonBeamTrait', lung);
+    const [top, bottom] = first!.slots;
+    await user.click(screen.getByRole('button', { name: 'Edit Sky Fall Hex tree' }));
+    const dialog = screen.getByRole('dialog', { name: 'Sky Fall Hex tree' });
+    const nextCards = () => within(dialog).getByRole('group', { name: /^Next card for Column/ });
+    const row = () => within(dialog).getByRole('rowheader', { name: 'Column 1' }).closest('tr')!;
+    const slots = () =>
+      Array.from(row().querySelectorAll<HTMLElement>('[data-node-key]')).map(
+        (chip) => chip.textContent,
+      );
+    const save = () => within(dialog).getByRole('button', { name: 'Save' }) as HTMLButtonElement;
+    const before = history().past.length;
+    const saved = tree();
+    expect(slots()).toEqual([label(top!.talentKey), label(bottom!.talentKey)]);
+
+    // The column is dealt top slot first, from the cards its deck has left.
+    await user.click(within(dialog).getByRole('button', { name: 'Deal Column 1' }));
+    await user.click(
+      within(nextCards()).getByRole('button', {
+        name: label(bottom!.talentKey),
+      }),
+    );
+    expect(slots()).toEqual([label(bottom!.talentKey), '']);
+    // The map follows the deal: the column's nodes, and the slot the next card fills.
+    const nodeOf = (nodeKey: string) =>
+      dialog.querySelector<HTMLElement>(`.hex-tree-node[id$="-${nodeKey}"]`)!;
+    expect(nodeOf(top!.nodeKey).dataset.dealing).toBe('true');
+    expect(nodeOf(top!.nodeKey).dataset.nextCard).toBeUndefined();
+    const elsewhere = authoredHexColumns(application.catalog, 'SpellMoonBeamTrait', lung)[1]!;
+    expect(nodeOf(elsewhere.slots[0]!.nodeKey).dataset.dealing).toBe('false');
+    // The deal's options sit in the row itself, with its progress.
+    expect(nextCards().closest('tr')).toBe(row());
+    expect(row().textContent).toContain('Dealt 1 of 2');
+    expect(nodeOf(bottom!.nodeKey).dataset.nextCard).toBe('true');
+    // The dealt card leaves the deck the row offers.
+    expect(nextCards().textContent).not.toContain(label(bottom!.talentKey));
+    expect(save().disabled).toBe(true);
+    await user.click(within(nextCards()).getByRole('button', { name: label(top!.talentKey) }));
+    expect(within(dialog).queryByRole('group', { name: /^Next card/ })).toBeNull();
+    expect(slots()).toEqual([label(bottom!.talentKey), label(top!.talentKey)]);
+    expect(history().past).toHaveLength(before);
+    expect(save().disabled).toBe(false);
+    await user.click(save());
+    expect(history().past).toHaveLength(before + 1);
+    expect(tree()?.nodes).toMatchObject({
+      [top!.nodeKey]: bottom!.talentKey,
+      [bottom!.nodeKey]: top!.talentKey,
+    });
+    act(() => {
+      application.store.dispatch(authoredProjectUndoRequested());
+    });
+    expect(tree()).toEqual(saved);
+  });
+
+  it('keeps the column as it was when a deal is cancelled mid-way', async () => {
+    const { application, user } = renderPlannerForInteraction({ application: seleneApplication() });
+    const hex = application.catalog.hexes.byKey['SpellMoonBeamTrait']!;
+    const label = (key: string) => hex.repeatableCandidates.byKey[key]!.label;
+    const lung = createDefaultAuthoredHexTree(application.catalog, 'SpellMoonBeamTrait');
+    const [first] = authoredHexColumns(application.catalog, 'SpellMoonBeamTrait', lung);
+    await user.click(screen.getByRole('button', { name: 'Edit Sky Fall Hex tree' }));
+    const dialog = screen.getByRole('dialog', { name: 'Sky Fall Hex tree' });
+    const nextCards = () => within(dialog).getByRole('group', { name: /^Next card for Column/ });
+    const row = () => within(dialog).getByRole('rowheader', { name: 'Column 1' }).closest('tr')!;
+    const slots = () =>
+      Array.from(row().querySelectorAll<HTMLElement>('[data-node-key]')).map(
+        (chip) => chip.textContent,
+      );
+    const deal = within(dialog).getByRole('button', { name: 'Deal Column 1' });
+    await user.click(deal);
+    await user.click(
+      within(nextCards()).getByRole('button', {
+        name: label(first!.slots[1]!.talentKey),
+      }),
+    );
+    await user.keyboard('{Escape}');
+    expect(within(dialog).queryByRole('group', { name: /^Next card/ })).toBeNull();
+    expect(document.activeElement).toBe(
+      within(dialog).getByRole('button', { name: 'Deal Column 1' }),
+    );
+    expect(screen.getByRole('dialog', { name: 'Sky Fall Hex tree' })).toBe(dialog);
+    expect(slots()).toEqual(first!.slots.map((slot) => label(slot.talentKey)));
+    expect(
+      (within(dialog).getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
+
+  it('marks the first column its deck cannot deal; later columns wait on it', async () => {
+    const { application, user } = renderPlannerForInteraction({ application: seleneApplication() });
+    const hex = application.catalog.hexes.byKey['SpellMoonBeamTrait']!;
+    const label = (key: string) => hex.repeatableCandidates.byKey[key]!.label;
+    const lung = createDefaultAuthoredHexTree(application.catalog, 'SpellMoonBeamTrait');
+    const [, second] = authoredHexColumns(application.catalog, 'SpellMoonBeamTrait', lung);
+    await user.click(screen.getByRole('button', { name: 'Edit Sky Fall Hex tree' }));
+    const dialog = screen.getByRole('dialog', { name: 'Sky Fall Hex tree' });
+    const nextCards = () => within(dialog).getByRole('group', { name: /^Next card for Column/ });
+    const deal = (column: number) =>
+      within(dialog).getByRole('button', { name: `Deal Column ${column}` }) as HTMLButtonElement;
+    expect(deal(2).dataset.hasFindings).toBeUndefined();
+    // Column 1 takes the cards Column 2 holds, so Column 2 is no longer a deal.
+    await user.click(deal(1));
+    for (const slot of second!.slots)
+      await user.click(within(nextCards()).getByRole('button', { name: label(slot.talentKey) }));
+    expect(dialogFinding(dialog)).toBe("Column 2 can't be dealt");
+    expect(deal(1).dataset.hasFindings).toBeUndefined();
+    expect(deal(2).dataset.hasFindings).toBe('true');
+    expect(deal(2).disabled).toBe(false);
+    for (const column of [3, 4, 5]) {
+      expect(deal(column).disabled).toBe(true);
+      expect(deal(column).getAttribute('aria-description')).toBe('Waits on an earlier choice.');
+    }
+  });
+
+  it('links Common nodes on the map to their column rows', async () => {
+    const { application, user } = renderPlannerForInteraction({ application: seleneApplication() });
+    const hex = application.catalog.hexes.byKey['SpellMoonBeamTrait']!;
+    const lung = createDefaultAuthoredHexTree(application.catalog, 'SpellMoonBeamTrait');
+    const [, second] = authoredHexColumns(application.catalog, 'SpellMoonBeamTrait', lung);
+    const slot = second!.slots[0]!;
     await user.click(screen.getByRole('button', { name: 'Edit Sky Fall Hex tree' }));
     const dialog = screen.getByRole('dialog', { name: 'Sky Fall Hex tree' });
     const board = within(dialog).getByRole('group', { name: /Hex tree$/ });
-    const table = within(dialog).getByRole('table', { name: 'Common decks' });
-    // The table's columns are the Common columns, coloured like their nodes.
-    expect(
-      within(table)
-        .getAllByRole('columnheader')
-        .map((cell) => [cell.textContent, cell.dataset.commonColumn]),
-    ).toEqual([
-      ['Column 1', '0'],
-      ['Column 2', '1'],
-      ['Column 3', '2'],
-      ['Column 4', '3'],
-      ['Column 5', '4'],
-    ]);
-    expect(
-      within(table)
-        .getAllByRole('rowheader')
-        .map((cell) => cell.textContent),
-    ).toEqual(['Deck 1', 'Deck 2', 'Deck 3', 'Deck 4']);
-    // Every talent opens its node's picker; a single-column deck's has no trades.
-    await user.click(within(table).getAllByRole('button', { name: /^Deck 2, column 3:/ })[0]!);
-    expect(
-      within(await screen.findByRole('listbox')).queryByText('Trade with another column'),
-    ).toBeNull();
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
-
-    const chip = within(table).getByRole('button', { name: `Deck 1, column 1: ${omen}` });
-    const own = within(board).getByRole('button', { name: `Common ${omen}, depth 1` });
-    const target = within(board).getByRole('button', { name: `Common ${damage}, depth 2` });
+    const node = board.querySelector<HTMLButtonElement>(`button[id$="-${slot.nodeKey}"]`)!;
+    expect(node.getAttribute('aria-label')).toMatch(
+      new RegExp(`^Common ${hex.repeatableCandidates.byKey[slot.talentKey]!.label}, depth 2`),
+    );
+    // A Common node opens no picker; it takes the user to its column's deal.
+    await user.click(node);
+    expect(within(dialog).queryByRole('group', { name: /^Next card/ })).toBeNull();
+    expect(document.activeElement).toBe(
+      within(dialog).getByRole('button', { name: 'Deal Column 2' }),
+    );
+    const chip = dialog.querySelector<HTMLElement>(`[data-node-key="${slot.nodeKey}"]`)!;
     await user.hover(chip);
-    expect(own.dataset.involved).toBe('true');
-    await user.click(chip);
-    // The same picker as the board node's, which is marked as being edited.
-    const listbox = await screen.findByRole('listbox');
-    expect(screen.getByRole('dialog', { name: `Common · ${omen}` })).toBeTruthy();
-    expect(within(listbox).getByText('Swap in this column')).toBeTruthy();
-    expect(own.dataset.editing).toBe('true');
-    const option = within(listbox).getByRole('option', {
-      name: new RegExp(`^${damage} — column 2`),
-    });
-    await user.hover(option);
-    await waitFor(() => expect(target.dataset.involved).toBe('true'));
-    await user.click(option);
-    const boardNow = () => within(dialog).getByRole('group', { name: /Hex tree$/ });
-    expect(
-      await within(boardNow()).findByRole('button', { name: `Common ${damage}, depth 1` }),
-    ).toBeTruthy();
-    expect(
-      within(boardNow()).getByRole('button', { name: `Common ${omen}, depth 2` }),
-    ).toBeTruthy();
-    expect(
-      within(within(dialog).getByRole('table', { name: 'Common decks' })).getByRole('button', {
-        name: `Deck 1, column 2: ${omen}`,
-      }),
-    ).toBeTruthy();
-    // The trade keeps the tree legal.
-    expect(dialogFinding(dialog)).toBeUndefined();
-  });
-
-  it('explains layouts and common nodes from the dialog header', async () => {
-    const { user } = renderPlannerForInteraction({ application: seleneApplication() });
-    await user.click(screen.getByRole('button', { name: 'Edit Sky Fall Hex tree' }));
-    const dialog = screen.getByRole('dialog', { name: 'Sky Fall Hex tree' });
+    expect(node.dataset.involved).toBe('true');
+    await user.unhover(chip);
+    await user.hover(node);
+    expect(chip.dataset.involved).toBe('true');
+    // Help opens from the title line.
     await user.click(within(dialog).getByRole('button', { name: 'Hex tree help' }));
-    const help = await screen.findByRole('dialog', { name: 'Hex tree help' });
-    expect(help.textContent).toContain('Choosing a layout generates its default tree');
-    expect(help.textContent).toContain('fill in order');
-    expect(help.textContent).toContain('a column that empties a deck draws from the next one');
-    expect(help.textContent).toContain('Rare and Epic nodes pick from their pool');
-    expect(help.textContent).toContain('swap for an unused talent');
+    expect(await screen.findByRole('dialog', { name: 'Hex tree help' })).toBeTruthy();
   });
 });

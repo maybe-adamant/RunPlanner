@@ -11,6 +11,7 @@ export type ActionIconName =
   | 'redo'
   | 'rename'
   | 'reset'
+  | 'shuffle'
   | 'trash'
   | 'undo'
   | 'zoom';
@@ -44,6 +45,14 @@ export function ActionIcon({ name }: { readonly name: ActionIconName }) {
           <>
             <path d="M12.5 8a4.5 4.5 0 1 1-1.3-3.2" />
             <path d="M12 2.5v2.8H9.2" />
+          </>
+        );
+      case 'shuffle':
+        return (
+          <>
+            <path d="M2 4.5h2.2c1 0 1.9.5 2.4 1.3l2.8 4.4c.5.8 1.4 1.3 2.4 1.3H14" />
+            <path d="M2 11.5h2.2c1 0 1.9-.5 2.4-1.3l2.8-4.4c.5-.8 1.4-1.3 2.4-1.3H14" />
+            <path d="m12 2.5 2 2-2 2M12 9.5l2 2-2 2" />
           </>
         );
       case 'chevronLeft':

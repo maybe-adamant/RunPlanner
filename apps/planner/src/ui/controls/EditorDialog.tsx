@@ -140,6 +140,7 @@ export function EditorDialog({
   returnFocusId,
   size = 'standard',
   title,
+  titleExtra,
 }: {
   /** Finding anchor attributes for the dialog surface. */
   readonly anchorProps?: ModalSurfaceProps;
@@ -164,6 +165,8 @@ export function EditorDialog({
   readonly returnFocusId?: string;
   readonly size?: 'standard' | 'narrow' | 'cards' | 'hexTree';
   readonly title: ReactNode;
+  /** A control that continues the title, such as a variant picker; outside the dialog's name. */
+  readonly titleExtra?: ReactNode;
 }) {
   const dispatch = useAppDispatch();
   const titleId = useId();
@@ -213,6 +216,9 @@ export function EditorDialog({
               <h2 id={titleId} onMouseEnter={showTruncatedTitle}>
                 {title}
               </h2>
+              {titleExtra === undefined ? null : (
+                <span className="editor-dialog-title-extra">{titleExtra}</span>
+              )}
               <span className="editor-dialog-title-action" ref={setTitleSlot} />
               {headerAction}
             </div>
@@ -237,6 +243,9 @@ export function EditorDialog({
             {eyebrow === undefined ? null : <p className="eyebrow">{eyebrow}</p>}
             <div className="editor-dialog-title-line">
               <h2 id={titleId}>{title}</h2>
+              {titleExtra === undefined ? null : (
+                <span className="editor-dialog-title-extra">{titleExtra}</span>
+              )}
               <span className="editor-dialog-title-action" ref={setTitleSlot} />
             </div>
             {headerBelow}

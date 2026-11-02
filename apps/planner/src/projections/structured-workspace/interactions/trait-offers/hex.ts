@@ -1,6 +1,9 @@
 import type {
   WorkspaceHexBoardNode,
-  WorkspaceHexDeckTable,
+  WorkspaceHexColumnChip,
+  WorkspaceHexColumnDeal,
+  WorkspaceHexColumnDeckSegment,
+  WorkspaceHexColumnRow,
   WorkspaceHexNodeEditor,
   WorkspaceHexTreeDomain,
   WorkspaceHexTreeInteraction,
@@ -10,7 +13,8 @@ import type {
 import {
   applyAuthoredHexTreeEdit,
   assessAuthoredHexTree,
-  authoredHexCommonDecks,
+  authoredHexColumnDeal,
+  authoredHexColumns,
   authoredHexNodeEditOptions,
   createDefaultAuthoredHexTree,
   createHexTreeAddress,
@@ -19,12 +23,12 @@ import {
   updateAuthoredTraitCarrierChild,
 } from '@run-planner/engine/authored-project';
 import type {
-  HexCommonDecks,
   AuthoredHexNodeEditGroup,
   AuthoredHexNodeEditOption,
   AuthoredHexTreeConfiguration,
   AuthoredHexTreeEdit,
   AuthoredTraitOfferTraits,
+  HexCommonColumnDealSegment,
   HexTalentTreeViolation,
   HexTreeAddress,
   TraitOptionKey,
@@ -37,7 +41,6 @@ import type {
   HexLayoutNodeDeclaration,
   HexNodeKind,
 } from '@run-planner/engine/catalog-schema';
-import { findingTitleLimit } from '@planner/projections/evaluationProjection';
 import { projectDirectTraitOutcomePicker } from '@planner/projections/contextual/directTraitOutcomeProjection';
 import { StructuredWorkspaceProjectionContractError } from '@planner/projections/structured-workspace/contract';
 
@@ -88,46 +91,29 @@ function nodeNames(
   );
 }
 
-function listed(values: readonly string[]): string {
-  return values.length <= 2
-    ? values.join(' and ')
-    : `${values.slice(0, -1).join(', ')} and ${values.at(-1)}`;
-}
-
+/** A repeated talent names its nodes; a draw that fails names the first column it fails at. */
 function treeIssue(
   hex: HexDeclaration,
   layout: HexLayoutDeclaration,
-  tree: Readonly<Record<string, string>>,
+  columns: readonly WorkspaceHexColumnRow[],
   violation: HexTalentTreeViolation,
 ): string {
   if (violation.kind === 'repeatedTalent') {
     const kind = kindLabels[layout.nodes.byKey[violation.nodeKeys[0]!]!.kind];
     return `${talentLabel(hex, violation.talentKey)} on ${counts[violation.nodeKeys.length] ?? violation.nodeKeys.length} ${kind} nodes`;
   }
-  const talents = [...new Set(violation.nodeKeys.map((key) => talentLabel(hex, tree[key]!)))];
-  const named = `${listed(talents)} can't be dealt here`;
-  // The marked nodes name the talents a longer list would.
-  return named.length <= findingTitleLimit ? named : "Common talents can't be dealt here";
+  const column = columns.find((row) => row.draw?.undrawable === true);
+  return column === undefined ? "Common columns can't be dealt" : `${column.label} can't be dealt`;
 }
 
-const groupLabels: Readonly<Record<AuthoredHexNodeEditGroup['kind'], string>> = {
-  pool: 'Talents',
-  atDepth: 'Swap in this column',
-  otherColumn: 'Trade with another column',
-  unused: 'Swap for an unused talent',
-};
-
-/** A Rare or Epic talent another node holds; Common groups name their own effect. */
-function optionExplanation(
-  kind: string,
-  group: AuthoredHexNodeEditGroup['kind'],
-  option: AuthoredHexNodeEditOption,
-): string | undefined {
-  return group !== 'pool' || option.selected || option.relatedNodeKeys.length === 0
+/** A Rare or Epic talent another node of the kind holds. */
+function optionExplanation(kind: string, option: AuthoredHexNodeEditOption): string | undefined {
+  return option.selected || option.relatedNodeKeys.length === 0
     ? undefined
     : `On another ${kind} node`;
 }
 
+/** A Rare or Epic node's picker over its pool. */
 function nodeEditor(
   hex: HexDeclaration,
   node: HexLayoutNodeDeclaration,
@@ -141,19 +127,18 @@ function nodeEditor(
     Object.freeze({
       key: group.kind,
       kind: 'category' as const,
-      label: groupLabels[group.kind],
+      label: 'Talents',
       collapsible: false,
       items: Object.freeze(
         group.options.map((option) => {
           const key = `${group.kind}:${option.talentKey}`;
           relatedNodeKeys[key] = option.relatedNodeKeys;
           talentKeys[key] = option.talentKey;
-          const explanation = optionExplanation(kind, group.kind, option);
-          const name = talentLabel(hex, option.talentKey);
+          const explanation = optionExplanation(kind, option);
           return Object.freeze({
             key,
             value: option.edit,
-            label: option.depth === undefined ? name : `${name} — column ${option.depth}`,
+            label: talentLabel(hex, option.talentKey),
             state: 'possible' as const,
             selected: option.selected,
             disabled: false,
@@ -175,57 +160,92 @@ function nodeEditor(
   });
 }
 
-/** The Common decks as a table: one row per deck, one cell per Common column. */
-function deckTable(
+function chip(hex: HexDeclaration, talentKey: string): WorkspaceHexColumnChip {
+  return Object.freeze({ talentKey, label: talentLabel(hex, talentKey) });
+}
+
+/**
+ * The cards a deal has left, deck by deck; a deck the column reaches after
+ * the one before it emptied is a refill. A talent is a pick at its first
+ * card only, since the deal takes it the same from either.
+ */
+function dealDeck(
+  hex: HexDeclaration,
+  segments: readonly HexCommonColumnDealSegment[],
+  next: readonly string[],
+  previousDeckIndex: number | undefined,
+): readonly WorkspaceHexColumnDeckSegment[] {
+  const offered = new Set<string>();
+  return Object.freeze(
+    segments.flatMap((segment, index) =>
+      segment.remainingTalentKeys.length === 0
+        ? []
+        : [
+            Object.freeze({
+              key: `${segment.deckIndex}`,
+              refill:
+                index > 0 ||
+                (previousDeckIndex !== undefined && previousDeckIndex !== segment.deckIndex),
+              cards: Object.freeze(
+                segment.remainingTalentKeys.map((talentKey) => {
+                  const pick = next.includes(talentKey) && !offered.has(talentKey);
+                  if (pick) offered.add(talentKey);
+                  return Object.freeze({ ...chip(hex, talentKey), pick });
+                }),
+              ),
+            }),
+          ],
+    ),
+  );
+}
+
+/** The Common columns in draw order, each with its decks, talents and deal. */
+function columnRows(
   catalog: Catalog,
   hex: HexDeclaration,
-  decks: HexCommonDecks,
-): WorkspaceHexDeckTable {
-  // One chip width for every Hex: the catalog's longest Common label.
-  const chipLength = Math.max(
-    ...catalog.hexes.values.flatMap((candidate) =>
-      candidate.repeatableCandidates.values.map((talent) => talent.label.length),
-    ),
-  );
-  const columns = Object.freeze(
-    decks.depths.map((depth, index) =>
-      Object.freeze({ key: `${depth}`, label: `Column ${depth}`, commonColumn: index }),
-    ),
-  );
-  if (decks.decks === undefined)
-    return Object.freeze({
-      columns,
-      chipLength,
-      unreadable: 'Fix the marked nodes to see which deck dealt each talent.',
-    });
-  return Object.freeze({
-    columns,
-    chipLength,
-    rows: Object.freeze(
-      decks.decks.map((deck) => {
-        const label = `Deck ${deck.index + 1}`;
+  spellTraitKey: string,
+  tree: AuthoredHexTreeConfiguration,
+): readonly WorkspaceHexColumnRow[] {
+  const columns = authoredHexColumns(catalog, spellTraitKey, tree);
+  return Object.freeze(
+    columns.map((column, index) => {
+      const previousDeckIndex = columns[index - 1]?.deck?.at(-1)?.deckIndex;
+      const deal = (dealt: readonly string[]): WorkspaceHexColumnDeal => {
+        const product = authoredHexColumnDeal(catalog, spellTraitKey, tree, column.depth, dealt)!;
         return Object.freeze({
-          key: `${deck.index}`,
-          label,
-          cells: Object.freeze(
-            decks.depths.map((depth) => {
-              const segment = deck.segments.find((candidate) => candidate.depth === depth);
-              return Object.freeze(
-                (segment?.talentKeys ?? []).map((talentKey, index) =>
-                  Object.freeze({
-                    key: `${depth}:${talentKey}`,
-                    label: talentLabel(hex, talentKey),
-                    name: `${label}, column ${depth}: ${talentLabel(hex, talentKey)}`,
-                    nodeKey: segment!.nodeKeys[index]!,
-                  }),
-                ),
-              );
+          dealt: product.dealt,
+          slots: Object.freeze(
+            product.nodeKeys.map((nodeKey, slot) => {
+              const talentKey = product.dealt[slot];
+              return Object.freeze({
+                nodeKey,
+                ...(talentKey === undefined ? {} : { talent: chip(hex, talentKey) }),
+              });
             }),
           ),
+          deck: dealDeck(hex, product.segments, product.nextTalentKeys, previousDeckIndex),
+          ...(product.edit === undefined ? {} : { edit: product.edit }),
         });
-      }),
-    ),
-  });
+      };
+      return Object.freeze({
+        depth: column.depth,
+        label: `Column ${index + 1}`,
+        slots: Object.freeze(
+          column.slots.map((slot) =>
+            Object.freeze({ nodeKey: slot.nodeKey, talent: chip(hex, slot.talentKey) }),
+          ),
+        ),
+        ...(column.deck === undefined
+          ? {}
+          : {
+              draw: Object.freeze({
+                undrawable: !column.drawable,
+                deal,
+              }),
+            }),
+      });
+    }),
+  );
 }
 
 /** The tree's present nodes on the native grid, named by the talents the tree places. */
@@ -268,18 +288,15 @@ export function projectHexTreeDomain(
   const layout = hex?.layouts.byKey[tree.layoutKey];
   if (hex === undefined || layout === undefined) return undefined;
   const violations = assessAuthoredHexTree(catalog, spellTraitKey, tree);
+  const columns = columnRows(catalog, hex, spellTraitKey, tree);
   const conflicting = new Set(violations.flatMap((violation) => violation.nodeKeys));
-  const commonDecks = authoredHexCommonDecks(catalog, spellTraitKey, tree);
   const nodes = projectHexBoardNodes(hex, layout, tree).map((board): WorkspaceHexTreeNode => {
     const node = layout.nodes.byKey[board.nodeKey]!;
     const olympian = node.kind === 'olympianSpell' || node.kind === 'olympianCount';
     return Object.freeze({
       ...board,
       conflict: conflicting.has(node.key),
-      ...(node.kind === 'repeatable'
-        ? { commonColumn: commonDecks.depths.indexOf(node.depth) }
-        : {}),
-      ...(olympian
+      ...(olympian || node.kind === 'repeatable'
         ? {}
         : {
             editor: nodeEditor(
@@ -298,7 +315,7 @@ export function projectHexTreeDomain(
         violation.kind === 'repeatedTalent'
           ? `${violation.kind}:${violation.talentKey}`
           : violation.kind,
-        treeIssue(hex, layout, tree.nodes, violation),
+        treeIssue(hex, layout, columns, violation),
       ] as const,
   );
   return Object.freeze({
@@ -315,7 +332,12 @@ export function projectHexTreeDomain(
       (key) => key,
     ),
     nodes: Object.freeze(nodes),
-    decks: deckTable(catalog, hex, commonDecks),
+    deckLegend: Object.freeze(
+      hex.repeatableCandidates.values.map((talent) =>
+        talent.maxCount === undefined ? talent.label : `${talent.label} ×${talent.maxCount}`,
+      ),
+    ),
+    columns,
     treeIssues: Object.freeze(treeIssues),
     edit: (edit: AuthoredHexTreeEdit) =>
       applyAuthoredHexTreeEdit(catalog, spellTraitKey, tree, edit),

@@ -31,7 +31,7 @@ import { ArtworkIcon } from '@planner/ui/artwork/ArtworkIcon';
 import { traitGiverArtwork } from '@planner/ui/artwork/trait-givers/traitGiverArtwork';
 import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
-import { TraitOfferSelectedOutcome } from './TraitOfferSelectedOutcome';
+import { TraitOfferSelectedOutcome, type TraitOfferTreeReset } from './TraitOfferSelectedOutcome';
 import { TraitOfferForm, TraitOfferShapeActions, useOutcomeFeedback } from './TraitOfferForm';
 import { TraitOfferStateInspector } from './TraitOfferStateInspector';
 import { selectedTraitOutcomeDraftComplete } from './traitOfferOptions';
@@ -127,6 +127,7 @@ export function TraitOfferEditorShell({
   );
   // Sub-editors report their draft feedback here; the dialog renders it in one fixed region.
   const [outcomeEntries, reportOutcomeFeedback] = useOutcomeFeedback();
+  const [treeReset, setTreeReset] = useState<TraitOfferTreeReset>();
   const earlierScreens: readonly unknown[] = value.rerolledScreens ?? [];
   const earlierCount = earlierScreens.length;
   const screenTab = useScreenTab(interaction.owner, earlierCount);
@@ -661,6 +662,7 @@ export function TraitOfferEditorShell({
               echoLastRunBoonOpen={view === 'echoLastRunBoon'}
               onFeedback={reportOutcomeFeedback}
               onOpenEchoLastRunBoon={() => setView('echoLastRunBoon')}
+              onTreeReset={setTreeReset}
               onUpdate={updateValue}
               value={value}
             />
@@ -682,6 +684,14 @@ export function TraitOfferEditorShell({
           issues={issues}
           notes={notes}
           recovery={recoveryAction}
+          {...(treeReset === undefined
+            ? {}
+            : {
+                headerReset: {
+                  disabled: treeReset.disabled,
+                  onReset: () => updateValue(treeReset.value),
+                },
+              })}
           reset={resetAction}
           save={save}
           {...(screenTabs === undefined ? {} : { screenTabs })}
