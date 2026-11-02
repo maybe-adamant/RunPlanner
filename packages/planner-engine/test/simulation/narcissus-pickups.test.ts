@@ -28,6 +28,9 @@ import {
   encodeProjectDocument,
   redoProjectHistory,
   roomActionKey,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  seaStarDuplicateAcquisitionSite,
+  seaStarDuplicateSiteKey,
   semanticAddressKey,
   type ProjectDocument,
   undoProjectHistory,
@@ -56,6 +59,14 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { createCompleteNProject } from '../authored-project/support/complete-n-project';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits/state';
+import { factsWithHistory } from '@run-planner/engine/reward-kernel';
+import { settlePickupAcquisitionSite } from '../../src/simulation/rewards/acquisition/site-settlement';
+import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
+import type { SimulationState } from '../../src/simulation/state/model';
+import { replaceSimulationTraitHistory } from '../../src/simulation/state/transitions';
+import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { baseFacts } from './shop-trait-purchase-support';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement/coordinator';
 import { resolveProducedRerollGrant } from '../../src/simulation/state/pending-resource-pickups';
@@ -264,6 +275,77 @@ describe('Narcissus pickup producer', () => {
     expect(
       resolveProducedRerollGrant(catalog, history, 'MaxManaDrop', 'NarcissusPickup', 'maxMana'),
     ).toBe(0);
+  });
+
+  it('grants a Sea Star duplicate of the reroll drop its rerolls again', () => {
+    // RerollDrop inherits BaseConsumable's CanDuplicate; the duplicate re-enables the same object.
+    const traitHistory = Object.freeze({
+      ...createTraitHistoryState(),
+      equippedTraits: Object.freeze({
+        NarcissusF: { traitKey: 'NarcissusF', acquisitionOrdinal: 1 } as never,
+        DoubleRewardBoon: Object.freeze({
+          traitKey: 'DoubleRewardBoon',
+          giverKey: 'Poseidon',
+          providerKind: 'olympian' as const,
+          rarity: 'Common' as const,
+          sourceRole: 'selection',
+        }),
+      }),
+    });
+    const initial = initializeTestRewardBranches()[0]!;
+    const branch = Object.freeze({
+      ...initial,
+      state: replaceSimulationTraitHistory(initial.state, traitHistory),
+    });
+    const occurrence = createOccurrenceAddress(goldenGBiome, createOccurrenceId('reroll-drop'));
+    const site = createAcquisitionSiteAddress(occurrence, 'traitGenerated:reroll');
+    const entry = createAcquisitionEntryAddress(site, 'reroll');
+    const source = createAcquisitionRoleAddress(entry, 'self');
+    const drop = () =>
+      createUnresolvedAcquisitionRewardState(
+        catalog,
+        { rewardType: 'RerollDrop' },
+        { kind: 'producerLifecycle', key: 'NarcissusPickup' },
+        'Underworld',
+      );
+    const facts = (state: SimulationState) =>
+      factsWithHistory(baseFacts(), state.rewardHistory, new Set());
+    const granted = (settled: readonly RewardBranchState[]) =>
+      settled.map((settledBranch) => settledBranch.state.arcanaFear.arcana.rerollPool.granted);
+    const before = branch.state.arcanaFear.arcana.rerollPool.granted;
+
+    const collected = settlePickupAcquisitionSite(catalog, [branch], {
+      siteOwner: occurrence,
+      site,
+      entries: Object.freeze({ reroll: drop() }),
+      order: Object.freeze(['reroll']),
+      producerLifecycleKey: 'NarcissusPickup',
+      presentsMaterializedScreen: false,
+      historySequence: 1,
+      facts,
+      authoredSeaStarDuplicateSiteKeys: new Set([seaStarDuplicateSiteKey(source)]),
+    }).branches;
+    expect(granted(collected)).toEqual([before + 2]);
+
+    const duplicated = settlePickupAcquisitionSite(catalog, collected, {
+      siteOwner: occurrence,
+      site: seaStarDuplicateAcquisitionSite(occurrence, source),
+      entries: Object.freeze({ [SEA_STAR_DUPLICATE_ENTRY_KEY]: drop() }),
+      order: Object.freeze([SEA_STAR_DUPLICATE_ENTRY_KEY]),
+      producerLifecycleKey: 'NarcissusPickup',
+      producerByEntryKey: Object.freeze({
+        [SEA_STAR_DUPLICATE_ENTRY_KEY]: Object.freeze({
+          kind: 'seaStarDuplicate' as const,
+          sourceOwner: entry,
+          sourceRole: 'self',
+        }),
+      }),
+      seaStarDuplicateEntryKeys: new Set([SEA_STAR_DUPLICATE_ENTRY_KEY]),
+      presentsMaterializedScreen: false,
+      historySequence: 2,
+      facts,
+    }).branches;
+    expect(granted(duplicated)).toEqual([before + 4]);
   });
 
   it('shares the reached Arcana state between Narcissus candidates and selected offer findings', () => {
