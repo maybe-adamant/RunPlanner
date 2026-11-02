@@ -83,9 +83,9 @@ describe('Hex tree settlement', () => {
     const lung = saved.route.loadout.aspectHexTree!;
     // Depth 1 shares a deck with depth 2; a talent dealt at depth 2 cannot also take 1:4.
     const project = editAspect(saved, {
-      kind: 'setNode',
-      nodeKey: '1:4',
-      talentKey: lung.nodes['2:2']!,
+      kind: 'setColumn',
+      depth: 1,
+      talentKeys: [lung.nodes['1:2']!, lung.nodes['2:2']!],
     });
     const finding = simulateProject(catalog, project).findings[0];
     expect(finding).toMatchObject({

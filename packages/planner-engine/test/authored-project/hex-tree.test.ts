@@ -6,7 +6,6 @@ import {
   assessAuthoredHexTree,
   authoredHexColumnDeal,
   authoredHexColumns,
-  authoredHexCommonDecks,
   authoredHexNodeEditOptions,
   createDefaultAuthoredHexTree,
   type AuthoredHexTreeEdit,
@@ -23,11 +22,10 @@ const edit = (value: AuthoredHexTreeEdit, tree = lung) =>
 const options = (nodeKey: string, tree = lung) =>
   authoredHexNodeEditOptions(catalog, SPELL, tree, nodeKey).map((group) => ({
     kind: group.kind,
-    options: group.options.map(({ talentKey, selected, relatedNodeKeys, depth }) => ({
+    options: group.options.map(({ talentKey, selected, relatedNodeKeys }) => ({
       talentKey,
       selected,
       ...(relatedNodeKeys.length === 0 ? {} : { related: relatedNodeKeys }),
-      ...(depth === undefined ? {} : { depth }),
     })),
   }));
 
@@ -58,121 +56,29 @@ describe('Rare and Epic node edits', () => {
     ]);
   });
 
-  it('gives the God Sent nodes no edits', () => {
+  it('gives the God Sent and Common nodes no node edits', () => {
     expect(options('5:3')).toEqual([]);
     expect(options('6:1')).toEqual([]);
+    expect(options('1:4')).toEqual([]);
   });
 });
 
 describe('Common node edits', () => {
-  it('swaps with the first node at its depth holding the talent, keeping the tree legal', () => {
-    // Depth 3 holds two whole decks: no trade with another column.
-    expect(options('3:4')).toEqual([
-      {
-        kind: 'atDepth',
-        options: [
-          { talentKey: VULNERABILITY, selected: true },
-          {
-            talentKey: DAMAGE,
-
-            selected: false,
-            related: ['3:2'],
-          },
-          {
-            talentKey: COUNT,
-
-            selected: false,
-            related: ['3:3'],
-          },
-        ],
-      },
-    ]);
-    const swapped = edit({ kind: 'swapNodes', nodeKey: '3:4', otherNodeKey: '3:2' });
-    expect(swapped.nodes).toEqual({ ...lung.nodes, '3:4': DAMAGE, '3:2': VULNERABILITY });
-    expect(assessAuthoredHexTree(catalog, SPELL, swapped)).toEqual([]);
-    expect(() => edit({ kind: 'swapNodes', nodeKey: '3:4', otherNodeKey: '4:1' })).toThrow(
-      'not two Common nodes',
+  it('changes a Common node only through its column', () => {
+    expect(() => edit({ kind: 'setNode', nodeKey: '1:4', talentKey: DAMAGE })).toThrow(
+      'not a Lung Rare or Epic node',
     );
-    // A swap across depths keeps each node within its depth's domain.
-    expect(() => edit({ kind: 'swapNodes', nodeKey: '1:2', otherNodeKey: '3:1' })).toThrow(
-      'cannot hold',
+    expect(() => edit({ kind: 'setNode', nodeKey: '5:3', talentKey: COUNT })).toThrow(
+      'not a Lung Rare or Epic node',
     );
   });
 
-  it('offers swaps in its column, then trades with its deck in other columns', () => {
-    expect(options('1:4')).toEqual([
-      {
-        kind: 'atDepth',
-        options: [
-          { talentKey: GROWTH, selected: false, related: ['1:2'] },
-          { talentKey: VULNERABILITY, selected: true },
-        ],
-      },
-      {
-        kind: 'otherColumn',
-        options: [
-          { talentKey: DAMAGE, selected: false, related: ['2:2'], depth: 2 },
-          { talentKey: COUNT, selected: false, related: ['2:4'], depth: 2 },
-        ],
-      },
-    ]);
-  });
-
-  it('keeps a set that breaks the draw sequence and names only the nodes it involves', () => {
-    const conflicted = edit({ kind: 'setNode', nodeKey: '1:4', talentKey: DAMAGE });
-    expect(conflicted.nodes['1:4']).toBe(DAMAGE);
+  it('keeps a column that breaks the draw sequence and names only the nodes it involves', () => {
+    const conflicted = edit({ kind: 'setColumn', depth: 1, talentKeys: [GROWTH, DAMAGE] });
+    expect(conflicted.nodes).toEqual({ ...lung.nodes, '1:4': DAMAGE });
     expect(assessAuthoredHexTree(catalog, SPELL, conflicted)).toEqual([
       { kind: 'repeatableSequence', nodeKeys: ['1:4', '2:2'] },
     ]);
-    expect(authoredHexCommonDecks(catalog, SPELL, conflicted).decks).toBeUndefined();
-    // An unreadable tree keeps its column swaps and offers no trades.
-    expect(options('1:4', conflicted).map((group) => group.kind)).toEqual(['atDepth']);
-  });
-});
-
-describe('Common deck trades', () => {
-  const trades = (nodeKey: string, tree = lung) =>
-    authoredHexNodeEditOptions(catalog, SPELL, tree, nodeKey)
-      .filter((group) => group.kind === 'otherColumn' || group.kind === 'unused')
-      .map((group) => [group.kind, group.options.map((option) => option.edit)]);
-
-  it('offers a node its deck mates in other columns, and the undealt talents of a partial deck', () => {
-    expect(trades('1:4')).toEqual([
-      [
-        'otherColumn',
-        [
-          { kind: 'swapNodes', nodeKey: '1:4', otherNodeKey: '2:2' },
-          { kind: 'swapNodes', nodeKey: '1:4', otherNodeKey: '2:4' },
-        ],
-      ],
-    ]);
-    expect(trades('3:1')).toEqual([]);
-    expect(trades('5:3', createDefaultAuthoredHexTree(catalog, SPELL, 'Pyramid'))).toEqual([
-      [
-        'unused',
-        [
-          { kind: 'setNode', nodeKey: '5:3', talentKey: DAMAGE },
-          { kind: 'setNode', nodeKey: '5:3', talentKey: COUNT },
-        ],
-      ],
-    ]);
-  });
-
-  it('keeps every legal tree legal under each trade', () => {
-    for (const declaration of catalog.hexes.values)
-      for (const layoutKey of ['Lung', 'Pyramid', 'Maze', 'Nacelle'] as const) {
-        const spell = declaration.spellTraitKey;
-        const tree = createDefaultAuthoredHexTree(catalog, spell, layoutKey);
-        for (const nodeKey of Object.keys(tree.nodes))
-          for (const group of authoredHexNodeEditOptions(catalog, spell, tree, nodeKey))
-            if (group.kind === 'otherColumn' || group.kind === 'unused')
-              for (const option of group.options) {
-                const next = applyAuthoredHexTreeEdit(catalog, spell, tree, option.edit);
-                expect(next).not.toEqual(tree);
-                expect(assessAuthoredHexTree(catalog, spell, next)).toEqual([]);
-                expect(authoredHexCommonDecks(catalog, spell, next).decks).toBeDefined();
-              }
-      }
   });
 });
 
@@ -196,45 +102,39 @@ describe('Common columns', () => {
       drawable: column.drawable,
       deck: column.deck?.map(({ deckIndex, draws }) => [deckIndex, draws]),
     }));
-  const slotOptions = (depth: number, nodeKey: string, tree = lung, spell = SPELL) =>
-    columns(tree, spell)
-      .find((column) => column.depth === depth)!
-      .slots.find((slot) => slot.nodeKey === nodeKey)!
-      .options.map((option) => [option.talentKey, option.edit.talentKeys]);
   const setColumn = (depth: number, talentKeys: readonly string[], tree = lung, spell = SPELL) =>
     applyAuthoredHexTreeEdit(catalog, spell, tree, { kind: 'setColumn', depth, talentKeys });
 
-  it('reads each default column on the same deck boundaries as the deck table', () => {
+  it('hands each default column the decks its own deal leaves to the next', () => {
     for (const declaration of catalog.hexes.values)
       for (const layoutKey of LAYOUTS) {
         const spell = declaration.spellTraitKey;
         const tree = createDefaultAuthoredHexTree(catalog, spell, layoutKey);
-        const { depths, decks } = authoredHexCommonDecks(catalog, spell, tree);
         const projected = columns(tree, spell);
-        expect(projected.map((column) => column.depth)).toEqual(depths);
-        for (const column of projected) {
+        projected.forEach((column, index) => {
           expect(column.drawable).toBe(true);
-          const dealt = decks!.flatMap((deck) =>
-            deck.segments
-              .filter((segment) => segment.depth === column.depth)
-              .map((segment) => ({ deckIndex: deck.index, ...segment })),
+          const talentKeys = column.slots.map((slot) => slot.talentKey);
+          const dealt = authoredHexColumnDeal(catalog, spell, tree, column.depth, talentKeys)!;
+          expect(dealt.edit).toEqual({ kind: 'setColumn', depth: column.depth, talentKeys });
+          expect(applyAuthoredHexTreeEdit(catalog, spell, tree, dealt.edit!)).toEqual(tree);
+          expect(dealt.segments.map(({ deckIndex, draws }) => [deckIndex, draws])).toEqual(
+            column.deck!.map(({ deckIndex, draws }) => [deckIndex, draws]),
           );
-          expect(column.deck!.map(({ deckIndex, draws }) => [deckIndex, draws])).toEqual(
-            dealt.map((segment) => [segment.deckIndex, segment.nodeKeys.length]),
+          // Only the last deck the column reaches can keep cards; the next column starts there.
+          expect(dealt.segments.slice(0, -1).every((segment) => segment.drawsLeft === 0)).toBe(
+            true,
           );
-          // What a deck holds when the column reaches it is what this column was dealt and what later ones take.
-          column.deck!.forEach((segment, index) => {
-            const later = decks![segment.deckIndex]!.segments.filter(
-              (other) => other.depth === undefined || other.depth > column.depth,
-            );
-            expect([...segment.talentKeys].sort()).toEqual(
-              [...dealt[index]!.talentKeys, ...later.flatMap((other) => other.talentKeys)].sort(),
-            );
-          });
-          expect(new Set(column.slots.map((slot) => slot.nodeKey))).toEqual(
-            new Set(dealt.flatMap((segment) => segment.nodeKeys)),
-          );
-        }
+          const last = dealt.segments.at(-1)!;
+          const next = projected[index + 1]?.deck?.[0];
+          if (next === undefined) return;
+          if (last.remainingTalentKeys.length === 0)
+            expect(next.deckIndex).toBe(last.deckIndex + 1);
+          else
+            expect([next.deckIndex, next.talentKeys]).toEqual([
+              last.deckIndex,
+              last.remainingTalentKeys,
+            ]);
+        });
       }
   });
 
@@ -248,39 +148,7 @@ describe('Common columns', () => {
     expect(slots(maze, 5)).toEqual(['5:1', '5:3', '5:2', '5:4', '5:5', '5:6']);
   });
 
-  it('keeps a drawable column drawable under every slot choice, as the tree policy agrees', () => {
-    for (const declaration of catalog.hexes.values)
-      for (const layoutKey of LAYOUTS) {
-        const spell = declaration.spellTraitKey;
-        const tree = createDefaultAuthoredHexTree(catalog, spell, layoutKey);
-        for (const column of columns(tree, spell))
-          for (const slot of column.slots)
-            for (const option of slot.options) {
-              const next = applyAuthoredHexTreeEdit(catalog, spell, tree, option.edit);
-              const after = columns(next, spell);
-              expect(after.find((other) => other.depth === column.depth)!.drawable).toBe(true);
-              expect(assessAuthoredHexTree(catalog, spell, next).length === 0).toBe(
-                after.every((other) => other.drawable),
-              );
-            }
-      }
-  });
-
-  it('offers a column the rest of its deck, swapping a talent it already holds', () => {
-    expect(slotOptions(1, '1:2')).toEqual([
-      [GROWTH, [GROWTH, VULNERABILITY]],
-      [VULNERABILITY, [VULNERABILITY, GROWTH]],
-      [DAMAGE, [DAMAGE, VULNERABILITY]],
-      [COUNT, [COUNT, VULNERABILITY]],
-    ]);
-    // A column that takes its whole deck can only rearrange it.
-    expect(slotOptions(2, '2:2')).toEqual([
-      [DAMAGE, [DAMAGE, COUNT]],
-      [COUNT, [COUNT, DAMAGE]],
-    ]);
-  });
-
-  it('offers the refill subset where a partial deck straddles a column', () => {
+  it('reads the refill a partial deck straddles into a column', () => {
     const pyramid = createDefaultAuthoredHexTree(catalog, SPELL, 'Pyramid');
     expect(shape(pyramid)[0]).toEqual({
       depth: 1,
@@ -292,12 +160,6 @@ describe('Common columns', () => {
     });
     expect(columns(pyramid)[0]!.deck![1]!.talentKeys).toEqual([VULNERABILITY, DAMAGE, COUNT]);
     const first = [GROWTH, VULNERABILITY, DAMAGE, COUNT];
-    expect(slotOptions(1, '1:5', pyramid)).toEqual([
-      [GROWTH, [VULNERABILITY, VULNERABILITY, DAMAGE, COUNT, GROWTH]],
-      [VULNERABILITY, [...first, VULNERABILITY]],
-      [DAMAGE, [...first, DAMAGE]],
-      [COUNT, [...first, COUNT]],
-    ]);
     // The next column starts from what the refill pick left.
     const picked = setColumn(1, [...first, DAMAGE], pyramid);
     expect(columns(picked)[1]!.deck![0]!.talentKeys).toEqual([VULNERABILITY, COUNT]);
@@ -317,14 +179,6 @@ describe('Common columns', () => {
         );
       expect(new Set(reachable(GROWTH))).toEqual(new Set([0]));
       expect(new Set(reachable(PREPARATION))).toEqual(new Set([0, 1]));
-      for (const column of projected)
-        for (const slot of column.slots)
-          for (const option of slot.options) {
-            const count = (talentKey: string) =>
-              option.edit.talentKeys.filter((key) => key === talentKey).length;
-            expect(count(GROWTH)).toBeLessThanOrEqual(1);
-            expect(count(PREPARATION)).toBeLessThanOrEqual(2);
-          }
     }
     // Night Bloom on Pyramid: the first column's refill pick cannot be Growth again.
     const pyramid = createDefaultAuthoredHexTree(catalog, nightBloom, 'Pyramid');
@@ -337,46 +191,6 @@ describe('Common columns', () => {
     );
     expect(columns(twice, nightBloom)[0]!.drawable).toBe(false);
     expect(assessAuthoredHexTree(catalog, nightBloom, twice)).not.toEqual([]);
-  });
-
-  it('names the talents a refill leaves out at their MaxCount', () => {
-    const nightBloom = 'SpellSummonTrait';
-    const tree = createDefaultAuthoredHexTree(catalog, nightBloom, 'Lung');
-    const projected = columns(tree, nightBloom);
-    // A segment whose deck an earlier column already reached is that deck's remainder.
-    const seen = new Set<number>();
-    const segments = projected.flatMap((column) => {
-      const read = column.deck!.map((segment) => ({
-        segment,
-        remainder: seen.has(segment.deckIndex),
-      }));
-      for (const segment of column.deck!) seen.add(segment.deckIndex);
-      return read;
-    });
-    const refills = segments.filter(({ remainder }) => !remainder);
-    expect(refills.map(({ segment }) => [segment.deckIndex, segment.cappedOut])).toEqual(
-      refills.map(({ segment }) => [
-        segment.deckIndex,
-        segment.deckIndex === 1
-          ? [{ talentKey: GROWTH, maxCount: 1 }]
-          : segment.deckIndex === 2
-            ? [{ talentKey: 'PreChargeTalent', maxCount: 2 }]
-            : [],
-      ]),
-    );
-    expect(refills.map(({ segment }) => segment.deckIndex)).toEqual(
-      expect.arrayContaining([0, 1, 2, 3]),
-    );
-    const remainders = segments.filter(({ remainder }) => remainder);
-    expect(remainders.length).toBeGreaterThan(0);
-    for (const { segment } of remainders) expect(segment.cappedOut).toEqual([]);
-    // The deal carries the same segments.
-    for (const column of projected)
-      expect(
-        authoredHexColumnDeal(catalog, nightBloom, tree, column.depth, [])!.segments.map(
-          (segment) => segment.cappedOut,
-        ),
-      ).toEqual(column.deck!.map((segment) => segment.cappedOut));
   });
 
   it('sets a column atomically and keeps later columns as authored', () => {
@@ -405,18 +219,6 @@ describe('Common columns', () => {
     // The tree finding names the smallest changes that restore a draw sequence.
     expect(assessAuthoredHexTree(catalog, SPELL, broken)).toEqual([
       { kind: 'repeatableSequence', nodeKeys: ['1:2', '1:4', '2:2', '2:4'] },
-    ]);
-    // The broken column offers its whole deck; a column past it, its node's own domain.
-    expect(slotOptions(2, '2:2', broken).map(([talentKey]) => talentKey)).toEqual([
-      GROWTH,
-      VULNERABILITY,
-      DAMAGE,
-    ]);
-    expect(slotOptions(2, '2:2', broken)[0]).toEqual([GROWTH, [GROWTH, COUNT]]);
-    expect(slotOptions(4, '4:3', broken).map(([talentKey]) => talentKey)).toEqual([
-      VULNERABILITY,
-      DAMAGE,
-      COUNT,
     ]);
   });
 });

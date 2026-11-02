@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   defaultHexTalentTree,
-  hexCommonDecks,
+  hexCommonColumns,
   hexNodeTalentDomain,
   hexRepeatableCycles,
   validateHexTalentTree,
@@ -183,102 +183,95 @@ describe('Hex talent tree default fill', () => {
   });
 });
 
-describe('Hex Common decks', () => {
+describe('Hex Common column decks', () => {
   const decks = (declaration: HexDeclaration, layoutKey: HexLayoutKey, tree: HexTalentTree) =>
-    hexCommonDecks(declaration, layoutKey, tree).decks?.map((deck) =>
-      deck.segments.map((segment) => [segment.depth ?? null, segment.nodeKeys, segment.talentKeys]),
-    );
-
-  it('splits columns into whole decks and decks that straddle the next column', () => {
-    const tree = complete(polymorph, 'Lung');
-    expect(hexCommonDecks(polymorph, 'Lung', tree)).toMatchObject({
-      depths: [1, 2, 3, 4, 5],
-    });
-    expect(decks(polymorph, 'Lung', tree)).toEqual([
-      [
-        [1, ['1:2', '1:4'], [CD, GROWTH]],
-        [2, ['2:2', '2:4'], [HUMILITY, EXPOSURE]],
-      ],
-      [[3, ['3:1', '3:2', '3:3'], [CD, HUMILITY, EXPOSURE]]],
-      [[3, ['3:4', '3:5', '3:6'], [CD, HUMILITY, EXPOSURE]]],
-      [
-        [4, ['4:3'], [CD]],
-        [5, ['5:2', '5:4'], [HUMILITY, EXPOSURE]],
-      ],
+    hexCommonColumns(declaration, layoutKey, tree).map((column) => [
+      column.depth,
+      column.drawable,
+      column.deck?.map((segment) => [segment.deckIndex, segment.draws, segment.talentKeys]),
     ]);
-  });
 
-  it('assigns a column node to the earliest deck holding its talent, in node order', () => {
-    // Depth 3 holds two of each talent; the first holder of each goes to the first deck.
-    const tree = {
-      ...complete(polymorph, 'Lung'),
-      '3:1': EXPOSURE,
-      '3:2': EXPOSURE,
-      '3:3': CD,
-      '3:4': CD,
-      '3:5': HUMILITY,
-      '3:6': HUMILITY,
-    };
-    expect(decks(polymorph, 'Lung', tree)?.slice(1, 3)).toEqual([
-      [[3, ['3:3', '3:5', '3:1'], [CD, HUMILITY, EXPOSURE]]],
-      [[3, ['3:4', '3:6', '3:2'], [CD, HUMILITY, EXPOSURE]]],
+  it('reads whole decks and decks that straddle the next column', () => {
+    expect(decks(polymorph, 'Lung', complete(polymorph, 'Lung'))).toEqual([
+      [1, true, [[0, 2, [CD, GROWTH, HUMILITY, EXPOSURE]]]],
+      [2, true, [[0, 2, [HUMILITY, EXPOSURE]]]],
+      [
+        3,
+        true,
+        [
+          [1, 3, [CD, HUMILITY, EXPOSURE]],
+          [2, 3, [CD, HUMILITY, EXPOSURE]],
+        ],
+      ],
+      [4, true, [[3, 1, [CD, HUMILITY, EXPOSURE]]]],
+      [5, true, [[3, 2, [HUMILITY, EXPOSURE]]]],
     ]);
   });
 
   it('chains decks across every column of a Pyramid and leaves the last deck partly undealt', () => {
-    const tree = complete(polymorph, 'Pyramid');
-    expect(decks(polymorph, 'Pyramid', tree)).toEqual([
-      [[1, ['1:1', '1:2', '1:3', '1:4'], [CD, GROWTH, HUMILITY, EXPOSURE]]],
+    expect(decks(polymorph, 'Pyramid', complete(polymorph, 'Pyramid'))).toEqual([
       [
-        [1, ['1:5'], [CD]],
-        [2, ['2:1', '2:2'], [HUMILITY, EXPOSURE]],
+        1,
+        true,
+        [
+          [0, 4, [CD, GROWTH, HUMILITY, EXPOSURE]],
+          [1, 1, [CD, HUMILITY, EXPOSURE]],
+        ],
       ],
       [
-        [2, ['2:3', '2:4'], [CD, HUMILITY]],
-        [3, ['3:2'], [EXPOSURE]],
+        2,
+        true,
+        [
+          [1, 2, [HUMILITY, EXPOSURE]],
+          [2, 2, [CD, HUMILITY, EXPOSURE]],
+        ],
       ],
       [
-        [3, ['3:4'], [CD]],
-        [4, ['4:2', '4:4'], [HUMILITY, EXPOSURE]],
+        3,
+        true,
+        [
+          [2, 1, [EXPOSURE]],
+          [3, 1, [CD, HUMILITY, EXPOSURE]],
+        ],
       ],
-      [
-        [5, ['5:3'], [CD]],
-        [null, [], [HUMILITY, EXPOSURE]],
-      ],
+      [4, true, [[3, 2, [HUMILITY, EXPOSURE]]]],
+      [5, true, [[4, 1, [CD, HUMILITY, EXPOSURE]]]],
     ]);
   });
 
   it('drops capped talents from later decks', () => {
     // Preparation reaches its cap after two decks; the last deck deals two of three.
     expect(decks(meteor, 'Lung', complete(meteor, 'Lung'))).toEqual([
+      [1, true, [[0, 2, [CD, PREP, VASTNESS, MAGNITUDE]]]],
+      [2, true, [[0, 2, [VASTNESS, MAGNITUDE]]]],
       [
-        [1, ['1:2', '1:4'], [CD, PREP]],
-        [2, ['2:2', '2:4'], [VASTNESS, MAGNITUDE]],
+        3,
+        true,
+        [
+          [1, 4, [CD, PREP, VASTNESS, MAGNITUDE]],
+          [2, 2, [CD, VASTNESS, MAGNITUDE]],
+        ],
       ],
-      [[3, ['3:1', '3:2', '3:3', '3:4'], [CD, PREP, VASTNESS, MAGNITUDE]]],
-      [
-        [3, ['3:5', '3:6'], [CD, VASTNESS]],
-        [4, ['4:3'], [MAGNITUDE]],
-      ],
-      [
-        [5, ['5:2', '5:4'], [CD, VASTNESS]],
-        [null, [], [MAGNITUDE]],
-      ],
+      [4, true, [[2, 1, [MAGNITUDE]]]],
+      [5, true, [[3, 2, [CD, VASTNESS, MAGNITUDE]]]],
     ]);
   });
 
-  it('reads no decks from a tree no draw sequence deals', () => {
+  it('reads no deck past a column no draw yields', () => {
     const tree = { ...complete(meteor, 'Lung'), '4:3': CD };
-    expect(hexCommonDecks(meteor, 'Lung', tree)).toEqual({
-      depths: [1, 2, 3, 4, 5],
-    });
+    expect(decks(meteor, 'Lung', tree).slice(3)).toEqual([
+      [4, false, [[2, 1, [MAGNITUDE]]]],
+      [5, false, undefined],
+    ]);
   });
 
-  it('reads every legal default tree', () => {
+  it('reads every legal default tree as drawable', () => {
     for (const declaration of catalog.hexes.values)
       for (const layoutKey of LAYOUTS)
         expect(
-          hexCommonDecks(declaration, layoutKey, complete(declaration, layoutKey)).decks,
-        ).toBeDefined();
+          hexCommonColumns(declaration, layoutKey, complete(declaration, layoutKey)).every(
+            (column) => column.drawable,
+          ),
+        ).toBe(true);
   });
 });

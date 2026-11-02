@@ -10,10 +10,8 @@ import {
   defaultHexTalentTree,
   hexCommonColumnDeal,
   type HexCommonColumnDeal,
+  type HexCommonColumn,
   hexCommonColumns,
-  type HexCommonColumnDeckSegment,
-  hexCommonDecks,
-  type HexCommonDecks,
   hexNodeTalentDomain,
   hexNodeTalentPool,
   validateHexTalentTree,
@@ -29,9 +27,8 @@ import {
 
 /** One semantic edit of an authored Hex tree. */
 export type AuthoredHexTreeEdit =
+  /** Sets a Rare or Epic node's talent; Common nodes change only by column. */
   | { readonly kind: 'setNode'; readonly nodeKey: string; readonly talentKey: string }
-  /** Exchanges the talents of two Common nodes. */
-  | { readonly kind: 'swapNodes'; readonly nodeKey: string; readonly otherNodeKey: string }
   /** Sets a Common column's talents, by its slots in map order; later columns keep theirs. */
   | { readonly kind: 'setColumn'; readonly depth: number; readonly talentKeys: readonly string[] }
   /** Regenerates the default tree on another layout. */
@@ -43,19 +40,13 @@ export interface AuthoredHexNodeEditOption {
   readonly talentKey: string;
   readonly edit: AuthoredHexTreeEdit;
   readonly selected: boolean;
-  /** The nodes the choice involves: the other holders of a Rare or Epic talent, or the swap partner. */
+  /** The other nodes of the kind holding the talent. */
   readonly relatedNodeKeys: readonly string[];
-  /** The column of a trade partner in the node's deck. */
-  readonly depth?: number;
 }
 
-/**
- * `pool`: a Rare or Epic node's talents. `atDepth`: swaps within the node's
- * column. `otherColumn`: swaps with the node's deck in its other columns.
- * `unused`: the partial last deck's undealt talents, taking the node's place.
- */
+/** `pool`: a Rare or Epic node's talents. */
 export interface AuthoredHexNodeEditGroup {
-  readonly kind: 'pool' | 'atDepth' | 'otherColumn' | 'unused';
+  readonly kind: 'pool';
   readonly options: readonly AuthoredHexNodeEditOption[];
 }
 
@@ -150,29 +141,6 @@ export function assessAuthoredHexTree(
   return validateHexTalentTree(hex, value.layoutKey, fullTree(hex, layout, value.nodes)).tree;
 }
 
-/** Each node keeps a talent of its own depth's domain. */
-function swapNodes(
-  catalog: Catalog,
-  spellTraitKey: string,
-  value: AuthoredHexTreeConfiguration,
-  nodeKey: string,
-  otherNodeKey: string,
-): AuthoredHexTreeConfiguration {
-  const layout = layoutFor(hexFor(catalog, spellTraitKey), value.layoutKey);
-  const node = layout.nodes.byKey[nodeKey];
-  const other = layout.nodes.byKey[otherNodeKey];
-  if (node?.kind !== 'repeatable' || other?.kind !== 'repeatable' || node.key === other.key)
-    throw new Error(`Hex nodes ${nodeKey} and ${otherNodeKey} are not two Common nodes`);
-  return normalizeAuthoredHexTree(catalog, spellTraitKey, {
-    layoutKey: value.layoutKey,
-    nodes: {
-      ...value.nodes,
-      [nodeKey]: value.nodes[otherNodeKey]!,
-      [otherNodeKey]: value.nodes[nodeKey]!,
-    },
-  });
-}
-
 function setColumn(
   catalog: Catalog,
   spellTraitKey: string,
@@ -206,15 +174,17 @@ export function applyAuthoredHexTreeEdit(
   edit: AuthoredHexTreeEdit,
 ): AuthoredHexTreeConfiguration {
   switch (edit.kind) {
-    case 'setNode':
-      if (value.nodes[edit.nodeKey] === undefined)
-        throw new Error(`Hex node ${edit.nodeKey} is not an authored ${value.layoutKey} node`);
+    case 'setNode': {
+      const node = layoutFor(hexFor(catalog, spellTraitKey), value.layoutKey).nodes.byKey[
+        edit.nodeKey
+      ];
+      if (node?.kind !== 'keystone' && node?.kind !== 'legendary')
+        throw new Error(`Hex node ${edit.nodeKey} is not a ${value.layoutKey} Rare or Epic node`);
       return normalizeAuthoredHexTree(catalog, spellTraitKey, {
         layoutKey: value.layoutKey,
         nodes: { ...value.nodes, [edit.nodeKey]: edit.talentKey },
       });
-    case 'swapNodes':
-      return swapNodes(catalog, spellTraitKey, value, edit.nodeKey, edit.otherNodeKey);
+    }
     case 'setColumn':
       return setColumn(catalog, spellTraitKey, value, edit.depth, edit.talentKeys);
     case 'changeLayout':
@@ -227,9 +197,8 @@ export function applyAuthoredHexTreeEdit(
 }
 
 /**
- * The talents one node can take, grouped by effect: a Rare or Epic node's
- * pool; a Common node's swaps in its column and trades within its deck, which
- * keep a legal tree legal. God Sent nodes have none.
+ * A Rare or Epic node's pool, each talent naming the other nodes of its kind
+ * that hold it. Common nodes change by column; God Sent nodes have none.
  */
 export function authoredHexNodeEditOptions(
   catalog: Catalog,
@@ -241,125 +210,36 @@ export function authoredHexNodeEditOptions(
   const layout = layoutFor(hex, value.layoutKey);
   const node = layout.nodes.byKey[nodeKey];
   if (node === undefined) throw new Error(`Hex node ${nodeKey} is not declared on ${layout.key}`);
-  const none = Object.freeze([]);
-  if (!authoredNode(node)) return none;
+  if (node.kind !== 'keystone' && node.kind !== 'legendary') return Object.freeze([]);
   const current = value.nodes[nodeKey]!;
-  const set = (talentKey: string, relatedNodeKeys: readonly string[]): AuthoredHexNodeEditOption =>
-    Object.freeze({
-      talentKey,
-      edit: Object.freeze({ kind: 'setNode' as const, nodeKey, talentKey }),
-      selected: talentKey === current,
-      relatedNodeKeys: Object.freeze(talentKey === current ? [] : relatedNodeKeys),
-    });
-  const holding = (keys: readonly string[], talentKey: string) =>
-    keys.filter((key) => value.nodes[key] === talentKey);
-  if (node.kind !== 'repeatable') {
-    const others = layout.nodes.values
-      .filter((other) => other.kind === node.kind && other.key !== nodeKey)
-      .map((other) => other.key);
-    return Object.freeze([
-      Object.freeze({
-        kind: 'pool' as const,
-        options: Object.freeze(
-          hexNodeTalentPool(hex, node).map((talentKey) =>
-            set(talentKey, holding(others, talentKey)),
-          ),
-        ),
-      }),
-    ]);
-  }
-  const sameDepth = layout.nodes.values
-    .filter(
-      (other) => other.kind === 'repeatable' && other.depth === node.depth && other.key !== nodeKey,
-    )
+  const others = layout.nodes.values
+    .filter((other) => other.kind === node.kind && other.key !== nodeKey)
     .map((other) => other.key);
-  const atDepth = hexNodeTalentPool(hex, node).flatMap((talentKey): AuthoredHexNodeEditOption[] => {
-    if (talentKey === current) return [set(talentKey, [])];
-    const holders = holding(sameDepth, talentKey);
-    if (holders.length === 0) return [];
-    return [
-      Object.freeze({
-        talentKey,
-        edit: Object.freeze({ kind: 'swapNodes' as const, nodeKey, otherNodeKey: holders[0]! }),
-        selected: false,
-        relatedNodeKeys: Object.freeze([holders[0]!]),
-      }),
-    ];
-  });
-  const { decks } = hexCommonDecks(hex, layout.key, fullTree(hex, layout, value.nodes));
-  const deck = decks?.find((candidate) =>
-    candidate.segments.some((segment) => segment.nodeKeys.includes(nodeKey)),
-  );
-  const others = (deck?.segments ?? []).filter((segment) => !segment.nodeKeys.includes(nodeKey));
-  const trades = others.flatMap(({ depth, nodeKeys, talentKeys }) =>
-    depth === undefined
-      ? []
-      : talentKeys.map((talentKey, index): AuthoredHexNodeEditOption =>
+  return Object.freeze([
+    Object.freeze({
+      kind: 'pool' as const,
+      options: Object.freeze(
+        hexNodeTalentPool(hex, node).map((talentKey) =>
           Object.freeze({
             talentKey,
-            edit: Object.freeze({
-              kind: 'swapNodes' as const,
-              nodeKey,
-              otherNodeKey: nodeKeys[index]!,
-            }),
-            selected: false,
-            relatedNodeKeys: Object.freeze([nodeKeys[index]!]),
-            depth,
+            edit: Object.freeze({ kind: 'setNode' as const, nodeKey, talentKey }),
+            selected: talentKey === current,
+            relatedNodeKeys: Object.freeze(
+              talentKey === current ? [] : others.filter((key) => value.nodes[key] === talentKey),
+            ),
           }),
         ),
-  );
-  const unused = others.flatMap((segment) =>
-    segment.depth === undefined ? segment.talentKeys.map((key) => set(key, [])) : [],
-  );
-  return Object.freeze([
-    Object.freeze({ kind: 'atDepth' as const, options: Object.freeze(atDepth) }),
-    ...(trades.length === 0
-      ? []
-      : [Object.freeze({ kind: 'otherColumn' as const, options: Object.freeze(trades) })]),
-    ...(unused.length === 0
-      ? []
-      : [Object.freeze({ kind: 'unused' as const, options: Object.freeze(unused) })]),
+      ),
+    }),
   ]);
 }
 
-/** The tree's Common decks and the nodes each dealt to. */
-export function authoredHexCommonDecks(
-  catalog: Catalog,
-  spellTraitKey: string,
-  value: AuthoredHexTreeConfiguration,
-): HexCommonDecks {
-  const hex = hexFor(catalog, spellTraitKey);
-  const layout = layoutFor(hex, value.layoutKey);
-  return hexCommonDecks(hex, layout.key, fullTree(hex, layout, value.nodes));
-}
-
-/** One talent a Common column slot can take, and the column edit that places it. */
-export interface AuthoredHexColumnSlotOption {
-  readonly talentKey: string;
-  readonly selected: boolean;
-  readonly edit: Extract<AuthoredHexTreeEdit, { readonly kind: 'setColumn' }>;
-}
-
-export interface AuthoredHexColumnSlot {
-  readonly nodeKey: string;
-  readonly talentKey: string;
-  readonly options: readonly AuthoredHexColumnSlotOption[];
-}
-
 /** One Common column, read against the earlier columns as authored. */
-export interface AuthoredHexColumn {
-  readonly depth: number;
-  /** Map order, top to bottom. */
-  readonly slots: readonly AuthoredHexColumnSlot[];
-  /** The decks the column draws from; absent past an undrawable column. */
-  readonly deck?: readonly HexCommonColumnDeckSegment[];
-  readonly drawable: boolean;
-}
+export type AuthoredHexColumn = HexCommonColumn;
 
 /**
- * The tree's Common columns in draw order: what each draws from and the
- * column edit each slot choice makes. From a drawable column every choice
- * keeps it drawable; later columns are not reflowed.
+ * The tree's Common columns in draw order: each column's talents in map
+ * order, the decks it draws from and whether it is such a draw.
  */
 export function authoredHexColumns(
   catalog: Catalog,
@@ -368,33 +248,7 @@ export function authoredHexColumns(
 ): readonly AuthoredHexColumn[] {
   const hex = hexFor(catalog, spellTraitKey);
   const layout = layoutFor(hex, value.layoutKey);
-  return Object.freeze(
-    hexCommonColumns(hex, layout.key, fullTree(hex, layout, value.nodes)).map((column) =>
-      Object.freeze({
-        ...column,
-        slots: Object.freeze(
-          column.slots.map((slot) =>
-            Object.freeze({
-              ...slot,
-              options: Object.freeze(
-                slot.options.map((option) =>
-                  Object.freeze({
-                    talentKey: option.talentKey,
-                    selected: option.selected,
-                    edit: Object.freeze({
-                      kind: 'setColumn' as const,
-                      depth: column.depth,
-                      talentKeys: option.talentKeys,
-                    }),
-                  }),
-                ),
-              ),
-            }),
-          ),
-        ),
-      }),
-    ),
-  );
+  return hexCommonColumns(hex, layout.key, fullTree(hex, layout, value.nodes));
 }
 
 /** A column's deal so far; once complete, the column edit that places it. */

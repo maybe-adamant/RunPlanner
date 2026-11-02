@@ -256,22 +256,17 @@ export {
   assessAuthoredHexTree,
   authoredHexColumnDeal,
   authoredHexColumns,
-  authoredHexCommonDecks,
   authoredHexNodeEditOptions,
   createDefaultAuthoredHexTree,
   type AuthoredHexColumn,
   type AuthoredHexColumnDeal,
-  type AuthoredHexColumnSlot,
-  type AuthoredHexColumnSlotOption,
   type AuthoredHexNodeEditGroup,
   type AuthoredHexNodeEditOption,
   type AuthoredHexTreeEdit,
 } from './traits/hex-tree';
 export {
-  type HexCappedTalent,
   type HexCommonColumnDealSegment,
   type HexCommonColumnDeckSegment,
-  type HexCommonDecks,
   type HexTalentTreeViolation,
 } from './traits/hex-talent-tree';
 export {
